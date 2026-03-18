@@ -1,0 +1,77 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal modal--lg">
+    <div class="modal__header">
+      <h2 id="modal-title">{{jurisdiction.name}}</h2>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <dl class="detail-list">
+      <div class="detail-list__item">
+        <dt>ID</dt>
+        <dd><code>{{jurisdiction.id}}</code></dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Type</dt>
+        <dd><span class="badge badge--info">{{jurisdiction.type}}</span></dd>
+      </div>
+      {{#if jurisdiction.iso3166}}
+      <div class="detail-list__item">
+        <dt>ISO 3166</dt>
+        <dd>{{jurisdiction.iso3166}}</dd>
+      </div>
+      {{/if}}
+      {{#if jurisdiction.parentId}}
+      <div class="detail-list__item">
+        <dt>Parent</dt>
+        <dd>{{jurisdiction.parentId}}</dd>
+      </div>
+      {{/if}}
+    </dl>
+
+    {{#if regulations.length}}
+    <h3 class="detail-section-title">Regulations ({{regulations.length}})</h3>
+    <div class="detail-cards">
+      {{#each regulations}}
+      <div class="detail-card">
+        <div class="detail-card__header">
+          <strong>{{name}}</strong>
+          <span class="badge badge--{{#if (eq status 'active')}}completed{{else}}{{#if (eq status 'draft')}}queued{{else}}failed{{/if}}{{/if}}">{{status}}</span>
+        </div>
+        <div class="detail-card__body">
+          <span class="text-muted text-xs">{{shortName}} · {{reference}}</span>
+          {{#if description}}
+          <p class="text-sm mt-sm">{{description}}</p>
+          {{/if}}
+          <div class="detail-card__meta mt-sm">
+            <span class="text-xs text-muted">Enforcement: {{enforcementDate}}</span>
+            {{#if url}}
+            <a href="{{url}}" target="_blank" rel="noopener noreferrer" class="btn btn--sm btn--ghost">
+              Official Source ↗
+            </a>
+            {{/if}}
+          </div>
+        </div>
+        <div class="detail-card__footer">
+          <button hx-get="/admin/regulations/{{id}}/view"
+                  hx-target="#modal-container"
+                  hx-swap="innerHTML"
+                  class="btn btn--sm btn--secondary">View Details</button>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+    {{else}}
+    <p class="text-muted mt-md">No regulations linked to this jurisdiction.</p>
+    {{/if}}
+
+    <div class="modal__footer">
+      {{#unless isSystem}}
+      <button hx-get="/admin/jurisdictions/{{jurisdiction.id}}/edit"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              class="btn btn--primary">Edit</button>
+      {{/unless}}
+      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>

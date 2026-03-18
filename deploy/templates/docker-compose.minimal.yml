@@ -1,0 +1,57 @@
+# Luqen — Minimal deployment
+# Compliance + Dashboard only (no Redis, no pa11y)
+# pa11y webservice must be provided externally via LUQEN_WEBSERVICE_URL
+
+services:
+  compliance:
+    build:
+      context: .
+      dockerfile: packages/compliance/Dockerfile
+    container_name: luqen-compliance
+    ports:
+      - "${COMPLIANCE_PORT:-4000}:4000"
+    volumes:
+      - compliance-data:/app/data
+      - compliance-keys:/app/keys
+    environment:
+      - COMPLIANCE_PORT=4000
+      - COMPLIANCE_DB_PATH=/app/data/compliance.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: packages/dashboard/Dockerfile
+    container_name: luqen-dashboard
+    ports:
+      - "${DASHBOARD_PORT:-5000}:5000"
+    volumes:
+      - dashboard-data:/app/data
+      - dashboard-reports:/app/reports
+    environment:
+      - DASHBOARD_PORT=5000
+      - DASHBOARD_COMPLIANCE_URL=http://compliance:4000
+      - DASHBOARD_WEBSERVICE_URL=${LUQEN_WEBSERVICE_URL:-http://host.docker.internal:3000}
+      - DASHBOARD_REPORTS_DIR=/app/reports
+      - DASHBOARD_DB_PATH=/app/data/dashboard.db
+      - DASHBOARD_SESSION_SECRET=${DASHBOARD_SESSION_SECRET}
+    depends_on:
+      compliance:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  compliance-data:
+  compliance-keys:
+  dashboard-data:
+  dashboard-reports:

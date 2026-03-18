@@ -1,0 +1,151 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Inherit everything from the base and apply prod-specific overrides
+bases:
+  - ../../
+
+namespace: luqen
+
+# Production image tags — set by CI/CD after a successful build:
+#   kustomize edit set image \
+#     ghcr.io/your-org/luqen-compliance:$TAG \
+#     ghcr.io/your-org/luqen-dashboard:$TAG
+images:
+  - name: "${REGISTRY}/luqen-compliance:${TAG}"
+    newName: ghcr.io/your-org/luqen-compliance
+    newTag: latest
+  - name: "${REGISTRY}/luqen-dashboard:${TAG}"
+    newName: ghcr.io/your-org/luqen-dashboard
+    newTag: latest
+
+patches:
+  # ── Compliance: 3 replicas, higher resource limits ─────────────────────────
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: luqen-compliance
+        namespace: luqen
+      spec:
+        replicas: 3
+        template:
+          spec:
+            containers:
+              - name: compliance
+                resources:
+                  requests:
+                    memory: "192Mi"
+                    cpu: "300m"
+                  limits:
+                    memory: "512Mi"
+                    cpu: "1000m"
+
+  # ── Dashboard: 3 replicas, higher resource limits ──────────────────────────
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: luqen-dashboard
+        namespace: luqen
+      spec:
+        replicas: 3
+        template:
+          spec:
+            containers:
+              - name: dashboard
+                resources:
+                  requests:
+                    memory: "192Mi"
+                    cpu: "300m"
+                  limits:
+                    memory: "512Mi"
+                    cpu: "1000m"
+
+  # ── HPA: higher ceilings for prod load ────────────────────────────────────
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: luqen-compliance
+        namespace: luqen
+      spec:
+        minReplicas: 3
+        maxReplicas: 20
+
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: luqen-dashboard
+        namespace: luqen
+      spec:
+        minReplicas: 3
+        maxReplicas: 10
+
+  # ── PVCs: larger storage for prod ─────────────────────────────────────────
+  - patch: |-
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: luqen-compliance-data
+        namespace: luqen
+      spec:
+        resources:
+          requests:
+            storage: 20Gi
+
+  # ── Ingress: real TLS hostname ─────────────────────────────────────────────
+  # Replace REPLACE_WITH_YOUR_PROD_HOSTNAME with the production FQDN.
+  # Replace REPLACE_WITH_TLS_ISSUER with your cert-manager ClusterIssuer name.
+  - patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: luqen
+        namespace: luqen
+        annotations:
+          cert-manager.io/cluster-issuer: "letsencrypt-prod"
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      spec:
+        tls:
+          - hosts:
+              - REPLACE_WITH_YOUR_PROD_HOSTNAME
+            secretName: luqen-tls-prod
+        rules:
+          - host: REPLACE_WITH_YOUR_PROD_HOSTNAME
+            http:
+              paths:
+                - path: /api/docs(/|$)(.*)
+                  pathType: ImplementationSpecific
+                  backend:
+                    service:
+                      name: luqen-compliance
+                      port:
+                        name: http
+                - path: /api(/|$)(.*)
+                  pathType: ImplementationSpecific
+                  backend:
+                    service:
+                      name: luqen-compliance
+                      port:
+                        name: http
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: luqen-dashboard
+                      port:
+                        name: http
+
+  # ── ConfigMap: prod CORS origin ────────────────────────────────────────────
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: luqen-compliance-config
+        namespace: luqen
+      data:
+        COMPLIANCE_CORS_ORIGIN: "https://REPLACE_WITH_YOUR_PROD_HOSTNAME"
+        COMPLIANCE_TOKEN_EXPIRY: "30m"

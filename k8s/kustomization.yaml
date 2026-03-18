@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: luqen
+
+resources:
+  # Cluster-level resources
+  - namespace.yaml
+  - rbac.yaml
+  - ingress.yaml
+
+  # Compliance service
+  - compliance/pvc.yaml
+  - compliance/configmap.yaml
+  - compliance/secret.yaml
+  - compliance/deployment.yaml
+  - compliance/service.yaml
+  - compliance/hpa.yaml
+
+  # Dashboard service
+  - dashboard/configmap.yaml
+  - dashboard/secret.yaml
+  - dashboard/deployment.yaml
+  - dashboard/service.yaml
+  - dashboard/hpa.yaml
+
+  # Optional Redis cache (enables compliance caching, scan queue, SSE pub/sub)
+  # Remove these two lines if you do not want Redis:
+  - redis/deployment.yaml
+  - redis/service.yaml
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: luqen-ecosystem

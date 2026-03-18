@@ -1,0 +1,115 @@
+<section aria-label="Dashboard user management">
+  {{#if perm.usersCreate}}
+  <div class="page-actions">
+    <button hx-get="/admin/dashboard-users/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--primary"
+            aria-haspopup="dialog">
+      {{t "users.addUser"}}
+    </button>
+  </div>
+  {{/if}}
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Dashboard users">
+      <thead>
+        <tr>
+          <th scope="col">{{t "users.username"}}</th>
+          <th scope="col">{{t "users.role"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
+        </tr>
+      </thead>
+      <tbody id="dashboard-users-table">
+        {{#each users}}
+        <tr id="dashboard-user-{{this.id}}">
+          <td data-label="Username">{{this.username}}</td>
+          <td data-label="Role">
+            {{#if ../perm.usersRoles}}
+            {{#if this.active}}
+            <select hx-patch="/admin/dashboard-users/{{this.id}}/role"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    hx-include="this"
+                    name="role"
+                    class="input input--sm"
+                    aria-label="Change role for {{this.username}}">
+              <option value="executive" {{#if (eq this.role 'executive')}}selected{{/if}}>executive</option>
+              <option value="viewer" {{#if (eq this.role 'viewer')}}selected{{/if}}>viewer</option>
+              <option value="user" {{#if (eq this.role 'user')}}selected{{/if}}>user</option>
+              <option value="developer" {{#if (eq this.role 'developer')}}selected{{/if}}>developer</option>
+              <option value="admin" {{#if (eq this.role 'admin')}}selected{{/if}}>admin</option>
+            </select>
+            {{else}}
+            <span class="badge badge--neutral">{{this.role}}</span>
+            {{/if}}
+            {{else}}
+            <span class="badge badge--neutral">{{this.role}}</span>
+            {{/if}}
+          </td>
+          <td data-label="Status">
+            {{#if this.active}}
+            <span class="badge badge--success">{{t "common.active"}}</span>
+            {{else}}
+            <span class="badge badge--error">{{t "common.inactive"}}</span>
+            {{/if}}
+          </td>
+          <td>
+            {{#if ../perm.usersActivate}}
+            {{#if this.active}}
+            <button hx-post="/admin/dashboard-users/{{this.id}}/deactivate"
+                    hx-confirm="Deactivate user {{this.username}}?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--warning"
+                    aria-label="Deactivate {{this.username}}">
+              {{t "users.deactivate"}}
+            </button>
+            {{else}}
+            <button hx-post="/admin/dashboard-users/{{this.id}}/activate"
+                    hx-confirm="Activate user {{this.username}}?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--success"
+                    aria-label="Activate {{this.username}}">
+              {{t "users.activate"}}
+            </button>
+            {{/if}}
+            {{/if}}
+            {{#if ../perm.usersResetPassword}}
+            <button hx-get="/admin/dashboard-users/{{this.id}}/reset-password"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--ghost"
+                    aria-label="Reset password for {{this.username}}">
+              {{t "users.resetPassword"}}
+            </button>
+            {{/if}}
+            {{#if ../perm.usersDelete}}
+            <button hx-delete="/admin/dashboard-users/{{this.id}}"
+                    hx-confirm="Permanently delete user {{this.username}}? This cannot be undone."
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Delete {{this.username}}">
+              {{t "users.deleteUser"}}
+            </button>
+            {{/if}}
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="4" class="table__empty">{{t "users.noUsers"}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>

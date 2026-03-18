@@ -1,0 +1,63 @@
+<section aria-label="Monitored sources management">
+  <div class="page-actions">
+    <button hx-get="/admin/sources/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--primary"
+            aria-haspopup="dialog">
+      Add Source
+    </button>
+    <button hx-post="/admin/sources/scan"
+            hx-target="#scan-results"
+            hx-swap="outerHTML"
+            hx-indicator="#scan-spinner"
+            class="btn btn--secondary"
+            aria-label="Trigger scan of all monitored sources now">
+      Scan Now
+    </button>
+    <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">Scanning...</span>
+  </div>
+
+  <div id="scan-results" aria-live="polite"></div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table aria-label="Monitored sources">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Type</th>
+          <th scope="col">Schedule</th>
+          <th scope="col">Last Checked</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="sources-table-body">
+        {{#each sources}}
+        <tr id="source-{{id}}">
+          <td data-label="Name">{{name}}</td>
+          <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
+          <td data-label="Schedule">{{schedule}}</td>
+          <td data-label="Last Checked">{{#if lastChecked}}{{lastChecked}}{{else}}Never{{/if}}</td>
+          <td>
+            <button hx-get="/admin/sources/{{id}}/view"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="View {{name}}">View</button>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="5">No sources configured.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>

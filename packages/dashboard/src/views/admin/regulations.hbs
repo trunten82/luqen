@@ -1,0 +1,104 @@
+<section aria-label="Regulations management">
+  <div class="page-actions">
+    <button hx-get="/admin/regulations/new{{#if jurisdictionId}}?jurisdictionId={{jurisdictionId}}{{/if}}"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--primary"
+            aria-haspopup="dialog">
+      Add Regulation
+    </button>
+  </div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="filter-bar">
+    <label for="jurisdiction-filter" class="form-label">Filter by Jurisdiction</label>
+    <select id="jurisdiction-filter"
+            name="jurisdictionId"
+            hx-get="/admin/regulations"
+            hx-trigger="change"
+            hx-target="#regulations-table-body"
+            hx-include="[name='q']"
+            class="select"
+            aria-label="Filter regulations by jurisdiction">
+      <option value="">All Jurisdictions</option>
+      {{#each jurisdictions}}
+      <option value="{{id}}" {{#if (eq id ../jurisdictionId)}}selected{{/if}}>{{name}}</option>
+      {{/each}}
+    </select>
+
+    <label for="regulation-search" class="visually-hidden">Search regulations</label>
+    <input id="regulation-search"
+           type="search"
+           name="q"
+           value="{{q}}"
+           placeholder="Search by name..."
+           hx-get="/admin/regulations"
+           hx-trigger="input changed delay:300ms"
+           hx-target="#regulations-table-body"
+           hx-include="[name='jurisdictionId']"
+           hx-indicator="#search-spinner"
+           class="input"
+           aria-label="Search regulations by name"
+           role="searchbox">
+    <span id="search-spinner" class="htmx-indicator" aria-hidden="true">Searching...</span>
+  </div>
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Regulations">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Name</th>
+          <th scope="col">Short Name</th>
+          <th scope="col">Jurisdiction</th>
+          <th scope="col">Enforcement Date</th>
+          <th scope="col">Status</th>
+          <th scope="col">Scope</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="regulations-table-body">
+        {{#each regulations}}
+        <tr id="regulation-{{id}}">
+          <td data-label="ID">{{id}}</td>
+          <td data-label="Name">{{name}}</td>
+          <td data-label="Short Name">{{shortName}}</td>
+          <td data-label="Jurisdiction">{{jurisdictionId}}</td>
+          <td data-label="Enforcement Date">{{enforcementDate}}</td>
+          <td data-label="Status">{{status}}</td>
+          <td data-label="Scope">{{scope}}</td>
+          <td>
+            <button hx-get="/admin/regulations/{{id}}/view"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="View {{name}}">View</button>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="8" class="table__empty">No regulations found.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  {{#if hasNext}}
+  <div class="load-more" id="load-more-regulations">
+    <button hx-get="/admin/regulations?offset={{nextOffset}}&limit={{limit}}&q={{q}}&jurisdictionId={{jurisdictionId}}&partial=rows"
+            hx-target="#regulations-table-body"
+            hx-swap="beforeend"
+            class="btn btn--ghost btn--full"
+            aria-label="Load more regulations"
+            hx-on::after-request="this.closest('.load-more').remove()">
+      Load more ({{nextOffset}} of {{total}})
+    </button>
+  </div>
+  {{/if}}
+</section>

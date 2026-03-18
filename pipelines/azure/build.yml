@@ -1,0 +1,183 @@
+# Azure DevOps — Build and Test Pipeline
+# Triggers on push to master/develop and PRs
+# Monorepo-aware: detects changed packages, only builds/tests what changed
+
+trigger:
+  branches:
+    include:
+      - master
+      - develop
+
+pr:
+  branches:
+    include:
+      - master
+      - develop
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  NODE_VERSION: '20'
+  # Set in Azure Pipelines variable groups — do NOT hardcode secrets here
+  # Variable group: luqen-secrets (COMPLIANCE_CLIENT_ID, COMPLIANCE_CLIENT_SECRET, etc.)
+
+stages:
+
+  # ─────────────────────────────────────────────
+  # Stage 1: Detect changed packages
+  # ─────────────────────────────────────────────
+  - stage: Detect
+    displayName: Detect changed packages
+    jobs:
+      - job: DetectChanges
+        displayName: Determine which packages changed
+        steps:
+          - checkout: self
+            fetchDepth: 0  # Full history needed for git diff
+
+          - script: |
+              set -euo pipefail
+
+              # Determine base commit for diff
+              if [ "$(Build.Reason)" = "PullRequest" ]; then
+                BASE=$(git merge-base HEAD origin/$(System.PullRequest.TargetBranch))
+              else
+                BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse --root)
+              fi
+
+              echo "Base commit: $BASE"
+
+              CHANGED_FILES=$(git diff --name-only "$BASE" HEAD)
+              echo "Changed files:"
+              echo "$CHANGED_FILES"
+
+              BUILD_CORE=false
+              BUILD_COMPLIANCE=false
+              BUILD_ALL=false
+
+              # Root-level changes (package.json, tsconfig, etc.) trigger full build
+              if echo "$CHANGED_FILES" | grep -qE '^(package\.json|package-lock\.json|tsconfig.*\.json)$'; then
+                BUILD_ALL=true
+              fi
+
+              if [ "$BUILD_ALL" = "true" ] || echo "$CHANGED_FILES" | grep -q "^packages/core/"; then
+                BUILD_CORE=true
+              fi
+
+              if [ "$BUILD_ALL" = "true" ] || echo "$CHANGED_FILES" | grep -q "^packages/compliance/"; then
+                BUILD_COMPLIANCE=true
+              fi
+
+              echo "##vso[task.setvariable variable=buildCore;isOutput=true]$BUILD_CORE"
+              echo "##vso[task.setvariable variable=buildCompliance;isOutput=true]$BUILD_COMPLIANCE"
+
+              echo "Build core: $BUILD_CORE"
+              echo "Build compliance: $BUILD_COMPLIANCE"
+            name: setVars
+            displayName: Detect changed packages
+
+  # ─────────────────────────────────────────────
+  # Stage 2: Build and test @luqen/core
+  # ─────────────────────────────────────────────
+  - stage: BuildCore
+    displayName: Build and test core
+    dependsOn: Detect
+    condition: |
+      and(
+        succeeded('Detect'),
+        eq(dependencies.Detect.outputs['DetectChanges.setVars.buildCore'], 'true')
+      )
+    jobs:
+      - template: templates/test.yml
+        parameters:
+          package: core
+          nodeVersion: $(NODE_VERSION)
+
+  # ─────────────────────────────────────────────
+  # Stage 3: Build and test @luqen/compliance
+  # ─────────────────────────────────────────────
+  - stage: BuildCompliance
+    displayName: Build and test compliance
+    dependsOn: Detect
+    condition: |
+      and(
+        succeeded('Detect'),
+        eq(dependencies.Detect.outputs['DetectChanges.setVars.buildCompliance'], 'true')
+      )
+    jobs:
+      - template: templates/test.yml
+        parameters:
+          package: compliance
+          nodeVersion: $(NODE_VERSION)
+
+  # ─────────────────────────────────────────────
+  # Stage 4: Publish artifacts
+  # ─────────────────────────────────────────────
+  - stage: Publish
+    displayName: Publish artifacts
+    dependsOn:
+      - Detect
+      - BuildCore
+      - BuildCompliance
+    condition: |
+      and(
+        not(failed()),
+        or(
+          eq(dependencies.Detect.outputs['DetectChanges.setVars.buildCore'], 'true'),
+          eq(dependencies.Detect.outputs['DetectChanges.setVars.buildCompliance'], 'true')
+        )
+      )
+    jobs:
+      - job: PublishArtifacts
+        displayName: Publish build artifacts
+        steps:
+          - checkout: self
+
+          - task: NodeTool@0
+            displayName: Setup Node.js $(NODE_VERSION)
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - script: npm ci
+            displayName: Install dependencies
+
+          - script: npm run build --workspaces
+            displayName: Build all packages
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish dist artifacts
+            inputs:
+              PathtoPublish: packages
+              ArtifactName: dist
+              publishLocation: Container
+
+          - task: PublishTestResults@2
+            displayName: Publish test results (core)
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: packages/core/test-results/*.xml
+              testRunTitle: Core Unit Tests
+              failTaskOnFailedTests: true
+
+          - task: PublishTestResults@2
+            displayName: Publish test results (compliance)
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: packages/compliance/test-results/*.xml
+              testRunTitle: Compliance Unit Tests
+              failTaskOnFailedTests: true
+
+          - task: PublishCodeCoverageResults@2
+            displayName: Publish coverage report (core)
+            condition: always()
+            inputs:
+              summaryFileLocation: packages/core/coverage/cobertura-coverage.xml
+
+          - task: PublishCodeCoverageResults@2
+            displayName: Publish coverage report (compliance)
+            condition: always()
+            inputs:
+              summaryFileLocation: packages/compliance/coverage/cobertura-coverage.xml

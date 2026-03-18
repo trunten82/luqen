@@ -1,0 +1,14 @@
+{
+  "name": "storage-s3",
+  "displayName": "AWS S3 Storage",
+  "type": "storage",
+  "version": "1.0.0",
+  "description": "Store reports and scan data in AWS S3",
+  "configSchema": [
+    { "key": "bucket", "label": "S3 Bucket Name", "type": "string", "required": true },
+    { "key": "region", "label": "AWS Region", "type": "string", "default": "us-east-1" },
+    { "key": "accessKeyId", "label": "Access Key ID", "type": "secret", "required": true },
+    { "key": "secretAccessKey", "label": "Secret Access Key", "type": "secret", "required": true },
+    { "key": "prefix", "label": "Key Prefix", "type": "string", "default": "luqen-agent/" }
+  ]
+}

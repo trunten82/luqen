@@ -1,0 +1,130 @@
+<section aria-label="Monitor dashboard">
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="cards">
+    <div class="card card--neutral" aria-label="Sources count">
+      <div class="card__header">
+        <h2 class="card__title">Sources</h2>
+      </div>
+      <div class="card__body">
+        <span class="text--large">{{sourcesCount}}</span>
+      </div>
+    </div>
+
+    <div class="card card--neutral" aria-label="Last scan time">
+      <div class="card__header">
+        <h2 class="card__title">Last Scan</h2>
+      </div>
+      <div class="card__body">
+        <span>{{lastScanTime}}</span>
+      </div>
+    </div>
+
+    <div class="card {{#if pendingProposalsCount}}card--warning{{else}}card--success{{/if}}" aria-label="Pending proposals count">
+      <div class="card__header">
+        <h2 class="card__title">Pending Proposals</h2>
+      </div>
+      <div class="card__body">
+        <span class="text--large">{{pendingProposalsCount}}</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="admin-section" aria-label="Trigger scan">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+      <h2 class="section-title" style="margin:0">Scan</h2>
+      <button class="btn btn--primary btn--sm"
+              hx-post="/admin/monitor/trigger"
+              hx-target="#scan-results"
+              hx-swap="innerHTML"
+              hx-indicator="#scan-spinner"
+              aria-label="Trigger source scan">
+        Trigger Scan
+      </button>
+      <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">Scanning...</span>
+    </div>
+    <div id="scan-results" aria-live="polite"></div>
+  </section>
+
+  <section class="admin-section" aria-label="Monitored sources">
+    <h2 class="section-title">Monitored Sources</h2>
+    {{#if sources.length}}
+    <div class="table-wrapper">
+      <table class="table" aria-label="Monitored sources">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">URL</th>
+            <th scope="col">Type</th>
+            <th scope="col">Schedule</th>
+            <th scope="col">Last Checked</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each sources}}
+          <tr>
+            <td data-label="Name">{{name}}</td>
+            <td data-label="URL"><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
+            <td data-label="Type">{{type}}</td>
+            <td data-label="Schedule">{{schedule}}</td>
+            <td data-label="Last Checked">{{lastCheckedDisplay}}</td>
+            <td data-label="Status">
+              {{#if stale}}
+              <span class="badge badge--warning">Stale</span>
+              {{else}}
+              <span class="badge badge--success">OK</span>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p>No monitored sources configured.</p>
+    {{/if}}
+  </section>
+
+  <section class="admin-section" aria-label="Recent proposals">
+    <h2 class="section-title">Recent Proposals</h2>
+    {{#if proposals.length}}
+    <div class="table-wrapper">
+      <table class="table" aria-label="Recent proposals">
+        <thead>
+          <tr>
+            <th scope="col">Summary</th>
+            <th scope="col">Source</th>
+            <th scope="col">Created</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each proposals}}
+          <tr>
+            <td data-label="Summary">{{summary}}</td>
+            <td data-label="Source">{{source}}</td>
+            <td data-label="Created">{{detectedAtDisplay}}</td>
+            <td data-label="Status">
+              <span class="badge {{#if (eq status 'pending')}}badge--warning{{else if (eq status 'approved')}}badge--success{{else}}badge--neutral{{/if}}">
+                {{status}}
+              </span>
+            </td>
+            <td>
+              <a href="/admin/proposals/{{id}}" class="btn btn--sm btn--ghost">View</a>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p>No recent proposals.</p>
+    {{/if}}
+  </section>
+</section>

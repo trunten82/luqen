@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "luqen.fullname" . }}-dashboard
+  labels:
+    {{- include "luqen.componentLabels" (dict "component" "dashboard" "tier" "frontend" "root" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.dashboard.replicas }}
+  selector:
+    matchLabels:
+      {{- include "luqen.selectorLabels" (dict "component" "dashboard" "root" .) | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "luqen.componentLabels" (dict "component" "dashboard" "tier" "frontend" "root" .) | nindent 8 }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "luqen.fullname" . }}-dashboard
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "luqen.selectorLabels" (dict "component" "dashboard" "root" .) | nindent 20 }}
+                topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: wait-for-compliance
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until wget -q --spider http://{{ include "luqen.fullname" . }}-compliance:{{ .Values.compliance.port }}/api/v1/health; do
+                echo "Waiting for compliance service..."
+                sleep 3
+              done
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      containers:
+        - name: dashboard
+          image: "{{ .Values.dashboard.image.repository }}:{{ include "luqen.imageTag" (dict "tag" .Values.dashboard.image.tag "global" .Values.global) }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.dashboard.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "luqen.fullname" . }}-dashboard
+          env:
+            - name: DASHBOARD_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "luqen.fullname" . }}-secrets
+                  key: DASHBOARD_SESSION_SECRET
+            - name: DASHBOARD_COMPLIANCE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "luqen.fullname" . }}-secrets
+                  key: DASHBOARD_COMPLIANCE_CLIENT_ID
+                  optional: true
+            - name: DASHBOARD_COMPLIANCE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "luqen.fullname" . }}-secrets
+                  key: DASHBOARD_COMPLIANCE_CLIENT_SECRET
+                  optional: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.dashboard.resources | nindent 12 }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: reports
+              mountPath: {{ .Values.dashboard.reportsDir }}
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: reports
+          {{- if .Values.dashboard.persistence.reports.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "luqen.fullname" . }}-dashboard-reports
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
+      securityContext:
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 30

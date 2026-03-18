@@ -1,0 +1,58 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: luqen
+  namespace: luqen
+  labels:
+    app.kubernetes.io/name: luqen
+    app.kubernetes.io/part-of: luqen-ecosystem
+  annotations:
+    # nginx ingress controller
+    kubernetes.io/ingress.class: "nginx"
+    # Proxy timeouts — compliance scans can be long-running
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+
+    # Body size limit for scan submission payloads
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # TLS: cert-manager will provision a Let's Encrypt certificate.
+    # Replace REPLACE_WITH_TLS_ISSUER with the name of your ClusterIssuer/Issuer.
+    cert-manager.io/cluster-issuer: "REPLACE_WITH_TLS_ISSUER"
+
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Permissions-Policy: geolocation=(), microphone=(), camera=()";
+spec:
+  # Replace REPLACE_WITH_YOUR_HOSTNAME with the public DNS hostname,
+  # e.g. luqen.example.com
+  tls:
+    - hosts:
+        - REPLACE_WITH_YOUR_HOSTNAME
+      secretName: luqen-tls
+
+  rules:
+    - host: REPLACE_WITH_YOUR_HOSTNAME
+      http:
+        paths:
+          # All /api/ traffic → compliance service
+          - path: "/api"
+            pathType: Prefix
+            backend:
+              service:
+                name: luqen-compliance
+                port:
+                  name: http
+
+          # Everything else → dashboard
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: luqen-dashboard
+                port:
+                  name: http

@@ -1,0 +1,12 @@
+{
+  "name": "storage-azure",
+  "displayName": "Azure Blob Storage",
+  "type": "storage",
+  "version": "1.0.0",
+  "description": "Store reports and scan data in Azure Blob Storage",
+  "configSchema": [
+    { "key": "connectionString", "label": "Connection String", "type": "secret", "required": true },
+    { "key": "containerName", "label": "Container Name", "type": "string", "required": true },
+    { "key": "prefix", "label": "Blob Prefix", "type": "string", "default": "luqen-agent/" }
+  ]
+}

@@ -1,0 +1,125 @@
+<section aria-label="Plugin management dashboard">
+  <p class="text-sm text-muted mb-md">
+    <span class="badge badge--completed">{{counts.active}} active</span>
+    <span class="badge badge--info">{{counts.installed}} installed</span>
+    <span class="badge badge--queued">{{counts.available}} available</span>
+  </p>
+
+  <div id="plugin-messages"></div>
+
+  <section class="admin-section" aria-label="Installed plugins">
+    <h2 class="section-title">Installed Plugins</h2>
+
+    {{#if installed.length}}
+    <div class="plugin-grid">
+      {{#each installed}}
+      <div class="card" id="plugin-{{id}}" aria-label="Plugin {{packageName}}">
+        <div class="card__header">
+          <h3 class="card__title">{{packageName}}</h3>
+          <span class="badge badge--info">{{type}}</span>
+        </div>
+        <div class="card__body">
+          <dl class="stats-list">
+            <div class="stats-list__item">
+              <dt>Version</dt>
+              <dd>{{version}}</dd>
+            </div>
+            <div class="stats-list__item">
+              <dt>Status</dt>
+              <dd>
+                <span class="badge {{#if (eq status 'active')}}badge--success{{else if (eq status 'inactive')}}badge--neutral{{else if (eq status 'error')}}badge--error{{else if (eq status 'unhealthy')}}badge--warning{{else}}badge--neutral{{/if}}">
+                  {{status}}
+                </span>
+              </dd>
+            </div>
+            {{#if error}}
+            <div class="stats-list__item">
+              <dt>Error</dt>
+              <dd class="text--error">{{error}}</dd>
+            </div>
+            {{/if}}
+          </dl>
+
+          <div class="btn-group" role="group" aria-label="Plugin actions">
+            {{#if (eq status 'active')}}
+            <button class="btn btn--sm btn--ghost"
+                    hx-post="/admin/plugins/{{id}}/deactivate"
+                    hx-target="#plugin-messages"
+                    hx-swap="innerHTML">
+              Deactivate
+            </button>
+            {{else}}
+            <button class="btn btn--sm btn--primary"
+                    hx-post="/admin/plugins/{{id}}/activate"
+                    hx-target="#plugin-messages"
+                    hx-swap="innerHTML">
+              Activate
+            </button>
+            {{/if}}
+
+            <button class="btn btn--sm btn--ghost"
+                    hx-get="/admin/plugins/{{id}}/configure"
+                    hx-target="#plugin-config-area"
+                    hx-swap="innerHTML">
+              Configure
+            </button>
+
+            <button class="btn btn--sm btn--danger"
+                    hx-delete="/admin/plugins/{{id}}"
+                    hx-target="#plugin-messages"
+                    hx-swap="innerHTML"
+                    hx-confirm="Remove this plugin?">
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+    {{else}}
+    <p>No plugins installed. Browse available plugins below.</p>
+    {{/if}}
+  </section>
+
+  <div id="plugin-config-area"></div>
+
+  <section class="admin-section" aria-label="Available plugins from registry">
+    <h2 class="section-title">Available Plugins</h2>
+
+    {{#if available.length}}
+    <div class="plugin-grid">
+      {{#each available}}
+      <div class="card" aria-label="Available plugin {{displayName}}">
+        <div class="card__header">
+          <h3 class="card__title">{{displayName}}</h3>
+          <span class="badge badge--info">{{type}}</span>
+        </div>
+        <div class="card__body">
+          <p>{{description}}</p>
+          <dl class="stats-list">
+            <div class="stats-list__item">
+              <dt>Package</dt>
+              <dd><code>{{packageName}}</code></dd>
+            </div>
+            <div class="stats-list__item">
+              <dt>Version</dt>
+              <dd>{{version}}</dd>
+            </div>
+          </dl>
+
+          <button class="btn btn--sm btn--primary"
+                  hx-post="/admin/plugins/install"
+                  hx-vals='{"packageName": "{{packageName}}"}'
+                  hx-target="#plugin-messages"
+                  hx-swap="innerHTML">
+            Install
+          </button>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+    {{else}}
+    <p>All available plugins are already installed.</p>
+    {{/if}}
+  </section>
+</section>

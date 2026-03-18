@@ -1,0 +1,54 @@
+<section aria-label="API key management">
+  <div class="page-actions">
+    <button class="btn btn--primary"
+            hx-get="/admin/api-keys/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            aria-haspopup="dialog">
+      Create API Key
+    </button>
+  </div>
+
+  <div id="new-key-alert"></div>
+
+  {{#if keys.length}}
+  <div class="table-wrapper">
+    <table aria-label="API keys">
+      <thead>
+        <tr>
+          <th scope="col">Label</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created</th>
+          <th scope="col">Last Used</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="api-keys-table">
+        {{#each keys}}
+        <tr id="api-key-{{this.id}}">
+          <td data-label="Label">{{this.label}}</td>
+          <td data-label="Status">
+            {{#if this.active}}
+            <span class="badge badge--completed">Active</span>
+            {{else}}
+            <span class="badge badge--failed">Revoked</span>
+            {{/if}}
+          </td>
+          <td data-label="Created">{{this.created_at}}</td>
+          <td data-label="Last Used">{{#if this.last_used_at}}{{this.last_used_at}}{{else}}Never{{/if}}</td>
+          <td>
+            <button hx-get="/admin/api-keys/{{this.id}}/view"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="View {{this.label}}">View</button>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="text-muted">No API keys found. Create one to allow programmatic access.</p>
+  {{/if}}
+</section>

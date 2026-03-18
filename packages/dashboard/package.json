@@ -1,0 +1,83 @@
+{
+  "name": "@luqen/dashboard",
+  "version": "1.1.0",
+  "description": "Web dashboard for luqen accessibility scanner",
+  "type": "module",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "bin": {
+    "luqen-dashboard": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && rm -rf dist/views dist/static dist/i18n/locales && cp -r src/views dist/views && cp -r src/static dist/static && cp -r src/i18n/locales dist/i18n/locales && cp plugin-registry.json dist/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "start": "node dist/cli.js serve"
+  },
+  "license": "MIT",
+  "author": "trunten82",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trunten82/luqen.git",
+    "directory": "packages/dashboard"
+  },
+  "bugs": {
+    "url": "https://github.com/trunten82/luqen/issues"
+  },
+  "homepage": "https://github.com/trunten82/luqen#readme",
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "pa11y",
+    "compliance",
+    "testing",
+    "dashboard",
+    "htmx",
+    "report-viewer"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@fastify/csrf-protection": "^7.1.0",
+    "@fastify/formbody": "^8.0.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/secure-session": "^8.0.0",
+    "@fastify/static": "^8.0.0",
+    "@fastify/view": "^10.0.0",
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^11.0.0",
+    "commander": "^14.0.3",
+    "fastify": "^5.0.0",
+    "handlebars": "^4.7.8",
+    "ioredis": "^5.10.1",
+    "jose": "^6.0.0",
+    "graphql": "^16.9.0",
+    "mercurius": "^15.0.0",
+    "nodemailer": "^8.0.3"
+  },
+  "optionalDependencies": {
+    "puppeteer": "^23.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/ioredis": "^4.28.10",
+    "@types/node": "^25.5.0",
+    "@types/nodemailer": "^7.0.11",
+    "@vitest/coverage-v8": "^4.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

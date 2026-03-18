@@ -1,0 +1,140 @@
+<div class="page-header">
+  <h1 class="page-header__title">{{t "profile.title"}}</h1>
+</div>
+
+<div class="profile-grid">
+  {{!-- Account info card --}}
+  <div class="card">
+    <h2 class="card__title">{{t "profile.accountDetails"}}</h2>
+    <dl class="profile-details">
+      <dt>{{t "users.username"}}</dt>
+      <dd>{{user.username}}</dd>
+      <dt>{{t "users.role"}}</dt>
+      <dd><span class="badge badge--neutral">{{user.role}}</span></dd>
+      <dt>{{t "profile.authentication"}}</dt>
+      <dd>
+        {{#if (eq authMethod "password")}}{{t "profile.authPassword"}}{{/if}}
+        {{#if (eq authMethod "api-key")}}{{t "profile.authApiKey"}}{{/if}}
+        {{#if (eq authMethod "sso")}}{{t "profile.authSso"}}{{/if}}
+        {{#if (eq authMethod "oauth")}}{{t "profile.authOauth"}}{{/if}}
+      </dd>
+    </dl>
+  </div>
+
+  {{!-- Language preference card --}}
+  <div class="card">
+    <h2 class="card__title">{{t "profile.languagePreference"}}</h2>
+    <p class="form-hint mb-sm">{{t "profile.languageHint"}}</p>
+
+    {{#if localeSaved}}
+    <div class="alert alert--success" role="status" aria-live="polite">
+      <div class="alert__body">{{t "profile.languageSaved"}}</div>
+    </div>
+    {{/if}}
+
+    <form method="POST" action="/account/locale">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <input type="hidden" name="_from" value="profile">
+      <div class="form-group">
+        <label for="locale">{{t "profile.languagePreference"}}</label>
+        <select id="locale" name="locale" class="select" aria-describedby="locale-hint">
+          {{#each locales}}
+          <option value="{{this}}" {{#if (eq this ../locale)}}selected{{/if}}>{{lookup ../localeLabels this}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="form-group" style="margin-top: var(--space-md)">
+        <button type="submit" class="btn btn--primary">{{t "common.save"}}</button>
+      </div>
+    </form>
+  </div>
+
+  {{!-- Change password card --}}
+  <div class="card">
+    <h2 class="card__title">{{t "profile.changePassword"}}</h2>
+
+    {{#unless canChangePassword}}
+    <div class="alert alert--info" role="status">
+      <div class="alert__body">
+        {{t "profile.notPasswordUser"}}
+        {{#if (eq authMethod "api-key")}}{{t "profile.authApiKeyNote"}}{{/if}}
+        {{#if (eq authMethod "sso")}}{{t "profile.authSsoNote"}}{{/if}}
+        {{#if (eq authMethod "oauth")}}{{t "profile.authOauthNote"}}{{/if}}
+      </div>
+    </div>
+    {{/unless}}
+
+    {{#if canChangePassword}}
+    {{#if pwError}}
+    <div class="alert alert--error" role="alert" aria-live="assertive">
+      <div class="alert__body">{{pwError}}</div>
+    </div>
+    {{/if}}
+
+    {{#if pwSuccess}}
+    <div class="alert alert--success" role="status" aria-live="polite">
+      <div class="alert__body">{{pwSuccess}}</div>
+    </div>
+    {{/if}}
+
+    <form method="POST" action="/account/change-password" novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label for="currentPassword">
+          {{t "profile.currentPassword"}}
+          <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input
+          type="password"
+          id="currentPassword"
+          name="currentPassword"
+          class="input"
+          autocomplete="current-password"
+          required
+          aria-required="true"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="newPassword">
+          {{t "profile.newPassword"}}
+          <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input
+          type="password"
+          id="newPassword"
+          name="newPassword"
+          class="input"
+          autocomplete="new-password"
+          required
+          aria-required="true"
+          minlength="8"
+        >
+        <span class="form-hint">{{t "profile.passwordHint"}}</span>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">
+          {{t "profile.confirmPassword"}}
+          <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input
+          type="password"
+          id="confirmPassword"
+          name="confirmPassword"
+          class="input"
+          autocomplete="new-password"
+          required
+          aria-required="true"
+          minlength="8"
+        >
+      </div>
+
+      <div class="form-group" style="margin-top: var(--space-lg)">
+        <button type="submit" class="btn btn--primary">{{t "profile.changePasswordButton"}}</button>
+      </div>
+    </form>
+    {{/if}}
+  </div>
+</div>

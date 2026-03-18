@@ -1,0 +1,102 @@
+# Azure DevOps — Reusable test template
+# Parameters:
+#   package     — "core" or "compliance"
+#   nodeVersion — Node.js version (default: "20")
+
+parameters:
+  - name: package
+    type: string
+    values:
+      - core
+      - compliance
+  - name: nodeVersion
+    type: string
+    default: '20'
+
+jobs:
+  - job: Test_${{ parameters.package }}
+    displayName: Test @luqen/${{ parameters.package }}
+
+    steps:
+      - checkout: self
+
+      - task: NodeTool@0
+        displayName: Setup Node.js ${{ parameters.nodeVersion }}
+        inputs:
+          versionSpec: ${{ parameters.nodeVersion }}
+
+      # Cache node_modules keyed on lockfile hash
+      - task: Cache@2
+        displayName: Cache node_modules
+        inputs:
+          key: '"node_modules" | "$(Agent.OS)" | package-lock.json'
+          restoreKeys: |
+            "node_modules" | "$(Agent.OS)"
+          path: node_modules
+
+      - task: Cache@2
+        displayName: Cache package node_modules (${{ parameters.package }})
+        inputs:
+          key: '"node_modules_${{ parameters.package }}" | "$(Agent.OS)" | packages/${{ parameters.package }}/package.json'
+          restoreKeys: |
+            "node_modules_${{ parameters.package }}" | "$(Agent.OS)"
+          path: packages/${{ parameters.package }}/node_modules
+
+      - script: npm ci
+        displayName: Install dependencies
+        workingDirectory: $(Build.SourcesDirectory)
+
+      - script: npm run lint
+        displayName: Lint (type-check)
+        workingDirectory: packages/${{ parameters.package }}
+
+      - script: npm run build
+        displayName: Build
+        workingDirectory: packages/${{ parameters.package }}
+
+      - script: |
+          npm run test -- --reporter=junit --outputFile=test-results/results.xml
+        displayName: Run tests
+        workingDirectory: packages/${{ parameters.package }}
+
+      - script: |
+          npm run test:coverage
+        displayName: Run tests with coverage
+        workingDirectory: packages/${{ parameters.package }}
+
+      # Enforce 80% coverage threshold — fail the pipeline if below
+      - script: |
+          node -e "
+            const fs = require('fs');
+            const path = 'packages/${{ parameters.package }}/coverage/coverage-summary.json';
+            if (!fs.existsSync(path)) { console.error('Coverage summary not found'); process.exit(1); }
+            const summary = JSON.parse(fs.readFileSync(path, 'utf-8'));
+            const total = summary.total;
+            const threshold = 80;
+            let failed = false;
+            for (const metric of ['lines', 'statements', 'functions', 'branches']) {
+              const pct = total[metric].pct;
+              const status = pct >= threshold ? 'PASS' : 'FAIL';
+              console.log(metric + ': ' + pct + '% (' + status + ')');
+              if (pct < threshold) failed = true;
+            }
+            if (failed) { console.error('Coverage below ' + threshold + '% threshold'); process.exit(1); }
+            console.log('Coverage thresholds met.');
+          "
+        displayName: Enforce 80% coverage threshold
+        workingDirectory: $(Build.SourcesDirectory)
+
+      - task: PublishTestResults@2
+        displayName: Publish test results
+        condition: always()
+        inputs:
+          testResultsFormat: JUnit
+          testResultsFiles: packages/${{ parameters.package }}/test-results/results.xml
+          testRunTitle: ${{ parameters.package }} tests
+          failTaskOnFailedTests: true
+
+      - task: PublishCodeCoverageResults@2
+        displayName: Publish coverage
+        condition: always()
+        inputs:
+          summaryFileLocation: packages/${{ parameters.package }}/coverage/cobertura-coverage.xml

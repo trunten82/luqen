@@ -1,0 +1,35 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h2 id="modal-title">Add Organization</h2>
+
+    <form hx-post="/admin/organizations"
+          hx-target="#organizations-table"
+          hx-swap="beforeend"
+          hx-on::after-request="if(event.detail.successful) document.getElementById('modal-container').replaceChildren()"
+          novalidate>
+
+      <div class="form-group">
+        <label for="org-name" class="form-label">Name <span aria-hidden="true">*</span></label>
+        <input id="org-name" name="name" type="text" class="input"
+               required aria-required="true"
+               placeholder="e.g. Acme Corporation">
+      </div>
+
+      <div class="form-group">
+        <label for="org-slug" class="form-label">Slug <span aria-hidden="true">*</span></label>
+        <input id="org-slug" name="slug" type="text" class="input"
+               required aria-required="true"
+               pattern="[a-z0-9\-]+"
+               placeholder="e.g. acme-corp"
+               aria-describedby="org-slug-hint">
+        <span id="org-slug-hint" class="form-hint">Lowercase letters, numbers, and hyphens only</span>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Create Organization</button>
+        <button type="button" class="btn btn--ghost close-modal-btn"
+                aria-label="Cancel and close dialog">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>

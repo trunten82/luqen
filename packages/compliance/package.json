@@ -1,0 +1,77 @@
+{
+  "name": "@luqen/compliance",
+  "version": "1.1.0",
+  "description": "Accessibility compliance rule engine service",
+  "type": "module",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "bin": {
+    "luqen-compliance": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && cp src/seed/baseline.json dist/seed/baseline.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "start": "node dist/cli.js serve"
+  },
+  "license": "MIT",
+  "author": "trunten82",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trunten82/luqen.git",
+    "directory": "packages/compliance"
+  },
+  "bugs": {
+    "url": "https://github.com/trunten82/luqen/issues"
+  },
+  "homepage": "https://github.com/trunten82/luqen#readme",
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "pa11y",
+    "compliance",
+    "testing",
+    "legal",
+    "regulations",
+    "jurisdictions",
+    "oauth2",
+    "fastify"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "@fastify/swagger": "^9.0.0",
+    "@fastify/swagger-ui": "^5.0.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^11.0.0",
+    "commander": "^14.0.3",
+    "fastify": "^5.0.0",
+    "ioredis": "^5.10.1",
+    "jose": "^6.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/ioredis": "^4.28.10",
+    "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

@@ -1,0 +1,426 @@
+{{! Issue Assignments — lifecycle tracking for WCAG issues }}
+
+<script>window.__luqenAssignees = {{{json assignees}}};</script>
+
+<section aria-labelledby="asgn-heading" class="report-meta" style="margin-bottom:1.5rem;">
+  <div class="detail-list detail-list--horizontal">
+    <div class="detail-list__item">
+      <dt>Site URL</dt>
+      <dd><a href="{{scan.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scan.siteUrl}}</a></dd>
+    </div>
+    <div class="detail-list__item">
+      <dt>Standard</dt>
+      <dd>{{formatStandard scan.standard}}</dd>
+    </div>
+    <div class="detail-list__item">
+      <dt>Status</dt>
+      <dd><span class="badge badge--{{scan.status}}">{{scan.status}}</span></dd>
+    </div>
+  </div>
+
+  <div class="report-actions" role="group" aria-label="Navigation" style="margin-top:1rem;">
+    <a href="/reports/{{scan.id}}" class="btn btn--ghost btn--sm">&larr; Back to Report</a>
+    <a href="/reports" class="btn btn--ghost btn--sm">All Reports</a>
+  </div>
+</section>
+
+{{! Pipeline summary bar }}
+<div class="asgn-pipeline" role="region" aria-label="Assignment pipeline">
+  <div class="asgn-pipeline__stage asgn-pipeline__stage--open" id="asgn-stat-open">
+    <div class="asgn-pipeline__count">{{stats.open}}</div>
+    <div class="asgn-pipeline__label">Open</div>
+  </div>
+  <div class="asgn-pipeline__stage asgn-pipeline__stage--assigned" id="asgn-stat-assigned">
+    <div class="asgn-pipeline__count">{{stats.assigned}}</div>
+    <div class="asgn-pipeline__label">Assigned</div>
+  </div>
+  <div class="asgn-pipeline__stage asgn-pipeline__stage--in-progress" id="asgn-stat-in-progress">
+    <div class="asgn-pipeline__count">{{stats.inProgress}}</div>
+    <div class="asgn-pipeline__label">In Progress</div>
+  </div>
+  <div class="asgn-pipeline__stage asgn-pipeline__stage--fixed" id="asgn-stat-fixed">
+    <div class="asgn-pipeline__count">{{stats.fixed}}</div>
+    <div class="asgn-pipeline__label">Fixed</div>
+  </div>
+  <div class="asgn-pipeline__stage asgn-pipeline__stage--verified" id="asgn-stat-verified">
+    <div class="asgn-pipeline__count">{{stats.verified}}</div>
+    <div class="asgn-pipeline__label">Verified</div>
+  </div>
+</div>
+
+{{! Filter buttons }}
+<div class="asgn-filters" role="group" aria-label="Filter assignments by status">
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'all')}} asgn-filter--active{{/if}}" onclick="asgnFilter('all',this)">All ({{stats.total}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'open')}} asgn-filter--active{{/if}}" onclick="asgnFilter('open',this)">Open ({{stats.open}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'assigned')}} asgn-filter--active{{/if}}" onclick="asgnFilter('assigned',this)">Assigned ({{stats.assigned}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'in-progress')}} asgn-filter--active{{/if}}" onclick="asgnFilter('in-progress',this)">In Progress ({{stats.inProgress}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'fixed')}} asgn-filter--active{{/if}}" onclick="asgnFilter('fixed',this)">Fixed ({{stats.fixed}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'verified')}} asgn-filter--active{{/if}}" onclick="asgnFilter('verified',this)">Verified ({{stats.verified}})</button>
+</div>
+
+{{! Bulk actions bar }}
+<div class="asgn-bulk-bar" id="asgn-bulk-bar" style="display:none;">
+  <label><input type="checkbox" id="asgn-bulk-select-all" onchange="asgnBulkToggleAll(this.checked)"> Select all visible</label>
+  <span id="asgn-bulk-count">0 selected</span>
+  <select id="asgn-bulk-assignee" class="asgn-select"></select>
+  <button type="button" class="btn btn--primary btn--sm" onclick="asgnBulkReassign()">Reassign</button>
+  <button type="button" class="btn btn--ghost btn--sm" style="color:var(--status-error)" onclick="asgnBulkRemove()">Remove</button>
+  <button type="button" class="btn btn--ghost btn--sm" onclick="asgnToggleBulkMode()">Cancel</button>
+</div>
+<button type="button" class="btn btn--ghost btn--sm" id="asgn-bulk-mode-btn" onclick="asgnToggleBulkMode()" style="margin-bottom:0.75rem;">Bulk Actions</button>
+
+{{! Assignment cards }}
+<div class="asgn-list" id="asgn-list">
+  {{#each assignments}}
+  <div class="asgn-card" id="asgn-card-{{id}}" data-status="{{status}}">
+    <div class="asgn-card__header">
+      <input type="checkbox" class="asgn-bulk-cb" data-id="{{id}}" onclick="asgnBulkUpdate()" style="display:none;">
+      <span class="asgn-sev asgn-sev--{{severity}}">{{severity}}</span>
+      {{#if wcagCriterion}}
+      <span class="asgn-card__criterion">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
+      {{/if}}
+      <span class="asgn-card__message">{{message}}</span>
+    </div>
+    {{#if selector}}
+    <div class="asgn-card__selector"><code>{{selector}}</code></div>
+    {{/if}}
+    {{#if pageUrl}}
+    <div class="asgn-card__url">{{pageUrl}}</div>
+    {{/if}}
+    <div class="asgn-card__controls">
+      <label class="asgn-label">Status
+        <select class="asgn-select" data-field="status">
+          <option value="open"{{#if (eq status 'open')}} selected{{/if}}>open</option>
+          <option value="assigned"{{#if (eq status 'assigned')}} selected{{/if}}>assigned</option>
+          <option value="in-progress"{{#if (eq status 'in-progress')}} selected{{/if}}>in-progress</option>
+          <option value="fixed"{{#if (eq status 'fixed')}} selected{{/if}}>fixed</option>
+          <option value="verified"{{#if (eq status 'verified')}} selected{{/if}}>verified</option>
+        </select>
+      </label>
+      <label class="asgn-label">Assigned To
+        <select class="asgn-select" data-field="assignedTo" data-current-value="{{assignedTo}}">
+          <option value="">Unassigned</option>
+        </select>
+      </label>
+      <label class="asgn-label asgn-label--wide">Notes
+        <textarea class="asgn-textarea" data-field="notes" rows="2" placeholder="Notes...">{{notes}}</textarea>
+      </label>
+      <button type="button" class="btn btn--sm btn--primary asgn-save-btn" onclick="asgnSave('{{id}}', this)">Save</button>
+      <button type="button" class="btn btn--sm btn--ghost asgn-delete-btn" onclick="asgnDelete('{{id}}', this)" title="Remove assignment">Remove</button>
+    </div>
+    <div class="asgn-card__meta">
+      Created by {{createdBy}} &middot; Updated {{updatedAt}}
+    </div>
+  </div>
+  {{/each}}
+
+  {{#unless assignments.length}}
+  <div class="alert alert--info" role="status">No assignments yet. Use the "Assign" buttons on the report issues tab to create assignments.</div>
+  {{/unless}}
+</div>
+
+<script>
+  /* Filter assignments client-side by status */
+  function asgnFilter(status, btn) {
+    var cards = document.querySelectorAll('.asgn-card');
+    cards.forEach(function(card) {
+      if (status === 'all' || card.getAttribute('data-status') === status) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    var btns = document.querySelectorAll('.asgn-filter');
+    btns.forEach(function(b) { b.classList.remove('asgn-filter--active'); });
+    if (btn) btn.classList.add('asgn-filter--active');
+  }
+
+  /* Save assignment via PATCH using fetch (same pattern as manual-tests) */
+  function asgnSave(assignmentId, btn) {
+    var card = document.getElementById('asgn-card-' + assignmentId);
+    if (!card) return;
+
+    var statusEl = card.querySelector('[data-field="status"]');
+    var assignedEl = card.querySelector('[data-field="assignedTo"]');
+    var notesEl = card.querySelector('[data-field="notes"]');
+
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+    var formData = new URLSearchParams();
+    if (statusEl) formData.append('status', statusEl.value);
+    if (assignedEl) formData.append('assignedTo', assignedEl.value);
+    if (notesEl) formData.append('notes', notesEl.value);
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    fetch('/assignments/' + assignmentId, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'x-csrf-token': csrfToken,
+        'HX-Request': 'true'
+      },
+      body: formData.toString()
+    })
+    .then(function(response) {
+      if (!response.ok) throw new Error('Save failed');
+      return response.text();
+    })
+    .then(function(html) {
+      /* Parse server response — contains updated card + hidden stats element */
+      var temp = document.createElement('div');
+      temp.textContent = '';
+      /* Use DOMParser for safer HTML parsing from trusted server response */
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(html, 'text/html');
+
+      var newCard = doc.querySelector('.asgn-card');
+      if (newCard && card) {
+        card.replaceWith(newCard);
+        asgnPopulateSelects(newCard);
+      }
+
+      var statsEl = doc.querySelector('[data-asgn-stats]');
+      if (statsEl) {
+        asgnUpdateStats(statsEl);
+      }
+
+      asgnShowToast('Assignment updated', 'success');
+    })
+    .catch(function(err) {
+      asgnShowToast('Failed to save: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Save';
+    });
+  }
+
+  function asgnDelete(assignmentId, btn) {
+    if (!confirm('Remove this assignment?')) return;
+    var card = document.getElementById('asgn-card-' + assignmentId);
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+    btn.disabled = true;
+    btn.textContent = 'Removing...';
+
+    fetch('/assignments/' + assignmentId, {
+      method: 'DELETE',
+      headers: { 'x-csrf-token': csrfToken }
+    })
+    .then(function(response) {
+      if (!response.ok) throw new Error('Delete failed');
+      return response.text();
+    })
+    .then(function(html) {
+      if (card) card.remove();
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(html, 'text/html');
+      var statsEl = doc.querySelector('[data-asgn-stats]');
+      if (statsEl) asgnUpdateStats(statsEl);
+      asgnShowToast('Assignment removed', 'success');
+    })
+    .catch(function(err) {
+      asgnShowToast('Failed to remove: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Remove';
+    });
+  }
+
+  /* Update pipeline stats from data attributes */
+  function asgnUpdateStats(el) {
+    var fields = ['open', 'assigned', 'in-progress', 'fixed', 'verified'];
+    fields.forEach(function(f) {
+      var val = el.getAttribute('data-' + f) || '0';
+      var statEl = document.getElementById('asgn-stat-' + f);
+      if (statEl) {
+        var countEl = statEl.querySelector('.asgn-pipeline__count');
+        if (countEl) countEl.textContent = val;
+      }
+    });
+  }
+
+  /* Populate assignee dropdowns from window.__luqenAssignees */
+  function asgnPopulateSelects(root) {
+    var container = root || document;
+    var selects = container.querySelectorAll('select[data-field="assignedTo"]');
+    var assignees = window.__luqenAssignees || [];
+    selects.forEach(function(sel) {
+      var currentVal = sel.getAttribute('data-current-value') || '';
+      // Only add options if not already populated (beyond the default option)
+      if (sel.options.length <= 1) {
+        assignees.forEach(function(a) {
+          var opt = document.createElement('option');
+          opt.value = a.id;
+          opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
+          if (a.id === currentVal) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        // If current value doesn't match any assignee but exists, add it as an option
+        if (currentVal && !sel.value) {
+          var opt = document.createElement('option');
+          opt.value = currentVal;
+          opt.textContent = currentVal;
+          opt.selected = true;
+          sel.appendChild(opt);
+        }
+      }
+    });
+  }
+  asgnPopulateSelects();
+
+  /* Bulk actions */
+  var _asgnBulkMode = false;
+  function asgnToggleBulkMode() {
+    _asgnBulkMode = !_asgnBulkMode;
+    var bar = document.getElementById('asgn-bulk-bar');
+    var btn = document.getElementById('asgn-bulk-mode-btn');
+    var cbs = document.querySelectorAll('.asgn-bulk-cb');
+    if (bar) bar.style.display = _asgnBulkMode ? 'flex' : 'none';
+    if (btn) { btn.textContent = _asgnBulkMode ? 'Cancel Bulk' : 'Bulk Actions'; btn.classList.toggle('btn--primary', _asgnBulkMode); btn.classList.toggle('btn--ghost', !_asgnBulkMode); }
+    cbs.forEach(function(cb) { cb.style.display = _asgnBulkMode ? 'inline-block' : 'none'; cb.checked = false; });
+    if (_asgnBulkMode) {
+      var sel = document.getElementById('asgn-bulk-assignee');
+      if (sel && sel.options.length <= 1) {
+        (window.__luqenAssignees || []).forEach(function(a) {
+          var opt = document.createElement('option'); opt.value = a.id;
+          opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
+          sel.appendChild(opt);
+        });
+      }
+    }
+    asgnBulkUpdate();
+  }
+
+  function asgnBulkToggleAll(checked) {
+    document.querySelectorAll('.asgn-bulk-cb').forEach(function(cb) {
+      var card = cb.closest('.asgn-card');
+      if (card && card.style.display !== 'none') cb.checked = checked;
+    });
+    asgnBulkUpdate();
+  }
+
+  function asgnBulkUpdate() {
+    var count = document.querySelectorAll('.asgn-bulk-cb:checked').length;
+    var el = document.getElementById('asgn-bulk-count');
+    if (el) el.textContent = count + ' selected';
+  }
+
+  function asgnBulkReassign() {
+    var assignee = (document.getElementById('asgn-bulk-assignee') || {}).value || '';
+    if (!assignee) { asgnShowToast('Please select an assignee', 'error'); return; }
+    var checked = document.querySelectorAll('.asgn-bulk-cb:checked');
+    if (checked.length === 0) return;
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    var pending = checked.length, done = 0;
+    checked.forEach(function(cb) {
+      var id = cb.getAttribute('data-id');
+      var fd = new URLSearchParams();
+      fd.append('assignedTo', assignee);
+      fd.append('status', 'assigned');
+      fetch('/assignments/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrfToken, 'HX-Request': 'true' }, body: fd.toString() })
+      .then(function() { done++; if (done >= pending) window.location.reload(); });
+    });
+  }
+
+  function asgnBulkRemove() {
+    var checked = document.querySelectorAll('.asgn-bulk-cb:checked');
+    if (checked.length === 0) return;
+    if (!confirm('Remove ' + checked.length + ' assignment(s)?')) return;
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    var pending = checked.length, done = 0;
+    checked.forEach(function(cb) {
+      var id = cb.getAttribute('data-id');
+      fetch('/assignments/' + id, { method: 'DELETE', headers: { 'x-csrf-token': csrfToken } })
+      .then(function() { done++; if (done >= pending) window.location.reload(); });
+    });
+  }
+
+  /* Toast notifications */
+  function asgnShowToast(msg, type) {
+    var container = document.getElementById('toast-container');
+    if (!container) return;
+    var toast = document.createElement('div');
+    toast.className = 'toast toast--' + (type || 'info');
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 3000);
+  }
+</script>
+
+<style>
+  /* Pipeline summary bar */
+  .asgn-pipeline {
+    display: flex; gap: 0; margin-bottom: 1.5rem; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border-color, #ddd);
+  }
+  .asgn-pipeline__stage {
+    flex: 1; text-align: center; padding: 0.75rem 0.5rem;
+    border-right: 1px solid var(--border-color, #ddd);
+  }
+  .asgn-pipeline__stage:last-child { border-right: none; }
+  .asgn-pipeline__count { font-size: 1.5rem; font-weight: 700; }
+  .asgn-pipeline__label { font-size: 0.8rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em; }
+  .asgn-pipeline__stage--open { background: var(--asgn-open-bg, #fee2e2); color: var(--asgn-open-fg, #991b1b); }
+  .asgn-pipeline__stage--assigned { background: var(--asgn-assigned-bg, #fef3c7); color: var(--asgn-assigned-fg, #92400e); }
+  .asgn-pipeline__stage--in-progress { background: var(--asgn-wip-bg, #dbeafe); color: var(--asgn-wip-fg, #1e40af); }
+  .asgn-pipeline__stage--fixed { background: var(--asgn-fixed-bg, #d1fae5); color: var(--asgn-fixed-fg, #065f46); }
+  .asgn-pipeline__stage--verified { background: var(--asgn-verified-bg, #e0e7ff); color: var(--asgn-verified-fg, #3730a3); }
+
+  /* Filters */
+  .asgn-filters { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .asgn-filter {
+    padding: 0.4rem 0.8rem; border: 1px solid var(--border-color, #ccc); border-radius: 4px;
+    background: transparent; cursor: pointer; font-size: 0.85rem;
+  }
+  .asgn-filter--active { background: var(--primary-color, #2563eb); color: #fff; border-color: var(--primary-color, #2563eb); }
+
+  /* Assignment cards */
+  .asgn-list { display: flex; flex-direction: column; gap: 1rem; }
+  .asgn-card {
+    border: 1px solid var(--border-color, #ddd); border-radius: 8px; padding: 1rem;
+    background: var(--card-bg, #fff);
+  }
+  .asgn-card__header { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .asgn-card__criterion { font-weight: 600; font-size: 0.85rem; }
+  .asgn-card__message { font-size: 0.9rem; color: var(--text-muted, #666); }
+  .asgn-card__selector { font-size: 0.8rem; margin-bottom: 0.25rem; }
+  .asgn-card__selector code { background: var(--code-bg, #f3f4f6); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8rem; }
+  .asgn-card__url { font-size: 0.8rem; color: var(--text-muted, #888); margin-bottom: 0.5rem; }
+  .asgn-card__controls { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-top: 0.5rem; }
+  .asgn-card__meta { font-size: 0.75rem; color: var(--text-muted, #999); margin-top: 0.5rem; }
+
+  .asgn-label { display: flex; flex-direction: column; font-size: 0.8rem; font-weight: 500; gap: 0.2rem; }
+  .asgn-label--wide { flex: 1; min-width: 200px; }
+  .asgn-select, .asgn-input, .asgn-textarea {
+    padding: 0.35rem 0.5rem; border: 1px solid var(--border-color, #ccc); border-radius: 4px;
+    font-size: 0.85rem; background: var(--input-bg, #fff); color: var(--text-color, #333);
+  }
+  .asgn-textarea { resize: vertical; min-height: 2.5rem; }
+  .asgn-save-btn { align-self: flex-end; }
+  .asgn-bulk-bar { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.85rem; background: var(--accent-light, #e8f0fb); border: 1px solid var(--accent, #0056b3); border-radius: 6px; margin-bottom: 0.75rem; flex-wrap: wrap; font-size: 0.84rem; }
+  .asgn-bulk-cb { cursor: pointer; }
+
+  /* Severity badges */
+  .asgn-sev { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+  .asgn-sev--error { background: #fee2e2; color: #991b1b; }
+  .asgn-sev--warning { background: #fef3c7; color: #92400e; }
+  .asgn-sev--notice { background: #dbeafe; color: #1e40af; }
+
+  /* Assign button on report issues (shared with report-detail) */
+  .rpt-assign-btn {
+    padding: 0.2rem 0.5rem; font-size: 0.7rem; border: 1px solid var(--border-color, #ccc);
+    border-radius: 3px; background: transparent; cursor: pointer; white-space: nowrap;
+  }
+  .rpt-assign-btn:hover { background: var(--primary-color, #2563eb); color: #fff; border-color: var(--primary-color, #2563eb); }
+  .rpt-assign-btn--done { background: #d1fae5; color: #065f46; border-color: #a7f3d0; cursor: default; }
+
+  @media (max-width: 640px) {
+    .asgn-pipeline { flex-wrap: wrap; }
+    .asgn-pipeline__stage { flex: 1 1 33%; }
+    .asgn-card__controls { flex-direction: column; align-items: stretch; }
+  }
+</style>

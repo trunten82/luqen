@@ -1,0 +1,78 @@
+<section aria-label="Organization members management">
+  <div class="admin-header">
+    <h1 class="page-title">Members &mdash; {{org.name}}</h1>
+    <a href="/admin/organizations" class="btn btn--ghost" aria-label="Back to organizations list">
+      &larr; Back to Organizations
+    </a>
+  </div>
+
+  {{#if members.length}}
+  <table class="table" aria-label="Organization members list">
+    <thead>
+      <tr>
+        <th scope="col">Username</th>
+        <th scope="col">Role</th>
+        <th scope="col">Joined</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="org-members-table">
+      {{#each members}}
+      <tr id="member-{{this.userId}}">
+        <td data-label="Username">{{this.username}}</td>
+        <td data-label="Role"><span class="badge badge--neutral">{{this.role}}</span></td>
+        <td data-label="Joined">{{this.joinedAt}}</td>
+        <td>
+          <button hx-post="/admin/organizations/{{../org.id}}/members/{{this.userId}}/remove"
+                  hx-confirm="Remove {{this.username}} from this organization?"
+                  hx-target="closest tr"
+                  hx-swap="outerHTML"
+                  class="btn btn--sm btn--warning"
+                  aria-label="Remove {{this.username}}">
+            Remove
+          </button>
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+  <div class="empty-state" role="status">
+    <p>No members in this organization yet.</p>
+  </div>
+  {{/if}}
+
+  {{#if availableUsers.length}}
+  <div class="card" style="margin-top: 1.5rem;">
+    <h2 class="card__title">Add Member</h2>
+    <form hx-post="/admin/organizations/{{org.id}}/members"
+          hx-target="#org-members-table"
+          hx-swap="beforeend"
+          class="form-inline">
+
+      <div class="form-group">
+        <label for="add-member-user" class="form-label">User</label>
+        <select id="add-member-user" name="userId" class="select" required aria-required="true">
+          <option value="">Select a user&hellip;</option>
+          {{#each availableUsers}}
+          <option value="{{this.id}}">{{this.username}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="add-member-role" class="form-label">Role</label>
+        <select id="add-member-role" name="role" class="select" required aria-required="true">
+          {{#each roles}}
+          <option value="{{this}}">{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn--primary">Add Member</button>
+    </form>
+  </div>
+  {{/if}}
+
+  <div id="toast"></div>
+</section>

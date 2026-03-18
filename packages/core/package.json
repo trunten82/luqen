@@ -1,0 +1,69 @@
+{
+  "name": "@luqen/core",
+  "version": "1.1.0",
+  "description": "Accessibility testing agent using pa11y webservice",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": { "luqen": "dist/cli.js" },
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && cp src/reporter/report.hbs dist/reporter/report.hbs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "author": "trunten82",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trunten82/luqen.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/trunten82/luqen/issues"
+  },
+  "homepage": "https://github.com/trunten82/luqen#readme",
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "pa11y",
+    "compliance",
+    "testing",
+    "scanner",
+    "source-mapping",
+    "fix-proposals"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "cheerio": "^1.2.0",
+    "commander": "^14.0.3",
+    "handlebars": "^4.7.8",
+    "robots-parser": "^3.0.1",
+    "xml2js": "^0.6.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/xml2js": "^0.4.14",
+    "@vitest/coverage-v8": "^4.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "luqen.fullname" . }}-compliance
+  labels:
+    {{- include "luqen.componentLabels" (dict "component" "compliance" "tier" "backend" "root" .) | nindent 4 }}
+data:
+  COMPLIANCE_PORT: {{ .Values.compliance.port | quote }}
+  COMPLIANCE_HOST: "0.0.0.0"
+  COMPLIANCE_DB_ADAPTER: {{ .Values.compliance.dbAdapter | quote }}
+  COMPLIANCE_DB_PATH: {{ .Values.compliance.dbPath | quote }}
+  COMPLIANCE_JWT_PRIVATE_KEY: "/app/keys/private.pem"
+  COMPLIANCE_JWT_PUBLIC_KEY: "/app/keys/public.pem"
+  COMPLIANCE_TOKEN_EXPIRY: {{ .Values.compliance.tokenExpiry | quote }}
+  COMPLIANCE_REFRESH_TOKEN_EXPIRY: {{ .Values.compliance.refreshTokenExpiry | quote }}
+  COMPLIANCE_CORS_ORIGIN: {{ default (printf "http://%s-dashboard:%d" (include "luqen.fullname" .) (.Values.dashboard.port | int)) .Values.compliance.corsOrigin | quote }}
+  {{- if .Values.redis.enabled }}
+  COMPLIANCE_REDIS_URL: {{ include "luqen.redisUrl" . | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "luqen.fullname" . }}-dashboard
+  labels:
+    {{- include "luqen.componentLabels" (dict "component" "dashboard" "tier" "frontend" "root" .) | nindent 4 }}
+data:
+  DASHBOARD_PORT: {{ .Values.dashboard.port | quote }}
+  DASHBOARD_COMPLIANCE_URL: "http://{{ include "luqen.fullname" . }}-compliance:{{ .Values.compliance.port }}"
+  DASHBOARD_WEBSERVICE_URL: "http://{{ include "luqen.fullname" . }}-webservice:{{ .Values.pa11y.port }}"
+  DASHBOARD_REPORTS_DIR: {{ .Values.dashboard.reportsDir | quote }}
+  DASHBOARD_DB_PATH: {{ .Values.dashboard.dbPath | quote }}
+  DASHBOARD_MAX_CONCURRENT_SCANS: {{ .Values.dashboard.maxConcurrentScans | quote }}
+  {{- if .Values.redis.enabled }}
+  DASHBOARD_REDIS_URL: {{ include "luqen.redisUrl" . | quote }}
+  {{- end }}

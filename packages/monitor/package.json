@@ -1,0 +1,59 @@
+{
+  "name": "@luqen/monitor",
+  "version": "1.1.0",
+  "description": "Regulatory monitor agent — watches legal sources for accessibility regulation changes",
+  "type": "module",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "bin": {
+    "luqen-monitor": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "start": "node dist/cli.js scan"
+  },
+  "license": "MIT",
+  "author": "trunten82",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trunten82/luqen.git",
+    "directory": "packages/monitor"
+  },
+  "bugs": {
+    "url": "https://github.com/trunten82/luqen/issues"
+  },
+  "homepage": "https://github.com/trunten82/luqen#readme",
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "pa11y",
+    "compliance",
+    "testing"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "commander": "^14.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

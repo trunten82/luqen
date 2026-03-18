@@ -1,0 +1,169 @@
+<section aria-label="New accessibility scan">
+  <p class="form-hint mb-md">
+    {{{t "scans.configureHint"}}}
+  </p>
+
+  {{#if complianceWarning}}
+  <div class="alert alert--warning" role="alert">
+    <svg class="alert__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M10 2L1 18h18L10 2z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <path d="M10 8v4M10 14v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div class="alert__body">{{complianceWarning}}</div>
+  </div>
+  {{/if}}
+
+  <form method="POST" action="/scan/new" novalidate>
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <div class="card mb-md">
+      <h3 class="card__title mb-md">{{t "scans.targetUrl"}}</h3>
+      <div class="form-group">
+        <label for="siteUrl">
+          {{t "scans.websiteUrl"}} <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input type="url" id="siteUrl" name="siteUrl"
+               placeholder="https://example.com"
+               {{#if prefillUrl}}value="{{prefillUrl}}"{{/if}}
+               autocomplete="url" required aria-required="true"
+               aria-describedby="siteUrl-hint">
+        <p id="siteUrl-hint" class="form-hint">
+          {{{t "scans.urlHint"}}}
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label>{{t "scans.scanMode"}}</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="scanMode" value="single" checked>
+            <span>{{t "scans.singlePage"}}</span>
+            <span class="form-hint">{{t "scans.singlePageHint"}}</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="scanMode" value="site">
+            <span>{{t "scans.fullSite"}}</span>
+            <span class="form-hint">Discover and scan up to {{maxPages}} pages via sitemap &amp; crawl</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-md">
+      <h3 class="card__title mb-md">{{t "scans.wcagStandard"}}</h3>
+      <div class="form-group">
+        <label for="standard">
+          {{t "scans.conformanceLevel"}} <span class="required" aria-hidden="true">*</span>
+        </label>
+        <select id="standard" name="standard" required aria-required="true"
+                aria-describedby="standard-hint">
+          {{#each standards}}
+          <option value="{{this}}" {{#if (eq this ../defaultStandard)}}selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+        <p id="standard-hint" class="form-hint">
+          {{t "scans.conformanceHint"}}
+        </p>
+      </div>
+    </div>
+
+    {{#if jurisdictions.length}}
+    <div class="card mb-md">
+      <h3 class="card__title mb-md">{{t "scans.complianceCheck"}}</h3>
+      <p class="form-hint mb-sm">{{t "scans.complianceHint"}}</p>
+
+      <div class="picker" id="scan-picker">
+        <div class="picker__tabs">
+          <button type="button" class="picker__tab picker__tab--active" onclick="pickerTab('jurisdictions',this)">{{t "scans.jurisdictions"}}</button>
+          <button type="button" class="picker__tab" onclick="pickerTab('regulations',this)">{{t "scans.regulations"}}</button>
+        </div>
+        <input type="search" class="picker__search" placeholder="{{t "common.search"}}" oninput="pickerSearch(this.value)" aria-label="Search">
+        <div class="picker__list">
+          {{#each jurisdictions}}
+          <label class="picker__item" data-tab="jurisdictions" data-name="{{name}}">
+            <input type="checkbox" name="jurisdictions" value="{{id}}">
+            <span>{{name}}</span>
+            <span class="text-xs text-muted">{{id}}</span>
+          </label>
+          {{/each}}
+          {{#each regulations}}
+          <label class="picker__item" data-tab="regulations" data-name="{{name}} {{shortName}}" style="display:none">
+            <input type="checkbox" name="jurisdictions" value="{{jurisdictionId}}">
+            <span>{{shortName}}</span>
+            <span class="text-xs text-muted">{{name}}</span>
+          </label>
+          {{/each}}
+        </div>
+        <div class="picker__selected"></div>
+      </div>
+    </div>
+    {{/if}}
+
+    <div class="card mb-md">
+      <h3 class="card__title mb-md">{{t "scans.scanOptions"}}</h3>
+      <div class="form-group">
+        <label for="runner">{{t "scans.testRunner"}}</label>
+        <select id="runner" name="runner" aria-describedby="runner-hint">
+          <option value="htmlcs" {{#if (eq defaultRunner "htmlcs")}}selected{{/if}}>HTML_CodeSniffer (htmlcs)</option>
+          <option value="axe" {{#if (eq defaultRunner "axe")}}selected{{/if}}>axe-core (axe)</option>
+        </select>
+        <p id="runner-hint" class="form-hint">
+          {{{t "scans.testRunnerHint"}}}
+        </p>
+      </div>
+      <div class="form-group">
+        <label for="concurrency">{{t "scans.concurrentPages"}}</label>
+        <input type="range" id="concurrency" name="concurrency"
+               min="1" max="{{maxConcurrency}}" value="{{defaultConcurrency}}"
+               aria-describedby="concurrency-hint"
+               oninput="document.getElementById('concurrency-value').textContent = this.value">
+        <output id="concurrency-value" for="concurrency" aria-live="polite" class="text-sm text-muted">{{defaultConcurrency}}</output>
+        <p id="concurrency-hint" class="form-hint">
+          Number of pages scanned simultaneously (1–{{maxConcurrency}}).
+        </p>
+      </div>
+      <div class="form-group">
+        <label for="maxPages">{{t "scans.maxPages"}}</label>
+        <input type="number" id="maxPages" name="maxPages"
+               min="1" max="1000" value="{{maxPages}}"
+               class="input" style="max-width:120px"
+               aria-describedby="maxPages-hint">
+        <p id="maxPages-hint" class="form-hint">
+          {{t "scans.maxPagesHint"}}
+        </p>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="incremental" value="true" id="incremental-cb">
+          <span>{{t "scans.incremental"}}</span>
+        </label>
+        <p class="form-hint" id="incremental-hint">
+          {{t "scans.incrementalHint"}}
+        </p>
+      </div>
+    </div>
+
+    <div class="page-actions">
+      <button type="submit" class="btn btn--primary">{{t "scans.startScan"}}</button>
+      <a href="/home" class="btn btn--ghost">{{t "common.cancel"}}</a>
+    </div>
+  </form>
+</section>
+
+<script>
+  (function() {
+    var incrementalCb = document.getElementById('incremental-cb');
+    var modeRadios = document.querySelectorAll('input[name="scanMode"]');
+    if (!incrementalCb) return;
+
+    incrementalCb.addEventListener('change', function() {
+      if (this.checked) {
+        modeRadios.forEach(function(r) {
+          if (r.value === 'site') { r.checked = true; }
+          r.disabled = true;
+        });
+      } else {
+        modeRadios.forEach(function(r) { r.disabled = false; });
+      }
+    });
+  })();
+</script>

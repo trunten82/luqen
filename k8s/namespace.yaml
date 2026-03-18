@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: luqen
+  labels:
+    app.kubernetes.io/part-of: luqen-ecosystem
+    app.kubernetes.io/managed-by: kustomize

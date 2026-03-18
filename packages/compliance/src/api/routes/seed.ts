@@ -1,0 +1,35 @@
+import type { FastifyInstance } from 'fastify';
+import type { DbAdapter } from '../../db/adapter.js';
+import { requireScope } from '../../auth/middleware.js';
+import { seedBaseline, getSeedStatus } from '../../seed/loader.js';
+
+export async function registerSeedRoutes(
+  app: FastifyInstance,
+  db: DbAdapter,
+): Promise<void> {
+  // POST /api/v1/seed
+  app.post('/api/v1/seed', {
+    preHandler: [requireScope('admin')],
+  }, async (_request, reply) => {
+    try {
+      await seedBaseline(db);
+      const status = await getSeedStatus(db);
+      await reply.status(200).send({ success: true, ...status });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Seed failed';
+      await reply.status(500).send({ error: message, statusCode: 500 });
+    }
+  });
+
+  // GET /api/v1/seed/status
+  app.get('/api/v1/seed/status', {
+    preHandler: [requireScope('read')],
+  }, async (_request, reply) => {
+    try {
+      const status = await getSeedStatus(db);
+      await reply.send(status);
+    } catch (err) {
+      await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+}

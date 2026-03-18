@@ -1,0 +1,75 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal modal--lg">
+    <div class="modal__header">
+      <h2 id="modal-title">{{regulation.name}}</h2>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+
+    {{#if regulation.url}}
+    <a href="{{regulation.url}}" target="_blank" rel="noopener noreferrer" class="detail-source-link">
+      {{regulation.reference}} — View Official Source ↗
+    </a>
+    {{/if}}
+
+    <dl class="detail-list">
+      <div class="detail-list__item">
+        <dt>Short Name</dt>
+        <dd>{{regulation.shortName}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Jurisdiction</dt>
+        <dd>{{jurisdictionName}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Status</dt>
+        <dd><span class="badge badge--{{#if (eq regulation.status 'active')}}completed{{else}}{{#if (eq regulation.status 'draft')}}queued{{else}}failed{{/if}}{{/if}}">{{regulation.status}}</span></dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Enforcement</dt>
+        <dd>{{regulation.enforcementDate}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Scope</dt>
+        <dd>{{regulation.scope}}</dd>
+      </div>
+      {{#if regulation.description}}
+      <div class="detail-list__item">
+        <dt>Description</dt>
+        <dd>{{regulation.description}}</dd>
+      </div>
+      {{/if}}
+    </dl>
+
+    {{#if requirements.length}}
+    <h3 class="detail-section-title">WCAG Requirements ({{requirements.length}})</h3>
+    <div class="detail-cards">
+      {{#each requirements}}
+      <div class="detail-card detail-card--compact">
+        <div class="detail-card__header">
+          <strong>WCAG {{wcagVersion}} Level {{wcagLevel}}</strong>
+          <span class="badge {{#if (eq obligation 'mandatory')}}badge--failed{{else}}{{#if (eq obligation 'recommended')}}badge--warning{{else}}badge--info{{/if}}{{/if}}">{{obligation}}</span>
+        </div>
+        <div class="detail-card__body">
+          <span class="text-sm">Criterion: <code>{{wcagCriterion}}</code></span>
+          {{#if notes}}
+          <p class="text-xs text-muted mt-sm">{{notes}}</p>
+          {{/if}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
+    {{else}}
+    <p class="text-muted mt-md">No specific WCAG requirements defined.</p>
+    {{/if}}
+
+    <div class="modal__footer">
+      {{#unless isSystem}}
+      <button hx-get="/admin/regulations/{{regulation.id}}/edit"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              class="btn btn--primary">Edit</button>
+      {{/unless}}
+      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>

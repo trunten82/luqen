@@ -1,0 +1,123 @@
+{{! Connected Repositories — manage source code connections for fix proposals }}
+
+<section aria-labelledby="repos-heading">
+  <h2 id="repos-heading" class="section-title">Connected Repositories</h2>
+
+  <p style="margin-bottom:1.5rem;color:var(--text-muted);max-width:60ch;">
+    Connect a git repository to a site URL pattern to enable automated fix proposals.
+    When viewing a scan report, Luqen can suggest source-level code fixes for accessibility issues.
+  </p>
+
+  {{! ── Create New Connection ──────────────────────────────────────── }}
+  <div class="card mb-lg">
+    <h3 style="margin:0 0 1rem;">Connect Repository</h3>
+    <form method="POST" action="/admin/repos"
+          style="display:grid;gap:0.75rem;max-width:600px;">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label for="siteUrlPattern">Site URL Pattern</label>
+        <input type="text" id="siteUrlPattern" name="siteUrlPattern" class="input" required
+               placeholder="https://example.com%" aria-required="true"
+               title="URL pattern using SQL LIKE syntax. Use % as wildcard.">
+        <small style="color:var(--text-muted);">Use <code>%</code> as wildcard, e.g. <code>https://example.com%</code></small>
+      </div>
+
+      <div class="form-group">
+        <label for="repoUrl">Repository URL</label>
+        <input type="text" id="repoUrl" name="repoUrl" class="input" required
+               placeholder="https://github.com/org/repo.git" aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="repoPath">Local Path <span style="color:var(--text-muted);">(optional)</span></label>
+        <input type="text" id="repoPath" name="repoPath" class="input"
+               placeholder="/home/user/projects/my-site">
+        <small style="color:var(--text-muted);">Absolute path to the cloned repo on this server. Required for applying fixes directly.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="branch">Branch</label>
+        <input type="text" id="branch" name="branch" class="input"
+               placeholder="main" value="main">
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn--primary">Connect Repository</button>
+      </div>
+    </form>
+  </div>
+
+  {{! ── Connected Repos Table ──────────────────────────────────────── }}
+  {{#if repos.length}}
+  <div class="card">
+    <h3 style="margin:0 0 1rem;">Active Connections</h3>
+    <div class="table-wrap">
+      <table class="data-table" aria-label="Connected repositories">
+        <thead>
+          <tr>
+            <th scope="col">Site URL Pattern</th>
+            <th scope="col">Repository</th>
+            <th scope="col">Branch</th>
+            <th scope="col">Local Path</th>
+            <th scope="col">Created</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each repos}}
+          <tr id="repo-row-{{this.id}}">
+            <td><code>{{this.siteUrlPattern}}</code></td>
+            <td>
+              <a href="{{this.repoUrl}}" target="_blank" rel="noopener noreferrer" style="word-break:break-all;">
+                {{this.repoUrl}}
+              </a>
+            </td>
+            <td><code>{{this.branch}}</code></td>
+            <td>
+              {{#if this.repoPath}}
+              <code>{{this.repoPath}}</code>
+              {{else}}
+              <span style="color:var(--text-muted);">Not set</span>
+              {{/if}}
+            </td>
+            <td>{{this.createdAt}}</td>
+            <td>
+              <form method="POST" action="/admin/repos/{{this.id}}?_method=DELETE" style="display:inline;">
+                <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+                <button type="submit"
+                        class="btn btn--ghost btn--sm btn--danger"
+                        hx-delete="/admin/repos/{{this.id}}"
+                        hx-target="#repo-row-{{this.id}}"
+                        hx-swap="outerHTML"
+                        hx-confirm="Disconnect this repository?"
+                        aria-label="Disconnect repository {{this.repoUrl}}">
+                  Disconnect
+                </button>
+              </form>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{else}}
+  <div class="card" style="text-align:center;padding:2rem;">
+    <p style="color:var(--text-muted);">No repositories connected yet. Use the form above to connect your first repository.</p>
+  </div>
+  {{/if}}
+
+  {{! ── Integration Notes ──────────────────────────────────────────── }}
+  <div class="card mt-lg" style="background:var(--surface-alt, var(--bg-secondary));">
+    <h3 style="margin:0 0 0.75rem;">Integration Options</h3>
+    <p style="color:var(--text-muted);margin-bottom:0.5rem;">
+      Fix proposals are also available via:
+    </p>
+    <ul style="color:var(--text-muted);margin:0;padding-left:1.5rem;">
+      <li><strong>MCP tools:</strong> <code>luqen_propose_fixes</code>, <code>luqen_apply_fix</code> — use from your IDE</li>
+      <li><strong>REST API:</strong> <code>GET /api/v1/scans/:id/fixes</code> — for external integrations</li>
+      <li><strong>A2A protocol:</strong> agents can call the REST API to propose and apply fixes programmatically</li>
+    </ul>
+  </div>
+</section>

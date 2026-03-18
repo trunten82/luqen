@@ -1,0 +1,218 @@
+{{! Reports list — searchable, paginated, deletable }}
+
+<div class="reports-controls" role="search">
+  <form method="GET" action="/reports" aria-label="Search and filter reports">
+    <div class="controls-row">
+      <div class="form-group form-group--inline">
+        <label for="q">{{t "reports.searchByUrl"}}</label>
+        <div class="input-with-indicator">
+          <input
+            type="search"
+            id="q"
+            name="q"
+            class="form-control"
+            placeholder="{{t "reports.filterPlaceholder"}}"
+            value="{{q}}"
+            autocomplete="off"
+            hx-get="/reports"
+            hx-trigger="input changed delay:300ms, search"
+            hx-target="#reports-table-body"
+            hx-indicator="#search-spinner"
+            hx-include="[name='status']"
+            role="searchbox"
+            aria-label="Search reports by URL"
+          >
+          <span id="search-spinner" class="htmx-indicator" aria-hidden="true">{{t "common.searching"}}</span>
+        </div>
+      </div>
+
+      <div class="form-group form-group--inline">
+        <label for="status">{{t "common.status"}}</label>
+        <select
+          id="status"
+          name="status"
+          class="form-control"
+          hx-get="/reports"
+          hx-trigger="change"
+          hx-target="#reports-table-body"
+          hx-include="[name='q']"
+          aria-label="Filter by scan status"
+        >
+          <option value="all" {{#if (eq status 'all')}}selected{{/if}}>{{t "reports.allStatuses"}}</option>
+          <option value="completed" {{#if (eq status 'completed')}}selected{{/if}}>{{t "reports.completed"}}</option>
+          <option value="running" {{#if (eq status 'running')}}selected{{/if}}>{{t "reports.running"}}</option>
+          <option value="queued" {{#if (eq status 'queued')}}selected{{/if}}>{{t "reports.queued"}}</option>
+          <option value="failed" {{#if (eq status 'failed')}}selected{{/if}}>{{t "reports.failed"}}</option>
+        </select>
+      </div>
+
+      <button
+        id="compare-btn"
+        class="btn btn--sm btn--ghost"
+        disabled
+        onclick="cmpNavigate()"
+        aria-label="Compare two selected reports"
+      >{{t "common.compare"}}</button>
+
+      <a href="/api/v1/export/scans.csv" class="btn btn--ghost btn--sm" aria-label="Export all scans as CSV">{{t "reports.exportCsv"}}</a>
+
+      <a href="/scan/new" class="btn btn--primary btn--sm">
+        {{t "reports.newScan"}}
+      </a>
+    </div>
+  </form>
+</div>
+
+<div
+  id="reports-table-body"
+  aria-live="polite"
+  aria-atomic="false"
+  aria-label="Reports list"
+>
+  {{#if scans.length}}
+  <div class="table-responsive" role="region" aria-label="Reports table" tabindex="0">
+    <table class="data-table" aria-label="Accessibility scan reports">
+      <caption class="sr-only">Accessibility scan reports — sorted by date, newest first</caption>
+      <thead>
+        <tr>
+          <th scope="col" class="cell--checkbox"><span class="sr-only">Select</span></th>
+          <th scope="col">{{t "reports.siteUrl"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "reports.standard"}}</th>
+          <th scope="col">{{t "reports.jurisdictions"}}</th>
+          <th scope="col">{{t "reports.pages"}}</th>
+          <th scope="col">{{t "reports.errors"}}</th>
+          <th scope="col">{{t "reports.warnings"}}</th>
+          <th scope="col">{{t "reports.notices"}}</th>
+          <th scope="col">{{t "reports.violations"}}</th>
+          <th scope="col">{{t "common.date"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each scans}}
+        <tr id="report-{{id}}">
+          <td class="cell--checkbox">
+            {{#if (eq status 'completed')}}
+            <input
+              type="checkbox"
+              class="cmp-check"
+              value="{{id}}"
+              onchange="cmpUpdateBtn()"
+              aria-label="Select report for {{siteUrl}} for comparison"
+            >
+            {{/if}}
+          </td>
+          <td data-label="Site URL" class="cell--url">
+            <a href="/reports/{{id}}" aria-label="View report for {{siteUrl}}">
+              {{siteUrl}}
+            </a>
+          </td>
+          <td data-label="Status">
+            <span class="badge badge--{{status}}" aria-label="Status: {{status}}">
+              {{status}}
+            </span>
+          </td>
+          <td data-label="Standard">{{formatStandard standard}}</td>
+          <td data-label="Jurisdictions">{{#if jurisdictions}}{{jurisdictions}}{{else}}&mdash;{{/if}}</td>
+          <td data-label="Pages">{{pagesScanned}}</td>
+          <td data-label="Errors" class="text--error">{{errors}}</td>
+          <td data-label="Warnings" class="text--warning">{{warnings}}</td>
+          <td data-label="Notices">{{notices}}</td>
+          <td data-label="Violations">{{confirmedViolations}}</td>
+          <td data-label="Date">
+            <time datetime="{{createdAt}}">{{createdAtDisplay}}</time>
+          </td>
+          <td class="cell--actions">
+            <a href="/reports/{{id}}" class="btn btn--sm btn--secondary" aria-label="View report for {{siteUrl}}">{{t "common.view"}}</a>
+            {{#if previousScanId}}
+            <a
+              href="/reports/compare?a={{previousScanId}}&b={{id}}"
+              class="btn btn--sm btn--ghost"
+              aria-label="Compare with previous scan for {{siteUrl}}"
+              title="Compare with previous scan"
+            >{{t "common.compare"}}</a>
+            {{/if}}
+            <button
+              class="btn btn--sm btn--danger"
+              hx-delete="/reports/{{id}}"
+              hx-confirm="Delete the scan report for {{siteUrl}}? This cannot be undone."
+              hx-target="#report-{{id}}"
+              hx-swap="outerHTML swap:300ms"
+              aria-label="Delete scan report for {{siteUrl}}"
+            >{{t "common.delete"}}</button>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  <nav aria-label="Reports pagination" class="pagination">
+    {{#if hasPrev}}
+    <a
+      href="/reports?offset={{prevOffset}}&limit={{limit}}{{#if q}}&q={{q}}{{/if}}{{#if status}}&status={{status}}{{/if}}"
+      class="btn btn--ghost btn--sm"
+      hx-get="/reports?offset={{prevOffset}}&limit={{limit}}{{#if q}}&q={{q}}{{/if}}{{#if status}}&status={{status}}{{/if}}"
+      hx-target="#reports-table-body"
+      hx-push-url="true"
+      aria-label="Previous page"
+    >
+      &larr; {{t "common.previous"}}
+    </a>
+    {{/if}}
+
+    <span class="pagination__info" aria-current="page">{{t "common.page"}} {{currentPage}}</span>
+
+    {{#if hasNext}}
+    <a
+      href="/reports?offset={{nextOffset}}&limit={{limit}}{{#if q}}&q={{q}}{{/if}}{{#if status}}&status={{status}}{{/if}}"
+      class="btn btn--ghost btn--sm"
+      hx-get="/reports?offset={{nextOffset}}&limit={{limit}}{{#if q}}&q={{q}}{{/if}}{{#if status}}&status={{status}}{{/if}}"
+      hx-target="#reports-table-body"
+      hx-push-url="true"
+      aria-label="Next page"
+    >
+      {{t "common.next"}} &rarr;
+    </a>
+    {{/if}}
+  </nav>
+
+  {{else}}
+  <div class="empty-state" role="status">
+    {{#if q}}
+    <div class="empty-state__icon">&#128269;</div>
+    <div class="empty-state__title">{{t "reports.noMatchTitle"}}</div>
+    <div class="empty-state__desc">{{t "reports.noMatchDesc"}} <strong>"{{q}}"</strong>.</div>
+    <a href="/reports" class="btn btn--ghost btn--sm">{{t "reports.clearSearch"}}</a>
+    {{else}}
+    <div class="empty-state__icon">&#128269;</div>
+    <div class="empty-state__title">{{t "reports.noReportsTitle"}}</div>
+    <div class="empty-state__desc">{{t "reports.noReportsDesc"}}</div>
+    <a href="/scan/new" class="btn btn--primary">{{t "reports.newScan"}}</a>
+    {{/if}}
+  </div>
+  {{/if}}
+</div>
+
+<script>
+  function cmpUpdateBtn() {
+    var checked = document.querySelectorAll('.cmp-check:checked');
+    var btn = document.getElementById('compare-btn');
+    if (!btn) return;
+    btn.disabled = checked.length !== 2;
+    // Uncheck extras beyond 2
+    if (checked.length > 2) {
+      checked[0].checked = false;
+      cmpUpdateBtn();
+    }
+  }
+
+  function cmpNavigate() {
+    var checked = document.querySelectorAll('.cmp-check:checked');
+    if (checked.length !== 2) return;
+    var a = checked[0].value;
+    var b = checked[1].value;
+    window.location.href = '/reports/compare?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b);
+  }
+</script>

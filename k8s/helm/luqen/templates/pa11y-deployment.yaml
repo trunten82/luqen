@@ -1,0 +1,53 @@
+{{- if .Values.pa11y.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "luqen.fullname" . }}-pa11y
+  labels:
+    {{- include "luqen.componentLabels" (dict "component" "pa11y" "tier" "scanner" "root" .) | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "luqen.selectorLabels" (dict "component" "pa11y" "root" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "luqen.componentLabels" (dict "component" "pa11y" "tier" "scanner" "root" .) | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: pa11y
+          image: "{{ .Values.pa11y.image.repository }}:{{ include "luqen.imageTag" (dict "tag" .Values.pa11y.image.tag "global" .Values.global) }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.pa11y.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.pa11y.resources | nindent 12 }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      terminationGracePeriodSeconds: 15
+{{- end }}

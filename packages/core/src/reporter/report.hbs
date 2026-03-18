@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luqen Accessibility Report — {{summary.url}}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f3f4f6; --surface: #fff; --text: #111827; --text-muted: #6b7280;
+      --border: #e5e7eb; --header-bg: #1e293b; --header-text: #f1f5f9;
+      --err: #dc2626; --err-bg: #fef2f2; --err-border: #fca5a5;
+      --warn: #d97706; --warn-bg: #fffbeb; --warn-border: #fcd34d;
+      --note: #2563eb; --note-bg: #eff6ff; --note-border: #93c5fd;
+      --pass: #16a34a; --pass-bg: #f0fdf4; --fail: #dc2626; --fail-bg: #fef2f2; --review: #d97706; --review-bg: #fffbeb;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a; --surface: #1e293b; --text: #e2e8f0; --text-muted: #94a3b8;
+        --border: #334155; --header-bg: #0f172a;
+        --err-bg: #451a1a; --err-border: #991b1b;
+        --warn-bg: #451a03; --warn-border: #92400e;
+        --note-bg: #1e3a5f; --note-border: #1e40af;
+        --pass-bg: #14532d; --fail-bg: #451a1a;
+      }
+    }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
+    /* Sticky header */
+    .top-bar { position: sticky; top: 0; z-index: 100; background: var(--header-bg); color: var(--header-text); padding: 0.75rem 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .top-bar h1 { font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
+    .top-bar-stats { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .pill-err { background: var(--err); color: #fff; }
+    .pill-warn { background: var(--warn); color: #fff; }
+    .pill-note { background: var(--note); color: #fff; }
+    .pill-total { background: #475569; color: #fff; }
+    /* Executive header */
+    .exec-header { background: var(--header-bg); color: var(--header-text); padding: 2rem 2rem 1.5rem; }
+    .exec-header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .exec-header .site-url { font-size: 1rem; color: #94a3b8; word-break: break-all; }
+    .exec-header .scan-meta { margin-top: 0.75rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    /* Summary cards */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .summary-card { background: var(--surface); border-radius: 10px; padding: 1.25rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; border-top: 3px solid var(--border); }
+    .summary-card .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600; }
+    .summary-card .value { font-size: 2rem; font-weight: 800; margin-top: 0.2rem; }
+    .summary-card.error { border-top-color: var(--err); }
+    .summary-card.error .value { color: var(--err); }
+    .summary-card.warning { border-top-color: var(--warn); }
+    .summary-card.warning .value { color: var(--warn); }
+    .summary-card.notice { border-top-color: var(--note); }
+    .summary-card.notice .value { color: var(--note); }
+    .summary-card.total .value { color: var(--text); }
+    .summary-card .subtext { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
+    /* Donut chart */
+    .chart-row { display: flex; align-items: center; justify-content: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .donut-wrap { position: relative; width: 140px; height: 140px; }
+    .donut-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .donut-wrap circle { fill: none; stroke-width: 18; }
+    .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .donut-center .big { font-size: 1.6rem; font-weight: 800; }
+    .donut-center .small { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .legend { display: flex; flex-direction: column; gap: 0.5rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    /* Compliance matrix */
+    .compliance-section { background: var(--surface); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 2rem; overflow: hidden; }
+    .compliance-section-header { background: var(--header-bg); color: var(--header-text); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+    .compliance-section-header h2 { font-size: 1rem; font-weight: 700; }
+    .compliance-meta { display: flex; gap: 0.75rem; font-size: 0.8rem; }
+    .compliance-meta span { padding: 0.2rem 0.7rem; border-radius: 6px; font-weight: 600; }
+    .compliance-meta .pass-count { background: var(--pass); color: #fff; }
+    .compliance-meta .fail-count { background: var(--fail); color: #fff; }
+    .jurisdiction-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; padding: 1.25rem; }
+    .juris-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .juris-card-head { padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; }
+    .juris-card-head.pass-head { background: var(--pass-bg); border-bottom: 2px solid var(--pass); }
+    .juris-card-head.fail-head { background: var(--fail-bg); border-bottom: 2px solid var(--fail); }
+    .juris-card-head.review-head { background: var(--review-bg); border-bottom: 2px solid var(--review); }
+    .juris-name { font-weight: 700; font-size: 0.95rem; }
+    .juris-id { font-size: 0.72rem; color: var(--text-muted); }
+    .juris-status { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+    .juris-status.s-pass { color: var(--pass); }
+    .juris-status.s-fail { color: var(--fail); }
+    .juris-status.s-review { color: var(--review); }
+    .juris-body { padding: 0.75rem 1rem; font-size: 0.82rem; }
+    .juris-body .viol-line { margin-bottom: 0.4rem; }
+    .juris-body .viol-count { font-weight: 700; }
+    .juris-body .viol-count.has-violations { color: var(--fail); }
+    .juris-regs { margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .compliance-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .compliance-table th { background: var(--bg); padding: 0.6rem 1.25rem; text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+    .compliance-table td { padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .compliance-table tr:last-child td { border-bottom: none; }
+    .compliance-pass { color: var(--pass); font-weight: 700; }
+    .compliance-fail { color: var(--fail); font-weight: 700; }
+    .status-badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; }
+    .status-badge.pass { background: var(--pass-bg); color: var(--pass); }
+    .status-badge.fail { background: var(--fail-bg); color: var(--fail); }
+    .status-badge.review { background: var(--review-bg); color: var(--review); }
+    .reg-tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; margin: 0.1rem 0.15rem 0.1rem 0; white-space: nowrap; text-decoration: none; }
+    .reg-tag.obligation-mandatory { background: var(--err-bg); color: var(--err); border: 1px solid var(--err-border); }
+    .reg-tag.obligation-recommended { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-border); }
+    .reg-tag.obligation-optional { background: var(--note-bg); color: var(--note); border: 1px solid var(--note-border); }
+    .wcag-link { color: inherit; text-decoration: underline dotted; }
+    .wcag-link:hover { text-decoration: underline; }
+    /* Template issues section */
+    .template-section { background: var(--surface); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 2rem; overflow: hidden; }
+    .template-section-header { background: #7c3aed; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+    .template-section-header h2 { font-size: 1rem; font-weight: 700; }
+    .template-section-desc { font-size: 0.8rem; opacity: 0.85; margin-top: 0.25rem; }
+    .template-meta { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .template-badge { background: rgba(255,255,255,0.2); color: #fff; padding: 0.2rem 0.7rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+    .template-issue-row { border-bottom: 1px solid var(--border); padding: 0.9rem 1.25rem; font-size: 0.82rem; }
+    .template-issue-row:last-child { border-bottom: none; }
+    .template-affected { margin-top: 0.4rem; font-size: 0.75rem; color: var(--text-muted); }
+    .template-affected summary { cursor: pointer; color: #7c3aed; font-weight: 600; }
+    .template-affected ul { margin-top: 0.3rem; padding-left: 1.2rem; }
+    .template-affected li { font-size: 0.72rem; word-break: break-all; }
+    .reg-enforcement { font-size: 0.7rem; color: var(--text-muted); }
+    /* Controls */
+    .controls { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .search-box { padding: 0.4rem 0.75rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; width: 220px; }
+    .search-box::placeholder { color: var(--text-muted); }
+    .btn { padding: 0.4rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); transition: background 0.15s, color 0.15s; }
+    .btn:hover { background: var(--bg); }
+    .btn.active { background: var(--header-bg); color: #fff; border-color: var(--header-bg); }
+    .btn.error-filter.active { background: var(--err); border-color: var(--err); color: #fff; }
+    .btn.warning-filter.active { background: var(--warn); border-color: var(--warn); color: #fff; }
+    .btn.notice-filter.active { background: var(--note); border-color: var(--note); color: #fff; }
+    .expand-controls { margin-left: auto; display: flex; gap: 0.4rem; }
+    /* Page sections */
+    .page-section { background: var(--surface); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 0.75rem; overflow: hidden; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.25rem; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: background 0.1s; }
+    .page-header:hover { background: var(--bg); }
+    .page-header.has-issues { border-bottom-color: var(--border); }
+    .page-url { font-size: 0.88rem; font-weight: 600; color: var(--note); word-break: break-all; }
+    .page-meta { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; margin-left: 1rem; }
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
+    .badge.error { background: var(--err-bg); color: var(--err); }
+    .badge.warning { background: var(--warn-bg); color: var(--warn); }
+    .badge.notice { background: var(--note-bg); color: var(--note); }
+    .badge.clean { background: var(--pass-bg); color: var(--pass); }
+    .chevron { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
+    .page-body { padding: 0; }
+    .page-body.collapsed { display: none; }
+    /* Issue table */
+    .issue-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .issue-table th { background: var(--bg); padding: 0.55rem 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+    .issue-table td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .issue-table tr:last-child td { border-bottom: none; }
+    .issue-table tr.type-error td:first-child { border-left: 3px solid var(--err); }
+    .issue-table tr.type-warning td:first-child { border-left: 3px solid var(--warn); }
+    .issue-table tr.type-notice td:first-child { border-left: 3px solid var(--note); }
+    .issue-code { font-family: var(--mono); font-size: 0.75rem; color: #7c3aed; word-break: break-all; }
+    .issue-context { font-family: var(--mono); font-size: 0.75rem; background: var(--bg); padding: 0.2rem 0.4rem; border-radius: 4px; word-break: break-all; display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+    .wcag-info { margin-top: 0.3rem; }
+    .wcag-title { font-weight: 600; font-size: 0.8rem; color: var(--text); }
+    .wcag-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .wcag-impact { font-size: 0.72rem; color: var(--warn); background: var(--warn-bg); padding: 0.12rem 0.4rem; border-radius: 3px; display: inline-block; margin-top: 0.2rem; }
+    .no-issues { padding: 1rem 1.25rem; color: var(--pass); font-size: 0.85rem; font-weight: 500; }
+    /* Errors section */
+    .errors-section { margin-top: 2rem; }
+    .errors-section h2 { font-size: 1rem; font-weight: 700; color: var(--err); margin-bottom: 0.75rem; }
+    .error-item { background: var(--err-bg); border: 1px solid var(--err-border); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.82rem; }
+    footer { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.75rem; border-top: 1px solid var(--border); margin-top: 2rem; }
+    /* Print */
+    @media print {
+      .top-bar, .controls, .expand-controls, .search-box { display: none !important; }
+      .page-body.collapsed { display: block !important; }
+      body { background: #fff; color: #000; }
+      .page-section, .summary-card, .compliance-section { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+      .exec-header { background: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 1rem; }
+      .summary-grid { grid-template-columns: repeat(3, 1fr); }
+      .jurisdiction-cards { grid-template-columns: 1fr; }
+      .issue-table { font-size: 0.75rem; }
+      .issue-table th, .issue-table td { padding: 0.5rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar" id="sticky-header">
+  <h1>Luqen Report</h1>
+  <div class="top-bar-stats">
+    <span class="pill pill-total">{{summary.totalIssues}} issues</span>
+    <span class="pill pill-err">{{summary.byLevel.error}} errors</span>
+    <span class="pill pill-warn">{{summary.byLevel.warning}} warnings</span>
+    <span class="pill pill-note">{{summary.byLevel.notice}} notices</span>
+  </div>
+</div>
+
+<div class="exec-header">
+  <h1>Accessibility Report</h1>
+  <div class="site-url">{{summary.url}}</div>
+  <div class="scan-meta">
+    <span class="pill pill-total">{{summary.pagesScanned}} pages scanned</span>
+    <span class="pill pill-err">{{summary.byLevel.error}} errors</span>
+    <span class="pill pill-warn">{{summary.byLevel.warning}} warnings</span>
+    <span class="pill pill-note">{{summary.byLevel.notice}} notices</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="summary-grid">
+    <div class="summary-card total">
+      <div class="label">Pages Scanned</div>
+      <div class="value">{{summary.pagesScanned}}</div>
+      <div class="subtext">{{summary.pagesScanned}} pages scanned</div>
+    </div>
+    <div class="summary-card total">
+      <div class="label">Total Issues</div>
+      <div class="value">{{summary.totalIssues}}</div>
+    </div>
+    <div class="summary-card error">
+      <div class="label">Errors</div>
+      <div class="value">{{summary.byLevel.error}}</div>
+    </div>
+    <div class="summary-card warning">
+      <div class="label">Warnings</div>
+      <div class="value">{{summary.byLevel.warning}}</div>
+    </div>
+    <div class="summary-card notice">
+      <div class="label">Notices</div>
+      <div class="value">{{summary.byLevel.notice}}</div>
+    </div>
+    <div class="summary-card total">
+      <div class="label">Pages Failed</div>
+      <div class="value">{{summary.pagesFailed}}</div>
+    </div>
+  </div>
+
+  {{#if summary.totalIssues}}
+  <div class="chart-row">
+    <div class="donut-wrap">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="41" stroke="#e5e7eb" />
+        <circle class="donut-err" cx="50" cy="50" r="41" stroke="#dc2626" stroke-dasharray="0 257.6" />
+        <circle class="donut-warn" cx="50" cy="50" r="41" stroke="#d97706" stroke-dasharray="0 257.6" />
+        <circle class="donut-note" cx="50" cy="50" r="41" stroke="#2563eb" stroke-dasharray="0 257.6" />
+      </svg>
+      <div class="donut-center">
+        <span class="big">{{summary.totalIssues}}</span>
+        <span class="small">Issues</span>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot" style="background:#dc2626"></span> Errors: {{summary.byLevel.error}}</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#d97706"></span> Warnings: {{summary.byLevel.warning}}</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#2563eb"></span> Notices: {{summary.byLevel.notice}}</div>
+    </div>
+  </div>
+  {{/if}}
+
+  {{#if complianceMatrix}}
+  <div class="compliance-section" id="compliance-matrix">
+    <div class="compliance-section-header">
+      <h2>Legal Compliance Matrix</h2>
+      <div class="compliance-meta">
+        <span class="pass-count">{{compliance.summary.passing}} Passing</span>
+        <span class="fail-count">{{compliance.summary.failing}} Failing</span>
+      </div>
+    </div>
+    <div class="jurisdiction-cards">
+      {{#each complianceMatrix}}
+      <div class="juris-card">
+        <div class="juris-card-head {{reviewStatusClass reviewStatus}}">
+          <div>
+            <div class="juris-name">{{jurisdictionName}}</div>
+            <div class="juris-id">{{jurisdictionId}}</div>
+          </div>
+          <div class="juris-status {{reviewStatusLabelClass reviewStatus}}">{{reviewStatusLabel reviewStatus}}</div>
+        </div>
+        <div class="juris-body">
+          <div class="viol-line">Confirmed violations (errors): <span class="viol-count{{#if confirmedViolations}} has-violations{{/if}}">{{confirmedViolations}}</span></div>
+          <div class="viol-line">Need manual review (warnings/notices): <span class="viol-count">{{needsReview}}</span></div>
+          <div class="viol-line">Recommended violations: <span class="viol-count">{{recommendedViolations}}</span></div>
+          {{#if regulations.length}}
+          <div class="juris-regs">
+            {{#each regulations}}
+            {{#if url}}
+              <a class="reg-tag {{#if (eq ../reviewStatus 'fail')}}obligation-mandatory{{else}}obligation-optional{{/if}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
+            {{else}}
+              <span class="reg-tag {{#if (eq ../reviewStatus 'fail')}}obligation-mandatory{{else}}obligation-optional{{/if}}">{{shortName}}</span>
+            {{/if}}
+            <span class="reg-enforcement">{{enforcementDate}}</span>
+            {{/each}}
+          </div>
+          {{/if}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
+    <table class="compliance-table" aria-label="Compliance status by jurisdiction">
+      <thead>
+        <tr>
+          <th>Jurisdiction</th>
+          <th>Status</th>
+          <th>Confirmed Violations</th>
+          <th>Need Review</th>
+          <th>Recommended Violations</th>
+          <th>Key Regulations</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each complianceMatrix}}
+        <tr>
+          <td><strong>{{jurisdictionName}}</strong><br><span style="font-size:0.72rem;color:var(--text-muted)">{{jurisdictionId}}</span></td>
+          <td><span class="status-badge {{reviewStatus}}">{{reviewStatusLabel reviewStatus}}</span></td>
+          <td class="{{complianceStatusClass status}}">{{confirmedViolations}}</td>
+          <td>{{needsReview}}</td>
+          <td>{{recommendedViolations}}</td>
+          <td>
+            {{#each regulations}}
+            {{#if url}}
+              <a class="reg-tag {{#if (eq ../reviewStatus 'fail')}}obligation-mandatory{{/if}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
+            {{else}}
+              <span class="reg-tag {{#if (eq ../reviewStatus 'fail')}}obligation-mandatory{{/if}}">{{shortName}}</span>
+            {{/if}}
+            <span class="reg-enforcement">({{enforcementDate}})</span>
+            {{/each}}
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{/if}}
+
+  {{#if templateIssues}}
+  <div class="template-section" id="template-issues">
+    <div class="template-section-header">
+      <div>
+        <h2>Template &amp; Layout Issues</h2>
+        <div class="template-section-desc">These affect multiple pages and likely come from shared components (header, footer, navigation).</div>
+      </div>
+      <div class="template-meta">
+        <span class="template-badge">{{templateIssueCount}} template issues</span>
+        <span class="template-badge">{{templateOccurrenceCount}}+ individual occurrences</span>
+      </div>
+    </div>
+    {{#each templateIssues}}
+    <div class="template-issue-row">
+      <div style="display:flex;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;">
+        <span class="badge {{type}}">{{type}}</span>
+        {{#if wcagCriterion}}
+          {{#if wcagUrl}}
+            <a class="issue-code wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</a>
+          {{else}}
+            <span class="issue-code">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
+          {{/if}}
+        {{else}}
+          <span class="issue-code">{{code}}</span>
+        {{/if}}
+        {{#if regulations}}
+          {{#each regulations}}
+          {{#if url}}
+            <a class="reg-tag {{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
+          {{else}}
+            <span class="reg-tag {{obligationClass obligation}}">{{shortName}}</span>
+          {{/if}}
+          {{/each}}
+        {{/if}}
+      </div>
+      <div style="margin-top:0.35rem;">{{message}}</div>
+      {{#if selector}}<div style="margin-top:0.2rem;"><span class="issue-code">{{selector}}</span></div>{{/if}}
+      {{#if context}}<div style="margin-top:0.2rem;"><span class="issue-context">{{context}}</span></div>{{/if}}
+      <details class="template-affected">
+        <summary>Affects {{affectedCount}} pages</summary>
+        <ul>
+          {{#each affectedPages}}
+          <li>{{this}}</li>
+          {{/each}}
+        </ul>
+      </details>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  <div class="controls">
+    <input type="text" class="search-box" placeholder="Search by URL..." oninput="searchPages(this.value)" />
+    <button class="btn active" onclick="filterIssues('all', this)">All</button>
+    <button class="btn error-filter" onclick="filterIssues('error', this)">Errors</button>
+    <button class="btn warning-filter" onclick="filterIssues('warning', this)">Warnings</button>
+    <button class="btn notice-filter" onclick="filterIssues('notice', this)">Notices</button>
+    <div class="expand-controls">
+      <button class="btn" onclick="expandAll()">Expand All</button>
+      <button class="btn" onclick="collapseAll()">Collapse All</button>
+    </div>
+  </div>
+
+  {{#each pages}}
+  <div class="page-section" data-url="{{url}}" data-has-issues="{{issueCount}}">
+    <div class="page-header{{#if issueCount}} has-issues{{/if}}" onclick="toggleSection(this)">
+      <span class="page-url">{{url}}</span>
+      <div class="page-meta">
+        {{#if issueCount}}
+          {{#if (issuesByType issues 'error')}}<span class="badge error">{{countByType issues 'error'}} error{{#if (eq (countByType issues 'error') 1)}}{{else}}s{{/if}}</span>{{/if}}
+          {{#if (issuesByType issues 'warning')}}<span class="badge warning">{{countByType issues 'warning'}} warning{{#if (eq (countByType issues 'warning') 1)}}{{else}}s{{/if}}</span>{{/if}}
+          {{#if (issuesByType issues 'notice')}}<span class="badge notice">{{countByType issues 'notice'}} notice{{#if (eq (countByType issues 'notice') 1)}}{{else}}s{{/if}}</span>{{/if}}
+        {{else}}
+          <span class="badge clean">Clean</span>
+        {{/if}}
+        <span class="chevron">&#9660;</span>
+      </div>
+    </div>
+    <div class="page-body{{#unless issueCount}} collapsed{{/unless}}">
+      {{#if issueCount}}
+      <table class="issue-table">
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>WCAG Criterion</th>
+            <th>What's Wrong</th>
+            <th>Legal Impact</th>
+            <th>Element</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each issues}}
+          <tr class="type-{{type}}" data-type="{{type}}">
+            <td><span class="badge {{type}}">{{type}}</span></td>
+            <td>
+              {{#if wcagCriterion}}
+                {{#if wcagUrl}}
+                  <a class="issue-code wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</a>
+                {{else}}
+                  <span class="issue-code">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
+                {{/if}}
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG {{wcagCriterion}}</span>
+              {{else}}
+                <span class="issue-code">{{code}}</span>
+              {{/if}}
+            </td>
+            <td>
+              {{message}}
+              {{#if wcagTitle}}
+              <div class="wcag-info">
+                <div class="wcag-title">{{wcagTitle}}</div>
+                {{#if wcagDescription}}<div class="wcag-desc">{{wcagDescription}}</div>{{/if}}
+                {{#if wcagImpact}}<div class="wcag-impact">Impact: {{wcagImpact}}</div>{{/if}}
+              </div>
+              {{/if}}
+            </td>
+            <td>
+              {{#if regulations}}
+                {{#each regulations}}
+                {{#if url}}
+                  <a class="reg-tag {{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
+                {{else}}
+                  <span class="reg-tag {{obligationClass obligation}}">{{shortName}}</span>
+                {{/if}}
+                {{/each}}
+              {{else}}
+              &mdash;
+              {{/if}}
+            </td>
+            <td><span class="issue-code">{{selector}}</span></td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{else}}
+      <div class="no-issues">No issues found on this page.</div>
+      {{/if}}
+    </div>
+  </div>
+  {{/each}}
+
+  {{#if errors.length}}
+  <div class="errors-section">
+    <h2>Scan Errors ({{errors.length}})</h2>
+    {{#each errors}}
+    <div class="error-item">
+      <strong>{{url}}</strong> &mdash; {{code}}: {{message}}
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+</div>
+
+{{#if nextSteps}}
+<div class="container" style="margin-top:1rem;">
+  <div style="background:var(--surface);border-radius:10px;padding:1rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,0.08);font-size:0.82rem;color:var(--text-muted);">
+    <strong style="color:var(--text);">Next steps</strong>
+    <ul style="margin-top:0.4rem;padding-left:1.2rem;">
+      {{#each nextSteps}}
+      <li>{{this}}</li>
+      {{/each}}
+    </ul>
+  </div>
+</div>
+{{/if}}
+
+<footer>Generated by Luqen{{#if generatedAt}} on {{generatedAt}}{{/if}}</footer>
+
+<script>
+  function toggleSection(header) {
+    var body = header.nextElementSibling;
+    var chevron = header.querySelector('.chevron');
+    if (body.classList.contains('collapsed')) {
+      body.classList.remove('collapsed');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+    } else {
+      body.classList.add('collapsed');
+      if (chevron) chevron.style.transform = 'rotate(-90deg)';
+    }
+  }
+
+  function expandAll() {
+    document.querySelectorAll('.page-body').forEach(function(body) {
+      body.classList.remove('collapsed');
+    });
+    document.querySelectorAll('.chevron').forEach(function(c) {
+      c.style.transform = 'rotate(0deg)';
+    });
+  }
+
+  function collapseAll() {
+    document.querySelectorAll('.page-body').forEach(function(body) {
+      body.classList.add('collapsed');
+    });
+    document.querySelectorAll('.chevron').forEach(function(c) {
+      c.style.transform = 'rotate(-90deg)';
+    });
+  }
+
+  function filterIssues(type, btn) {
+    document.querySelectorAll('.controls .btn:not(.expand-controls .btn)').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    document.querySelectorAll('.page-section').forEach(function(section) {
+      if (type === 'all') {
+        section.style.display = '';
+        section.querySelectorAll('tr[data-type]').forEach(function(row) { row.style.display = ''; });
+      } else {
+        var rows = section.querySelectorAll('tr[data-type]');
+        if (rows.length === 0) { section.style.display = ''; return; }
+        var visible = 0;
+        rows.forEach(function(row) {
+          if (row.dataset.type === type) { row.style.display = ''; visible++; }
+          else { row.style.display = 'none'; }
+        });
+        section.style.display = visible === 0 ? 'none' : '';
+      }
+    });
+  }
+
+  function searchPages(query) {
+    var q = query.toLowerCase();
+    document.querySelectorAll('.page-section').forEach(function(section) {
+      var url = (section.getAttribute('data-url') || '').toLowerCase();
+      section.style.display = (!q || url.indexOf(q) !== -1) ? '' : 'none';
+    });
+  }
+
+  /* Donut chart animation */
+  (function() {
+    var total = {{summary.totalIssues}};
+    if (!total) return;
+    var err = {{summary.byLevel.error}}, warn = {{summary.byLevel.warning}}, note = {{summary.byLevel.notice}};
+    var C = 2 * Math.PI * 41;
+    var errLen = (err / total) * C, warnLen = (warn / total) * C, noteLen = (note / total) * C;
+    var ce = document.querySelector('.donut-err');
+    var cw = document.querySelector('.donut-warn');
+    var cn = document.querySelector('.donut-note');
+    if (ce) { ce.setAttribute('stroke-dasharray', errLen + ' ' + C); ce.setAttribute('stroke-dashoffset', '0'); }
+    if (cw) { cw.setAttribute('stroke-dasharray', warnLen + ' ' + C); cw.setAttribute('stroke-dashoffset', '-' + errLen); }
+    if (cn) { cn.setAttribute('stroke-dasharray', noteLen + ' ' + C); cn.setAttribute('stroke-dashoffset', '-' + (errLen + warnLen)); }
+  })();
+</script>
+</body>
+</html>

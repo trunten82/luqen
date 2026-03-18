@@ -1,0 +1,89 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h2 id="modal-title">{{#if isNew}}Add Regulation{{else}}Edit Regulation{{/if}}</h2>
+
+    <form {{#if isNew}}
+          hx-post="/admin/regulations"
+          hx-target="#regulations-table-body"
+          hx-swap="beforeend"
+          {{else}}
+          hx-patch="/admin/regulations/{{regulation.id}}"
+          hx-target="#regulation-{{regulation.id}}"
+          hx-swap="outerHTML"
+          {{/if}}
+          hx-on::after-request="if(event.detail.successful) document.getElementById('modal-container').replaceChildren()"
+          novalidate>
+
+      {{#if isNew}}
+      <div class="form-group">
+        <label for="reg-id" class="form-label">ID <span aria-hidden="true">*</span></label>
+        <input id="reg-id" name="id" type="text" class="input"
+               value="{{regulation.id}}" required aria-required="true">
+      </div>
+      {{/if}}
+
+      <div class="form-group">
+        <label for="reg-name" class="form-label">Name <span aria-hidden="true">*</span></label>
+        <input id="reg-name" name="name" type="text" class="input"
+               value="{{regulation.name}}" required aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="reg-short" class="form-label">Short Name</label>
+        <input id="reg-short" name="shortName" type="text" class="input"
+               value="{{regulation.shortName}}">
+      </div>
+
+      <div class="form-group">
+        <label for="reg-jurisdiction" class="form-label">Jurisdiction <span aria-hidden="true">*</span></label>
+        {{#if isNew}}
+        <select id="reg-jurisdiction" name="jurisdictionId" class="select"
+                required aria-required="true">
+          <option value="">Select a jurisdiction</option>
+          {{#each jurisdictions}}
+          <option value="{{id}}" {{#if (eq id ../regulation.jurisdictionId)}}selected{{/if}}>{{name}}</option>
+          {{/each}}
+        </select>
+        {{else}}
+        <input id="reg-jurisdiction"
+               name="jurisdictionId"
+               type="text"
+               class="input"
+               value="{{regulation.jurisdictionId}}"
+               readonly
+               aria-describedby="reg-jurisdiction-hint">
+        <span id="reg-jurisdiction-hint" class="form-hint">Jurisdiction cannot be changed after creation</span>
+        {{/if}}
+      </div>
+
+      <div class="form-group">
+        <label for="reg-date" class="form-label">Enforcement Date</label>
+        <input id="reg-date" name="enforcementDate" type="date" class="input"
+               value="{{regulation.enforcementDate}}">
+      </div>
+
+      <div class="form-group">
+        <label for="reg-status" class="form-label">Status</label>
+        <select id="reg-status" name="status" class="select">
+          <option value="active" {{#if (eq regulation.status 'active')}}selected{{/if}}>Active</option>
+          <option value="draft" {{#if (eq regulation.status 'draft')}}selected{{/if}}>Draft</option>
+          <option value="repealed" {{#if (eq regulation.status 'repealed')}}selected{{/if}}>Repealed</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-scope" class="form-label">Scope</label>
+        <input id="reg-scope" name="scope" type="text" class="input"
+               value="{{regulation.scope}}">
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">
+          {{#if isNew}}Create{{else}}Save{{/if}}
+        </button>
+        <button type="button" class="btn btn--ghost close-modal-btn"
+                aria-label="Cancel and close dialog">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>

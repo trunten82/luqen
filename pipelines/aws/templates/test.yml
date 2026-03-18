@@ -1,0 +1,93 @@
+# GitHub Actions — Reusable workflow: install, lint, test, coverage
+# Inputs:
+#   package   — "core" or "compliance"
+
+name: Test package
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: Package to test (core or compliance)
+        required: true
+        type: string
+    outputs:
+      coverage-artifact:
+        description: Artifact name for the coverage report
+        value: ${{ jobs.test.outputs.coverage-artifact }}
+
+jobs:
+  test:
+    name: Test @luqen/${{ inputs.package }}
+    runs-on: ubuntu-latest
+    outputs:
+      coverage-artifact: coverage-${{ inputs.package }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Cache workspace node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-
+
+      - name: Cache package node_modules
+        uses: actions/cache@v4
+        with:
+          path: packages/${{ inputs.package }}/node_modules
+          key: ${{ runner.os }}-node-modules-${{ inputs.package }}-${{ hashFiles(format('packages/{0}/package.json', inputs.package)) }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-${{ inputs.package }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (type-check)
+        working-directory: packages/${{ inputs.package }}
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: packages/${{ inputs.package }}
+        run: npm run test
+
+      - name: Run tests with coverage
+        working-directory: packages/${{ inputs.package }}
+        run: npm run test:coverage
+
+      - name: Enforce 80% coverage threshold
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = 'packages/${{ inputs.package }}/coverage/coverage-summary.json';
+            if (!fs.existsSync(path)) { console.error('Coverage summary not found'); process.exit(1); }
+            const summary = JSON.parse(fs.readFileSync(path, 'utf-8'));
+            const total = summary.total;
+            const threshold = 80;
+            let failed = false;
+            for (const metric of ['lines', 'statements', 'functions', 'branches']) {
+              const pct = total[metric].pct;
+              const status = pct >= threshold ? 'PASS' : 'FAIL';
+              console.log(metric + ': ' + pct + '% (' + status + ')');
+              if (pct < threshold) failed = true;
+            }
+            if (failed) { console.error('Coverage below ' + threshold + '% threshold'); process.exit(1); }
+            console.log('Coverage thresholds met.');
+          "
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ inputs.package }}
+          path: packages/${{ inputs.package }}/coverage/
+          retention-days: 14

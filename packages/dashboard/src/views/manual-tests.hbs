@@ -1,0 +1,314 @@
+{{! Manual Testing Checklist — guided WCAG criteria that cannot be fully automated }}
+
+<section aria-labelledby="mt-heading" class="report-meta" style="margin-bottom:1.5rem;">
+  <div class="detail-list detail-list--horizontal">
+    <div class="detail-list__item">
+      <dt>Site URL</dt>
+      <dd><a href="{{scan.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scan.siteUrl}}</a></dd>
+    </div>
+    <div class="detail-list__item">
+      <dt>Standard</dt>
+      <dd>{{formatStandard scan.standard}}</dd>
+    </div>
+    <div class="detail-list__item">
+      <dt>Status</dt>
+      <dd><span class="badge badge--{{scan.status}}">{{scan.status}}</span></dd>
+    </div>
+  </div>
+
+  <div class="report-actions" role="group" aria-label="Navigation" style="margin-top:1rem;">
+    <a href="/reports/{{scan.id}}" class="btn btn--ghost btn--sm">&larr; Back to Report</a>
+    <a href="/reports" class="btn btn--ghost btn--sm">All Reports</a>
+  </div>
+</section>
+
+{{! ── Progress bar ──────────────────────────────────────────────────────── }}
+<div class="mt-progress" role="region" aria-label="Manual testing progress">
+  <div class="mt-progress__bar">
+    <div class="mt-progress__fill" id="mt-progress-fill" style="width:{{stats.percentage}}%"></div>
+  </div>
+  <div class="mt-progress__stats" id="mt-progress-stats">
+    <span id="mt-stat-pct"><strong>{{stats.percentage}}%</strong> complete</span>
+    <span class="mt-stat-sep">|</span>
+    <span id="mt-stat-tested">{{stats.tested}} tested</span>
+    <span class="mt-stat-sep">|</span>
+    <span class="mt-stat--pass" id="mt-stat-pass">{{stats.passed}} pass</span>
+    <span class="mt-stat-sep">|</span>
+    <span class="mt-stat--fail" id="mt-stat-fail">{{stats.failed}} fail</span>
+    <span class="mt-stat-sep">|</span>
+    <span class="mt-stat--na" id="mt-stat-na">{{stats.na}} N/A</span>
+    <span class="mt-stat-sep">|</span>
+    <span id="mt-stat-untested">{{stats.untested}} remaining</span>
+  </div>
+</div>
+
+{{! ── Filter buttons ─────────────────────────────────────────────────── }}
+<div class="mt-filters" role="group" aria-label="Filter criteria by status">
+  <button type="button" class="mt-filter mt-filter--active" onclick="mtFilter('all',this)">All</button>
+  <button type="button" class="mt-filter" onclick="mtFilter('untested',this)">Untested</button>
+  <button type="button" class="mt-filter" onclick="mtFilter('pass',this)">Pass</button>
+  <button type="button" class="mt-filter" onclick="mtFilter('fail',this)">Fail</button>
+  <button type="button" class="mt-filter" onclick="mtFilter('na',this)">N/A</button>
+</div>
+
+{{! ── Manual-only criteria ──────────────────────────────────────────── }}
+<section class="mt-section" aria-labelledby="mt-manual-heading">
+  <h2 id="mt-manual-heading" class="mt-section__title">
+    Requires Manual Testing
+    <span class="mt-section__count">{{manualItems.length}} criteria</span>
+  </h2>
+  <p class="mt-section__desc">These criteria cannot be verified by automated scanning tools.</p>
+
+  <div class="mt-list" id="mt-list-manual">
+    {{#each manualItems}}
+    <div class="mt-criterion" id="mt-row-{{id}}" data-status="{{status}}">
+      <div class="mt-criterion__header">
+        <span class="mt-badge {{#if (eq status 'pass')}}mt-badge--pass{{else if (eq status 'fail')}}mt-badge--fail{{else if (eq status 'na')}}mt-badge--na{{else}}mt-badge--untested{{/if}}">
+          {{#if (eq status 'pass')}}Pass{{else if (eq status 'fail')}}Fail{{else if (eq status 'na')}}N/A{{else}}Untested{{/if}}
+        </span>
+        <strong>{{id}}</strong> &mdash; {{title}}
+        <span class="mt-level mt-level--{{level}}">{{level}}</span>
+        <button type="button" class="mt-toggle" onclick="mtToggle(this)" aria-label="Toggle details" aria-expanded="false">&#9660;</button>
+      </div>
+      <div class="mt-criterion__body mt-criterion__body--collapsed">
+        <p class="mt-instructions">{{testInstructions}}</p>
+        <ul class="mt-checklist">
+          {{#each whatToCheck}}
+          <li>{{this}}</li>
+          {{/each}}
+        </ul>
+        {{#if steps.length}}
+        <details class="mt-steps-detail">
+          <summary class="mt-steps-toggle">Step-by-step guide</summary>
+          <ol class="mt-steps">
+            {{#each steps}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ol>
+        </details>
+        {{/if}}
+        {{#if goodExample}}
+        <details class="mt-examples-detail">
+          <summary class="mt-examples-toggle">Examples</summary>
+          <div class="mt-examples">
+            <div class="mt-example mt-example--good">
+              <div class="mt-example__label">Good</div>
+              <pre class="mt-example__code"><code>{{goodExample}}</code></pre>
+            </div>
+            <div class="mt-example mt-example--bad">
+              <div class="mt-example__label">Bad</div>
+              <pre class="mt-example__code"><code>{{badExample}}</code></pre>
+            </div>
+          </div>
+        </details>
+        {{/if}}
+        <div class="mt-actions">
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">Pass</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">Fail</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','na',this)">N/A</button>
+        </div>
+        <div class="mt-notes-wrap">
+          <label for="mt-notes-{{id}}">Notes</label>
+          <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="Optional notes...">{{notes}}</textarea>
+        </div>
+        {{#if testedBy}}
+        <div class="mt-tested-info">Tested by {{testedBy}} on {{testedAt}}</div>
+        {{/if}}
+      </div>
+    </div>
+    {{/each}}
+  </div>
+</section>
+
+{{! ── Partially automatable criteria ────────────────────────────────── }}
+<section class="mt-section" aria-labelledby="mt-partial-heading">
+  <h2 id="mt-partial-heading" class="mt-section__title">
+    Partially Automated &mdash; Verify Manually
+    <span class="mt-section__count">{{partialItems.length}} criteria</span>
+  </h2>
+  <p class="mt-section__desc">Automation catches some issues but human verification is needed to confirm full compliance.</p>
+
+  <div class="mt-list" id="mt-list-partial">
+    {{#each partialItems}}
+    <div class="mt-criterion" id="mt-row-{{id}}" data-status="{{status}}">
+      <div class="mt-criterion__header">
+        <span class="mt-badge {{#if (eq status 'pass')}}mt-badge--pass{{else if (eq status 'fail')}}mt-badge--fail{{else if (eq status 'na')}}mt-badge--na{{else}}mt-badge--untested{{/if}}">
+          {{#if (eq status 'pass')}}Pass{{else if (eq status 'fail')}}Fail{{else if (eq status 'na')}}N/A{{else}}Untested{{/if}}
+        </span>
+        <strong>{{id}}</strong> &mdash; {{title}}
+        <span class="mt-level mt-level--{{level}}">{{level}}</span>
+        <button type="button" class="mt-toggle" onclick="mtToggle(this)" aria-label="Toggle details" aria-expanded="false">&#9660;</button>
+      </div>
+      <div class="mt-criterion__body mt-criterion__body--collapsed">
+        <p class="mt-instructions">{{testInstructions}}</p>
+        <ul class="mt-checklist">
+          {{#each whatToCheck}}
+          <li>{{this}}</li>
+          {{/each}}
+        </ul>
+        {{#if steps.length}}
+        <details class="mt-steps-detail">
+          <summary class="mt-steps-toggle">Step-by-step guide</summary>
+          <ol class="mt-steps">
+            {{#each steps}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ol>
+        </details>
+        {{/if}}
+        {{#if goodExample}}
+        <details class="mt-examples-detail">
+          <summary class="mt-examples-toggle">Examples</summary>
+          <div class="mt-examples">
+            <div class="mt-example mt-example--good">
+              <div class="mt-example__label">Good</div>
+              <pre class="mt-example__code"><code>{{goodExample}}</code></pre>
+            </div>
+            <div class="mt-example mt-example--bad">
+              <div class="mt-example__label">Bad</div>
+              <pre class="mt-example__code"><code>{{badExample}}</code></pre>
+            </div>
+          </div>
+        </details>
+        {{/if}}
+        <div class="mt-actions">
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">Pass</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">Fail</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','na',this)">N/A</button>
+        </div>
+        <div class="mt-notes-wrap">
+          <label for="mt-notes-{{id}}">Notes</label>
+          <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="Optional notes...">{{notes}}</textarea>
+        </div>
+        {{#if testedBy}}
+        <div class="mt-tested-info">Tested by {{testedBy}} on {{testedAt}}</div>
+        {{/if}}
+      </div>
+    </div>
+    {{/each}}
+  </div>
+</section>
+
+<script>
+  /* ── Toggle expand/collapse ──────────────────────────────────────────── */
+  function mtToggle(btn) {
+    var body = btn.closest('.mt-criterion__header').nextElementSibling;
+    var collapsed = body.classList.toggle('mt-criterion__body--collapsed');
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    btn.textContent = collapsed ? '\u25BC' : '\u25B2';
+  }
+
+  /* ── Save result via fetch POST ─────────────────────────────────────── */
+  function mtSave(scanId, criterionId, status, btn) {
+    var row = document.getElementById('mt-row-' + criterionId);
+    var notesEl = document.getElementById('mt-notes-' + criterionId);
+    var notes = notesEl ? notesEl.value : '';
+
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+    var formData = new URLSearchParams();
+    formData.append('criterionId', criterionId);
+    formData.append('status', status);
+    formData.append('notes', notes);
+
+    fetch('/reports/' + scanId + '/manual', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'x-csrf-token': csrfToken,
+        'HX-Request': 'true'
+      },
+      body: formData.toString()
+    })
+    .then(function(response) {
+      if (!response.ok) throw new Error('Save failed');
+      return response.text();
+    })
+    .then(function(html) {
+      // The response contains an updated .mt-criterion div and a hidden
+      // element with data-stats carrying JSON stats.
+      var temp = document.createElement('div');
+      temp.innerHTML = html;
+
+      // Swap the criterion row
+      var newRow = temp.querySelector('.mt-criterion');
+      if (newRow && row) {
+        row.replaceWith(newRow);
+      }
+
+      // Update stats from data attributes on a hidden element
+      var statsEl = temp.querySelector('[data-mt-tested]');
+      if (statsEl) {
+        mtUpdateStats(
+          parseInt(statsEl.getAttribute('data-mt-tested'), 10),
+          parseInt(statsEl.getAttribute('data-mt-passed'), 10),
+          parseInt(statsEl.getAttribute('data-mt-failed'), 10),
+          parseInt(statsEl.getAttribute('data-mt-na'), 10),
+          parseInt(statsEl.getAttribute('data-mt-untested'), 10),
+          parseInt(statsEl.getAttribute('data-mt-pct'), 10)
+        );
+      }
+
+      showToast('Saved: ' + criterionId + ' = ' + status, 'success');
+    })
+    .catch(function(err) {
+      showToast('Failed to save: ' + err.message, 'error');
+    });
+  }
+
+  /* ── Update progress stats (using textContent for safe DOM updates) ── */
+  function mtUpdateStats(tested, passed, failed, na, untested, pct) {
+    var fill = document.getElementById('mt-progress-fill');
+    if (fill) fill.style.width = pct + '%';
+
+    var pctEl = document.getElementById('mt-stat-pct');
+    if (pctEl) {
+      pctEl.textContent = '';
+      var strong = document.createElement('strong');
+      strong.textContent = pct + '%';
+      pctEl.appendChild(strong);
+      pctEl.appendChild(document.createTextNode(' complete'));
+    }
+
+    var map = {
+      'mt-stat-tested': tested + ' tested',
+      'mt-stat-pass': passed + ' pass',
+      'mt-stat-fail': failed + ' fail',
+      'mt-stat-na': na + ' N/A',
+      'mt-stat-untested': untested + ' remaining'
+    };
+    for (var key in map) {
+      var el = document.getElementById(key);
+      if (el) el.textContent = map[key];
+    }
+  }
+
+  /* ── Filter by status ───────────────────────────────────────────────── */
+  function mtFilter(status, btn) {
+    document.querySelectorAll('.mt-filter').forEach(function(f) {
+      f.classList.remove('mt-filter--active');
+    });
+    btn.classList.add('mt-filter--active');
+
+    document.querySelectorAll('.mt-criterion').forEach(function(row) {
+      if (status === 'all') {
+        row.style.display = '';
+      } else {
+        row.style.display = row.getAttribute('data-status') === status ? '' : 'none';
+      }
+    });
+  }
+
+  /* ── Toast helper (reuse existing toast container from layout) ───── */
+  function showToast(msg, type) {
+    var tc = document.getElementById('toast-container');
+    if (!tc) return;
+    var toast = document.createElement('div');
+    toast.className = 'toast toast--' + (type || 'info');
+    toast.setAttribute('role', 'status');
+    toast.textContent = msg;
+    tc.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 3000);
+  }
+</script>
