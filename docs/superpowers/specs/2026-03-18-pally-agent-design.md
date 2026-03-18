@@ -76,7 +76,7 @@ Key API behaviours the scanner depends on:
 
 - `POST /tasks` — creates a task, returns `201` with task object including `id`
 - `POST /tasks/{id}/run` — triggers a background scan, returns `202`
-- `GET /tasks/{id}/results?full=true` — returns an array of result objects; an empty array means the scan has not completed yet
+- `GET /tasks/{id}/results?full=true` — returns an array of result objects. A completed scan returns a result object with a `date` field and an `issues` array (which may be empty for fully accessible pages). An empty results array means the scan has not completed yet.
 - `DELETE /tasks/{id}` — removes the task, returns `204`
 
 ### Task Lifecycle
@@ -109,7 +109,7 @@ interface ScanProgress {
 ```
 
 - CLI subscribes and displays a progress counter
-- MCP emits these as progress notifications via the protocol's notification mechanism
+- MCP emits these via the `notifications/progress` method. The `pally_scan` tool accepts `_meta.progressToken` in its input. The `ScanProgress` fields map to the MCP progress notification payload: `progressToken` from the request, `progress` = `current`, `total` = `total`, and `message` = `url`
 
 ### Error Handling
 
@@ -222,6 +222,31 @@ Both JSON and HTML reports contain:
 - **Per-page results** — URL, issue count, list of issues with: rule code, description, severity, CSS selector, context snippet
 - **Failed pages** — URL and `ScanError` details
 - **Source mapping** (when repo provided) — file path, line number, confidence level, component name
+
+### PageResult Interface
+
+```typescript
+interface PageResult {
+  url: string;
+  discoveryMethod: 'sitemap' | 'crawl';
+  issueCount: number;
+  issues: Array<{
+    code: string;           // WCAG rule code (e.g. "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37")
+    type: 'error' | 'warning' | 'notice';
+    message: string;        // Human-readable description
+    selector: string;       // CSS selector of the offending element
+    context: string;        // HTML snippet surrounding the issue
+    fixSuggestion?: string; // Generic textual recommendation (always present)
+  }>;
+  sourceMap?: {
+    file: string;
+    line?: number;
+    component?: string;
+    confidence: 'high' | 'low' | 'none';
+  };
+  error?: ScanError;        // Present only for failed pages (issues will be empty)
+}
+```
 - **Fix suggestions** — generic textual recommendations are always included; concrete code diffs require a repo
 
 ### HTML Report
@@ -284,7 +309,13 @@ Config file discovery: search from the current working directory upward to the f
 }
 ```
 
-All values have sensible defaults. Environment variable `PALLY_WEBSERVICE_URL` overrides the config file value.
+All values have sensible defaults. Environment variables override config file values:
+
+| Env Variable | Overrides |
+|---|---|
+| `PALLY_WEBSERVICE_URL` | `webserviceUrl` |
+| `PALLY_WEBSERVICE_AUTH` | `webserviceHeaders.Authorization` |
+| `PALLY_AGENT_CONFIG` | config file path (equivalent to `--config`) |
 
 ### CLI Interface
 
@@ -314,7 +345,7 @@ pally-agent fix https://example.com --repo ./my-project
 pally-agent fix --from-report ./pally-reports/pally-report-2026-03-18T120000Z.json --repo ./my-project
 ```
 
-**`fix` subcommand:** By default, `fix` runs a full scan first, then proposes fixes. Use `--from-report <path>` to skip the scan and propose fixes from a previously generated JSON report. The `--repo` flag is required for `fix`.
+**`fix` subcommand:** By default, `fix` runs a full scan first, then proposes fixes. Use `--from-report <path>` to skip the scan and propose fixes from a previously generated JSON report (must conform to the `PallyScanOutput` schema). The `--repo` flag is required for `fix`.
 
 ### MCP Server Tools
 
@@ -439,12 +470,18 @@ Key scenarios that drive the test suite:
 6. **Concurrency limit:** Given 20 URLs and concurrency of 5, at most 5 tasks are active simultaneously
 7. **Scan timeout:** Given a task that never returns results, the scanner retries once then records a `ScanError` with code `TIMEOUT`
 8. **JSON report:** Given scan results, the JSON report contains summary, per-page results, and any errors
-9. **HTML report:** Given scan results, the HTML report is a self-contained file that renders correctly
+9. **HTML report:** Given scan results, the HTML report contains no external script/stylesheet references, includes a summary with page count, and has per-page collapsible sections
 10. **Source mapping (Next.js):** Given a Next.js App Router project, `/about` maps to `app/about/page.tsx`
 11. **Source mapping override:** Given a `sourceMap` config entry, the override takes precedence over auto-detection
 12. **Fix proposal:** Given an `<img>` without `alt` in a mapped source file, the agent proposes adding `alt=""`
 13. **CLI exit codes:** Exit 0 on clean scan, 1 on issues found, 2 on partial failure, 3 on fatal error
 14. **Config discovery:** The agent finds `.pally-agent.json` by walking up from CWD; `--config` overrides
+15. **Interactive fix flow:** Given a proposed fix, when the user selects 's' (show diff), a unified diff is printed and the prompt repeats; 'n' skips the file; 'a' aborts remaining fixes
+16. **Fix from report:** Given `--from-report` with a valid JSON report, the fix command skips scanning and proposes fixes directly
+17. **MCP pally_scan:** Given a valid URL, the MCP tool returns a `PallyScanOutput` with summary and page results
+18. **Also-crawl:** Given `--also-crawl` with a site that has a partial sitemap, crawled pages are merged with sitemap pages
+19. **Env var override:** Given `PALLY_WEBSERVICE_URL` set, it overrides the config file `webserviceUrl`
+20. **Output naming:** Reports use timestamped filenames and never overwrite existing files
 
 ## Non-Goals
 
