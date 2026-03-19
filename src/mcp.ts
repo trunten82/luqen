@@ -36,7 +36,7 @@ export function createServer(): PallyMcpServer {
       maxPages: z.number().int().positive().optional().describe('Maximum number of pages to scan'),
       alsoCrawl: z.boolean().optional().describe('Also crawl the site in addition to sitemap'),
       ignore: z.array(z.string()).optional().describe('Issue codes to ignore'),
-      headers: z.record(z.string()).optional().describe('Additional HTTP headers'),
+      headers: z.record(z.string(), z.string()).optional().describe('Additional HTTP headers'),
       wait: z.number().int().nonnegative().optional().describe('Milliseconds to wait after page load'),
     },
     async (args) => {

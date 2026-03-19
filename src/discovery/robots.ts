@@ -1,4 +1,13 @@
-import robotsParser from 'robots-parser';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+
+interface RobotsTxtParser {
+  isAllowed(url: string, ua?: string): boolean | undefined;
+}
+
+// robots-parser is a CommonJS module; use require to avoid ESM interop type issues
+const robotsParser = require('robots-parser') as (url: string, robotstxt: string) => RobotsTxtParser;
 
 export interface RobotsResult {
   readonly sitemapUrls: readonly string[];

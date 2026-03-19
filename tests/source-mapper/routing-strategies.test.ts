@@ -91,4 +91,60 @@ describe('resolveUrlToFile', () => {
     const result = await resolveUrlToFile('/about', 'unknown', tmpDir);
     expect(result).toBeNull();
   });
+
+  it('sveltekit: resolves / to src/routes/+page.svelte', async () => {
+    await mkdir(join(tmpDir, 'src', 'routes'), { recursive: true });
+    await writeFile(join(tmpDir, 'src', 'routes', '+page.svelte'), '<div/>');
+
+    const result = await resolveUrlToFile('/', 'sveltekit', tmpDir);
+    expect(result).toBe(join(tmpDir, 'src', 'routes', '+page.svelte'));
+  });
+
+  it('sveltekit: resolves dynamic segment [id]', async () => {
+    await mkdir(join(tmpDir, 'src', 'routes', '[id]'), { recursive: true });
+    await writeFile(join(tmpDir, 'src', 'routes', '[id]', '+page.svelte'), '<div/>');
+
+    const result = await resolveUrlToFile('/123', 'sveltekit', tmpDir);
+    expect(result).toBe(join(tmpDir, 'src', 'routes', '[id]', '+page.svelte'));
+  });
+
+  it('sveltekit: returns null when no matching file', async () => {
+    await mkdir(join(tmpDir, 'src', 'routes'), { recursive: true });
+
+    const result = await resolveUrlToFile('/nonexistent', 'sveltekit', tmpDir);
+    expect(result).toBeNull();
+  });
+
+  it('nextjs-app: catch-all segment [...]', async () => {
+    await mkdir(join(tmpDir, 'app', '[...slug]'), { recursive: true });
+    await writeFile(join(tmpDir, 'app', '[...slug]', 'page.tsx'), '<div/>');
+
+    const result = await resolveUrlToFile('/any/deep/path', 'nextjs-app', tmpDir);
+    expect(result).toBe(join(tmpDir, 'app', '[...slug]', 'page.tsx'));
+  });
+
+  it('nextjs-pages: resolves dynamic segment via [id] dir', async () => {
+    // findDynamicSegment finds dirs named like [id], then resolves to [id].tsx as sibling file
+    await mkdir(join(tmpDir, 'pages', '[id]'), { recursive: true });
+    await writeFile(join(tmpDir, 'pages', '[id].tsx'), '<div/>');
+
+    const result = await resolveUrlToFile('/123', 'nextjs-pages', tmpDir);
+    expect(result).toBe(join(tmpDir, 'pages', '[id].tsx'));
+  });
+
+  it('nuxt: resolves dynamic segment via [id] dir', async () => {
+    // findDynamicSegment finds dirs named like [id], then resolves to [id].vue as sibling file
+    await mkdir(join(tmpDir, 'pages', '[id]'), { recursive: true });
+    await writeFile(join(tmpDir, 'pages', '[id].vue'), '<template/>');
+
+    const result = await resolveUrlToFile('/123', 'nuxt', tmpDir);
+    expect(result).toBe(join(tmpDir, 'pages', '[id].vue'));
+  });
+
+  it('nuxt: returns null when no matching file', async () => {
+    await mkdir(join(tmpDir, 'pages'), { recursive: true });
+
+    const result = await resolveUrlToFile('/nonexistent', 'nuxt', tmpDir);
+    expect(result).toBeNull();
+  });
 });
