@@ -1,0 +1,86 @@
+<section aria-label="System health dashboard">
+  <div class="cards">
+    {{#each services}}
+    <div class="card {{#if (eq status 'ok')}}card--success{{else if (eq status 'error')}}card--error{{else}}card--neutral{{/if}}"
+         aria-label="{{label}} status: {{status}}">
+      <div class="card__header">
+        <h2 class="card__title">{{label}}</h2>
+      </div>
+      <div class="card__body">
+        <span class="status-indicator {{#if (eq status 'ok')}}status--ok{{else if (eq status 'error')}}status--error{{else}}status--unknown{{/if}}"
+              aria-label="Status: {{status}}">
+          {{status}}
+        </span>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+
+  <section class="admin-section" aria-label="Database statistics">
+    <h2 class="section-title">Database</h2>
+    <dl class="stats-list">
+      <div class="stats-list__item">
+        <dt>File Path</dt>
+        <dd><code>{{db.path}}</code></dd>
+      </div>
+      <div class="stats-list__item">
+        <dt>File Size</dt>
+        <dd>{{db.sizeKb}} KB</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="admin-section" aria-label="Compliance seed status">
+    <h2 class="section-title">Seed Status</h2>
+    <dl class="stats-list">
+      <div class="stats-list__item">
+        <dt>Seeded</dt>
+        <dd>
+          <span class="badge {{#if seed.seeded}}badge--success{{else}}badge--warning{{/if}}">
+            {{#if seed.seeded}}Yes{{else}}No{{/if}}
+          </span>
+        </dd>
+      </div>
+      <div class="stats-list__item">
+        <dt>Jurisdictions</dt>
+        <dd>{{seed.jurisdictions}}</dd>
+      </div>
+      <div class="stats-list__item">
+        <dt>Regulations</dt>
+        <dd>{{seed.regulations}}</dd>
+      </div>
+      <div class="stats-list__item">
+        <dt>Requirements</dt>
+        <dd>{{seed.requirements}}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="admin-section" aria-label="Runtime information">
+    <h2 class="section-title">Runtime</h2>
+    <dl class="stats-list">
+      <div class="stats-list__item">
+        <dt>Dashboard Version</dt>
+        <dd>{{version}}</dd>
+      </div>
+      <div class="stats-list__item">
+        <dt>Node.js Version</dt>
+        <dd>{{nodeVersion}}</dd>
+      </div>
+      <div class="stats-list__item">
+        <dt>Uptime</dt>
+        <dd>{{uptime}}</dd>
+      </div>
+      <div class="stats-list__item">
+        <dt>Compliance URL</dt>
+        <dd><code>{{complianceUrl}}</code></dd>
+      </div>
+      {{#if webserviceUrl}}
+      <div class="stats-list__item">
+        <dt>Webservice URL</dt>
+        <dd><code>{{webserviceUrl}}</code></dd>
+      </div>
+      {{/if}}
+    </dl>
+  </section>
+</section>

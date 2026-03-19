@@ -1,0 +1,52 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h2 id="modal-title">Add Monitored Source</h2>
+
+    <form hx-post="/admin/sources"
+          hx-target="#sources-table-body"
+          hx-swap="beforeend"
+          hx-on::after-request="if(event.detail.successful) document.getElementById('modal-container').replaceChildren()"
+          novalidate>
+
+      <div class="form-group">
+        <label for="src-name" class="form-label">Name <span aria-hidden="true">*</span></label>
+        <input id="src-name" name="name" type="text" class="input"
+               required aria-required="true"
+               aria-describedby="src-name-hint">
+        <span id="src-name-hint" class="form-hint">A descriptive name for this source</span>
+      </div>
+
+      <div class="form-group">
+        <label for="src-url" class="form-label">URL <span aria-hidden="true">*</span></label>
+        <input id="src-url" name="url" type="url" class="input"
+               required aria-required="true"
+               placeholder="https://example.gov/feed.rss">
+      </div>
+
+      <div class="form-group">
+        <label for="src-type" class="form-label">Type</label>
+        <select id="src-type" name="type" class="select">
+          <option value="rss">RSS Feed</option>
+          <option value="atom">Atom Feed</option>
+          <option value="html">HTML Page</option>
+          <option value="json">JSON API</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="src-schedule" class="form-label">Schedule</label>
+        <select id="src-schedule" name="schedule" class="select">
+          <option value="hourly">Hourly</option>
+          <option value="daily" selected>Daily</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Add Source</button>
+        <button type="button" class="btn btn--ghost close-modal-btn"
+                aria-label="Cancel and close dialog">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>

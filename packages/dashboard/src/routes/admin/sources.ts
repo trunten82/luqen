@@ -1,0 +1,146 @@
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import {
+  listSources,
+  createSource,
+  deleteSource,
+  scanSources,
+} from '../../compliance-client.js';
+import { adminGuard } from '../../auth/middleware.js';
+
+function getToken(request: FastifyRequest): string {
+  const session = request.session as { token?: string };
+  return session.token ?? '';
+}
+
+function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
+  return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
+}
+
+export async function sourceRoutes(
+  server: FastifyInstance,
+  baseUrl: string,
+): Promise<void> {
+  // GET /admin/sources — list monitored sources
+  server.get(
+    '/admin/sources',
+    { preHandler: adminGuard },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      let sources: Awaited<ReturnType<typeof listSources>> = [];
+      let error: string | undefined;
+
+      try {
+        sources = await listSources(baseUrl, getToken(request));
+      } catch (err) {
+        error = err instanceof Error ? err.message : 'Failed to load sources';
+      }
+
+      return reply.view('admin/sources.hbs', {
+        pageTitle: 'Monitored Sources',
+        currentPath: '/admin/sources',
+        user: request.user,
+        sources,
+        error,
+      });
+    },
+  );
+
+  // GET /admin/sources/new — modal form fragment
+  server.get(
+    '/admin/sources/new',
+    { preHandler: adminGuard },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      return reply.view('admin/source-form.hbs', {
+        isNew: true,
+        source: { id: '', name: '', url: '', type: 'rss', schedule: 'daily' },
+      });
+    },
+  );
+
+  // POST /admin/sources — add new source
+  server.post(
+    '/admin/sources',
+    { preHandler: adminGuard },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as {
+        name?: string;
+        url?: string;
+        type?: string;
+        schedule?: string;
+      };
+
+      if (!body.name?.trim() || !body.url?.trim()) {
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml('Name and URL are required.', 'error'));
+      }
+
+      try {
+        const created = await createSource(baseUrl, getToken(request), {
+          name: body.name.trim(),
+          url: body.url.trim(),
+          type: body.type?.trim() ?? 'rss',
+          schedule: body.schedule?.trim() ?? 'daily',
+        });
+
+        const row = `<tr id="source-${created.id}">
+  <td>${created.name}</td>
+  <td><a href="${created.url}" target="_blank" rel="noopener noreferrer">${created.url}</a></td>
+  <td>${created.type}</td>
+  <td>${created.schedule}</td>
+  <td>${created.lastChecked ?? 'Never'}</td>
+  <td>
+    <button hx-delete="/admin/sources/${encodeURIComponent(created.id)}"
+            hx-confirm="Remove source ${created.name}?"
+            hx-target="closest tr"
+            hx-swap="outerHTML swap:500ms"
+            class="btn btn--sm btn--danger"
+            aria-label="Remove ${created.name}">Remove</button>
+  </td>
+</tr>`;
+
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(`${row}\n<div id="modal-container" hx-swap-oob="true"></div>\n${toastHtml(`Source "${created.name}" added successfully.`)}`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to add source';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // DELETE /admin/sources/:id — remove source
+  server.delete(
+    '/admin/sources/:id',
+    { preHandler: adminGuard },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      try {
+        await deleteSource(baseUrl, getToken(request), id);
+        return reply.code(200).header('content-type', 'text/html').send(toastHtml('Source removed successfully.'));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to remove source';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // POST /admin/sources/scan — trigger scan
+  server.post(
+    '/admin/sources/scan',
+    { preHandler: adminGuard },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const result = await scanSources(baseUrl, getToken(request));
+        const html = `<div id="scan-results" aria-live="polite">
+  <p class="text--success">Scan complete: ${result.scanned} source(s) checked, ${result.proposalsCreated} proposal(s) created.</p>
+</div>
+${toastHtml(`Scan complete: ${result.scanned} sources scanned, ${result.proposalsCreated} proposals created.`)}`;
+
+        return reply.code(200).header('content-type', 'text/html').send(html);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to trigger scan';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+}

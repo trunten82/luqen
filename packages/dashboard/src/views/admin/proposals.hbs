@@ -1,0 +1,74 @@
+<section aria-label="Update proposals management">
+  <div class="filter-bar">
+    <label for="proposal-status-filter" class="form-label">Status</label>
+    <select id="proposal-status-filter"
+            name="status"
+            hx-get="/admin/proposals"
+            hx-trigger="change"
+            hx-target="#proposals-table-body"
+            class="select"
+            aria-label="Filter proposals by status">
+      <option value="" {{#if (eq statusFilter '')}}selected{{/if}}>All Statuses</option>
+      <option value="pending" {{#if (eq statusFilter 'pending')}}selected{{/if}}>Pending</option>
+      <option value="approved" {{#if (eq statusFilter 'approved')}}selected{{/if}}>Approved</option>
+      <option value="rejected" {{#if (eq statusFilter 'rejected')}}selected{{/if}}>Rejected</option>
+    </select>
+  </div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Update proposals">
+      <caption class="visually-hidden">List of update proposals</caption>
+      <thead>
+        <tr>
+          <th scope="col">Source</th>
+          <th scope="col">Type</th>
+          <th scope="col">Summary</th>
+          <th scope="col">Detected</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="proposals-table-body">
+        {{#each proposals}}
+        <tr id="proposal-{{id}}">
+          <td>{{source}}</td>
+          <td>{{type}}</td>
+          <td>{{summary}}</td>
+          <td>{{detectedAtDisplay}}</td>
+          <td>
+            <span class="badge {{#if (eq status 'pending')}}badge--warning{{else if (eq status 'approved')}}badge--success{{else}}badge--error{{/if}}">
+              {{status}}
+            </span>
+          </td>
+          <td>
+            {{#if isPending}}
+            <button hx-post="/admin/proposals/{{id}}/approve"
+                    hx-confirm="Approve this proposal?"
+                    hx-target="#proposal-{{id}}"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--success"
+                    aria-label="Approve proposal: {{summary}}">Approve</button>
+            <button hx-post="/admin/proposals/{{id}}/reject"
+                    hx-confirm="Reject this proposal?"
+                    hx-target="#proposal-{{id}}"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Reject proposal: {{summary}}">Reject</button>
+            {{/if}}
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="6" class="table__empty">No proposals found.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>

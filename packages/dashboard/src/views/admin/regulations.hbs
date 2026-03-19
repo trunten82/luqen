@@ -1,0 +1,116 @@
+<section aria-label="Regulations management">
+  <div class="page-actions">
+    <button hx-get="/admin/regulations/new{{#if jurisdictionId}}?jurisdictionId={{jurisdictionId}}{{/if}}"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--primary"
+            aria-haspopup="dialog">
+      Add Regulation
+    </button>
+  </div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="filter-bar">
+    <label for="jurisdiction-filter" class="form-label">Filter by Jurisdiction</label>
+    <select id="jurisdiction-filter"
+            name="jurisdictionId"
+            hx-get="/admin/regulations"
+            hx-trigger="change"
+            hx-target="#regulations-table-body"
+            hx-include="[name='q']"
+            class="select"
+            aria-label="Filter regulations by jurisdiction">
+      <option value="">All Jurisdictions</option>
+      {{#each jurisdictions}}
+      <option value="{{id}}" {{#if (eq id ../jurisdictionId)}}selected{{/if}}>{{name}}</option>
+      {{/each}}
+    </select>
+
+    <label for="regulation-search" class="visually-hidden">Search regulations</label>
+    <input id="regulation-search"
+           type="search"
+           name="q"
+           value="{{q}}"
+           placeholder="Search by name..."
+           hx-get="/admin/regulations"
+           hx-trigger="input changed delay:300ms"
+           hx-target="#regulations-table-body"
+           hx-include="[name='jurisdictionId']"
+           hx-indicator="#search-spinner"
+           class="input"
+           aria-label="Search regulations by name"
+           role="searchbox">
+    <span id="search-spinner" class="htmx-indicator" aria-hidden="true">Searching...</span>
+  </div>
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Regulations">
+      <caption class="visually-hidden">List of regulations</caption>
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Name</th>
+          <th scope="col">Short Name</th>
+          <th scope="col">Jurisdiction</th>
+          <th scope="col">Enforcement Date</th>
+          <th scope="col">Status</th>
+          <th scope="col">Scope</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="regulations-table-body">
+        {{#each regulations}}
+        <tr id="regulation-{{id}}">
+          <td>{{id}}</td>
+          <td>{{name}}</td>
+          <td>{{shortName}}</td>
+          <td>{{jurisdictionId}}</td>
+          <td>{{enforcementDate}}</td>
+          <td>{{status}}</td>
+          <td>{{scope}}</td>
+          <td>
+            <button hx-get="/admin/regulations/{{id}}/edit"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="Edit {{name}}">Edit</button>
+            <button hx-delete="/admin/regulations/{{id}}"
+                    hx-confirm="Delete regulation {{name}}?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:500ms"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Delete {{name}}">Delete</button>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="8" class="table__empty">No regulations found.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  <nav aria-label="Regulations pagination" class="pagination">
+    {{#if hasPrev}}
+    <a hx-get="/admin/regulations?offset={{prevOffset}}&limit={{limit}}&q={{q}}&jurisdictionId={{jurisdictionId}}"
+       hx-target="#regulations-table-body"
+       hx-push-url="true"
+       class="btn btn--ghost"
+       aria-label="Previous page">Previous</a>
+    {{/if}}
+    <span class="pagination__info" aria-current="page">Page {{currentPage}}</span>
+    {{#if hasNext}}
+    <a hx-get="/admin/regulations?offset={{nextOffset}}&limit={{limit}}&q={{q}}&jurisdictionId={{jurisdictionId}}"
+       hx-target="#regulations-table-body"
+       hx-push-url="true"
+       class="btn btn--ghost"
+       aria-label="Next page">Next</a>
+    {{/if}}
+  </nav>
+</section>

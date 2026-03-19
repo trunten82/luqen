@@ -1,0 +1,45 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h2 id="modal-title">Add OAuth Client</h2>
+
+    <form hx-post="/admin/clients"
+          hx-target="#clients-table-body"
+          hx-swap="beforeend"
+          hx-on::after-request="if(event.detail.successful) document.getElementById('modal-container').replaceChildren()"
+          novalidate>
+
+      <div class="form-group">
+        <label for="cl-name" class="form-label">Client Name <span aria-hidden="true">*</span></label>
+        <input id="cl-name" name="name" type="text" class="input"
+               required aria-required="true"
+               aria-describedby="cl-name-hint">
+        <span id="cl-name-hint" class="form-hint">A human-readable name for this client</span>
+      </div>
+
+      <div class="form-group">
+        <label for="cl-scopes" class="form-label">Scopes</label>
+        <input id="cl-scopes" name="scopes" type="text" class="input"
+               placeholder="read write admin"
+               aria-describedby="cl-scopes-hint">
+        <span id="cl-scopes-hint" class="form-hint">Space or comma-separated list of scopes</span>
+      </div>
+
+      <fieldset class="form-group">
+        <legend class="form-label">Grant Types</legend>
+        {{#each availableGrantTypes}}
+        <label class="checkbox-label">
+          <input type="checkbox" name="grantTypes" value="{{this}}"
+                 {{#if (eq this 'client_credentials')}}checked{{/if}}>
+          {{this}}
+        </label>
+        {{/each}}
+      </fieldset>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Create Client</button>
+        <button type="button" class="btn btn--ghost close-modal-btn"
+                aria-label="Cancel and close dialog">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>

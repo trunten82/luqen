@@ -1,0 +1,43 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h2 id="modal-title">Add Webhook</h2>
+
+    <form hx-post="/admin/webhooks"
+          hx-target="#webhooks-table-body"
+          hx-swap="beforeend"
+          hx-on::after-request="if(event.detail.successful) document.getElementById('modal-container').replaceChildren()"
+          novalidate>
+
+      <div class="form-group">
+        <label for="wh-url" class="form-label">Endpoint URL <span aria-hidden="true">*</span></label>
+        <input id="wh-url" name="url" type="url" class="input"
+               required aria-required="true"
+               placeholder="https://example.com/webhook">
+      </div>
+
+      <fieldset class="form-group">
+        <legend class="form-label">Events</legend>
+        {{#each availableEvents}}
+        <label class="checkbox-label">
+          <input type="checkbox" name="events" value="{{this}}">
+          {{this}}
+        </label>
+        {{/each}}
+      </fieldset>
+
+      <div class="form-group">
+        <label for="wh-secret" class="form-label">Secret</label>
+        <input id="wh-secret" name="secret" type="password" class="input"
+               autocomplete="new-password"
+               aria-describedby="wh-secret-hint">
+        <span id="wh-secret-hint" class="form-hint">Used to sign webhook payloads (HMAC-SHA256)</span>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Add Webhook</button>
+        <button type="button" class="btn btn--ghost close-modal-btn"
+                aria-label="Cancel and close dialog">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
