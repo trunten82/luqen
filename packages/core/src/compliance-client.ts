@@ -39,19 +39,30 @@ interface JurisdictionResult {
   regulations: RegulationResult[];
 }
 
-interface IssueAnnotationEntry {
-  issueCode: string;
-  annotations: Array<{
+interface AnnotatedIssueEntry {
+  code: string;
+  wcagCriterion: string;
+  wcagLevel: string;
+  regulations: Array<{
+    regulationId: string;
     regulationName: string;
     shortName: string;
     jurisdictionId: string;
     obligation: 'mandatory' | 'recommended' | 'optional';
+    enforcementDate: string;
   }>;
 }
 
 interface ComplianceCheckResponse {
-  jurisdictions: JurisdictionResult[];
-  issueAnnotations: IssueAnnotationEntry[];
+  matrix: Record<string, JurisdictionResult>;
+  annotatedIssues: AnnotatedIssueEntry[];
+  summary: {
+    totalJurisdictions: number;
+    passing: number;
+    failing: number;
+    totalMandatoryViolations: number;
+    totalOptionalViolations: number;
+  };
 }
 
 /**
@@ -63,16 +74,14 @@ async function fetchToken(
   clientId: string,
   clientSecret: string,
 ): Promise<string | undefined> {
-  const body = new URLSearchParams({
-    grant_type: 'client_credentials',
-    client_id: clientId,
-    client_secret: clientSecret,
-  });
-
   const response = await fetch(`${complianceUrl}/api/v1/oauth/token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
   });
 
   if (!response.ok) {
@@ -147,14 +156,25 @@ export async function fetchComplianceEnrichment(
     }
   }
 
-  return fetchComplianceCheck(complianceUrl, jurisdictions, issues, token);
+  // Deduplicate issues by code — the compliance check only needs unique codes
+  // to map to regulations, not every individual instance
+  const seen = new Set<string>();
+  const deduped: ComplianceIssueInput[] = [];
+  for (const issue of issues) {
+    if (!seen.has(issue.code)) {
+      seen.add(issue.code);
+      deduped.push(issue);
+    }
+  }
+
+  return fetchComplianceCheck(complianceUrl, jurisdictions, deduped, token);
 }
 
 function mapToEnrichment(data: ComplianceCheckResponse): ComplianceEnrichment {
-  // Build the jurisdiction matrix
+  // Matrix comes pre-built from the API
   const matrix: Record<string, JurisdictionComplianceResult> = {};
-  for (const j of data.jurisdictions) {
-    matrix[j.jurisdictionId] = {
+  for (const [jid, j] of Object.entries(data.matrix)) {
+    matrix[jid] = {
       jurisdictionId: j.jurisdictionId,
       jurisdictionName: j.jurisdictionName,
       status: j.status,
@@ -171,32 +191,24 @@ function mapToEnrichment(data: ComplianceCheckResponse): ComplianceEnrichment {
     };
   }
 
-  // Build the issue annotations map
+  // Build the issue annotations map from annotatedIssues
   const issueAnnotations = new Map<string, readonly RegulationAnnotation[]>();
-  for (const entry of data.issueAnnotations) {
-    const annotations: RegulationAnnotation[] = entry.annotations.map((a) => ({
-      regulationName: a.regulationName,
-      shortName: a.shortName,
-      jurisdictionId: a.jurisdictionId,
-      obligation: a.obligation,
+  for (const entry of data.annotatedIssues) {
+    const annotations: RegulationAnnotation[] = entry.regulations.map((r) => ({
+      regulationName: r.regulationName,
+      shortName: r.shortName,
+      jurisdictionId: r.jurisdictionId,
+      obligation: r.obligation,
     }));
-    issueAnnotations.set(entry.issueCode, annotations);
+    issueAnnotations.set(entry.code, annotations);
   }
 
-  // Compute summary
-  const jurisdictionValues = Object.values(matrix);
-  const passing = jurisdictionValues.filter((j) => j.status === 'pass').length;
-  const failing = jurisdictionValues.filter((j) => j.status === 'fail').length;
-  const totalMandatoryViolations = jurisdictionValues.reduce(
-    (sum, j) => sum + j.mandatoryViolations,
-    0,
-  );
-
+  // Use summary directly from API
   const summary: ComplianceSummary = {
-    totalJurisdictions: jurisdictionValues.length,
-    passing,
-    failing,
-    totalMandatoryViolations,
+    totalJurisdictions: data.summary.totalJurisdictions,
+    passing: data.summary.passing,
+    failing: data.summary.failing,
+    totalMandatoryViolations: data.summary.totalMandatoryViolations,
   };
 
   return { matrix, issueAnnotations, summary };

@@ -12,47 +12,76 @@ const SAMPLE_ISSUES: ComplianceIssueInput[] = [
   },
 ];
 
+// Matches the actual compliance service response shape
 const SAMPLE_RESPONSE = {
-  jurisdictions: [
-    {
+  matrix: {
+    EU: {
       jurisdictionId: 'EU',
       jurisdictionName: 'European Union',
       status: 'fail',
       mandatoryViolations: 1,
       recommendedViolations: 0,
+      optionalViolations: 0,
       regulations: [
         {
-          regulationId: 'eu-accessibility-act',
+          regulationId: 'eu-eaa',
           regulationName: 'EU Accessibility Act',
           shortName: 'EAA',
           status: 'fail',
           enforcementDate: '2025-06-28',
+          scope: 'all',
+          violations: [{ wcagCriterion: '1.1.1', obligation: 'mandatory', issueCount: 1 }],
           violationCount: 1,
         },
       ],
     },
-    {
+    US: {
       jurisdictionId: 'US',
       jurisdictionName: 'United States',
       status: 'pass',
       mandatoryViolations: 0,
       recommendedViolations: 0,
+      optionalViolations: 0,
       regulations: [],
     },
-  ],
-  issueAnnotations: [
+  },
+  annotatedIssues: [
     {
-      issueCode: 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37',
-      annotations: [
+      code: 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37',
+      wcagCriterion: '1.1.1',
+      wcagLevel: 'AA',
+      originalIssue: {},
+      regulations: [
         {
+          regulationId: 'eu-eaa',
           regulationName: 'EU Accessibility Act',
           shortName: 'EAA',
           jurisdictionId: 'EU',
           obligation: 'mandatory',
+          enforcementDate: '2025-06-28',
         },
       ],
     },
   ],
+  summary: {
+    totalJurisdictions: 2,
+    passing: 1,
+    failing: 1,
+    totalMandatoryViolations: 1,
+    totalOptionalViolations: 0,
+  },
+};
+
+const EMPTY_RESPONSE = {
+  matrix: {},
+  annotatedIssues: [],
+  summary: {
+    totalJurisdictions: 0,
+    passing: 0,
+    failing: 0,
+    totalMandatoryViolations: 0,
+    totalOptionalViolations: 0,
+  },
 };
 
 describe('fetchComplianceCheck', () => {
@@ -161,7 +190,7 @@ describe('fetchComplianceCheck', () => {
   it('includes the Authorization header when a token is provided', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ jurisdictions: [], issueAnnotations: [] }),
+      json: async () => EMPTY_RESPONSE,
     });
 
     await fetchComplianceCheck(
@@ -178,7 +207,7 @@ describe('fetchComplianceCheck', () => {
   it('omits Authorization header when no token is provided', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ jurisdictions: [], issueAnnotations: [] }),
+      json: async () => EMPTY_RESPONSE,
     });
 
     await fetchComplianceCheck(
@@ -194,7 +223,7 @@ describe('fetchComplianceCheck', () => {
   it('sends the correct payload to the endpoint', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ jurisdictions: [], issueAnnotations: [] }),
+      json: async () => EMPTY_RESPONSE,
     });
 
     await fetchComplianceCheck(
@@ -213,7 +242,7 @@ describe('fetchComplianceCheck', () => {
   it('returns an empty map for issueAnnotations when service returns empty list', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ jurisdictions: [], issueAnnotations: [] }),
+      json: async () => EMPTY_RESPONSE,
     });
 
     const result = await fetchComplianceCheck(
@@ -241,16 +270,14 @@ describe('fetchComplianceEnrichment', () => {
   });
 
   it('fetches a token first when client credentials are provided', async () => {
-    // First call: token endpoint
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ access_token: 'tok-123' }),
       })
-      // Second call: compliance check
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ jurisdictions: [], issueAnnotations: [] }),
+        json: async () => EMPTY_RESPONSE,
       });
 
     const result = await fetchComplianceEnrichment(
@@ -270,7 +297,7 @@ describe('fetchComplianceEnrichment', () => {
   it('skips token fetch when no credentials are provided', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ jurisdictions: [], issueAnnotations: [] }),
+      json: async () => EMPTY_RESPONSE,
     });
 
     await fetchComplianceEnrichment(
@@ -285,13 +312,11 @@ describe('fetchComplianceEnrichment', () => {
   });
 
   it('proceeds without auth when token fetch fails', async () => {
-    // Token call fails
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockRejectedValueOnce(new Error('token endpoint error'))
-      // Compliance check proceeds without token
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ jurisdictions: [], issueAnnotations: [] }),
+        json: async () => EMPTY_RESPONSE,
       });
 
     const result = await fetchComplianceEnrichment(
@@ -303,7 +328,25 @@ describe('fetchComplianceEnrichment', () => {
     );
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
-    // Should still return a result (without auth)
     expect(result).not.toBeNull();
+  });
+
+  it('deduplicates issues by code before sending', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => EMPTY_RESPONSE,
+    });
+
+    const duplicatedIssues: ComplianceIssueInput[] = [
+      { code: 'WCAG2AA.H37', type: 'error', message: 'a', selector: 'img', context: '<img>' },
+      { code: 'WCAG2AA.H37', type: 'error', message: 'b', selector: 'img', context: '<img>' },
+      { code: 'WCAG2AA.H44', type: 'error', message: 'c', selector: 'input', context: '<input>' },
+    ];
+
+    await fetchComplianceEnrichment('http://localhost:4000', ['EU'], duplicatedIssues);
+
+    const [, options] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { issues: unknown[] };
+    expect(body.issues).toHaveLength(2); // deduplicated
   });
 });
