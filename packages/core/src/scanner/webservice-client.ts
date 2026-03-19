@@ -18,7 +18,8 @@ export interface Pa11yTask {
 
 export interface Pa11yResult {
   readonly date: string;
-  readonly issues?: readonly Pa11yIssue[];
+  readonly results?: readonly Pa11yIssue[];  // pa11y-webservice uses 'results', not 'issues'
+  readonly issues?: readonly Pa11yIssue[];   // kept for backward compat
   readonly [key: string]: unknown;
 }
 

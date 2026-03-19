@@ -141,7 +141,7 @@ async function scanUrl(
     }
 
     const pa11yResult = results[0];
-    const rawIssues = pa11yResult.issues ?? [];
+    const rawIssues = pa11yResult.results ?? pa11yResult.issues ?? [];
     const issues = mapIssues(rawIssues);
 
     await client.deleteTask(taskId);
