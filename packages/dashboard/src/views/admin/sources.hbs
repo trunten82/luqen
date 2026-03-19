@@ -1,0 +1,67 @@
+<section aria-label="Monitored sources management">
+  <div class="page-actions">
+    <button hx-get="/admin/sources/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--primary"
+            aria-haspopup="dialog">
+      Add Source
+    </button>
+    <button hx-post="/admin/sources/scan"
+            hx-target="#scan-results"
+            hx-swap="outerHTML"
+            hx-indicator="#scan-spinner"
+            class="btn btn--secondary"
+            aria-label="Trigger scan of all monitored sources now">
+      Scan Now
+    </button>
+    <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">Scanning...</span>
+  </div>
+
+  <div id="scan-results" aria-live="polite"></div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Monitored sources">
+      <caption class="visually-hidden">List of monitored legal sources</caption>
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">URL</th>
+          <th scope="col">Type</th>
+          <th scope="col">Schedule</th>
+          <th scope="col">Last Checked</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="sources-table-body">
+        {{#each sources}}
+        <tr id="source-{{id}}">
+          <td>{{name}}</td>
+          <td><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
+          <td>{{type}}</td>
+          <td>{{schedule}}</td>
+          <td>{{lastChecked}}</td>
+          <td>
+            <button hx-delete="/admin/sources/{{id}}"
+                    hx-confirm="Remove source {{name}}?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:500ms"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Remove {{name}}">Remove</button>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="6" class="table__empty">No sources configured.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>

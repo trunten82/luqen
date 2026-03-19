@@ -1,0 +1,56 @@
+<section aria-label="OAuth clients management">
+  <div class="page-actions">
+    <button hx-get="/admin/clients/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--primary"
+            aria-haspopup="dialog">
+      Add OAuth Client
+    </button>
+  </div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="OAuth clients">
+      <caption class="visually-hidden">List of OAuth clients</caption>
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Client ID</th>
+          <th scope="col">Scopes</th>
+          <th scope="col">Grant Types</th>
+          <th scope="col">Created</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="clients-table-body">
+        {{#each clients}}
+        <tr id="client-{{clientId}}">
+          <td>{{name}}</td>
+          <td><code>{{clientId}}</code></td>
+          <td>{{scopesDisplay}}</td>
+          <td>{{grantTypesDisplay}}</td>
+          <td>{{createdAtDisplay}}</td>
+          <td>
+            <button hx-post="/admin/clients/{{clientId}}/revoke"
+                    hx-confirm="Revoke client {{name}}? This cannot be undone."
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:500ms"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Revoke {{name}}">Revoke</button>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="6" class="table__empty">No OAuth clients registered.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>

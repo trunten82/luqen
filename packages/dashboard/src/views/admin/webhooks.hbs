@@ -1,0 +1,63 @@
+<section aria-label="Webhooks management">
+  <div class="page-actions">
+    <button hx-get="/admin/webhooks/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--primary"
+            aria-haspopup="dialog">
+      Add Webhook
+    </button>
+  </div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Webhooks">
+      <caption class="visually-hidden">List of registered webhooks</caption>
+      <thead>
+        <tr>
+          <th scope="col">URL</th>
+          <th scope="col">Events</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="webhooks-table-body">
+        {{#each webhooks}}
+        <tr id="webhook-{{id}}">
+          <td><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
+          <td>{{eventsDisplay}}</td>
+          <td>
+            <span class="badge {{#if active}}badge--success{{else}}badge--neutral{{/if}}">
+              {{#if active}}Active{{else}}Inactive{{/if}}
+            </span>
+          </td>
+          <td>{{createdAtDisplay}}</td>
+          <td>
+            <button hx-post="/admin/webhooks/{{id}}/test"
+                    hx-target="#toast-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="Send test delivery to {{url}}">Test</button>
+            <button hx-delete="/admin/webhooks/{{id}}"
+                    hx-confirm="Delete this webhook?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:500ms"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Delete webhook {{url}}">Delete</button>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="5" class="table__empty">No webhooks registered.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>

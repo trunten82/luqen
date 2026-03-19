@@ -1,0 +1,60 @@
+<section aria-label="Users management">
+  <div class="page-actions">
+    <button hx-get="/admin/users/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--primary"
+            aria-haspopup="dialog">
+      Add User
+    </button>
+  </div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Users">
+      <caption class="visually-hidden">List of users</caption>
+      <thead>
+        <tr>
+          <th scope="col">Username</th>
+          <th scope="col">Role</th>
+          <th scope="col">Created</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="users-table-body">
+        {{#each users}}
+        <tr id="user-{{id}}">
+          <td>{{username}}</td>
+          <td><span class="badge badge--neutral">{{role}}</span></td>
+          <td>{{createdAtDisplay}}</td>
+          <td>
+            <span class="badge {{#if active}}badge--success{{else}}badge--error{{/if}}">
+              {{#if active}}Active{{else}}Inactive{{/if}}
+            </span>
+          </td>
+          <td>
+            {{#if active}}
+            <button hx-post="/admin/users/{{id}}/deactivate"
+                    hx-confirm="Deactivate user {{username}}?"
+                    hx-target="#user-{{id}}"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--warning"
+                    aria-label="Deactivate {{username}}">Deactivate</button>
+            {{/if}}
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="5" class="table__empty">No users found.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -8,6 +8,14 @@ import { authRoutes } from './routes/auth.js';
 import { homeRoutes } from './routes/home.js';
 import { scanRoutes } from './routes/scan.js';
 import { reportRoutes } from './routes/reports.js';
+import { jurisdictionRoutes } from './routes/admin/jurisdictions.js';
+import { regulationRoutes } from './routes/admin/regulations.js';
+import { proposalRoutes } from './routes/admin/proposals.js';
+import { sourceRoutes } from './routes/admin/sources.js';
+import { webhookRoutes } from './routes/admin/webhooks.js';
+import { userRoutes } from './routes/admin/users.js';
+import { clientRoutes } from './routes/admin/clients.js';
+import { systemRoutes } from './routes/admin/system.js';
 import { ScanDb } from './db/scans.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
 
@@ -82,6 +90,20 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await homeRoutes(server, db);
   await scanRoutes(server, db, orchestrator, config);
   await reportRoutes(server, db);
+
+  // ── Admin routes (all require admin role via adminGuard per route) ─────────
+  await jurisdictionRoutes(server, config.complianceUrl);
+  await regulationRoutes(server, config.complianceUrl);
+  await proposalRoutes(server, config.complianceUrl);
+  await sourceRoutes(server, config.complianceUrl);
+  await webhookRoutes(server, config.complianceUrl);
+  await userRoutes(server, config.complianceUrl);
+  await clientRoutes(server, config.complianceUrl);
+  await systemRoutes(server, {
+    complianceUrl: config.complianceUrl,
+    webserviceUrl: config.webserviceUrl,
+    dbPath: config.dbPath,
+  });
 
   // ── Health endpoint ───────────────────────────────────────────────────────
   server.get('/health', async (_request, _reply) => {

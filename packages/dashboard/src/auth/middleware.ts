@@ -68,28 +68,28 @@ export async function authGuard(
   request.user = user;
 }
 
-export function adminGuard(
+export async function adminGuard(
   request: FastifyRequest,
   reply: FastifyReply,
-): void {
+): Promise<void> {
   if (request.user?.role !== 'admin') {
-    void reply.code(403).send({ error: 'Forbidden: admin role required' });
+    await reply.code(403).send({ error: 'Forbidden: admin role required' });
   }
 }
 
 export function requireRole(role: 'viewer' | 'user' | 'admin') {
   const roleOrder: Record<string, number> = { viewer: 0, user: 1, admin: 2 };
 
-  return function roleGuard(
+  return async function roleGuard(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): void {
+  ): Promise<void> {
     const userRole = request.user?.role ?? 'viewer';
     const requiredLevel = roleOrder[role] ?? 0;
     const userLevel = roleOrder[userRole] ?? 0;
 
     if (userLevel < requiredLevel) {
-      void reply.code(403).send({ error: `Forbidden: ${role} role required` });
+      await reply.code(403).send({ error: `Forbidden: ${role} role required` });
     }
   };
 }

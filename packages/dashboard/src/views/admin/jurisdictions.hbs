@@ -1,0 +1,94 @@
+<section aria-label="Jurisdictions management">
+  <div class="page-actions">
+    <button hx-get="/admin/jurisdictions/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--primary"
+            aria-haspopup="dialog">
+      Add Jurisdiction
+    </button>
+  </div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="search-bar">
+    <label for="jurisdiction-search" class="visually-hidden">Search jurisdictions</label>
+    <input id="jurisdiction-search"
+           type="search"
+           name="q"
+           value="{{q}}"
+           placeholder="Search by name or ID..."
+           hx-get="/admin/jurisdictions"
+           hx-trigger="input changed delay:300ms"
+           hx-target="#jurisdictions-table-body"
+           hx-indicator="#search-spinner"
+           class="input"
+           aria-label="Search jurisdictions by name or ID"
+           role="searchbox">
+    <span id="search-spinner" class="htmx-indicator" aria-hidden="true">Searching...</span>
+  </div>
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Jurisdictions">
+      <caption class="visually-hidden">List of jurisdictions</caption>
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Name</th>
+          <th scope="col">Type</th>
+          <th scope="col">Parent</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="jurisdictions-table-body">
+        {{#each jurisdictions}}
+        <tr id="jurisdiction-{{id}}">
+          <td>{{id}}</td>
+          <td>{{name}}</td>
+          <td>{{type}}</td>
+          <td>{{parentId}}</td>
+          <td>
+            <button hx-get="/admin/jurisdictions/{{id}}/edit"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="Edit {{name}}">Edit</button>
+            <button hx-delete="/admin/jurisdictions/{{id}}"
+                    hx-confirm="Delete jurisdiction {{name}}?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:500ms"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Delete {{name}}">Delete</button>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="5" class="table__empty">No jurisdictions found.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  <nav aria-label="Jurisdictions pagination" class="pagination">
+    {{#if hasPrev}}
+    <a hx-get="/admin/jurisdictions?offset={{prevOffset}}&limit={{limit}}&q={{q}}"
+       hx-target="#jurisdictions-table-body"
+       hx-push-url="true"
+       class="btn btn--ghost"
+       aria-label="Previous page">Previous</a>
+    {{/if}}
+    <span class="pagination__info" aria-current="page">Page {{currentPage}}</span>
+    {{#if hasNext}}
+    <a hx-get="/admin/jurisdictions?offset={{nextOffset}}&limit={{limit}}&q={{q}}"
+       hx-target="#jurisdictions-table-body"
+       hx-push-url="true"
+       class="btn btn--ghost"
+       aria-label="Next page">Next</a>
+    {{/if}}
+  </nav>
+</section>
