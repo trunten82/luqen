@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Handlebars from 'handlebars';
-import type { PageResult, ScanError, ScanSummary, ComplianceEnrichment, RegulationAnnotation } from '../types.js';
+import type { PageResult, ScanError, ScanSummary, ComplianceEnrichment, RegulationAnnotation, JurisdictionComplianceResult } from '../types.js';
 import { extractCriterion, getWcagDescription } from '../wcag-descriptions.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -59,6 +59,7 @@ function buildUniqueFilename(outputDir: string, siteUrl: string, timestamp: stri
  * Annotate each issue with WCAG description, URL, and regulation tags for the
  * template. Returns a new array — original issues are not mutated.
  * Also extracts template issues (same code+selector+context on 3+ pages).
+ * Also computes per-jurisdiction confirmedViolations / needsReview / reviewStatus.
  */
 export function buildAnnotatedPages(
   pages: readonly PageResult[],
@@ -66,6 +67,7 @@ export function buildAnnotatedPages(
 ): {
   annotatedPages: Array<PageResult & { issues: AnnotatedIssue[] }>;
   templateIssues: TemplateIssue[];
+  enrichedMatrix: (JurisdictionComplianceResult & { confirmedViolations: number; needsReview: number; reviewStatus: 'fail' | 'review' | 'pass' })[] | null;
 } {
   // First pass: annotate all issues
   const annotated = pages.map((page) => ({
@@ -127,7 +129,43 @@ export function buildAnnotatedPages(
     }),
   }));
 
-  return { annotatedPages, templateIssues };
+  // Fourth pass: build enriched compliance matrix with confirmed/needsReview breakdown
+  let enrichedMatrix: (JurisdictionComplianceResult & { confirmedViolations: number; needsReview: number; reviewStatus: 'fail' | 'review' | 'pass' })[] | null = null;
+  if (compliance) {
+    // Build a map of issue code -> type ('error'|'warning'|'notice') from all pages
+    // An issue code may appear with different types; we track per-issue occurrence
+    // For each jurisdiction, count per-type based on all issues in pages
+    enrichedMatrix = Object.values(compliance.matrix).map((j) => {
+      let confirmed = 0;
+      let needsReviewCount = 0;
+      for (const page of pages) {
+        for (const issue of page.issues) {
+          const annotations = compliance.issueAnnotations.get(issue.code);
+          if (!annotations) continue;
+          const hasMandatoryForJurisdiction = annotations.some(
+            (a) => a.jurisdictionId === j.jurisdictionId && a.obligation === 'mandatory',
+          );
+          if (!hasMandatoryForJurisdiction) continue;
+          if (issue.type === 'error') {
+            confirmed++;
+          } else {
+            needsReviewCount++;
+          }
+        }
+      }
+      const reviewStatus: 'fail' | 'review' | 'pass' =
+        confirmed > 0 ? 'fail' : needsReviewCount > 0 ? 'review' : 'pass';
+      return {
+        ...j,
+        regulations: j.regulations.map((r) => ({ ...r })),
+        confirmedViolations: confirmed,
+        needsReview: needsReviewCount,
+        reviewStatus,
+      };
+    });
+  }
+
+  return { annotatedPages, templateIssues, enrichedMatrix };
 }
 
 export async function generateHtmlReport(input: HtmlReportInput): Promise<string> {
@@ -163,16 +201,26 @@ export async function generateHtmlReport(input: HtmlReportInput): Promise<string
     status === 'pass' ? 'compliance-pass' : 'compliance-fail',
   );
   Handlebars.registerHelper('hasCompliance', (c: unknown) => c != null);
+  Handlebars.registerHelper('reviewStatusClass', (reviewStatus: string) => {
+    if (reviewStatus === 'fail') return 'fail-head';
+    if (reviewStatus === 'review') return 'review-head';
+    return 'pass-head';
+  });
+  Handlebars.registerHelper('reviewStatusLabelClass', (reviewStatus: string) => {
+    if (reviewStatus === 'fail') return 's-fail';
+    if (reviewStatus === 'review') return 's-review';
+    return 's-pass';
+  });
+  Handlebars.registerHelper('reviewStatusLabel', (reviewStatus: string) => {
+    if (reviewStatus === 'fail') return 'FAIL';
+    if (reviewStatus === 'review') return 'REVIEW NEEDED';
+    return 'PASS';
+  });
 
-  const { annotatedPages, templateIssues } = buildAnnotatedPages(pages, compliance);
+  const { annotatedPages, templateIssues, enrichedMatrix } = buildAnnotatedPages(pages, compliance);
 
-  // Build compliance matrix array for template (Handlebars cannot iterate Records)
-  const complianceMatrix = compliance
-    ? Object.values(compliance.matrix).map((j) => ({
-        ...j,
-        regulations: j.regulations.map((r) => ({ ...r })),
-      }))
-    : null;
+  // Use enriched matrix (has confirmedViolations / needsReview / reviewStatus computed from issue types)
+  const complianceMatrix = enrichedMatrix;
 
   const templateSource = await readFile(join(__dirname, 'report.hbs'), 'utf-8');
   const template = Handlebars.compile(templateSource);

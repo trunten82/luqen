@@ -312,6 +312,125 @@ describe('generateHtmlReport', () => {
   });
 });
 
+describe('buildAnnotatedPages — confirmed violations vs. needs review', () => {
+  const errorIssue = {
+    code: 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37',
+    type: 'error' as const,
+    message: 'Missing alt',
+    selector: 'img',
+    context: '<img>',
+  };
+  const warningIssue = {
+    code: 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37',
+    type: 'warning' as const,
+    message: 'Check alt',
+    selector: 'img.warn',
+    context: '<img class="warn">',
+  };
+  const noticeIssue = {
+    code: 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37',
+    type: 'notice' as const,
+    message: 'Verify alt',
+    selector: 'img.note',
+    context: '<img class="note">',
+  };
+
+  const compliance: ComplianceEnrichment = {
+    summary: { totalJurisdictions: 1, passing: 0, failing: 1, totalMandatoryViolations: 3 },
+    matrix: {
+      EU: {
+        jurisdictionId: 'EU',
+        jurisdictionName: 'European Union',
+        status: 'fail',
+        mandatoryViolations: 3,
+        recommendedViolations: 0,
+        regulations: [],
+      },
+    },
+    issueAnnotations: new Map([
+      [
+        'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37',
+        [{ regulationName: 'EU Accessibility Act', shortName: 'EAA', jurisdictionId: 'EU', obligation: 'mandatory' }],
+      ],
+    ]),
+  };
+
+  it('counts only error-type issues as confirmedViolations', () => {
+    const pages = [
+      { url: 'https://example.com/', discoveryMethod: 'sitemap' as const, issueCount: 3, issues: [errorIssue, warningIssue, noticeIssue] },
+    ];
+    const { enrichedMatrix } = buildAnnotatedPages(pages, compliance);
+    expect(enrichedMatrix).not.toBeNull();
+    const eu = enrichedMatrix![0];
+    expect(eu.confirmedViolations).toBe(1);
+    expect(eu.needsReview).toBe(2);
+    expect(eu.reviewStatus).toBe('fail');
+  });
+
+  it('sets reviewStatus to review when only warnings/notices present', () => {
+    const pages = [
+      { url: 'https://example.com/', discoveryMethod: 'sitemap' as const, issueCount: 2, issues: [warningIssue, noticeIssue] },
+    ];
+    const { enrichedMatrix } = buildAnnotatedPages(pages, compliance);
+    const eu = enrichedMatrix![0];
+    expect(eu.confirmedViolations).toBe(0);
+    expect(eu.needsReview).toBe(2);
+    expect(eu.reviewStatus).toBe('review');
+  });
+
+  it('sets reviewStatus to pass when no mandatory issues', () => {
+    const pages = [
+      { url: 'https://example.com/', discoveryMethod: 'sitemap' as const, issueCount: 0, issues: [] },
+    ];
+    const { enrichedMatrix } = buildAnnotatedPages(pages, compliance);
+    const eu = enrichedMatrix![0];
+    expect(eu.confirmedViolations).toBe(0);
+    expect(eu.needsReview).toBe(0);
+    expect(eu.reviewStatus).toBe('pass');
+  });
+
+  it('shows REVIEW NEEDED status in HTML when only warnings present', async () => {
+    const outputDir = join(tmpdir(), `pally-review-test-${Date.now()}`);
+    mkdirSync(outputDir, { recursive: true });
+    const reviewPages = [
+      { url: 'https://example.com/', discoveryMethod: 'sitemap' as const, issueCount: 1, issues: [warningIssue] },
+    ];
+    try {
+      const reportPath = await generateHtmlReport({ siteUrl: 'https://example.com', pages: reviewPages, errors: [], outputDir, compliance });
+      const html = readFileSync(reportPath, 'utf-8');
+      expect(html).toContain('REVIEW NEEDED');
+      // juris-status element should have s-review class, not s-fail
+      expect(html).toContain('class="juris-status s-review"');
+      expect(html).not.toContain('class="juris-status s-fail"');
+    } finally {
+      rmSync(outputDir, { recursive: true, force: true });
+    }
+  });
+
+  it('shows FAIL status in HTML when error-type issues present', async () => {
+    const outputDir = join(tmpdir(), `pally-fail-test-${Date.now()}`);
+    mkdirSync(outputDir, { recursive: true });
+    const failPages = [
+      { url: 'https://example.com/', discoveryMethod: 'sitemap' as const, issueCount: 1, issues: [errorIssue] },
+    ];
+    try {
+      const reportPath = await generateHtmlReport({ siteUrl: 'https://example.com', pages: failPages, errors: [], outputDir, compliance });
+      const html = readFileSync(reportPath, 'utf-8');
+      expect(html).toContain('s-fail');
+    } finally {
+      rmSync(outputDir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns null enrichedMatrix when no compliance provided', () => {
+    const pages = [
+      { url: 'https://example.com/', discoveryMethod: 'sitemap' as const, issueCount: 0, issues: [] },
+    ];
+    const { enrichedMatrix } = buildAnnotatedPages(pages, null);
+    expect(enrichedMatrix).toBeNull();
+  });
+});
+
 describe('buildAnnotatedPages — template issue deduplication', () => {
   function makeIssue(overrides: Partial<PageResult['issues'][number]> = {}): PageResult['issues'][number] {
     return {

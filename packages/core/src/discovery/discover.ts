@@ -9,7 +9,14 @@ interface DiscoverOptions {
   readonly alsoCrawl: boolean;
 }
 
-export async function discoverUrls(baseUrl: string, options: DiscoverOptions): Promise<DiscoveredUrl[]> {
+export interface DiscoverResult {
+  readonly urls: DiscoveredUrl[];
+  readonly wafWarning?: string;
+}
+
+export async function discoverUrls(baseUrl: string, options: DiscoverOptions): Promise<DiscoveredUrl[]>;
+export async function discoverUrls(baseUrl: string, options: DiscoverOptions, returnResult: true): Promise<DiscoverResult>;
+export async function discoverUrls(baseUrl: string, options: DiscoverOptions, returnResult?: boolean): Promise<DiscoveredUrl[] | DiscoverResult> {
   const { maxPages, crawlDepth, alsoCrawl } = options;
   const robots = await fetchRobots(baseUrl);
 
@@ -26,17 +33,28 @@ export async function discoverUrls(baseUrl: string, options: DiscoverOptions): P
   const hasSitemap = sitemapUrls.length > 0;
 
   let crawledUrls: string[] = [];
+  let wafWarning: string | undefined;
   if (!hasSitemap || alsoCrawl) {
-    crawledUrls = await crawlSite(baseUrl, { maxPages, maxDepth: crawlDepth, isAllowed: robots.isAllowed });
+    const rawResult = await crawlSite(baseUrl, { maxPages, maxDepth: crawlDepth, isAllowed: robots.isAllowed }, true);
+    // Handle both CrawlResult (new) and string[] (legacy/mock)
+    if (Array.isArray(rawResult)) {
+      crawledUrls = rawResult as unknown as string[];
+    } else {
+      crawledUrls = rawResult.urls;
+      wafWarning = rawResult.wafWarning;
+    }
   }
 
   const seen = new Set<string>();
-  const results: DiscoveredUrl[] = [];
+  const urls: DiscoveredUrl[] = [];
   for (const url of sitemapUrls) {
-    if (!seen.has(url)) { seen.add(url); results.push({ url, discoveryMethod: 'sitemap' }); }
+    if (!seen.has(url)) { seen.add(url); urls.push({ url, discoveryMethod: 'sitemap' }); }
   }
   for (const url of crawledUrls) {
-    if (!seen.has(url)) { seen.add(url); results.push({ url, discoveryMethod: 'crawl' }); }
+    if (!seen.has(url)) { seen.add(url); urls.push({ url, discoveryMethod: 'crawl' }); }
   }
-  return results.slice(0, maxPages);
+  const slicedUrls = urls.slice(0, maxPages);
+
+  if (returnResult) return { urls: slicedUrls, wafWarning };
+  return slicedUrls;
 }
