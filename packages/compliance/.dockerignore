@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.git
+*.test.ts
+tests
+*.md
+compliance.db
+compliance.db-shm
+compliance.db-wal
+keys
+pally-reports
