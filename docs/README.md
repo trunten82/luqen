@@ -18,6 +18,7 @@ Pally Agent is a Node.js/TypeScript tool that orchestrates accessibility testing
 10. [Integration Guide](#10-integration-guide)
 11. [Troubleshooting](#11-troubleshooting)
 12. [API Reference](#12-api-reference)
+13. [Backward Compatibility / Pa11y Passthrough](#13-backward-compatibility--pa11y-passthrough)
 
 ---
 
@@ -436,7 +437,7 @@ Build first:
 cd /root/pally-agent && npm run build
 ```
 
-After restarting Claude Code, the four MCP tools will be available.
+After restarting Claude Code, the six MCP tools will be available.
 
 ### MCP Tools
 
@@ -626,6 +627,136 @@ Applies one fix proposal to the source file. The calling agent must confirm with
   "file": "/home/user/my-next-app/app/about/page.tsx",
   "diff": "--- a/app/about/page.tsx\n+++ b/app/about/page.tsx\n@@ -23,7 +23,7 @@\n ..."
 }
+```
+
+---
+
+#### `pally_raw` — Single-Page Pa11y Passthrough
+
+Runs a pa11y scan on a single URL and returns the raw pa11y-webservice output format — identical to what pa11y-webservice natively returns. Designed for backward compatibility with existing automations that already consume pa11y-webservice output directly.
+
+**Input schema:**
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `url` | `string` | Yes | — | URL to scan |
+| `standard` | `"WCAG2A" \| "WCAG2AA" \| "WCAG2AAA"` | No | `"WCAG2AA"` | WCAG conformance level |
+| `timeout` | `number` | No | `30000` | Per-page scan timeout in milliseconds |
+| `wait` | `number` | No | `0` | Milliseconds to wait after page load before testing |
+| `ignore` | `string[]` | No | `[]` | WCAG rule codes to exclude from results |
+| `hideElements` | `string` | No | `""` | CSS selector for elements pa11y should ignore |
+| `headers` | `object` | No | `{}` | HTTP headers sent by pa11y to the target page |
+| `actions` | `string[]` | No | `[]` | Pa11y actions to run before testing (e.g. `"click element #tab"`) |
+
+**Output schema:**
+
+Raw pa11y result object — the same structure pa11y-webservice returns natively:
+
+```typescript
+{
+  date: string;        // ISO 8601 timestamp of the scan
+  issues: Array<{
+    code: string;      // WCAG rule code
+    type: string;      // "error", "warning", or "notice"
+    message: string;   // Human-readable description
+    selector: string;  // CSS selector of the offending element
+    context: string;   // HTML snippet surrounding the issue
+  }>;
+}
+```
+
+**Example:**
+
+```json
+// Input
+{ "url": "https://example.com/page", "standard": "WCAG2AA" }
+
+// Output
+{
+  "date": "2026-03-19T10:00:00.000Z",
+  "issues": [
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+      "type": "error",
+      "message": "Img element missing an alt attribute.",
+      "selector": "html > body > main > img",
+      "context": "<img src=\"/hero.jpg\">"
+    }
+  ]
+}
+```
+
+---
+
+#### `pally_raw_batch` — Multi-Page Pa11y Passthrough
+
+Runs pa11y on multiple URLs with concurrency control and returns raw pa11y output per URL. Uses the same backward-compatible format as `pally_raw`.
+
+**Input schema:**
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `urls` | `string[]` | Yes | — | Array of URLs to scan |
+| `standard` | `"WCAG2A" \| "WCAG2AA" \| "WCAG2AAA"` | No | `"WCAG2AA"` | WCAG conformance level |
+| `concurrency` | `number` | No | `5` | Maximum number of pages scanned in parallel |
+| `timeout` | `number` | No | `30000` | Per-page scan timeout in milliseconds |
+| `wait` | `number` | No | `0` | Milliseconds to wait after page load before testing |
+| `ignore` | `string[]` | No | `[]` | WCAG rule codes to exclude from results |
+| `hideElements` | `string` | No | `""` | CSS selector for elements pa11y should ignore |
+| `headers` | `object` | No | `{}` | HTTP headers sent by pa11y to the target pages |
+
+**Output schema:**
+
+Array of per-URL result objects:
+
+```typescript
+Array<{
+  url: string;         // The URL that was scanned
+  result?: {           // Present when the scan succeeded
+    date: string;
+    issues: Array<{
+      code: string;
+      type: string;
+      message: string;
+      selector: string;
+      context: string;
+    }>;
+  };
+  error?: string;      // Present when the scan failed (timeout, HTTP error, etc.)
+}>
+```
+
+**Example:**
+
+```json
+// Input
+{ "urls": ["https://example.com/", "https://example.com/about"], "concurrency": 5 }
+
+// Output
+[
+  {
+    "url": "https://example.com/",
+    "result": {
+      "date": "2026-03-19T10:00:00.000Z",
+      "issues": []
+    }
+  },
+  {
+    "url": "https://example.com/about",
+    "result": {
+      "date": "2026-03-19T10:00:01.000Z",
+      "issues": [
+        {
+          "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+          "type": "error",
+          "message": "Img element missing an alt attribute.",
+          "selector": "html > body > main > img",
+          "context": "<img src=\"/team.jpg\">"
+        }
+      ]
+    }
+  }
+]
 ```
 
 ---
@@ -1040,7 +1171,7 @@ Pally Agent implements the MCP protocol, so any MCP-compatible agent can use it:
 }
 ```
 
-The four tools (`pally_scan`, `pally_get_issues`, `pally_propose_fixes`, `pally_apply_fix`) follow the MCP tool calling convention and return structured JSON.
+The six tools (`pally_scan`, `pally_get_issues`, `pally_propose_fixes`, `pally_apply_fix`, `pally_raw`, `pally_raw_batch`) follow the MCP tool calling convention and return structured JSON.
 
 ### Webhook / Notification Patterns
 
@@ -1319,6 +1450,51 @@ A URL returned by the discovery phase.
 |-------|------|-------------|
 | `url` | `string` | The discovered URL |
 | `discoveryMethod` | `"sitemap" \| "crawl"` | How it was found |
+
+---
+
+## 13. Backward Compatibility / Pa11y Passthrough
+
+### Purpose
+
+`pally_raw` and `pally_raw_batch` exist for teams that already have automations built on top of [pa11y-webservice](https://github.com/pa11y/pa11y-webservice) and want to call those automations through an MCP interface without migrating to the enriched `pally_scan` output format.
+
+### Output Format
+
+The output of both tools is **identical to the native pa11y-webservice response format**. If your code already processes pa11y-webservice results, it will work with `pally_raw` and `pally_raw_batch` without any changes.
+
+Each issue object contains exactly the fields pa11y-webservice returns:
+
+| Field | Description |
+|-------|-------------|
+| `code` | WCAG rule code |
+| `type` | `"error"`, `"warning"`, or `"notice"` |
+| `message` | Human-readable description |
+| `selector` | CSS selector of the offending element |
+| `context` | HTML snippet surrounding the issue |
+
+### When to Use Each Tool
+
+| Tool | Use case |
+|------|----------|
+| `pally_raw` | Single-page scan with pa11y-webservice-compatible output |
+| `pally_raw_batch` | Multiple pages, same format, with concurrency control |
+| `pally_scan` | Full site scan with discovery, source mapping, and enriched output |
+
+### Contrast with `pally_scan`
+
+`pally_scan` adds capabilities on top of the raw pa11y output:
+
+- **Page discovery** — automatically finds all pages via sitemap and/or crawl
+- **Source mapping** — maps issues to source files in your framework's codebase
+- **Enriched output** — adds `discoveryMethod`, `issueCount`, source mapping results, and structured error details
+- **Structured reports** — writes timestamped JSON and HTML report files to disk
+
+Use `pally_raw` / `pally_raw_batch` when you need the raw pa11y data format and handle the rest yourself. Use `pally_scan` when you want Pally Agent to handle discovery, source mapping, and reporting for you.
+
+### Migration Path
+
+If you are building new integrations, prefer `pally_scan` for its richer output. The passthrough tools are provided for backward compatibility and will be maintained alongside `pally_scan`.
 
 ---
 
