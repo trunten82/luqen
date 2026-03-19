@@ -41,4 +41,20 @@ describe('MCP Server', () => {
     const { server } = await createComplianceMcpServer({ dbPath: ':memory:' });
     expect(typeof server.connect).toBe('function');
   });
+
+  it('uses COMPLIANCE_DB_PATH env var when no dbPath provided', async () => {
+    const origEnv = process.env.COMPLIANCE_DB_PATH;
+    process.env.COMPLIANCE_DB_PATH = ':memory:';
+    try {
+      const result = await createComplianceMcpServer({});
+      expect(result).toHaveProperty('server');
+      expect(result).toHaveProperty('toolNames');
+    } finally {
+      if (origEnv === undefined) {
+        delete process.env.COMPLIANCE_DB_PATH;
+      } else {
+        process.env.COMPLIANCE_DB_PATH = origEnv;
+      }
+    }
+  });
 });

@@ -69,6 +69,11 @@ describe('webhooks', () => {
     it('returns false for malformed signature', () => {
       expect(verifyWebhookSignature('body', 'invalid', 'secret')).toBe(false);
     });
+
+    it('returns false when signature length does not match', () => {
+      // sha256=<wronglength> - starts with sha256= but wrong length
+      expect(verifyWebhookSignature('body', 'sha256=abc123', 'secret')).toBe(false);
+    });
   });
 
   describe('dispatchWebhook', () => {
@@ -132,6 +137,30 @@ describe('webhooks', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [_url, options] = mockFetch.mock.calls[0] as [string, RequestInit & { headers: Record<string, string> }];
       expect(options.headers['X-Pally-Signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
+    });
+
+    it('retries on fetch failure', async () => {
+      await db.createWebhook({
+        url: 'https://retry-server.com/hook',
+        secret: 'secret',
+        events: ['retry.event'],
+      });
+
+      let callCount = 0;
+      const mockFetch = vi.fn().mockImplementation(async () => {
+        callCount++;
+        if (callCount < 2) {
+          throw new Error('Network error');
+        }
+        return { ok: true, status: 200 };
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      dispatchWebhook(db, 'retry.event', {});
+      // Wait for retries to complete (BASE_DELAY_MS * 2^0 = 250ms + execution)
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      expect(mockFetch.mock.calls.length).toBeGreaterThan(1);
     });
 
     it('is fire-and-forget — does not block the caller', async () => {

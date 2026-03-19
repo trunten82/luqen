@@ -179,12 +179,9 @@ export function createProgram(): Command {
         process.exit(1);
       }
 
-      const { hashPassword } = await import('./auth/oauth.js');
-      const passwordHash = await hashPassword(password);
-
       const user = await db.createUser({
         username: opts.username,
-        passwordHash,
+        password,
         role: opts.role as 'admin' | 'editor' | 'viewer',
       });
 

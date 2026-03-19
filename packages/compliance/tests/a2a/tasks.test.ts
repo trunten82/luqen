@@ -163,4 +163,91 @@ describe('A2A Tasks', () => {
       expect(Array.isArray(body)).toBe(true);
     });
   });
+
+  describe('POST /a2a/tasks - update-management skill variations', () => {
+    it('handles update-management with propose action', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/a2a/tasks',
+        payload: {
+          skill: 'update-management',
+          input: {
+            action: 'propose',
+            proposal: {
+              source: 'https://example.com/a2a-test',
+              type: 'amendment',
+              summary: 'A2A test amendment',
+              proposedChanges: {
+                action: 'update',
+                entityType: 'regulation',
+                entityId: 'some-id',
+              },
+            },
+          },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(typeof body.id).toBe('string');
+    });
+
+    it('handles update-management with default action (list all)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/a2a/tasks',
+        payload: {
+          skill: 'update-management',
+          input: {},
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+  });
+
+  describe('POST /a2a/tasks - source-monitoring with non-list action', () => {
+    it('handles source-monitoring with non-list action', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/a2a/tasks',
+        payload: {
+          skill: 'source-monitoring',
+          input: { action: 'other' },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+  });
+
+  describe('POST /a2a/tasks - task failure handling', () => {
+    it('task with propose but missing proposal fails gracefully', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/a2a/tasks',
+        payload: {
+          skill: 'update-management',
+          input: {
+            action: 'propose',
+            // no proposal field
+          },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const { id } = JSON.parse(response.payload) as { id: string };
+
+      // Wait for async execution
+      await new Promise(r => setTimeout(r, 100));
+
+      const statusRes = await app.inject({
+        method: 'GET',
+        url: `/a2a/tasks/${id}`,
+      });
+
+      const body = JSON.parse(statusRes.payload) as { status: string };
+      expect(body.status).toBe('failed');
+    });
+  });
 });

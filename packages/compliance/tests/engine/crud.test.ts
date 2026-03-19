@@ -297,6 +297,12 @@ describe('updateRegulation', () => {
     ).rejects.toThrow(/invalid status/i);
   });
 
+  it('rejects update with invalid scope', async () => {
+    await expect(
+      updateRegulation(db, 'eu-eaa', { scope: 'everything' as never }),
+    ).rejects.toThrow(/invalid scope/i);
+  });
+
   it('rejects update with non-existent jurisdictionId', async () => {
     await expect(
       updateRegulation(db, 'eu-eaa', { jurisdictionId: 'MISSING' }),
@@ -481,6 +487,18 @@ describe('updateRequirement', () => {
     await expect(
       updateRequirement(db, requirementId, { wcagLevel: 'C' as never }),
     ).rejects.toThrow(/invalid wcag level/i);
+  });
+
+  it('rejects update with invalid wcagVersion', async () => {
+    await expect(
+      updateRequirement(db, requirementId, { wcagVersion: '3.0' as never }),
+    ).rejects.toThrow(/invalid wcag version/i);
+  });
+
+  it('rejects update with non-existent regulationId', async () => {
+    await expect(
+      updateRequirement(db, requirementId, { regulationId: 'MISSING-REG' }),
+    ).rejects.toThrow(/regulation.*not found/i);
   });
 });
 

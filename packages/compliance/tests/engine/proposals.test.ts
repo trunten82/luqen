@@ -172,12 +172,233 @@ describe('proposals', () => {
       expect(xx).toBeNull();
     });
 
+    it('applies a create-requirement change', async () => {
+      // First create a regulation
+      await db.createRegulation({
+        id: 'EU-TEST',
+        jurisdictionId: 'EU',
+        name: 'Test Reg',
+        shortName: 'TR',
+        reference: 'TR-1',
+        url: 'https://example.com',
+        enforcementDate: '2025-01-01',
+        status: 'active',
+        scope: 'public',
+        sectors: [],
+        description: 'Test regulation',
+      });
+
+      const reqData = {
+        regulationId: 'EU-TEST',
+        wcagVersion: '2.1' as const,
+        wcagLevel: 'A' as const,
+        wcagCriterion: '1.1.1',
+        obligation: 'mandatory' as const,
+        notes: '',
+      };
+
+      const proposal = await proposeUpdate(db, {
+        source: 'bot',
+        type: 'new_requirement',
+        summary: 'New requirement',
+        proposedChanges: { action: 'create', entityType: 'requirement', after: reqData },
+      });
+
+      await approveUpdate(db, proposal.id, 'admin');
+
+      const reqs = await db.listRequirements({ regulationId: 'EU-TEST' });
+      expect(reqs.length).toBeGreaterThan(0);
+    });
+
+    it('applies an update-regulation change', async () => {
+      // Create regulation first
+      await db.createRegulation({
+        id: 'EU-UPD',
+        jurisdictionId: 'EU',
+        name: 'Update Reg',
+        shortName: 'UR',
+        reference: 'UR-1',
+        url: 'https://example.com',
+        enforcementDate: '2025-01-01',
+        status: 'active',
+        scope: 'public',
+        sectors: [],
+        description: 'Before update',
+      });
+
+      const proposal = await proposeUpdate(db, {
+        source: 'bot',
+        type: 'amendment',
+        summary: 'Update regulation description',
+        proposedChanges: {
+          action: 'update',
+          entityType: 'regulation',
+          entityId: 'EU-UPD',
+          after: { description: 'After update' },
+        },
+      });
+
+      await approveUpdate(db, proposal.id, 'admin');
+
+      const reg = await db.getRegulation('EU-UPD');
+      expect(reg!.description).toBe('After update');
+    });
+
+    it('applies a delete-regulation change', async () => {
+      await db.createRegulation({
+        id: 'EU-DEL',
+        jurisdictionId: 'EU',
+        name: 'Delete Reg',
+        shortName: 'DR',
+        reference: 'DR-1',
+        url: 'https://example.com',
+        enforcementDate: '2020-01-01',
+        status: 'repealed',
+        scope: 'public',
+        sectors: [],
+        description: 'To be deleted',
+      });
+
+      const proposal = await proposeUpdate(db, {
+        source: 'bot',
+        type: 'repeal',
+        summary: 'Delete regulation',
+        proposedChanges: {
+          action: 'delete',
+          entityType: 'regulation',
+          entityId: 'EU-DEL',
+        },
+      });
+
+      await approveUpdate(db, proposal.id, 'admin');
+
+      const reg = await db.getRegulation('EU-DEL');
+      expect(reg).toBeNull();
+    });
+
+    it('applies an update-requirement change', async () => {
+      // Create regulation + requirement
+      await db.createRegulation({
+        id: 'EU-REQUPD',
+        jurisdictionId: 'EU',
+        name: 'Req Update Reg',
+        shortName: 'RUR',
+        reference: 'RUR-1',
+        url: 'https://example.com',
+        enforcementDate: '2025-01-01',
+        status: 'active',
+        scope: 'public',
+        sectors: [],
+        description: 'Test',
+      });
+      const req = await db.createRequirement({
+        regulationId: 'EU-REQUPD',
+        wcagVersion: '2.1',
+        wcagLevel: 'A',
+        wcagCriterion: '1.1.1',
+        obligation: 'mandatory',
+        notes: 'original',
+      });
+
+      const proposal = await proposeUpdate(db, {
+        source: 'bot',
+        type: 'amendment',
+        summary: 'Update requirement notes',
+        proposedChanges: {
+          action: 'update',
+          entityType: 'requirement',
+          entityId: req.id,
+          after: { notes: 'updated' },
+        },
+      });
+
+      await approveUpdate(db, proposal.id, 'admin');
+
+      const updatedReq = await db.getRequirement(req.id);
+      expect(updatedReq!.notes).toBe('updated');
+    });
+
+    it('throws when update action has no entityId', async () => {
+      const proposal = await proposeUpdate(db, {
+        source: 'bot',
+        type: 'amendment',
+        summary: 'Missing entityId',
+        proposedChanges: {
+          action: 'update',
+          entityType: 'jurisdiction',
+          // no entityId
+        },
+      });
+
+      await expect(approveUpdate(db, proposal.id, 'admin')).rejects.toThrow('entityId is required');
+    });
+
+    it('throws when delete action has no entityId', async () => {
+      const proposal = await proposeUpdate(db, {
+        source: 'bot',
+        type: 'repeal',
+        summary: 'Missing entityId for delete',
+        proposedChanges: {
+          action: 'delete',
+          entityType: 'regulation',
+          // no entityId
+        },
+      });
+
+      await expect(approveUpdate(db, proposal.id, 'admin')).rejects.toThrow('entityId is required');
+    });
+
+    it('applies a delete-requirement change', async () => {
+      // Create regulation + requirement
+      await db.createRegulation({
+        id: 'EU-REQDEL',
+        jurisdictionId: 'EU',
+        name: 'Req Delete Reg',
+        shortName: 'RDR',
+        reference: 'RDR-1',
+        url: 'https://example.com',
+        enforcementDate: '2025-01-01',
+        status: 'active',
+        scope: 'public',
+        sectors: [],
+        description: 'Test',
+      });
+      const req = await db.createRequirement({
+        regulationId: 'EU-REQDEL',
+        wcagVersion: '2.1',
+        wcagLevel: 'AA',
+        wcagCriterion: '2.4.1',
+        obligation: 'mandatory',
+        notes: '',
+      });
+
+      const proposal = await proposeUpdate(db, {
+        source: 'bot',
+        type: 'repeal',
+        summary: 'Delete requirement',
+        proposedChanges: {
+          action: 'delete',
+          entityType: 'requirement',
+          entityId: req.id,
+        },
+      });
+
+      await approveUpdate(db, proposal.id, 'admin');
+
+      const deletedReq = await db.getRequirement(req.id);
+      expect(deletedReq).toBeNull();
+    });
+
     it('throws when proposal does not exist', async () => {
       await expect(approveUpdate(db, 'nonexistent-id', 'admin')).rejects.toThrow();
     });
   });
 
   describe('rejectUpdate', () => {
+    it('throws when proposal does not exist', async () => {
+      await expect(rejectUpdate(db, 'nonexistent-id', 'admin')).rejects.toThrow();
+    });
+
     it('marks proposal as rejected without applying changes', async () => {
       const proposal = await proposeUpdate(db, {
         source: 'bot',

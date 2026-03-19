@@ -170,8 +170,8 @@ export async function createComplianceMcpServer(
           action: z.enum(['create', 'update', 'delete']),
           entityType: z.enum(['jurisdiction', 'regulation', 'requirement']),
           entityId: z.string().optional(),
-          before: z.record(z.unknown()).optional(),
-          after: z.record(z.unknown()).optional(),
+          before: z.record(z.string(), z.unknown()).optional(),
+          after: z.record(z.string(), z.unknown()).optional(),
         }),
         affectedRegulationId: z.string().optional(),
         affectedJurisdictionId: z.string().optional(),
@@ -185,7 +185,6 @@ export async function createComplianceMcpServer(
         proposedChanges: args.proposedChanges,
         affectedRegulationId: args.affectedRegulationId,
         affectedJurisdictionId: args.affectedJurisdictionId,
-        detectedAt: new Date().toISOString(),
       });
       return { content: [{ type: 'text', text: JSON.stringify(proposal, null, 2) }] };
     },

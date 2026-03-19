@@ -180,4 +180,49 @@ describe('Jurisdictions API', () => {
     });
     expect(response.statusCode).toBe(403);
   });
+
+  it('PATCH /api/v1/jurisdictions/:id returns 404 for missing', async () => {
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/jurisdictions/NONEXISTENT',
+      headers: { ...authHeader(adminToken), 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated' }),
+    });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('DELETE /api/v1/jurisdictions/:id returns 404 for missing', async () => {
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/api/v1/jurisdictions/NONEXISTENT-DEL',
+      headers: authHeader(adminToken),
+    });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('GET /api/v1/jurisdictions filters by parentId', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/jurisdictions?parentId=EU',
+      headers: authHeader(readToken),
+    });
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as { data: Array<{ parentId: string }> };
+    for (const j of body.data) {
+      expect(j.parentId).toBe('EU');
+    }
+  });
+
+  it('GET /api/v1/jurisdictions filters by type', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/jurisdictions?type=supranational',
+      headers: authHeader(readToken),
+    });
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as { data: Array<{ type: string }> };
+    for (const j of body.data) {
+      expect(j.type).toBe('supranational');
+    }
+  });
 });
