@@ -158,6 +158,38 @@ Issues like empty links and heading hierarchy are flagged but require human judg
 
 ---
 
+## Pally Dashboard
+
+Web dashboard for browsing reports and managing scans. HTMX-powered, no JS build step.
+
+### Start Dashboard
+
+```bash
+cd /root/pally-agent/packages/dashboard && npm run build
+node dist/cli.js serve --port 5000
+# Open http://localhost:5000
+```
+
+Or via Docker: `docker compose up -d` (starts compliance + dashboard together)
+
+### Features
+
+**User section:** New scan launcher (with jurisdiction picker), live SSE progress, report browser (search/filter/sort), report viewer, delete reports
+
+**Admin section:** CRUD jurisdictions/regulations/requirements, review/approve update proposals, manage sources/webhooks/users/OAuth clients, system health
+
+### Roles
+
+| Role | Access |
+|------|--------|
+| `viewer` | Browse reports only |
+| `user` | Scan + reports |
+| `admin` | Full admin section |
+
+Create users via compliance CLI: `pally-compliance users create --username admin --role admin`
+
+---
+
 ## Pally Compliance Service
 
 The compliance service (`@pally-agent/compliance`) maps WCAG violations to country-specific legal requirements. It is a separate service that pally-agent and Claude Code can call.
