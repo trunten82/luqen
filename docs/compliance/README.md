@@ -78,6 +78,8 @@ npm install
 # Build the compliance package
 cd packages/compliance
 npm run build
+# Note: the build script also copies src/seed/baseline.json → dist/seed/baseline.json
+# automatically. No manual copy is required.
 ```
 
 ### Link the CLI globally (optional)
