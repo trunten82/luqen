@@ -98,3 +98,52 @@ export interface FixResult {
 }
 
 export type ProgressListener = (progress: ScanProgress) => void;
+
+// ---------------------------------------------------------------------------
+// Compliance enrichment types
+// ---------------------------------------------------------------------------
+
+export interface ComplianceEnrichment {
+  readonly matrix: Record<string, JurisdictionComplianceResult>;
+  readonly issueAnnotations: ReadonlyMap<string, readonly RegulationAnnotation[]>;
+  readonly summary: ComplianceSummary;
+}
+
+export interface JurisdictionComplianceResult {
+  readonly jurisdictionId: string;
+  readonly jurisdictionName: string;
+  readonly status: 'pass' | 'fail';
+  readonly mandatoryViolations: number;
+  readonly recommendedViolations: number;
+  readonly regulations: readonly RegulationComplianceResult[];
+}
+
+export interface RegulationComplianceResult {
+  readonly regulationId: string;
+  readonly regulationName: string;
+  readonly shortName: string;
+  readonly status: 'pass' | 'fail';
+  readonly enforcementDate: string;
+  readonly violationCount: number;
+}
+
+export interface RegulationAnnotation {
+  readonly regulationName: string;
+  readonly shortName: string;
+  readonly jurisdictionId: string;
+  readonly obligation: 'mandatory' | 'recommended' | 'optional';
+}
+
+export interface ComplianceSummary {
+  readonly totalJurisdictions: number;
+  readonly passing: number;
+  readonly failing: number;
+  readonly totalMandatoryViolations: number;
+}
+
+export interface ComplianceConfig {
+  readonly url: string;
+  readonly jurisdictions: readonly string[];
+  readonly clientId?: string;
+  readonly clientSecret?: string;
+}
