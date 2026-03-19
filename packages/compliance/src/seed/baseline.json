@@ -51,6 +51,331 @@
       "name": "Japan",
       "type": "country",
       "iso3166": "JP"
+    },
+    {
+      "id": "AT",
+      "name": "Austria",
+      "type": "country",
+      "iso3166": "AT",
+      "parentId": "EU"
+    },
+    {
+      "id": "BE",
+      "name": "Belgium",
+      "type": "country",
+      "iso3166": "BE",
+      "parentId": "EU"
+    },
+    {
+      "id": "BG",
+      "name": "Bulgaria",
+      "type": "country",
+      "iso3166": "BG",
+      "parentId": "EU"
+    },
+    {
+      "id": "HR",
+      "name": "Croatia",
+      "type": "country",
+      "iso3166": "HR",
+      "parentId": "EU"
+    },
+    {
+      "id": "CY",
+      "name": "Cyprus",
+      "type": "country",
+      "iso3166": "CY",
+      "parentId": "EU"
+    },
+    {
+      "id": "CZ",
+      "name": "Czech Republic",
+      "type": "country",
+      "iso3166": "CZ",
+      "parentId": "EU"
+    },
+    {
+      "id": "DK",
+      "name": "Denmark",
+      "type": "country",
+      "iso3166": "DK",
+      "parentId": "EU"
+    },
+    {
+      "id": "EE",
+      "name": "Estonia",
+      "type": "country",
+      "iso3166": "EE",
+      "parentId": "EU"
+    },
+    {
+      "id": "FI",
+      "name": "Finland",
+      "type": "country",
+      "iso3166": "FI",
+      "parentId": "EU"
+    },
+    {
+      "id": "GR",
+      "name": "Greece",
+      "type": "country",
+      "iso3166": "GR",
+      "parentId": "EU"
+    },
+    {
+      "id": "HU",
+      "name": "Hungary",
+      "type": "country",
+      "iso3166": "HU",
+      "parentId": "EU"
+    },
+    {
+      "id": "IE",
+      "name": "Ireland",
+      "type": "country",
+      "iso3166": "IE",
+      "parentId": "EU"
+    },
+    {
+      "id": "IT",
+      "name": "Italy",
+      "type": "country",
+      "iso3166": "IT",
+      "parentId": "EU"
+    },
+    {
+      "id": "LV",
+      "name": "Latvia",
+      "type": "country",
+      "iso3166": "LV",
+      "parentId": "EU"
+    },
+    {
+      "id": "LT",
+      "name": "Lithuania",
+      "type": "country",
+      "iso3166": "LT",
+      "parentId": "EU"
+    },
+    {
+      "id": "LU",
+      "name": "Luxembourg",
+      "type": "country",
+      "iso3166": "LU",
+      "parentId": "EU"
+    },
+    {
+      "id": "MT",
+      "name": "Malta",
+      "type": "country",
+      "iso3166": "MT",
+      "parentId": "EU"
+    },
+    {
+      "id": "NL",
+      "name": "Netherlands",
+      "type": "country",
+      "iso3166": "NL",
+      "parentId": "EU"
+    },
+    {
+      "id": "PL",
+      "name": "Poland",
+      "type": "country",
+      "iso3166": "PL",
+      "parentId": "EU"
+    },
+    {
+      "id": "PT",
+      "name": "Portugal",
+      "type": "country",
+      "iso3166": "PT",
+      "parentId": "EU"
+    },
+    {
+      "id": "RO",
+      "name": "Romania",
+      "type": "country",
+      "iso3166": "RO",
+      "parentId": "EU"
+    },
+    {
+      "id": "SK",
+      "name": "Slovakia",
+      "type": "country",
+      "iso3166": "SK",
+      "parentId": "EU"
+    },
+    {
+      "id": "SI",
+      "name": "Slovenia",
+      "type": "country",
+      "iso3166": "SI",
+      "parentId": "EU"
+    },
+    {
+      "id": "ES",
+      "name": "Spain",
+      "type": "country",
+      "iso3166": "ES",
+      "parentId": "EU"
+    },
+    {
+      "id": "SE",
+      "name": "Sweden",
+      "type": "country",
+      "iso3166": "SE",
+      "parentId": "EU"
+    },
+    {
+      "id": "NO",
+      "name": "Norway",
+      "type": "country",
+      "iso3166": "NO"
+    },
+    {
+      "id": "CH",
+      "name": "Switzerland",
+      "type": "country",
+      "iso3166": "CH"
+    },
+    {
+      "id": "IS",
+      "name": "Iceland",
+      "type": "country",
+      "iso3166": "IS"
+    },
+    {
+      "id": "NZ",
+      "name": "New Zealand",
+      "type": "country",
+      "iso3166": "NZ"
+    },
+    {
+      "id": "KR",
+      "name": "South Korea",
+      "type": "country",
+      "iso3166": "KR"
+    },
+    {
+      "id": "IN",
+      "name": "India",
+      "type": "country",
+      "iso3166": "IN"
+    },
+    {
+      "id": "IL",
+      "name": "Israel",
+      "type": "country",
+      "iso3166": "IL"
+    },
+    {
+      "id": "BR",
+      "name": "Brazil",
+      "type": "country",
+      "iso3166": "BR"
+    },
+    {
+      "id": "AR",
+      "name": "Argentina",
+      "type": "country",
+      "iso3166": "AR"
+    },
+    {
+      "id": "CO",
+      "name": "Colombia",
+      "type": "country",
+      "iso3166": "CO"
+    },
+    {
+      "id": "MX",
+      "name": "Mexico",
+      "type": "country",
+      "iso3166": "MX"
+    },
+    {
+      "id": "CL",
+      "name": "Chile",
+      "type": "country",
+      "iso3166": "CL"
+    },
+    {
+      "id": "ZA",
+      "name": "South Africa",
+      "type": "country",
+      "iso3166": "ZA"
+    },
+    {
+      "id": "KE",
+      "name": "Kenya",
+      "type": "country",
+      "iso3166": "KE"
+    },
+    {
+      "id": "NG",
+      "name": "Nigeria",
+      "type": "country",
+      "iso3166": "NG"
+    },
+    {
+      "id": "SG",
+      "name": "Singapore",
+      "type": "country",
+      "iso3166": "SG"
+    },
+    {
+      "id": "HK",
+      "name": "Hong Kong",
+      "type": "region",
+      "iso3166": "HK"
+    },
+    {
+      "id": "TW",
+      "name": "Taiwan",
+      "type": "country",
+      "iso3166": "TW"
+    },
+    {
+      "id": "CN",
+      "name": "China",
+      "type": "country",
+      "iso3166": "CN"
+    },
+    {
+      "id": "RU",
+      "name": "Russia",
+      "type": "country",
+      "iso3166": "RU"
+    },
+    {
+      "id": "TR",
+      "name": "Turkey",
+      "type": "country",
+      "iso3166": "TR"
+    },
+    {
+      "id": "SA",
+      "name": "Saudi Arabia",
+      "type": "country",
+      "iso3166": "SA"
+    },
+    {
+      "id": "AE",
+      "name": "United Arab Emirates",
+      "type": "country",
+      "iso3166": "AE"
+    },
+    {
+      "id": "EG",
+      "name": "Egypt",
+      "type": "country",
+      "iso3166": "EG"
+    },
+    {
+      "id": "TH",
+      "name": "Thailand",
+      "type": "country",
+      "iso3166": "TH"
     }
   ],
   "regulations": [
@@ -196,6 +521,669 @@
       "scope": "all",
       "sectors": ["government", "services"],
       "description": "JIS X 8341-3 is the Japanese standard for web content accessibility, aligned with WCAG 2.1."
+    },
+    {
+      "id": "AT-WAD",
+      "jurisdictionId": "AT",
+      "name": "Barrierefreiheitsgesetz — Web Accessibility Act (Austria)",
+      "shortName": "BaFG",
+      "reference": "BGBl. I Nr. 59/2019",
+      "url": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20010727",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Austria's national transposition of the EU Web Accessibility Directive, requiring public sector bodies to meet WCAG 2.1 AA."
+    },
+    {
+      "id": "BE-WAD",
+      "jurisdictionId": "BE",
+      "name": "Arrêté royal relatif à l'accessibilité des sites internet et des applications mobiles",
+      "shortName": "AR Accessibilité Web",
+      "reference": "AR 2019-09-16",
+      "url": "https://www.ejustice.just.fgov.be/eli/arrete/2019/09/16/2019015017/justel",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Belgium's royal decree transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+    },
+    {
+      "id": "BG-WAD",
+      "jurisdictionId": "BG",
+      "name": "Наредба за достъпност на уебсайтовете и мобилните приложения",
+      "shortName": "Наредба WAD",
+      "reference": "ПМС № 233 / 2019",
+      "url": "https://www.w3.org/WAI/policies/bulgaria/",
+      "enforcementDate": "2019-10-10",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Bulgaria's ordinance transposing the EU Web Accessibility Directive for public sector digital services."
+    },
+    {
+      "id": "HR-WAD",
+      "jurisdictionId": "HR",
+      "name": "Zakon o pristupačnosti mrežnih stranica i programskih rješenja za pokretne uređaje tijela javnog sektora",
+      "shortName": "Zakon o pristupačnosti",
+      "reference": "NN 17/2019",
+      "url": "https://www.zakon.hr/z/1115/Zakon-o-pristupa%C4%8Dnosti-mre%C5%BEnih-stranica-i-programskih-rje%C5%A1enja-za-pokretne-ure%C4%91aje-tijela-javnog-sektora",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Croatia's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+    },
+    {
+      "id": "CY-WAD",
+      "jurisdictionId": "CY",
+      "name": "Νόμος για την Προσβασιμότητα των Ιστοτόπων και των Εφαρμογών για Φορητές Συσκευές",
+      "shortName": "WAD Cyprus",
+      "reference": "N. 180(I)/2019",
+      "url": "https://www.w3.org/WAI/policies/cyprus/",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Cyprus' law transposing the EU Web Accessibility Directive for public sector bodies' websites and mobile apps."
+    },
+    {
+      "id": "CZ-WAD",
+      "jurisdictionId": "CZ",
+      "name": "Zákon o přístupnosti internetových stránek a mobilních aplikací",
+      "shortName": "Zákon č. 99/2019",
+      "reference": "Zákon č. 99/2019 Sb.",
+      "url": "https://www.zakonyprolidi.cz/cs/2019-99",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Czech law transposing the EU Web Accessibility Directive, requiring public sector websites to meet WCAG 2.1 AA."
+    },
+    {
+      "id": "DK-WAD",
+      "jurisdictionId": "DK",
+      "name": "Bekendtgørelse om tilgængelighed af offentlige organers websteder og mobilapplikationer",
+      "shortName": "BEK nr 772 / 2019",
+      "reference": "BEK nr 772 af 09/07/2019",
+      "url": "https://www.retsinformation.dk/eli/lta/2019/772",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Denmark's order transposing the EU Web Accessibility Directive for public sector digital services."
+    },
+    {
+      "id": "EE-WAD",
+      "jurisdictionId": "EE",
+      "name": "Avaliku teabe seaduse muutmise seadus — veebilehtede ja mobiilirakenduste ligipääsetavus",
+      "shortName": "ATS muutmise seadus",
+      "reference": "RT I, 10.07.2019, 2",
+      "url": "https://www.riigiteataja.ee/akt/110072019002",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Estonia's amendment to the Public Information Act transposing the EU Web Accessibility Directive."
+    },
+    {
+      "id": "FI-WAD",
+      "jurisdictionId": "FI",
+      "name": "Laki digitaalisten palvelujen tarjoamisesta",
+      "shortName": "Digipalvelulaki",
+      "reference": "306/2019",
+      "url": "https://www.finlex.fi/fi/laki/ajantasa/2019/20190306",
+      "enforcementDate": "2019-04-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector", "digital-services"],
+      "description": "Finland's Act on the Provision of Digital Services transposes the EU Web Accessibility Directive and sets WCAG 2.1 AA requirements."
+    },
+    {
+      "id": "GR-WAD",
+      "jurisdictionId": "GR",
+      "name": "Νόμος για την Προσβασιμότητα Ιστοτόπων και Εφαρμογών για Φορητές Συσκευές Φορέων του Δημόσιου Τομέα",
+      "shortName": "Ν. 4591/2019",
+      "reference": "N. 4591/2019",
+      "url": "https://www.e-nomothesia.gr/kat-ekpaideuse/n-4591-2019.html",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Greece's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+    },
+    {
+      "id": "HU-WAD",
+      "jurisdictionId": "HU",
+      "name": "Az elektronikus ügyintézés és a bizalmi szolgáltatások általános szabályairól szóló törvény módosítása",
+      "shortName": "E-ügyintézési törvény mód.",
+      "reference": "2019. évi LXXIII. törvény",
+      "url": "https://www.w3.org/WAI/policies/hungary/",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Hungary's transposition of the EU Web Accessibility Directive through amendment of the e-Administration Act."
+    },
+    {
+      "id": "IE-WAD",
+      "jurisdictionId": "IE",
+      "name": "European Union (Accessibility of Websites and Mobile Applications of Public Sector Bodies) Regulations 2020",
+      "shortName": "SI 358/2020",
+      "reference": "S.I. No. 358/2020",
+      "url": "https://www.irishstatutebook.ie/eli/2020/si/358/made/en/print",
+      "enforcementDate": "2020-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Ireland's statutory instrument transposing the EU Web Accessibility Directive for public sector digital services."
+    },
+    {
+      "id": "IT-STANCA",
+      "jurisdictionId": "IT",
+      "name": "Legge Stanca — Disposizioni per favorire l'accesso dei soggetti disabili agli strumenti informatici",
+      "shortName": "Legge Stanca",
+      "reference": "Legge n. 4/2004",
+      "url": "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:legge:2004-01-09;4",
+      "enforcementDate": "2004-01-09",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector", "private-sector"],
+      "description": "Italy's Stanca Law mandates web accessibility for public administration and private entities offering public services."
+    },
+    {
+      "id": "IT-WAD",
+      "jurisdictionId": "IT",
+      "name": "Decreto legislativo di recepimento della Direttiva WAD",
+      "shortName": "D.Lgs. 106/2018",
+      "reference": "D.Lgs. 10 agosto 2018, n. 106",
+      "url": "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2018-08-10;106",
+      "enforcementDate": "2018-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Italy's legislative decree transposing the EU Web Accessibility Directive, updating and extending the Stanca Law."
+    },
+    {
+      "id": "LV-WAD",
+      "jurisdictionId": "LV",
+      "name": "Publisko iestāžu tīmekļa vietņu un mobilās lietotnes pieejamības noteikumi",
+      "shortName": "MK noteikumi Nr. 445",
+      "reference": "MK noteikumi Nr. 445",
+      "url": "https://likumi.lv/ta/id/308140",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Latvia's Cabinet of Ministers regulations transposing the EU Web Accessibility Directive."
+    },
+    {
+      "id": "LT-WAD",
+      "jurisdictionId": "LT",
+      "name": "Viešojo sektoriaus subjektų interneto svetainių ir mobiliųjų programų prieinamumo įstatymas",
+      "shortName": "Prieinamumo įstatymas",
+      "reference": "2019 m. Nr. XIV",
+      "url": "https://www.w3.org/WAI/policies/lithuania/",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Lithuania's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+    },
+    {
+      "id": "LU-WAD",
+      "jurisdictionId": "LU",
+      "name": "Loi relative à l'accessibilité des sites internet et des applications mobiles des organismes du secteur public",
+      "shortName": "Loi accessibilité 2019",
+      "reference": "Mém. A 2019, no. 594",
+      "url": "http://data.legilux.public.lu/eli/etat/leg/loi/2019/05/28/a594/jo",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Luxembourg's law transposing the EU Web Accessibility Directive for public sector digital services."
+    },
+    {
+      "id": "MT-WAD",
+      "jurisdictionId": "MT",
+      "name": "Accessibility of Websites and Mobile Applications of Public Sector Bodies Regulations",
+      "shortName": "LN 243/2019",
+      "reference": "S.L. 451.15",
+      "url": "https://legislation.mt/eli/sl/451.15/eng",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Malta's regulations transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+    },
+    {
+      "id": "NL-WAB",
+      "jurisdictionId": "NL",
+      "name": "Tijdelijk besluit digitale toegankelijkheid overheid",
+      "shortName": "Besluit digitale toegankelijkheid",
+      "reference": "Stb. 2018, 141",
+      "url": "https://wetten.overheid.nl/BWBR0040936/",
+      "enforcementDate": "2018-07-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "The Netherlands' decree on digital accessibility for government transposing the EU Web Accessibility Directive."
+    },
+    {
+      "id": "PL-WAD",
+      "jurisdictionId": "PL",
+      "name": "Ustawa o dostępności cyfrowej stron internetowych i aplikacji mobilnych podmiotów publicznych",
+      "shortName": "Ustawa o dostępności cyfrowej",
+      "reference": "Dz.U. 2019 poz. 848",
+      "url": "https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20190000848",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Poland's act on digital accessibility of websites and mobile applications of public sector bodies."
+    },
+    {
+      "id": "PT-WAD",
+      "jurisdictionId": "PT",
+      "name": "Decreto-Lei n.º 83/2018 — Acessibilidade dos sítios web e aplicações móveis",
+      "shortName": "DL 83/2018",
+      "reference": "DL n.º 83/2018",
+      "url": "https://dre.pt/application/conteudo/116734769",
+      "enforcementDate": "2018-11-19",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Portugal's decree-law transposing the EU Web Accessibility Directive for public sector digital services."
+    },
+    {
+      "id": "RO-WAD",
+      "jurisdictionId": "RO",
+      "name": "Lege privind accesibilitatea site-urilor web și a aplicațiilor mobile ale organismelor din sectorul public",
+      "shortName": "Legea nr. 24/2022",
+      "reference": "Legea nr. 24/2022",
+      "url": "https://legislatie.just.ro/Public/DetaliiDocumentAfis/263218",
+      "enforcementDate": "2022-03-21",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Romania's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+    },
+    {
+      "id": "SK-WAD",
+      "jurisdictionId": "SK",
+      "name": "Zákon o prístupnosti webových sídel a mobilných aplikácií subjektov verejného sektora",
+      "shortName": "Zákon č. 95/2019 Z.z.",
+      "reference": "Zákon č. 95/2019 Z.z.",
+      "url": "https://www.slov-lex.sk/pravne-predpisy/SK/ZZ/2019/95/",
+      "enforcementDate": "2019-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Slovakia's law transposing the EU Web Accessibility Directive for public sector digital services."
+    },
+    {
+      "id": "SI-WAD",
+      "jurisdictionId": "SI",
+      "name": "Zakon o dostopnosti spletišč in mobilnih aplikacij",
+      "shortName": "ZDSMA",
+      "reference": "Ur.l. RS, št. 30/18",
+      "url": "https://www.uradni-list.si/glasilo-uradni-list-rs/vsebina/2018-01-1303",
+      "enforcementDate": "2018-05-05",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Slovenia's Act on Accessibility of Websites and Mobile Applications transposes the EU Web Accessibility Directive."
+    },
+    {
+      "id": "ES-LSSICE",
+      "jurisdictionId": "ES",
+      "name": "Real Decreto 1112/2018 sobre accesibilidad de los sitios web y aplicaciones para dispositivos móviles del sector público",
+      "shortName": "RD 1112/2018",
+      "reference": "RD 1112/2018, BOE-A-2018-12699",
+      "url": "https://www.boe.es/eli/es/rd/2018/09/07/1112",
+      "enforcementDate": "2018-10-20",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Spain's Royal Decree transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+    },
+    {
+      "id": "SE-WAD",
+      "jurisdictionId": "SE",
+      "name": "Lag om tillgänglighet till digital offentlig service",
+      "shortName": "DOS-lagen",
+      "reference": "SFS 2018:1937",
+      "url": "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/lag-20181937-om-tillganglighet-till-digital_sfs-2018-1937",
+      "enforcementDate": "2019-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Sweden's Act on Accessibility to Digital Public Services transposes the EU Web Accessibility Directive."
+    },
+    {
+      "id": "NO-LDL",
+      "jurisdictionId": "NO",
+      "name": "Likestillings- og diskrimineringsloven — IKT-forskriften",
+      "shortName": "IKT-forskriften",
+      "reference": "FOR-2013-06-21-732",
+      "url": "https://lovdata.no/dokument/SF/forskrift/2013-06-21-732",
+      "enforcementDate": "2013-07-01",
+      "status": "active",
+      "scope": "all",
+      "sectors": ["public-sector", "private-sector", "digital"],
+      "description": "Norway's ICT regulations under the Equality and Anti-Discrimination Act require WCAG 2.0 AA compliance for public and private sector digital services."
+    },
+    {
+      "id": "CH-BehiG",
+      "jurisdictionId": "CH",
+      "name": "Bundesgesetz über die Beseitigung von Benachteiligungen von Menschen mit Behinderungen",
+      "shortName": "BehiG / LHand",
+      "reference": "SR 151.3",
+      "url": "https://www.fedlex.admin.ch/eli/cc/2003/667/de",
+      "enforcementDate": "2004-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government", "public-services"],
+      "description": "Switzerland's Federal Act on the Elimination of Disadvantages to People with Disabilities requires accessible websites for public administration."
+    },
+    {
+      "id": "IS-WAD",
+      "jurisdictionId": "IS",
+      "name": "Reglugerð um aðgængi vefsíðna og farsímaforrita opinberra aðila",
+      "shortName": "Reglugerð nr. 1101/2020",
+      "reference": "Reglugerð nr. 1101/2020",
+      "url": "https://www.reglugerd.is/reglugerdir/eftir-ministrium/forsaetisraduneytid/nr/1101-2020",
+      "enforcementDate": "2020-11-20",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Iceland's regulation implementing the EEA equivalent of the EU Web Accessibility Directive for public sector digital services."
+    },
+    {
+      "id": "NZ-WAS",
+      "jurisdictionId": "NZ",
+      "name": "New Zealand Government Web Accessibility Standard",
+      "shortName": "NZ WAS 1.1",
+      "reference": "Web Accessibility Standard 1.1",
+      "url": "https://www.digital.govt.nz/standards-and-guidance/nz-government-web-standards/web-accessibility-standard-1-1/",
+      "enforcementDate": "2019-07-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "New Zealand's Web Accessibility Standard 1.1 mandates WCAG 2.1 AA compliance for New Zealand government websites and apps."
+    },
+    {
+      "id": "KR-KWCAG",
+      "jurisdictionId": "KR",
+      "name": "한국형 웹 콘텐츠 접근성 지침 — Korean Web Content Accessibility Guidelines",
+      "shortName": "KWCAG 2.1",
+      "reference": "KS X OT0003:2021",
+      "url": "https://www.w3.org/WAI/policies/korea/",
+      "enforcementDate": "2021-06-01",
+      "status": "active",
+      "scope": "all",
+      "sectors": ["government", "public-services", "digital"],
+      "description": "South Korea's Web Content Accessibility Guidelines (KWCAG 2.1) apply to public and private sector digital services."
+    },
+    {
+      "id": "IN-GIGW",
+      "jurisdictionId": "IN",
+      "name": "Guidelines for Indian Government Websites 2.0",
+      "shortName": "GIGW 2.0",
+      "reference": "GIGW 2.0 (2009, rev. 2018)",
+      "url": "https://guidelines.india.gov.in/",
+      "enforcementDate": "2009-03-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "India's Guidelines for Indian Government Websites 2.0 mandate WCAG 2.0 AA compliance for all Indian government websites."
+    },
+    {
+      "id": "IL-5568",
+      "jurisdictionId": "IL",
+      "name": "Israeli Standard 5568 — Web Content Accessibility",
+      "shortName": "IS 5568",
+      "reference": "Israeli Standard 5568",
+      "url": "https://www.w3.org/WAI/policies/israel/",
+      "enforcementDate": "2017-10-26",
+      "status": "active",
+      "scope": "all",
+      "sectors": ["government", "private-sector", "digital"],
+      "description": "Israel's Standard 5568 requires WCAG 2.0 AA compliance for websites targeting Israeli users across public and private sectors."
+    },
+    {
+      "id": "BR-EMAG",
+      "jurisdictionId": "BR",
+      "name": "Modelo de Acessibilidade em Governo Eletrônico",
+      "shortName": "eMAG 3.1",
+      "reference": "eMAG 3.1 / Portaria 3/2007",
+      "url": "http://emag.governoeletronico.gov.br/",
+      "enforcementDate": "2014-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Brazil's eMAG model for e-government accessibility sets WCAG-based requirements for all Brazilian federal government websites."
+    },
+    {
+      "id": "AR-LEY26653",
+      "jurisdictionId": "AR",
+      "name": "Ley 26.653 — Accesibilidad de la Información en las Páginas Web",
+      "shortName": "Ley 26.653",
+      "reference": "Ley 26.653",
+      "url": "http://servicios.infoleg.gob.ar/infolegInternet/anexos/175000-179999/175694/norma.htm",
+      "enforcementDate": "2010-11-26",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Argentina's Law 26.653 requires all public sector websites to meet WCAG 2.0 AA accessibility standards."
+    },
+    {
+      "id": "CO-NTCGP",
+      "jurisdictionId": "CO",
+      "name": "Decreto 1078 de 2015 — Accesibilidad web para entidades del Estado",
+      "shortName": "Decreto 1078/2015",
+      "reference": "Decreto 1078 de 2015",
+      "url": "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=77135",
+      "enforcementDate": "2015-05-26",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Colombia's Decree 1078/2015 establishes WCAG 2.0 AA accessibility requirements for state entity websites."
+    },
+    {
+      "id": "MX-NMX",
+      "jurisdictionId": "MX",
+      "name": "Norma Técnica para la Accesibilidad de los Sitios Web del Gobierno Federal",
+      "shortName": "NTACSGF",
+      "reference": "NTACSGF-001",
+      "url": "https://www.w3.org/WAI/policies/mexico/",
+      "enforcementDate": "2012-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Mexico's technical standard for federal government website accessibility requires WCAG 2.0 AA compliance."
+    },
+    {
+      "id": "CL-DECRETO",
+      "jurisdictionId": "CL",
+      "name": "Norma Técnica sobre Accesibilidad y Usabilidad de Sitios Web del Estado",
+      "shortName": "NTG-009",
+      "reference": "Decreto 45/2019",
+      "url": "https://www.digital.gob.cl/contenidos-digitales/normas-tecnicas/",
+      "enforcementDate": "2019-07-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Chile's technical standard for State website accessibility and usability requires WCAG 2.1 AA for government digital services."
+    },
+    {
+      "id": "ZA-ECTA",
+      "jurisdictionId": "ZA",
+      "name": "Electronic Communications and Transactions Act",
+      "shortName": "ECTA 2002",
+      "reference": "Act 25 of 2002",
+      "url": "https://www.gov.za/documents/electronic-communications-and-transactions-act",
+      "enforcementDate": "2002-08-02",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government", "e-commerce"],
+      "description": "South Africa's ECTA includes provisions requiring accessible digital services for persons with disabilities."
+    },
+    {
+      "id": "KE-KENAS",
+      "jurisdictionId": "KE",
+      "name": "Kenya ICT Accessibility Standard",
+      "shortName": "KS 2803",
+      "reference": "Kenya Standard KS 2803",
+      "url": "https://www.w3.org/WAI/policies/kenya/",
+      "enforcementDate": "2019-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government", "digital-services"],
+      "description": "Kenya's ICT Accessibility Standard requires government digital services to be accessible to persons with disabilities."
+    },
+    {
+      "id": "NG-DRA",
+      "jurisdictionId": "NG",
+      "name": "Disability Rights Act 2018",
+      "shortName": "DRA 2018",
+      "reference": "Disability Rights Act 2018",
+      "url": "https://www.w3.org/WAI/policies/nigeria/",
+      "enforcementDate": "2019-01-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government", "public-services"],
+      "description": "Nigeria's Disability Rights Act 2018 includes requirements for accessible digital information and communications."
+    },
+    {
+      "id": "SG-DGSS",
+      "jurisdictionId": "SG",
+      "name": "Singapore Government Design System — Accessibility Standard",
+      "shortName": "SGDS Accessibility",
+      "reference": "SGDS 1.0",
+      "url": "https://www.designsystem.tech.gov.sg/",
+      "enforcementDate": "2019-06-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Singapore's Government Design System mandates WCAG 2.1 AA compliance for all Singapore government digital services."
+    },
+    {
+      "id": "HK-WCAG",
+      "jurisdictionId": "HK",
+      "name": "Guidelines on Accessibility of Government Websites",
+      "shortName": "OGCIO Accessibility Guidelines",
+      "reference": "OGCIO Web Accessibility Guidelines",
+      "url": "https://www.ogcio.gov.hk/en/our_work/infrastructure/e_government/web_accessibility/",
+      "enforcementDate": "2012-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Hong Kong's OGCIO guidelines require government websites to conform to WCAG 2.0 AA standards."
+    },
+    {
+      "id": "TW-WCAG",
+      "jurisdictionId": "TW",
+      "name": "無障礙網頁開發規範 — Web Accessibility Guidelines for Government Websites",
+      "shortName": "TWCAG 2.0",
+      "reference": "TWCAG 2.0",
+      "url": "https://accessibility.moda.gov.tw/",
+      "enforcementDate": "2016-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Taiwan's Web Accessibility Guidelines for Government Websites require WCAG 2.0 AA compliance for all government digital services."
+    },
+    {
+      "id": "CN-GB",
+      "jurisdictionId": "CN",
+      "name": "网站设计通用规范 — National Standard for Information Accessibility",
+      "shortName": "GB/T 37668-2019",
+      "reference": "GB/T 37668-2019",
+      "url": "https://www.w3.org/WAI/policies/china/",
+      "enforcementDate": "2020-04-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government", "digital-services"],
+      "description": "China's national standard GB/T 37668-2019 on information accessibility of websites covers public sector digital services."
+    },
+    {
+      "id": "RU-GOST",
+      "jurisdictionId": "RU",
+      "name": "ГОСТ Р 52872-2019 — Интернет-ресурсы и другая информация, представленная в электронно-цифровой форме",
+      "shortName": "ГОСТ Р 52872-2019",
+      "reference": "GOST R 52872-2019",
+      "url": "https://protect.gost.ru/document1.aspx?control=31&id=229797",
+      "enforcementDate": "2020-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government", "public-services"],
+      "description": "Russia's national standard GOST R 52872-2019 sets accessibility requirements for web resources and digital information."
+    },
+    {
+      "id": "TR-EBYS",
+      "jurisdictionId": "TR",
+      "name": "Kamu İnternet Sitesi Kılavuzu ve İçerik Yönetim Sistemi — Web Erişilebilirliği",
+      "shortName": "e-Devlet Web Erişilebilirliği",
+      "reference": "2013/3 Başbakanlık Genelgesi",
+      "url": "https://www.w3.org/WAI/policies/turkey/",
+      "enforcementDate": "2013-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Turkey's public internet website guide requires government websites to meet WCAG 2.0 AA accessibility standards."
+    },
+    {
+      "id": "SA-WCAG",
+      "jurisdictionId": "SA",
+      "name": "Saudi Accessibility Framework for ICT",
+      "shortName": "SAFICT",
+      "reference": "CITC Accessibility Framework",
+      "url": "https://www.w3.org/WAI/policies/saudi-arabia/",
+      "enforcementDate": "2019-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government", "telecom", "digital-services"],
+      "description": "Saudi Arabia's ICT accessibility framework requires WCAG 2.1 AA compliance for government and regulated digital services."
+    },
+    {
+      "id": "AE-TDRA",
+      "jurisdictionId": "AE",
+      "name": "UAE Federal Government Web Accessibility Standards",
+      "shortName": "TDRA Web Standards",
+      "reference": "TDRA Website Design Standards",
+      "url": "https://www.tdra.gov.ae/en/digital-government/digital-standards/",
+      "enforcementDate": "2019-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "The UAE's Telecommunications and Digital Regulatory Authority requires government websites to meet WCAG 2.1 AA standards."
+    },
+    {
+      "id": "EG-MICT",
+      "jurisdictionId": "EG",
+      "name": "Egyptian ICT Accessibility Guidelines for Government Portals",
+      "shortName": "MCIT Accessibility Guidelines",
+      "reference": "MCIT Web Accessibility Guidelines",
+      "url": "https://www.w3.org/WAI/policies/egypt/",
+      "enforcementDate": "2012-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Egypt's Ministry of Communications and IT guidelines require government web portals to meet WCAG 2.0 AA accessibility standards."
+    },
+    {
+      "id": "TH-WCAG",
+      "jurisdictionId": "TH",
+      "name": "มาตรฐานเว็บไซต์ภาครัฐ — Thai Government Website Standard",
+      "shortName": "Thai WCAG Standard",
+      "reference": "ETDA Web Standard v2.0",
+      "url": "https://www.w3.org/WAI/policies/thailand/",
+      "enforcementDate": "2018-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Thailand's ETDA government website standard requires public sector websites to meet WCAG 2.1 AA accessibility criteria."
     }
   ],
   "requirements": [
@@ -271,6 +1259,363 @@
     },
     {
       "regulationId": "JP-JIS",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "AT-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "BE-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "BG-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "HR-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "CY-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "CZ-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "DK-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "EE-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "FI-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "GR-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "HU-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "IE-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "IT-STANCA",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "IT-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "LV-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "LT-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "LU-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "MT-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "NL-WAB",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "PL-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "PT-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "RO-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "SK-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "SI-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "ES-LSSICE",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "SE-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "NO-LDL",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "CH-BehiG",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "IS-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "NZ-WAS",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "KR-KWCAG",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "IN-GIGW",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "IL-5568",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "BR-EMAG",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "AR-LEY26653",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "CO-NTCGP",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "MX-NMX",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "CL-DECRETO",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "ZA-ECTA",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "KE-KENAS",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "NG-DRA",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "SG-DGSS",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "HK-WCAG",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "TW-WCAG",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "CN-GB",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "RU-GOST",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "TR-EBYS",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "SA-WCAG",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "AE-TDRA",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "EG-MICT",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "TH-WCAG",
       "wcagVersion": "2.1",
       "wcagLevel": "AA",
       "wcagCriterion": "*",
