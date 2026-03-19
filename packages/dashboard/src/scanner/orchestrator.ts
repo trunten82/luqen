@@ -161,7 +161,6 @@ export class ScanOrchestrator {
 
       const hostname = new URL(config.siteUrl).hostname;
       const jsonPath = join(this.reportsDir, `${hostname}-${scanId}.json`);
-      const htmlPath = join(this.reportsDir, `${hostname}-${scanId}.html`);
 
       const reportData = {
         scanId,
@@ -176,7 +175,6 @@ export class ScanOrchestrator {
       };
 
       await writeFile(jsonPath, JSON.stringify(reportData, null, 2));
-      await writeFile(htmlPath, buildHtmlReport(reportData));
 
       let confirmedViolations: number | undefined;
 
@@ -221,7 +219,6 @@ export class ScanOrchestrator {
         notices,
         ...(confirmedViolations !== undefined ? { confirmedViolations } : {}),
         jsonReportPath: jsonPath,
-        htmlReportPath: htmlPath,
       });
 
       emit({
@@ -250,76 +247,3 @@ export class ScanOrchestrator {
   }
 }
 
-function buildHtmlReport(data: {
-  scanId: string;
-  siteUrl: string;
-  standard: string;
-  pagesScanned: number;
-  errors: number;
-  warnings: number;
-  notices: number;
-  completedAt: string;
-  issues: Array<{ code: string; type: string; message: string; selector: string; context: string }>;
-}): string {
-  const escapeHtml = (str: string): string =>
-    str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-
-  const issueRows = data.issues
-    .map(
-      (issue) => `
-    <tr>
-      <td>${escapeHtml(issue.type)}</td>
-      <td>${escapeHtml(issue.code)}</td>
-      <td>${escapeHtml(issue.message)}</td>
-      <td><code>${escapeHtml(issue.selector)}</code></td>
-    </tr>`,
-    )
-    .join('');
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Accessibility Report — ${escapeHtml(data.siteUrl)}</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a1a; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .summary { display: flex; gap: 2rem; margin: 1rem 0; }
-    .card { border: 1px solid #ccc; padding: 1rem; border-radius: 4px; }
-  </style>
-</head>
-<body>
-  <h1>Accessibility Report</h1>
-  <p><strong>Site:</strong> ${escapeHtml(data.siteUrl)}</p>
-  <p><strong>Standard:</strong> ${escapeHtml(data.standard)}</p>
-  <p><strong>Completed:</strong> ${escapeHtml(data.completedAt)}</p>
-  <div class="summary">
-    <div class="card"><strong>${data.pagesScanned}</strong><br>Pages Scanned</div>
-    <div class="card"><strong>${data.errors}</strong><br>Errors</div>
-    <div class="card"><strong>${data.warnings}</strong><br>Warnings</div>
-    <div class="card"><strong>${data.notices}</strong><br>Notices</div>
-  </div>
-  ${data.issues.length > 0 ? `
-  <h2>Issues</h2>
-  <table>
-    <caption>Accessibility issues found during scan</caption>
-    <thead>
-      <tr>
-        <th scope="col">Type</th>
-        <th scope="col">Code</th>
-        <th scope="col">Message</th>
-        <th scope="col">Selector</th>
-      </tr>
-    </thead>
-    <tbody>${issueRows}</tbody>
-  </table>` : '<p>No issues found.</p>'}
-</body>
-</html>`;
-}

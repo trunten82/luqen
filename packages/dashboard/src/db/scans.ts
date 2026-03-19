@@ -16,7 +16,6 @@ export interface ScanRecord {
   readonly notices?: number;
   readonly confirmedViolations?: number;
   readonly jsonReportPath?: string;
-  readonly htmlReportPath?: string;
   readonly error?: string;
 }
 
@@ -46,7 +45,6 @@ interface ScanRow {
   notices: number | null;
   confirmed_violations: number | null;
   json_report_path: string | null;
-  html_report_path: string | null;
   error: string | null;
 }
 
@@ -71,7 +69,6 @@ function rowToRecord(row: ScanRow): ScanRecord {
     ...(row.notices !== null ? { notices: row.notices } : {}),
     ...(row.confirmed_violations !== null ? { confirmedViolations: row.confirmed_violations } : {}),
     ...(row.json_report_path !== null ? { jsonReportPath: row.json_report_path } : {}),
-    ...(row.html_report_path !== null ? { htmlReportPath: row.html_report_path } : {}),
     ...(row.error !== null ? { error: row.error } : {}),
   };
 }
@@ -93,7 +90,6 @@ CREATE TABLE IF NOT EXISTS scan_records (
   notices INTEGER,
   confirmed_violations INTEGER,
   json_report_path TEXT,
-  html_report_path TEXT,
   error TEXT
 );
 
@@ -191,7 +187,6 @@ export class ScanDb {
       notices: 'notices',
       confirmedViolations: 'confirmed_violations',
       jsonReportPath: 'json_report_path',
-      htmlReportPath: 'html_report_path',
       error: 'error',
     };
 

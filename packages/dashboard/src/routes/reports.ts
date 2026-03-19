@@ -12,6 +12,144 @@ interface ReportsQuery {
 
 const PAGE_SIZE = 20;
 
+/** Shape of the JSON report file written by core's generateJsonReport or the orchestrator. */
+interface JsonReportFile {
+  summary?: {
+    url?: string;
+    pagesScanned?: number;
+    pagesFailed?: number;
+    totalIssues?: number;
+    byLevel?: { error: number; warning: number; notice: number };
+  };
+  pages?: Array<{
+    url: string;
+    issueCount: number;
+    issues: Array<{
+      type: string;
+      code: string;
+      message: string;
+      selector: string;
+      context: string;
+      wcagCriterion?: string;
+      wcagTitle?: string;
+      wcagDescription?: string;
+      wcagImpact?: string;
+      wcagUrl?: string;
+      regulations?: Array<{
+        shortName: string;
+        url?: string;
+        obligation?: string;
+        enforcementDate?: string;
+      }>;
+    }>;
+  }>;
+  errors?: Array<{ url: string; code: string; message: string }>;
+  compliance?: {
+    summary?: {
+      passing?: number;
+      failing?: number;
+      totalConfirmedViolations?: number;
+      totalNeedsReview?: number;
+    };
+    matrix?: Record<string, {
+      jurisdictionId: string;
+      jurisdictionName: string;
+      status?: string;
+      reviewStatus?: string;
+      confirmedViolations?: number;
+      needsReview?: number;
+      recommendedViolations?: number;
+      regulations?: Array<{
+        shortName: string;
+        url?: string;
+        obligation?: string;
+        enforcementDate?: string;
+      }>;
+    }>;
+  };
+  templateIssues?: Array<{
+    type: string;
+    code: string;
+    message: string;
+    selector?: string;
+    context?: string;
+    wcagCriterion?: string;
+    wcagTitle?: string;
+    wcagUrl?: string;
+    regulations?: Array<{
+      shortName: string;
+      url?: string;
+      obligation?: string;
+    }>;
+    affectedPages: string[];
+    affectedCount: number;
+  }>;
+  // Flat fields written by the dashboard orchestrator
+  siteUrl?: string;
+  pagesScanned?: number;
+  errors_count?: number;
+  warnings?: number;
+  notices?: number;
+  issues?: Array<{ code: string; type: string; message: string; selector: string; context: string }>;
+}
+
+function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string; pagesScanned?: number; errors?: number; warnings?: number; notices?: number }) {
+  // Support both the core JSON report format (has summary/pages) and the
+  // dashboard orchestrator's simpler format (flat fields + issues array).
+  const summary = raw.summary ?? {
+    url: raw.siteUrl ?? scan.siteUrl,
+    pagesScanned: raw.pagesScanned ?? scan.pagesScanned ?? 0,
+    pagesFailed: 0,
+    totalIssues: (scan.errors ?? 0) + (scan.warnings ?? 0) + (scan.notices ?? 0),
+    byLevel: {
+      error: scan.errors ?? 0,
+      warning: scan.warnings ?? 0,
+      notice: scan.notices ?? 0,
+    },
+  };
+
+  // If raw.pages exists use it; otherwise build a synthetic single page from flat issues
+  const pages = raw.pages ?? (
+    raw.issues && raw.issues.length > 0
+      ? [{
+          url: raw.siteUrl ?? scan.siteUrl,
+          issueCount: raw.issues.length,
+          issues: raw.issues,
+        }]
+      : []
+  );
+
+  // Add issueCount helper to each page if missing
+  const pagesWithCount = pages.map((p) => ({
+    ...p,
+    issueCount: p.issueCount ?? p.issues?.length ?? 0,
+  }));
+
+  const complianceMatrix = raw.compliance?.matrix
+    ? Object.values(raw.compliance.matrix)
+    : null;
+
+  const templateIssues = raw.templateIssues && raw.templateIssues.length > 0
+    ? raw.templateIssues
+    : null;
+
+  const templateIssueCount = templateIssues?.length ?? 0;
+  const templateOccurrenceCount = templateIssues
+    ? templateIssues.reduce((sum, ti) => sum + (ti.affectedCount ?? 0), 0)
+    : 0;
+
+  return {
+    summary,
+    pages: pagesWithCount,
+    errors: raw.errors ?? [],
+    compliance: raw.compliance ?? null,
+    complianceMatrix,
+    templateIssues,
+    templateIssueCount,
+    templateOccurrenceCount,
+  };
+}
+
 export async function reportRoutes(
   server: FastifyInstance,
   db: ScanDb,
@@ -83,7 +221,7 @@ export async function reportRoutes(
     },
   );
 
-  // GET /reports/:id — render report viewer
+  // GET /reports/:id — read JSON report and render rich report-detail template
   server.get(
     '/reports/:id',
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -94,46 +232,47 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
-      return reply.view('report-view.hbs', {
+      const scanMeta = {
+        ...scan,
+        jurisdictions: scan.jurisdictions.join(', '),
+        createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
+        completedAtDisplay: scan.completedAt
+          ? new Date(scan.completedAt).toLocaleString()
+          : '',
+      };
+
+      // If scan is not completed or no JSON file, render a status-only view
+      if (
+        scan.status !== 'completed' ||
+        scan.jsonReportPath === undefined ||
+        !existsSync(scan.jsonReportPath)
+      ) {
+        return reply.view('report-detail.hbs', {
+          pageTitle: `Report — ${scan.siteUrl}`,
+          currentPath: `/reports/${id}`,
+          user: request.user,
+          scan: scanMeta,
+          reportData: null,
+        });
+      }
+
+      let reportData: ReturnType<typeof normalizeReportData> | null = null;
+      try {
+        const raw = JSON.parse(
+          await readFile(scan.jsonReportPath, 'utf-8'),
+        ) as JsonReportFile;
+        reportData = normalizeReportData(raw, scan);
+      } catch {
+        // Render without report data — template handles the missing case
+      }
+
+      return reply.view('report-detail.hbs', {
         pageTitle: `Report — ${scan.siteUrl}`,
         currentPath: `/reports/${id}`,
         user: request.user,
-        scan: {
-          ...scan,
-          jurisdictions: scan.jurisdictions.join(', '),
-          createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
-          completedAtDisplay: scan.completedAt
-            ? new Date(scan.completedAt).toLocaleString()
-            : '',
-          hasHtmlReport:
-            scan.htmlReportPath !== undefined &&
-            existsSync(scan.htmlReportPath),
-        },
+        scan: scanMeta,
+        reportData,
       });
-    },
-  );
-
-  // GET /reports/:id/raw — serve raw HTML report
-  server.get(
-    '/reports/:id/raw',
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const { id } = request.params as { id: string };
-      const scan = db.getScan(id);
-
-      if (scan === null || scan.htmlReportPath === undefined) {
-        return reply.code(404).send({ error: 'Report not found' });
-      }
-
-      if (!existsSync(scan.htmlReportPath)) {
-        return reply.code(404).send({ error: 'Report file not found on disk' });
-      }
-
-      try {
-        const html = await readFile(scan.htmlReportPath, 'utf-8');
-        return reply.type('text/html').send(html);
-      } catch {
-        return reply.code(500).send({ error: 'Failed to read report file' });
-      }
     },
   );
 
@@ -158,9 +297,6 @@ export async function reportRoutes(
       }
 
       // Delete report files
-      if (scan.htmlReportPath !== undefined && existsSync(scan.htmlReportPath)) {
-        await unlink(scan.htmlReportPath).catch(() => undefined);
-      }
       if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
         await unlink(scan.jsonReportPath).catch(() => undefined);
       }

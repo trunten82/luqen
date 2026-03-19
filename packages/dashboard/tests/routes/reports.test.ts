@@ -101,7 +101,7 @@ describe('Report routes', () => {
   });
 
   describe('GET /reports/:id', () => {
-    it('returns 200 with report-view template', async () => {
+    it('returns 200 with report-detail template', async () => {
       const id = makeScan(ctx);
 
       const response = await ctx.server.inject({
@@ -111,7 +111,7 @@ describe('Report routes', () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json() as { template: string };
-      expect(body.template).toBe('report-view.hbs');
+      expect(body.template).toBe('report-detail.hbs');
     });
 
     it('returns 404 for non-existent scan', async () => {
@@ -134,6 +134,53 @@ describe('Report routes', () => {
       const body = response.json() as { data: { scan: { id: string; siteUrl: string } } };
       expect(body.data.scan.id).toBe(id);
       expect(body.data.scan.siteUrl).toBe('https://mysite.com');
+    });
+
+    it('renders reportData from JSON file when scan is completed and JSON exists', async () => {
+      const { writeFile } = await import('node:fs/promises');
+      const { join } = await import('node:path');
+      const id = makeScan(ctx, { status: 'completed' });
+      const jsonPath = join(ctx.config.reportsDir, `report-${id}.json`);
+      const reportJson = JSON.stringify({
+        summary: {
+          url: 'https://mysite.com',
+          pagesScanned: 1,
+          pagesFailed: 0,
+          totalIssues: 2,
+          byLevel: { error: 1, warning: 1, notice: 0 },
+        },
+        pages: [
+          { url: 'https://mysite.com', issueCount: 2, issues: [
+            { type: 'error', code: 'WCAG2AA.1_1_1', message: 'Missing alt', selector: 'img', context: '<img>' },
+            { type: 'warning', code: 'WCAG2AA.1_3_1', message: 'Heading order', selector: 'h3', context: '<h3>' },
+          ]},
+        ],
+        errors: [],
+      });
+      await writeFile(jsonPath, reportJson, 'utf-8');
+      ctx.db.updateScan(id, { jsonReportPath: jsonPath });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/reports/${id}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { data: { reportData: { summary: { totalIssues: number } } } };
+      expect(body.data.reportData).not.toBeNull();
+      expect(body.data.reportData.summary.totalIssues).toBe(2);
+    });
+
+    it('renders null reportData when scan is queued', async () => {
+      const id = makeScan(ctx, { status: 'queued' });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/reports/${id}`,
+      });
+
+      const body = response.json() as { data: { reportData: null } };
+      expect(body.data.reportData).toBeNull();
     });
   });
 
@@ -183,16 +230,4 @@ describe('Report routes', () => {
     });
   });
 
-  describe('GET /reports/:id/raw', () => {
-    it('returns 404 when no html report path', async () => {
-      const id = makeScan(ctx);
-
-      const response = await ctx.server.inject({
-        method: 'GET',
-        url: `/reports/${id}/raw`,
-      });
-
-      expect(response.statusCode).toBe(404);
-    });
-  });
 });
