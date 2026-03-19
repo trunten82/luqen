@@ -89,12 +89,35 @@ pally-agent scan https://example.com --format json,html
 # Scan with source mapping
 pally-agent scan https://example.com --repo ./my-project
 
+# Compliance-enriched scan (v0.2.0+)
+pally-agent scan https://example.com \
+  --format both \
+  --compliance-url http://localhost:4000 \
+  --jurisdictions EU,US,UK \
+  --compliance-client-id $CLIENT_ID \
+  --compliance-client-secret $CLIENT_SECRET
+
 # Fix interactively
 pally-agent fix https://example.com --repo ./my-project
 
 # Fix from existing report
 pally-agent fix --from-report ./pally-reports/report.json --repo ./my-project
 ```
+
+### Compliance CLI Options (v0.2.0+)
+
+| Option | Description |
+|--------|-------------|
+| `--compliance-url <url>` | Base URL of the compliance service |
+| `--jurisdictions <list>` | Comma-separated jurisdiction IDs (e.g. `EU,US,UK`) |
+| `--compliance-client-id <id>` | OAuth client ID |
+| `--compliance-client-secret <secret>` | OAuth client secret |
+
+### v0.3.0 Report Enhancements
+
+- **WCAG hyperlinks** — `wcagInfo.url` on every issue links to W3C Understanding WCAG 2.1
+- **Regulation hyperlinks** — `regulations[].url` on annotated issues links to official legal texts
+- **Template issue deduplication** — issues with the same `code+selector+context` on 3+ pages are grouped in the top-level `templateIssues` array (removes ~84% of duplicate noise)
 
 ## Typical Workflow
 

@@ -77,40 +77,53 @@ Use environment variables for secrets:
 
 ## Workflow: scan → compliance check → enriched report
 
-### Manual workflow (CLI)
+### Integrated workflow (recommended — v0.2.0+)
+
+pally-agent has native compliance integration. Pass credentials on the CLI and the enriched report is produced in a single step:
+
+```bash
+pally-agent scan https://example.com \
+  --format both \
+  --compliance-url http://localhost:4000 \
+  --jurisdictions EU,US,UK \
+  --compliance-client-id $COMPLIANCE_CLIENT_ID \
+  --compliance-client-secret $COMPLIANCE_CLIENT_SECRET
+```
+
+The HTML report includes:
+- A compliance matrix table (per-jurisdiction pass/fail)
+- Regulation badges on each issue (e.g. `EAA`, `ADA`) — clicking a badge opens the official legal text (v0.3.0+)
+- WCAG criterion links on every issue (v0.3.0+)
+
+The JSON report includes:
+- `compliance` field — jurisdiction matrix with mandatory violation counts
+- `templateIssues` array — issues deduplicated across 3+ pages (v0.3.0+)
+- `regulations` array on each issue — legal annotations with optional `url` field
+
+### Manual workflow (shell pipeline)
+
+If you need more control or are scripting outside of pally-agent:
 
 ```bash
 # Step 1: Scan the website
-pally-agent scan https://example.com --format json --output ./reports/scan.json
+pally-agent scan https://example.com --format json
 
-# Step 2: Check compliance using the scan results
+# Step 2: Obtain a token
 TOKEN=$(curl -s -X POST http://localhost:4000/api/v1/oauth/token \
   -H "Content-Type: application/json" \
   -d "{\"grant_type\":\"client_credentials\",\"client_id\":\"$COMPLIANCE_CLIENT_ID\",\"client_secret\":\"$COMPLIANCE_CLIENT_SECRET\",\"scope\":\"read\"}" \
   | jq -r '.access_token')
 
-# Extract pa11y issues from the report and check compliance
-ISSUES=$(jq '[.pages[].issues[] | {code:.code,type:.type,message:.message,selector:.selector,context:.context}]' ./reports/scan.json)
+# Step 3: Extract issues and check compliance
+ISSUES=$(jq '[.pages[].issues[] | {code:.code,type:.type,message:.message,selector:.selector,context:.context}]' \
+  pally-reports/pally-report-*.json)
 
 curl -X POST http://localhost:4000/api/v1/compliance/check \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"jurisdictions\":[\"EU\",\"US\",\"UK\"],\"issues\":$ISSUES}" \
-  > ./reports/compliance.json
-
-# Step 3: View summary
-jq '.summary' ./reports/compliance.json
+  | jq '.summary'
 ```
-
-### Automated workflow (when pally-agent integration is complete)
-
-When pally-agent has native compliance integration enabled, the enriched report is produced in a single step:
-
-```bash
-pally-agent scan https://example.com --compliance --jurisdictions EU,US,UK
-```
-
-The output includes the standard pa11y issues plus `complianceMatrix` and `annotatedIssues` fields.
 
 ## Reading the enriched report
 

@@ -15,10 +15,11 @@ Pally Agent is a Node.js/TypeScript tool that orchestrates accessibility testing
 7. [Source Mapping](#7-source-mapping)
 8. [Fix Proposals](#8-fix-proposals)
 9. [Report Formats](#9-report-formats)
-10. [Integration Guide](#10-integration-guide)
-11. [Troubleshooting](#11-troubleshooting)
-12. [API Reference](#12-api-reference)
-13. [Backward Compatibility / Pa11y Passthrough](#13-backward-compatibility--pa11y-passthrough)
+10. [Compliance-Enriched Scanning](#10-compliance-enriched-scanning)
+11. [Integration Guide](#11-integration-guide)
+12. [Troubleshooting](#12-troubleshooting)
+13. [API Reference](#13-api-reference)
+14. [Backward Compatibility / Pa11y Passthrough](#14-backward-compatibility--pa11y-passthrough)
 
 ---
 
@@ -41,6 +42,10 @@ Running pa11y manually on one page at a time is tedious. The pa11y webservice ex
 - **Site-wide scanning** — discovers all pages via `sitemap.xml` (with sitemap index recursion), crawl fallback, or both
 - **Source mapping** — maps WCAG issues to source files in Next.js, Nuxt, SvelteKit, Angular, and plain HTML projects
 - **Auto-fix proposals** — generates unified diffs for common issues (missing `alt`, missing labels, missing `lang`)
+- **Template issue deduplication** — issues appearing on 3+ pages are grouped into a "Template & Layout Issues" section, eliminating ~84% of duplicate noise
+- **WCAG hyperlinks** — every WCAG criterion in reports links to the official W3C Understanding WCAG 2.1 page
+- **Regulation hyperlinks** — regulation badges link to official legal texts
+- **Compliance-enriched scanning** — optional integration with the compliance service adds per-jurisdiction pass/fail matrix and regulation badges to every issue
 - **Dual interfaces** — CLI for humans, MCP server for AI agents (Claude Code and others)
 - **Structured reports** — timestamped JSON and self-contained HTML reports
 - **CI/CD ready** — meaningful exit codes, JSON output, no interactive prompts in non-fix mode
@@ -302,6 +307,10 @@ pally-agent scan <url> [options]
 | `--format <format>` | `json \| html \| both \| json,html` | Report format to generate (default: `json`). Comma-separated values are supported (e.g. `--format json,html` is equivalent to `--format both`) |
 | `--also-crawl` | `boolean` | Crawl the site in addition to the sitemap |
 | `--config <path>` | `string` | Explicit path to a `.pally-agent.json` config file |
+| `--compliance-url <url>` | `string` | Base URL of the compliance service — enables compliance-enriched scanning |
+| `--jurisdictions <list>` | `string` | Comma-separated jurisdiction IDs to check (e.g. `EU,US,UK`) |
+| `--compliance-client-id <id>` | `string` | OAuth client ID for the compliance service |
+| `--compliance-client-secret <secret>` | `string` | OAuth client secret for the compliance service |
 
 **Examples:**
 
@@ -326,6 +335,14 @@ pally-agent scan https://example.com --also-crawl
 
 # Use explicit config file
 pally-agent scan https://example.com --config ./ci/.pally-agent.json
+
+# Compliance-enriched scan — annotates issues with legal obligations
+pally-agent scan https://example.com \
+  --compliance-url http://localhost:4000 \
+  --jurisdictions EU,US,UK \
+  --compliance-client-id $CLIENT_ID \
+  --compliance-client-secret $CLIENT_SECRET \
+  --format both
 ```
 
 **Output:**
@@ -397,7 +414,7 @@ pally-agent fix --from-report ./pally-reports/pally-report-2026-03-18T120000Z.js
   --repo ./my-project
 ```
 
-The report file must conform to the `ScanReport` schema (see [API Reference](#12-api-reference)).
+The report file must conform to the `ScanReport` schema (see [API Reference](#13-api-reference)).
 
 ### Exit Codes
 
@@ -511,7 +528,7 @@ Reads a previously generated JSON report and returns issues matching the specifi
 | `severity` | `"error" \| "warning" \| "notice"` | No | Filter by issue severity |
 | `ruleCode` | `string` | No | Filter by WCAG rule code (exact match) |
 
-**Output:** Filtered array of `PageResult` objects (see [API Reference](#12-api-reference)).
+**Output:** Filtered array of `PageResult` objects (see [API Reference](#13-api-reference)).
 
 **Examples:**
 
@@ -1051,6 +1068,19 @@ Reports are written to `outputDir` with timestamped filenames (e.g. `pally-repor
       selector: string;       // CSS selector of the offending element
       context: string;        // HTML snippet surrounding the issue
       fixSuggestion?: string; // Textual recommendation (always present)
+      wcagInfo?: {            // WCAG criterion metadata (v0.3.0+)
+        criterion: string;    // e.g. "1.1.1"
+        title: string;        // e.g. "Non-text Content"
+        level: string;        // "A", "AA", or "AAA"
+        url: string;          // Link to W3C Understanding WCAG 2.1 page
+      };
+      regulations?: Array<{   // Present when compliance service is enabled (v0.2.0+)
+        regulationId: string;
+        shortName: string;    // e.g. "EAA", "ADA"
+        jurisdictionId: string;
+        obligation: "mandatory" | "recommended";
+        url?: string;         // Link to official legal text (v0.3.0+)
+      }>;
     }>;
     sourceMap?: {             // Present when --repo was used
       file: string;           // Source file path
@@ -1066,6 +1096,43 @@ Reports are written to `outputDir` with timestamped filenames (e.g. `pally-repor
     };
   }>;
 
+  // Template & Layout issues — issues with the same code+selector+context on 3+ pages (v0.3.0+)
+  // These are deduplicated from page-level issues and grouped here to reduce noise.
+  templateIssues?: Array<{
+    code: string;
+    type: "error" | "warning" | "notice";
+    message: string;
+    selector: string;
+    context: string;
+    affectedPages: string[];  // URLs of all pages where this issue appears
+    affectedPageCount: number;
+    fixSuggestion?: string;
+    wcagInfo?: WcagCriterionInfo;
+    regulations?: RegulationAnnotation[];
+  }>;
+
+  // Compliance matrix — present when --compliance-url is set (v0.2.0+)
+  compliance?: {
+    summary: {
+      totalJurisdictions: number;
+      passing: number;
+      failing: number;
+      totalMandatoryViolations: number;
+    };
+    matrix: Record<string, {
+      status: "pass" | "fail";
+      mandatoryViolations: number;
+      regulations: Array<{
+        regulationId: string;
+        regulationName: string;
+        shortName: string;
+        status: "pass" | "fail";
+        enforcementDate: string;
+        url?: string;
+      }>;
+    }>;
+  };
+
   // Pages that failed to scan
   errors: Array<{
     url: string;
@@ -1079,6 +1146,41 @@ Reports are written to `outputDir` with timestamped filenames (e.g. `pally-repor
 }
 ```
 
+### Template Issue Deduplication (v0.3.0)
+
+Many sites have shared components (headers, footers, navigation) that produce identical accessibility issues on every page. Without deduplication, a single missing `alt` on a logo could appear 50+ times across a large site, flooding reports with noise.
+
+**How it works:**
+
+- After scanning, pally-agent identifies issues where `code + selector + context` is identical across **3 or more pages**
+- These issues are extracted from individual page results and grouped into the top-level `templateIssues` array
+- Each entry records `affectedPageCount` and `affectedPages` so you know the full scope
+- Page-level `issues` arrays no longer contain the deduplicated issues — they only show page-specific problems
+
+**Impact:** Eliminates approximately 84% of duplicate issue noise on typical sites with shared layouts.
+
+**Example templateIssues entry:**
+
+```json
+{
+  "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+  "type": "error",
+  "message": "Img element missing an alt attribute.",
+  "selector": "header > nav > a > img",
+  "context": "<img src=\"/logo.svg\">",
+  "affectedPageCount": 42,
+  "affectedPages": ["https://example.com/", "https://example.com/about", "..."],
+  "wcagInfo": {
+    "criterion": "1.1.1",
+    "title": "Non-text Content",
+    "level": "A",
+    "url": "https://www.w3.org/WAI/WCAG21/Understanding/non-text-content"
+  }
+}
+```
+
+Fix the issue once in the shared component and it resolves on all 42 pages.
+
 ### HTML Report Features
 
 HTML reports (`pally-report-*.html`) are:
@@ -1087,6 +1189,10 @@ HTML reports (`pally-report-*.html`) are:
 - **Filterable** — filter issues by severity (error / warning / notice), page URL, and rule code
 - **Collapsible** — each page section is collapsible; summary statistics are always visible
 - **Colour-coded** — errors in red, warnings in yellow, notices in blue
+- **WCAG hyperlinks** — every WCAG criterion (e.g. "1.1.1 Non-text Content") links to the W3C Understanding WCAG 2.1 page (v0.3.0+)
+- **Regulation badges** — when compliance is enabled, each issue shows clickable regulation badges (e.g. "EAA", "ADA") linking to official legal texts (v0.3.0+)
+- **Compliance matrix** — when compliance is enabled, a per-jurisdiction pass/fail table appears at the top of the report (v0.2.0+)
+- **Template issues section** — deduplicated issues are shown in a dedicated "Template & Layout Issues" section before the per-page breakdown (v0.3.0+)
 
 ### Output Directory and Naming
 
@@ -1105,7 +1211,57 @@ Example: `pally-report-2026-03-18T120000Z.json`
 
 ---
 
-## 10. Integration Guide
+## 10. Compliance-Enriched Scanning
+
+Pally Agent integrates with the companion `@pally-agent/compliance` service to annotate every WCAG issue with the specific legal regulations it violates, and to produce a per-jurisdiction pass/fail compliance matrix.
+
+### How It Works
+
+When `--compliance-url` is provided, pally-agent performs a standard scan and then sends the collected issues to the compliance service via its REST API. The response is merged into the report: each issue gains a `regulations` array, and the top-level `compliance` field contains the jurisdiction matrix.
+
+### CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--compliance-url <url>` | Base URL of the compliance service (e.g. `http://localhost:4000`) |
+| `--jurisdictions <list>` | Comma-separated jurisdiction IDs (e.g. `EU,US,UK`) |
+| `--compliance-client-id <id>` | OAuth client ID for the compliance service |
+| `--compliance-client-secret <secret>` | OAuth client secret |
+
+### Example
+
+```bash
+pally-agent scan https://example.com \
+  --format both \
+  --compliance-url http://localhost:4000 \
+  --jurisdictions EU,US,UK \
+  --compliance-client-id $COMPLIANCE_CLIENT_ID \
+  --compliance-client-secret $COMPLIANCE_CLIENT_SECRET
+```
+
+The HTML report will include:
+- A compliance matrix table at the top (EU: FAIL — 3 mandatory violations, US: FAIL — 3, UK: PASS)
+- Regulation badges on each issue (e.g. `EAA` `ADA`) that link to official legal texts
+- WCAG criterion links on every issue heading
+
+### Config File Alternative
+
+```json
+{
+  "compliance": {
+    "url": "http://localhost:4000",
+    "clientId": "YOUR_CLIENT_ID",
+    "clientSecret": "YOUR_CLIENT_SECRET",
+    "jurisdictions": ["EU", "US", "UK"]
+  }
+}
+```
+
+For full setup instructions (OAuth client creation, service installation, A2A integration), see [docs/compliance/integrations/pally-agent.md](compliance/integrations/pally-agent.md).
+
+---
+
+## 11. Integration Guide
 
 ### CI/CD Integration
 
@@ -1192,7 +1348,7 @@ curl -X POST $SLACK_WEBHOOK_URL \
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 ### Webservice Connection Issues
 
@@ -1292,7 +1448,7 @@ This is typically a browser issue with self-contained HTML files and is not a pa
 
 ---
 
-## 12. API Reference
+## 13. API Reference
 
 All TypeScript interfaces are defined in `src/types.ts`.
 
@@ -1328,6 +1484,8 @@ Returned by `pally_scan` and written to the JSON report file.
 |-------|------|-------------|
 | `summary` | `ScanSummary` | Aggregate statistics |
 | `pages` | `PageResult[]` | Per-page results |
+| `templateIssues` | `TemplateIssue[] \| undefined` | Issues deduplicated across 3+ pages (v0.3.0+) |
+| `compliance` | `ComplianceResult \| undefined` | Per-jurisdiction matrix — present when compliance service is enabled (v0.2.0+) |
 | `errors` | `ScanError[]` | Pages that failed to scan |
 | `reportPath` | `string` | Absolute path to the JSON report file |
 
@@ -1374,6 +1532,35 @@ One accessibility issue as reported by pa11y.
 | `selector` | `string` | CSS selector of the offending element |
 | `context` | `string` | HTML snippet surrounding the issue |
 | `fixSuggestion` | `string \| undefined` | Textual recommendation |
+| `wcagInfo` | `WcagCriterionInfo \| undefined` | WCAG criterion metadata with hyperlink (v0.3.0+) |
+| `regulations` | `RegulationAnnotation[] \| undefined` | Legal regulation annotations — present when compliance service is enabled (v0.2.0+) |
+
+---
+
+### `WcagCriterionInfo`
+
+WCAG criterion metadata attached to each issue (v0.3.0+).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `criterion` | `string` | WCAG criterion number (e.g. `"1.1.1"`) |
+| `title` | `string` | Criterion title (e.g. `"Non-text Content"`) |
+| `level` | `"A" \| "AA" \| "AAA"` | Conformance level |
+| `url` | `string` | Link to the W3C Understanding WCAG 2.1 page for this criterion |
+
+---
+
+### `RegulationAnnotation`
+
+A legal regulation that an accessibility issue violates. Present on issues when compliance integration is enabled (v0.2.0+).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `regulationId` | `string` | Regulation identifier (e.g. `"EU-EAA"`) |
+| `shortName` | `string` | Short display name (e.g. `"EAA"`, `"ADA"`) |
+| `jurisdictionId` | `string` | Jurisdiction identifier (e.g. `"EU"`, `"US"`) |
+| `obligation` | `"mandatory" \| "recommended"` | Whether compliance is legally required |
+| `url` | `string \| undefined` | Link to the official legal text (v0.3.0+) |
 
 ---
 
@@ -1457,7 +1644,7 @@ A URL returned by the discovery phase.
 
 ---
 
-## 13. Backward Compatibility / Pa11y Passthrough
+## 14. Backward Compatibility / Pa11y Passthrough
 
 ### Purpose
 
@@ -1503,4 +1690,4 @@ If you are building new integrations, prefer `pally_scan` for its richer output.
 
 ---
 
-*Pally Agent v0.1.0 — MIT License*
+*Pally Agent v0.3.0 — MIT License*
