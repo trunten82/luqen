@@ -1923,7 +1923,7 @@ Start the Fastify REST + MCP + A2A server.
 
 ```bash
 pally-compliance serve
-pally-compliance serve --port 4001
+pally-compliance serve --port 4000
 ```
 
 Options:
