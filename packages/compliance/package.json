@@ -4,7 +4,9 @@
   "description": "Accessibility compliance rule engine service",
   "type": "module",
   "main": "dist/cli.js",
-  "bin": { "pally-compliance": "dist/cli.js" },
+  "bin": {
+    "pally-compliance": "dist/cli.js"
+  },
   "scripts": {
     "build": "tsc && cp src/seed/baseline.json dist/seed/baseline.json",
     "test": "vitest run",
@@ -20,11 +22,14 @@
     "@fastify/swagger": "^9.0.0",
     "@fastify/swagger-ui": "^5.0.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "@types/pg": "^8.18.0",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^11.0.0",
     "commander": "^14.0.3",
     "fastify": "^5.0.0",
     "jose": "^6.0.0",
+    "mongodb": "^7.1.0",
+    "pg": "^8.20.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
