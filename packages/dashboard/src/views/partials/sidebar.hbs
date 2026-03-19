@@ -1,0 +1,138 @@
+<nav id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+  <a class="sidebar__logo" href="/home" aria-label="Pally Dashboard home">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+      <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Pally
+  </a>
+
+  <div class="sidebar__nav">
+    <!-- User section — visible to all authenticated users -->
+    <span class="sidebar__section-label">Overview</span>
+
+    <a class="sidebar__item {{#if (eq currentPath '/home')}}is-active{{/if}}"
+       href="/home"
+       aria-current="{{#if (eq currentPath '/home')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M3 9l9-7 9 7v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Home
+    </a>
+
+    <span class="sidebar__section-label">Scans</span>
+
+    {{#if (canScan user.role)}}
+    <a class="sidebar__item {{#if (eq currentPath '/scan/new')}}is-active{{/if}}"
+       href="/scan/new"
+       aria-current="{{#if (eq currentPath '/scan/new')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 6v4l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      New Scan
+    </a>
+    {{/if}}
+
+    <a class="sidebar__item {{#if (eq currentPath '/reports')}}is-active{{/if}}"
+       href="/reports"
+       aria-current="{{#if (eq currentPath '/reports')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M6 2h8l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M14 2v4h4M8 10h4M8 14h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Reports
+    </a>
+
+    {{#if (isAdmin user.role)}}
+    <!-- Admin section — visible to admins only -->
+    <span class="sidebar__section-label">Administration</span>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/jurisdictions')}}is-active{{/if}}"
+       href="/admin/jurisdictions"
+       aria-current="{{#if (startsWith currentPath '/admin/jurisdictions')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 6v8M6 10h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Jurisdictions
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/regulations')}}is-active{{/if}}"
+       href="/admin/regulations"
+       aria-current="{{#if (startsWith currentPath '/admin/regulations')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Regulations
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/requirements')}}is-active{{/if}}"
+       href="/admin/requirements">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M9 11l2 2 4-4M5 5h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Requirements
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/proposals')}}is-active{{/if}}"
+       href="/admin/proposals">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M11 5H6a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-5M14 3l3 3-8 8H6v-3l8-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Proposals
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/sources')}}is-active{{/if}}"
+       href="/admin/sources">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zM4 10h12" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 2c-2 2-3 5-3 8s1 6 3 8m0-16c2 2 3 5 3 8s-1 6-3 8" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Sources
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/webhooks')}}is-active{{/if}}"
+       href="/admin/webhooks">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M13 10a3 3 0 11-6 0 3 3 0 016 0zM7.5 10H3M17 10h-4M10 7.5V3M10 17v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Webhooks
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/users')}}is-active{{/if}}"
+       href="/admin/users">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM5 16a7 7 0 0110 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Users
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/clients')}}is-active{{/if}}"
+       href="/admin/clients">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="3" y="6" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7 6V5a3 3 0 016 0v1" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      OAuth Clients
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/system')}}is-active{{/if}}"
+       href="/admin/system">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      System Health
+    </a>
+    {{/if}}
+  </div>
+
+  <div class="sidebar__footer">
+    <div class="flex items-center justify-between">
+      <span>{{user.username}}</span>
+      <a href="/logout" class="btn btn--ghost btn--sm">Sign out</a>
+    </div>
+  </div>
+</nav>

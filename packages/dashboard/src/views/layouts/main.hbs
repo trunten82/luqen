@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Pally Dashboard — Accessibility Scanner">
+  <title>{{#if pageTitle}}{{pageTitle}} — {{/if}}Pally Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Skip to main content: first focusable element on every page -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="layout">
+    <!-- Sidebar navigation -->
+    {{> sidebar}}
+
+    <!-- Mobile header (visible below 1024px) -->
+    <div class="mobile-header" role="banner">
+      <button class="mobile-menu-toggle"
+              aria-label="Open navigation menu"
+              aria-expanded="false"
+              aria-controls="sidebar"
+              id="mobile-menu-btn">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M2 5h16M2 10h16M2 15h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <span aria-label="Pally Dashboard" style="font-size:1.25rem;font-weight:700;color:var(--accent)">Pally</span>
+    </div>
+
+    <!-- Main content area -->
+    <main id="main-content" class="main-content" role="main" tabindex="-1">
+      {{#if pageTitle}}
+      <header class="page-header">
+        <h1 class="page-header__title">{{pageTitle}}</h1>
+        {{#if pageSubtitle}}
+        <p class="page-header__subtitle">{{pageSubtitle}}</p>
+        {{/if}}
+      </header>
+      {{/if}}
+
+      <div class="page-body">
+        {{{body}}}
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast notification container (populated by HTMX OOB swaps) -->
+  <div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+  <!-- Modal container (populated by HTMX fragment loads) -->
+  <div id="modal-container"></div>
+
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/htmx-sse.js"></script>
+  <script>
+    // Mobile sidebar toggle
+    (function () {
+      var btn = document.getElementById('mobile-menu-btn');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
+        var open = sidebar.classList.toggle('is-open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+      });
+    }());
+
+    // Auto-dismiss toasts after 5 seconds
+    document.addEventListener('htmx:afterSwap', function () {
+      var toastContainer = document.getElementById('toast-container');
+      if (!toastContainer) return;
+      var toasts = toastContainer.querySelectorAll('.toast');
+      toasts.forEach(function (toast) {
+        setTimeout(function () {
+          toast.style.opacity = '0';
+          toast.style.transition = 'opacity 300ms ease';
+          setTimeout(function () { toast.parentNode && toast.parentNode.removeChild(toast); }, 300);
+        }, 5000);
+      });
+    });
+
+    // Close modal when overlay is clicked or Escape pressed
+    document.addEventListener('click', function (evt) {
+      if (evt.target && evt.target.classList.contains('modal-overlay')) {
+        var container = document.getElementById('modal-container');
+        if (container) { while (container.firstChild) { container.removeChild(container.firstChild); } }
+      }
+    });
+    document.addEventListener('keydown', function (evt) {
+      if (evt.key === 'Escape') {
+        var container = document.getElementById('modal-container');
+        if (container && container.children.length > 0) {
+          while (container.firstChild) { container.removeChild(container.firstChild); }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
