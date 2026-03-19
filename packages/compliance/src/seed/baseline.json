@@ -1,0 +1,280 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-03-19T00:00:00.000Z",
+  "jurisdictions": [
+    {
+      "id": "EU",
+      "name": "European Union",
+      "type": "supranational",
+      "iso3166": "EU"
+    },
+    {
+      "id": "US",
+      "name": "United States",
+      "type": "country",
+      "iso3166": "US"
+    },
+    {
+      "id": "UK",
+      "name": "United Kingdom",
+      "type": "country",
+      "iso3166": "GB"
+    },
+    {
+      "id": "DE",
+      "name": "Germany",
+      "type": "country",
+      "iso3166": "DE",
+      "parentId": "EU"
+    },
+    {
+      "id": "FR",
+      "name": "France",
+      "type": "country",
+      "iso3166": "FR",
+      "parentId": "EU"
+    },
+    {
+      "id": "AU",
+      "name": "Australia",
+      "type": "country",
+      "iso3166": "AU"
+    },
+    {
+      "id": "CA",
+      "name": "Canada",
+      "type": "country",
+      "iso3166": "CA"
+    },
+    {
+      "id": "JP",
+      "name": "Japan",
+      "type": "country",
+      "iso3166": "JP"
+    }
+  ],
+  "regulations": [
+    {
+      "id": "EU-EAA",
+      "jurisdictionId": "EU",
+      "name": "European Accessibility Act",
+      "shortName": "EAA",
+      "reference": "Directive (EU) 2019/882",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0882",
+      "enforcementDate": "2025-06-28",
+      "status": "active",
+      "scope": "all",
+      "sectors": ["products", "services", "digital"],
+      "description": "The European Accessibility Act requires certain products and services to be accessible to persons with disabilities."
+    },
+    {
+      "id": "EU-WAD",
+      "jurisdictionId": "EU",
+      "name": "Web Accessibility Directive",
+      "shortName": "WAD",
+      "reference": "Directive (EU) 2016/2102",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32016L2102",
+      "enforcementDate": "2018-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government", "public-sector"],
+      "description": "The Web Accessibility Directive requires public sector bodies in the EU to make their websites and mobile applications accessible."
+    },
+    {
+      "id": "US-508",
+      "jurisdictionId": "US",
+      "name": "Section 508 of the Rehabilitation Act",
+      "shortName": "Section 508",
+      "reference": "29 U.S.C. § 794d",
+      "url": "https://www.section508.gov/",
+      "enforcementDate": "1998-08-07",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["federal-government"],
+      "description": "Section 508 requires federal agencies to make their electronic and information technology accessible to people with disabilities."
+    },
+    {
+      "id": "US-ADA",
+      "jurisdictionId": "US",
+      "name": "Americans with Disabilities Act",
+      "shortName": "ADA",
+      "reference": "42 U.S.C. § 12101",
+      "url": "https://www.ada.gov/",
+      "enforcementDate": "1990-07-26",
+      "status": "active",
+      "scope": "all",
+      "sectors": ["public-accommodation", "employment", "government"],
+      "description": "The ADA prohibits discrimination against people with disabilities and requires accessibility in places of public accommodation."
+    },
+    {
+      "id": "UK-EA",
+      "jurisdictionId": "UK",
+      "name": "Equality Act 2010",
+      "shortName": "Equality Act",
+      "reference": "Equality Act 2010 c.15",
+      "url": "https://www.legislation.gov.uk/ukpga/2010/15/contents",
+      "enforcementDate": "2010-10-01",
+      "status": "active",
+      "scope": "all",
+      "sectors": ["services", "employment", "public-sector"],
+      "description": "The Equality Act 2010 requires service providers to make reasonable adjustments for disabled people, including digital accessibility."
+    },
+    {
+      "id": "UK-PSBAR",
+      "jurisdictionId": "UK",
+      "name": "Public Sector Bodies Accessibility Regulations",
+      "shortName": "PSBAR",
+      "reference": "SI 2018/952",
+      "url": "https://www.legislation.gov.uk/uksi/2018/952/contents",
+      "enforcementDate": "2018-09-23",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "Requires public sector bodies in the UK to meet accessibility requirements for their websites and mobile applications."
+    },
+    {
+      "id": "DE-BITV",
+      "jurisdictionId": "DE",
+      "name": "Barrierefreie-Informationstechnik-Verordnung 2.0",
+      "shortName": "BITV 2.0",
+      "reference": "BITV 2.0",
+      "url": "https://www.gesetze-im-internet.de/bitv_2_0/",
+      "enforcementDate": "2011-09-22",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["federal-government"],
+      "description": "BITV 2.0 implements web accessibility requirements for German federal public sector websites and mobile applications."
+    },
+    {
+      "id": "FR-RGAA",
+      "jurisdictionId": "FR",
+      "name": "Référentiel Général d'Amélioration de l'Accessibilité",
+      "shortName": "RGAA",
+      "reference": "RGAA 4.1",
+      "url": "https://accessibilite.numerique.gouv.fr/",
+      "enforcementDate": "2020-09-14",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["public-sector"],
+      "description": "RGAA is France's general accessibility improvement framework for digital public services."
+    },
+    {
+      "id": "AU-DDA",
+      "jurisdictionId": "AU",
+      "name": "Disability Discrimination Act 1992",
+      "shortName": "DDA",
+      "reference": "DDA 1992",
+      "url": "https://www.legislation.gov.au/Details/C2018C00125",
+      "enforcementDate": "1992-11-05",
+      "status": "active",
+      "scope": "all",
+      "sectors": ["services", "employment", "government"],
+      "description": "The DDA prohibits discrimination on the grounds of disability in Australia, including inaccessible digital services."
+    },
+    {
+      "id": "CA-ACA",
+      "jurisdictionId": "CA",
+      "name": "Accessible Canada Act",
+      "shortName": "ACA",
+      "reference": "S.C. 2019, c.10",
+      "url": "https://laws-lois.justice.gc.ca/eng/acts/A-0.6/",
+      "enforcementDate": "2019-07-11",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["federal-government", "regulated-entities"],
+      "description": "The Accessible Canada Act aims to create a barrier-free Canada by 2040, including digital accessibility requirements."
+    },
+    {
+      "id": "JP-JIS",
+      "jurisdictionId": "JP",
+      "name": "JIS X 8341-3: Guidelines for older persons and persons with disabilities",
+      "shortName": "JIS X 8341-3",
+      "reference": "JIS X 8341-3:2016",
+      "url": "https://www.jisc.go.jp/",
+      "enforcementDate": "2016-03-22",
+      "status": "active",
+      "scope": "all",
+      "sectors": ["government", "services"],
+      "description": "JIS X 8341-3 is the Japanese standard for web content accessibility, aligned with WCAG 2.1."
+    }
+  ],
+  "requirements": [
+    {
+      "regulationId": "EU-EAA",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "EU-WAD",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "US-508",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "US-ADA",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "UK-EA",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "UK-PSBAR",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "DE-BITV",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "FR-RGAA",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "AU-DDA",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "CA-ACA",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "JP-JIS",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    }
+  ]
+}
