@@ -39,7 +39,7 @@ Add a `compliance` section to `.pally-agent.json`:
 
 ```json
 {
-  "webserviceUrl": "http://localhost:4002",
+  "webserviceUrl": "http://localhost:3000",
   "standard": "WCAG2AA",
   "concurrency": 3,
   "compliance": {

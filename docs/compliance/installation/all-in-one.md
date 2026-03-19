@@ -65,7 +65,7 @@ services:
     volumes:
       - pally-reports:/reports
     environment:
-      PALLY_WEBSERVICE_URL: "http://pa11y-webservice:4002"
+      PALLY_WEBSERVICE_URL: "http://pa11y-webservice:3000"
       PALLY_COMPLIANCE_URL: "http://compliance:4000"
       PALLY_COMPLIANCE_CLIENT_ID: "${PALLY_COMPLIANCE_CLIENT_ID}"
       PALLY_COMPLIANCE_CLIENT_SECRET: "${PALLY_COMPLIANCE_CLIENT_SECRET}"
@@ -81,9 +81,9 @@ services:
     container_name: pa11y-webservice
     restart: unless-stopped
     ports:
-      - "4002:4002"
+      - "3000:3000"
     environment:
-      PORT: "4002"
+      PORT: "3000"
       DATABASE: "mongodb://mongo:27017/pa11y"
     depends_on:
       - mongo
@@ -155,7 +155,7 @@ curl http://localhost:4000/api/v1/health
 curl http://localhost:3001/health
 
 # Check pa11y webservice
-curl http://localhost:4002/
+curl http://localhost:3000/
 ```
 
 ## Pally-agent configuration
@@ -164,7 +164,7 @@ Create `.pally-agent.json` (mounted into the pally-agent container or in the pro
 
 ```json
 {
-  "webserviceUrl": "http://pa11y-webservice:4002",
+  "webserviceUrl": "http://pa11y-webservice:3000",
   "standard": "WCAG2AA",
   "concurrency": 3,
   "compliance": {
@@ -186,7 +186,7 @@ The `compliance` section tells pally-agent to call the compliance service after 
 | Compliance REST API | `http://compliance:4000/api/v1` | `http://localhost:4000/api/v1` |
 | Compliance Swagger UI | `http://compliance:4000/api/v1/docs` | `http://localhost:4000/api/v1/docs` |
 | Compliance A2A card | `http://compliance:4000/.well-known/agent.json` | `http://localhost:4000/.well-known/agent.json` |
-| Pa11y webservice | `http://pa11y-webservice:4002` | `http://localhost:4002` |
+| Pa11y webservice | `http://pa11y-webservice:3000` | `http://localhost:3000` |
 | Pally-agent API | `http://pally-agent:3001` | `http://localhost:3001` |
 
 ## Claude Code MCP config

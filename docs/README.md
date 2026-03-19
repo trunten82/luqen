@@ -80,7 +80,7 @@ Running pa11y manually on one page at a time is tedious. The pa11y webservice ex
 
 - **Node.js** 18 or later
 - A running **pa11y webservice** instance (see [pa11y-webservice](https://github.com/pa11y/pa11y-webservice) for setup)
-- The webservice URL — typically `http://localhost:4002` or a remote host
+- The webservice URL — typically `http://localhost:3000` or a remote host
 
 ### Installation
 
@@ -103,7 +103,7 @@ After linking, `pally-agent` is available as a global command.
 
 ```bash
 # 1. Set the webservice URL (or put it in .pally-agent.json)
-export PALLY_WEBSERVICE_URL=http://localhost:4002
+export PALLY_WEBSERVICE_URL=http://localhost:3000
 
 # 2. Scan a site
 pally-agent scan https://example.com
@@ -152,7 +152,7 @@ Place this file in your project root (or any ancestor directory). All fields are
 
 ```json
 {
-  "webserviceUrl": "http://localhost:4002",
+  "webserviceUrl": "http://localhost:3000",
   "webserviceHeaders": {},
   "standard": "WCAG2AA",
   "concurrency": 5,
@@ -174,7 +174,7 @@ Place this file in your project root (or any ancestor directory). All fields are
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `webserviceUrl` | `string` | `"http://localhost:4002"` | Base URL of the pa11y webservice instance |
+| `webserviceUrl` | `string` | `"http://localhost:3000"` | Base URL of the pa11y webservice instance |
 | `webserviceHeaders` | `object` | `{}` | HTTP headers sent with every request **to the webservice** (e.g. for webservice authentication) |
 | `standard` | `"WCAG2A" \| "WCAG2AA" \| "WCAG2AAA"` | `"WCAG2AA"` | WCAG conformance level to test against |
 | `concurrency` | `number` | `5` | Maximum number of pages scanned in parallel |
@@ -236,7 +236,7 @@ For example, `--standard WCAG2AAA` on the CLI overrides `"standard": "WCAG2AA"` 
 
 ```json
 {
-  "webserviceUrl": "http://localhost:4002",
+  "webserviceUrl": "http://localhost:3000",
   "standard": "WCAG2AA",
   "outputDir": "./a11y-reports"
 }
@@ -262,7 +262,7 @@ For example, `--standard WCAG2AAA` on the CLI overrides `"standard": "WCAG2AA"` 
 
 ```json
 {
-  "webserviceUrl": "http://pa11y-webservice:4002",
+  "webserviceUrl": "http://pa11y-webservice:3000",
   "standard": "WCAG2AA",
   "concurrency": 10,
   "maxPages": 50,
@@ -1116,7 +1116,7 @@ Use exit codes to drive your pipeline:
 - name: Run accessibility scan
   run: pally-agent scan ${{ env.SITE_URL }} --format json
   env:
-    PALLY_WEBSERVICE_URL: http://pa11y-webservice:4002
+    PALLY_WEBSERVICE_URL: http://pa11y-webservice:3000
   # Exit 1 = issues found (fail the build)
   # Exit 2 = some pages failed (fail the build, investigate infrastructure)
   # Exit 3 = fatal (misconfiguration)
@@ -1168,7 +1168,7 @@ Pally Agent implements the MCP protocol, so any MCP-compatible agent can use it:
       "command": "node",
       "args": ["/path/to/pally-agent/dist/mcp.js"],
       "env": {
-        "PALLY_WEBSERVICE_URL": "http://localhost:4002"
+        "PALLY_WEBSERVICE_URL": "http://localhost:3000"
       }
     }
   }
@@ -1196,12 +1196,12 @@ curl -X POST $SLACK_WEBHOOK_URL \
 
 ### Webservice Connection Issues
 
-**Error:** `Fatal error: connect ECONNREFUSED 127.0.0.1:4002`
+**Error:** `Fatal error: connect ECONNREFUSED 127.0.0.1:3000`
 
 The pa11y webservice is not running or is not accessible at the configured URL.
 
 **Solutions:**
-1. Verify the webservice is running: `curl http://localhost:4002/tasks`
+1. Verify the webservice is running: `curl http://localhost:3000/tasks`
 2. Check `PALLY_WEBSERVICE_URL` or `webserviceUrl` in your config
 3. If the webservice is on a different host, ensure network connectivity
 4. If authentication is required, set `PALLY_WEBSERVICE_AUTH` or `webserviceHeaders.Authorization`
@@ -1261,7 +1261,7 @@ Pa11y did not return results within the `pollTimeout` window.
 
 ### Config Not Found
 
-**Symptom:** The webservice URL reverts to `http://localhost:4002` even though you have a config file.
+**Symptom:** The webservice URL reverts to `http://localhost:3000` even though you have a config file.
 
 **Solutions:**
 1. Ensure the file is named exactly `.pally-agent.json` (note the leading dot)
@@ -1302,7 +1302,7 @@ The complete configuration object. All fields are readonly.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `webserviceUrl` | `string` | `"http://localhost:4002"` | Pa11y webservice base URL |
+| `webserviceUrl` | `string` | `"http://localhost:3000"` | Pa11y webservice base URL |
 | `webserviceHeaders` | `Record<string, string>` | `{}` | Headers for every webservice API request |
 | `standard` | `"WCAG2A" \| "WCAG2AA" \| "WCAG2AAA"` | `"WCAG2AA"` | WCAG conformance level |
 | `concurrency` | `number` | `5` | Max parallel scans |
