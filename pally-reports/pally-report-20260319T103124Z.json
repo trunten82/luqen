@@ -1,0 +1,317 @@
+{
+  "summary": {
+    "url": "https://www.kidhora.it",
+    "pagesScanned": 50,
+    "pagesFailed": 0,
+    "totalIssues": 0,
+    "byLevel": {
+      "error": 0,
+      "warning": 0,
+      "notice": 0
+    }
+  },
+  "pages": [
+    {
+      "url": "https://www.kidhora.it/suggerisci-una-attivita/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/landing/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/accedi/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/contatti/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/scopri/attivita/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/scopri/ristoranti/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/faq/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/chi-siamo/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/partner/login/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/partner/impostazioni/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/partner/eventi/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/partner/recensioni/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/partner/attivita/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/privacy-policy/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/partner/panoramica/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/profilo-utente/impostazioni/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/scopri/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/chat/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/ricerca/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/partner/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/partner/dashboard/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/conferma-registrazione/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/reset-password/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/recupera-password/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/aggiungi-attivita/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/termini-e-condizioni/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/profilo-utente/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/scopri/eventi/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/liberty-city-fun/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/parco-avventura-milano/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/crazy-dreams/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/parchi-avventura-bergamo/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/leolandia/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/fattoria-didattica-e-agrituristica-apepe/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/artevox-teatro/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/cascina-vallidone/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/bosco-gerolo/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/la-cascina/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/mulino-star-qua/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/teatro-manzoni/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/fattoria-didattica-cascina-pezzoli/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/fattoria-ariete/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/muba-museo-dei-bambini-milano/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/museo-bagatti-valsecchi/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/museo-di-storia-naturale-milano/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/musil-museo-dellenergia-idroelettrica-di-valle-camonica/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/museo-villa-bernasconi-la-casa-che-parla/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "url": "https://www.kidhora.it/attivita/mic-museo-interattivo-del-cinema/",
+      "discoveryMethod": "sitemap",
+      "issueCount": 0,
+      "issues": []
+    }
+  ],
+  "errors": [],
+  "reportPath": "/root/pally-agent/pally-reports/pally-report-20260319T103124Z.json"
+}

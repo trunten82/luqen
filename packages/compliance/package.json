@@ -6,7 +6,7 @@
   "main": "dist/cli.js",
   "bin": { "pally-compliance": "dist/cli.js" },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/seed/baseline.json dist/seed/baseline.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

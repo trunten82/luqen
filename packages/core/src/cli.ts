@@ -107,7 +107,7 @@ program
         mappedPages = await mapIssuesToSource(pages, opts.repo, effectiveConfig.sourceMap);
       }
 
-      const format = opts.format ?? 'json';
+      const formats = (opts.format ?? 'json').split(',').map((f: string) => f.trim());
       const reportInput = {
         siteUrl: url,
         pages: mappedPages,
@@ -117,12 +117,12 @@ program
 
       let report: ScanReport | undefined;
 
-      if (format === 'json' || format === 'both') {
+      if (formats.includes('json')) {
         report = await generateJsonReport(reportInput);
         console.log(`JSON report written to: ${report.reportPath}`);
       }
 
-      if (format === 'html' || format === 'both') {
+      if (formats.includes('html')) {
         const htmlPath = await generateHtmlReport(reportInput);
         console.log(`HTML report written to: ${htmlPath}`);
       }
