@@ -34,12 +34,21 @@ function generateTimestamp(): string {
   return new Date().toISOString().replace(/[:-]/g, '').replace(/\.\d{3}/, '');
 }
 
-function buildUniqueFilename(outputDir: string, timestamp: string): string {
-  let filename = `pally-report-${timestamp}.html`;
+function slugifyHost(siteUrl: string): string {
+  try {
+    return new URL(siteUrl).hostname.replace(/[^a-z0-9]/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  } catch {
+    return 'unknown';
+  }
+}
+
+function buildUniqueFilename(outputDir: string, siteUrl: string, timestamp: string, ext: string): string {
+  const host = slugifyHost(siteUrl);
+  let filename = `pally-report-${host}-${timestamp}.${ext}`;
   let fullPath = join(outputDir, filename);
   let counter = 1;
   while (existsSync(fullPath)) {
-    filename = `pally-report-${timestamp}-${counter}.html`;
+    filename = `pally-report-${host}-${timestamp}-${counter}.${ext}`;
     fullPath = join(outputDir, filename);
     counter++;
   }
@@ -180,7 +189,7 @@ export async function generateHtmlReport(input: HtmlReportInput): Promise<string
 
   await mkdir(outputDir, { recursive: true });
   const timestamp = generateTimestamp();
-  const reportPath = buildUniqueFilename(outputDir, timestamp);
+  const reportPath = buildUniqueFilename(outputDir, siteUrl, timestamp, 'html');
   await writeFile(reportPath, html, 'utf-8');
   return reportPath;
 }
