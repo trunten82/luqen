@@ -2,6 +2,63 @@
 
 Run accessibility compliance checks in CI/CD pipelines to block deployments when mandatory legal violations are found.
 
+## Pipeline templates
+
+Ready-to-use pipeline templates for building, testing, and deploying the pally-agent monorepo are in `pipelines/`:
+
+```
+pipelines/
+├── azure/
+│   ├── build.yml                  # Build + test (Azure DevOps, monorepo-aware)
+│   ├── deploy-aks.yml             # Deploy to Azure Kubernetes Service
+│   ├── deploy-container-apps.yml  # Deploy to Azure Container Apps
+│   └── templates/
+│       ├── docker-build.yml       # Reusable: Docker build + push to ACR
+│       └── test.yml               # Reusable: install, lint, test, coverage
+└── aws/
+    ├── build.yml                  # Build + test (GitHub Actions, matrix strategy)
+    ├── deploy-ecs.yml             # Deploy to ECS Fargate
+    ├── deploy-lambda.yml          # Deploy as Lambda + API Gateway (SAM)
+    └── templates/
+        ├── docker-build.yml       # Reusable workflow: build + push to ECR
+        └── test.yml               # Reusable workflow: install, lint, test, coverage
+```
+
+### Azure DevOps quick start
+
+1. Import `pipelines/azure/build.yml` as a pipeline in Azure DevOps.
+2. Create variable groups `pally-agent-aks-dev`, `pally-agent-aks-staging`, `pally-agent-aks-prod` with the values listed in `deploy-aks.yml` comments.
+3. Add a service connection named `azure-service-connection` (Azure Resource Manager, workload identity federation).
+4. For Container Apps, use `deploy-container-apps.yml` instead and create `pally-agent-aca-*` variable groups.
+5. All secrets (ACR credentials, JWT keys, DB passwords) must be stored in Azure Key Vault and referenced via variable groups — never committed to source.
+
+### AWS / GitHub Actions quick start
+
+1. Copy `pipelines/aws/build.yml` to `.github/workflows/build.yml` in your repository.
+2. Copy the `pipelines/aws/deploy-ecs.yml` or `deploy-lambda.yml` workflow to `.github/workflows/`.
+3. Copy `pipelines/aws/templates/` to `.github/workflows/templates/` (or adjust the `uses:` paths).
+4. Configure GitHub Actions secrets:
+   - `AWS_DEPLOY_ROLE_ARN` — IAM role ARN (OIDC, no long-lived keys)
+5. Configure GitHub Actions variables:
+   - `ECR_REGISTRY` — ECR registry URI (e.g. `123456789.dkr.ecr.eu-west-1.amazonaws.com`)
+   - `HEALTH_CHECK_URL_DEV`, `HEALTH_CHECK_URL_STAGING`, `HEALTH_CHECK_URL_PROD`
+6. For Lambda, place your SAM template at `infra/sam/compliance-template.yml`. See the SAM template notes in `deploy-lambda.yml`.
+7. For prod deployments, configure a GitHub environment named `prod` with required reviewers for the manual approval gate.
+
+### Key pipeline features
+
+| Feature | Details |
+|---------|---------|
+| Node.js version | 20 (all pipelines) |
+| Dependency install | `npm ci` (reproducible, lock-file based) |
+| Coverage threshold | 80% enforced (lines, statements, functions, branches) |
+| Docker layer caching | BuildKit inline cache (Azure); `docker/build-push-action` registry cache (AWS) |
+| Secrets | Never in pipeline files — use variable groups (Azure) or Secrets Manager / SSM (AWS) |
+| Monorepo awareness | Changed-package detection via `git diff`; skips unchanged packages |
+| Stages | build → test → scan → publish/package → deploy |
+| Environment gates | dev/staging auto-deploy; prod requires manual approval |
+| Rollback | Automatic on health check failure (AKS rollout undo; ECS previous task def; CloudFormation rollback) |
+
 ## Overview
 
 The compliance check can be integrated into any CI/CD pipeline that supports shell scripts or HTTP requests. The core pattern is:

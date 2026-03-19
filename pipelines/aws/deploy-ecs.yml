@@ -1,0 +1,188 @@
+# GitHub Actions — Deploy compliance service to ECS Fargate
+# Triggers on push to master after build passes
+# Stages: build → test → docker push → ECS deploy → wait for stability
+
+name: Deploy to ECS Fargate
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - packages/compliance/**
+      - pipelines/aws/deploy-ecs.yml
+
+  # Also callable from other workflows with a specific image tag
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: Docker image tag to deploy (default: commit SHA)
+        required: false
+        default: ''
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REPOSITORY: pally-compliance
+  ECS_CLUSTER: pally-agent
+  ECS_SERVICE: pally-compliance
+  CONTAINER_NAME: pally-compliance
+
+jobs:
+
+  # ─────────────────────────────────────────────
+  # Job 1: Build and test
+  # ─────────────────────────────────────────────
+  test:
+    name: Test compliance package
+    uses: ./.github/workflows/pipelines/aws/templates/test.yml
+    with:
+      package: compliance
+
+  # ─────────────────────────────────────────────
+  # Job 2: Build and push Docker image to ECR
+  # ─────────────────────────────────────────────
+  build:
+    name: Build and push Docker image
+    needs: test
+    uses: ./.github/workflows/pipelines/aws/templates/docker-build.yml
+    with:
+      service: compliance
+      ecr-repository: ${{ vars.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}
+      image-tag: ${{ github.event.inputs.image-tag || github.sha }}
+      aws-region: eu-west-1
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+
+  # ─────────────────────────────────────────────
+  # Job 3: Manual approval gate for prod
+  # ─────────────────────────────────────────────
+  approve-prod:
+    name: Approve prod deployment
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: prod  # GitHub environment with required reviewers configured
+    if: |
+      github.event.inputs.environment == 'prod'
+    steps:
+      - name: Approved
+        run: echo "Prod deployment approved."
+
+  # ─────────────────────────────────────────────
+  # Job 4: Deploy to ECS Fargate
+  # ─────────────────────────────────────────────
+  deploy:
+    name: Deploy to ECS (${{ github.event.inputs.environment || 'dev' }})
+    needs:
+      - build
+      - approve-prod
+    runs-on: ubuntu-latest
+    if: |
+      always() &&
+      needs.build.result == 'success' &&
+      (needs.approve-prod.result == 'success' || needs.approve-prod.result == 'skipped')
+
+    env:
+      DEPLOY_ENV: ${{ github.event.inputs.environment || 'dev' }}
+      IMAGE_TAG: ${{ github.event.inputs.image-tag || github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Download current ECS task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition pally-compliance-${{ env.DEPLOY_ENV }} \
+            --query taskDefinition \
+            > task-definition.json
+
+      - name: Update image in task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ vars.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      - name: Deploy updated task definition to ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}-${{ env.DEPLOY_ENV }}
+          cluster: ${{ env.ECS_CLUSTER }}-${{ env.DEPLOY_ENV }}
+          wait-for-service-stability: true
+          wait-for-minutes: 10
+
+      - name: Verify service health
+        run: |
+          set -euo pipefail
+          HEALTH_URL="${{ vars[format('HEALTH_CHECK_URL_{0}', env.DEPLOY_ENV)] }}"
+          MAX_RETRIES=10
+          SLEEP_SECONDS=15
+
+          echo "Health check: $HEALTH_URL/api/v1/health"
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" \
+              "$HEALTH_URL/api/v1/health" 2>/dev/null || echo "000")
+            echo "Attempt $i/$MAX_RETRIES: HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Health check passed."
+              exit 0
+            fi
+            sleep $SLEEP_SECONDS
+          done
+
+          echo "Health check failed. Triggering ECS rollback..."
+          exit 1
+
+      - name: Rollback ECS service on failure
+        if: failure()
+        run: |
+          # Force ECS to use the previous task definition revision
+          PREVIOUS_REVISION=$(aws ecs describe-services \
+            --cluster "${{ env.ECS_CLUSTER }}-${{ env.DEPLOY_ENV }}" \
+            --services "${{ env.ECS_SERVICE }}-${{ env.DEPLOY_ENV }}" \
+            --query 'services[0].deployments[?status==`PRIMARY`].taskDefinition' \
+            --output text | sed 's/:[0-9]*$//')
+
+          ROLLBACK_REVISION=$(aws ecs describe-task-definition \
+            --task-definition "pally-compliance-${{ env.DEPLOY_ENV }}" \
+            --query 'taskDefinition.revision' \
+            --output text)
+
+          ROLLBACK_REVISION=$((ROLLBACK_REVISION - 1))
+
+          echo "Rolling back to revision $ROLLBACK_REVISION"
+
+          aws ecs update-service \
+            --cluster "${{ env.ECS_CLUSTER }}-${{ env.DEPLOY_ENV }}" \
+            --service "${{ env.ECS_SERVICE }}-${{ env.DEPLOY_ENV }}" \
+            --task-definition "pally-compliance-${{ env.DEPLOY_ENV }}:$ROLLBACK_REVISION" \
+            --force-new-deployment
+
+          aws ecs wait services-stable \
+            --cluster "${{ env.ECS_CLUSTER }}-${{ env.DEPLOY_ENV }}" \
+            --services "${{ env.ECS_SERVICE }}-${{ env.DEPLOY_ENV }}"
+
+          echo "Rollback complete."

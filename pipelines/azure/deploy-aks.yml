@@ -1,0 +1,215 @@
+# Azure DevOps — Deploy to Azure Kubernetes Service (AKS)
+# Stages: build → test → scan → publish → deploy
+# Manual approval gate for prod; rollback on health check failure
+
+trigger: none  # Manual trigger or chained from build.yml
+
+parameters:
+  - name: environment
+    displayName: Target environment
+    type: string
+    default: dev
+    values:
+      - dev
+      - staging
+      - prod
+
+  - name: imageTag
+    displayName: Docker image tag to deploy
+    type: string
+    default: latest
+
+variables:
+  NODE_VERSION: '20'
+  # ACR and AKS values come from variable groups — no secrets in this file
+  # Variable group: pally-agent-aks-$(environment) must define:
+  #   ACR_LOGIN_SERVER, ACR_NAME
+  #   AKS_RESOURCE_GROUP, AKS_CLUSTER_NAME
+  #   COMPLIANCE_NAMESPACE, HEALTH_CHECK_URL
+
+stages:
+
+  # ─────────────────────────────────────────────
+  # Stage 1: Build Docker images
+  # ─────────────────────────────────────────────
+  - stage: Build
+    displayName: Build Docker images
+    jobs:
+      - template: templates/docker-build.yml
+        parameters:
+          service: compliance
+          registry: $(ACR_LOGIN_SERVER)
+          tag: ${{ parameters.imageTag }}
+
+  # ─────────────────────────────────────────────
+  # Stage 2: Integration tests (against image)
+  # ─────────────────────────────────────────────
+  - stage: Test
+    displayName: Run integration tests
+    dependsOn: Build
+    jobs:
+      - template: templates/test.yml
+        parameters:
+          package: compliance
+          nodeVersion: $(NODE_VERSION)
+
+  # ─────────────────────────────────────────────
+  # Stage 3: Security scan
+  # ─────────────────────────────────────────────
+  - stage: Scan
+    displayName: Security scan
+    dependsOn: Build
+    jobs:
+      - job: ContainerScan
+        displayName: Scan container image for vulnerabilities
+        steps:
+          - task: AzureContainerApps@1
+            displayName: Trivy vulnerability scan
+            inputs:
+              # Trivy is available as a container task extension
+              # Install the Trivy task from the Azure DevOps marketplace
+              # or use a script step as below
+              azureSubscription: azure-service-connection
+
+          - script: |
+              docker run --rm \
+                aquasec/trivy:latest image \
+                --exit-code 1 \
+                --severity HIGH,CRITICAL \
+                --no-progress \
+                $(ACR_LOGIN_SERVER)/pally-agent/compliance:${{ parameters.imageTag }}
+            displayName: Trivy scan — fail on HIGH/CRITICAL CVEs
+
+  # ─────────────────────────────────────────────
+  # Stage 4: Manual approval gate for prod
+  # ─────────────────────────────────────────────
+  - stage: Approve
+    displayName: Manual approval (prod only)
+    dependsOn:
+      - Test
+      - Scan
+    condition: |
+      and(
+        succeeded(),
+        eq('${{ parameters.environment }}', 'prod')
+      )
+    jobs:
+      - job: waitForApproval
+        displayName: Wait for release approval
+        pool: server  # Agentless — runs only the approval gate
+        timeoutInMinutes: 1440  # 24 hours
+        steps:
+          - task: ManualValidation@0
+            displayName: Approve prod deployment
+            inputs:
+              notifyUsers: |
+                $(RELEASE_APPROVER_EMAIL)
+              instructions: |
+                Review the staging deployment and approve to promote image
+                ${{ parameters.imageTag }} to production.
+              onTimeout: reject
+
+  # ─────────────────────────────────────────────
+  # Stage 5: Deploy to AKS
+  # ─────────────────────────────────────────────
+  - stage: Deploy
+    displayName: Deploy to AKS (${{ parameters.environment }})
+    dependsOn:
+      - Test
+      - Scan
+      - Approve
+    condition: |
+      and(
+        not(failed()),
+        or(
+          ne('${{ parameters.environment }}', 'prod'),
+          succeeded('Approve')
+        )
+      )
+    variables:
+      - group: pally-agent-aks-${{ parameters.environment }}
+    jobs:
+      - deployment: DeployCompliance
+        displayName: Deploy compliance service
+        environment: pally-agent-${{ parameters.environment }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: AzureCLI@2
+                  displayName: Get AKS credentials
+                  inputs:
+                    azureSubscription: azure-service-connection
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az aks get-credentials \
+                        --resource-group $(AKS_RESOURCE_GROUP) \
+                        --name $(AKS_CLUSTER_NAME) \
+                        --overwrite-existing
+
+                - script: |
+                    # Substitute image tag in manifest
+                    sed -i "s|IMAGE_TAG_PLACEHOLDER|${{ parameters.imageTag }}|g" \
+                      manifests/${{ parameters.environment }}/compliance-deployment.yml
+                  displayName: Substitute image tag in manifests
+
+                - script: |
+                    kubectl apply -f manifests/${{ parameters.environment }}/
+                    kubectl rollout status deployment/pally-compliance \
+                      -n $(COMPLIANCE_NAMESPACE) \
+                      --timeout=300s
+                  displayName: Apply manifests and wait for rollout
+
+  # ─────────────────────────────────────────────
+  # Stage 6: Health check — rollback on failure
+  # ─────────────────────────────────────────────
+  - stage: HealthCheck
+    displayName: Post-deploy health check
+    dependsOn: Deploy
+    jobs:
+      - job: HealthCheck
+        displayName: Verify deployment health
+        steps:
+          - script: |
+              set -euo pipefail
+              MAX_RETRIES=10
+              SLEEP_SECONDS=15
+
+              echo "Health check URL: $(HEALTH_CHECK_URL)"
+
+              for i in $(seq 1 $MAX_RETRIES); do
+                HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" "$(HEALTH_CHECK_URL)/api/v1/health" 2>/dev/null || echo "000")
+                echo "Attempt $i/$MAX_RETRIES: HTTP $HTTP_CODE"
+                if [ "$HTTP_CODE" = "200" ]; then
+                  echo "Health check passed."
+                  exit 0
+                fi
+                sleep $SLEEP_SECONDS
+              done
+
+              echo "Health check failed after $MAX_RETRIES attempts."
+              exit 1
+            displayName: Wait for service health
+
+          - task: AzureCLI@2
+            displayName: Rollback on failure
+            condition: failed()
+            inputs:
+              azureSubscription: azure-service-connection
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Health check failed — rolling back deployment"
+                az aks get-credentials \
+                  --resource-group $(AKS_RESOURCE_GROUP) \
+                  --name $(AKS_CLUSTER_NAME) \
+                  --overwrite-existing
+                kubectl rollout undo deployment/pally-compliance \
+                  -n $(COMPLIANCE_NAMESPACE)
+                kubectl rollout status deployment/pally-compliance \
+                  -n $(COMPLIANCE_NAMESPACE) \
+                  --timeout=180s
+                echo "Rollback complete."

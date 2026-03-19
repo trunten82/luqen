@@ -1,0 +1,173 @@
+# Azure DevOps — Deploy to Azure Container Apps
+# Simpler alternative to AKS; creates a separate revision per environment
+# Stages: build → test → deploy (auto for dev/staging, manual gate for prod)
+
+trigger: none  # Manual trigger or chained from build.yml
+
+parameters:
+  - name: environment
+    displayName: Target environment
+    type: string
+    default: dev
+    values:
+      - dev
+      - staging
+      - prod
+
+  - name: imageTag
+    displayName: Docker image tag to deploy
+    type: string
+    default: latest
+
+variables:
+  NODE_VERSION: '20'
+  # Variable group: pally-agent-aca-$(environment) must define:
+  #   ACR_LOGIN_SERVER, AZURE_RESOURCE_GROUP
+  #   CONTAINER_APP_NAME, CONTAINER_APP_ENV_NAME
+  #   HEALTH_CHECK_URL
+
+stages:
+
+  # ─────────────────────────────────────────────
+  # Stage 1: Build Docker image
+  # ─────────────────────────────────────────────
+  - stage: Build
+    displayName: Build and push compliance image
+    jobs:
+      - template: templates/docker-build.yml
+        parameters:
+          service: compliance
+          registry: $(ACR_LOGIN_SERVER)
+          tag: ${{ parameters.imageTag }}
+
+  # ─────────────────────────────────────────────
+  # Stage 2: Run tests
+  # ─────────────────────────────────────────────
+  - stage: Test
+    displayName: Run unit tests
+    dependsOn: Build
+    jobs:
+      - template: templates/test.yml
+        parameters:
+          package: compliance
+          nodeVersion: $(NODE_VERSION)
+
+  # ─────────────────────────────────────────────
+  # Stage 3: Manual approval gate (prod only)
+  # ─────────────────────────────────────────────
+  - stage: Approve
+    displayName: Manual approval (prod only)
+    dependsOn:
+      - Test
+    condition: |
+      and(
+        succeeded(),
+        eq('${{ parameters.environment }}', 'prod')
+      )
+    jobs:
+      - job: waitForApproval
+        displayName: Wait for release approval
+        pool: server
+        timeoutInMinutes: 1440
+        steps:
+          - task: ManualValidation@0
+            displayName: Approve prod Container Apps deployment
+            inputs:
+              notifyUsers: $(RELEASE_APPROVER_EMAIL)
+              instructions: |
+                Approve to deploy image tag ${{ parameters.imageTag }}
+                to the prod Azure Container Apps environment.
+              onTimeout: reject
+
+  # ─────────────────────────────────────────────
+  # Stage 4: Deploy to Azure Container Apps
+  # ─────────────────────────────────────────────
+  - stage: Deploy
+    displayName: Deploy to Container Apps (${{ parameters.environment }})
+    dependsOn:
+      - Test
+      - Approve
+    condition: |
+      and(
+        not(failed()),
+        or(
+          ne('${{ parameters.environment }}', 'prod'),
+          succeeded('Approve')
+        )
+      )
+    variables:
+      - group: pally-agent-aca-${{ parameters.environment }}
+    jobs:
+      - deployment: DeployContainerApp
+        displayName: Update Container App revision
+        environment: pally-agent-aca-${{ parameters.environment }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: Update Container App image
+                  inputs:
+                    azureSubscription: azure-service-connection
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+
+                      FULL_IMAGE="$(ACR_LOGIN_SERVER)/pally-agent/compliance:${{ parameters.imageTag }}"
+                      REVISION_SUFFIX="${{ parameters.environment }}-${{ parameters.imageTag }}"
+
+                      echo "Deploying image: $FULL_IMAGE"
+                      echo "Revision suffix: $REVISION_SUFFIX"
+
+                      az containerapp update \
+                        --name "$(CONTAINER_APP_NAME)" \
+                        --resource-group "$(AZURE_RESOURCE_GROUP)" \
+                        --image "$FULL_IMAGE" \
+                        --revision-suffix "$REVISION_SUFFIX" \
+                        --set-env-vars \
+                          "NODE_ENV=${{ parameters.environment }}" \
+                          "COMPLIANCE_PORT=4000"
+                      # Secrets (JWT keys, DB credentials, etc.) must be set via
+                      # Container Apps secrets — never pass them as env vars here
+
+                      echo "Deployment submitted. Waiting for active revision..."
+                      az containerapp revision show \
+                        --name "$(CONTAINER_APP_NAME)" \
+                        --resource-group "$(AZURE_RESOURCE_GROUP)" \
+                        --revision "$(CONTAINER_APP_NAME)--$REVISION_SUFFIX" \
+                        --query "properties.active"
+
+  # ─────────────────────────────────────────────
+  # Stage 5: Health check
+  # ─────────────────────────────────────────────
+  - stage: HealthCheck
+    displayName: Post-deploy health check
+    dependsOn: Deploy
+    jobs:
+      - job: HealthCheck
+        displayName: Verify Container App health
+        variables:
+          - group: pally-agent-aca-${{ parameters.environment }}
+        steps:
+          - script: |
+              set -euo pipefail
+              MAX_RETRIES=10
+              SLEEP_SECONDS=15
+
+              echo "Health check URL: $(HEALTH_CHECK_URL)"
+
+              for i in $(seq 1 $MAX_RETRIES); do
+                HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" \
+                  "$(HEALTH_CHECK_URL)/api/v1/health" 2>/dev/null || echo "000")
+                echo "Attempt $i/$MAX_RETRIES: HTTP $HTTP_CODE"
+                if [ "$HTTP_CODE" = "200" ]; then
+                  echo "Health check passed."
+                  exit 0
+                fi
+                sleep $SLEEP_SECONDS
+              done
+
+              echo "Health check failed after $MAX_RETRIES attempts."
+              exit 1
+            displayName: Wait for service health

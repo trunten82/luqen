@@ -1,0 +1,241 @@
+# GitHub Actions — Deploy compliance service as AWS Lambda + API Gateway
+# Uses a serverless HTTP adapter to wrap the Fastify app
+# Deployment via AWS SAM (serverless-http adapter pattern)
+# Triggers on push to master after build passes
+
+name: Deploy to AWS Lambda
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - packages/compliance/**
+      - pipelines/aws/deploy-lambda.yml
+      - infra/sam/**
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      stack-suffix:
+        description: SAM stack name suffix (optional override)
+        required: false
+        default: ''
+
+env:
+  AWS_REGION: eu-west-1
+  SAM_TEMPLATE: infra/sam/compliance-template.yml
+  S3_BUCKET_PREFIX: pally-agent-sam-artifacts
+
+jobs:
+
+  # ─────────────────────────────────────────────
+  # Job 1: Build and test
+  # ─────────────────────────────────────────────
+  test:
+    name: Test compliance package
+    uses: ./.github/workflows/pipelines/aws/templates/test.yml
+    with:
+      package: compliance
+
+  # ─────────────────────────────────────────────
+  # Job 2: Package Lambda artifact
+  # ─────────────────────────────────────────────
+  package:
+    name: Build Lambda package
+    needs: test
+    runs-on: ubuntu-latest
+
+    env:
+      DEPLOY_ENV: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build compliance package
+        working-directory: packages/compliance
+        run: npm run build
+
+      - name: Install production dependencies for Lambda bundle
+        working-directory: packages/compliance
+        run: |
+          # Create a clean lambda bundle directory with only production deps
+          mkdir -p lambda-bundle
+          cp -r dist/* lambda-bundle/
+          cp package.json lambda-bundle/
+          cd lambda-bundle && npm install --omit=dev
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: SAM build
+        # SAM reads infra/sam/compliance-template.yml and packages the Lambda code
+        run: |
+          sam build \
+            --template-file ${{ env.SAM_TEMPLATE }} \
+            --build-dir .aws-sam/build \
+            --use-container
+
+      - name: SAM package (upload to S3)
+        run: |
+          STACK_NAME="pally-compliance-${{ env.DEPLOY_ENV }}"
+          S3_BUCKET="${{ env.S3_BUCKET_PREFIX }}-${{ env.DEPLOY_ENV }}"
+
+          sam package \
+            --template-file ${{ env.SAM_TEMPLATE }} \
+            --s3-bucket "$S3_BUCKET" \
+            --s3-prefix "$STACK_NAME/${{ github.sha }}" \
+            --output-template-file packaged-template.yml \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Upload packaged template as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sam-packaged-template
+          path: packaged-template.yml
+          retention-days: 1
+
+  # ─────────────────────────────────────────────
+  # Job 3: Manual approval gate for prod
+  # ─────────────────────────────────────────────
+  approve-prod:
+    name: Approve prod Lambda deployment
+    needs: package
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+    if: |
+      github.event.inputs.environment == 'prod'
+    steps:
+      - name: Approved
+        run: echo "Prod Lambda deployment approved."
+
+  # ─────────────────────────────────────────────
+  # Job 4: SAM Deploy
+  # ─────────────────────────────────────────────
+  deploy:
+    name: SAM deploy (${{ github.event.inputs.environment || 'dev' }})
+    needs:
+      - package
+      - approve-prod
+    runs-on: ubuntu-latest
+    if: |
+      always() &&
+      needs.package.result == 'success' &&
+      (needs.approve-prod.result == 'success' || needs.approve-prod.result == 'skipped')
+
+    env:
+      DEPLOY_ENV: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download packaged SAM template
+        uses: actions/download-artifact@v4
+        with:
+          name: sam-packaged-template
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: SAM deploy
+        run: |
+          STACK_NAME="pally-compliance-${{ env.DEPLOY_ENV }}"
+          S3_BUCKET="${{ env.S3_BUCKET_PREFIX }}-${{ env.DEPLOY_ENV }}"
+
+          sam deploy \
+            --template-file packaged-template.yml \
+            --stack-name "$STACK_NAME" \
+            --s3-bucket "$S3_BUCKET" \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --region ${{ env.AWS_REGION }} \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              "Environment=${{ env.DEPLOY_ENV }}" \
+              "NodeVersion=20"
+          # Secrets (JWT keys, DB credentials) are passed via SSM Parameter Store
+          # references in the SAM template — never hardcoded here
+
+      - name: Get API Gateway URL
+        id: get-url
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name "pally-compliance-${{ env.DEPLOY_ENV }}" \
+            --query 'Stacks[0].Outputs[?OutputKey==`ComplianceApiUrl`].OutputValue' \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          echo "api-url=$API_URL" >> "$GITHUB_OUTPUT"
+          echo "Deployed API URL: $API_URL"
+
+      - name: Verify Lambda health check
+        run: |
+          set -euo pipefail
+          API_URL="${{ steps.get-url.outputs.api-url }}"
+          MAX_RETRIES=8
+          SLEEP_SECONDS=10
+
+          echo "Health check: $API_URL/api/v1/health"
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" \
+              "$API_URL/api/v1/health" 2>/dev/null || echo "000")
+            echo "Attempt $i/$MAX_RETRIES: HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Lambda health check passed."
+              exit 0
+            fi
+            sleep $SLEEP_SECONDS
+          done
+
+          echo "Lambda health check failed."
+          exit 1
+
+      - name: Rollback CloudFormation stack on failure
+        if: failure()
+        run: |
+          echo "Deployment failed — rolling back CloudFormation stack..."
+          aws cloudformation continue-update-rollback \
+            --stack-name "pally-compliance-${{ env.DEPLOY_ENV }}" \
+            --region ${{ env.AWS_REGION }} || true
+
+          # Wait for rollback to complete
+          aws cloudformation wait stack-rollback-complete \
+            --stack-name "pally-compliance-${{ env.DEPLOY_ENV }}" \
+            --region ${{ env.AWS_REGION }} || true
+
+          echo "Rollback complete."
