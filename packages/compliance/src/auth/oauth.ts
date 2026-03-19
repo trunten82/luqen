@@ -19,6 +19,8 @@ export interface SignTokenInput {
   readonly sub: string;
   readonly scopes: readonly string[];
   readonly expiresIn: string;
+  readonly role?: string;
+  readonly username?: string;
 }
 
 export type TokenSigner = (input: SignTokenInput) => Promise<string>;
@@ -32,9 +34,11 @@ export async function createTokenSigner(
   const privateKey = await importPKCS8(privateKeyPem, 'RS256');
 
   return async (input: SignTokenInput): Promise<string> => {
-    const jwt = new SignJWT(
-      { scopes: input.scopes } as unknown as JWTPayload,
-    )
+    const claims: Record<string, unknown> = { scopes: input.scopes };
+    if (input.role != null) claims.role = input.role;
+    if (input.username != null) claims.username = input.username;
+
+    const jwt = new SignJWT(claims as unknown as JWTPayload)
       .setProtectedHeader({ alg: 'RS256' })
       .setSubject(input.sub)
       .setIssuedAt()

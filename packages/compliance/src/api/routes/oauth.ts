@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { DbAdapter } from '../../db/adapter.js';
 import type { TokenSigner } from '../../auth/oauth.js';
-import { verifyClientSecret } from '../../auth/oauth.js';
+import { verifyClientSecret, verifyPassword } from '../../auth/oauth.js';
 
 interface OAuthDeps {
   readonly db: DbAdapter;
@@ -42,6 +42,75 @@ export async function registerOAuthRoutes(
       if (body.grant_type != null) grantType = String(body.grant_type);
       if (body.scope != null) {
         requestedScopes = String(body.scope).split(' ').filter(Boolean);
+      }
+
+      if (grantType === 'password') {
+        // Resource Owner Password Credentials grant
+        const username = body.username != null ? String(body.username) : undefined;
+        const password = body.password != null ? String(body.password) : undefined;
+
+        if (username == null || password == null) {
+          await reply.status(400).send({
+            error: 'invalid_request: username and password are required',
+            statusCode: 400,
+          });
+          return;
+        }
+
+        const user = await db.getUserByUsername(username);
+        if (user == null) {
+          await reply.status(401).send({ error: 'invalid_grant', statusCode: 401 });
+          return;
+        }
+
+        const validPassword = await verifyPassword(password, user.passwordHash);
+        if (!validPassword) {
+          await reply.status(401).send({ error: 'invalid_grant', statusCode: 401 });
+          return;
+        }
+
+        // Map role to scopes
+        const roleScopes: Record<string, string[]> = {
+          viewer: ['read'],
+          editor: ['read', 'write'],
+          user: ['read'],
+          admin: ['read', 'write', 'admin'],
+        };
+        const defaultScopes = roleScopes[user.role] ?? ['read'];
+
+        // If specific scopes requested, intersect with role scopes
+        let grantedScopes: string[];
+        if (requestedScopes.length > 0) {
+          grantedScopes = requestedScopes.filter(s => defaultScopes.includes(s));
+          if (grantedScopes.length === 0) {
+            await reply.status(400).send({ error: 'invalid_scope', statusCode: 400 });
+            return;
+          }
+        } else {
+          grantedScopes = defaultScopes;
+        }
+
+        const accessToken = await signToken({
+          sub: user.id,
+          scopes: grantedScopes,
+          expiresIn: tokenExpiry,
+          role: user.role,
+          username: user.username,
+        });
+
+        const expiresIn = tokenExpiry.endsWith('h')
+          ? parseInt(tokenExpiry) * 3600
+          : tokenExpiry.endsWith('m')
+          ? parseInt(tokenExpiry) * 60
+          : parseInt(tokenExpiry);
+
+        await reply.status(200).send({
+          access_token: accessToken,
+          token_type: 'bearer',
+          expires_in: expiresIn,
+          scope: grantedScopes.join(' '),
+        });
+        return;
       }
 
       if (grantType !== 'client_credentials') {
