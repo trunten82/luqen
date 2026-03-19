@@ -3,3 +3,5 @@ dist/
 *.tgz
 .pally-reports/
 coverage/
+packages/*/dist/
+packages/*/node_modules/
