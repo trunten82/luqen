@@ -14,5 +14,7 @@ describe('MCP Server', () => {
     expect(server.toolNames).toContain('pally_get_issues');
     expect(server.toolNames).toContain('pally_propose_fixes');
     expect(server.toolNames).toContain('pally_apply_fix');
+    expect(server.toolNames).toContain('pally_raw');
+    expect(server.toolNames).toContain('pally_raw_batch');
   });
 });

@@ -258,6 +258,177 @@ export function createServer(): PallyMcpServer {
   );
   toolNames.push('pally_apply_fix');
 
+  // Tool: pally_raw — Direct pa11y webservice passthrough for backward compatibility
+  mcpServer.tool(
+    'pally_raw',
+    'Run a single-page pa11y scan and return raw pa11y webservice output. Use this for backward compatibility with existing pa11y automations — the response format matches pa11y-webservice exactly.',
+    {
+      url: z.string().url().describe('The URL to test'),
+      standard: z.enum(['WCAG2A', 'WCAG2AA', 'WCAG2AAA']).optional().default('WCAG2AA').describe('WCAG standard'),
+      timeout: z.number().int().positive().optional().describe('Scan timeout in ms'),
+      wait: z.number().int().nonnegative().optional().describe('Wait time after page load in ms'),
+      ignore: z.array(z.string()).optional().describe('Issue codes to ignore'),
+      hideElements: z.string().optional().describe('CSS selector for elements to hide'),
+      headers: z.record(z.string(), z.string()).optional().describe('HTTP headers sent to the target page'),
+      actions: z.array(z.string()).optional().describe('Pa11y actions to run before testing (e.g. "click element #tab", "wait for element .loaded")'),
+    },
+    async (args) => {
+      try {
+        const config = await loadConfig();
+        const client = new WebserviceClient(config.webserviceUrl, config.webserviceHeaders);
+
+        // Create task
+        const task = await client.createTask({
+          name: `pally_raw: ${args.url}`,
+          url: args.url,
+          standard: args.standard ?? 'WCAG2AA',
+          timeout: args.timeout,
+          wait: args.wait,
+          ignore: args.ignore,
+          hideElements: args.hideElements,
+          headers: args.headers,
+        });
+
+        // Run and poll
+        await client.runTask(task.id);
+
+        const pollTimeout = config.pollTimeout;
+        const start = Date.now();
+        let delay = 1000;
+        let result = null;
+
+        while (Date.now() - start < pollTimeout) {
+          const results = await client.getResults(task.id);
+          if (results.length > 0 && results[0].date) {
+            result = results[0];
+            break;
+          }
+          const jitter = Math.random() * 1000 - 500;
+          await new Promise((resolve) => setTimeout(resolve, Math.max(100, delay + jitter)));
+          delay = Math.min(delay * 2, 10000);
+        }
+
+        // Cleanup
+        try { await client.deleteTask(task.id); } catch { /* best effort */ }
+
+        if (!result) {
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Scan timed out', url: args.url }) }],
+            isError: true,
+          };
+        }
+
+        // Return raw pa11y result — identical to what pa11y-webservice returns
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: message }) }],
+          isError: true,
+        };
+      }
+    },
+  );
+  toolNames.push('pally_raw');
+
+  // Tool: pally_raw_batch — Batch multiple URLs through pa11y with raw output
+  mcpServer.tool(
+    'pally_raw_batch',
+    'Run pa11y scans on multiple URLs and return raw pa11y results per URL. Backward-compatible output format matching pa11y-webservice.',
+    {
+      urls: z.array(z.string().url()).describe('List of URLs to test'),
+      standard: z.enum(['WCAG2A', 'WCAG2AA', 'WCAG2AAA']).optional().default('WCAG2AA').describe('WCAG standard'),
+      concurrency: z.number().int().positive().optional().default(5).describe('Max concurrent scans'),
+      timeout: z.number().int().positive().optional().describe('Scan timeout per page in ms'),
+      wait: z.number().int().nonnegative().optional().describe('Wait time after page load in ms'),
+      ignore: z.array(z.string()).optional().describe('Issue codes to ignore'),
+      hideElements: z.string().optional().describe('CSS selector for elements to hide'),
+      headers: z.record(z.string(), z.string()).optional().describe('HTTP headers sent to target pages'),
+    },
+    async (args) => {
+      try {
+        const config = await loadConfig();
+        const client = new WebserviceClient(config.webserviceUrl, config.webserviceHeaders);
+        const concurrency = args.concurrency ?? 5;
+        const pollTimeout = config.pollTimeout;
+
+        const results: Array<{ url: string; result: unknown; error?: string }> = [];
+        const queue = [...args.urls];
+        let queueIndex = 0;
+
+        async function processUrl(url: string): Promise<{ url: string; result: unknown; error?: string }> {
+          try {
+            const task = await client.createTask({
+              name: `pally_raw_batch: ${url}`,
+              url,
+              standard: args.standard ?? 'WCAG2AA',
+              timeout: args.timeout,
+              wait: args.wait,
+              ignore: args.ignore,
+              hideElements: args.hideElements,
+              headers: args.headers,
+            });
+
+            await client.runTask(task.id);
+
+            const start = Date.now();
+            let delay = 1000;
+            let scanResult = null;
+
+            while (Date.now() - start < pollTimeout) {
+              const taskResults = await client.getResults(task.id);
+              if (taskResults.length > 0 && taskResults[0].date) {
+                scanResult = taskResults[0];
+                break;
+              }
+              const jitter = Math.random() * 1000 - 500;
+              await new Promise((resolve) => setTimeout(resolve, Math.max(100, delay + jitter)));
+              delay = Math.min(delay * 2, 10000);
+            }
+
+            try { await client.deleteTask(task.id); } catch { /* best effort */ }
+
+            if (!scanResult) {
+              return { url, result: null, error: 'Scan timed out' };
+            }
+            return { url, result: scanResult };
+          } catch (err) {
+            return { url, result: null, error: err instanceof Error ? err.message : String(err) };
+          }
+        }
+
+        // Worker pool
+        async function worker(): Promise<void> {
+          while (queueIndex < queue.length) {
+            const idx = queueIndex++;
+            if (idx >= queue.length) break;
+            const r = await processUrl(queue[idx]);
+            results.push(r);
+          }
+        }
+
+        const workers = Array.from(
+          { length: Math.min(concurrency, queue.length) },
+          () => worker(),
+        );
+        await Promise.all(workers);
+
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(results, null, 2) }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: message }) }],
+          isError: true,
+        };
+      }
+    },
+  );
+  toolNames.push('pally_raw_batch');
+
   return {
     mcpServer,
     toolNames: toolNames as readonly string[],

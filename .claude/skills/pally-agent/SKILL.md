@@ -64,6 +64,22 @@ Returns fixable/unfixable counts + concrete `oldText`/`newText` diffs per file.
 { "file": "/path/to/file.tsx", "line": 12, "oldText": "<img src=\"x\">", "newText": "<img alt=\"\" src=\"x\">" }
 ```
 
+### `pally_raw` — Single-page pa11y passthrough (backward compatible)
+
+```json
+{ "url": "https://example.com/page", "standard": "WCAG2AA" }
+```
+
+Returns raw pa11y-webservice output (identical format). Supports `actions` for pre-test interactions.
+
+### `pally_raw_batch` — Multi-page pa11y passthrough
+
+```json
+{ "urls": ["https://example.com/", "https://example.com/about"], "concurrency": 5 }
+```
+
+Returns array of `{ url, result, error? }` with raw pa11y output per URL.
+
 ## CLI Usage
 
 ```bash
