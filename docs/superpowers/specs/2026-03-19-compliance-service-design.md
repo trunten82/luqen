@@ -102,7 +102,7 @@ interface Requirement {
 }
 ```
 
-When `wcagCriterion` is `"*"`, it means the regulation requires ALL criteria at the specified level (e.g. EU EAA requires all WCAG 2.1 AA criteria).
+When `wcagCriterion` is `"*"`, it means the regulation requires ALL criteria at the specified level **and all levels below it** (e.g. EU EAA requires WCAG 2.1 AA, which implicitly includes all A-level criteria). A `"*"` requirement at level AA matches issues from both `WCAG2A` and `WCAG2AA` codes. A `"*"` at level AAA matches all three levels.
 
 ### UpdateProposal
 
@@ -117,13 +117,46 @@ interface UpdateProposal {
   readonly affectedRegulationId?: string;
   readonly affectedJurisdictionId?: string;
   readonly summary: string;         // human-readable description of the change
-  readonly proposedChanges: Record<string, unknown>;  // JSON diff
+  readonly proposedChanges: ProposedChange;            // structured diff
   readonly status: 'pending' | 'approved' | 'rejected';
   readonly reviewedBy?: string;
   readonly reviewedAt?: string;
   readonly createdAt: string;
 }
 ```
+
+### ProposedChange
+
+The structured diff format used in update proposals. When approved, the engine applies this deterministically.
+
+```typescript
+interface ProposedChange {
+  readonly action: 'create' | 'update' | 'delete';
+  readonly entityType: 'jurisdiction' | 'regulation' | 'requirement';
+  readonly entityId?: string;              // required for update/delete
+  readonly before?: Record<string, unknown>; // current state (for update/delete)
+  readonly after?: Record<string, unknown>;  // new state (for create/update)
+}
+```
+
+The `approve` endpoint reads `action` and `entityType` to dispatch to the correct CRUD operation. For `update`, only fields present in `after` are changed. For `create`, `after` must contain all required fields for the entity type. For `delete`, only `entityId` is needed.
+
+### Webhook
+
+Registered webhook for event notifications.
+
+```typescript
+interface Webhook {
+  readonly id: string;
+  readonly url: string;               // POST target URL
+  readonly secret: string;            // shared secret for HMAC-SHA256 signature
+  readonly events: readonly string[]; // e.g. ["update.proposed", "regulation.created"]
+  readonly active: boolean;
+  readonly createdAt: string;
+}
+```
+
+Webhook delivery: POST to `url` with JSON body and `X-Webhook-Signature` header containing `sha256=<hex>` where the hex value is `HMAC-SHA256(body, secret)`. The receiver must verify the signature matches before trusting the payload. Delivery retries 3 times with exponential backoff on 5xx or timeout.
 
 ### MonitoredSource
 
@@ -189,6 +222,26 @@ The matcher also extracts the WCAG level from the prefix: `WCAG2A` → A, `WCAG2
 
 Base path: `/api/v1`
 
+### Pagination
+
+All list endpoints support pagination via query parameters:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `limit` | `50` | Max items per page (max 200) |
+| `offset` | `0` | Number of items to skip |
+
+Response envelope for list endpoints:
+
+```typescript
+interface PaginatedResponse<T> {
+  readonly data: readonly T[];
+  readonly total: number;
+  readonly limit: number;
+  readonly offset: number;
+}
+```
+
 ### Jurisdictions
 
 | Method | Path | Auth Scope | Description |
@@ -214,6 +267,7 @@ Base path: `/api/v1`
 | Method | Path | Auth Scope | Description |
 |--------|------|------------|-------------|
 | `GET` | `/requirements` | `read` | List. Filters: `?regulationId=eu-eaa&wcagCriterion=1.1.1&obligation=mandatory` |
+| `GET` | `/requirements/:id` | `read` | Single requirement with regulation metadata |
 | `POST` | `/requirements` | `write` | Create |
 | `PATCH` | `/requirements/:id` | `write` | Update |
 | `DELETE` | `/requirements/:id` | `admin` | Remove |
@@ -303,7 +357,7 @@ interface AnnotatedIssue {
 | Method | Path | Auth Scope | Description |
 |--------|------|------------|-------------|
 | `POST` | `/updates/propose` | `write` | Submit a proposed change |
-| `GET` | `/updates/pending` | `read` | List pending proposals |
+| `GET` | `/updates` | `read` | List all proposals. Filter: `?status=pending\|approved\|rejected` |
 | `GET` | `/updates/:id` | `read` | Single proposal with full diff |
 | `PATCH` | `/updates/:id/approve` | `admin` | Approve and apply |
 | `PATCH` | `/updates/:id/reject` | `admin` | Reject |
@@ -315,7 +369,7 @@ interface AnnotatedIssue {
 | `GET` | `/sources` | `read` | List monitored sources |
 | `POST` | `/sources` | `admin` | Add a source |
 | `DELETE` | `/sources/:id` | `admin` | Remove |
-| `POST` | `/sources/scan` | `admin` | Trigger a scan of all sources (returns diffs) |
+| `POST` | `/sources/scan` | `admin` | Trigger a scan of all sources. Synchronous. Returns `{ scanned: number, proposalsCreated: number, proposals: UpdateProposal[] }`. For each source, fetches content, computes SHA-256, compares to `lastContentHash`. If changed, creates an `UpdateProposal` with `type: "amendment"` and the raw content diff in `proposedChanges`. |
 
 ### Seed
 
@@ -441,10 +495,21 @@ The compliance service also runs as an MCP server (stdio transport) for use by C
 | `compliance_propose_update` | Submit a proposed rule change | `POST /updates/propose` |
 | `compliance_get_pending` | List pending update proposals | `GET /updates/pending` |
 | `compliance_approve_update` | Approve a proposal | `PATCH /updates/:id/approve` |
-| `compliance_manage_sources` | Add/list monitored legal sources | `GET/POST /sources` |
+| `compliance_list_sources` | List monitored legal sources | `GET /sources` |
+| `compliance_add_source` | Add a monitored legal source | `POST /sources` |
 | `compliance_seed` | Load baseline dataset | `POST /seed` |
 
-MCP tools accept the same parameters as their REST equivalents. Auth for MCP is handled by the transport layer (the MCP client provides credentials via environment or config).
+MCP tools accept the same parameters as their REST equivalents.
+
+**MCP Authentication:** When running as an MCP server (stdio transport), auth is handled via environment variables set by the MCP client:
+
+| Env Variable | Purpose |
+|---|---|
+| `COMPLIANCE_MCP_CLIENT_ID` | OAuth2 client_id for MCP session |
+| `COMPLIANCE_MCP_CLIENT_SECRET` | OAuth2 client_secret for MCP session |
+| `COMPLIANCE_MCP_SCOPES` | Space-separated scopes (default: `read write`) |
+
+On startup, the MCP server exchanges these credentials for an access token via the OAuth2 client_credentials flow (calling its own token endpoint internally). If the env vars are not set, the MCP server runs in **local mode** with full admin access (suitable for single-user Claude Code setups). The MCP tool count is 11 (the split of `compliance_manage_sources` into `list` and `add` adds one).
 
 ## A2A Agent
 
@@ -708,11 +773,11 @@ The seed endpoint is idempotent — running it multiple times does not create du
   "host": "0.0.0.0",
   "dbAdapter": "sqlite",
   "dbPath": "./compliance.db",
-  "jwtSecret": "change-me-in-production",
   "jwtKeyPair": {
     "publicKeyPath": "./keys/public.pem",
     "privateKeyPath": "./keys/private.pem"
   },
+  "webhookSigningKey": "change-me-in-production",
   "tokenExpiry": "1h",
   "refreshTokenExpiry": "30d",
   "rateLimit": {
@@ -739,7 +804,9 @@ The seed endpoint is idempotent — running it multiple times does not create du
 | `COMPLIANCE_DB_ADAPTER` | `dbAdapter` (sqlite, mongodb, postgres) |
 | `COMPLIANCE_DB_URL` | Connection string (MongoDB/PostgreSQL) |
 | `COMPLIANCE_DB_PATH` | `dbPath` (SQLite) |
-| `COMPLIANCE_JWT_SECRET` | `jwtSecret` |
+| `COMPLIANCE_JWT_PRIVATE_KEY` | Path to RS256 private key PEM |
+| `COMPLIANCE_JWT_PUBLIC_KEY` | Path to RS256 public key PEM |
+| `COMPLIANCE_WEBHOOK_SECRET` | `webhookSigningKey` (fallback for per-webhook secrets) |
 | `COMPLIANCE_CORS_ORIGIN` | `cors.origin` (comma-separated) |
 
 ### CLI
@@ -773,7 +840,7 @@ pally-compliance mcp
 
 - **Language:** TypeScript (strict mode, ESM)
 - **HTTP framework:** Fastify
-- **OAuth2:** `@fastify/oauth2` + custom JWT signing
+- **OAuth2:** Custom authorization server built on Fastify (note: `@fastify/oauth2` is an OAuth *client* helper, not a server — the authorization server endpoints are implemented directly using `jose` for JWT and `bcrypt` for secrets)
 - **OpenAPI:** `@fastify/swagger` + `@fastify/swagger-ui`
 - **MCP:** `@modelcontextprotocol/sdk`
 - **SQLite:** `better-sqlite3`
@@ -798,15 +865,21 @@ pally-compliance mcp
 9. **OAuth2 scope enforcement:** A `read`-scoped token cannot access `POST /regulations`.
 10. **Rate limiting:** Exceeding rate limit returns `429` with `Retry-After`.
 11. **OpenAPI:** `GET /openapi.json` returns valid OpenAPI 3.1 spec. `GET /docs` renders Swagger UI.
-12. **MCP tools:** All 10 MCP tools are registered and callable.
+12. **MCP tools:** All 11 MCP tools are registered and callable.
 13. **A2A agent card:** `GET /.well-known/agent.json` returns valid agent card.
 14. **A2A tasks:** `POST /a2a/tasks` with `compliance-check` skill executes and returns result.
 15. **Update proposals:** Submit, list pending, approve (applies change), reject.
 16. **Webhooks:** Register webhook, trigger event, verify POST received with signature.
-17. **DB adapters:** SQLite works by default. MongoDB and PostgreSQL adapters pass the same test suite.
+17. **DB adapters:** SQLite works by default. MongoDB and PostgreSQL adapters pass a shared adapter contract test suite (a single test file parameterized by adapter type, run via `DB_ADAPTER=mongodb vitest run tests/db/adapter-contract.test.ts`).
 18. **CLI:** `serve`, `seed`, `clients create/list/revoke`, `users create`, `keys generate`, `mcp` commands work.
 19. **Health:** `GET /health` returns 200 without auth.
 20. **Criterion extraction:** Pa11y code `WCAG2AA.Principle1.Guideline1_1.1_1_1.H37` correctly maps to criterion `1.1.1`.
+21. **includeOptional filter:** Compliance check with `includeOptional: false` (default) excludes optional-obligation violations from the matrix count and annotated issues. With `includeOptional: true`, they are included.
+22. **sectors filter:** Compliance check with `sectors: ["banking"]` only matches regulations whose `sectors` array includes "banking".
+23. **Pagination:** `GET /regulations?limit=5&offset=10` returns at most 5 items starting from offset 10, with correct `total` count.
+24. **Webhook signature verification:** A webhook payload with a tampered body fails HMAC-SHA256 verification against the `X-Webhook-Signature` header.
+25. **ProposedChange apply:** Approving an update proposal with `action: "update"` and `entityType: "regulation"` modifies only the fields in `after`, leaving other fields unchanged.
+26. **Wildcard level inheritance:** A `wcagCriterion: "*"` requirement at level AA matches issues from both WCAG2A and WCAG2AA codes.
 
 ## Non-Goals (This Milestone)
 
