@@ -13,7 +13,8 @@ import { generateHtmlReport } from './reporter/html-reporter.js';
 import { mapIssuesToSource } from './source-mapper/source-mapper.js';
 import { proposeFixesFromReport } from './fixer/fix-proposer.js';
 import { applyFix, generateDiffPreview } from './fixer/fix-applier.js';
-import type { ScanReport, FixProposal } from './types.js';
+import { fetchComplianceEnrichment } from './compliance-client.js';
+import type { ScanReport, FixProposal, ComplianceEnrichment } from './types.js';
 
 // Exit codes
 // 0 = clean (no issues found)
@@ -42,6 +43,10 @@ program
   .option('--format <format>', 'Report format: json, html, or both (default: json)', 'json')
   .option('--also-crawl', 'Also crawl the site in addition to using sitemaps')
   .option('--config <path>', 'Path to configuration file')
+  .option('--compliance-url <url>', 'URL of the compliance service for legal enrichment')
+  .option('--jurisdictions <list>', 'Comma-separated jurisdiction IDs (e.g. EU,US)', 'EU,US')
+  .option('--compliance-client-id <id>', 'OAuth client ID for the compliance service')
+  .option('--compliance-client-secret <secret>', 'OAuth client secret for the compliance service')
   .action(async (url: string, opts: {
     standard?: string;
     concurrency?: number;
@@ -50,6 +55,10 @@ program
     format?: string;
     alsoCrawl?: boolean;
     config?: string;
+    complianceUrl?: string;
+    jurisdictions?: string;
+    complianceClientId?: string;
+    complianceClientSecret?: string;
   }) => {
     try {
       const config = await loadConfig({
@@ -107,12 +116,50 @@ program
         mappedPages = await mapIssuesToSource(pages, opts.repo, effectiveConfig.sourceMap);
       }
 
+      // Optionally enrich with compliance data
+      let compliance: ComplianceEnrichment | null = null;
+      const complianceUrl = opts.complianceUrl ?? (effectiveConfig as { compliance?: { url?: string } }).compliance?.url;
+      if (complianceUrl) {
+        const configCompliance = (effectiveConfig as { compliance?: { jurisdictions?: string[]; clientId?: string; clientSecret?: string } }).compliance;
+        const jurisdictionList = opts.jurisdictions
+          ? opts.jurisdictions.split(',').map((j: string) => j.trim())
+          : configCompliance?.jurisdictions ?? ['EU', 'US'];
+        const clientId = opts.complianceClientId ?? configCompliance?.clientId;
+        const clientSecret = opts.complianceClientSecret ?? configCompliance?.clientSecret;
+
+        const allIssues = mappedPages.flatMap((p) =>
+          p.issues.map((i) => ({
+            code: i.code,
+            type: i.type,
+            message: i.message,
+            selector: i.selector,
+            context: i.context,
+          })),
+        );
+
+        console.log(`Fetching compliance data from ${complianceUrl}...`);
+        compliance = await fetchComplianceEnrichment(
+          complianceUrl,
+          jurisdictionList,
+          allIssues,
+          clientId,
+          clientSecret,
+        );
+
+        if (compliance) {
+          console.log(
+            `Compliance: ${compliance.summary.failing} jurisdiction(s) failing, ${compliance.summary.totalMandatoryViolations} mandatory violations`,
+          );
+        }
+      }
+
       const formats = (opts.format ?? 'json').split(',').map((f: string) => f.trim());
       const reportInput = {
         siteUrl: url,
         pages: mappedPages,
         errors,
         outputDir: effectiveConfig.outputDir,
+        compliance,
       };
 
       let report: ScanReport | undefined;

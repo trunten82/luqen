@@ -10,7 +10,7 @@
     header { background: #2d3748; color: #fff; padding: 1.5rem 2rem; }
     header h1 { font-size: 1.5rem; font-weight: 700; }
     header p { font-size: 0.875rem; color: #a0aec0; margin-top: 0.25rem; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
     .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
     .summary-card { background: #fff; border-radius: 8px; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
     .summary-card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 600; }
@@ -19,6 +19,26 @@
     .summary-card.warning .value { color: #d69e2e; }
     .summary-card.notice .value { color: #3182ce; }
     .summary-card.total .value { color: #2d3748; }
+    /* ---- Compliance matrix ---- */
+    .compliance-section { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; overflow: hidden; }
+    .compliance-section-header { background: #2d3748; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .compliance-section-header h2 { font-size: 1rem; font-weight: 700; }
+    .compliance-meta { display: flex; gap: 1rem; font-size: 0.8rem; }
+    .compliance-meta span { padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: 600; }
+    .compliance-meta .pass-count { background: #276749; }
+    .compliance-meta .fail-count { background: #c53030; }
+    .compliance-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .compliance-table th { background: #f7fafc; padding: 0.6rem 1.25rem; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #718096; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+    .compliance-table td { padding: 0.75rem 1.25rem; border-bottom: 1px solid #edf2f7; vertical-align: top; }
+    .compliance-table tr:last-child td { border-bottom: none; }
+    .compliance-pass { color: #276749; font-weight: 700; }
+    .compliance-fail { color: #c53030; font-weight: 700; }
+    .status-badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; }
+    .status-badge.pass { background: #c6f6d5; color: #276749; }
+    .status-badge.fail { background: #fed7d7; color: #c53030; }
+    .reg-tag { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; margin: 0.1rem 0.2rem 0.1rem 0; background: #e2e8f0; color: #4a5568; white-space: nowrap; }
+    .reg-enforcement { font-size: 0.72rem; color: #718096; }
+    /* ---- Issue table enhancements ---- */
     .controls { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
     .btn { padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid #cbd5e0; background: #fff; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #4a5568; transition: background 0.15s, color 0.15s; }
     .btn:hover { background: #edf2f7; }
@@ -50,6 +70,13 @@
     .issue-table tr.type-notice td { border-left: 3px solid #3182ce; }
     .issue-code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.78rem; color: #553c9a; }
     .issue-context { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.78rem; background: #edf2f7; padding: 0.2rem 0.4rem; border-radius: 4px; word-break: break-all; }
+    .wcag-info { margin-top: 0.3rem; }
+    .wcag-title { font-weight: 600; font-size: 0.8rem; color: #2d3748; }
+    .wcag-desc { font-size: 0.78rem; color: #4a5568; margin-top: 0.1rem; }
+    .wcag-impact { font-size: 0.75rem; color: #744210; background: #fefcbf; padding: 0.15rem 0.4rem; border-radius: 3px; display: inline-block; margin-top: 0.2rem; }
+    .obligation-mandatory { background: #fed7d7; color: #c53030; }
+    .obligation-recommended { background: #fefcbf; color: #975a16; }
+    .obligation-optional { background: #bee3f8; color: #2b6cb0; }
     .no-issues { padding: 1rem 1.25rem; color: #68d391; font-size: 0.875rem; font-weight: 500; }
     .errors-section { margin-top: 2rem; }
     .errors-section h2 { font-size: 1rem; font-weight: 700; color: #c53030; margin-bottom: 0.75rem; }
@@ -91,6 +118,45 @@
     </div>
   </div>
 
+  {{#if complianceMatrix}}
+  <div class="compliance-section" id="compliance-matrix">
+    <div class="compliance-section-header">
+      <h2>Legal Compliance Matrix</h2>
+      <div class="compliance-meta">
+        <span class="pass-count">{{compliance.summary.passing}} Passing</span>
+        <span class="fail-count">{{compliance.summary.failing}} Failing</span>
+      </div>
+    </div>
+    <table class="compliance-table" aria-label="Compliance status by jurisdiction">
+      <thead>
+        <tr>
+          <th>Jurisdiction</th>
+          <th>Status</th>
+          <th>Mandatory Violations</th>
+          <th>Recommended Violations</th>
+          <th>Key Regulations</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each complianceMatrix}}
+        <tr>
+          <td><strong>{{jurisdictionName}}</strong><br><span style="font-size:0.75rem;color:#718096">{{jurisdictionId}}</span></td>
+          <td><span class="status-badge {{status}}">{{status}}</span></td>
+          <td class="{{complianceStatusClass status}}">{{mandatoryViolations}}</td>
+          <td>{{recommendedViolations}}</td>
+          <td>
+            {{#each regulations}}
+            <span class="reg-tag {{#if (eq status 'fail')}}obligation-mandatory{{/if}}">{{shortName}}</span>
+            <span class="reg-enforcement">({{enforcementDate}})</span>
+            {{/each}}
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{/if}}
+
   <div class="controls">
     <button class="btn active" onclick="filterIssues('all', this)">All</button>
     <button class="btn error-filter" onclick="filterIssues('error', this)">Errors</button>
@@ -123,8 +189,9 @@
         <thead>
           <tr>
             <th>Type</th>
-            <th>Code</th>
-            <th>Message</th>
+            <th>Code / WCAG</th>
+            <th>Message &amp; Description</th>
+            <th>Legal Impact</th>
             <th>Selector</th>
             <th>Context</th>
           </tr>
@@ -133,8 +200,31 @@
           {{#each issues}}
           <tr class="type-{{type}}" data-type="{{type}}">
             <td><span class="badge {{type}}">{{type}}</span></td>
-            <td><span class="issue-code">{{code}}</span></td>
-            <td>{{message}}</td>
+            <td>
+              <span class="issue-code">{{code}}</span>
+              {{#if wcagCriterion}}
+              <br><span style="font-size:0.72rem;color:#718096">WCAG {{wcagCriterion}}</span>
+              {{/if}}
+            </td>
+            <td>
+              {{message}}
+              {{#if wcagTitle}}
+              <div class="wcag-info">
+                <div class="wcag-title">{{wcagTitle}}</div>
+                <div class="wcag-desc">{{wcagDescription}}</div>
+                {{#if wcagImpact}}<div class="wcag-impact">Impact: {{wcagImpact}}</div>{{/if}}
+              </div>
+              {{/if}}
+            </td>
+            <td>
+              {{#if regulations}}
+                {{#each regulations}}
+                <span class="reg-tag {{obligationClass obligation}}">{{shortName}}</span>
+                {{/each}}
+              {{else}}
+              —
+              {{/if}}
+            </td>
             <td><span class="issue-code">{{selector}}</span></td>
             <td><span class="issue-context">{{context}}</span></td>
           </tr>
@@ -162,8 +252,8 @@
 <footer>Generated by pally-agent</footer>
 <script>
   function toggleSection(header) {
-    const body = header.nextElementSibling;
-    const chevron = header.querySelector('.chevron');
+    var body = header.nextElementSibling;
+    var chevron = header.querySelector('.chevron');
     if (body.classList.contains('collapsed')) {
       body.classList.remove('collapsed');
       if (chevron) chevron.style.transform = 'rotate(0deg)';
