@@ -132,6 +132,7 @@ export interface RegulationAnnotation {
   readonly shortName: string;
   readonly jurisdictionId: string;
   readonly obligation: 'mandatory' | 'recommended' | 'optional';
+  readonly url?: string;  // link to official legal text
 }
 
 export interface ComplianceSummary {

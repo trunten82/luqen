@@ -98,10 +98,25 @@
     .status-badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; }
     .status-badge.pass { background: var(--pass-bg); color: var(--pass); }
     .status-badge.fail { background: var(--fail-bg); color: var(--fail); }
-    .reg-tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; margin: 0.1rem 0.15rem 0.1rem 0; white-space: nowrap; }
+    .reg-tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; margin: 0.1rem 0.15rem 0.1rem 0; white-space: nowrap; text-decoration: none; }
     .reg-tag.obligation-mandatory { background: var(--err-bg); color: var(--err); border: 1px solid var(--err-border); }
     .reg-tag.obligation-recommended { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-border); }
     .reg-tag.obligation-optional { background: var(--note-bg); color: var(--note); border: 1px solid var(--note-border); }
+    .wcag-link { color: inherit; text-decoration: underline dotted; }
+    .wcag-link:hover { text-decoration: underline; }
+    /* Template issues section */
+    .template-section { background: var(--surface); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 2rem; overflow: hidden; }
+    .template-section-header { background: #7c3aed; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+    .template-section-header h2 { font-size: 1rem; font-weight: 700; }
+    .template-section-desc { font-size: 0.8rem; opacity: 0.85; margin-top: 0.25rem; }
+    .template-meta { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .template-badge { background: rgba(255,255,255,0.2); color: #fff; padding: 0.2rem 0.7rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+    .template-issue-row { border-bottom: 1px solid var(--border); padding: 0.9rem 1.25rem; font-size: 0.82rem; }
+    .template-issue-row:last-child { border-bottom: none; }
+    .template-affected { margin-top: 0.4rem; font-size: 0.75rem; color: var(--text-muted); }
+    .template-affected summary { cursor: pointer; color: #7c3aed; font-weight: 600; }
+    .template-affected ul { margin-top: 0.3rem; padding-left: 1.2rem; }
+    .template-affected li { font-size: 0.72rem; word-break: break-all; }
     .reg-enforcement { font-size: 0.7rem; color: var(--text-muted); }
     /* Controls */
     .controls { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
@@ -266,7 +281,11 @@
           {{#if regulations.length}}
           <div class="juris-regs">
             {{#each regulations}}
-            <span class="reg-tag {{#if (eq status 'fail')}}obligation-mandatory{{else}}obligation-optional{{/if}}">{{shortName}}</span>
+            {{#if url}}
+              <a class="reg-tag {{#if (eq status 'fail')}}obligation-mandatory{{else}}obligation-optional{{/if}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
+            {{else}}
+              <span class="reg-tag {{#if (eq status 'fail')}}obligation-mandatory{{else}}obligation-optional{{/if}}">{{shortName}}</span>
+            {{/if}}
             <span class="reg-enforcement">{{enforcementDate}}</span>
             {{/each}}
           </div>
@@ -294,7 +313,11 @@
           <td>{{recommendedViolations}}</td>
           <td>
             {{#each regulations}}
-            <span class="reg-tag {{#if (eq status 'fail')}}obligation-mandatory{{/if}}">{{shortName}}</span>
+            {{#if url}}
+              <a class="reg-tag {{#if (eq status 'fail')}}obligation-mandatory{{/if}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
+            {{else}}
+              <span class="reg-tag {{#if (eq status 'fail')}}obligation-mandatory{{/if}}">{{shortName}}</span>
+            {{/if}}
             <span class="reg-enforcement">({{enforcementDate}})</span>
             {{/each}}
           </td>
@@ -302,6 +325,57 @@
         {{/each}}
       </tbody>
     </table>
+  </div>
+  {{/if}}
+
+  {{#if templateIssues}}
+  <div class="template-section" id="template-issues">
+    <div class="template-section-header">
+      <div>
+        <h2>Template &amp; Layout Issues</h2>
+        <div class="template-section-desc">These affect multiple pages and likely come from shared components (header, footer, navigation).</div>
+      </div>
+      <div class="template-meta">
+        <span class="template-badge">{{templateIssueCount}} template issues</span>
+        <span class="template-badge">{{templateOccurrenceCount}}+ individual occurrences</span>
+      </div>
+    </div>
+    {{#each templateIssues}}
+    <div class="template-issue-row">
+      <div style="display:flex;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;">
+        <span class="badge {{type}}">{{type}}</span>
+        {{#if wcagCriterion}}
+          {{#if wcagUrl}}
+            <a class="issue-code wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</a>
+          {{else}}
+            <span class="issue-code">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
+          {{/if}}
+        {{else}}
+          <span class="issue-code">{{code}}</span>
+        {{/if}}
+        {{#if regulations}}
+          {{#each regulations}}
+          {{#if url}}
+            <a class="reg-tag {{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
+          {{else}}
+            <span class="reg-tag {{obligationClass obligation}}">{{shortName}}</span>
+          {{/if}}
+          {{/each}}
+        {{/if}}
+      </div>
+      <div style="margin-top:0.35rem;">{{message}}</div>
+      {{#if selector}}<div style="margin-top:0.2rem;"><span class="issue-code">{{selector}}</span></div>{{/if}}
+      {{#if context}}<div style="margin-top:0.2rem;"><span class="issue-context">{{context}}</span></div>{{/if}}
+      <details class="template-affected">
+        <summary>Affects {{affectedCount}} pages</summary>
+        <ul>
+          {{#each affectedPages}}
+          <li>{{this}}</li>
+          {{/each}}
+        </ul>
+      </details>
+    </div>
+    {{/each}}
   </div>
   {{/if}}
 
@@ -350,7 +424,11 @@
             <td><span class="badge {{type}}">{{type}}</span></td>
             <td>
               {{#if wcagCriterion}}
-                <span class="issue-code">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
+                {{#if wcagUrl}}
+                  <a class="issue-code wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</a>
+                {{else}}
+                  <span class="issue-code">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
+                {{/if}}
                 <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG {{wcagCriterion}}</span>
               {{else}}
                 <span class="issue-code">{{code}}</span>
@@ -369,7 +447,11 @@
             <td>
               {{#if regulations}}
                 {{#each regulations}}
-                <span class="reg-tag {{obligationClass obligation}}">{{shortName}}</span>
+                {{#if url}}
+                  <a class="reg-tag {{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
+                {{else}}
+                  <span class="reg-tag {{obligationClass obligation}}">{{shortName}}</span>
+                {{/if}}
                 {{/each}}
               {{else}}
               &mdash;
