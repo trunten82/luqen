@@ -1,0 +1,52 @@
+# Azure DevOps — Reusable Docker build + push template (Azure Container Registry)
+# Parameters:
+#   service    — "compliance" or "core"
+#   registry   — ACR login server, e.g. "myregistry.azurecr.io"
+#   tag        — image tag, e.g. "$(Build.BuildId)" or a semver
+
+parameters:
+  - name: service
+    type: string
+    values:
+      - compliance
+      - core
+  - name: registry
+    type: string
+  - name: tag
+    type: string
+    default: $(Build.BuildId)
+
+jobs:
+  - job: DockerBuild_${{ parameters.service }}
+    displayName: Docker build + push — ${{ parameters.service }}
+
+    steps:
+      - checkout: self
+
+      # Docker layer caching via BuildKit inline cache
+      - task: Docker@2
+        displayName: Login to ACR
+        inputs:
+          command: login
+          containerRegistry: acr-service-connection  # Configure in Azure DevOps service connections
+
+      - task: Docker@2
+        displayName: Build and push ${{ parameters.service }} image
+        inputs:
+          command: buildAndPush
+          repository: pally-agent/${{ parameters.service }}
+          dockerfile: packages/${{ parameters.service }}/Dockerfile
+          containerRegistry: acr-service-connection
+          tags: |
+            ${{ parameters.tag }}
+            latest
+          arguments: |
+            --build-arg NODE_VERSION=20
+            --cache-from=${{ parameters.registry }}/pally-agent/${{ parameters.service }}:latest
+            --build-arg BUILDKIT_INLINE_CACHE=1
+
+      - script: |
+          echo "##vso[task.setvariable variable=imageTag;isOutput=true]${{ parameters.tag }}"
+          echo "##vso[task.setvariable variable=imageFull;isOutput=true]${{ parameters.registry }}/pally-agent/${{ parameters.service }}:${{ parameters.tag }}"
+        name: outputVars
+        displayName: Export image tag variables
