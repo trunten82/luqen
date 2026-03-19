@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pally-dashboard-config
+  namespace: pally
+  labels:
+    app.kubernetes.io/name: pally-dashboard
+    app.kubernetes.io/part-of: pally-ecosystem
+data:
+  # HTTP server configuration
+  DASHBOARD_PORT: "5000"
+
+  # URL of the compliance service (in-cluster DNS name)
+  DASHBOARD_COMPLIANCE_URL: "http://pally-compliance:4000"
+
+  # URL of the pa11y web service (external or in-cluster)
+  # Override this in overlays or CI/CD to point at the real pa11y runner
+  DASHBOARD_WEBSERVICE_URL: "http://pally-webservice:3000"
+
+  # Path where generated accessibility reports are stored
+  DASHBOARD_REPORTS_DIR: "/app/reports"
+
+  # Path to the SQLite database file
+  DASHBOARD_DB_PATH: "/app/data/dashboard.db"
+
+  # Maximum number of concurrent scans the dashboard will dispatch
+  DASHBOARD_MAX_CONCURRENT_SCANS: "2"
