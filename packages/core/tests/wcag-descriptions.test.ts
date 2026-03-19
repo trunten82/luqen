@@ -52,6 +52,31 @@ describe('WCAG_DESCRIPTIONS', () => {
     }
   });
 
+  it('every entry has a url field', () => {
+    for (const [criterion, info] of Object.entries(WCAG_DESCRIPTIONS)) {
+      expect(info.url, `${criterion} missing url`).toBeTruthy();
+    }
+  });
+
+  it('every url starts with the W3C WCAG 2.1 Understanding base URL', () => {
+    const base = 'https://www.w3.org/WAI/WCAG21/Understanding/';
+    for (const [criterion, info] of Object.entries(WCAG_DESCRIPTIONS)) {
+      expect(info.url, `${criterion} url has wrong base`).toMatch(new RegExp(`^${base}`));
+    }
+  });
+
+  it('has correct url for 1.1.1 non-text-content', () => {
+    expect(WCAG_DESCRIPTIONS['1.1.1'].url).toBe('https://www.w3.org/WAI/WCAG21/Understanding/non-text-content');
+  });
+
+  it('has correct url for 1.4.3 contrast-minimum', () => {
+    expect(WCAG_DESCRIPTIONS['1.4.3'].url).toBe('https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum');
+  });
+
+  it('has correct url for 4.1.2 name-role-value', () => {
+    expect(WCAG_DESCRIPTIONS['4.1.2'].url).toBe('https://www.w3.org/WAI/WCAG21/Understanding/name-role-value');
+  });
+
   it('includes WCAG 2.1 AA criteria (1.3.4, 1.3.5, 1.4.10, 1.4.11, 1.4.12, 1.4.13)', () => {
     const aa21 = ['1.3.4', '1.3.5', '1.4.10', '1.4.11', '1.4.12', '1.4.13'];
     for (const c of aa21) {

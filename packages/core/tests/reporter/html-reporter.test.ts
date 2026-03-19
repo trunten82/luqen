@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { generateHtmlReport } from '../../src/reporter/html-reporter.js';
+import { generateHtmlReport, buildAnnotatedPages } from '../../src/reporter/html-reporter.js';
 import type { PageResult, ScanError, ComplianceEnrichment } from '../../src/types.js';
 import { mkdirSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -286,5 +286,153 @@ describe('generateHtmlReport', () => {
       const html = readFileSync(reportPath, 'utf-8');
       expect(html).toContain('obligation-optional');
     });
+
+    it('includes WCAG URL link in report when wcagUrl is available', async () => {
+      const reportPath = await generateHtmlReport({
+        siteUrl: 'https://example.com',
+        pages,
+        errors,
+        outputDir,
+        compliance,
+      });
+      const html = readFileSync(reportPath, 'utf-8');
+      expect(html).toContain('www.w3.org/WAI/WCAG21/Understanding/non-text-content');
+      expect(html).toContain('wcag-link');
+    });
+  });
+
+  describe('WCAG hyperlinks', () => {
+    it('renders WCAG URL as a link in the issue table', async () => {
+      const reportPath = await generateHtmlReport({ siteUrl: 'https://example.com', pages, errors, outputDir });
+      const html = readFileSync(reportPath, 'utf-8');
+      expect(html).toContain('href="https://www.w3.org/WAI/WCAG21/Understanding/non-text-content"');
+      expect(html).toContain('target="_blank"');
+      expect(html).toContain('rel="noopener"');
+    });
+  });
+});
+
+describe('buildAnnotatedPages — template issue deduplication', () => {
+  function makeIssue(overrides: Partial<PageResult['issues'][number]> = {}): PageResult['issues'][number] {
+    return {
+      code: 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37',
+      type: 'error',
+      message: 'Missing alt text',
+      selector: 'header img',
+      context: '<img src="logo.png">',
+      ...overrides,
+    };
+  }
+
+  function makePage(url: string, issues: PageResult['issues']): PageResult {
+    return { url, discoveryMethod: 'sitemap', issueCount: issues.length, issues };
+  }
+
+  it('extracts template issues that appear on 3+ pages', () => {
+    const sharedIssue = makeIssue();
+    const pages: PageResult[] = [
+      makePage('https://example.com/1', [sharedIssue]),
+      makePage('https://example.com/2', [sharedIssue]),
+      makePage('https://example.com/3', [sharedIssue]),
+      makePage('https://example.com/4', [sharedIssue]),
+      makePage('https://example.com/5', [sharedIssue]),
+    ];
+    const { templateIssues } = buildAnnotatedPages(pages, undefined);
+    expect(templateIssues).toHaveLength(1);
+    expect(templateIssues[0].affectedCount).toBe(5);
+  });
+
+  it('sets affectedPages to the list of page URLs', () => {
+    const sharedIssue = makeIssue();
+    const pages: PageResult[] = [
+      makePage('https://example.com/a', [sharedIssue]),
+      makePage('https://example.com/b', [sharedIssue]),
+      makePage('https://example.com/c', [sharedIssue]),
+    ];
+    const { templateIssues } = buildAnnotatedPages(pages, undefined);
+    expect(templateIssues[0].affectedPages).toEqual([
+      'https://example.com/a',
+      'https://example.com/b',
+      'https://example.com/c',
+    ]);
+  });
+
+  it('removes template issues from individual page results', () => {
+    const sharedIssue = makeIssue();
+    const uniqueIssue = makeIssue({ selector: 'main h1', context: '<h1>Title</h1>' });
+    const pages: PageResult[] = [
+      makePage('https://example.com/1', [sharedIssue, uniqueIssue]),
+      makePage('https://example.com/2', [sharedIssue]),
+      makePage('https://example.com/3', [sharedIssue]),
+    ];
+    const { annotatedPages } = buildAnnotatedPages(pages, undefined);
+    // sharedIssue should be removed from page 1
+    expect(annotatedPages[0].issues).toHaveLength(1);
+    expect(annotatedPages[0].issues[0].selector).toBe('main h1');
+    // sharedIssue should be removed from pages 2 and 3 too
+    expect(annotatedPages[1].issues).toHaveLength(0);
+    expect(annotatedPages[2].issues).toHaveLength(0);
+  });
+
+  it('does NOT treat issues appearing on fewer than 3 pages as template issues', () => {
+    const sharedIssue = makeIssue();
+    const pages: PageResult[] = [
+      makePage('https://example.com/1', [sharedIssue]),
+      makePage('https://example.com/2', [sharedIssue]),
+    ];
+    const { templateIssues, annotatedPages } = buildAnnotatedPages(pages, undefined);
+    expect(templateIssues).toHaveLength(0);
+    // Issue should remain on pages
+    expect(annotatedPages[0].issues).toHaveLength(1);
+    expect(annotatedPages[1].issues).toHaveLength(1);
+  });
+
+  it('handles pages with no shared issues gracefully', () => {
+    const pages: PageResult[] = [
+      makePage('https://example.com/1', [makeIssue({ selector: 'div.a' })]),
+      makePage('https://example.com/2', [makeIssue({ selector: 'div.b' })]),
+      makePage('https://example.com/3', [makeIssue({ selector: 'div.c' })]),
+    ];
+    const { templateIssues, annotatedPages } = buildAnnotatedPages(pages, undefined);
+    expect(templateIssues).toHaveLength(0);
+    expect(annotatedPages[0].issues).toHaveLength(1);
+    expect(annotatedPages[1].issues).toHaveLength(1);
+    expect(annotatedPages[2].issues).toHaveLength(1);
+  });
+
+  it('renders template issues section in HTML report', async () => {
+    const sharedIssue = makeIssue();
+    const templatePages: PageResult[] = [
+      makePage('https://example.com/p1', [sharedIssue]),
+      makePage('https://example.com/p2', [sharedIssue]),
+      makePage('https://example.com/p3', [sharedIssue]),
+      makePage('https://example.com/p4', [sharedIssue]),
+    ];
+    const outputDir = join(tmpdir(), `pally-template-test-${Date.now()}`);
+    mkdirSync(outputDir, { recursive: true });
+    try {
+      const reportPath = await generateHtmlReport({ siteUrl: 'https://example.com', pages: templatePages, errors: [], outputDir });
+      const html = readFileSync(reportPath, 'utf-8');
+      expect(html).toContain('id="template-issues"');
+      expect(html).toContain('Template &amp; Layout Issues');
+      expect(html).toContain('Affects 4 pages');
+    } finally {
+      rmSync(outputDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does NOT render template issues section when no template issues exist', async () => {
+    const uniquePages: PageResult[] = [
+      makePage('https://example.com/x', [makeIssue({ selector: 'div.x' })]),
+    ];
+    const outputDir = join(tmpdir(), `pally-notemplate-test-${Date.now()}`);
+    mkdirSync(outputDir, { recursive: true });
+    try {
+      const reportPath = await generateHtmlReport({ siteUrl: 'https://example.com', pages: uniquePages, errors: [], outputDir });
+      const html = readFileSync(reportPath, 'utf-8');
+      expect(html).not.toContain('id="template-issues"');
+    } finally {
+      rmSync(outputDir, { recursive: true, force: true });
+    }
   });
 });

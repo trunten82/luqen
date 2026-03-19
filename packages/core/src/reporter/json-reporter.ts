@@ -2,6 +2,7 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PageResult, ScanError, ScanReport, ComplianceEnrichment } from '../types.js';
+import { buildAnnotatedPages } from './html-reporter.js';
 
 interface JsonReportInput {
   readonly siteUrl: string;
@@ -65,6 +66,12 @@ export async function generateJsonReport(input: JsonReportInput): Promise<ScanRe
   const outputData: Record<string, unknown> = { ...report };
   if (compliance) {
     outputData['compliance'] = serializeCompliance(compliance);
+  }
+
+  // Include template issues when present
+  const { templateIssues } = buildAnnotatedPages(pages, compliance);
+  if (templateIssues.length > 0) {
+    outputData['templateIssues'] = templateIssues;
   }
 
   await writeFile(reportPath, JSON.stringify(outputData, null, 2), 'utf-8');
