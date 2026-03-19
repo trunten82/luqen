@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { loadConfig } from './config.js';
-import { discoverUrls } from './discovery/discover.js';
+import { discoverUrls, type DiscoverResult } from './discovery/discover.js';
 import { WebserviceClient } from './scanner/webservice-client.js';
 import { scanUrls } from './scanner/scanner.js';
 import { generateJsonReport } from './reporter/json-reporter.js';
@@ -76,11 +76,16 @@ program
       };
 
       console.log(`Discovering URLs from ${url}...`);
-      const discoveredUrls = await discoverUrls(url, {
+      const discoverResult: DiscoverResult = await discoverUrls(url, {
         maxPages: effectiveConfig.maxPages,
         crawlDepth: effectiveConfig.crawlDepth,
         alsoCrawl: effectiveConfig.alsoCrawl,
-      });
+      }, true);
+      const discoveredUrls = discoverResult.urls;
+
+      if (discoverResult.wafWarning) {
+        console.warn(discoverResult.wafWarning);
+      }
 
       console.log(`Found ${discoveredUrls.length} URLs to scan`);
 
@@ -147,8 +152,36 @@ program
         );
 
         if (compliance) {
+          // Compute confirmed vs. needs-review breakdown for CLI output
+          let confirmedFailingJurisdictions = 0;
+          let reviewJurisdictions = 0;
+          let confirmedViolationsTotal = 0;
+          let needsReviewTotal = 0;
+          for (const j of Object.values(compliance.matrix)) {
+            let confirmed = 0;
+            let needsReview = 0;
+            for (const page of mappedPages) {
+              for (const issue of page.issues) {
+                const annotations = compliance.issueAnnotations.get(issue.code);
+                if (!annotations) continue;
+                const hasMandatory = annotations.some(
+                  (a) => a.jurisdictionId === j.jurisdictionId && a.obligation === 'mandatory',
+                );
+                if (!hasMandatory) continue;
+                if (issue.type === 'error') {
+                  confirmed++;
+                } else {
+                  needsReview++;
+                }
+              }
+            }
+            if (confirmed > 0) confirmedFailingJurisdictions++;
+            else if (needsReview > 0) reviewJurisdictions++;
+            confirmedViolationsTotal += confirmed;
+            needsReviewTotal += needsReview;
+          }
           console.log(
-            `Compliance: ${compliance.summary.failing} jurisdiction(s) failing, ${compliance.summary.totalMandatoryViolations} mandatory violations`,
+            `Compliance: ${confirmedFailingJurisdictions} confirmed failure(s), ${reviewJurisdictions} need review, ${confirmedViolationsTotal} confirmed violations, ${needsReviewTotal} need review`,
           );
         }
       }
@@ -232,11 +265,16 @@ program
         };
 
         console.log(`Discovering URLs from ${url}...`);
-        const discoveredUrls = await discoverUrls(url, {
+        const fixDiscoverResult: DiscoverResult = await discoverUrls(url, {
           maxPages: effectiveConfig.maxPages,
           crawlDepth: effectiveConfig.crawlDepth,
           alsoCrawl: effectiveConfig.alsoCrawl,
-        });
+        }, true);
+        const discoveredUrls = fixDiscoverResult.urls;
+
+        if (fixDiscoverResult.wafWarning) {
+          console.warn(fixDiscoverResult.wafWarning);
+        }
 
         console.log(`Found ${discoveredUrls.length} URLs to scan`);
 

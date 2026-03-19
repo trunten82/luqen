@@ -40,15 +40,60 @@ function buildUniqueFilename(outputDir: string, siteUrl: string, timestamp: stri
 /**
  * Serialize a ComplianceEnrichment for JSON output.
  * The issueAnnotations Map must be converted to a plain object.
+ * Also includes confirmedViolations / needsReview in the enriched matrix entries.
  */
-function serializeCompliance(compliance: ComplianceEnrichment): Record<string, unknown> {
+function serializeCompliance(
+  compliance: ComplianceEnrichment,
+  pages: readonly import('../types.js').PageResult[],
+): Record<string, unknown> {
   const annotationsObj: Record<string, unknown> = {};
   for (const [key, value] of compliance.issueAnnotations) {
     annotationsObj[key] = value;
   }
+
+  // Compute per-jurisdiction confirmed/needsReview counts
+  const enrichedMatrix: Record<string, unknown> = {};
+  for (const [jid, j] of Object.entries(compliance.matrix)) {
+    let confirmed = 0;
+    let needsReviewCount = 0;
+    for (const page of pages) {
+      for (const issue of page.issues) {
+        const annotations = compliance.issueAnnotations.get(issue.code);
+        if (!annotations) continue;
+        const hasMandatory = annotations.some(
+          (a) => a.jurisdictionId === j.jurisdictionId && a.obligation === 'mandatory',
+        );
+        if (!hasMandatory) continue;
+        if (issue.type === 'error') {
+          confirmed++;
+        } else {
+          needsReviewCount++;
+        }
+      }
+    }
+    const reviewStatus: 'fail' | 'review' | 'pass' =
+      confirmed > 0 ? 'fail' : needsReviewCount > 0 ? 'review' : 'pass';
+    enrichedMatrix[jid] = { ...j, confirmedViolations: confirmed, needsReview: needsReviewCount, reviewStatus };
+  }
+
+  // Compute aggregate summary counts
+  let totalConfirmedViolations = 0;
+  let totalNeedsReview = 0;
+  let needsReviewJurisdictions = 0;
+  for (const entry of Object.values(enrichedMatrix) as Array<{ confirmedViolations: number; needsReview: number; reviewStatus: string }>) {
+    totalConfirmedViolations += entry.confirmedViolations;
+    totalNeedsReview += entry.needsReview;
+    if (entry.reviewStatus === 'review') needsReviewJurisdictions++;
+  }
+
   return {
-    summary: compliance.summary,
-    matrix: compliance.matrix,
+    summary: {
+      ...compliance.summary,
+      totalConfirmedViolations,
+      totalNeedsReview,
+      needsReview: needsReviewJurisdictions,
+    },
+    matrix: enrichedMatrix,
     issueAnnotations: annotationsObj,
   };
 }
@@ -74,7 +119,7 @@ export async function generateJsonReport(input: JsonReportInput): Promise<ScanRe
   // When compliance data is available, include it as a top-level field.
   const outputData: Record<string, unknown> = { ...report };
   if (compliance) {
-    outputData['compliance'] = serializeCompliance(compliance);
+    outputData['compliance'] = serializeCompliance(compliance, pages);
   }
 
   // Include template issues when present

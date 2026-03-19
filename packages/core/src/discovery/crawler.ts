@@ -6,6 +6,21 @@ const NON_HTML_EXTENSIONS = new Set([
   '.mp3', '.mp4', '.avi', '.mov', '.wmv', '.woff', '.woff2', '.ttf', '.eot',
 ]);
 
+const WAF_SIGNATURES = [
+  '_Incapsula_Resource',
+  'cf-browser-verification',
+  '__cf_chl',
+  'challenge-platform',
+];
+
+const WAF_SIZE_THRESHOLD = 1000;
+
+/** Returns true if the response body looks like a WAF/bot-protection challenge page. */
+export function isWafChallenge(body: string): boolean {
+  if (body.length >= WAF_SIZE_THRESHOLD) return false;
+  return WAF_SIGNATURES.some((sig) => body.includes(sig));
+}
+
 interface CrawlOptions {
   readonly maxPages: number;
   readonly maxDepth: number;
@@ -28,14 +43,22 @@ function normalizeUrl(href: string, baseUrl: string): string | null {
   }
 }
 
-export async function crawlSite(startUrl: string, options: CrawlOptions): Promise<string[]> {
+export interface CrawlResult {
+  readonly urls: string[];
+  readonly wafWarning?: string;
+}
+
+export async function crawlSite(startUrl: string, options: CrawlOptions): Promise<string[]>;
+export async function crawlSite(startUrl: string, options: CrawlOptions, returnResult: true): Promise<CrawlResult>;
+export async function crawlSite(startUrl: string, options: CrawlOptions, returnResult?: boolean): Promise<string[] | CrawlResult> {
   const { maxPages, maxDepth, isAllowed } = options;
   const baseOrigin = new URL(startUrl).origin;
   const visited = new Set<string>();
   const queue: Array<{ url: string; depth: number }> = [];
+  let wafWarning: string | undefined;
 
   const startNormalized = normalizeUrl(startUrl, startUrl);
-  if (!startNormalized) return [];
+  if (!startNormalized) return returnResult ? { urls: [], wafWarning: undefined } : [];
 
   queue.push({ url: startNormalized, depth: 0 });
   visited.add(startNormalized);
@@ -52,6 +75,17 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       const contentType = response.headers.get('content-type') ?? '';
       if (!contentType.includes('text/html')) continue;
       const html = await response.text();
+
+      // Detect WAF challenge pages — only warn once, on the start URL
+      if (depth === 0 && isWafChallenge(html)) {
+        wafWarning =
+          `Warning: WAF/bot protection detected on ${url}. Crawler cannot bypass JavaScript challenges. ` +
+          `The pa11y webservice (Chromium-based) can still scan individual pages. ` +
+          `Consider providing URLs manually or using --also-crawl with a sitemap.`;
+        // Still include the start URL so at least the homepage gets scanned
+        break;
+      }
+
       const $ = cheerio.load(html);
 
       if (depth < maxDepth) {
@@ -72,5 +106,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     } catch { /* skip failed pages */ }
   }
 
-  return [...visited];
+  const urls = [...visited];
+  if (returnResult) return { urls, wafWarning };
+  if (wafWarning) console.warn(wafWarning);
+  return urls;
 }

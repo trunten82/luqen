@@ -116,6 +116,12 @@ export interface JurisdictionComplianceResult {
   readonly mandatoryViolations: number;
   readonly recommendedViolations: number;
   readonly regulations: readonly RegulationComplianceResult[];
+  /** Confirmed violations: mandatory issues where pa11y type === 'error' */
+  readonly confirmedViolations?: number;
+  /** Needs review: mandatory issues where pa11y type is 'warning' or 'notice' */
+  readonly needsReview?: number;
+  /** Computed review status: 'fail' if confirmed violations exist, 'review' if only warnings/notices, 'pass' otherwise */
+  readonly reviewStatus?: 'fail' | 'review' | 'pass';
 }
 
 export interface RegulationComplianceResult {
@@ -140,6 +146,12 @@ export interface ComplianceSummary {
   readonly passing: number;
   readonly failing: number;
   readonly totalMandatoryViolations: number;
+  /** Total confirmed violations (pa11y type === 'error') across all jurisdictions */
+  readonly totalConfirmedViolations?: number;
+  /** Total issues needing review (pa11y type !== 'error') across all jurisdictions */
+  readonly totalNeedsReview?: number;
+  /** Jurisdictions with only warnings/notices (no confirmed errors) */
+  readonly needsReview?: number;
 }
 
 export interface ComplianceConfig {
