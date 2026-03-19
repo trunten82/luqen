@@ -1,0 +1,35 @@
+---
+# PVC for the SQLite database file
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pally-compliance-data
+  namespace: pally
+  labels:
+    app.kubernetes.io/name: pally-compliance
+    app.kubernetes.io/part-of: pally-ecosystem
+spec:
+  accessModes:
+    - ReadWriteOnce
+  # storageClassName defaults to the cluster default; set explicitly if needed.
+  # storageClassName: standard
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# PVC for the RSA JWT key pair (private.pem + public.pem)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pally-compliance-keys
+  namespace: pally
+  labels:
+    app.kubernetes.io/name: pally-compliance
+    app.kubernetes.io/part-of: pally-ecosystem
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi

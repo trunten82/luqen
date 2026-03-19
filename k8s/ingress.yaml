@@ -1,0 +1,75 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pally
+  namespace: pally
+  labels:
+    app.kubernetes.io/name: pally
+    app.kubernetes.io/part-of: pally-ecosystem
+  annotations:
+    # nginx ingress controller
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+
+    # Rewrite /api/ prefix before forwarding to compliance service
+    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
+
+    # Proxy timeouts — compliance scans can be long-running
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+
+    # Body size limit for scan submission payloads
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # TLS: cert-manager will provision a Let's Encrypt certificate.
+    # Replace REPLACE_WITH_TLS_ISSUER with the name of your ClusterIssuer/Issuer.
+    cert-manager.io/cluster-issuer: "REPLACE_WITH_TLS_ISSUER"
+
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Permissions-Policy: geolocation=(), microphone=(), camera=()";
+spec:
+  # Replace REPLACE_WITH_YOUR_HOSTNAME with the public DNS hostname,
+  # e.g. pally.example.com
+  tls:
+    - hosts:
+        - REPLACE_WITH_YOUR_HOSTNAME
+      secretName: pally-tls
+
+  rules:
+    - host: REPLACE_WITH_YOUR_HOSTNAME
+      http:
+        paths:
+          # Swagger UI — must be listed before the generic /api/ rule so it
+          # matches first (nginx evaluates longest prefix first for Exact,
+          # then regex in order for ImplementationSpecific).
+          - path: /api/docs(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: pally-compliance
+                port:
+                  name: http
+
+          # All other /api/ traffic → compliance service
+          # The rewrite-target annotation strips the /api prefix.
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: pally-compliance
+                port:
+                  name: http
+
+          # Everything else → dashboard
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pally-dashboard
+                port:
+                  name: http

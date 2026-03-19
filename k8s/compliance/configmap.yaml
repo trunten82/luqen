@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pally-compliance-config
+  namespace: pally
+  labels:
+    app.kubernetes.io/name: pally-compliance
+    app.kubernetes.io/part-of: pally-ecosystem
+data:
+  # HTTP server configuration
+  COMPLIANCE_PORT: "4000"
+  COMPLIANCE_HOST: "0.0.0.0"
+
+  # Database adapter: sqlite | postgres | mongodb
+  COMPLIANCE_DB_ADAPTER: "sqlite"
+
+  # Path to the SQLite database file (used when COMPLIANCE_DB_ADAPTER=sqlite)
+  COMPLIANCE_DB_PATH: "/app/data/compliance.db"
+
+  # Paths to the RSA key pair files mounted from the PVC
+  COMPLIANCE_JWT_PRIVATE_KEY: "/app/keys/private.pem"
+  COMPLIANCE_JWT_PUBLIC_KEY: "/app/keys/public.pem"
+
+  # Token expiry durations
+  COMPLIANCE_TOKEN_EXPIRY: "1h"
+  COMPLIANCE_REFRESH_TOKEN_EXPIRY: "30d"
+
+  # CORS: comma-separated list of allowed origins
+  # Override in overlays to match the actual ingress hostname
+  COMPLIANCE_CORS_ORIGIN: "http://pally-dashboard:5000"

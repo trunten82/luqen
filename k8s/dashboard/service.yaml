@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pally-dashboard
+  namespace: pally
+  labels:
+    app.kubernetes.io/name: pally-dashboard
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: pally-ecosystem
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: pally-dashboard
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+      protocol: TCP

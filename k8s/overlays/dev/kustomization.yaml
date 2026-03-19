@@ -1,0 +1,129 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Inherit everything from the base and apply dev-specific overrides
+bases:
+  - ../../
+
+namespace: pally
+
+# Dev image tags — CI/CD replaces these via `kustomize edit set image`
+images:
+  - name: "${REGISTRY}/pally-compliance:${TAG}"
+    newName: ghcr.io/your-org/pally-compliance
+    newTag: dev
+  - name: "${REGISTRY}/pally-dashboard:${TAG}"
+    newName: ghcr.io/your-org/pally-dashboard
+    newTag: dev
+
+patches:
+  # ── Compliance: 1 replica, halved resource limits ──────────────────────────
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: pally-compliance
+        namespace: pally
+      spec:
+        replicas: 1
+        template:
+          spec:
+            containers:
+              - name: compliance
+                resources:
+                  requests:
+                    memory: "64Mi"
+                    cpu: "100m"
+                  limits:
+                    memory: "128Mi"
+                    cpu: "250m"
+
+  # ── Dashboard: 1 replica, halved resource limits ───────────────────────────
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: pally-dashboard
+        namespace: pally
+      spec:
+        replicas: 1
+        template:
+          spec:
+            containers:
+              - name: dashboard
+                resources:
+                  requests:
+                    memory: "64Mi"
+                    cpu: "100m"
+                  limits:
+                    memory: "128Mi"
+                    cpu: "250m"
+
+  # ── HPA: lower min replicas for dev ────────────────────────────────────────
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: pally-compliance
+        namespace: pally
+      spec:
+        minReplicas: 1
+        maxReplicas: 3
+
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: pally-dashboard
+        namespace: pally
+      spec:
+        minReplicas: 1
+        maxReplicas: 2
+
+  # ── Ingress: no TLS in dev (uses HTTP only) ────────────────────────────────
+  - patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: pally
+        namespace: pally
+        annotations:
+          cert-manager.io/cluster-issuer: null
+          kubernetes.io/ingress.class: "nginx"
+      spec:
+        tls: []
+        rules:
+          - host: pally.dev.local
+            http:
+              paths:
+                - path: /api/docs(/|$)(.*)
+                  pathType: ImplementationSpecific
+                  backend:
+                    service:
+                      name: pally-compliance
+                      port:
+                        name: http
+                - path: /api(/|$)(.*)
+                  pathType: ImplementationSpecific
+                  backend:
+                    service:
+                      name: pally-compliance
+                      port:
+                        name: http
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: pally-dashboard
+                      port:
+                        name: http
+
+  # ── ConfigMap: dev CORS origin ─────────────────────────────────────────────
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: pally-compliance-config
+        namespace: pally
+      data:
+        COMPLIANCE_CORS_ORIGIN: "http://pally.dev.local"
