@@ -1,0 +1,222 @@
+{{! Scan progress page — SSE live updates }}
+
+<div class="progress-layout">
+
+  <section aria-labelledby="scan-info-heading" class="scan-info-card">
+    <h2 id="scan-info-heading" class="section-title">Scan Details</h2>
+    <dl class="detail-list">
+      <div class="detail-list__item">
+        <dt>Site URL</dt>
+        <dd><a href="{{scan.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scan.siteUrl}}</a></dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Standard</dt>
+        <dd>{{scan.standard}}</dd>
+      </div>
+      {{#if scan.jurisdictions}}
+      <div class="detail-list__item">
+        <dt>Jurisdictions</dt>
+        <dd>{{scan.jurisdictions}}</dd>
+      </div>
+      {{/if}}
+      <div class="detail-list__item">
+        <dt>Started</dt>
+        <dd><time datetime="{{scan.createdAt}}">{{scan.createdAt}}</time></dd>
+      </div>
+    </dl>
+  </section>
+
+  {{! SSE live progress area }}
+  <section
+    aria-labelledby="progress-heading"
+    hx-ext="sse"
+    sse-connect="/scan/{{scan.id}}/events"
+    role="region"
+  >
+    <h2 id="progress-heading" class="section-title">Live Progress</h2>
+
+    <div
+      id="scan-status"
+      role="status"
+      aria-live="polite"
+      aria-label="Scan status"
+      class="status-banner status-banner--{{scan.status}}"
+    >
+      <span class="status-banner__icon" aria-hidden="true"></span>
+      <span id="status-text">
+        {{#if (eq scan.status 'queued')}}Queued — waiting for a scan slot…{{/if}}
+        {{#if (eq scan.status 'running')}}Scanning in progress…{{/if}}
+        {{#if (eq scan.status 'completed')}}Scan completed.{{/if}}
+        {{#if (eq scan.status 'failed')}}Scan failed.{{/if}}
+      </span>
+    </div>
+
+    <div class="progress-stats" role="region" aria-label="Scan progress statistics">
+      <div class="progress-stat">
+        <span class="progress-stat__label">Pages Discovered</span>
+        <span
+          id="pages-discovered"
+          class="progress-stat__value"
+          aria-live="polite"
+          sse-swap="discovery"
+          hx-swap="innerHTML"
+        >—</span>
+      </div>
+      <div class="progress-stat">
+        <span class="progress-stat__label">Pages Scanned</span>
+        <span
+          id="pages-scanned"
+          class="progress-stat__value"
+          aria-live="polite"
+        >{{scan.pagesScanned}}</span>
+      </div>
+      <div class="progress-stat">
+        <span class="progress-stat__label">Issues Found</span>
+        <span
+          id="issues-count"
+          class="progress-stat__value"
+          aria-live="polite"
+        >—</span>
+      </div>
+    </div>
+
+    <div
+      id="progress-bar-container"
+      class="progress-bar-container"
+      role="progressbar"
+      aria-label="Scan progress"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+    >
+      <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+    </div>
+
+    <div
+      id="current-url"
+      class="current-url"
+      aria-live="polite"
+      aria-label="Current page being scanned"
+      aria-atomic="true"
+    ></div>
+
+    <div
+      id="scan-log"
+      class="scan-log"
+      role="log"
+      aria-label="Scan event log"
+      aria-live="polite"
+      aria-relevant="additions"
+    ></div>
+
+    {{#if (eq scan.status 'failed')}}
+    <div class="alert alert--error" role="alert">
+      <strong>Error:</strong> {{scan.error}}
+      <div class="alert__actions">
+        <a href="/scan/new" class="btn btn--sm btn--primary">Try Again</a>
+      </div>
+    </div>
+    {{/if}}
+  </section>
+
+</div>
+
+<script>
+(function () {
+  var source = new EventSource('/scan/{{scan.id}}/events');
+  var log = document.getElementById('scan-log');
+  var statusText = document.getElementById('status-text');
+  var statusBanner = document.getElementById('scan-status');
+  var progressBar = document.getElementById('progress-bar');
+  var progressContainer = document.getElementById('progress-bar-container');
+  var currentUrlEl = document.getElementById('current-url');
+  var pagesScannedEl = document.getElementById('pages-scanned');
+  var issuesCountEl = document.getElementById('issues-count');
+  var pagesDiscoveredEl = document.getElementById('pages-discovered');
+
+  function addLog(msg) {
+    if (!log) return;
+    var li = document.createElement('div');
+    li.className = 'scan-log__entry';
+    li.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+    log.appendChild(li);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  source.addEventListener('scan_start', function (e) {
+    if (statusText) statusText.textContent = 'Scanning in progress\u2026';
+    if (statusBanner) { statusBanner.className = 'status-banner status-banner--running'; }
+    addLog('Scan started.');
+  });
+
+  source.addEventListener('discovery', function (e) {
+    try {
+      var evt = JSON.parse(e.data);
+      if (evt.data && evt.data.pagesDiscovered !== undefined && pagesDiscoveredEl) {
+        pagesDiscoveredEl.textContent = evt.data.pagesDiscovered;
+      }
+      addLog('Discovered ' + (evt.data ? evt.data.pagesDiscovered : '?') + ' pages.');
+    } catch (_) {}
+  });
+
+  source.addEventListener('scan_complete', function (e) {
+    try {
+      var evt = JSON.parse(e.data);
+      var d = evt.data || {};
+      if (d.pagesScanned !== undefined && pagesScannedEl) {
+        pagesScannedEl.textContent = d.pagesScanned;
+      }
+      if (d.totalPages && d.pagesScanned !== undefined && progressContainer && progressBar) {
+        var pct = Math.round((d.pagesScanned / d.totalPages) * 100);
+        progressBar.style.width = pct + '%';
+        progressContainer.setAttribute('aria-valuenow', pct);
+      }
+      if (d.currentUrl && currentUrlEl) {
+        currentUrlEl.textContent = 'Scanning: ' + d.currentUrl;
+      }
+      if (d.issues && issuesCountEl) {
+        issuesCountEl.textContent = (d.issues.errors || 0) + ' errors, ' + (d.issues.warnings || 0) + ' warnings';
+      }
+    } catch (_) {}
+  });
+
+  source.addEventListener('compliance', function (e) {
+    if (statusText) statusText.textContent = 'Running compliance check\u2026';
+    addLog('Running compliance check.');
+  });
+
+  source.addEventListener('complete', function (e) {
+    source.close();
+    try {
+      var evt = JSON.parse(e.data);
+      var reportUrl = (evt.data && evt.data.reportUrl) ? evt.data.reportUrl : '/reports';
+      if (progressBar) progressBar.style.width = '100%';
+      if (progressContainer) progressContainer.setAttribute('aria-valuenow', '100');
+      if (statusText) statusText.textContent = 'Scan completed! Redirecting to report\u2026';
+      if (statusBanner) statusBanner.className = 'status-banner status-banner--completed';
+      if (currentUrlEl) currentUrlEl.textContent = '';
+      addLog('Scan complete.');
+      setTimeout(function () { window.location.href = reportUrl; }, 1500);
+    } catch (_) {
+      window.location.href = '/reports';
+    }
+  });
+
+  source.addEventListener('failed', function (e) {
+    source.close();
+    try {
+      var evt = JSON.parse(e.data);
+      var errMsg = (evt.data && evt.data.error) ? evt.data.error : 'Unknown error';
+      if (statusText) statusText.textContent = 'Scan failed: ' + errMsg;
+      if (statusBanner) statusBanner.className = 'status-banner status-banner--failed';
+      addLog('Scan failed: ' + errMsg);
+    } catch (_) {
+      if (statusText) statusText.textContent = 'Scan failed.';
+    }
+  });
+
+  source.onerror = function () {
+    addLog('Connection interrupted. Reconnecting\u2026');
+  };
+}());
+</script>

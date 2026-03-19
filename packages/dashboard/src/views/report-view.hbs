@@ -1,0 +1,119 @@
+{{! Report viewer — iframe embedded HTML report }}
+
+<section aria-labelledby="report-meta-heading" class="report-meta">
+  <h2 id="report-meta-heading" class="section-title">Report Metadata</h2>
+  <dl class="detail-list detail-list--horizontal">
+    <div class="detail-list__item">
+      <dt>Site URL</dt>
+      <dd><a href="{{scan.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scan.siteUrl}}</a></dd>
+    </div>
+    <div class="detail-list__item">
+      <dt>Standard</dt>
+      <dd>{{scan.standard}}</dd>
+    </div>
+    <div class="detail-list__item">
+      <dt>Status</dt>
+      <dd>
+        <span class="badge badge--{{scan.status}}" aria-label="Status: {{scan.status}}">{{scan.status}}</span>
+      </dd>
+    </div>
+    {{#if scan.pagesScanned}}
+    <div class="detail-list__item">
+      <dt>Pages Scanned</dt>
+      <dd>{{scan.pagesScanned}}</dd>
+    </div>
+    {{/if}}
+    {{#if scan.errors}}
+    <div class="detail-list__item">
+      <dt>Errors</dt>
+      <dd class="text--error">{{scan.errors}}</dd>
+    </div>
+    {{/if}}
+    {{#if scan.warnings}}
+    <div class="detail-list__item">
+      <dt>Warnings</dt>
+      <dd class="text--warning">{{scan.warnings}}</dd>
+    </div>
+    {{/if}}
+    {{#if scan.notices}}
+    <div class="detail-list__item">
+      <dt>Notices</dt>
+      <dd>{{scan.notices}}</dd>
+    </div>
+    {{/if}}
+    {{#if scan.confirmedViolations}}
+    <div class="detail-list__item">
+      <dt>Confirmed Violations</dt>
+      <dd class="text--error">{{scan.confirmedViolations}}</dd>
+    </div>
+    {{/if}}
+    {{#if scan.jurisdictions}}
+    <div class="detail-list__item">
+      <dt>Jurisdictions</dt>
+      <dd>{{scan.jurisdictions}}</dd>
+    </div>
+    {{/if}}
+    <div class="detail-list__item">
+      <dt>Date</dt>
+      <dd><time datetime="{{scan.createdAt}}">{{scan.createdAtDisplay}}</time></dd>
+    </div>
+    {{#if scan.completedAt}}
+    <div class="detail-list__item">
+      <dt>Completed</dt>
+      <dd><time datetime="{{scan.completedAt}}">{{scan.completedAtDisplay}}</time></dd>
+    </div>
+    {{/if}}
+  </dl>
+
+  <div class="report-actions" role="group" aria-label="Report actions">
+    <a href="/reports" class="btn btn--ghost btn--sm" aria-label="Back to reports list">
+      &larr; Back to Reports
+    </a>
+    {{#if scan.hasHtmlReport}}
+    <a
+      href="/reports/{{scan.id}}/raw"
+      class="btn btn--ghost btn--sm"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Open raw HTML report in new tab"
+    >
+      Open Full Report
+    </a>
+    {{/if}}
+  </div>
+</section>
+
+{{#if scan.hasHtmlReport}}
+<section aria-labelledby="report-content-heading" class="report-iframe-section">
+  <h2 id="report-content-heading" class="section-title">Report Content</h2>
+  <iframe
+    src="/reports/{{scan.id}}/raw"
+    title="Accessibility report for {{scan.siteUrl}}"
+    class="report-iframe"
+    aria-label="Accessibility report content"
+    loading="lazy"
+  ></iframe>
+</section>
+{{else if (eq scan.status 'failed')}}
+<div class="alert alert--error" role="alert">
+  <strong>Scan Failed</strong>
+  {{#if scan.error}}
+  <p>{{scan.error}}</p>
+  {{/if}}
+  <a href="/scan/new" class="btn btn--sm btn--primary">Try Again</a>
+</div>
+{{else if (eq scan.status 'running')}}
+<div class="alert alert--info" role="status" aria-live="polite">
+  Scan is still in progress.
+  <a href="/scan/{{scan.id}}/progress" class="btn btn--sm btn--ghost">View Progress</a>
+</div>
+{{else if (eq scan.status 'queued')}}
+<div class="alert alert--info" role="status" aria-live="polite">
+  Scan is queued.
+  <a href="/scan/{{scan.id}}/progress" class="btn btn--sm btn--ghost">View Queue Status</a>
+</div>
+{{else}}
+<div class="alert alert--info" role="status">
+  No report file available.
+</div>
+{{/if}}

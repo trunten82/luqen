@@ -1,0 +1,127 @@
+{{! Home page — summary stats and recent scans }}
+
+<section aria-labelledby="stats-heading">
+  <h2 id="stats-heading" class="section-title">Overview</h2>
+  <div class="stats-grid" role="list" aria-label="Summary statistics">
+    <article class="stat-card" role="listitem">
+      <span class="stat-card__value" aria-label="{{stats.totalScans}} total scans">{{stats.totalScans}}</span>
+      <span class="stat-card__label">Total Scans</span>
+    </article>
+    <article class="stat-card" role="listitem">
+      <span class="stat-card__value" aria-label="{{stats.scansThisWeek}} scans this week">{{stats.scansThisWeek}}</span>
+      <span class="stat-card__label">Scans This Week</span>
+    </article>
+    <article class="stat-card" role="listitem">
+      <span class="stat-card__value" aria-label="{{stats.pagesScanned}} pages scanned">{{stats.pagesScanned}}</span>
+      <span class="stat-card__label">Pages Scanned</span>
+    </article>
+    <article class="stat-card" role="listitem">
+      <span class="stat-card__value" aria-label="{{stats.issuesFound}} issues found">{{stats.issuesFound}}</span>
+      <span class="stat-card__label">Issues Found</span>
+    </article>
+  </div>
+</section>
+
+<section aria-labelledby="quick-scan-heading" class="quick-scan-section">
+  <h2 id="quick-scan-heading" class="section-title">Quick Scan</h2>
+  <form method="POST" action="/scan/new" class="quick-scan-form" aria-describedby="quick-scan-desc">
+    <p id="quick-scan-desc" class="form-hint">
+      Enter a URL to start a new accessibility scan with default settings.
+    </p>
+    <div class="input-group">
+      <label for="quick-url" class="sr-only">Website URL</label>
+      <input
+        type="url"
+        id="quick-url"
+        name="siteUrl"
+        class="form-control"
+        placeholder="https://example.com"
+        autocomplete="url"
+        aria-required="true"
+        required
+      >
+      <input type="hidden" name="standard" value="WCAG2AA">
+      <button type="submit" class="btn btn--primary">
+        <svg class="btn__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 6v4l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Scan Now
+      </button>
+    </div>
+    <p class="form-hint">
+      <a href="/scan/new">Advanced scan options</a> — choose jurisdictions, WCAG level, and concurrency.
+    </p>
+  </form>
+</section>
+
+<section aria-labelledby="recent-scans-heading">
+  <div class="section-header">
+    <h2 id="recent-scans-heading" class="section-title">Recent Scans</h2>
+    <a href="/reports" class="btn btn--ghost btn--sm">View all reports</a>
+  </div>
+
+  {{#if recentScans.length}}
+  <div class="table-responsive" role="region" aria-label="Recent scans table" tabindex="0">
+    <table class="data-table" aria-label="Recent scans">
+      <caption class="sr-only">Most recent accessibility scans</caption>
+      <thead>
+        <tr>
+          <th scope="col">Site URL</th>
+          <th scope="col">Status</th>
+          <th scope="col">Standard</th>
+          <th scope="col">Pages</th>
+          <th scope="col">Issues</th>
+          <th scope="col">Date</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each recentScans}}
+        <tr id="scan-{{id}}">
+          <td class="cell--url">
+            <a href="/reports/{{id}}" aria-label="View report for {{siteUrl}}">
+              {{siteUrl}}
+            </a>
+          </td>
+          <td>
+            <span class="badge badge--{{status}}" aria-label="Status: {{status}}">
+              {{status}}
+            </span>
+          </td>
+          <td>{{standard}}</td>
+          <td>{{pagesScanned}}</td>
+          <td>
+            {{#if totalIssues}}
+            <span>
+              <span class="text--error">{{errors}} errors</span>,
+              <span class="text--warning">{{warnings}} warnings</span>,
+              {{notices}} notices
+            </span>
+            {{else}}
+            —
+            {{/if}}
+          </td>
+          <td>
+            <time datetime="{{createdAt}}">{{createdAtDisplay}}</time>
+          </td>
+          <td>
+            {{#if (eq status 'completed')}}
+            <a href="/reports/{{id}}" class="btn btn--sm btn--ghost">View Report</a>
+            {{else if (eq status 'running')}}
+            <a href="/scan/{{id}}/progress" class="btn btn--sm btn--ghost">View Progress</a>
+            {{else if (eq status 'queued')}}
+            <a href="/scan/{{id}}/progress" class="btn btn--sm btn--ghost">View Queue</a>
+            {{/if}}
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="empty-state" role="status">
+    <p>No scans yet. Start your first scan using the quick scan form above.</p>
+  </div>
+  {{/if}}
+</section>

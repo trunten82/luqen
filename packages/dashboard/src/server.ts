@@ -1,10 +1,27 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DashboardConfig } from './config.js';
+import { registerSession } from './auth/session.js';
+import { authGuard } from './auth/middleware.js';
+import { authRoutes } from './routes/auth.js';
+import { homeRoutes } from './routes/home.js';
+import { scanRoutes } from './routes/scan.js';
+import { reportRoutes } from './routes/reports.js';
+import { ScanDb } from './db/scans.js';
+import { ScanOrchestrator } from './scanner/orchestrator.js';
 
-/**
- * Creates and configures the Fastify application instance.
- * Plugins, routes, and views are registered here.
- */
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
+// Routes that bypass auth guard
+const PUBLIC_PATHS = new Set(['/login', '/health']);
+
+function isPublicPath(path: string): boolean {
+  if (PUBLIC_PATHS.has(path)) return true;
+  if (path.startsWith('/static/')) return true;
+  return false;
+}
+
 export async function createServer(config: DashboardConfig): Promise<FastifyInstance> {
   const server = Fastify({
     logger: {
@@ -12,8 +29,61 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     },
   });
 
-  // Plugins, routes, and views will be registered in subsequent implementation steps.
-  // For now, register a health endpoint so the server is functional.
+  // ── Database & orchestrator ──────────────────────────────────────────────
+  const db = new ScanDb(config.dbPath);
+  db.initialize();
+
+  const orchestrator = new ScanOrchestrator(db, config.reportsDir, config.maxConcurrentScans);
+
+  // ── Plugins ──────────────────────────────────────────────────────────────
+  await server.register(import('@fastify/formbody'));
+
+  await registerSession(server, config.sessionSecret);
+
+  // Static files
+  const staticDir = resolve(join(__dirname, 'static'));
+  await server.register(import('@fastify/static'), {
+    root: staticDir,
+    prefix: '/static/',
+    decorateReply: false,
+  });
+
+  // Handlebars views
+  const viewsDir = resolve(join(__dirname, 'views'));
+  await server.register(import('@fastify/view'), {
+    engine: { handlebars: (await import('handlebars')).default },
+    root: viewsDir,
+    layout: 'layouts/main.hbs',
+    options: {
+      partials: {
+        sidebar: 'partials/sidebar.hbs',
+        'reports-table': 'partials/reports-table.hbs',
+      },
+      helpers: {
+        eq: (a: unknown, b: unknown) => a === b,
+        canScan: (role: string) => role === 'user' || role === 'admin',
+        isAdmin: (role: string) => role === 'admin',
+        startsWith: (str: string, prefix: string) =>
+          typeof str === 'string' && str.startsWith(prefix),
+      },
+    },
+  });
+
+  // ── Global auth guard ─────────────────────────────────────────────────────
+  server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (isPublicPath(request.url.split('?')[0])) {
+      return;
+    }
+    await authGuard(request, reply);
+  });
+
+  // ── Routes ────────────────────────────────────────────────────────────────
+  await authRoutes(server, config);
+  await homeRoutes(server, db);
+  await scanRoutes(server, db, orchestrator, config);
+  await reportRoutes(server, db);
+
+  // ── Health endpoint ───────────────────────────────────────────────────────
   server.get('/health', async (_request, _reply) => {
     return { status: 'ok', version: '0.1.0' };
   });
