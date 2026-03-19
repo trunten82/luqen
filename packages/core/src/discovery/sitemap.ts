@@ -24,7 +24,14 @@ export async function parseSitemap(sitemapUrl: string): Promise<string[]> {
   async function processSitemap(url: string): Promise<void> {
     const xml = await fetchXml(url);
     if (!xml) return;
-    const parsed = (await parseStringPromise(xml)) as SitemapUrlset & SitemapIndex;
+
+    let parsed: SitemapUrlset & SitemapIndex;
+    try {
+      parsed = (await parseStringPromise(xml)) as SitemapUrlset & SitemapIndex;
+    } catch {
+      // Not valid XML (e.g. WAF/bot protection returning HTML) — skip
+      return;
+    }
 
     if (parsed.sitemapindex?.sitemap) {
       const childUrls = parsed.sitemapindex.sitemap

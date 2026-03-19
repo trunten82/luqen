@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pally Accessibility Report — https://www.camparigroup.com</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f3f4f6; --surface: #fff; --text: #111827; --text-muted: #6b7280;
+      --border: #e5e7eb; --header-bg: #1e293b; --header-text: #f1f5f9;
+      --err: #dc2626; --err-bg: #fef2f2; --err-border: #fca5a5;
+      --warn: #d97706; --warn-bg: #fffbeb; --warn-border: #fcd34d;
+      --note: #2563eb; --note-bg: #eff6ff; --note-border: #93c5fd;
+      --pass: #16a34a; --pass-bg: #f0fdf4; --fail: #dc2626; --fail-bg: #fef2f2;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a; --surface: #1e293b; --text: #e2e8f0; --text-muted: #94a3b8;
+        --border: #334155; --header-bg: #0f172a;
+        --err-bg: #451a1a; --err-border: #991b1b;
+        --warn-bg: #451a03; --warn-border: #92400e;
+        --note-bg: #1e3a5f; --note-border: #1e40af;
+        --pass-bg: #14532d; --fail-bg: #451a1a;
+      }
+    }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
+    /* Sticky header */
+    .top-bar { position: sticky; top: 0; z-index: 100; background: var(--header-bg); color: var(--header-text); padding: 0.75rem 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .top-bar h1 { font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
+    .top-bar-stats { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .pill-err { background: var(--err); color: #fff; }
+    .pill-warn { background: var(--warn); color: #fff; }
+    .pill-note { background: var(--note); color: #fff; }
+    .pill-total { background: #475569; color: #fff; }
+    /* Executive header */
+    .exec-header { background: var(--header-bg); color: var(--header-text); padding: 2rem 2rem 1.5rem; }
+    .exec-header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .exec-header .site-url { font-size: 1rem; color: #94a3b8; word-break: break-all; }
+    .exec-header .scan-meta { margin-top: 0.75rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    /* Summary cards */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .summary-card { background: var(--surface); border-radius: 10px; padding: 1.25rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; border-top: 3px solid var(--border); }
+    .summary-card .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600; }
+    .summary-card .value { font-size: 2rem; font-weight: 800; margin-top: 0.2rem; }
+    .summary-card.error { border-top-color: var(--err); }
+    .summary-card.error .value { color: var(--err); }
+    .summary-card.warning { border-top-color: var(--warn); }
+    .summary-card.warning .value { color: var(--warn); }
+    .summary-card.notice { border-top-color: var(--note); }
+    .summary-card.notice .value { color: var(--note); }
+    .summary-card.total .value { color: var(--text); }
+    .summary-card .subtext { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
+    /* Donut chart */
+    .chart-row { display: flex; align-items: center; justify-content: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .donut-wrap { position: relative; width: 140px; height: 140px; }
+    .donut-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .donut-wrap circle { fill: none; stroke-width: 18; }
+    .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .donut-center .big { font-size: 1.6rem; font-weight: 800; }
+    .donut-center .small { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .legend { display: flex; flex-direction: column; gap: 0.5rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    /* Compliance matrix */
+    .compliance-section { background: var(--surface); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 2rem; overflow: hidden; }
+    .compliance-section-header { background: var(--header-bg); color: var(--header-text); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+    .compliance-section-header h2 { font-size: 1rem; font-weight: 700; }
+    .compliance-meta { display: flex; gap: 0.75rem; font-size: 0.8rem; }
+    .compliance-meta span { padding: 0.2rem 0.7rem; border-radius: 6px; font-weight: 600; }
+    .compliance-meta .pass-count { background: var(--pass); color: #fff; }
+    .compliance-meta .fail-count { background: var(--fail); color: #fff; }
+    .jurisdiction-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; padding: 1.25rem; }
+    .juris-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .juris-card-head { padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; }
+    .juris-card-head.pass-head { background: var(--pass-bg); border-bottom: 2px solid var(--pass); }
+    .juris-card-head.fail-head { background: var(--fail-bg); border-bottom: 2px solid var(--fail); }
+    .juris-name { font-weight: 700; font-size: 0.95rem; }
+    .juris-id { font-size: 0.72rem; color: var(--text-muted); }
+    .juris-status { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+    .juris-status.s-pass { color: var(--pass); }
+    .juris-status.s-fail { color: var(--fail); }
+    .juris-body { padding: 0.75rem 1rem; font-size: 0.82rem; }
+    .juris-body .viol-line { margin-bottom: 0.4rem; }
+    .juris-body .viol-count { font-weight: 700; }
+    .juris-body .viol-count.has-violations { color: var(--fail); }
+    .juris-regs { margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .compliance-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .compliance-table th { background: var(--bg); padding: 0.6rem 1.25rem; text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+    .compliance-table td { padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .compliance-table tr:last-child td { border-bottom: none; }
+    .compliance-pass { color: var(--pass); font-weight: 700; }
+    .compliance-fail { color: var(--fail); font-weight: 700; }
+    .status-badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; }
+    .status-badge.pass { background: var(--pass-bg); color: var(--pass); }
+    .status-badge.fail { background: var(--fail-bg); color: var(--fail); }
+    .reg-tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; margin: 0.1rem 0.15rem 0.1rem 0; white-space: nowrap; text-decoration: none; }
+    .reg-tag.obligation-mandatory { background: var(--err-bg); color: var(--err); border: 1px solid var(--err-border); }
+    .reg-tag.obligation-recommended { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-border); }
+    .reg-tag.obligation-optional { background: var(--note-bg); color: var(--note); border: 1px solid var(--note-border); }
+    .wcag-link { color: inherit; text-decoration: underline dotted; }
+    .wcag-link:hover { text-decoration: underline; }
+    /* Template issues section */
+    .template-section { background: var(--surface); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 2rem; overflow: hidden; }
+    .template-section-header { background: #7c3aed; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+    .template-section-header h2 { font-size: 1rem; font-weight: 700; }
+    .template-section-desc { font-size: 0.8rem; opacity: 0.85; margin-top: 0.25rem; }
+    .template-meta { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .template-badge { background: rgba(255,255,255,0.2); color: #fff; padding: 0.2rem 0.7rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+    .template-issue-row { border-bottom: 1px solid var(--border); padding: 0.9rem 1.25rem; font-size: 0.82rem; }
+    .template-issue-row:last-child { border-bottom: none; }
+    .template-affected { margin-top: 0.4rem; font-size: 0.75rem; color: var(--text-muted); }
+    .template-affected summary { cursor: pointer; color: #7c3aed; font-weight: 600; }
+    .template-affected ul { margin-top: 0.3rem; padding-left: 1.2rem; }
+    .template-affected li { font-size: 0.72rem; word-break: break-all; }
+    .reg-enforcement { font-size: 0.7rem; color: var(--text-muted); }
+    /* Controls */
+    .controls { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .search-box { padding: 0.4rem 0.75rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; width: 220px; }
+    .search-box::placeholder { color: var(--text-muted); }
+    .btn { padding: 0.4rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); transition: background 0.15s, color 0.15s; }
+    .btn:hover { background: var(--bg); }
+    .btn.active { background: var(--header-bg); color: #fff; border-color: var(--header-bg); }
+    .btn.error-filter.active { background: var(--err); border-color: var(--err); color: #fff; }
+    .btn.warning-filter.active { background: var(--warn); border-color: var(--warn); color: #fff; }
+    .btn.notice-filter.active { background: var(--note); border-color: var(--note); color: #fff; }
+    .expand-controls { margin-left: auto; display: flex; gap: 0.4rem; }
+    /* Page sections */
+    .page-section { background: var(--surface); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 0.75rem; overflow: hidden; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.25rem; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: background 0.1s; }
+    .page-header:hover { background: var(--bg); }
+    .page-header.has-issues { border-bottom-color: var(--border); }
+    .page-url { font-size: 0.88rem; font-weight: 600; color: var(--note); word-break: break-all; }
+    .page-meta { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; margin-left: 1rem; }
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
+    .badge.error { background: var(--err-bg); color: var(--err); }
+    .badge.warning { background: var(--warn-bg); color: var(--warn); }
+    .badge.notice { background: var(--note-bg); color: var(--note); }
+    .badge.clean { background: var(--pass-bg); color: var(--pass); }
+    .chevron { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
+    .page-body { padding: 0; }
+    .page-body.collapsed { display: none; }
+    /* Issue table */
+    .issue-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .issue-table th { background: var(--bg); padding: 0.55rem 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+    .issue-table td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .issue-table tr:last-child td { border-bottom: none; }
+    .issue-table tr.type-error td:first-child { border-left: 3px solid var(--err); }
+    .issue-table tr.type-warning td:first-child { border-left: 3px solid var(--warn); }
+    .issue-table tr.type-notice td:first-child { border-left: 3px solid var(--note); }
+    .issue-code { font-family: var(--mono); font-size: 0.75rem; color: #7c3aed; word-break: break-all; }
+    .issue-context { font-family: var(--mono); font-size: 0.75rem; background: var(--bg); padding: 0.2rem 0.4rem; border-radius: 4px; word-break: break-all; display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+    .wcag-info { margin-top: 0.3rem; }
+    .wcag-title { font-weight: 600; font-size: 0.8rem; color: var(--text); }
+    .wcag-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .wcag-impact { font-size: 0.72rem; color: var(--warn); background: var(--warn-bg); padding: 0.12rem 0.4rem; border-radius: 3px; display: inline-block; margin-top: 0.2rem; }
+    .no-issues { padding: 1rem 1.25rem; color: var(--pass); font-size: 0.85rem; font-weight: 500; }
+    /* Errors section */
+    .errors-section { margin-top: 2rem; }
+    .errors-section h2 { font-size: 1rem; font-weight: 700; color: var(--err); margin-bottom: 0.75rem; }
+    .error-item { background: var(--err-bg); border: 1px solid var(--err-border); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.82rem; }
+    footer { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.75rem; border-top: 1px solid var(--border); margin-top: 2rem; }
+    /* Print */
+    @media print {
+      .top-bar, .controls, .expand-controls, .search-box { display: none !important; }
+      .page-body.collapsed { display: block !important; }
+      body { background: #fff; color: #000; }
+      .page-section, .summary-card, .compliance-section { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+      .exec-header { background: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 1rem; }
+      .summary-grid { grid-template-columns: repeat(3, 1fr); }
+      .jurisdiction-cards { grid-template-columns: 1fr; }
+      .issue-table { font-size: 0.75rem; }
+      .issue-table th, .issue-table td { padding: 0.5rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar" id="sticky-header">
+  <h1>Pally Report</h1>
+  <div class="top-bar-stats">
+    <span class="pill pill-total">26 issues</span>
+    <span class="pill pill-err">3 errors</span>
+    <span class="pill pill-warn">0 warnings</span>
+    <span class="pill pill-note">23 notices</span>
+  </div>
+</div>
+
+<div class="exec-header">
+  <h1>Accessibility Report</h1>
+  <div class="site-url">https://www.camparigroup.com</div>
+  <div class="scan-meta">
+    <span class="pill pill-total">1 pages scanned</span>
+    <span class="pill pill-err">3 errors</span>
+    <span class="pill pill-warn">0 warnings</span>
+    <span class="pill pill-note">23 notices</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="summary-grid">
+    <div class="summary-card total">
+      <div class="label">Pages Scanned</div>
+      <div class="value">1</div>
+      <div class="subtext">1 pages scanned</div>
+    </div>
+    <div class="summary-card total">
+      <div class="label">Total Issues</div>
+      <div class="value">26</div>
+    </div>
+    <div class="summary-card error">
+      <div class="label">Errors</div>
+      <div class="value">3</div>
+    </div>
+    <div class="summary-card warning">
+      <div class="label">Warnings</div>
+      <div class="value">0</div>
+    </div>
+    <div class="summary-card notice">
+      <div class="label">Notices</div>
+      <div class="value">23</div>
+    </div>
+    <div class="summary-card total">
+      <div class="label">Pages Failed</div>
+      <div class="value">0</div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="donut-wrap">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="41" stroke="#e5e7eb" />
+        <circle class="donut-err" cx="50" cy="50" r="41" stroke="#dc2626" stroke-dasharray="0 257.6" />
+        <circle class="donut-warn" cx="50" cy="50" r="41" stroke="#d97706" stroke-dasharray="0 257.6" />
+        <circle class="donut-note" cx="50" cy="50" r="41" stroke="#2563eb" stroke-dasharray="0 257.6" />
+      </svg>
+      <div class="donut-center">
+        <span class="big">26</span>
+        <span class="small">Issues</span>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot" style="background:#dc2626"></span> Errors: 3</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#d97706"></span> Warnings: 0</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#2563eb"></span> Notices: 23</div>
+    </div>
+  </div>
+
+  <div class="compliance-section" id="compliance-matrix">
+    <div class="compliance-section-header">
+      <h2>Legal Compliance Matrix</h2>
+      <div class="compliance-meta">
+        <span class="pass-count">0 Passing</span>
+        <span class="fail-count">3 Failing</span>
+      </div>
+    </div>
+    <div class="jurisdiction-cards">
+      <div class="juris-card">
+        <div class="juris-card-head fail-head">
+          <div>
+            <div class="juris-name">European Union</div>
+            <div class="juris-id">EU</div>
+          </div>
+          <div class="juris-status s-fail">fail</div>
+        </div>
+        <div class="juris-body">
+          <div class="viol-line">Mandatory violations: <span class="viol-count has-violations">52</span></div>
+          <div class="viol-line">Recommended violations: <span class="viol-count">0</span></div>
+          <div class="juris-regs">
+              <span class="reg-tag obligation-mandatory">EAA</span>
+            <span class="reg-enforcement">2025-06-28</span>
+              <span class="reg-tag obligation-mandatory">WAD</span>
+            <span class="reg-enforcement">2018-09-23</span>
+          </div>
+        </div>
+      </div>
+      <div class="juris-card">
+        <div class="juris-card-head fail-head">
+          <div>
+            <div class="juris-name">United States</div>
+            <div class="juris-id">US</div>
+          </div>
+          <div class="juris-status s-fail">fail</div>
+        </div>
+        <div class="juris-body">
+          <div class="viol-line">Mandatory violations: <span class="viol-count has-violations">52</span></div>
+          <div class="viol-line">Recommended violations: <span class="viol-count">0</span></div>
+          <div class="juris-regs">
+              <span class="reg-tag obligation-mandatory">Section 508</span>
+            <span class="reg-enforcement">1998-08-07</span>
+              <span class="reg-tag obligation-mandatory">ADA</span>
+            <span class="reg-enforcement">1990-07-26</span>
+          </div>
+        </div>
+      </div>
+      <div class="juris-card">
+        <div class="juris-card-head fail-head">
+          <div>
+            <div class="juris-name">United Kingdom</div>
+            <div class="juris-id">UK</div>
+          </div>
+          <div class="juris-status s-fail">fail</div>
+        </div>
+        <div class="juris-body">
+          <div class="viol-line">Mandatory violations: <span class="viol-count has-violations">52</span></div>
+          <div class="viol-line">Recommended violations: <span class="viol-count">0</span></div>
+          <div class="juris-regs">
+              <span class="reg-tag obligation-mandatory">Equality Act</span>
+            <span class="reg-enforcement">2010-10-01</span>
+              <span class="reg-tag obligation-mandatory">PSBAR</span>
+            <span class="reg-enforcement">2018-09-23</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <table class="compliance-table" aria-label="Compliance status by jurisdiction">
+      <thead>
+        <tr>
+          <th>Jurisdiction</th>
+          <th>Status</th>
+          <th>Mandatory Violations</th>
+          <th>Recommended Violations</th>
+          <th>Key Regulations</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>European Union</strong><br><span style="font-size:0.72rem;color:var(--text-muted)">EU</span></td>
+          <td><span class="status-badge fail">fail</span></td>
+          <td class="compliance-fail">52</td>
+          <td>0</td>
+          <td>
+              <span class="reg-tag obligation-mandatory">EAA</span>
+            <span class="reg-enforcement">(2025-06-28)</span>
+              <span class="reg-tag obligation-mandatory">WAD</span>
+            <span class="reg-enforcement">(2018-09-23)</span>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>United States</strong><br><span style="font-size:0.72rem;color:var(--text-muted)">US</span></td>
+          <td><span class="status-badge fail">fail</span></td>
+          <td class="compliance-fail">52</td>
+          <td>0</td>
+          <td>
+              <span class="reg-tag obligation-mandatory">Section 508</span>
+            <span class="reg-enforcement">(1998-08-07)</span>
+              <span class="reg-tag obligation-mandatory">ADA</span>
+            <span class="reg-enforcement">(1990-07-26)</span>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>United Kingdom</strong><br><span style="font-size:0.72rem;color:var(--text-muted)">UK</span></td>
+          <td><span class="status-badge fail">fail</span></td>
+          <td class="compliance-fail">52</td>
+          <td>0</td>
+          <td>
+              <span class="reg-tag obligation-mandatory">Equality Act</span>
+            <span class="reg-enforcement">(2010-10-01)</span>
+              <span class="reg-tag obligation-mandatory">PSBAR</span>
+            <span class="reg-enforcement">(2018-09-23)</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <div class="controls">
+    <input type="text" class="search-box" placeholder="Search by URL..." oninput="searchPages(this.value)" />
+    <button class="btn active" onclick="filterIssues('all', this)">All</button>
+    <button class="btn error-filter" onclick="filterIssues('error', this)">Errors</button>
+    <button class="btn warning-filter" onclick="filterIssues('warning', this)">Warnings</button>
+    <button class="btn notice-filter" onclick="filterIssues('notice', this)">Notices</button>
+    <div class="expand-controls">
+      <button class="btn" onclick="expandAll()">Expand All</button>
+      <button class="btn" onclick="collapseAll()">Collapse All</button>
+    </div>
+  </div>
+
+  <div class="page-section" data-url="https://www.camparigroup.com/" data-has-issues="26">
+    <div class="page-header has-issues" onclick="toggleSection(this)">
+      <span class="page-url">https://www.camparigroup.com/</span>
+      <div class="page-meta">
+          <span class="badge error">3 errors</span>
+          
+          <span class="badge notice">23 notices</span>
+        <span class="chevron">&#9660;</span>
+      </div>
+    </div>
+    <div class="page-body">
+      <table class="issue-table">
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>WCAG Criterion</th>
+            <th>What's Wrong</th>
+            <th>Legal Impact</th>
+            <th>Element</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="type-error" data-type="error">
+            <td><span class="badge error">error</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/page-titled" target="_blank" rel="noopener">2.4.2 &mdash; Page Titled</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.4.2</span>
+            </td>
+            <td>
+              A title should be provided for the document, using a non-empty title element in the head section.
+              <div class="wcag-info">
+                <div class="wcag-title">Page Titled</div>
+                <div class="wcag-desc">Web pages must have descriptive, meaningful titles.</div>
+                <div class="wcag-impact">Impact: Users navigating with browser tabs or screen readers cannot identify pages without titles.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code">html &gt; head</span></td>
+          </tr>
+          <tr class="type-error" data-type="error">
+            <td><span class="badge error">error</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/language-of-page" target="_blank" rel="noopener">3.1.1 &mdash; Language of Page</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 3.1.1</span>
+            </td>
+            <td>
+              The html element should have a lang or xml:lang attribute which describes the language of the document.
+              <div class="wcag-info">
+                <div class="wcag-title">Language of Page</div>
+                <div class="wcag-desc">The default human language of each page must be programmatically determinable.</div>
+                <div class="wcag-impact">Impact: Screen readers may mispronounce content if the page language is not declared in the HTML.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code">html</span></td>
+          </tr>
+          <tr class="type-error" data-type="error">
+            <td><span class="badge error">error</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/bypass-blocks" target="_blank" rel="noopener">2.4.1 &mdash; Bypass Blocks</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.4.1</span>
+            </td>
+            <td>
+              Iframe element requires a non-empty title attribute that identifies the frame.
+              <div class="wcag-info">
+                <div class="wcag-title">Bypass Blocks</div>
+                <div class="wcag-desc">A mechanism must be provided to skip repeated blocks of content (e.g., skip navigation links).</div>
+                <div class="wcag-impact">Impact: Keyboard users must tab through every navigation link on every page without a skip link.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code">#main-iframe</span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/meaningful-sequence" target="_blank" rel="noopener">1.3.2 &mdash; Meaningful Sequence</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 1.3.2</span>
+            </td>
+            <td>
+              Check that the content is ordered in a meaningful sequence when linearised, such as when style sheets are disabled.
+              <div class="wcag-info">
+                <div class="wcag-title">Meaningful Sequence</div>
+                <div class="wcag-desc">When the order of content matters, the correct reading sequence must be determinable programmatically.</div>
+                <div class="wcag-impact">Impact: Screen reader users encounter content out of order, leading to confusion.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/sensory-characteristics" target="_blank" rel="noopener">1.3.3 &mdash; Sensory Characteristics</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 1.3.3</span>
+            </td>
+            <td>
+              Where instructions are provided for understanding the content, do not rely on sensory characteristics alone (such as shape, size or location) to describe objects.
+              <div class="wcag-info">
+                <div class="wcag-title">Sensory Characteristics</div>
+                <div class="wcag-desc">Instructions must not rely solely on shape, color, size, visual location, orientation, or sound.</div>
+                <div class="wcag-impact">Impact: Users who are blind or color-blind cannot follow instructions tied to visual appearance alone.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/orientation" target="_blank" rel="noopener">1.3.4 &mdash; Orientation</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 1.3.4</span>
+            </td>
+            <td>
+              Check that content does not restrict its view and operation to a single display orientation, such as portrait or landscape, unless a specific display orientation is essential.
+              <div class="wcag-info">
+                <div class="wcag-title">Orientation</div>
+                <div class="wcag-desc">Content must not restrict its view and operation to a single display orientation unless essential.</div>
+                <div class="wcag-impact">Impact: Users who mount devices in a fixed orientation (e.g., wheelchair users) cannot use restricted content.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/use-of-color" target="_blank" rel="noopener">1.4.1 &mdash; Use of Color</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 1.4.1</span>
+            </td>
+            <td>
+              Check that any information conveyed using colour alone is also available in text, or through other visual cues.
+              <div class="wcag-info">
+                <div class="wcag-title">Use of Color</div>
+                <div class="wcag-desc">Color must not be used as the only visual means of conveying information.</div>
+                <div class="wcag-impact">Impact: Color-blind users cannot distinguish information conveyed by color alone.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/resize-text" target="_blank" rel="noopener">1.4.4 &mdash; Resize Text</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 1.4.4</span>
+            </td>
+            <td>
+              Check that text can be resized without assistive technology up to 200 percent without loss of content or functionality.
+              <div class="wcag-info">
+                <div class="wcag-title">Resize Text</div>
+                <div class="wcag-desc">Text must be resizable up to 200% without loss of content or functionality.</div>
+                <div class="wcag-impact">Impact: Users with low vision who increase text size may lose access to content if the page breaks.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/reflow" target="_blank" rel="noopener">1.4.10 &mdash; Reflow</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 1.4.10</span>
+            </td>
+            <td>
+              Check that content can be presented without loss of information or functionality, and without requiring scrolling in two dimensions for:     Vertical scrolling content at a width equivalent to 320 CSS pixels;     Horizontal scrolling content at a height equivalent to 256 CSS pixels;     Except for parts of the content which require two-dimensional layout for usage or meaning.
+              <div class="wcag-info">
+                <div class="wcag-title">Reflow</div>
+                <div class="wcag-desc">Content must reflow into a single column at 320 CSS pixels wide without loss of information or requiring horizontal scrolling.</div>
+                <div class="wcag-impact">Impact: Users with low vision who zoom into pages lose access to content requiring horizontal scrolling.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast" target="_blank" rel="noopener">1.4.11 &mdash; Non-text Contrast</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 1.4.11</span>
+            </td>
+            <td>
+              Check that the visual presentation of the following have a contrast ratio of at least 3:1 against adjacent color(s):     User Interface Components: Visual information required to identify user interface components and states, except for inactive components or where the appearance of the component is determined by the user agent and not modified by the author;     Graphical Objects: Parts of graphics required to understand the content, except when a particular presentation of graphics is essential to the information being conveyed.
+              <div class="wcag-info">
+                <div class="wcag-title">Non-text Contrast</div>
+                <div class="wcag-desc">UI components and graphical objects must have at least a 3:1 contrast ratio against adjacent colors.</div>
+                <div class="wcag-impact">Impact: Users with low vision cannot see interface controls or meaningful graphics with insufficient contrast.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/text-spacing" target="_blank" rel="noopener">1.4.12 &mdash; Text Spacing</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 1.4.12</span>
+            </td>
+            <td>
+              Check that no loss of content or functionality occurs by setting all of the following and by changing no other style property:              Line height (line spacing) to at least 1.5 times the font size;         Spacing following paragraphs to at least 2 times the font size;         Letter spacing (tracking) to at least 0.12 times the font size;         Word spacing to at least 0.16 times the font size.
+              <div class="wcag-info">
+                <div class="wcag-title">Text Spacing</div>
+                <div class="wcag-desc">Content must remain readable when users override line height, letter spacing, word spacing, and paragraph spacing.</div>
+                <div class="wcag-impact">Impact: Users with dyslexia who adjust text spacing may encounter content that breaks or overlaps.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/content-on-hover-or-focus" target="_blank" rel="noopener">1.4.13 &mdash; Content on Hover or Focus</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 1.4.13</span>
+            </td>
+            <td>
+              Check that where receiving and then removing pointer hover or keyboard focus triggers additional content to become visible and then hidden, the following are true:              Dismissable: A mechanism is available to dismiss the additional content without moving pointer hover or keyboard focus, unless the additional content communicates an input error or does not obscure or replace other content;         Hoverable: If pointer hover can trigger the additional content, then the pointer can be moved over the additional content without the additional content disappearing;         Persistent: The additional content remains visible until the hover or focus trigger is removed, the user dismisses it, or its information is no longer valid.
+              <div class="wcag-info">
+                <div class="wcag-title">Content on Hover or Focus</div>
+                <div class="wcag-desc">Content that appears on hover or focus must be dismissible, hoverable, and persistent.</div>
+                <div class="wcag-impact">Impact: Users with low vision and motor disabilities cannot access or dismiss tooltip-style content.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/character-key-shortcuts" target="_blank" rel="noopener">2.1.4 &mdash; Character Key Shortcuts</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.1.4</span>
+            </td>
+            <td>
+              Check that if a keyboard shortcut is implemented in content using only letter (including upper- and lower-case letters), punctuation, number, or symbol characters, then at least one of the following is true:              Turn off: A mechanism is available to turn the shortcut off;         Remap: A mechanism is available to remap the shortcut to use one or more non-printable keyboard characters (e.g. Ctrl, Alt, etc);         Active only on focus: The keyboard shortcut for a user interface component is only active when that component has focus.     
+              <div class="wcag-info">
+                <div class="wcag-title">Character Key Shortcuts</div>
+                <div class="wcag-desc">If single-character key shortcuts exist, users must be able to turn them off, remap, or activate only on focus.</div>
+                <div class="wcag-impact">Impact: Users who speak commands or have motor disabilities may accidentally trigger shortcuts.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/pause-stop-hide" target="_blank" rel="noopener">2.2.2 &mdash; Pause, Stop, Hide</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.2.2</span>
+            </td>
+            <td>
+              If any part of the content moves, scrolls or blinks for more than 5 seconds, or auto-updates, check that there is a mechanism available to pause, stop, or hide the content.
+              <div class="wcag-info">
+                <div class="wcag-title">Pause, Stop, Hide</div>
+                <div class="wcag-desc">Moving, blinking, or scrolling content that starts automatically and lasts more than 5 seconds must have a mechanism to pause, stop, or hide it.</div>
+                <div class="wcag-impact">Impact: Users with attention or cognitive disabilities are distracted by moving content they cannot stop.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/three-flashes-or-below-threshold" target="_blank" rel="noopener">2.3.1 &mdash; Three Flashes or Below Threshold</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.3.1</span>
+            </td>
+            <td>
+              Check that no component of the content flashes more than three times in any 1-second period, or that the size of any flashing area is sufficiently small.
+              <div class="wcag-info">
+                <div class="wcag-title">Three Flashes or Below Threshold</div>
+                <div class="wcag-desc">Pages must not contain content that flashes more than three times per second, or the flash is below thresholds.</div>
+                <div class="wcag-impact">Impact: Content that flashes rapidly can trigger seizures in users with photosensitive epilepsy.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/bypass-blocks" target="_blank" rel="noopener">2.4.1 &mdash; Bypass Blocks</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.4.1</span>
+            </td>
+            <td>
+              Ensure that any common navigation elements can be bypassed; for instance, by use of skip links, header elements, or ARIA landmark roles.
+              <div class="wcag-info">
+                <div class="wcag-title">Bypass Blocks</div>
+                <div class="wcag-desc">A mechanism must be provided to skip repeated blocks of content (e.g., skip navigation links).</div>
+                <div class="wcag-impact">Impact: Keyboard users must tab through every navigation link on every page without a skip link.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/multiple-ways" target="_blank" rel="noopener">2.4.5 &mdash; Multiple Ways</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.4.5</span>
+            </td>
+            <td>
+              If this Web page is not part of a linear process, check that there is more than one way of locating this Web page within a set of Web pages.
+              <div class="wcag-info">
+                <div class="wcag-title">Multiple Ways</div>
+                <div class="wcag-desc">More than one way must be provided to locate a page within a set of pages (e.g., search, site map, navigation).</div>
+                <div class="wcag-impact">Impact: Users who cannot use certain navigation mechanisms are blocked from finding content.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/headings-and-labels" target="_blank" rel="noopener">2.4.6 &mdash; Headings and Labels</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.4.6</span>
+            </td>
+            <td>
+              Check that headings and labels describe topic or purpose.
+              <div class="wcag-info">
+                <div class="wcag-title">Headings and Labels</div>
+                <div class="wcag-desc">Headings and labels must describe the topic or purpose of the associated content.</div>
+                <div class="wcag-impact">Impact: Screen reader users rely on headings to scan and navigate; vague headings make orientation impossible.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/pointer-gestures" target="_blank" rel="noopener">2.5.1 &mdash; Pointer Gestures</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.5.1</span>
+            </td>
+            <td>
+              Check that all functionality that uses multipoint or path-based gestures for operation can be operated with a single pointer without a path-based gesture, unless a multipoint or path-based gesture is essential.
+              <div class="wcag-info">
+                <div class="wcag-title">Pointer Gestures</div>
+                <div class="wcag-desc">All functionality that uses multipoint or path-based gestures must be operable with a single pointer.</div>
+                <div class="wcag-impact">Impact: Users with motor disabilities who cannot perform complex gestures (pinch, swipe) lose access.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/pointer-cancellation" target="_blank" rel="noopener">2.5.2 &mdash; Pointer Cancellation</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.5.2</span>
+            </td>
+            <td>
+              Check that for functionality that can be operated using a single pointer, at least one of the following is true:         No Down-Event: The down-event of the pointer is not used to execute any part of the function;         Abort or Undo: Completion of the function is on the up-event, and a mechanism is available to abort the function before completion or to undo the function after completion;         Up Reversal: The up-event reverses any outcome of the preceding down-event;         Essential: Completing the function on the down-event is essential.
+              <div class="wcag-info">
+                <div class="wcag-title">Pointer Cancellation</div>
+                <div class="wcag-desc">Functions triggered by a single pointer must be cancellable or reversible to prevent accidental activation.</div>
+                <div class="wcag-impact">Impact: Users with tremors who accidentally touch a target cannot undo unintended actions.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/label-in-name" target="_blank" rel="noopener">2.5.3 &mdash; Label in Name</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.5.3</span>
+            </td>
+            <td>
+              Check that for user interface components with labels that include text or images of text, the name contains the text that is presented visually.
+              <div class="wcag-info">
+                <div class="wcag-title">Label in Name</div>
+                <div class="wcag-desc">For UI components with visible text labels, the accessible name must contain the visible text.</div>
+                <div class="wcag-impact">Impact: Voice control users who speak the visible label cannot activate controls with mismatched accessible names.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/motion-actuation" target="_blank" rel="noopener">2.5.4 &mdash; Motion Actuation</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 2.5.4</span>
+            </td>
+            <td>
+              Check that functionality that can be operated by device motion or user motion can also be operated by user interface components and responding to the motion can be disabled to prevent accidental actuation, except when:              Supported Interface: The motion is used to operate functionality through an accessibility supported interface;         Essential: The motion is essential for the function and doing so would invalidate the activity.     
+              <div class="wcag-info">
+                <div class="wcag-title">Motion Actuation</div>
+                <div class="wcag-desc">Functionality triggered by device motion must also be operable through UI components, with the ability to disable motion response.</div>
+                <div class="wcag-impact">Impact: Users with tremors or who mount devices in fixed positions cannot use motion-triggered features.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/language-of-parts" target="_blank" rel="noopener">3.1.2 &mdash; Language of Parts</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 3.1.2</span>
+            </td>
+            <td>
+              Ensure that any change in language is marked using the lang and/or xml:lang attribute on an element, as appropriate.
+              <div class="wcag-info">
+                <div class="wcag-title">Language of Parts</div>
+                <div class="wcag-desc">The language of each passage or phrase in the content must be programmatically determinable.</div>
+                <div class="wcag-impact">Impact: Screen readers cannot switch pronunciation correctly between languages when parts are not marked up.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/consistent-navigation" target="_blank" rel="noopener">3.2.3 &mdash; Consistent Navigation</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 3.2.3</span>
+            </td>
+            <td>
+              Check that navigational mechanisms that are repeated on multiple Web pages occur in the same relative order each time they are repeated, unless a change is initiated by the user.
+              <div class="wcag-info">
+                <div class="wcag-title">Consistent Navigation</div>
+                <div class="wcag-desc">Navigation mechanisms repeated across pages must occur in the same relative order each time.</div>
+                <div class="wcag-impact">Impact: Users with cognitive disabilities are confused when navigation moves around between pages.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/consistent-identification" target="_blank" rel="noopener">3.2.4 &mdash; Consistent Identification</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 3.2.4</span>
+            </td>
+            <td>
+              Check that components that have the same functionality within this Web page are identified consistently in the set of Web pages to which it belongs.
+              <div class="wcag-info">
+                <div class="wcag-title">Consistent Identification</div>
+                <div class="wcag-desc">Components with the same functionality must be identified consistently across the website.</div>
+                <div class="wcag-impact">Impact: Users who learn one component cannot transfer that knowledge when identical components are labeled differently.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+          <tr class="type-notice" data-type="notice">
+            <td><span class="badge notice">notice</span></td>
+            <td>
+                  <a class="issue-code wcag-link" href="https://www.w3.org/WAI/WCAG21/Understanding/status-messages" target="_blank" rel="noopener">4.1.3 &mdash; Status Messages</a>
+                <br><span style="font-size:0.68rem;color:var(--text-muted)">WCAG 4.1.3</span>
+            </td>
+            <td>
+              Check that status messages can be programmatically determined through role or properties such that they can be presented to the user by assistive technologies without receiving focus.
+              <div class="wcag-info">
+                <div class="wcag-title">Status Messages</div>
+                <div class="wcag-desc">Status messages must be programmatically determinable so they can be announced by assistive technology without receiving focus.</div>
+                <div class="wcag-impact">Impact: Screen reader users do not hear status updates (e.g., &quot;Item added to cart&quot;) that appear dynamically.</div>
+              </div>
+            </td>
+            <td>
+                  <span class="reg-tag obligation-mandatory">EAA</span>
+                  <span class="reg-tag obligation-mandatory">WAD</span>
+                  <span class="reg-tag obligation-mandatory">Section 508</span>
+                  <span class="reg-tag obligation-mandatory">ADA</span>
+                  <span class="reg-tag obligation-mandatory">Equality Act</span>
+                  <span class="reg-tag obligation-mandatory">PSBAR</span>
+            </td>
+            <td><span class="issue-code"></span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+</div>
+
+<footer>Generated by pally-agent</footer>
+
+<script>
+  function toggleSection(header) {
+    var body = header.nextElementSibling;
+    var chevron = header.querySelector('.chevron');
+    if (body.classList.contains('collapsed')) {
+      body.classList.remove('collapsed');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+    } else {
+      body.classList.add('collapsed');
+      if (chevron) chevron.style.transform = 'rotate(-90deg)';
+    }
+  }
+
+  function expandAll() {
+    document.querySelectorAll('.page-body').forEach(function(body) {
+      body.classList.remove('collapsed');
+    });
+    document.querySelectorAll('.chevron').forEach(function(c) {
+      c.style.transform = 'rotate(0deg)';
+    });
+  }
+
+  function collapseAll() {
+    document.querySelectorAll('.page-body').forEach(function(body) {
+      body.classList.add('collapsed');
+    });
+    document.querySelectorAll('.chevron').forEach(function(c) {
+      c.style.transform = 'rotate(-90deg)';
+    });
+  }
+
+  function filterIssues(type, btn) {
+    document.querySelectorAll('.controls .btn:not(.expand-controls .btn)').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    document.querySelectorAll('.page-section').forEach(function(section) {
+      if (type === 'all') {
+        section.style.display = '';
+        section.querySelectorAll('tr[data-type]').forEach(function(row) { row.style.display = ''; });
+      } else {
+        var rows = section.querySelectorAll('tr[data-type]');
+        if (rows.length === 0) { section.style.display = ''; return; }
+        var visible = 0;
+        rows.forEach(function(row) {
+          if (row.dataset.type === type) { row.style.display = ''; visible++; }
+          else { row.style.display = 'none'; }
+        });
+        section.style.display = visible === 0 ? 'none' : '';
+      }
+    });
+  }
+
+  function searchPages(query) {
+    var q = query.toLowerCase();
+    document.querySelectorAll('.page-section').forEach(function(section) {
+      var url = (section.getAttribute('data-url') || '').toLowerCase();
+      section.style.display = (!q || url.indexOf(q) !== -1) ? '' : 'none';
+    });
+  }
+
+  /* Donut chart animation */
+  (function() {
+    var total = 26;
+    if (!total) return;
+    var err = 3, warn = 0, note = 23;
+    var C = 2 * Math.PI * 41;
+    var errLen = (err / total) * C, warnLen = (warn / total) * C, noteLen = (note / total) * C;
+    var ce = document.querySelector('.donut-err');
+    var cw = document.querySelector('.donut-warn');
+    var cn = document.querySelector('.donut-note');
+    if (ce) { ce.setAttribute('stroke-dasharray', errLen + ' ' + C); ce.setAttribute('stroke-dashoffset', '0'); }
+    if (cw) { cw.setAttribute('stroke-dasharray', warnLen + ' ' + C); cw.setAttribute('stroke-dashoffset', '-' + errLen); }
+    if (cn) { cn.setAttribute('stroke-dasharray', noteLen + ' ' + C); cn.setAttribute('stroke-dashoffset', '-' + (errLen + warnLen)); }
+  })();
+</script>
+</body>
+</html>
