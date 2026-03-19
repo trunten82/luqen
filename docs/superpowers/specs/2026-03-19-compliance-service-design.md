@@ -881,6 +881,53 @@ pally-compliance mcp
 25. **ProposedChange apply:** Approving an update proposal with `action: "update"` and `entityType: "regulation"` modifies only the fields in `after`, leaving other fields unchanged.
 26. **Wildcard level inheritance:** A `wcagCriterion: "*"` requirement at level AA matches issues from both WCAG2A and WCAG2AA codes.
 
+## Documentation Deliverables
+
+The following documentation must be produced as part of this milestone:
+
+### 1. Product Documentation (`docs/compliance/README.md`)
+
+Comprehensive documentation covering:
+
+- **Overview** — what the compliance service is, the problem it solves, how it fits in the pally ecosystem
+- **Getting Started** — prerequisites, installation (npm, Docker, from source), first-run walkthrough
+- **Configuration** — all config fields, env vars, precedence order, example configs
+- **Authentication** — OAuth2 setup, creating clients, obtaining tokens, scope reference
+- **REST API Reference** — every endpoint with request/response examples
+- **Compliance Check Guide** — how to check issues, reading the matrix, understanding obligation levels
+- **Data Model** — jurisdictions, regulations, requirements with relationship diagrams
+- **MCP Server** — setup in Claude Code, all 11 tools with examples
+- **A2A Agent** — agent card, task flow, peer discovery, inter-agent auth
+- **Database Adapters** — SQLite (default), switching to MongoDB or PostgreSQL
+- **Baseline Data** — what's included, how to seed, how to verify
+- **Update Proposals** — workflow for proposing, reviewing, approving/rejecting changes
+- **Monitored Sources** — adding sources, scanning for changes
+- **Webhooks** — registering, event types, signature verification
+- **Troubleshooting** — common errors and solutions
+- **API Types Reference** — all TypeScript interfaces as reference tables
+
+### 2. Installation Guides (`docs/compliance/installation/`)
+
+Per-environment installation guides:
+
+- `docker.md` — Docker Compose setup (single container, with DB options)
+- `bare-metal.md` — Direct Node.js installation on Linux/macOS/Windows
+- `kubernetes.md` — K8s deployment overview (manifest structure, not full manifests — those are milestone 3)
+- `cloud.md` — AWS (Lambda/ECS) and Azure (Functions/Container Apps) overview
+- `all-in-one.md` — All-in-one mode with pally-agent
+
+### 3. Integration Guides (`docs/compliance/integrations/`)
+
+- `pally-agent.md` — How pally-agent connects (config, A2A flow)
+- `power-automate.md` — Power Automate custom connector setup, OAuth2 config, example flows
+- `n8n.md` — n8n HTTP Request node setup, OAuth2 credentials, example workflows
+- `claude-code.md` — MCP server config, skill usage, example conversations
+- `ci-cd.md` — Using compliance checks in CI/CD pipelines (exit codes, JSON output)
+
+### 4. Updated Claude Code Skill
+
+Update `~/.claude/skills/pally-agent/SKILL.md` and `.claude/skills/pally-agent/SKILL.md` to include all compliance tools and workflows.
+
 ## Non-Goals (This Milestone)
 
 - Regulatory Monitor Agent (milestone 3)
