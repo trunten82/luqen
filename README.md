@@ -2,16 +2,16 @@
 
 **Site-wide WCAG accessibility scanning with legal compliance mapping — CLI, MCP server, and REST API.**
 
-![Version](https://img.shields.io/badge/version-v0.3.2-blue)
+![Version](https://img.shields.io/badge/version-v0.4.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-489%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-619%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
 
 ---
 
 ## What is Pally Agent?
 
-Running pa11y on one page at a time is tedious, and translating WCAG violations into legal obligations requires specialist knowledge of dozens of jurisdictions. Pally Agent orchestrates site-wide accessibility scanning via a pa11y webservice instance — discovering all pages, aggregating results, mapping issues to source files, and proposing concrete code fixes. The companion compliance service maps every WCAG violation to the regulations that require it across 58 jurisdictions and 62 regulations, so you know exactly what is a legal obligation and what is best practice.
+Running pa11y on one page at a time is tedious, and translating WCAG violations into legal obligations requires specialist knowledge of dozens of jurisdictions. Pally Agent orchestrates site-wide accessibility scanning via a pa11y webservice instance — discovering all pages, aggregating results, mapping issues to source files, and proposing concrete code fixes. The companion compliance service maps every WCAG violation to the regulations that require it across 58 jurisdictions and 62 regulations, so you know exactly what is a legal obligation and what is best practice. The dashboard brings everything together in a browser UI — start scans, watch progress live, browse reports, and administer the compliance service without touching the command line.
 
 ---
 
@@ -34,29 +34,38 @@ Running pa11y on one page at a time is tedious, and translating WCAG violations 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     pally-agent monorepo                │
-│                                                         │
-│  ┌──────────────────────────┐                           │
-│  │   @pally-agent/core      │  CLI + MCP server         │
-│  │                          │  ─ site scan & crawl      │
-│  │  pally-agent scan ...    │  ─ source mapping         │
-│  │  pally-agent fix  ...    │  ─ fix proposals          │
-│  └──────────┬───────────────┘  ─ HTML/JSON reports      │
-│             │ HTTP                                       │
-│             ▼                                           │
-│  ┌──────────────────────────┐                           │
-│  │   pa11y webservice       │  External service         │
-│  │   (Docker / remote)      │  (not in this repo)       │
-│  └──────────────────────────┘                           │
-│                                                         │
-│  ┌──────────────────────────┐                           │
-│  │  @pally-agent/compliance │  REST API + MCP server    │
-│  │                          │  ─ 58 jurisdictions       │
-│  │  pally-compliance serve  │  ─ 62 regulations         │
-│  │  pally-compliance mcp    │  ─ OAuth2 / JWT auth      │
-│  └──────────────────────────┘  ─ SQLite + OpenAPI       │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      pally-agent monorepo                    │
+│                                                              │
+│  ┌───────────────────────────┐                               │
+│  │   @pally-agent/dashboard  │  Web UI (browser)             │
+│  │                           │  ─ start scans, view reports  │
+│  │  pally-dashboard serve    │  ─ HTMX, no JS build step     │
+│  │  pally-dashboard migrate  │  ─ admin: jurisdictions,      │
+│  └──────────┬────────────────┘    users, webhooks, health    │
+│             │ HTTP (REST)                                     │
+│             ▼                                                │
+│  ┌───────────────────────────┐                               │
+│  │  @pally-agent/compliance  │  REST API + MCP server        │
+│  │                           │  ─ 58 jurisdictions           │
+│  │  pally-compliance serve   │  ─ 62 regulations             │
+│  │  pally-compliance mcp     │  ─ OAuth2 / JWT auth          │
+│  └──────────┬────────────────┘  ─ SQLite + OpenAPI           │
+│             │ uses as library                                 │
+│             ▼                                                │
+│  ┌───────────────────────────┐                               │
+│  │   @pally-agent/core       │  CLI + MCP server             │
+│  │                           │  ─ site scan & crawl          │
+│  │  pally-agent scan ...     │  ─ source mapping             │
+│  │  pally-agent fix  ...     │  ─ fix proposals              │
+│  └──────────┬────────────────┘  ─ HTML/JSON reports          │
+│             │ HTTP                                            │
+│             ▼                                                │
+│  ┌───────────────────────────┐                               │
+│  │   pa11y webservice        │  External service             │
+│  │   (Docker / remote)       │  (not in this repo)           │
+│  └───────────────────────────┘                               │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -95,6 +104,7 @@ Reports are written to `./pally-reports/`.
 |---------|-------------|------|
 | [`@pally-agent/core`](packages/core) | Site scanner, source mapper, fix engine, CLI, MCP server | [docs/README.md](docs/README.md) |
 | [`@pally-agent/compliance`](packages/compliance) | Compliance rule engine, REST API, MCP server | [docs/compliance/README.md](docs/compliance/README.md) |
+| [`@pally-agent/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, admin UI | [docs/dashboard/README.md](docs/dashboard/README.md) |
 
 ---
 
@@ -123,13 +133,29 @@ The REST API is documented at `http://localhost:4000/docs` (Swagger UI).
 
 ---
 
+## Dashboard
+
+The dashboard is a browser-based UI for managing accessibility scans and administering the compliance service. No JavaScript build step — it uses HTMX for live updates.
+
+```bash
+# Generate a session secret (required)
+export DASHBOARD_SESSION_SECRET="$(openssl rand -base64 32)"
+
+# Start all services (compliance + dashboard)
+docker compose up -d
+```
+
+Open `http://localhost:5000` and log in with a compliance service user account. See [docs/dashboard/README.md](docs/dashboard/README.md) for the full guide.
+
+---
+
 ## Docker
 
 ```bash
 docker compose up
 ```
 
-This starts pa11y webservice (port 3000) and the compliance service (port 4000).
+This starts the compliance service (port 4000) and the dashboard (port 5000). For pa11y webservice, run it separately and set `PALLY_WEBSERVICE_URL` in a `.env` file.
 
 ---
 
@@ -165,6 +191,8 @@ This gives Claude Code 17 tools: 6 for scanning/fixing (`pally_scan`, `pally_get
 
 - [docs/README.md](docs/README.md) — full core package docs (CLI, MCP tools, source mapping, reports, configuration)
 - [docs/compliance/README.md](docs/compliance/README.md) — compliance service docs (REST API, MCP tools, jurisdictions, regulations)
+- [docs/dashboard/README.md](docs/dashboard/README.md) — dashboard docs (user guide, admin guide, configuration, Docker, accessibility)
+- [CHANGELOG.md](CHANGELOG.md) — full version history
 
 ---
 
@@ -176,9 +204,10 @@ npm test --workspaces
 
 Expected output:
 ```
-packages/core: 489 tests passing
-packages/compliance: included in total
-✓ 489 tests passed
+packages/core:       170 tests passing
+packages/compliance: 370 tests passing
+packages/dashboard:   79 tests passing
+✓ 619 tests passed
 ```
 
 Run with coverage:
