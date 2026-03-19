@@ -1,0 +1,158 @@
+{{! Reports list — searchable, paginated, deletable }}
+
+<div class="reports-controls" role="search">
+  <form method="GET" action="/reports" aria-label="Search and filter reports">
+    <div class="controls-row">
+      <div class="form-group form-group--inline">
+        <label for="q">Search by URL</label>
+        <div class="input-with-indicator">
+          <input
+            type="search"
+            id="q"
+            name="q"
+            class="form-control"
+            placeholder="Filter by site URL…"
+            value="{{q}}"
+            autocomplete="off"
+            hx-get="/reports"
+            hx-trigger="input changed delay:300ms, search"
+            hx-target="#reports-table-body"
+            hx-indicator="#search-spinner"
+            hx-include="[name='status']"
+            role="searchbox"
+            aria-label="Search reports by URL"
+          >
+          <span id="search-spinner" class="htmx-indicator" aria-hidden="true">Searching…</span>
+        </div>
+      </div>
+
+      <div class="form-group form-group--inline">
+        <label for="status">Status</label>
+        <select
+          id="status"
+          name="status"
+          class="form-control"
+          hx-get="/reports"
+          hx-trigger="change"
+          hx-target="#reports-table-body"
+          hx-include="[name='q']"
+          aria-label="Filter by scan status"
+        >
+          <option value="all" {{#if (eq status 'all')}}selected{{/if}}>All statuses</option>
+          <option value="completed" {{#if (eq status 'completed')}}selected{{/if}}>Completed</option>
+          <option value="running" {{#if (eq status 'running')}}selected{{/if}}>Running</option>
+          <option value="queued" {{#if (eq status 'queued')}}selected{{/if}}>Queued</option>
+          <option value="failed" {{#if (eq status 'failed')}}selected{{/if}}>Failed</option>
+        </select>
+      </div>
+
+      <a href="/scan/new" class="btn btn--primary btn--sm">
+        New Scan
+      </a>
+    </div>
+  </form>
+</div>
+
+<div
+  id="reports-table-body"
+  aria-live="polite"
+  aria-atomic="false"
+  aria-label="Reports list"
+>
+  {{#if scans.length}}
+  <div class="table-responsive" role="region" aria-label="Reports table" tabindex="0">
+    <table class="data-table" aria-label="Accessibility scan reports">
+      <caption class="sr-only">Accessibility scan reports — sorted by date, newest first</caption>
+      <thead>
+        <tr>
+          <th scope="col">Site URL</th>
+          <th scope="col">Status</th>
+          <th scope="col">Standard</th>
+          <th scope="col">Pages</th>
+          <th scope="col">Errors</th>
+          <th scope="col">Warnings</th>
+          <th scope="col">Notices</th>
+          <th scope="col">Violations</th>
+          <th scope="col">Date</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each scans}}
+        <tr id="report-{{id}}">
+          <td class="cell--url">
+            <a href="/reports/{{id}}" aria-label="View report for {{siteUrl}}">
+              {{siteUrl}}
+            </a>
+          </td>
+          <td>
+            <span class="badge badge--{{status}}" aria-label="Status: {{status}}">
+              {{status}}
+            </span>
+          </td>
+          <td>{{standard}}</td>
+          <td>{{pagesScanned}}</td>
+          <td class="text--error">{{errors}}</td>
+          <td class="text--warning">{{warnings}}</td>
+          <td>{{notices}}</td>
+          <td>{{confirmedViolations}}</td>
+          <td>
+            <time datetime="{{createdAt}}">{{createdAtDisplay}}</time>
+          </td>
+          <td class="cell--actions">
+            <a href="/reports/{{id}}" class="btn btn--sm btn--ghost" aria-label="View report for {{siteUrl}}">View</a>
+            <button
+              class="btn btn--sm btn--danger"
+              hx-delete="/reports/{{id}}"
+              hx-confirm="Delete the scan report for {{siteUrl}}? This cannot be undone."
+              hx-target="#report-{{id}}"
+              hx-swap="outerHTML swap:300ms"
+              aria-label="Delete scan report for {{siteUrl}}"
+            >Delete</button>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  <nav aria-label="Reports pagination" class="pagination">
+    {{#if hasPrev}}
+    <a
+      href="/reports?offset={{prevOffset}}&limit={{limit}}{{#if q}}&q={{q}}{{/if}}{{#if status}}&status={{status}}{{/if}}"
+      class="btn btn--ghost btn--sm"
+      hx-get="/reports?offset={{prevOffset}}&limit={{limit}}{{#if q}}&q={{q}}{{/if}}{{#if status}}&status={{status}}{{/if}}"
+      hx-target="#reports-table-body"
+      hx-push-url="true"
+      aria-label="Previous page"
+    >
+      &larr; Previous
+    </a>
+    {{/if}}
+
+    <span class="pagination__info" aria-current="page">Page {{currentPage}}</span>
+
+    {{#if hasNext}}
+    <a
+      href="/reports?offset={{nextOffset}}&limit={{limit}}{{#if q}}&q={{q}}{{/if}}{{#if status}}&status={{status}}{{/if}}"
+      class="btn btn--ghost btn--sm"
+      hx-get="/reports?offset={{nextOffset}}&limit={{limit}}{{#if q}}&q={{q}}{{/if}}{{#if status}}&status={{status}}{{/if}}"
+      hx-target="#reports-table-body"
+      hx-push-url="true"
+      aria-label="Next page"
+    >
+      Next &rarr;
+    </a>
+    {{/if}}
+  </nav>
+
+  {{else}}
+  <div class="empty-state" role="status">
+    {{#if q}}
+    <p>No reports match <strong>"{{q}}"</strong>. <a href="/reports">Clear search</a></p>
+    {{else}}
+    <p>No scan reports yet. <a href="/scan/new">Start your first scan</a>.</p>
+    {{/if}}
+  </div>
+  {{/if}}
+</div>
