@@ -40,14 +40,36 @@ export class WebserviceClient {
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${path}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.headers,
-        ...(options.headers as Record<string, string> | undefined),
-      },
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.headers,
+          ...(options.headers as Record<string, string> | undefined),
+        },
+      });
+    } catch (error: unknown) {
+      const isConnectionError =
+        error instanceof TypeError ||
+        (error instanceof Error &&
+          (error.message.includes('ECONNREFUSED') ||
+            error.message.includes('fetch failed') ||
+            error.cause !== undefined));
+      if (isConnectionError) {
+        throw new Error(
+          `Cannot connect to pa11y webservice at ${this.baseUrl}.\n\n` +
+            'To set up pa11y webservice:\n' +
+            '  npm install -g pa11y-webservice\n' +
+            '  pa11y-webservice\n\n' +
+            'Or use Docker:\n' +
+            '  docker run -p 3000:3000 pa11y/pa11y-webservice\n\n' +
+            'Then retry your scan.',
+        );
+      }
+      throw error;
+    }
     if (!response.ok) {
       throw new Error(`Pa11y webservice error: ${response.status} ${response.statusText} for ${options.method ?? 'GET'} ${path}`);
     }
