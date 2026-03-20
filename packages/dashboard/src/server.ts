@@ -3,7 +3,8 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DashboardConfig } from './config.js';
 import { registerSession } from './auth/session.js';
-import { authGuard } from './auth/middleware.js';
+import { createAuthGuard } from './auth/middleware.js';
+import { AuthService } from './auth/auth-service.js';
 import { authRoutes } from './routes/auth.js';
 import { homeRoutes } from './routes/home.js';
 import { scanRoutes } from './routes/scan.js';
@@ -25,6 +26,9 @@ import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
+import { getOrCreateApiKey } from './auth/api-key.js';
+import { UserDb } from './db/users.js';
+import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { VERSION } from './version.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -35,6 +39,8 @@ const PUBLIC_PATHS = new Set(['/login', '/health']);
 function isPublicPath(path: string): boolean {
   if (PUBLIC_PATHS.has(path)) return true;
   if (path.startsWith('/static/')) return true;
+  if (path.startsWith('/auth/callback/')) return true;
+  if (path.startsWith('/auth/sso/')) return true;
   return false;
 }
 
@@ -59,6 +65,24 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
   await pluginManager.initializeOnStartup();
   pluginManager.startHealthChecks(60_000);
+
+  // ── Auth Service ────────────────────────────────────────────────────────
+  const authService = new AuthService(db.getDatabase(), pluginManager);
+  const userDb = new UserDb(db.getDatabase());
+
+  // ── Solo mode: first-start API key ──────────────────────────────────────
+  if (authService.getAuthMode() === 'solo') {
+    const { key, isNew } = getOrCreateApiKey(db.getDatabase());
+    if (isNew) {
+      server.log.info('');
+      server.log.info('========================================');
+      server.log.info('  PALLY DASHBOARD — First Start');
+      server.log.info('  API Key: ' + key);
+      server.log.info('  Save this key — it will not be shown again.');
+      server.log.info('========================================');
+      server.log.info('');
+    }
+  }
 
   // ── Optional Redis ────────────────────────────────────────────────────────
   const redisClient = createRedisClient(config.redisUrl);
@@ -147,6 +171,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Global auth guard ─────────────────────────────────────────────────────
+  const authGuard = createAuthGuard(authService);
   server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
     if (isPublicPath(request.url.split('?')[0])) {
       return;
@@ -155,7 +180,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Routes ────────────────────────────────────────────────────────────────
-  await authRoutes(server, config);
+  await authRoutes(server, config, authService);
   await homeRoutes(server, db);
   await scanRoutes(server, db, orchestrator, config);
   await compareRoutes(server, db);
@@ -175,6 +200,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     webserviceUrl: config.webserviceUrl,
     dbPath: config.dbPath,
   });
+
+  await dashboardUserRoutes(server, userDb);
 
   await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
 

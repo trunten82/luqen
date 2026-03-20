@@ -1,123 +1,142 @@
 import { describe, it, expect, vi } from 'vitest';
-import { authGuard, adminGuard, requireRole } from '../../src/auth/middleware.js';
+import { createAuthGuard, adminGuard, requireRole } from '../../src/auth/middleware.js';
+import type { AuthService } from '../../src/auth/auth-service.js';
+import type { AuthResult } from '../../src/plugins/types.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-// Helper to create a JWT-like token with given payload
-// We use base64url encoding to create a fake JWT (not cryptographically valid,
-// but suitable for decodeJwt which only decodes without verification)
-function makeToken(payload: Record<string, unknown>): string {
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const sig = 'fakesig';
-  return `${header}.${body}.${sig}`;
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function mockAuthService(result: AuthResult): AuthService {
+  return {
+    authenticateRequest: vi.fn().mockResolvedValue(result),
+  } as unknown as AuthService;
 }
 
-function futureExp(): number {
-  return Math.floor(Date.now() / 1000) + 3600;
-}
-
-function pastExp(): number {
-  return Math.floor(Date.now() / 1000) - 3600;
-}
-
-function makeMockRequest(overrides: Partial<FastifyRequest> & { sessionData?: Record<string, unknown> } = {}): FastifyRequest {
-  const { sessionData = {}, ...rest } = overrides;
+function makeMockRequest(overrides: Partial<FastifyRequest> = {}): FastifyRequest {
   return {
     url: '/dashboard',
+    headers: {},
     session: {
-      ...sessionData,
+      get: vi.fn(),
+      set: vi.fn(),
       delete: vi.fn(),
     },
-    headers: {},
-    ...rest,
+    ...overrides,
   } as unknown as FastifyRequest;
 }
 
-function makeMockReply(): { reply: FastifyReply; redirected: string | null; status: number | null } {
-  const state: { redirected: string | null; status: number | null; body: unknown } = {
-    redirected: null,
-    status: null,
-    body: null,
-  };
+function makeMockReply(): { reply: FastifyReply; getRedirected: () => string | null; getStatus: () => number | null; getBody: () => unknown } {
+  let redirected: string | null = null;
+  let status: number | null = null;
+  let body: unknown = null;
 
   const reply = {
     redirect: vi.fn(async (url: string) => {
-      state.redirected = url;
+      redirected = url;
     }),
     code: vi.fn((code: number) => {
-      state.status = code;
+      status = code;
       return {
-        send: vi.fn((body: unknown) => {
-          state.body = body;
+        send: vi.fn((b: unknown) => {
+          body = b;
         }),
       };
     }),
   } as unknown as FastifyReply;
 
-  return { reply, redirected: state.redirected, status: state.status };
+  return {
+    reply,
+    getRedirected: () => redirected,
+    getStatus: () => status,
+    getBody: () => body,
+  };
 }
 
-describe('authGuard', () => {
-  it('redirects to /login when no token in session', async () => {
-    const request = makeMockRequest({ sessionData: {} });
+// ---------------------------------------------------------------------------
+// createAuthGuard
+// ---------------------------------------------------------------------------
+
+describe('createAuthGuard', () => {
+  it('redirects to /login when not authenticated (page request)', async () => {
+    const service = mockAuthService({ authenticated: false });
+    const guard = createAuthGuard(service);
+    const request = makeMockRequest();
     const { reply } = makeMockReply();
 
-    await authGuard(request, reply);
+    await guard(request, reply);
 
     expect(reply.redirect).toHaveBeenCalledWith('/login');
   });
 
-  it('redirects to /login when token is expired', async () => {
-    const token = makeToken({ sub: 'user1', exp: pastExp(), role: 'user' });
-    const request = makeMockRequest({ sessionData: { token } });
+  it('returns 401 JSON when not authenticated (API request)', async () => {
+    const service = mockAuthService({ authenticated: false, error: 'Token expired' });
+    const guard = createAuthGuard(service);
+    const request = makeMockRequest({ url: '/api/scans' });
     const { reply } = makeMockReply();
 
-    await authGuard(request, reply);
+    await guard(request, reply);
 
-    expect(reply.redirect).toHaveBeenCalledWith('/login');
+    expect(reply.code).toHaveBeenCalledWith(401);
   });
 
-  it('attaches user to request when token is valid', async () => {
-    const token = makeToken({ sub: 'user1', exp: futureExp(), role: 'user', username: 'alice' });
-    const request = makeMockRequest({ sessionData: { token } });
+  it('returns 401 with default message when no error provided', async () => {
+    const service = mockAuthService({ authenticated: false });
+    const guard = createAuthGuard(service);
+    const request = makeMockRequest({ url: '/api/scans' });
+    const { reply, getBody } = makeMockReply();
+
+    await guard(request, reply);
+
+    expect(reply.code).toHaveBeenCalledWith(401);
+    expect(getBody()).toEqual({ error: 'Authentication required' });
+  });
+
+  it('attaches user to request when authenticated', async () => {
+    const service = mockAuthService({
+      authenticated: true,
+      user: { id: 'user1', username: 'alice', role: 'admin' },
+    });
+    const guard = createAuthGuard(service);
+    const request = makeMockRequest();
     const { reply } = makeMockReply();
 
-    await authGuard(request, reply);
+    await guard(request, reply);
 
     expect(reply.redirect).not.toHaveBeenCalled();
-    expect(request.user).toEqual({ id: 'user1', username: 'alice', role: 'user' });
+    expect(request.user).toEqual({ id: 'user1', username: 'alice', role: 'admin' });
   });
 
-  it('uses sub as username when username claim is absent', async () => {
-    const token = makeToken({ sub: 'user42', exp: futureExp(), role: 'admin' });
-    const request = makeMockRequest({ sessionData: { token } });
+  it('defaults role to viewer when AuthResult user has no role', async () => {
+    const service = mockAuthService({
+      authenticated: true,
+      user: { id: 'user1', username: 'alice' },
+    });
+    const guard = createAuthGuard(service);
+    const request = makeMockRequest();
     const { reply } = makeMockReply();
 
-    await authGuard(request, reply);
-
-    expect(request.user?.username).toBe('user42');
-    expect(request.user?.role).toBe('admin');
-  });
-
-  it('defaults role to viewer when role claim missing', async () => {
-    const token = makeToken({ sub: 'user1', exp: futureExp() });
-    const request = makeMockRequest({ sessionData: { token } });
-    const { reply } = makeMockReply();
-
-    await authGuard(request, reply);
+    await guard(request, reply);
 
     expect(request.user?.role).toBe('viewer');
   });
 
-  it('redirects to /login when token is malformed', async () => {
-    const request = makeMockRequest({ sessionData: { token: 'not.a.jwt' } });
+  it('delegates to authService.authenticateRequest', async () => {
+    const service = mockAuthService({ authenticated: false });
+    const guard = createAuthGuard(service);
+    const request = makeMockRequest();
     const { reply } = makeMockReply();
 
-    await authGuard(request, reply);
+    await guard(request, reply);
 
-    expect(reply.redirect).toHaveBeenCalledWith('/login');
+    expect(service.authenticateRequest).toHaveBeenCalledWith(request);
   });
 });
+
+// ---------------------------------------------------------------------------
+// adminGuard
+// ---------------------------------------------------------------------------
 
 describe('adminGuard', () => {
   it('returns 403 when user is not admin', () => {
@@ -140,6 +159,10 @@ describe('adminGuard', () => {
     expect(codeFn).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// requireRole
+// ---------------------------------------------------------------------------
 
 describe('requireRole', () => {
   it('allows access when user meets role requirement', () => {

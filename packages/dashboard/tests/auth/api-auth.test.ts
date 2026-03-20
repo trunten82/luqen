@@ -1,34 +1,31 @@
 import { describe, it, expect, vi } from 'vitest';
-import { authGuard } from '../../src/auth/middleware.js';
+import { createAuthGuard } from '../../src/auth/middleware.js';
+import type { AuthService } from '../../src/auth/auth-service.js';
+import type { AuthResult } from '../../src/plugins/types.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-function makeToken(payload: Record<string, unknown>): string {
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const sig = 'fakesig';
-  return `${header}.${body}.${sig}`;
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-function futureExp(): number {
-  return Math.floor(Date.now() / 1000) + 3600;
-}
-
-function pastExp(): number {
-  return Math.floor(Date.now() / 1000) - 3600;
+function mockAuthService(result: AuthResult): AuthService {
+  return {
+    authenticateRequest: vi.fn().mockResolvedValue(result),
+  } as unknown as AuthService;
 }
 
 function makeMockRequest(
-  overrides: { sessionData?: Record<string, unknown>; url?: string } = {},
+  overrides: { url?: string } = {},
 ): FastifyRequest {
-  const { sessionData = {}, url = '/reports', ...rest } = overrides;
+  const { url = '/reports' } = overrides;
   return {
     url,
+    headers: {},
     session: {
-      ...sessionData,
+      get: vi.fn(),
+      set: vi.fn(),
       delete: vi.fn(),
     },
-    headers: {},
-    ...rest,
   } as unknown as FastifyRequest;
 }
 
@@ -55,7 +52,6 @@ function makeMockReply(): { reply: FastifyReply; state: MockReplyState } {
     }),
   } as unknown as FastifyReply;
 
-  // Use a proxy so state reads are always current
   const state: MockReplyState = {
     get redirectUrl() { return internal.redirectUrl; },
     get statusCode() { return internal.statusCode; },
@@ -65,9 +61,15 @@ function makeMockReply(): { reply: FastifyReply; state: MockReplyState } {
   return { reply, state };
 }
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe('authGuard – API requests return JSON 401', () => {
-  it('returns 401 JSON when API request has no session token', async () => {
-    const request = makeMockRequest({ url: '/api/v1/plugins', sessionData: {} });
+  it('returns 401 JSON when API request is not authenticated', async () => {
+    const service = mockAuthService({ authenticated: false });
+    const authGuard = createAuthGuard(service);
+    const request = makeMockRequest({ url: '/api/v1/plugins' });
     const { reply, state } = makeMockReply();
 
     await authGuard(request, reply);
@@ -77,9 +79,10 @@ describe('authGuard – API requests return JSON 401', () => {
     expect(reply.redirect).not.toHaveBeenCalled();
   });
 
-  it('returns 401 JSON when API request has expired token', async () => {
-    const token = makeToken({ sub: 'user1', exp: pastExp(), role: 'user' });
-    const request = makeMockRequest({ url: '/api/v1/plugins', sessionData: { token } });
+  it('returns 401 JSON with custom error message from AuthService', async () => {
+    const service = mockAuthService({ authenticated: false, error: 'Token expired' });
+    const authGuard = createAuthGuard(service);
+    const request = makeMockRequest({ url: '/api/v1/plugins' });
     const { reply, state } = makeMockReply();
 
     await authGuard(request, reply);
@@ -89,35 +92,39 @@ describe('authGuard – API requests return JSON 401', () => {
     expect(reply.redirect).not.toHaveBeenCalled();
   });
 
-  it('returns 401 JSON with "Invalid token" when token is decodable but has no sub', async () => {
-    // Token decodes fine but has no sub claim, so extractUserFromToken returns null
-    const token = makeToken({ exp: futureExp(), role: 'user' });
-    const request = makeMockRequest({ url: '/api/v1/plugins', sessionData: { token } });
+  it('returns 401 with default message when no error provided', async () => {
+    const service = mockAuthService({ authenticated: false });
+    const authGuard = createAuthGuard(service);
+    const request = makeMockRequest({ url: '/api/scans' });
     const { reply, state } = makeMockReply();
 
     await authGuard(request, reply);
 
     expect(state.statusCode).toBe(401);
-    expect(state.body).toEqual({ error: 'Invalid token' });
-    expect(reply.redirect).not.toHaveBeenCalled();
+    expect(state.body).toEqual({ error: 'Authentication required' });
   });
 
-  it('returns 401 JSON with "Token expired" when API request has malformed token', async () => {
-    // Malformed tokens fail decodeJwt, which makes isTokenExpired return true
-    const request = makeMockRequest({ url: '/api/v1/plugins', sessionData: { token: 'not.a.jwt' } });
-    const { reply, state } = makeMockReply();
+  it('attaches user when API request is authenticated', async () => {
+    const service = mockAuthService({
+      authenticated: true,
+      user: { id: 'user1', username: 'alice', role: 'admin' },
+    });
+    const authGuard = createAuthGuard(service);
+    const request = makeMockRequest({ url: '/api/v1/plugins' });
+    const { reply } = makeMockReply();
 
     await authGuard(request, reply);
 
-    expect(state.statusCode).toBe(401);
-    expect(state.body).toEqual({ error: 'Token expired' });
-    expect(reply.redirect).not.toHaveBeenCalled();
+    expect(reply.code).not.toHaveBeenCalled();
+    expect(request.user).toEqual({ id: 'user1', username: 'alice', role: 'admin' });
   });
 });
 
 describe('authGuard – non-API requests still redirect', () => {
-  it('redirects to /login when non-API request has no session', async () => {
-    const request = makeMockRequest({ url: '/reports', sessionData: {} });
+  it('redirects to /login when non-API request is not authenticated', async () => {
+    const service = mockAuthService({ authenticated: false });
+    const authGuard = createAuthGuard(service);
+    const request = makeMockRequest({ url: '/reports' });
     const { reply } = makeMockReply();
 
     await authGuard(request, reply);
@@ -125,13 +132,18 @@ describe('authGuard – non-API requests still redirect', () => {
     expect(reply.redirect).toHaveBeenCalledWith('/login');
   });
 
-  it('redirects to /login when non-API request has expired token', async () => {
-    const token = makeToken({ sub: 'user1', exp: pastExp(), role: 'user' });
-    const request = makeMockRequest({ url: '/reports', sessionData: { token } });
+  it('does not redirect when non-API request is authenticated', async () => {
+    const service = mockAuthService({
+      authenticated: true,
+      user: { id: 'user1', username: 'alice', role: 'user' },
+    });
+    const authGuard = createAuthGuard(service);
+    const request = makeMockRequest({ url: '/reports' });
     const { reply } = makeMockReply();
 
     await authGuard(request, reply);
 
-    expect(reply.redirect).toHaveBeenCalledWith('/login');
+    expect(reply.redirect).not.toHaveBeenCalled();
+    expect(request.user).toEqual({ id: 'user1', username: 'alice', role: 'user' });
   });
 });
