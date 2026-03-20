@@ -52,13 +52,18 @@ export interface TokenResponse {
 async function apiFetch<T>(
   url: string,
   options: RequestInit = {},
+  orgId?: string,
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+  if (orgId != null && orgId !== 'system') {
+    headers['X-Org-Id'] = orgId;
+  }
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -101,21 +106,23 @@ export async function getToken(
 export async function listJurisdictions(
   baseUrl: string,
   token: string,
+  orgId?: string,
 ): Promise<Jurisdiction[]> {
   return apiFetch<Jurisdiction[]>(`${baseUrl}/api/v1/jurisdictions`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 export async function listRegulations(
   baseUrl: string,
   token: string,
   filters?: Record<string, string>,
+  orgId?: string,
 ): Promise<Regulation[]> {
   const params = filters !== undefined ? `?${new URLSearchParams(filters).toString()}` : '';
   return apiFetch<Regulation[]>(`${baseUrl}/api/v1/regulations${params}`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 export interface ComplianceIssueInput {
@@ -131,54 +138,59 @@ export async function checkCompliance(
   token: string,
   jurisdictions: readonly string[],
   issues: readonly ComplianceIssueInput[],
+  orgId?: string,
 ): Promise<ComplianceCheckResult> {
   return apiFetch<ComplianceCheckResult>(`${baseUrl}/api/v1/compliance/check`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ jurisdictions, issues }),
-  });
+  }, orgId);
 }
 
 export async function getSeedStatus(
   baseUrl: string,
   token: string,
+  orgId?: string,
 ): Promise<SeedStatus> {
   return apiFetch<SeedStatus>(`${baseUrl}/api/v1/seed/status`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 export async function listUpdateProposals(
   baseUrl: string,
   token: string,
   status?: string,
+  orgId?: string,
 ): Promise<UpdateProposal[]> {
   const params = status !== undefined ? `?status=${encodeURIComponent(status)}` : '';
   return apiFetch<UpdateProposal[]>(`${baseUrl}/api/v1/updates${params}`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 export async function approveProposal(
   baseUrl: string,
   token: string,
   id: string,
+  orgId?: string,
 ): Promise<UpdateProposal> {
   return apiFetch<UpdateProposal>(`${baseUrl}/api/v1/updates/${encodeURIComponent(id)}/approve`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 export async function rejectProposal(
   baseUrl: string,
   token: string,
   id: string,
+  orgId?: string,
 ): Promise<UpdateProposal> {
   return apiFetch<UpdateProposal>(`${baseUrl}/api/v1/updates/${encodeURIComponent(id)}/reject`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 // ── Jurisdiction CRUD ─────────────────────────────────────────────────────────
@@ -194,12 +206,13 @@ export async function createJurisdiction(
   baseUrl: string,
   token: string,
   data: CreateJurisdictionInput,
+  orgId?: string,
 ): Promise<Jurisdiction> {
   return apiFetch<Jurisdiction>(`${baseUrl}/api/v1/jurisdictions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
-  });
+  }, orgId);
 }
 
 export async function updateJurisdiction(
@@ -207,27 +220,33 @@ export async function updateJurisdiction(
   token: string,
   id: string,
   data: Partial<CreateJurisdictionInput>,
+  orgId?: string,
 ): Promise<Jurisdiction> {
   return apiFetch<Jurisdiction>(`${baseUrl}/api/v1/jurisdictions/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
-  });
+  }, orgId);
 }
 
 export async function deleteJurisdiction(
   baseUrl: string,
   token: string,
   id: string,
+  orgId?: string,
 ): Promise<void> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+  if (orgId != null && orgId !== 'system') {
+    headers['X-Org-Id'] = orgId;
+  }
   const response = await fetch(
     `${baseUrl}/api/v1/jurisdictions/${encodeURIComponent(id)}`,
     {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
     },
   );
   if (!response.ok) {
@@ -252,12 +271,13 @@ export async function createRegulation(
   baseUrl: string,
   token: string,
   data: CreateRegulationInput,
+  orgId?: string,
 ): Promise<Regulation> {
   return apiFetch<Regulation>(`${baseUrl}/api/v1/regulations`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
-  });
+  }, orgId);
 }
 
 export async function updateRegulation(
@@ -265,28 +285,31 @@ export async function updateRegulation(
   token: string,
   id: string,
   data: Partial<CreateRegulationInput>,
+  orgId?: string,
 ): Promise<Regulation> {
   return apiFetch<Regulation>(`${baseUrl}/api/v1/regulations/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
-  });
+  }, orgId);
 }
 
 export async function deleteRegulation(
   baseUrl: string,
   token: string,
   id: string,
+  orgId?: string,
 ): Promise<void> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+  if (orgId != null && orgId !== 'system') {
+    headers['X-Org-Id'] = orgId;
+  }
   const response = await fetch(
     `${baseUrl}/api/v1/regulations/${encodeURIComponent(id)}`,
-    {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    },
+    { method: 'DELETE', headers },
   );
   if (!response.ok) {
     const body = await response.text().catch(() => '');
@@ -315,35 +338,41 @@ export interface CreateSourceInput {
 export async function listSources(
   baseUrl: string,
   token: string,
+  orgId?: string,
 ): Promise<MonitoredSource[]> {
   return apiFetch<MonitoredSource[]>(`${baseUrl}/api/v1/sources`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 export async function createSource(
   baseUrl: string,
   token: string,
   data: CreateSourceInput,
+  orgId?: string,
 ): Promise<MonitoredSource> {
   return apiFetch<MonitoredSource>(`${baseUrl}/api/v1/sources`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
-  });
+  }, orgId);
 }
 
 export async function deleteSource(
   baseUrl: string,
   token: string,
   id: string,
+  orgId?: string,
 ): Promise<void> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+  if (orgId != null && orgId !== 'system') {
+    headers['X-Org-Id'] = orgId;
+  }
   const response = await fetch(`${baseUrl}/api/v1/sources/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    method: 'DELETE', headers,
   });
   if (!response.ok) {
     const body = await response.text().catch(() => '');
@@ -383,35 +412,41 @@ export interface CreateWebhookInput {
 export async function listWebhooks(
   baseUrl: string,
   token: string,
+  orgId?: string,
 ): Promise<Webhook[]> {
   return apiFetch<Webhook[]>(`${baseUrl}/api/v1/webhooks`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 export async function createWebhook(
   baseUrl: string,
   token: string,
   data: CreateWebhookInput,
+  orgId?: string,
 ): Promise<Webhook> {
   return apiFetch<Webhook>(`${baseUrl}/api/v1/webhooks`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
-  });
+  }, orgId);
 }
 
 export async function deleteWebhook(
   baseUrl: string,
   token: string,
   id: string,
+  orgId?: string,
 ): Promise<void> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+  if (orgId != null && orgId !== 'system') {
+    headers['X-Org-Id'] = orgId;
+  }
   const response = await fetch(`${baseUrl}/api/v1/webhooks/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    method: 'DELETE', headers,
   });
   if (!response.ok) {
     const body = await response.text().catch(() => '');
@@ -456,40 +491,59 @@ export interface CreateUserInput {
 export async function listUsers(
   baseUrl: string,
   token: string,
+  orgId?: string,
 ): Promise<User[]> {
   return apiFetch<User[]>(`${baseUrl}/api/v1/users`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 export async function createUser(
   baseUrl: string,
   token: string,
   data: CreateUserInput,
+  orgId?: string,
 ): Promise<User> {
   return apiFetch<User>(`${baseUrl}/api/v1/users`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
-  });
+  }, orgId);
 }
 
 export async function deactivateUser(
   baseUrl: string,
   token: string,
   id: string,
+  orgId?: string,
 ): Promise<void> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+  if (orgId != null && orgId !== 'system') {
+    headers['X-Org-Id'] = orgId;
+  }
   const response = await fetch(`${baseUrl}/api/v1/users/${encodeURIComponent(id)}/deactivate`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    method: 'PATCH', headers,
   });
   if (!response.ok) {
     const body = await response.text().catch(() => '');
     throw new Error(`HTTP ${response.status}: ${body}`);
   }
+}
+
+// ── Org Data Cleanup ──────────────────────────────────────────────────────────
+
+export async function deleteOrgData(
+  baseUrl: string,
+  token: string,
+  orgId: string,
+): Promise<void> {
+  await apiFetch(`${baseUrl}/api/v1/orgs/${encodeURIComponent(orgId)}/data`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 // ── OAuth Clients ─────────────────────────────────────────────────────────────
@@ -511,22 +565,24 @@ export interface CreateClientInput {
 export async function listClients(
   baseUrl: string,
   token: string,
+  orgId?: string,
 ): Promise<OAuthClient[]> {
   return apiFetch<OAuthClient[]>(`${baseUrl}/api/v1/clients`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }, orgId);
 }
 
 export async function createClient(
   baseUrl: string,
   token: string,
   data: CreateClientInput,
+  orgId?: string,
 ): Promise<OAuthClient & { secret: string }> {
   return apiFetch<OAuthClient & { secret: string }>(`${baseUrl}/api/v1/clients`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
-  });
+  }, orgId);
 }
 
 export async function revokeClient(
