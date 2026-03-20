@@ -1,0 +1,411 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import Fastify, { FastifyInstance, FastifyReply } from 'fastify';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { rmSync, existsSync } from 'node:fs';
+import { ScanDb } from '../../src/db/scans.js';
+import { OrgDb } from '../../src/db/orgs.js';
+import { UserDb } from '../../src/db/users.js';
+import { registerSession } from '../../src/auth/session.js';
+import { organizationRoutes } from '../../src/routes/admin/organizations.js';
+
+const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
+
+interface TestContext {
+  server: FastifyInstance;
+  db: ScanDb;
+  orgDb: OrgDb;
+  userDb: UserDb;
+  cleanup: () => void;
+}
+
+async function createTestServer(role: string = 'admin'): Promise<TestContext> {
+  const dbPath = join(tmpdir(), `test-orgs-admin-${randomUUID()}.db`);
+
+  const db = new ScanDb(dbPath);
+  db.initialize();
+  const orgDb = new OrgDb(db.getDatabase());
+  const userDb = new UserDb(db.getDatabase());
+
+  const server = Fastify({ logger: false });
+
+  await server.register(import('@fastify/formbody'));
+  await registerSession(server, TEST_SESSION_SECRET);
+
+  // Stub reply.view so tests can inspect template name + data
+  server.decorateReply(
+    'view',
+    function (this: FastifyReply, template: string, data: unknown) {
+      return this.code(200).header('content-type', 'application/json').send(
+        JSON.stringify({ template, data }),
+      );
+    },
+  );
+
+  // Inject user into all requests
+  server.addHook('preHandler', async (request) => {
+    request.user = { id: 'test-user-id', username: 'testadmin', role };
+  });
+
+  await organizationRoutes(server, orgDb, userDb);
+  await server.ready();
+
+  const cleanup = (): void => {
+    db.close();
+    if (existsSync(dbPath)) rmSync(dbPath);
+    void server.close();
+  };
+
+  return { server, db, orgDb, userDb, cleanup };
+}
+
+// ── GET /admin/organizations ────────────────────────────────────────────────
+
+describe('GET /admin/organizations', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('returns 200 with organizations template', async () => {
+    const response = await ctx.server.inject({ method: 'GET', url: '/admin/organizations' });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { template: string };
+    expect(body.template).toBe('admin/organizations.hbs');
+  });
+
+  it('includes empty orgs list when no orgs exist', async () => {
+    const response = await ctx.server.inject({ method: 'GET', url: '/admin/organizations' });
+
+    const body = response.json() as { data: { orgs: unknown[] } };
+    expect(body.data.orgs).toHaveLength(0);
+  });
+
+  it('includes orgs after creation', async () => {
+    ctx.orgDb.createOrg({ name: 'Acme Corp', slug: 'acme' });
+
+    const response = await ctx.server.inject({ method: 'GET', url: '/admin/organizations' });
+
+    const body = response.json() as { data: { orgs: Array<{ name: string }> } };
+    expect(body.data.orgs).toHaveLength(1);
+    expect(body.data.orgs[0].name).toBe('Acme Corp');
+  });
+});
+
+// ── GET /admin/organizations/new ────────────────────────────────────────────
+
+describe('GET /admin/organizations/new', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('returns 200 with organization form template', async () => {
+    const response = await ctx.server.inject({ method: 'GET', url: '/admin/organizations/new' });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { template: string };
+    expect(body.template).toBe('admin/organization-form.hbs');
+  });
+});
+
+// ── POST /admin/organizations ───────────────────────────────────────────────
+
+describe('POST /admin/organizations', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('creates org and returns HTMX row', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/organizations',
+      payload: 'name=Acme+Corp&slug=acme',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/html');
+    expect(response.body).toContain('Acme Corp');
+    expect(response.body).toContain('created successfully');
+  });
+
+  it('returns 400 when name is missing', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/organizations',
+      payload: 'slug=acme',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 400 when slug is missing', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/organizations',
+      payload: 'name=Acme',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 400 for duplicate slug', async () => {
+    ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/organizations',
+      payload: 'name=Acme+Two&slug=acme',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toContain('already exists');
+  });
+
+  it('persists org to database', async () => {
+    await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/organizations',
+      payload: 'name=TestOrg&slug=test-org',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    const orgs = ctx.orgDb.listOrgs();
+    expect(orgs).toHaveLength(1);
+    expect(orgs[0].slug).toBe('test-org');
+  });
+});
+
+// ── POST /admin/organizations/:id/delete ────────────────────────────────────
+
+describe('POST /admin/organizations/:id/delete', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('deletes org and returns toast', async () => {
+    const org = ctx.orgDb.createOrg({ name: 'ToDelete', slug: 'to-delete' });
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/organizations/${org.id}/delete`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('deleted');
+
+    const deleted = ctx.orgDb.getOrg(org.id);
+    expect(deleted).toBeNull();
+  });
+
+  it('returns 404 when org does not exist', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/organizations/${randomUUID()}/delete`,
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+});
+
+// ── GET /admin/organizations/:id/members ────────────────────────────────────
+
+describe('GET /admin/organizations/:id/members', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('returns 200 with members template', async () => {
+    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
+
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: `/admin/organizations/${org.id}/members`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { template: string };
+    expect(body.template).toBe('admin/organization-members.hbs');
+  });
+
+  it('returns 404 when org does not exist', async () => {
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: `/admin/organizations/${randomUUID()}/members`,
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('includes org name and members list', async () => {
+    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
+    const user = await ctx.userDb.createUser('alice', 'password123', 'user');
+    ctx.orgDb.addMember(org.id, user.id, 'member');
+
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: `/admin/organizations/${org.id}/members`,
+    });
+
+    const body = response.json() as {
+      data: {
+        org: { name: string };
+        members: Array<{ userId: string; username: string }>;
+      };
+    };
+    expect(body.data.org.name).toBe('Acme');
+    expect(body.data.members).toHaveLength(1);
+    expect(body.data.members[0].username).toBe('alice');
+  });
+});
+
+// ── POST /admin/organizations/:id/members ───────────────────────────────────
+
+describe('POST /admin/organizations/:id/members', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('adds member and returns HTMX row', async () => {
+    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
+    const user = await ctx.userDb.createUser('bob', 'password123', 'user');
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/organizations/${org.id}/members`,
+      payload: `userId=${user.id}&role=member`,
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/html');
+    expect(response.body).toContain('bob');
+    expect(response.body).toContain('added');
+
+    const members = ctx.orgDb.listMembers(org.id);
+    expect(members).toHaveLength(1);
+    expect(members[0].userId).toBe(user.id);
+  });
+
+  it('returns 400 when userId is missing', async () => {
+    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/organizations/${org.id}/members`,
+      payload: 'role=member',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 404 when org does not exist', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/organizations/${randomUUID()}/members`,
+      payload: 'userId=some-id&role=member',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+});
+
+// ── POST /admin/organizations/:id/members/:userId/remove ────────────────────
+
+describe('POST /admin/organizations/:id/members/:userId/remove', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('removes member and returns toast', async () => {
+    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
+    const user = await ctx.userDb.createUser('charlie', 'password123', 'user');
+    ctx.orgDb.addMember(org.id, user.id, 'member');
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/organizations/${org.id}/members/${user.id}/remove`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('removed');
+
+    const members = ctx.orgDb.listMembers(org.id);
+    expect(members).toHaveLength(0);
+  });
+});
+
+// ── Admin role required ─────────────────────────────────────────────────────
+
+describe('Organizations admin access control', () => {
+  it('non-admin (viewer role) gets 403 on GET /admin/organizations', async () => {
+    const ctx = await createTestServer('viewer');
+
+    const response = await ctx.server.inject({ method: 'GET', url: '/admin/organizations' });
+    expect(response.statusCode).toBe(403);
+
+    ctx.cleanup();
+  });
+
+  it('non-admin (user role) gets 403 on POST /admin/organizations', async () => {
+    const ctx = await createTestServer('user');
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/organizations',
+      payload: 'name=Acme&slug=acme',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(403);
+
+    ctx.cleanup();
+  });
+});
