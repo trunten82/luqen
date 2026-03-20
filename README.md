@@ -29,6 +29,7 @@ Running pa11y on one page at a time is tedious, and translating WCAG violations 
 - **Four interfaces** — CLI for humans, MCP server for AI agents (Claude Code), OAuth2 REST API with OpenAPI/Swagger, web dashboard
 - **Regulatory monitoring** — watches legal sources for changes and creates update proposals when regulations evolve
 - **WAF detection** — detects and reports when a Web Application Firewall blocks scanning
+- **Plugin system** — extensible via plugins for authentication (Entra ID, Okta, Google), notifications (Slack, Teams), storage (S3, Azure Blob), and custom scanners; managed via dashboard UI, CLI, or REST API
 
 ---
 

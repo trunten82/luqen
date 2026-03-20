@@ -37,6 +37,8 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `maxConcurrentScans` | `number` | `2` | Maximum number of scans that may run simultaneously |
 | `complianceClientId` | `string` | — | OAuth2 client ID registered in the compliance service |
 | `complianceClientSecret` | `string` | — | OAuth2 client secret |
+| `pluginsDir` | `string` | `./plugins` | Directory where plugin packages are installed |
+| `pluginsConfigFile` | `string` | — | Optional path to a plugins configuration JSON file |
 
 ---
 
@@ -53,6 +55,8 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `DASHBOARD_MAX_CONCURRENT_SCANS` | `maxConcurrentScans` | Max parallel scan limit |
 | `DASHBOARD_COMPLIANCE_CLIENT_ID` | `complianceClientId` | OAuth2 client ID |
 | `DASHBOARD_COMPLIANCE_CLIENT_SECRET` | `complianceClientSecret` | OAuth2 client secret |
+| `DASHBOARD_PLUGINS_DIR` | `pluginsDir` | Directory for plugin packages (default: `./plugins`) |
+| `DASHBOARD_PLUGINS_CONFIG` | `pluginsConfigFile` | Path to plugins configuration file |
 | `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |
 
 **Precedence:** Environment variables > `dashboard.config.json` > built-in defaults.
@@ -68,6 +72,7 @@ On startup the dashboard validates:
 - `maxConcurrentScans` is at least 1
 - `complianceUrl` is a valid URL
 - `reportsDir` exists and is writable (created if missing)
+- `pluginsDir` exists (created if missing)
 - `dbPath` parent directory exists and is writable
 
 Any failure exits immediately with a descriptive error message.

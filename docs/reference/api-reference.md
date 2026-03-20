@@ -174,6 +174,78 @@ Signature verification: `X-Webhook-Signature: sha256=<hmac-sha256-of-body>`
 
 ---
 
+## Dashboard Plugin API
+
+Base URL: `http://localhost:5000` (dashboard service). All plugin endpoints require admin role authentication via session cookie.
+
+### `GET /api/v1/plugins`
+
+List installed plugins. Returns an array of plugin records with masked secrets.
+
+Response: `[{ "id": "...", "packageName": "...", "type": "auth", "version": "1.0.0", "config": {...}, "status": "active", "installedAt": "...", "activatedAt": "..." }]`
+
+### `GET /api/v1/plugins/registry`
+
+List all plugins available in the registry. Each entry includes an `installed` boolean.
+
+Response: `[{ "name": "auth-entra", "displayName": "Azure Entra ID", "type": "auth", "version": "1.0.0", "description": "...", "packageName": "...", "icon": "entra", "installed": false }]`
+
+### `POST /api/v1/plugins/install`
+
+Install a plugin from the registry.
+
+Request: `{ "packageName": "@pally-agent/plugin-notify-slack" }`
+
+Response (201): `{ "id": "...", "packageName": "...", "type": "notification", "version": "1.0.0", "config": {}, "status": "inactive", "installedAt": "..." }`
+
+Errors: `400` if packageName missing or not in registry, `500` on install failure.
+
+### `PATCH /api/v1/plugins/:id/config`
+
+Update plugin configuration. Secret fields are encrypted with AES-256-GCM before storage.
+
+Request: `{ "config": { "webhookUrl": "https://...", "channel": "#a11y" } }`
+
+Response: `{ "id": "...", "packageName": "...", "config": {...}, "status": "inactive", ... }`
+
+Errors: `400` if config missing, `404` if plugin not found.
+
+### `POST /api/v1/plugins/:id/activate`
+
+Activate an installed plugin. Loads the plugin module, calls `activate()`, and starts health checks.
+
+Response: `{ "id": "...", "status": "active", "activatedAt": "...", ... }`
+
+Errors: `404` if not found, `500` on activation failure (status set to `error`).
+
+### `POST /api/v1/plugins/:id/deactivate`
+
+Deactivate a running plugin. Calls `deactivate()` and stops health checks.
+
+Response: `{ "id": "...", "status": "inactive", ... }`
+
+Errors: `404` if not found.
+
+### `DELETE /api/v1/plugins/:id`
+
+Remove an installed plugin. Deactivates first if active, deletes the database record and package files.
+
+Response: `204 No Content`
+
+Errors: `404` if not found.
+
+### `GET /api/v1/plugins/:id/health`
+
+Check health of an active plugin.
+
+Response: `{ "ok": true }` or `{ "ok": false, "message": "Health check failed (2/3)" }`
+
+After 3 consecutive failures, the plugin is marked `unhealthy` (or auto-deactivated if `autoDeactivateOnFailure` is set).
+
+Errors: `404` if not found.
+
+---
+
 ## Pagination
 
 All list endpoints support: `?limit=50&offset=0` (defaults shown, max limit: 200).
