@@ -193,10 +193,6 @@ body {
 }
 
 /* ---- Layout ---- */
-.layout {
-  display: flex;
-  min-height: 100vh;
-}
 
 /* ---- Sidebar ---- */
 .sidebar {
@@ -997,7 +993,52 @@ select {
   z-index: 99;
 }
 
-/* ---- Responsive (Mobile / Tablet) ---- */
+/* ---- Mobile Header (hidden on desktop) ---- */
+.mobile-header {
+  display: none;
+}
+
+.mobile-menu-toggle {
+  display: none;
+}
+
+/* ---- Detail List (view mode) ---- */
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.detail-list__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.detail-list__item:last-child {
+  border-bottom: none;
+}
+
+.detail-list__item dt {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 100px;
+}
+
+.detail-list__item dd {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ---- Responsive (Tablet & Mobile < 1024px) ---- */
 @media (max-width: 1024px) {
   .sidebar-backdrop.is-visible {
     display: block;
@@ -1013,6 +1054,23 @@ select {
 
   .main-content {
     margin-left: 0;
+    padding-top: 56px; /* space for fixed mobile header */
+  }
+
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    z-index: 50;
   }
 
   .mobile-menu-toggle {
@@ -1026,19 +1084,7 @@ select {
     border-radius: var(--border-radius);
     cursor: pointer;
     color: var(--text-primary);
-  }
-
-  .mobile-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md) var(--space-lg);
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--bg-primary);
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
   }
 
   .stats-grid {
@@ -1280,13 +1326,7 @@ select {
   }
 }
 
-/* Desktop only */
-@media (min-width: 1025px) {
-  .mobile-menu-toggle,
-  .mobile-header {
-    display: none;
-  }
-}
+/* Desktop only — mobile elements already hidden by default (display: none) */
 
 /* ---- Print Styles ---- */
 @media print {

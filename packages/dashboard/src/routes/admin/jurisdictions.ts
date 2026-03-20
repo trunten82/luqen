@@ -115,10 +115,15 @@ export async function jurisdictionRoutes(
   <td data-label="Type">${created.type}</td>
   <td data-label="Parent">${created.parentId ?? ''}</td>
   <td>
-    <button hx-get="/admin/jurisdictions/${encodeURIComponent(created.id)}/edit"
+    <button hx-get="/admin/jurisdictions/${encodeURIComponent(created.id)}/view"
             hx-target="#modal-container"
             hx-swap="innerHTML"
             class="btn btn--sm btn--secondary"
+            aria-label="View ${created.name}">View</button>
+    <button hx-get="/admin/jurisdictions/${encodeURIComponent(created.id)}/edit"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--sm btn--ghost"
             aria-label="Edit ${created.name}">Edit</button>
     <button hx-delete="/admin/jurisdictions/${encodeURIComponent(created.id)}"
             hx-confirm="Delete jurisdiction ${created.name}?"
@@ -139,6 +144,26 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
           );
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create jurisdiction';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // GET /admin/jurisdictions/:id/view — read-only detail modal
+  server.get(
+    '/admin/jurisdictions/:id/view',
+    { preHandler: adminGuard },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      try {
+        const jurisdictions = await listJurisdictions(baseUrl, getToken(request), getOrgId(request));
+        const jurisdiction = jurisdictions.find((j) => j.id === id);
+        if (jurisdiction === undefined) {
+          return reply.code(404).send(toastHtml('Jurisdiction not found.', 'error'));
+        }
+        return reply.view('admin/jurisdiction-view.hbs', { jurisdiction });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load jurisdiction';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
     },
@@ -195,10 +220,15 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
   <td data-label="Type">${updated.type}</td>
   <td data-label="Parent">${updated.parentId ?? ''}</td>
   <td>
-    <button hx-get="/admin/jurisdictions/${encodeURIComponent(updated.id)}/edit"
+    <button hx-get="/admin/jurisdictions/${encodeURIComponent(updated.id)}/view"
             hx-target="#modal-container"
             hx-swap="innerHTML"
             class="btn btn--sm btn--secondary"
+            aria-label="View ${updated.name}">View</button>
+    <button hx-get="/admin/jurisdictions/${encodeURIComponent(updated.id)}/edit"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--sm btn--ghost"
             aria-label="Edit ${updated.name}">Edit</button>
     <button hx-delete="/admin/jurisdictions/${encodeURIComponent(updated.id)}"
             hx-confirm="Delete jurisdiction ${updated.name}?"

@@ -36,6 +36,7 @@
 
       <div class="form-group">
         <label for="reg-jurisdiction" class="form-label">Jurisdiction <span aria-hidden="true">*</span></label>
+        {{#if isNew}}
         <select id="reg-jurisdiction" name="jurisdictionId" class="select"
                 required aria-required="true">
           <option value="">Select a jurisdiction</option>
@@ -43,6 +44,16 @@
           <option value="{{id}}" {{#if (eq id ../regulation.jurisdictionId)}}selected{{/if}}>{{name}}</option>
           {{/each}}
         </select>
+        {{else}}
+        <input id="reg-jurisdiction"
+               name="jurisdictionId"
+               type="text"
+               class="input"
+               value="{{regulation.jurisdictionId}}"
+               readonly
+               aria-describedby="reg-jurisdiction-hint">
+        <span id="reg-jurisdiction-hint" class="form-hint">Jurisdiction cannot be changed after creation</span>
+        {{/if}}
       </div>
 
       <div class="form-group">
