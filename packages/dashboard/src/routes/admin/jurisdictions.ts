@@ -45,19 +45,62 @@ export async function jurisdictionRoutes(
       const hasNext = offset + limit < total;
       const currentPage = Math.floor(offset / limit) + 1;
 
+      const isPartialRows = (request.query as { partial?: string }).partial === 'rows';
       const isHtmx = request.headers['hx-request'] === 'true';
-      if (isHtmx) {
-        return reply.view('admin/jurisdictions-table.hbs', {
-          jurisdictions: page,
-          error,
-          hasPrev,
-          hasNext,
-          prevOffset: Math.max(0, offset - limit),
-          nextOffset: offset + limit,
-          limit,
-          currentPage,
-          q,
-        });
+
+      if (isPartialRows) {
+        // "Load more" — return just table rows + optional new load-more button
+        const escQ = encodeURIComponent(q);
+        let html = page.map((j) =>
+          `<tr id="jurisdiction-${j.id}">
+  <td data-label="ID">${j.id}</td>
+  <td data-label="Name">${j.name}</td>
+  <td data-label="Type">${j.type}</td>
+  <td data-label="Parent">${j.parentId ?? ''}</td>
+  <td><button hx-get="/admin/jurisdictions/${encodeURIComponent(j.id)}/view" hx-target="#modal-container" hx-swap="innerHTML" class="btn btn--sm btn--secondary" aria-label="View ${j.name}">View</button></td>
+</tr>`
+        ).join('\n');
+
+        if (hasNext) {
+          html += `\n<tr id="load-more-row" hx-swap-oob="true"><td colspan="5" style="text-align:center;padding:var(--space-md)">
+  <button hx-get="/admin/jurisdictions?offset=${offset + limit}&limit=${limit}&q=${escQ}&partial=rows"
+          hx-target="#jurisdictions-table-body"
+          hx-swap="beforeend"
+          class="btn btn--ghost"
+          hx-on::after-request="document.getElementById('load-more-row')?.remove()">
+    Load more (${offset + limit} of ${total})
+  </button>
+</td></tr>`;
+        }
+
+        return reply.code(200).header('content-type', 'text/html').send(html);
+      }
+
+      if (isHtmx && !isPartialRows) {
+        // Search — return full table HTML for the list area
+        const escQ = encodeURIComponent(q);
+        let rows = '';
+        if (page.length === 0) {
+          rows = '<tr><td colspan="5">No jurisdictions found.</td></tr>';
+        } else {
+          rows = page.map((j) =>
+            `<tr id="jurisdiction-${j.id}">
+  <td data-label="ID">${j.id}</td>
+  <td data-label="Name">${j.name}</td>
+  <td data-label="Type">${j.type}</td>
+  <td data-label="Parent">${j.parentId ?? ''}</td>
+  <td><button hx-get="/admin/jurisdictions/${encodeURIComponent(j.id)}/view" hx-target="#modal-container" hx-swap="innerHTML" class="btn btn--sm btn--secondary" aria-label="View ${j.name}">View</button></td>
+</tr>`
+          ).join('\n');
+        }
+
+        let loadMore = '';
+        if (hasNext) {
+          loadMore = `<div class="load-more"><button hx-get="/admin/jurisdictions?offset=${offset + limit}&limit=${limit}&q=${escQ}&partial=rows" hx-target="#jurisdictions-table-body" hx-swap="beforeend" class="btn btn--ghost btn--full" hx-on::after-request="this.closest('.load-more').remove()">Load more (${offset + limit} of ${total})</button></div>`;
+        }
+
+        const html = `<div class="table-wrapper"><table aria-label="Jurisdictions"><thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Parent</th><th scope="col">Actions</th></tr></thead><tbody id="jurisdictions-table-body">${rows}</tbody></table></div>${loadMore}`;
+        return reply.code(200).header('content-type', 'text/html').send(html);
       }
 
       return reply.view('admin/jurisdictions.hbs', {
@@ -66,12 +109,10 @@ export async function jurisdictionRoutes(
         user: request.user,
         jurisdictions: page,
         error,
-        hasPrev,
         hasNext,
-        prevOffset: Math.max(0, offset - limit),
         nextOffset: offset + limit,
         limit,
-        currentPage,
+        total,
         q,
       });
     },
