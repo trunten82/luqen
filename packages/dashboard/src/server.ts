@@ -124,57 +124,57 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // Handlebars views
   const viewsDir = resolve(join(__dirname, 'views'));
+  const handlebars = (await import('handlebars')).default;
+
+  // Register helpers on Handlebars instance directly (required by @fastify/view v10)
+  handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+  handlebars.registerHelper('canScan', (role: string) => role === 'user' || role === 'admin');
+  handlebars.registerHelper('isAdmin', (role: string) => role === 'admin');
+  handlebars.registerHelper('startsWith', (str: string, prefix: string) =>
+    typeof str === 'string' && str.startsWith(prefix));
+  handlebars.registerHelper('issuesByType', (issues: readonly { type: string }[], type: string) =>
+    Array.isArray(issues) && issues.some((i) => i.type === type));
+  handlebars.registerHelper('countByType', (issues: readonly { type: string }[], type: string) =>
+    Array.isArray(issues) ? issues.filter((i) => i.type === type).length : 0);
+  handlebars.registerHelper('obligationClass', (obligation: string) => {
+    if (obligation === 'mandatory') return 'obligation-mandatory';
+    if (obligation === 'recommended') return 'obligation-recommended';
+    return 'obligation-optional';
+  });
+  handlebars.registerHelper('complianceStatusClass', (status: string) =>
+    status === 'pass' ? 'compliance-pass' : 'compliance-fail');
+  handlebars.registerHelper('reviewStatusClass', (reviewStatus: string) => {
+    if (reviewStatus === 'fail') return 'fail-head';
+    if (reviewStatus === 'review') return 'review-head';
+    return 'pass-head';
+  });
+  handlebars.registerHelper('reviewStatusLabelClass', (reviewStatus: string) => {
+    if (reviewStatus === 'fail') return 's-fail';
+    if (reviewStatus === 'review') return 's-review';
+    return 's-pass';
+  });
+  handlebars.registerHelper('reviewStatusLabel', (reviewStatus: string) => {
+    if (reviewStatus === 'fail') return 'FAIL';
+    if (reviewStatus === 'review') return 'REVIEW NEEDED';
+    return 'PASS';
+  });
+  handlebars.registerHelper('cmpPositive', (n: number) => typeof n === 'number' && n > 0);
+  handlebars.registerHelper('cmpNegative', (n: number) => typeof n === 'number' && n < 0);
+  handlebars.registerHelper('cmpSign', (n: number) => {
+    if (typeof n !== 'number') return '0';
+    if (n > 0) return `+${n}`;
+    if (n < 0) return `${n}`;
+    return '0';
+  });
+
   await server.register(import('@fastify/view'), {
-    engine: { handlebars: (await import('handlebars')).default },
+    engine: { handlebars },
     root: viewsDir,
     layout: 'layouts/main.hbs',
     options: {
       partials: {
         sidebar: 'partials/sidebar.hbs',
         'reports-table': 'partials/reports-table.hbs',
-      },
-      helpers: {
-        eq: (a: unknown, b: unknown) => a === b,
-        canScan: (role: string) => role === 'user' || role === 'admin',
-        isAdmin: (role: string) => role === 'admin',
-        startsWith: (str: string, prefix: string) =>
-          typeof str === 'string' && str.startsWith(prefix),
-        // Report helpers — mirror the standalone HTML report's helpers
-        issuesByType: (issues: readonly { type: string }[], type: string) =>
-          Array.isArray(issues) && issues.some((i) => i.type === type),
-        countByType: (issues: readonly { type: string }[], type: string) =>
-          Array.isArray(issues) ? issues.filter((i) => i.type === type).length : 0,
-        obligationClass: (obligation: string) => {
-          if (obligation === 'mandatory') return 'obligation-mandatory';
-          if (obligation === 'recommended') return 'obligation-recommended';
-          return 'obligation-optional';
-        },
-        complianceStatusClass: (status: string) =>
-          status === 'pass' ? 'compliance-pass' : 'compliance-fail',
-        reviewStatusClass: (reviewStatus: string) => {
-          if (reviewStatus === 'fail') return 'fail-head';
-          if (reviewStatus === 'review') return 'review-head';
-          return 'pass-head';
-        },
-        reviewStatusLabelClass: (reviewStatus: string) => {
-          if (reviewStatus === 'fail') return 's-fail';
-          if (reviewStatus === 'review') return 's-review';
-          return 's-pass';
-        },
-        reviewStatusLabel: (reviewStatus: string) => {
-          if (reviewStatus === 'fail') return 'FAIL';
-          if (reviewStatus === 'review') return 'REVIEW NEEDED';
-          return 'PASS';
-        },
-        // Compare helpers
-        cmpPositive: (n: number) => typeof n === 'number' && n > 0,
-        cmpNegative: (n: number) => typeof n === 'number' && n < 0,
-        cmpSign: (n: number) => {
-          if (typeof n !== 'number') return '0';
-          if (n > 0) return `+${n}`;
-          if (n < 0) return `${n}`;
-          return '0';
-        },
       },
     },
   });
