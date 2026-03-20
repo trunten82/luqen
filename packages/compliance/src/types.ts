@@ -315,5 +315,6 @@ export interface BaselineSeedData {
   readonly jurisdictions: readonly CreateJurisdictionInput[];
   readonly regulations: readonly CreateRegulationInput[];
   readonly requirements: readonly CreateRequirementInput[];
+  readonly sources?: readonly CreateSourceInput[];
 }
 

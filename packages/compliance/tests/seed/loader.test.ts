@@ -22,6 +22,7 @@ describe('seed loader', () => {
       expect(status.jurisdictions).toBe(0);
       expect(status.regulations).toBe(0);
       expect(status.requirements).toBe(0);
+      expect(status.sources).toBe(0);
     });
   });
 
@@ -69,6 +70,24 @@ describe('seed loader', () => {
       expect(shortNames).toContain('WAD');
     });
 
+    it('seeds monitored sources from regulation URLs', async () => {
+      await seedBaseline(db);
+
+      const sources = await db.listSources();
+      // Should have at least the EU EAA and WAD sources
+      expect(sources.length).toBeGreaterThanOrEqual(2);
+
+      const urls = sources.map((s) => s.url);
+      expect(urls).toContain('https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0882');
+      expect(urls).toContain('https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32016L2102');
+
+      // All sources should be html type with weekly schedule
+      for (const source of sources) {
+        expect(source.type).toBe('html');
+        expect(source.schedule).toBe('weekly');
+      }
+    });
+
     it('is idempotent — running twice does not create duplicates', async () => {
       await seedBaseline(db);
       await seedBaseline(db);
@@ -79,6 +98,7 @@ describe('seed loader', () => {
       expect(status.jurisdictions).toBe(statusAfterFirst.jurisdictions);
       expect(status.regulations).toBe(statusAfterFirst.regulations);
       expect(status.requirements).toBe(statusAfterFirst.requirements);
+      expect(status.sources).toBe(statusAfterFirst.sources);
     });
 
     it('creates requirements with correct WCAG versions', async () => {
