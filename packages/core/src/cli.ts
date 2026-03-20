@@ -15,6 +15,7 @@ import { proposeFixesFromReport } from './fixer/fix-proposer.js';
 import { applyFix, generateDiffPreview } from './fixer/fix-applier.js';
 import { fetchComplianceEnrichment } from './compliance-client.js';
 import type { ScanReport, FixProposal, ComplianceEnrichment } from './types.js';
+import { VERSION } from './version.js';
 
 // Exit codes
 // 0 = clean (no issues found)
@@ -27,7 +28,7 @@ export const program = new Command();
 program
   .name('pally-agent')
   .description('Accessibility testing agent using pa11y webservice')
-  .version('0.1.0');
+  .version(VERSION);
 
 // ---------------------------------------------------------------------------
 // scan command

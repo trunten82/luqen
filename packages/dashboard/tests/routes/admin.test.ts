@@ -46,6 +46,8 @@ vi.mock('../../src/compliance-client.js', () => ({
   createClient: vi.fn().mockResolvedValue({ clientId: 'my-app-client', name: 'My App', scopes: ['read'], grantTypes: ['client_credentials'], createdAt: new Date().toISOString(), secret: 'super-secret-value' }),
   revokeClient: vi.fn().mockResolvedValue(undefined),
   getSystemHealth: vi.fn().mockResolvedValue({ compliance: { status: 'ok' }, pa11y: { status: 'ok' } }),
+  safeGetSystemHealth: vi.fn().mockResolvedValue({ compliance: { status: 'ok' }, pa11y: { status: 'ok' } }),
+  safeListJurisdictions: vi.fn().mockResolvedValue([]),
   getSeedStatus: vi.fn().mockResolvedValue({ seeded: true, jurisdictions: 2, regulations: 5, requirements: 20 }),
   getToken: vi.fn().mockResolvedValue({ access_token: 'token', token_type: 'Bearer', expires_in: 3600 }),
   checkCompliance: vi.fn().mockResolvedValue({ summary: { totalJurisdictions: 1, passing: 1, failing: 0, totalMandatoryViolations: 0 }, matrix: {} }),
@@ -836,7 +838,7 @@ describe('GET /admin/system', () => {
   });
 
   it('returns 200 with system template', async () => {
-    vi.mocked(complianceClient.getSystemHealth).mockResolvedValueOnce({
+    vi.mocked(complianceClient.safeGetSystemHealth).mockResolvedValueOnce({
       compliance: { status: 'ok' },
       pa11y: { status: 'ok' },
     });
@@ -855,7 +857,7 @@ describe('GET /admin/system', () => {
   });
 
   it('shows compliance status in template data', async () => {
-    vi.mocked(complianceClient.getSystemHealth).mockResolvedValueOnce({
+    vi.mocked(complianceClient.safeGetSystemHealth).mockResolvedValueOnce({
       compliance: { status: 'ok' },
     });
     vi.mocked(complianceClient.getSeedStatus).mockResolvedValueOnce({
@@ -871,14 +873,16 @@ describe('GET /admin/system', () => {
     expect(body.data.services.compliance.status).toBe('ok');
   });
 
-  it('shows error status when compliance service is unreachable', async () => {
-    vi.mocked(complianceClient.getSystemHealth).mockRejectedValueOnce(new Error('Connection refused'));
+  it('shows degraded status when compliance service is unreachable', async () => {
+    vi.mocked(complianceClient.safeGetSystemHealth).mockResolvedValueOnce({
+      compliance: { status: 'degraded' },
+    });
     vi.mocked(complianceClient.getSeedStatus).mockRejectedValueOnce(new Error('Connection refused'));
 
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/system' });
 
     expect(response.statusCode).toBe(200);
     const body = response.json() as { data: { services: { compliance: { status: string } } } };
-    expect(body.data.services.compliance.status).toBe('error');
+    expect(body.data.services.compliance.status).toBe('degraded');
   });
 });

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { VERSION } from './version.js';
 
 // ---- Types ----
 
@@ -95,7 +96,7 @@ export async function fetchSource(
   type: SourceType = 'html',
   options: FetchOptions = {},
 ): Promise<FetchedSource> {
-  const userAgent = options.userAgent ?? 'pally-monitor/0.1.0';
+  const userAgent = options.userAgent ?? `pally-monitor/${VERSION}`;
   const timeoutMs = options.timeoutMs ?? 15_000;
 
   // Check robots.txt

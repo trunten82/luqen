@@ -7,6 +7,7 @@ import { seedBaseline } from './seed/loader.js';
 import { loadConfig } from './config.js';
 import { createComplianceMcpServer } from './mcp/server.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { VERSION } from './version.js';
 
 // ---- Utility: load DB adapter ----
 
@@ -24,7 +25,7 @@ export function createProgram(): Command {
   program
     .name('pally-compliance')
     .description('Pally Compliance Service CLI')
-    .version('0.1.0');
+    .version(VERSION);
 
   // ---- serve ----
   program

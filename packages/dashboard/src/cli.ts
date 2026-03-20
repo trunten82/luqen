@@ -2,13 +2,14 @@
 import { Command } from 'commander';
 import { loadConfig, validateConfig } from './config.js';
 import { ScanDb } from './db/scans.js';
+import { VERSION } from './version.js';
 
 const program = new Command();
 
 program
   .name('pally-dashboard')
   .description('Pally accessibility dashboard server')
-  .version('0.1.0');
+  .version(VERSION);
 
 program
   .command('serve')

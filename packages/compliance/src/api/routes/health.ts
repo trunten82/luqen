@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { VERSION } from '../../version.js';
 
 export async function registerHealthRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/v1/health', {
@@ -17,7 +18,7 @@ export async function registerHealthRoutes(app: FastifyInstance): Promise<void> 
   }, async (_request, reply) => {
     await reply.status(200).send({
       status: 'ok',
-      version: '0.1.0',
+      version: VERSION,
       timestamp: new Date().toISOString(),
     });
   });

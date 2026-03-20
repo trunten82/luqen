@@ -21,6 +21,7 @@ import { monitorRoutes } from './routes/admin/monitor.js';
 import { ScanDb } from './db/scans.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
+import { VERSION } from './version.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -162,7 +163,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Health endpoint ───────────────────────────────────────────────────────
   server.get('/health', async (_request, _reply) => {
-    return { status: 'ok', version: '0.1.0' };
+    return { status: 'ok', version: VERSION };
   });
 
   return server;
