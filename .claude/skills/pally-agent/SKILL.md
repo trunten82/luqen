@@ -11,20 +11,38 @@ Scan entire websites for WCAG accessibility issues via pa11y, map issues to sour
 
 ### As MCP Server (recommended for Claude Code)
 
-Add to `.claude/settings.json`:
+Add to `.claude/settings.json` (all 4 servers — 20 tools total):
 
 ```json
 {
   "mcpServers": {
     "pally-agent": {
       "command": "node",
-      "args": ["/root/pally-agent/dist/mcp.js"]
+      "args": ["/root/pally-agent/packages/core/dist/mcp.js"]
+    },
+    "pally-compliance": {
+      "command": "node",
+      "args": ["/root/pally-agent/packages/compliance/dist/cli.js", "mcp"],
+      "env": {
+        "COMPLIANCE_DB_PATH": "/root/pally-agent/packages/compliance/compliance.db"
+      }
+    },
+    "pally-monitor": {
+      "command": "node",
+      "args": ["/root/pally-agent/packages/monitor/dist/cli.js", "mcp"],
+      "env": {
+        "COMPLIANCE_URL": "http://localhost:4000",
+        "COMPLIANCE_CLIENT_ID": "<client-id>",
+        "COMPLIANCE_CLIENT_SECRET": "<client-secret>"
+      }
     }
   }
 }
 ```
 
-Build first: `cd /root/pally-agent && npm run build`
+Build first: `cd /root/pally-agent && npm run build --workspaces`
+
+This gives Claude Code **20 MCP tools**: 6 for scanning/fixing (pally-agent), 11 for compliance (pally-compliance), and 3 for regulatory monitoring (pally-monitor).
 
 ### As CLI
 
@@ -343,7 +361,95 @@ Source types: `html`, `rss`, `api`. Schedules: `daily`, `weekly`, `monthly`.
 
 Loads baseline data (idempotent). Run once on setup. Returns counts of jurisdictions/regulations/requirements loaded.
 
-### Full Audit Workflow (both MCP servers)
+---
+
+## Pally Monitor Agent
+
+Watches monitored legal sources (HTML pages, RSS feeds, APIs) for content changes. When a source changes it creates an UpdateProposal in the compliance service for human review.
+
+### MCP Setup (monitor agent)
+
+Add alongside the other servers in `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "pally-agent": {
+      "command": "node",
+      "args": ["/root/pally-agent/packages/core/dist/mcp.js"]
+    },
+    "pally-compliance": {
+      "command": "node",
+      "args": ["/root/pally-agent/packages/compliance/dist/cli.js", "mcp"],
+      "env": {
+        "COMPLIANCE_DB_PATH": "/root/pally-agent/packages/compliance/compliance.db"
+      }
+    },
+    "pally-monitor": {
+      "command": "node",
+      "args": ["/root/pally-agent/packages/monitor/dist/cli.js", "mcp"],
+      "env": {
+        "COMPLIANCE_URL": "http://localhost:4000",
+        "COMPLIANCE_CLIENT_ID": "<client-id>",
+        "COMPLIANCE_CLIENT_SECRET": "<client-secret>"
+      }
+    }
+  }
+}
+```
+
+Build first: `cd /root/pally-agent/packages/monitor && npm run build`
+
+### Monitor MCP Tools (3 total)
+
+#### `monitor_scan_sources` — Scan all monitored sources
+
+```json
+{}
+```
+
+Fetches every source registered in the compliance service, computes a SHA-256 hash, and creates UpdateProposals for any sources whose content has changed. Returns `{ scanned, changed, unchanged, errors }`.
+
+#### `monitor_status` — Show monitor status
+
+```json
+{}
+```
+
+Returns the number of monitored sources, last scan timestamp, and count of pending proposals.
+
+#### `monitor_add_source` — Add a new source
+
+```json
+{
+  "name": "W3C WAI Policies",
+  "url": "https://www.w3.org/WAI/policies/",
+  "type": "html",
+  "schedule": "weekly"
+}
+```
+
+Registers a new URL for monitoring. Source types: `html`, `rss`, `api`. Schedules: `daily`, `weekly`, `monthly`.
+
+### Monitor CLI
+
+```bash
+# Run one full scan cycle (detect changes, create proposals)
+pally-monitor scan
+
+# Show current status (source count, last scan, pending proposals)
+pally-monitor status
+
+# Start MCP server on stdio (for Claude Code)
+pally-monitor mcp
+
+# Start HTTP server with A2A agent card endpoint
+pally-monitor serve --port 4200
+```
+
+---
+
+### Full Audit Workflow (all MCP servers)
 
 ```
 1. pally_scan — scan the website for WCAG issues
@@ -354,6 +460,8 @@ Loads baseline data (idempotent). Run once on setup. Returns counts of jurisdict
 6. Prioritize: fix mandatory violations first (legal), then recommended
 7. pally_apply_fix — apply fixes one at a time
 8. pally_scan — re-scan to verify
+9. monitor_scan_sources — detect any regulation changes that may affect obligations
+10. monitor_status — confirm no pending proposals require review
 ```
 
 ### Baseline Jurisdictions

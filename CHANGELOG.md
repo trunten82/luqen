@@ -6,6 +6,36 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.0] - 2026-03-20
+
+### Added
+
+- **Regulatory monitor agent** (`@pally-agent/monitor`) — new package that watches monitored legal sources for content changes, computes SHA-256 hashes, and creates UpdateProposals in the compliance service when changes are detected
+- **Monitor MCP server** — 3 tools: `monitor_scan_sources`, `monitor_status`, `monitor_add_source`
+- **Monitor CLI** — `pally-monitor scan`, `pally-monitor status`, `pally-monitor mcp`, `pally-monitor serve` commands
+- **Monitor A2A agent** — Agent-to-Agent protocol support via `/.well-known/agent.json` endpoint
+- **npm publish preparation** — `package.json` metadata (description, keywords, repository, homepage), `LICENSE` file (MIT), and `.npmignore` files added to all publishable packages
+- **Redis support** — optional Redis adapter for caching, job queue, and SSE broadcasting (used by compliance service and dashboard when `REDIS_URL` is set)
+
+### Security
+
+- **RSA private key removed** from repository history; keys are now generated at runtime with `pally-compliance keys generate` and stored outside the repo
+- **CSRF protection** added to dashboard state-changing routes (SameSite=Strict cookies + origin validation)
+- **bcrypt upgraded** from 5.1.1 to 6.x — resolves vulnerable `tar` transitive dependency
+
+---
+
+## [0.4.1] - 2026-03-20
+
+### Added
+
+- **Dashboard renders from JSON** — report viewer reads `.json` report files directly; no HTML file dependency required
+- **Kubernetes manifests** — `k8s/` directory with Deployment, Service, and ConfigMap manifests for core, compliance, and dashboard; Kustomize overlays for `base`, `staging`, and `production`
+- **Dashboard documentation** — `docs/dashboard/README.md` covering user guide, admin guide, configuration reference, Docker, and WCAG self-audit results
+- **CHANGELOG** — this file; full version history from v0.1.0
+
+---
+
 ## [0.4.0] - 2026-03-19
 
 ### Added
@@ -136,6 +166,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [0.5.0] | 2026-03-20 | Regulatory monitor agent, npm publish prep, security fixes, Redis support |
+| [0.4.1] | 2026-03-20 | Dashboard JSON rendering, Kubernetes manifests, dashboard docs, CHANGELOG |
 | [0.4.0] | 2026-03-19 | Web dashboard, admin UI, Docker Compose update |
 | [0.3.2] | 2026-03-19 | Confirmed violations vs notices, WAF detection, hostname in filenames |
 | [0.3.1] | 2026-03-19 | Documentation update for v0.3.0 |

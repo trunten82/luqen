@@ -4,7 +4,9 @@
   "description": "Web dashboard for pally accessibility scanner",
   "type": "module",
   "main": "dist/cli.js",
-  "bin": { "pally-dashboard": "dist/cli.js" },
+  "bin": {
+    "pally-dashboard": "dist/cli.js"
+  },
   "scripts": {
     "build": "tsc && cp -r src/views dist/views && cp -r src/static dist/static",
     "test": "vitest run",
@@ -52,10 +54,12 @@
     "commander": "^14.0.3",
     "fastify": "^5.0.0",
     "handlebars": "^4.7.8",
+    "ioredis": "^5.10.1",
     "jose": "^6.0.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
+    "@types/ioredis": "^4.28.10",
     "@types/node": "^25.5.0",
     "@vitest/coverage-v8": "^4.1.0",
     "typescript": "^5.9.3",

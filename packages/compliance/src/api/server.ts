@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit';
 import type { DbAdapter } from '../db/adapter.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
 import { createAuthMiddleware } from '../auth/middleware.js';
+import type { ComplianceCache } from '../cache/redis.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerOAuthRoutes } from './routes/oauth.js';
 import { registerJurisdictionRoutes } from './routes/jurisdictions.js';
@@ -27,6 +28,8 @@ export interface ServerOptions {
   readonly rateLimitWrite?: number;
   readonly rateLimitWindowMs?: number;
   readonly logger?: boolean;
+  /** Optional Redis-backed compliance result cache. */
+  readonly cache?: ComplianceCache;
 }
 
 export async function createServer(options: ServerOptions) {
@@ -39,6 +42,7 @@ export async function createServer(options: ServerOptions) {
     rateLimitRead = 100,
     rateLimitWindowMs = 60000,
     logger = false,
+    cache,
   } = options;
 
   const app = Fastify({ logger });
@@ -108,7 +112,7 @@ export async function createServer(options: ServerOptions) {
   await registerJurisdictionRoutes(app, db);
   await registerRegulationRoutes(app, db);
   await registerRequirementRoutes(app, db);
-  await registerComplianceRoutes(app, db);
+  await registerComplianceRoutes(app, db, cache);
   await registerUpdateRoutes(app, db);
   await registerSourceRoutes(app, db);
   await registerWebhookRoutes(app, db);

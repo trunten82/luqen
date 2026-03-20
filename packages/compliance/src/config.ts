@@ -41,6 +41,7 @@ function applyEnvOverrides(config: ComplianceConfig): ComplianceConfig {
       ?? config.dbAdapter,
     dbPath: env.COMPLIANCE_DB_PATH ?? config.dbPath,
     dbUrl: env.COMPLIANCE_DB_URL ?? config.dbUrl,
+    redisUrl: env.COMPLIANCE_REDIS_URL ?? config.redisUrl,
     host: env.COMPLIANCE_HOST ?? config.host,
     jwtKeyPair: {
       privateKeyPath: env.COMPLIANCE_JWT_PRIVATE_KEY

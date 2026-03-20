@@ -281,6 +281,7 @@ export interface ComplianceConfig {
   readonly dbAdapter: 'sqlite' | 'mongodb' | 'postgres';
   readonly dbPath?: string;
   readonly dbUrl?: string;
+  readonly redisUrl?: string;
   readonly jwtKeyPair: {
     readonly publicKeyPath: string;
     readonly privateKeyPath: string;
