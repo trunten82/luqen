@@ -183,7 +183,8 @@ export class ScanOrchestrator {
       const hostname = new URL(config.siteUrl).hostname;
       const jsonPath = join(this.reportsDir, `${hostname}-${scanId}.json`);
 
-      const reportData = {
+      // Build report data — compliance will be added if jurisdictions selected
+      const reportData: Record<string, unknown> = {
         scanId,
         siteUrl: config.siteUrl,
         standard: config.standard,
@@ -194,8 +195,6 @@ export class ScanOrchestrator {
         issues: allIssues,
         completedAt: new Date().toISOString(),
       };
-
-      await writeFile(jsonPath, JSON.stringify(reportData, null, 2));
 
       let confirmedViolations: number | undefined;
 
@@ -220,6 +219,9 @@ export class ScanOrchestrator {
             allIssues,
           );
           confirmedViolations = complianceResult.summary.totalConfirmedViolations ?? 0;
+
+          // Save full compliance data so the report template can render it
+          reportData.compliance = complianceResult;
         } catch (complianceErr) {
           // Non-fatal — compliance check failure doesn't fail the scan
           emit({
@@ -229,6 +231,8 @@ export class ScanOrchestrator {
           });
         }
       }
+
+      await writeFile(jsonPath, JSON.stringify(reportData, null, 2));
 
       this.db.updateScan(scanId, {
         status: 'completed',
