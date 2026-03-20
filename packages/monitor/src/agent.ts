@@ -33,6 +33,8 @@ export interface AgentOptions {
   readonly fetchOptions?: FetchOptions;
   /** Path to a local sources JSON file (--sources-file). Enables standalone mode. */
   readonly sourcesFile?: string;
+  /** Organisation ID for multi-tenant scoping (omit for system-wide). */
+  readonly orgId?: string;
 }
 
 // ---- Main scan loop ----
@@ -48,6 +50,7 @@ export interface AgentOptions {
  */
 export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
   const config = options.config ?? loadConfig();
+  const orgId = options.orgId ?? config.orgId;
   const fetchOptions: FetchOptions = {
     userAgent: config.userAgent,
     ...options.fetchOptions,
@@ -75,7 +78,7 @@ export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
       );
 
       // Step 2: List sources
-      sources = await listSources(baseUrl, token);
+      sources = await listSources(baseUrl, token, orgId);
     } catch {
       // Compliance service unavailable — try local fallback
       console.warn('[monitor] Compliance service unavailable, using local source config');
@@ -104,7 +107,7 @@ export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
         unchanged++;
         // Still update lastCheckedAt even when unchanged (only when connected)
         if (!standaloneMode && token !== undefined) {
-          await updateSourceLastChecked(baseUrl, token, source.id, fetched.contentHash);
+          await updateSourceLastChecked(baseUrl, token, source.id, fetched.contentHash, orgId);
         }
         continue;
       }
@@ -143,12 +146,12 @@ export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
               modifiedSections: analysis.sections.modified,
             },
           },
-        });
+        }, orgId);
 
         proposalsCreated.push(proposal);
 
         // Update source tracking
-        await updateSourceLastChecked(baseUrl, token, source.id, fetched.contentHash);
+        await updateSourceLastChecked(baseUrl, token, source.id, fetched.contentHash, orgId);
       }
     } catch (err) {
       errorDetails.push({
@@ -187,6 +190,7 @@ export interface MonitorStatus {
  */
 export async function getStatus(options: AgentOptions = {}): Promise<MonitorStatus> {
   const config = options.config ?? loadConfig();
+  const orgId = options.orgId ?? config.orgId;
   const baseUrl = config.complianceUrl;
 
   const token = await getToken(
@@ -195,7 +199,7 @@ export async function getStatus(options: AgentOptions = {}): Promise<MonitorStat
     config.complianceClientSecret,
   );
 
-  const sources = await listSources(baseUrl, token);
+  const sources = await listSources(baseUrl, token, orgId);
 
   // Find the most recent lastCheckedAt across all sources
   const lastScanAt =
