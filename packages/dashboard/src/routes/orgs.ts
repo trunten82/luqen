@@ -1,0 +1,67 @@
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { OrgDb } from '../db/orgs.js';
+
+export async function orgRoutes(
+  server: FastifyInstance,
+  orgDb: OrgDb,
+): Promise<void> {
+  // ── POST /orgs/switch — switch org context ──────────────────────────────
+  server.post('/orgs/switch', async (request: FastifyRequest, reply: FastifyReply) => {
+    const user = request.user;
+    if (user === undefined) {
+      await reply.code(401).send({ error: 'Authentication required' });
+      return;
+    }
+
+    const { orgId } = request.body as { orgId?: string };
+
+    const session = request.session as {
+      set(key: string, value: unknown): void;
+      get(key: string): unknown;
+    };
+
+    // Clear org context when orgId is 'system' or empty
+    if (orgId === undefined || orgId === '' || orgId === 'system') {
+      session.set('currentOrgId', '');
+      const referer = (request.headers.referer as string | undefined) ?? '/';
+      await reply.redirect(referer);
+      return;
+    }
+
+    // Validate user belongs to the requested org
+    const userOrgs = orgDb.getUserOrgs(user.id);
+    const belongsToOrg = userOrgs.some((org) => org.id === orgId);
+
+    if (!belongsToOrg) {
+      await reply.code(403).send({ error: 'You do not have access to this organization' });
+      return;
+    }
+
+    session.set('currentOrgId', orgId);
+    const referer = (request.headers.referer as string | undefined) ?? '/';
+    await reply.redirect(referer);
+  });
+
+  // ── GET /orgs/current — return current org context (JSON) ───────────────
+  server.get('/orgs/current', async (request: FastifyRequest, reply: FastifyReply) => {
+    const user = request.user;
+    if (user === undefined) {
+      await reply.code(401).send({ error: 'Authentication required' });
+      return;
+    }
+
+    const session = request.session as {
+      get(key: string): unknown;
+    };
+
+    const currentOrgId = (session.get('currentOrgId') as string | undefined) ?? '';
+    const currentOrg = currentOrgId !== '' ? orgDb.getOrg(currentOrgId) : null;
+    const userOrgs = orgDb.getUserOrgs(user.id);
+
+    return {
+      currentOrgId: currentOrgId !== '' ? currentOrgId : null,
+      currentOrg,
+      userOrgs,
+    };
+  });
+}
