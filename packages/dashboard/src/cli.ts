@@ -92,4 +92,169 @@ program
     }
   });
 
+// ── Plugin management ─────────────────────────────────────────────────────
+
+const pluginCmd = program.command('plugin').description('Manage plugins');
+
+async function withPluginManager(
+  configPath: string,
+  fn: (manager: import('./plugins/manager.js').PluginManager, registryEntries: readonly import('./plugins/types.js').RegistryEntry[]) => Promise<void>,
+): Promise<void> {
+  const config = loadConfig(configPath);
+  const db = new ScanDb(config.dbPath);
+  db.initialize();
+
+  const { PluginManager } = await import('./plugins/manager.js');
+  const { loadRegistry } = await import('./plugins/registry.js');
+
+  const registryEntries = loadRegistry();
+  const manager = new PluginManager({
+    db: db.getDatabase(),
+    pluginsDir: config.pluginsDir,
+    encryptionKey: config.sessionSecret,
+    registryEntries,
+  });
+
+  try {
+    await fn(manager, registryEntries);
+  } finally {
+    db.close();
+  }
+}
+
+pluginCmd
+  .command('list')
+  .description('List installed plugins')
+  .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
+  .action(async (options: { config: string }) => {
+    try {
+      await withPluginManager(options.config, async (manager) => {
+        const plugins = manager.list();
+        if (plugins.length === 0) {
+          console.log('No plugins installed');
+          return;
+        }
+
+        // Table header
+        console.log(
+          'ID'.padEnd(38) +
+          'Package'.padEnd(40) +
+          'Type'.padEnd(15) +
+          'Version'.padEnd(10) +
+          'Status',
+        );
+        console.log('-'.repeat(113));
+
+        for (const p of plugins) {
+          console.log(
+            p.id.padEnd(38) +
+            p.packageName.padEnd(40) +
+            p.type.padEnd(15) +
+            p.version.padEnd(10) +
+            p.status,
+          );
+        }
+      });
+    } catch (err) {
+      console.error('Failed to list plugins:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
+pluginCmd
+  .command('install <package>')
+  .description('Install a plugin from the registry')
+  .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
+  .action(async (pkg: string, options: { config: string }) => {
+    try {
+      await withPluginManager(options.config, async (manager) => {
+        const plugin = await manager.install(pkg);
+        console.log(`Installed ${plugin.packageName} (${plugin.type}, v${plugin.version})`);
+        console.log(`Plugin ID: ${plugin.id}`);
+      });
+    } catch (err) {
+      console.error('Install failed:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
+pluginCmd
+  .command('configure <id>')
+  .description('Configure a plugin')
+  .option('--set <pairs...>', 'key=value pairs')
+  .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
+  .action(async (id: string, options: { set?: string[]; config: string }) => {
+    try {
+      await withPluginManager(options.config, async (manager) => {
+        const pairs = options.set ?? [];
+        const config: Record<string, unknown> = {};
+
+        for (const pair of pairs) {
+          const eqIndex = pair.indexOf('=');
+          if (eqIndex === -1) {
+            console.error(`Invalid key=value pair: ${pair}`);
+            process.exit(1);
+          }
+          const key = pair.slice(0, eqIndex);
+          const value = pair.slice(eqIndex + 1);
+          config[key] = value;
+        }
+
+        const plugin = await manager.configure(id, config);
+        console.log(`Configured ${plugin.packageName}`);
+      });
+    } catch (err) {
+      console.error('Configure failed:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
+pluginCmd
+  .command('activate <id>')
+  .description('Activate an installed plugin')
+  .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
+  .action(async (id: string, options: { config: string }) => {
+    try {
+      await withPluginManager(options.config, async (manager) => {
+        const plugin = await manager.activate(id);
+        console.log(`Activated ${plugin.packageName} (status: ${plugin.status})`);
+      });
+    } catch (err) {
+      console.error('Activate failed:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
+pluginCmd
+  .command('deactivate <id>')
+  .description('Deactivate a running plugin')
+  .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
+  .action(async (id: string, options: { config: string }) => {
+    try {
+      await withPluginManager(options.config, async (manager) => {
+        const plugin = await manager.deactivate(id);
+        console.log(`Deactivated ${plugin.packageName} (status: ${plugin.status})`);
+      });
+    } catch (err) {
+      console.error('Deactivate failed:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
+pluginCmd
+  .command('remove <id>')
+  .description('Remove an installed plugin')
+  .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
+  .action(async (id: string, options: { config: string }) => {
+    try {
+      await withPluginManager(options.config, async (manager) => {
+        await manager.remove(id);
+        console.log(`Plugin ${id} removed`);
+      });
+    } catch (err) {
+      console.error('Remove failed:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);
