@@ -9,7 +9,7 @@
     "pally-dashboard": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && cp -r src/views dist/views && cp -r src/static dist/static",
+    "build": "tsc && cp -r src/views dist/views && cp -r src/static dist/static && cp plugin-registry.json dist/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
