@@ -19,24 +19,28 @@ export interface SeedStatus {
   readonly jurisdictions: number;
   readonly regulations: number;
   readonly requirements: number;
+  readonly sources: number;
 }
 
 export async function getSeedStatus(db: DbAdapter): Promise<SeedStatus> {
-  const [jurisdictions, regulations, requirements] = await Promise.all([
+  const [jurisdictions, regulations, requirements, sources] = await Promise.all([
     db.listJurisdictions(),
     db.listRegulations(),
     db.listRequirements(),
+    db.listSources(),
   ]);
 
   const j = jurisdictions.length;
   const reg = regulations.length;
   const req = requirements.length;
+  const src = sources.length;
 
   return {
     seeded: j > 0 && reg > 0 && req > 0,
     jurisdictions: j,
     regulations: reg,
     requirements: req,
+    sources: src,
   };
 }
 
@@ -81,6 +85,17 @@ export async function seedBaseline(db: DbAdapter): Promise<void> {
     );
     if (!alreadyExists) {
       await db.createRequirement(requirement);
+    }
+  }
+
+  // Upsert monitored sources
+  if (data.sources) {
+    const existingSources = await db.listSources();
+    for (const source of data.sources) {
+      const alreadyExists = existingSources.some((s) => s.url === source.url);
+      if (!alreadyExists) {
+        await db.createSource(source);
+      }
     }
   }
 }
