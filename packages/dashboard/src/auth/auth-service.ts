@@ -147,17 +147,21 @@ export class AuthService {
       const role = session.get('role') as string | undefined;
       const sessionBootId = session.get('bootId') as string | undefined;
 
-      // Verify session belongs to this database instance (invalidates
-      // stale sessions when the DB is recreated between restarts)
-      if (userId !== undefined && username !== undefined && sessionBootId === this.getBootId()) {
-        return {
-          authenticated: true,
-          user: {
-            id: userId,
-            username,
-            role: role ?? 'user',
-          },
-        };
+      if (userId !== undefined && username !== undefined) {
+        // Verify session belongs to this database instance
+        if (sessionBootId === this.getBootId()) {
+          return {
+            authenticated: true,
+            user: { id: userId, username, role: role ?? 'user' },
+          };
+        }
+
+        // Stale session from a previous DB — clear it to prevent redirect loops.
+        // session.regenerate() wipes all data from the encrypted cookie.
+        const regenerable = request.session as { regenerate?: (keep?: string[]) => void };
+        if (typeof regenerable.regenerate === 'function') {
+          regenerable.regenerate();
+        }
       }
     }
 
