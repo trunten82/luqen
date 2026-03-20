@@ -52,7 +52,9 @@ export async function seedBaseline(db: DbAdapter): Promise<void> {
   });
 
   for (const jurisdiction of sorted) {
-    const existing = await db.getJurisdiction(jurisdiction.id);
+    const jId = jurisdiction.id;
+    if (jId == null) continue;
+    const existing = await db.getJurisdiction(jId);
     if (existing == null) {
       await db.createJurisdiction(jurisdiction);
     }
@@ -60,7 +62,9 @@ export async function seedBaseline(db: DbAdapter): Promise<void> {
 
   // Upsert regulations
   for (const regulation of data.regulations) {
-    const existing = await db.getRegulation(regulation.id);
+    const rId = regulation.id;
+    if (rId == null) continue;
+    const existing = await db.getRegulation(rId);
     if (existing == null) {
       await db.createRegulation(regulation);
     }

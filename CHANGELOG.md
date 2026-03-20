@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.10.0] - 2026-03-20
+
+### Added
+- Multi-tenancy: org-level data isolation with `org_id` column on all tables
+- Organizations and org_members tables in dashboard database
+- OrgDb class for organization CRUD and membership management
+- Org-scoped scan CRUD (create, list, delete by org)
+- Org-scoped compliance queries (jurisdictions, regulations, requirements, proposals, sources, webhooks)
+- X-Org-Id header extraction in compliance service for cross-service org context
+- DELETE /api/v1/orgs/:id/data endpoint for org data cleanup
+- deleteOrgData() transactional cleanup across all compliance tables
+
+### Changed
+- ScanRecord now includes orgId field (defaults to 'system')
+- All compliance filter interfaces support optional orgId
+- All compliance create inputs support optional orgId
+- Compliance route handlers pass org context from X-Org-Id header to database queries
+
+---
+
 ## [0.9.0] - 2026-03-20
 
 ### Added
