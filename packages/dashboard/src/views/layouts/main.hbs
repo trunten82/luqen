@@ -103,21 +103,41 @@
       });
     });
 
-    // Close modal when overlay is clicked or Escape pressed
+    // Close modal when overlay, cancel button, or close button is clicked, or Escape pressed
+    function closeModal() {
+      var container = document.getElementById('modal-container');
+      if (container) { while (container.firstChild) { container.removeChild(container.firstChild); } }
+    }
     document.addEventListener('click', function (evt) {
-      if (evt.target && evt.target.classList.contains('modal-overlay')) {
-        var container = document.getElementById('modal-container');
-        if (container) { while (container.firstChild) { container.removeChild(container.firstChild); } }
+      if (evt.target && (
+        evt.target.classList.contains('modal-overlay') ||
+        evt.target.classList.contains('close-modal-btn') ||
+        evt.target.classList.contains('modal__close')
+      )) {
+        closeModal();
       }
     });
     document.addEventListener('keydown', function (evt) {
       if (evt.key === 'Escape') {
-        var container = document.getElementById('modal-container');
-        if (container && container.children.length > 0) {
-          while (container.firstChild) { container.removeChild(container.firstChild); }
-        }
+        closeModal();
       }
     });
+
+    // Mobile: tap on table card row to trigger its Edit button
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      document.addEventListener('click', function (evt) {
+        var target = evt.target;
+        // Don't intercept clicks on buttons, links, inputs, or selects
+        if (target.closest('button, a, input, select, textarea, .btn')) return;
+        var row = target.closest('tbody tr');
+        if (!row) return;
+        // Find the Edit button in this row
+        var editBtn = row.querySelector('[hx-get*="/edit"], .btn--secondary');
+        if (editBtn) {
+          editBtn.click();
+        }
+      });
+    }
   </script>
 </body>
 </html>

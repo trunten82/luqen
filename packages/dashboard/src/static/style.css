@@ -615,6 +615,14 @@ input[type="range"] {
   accent-color: var(--accent);
 }
 
+/* Readonly inputs show as muted with dashed border */
+input[readonly] {
+  background-color: var(--bg-secondary);
+  border-style: dashed;
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 .form-hint {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
@@ -839,16 +847,22 @@ select {
   color: var(--text-muted);
 }
 
-/* ---- Search Bar ---- */
-.search-bar {
+/* ---- Search Bar & Filter Bar ---- */
+.search-bar,
+.filter-bar {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
+  flex-wrap: wrap;
 }
 
 .search-bar input {
   max-width: 360px;
+}
+
+.filter-bar select {
+  max-width: 300px;
 }
 
 /* ---- Status Indicators ---- */
@@ -1101,6 +1115,28 @@ select {
     box-shadow: var(--shadow-md);
   }
 
+  /* Make entire card tappable on mobile */
+  tbody tr {
+    cursor: pointer;
+    position: relative;
+  }
+
+  tbody tr::after {
+    content: '›';
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    font-size: var(--font-size-xl);
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+
+  /* Better touch targets for buttons inside cards */
+  td .btn {
+    min-height: 40px;
+    font-size: var(--font-size-sm);
+  }
+
   td {
     display: flex;
     justify-content: space-between;
@@ -1171,12 +1207,17 @@ select {
     border-radius: var(--border-radius);
   }
 
-  .search-bar {
+  .search-bar,
+  .filter-bar {
     flex-direction: column;
+    gap: var(--space-sm);
   }
 
-  .search-bar input {
+  .search-bar input,
+  .filter-bar input,
+  .filter-bar select {
     max-width: 100%;
+    width: 100%;
   }
 
   /* ---- Modal (bottom sheet) ---- */
