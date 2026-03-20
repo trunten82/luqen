@@ -74,6 +74,15 @@ async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
+/** Unwrap a paginated envelope { data: T[], total, limit, offset } or a plain array. */
+function unwrapList<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  if (result != null && typeof result === 'object' && 'data' in result) {
+    return (result as { data: T[] }).data;
+  }
+  return [];
+}
+
 export async function getToken(
   baseUrl: string,
   username: string,
@@ -108,9 +117,10 @@ export async function listJurisdictions(
   token: string,
   orgId?: string,
 ): Promise<Jurisdiction[]> {
-  return apiFetch<Jurisdiction[]>(`${baseUrl}/api/v1/jurisdictions`, {
+  const result = await apiFetch<unknown>(`${baseUrl}/api/v1/jurisdictions?limit=500`, {
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);
+  return unwrapList<Jurisdiction>(result);
 }
 
 export async function listRegulations(
@@ -120,9 +130,11 @@ export async function listRegulations(
   orgId?: string,
 ): Promise<Regulation[]> {
   const params = filters !== undefined ? `?${new URLSearchParams(filters).toString()}` : '';
-  return apiFetch<Regulation[]>(`${baseUrl}/api/v1/regulations${params}`, {
+  const sep = params ? '&' : '?';
+  const result = await apiFetch<unknown>(`${baseUrl}/api/v1/regulations${params}${sep}limit=500`, {
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);
+  return unwrapList<Regulation>(result);
 }
 
 export interface ComplianceIssueInput {
@@ -164,9 +176,10 @@ export async function listUpdateProposals(
   orgId?: string,
 ): Promise<UpdateProposal[]> {
   const params = status !== undefined ? `?status=${encodeURIComponent(status)}` : '';
-  return apiFetch<UpdateProposal[]>(`${baseUrl}/api/v1/updates${params}`, {
+  const result = await apiFetch<unknown>(`${baseUrl}/api/v1/updates${params}`, {
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);
+  return unwrapList<UpdateProposal>(result);
 }
 
 export async function approveProposal(
@@ -340,9 +353,10 @@ export async function listSources(
   token: string,
   orgId?: string,
 ): Promise<MonitoredSource[]> {
-  return apiFetch<MonitoredSource[]>(`${baseUrl}/api/v1/sources`, {
+  const result = await apiFetch<unknown>(`${baseUrl}/api/v1/sources`, {
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);
+  return unwrapList<MonitoredSource>(result);
 }
 
 export async function createSource(
@@ -414,9 +428,10 @@ export async function listWebhooks(
   token: string,
   orgId?: string,
 ): Promise<Webhook[]> {
-  return apiFetch<Webhook[]>(`${baseUrl}/api/v1/webhooks`, {
+  const result = await apiFetch<unknown>(`${baseUrl}/api/v1/webhooks`, {
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);
+  return unwrapList<Webhook>(result);
 }
 
 export async function createWebhook(
@@ -493,9 +508,10 @@ export async function listUsers(
   token: string,
   orgId?: string,
 ): Promise<User[]> {
-  return apiFetch<User[]>(`${baseUrl}/api/v1/users`, {
+  const result = await apiFetch<unknown>(`${baseUrl}/api/v1/users`, {
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);
+  return unwrapList<User>(result);
 }
 
 export async function createUser(
@@ -567,9 +583,10 @@ export async function listClients(
   token: string,
   orgId?: string,
 ): Promise<OAuthClient[]> {
-  return apiFetch<OAuthClient[]>(`${baseUrl}/api/v1/clients`, {
+  const result = await apiFetch<unknown>(`${baseUrl}/api/v1/clients`, {
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);
+  return unwrapList<OAuthClient>(result);
 }
 
 export async function createClient(
