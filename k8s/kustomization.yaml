@@ -24,6 +24,11 @@ resources:
   - dashboard/service.yaml
   - dashboard/hpa.yaml
 
+  # Optional Redis cache (enables compliance caching, scan queue, SSE pub/sub)
+  # Remove these two lines if you do not want Redis:
+  - redis/deployment.yaml
+  - redis/service.yaml
+
 commonLabels:
   app.kubernetes.io/managed-by: kustomize
   app.kubernetes.io/part-of: pally-ecosystem

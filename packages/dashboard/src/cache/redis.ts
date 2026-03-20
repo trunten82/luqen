@@ -1,10 +1,12 @@
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
+
+type RedisInstance = InstanceType<typeof Redis>;
 
 /**
  * Creates a Redis client if a URL is provided. Returns null when Redis is not
  * configured, allowing the application to fall back to in-memory behaviour.
  */
-export function createRedisClient(url?: string): Redis | null {
+export function createRedisClient(url?: string): RedisInstance | null {
   if (!url) return null;
   const client = new Redis(url, {
     lazyConnect: true,
@@ -29,7 +31,7 @@ export interface QueuedScan {
 export class RedisScanQueue {
   private static readonly KEY = 'pally:scan:queue';
 
-  constructor(private readonly redis: Redis) {}
+  constructor(private readonly redis: RedisInstance) {}
 
   async enqueue(scanId: string, config: object): Promise<void> {
     const item: QueuedScan = { scanId, config };
@@ -49,7 +51,7 @@ export class RedisScanQueue {
 // ── SSE pub/sub ───────────────────────────────────────────────────────────────
 
 export class SsePublisher {
-  constructor(private readonly redis: Redis) {}
+  constructor(private readonly redis: RedisInstance) {}
 
   async publish(scanId: string, event: object): Promise<void> {
     await this.redis.publish(`pally:sse:${scanId}`, JSON.stringify(event));

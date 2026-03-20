@@ -11,6 +11,8 @@ export interface DashboardConfig {
   readonly maxConcurrentScans: number;
   readonly complianceClientId: string;
   readonly complianceClientSecret: string;
+  /** Optional Redis URL — enables scan queue and SSE pub/sub when set. */
+  readonly redisUrl?: string;
 }
 
 const DEFAULTS: DashboardConfig = {
@@ -52,6 +54,7 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
       : config.maxConcurrentScans,
     complianceClientId: process.env['DASHBOARD_COMPLIANCE_CLIENT_ID'] ?? config.complianceClientId,
     complianceClientSecret: process.env['DASHBOARD_COMPLIANCE_CLIENT_SECRET'] ?? config.complianceClientSecret,
+    redisUrl: process.env['DASHBOARD_REDIS_URL'] ?? config.redisUrl,
   };
 }
 

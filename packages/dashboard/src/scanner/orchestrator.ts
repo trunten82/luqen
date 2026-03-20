@@ -3,6 +3,7 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ScanDb } from '../db/scans.js';
 import { checkCompliance } from '../compliance-client.js';
+import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 
 export interface ScanProgressEvent {
   readonly type: 'discovery' | 'scan_start' | 'scan_complete' | 'scan_error' | 'compliance' | 'complete' | 'failed';
@@ -74,21 +75,41 @@ class ScanQueue {
   }
 }
 
+export interface OrchestratorOptions {
+  readonly maxConcurrent?: number;
+  /** Optional Redis publisher for cross-instance SSE delivery. */
+  readonly ssePublisher?: SsePublisher;
+  /** Optional Redis queue for cross-instance scan distribution. */
+  readonly redisQueue?: RedisScanQueue;
+}
+
 export class ScanOrchestrator {
   private readonly emitter = new EventEmitter();
   private readonly queue: ScanQueue;
   private readonly db: ScanDb;
   private readonly reportsDir: string;
+  private readonly ssePublisher?: SsePublisher;
 
-  constructor(db: ScanDb, reportsDir: string, maxConcurrent = 2) {
+  constructor(db: ScanDb, reportsDir: string, maxConcurrentOrOpts: number | OrchestratorOptions = 2) {
     this.db = db;
     this.reportsDir = reportsDir;
-    this.queue = new ScanQueue(maxConcurrent);
+
+    const opts: OrchestratorOptions = typeof maxConcurrentOrOpts === 'number'
+      ? { maxConcurrent: maxConcurrentOrOpts }
+      : maxConcurrentOrOpts;
+
+    this.queue = new ScanQueue(opts.maxConcurrent ?? 2);
     this.emitter.setMaxListeners(100);
+    this.ssePublisher = opts.ssePublisher;
   }
 
   emit(scanId: string, event: ScanProgressEvent): void {
+    // Always emit locally for same-instance listeners
     this.emitter.emit(`scan:${scanId}`, event);
+    // Also publish to Redis when available for cross-instance delivery
+    if (this.ssePublisher !== undefined) {
+      void this.ssePublisher.publish(scanId, event);
+    }
   }
 
   on(scanId: string, listener: (event: ScanProgressEvent) => void): void {
