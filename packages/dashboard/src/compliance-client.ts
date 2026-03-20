@@ -670,8 +670,8 @@ export async function getSystemHealth(
 
   if (webserviceUrl !== undefined && webserviceUrl !== '') {
     requests.push(
-      fetch(`${webserviceUrl}/health`)
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      fetch(webserviceUrl)
+        .then((r) => (r.ok ? { status: 'ok' } : Promise.reject(new Error(`HTTP ${r.status}`))))
         .catch(() => ({ status: 'error' })) as Promise<{ status: string }>,
     );
   }
