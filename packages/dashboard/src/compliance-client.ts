@@ -559,7 +559,7 @@ export async function getSystemHealth(
   webserviceUrl?: string,
 ): Promise<SystemHealth> {
   const requests: Array<Promise<{ status: string }>> = [
-    fetch(`${complianceUrl}/health`)
+    fetch(`${complianceUrl}/api/v1/health`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .catch(() => ({ status: 'error' })) as Promise<{ status: string }>,
   ];
