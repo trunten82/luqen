@@ -37,11 +37,11 @@
       <tbody id="proposals-table-body">
         {{#each proposals}}
         <tr id="proposal-{{id}}">
-          <td>{{source}}</td>
-          <td>{{type}}</td>
-          <td>{{summary}}</td>
-          <td>{{detectedAtDisplay}}</td>
-          <td>
+          <td data-label="Source">{{source}}</td>
+          <td data-label="Type">{{type}}</td>
+          <td data-label="Summary">{{summary}}</td>
+          <td data-label="Detected">{{detectedAtDisplay}}</td>
+          <td data-label="Status">
             <span class="badge {{#if (eq status 'pending')}}badge--warning{{else if (eq status 'approved')}}badge--success{{else}}badge--error{{/if}}">
               {{status}}
             </span>

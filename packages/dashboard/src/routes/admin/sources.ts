@@ -73,11 +73,11 @@ export async function sourceRoutes(
         }, getOrgId(request));
 
         const row = `<tr id="source-${created.id}">
-  <td>${created.name}</td>
-  <td><a href="${created.url}" target="_blank" rel="noopener noreferrer">${created.url}</a></td>
-  <td>${created.type}</td>
-  <td>${created.schedule}</td>
-  <td>${created.lastChecked ?? 'Never'}</td>
+  <td data-label="Name">${created.name}</td>
+  <td data-label="URL"><a href="${created.url}" target="_blank" rel="noopener noreferrer">${created.url}</a></td>
+  <td data-label="Type">${created.type}</td>
+  <td data-label="Schedule">${created.schedule}</td>
+  <td data-label="Last Checked">${created.lastChecked ?? 'Never'}</td>
   <td>
     <button hx-delete="/admin/sources/${encodeURIComponent(created.id)}"
             hx-confirm="Remove source ${created.name}?"

@@ -110,10 +110,10 @@ export async function jurisdictionRoutes(
         }, getOrgId(request));
 
         const row = `<tr id="jurisdiction-${created.id}">
-  <td>${created.id}</td>
-  <td>${created.name}</td>
-  <td>${created.type}</td>
-  <td>${created.parentId ?? ''}</td>
+  <td data-label="ID">${created.id}</td>
+  <td data-label="Name">${created.name}</td>
+  <td data-label="Type">${created.type}</td>
+  <td data-label="Parent">${created.parentId ?? ''}</td>
   <td>
     <button hx-get="/admin/jurisdictions/${encodeURIComponent(created.id)}/edit"
             hx-target="#modal-container"
@@ -190,10 +190,10 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
         }, getOrgId(request));
 
         const row = `<tr id="jurisdiction-${updated.id}">
-  <td>${updated.id}</td>
-  <td>${updated.name}</td>
-  <td>${updated.type}</td>
-  <td>${updated.parentId ?? ''}</td>
+  <td data-label="ID">${updated.id}</td>
+  <td data-label="Name">${updated.name}</td>
+  <td data-label="Type">${updated.type}</td>
+  <td data-label="Parent">${updated.parentId ?? ''}</td>
   <td>
     <button hx-get="/admin/jurisdictions/${encodeURIComponent(updated.id)}/edit"
             hx-target="#modal-container"

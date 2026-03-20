@@ -40,9 +40,9 @@ function userRowHtml(user: DashboardUser): string {
     : roleBadge;
 
   return `<tr id="dashboard-user-${user.id}">
-  <td>${user.username}</td>
-  <td>${roleSelect}</td>
-  <td>${statusBadge}</td>
+  <td data-label="Username">${user.username}</td>
+  <td data-label="Role">${roleSelect}</td>
+  <td data-label="Status">${statusBadge}</td>
   <td>${deactivateBtn}</td>
 </tr>`;
 }

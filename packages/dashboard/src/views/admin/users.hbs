@@ -30,10 +30,10 @@
       <tbody id="users-table-body">
         {{#each users}}
         <tr id="user-{{id}}">
-          <td>{{username}}</td>
-          <td><span class="badge badge--neutral">{{role}}</span></td>
-          <td>{{createdAtDisplay}}</td>
-          <td>
+          <td data-label="Username">{{username}}</td>
+          <td data-label="Role"><span class="badge badge--neutral">{{role}}</span></td>
+          <td data-label="Created">{{createdAtDisplay}}</td>
+          <td data-label="Status">
             <span class="badge {{#if active}}badge--success{{else}}badge--error{{/if}}">
               {{#if active}}Active{{else}}Inactive{{/if}}
             </span>

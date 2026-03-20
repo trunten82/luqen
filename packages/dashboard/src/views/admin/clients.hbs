@@ -31,11 +31,11 @@
       <tbody id="clients-table-body">
         {{#each clients}}
         <tr id="client-{{clientId}}">
-          <td>{{name}}</td>
-          <td><code>{{clientId}}</code></td>
-          <td>{{scopesDisplay}}</td>
-          <td>{{grantTypesDisplay}}</td>
-          <td>{{createdAtDisplay}}</td>
+          <td data-label="Name">{{name}}</td>
+          <td data-label="Client ID"><code>{{clientId}}</code></td>
+          <td data-label="Scopes">{{scopesDisplay}}</td>
+          <td data-label="Grant Types">{{grantTypesDisplay}}</td>
+          <td data-label="Created">{{createdAtDisplay}}</td>
           <td>
             <button hx-post="/admin/clients/{{clientId}}/revoke"
                     hx-confirm="Revoke client {{name}}? This cannot be undone."

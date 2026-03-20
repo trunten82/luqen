@@ -30,14 +30,14 @@
       <tbody id="webhooks-table-body">
         {{#each webhooks}}
         <tr id="webhook-{{id}}">
-          <td><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
-          <td>{{eventsDisplay}}</td>
-          <td>
+          <td data-label="URL"><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
+          <td data-label="Events">{{eventsDisplay}}</td>
+          <td data-label="Status">
             <span class="badge {{#if active}}badge--success{{else}}badge--neutral{{/if}}">
               {{#if active}}Active{{else}}Inactive{{/if}}
             </span>
           </td>
-          <td>{{createdAtDisplay}}</td>
+          <td data-label="Created">{{createdAtDisplay}}</td>
           <td>
             <button hx-post="/admin/webhooks/{{id}}/test"
                     hx-target="#toast-container"

@@ -107,11 +107,11 @@ export async function clientRoutes(
 </div>`;
 
         const row = `<tr id="client-${escapeHtml(created.clientId)}">
-  <td>${escapeHtml(created.name)}</td>
-  <td><code>${escapeHtml(created.clientId)}</code></td>
-  <td>${escapeHtml(scopes.join(', '))}</td>
-  <td>${escapeHtml(grantTypes.join(', '))}</td>
-  <td>${new Date(created.createdAt).toLocaleString()}</td>
+  <td data-label="Name">${escapeHtml(created.name)}</td>
+  <td data-label="Client ID"><code>${escapeHtml(created.clientId)}</code></td>
+  <td data-label="Scopes">${escapeHtml(scopes.join(', '))}</td>
+  <td data-label="Grant Types">${escapeHtml(grantTypes.join(', '))}</td>
+  <td data-label="Created">${new Date(created.createdAt).toLocaleString()}</td>
   <td>
     <button hx-post="/admin/clients/${encodeURIComponent(created.clientId)}/revoke"
             hx-confirm="Revoke client ${escapeHtml(created.name)}? This cannot be undone."

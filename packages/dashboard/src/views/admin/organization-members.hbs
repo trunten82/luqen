@@ -19,9 +19,9 @@
     <tbody id="org-members-table">
       {{#each members}}
       <tr id="member-{{this.userId}}">
-        <td>{{this.username}}</td>
-        <td><span class="badge badge--neutral">{{this.role}}</span></td>
-        <td>{{this.joinedAt}}</td>
+        <td data-label="Username">{{this.username}}</td>
+        <td data-label="Role"><span class="badge badge--neutral">{{this.role}}</span></td>
+        <td data-label="Joined">{{this.joinedAt}}</td>
         <td>
           <button hx-post="/admin/organizations/{{../org.id}}/members/{{this.userId}}/remove"
                   hx-confirm="Remove {{this.username}} from this organization?"
