@@ -2,9 +2,9 @@
 
 **Site-wide WCAG accessibility scanning with legal compliance mapping — CLI, MCP server, and REST API.**
 
-![Version](https://img.shields.io/badge/version-v0.4.0-blue)
+![Version](https://img.shields.io/badge/version-v0.5.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-619%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-681%2B%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
 
 ---
@@ -105,6 +105,7 @@ Reports are written to `./pally-reports/`.
 | [`@pally-agent/core`](packages/core) | Site scanner, source mapper, fix engine, CLI, MCP server | [docs/README.md](docs/README.md) |
 | [`@pally-agent/compliance`](packages/compliance) | Compliance rule engine, REST API, MCP server | [docs/compliance/README.md](docs/compliance/README.md) |
 | [`@pally-agent/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, admin UI | [docs/dashboard/README.md](docs/dashboard/README.md) |
+| [`@pally-agent/monitor`](packages/monitor) | Regulatory monitor agent — watches legal sources, creates update proposals | [packages/monitor/README.md](packages/monitor/README.md) |
 
 ---
 
@@ -149,6 +150,38 @@ Open `http://localhost:5000` and log in with a compliance service user account. 
 
 ---
 
+## Monitor Agent
+
+The regulatory monitor agent (`@pally-agent/monitor`) watches monitored legal sources for content changes and creates UpdateProposals in the compliance service when a change is detected.
+
+```bash
+cd packages/monitor
+npm run build
+
+# Run a one-off scan of all monitored sources
+node dist/cli.js scan
+
+# Show status (source count, last scan, pending proposals)
+node dist/cli.js status
+
+# Or if installed globally via npm link
+pally-monitor scan
+pally-monitor status
+
+# Start MCP server for Claude Code
+pally-monitor mcp
+```
+
+Set environment variables before running:
+
+```bash
+export COMPLIANCE_URL=http://localhost:4000
+export COMPLIANCE_CLIENT_ID=<client-id>
+export COMPLIANCE_CLIENT_SECRET=<client-secret>
+```
+
+---
+
 ## Docker
 
 ```bash
@@ -161,7 +194,7 @@ This starts the compliance service (port 4000) and the dashboard (port 5000). Fo
 
 ## Claude Code Integration
 
-Add both MCP servers to `.claude/settings.json`:
+Add all MCP servers to `.claude/settings.json`:
 
 ```json
 {
@@ -176,6 +209,15 @@ Add both MCP servers to `.claude/settings.json`:
       "env": {
         "COMPLIANCE_DB_PATH": "/root/pally-agent/packages/compliance/compliance.db"
       }
+    },
+    "pally-monitor": {
+      "command": "node",
+      "args": ["/root/pally-agent/packages/monitor/dist/cli.js", "mcp"],
+      "env": {
+        "COMPLIANCE_URL": "http://localhost:4000",
+        "COMPLIANCE_CLIENT_ID": "<client-id>",
+        "COMPLIANCE_CLIENT_SECRET": "<client-secret>"
+      }
     }
   }
 }
@@ -183,7 +225,7 @@ Add both MCP servers to `.claude/settings.json`:
 
 Build first: `npm run build --workspaces`
 
-This gives Claude Code 17 tools: 6 for scanning/fixing (`pally_scan`, `pally_get_issues`, `pally_propose_fixes`, `pally_apply_fix`, `pally_raw`, `pally_raw_batch`) and 11 for compliance (`compliance_check`, `compliance_list_jurisdictions`, `compliance_list_regulations`, and more).
+This gives Claude Code **20 MCP tools**: 6 for scanning/fixing (`pally_scan`, `pally_get_issues`, `pally_propose_fixes`, `pally_apply_fix`, `pally_raw`, `pally_raw_batch`), 11 for compliance (`compliance_check`, `compliance_list_jurisdictions`, `compliance_list_regulations`, and more), and 3 for regulatory monitoring (`monitor_scan_sources`, `monitor_status`, `monitor_add_source`).
 
 ---
 
@@ -207,7 +249,8 @@ Expected output:
 packages/core:       170 tests passing
 packages/compliance: 370 tests passing
 packages/dashboard:   79 tests passing
-✓ 619 tests passed
+packages/monitor:     62 tests passing
+✓ 681+ tests passed
 ```
 
 Run with coverage:
