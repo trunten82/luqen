@@ -25,9 +25,8 @@ k8s/
 │   ├── dashboard/          # Dashboard Deployment, Service
 │   └── kustomization.yaml
 ├── overlays/
-│   ├── development/        # Dev overlay (reduced replicas, NodePort)
-│   ├── staging/            # Staging overlay
-│   └── production/         # Production overlay (PodDisruptionBudget, HPA)
+│   ├── dev/                # Dev overlay (reduced replicas, NodePort)
+│   └── prod/               # Production overlay (PodDisruptionBudget, HPA)
 └── README.md
 ```
 
@@ -36,7 +35,7 @@ k8s/
 ## Deploy to development
 
 ```bash
-kubectl apply -k k8s/overlays/development
+kubectl apply -k k8s/overlays/dev
 ```
 
 ---
@@ -54,7 +53,7 @@ kubectl create secret generic pally-dashboard-secrets \
   --from-literal=DASHBOARD_COMPLIANCE_CLIENT_SECRET="<client-secret>"
 
 # 2. Apply the production overlay
-kubectl apply -k k8s/overlays/production
+kubectl apply -k k8s/overlays/prod
 ```
 
 ---

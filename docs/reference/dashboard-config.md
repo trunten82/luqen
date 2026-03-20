@@ -53,6 +53,7 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `DASHBOARD_MAX_CONCURRENT_SCANS` | `maxConcurrentScans` | Max parallel scan limit |
 | `DASHBOARD_COMPLIANCE_CLIENT_ID` | `complianceClientId` | OAuth2 client ID |
 | `DASHBOARD_COMPLIANCE_CLIENT_SECRET` | `complianceClientSecret` | OAuth2 client secret |
+| `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |
 
 **Precedence:** Environment variables > `dashboard.config.json` > built-in defaults.
 
@@ -97,6 +98,14 @@ pally-dashboard migrate [options]
 Options:
   -d, --db-path <path>   Path to SQLite database file
   -c, --config <path>    Path to config file [default: dashboard.config.json]
+```
+
+### `pally-dashboard self-audit`
+
+Run an accessibility scan against the dashboard itself and report any issues found. Useful for verifying the dashboard UI meets WCAG standards.
+
+```bash
+pally-dashboard self-audit
 ```
 
 ---
