@@ -6,19 +6,7 @@ import {
   scanSources,
 } from '../../compliance-client.js';
 import { adminGuard } from '../../auth/middleware.js';
-
-function getToken(request: FastifyRequest): string {
-  const session = request.session as { token?: string };
-  return session.token ?? '';
-}
-
-function getOrgId(request: FastifyRequest): string | undefined {
-  return request.user?.currentOrgId;
-}
-
-function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
-  return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
-}
+import { getToken, getOrgId, toastHtml } from './helpers.js';
 
 export async function sourceRoutes(
   server: FastifyInstance,

@@ -7,6 +7,7 @@ import {
   type UpdateProposal,
 } from '../../compliance-client.js';
 import { adminGuard } from '../../auth/middleware.js';
+import { getToken, toastHtml } from './helpers.js';
 
 // ── Public types for testing ─────────────────────────────────────────────────
 
@@ -109,15 +110,6 @@ export function buildMonitorViewData(
 }
 
 // ── Route handler ────────────────────────────────────────────────────────────
-
-function getToken(request: FastifyRequest): string {
-  const session = request.session as { token?: string };
-  return session.token ?? '';
-}
-
-function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
-  return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
-}
 
 export async function monitorRoutes(
   server: FastifyInstance,

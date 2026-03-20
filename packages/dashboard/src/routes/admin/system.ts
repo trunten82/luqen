@@ -3,15 +3,11 @@ import { safeGetSystemHealth, getSeedStatus } from '../../compliance-client.js';
 import { adminGuard } from '../../auth/middleware.js';
 import { statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { resolve, join, dirname } from 'node:path';
+import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getToken } from './helpers.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-
-function getToken(request: FastifyRequest): string {
-  const session = request.session as { token?: string };
-  return session.token ?? '';
-}
 
 async function getPackageVersion(): Promise<string> {
   try {

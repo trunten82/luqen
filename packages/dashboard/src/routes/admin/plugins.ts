@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminGuard } from '../../auth/middleware.js';
 import type { PluginManager } from '../../plugins/manager.js';
 import type { RegistryEntry, ConfigField } from '../../plugins/types.js';
+import { escapeHtml } from './helpers.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,15 +95,6 @@ function renderConfigField(field: ConfigField, currentValue: unknown): string {
     default:
       return '';
   }
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
 
 // ---------------------------------------------------------------------------

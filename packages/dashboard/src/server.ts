@@ -104,6 +104,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     redisQueue: redisScanQueue,
   });
 
+  // ── Rate Limiting ────────────────────────────────────────────────────────
+  await server.register(import('@fastify/rate-limit'), {
+    global: false,   // Only apply to routes that opt in
+  });
+
   // ── Plugins ──────────────────────────────────────────────────────────────
   await server.register(import('@fastify/formbody'));
 
@@ -234,7 +239,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   await dashboardUserRoutes(server, userDb);
-  await organizationRoutes(server, orgDb, userDb);
+  await organizationRoutes(server, orgDb, userDb, config.complianceUrl);
 
   await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
 
