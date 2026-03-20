@@ -121,6 +121,15 @@
       OAuth Clients
     </a>
 
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/plugins')}}is-active{{/if}}"
+       href="/admin/plugins"
+       aria-current="{{#if (startsWith currentPath '/admin/plugins')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 2a2 2 0 012 2v1h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Plugins
+    </a>
+
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/system')}}is-active{{/if}}"
        href="/admin/system">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
