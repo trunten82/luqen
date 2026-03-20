@@ -18,6 +18,8 @@ export async function registerRegulationRoutes(
       if (query.jurisdictionId) filters.jurisdictionId = String(query.jurisdictionId);
       if (query.status) filters.status = String(query.status);
       if (query.scope) filters.scope = String(query.scope);
+      const orgId = (request as unknown as { orgId?: string }).orgId;
+      if (orgId != null) filters.orgId = orgId;
 
       const items = await db.listRegulations(
         Object.keys(filters).length > 0 ? filters as Parameters<typeof db.listRegulations>[0] : undefined,
@@ -53,7 +55,8 @@ export async function registerRegulationRoutes(
   }, async (request, reply) => {
     try {
       const body = request.body as Parameters<typeof crud.createRegulation>[1];
-      const regulation = await crud.createRegulation(db, body);
+      const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
+      const regulation = await crud.createRegulation(db, { ...body, orgId });
       await reply.status(201).send(regulation);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Bad request';

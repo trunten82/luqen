@@ -10,9 +10,11 @@ export async function registerSourceRoutes(
   // GET /api/v1/sources
   app.get('/api/v1/sources', {
     preHandler: [requireScope('read')],
-  }, async (_request, reply) => {
+  }, async (request, reply) => {
     try {
-      const sources = await db.listSources();
+      const orgId = (request as unknown as { orgId?: string }).orgId;
+      const filters = orgId != null ? { orgId } : undefined;
+      const sources = await db.listSources(filters);
       await reply.send(sources);
     } catch (err) {
       await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
@@ -25,7 +27,8 @@ export async function registerSourceRoutes(
   }, async (request, reply) => {
     try {
       const body = request.body as Parameters<typeof db.createSource>[0];
-      const source = await db.createSource(body);
+      const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
+      const source = await db.createSource({ ...body, orgId });
       await reply.status(201).send(source);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Bad request';
