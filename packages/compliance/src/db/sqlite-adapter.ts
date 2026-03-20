@@ -113,6 +113,7 @@ interface UserRow {
   username: string;
   passwordHash: string;
   role: string;
+  active: number;
   createdAt: string;
 }
 
@@ -227,6 +228,7 @@ function toUser(row: UserRow): User {
     username: row.username,
     passwordHash: row.passwordHash,
     role: row.role as User['role'],
+    active: row.active === 1,
     createdAt: row.createdAt,
   };
 }
@@ -342,6 +344,7 @@ export class SqliteAdapter implements DbAdapter {
         username TEXT NOT NULL UNIQUE,
         passwordHash TEXT NOT NULL,
         role TEXT NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
         createdAt TEXT NOT NULL
       );
 
@@ -741,11 +744,20 @@ export class SqliteAdapter implements DbAdapter {
     const passwordHash = hashSync(data.password, salt);
 
     this.db.prepare(`
-      INSERT INTO users (id, username, passwordHash, role, createdAt)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO users (id, username, passwordHash, role, active, createdAt)
+      VALUES (?, ?, ?, ?, 1, ?)
     `).run(id, data.username, passwordHash, data.role, now);
     const row = this.db.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow;
     return toUser(row);
+  }
+
+  async listUsers(): Promise<User[]> {
+    const rows = this.db.prepare('SELECT * FROM users').all() as UserRow[];
+    return rows.map(toUser);
+  }
+
+  async deactivateUser(id: string): Promise<void> {
+    this.db.prepare('UPDATE users SET active = 0 WHERE id = ?').run(id);
   }
 
   // --- Webhooks ---

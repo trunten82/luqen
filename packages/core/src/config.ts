@@ -79,11 +79,13 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Pally
 
   const envUrl = process.env.PALLY_WEBSERVICE_URL;
   const envAuth = process.env.PALLY_WEBSERVICE_AUTH;
+  const envComplianceUrl = process.env.PALLY_COMPLIANCE_URL;
 
   const withEnv: PallyConfig = {
     ...merged,
     ...(envUrl ? { webserviceUrl: envUrl } : {}),
     ...(envAuth ? { webserviceHeaders: { ...merged.webserviceHeaders, Authorization: envAuth } } : {}),
+    ...(envComplianceUrl ? { complianceUrl: envComplianceUrl } : {}),
   };
 
   validate(withEnv);

@@ -14,6 +14,7 @@ export interface PallyConfig {
   readonly wait: number;
   readonly outputDir: string;
   readonly sourceMap: Readonly<Record<string, string>>;
+  readonly complianceUrl?: string;
 }
 
 export interface DiscoveredUrl {

@@ -17,6 +17,7 @@ describe('loadConfig', () => {
     delete process.env.PALLY_WEBSERVICE_URL;
     delete process.env.PALLY_WEBSERVICE_AUTH;
     delete process.env.PALLY_AGENT_CONFIG;
+    delete process.env.PALLY_COMPLIANCE_URL;
   });
 
   it('returns defaults when no config file exists', async () => {
@@ -72,6 +73,17 @@ describe('loadConfig', () => {
     process.env.PALLY_AGENT_CONFIG = configPath;
     const config = await loadConfig({ cwd: tempDir });
     expect(config.concurrency).toBe(99);
+  });
+
+  it('includes complianceUrl when PALLY_COMPLIANCE_URL is set', async () => {
+    process.env.PALLY_COMPLIANCE_URL = 'https://compliance.example.com/api';
+    const config = await loadConfig({ cwd: tempDir });
+    expect(config.complianceUrl).toBe('https://compliance.example.com/api');
+  });
+
+  it('does not include complianceUrl when PALLY_COMPLIANCE_URL is not set', async () => {
+    const config = await loadConfig({ cwd: tempDir });
+    expect(config.complianceUrl).toBeUndefined();
   });
 
   it('validates standard is a valid WCAG level', async () => {

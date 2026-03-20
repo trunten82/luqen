@@ -94,6 +94,8 @@ export interface DbAdapter {
   // Users
   getUserByUsername(username: string): Promise<User | null>;
   createUser(data: CreateUserInput): Promise<User>;
+  listUsers(): Promise<User[]>;
+  deactivateUser(id: string): Promise<void>;
 
   // Webhooks
   listWebhooks(): Promise<Webhook[]>;
