@@ -23,6 +23,7 @@ function pastExp(): number {
 function makeMockRequest(overrides: Partial<FastifyRequest> & { sessionData?: Record<string, unknown> } = {}): FastifyRequest {
   const { sessionData = {}, ...rest } = overrides;
   return {
+    url: '/dashboard',
     session: {
       ...sessionData,
       delete: vi.fn(),

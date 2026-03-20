@@ -44,24 +44,37 @@ export async function authGuard(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
+  const isApiRequest = request.url.startsWith('/api/');
   const session = request.session as { token?: string };
   const token = session.token;
 
   if (token === undefined || token === '') {
-    await reply.redirect('/login');
+    if (isApiRequest) {
+      await reply.code(401).send({ error: 'Authentication required' });
+    } else {
+      await reply.redirect('/login');
+    }
     return;
   }
 
   if (isTokenExpired(token)) {
     request.session.delete();
-    await reply.redirect('/login');
+    if (isApiRequest) {
+      await reply.code(401).send({ error: 'Token expired' });
+    } else {
+      await reply.redirect('/login');
+    }
     return;
   }
 
   const user = extractUserFromToken(token);
   if (user === null) {
     request.session.delete();
-    await reply.redirect('/login');
+    if (isApiRequest) {
+      await reply.code(401).send({ error: 'Invalid token' });
+    } else {
+      await reply.redirect('/login');
+    }
     return;
   }
 
