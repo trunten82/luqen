@@ -31,9 +31,9 @@ Add to `.claude/settings.json` (all 4 servers — 20 tools total):
       "command": "node",
       "args": ["/root/pally-agent/packages/monitor/dist/cli.js", "mcp"],
       "env": {
-        "COMPLIANCE_URL": "http://localhost:4000",
-        "COMPLIANCE_CLIENT_ID": "<client-id>",
-        "COMPLIANCE_CLIENT_SECRET": "<client-secret>"
+        "MONITOR_COMPLIANCE_URL": "http://localhost:4000",
+        "MONITOR_COMPLIANCE_CLIENT_ID": "<client-id>",
+        "MONITOR_COMPLIANCE_CLIENT_SECRET": "<client-secret>"
       }
     }
   }
@@ -102,7 +102,7 @@ Returns array of `{ url, result, error? }` with raw pa11y output per URL.
 
 ```bash
 # Scan a site
-pally-agent scan https://example.com --format json,html
+pally-agent scan https://example.com --format both
 
 # Scan with source mapping
 pally-agent scan https://example.com --repo ./my-project
@@ -221,7 +221,7 @@ Add alongside `pally-agent` in `.claude/settings.json`:
   "mcpServers": {
     "pally-agent": {
       "command": "node",
-      "args": ["/root/pally-agent/dist/mcp.js"]
+      "args": ["/root/pally-agent/packages/core/dist/mcp.js"]
     },
     "pally-compliance": {
       "command": "node",
@@ -389,9 +389,9 @@ Add alongside the other servers in `.claude/settings.json`:
       "command": "node",
       "args": ["/root/pally-agent/packages/monitor/dist/cli.js", "mcp"],
       "env": {
-        "COMPLIANCE_URL": "http://localhost:4000",
-        "COMPLIANCE_CLIENT_ID": "<client-id>",
-        "COMPLIANCE_CLIENT_SECRET": "<client-secret>"
+        "MONITOR_COMPLIANCE_URL": "http://localhost:4000",
+        "MONITOR_COMPLIANCE_CLIENT_ID": "<client-id>",
+        "MONITOR_COMPLIANCE_CLIENT_SECRET": "<client-secret>"
       }
     }
   }
