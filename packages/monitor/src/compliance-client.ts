@@ -121,7 +121,16 @@ async function apiRequest<T>(
   token: string,
   body?: unknown,
   timeoutMs = 15_000,
+  orgId?: string,
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+  if (orgId != null && orgId !== 'system') {
+    headers['X-Org-Id'] = orgId;
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -130,10 +139,7 @@ async function apiRequest<T>(
     response = await fetch(url, {
       method,
       signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } finally {
@@ -154,11 +160,15 @@ async function apiRequest<T>(
 export async function listSources(
   baseUrl: string,
   token: string,
+  orgId?: string,
 ): Promise<MonitoredSource[]> {
   const result = await apiRequest<{ data: MonitoredSource[] } | MonitoredSource[]>(
     'GET',
     `${baseUrl}/api/v1/sources`,
     token,
+    undefined,
+    undefined,
+    orgId,
   );
   // Handle both paginated envelope and plain array
   if (Array.isArray(result)) return result;
@@ -168,8 +178,12 @@ export async function listSources(
 /**
  * Get seed status from the compliance service.
  */
-export async function getSeedStatus(baseUrl: string, token: string): Promise<SeedStatus> {
-  return apiRequest<SeedStatus>('GET', `${baseUrl}/api/v1/seed/status`, token);
+export async function getSeedStatus(
+  baseUrl: string,
+  token: string,
+  orgId?: string,
+): Promise<SeedStatus> {
+  return apiRequest<SeedStatus>('GET', `${baseUrl}/api/v1/seed/status`, token, undefined, undefined, orgId);
 }
 
 /**
@@ -179,8 +193,9 @@ export async function proposeUpdate(
   baseUrl: string,
   token: string,
   proposal: ProposeUpdateInput,
+  orgId?: string,
 ): Promise<UpdateProposal> {
-  return apiRequest<UpdateProposal>('POST', `${baseUrl}/api/v1/updates/propose`, token, proposal);
+  return apiRequest<UpdateProposal>('POST', `${baseUrl}/api/v1/updates/propose`, token, proposal, undefined, orgId);
 }
 
 /**
@@ -193,6 +208,7 @@ export async function updateSourceLastChecked(
   token: string,
   sourceId: string,
   contentHash: string,
+  orgId?: string,
 ): Promise<void> {
   try {
     await apiRequest<unknown>(
@@ -203,6 +219,8 @@ export async function updateSourceLastChecked(
         lastContentHash: contentHash,
         lastCheckedAt: new Date().toISOString(),
       },
+      undefined,
+      orgId,
     );
   } catch (err) {
     // Best-effort — don't break the scan loop
@@ -217,6 +235,7 @@ export async function addSource(
   baseUrl: string,
   token: string,
   input: CreateSourceInput,
+  orgId?: string,
 ): Promise<MonitoredSource> {
-  return apiRequest<MonitoredSource>('POST', `${baseUrl}/api/v1/sources`, token, input);
+  return apiRequest<MonitoredSource>('POST', `${baseUrl}/api/v1/sources`, token, input, undefined, orgId);
 }

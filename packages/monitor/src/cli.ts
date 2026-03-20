@@ -19,12 +19,14 @@ program
   .command('scan')
   .description('Run one full scan cycle over all monitored legal sources')
   .option('--sources-file <path>', 'Path to a local sources JSON file (standalone mode)')
-  .action(async (opts: { sourcesFile?: string }) => {
+  .option('--org-id <orgId>', 'Organisation ID for multi-tenant scoping')
+  .action(async (opts: { sourcesFile?: string; orgId?: string }) => {
     try {
       console.error('[monitor] Starting scan…');
-      const result = await runScan(
-        opts.sourcesFile !== undefined ? { sourcesFile: opts.sourcesFile } : {},
-      );
+      const agentOpts: Record<string, unknown> = {};
+      if (opts.sourcesFile !== undefined) agentOpts.sourcesFile = opts.sourcesFile;
+      if (opts.orgId !== undefined) agentOpts.orgId = opts.orgId;
+      const result = await runScan(agentOpts);
       console.error(
         `[monitor] Scan complete: ${result.scanned} sources, ` +
           `${result.changed} changed, ${result.unchanged} unchanged, ` +

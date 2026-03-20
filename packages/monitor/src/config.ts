@@ -9,6 +9,8 @@ export interface MonitorConfig {
   readonly checkInterval: string;
   /** User-Agent string for HTTP requests to legal sources */
   readonly userAgent: string;
+  /** Organisation ID for multi-tenant scoping (omit for system-wide) */
+  readonly orgId?: string;
 }
 
 export function loadConfig(): MonitorConfig {
@@ -20,5 +22,6 @@ export function loadConfig(): MonitorConfig {
     userAgent:
       process.env.MONITOR_USER_AGENT ??
       `pally-monitor/${VERSION} (+https://github.com/pally-agent)`,
+    orgId: process.env.MONITOR_ORG_ID ?? undefined,
   };
 }
