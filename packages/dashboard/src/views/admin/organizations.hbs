@@ -1,55 +1,56 @@
 <section aria-label="Organization management">
-  <div class="admin-header">
-    <h1 class="page-title">Organizations</h1>
-    <button class="btn btn--primary"
-            hx-get="/admin/organizations/new"
+  <div class="page-actions">
+    <button hx-get="/admin/organizations/new"
             hx-target="#modal-container"
             hx-swap="innerHTML"
-            aria-label="Add new organization">
+            class="btn btn--primary"
+            aria-haspopup="dialog">
       Add Organization
     </button>
   </div>
 
-  <div id="modal-container"></div>
-
-  {{#if orgs.length}}
-  <table class="table" aria-label="Organizations list">
-    <thead>
-      <tr>
-        <th scope="col">Name</th>
-        <th scope="col">Slug</th>
-        <th scope="col">Created</th>
-        <th scope="col">Actions</th>
-      </tr>
-    </thead>
-    <tbody id="organizations-table">
-      {{#each orgs}}
-      <tr id="org-{{this.id}}">
-        <td data-label="Name">{{this.name}}</td>
-        <td data-label="Slug"><code>{{this.slug}}</code></td>
-        <td data-label="Created">{{this.createdAt}}</td>
-        <td>
-          <a href="/admin/organizations/{{this.id}}/members"
-             class="btn btn--sm btn--ghost"
-             aria-label="Manage members for {{this.name}}">Members</a>
-          <button hx-post="/admin/organizations/{{this.id}}/delete"
-                  hx-confirm="Delete organization {{this.name}}? This cannot be undone."
-                  hx-target="closest tr"
-                  hx-swap="outerHTML"
-                  class="btn btn--sm btn--danger"
-                  aria-label="Delete {{this.name}}">
-            Delete
-          </button>
-        </td>
-      </tr>
-      {{/each}}
-    </tbody>
-  </table>
-  {{else}}
-  <div class="empty-state" role="status">
-    <p>No organizations yet. Create one to enable multi-tenant scoping.</p>
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
   </div>
   {{/if}}
 
-  <div id="toast"></div>
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Organizations">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Slug</th>
+          <th scope="col">Created</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="organizations-table">
+        {{#each orgs}}
+        <tr id="org-{{this.id}}">
+          <td data-label="Name">{{this.name}}</td>
+          <td data-label="Slug"><code>{{this.slug}}</code></td>
+          <td data-label="Created">{{this.createdAt}}</td>
+          <td>
+            <a href="/admin/organizations/{{this.id}}/members"
+               class="btn btn--sm btn--ghost"
+               aria-label="Manage members for {{this.name}}">Members</a>
+            <button hx-post="/admin/organizations/{{this.id}}/delete"
+                    hx-confirm="Delete organization {{this.name}}? This cannot be undone."
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Delete {{this.name}}">
+              Delete
+            </button>
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="4" class="table__empty">No organizations yet. Create one to enable multi-tenant scoping.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
 </section>

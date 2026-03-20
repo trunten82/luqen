@@ -1,77 +1,77 @@
 <section aria-label="Dashboard user management">
-  <div class="admin-header">
-    <h1 class="page-title">Dashboard Users</h1>
-    <button class="btn btn--primary"
-            hx-get="/admin/dashboard-users/new"
+  <div class="page-actions">
+    <button hx-get="/admin/dashboard-users/new"
             hx-target="#modal-container"
             hx-swap="innerHTML"
-            aria-label="Add new dashboard user">
+            class="btn btn--primary"
+            aria-haspopup="dialog">
       Add User
     </button>
   </div>
 
-  <div id="modal-container"></div>
-
-  {{#if users.length}}
-  <table class="table" aria-label="Dashboard users list">
-    <thead>
-      <tr>
-        <th scope="col">Username</th>
-        <th scope="col">Role</th>
-        <th scope="col">Status</th>
-        <th scope="col">Actions</th>
-      </tr>
-    </thead>
-    <tbody id="dashboard-users-table">
-      {{#each users}}
-      <tr id="dashboard-user-{{this.id}}">
-        <td data-label="Username">{{this.username}}</td>
-        <td data-label="Role">
-          {{#if this.active}}
-          <select hx-patch="/admin/dashboard-users/{{this.id}}/role"
-                  hx-target="closest tr"
-                  hx-swap="outerHTML"
-                  hx-include="this"
-                  name="role"
-                  class="input input--sm"
-                  aria-label="Change role for {{this.username}}">
-            <option value="viewer" {{#if (eq this.role 'viewer')}}selected{{/if}}>viewer</option>
-            <option value="user" {{#if (eq this.role 'user')}}selected{{/if}}>user</option>
-            <option value="admin" {{#if (eq this.role 'admin')}}selected{{/if}}>admin</option>
-          </select>
-          {{else}}
-          <span class="badge badge--neutral">{{this.role}}</span>
-          {{/if}}
-        </td>
-        <td data-label="Status">
-          {{#if this.active}}
-          <span class="badge badge--success">Active</span>
-          {{else}}
-          <span class="badge badge--error">Inactive</span>
-          {{/if}}
-        </td>
-        <td>
-          {{#if this.active}}
-          <button hx-post="/admin/dashboard-users/{{this.id}}/deactivate"
-                  hx-confirm="Deactivate user {{this.username}}?"
-                  hx-target="closest tr"
-                  hx-swap="outerHTML"
-                  class="btn btn--sm btn--warning"
-                  aria-label="Deactivate {{this.username}}">
-            Deactivate
-          </button>
-          {{/if}}
-        </td>
-      </tr>
-      {{/each}}
-    </tbody>
-  </table>
-  {{else}}
-  <div class="empty-state" role="status">
-    <p>No dashboard users yet. The system is running in <strong>solo mode</strong> (API key only).</p>
-    <p>Adding the first user will activate <strong>team mode</strong> (username/password login).</p>
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
   </div>
   {{/if}}
 
-  <div id="toast"></div>
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Dashboard users">
+      <thead>
+        <tr>
+          <th scope="col">Username</th>
+          <th scope="col">Role</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="dashboard-users-table">
+        {{#each users}}
+        <tr id="dashboard-user-{{this.id}}">
+          <td data-label="Username">{{this.username}}</td>
+          <td data-label="Role">
+            {{#if this.active}}
+            <select hx-patch="/admin/dashboard-users/{{this.id}}/role"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    hx-include="this"
+                    name="role"
+                    class="input input--sm"
+                    aria-label="Change role for {{this.username}}">
+              <option value="viewer" {{#if (eq this.role 'viewer')}}selected{{/if}}>viewer</option>
+              <option value="user" {{#if (eq this.role 'user')}}selected{{/if}}>user</option>
+              <option value="admin" {{#if (eq this.role 'admin')}}selected{{/if}}>admin</option>
+            </select>
+            {{else}}
+            <span class="badge badge--neutral">{{this.role}}</span>
+            {{/if}}
+          </td>
+          <td data-label="Status">
+            {{#if this.active}}
+            <span class="badge badge--success">Active</span>
+            {{else}}
+            <span class="badge badge--error">Inactive</span>
+            {{/if}}
+          </td>
+          <td>
+            {{#if this.active}}
+            <button hx-post="/admin/dashboard-users/{{this.id}}/deactivate"
+                    hx-confirm="Deactivate user {{this.username}}?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--warning"
+                    aria-label="Deactivate {{this.username}}">
+              Deactivate
+            </button>
+            {{/if}}
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="4" class="table__empty">No dashboard users found. The system is running in solo mode (API key only). Adding the first user will activate team mode.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
 </section>
