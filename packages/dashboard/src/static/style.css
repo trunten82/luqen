@@ -1034,6 +1034,112 @@ select {
   color: var(--text-muted);
 }
 
+/* ---- Picker (searchable multi-select) ---- */
+.picker {
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.picker__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.picker__tab {
+  flex: 1;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-secondary);
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.picker__tab--active {
+  background: var(--bg-primary);
+  color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.picker__search {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-sm);
+  outline: none;
+}
+
+.picker__search:focus {
+  background: var(--accent-light);
+}
+
+.picker__list {
+  max-height: 200px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.picker__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  border-bottom: 1px solid var(--bg-tertiary);
+  transition: background var(--transition-fast);
+}
+
+.picker__item:hover {
+  background: var(--accent-light);
+}
+
+.picker__item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.picker__selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 0;
+}
+
+.picker__selected:empty {
+  display: none;
+}
+
+.picker__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 2px var(--space-sm);
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 20px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.picker__tag button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--accent);
+  padding: 0;
+  line-height: 1;
+}
+
 /* ---- Load More ---- */
 .load-more {
   text-align: center;
