@@ -1,6 +1,8 @@
 <section aria-label="Monitor dashboard">
   {{#if error}}
-  <div class="alert alert--error" role="alert">{{error}}</div>
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
   {{/if}}
 
   <div class="cards">
@@ -51,27 +53,27 @@
   <section class="admin-section" aria-label="Monitored sources">
     <h2 class="section-title">Monitored Sources</h2>
     {{#if sources.length}}
-    <div class="table-wrap">
-      <table class="table">
+    <div class="table-wrapper">
+      <table class="table" aria-label="Monitored sources">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>URL</th>
-            <th>Type</th>
-            <th>Schedule</th>
-            <th>Last Checked</th>
-            <th>Status</th>
+            <th scope="col">Name</th>
+            <th scope="col">URL</th>
+            <th scope="col">Type</th>
+            <th scope="col">Schedule</th>
+            <th scope="col">Last Checked</th>
+            <th scope="col">Status</th>
           </tr>
         </thead>
         <tbody>
           {{#each sources}}
           <tr>
-            <td>{{name}}</td>
-            <td><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
-            <td>{{type}}</td>
-            <td>{{schedule}}</td>
-            <td>{{lastCheckedDisplay}}</td>
-            <td>
+            <td data-label="Name">{{name}}</td>
+            <td data-label="URL"><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
+            <td data-label="Type">{{type}}</td>
+            <td data-label="Schedule">{{schedule}}</td>
+            <td data-label="Last Checked">{{lastCheckedDisplay}}</td>
+            <td data-label="Status">
               {{#if stale}}
               <span class="badge badge--warning">Stale</span>
               {{else}}
@@ -91,24 +93,24 @@
   <section class="admin-section" aria-label="Recent proposals">
     <h2 class="section-title">Recent Proposals</h2>
     {{#if proposals.length}}
-    <div class="table-wrap">
-      <table class="table">
+    <div class="table-wrapper">
+      <table class="table" aria-label="Recent proposals">
         <thead>
           <tr>
-            <th>Summary</th>
-            <th>Source</th>
-            <th>Created</th>
-            <th>Status</th>
-            <th></th>
+            <th scope="col">Summary</th>
+            <th scope="col">Source</th>
+            <th scope="col">Created</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
           </tr>
         </thead>
         <tbody>
           {{#each proposals}}
           <tr>
-            <td>{{summary}}</td>
-            <td>{{source}}</td>
-            <td>{{detectedAtDisplay}}</td>
-            <td>
+            <td data-label="Summary">{{summary}}</td>
+            <td data-label="Source">{{source}}</td>
+            <td data-label="Created">{{detectedAtDisplay}}</td>
+            <td data-label="Status">
               <span class="badge {{#if (eq status 'pending')}}badge--warning{{else if (eq status 'approved')}}badge--success{{else}}badge--neutral{{/if}}">
                 {{status}}
               </span>
