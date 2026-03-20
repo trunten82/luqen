@@ -1,11 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { OrgDb, Organization } from '../../db/orgs.js';
 import type { UserDb, DashboardUser } from '../../db/users.js';
+import { deleteOrgData } from '../../compliance-client.js';
 import { adminGuard } from '../../auth/middleware.js';
-
-function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
-  return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
-}
+import { getToken, toastHtml } from './helpers.js';
 
 function orgRowHtml(org: Organization): string {
   return `<tr id="org-${org.id}">
@@ -52,6 +50,7 @@ export async function organizationRoutes(
   server: FastifyInstance,
   orgDb: OrgDb,
   userDb: UserDb,
+  complianceUrl?: string,
 ): Promise<void> {
   // GET /admin/organizations — list all organizations
   server.get(
@@ -93,6 +92,13 @@ export async function organizationRoutes(
           .code(400)
           .header('content-type', 'text/html')
           .send(toastHtml('Name and slug are required.', 'error'));
+      }
+
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Slug must contain only lowercase letters, numbers, and hyphens.', 'error'));
       }
 
       // Check for duplicate slug
@@ -138,6 +144,17 @@ export async function organizationRoutes(
 
       try {
         orgDb.deleteOrg(id);
+
+        // Best effort — compliance cleanup failure shouldn't block org deletion
+        if (complianceUrl !== undefined) {
+          try {
+            const token = getToken(request);
+            await deleteOrgData(complianceUrl, token, id);
+          } catch {
+            // intentionally ignored
+          }
+        }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')

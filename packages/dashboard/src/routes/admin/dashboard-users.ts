@@ -1,10 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { UserDb, DashboardUser } from '../../db/users.js';
 import { adminGuard } from '../../auth/middleware.js';
-
-function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
-  return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
-}
+import { toastHtml } from './helpers.js';
 
 function roleBadgeClass(role: string): string {
   if (role === 'admin') return 'badge--error';
@@ -97,7 +94,7 @@ export async function dashboardUserRoutes(
       };
 
       const username = body.username?.trim();
-      const password = body.password?.trim();
+      const password = body.password;
       const role = body.role?.trim() ?? 'user';
 
       if (!username || !password) {
