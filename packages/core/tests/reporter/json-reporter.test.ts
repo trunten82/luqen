@@ -85,6 +85,35 @@ describe('generateJsonReport', () => {
     expect(content.compliance).toBeUndefined();
   });
 
+  it('includes nextSteps suggesting compliance when no compliance data', async () => {
+    const report = await generateJsonReport({ siteUrl: 'https://example.com', pages, errors, outputDir });
+    const content = JSON.parse(readFileSync(report.reportPath, 'utf-8'));
+    expect(content.nextSteps).toBeDefined();
+    expect(Array.isArray(content.nextSteps)).toBe(true);
+    expect(content.nextSteps.some((s: string) => /compliance/i.test(s))).toBe(true);
+  });
+
+  it('includes nextSteps suggesting dashboard when compliance data is present', async () => {
+    const compliance: ComplianceEnrichment = {
+      summary: { totalJurisdictions: 1, passing: 1, failing: 0, totalMandatoryViolations: 0 },
+      matrix: {
+        EU: {
+          jurisdictionId: 'EU',
+          jurisdictionName: 'European Union',
+          status: 'pass',
+          mandatoryViolations: 0,
+          recommendedViolations: 0,
+          regulations: [],
+        },
+      },
+      issueAnnotations: new Map(),
+    };
+    const report = await generateJsonReport({ siteUrl: 'https://example.com', pages, errors, outputDir, compliance });
+    const content = JSON.parse(readFileSync(report.reportPath, 'utf-8'));
+    expect(content.nextSteps).toBeDefined();
+    expect(content.nextSteps.some((s: string) => /dashboard/i.test(s))).toBe(true);
+  });
+
   it('counts notice issues in byLevel', async () => {
     const noticePages: PageResult[] = [
       { url: 'https://example.com/', discoveryMethod: 'sitemap', issueCount: 1, issues: [

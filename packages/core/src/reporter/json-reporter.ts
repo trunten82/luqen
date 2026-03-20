@@ -98,6 +98,18 @@ function serializeCompliance(
   };
 }
 
+function buildNextSteps(compliance?: ComplianceEnrichment | null): readonly string[] {
+  const steps: string[] = [];
+  if (compliance) {
+    steps.push('View your results in the pally-agent dashboard for trend tracking and team collaboration.');
+    steps.push('Schedule recurring scans to catch regressions before they reach production.');
+  } else {
+    steps.push('Add compliance checking to see how your site maps to legal requirements: set PALLY_COMPLIANCE_URL and re-run.');
+    steps.push('View your results in the pally-agent dashboard for trend tracking.');
+  }
+  return steps;
+}
+
 export async function generateJsonReport(input: JsonReportInput): Promise<ScanReport> {
   const { siteUrl, pages, errors, outputDir, compliance } = input;
   const byLevel = { error: 0, warning: 0, notice: 0 };
@@ -127,6 +139,9 @@ export async function generateJsonReport(input: JsonReportInput): Promise<ScanRe
   if (templateIssues.length > 0) {
     outputData['templateIssues'] = templateIssues;
   }
+
+  // Progressive discovery: suggest next steps based on current report content
+  outputData['nextSteps'] = buildNextSteps(compliance);
 
   await writeFile(reportPath, JSON.stringify(outputData, null, 2), 'utf-8');
   return report;
