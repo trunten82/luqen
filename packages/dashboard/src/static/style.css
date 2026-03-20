@@ -1038,6 +1038,93 @@ select {
   word-break: break-word;
 }
 
+/* ---- Detail Section Title ---- */
+.detail-section-title {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-sm);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-color);
+}
+
+/* ---- Detail Cards (nested items in view mode) ---- */
+.detail-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.detail-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--space-md);
+  background-color: var(--bg-secondary);
+}
+
+.detail-card--compact {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.detail-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xs);
+}
+
+.detail-card__body {
+  font-size: var(--font-size-sm);
+}
+
+.detail-card__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.detail-card__footer {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-color);
+}
+
+/* ---- Source Link (prominent) ---- */
+.detail-source-link {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+  background-color: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--border-radius);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  transition: background-color var(--transition-fast);
+}
+
+.detail-source-link:hover {
+  background-color: var(--accent);
+  color: var(--text-inverse);
+}
+
+/* ---- Larger modal for detail views ---- */
+.modal--lg {
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 767px) {
+  .modal--lg {
+    max-width: 100%;
+  }
+}
+
 /* ---- Responsive (Tablet & Mobile < 1024px) ---- */
 @media (max-width: 1024px) {
   .sidebar-backdrop.is-visible {

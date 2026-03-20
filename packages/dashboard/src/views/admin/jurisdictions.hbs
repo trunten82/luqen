@@ -57,17 +57,6 @@
                     hx-swap="innerHTML"
                     class="btn btn--sm btn--secondary"
                     aria-label="View {{name}}">View</button>
-            <button hx-get="/admin/jurisdictions/{{id}}/edit"
-                    hx-target="#modal-container"
-                    hx-swap="innerHTML"
-                    class="btn btn--sm btn--ghost"
-                    aria-label="Edit {{name}}">Edit</button>
-            <button hx-delete="/admin/jurisdictions/{{id}}"
-                    hx-confirm="Delete jurisdiction {{name}}?"
-                    hx-target="closest tr"
-                    hx-swap="outerHTML swap:500ms"
-                    class="btn btn--sm btn--danger"
-                    aria-label="Delete {{name}}">Delete</button>
           </td>
         </tr>
         {{else}}
