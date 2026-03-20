@@ -12,6 +12,9 @@
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
   <div class="layout">
+    <!-- Sidebar backdrop (mobile overlay) -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
     <!-- Sidebar navigation -->
     {{> sidebar}}
 
@@ -58,14 +61,32 @@
     // Mobile sidebar toggle
     (function () {
       var btn = document.getElementById('mobile-menu-btn');
+      var backdrop = document.getElementById('sidebar-backdrop');
       if (!btn) return;
+
+      function closeSidebar() {
+        var sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
+        sidebar.classList.remove('is-open');
+        if (backdrop) backdrop.classList.remove('is-visible');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute('aria-label', 'Open navigation menu');
+        document.body.style.overflow = '';
+      }
+
       btn.addEventListener('click', function () {
         var sidebar = document.getElementById('sidebar');
         if (!sidebar) return;
         var open = sidebar.classList.toggle('is-open');
+        if (backdrop) backdrop.classList.toggle('is-visible', open);
         btn.setAttribute('aria-expanded', open ? 'true' : 'false');
         btn.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+        document.body.style.overflow = open ? 'hidden' : '';
       });
+
+      if (backdrop) {
+        backdrop.addEventListener('click', closeSidebar);
+      }
     }());
 
     // Auto-dismiss toasts after 5 seconds
