@@ -90,21 +90,16 @@
     </table>
   </div>
 
-  <nav aria-label="Regulations pagination" class="pagination">
-    {{#if hasPrev}}
-    <a hx-get="/admin/regulations?offset={{prevOffset}}&limit={{limit}}&q={{q}}&jurisdictionId={{jurisdictionId}}"
-       hx-target="#regulations-table-body"
-       hx-push-url="true"
-       class="btn btn--ghost"
-       aria-label="Previous page">Previous</a>
-    {{/if}}
-    <span class="pagination__info" aria-current="page">Page {{currentPage}}</span>
-    {{#if hasNext}}
-    <a hx-get="/admin/regulations?offset={{nextOffset}}&limit={{limit}}&q={{q}}&jurisdictionId={{jurisdictionId}}"
-       hx-target="#regulations-table-body"
-       hx-push-url="true"
-       class="btn btn--ghost"
-       aria-label="Next page">Next</a>
-    {{/if}}
-  </nav>
+  {{#if hasNext}}
+  <div class="load-more" id="load-more-regulations">
+    <button hx-get="/admin/regulations?offset={{nextOffset}}&limit={{limit}}&q={{q}}&jurisdictionId={{jurisdictionId}}&partial=rows"
+            hx-target="#regulations-table-body"
+            hx-swap="beforeend"
+            class="btn btn--ghost btn--full"
+            aria-label="Load more regulations"
+            hx-on::after-request="this.closest('.load-more').remove()">
+      Load more ({{nextOffset}} of {{total}})
+    </button>
+  </div>
+  {{/if}}
 </section>

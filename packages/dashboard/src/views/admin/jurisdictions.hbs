@@ -16,7 +16,7 @@
   {{/if}}
 
   <div class="search-bar">
-    <label for="jurisdiction-search" class="visually-hidden">Search jurisdictions</label>
+    <label for="jurisdiction-search" class="sr-only">Search jurisdictions</label>
     <input id="jurisdiction-search"
            type="search"
            name="q"
@@ -24,65 +24,61 @@
            placeholder="Search by name or ID..."
            hx-get="/admin/jurisdictions"
            hx-trigger="input changed delay:300ms"
-           hx-target="#jurisdictions-table-body"
+           hx-target="#jurisdictions-list"
+           hx-swap="innerHTML"
            hx-indicator="#search-spinner"
-           class="input"
            aria-label="Search jurisdictions by name or ID"
            role="searchbox">
     <span id="search-spinner" class="htmx-indicator" aria-hidden="true">Searching...</span>
   </div>
 
-  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
-    <table class="table" aria-label="Jurisdictions">
-      <caption class="visually-hidden">List of jurisdictions</caption>
-      <thead>
-        <tr>
-          <th scope="col">ID</th>
-          <th scope="col">Name</th>
-          <th scope="col">Type</th>
-          <th scope="col">Parent</th>
-          <th scope="col">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="jurisdictions-table-body">
-        {{#each jurisdictions}}
-        <tr id="jurisdiction-{{id}}">
-          <td data-label="ID">{{id}}</td>
-          <td data-label="Name">{{name}}</td>
-          <td data-label="Type">{{type}}</td>
-          <td data-label="Parent">{{parentId}}</td>
-          <td>
-            <button hx-get="/admin/jurisdictions/{{id}}/view"
-                    hx-target="#modal-container"
-                    hx-swap="innerHTML"
-                    class="btn btn--sm btn--secondary"
-                    aria-label="View {{name}}">View</button>
-          </td>
-        </tr>
-        {{else}}
-        <tr>
-          <td colspan="5" class="table__empty">No jurisdictions found.</td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
-  </div>
+  <div id="jurisdictions-list" aria-live="polite">
+    <div class="table-wrapper">
+      <table aria-label="Jurisdictions">
+        <thead>
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Name</th>
+            <th scope="col">Type</th>
+            <th scope="col">Parent</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="jurisdictions-table-body">
+          {{#each jurisdictions}}
+          <tr id="jurisdiction-{{id}}">
+            <td data-label="ID">{{id}}</td>
+            <td data-label="Name">{{name}}</td>
+            <td data-label="Type">{{type}}</td>
+            <td data-label="Parent">{{parentId}}</td>
+            <td>
+              <button hx-get="/admin/jurisdictions/{{id}}/view"
+                      hx-target="#modal-container"
+                      hx-swap="innerHTML"
+                      class="btn btn--sm btn--secondary"
+                      aria-label="View {{name}}">View</button>
+            </td>
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="5">No jurisdictions found.</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
 
-  <nav aria-label="Jurisdictions pagination" class="pagination">
-    {{#if hasPrev}}
-    <a hx-get="/admin/jurisdictions?offset={{prevOffset}}&limit={{limit}}&q={{q}}"
-       hx-target="#jurisdictions-table-body"
-       hx-push-url="true"
-       class="btn btn--ghost"
-       aria-label="Previous page">Previous</a>
-    {{/if}}
-    <span class="pagination__info" aria-current="page">Page {{currentPage}}</span>
     {{#if hasNext}}
-    <a hx-get="/admin/jurisdictions?offset={{nextOffset}}&limit={{limit}}&q={{q}}"
-       hx-target="#jurisdictions-table-body"
-       hx-push-url="true"
-       class="btn btn--ghost"
-       aria-label="Next page">Next</a>
+    <div class="load-more" id="load-more-jurisdictions">
+      <button hx-get="/admin/jurisdictions?offset={{nextOffset}}&limit={{limit}}&q={{q}}&partial=rows"
+              hx-target="#jurisdictions-table-body"
+              hx-swap="beforeend"
+              class="btn btn--ghost btn--full"
+              aria-label="Load more jurisdictions"
+              hx-on::after-request="this.closest('.load-more').remove()">
+        Load more ({{nextOffset}} of {{total}})
+      </button>
+    </div>
     {{/if}}
-  </nav>
+  </div>
 </section>
