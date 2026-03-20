@@ -24,3 +24,4 @@ packages/*/dashboard.config.json
 *.db-shm
 *.db-wal
 keys/
+reports/
