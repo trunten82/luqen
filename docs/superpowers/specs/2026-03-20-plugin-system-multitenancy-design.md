@@ -408,6 +408,38 @@ Prove the plugin system works beyond auth:
 - Sends notifications on scan complete, violations found
 - Validates the notification plugin interface
 
+### Documentation Updates (continuous — after each phase)
+
+Each phase includes documentation as a deliverable, not an afterthought. Guides must be updated before the phase is considered complete.
+
+**After Phase 1 (Plugin System):**
+- Update `docs/getting-started/what-is-pally.md` — add plugin system to architecture overview
+- Update `docs/paths/full-dashboard.md` — add Settings → Plugins section
+- Update `docs/reference/cli-reference.md` — add `pally-dashboard plugin *` commands
+- Update `docs/reference/api-reference.md` — add `/api/v1/plugins/*` endpoints
+- Create `docs/reference/plugin-development.md` — manifest format, type interfaces, config schema
+- Update `README.md` — mention plugin extensibility
+
+**After Phase 2 (Auth Progression):**
+- Update `docs/getting-started/quick-scan.md` — document API key auth (printed on first start)
+- Update `docs/paths/full-dashboard.md` — document progressive auth (solo → team → SSO)
+- Create `docs/paths/enterprise-sso.md` — new path guide for SSO setup (Entra ID walkthrough)
+- Update `docs/reference/dashboard-config.md` — document new auth config options
+- Update `docs/deployment/docker.md` and `docs/deployment/kubernetes.md` — auth configuration in production
+
+**After Phase 3a+3b (Multi-Tenancy):**
+- Create `docs/paths/multi-tenant.md` — new path guide for org setup and management
+- Update `docs/paths/full-dashboard.md` — add org management section
+- Update `docs/reference/api-reference.md` — document `X-Org-Id` header, org management endpoints
+- Update `docs/reference/compliance-config.md` — document org-aware query behavior
+- Update `docs/deployment/kubernetes.md` — multi-tenant production recommendations
+
+**After Phase 4 (Notification Plugin):**
+- Create `docs/paths/notifications.md` — guide for setting up Slack/Teams alerts
+- Update `docs/reference/plugin-development.md` — add notification plugin example
+
+**CHANGELOG and SKILL.md** are updated at the end of each phase with version bump.
+
 ## Success Criteria
 
 1. Fresh install works with zero configuration — API key printed, dashboard accessible
@@ -420,6 +452,8 @@ Prove the plugin system works beyond auth:
 8. Existing single-user installs unaffected by multi-tenancy code (zero behavior change)
 9. All existing tests continue to pass
 10. Plugin health checks visible in admin UI
+11. Every new feature has a corresponding guide or reference doc update
+12. A new user can follow any path guide end-to-end without hitting undocumented steps
 
 ## Out of Scope
 
