@@ -8,6 +8,7 @@ import { authRoutes } from './routes/auth.js';
 import { homeRoutes } from './routes/home.js';
 import { scanRoutes } from './routes/scan.js';
 import { reportRoutes } from './routes/reports.js';
+import { compareRoutes } from './routes/compare.js';
 import { jurisdictionRoutes } from './routes/admin/jurisdictions.js';
 import { regulationRoutes } from './routes/admin/regulations.js';
 import { proposalRoutes } from './routes/admin/proposals.js';
@@ -16,6 +17,7 @@ import { webhookRoutes } from './routes/admin/webhooks.js';
 import { userRoutes } from './routes/admin/users.js';
 import { clientRoutes } from './routes/admin/clients.js';
 import { systemRoutes } from './routes/admin/system.js';
+import { monitorRoutes } from './routes/admin/monitor.js';
 import { ScanDb } from './db/scans.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
@@ -115,6 +117,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           if (reviewStatus === 'review') return 'REVIEW NEEDED';
           return 'PASS';
         },
+        // Compare helpers
+        cmpPositive: (n: number) => typeof n === 'number' && n > 0,
+        cmpNegative: (n: number) => typeof n === 'number' && n < 0,
+        cmpSign: (n: number) => {
+          if (typeof n !== 'number') return '0';
+          if (n > 0) return `+${n}`;
+          if (n < 0) return `${n}`;
+          return '0';
+        },
       },
     },
   });
@@ -131,6 +142,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await authRoutes(server, config);
   await homeRoutes(server, db);
   await scanRoutes(server, db, orchestrator, config);
+  await compareRoutes(server, db);
   await reportRoutes(server, db);
 
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
@@ -141,6 +153,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
   await clientRoutes(server, config.complianceUrl);
+  await monitorRoutes(server, config.complianceUrl);
   await systemRoutes(server, {
     complianceUrl: config.complianceUrl,
     webserviceUrl: config.webserviceUrl,

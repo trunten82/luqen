@@ -1,9 +1,10 @@
 {
   "name": "@pally-agent/dashboard",
-  "version": "0.1.0",
+  "version": "0.5.1",
   "description": "Web dashboard for pally accessibility scanner",
   "type": "module",
   "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
   "bin": {
     "pally-dashboard": "dist/cli.js"
   },
@@ -45,6 +46,9 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@fastify/formbody": "^8.0.0",
     "@fastify/secure-session": "^8.0.0",

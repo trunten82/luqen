@@ -8,6 +8,7 @@ import { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
 import { authRoutes } from '../../src/routes/auth.js';
 import { homeRoutes } from '../../src/routes/home.js';
 import { reportRoutes } from '../../src/routes/reports.js';
+import { compareRoutes } from '../../src/routes/compare.js';
 import { scanRoutes } from '../../src/routes/scan.js';
 import type { DashboardConfig } from '../../src/config.js';
 import { registerSession } from '../../src/auth/session.js';
@@ -63,6 +64,7 @@ export async function createTestServer(): Promise<TestContext> {
   await authRoutes(server, config);
   await homeRoutes(server, db);
   await scanRoutes(server, db, orchestrator, config);
+  await compareRoutes(server, db);
   await reportRoutes(server, db);
 
   server.get('/health', async () => ({ status: 'ok' }));

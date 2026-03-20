@@ -1,9 +1,10 @@
 {
   "name": "@pally-agent/core",
-  "version": "0.1.0",
+  "version": "0.5.1",
   "description": "Accessibility testing agent using pa11y webservice",
   "type": "module",
   "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
   "bin": { "pally-agent": "dist/cli.js" },
   "scripts": {
     "build": "tsc && cp src/reporter/report.hbs dist/reporter/report.hbs",
@@ -42,6 +43,9 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "cheerio": "^1.2.0",

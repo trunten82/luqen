@@ -55,4 +55,40 @@ program
     }
   });
 
+program
+  .command('self-audit')
+  .description('Scan the dashboard itself for WCAG 2.1 AA accessibility issues')
+  .option('--url <url>', 'URL of a running dashboard instance to audit')
+  .option('-p, --port <number>', 'Port for auto-started dashboard (default: from config)')
+  .option('-c, --config <path>', 'Path to config file', 'dashboard.config.json')
+  .option('--json', 'Output raw JSON instead of formatted summary')
+  .action(async (options: { url?: string; port?: string; config: string; json?: boolean }) => {
+    try {
+      // Dynamic imports to keep CLI startup fast
+      const { buildPageUrls, parseAuditResults, formatAuditSummary } = await import('./self-audit.js');
+      const { runSelfAudit } = await import('./self-audit-runner.js');
+
+      const config = loadConfig(options.config);
+      const port = options.port !== undefined ? parseInt(options.port, 10) : config.port;
+      const baseUrl = options.url ?? `http://localhost:${port}`;
+
+      const pageUrls = buildPageUrls(baseUrl);
+      console.log(`Auditing ${pageUrls.length} dashboard pages at ${baseUrl}...`);
+
+      const results = await runSelfAudit(pageUrls, config.webserviceUrl);
+      const summary = parseAuditResults(results);
+
+      if (options.json) {
+        console.log(JSON.stringify(summary, null, 2));
+      } else {
+        console.log(formatAuditSummary(summary));
+      }
+
+      process.exit(summary.totalErrors > 0 ? 1 : 0);
+    } catch (err) {
+      console.error('Self-audit failed:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);

@@ -93,6 +93,17 @@
       Sources
     </a>
 
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/monitor')}}is-active{{/if}}"
+       href="/admin/monitor"
+       aria-current="{{#if (startsWith currentPath '/admin/monitor')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="2" y="3" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 10l3-3 3 4 4-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M7 18h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Monitor
+    </a>
+
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/webhooks')}}is-active{{/if}}"
        href="/admin/webhooks">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
