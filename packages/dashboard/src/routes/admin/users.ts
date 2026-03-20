@@ -81,10 +81,10 @@ export async function userRoutes(
         }, getOrgId(request));
 
         const row = `<tr id="user-${created.id}">
-  <td>${created.username}</td>
-  <td><span class="badge badge--neutral">${created.role}</span></td>
-  <td>${new Date(created.createdAt).toLocaleString()}</td>
-  <td><span class="badge ${created.active ? 'badge--success' : 'badge--error'}">${created.active ? 'Active' : 'Inactive'}</span></td>
+  <td data-label="Username">${created.username}</td>
+  <td data-label="Role"><span class="badge badge--neutral">${created.role}</span></td>
+  <td data-label="Created">${new Date(created.createdAt).toLocaleString()}</td>
+  <td data-label="Status"><span class="badge ${created.active ? 'badge--success' : 'badge--error'}">${created.active ? 'Active' : 'Inactive'}</span></td>
   <td>
     <button hx-post="/admin/users/${encodeURIComponent(created.id)}/deactivate"
             hx-confirm="Deactivate user ${created.username}?"
@@ -118,8 +118,8 @@ export async function userRoutes(
         await deactivateUser(baseUrl, getToken(request), id, getOrgId(request));
 
         const rowHtml = `<tr id="user-${id}">
-  <td colspan="4">User deactivated.</td>
-  <td><span class="badge badge--error">Inactive</span></td>
+  <td data-label="Username" colspan="4">User deactivated.</td>
+  <td data-label="Status"><span class="badge badge--error">Inactive</span></td>
   <td></td>
 </tr>`;
 

@@ -25,9 +25,9 @@
     <tbody id="organizations-table">
       {{#each orgs}}
       <tr id="org-{{this.id}}">
-        <td>{{this.name}}</td>
-        <td><code>{{this.slug}}</code></td>
-        <td>{{this.createdAt}}</td>
+        <td data-label="Name">{{this.name}}</td>
+        <td data-label="Slug"><code>{{this.slug}}</code></td>
+        <td data-label="Created">{{this.createdAt}}</td>
         <td>
           <a href="/admin/organizations/{{this.id}}/members"
              class="btn btn--sm btn--ghost"

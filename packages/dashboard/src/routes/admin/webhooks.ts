@@ -84,10 +84,10 @@ export async function webhookRoutes(
         }, getOrgId(request));
 
         const row = `<tr id="webhook-${created.id}">
-  <td><a href="${created.url}" target="_blank" rel="noopener noreferrer">${created.url}</a></td>
-  <td>${created.events.join(', ')}</td>
-  <td><span class="badge ${created.active ? 'badge--success' : 'badge--neutral'}">${created.active ? 'Active' : 'Inactive'}</span></td>
-  <td>${new Date(created.createdAt).toLocaleString()}</td>
+  <td data-label="URL"><a href="${created.url}" target="_blank" rel="noopener noreferrer">${created.url}</a></td>
+  <td data-label="Events">${created.events.join(', ')}</td>
+  <td data-label="Status"><span class="badge ${created.active ? 'badge--success' : 'badge--neutral'}">${created.active ? 'Active' : 'Inactive'}</span></td>
+  <td data-label="Created">${new Date(created.createdAt).toLocaleString()}</td>
   <td>
     <button hx-post="/admin/webhooks/${encodeURIComponent(created.id)}/test"
             hx-target="#toast-container"

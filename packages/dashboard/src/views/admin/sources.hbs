@@ -42,11 +42,11 @@
       <tbody id="sources-table-body">
         {{#each sources}}
         <tr id="source-{{id}}">
-          <td>{{name}}</td>
-          <td><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
-          <td>{{type}}</td>
-          <td>{{schedule}}</td>
-          <td>{{lastChecked}}</td>
+          <td data-label="Name">{{name}}</td>
+          <td data-label="URL"><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
+          <td data-label="Type">{{type}}</td>
+          <td data-label="Schedule">{{schedule}}</td>
+          <td data-label="Last Checked">{{lastChecked}}</td>
           <td>
             <button hx-delete="/admin/sources/{{id}}"
                     hx-confirm="Remove source {{name}}?"

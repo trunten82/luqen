@@ -7,9 +7,9 @@ import { getToken, toastHtml } from './helpers.js';
 
 function orgRowHtml(org: Organization): string {
   return `<tr id="org-${org.id}">
-  <td>${org.name}</td>
-  <td><code>${org.slug}</code></td>
-  <td>${org.createdAt}</td>
+  <td data-label="Name">${org.name}</td>
+  <td data-label="Slug"><code>${org.slug}</code></td>
+  <td data-label="Created">${org.createdAt}</td>
   <td>
     <a href="/admin/organizations/${encodeURIComponent(org.id)}/members"
        class="btn btn--sm btn--ghost"
@@ -30,9 +30,9 @@ function memberRowHtml(
   username: string,
 ): string {
   return `<tr id="member-${member.userId}">
-  <td>${username}</td>
-  <td><span class="badge badge--neutral">${member.role}</span></td>
-  <td>${member.joinedAt}</td>
+  <td data-label="Username">${username}</td>
+  <td data-label="Role"><span class="badge badge--neutral">${member.role}</span></td>
+  <td data-label="Joined">${member.joinedAt}</td>
   <td>
     <button hx-post="/admin/organizations/${encodeURIComponent(orgId)}/members/${encodeURIComponent(member.userId)}/remove"
             hx-confirm="Remove ${username} from this organization?"

@@ -66,13 +66,13 @@
       <tbody id="regulations-table-body">
         {{#each regulations}}
         <tr id="regulation-{{id}}">
-          <td>{{id}}</td>
-          <td>{{name}}</td>
-          <td>{{shortName}}</td>
-          <td>{{jurisdictionId}}</td>
-          <td>{{enforcementDate}}</td>
-          <td>{{status}}</td>
-          <td>{{scope}}</td>
+          <td data-label="ID">{{id}}</td>
+          <td data-label="Name">{{name}}</td>
+          <td data-label="Short Name">{{shortName}}</td>
+          <td data-label="Jurisdiction">{{jurisdictionId}}</td>
+          <td data-label="Enforcement Date">{{enforcementDate}}</td>
+          <td data-label="Status">{{status}}</td>
+          <td data-label="Scope">{{scope}}</td>
           <td>
             <button hx-get="/admin/regulations/{{id}}/edit"
                     hx-target="#modal-container"

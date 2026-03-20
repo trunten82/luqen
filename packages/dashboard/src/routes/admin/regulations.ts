@@ -154,13 +154,13 @@ export async function regulationRoutes(
         }, getOrgId(request));
 
         const row = `<tr id="regulation-${created.id}">
-  <td>${created.id}</td>
-  <td>${created.name}</td>
-  <td>${created.shortName}</td>
-  <td>${created.jurisdictionId}</td>
-  <td>${created.enforcementDate}</td>
-  <td>${created.status}</td>
-  <td>${created.scope}</td>
+  <td data-label="ID">${created.id}</td>
+  <td data-label="Name">${created.name}</td>
+  <td data-label="Short Name">${created.shortName}</td>
+  <td data-label="Jurisdiction">${created.jurisdictionId}</td>
+  <td data-label="Enforcement Date">${created.enforcementDate}</td>
+  <td data-label="Status">${created.status}</td>
+  <td data-label="Scope">${created.scope}</td>
   <td>
     <button hx-get="/admin/regulations/${encodeURIComponent(created.id)}/edit"
             hx-target="#modal-container"
@@ -247,13 +247,13 @@ export async function regulationRoutes(
         }, getOrgId(request));
 
         const row = `<tr id="regulation-${updated.id}">
-  <td>${updated.id}</td>
-  <td>${updated.name}</td>
-  <td>${updated.shortName}</td>
-  <td>${updated.jurisdictionId}</td>
-  <td>${updated.enforcementDate}</td>
-  <td>${updated.status}</td>
-  <td>${updated.scope}</td>
+  <td data-label="ID">${updated.id}</td>
+  <td data-label="Name">${updated.name}</td>
+  <td data-label="Short Name">${updated.shortName}</td>
+  <td data-label="Jurisdiction">${updated.jurisdictionId}</td>
+  <td data-label="Enforcement Date">${updated.enforcementDate}</td>
+  <td data-label="Status">${updated.status}</td>
+  <td data-label="Scope">${updated.scope}</td>
   <td>
     <button hx-get="/admin/regulations/${encodeURIComponent(updated.id)}/edit"
             hx-target="#modal-container"

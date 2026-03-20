@@ -100,23 +100,23 @@
             >
             {{/if}}
           </td>
-          <td class="cell--url">
+          <td data-label="Site URL" class="cell--url">
             <a href="/reports/{{id}}" aria-label="View report for {{siteUrl}}">
               {{siteUrl}}
             </a>
           </td>
-          <td>
+          <td data-label="Status">
             <span class="badge badge--{{status}}" aria-label="Status: {{status}}">
               {{status}}
             </span>
           </td>
-          <td>{{standard}}</td>
-          <td>{{pagesScanned}}</td>
-          <td class="text--error">{{errors}}</td>
-          <td class="text--warning">{{warnings}}</td>
-          <td>{{notices}}</td>
-          <td>{{confirmedViolations}}</td>
-          <td>
+          <td data-label="Standard">{{standard}}</td>
+          <td data-label="Pages">{{pagesScanned}}</td>
+          <td data-label="Errors" class="text--error">{{errors}}</td>
+          <td data-label="Warnings" class="text--warning">{{warnings}}</td>
+          <td data-label="Notices">{{notices}}</td>
+          <td data-label="Violations">{{confirmedViolations}}</td>
+          <td data-label="Date">
             <time datetime="{{createdAt}}">{{createdAtDisplay}}</time>
           </td>
           <td class="cell--actions">

@@ -25,8 +25,8 @@
     <tbody id="dashboard-users-table">
       {{#each users}}
       <tr id="dashboard-user-{{this.id}}">
-        <td>{{this.username}}</td>
-        <td>
+        <td data-label="Username">{{this.username}}</td>
+        <td data-label="Role">
           {{#if this.active}}
           <select hx-patch="/admin/dashboard-users/{{this.id}}/role"
                   hx-target="closest tr"
@@ -43,7 +43,7 @@
           <span class="badge badge--neutral">{{this.role}}</span>
           {{/if}}
         </td>
-        <td>
+        <td data-label="Status">
           {{#if this.active}}
           <span class="badge badge--success">Active</span>
           {{else}}

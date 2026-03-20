@@ -47,10 +47,10 @@
       <tbody id="jurisdictions-table-body">
         {{#each jurisdictions}}
         <tr id="jurisdiction-{{id}}">
-          <td>{{id}}</td>
-          <td>{{name}}</td>
-          <td>{{type}}</td>
-          <td>{{parentId}}</td>
+          <td data-label="ID">{{id}}</td>
+          <td data-label="Name">{{name}}</td>
+          <td data-label="Type">{{type}}</td>
+          <td data-label="Parent">{{parentId}}</td>
           <td>
             <button hx-get="/admin/jurisdictions/{{id}}/edit"
                     hx-target="#modal-container"
