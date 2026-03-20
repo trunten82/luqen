@@ -50,7 +50,7 @@ The RS256 private key used to sign JWT access tokens was committed to the git re
 Because the key was committed, it must be considered compromised. Rotate the key pair:
 ```bash
 cd packages/compliance
-node dist/cli.js keys:generate
+node dist/cli.js keys generate
 ```
 Then update any deployed clients that hold the public key.
 
@@ -82,7 +82,7 @@ The `GET /logout` route deleted the session on a plain HTTP GET, which is a CSRF
 
 ---
 
-### OPEN — HIGH (npm audit): bcrypt depends on vulnerable node-tar
+### RESOLVED — HIGH (npm audit): bcrypt depends on vulnerable node-tar
 
 **Packages:** `packages/compliance`
 **Severity:** 3× HIGH
@@ -105,7 +105,7 @@ import bcrypt from 'bcrypt';
 // After (bcrypt v6)
 import { hash, compare } from 'bcrypt';
 ```
-Defer this upgrade if bcrypt v6 is not yet stable in your target environment. The vulnerability is build-time only.
+**RESOLVED:** bcrypt has been upgraded to v6.x. The vulnerable `tar` transitive dependency is no longer present.
 
 ---
 

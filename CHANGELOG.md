@@ -6,6 +6,38 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.7.0] - 2026-03-20
+
+### Added
+- User and Client REST API routes in compliance service
+- Webhook test endpoint (POST /api/v1/webhooks/:id/test)
+- PALLY_COMPLIANCE_URL env var for core → compliance integration
+- Helpful pa11y webservice connection error with setup instructions
+- Report "next steps" hints for progressive discovery
+- Monitor standalone mode with .pally-monitor.json local config fallback
+- Dashboard graceful degradation when compliance service unavailable
+- Dynamic version strings (read from package.json at runtime)
+
+### Fixed
+- Health endpoint path mismatch (/health → /api/v1/health)
+- K8s ingress rewrite-target breaking compliance API routing
+- Dead sidebar link to /admin/requirements (route didn't exist)
+
+### Removed
+- Orphaned MongoDB and PostgreSQL adapter files
+- Unused dependencies: mongodb, pg, @types/pg, jose
+- Stale report-view.hbs template
+- Dead config fields: dbAdapter, dbUrl, refreshTokenExpiry, a2a, ComplianceServiceVersion
+
+### Documentation
+- Restructured docs from component-based to path-based organization
+- 5 path guides: developer CLI, IDE integration, compliance checking, full dashboard, regulatory monitoring
+- 3 getting started guides: overview, quick scan, one-line install
+- Consolidated MCP tools and CLI reference
+- Fixed env var names, version numbers, test counts across all docs
+
+---
+
 ## [0.6.0] - 2026-03-20
 
 ### Added
@@ -183,6 +215,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [0.7.0] | 2026-03-20 | Path-based docs, REST API routes, dead code removal, env var fixes |
+| [0.6.0] | 2026-03-20 | Dashboard self-audit, report comparison, monitor admin UI, npm publish prep |
 | [0.5.0] | 2026-03-20 | Regulatory monitor agent, npm publish prep, security fixes, Redis support |
 | [0.4.1] | 2026-03-20 | Dashboard JSON rendering, Kubernetes manifests, dashboard docs, CHANGELOG |
 | [0.4.0] | 2026-03-19 | Web dashboard, admin UI, Docker Compose update |
