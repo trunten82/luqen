@@ -4,20 +4,17 @@ import type { ComplianceConfig } from './types.js';
 export const DEFAULT_CONFIG: Readonly<ComplianceConfig> = Object.freeze({
   port: 4000,
   host: '0.0.0.0',
-  dbAdapter: 'sqlite' as const,
   dbPath: './compliance.db',
   jwtKeyPair: Object.freeze({
     publicKeyPath: './keys/public.pem',
     privateKeyPath: './keys/private.pem',
   }),
   tokenExpiry: '1h',
-  refreshTokenExpiry: '30d',
   rateLimit: Object.freeze({ read: 100, write: 20, windowMs: 60000 }),
   cors: Object.freeze({
     origin: ['http://localhost:3000'] as readonly string[],
     credentials: true,
   }),
-  a2a: Object.freeze({ enabled: true, peers: [] as readonly string[] }),
 });
 
 function readConfigFile(path: string): Partial<ComplianceConfig> {
@@ -37,10 +34,7 @@ function applyEnvOverrides(config: ComplianceConfig): ComplianceConfig {
     port: env.COMPLIANCE_PORT
       ? parseInt(env.COMPLIANCE_PORT, 10)
       : config.port,
-    dbAdapter: (env.COMPLIANCE_DB_ADAPTER as ComplianceConfig['dbAdapter'])
-      ?? config.dbAdapter,
     dbPath: env.COMPLIANCE_DB_PATH ?? config.dbPath,
-    dbUrl: env.COMPLIANCE_DB_URL ?? config.dbUrl,
     redisUrl: env.COMPLIANCE_REDIS_URL ?? config.redisUrl,
     host: env.COMPLIANCE_HOST ?? config.host,
     jwtKeyPair: {
@@ -70,7 +64,6 @@ export function loadConfig(
       ...(fileConfig.rateLimit ?? {}),
     },
     cors: { ...DEFAULT_CONFIG.cors, ...(fileConfig.cors ?? {}) },
-    a2a: { ...DEFAULT_CONFIG.a2a, ...(fileConfig.a2a ?? {}) },
     jwtKeyPair: {
       ...DEFAULT_CONFIG.jwtKeyPair,
       ...(fileConfig.jwtKeyPair ?? {}),
