@@ -19,12 +19,14 @@ export interface ScanRecord {
   readonly confirmedViolations?: number;
   readonly jsonReportPath?: string;
   readonly error?: string;
+  readonly orgId: string;
 }
 
 export interface ScanFilters {
   readonly status?: ScanRecord['status'];
   readonly createdBy?: string;
   readonly siteUrl?: string;
+  readonly orgId?: string;
   readonly limit?: number;
   readonly offset?: number;
 }
@@ -48,6 +50,7 @@ interface ScanRow {
   confirmed_violations: number | null;
   json_report_path: string | null;
   error: string | null;
+  org_id: string;
 }
 
 function rowToRecord(row: ScanRow): ScanRecord {
@@ -59,6 +62,7 @@ function rowToRecord(row: ScanRow): ScanRecord {
     jurisdictions: JSON.parse(row.jurisdictions) as string[],
     createdBy: row.created_by,
     createdAt: row.created_at,
+    orgId: row.org_id,
   };
 
   return {
@@ -207,10 +211,11 @@ export class ScanDb {
     jurisdictions: string[];
     createdBy: string;
     createdAt: string;
+    orgId?: string;
   }): ScanRecord {
     const stmt = this.db.prepare(`
-      INSERT INTO scan_records (id, site_url, status, standard, jurisdictions, created_by, created_at)
-      VALUES (@id, @siteUrl, 'queued', @standard, @jurisdictions, @createdBy, @createdAt)
+      INSERT INTO scan_records (id, site_url, status, standard, jurisdictions, created_by, created_at, org_id)
+      VALUES (@id, @siteUrl, 'queued', @standard, @jurisdictions, @createdBy, @createdAt, @orgId)
     `);
 
     stmt.run({
@@ -220,6 +225,7 @@ export class ScanDb {
       jurisdictions: JSON.stringify(data.jurisdictions),
       createdBy: data.createdBy,
       createdAt: data.createdAt,
+      orgId: data.orgId ?? 'system',
     });
 
     const created = this.getScan(data.id);
@@ -250,6 +256,10 @@ export class ScanDb {
     if (filters.siteUrl !== undefined) {
       conditions.push('site_url LIKE @siteUrl');
       params['siteUrl'] = `%${filters.siteUrl}%`;
+    }
+    if (filters.orgId !== undefined) {
+      conditions.push('org_id = @orgId');
+      params['orgId'] = filters.orgId;
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -313,6 +323,10 @@ export class ScanDb {
   deleteScan(id: string): void {
     const stmt = this.db.prepare('DELETE FROM scan_records WHERE id = ?');
     stmt.run(id);
+  }
+
+  deleteOrgScans(orgId: string): void {
+    this.db.prepare('DELETE FROM scan_records WHERE org_id = ?').run(orgId);
   }
 
   close(): void {
