@@ -1,9 +1,5 @@
 /**
- * Shared adapter contract tests.
- *
- * Selects the adapter under test via DB_ADAPTER env var (default: sqlite).
- * MongoDB tests are skipped unless MONGODB_URL is set.
- * PostgreSQL tests are skipped unless POSTGRES_URL is set.
+ * Shared adapter contract tests — SQLite (in-memory).
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { DbAdapter } from '../../src/db/adapter.js';
@@ -15,18 +11,6 @@ import type { DbAdapter } from '../../src/db/adapter.js';
 async function makeSqliteAdapter(): Promise<DbAdapter> {
   const { SqliteAdapter } = await import('../../src/db/sqlite-adapter.js');
   return new SqliteAdapter(':memory:');
-}
-
-async function makeMongoAdapter(): Promise<DbAdapter> {
-  const url = process.env['MONGODB_URL']!;
-  const { MongoDbAdapter } = await import('../../src/db/mongodb-adapter.js');
-  return new MongoDbAdapter(url);
-}
-
-async function makePostgresAdapter(): Promise<DbAdapter> {
-  const url = process.env['POSTGRES_URL']!;
-  const { PostgresAdapter } = await import('../../src/db/postgres-adapter.js');
-  return new PostgresAdapter(url);
 }
 
 // ---------------------------------------------------------------------------
@@ -684,15 +668,3 @@ function runContractTests(
 
 // SQLite — always runs (in-memory, no env var needed)
 runContractTests('SqliteAdapter (contract)', makeSqliteAdapter);
-
-// MongoDB — skipped if MONGODB_URL is not set
-const mongoUrl = process.env['MONGODB_URL'];
-describe.skipIf(mongoUrl == null)('MongoDbAdapter (contract)', () => {
-  runContractTests('MongoDbAdapter (contract) inner', makeMongoAdapter);
-});
-
-// PostgreSQL — skipped if POSTGRES_URL is not set
-const postgresUrl = process.env['POSTGRES_URL'];
-describe.skipIf(postgresUrl == null)('PostgresAdapter (contract)', () => {
-  runContractTests('PostgresAdapter (contract) inner', makePostgresAdapter);
-});

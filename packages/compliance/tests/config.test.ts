@@ -12,10 +12,8 @@ describe('Config', () => {
     const config = loadConfig('/nonexistent/path/compliance.config.json');
     expect(config.port).toBe(4000);
     expect(config.host).toBe('0.0.0.0');
-    expect(config.dbAdapter).toBe('sqlite');
     expect(config.dbPath).toBe('./compliance.db');
     expect(config.tokenExpiry).toBe('1h');
-    expect(config.refreshTokenExpiry).toBe('30d');
     expect(config.rateLimit.read).toBe(100);
     expect(config.rateLimit.write).toBe(20);
     expect(config.rateLimit.windowMs).toBe(60000);
@@ -27,22 +25,10 @@ describe('Config', () => {
     expect(config.port).toBe(5000);
   });
 
-  it('overrides dbAdapter from COMPLIANCE_DB_ADAPTER env var', () => {
-    process.env.COMPLIANCE_DB_ADAPTER = 'mongodb';
-    const config = loadConfig('/nonexistent/path');
-    expect(config.dbAdapter).toBe('mongodb');
-  });
-
   it('overrides dbPath from COMPLIANCE_DB_PATH env var', () => {
     process.env.COMPLIANCE_DB_PATH = '/tmp/test.db';
     const config = loadConfig('/nonexistent/path');
     expect(config.dbPath).toBe('/tmp/test.db');
-  });
-
-  it('overrides dbUrl from COMPLIANCE_DB_URL env var', () => {
-    process.env.COMPLIANCE_DB_URL = 'mongodb://localhost:27017/compliance';
-    const config = loadConfig('/nonexistent/path');
-    expect(config.dbUrl).toBe('mongodb://localhost:27017/compliance');
   });
 
   it('overrides JWT key paths from env vars', () => {
