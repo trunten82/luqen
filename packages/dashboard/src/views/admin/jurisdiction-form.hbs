@@ -46,6 +46,7 @@
                type="text"
                class="input"
                value="{{jurisdiction.type}}"
+               {{#unless isNew}}readonly{{/unless}}
                required
                aria-required="true"
                aria-describedby="jur-type-hint">

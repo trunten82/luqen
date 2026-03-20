@@ -11,43 +11,42 @@
   <!-- Skip to main content: first focusable element on every page -->
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <div class="layout">
-    <!-- Sidebar backdrop (mobile overlay) -->
-    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <!-- Sidebar backdrop (mobile overlay) -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
-    <!-- Sidebar navigation -->
-    {{> sidebar}}
+  <!-- Sidebar navigation -->
+  {{> sidebar}}
 
-    <!-- Mobile header (visible below 1024px) -->
-    <div class="mobile-header" role="banner">
-      <button class="mobile-menu-toggle"
-              aria-label="Open navigation menu"
-              aria-expanded="false"
-              aria-controls="sidebar"
-              id="mobile-menu-btn">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path d="M2 5h16M2 10h16M2 15h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
-      <span aria-label="Pally Dashboard" style="font-size:1.25rem;font-weight:700;color:var(--accent)">Pally</span>
-    </div>
+  <!-- Mobile top bar (visible below 1024px, fixed at top) -->
+  <header class="mobile-header" role="banner" id="mobile-header">
+    <button class="mobile-menu-toggle"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="sidebar"
+            id="mobile-menu-btn"
+            type="button">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M2 5h16M2 10h16M2 15h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <span style="font-size:1.125rem;font-weight:700;color:var(--accent)">Pally</span>
+  </header>
 
-    <!-- Main content area -->
-    <main id="main-content" class="main-content" role="main" tabindex="-1">
-      {{#if pageTitle}}
-      <header class="page-header">
-        <h1 class="page-header__title">{{pageTitle}}</h1>
-        {{#if pageSubtitle}}
-        <p class="page-header__subtitle">{{pageSubtitle}}</p>
-        {{/if}}
-      </header>
+  <!-- Main content area -->
+  <main id="main-content" class="main-content" role="main" tabindex="-1">
+    {{#if pageTitle}}
+    <header class="page-header">
+      <h1 class="page-header__title">{{pageTitle}}</h1>
+      {{#if pageSubtitle}}
+      <p class="page-header__subtitle">{{pageSubtitle}}</p>
       {{/if}}
+    </header>
+    {{/if}}
 
-      <div class="page-body">
-        {{{body}}}
-      </div>
-    </main>
-  </div>
+    <div class="page-body">
+      {{{body}}}
+    </div>
+  </main>
 
   <!-- Toast notification container (populated by HTMX OOB swaps) -->
   <div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
@@ -58,15 +57,22 @@
   <script src="/static/htmx.min.js"></script>
   <script src="/static/htmx-sse.js"></script>
   <script>
-    // Mobile sidebar toggle
+    // ── Sidebar toggle (mobile) ──────────────────────────────────────────
     (function () {
       var btn = document.getElementById('mobile-menu-btn');
+      var sidebar = document.getElementById('sidebar');
       var backdrop = document.getElementById('sidebar-backdrop');
-      if (!btn) return;
+      if (!btn || !sidebar) return;
+
+      function openSidebar() {
+        sidebar.classList.add('is-open');
+        if (backdrop) backdrop.classList.add('is-visible');
+        btn.setAttribute('aria-expanded', 'true');
+        btn.setAttribute('aria-label', 'Close navigation menu');
+        document.body.style.overflow = 'hidden';
+      }
 
       function closeSidebar() {
-        var sidebar = document.getElementById('sidebar');
-        if (!sidebar) return;
         sidebar.classList.remove('is-open');
         if (backdrop) backdrop.classList.remove('is-visible');
         btn.setAttribute('aria-expanded', 'false');
@@ -75,26 +81,26 @@
       }
 
       btn.addEventListener('click', function () {
-        var sidebar = document.getElementById('sidebar');
-        if (!sidebar) return;
-        var open = sidebar.classList.toggle('is-open');
-        if (backdrop) backdrop.classList.toggle('is-visible', open);
-        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        btn.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
-        document.body.style.overflow = open ? 'hidden' : '';
+        if (sidebar.classList.contains('is-open')) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
       });
 
       if (backdrop) {
         backdrop.addEventListener('click', closeSidebar);
       }
+
+      // Expose for use by other handlers
+      window._closeSidebar = closeSidebar;
     }());
 
-    // Auto-dismiss toasts after 5 seconds
+    // ── Toast auto-dismiss ───────────────────────────────────────────────
     document.addEventListener('htmx:afterSwap', function () {
       var toastContainer = document.getElementById('toast-container');
       if (!toastContainer) return;
-      var toasts = toastContainer.querySelectorAll('.toast');
-      toasts.forEach(function (toast) {
+      toastContainer.querySelectorAll('.toast').forEach(function (toast) {
         setTimeout(function () {
           toast.style.opacity = '0';
           toast.style.transition = 'opacity 300ms ease';
@@ -103,41 +109,45 @@
       });
     });
 
-    // Close modal when overlay, cancel button, or close button is clicked, or Escape pressed
+    // ── Modal management ─────────────────────────────────────────────────
     function closeModal() {
       var container = document.getElementById('modal-container');
-      if (container) { while (container.firstChild) { container.removeChild(container.firstChild); } }
-    }
-    document.addEventListener('click', function (evt) {
-      if (evt.target && (
-        evt.target.classList.contains('modal-overlay') ||
-        evt.target.classList.contains('close-modal-btn') ||
-        evt.target.classList.contains('modal__close')
-      )) {
-        closeModal();
+      if (container) {
+        while (container.firstChild) container.removeChild(container.firstChild);
       }
-    });
-    document.addEventListener('keydown', function (evt) {
-      if (evt.key === 'Escape') {
+    }
+
+    document.addEventListener('click', function (evt) {
+      var t = evt.target;
+      if (t && (
+        t.classList.contains('modal-overlay') ||
+        t.classList.contains('close-modal-btn') ||
+        t.classList.contains('modal__close')
+      )) {
+        evt.stopPropagation(); // prevent other handlers from firing
         closeModal();
       }
     });
 
-    // Mobile: tap on table card row to trigger its Edit button
-    if (window.matchMedia('(max-width: 767px)').matches) {
-      document.addEventListener('click', function (evt) {
-        var target = evt.target;
-        // Don't intercept clicks on buttons, links, inputs, or selects
-        if (target.closest('button, a, input, select, textarea, .btn')) return;
-        var row = target.closest('tbody tr');
-        if (!row) return;
-        // Find the Edit button in this row
-        var editBtn = row.querySelector('[hx-get*="/edit"], .btn--secondary');
-        if (editBtn) {
-          editBtn.click();
-        }
-      });
-    }
+    document.addEventListener('keydown', function (evt) {
+      if (evt.key === 'Escape') closeModal();
+    });
+
+    // ── Mobile: tap card row to open view/detail ─────────────────────────
+    document.addEventListener('click', function (evt) {
+      // Only on mobile
+      if (window.innerWidth > 767) return;
+      var target = evt.target;
+      // Don't intercept clicks on interactive elements
+      if (target.closest('button, a, input, select, textarea, .btn')) return;
+      var row = target.closest('tbody tr');
+      if (!row) return;
+      // Find the View or Edit button in this row
+      var viewBtn = row.querySelector('[hx-get*="/view"], [hx-get*="/edit"], .btn--secondary');
+      if (viewBtn) {
+        viewBtn.click();
+      }
+    });
   </script>
 </body>
 </html>

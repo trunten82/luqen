@@ -1,0 +1,59 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="modal-title">Regulation Details</h2>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <dl class="detail-list">
+      <div class="detail-list__item">
+        <dt>ID</dt>
+        <dd><code>{{regulation.id}}</code></dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Name</dt>
+        <dd>{{regulation.name}}</dd>
+      </div>
+      {{#if regulation.shortName}}
+      <div class="detail-list__item">
+        <dt>Short Name</dt>
+        <dd>{{regulation.shortName}}</dd>
+      </div>
+      {{/if}}
+      <div class="detail-list__item">
+        <dt>Jurisdiction</dt>
+        <dd>{{jurisdictionName}}</dd>
+      </div>
+      {{#if regulation.enforcementDate}}
+      <div class="detail-list__item">
+        <dt>Enforcement Date</dt>
+        <dd>{{regulation.enforcementDate}}</dd>
+      </div>
+      {{/if}}
+      <div class="detail-list__item">
+        <dt>Status</dt>
+        <dd><span class="badge badge--info">{{regulation.status}}</span></dd>
+      </div>
+      {{#if regulation.scope}}
+      <div class="detail-list__item">
+        <dt>Scope</dt>
+        <dd>{{regulation.scope}}</dd>
+      </div>
+      {{/if}}
+      {{#if regulation.description}}
+      <div class="detail-list__item">
+        <dt>Description</dt>
+        <dd>{{regulation.description}}</dd>
+      </div>
+      {{/if}}
+    </dl>
+
+    <div class="modal__footer">
+      <button hx-get="/admin/regulations/{{regulation.id}}/edit"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              class="btn btn--primary">Edit</button>
+      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>

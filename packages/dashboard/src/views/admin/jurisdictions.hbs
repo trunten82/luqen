@@ -52,10 +52,15 @@
           <td data-label="Type">{{type}}</td>
           <td data-label="Parent">{{parentId}}</td>
           <td>
-            <button hx-get="/admin/jurisdictions/{{id}}/edit"
+            <button hx-get="/admin/jurisdictions/{{id}}/view"
                     hx-target="#modal-container"
                     hx-swap="innerHTML"
                     class="btn btn--sm btn--secondary"
+                    aria-label="View {{name}}">View</button>
+            <button hx-get="/admin/jurisdictions/{{id}}/edit"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--ghost"
                     aria-label="Edit {{name}}">Edit</button>
             <button hx-delete="/admin/jurisdictions/{{id}}"
                     hx-confirm="Delete jurisdiction {{name}}?"

@@ -1,0 +1,43 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="modal-title">Jurisdiction Details</h2>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <dl class="detail-list">
+      <div class="detail-list__item">
+        <dt>ID</dt>
+        <dd><code>{{jurisdiction.id}}</code></dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Name</dt>
+        <dd>{{jurisdiction.name}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Type</dt>
+        <dd><span class="badge badge--info">{{jurisdiction.type}}</span></dd>
+      </div>
+      {{#if jurisdiction.parentId}}
+      <div class="detail-list__item">
+        <dt>Parent</dt>
+        <dd>{{jurisdiction.parentId}}</dd>
+      </div>
+      {{/if}}
+      {{#if jurisdiction.iso3166}}
+      <div class="detail-list__item">
+        <dt>ISO 3166</dt>
+        <dd>{{jurisdiction.iso3166}}</dd>
+      </div>
+      {{/if}}
+    </dl>
+
+    <div class="modal__footer">
+      <button hx-get="/admin/jurisdictions/{{jurisdiction.id}}/edit"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              class="btn btn--primary">Edit</button>
+      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>

@@ -162,10 +162,15 @@ export async function regulationRoutes(
   <td data-label="Status">${created.status}</td>
   <td data-label="Scope">${created.scope}</td>
   <td>
-    <button hx-get="/admin/regulations/${encodeURIComponent(created.id)}/edit"
+    <button hx-get="/admin/regulations/${encodeURIComponent(created.id)}/view"
             hx-target="#modal-container"
             hx-swap="innerHTML"
             class="btn btn--sm btn--secondary"
+            aria-label="View ${created.name}">View</button>
+    <button hx-get="/admin/regulations/${encodeURIComponent(created.id)}/edit"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--sm btn--ghost"
             aria-label="Edit ${created.name}">Edit</button>
     <button hx-delete="/admin/regulations/${encodeURIComponent(created.id)}"
             hx-confirm="Delete regulation ${created.name}?"
@@ -182,6 +187,31 @@ export async function regulationRoutes(
           .send(`${row}\n<div id="modal-container" hx-swap-oob="true"></div>\n${toastHtml(`Regulation "${created.name}" created successfully.`)}`);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create regulation';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // GET /admin/regulations/:id/view — read-only detail modal
+  server.get(
+    '/admin/regulations/:id/view',
+    { preHandler: adminGuard },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      try {
+        const [jurisdictions, regulations] = await Promise.all([
+          listJurisdictions(baseUrl, getToken(request), getOrgId(request)),
+          listRegulations(baseUrl, getToken(request), undefined, getOrgId(request)),
+        ]);
+        const regulation = regulations.find((r) => r.id === id);
+        if (regulation === undefined) {
+          return reply.code(404).header('content-type', 'text/html').send(toastHtml('Regulation not found.', 'error'));
+        }
+        const jurisdiction = jurisdictions.find((j) => j.id === regulation.jurisdictionId);
+        const jurisdictionName = jurisdiction?.name ?? regulation.jurisdictionId;
+        return reply.view('admin/regulation-view.hbs', { regulation, jurisdictionName });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load regulation';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
     },
@@ -255,10 +285,15 @@ export async function regulationRoutes(
   <td data-label="Status">${updated.status}</td>
   <td data-label="Scope">${updated.scope}</td>
   <td>
-    <button hx-get="/admin/regulations/${encodeURIComponent(updated.id)}/edit"
+    <button hx-get="/admin/regulations/${encodeURIComponent(updated.id)}/view"
             hx-target="#modal-container"
             hx-swap="innerHTML"
             class="btn btn--sm btn--secondary"
+            aria-label="View ${updated.name}">View</button>
+    <button hx-get="/admin/regulations/${encodeURIComponent(updated.id)}/edit"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--sm btn--ghost"
             aria-label="Edit ${updated.name}">Edit</button>
     <button hx-delete="/admin/regulations/${encodeURIComponent(updated.id)}"
             hx-confirm="Delete regulation ${updated.name}?"
