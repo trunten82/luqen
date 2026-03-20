@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import {
   listJurisdictions,
+  listRegulations,
   createJurisdiction,
   updateJurisdiction,
   deleteJurisdiction,
@@ -120,17 +121,6 @@ export async function jurisdictionRoutes(
             hx-swap="innerHTML"
             class="btn btn--sm btn--secondary"
             aria-label="View ${created.name}">View</button>
-    <button hx-get="/admin/jurisdictions/${encodeURIComponent(created.id)}/edit"
-            hx-target="#modal-container"
-            hx-swap="innerHTML"
-            class="btn btn--sm btn--ghost"
-            aria-label="Edit ${created.name}">Edit</button>
-    <button hx-delete="/admin/jurisdictions/${encodeURIComponent(created.id)}"
-            hx-confirm="Delete jurisdiction ${created.name}?"
-            hx-target="closest tr"
-            hx-swap="outerHTML swap:500ms"
-            class="btn btn--sm btn--danger"
-            aria-label="Delete ${created.name}">Delete</button>
   </td>
 </tr>`;
 
@@ -156,12 +146,16 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
-        const jurisdictions = await listJurisdictions(baseUrl, getToken(request), getOrgId(request));
+        const [jurisdictions, regulations] = await Promise.all([
+          listJurisdictions(baseUrl, getToken(request), getOrgId(request)),
+          listRegulations(baseUrl, getToken(request), { jurisdictionId: id }, getOrgId(request)),
+        ]);
         const jurisdiction = jurisdictions.find((j) => j.id === id);
         if (jurisdiction === undefined) {
           return reply.code(404).send(toastHtml('Jurisdiction not found.', 'error'));
         }
-        return reply.view('admin/jurisdiction-view.hbs', { jurisdiction });
+        const isSystem = jurisdiction.orgId === 'system' || jurisdiction.orgId === undefined;
+        return reply.view('admin/jurisdiction-view.hbs', { jurisdiction, regulations, isSystem });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load jurisdiction';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
@@ -225,17 +219,6 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
             hx-swap="innerHTML"
             class="btn btn--sm btn--secondary"
             aria-label="View ${updated.name}">View</button>
-    <button hx-get="/admin/jurisdictions/${encodeURIComponent(updated.id)}/edit"
-            hx-target="#modal-container"
-            hx-swap="innerHTML"
-            class="btn btn--sm btn--ghost"
-            aria-label="Edit ${updated.name}">Edit</button>
-    <button hx-delete="/admin/jurisdictions/${encodeURIComponent(updated.id)}"
-            hx-confirm="Delete jurisdiction ${updated.name}?"
-            hx-target="closest tr"
-            hx-swap="outerHTML swap:500ms"
-            class="btn btn--sm btn--danger"
-            aria-label="Delete ${updated.name}">Delete</button>
   </td>
 </tr>`;
 

@@ -3,6 +3,8 @@ export interface Jurisdiction {
   readonly name: string;
   readonly type: string;
   readonly parentId?: string;
+  readonly iso3166?: string;
+  readonly orgId?: string;
 }
 
 export interface Regulation {
@@ -13,6 +15,21 @@ export interface Regulation {
   readonly enforcementDate: string;
   readonly status: string;
   readonly scope: string;
+  readonly url?: string;
+  readonly reference?: string;
+  readonly description?: string;
+  readonly sectors?: string[];
+  readonly orgId?: string;
+}
+
+export interface Requirement {
+  readonly id: string;
+  readonly regulationId: string;
+  readonly wcagVersion: string;
+  readonly wcagLevel: string;
+  readonly wcagCriterion: string;
+  readonly obligation: string;
+  readonly notes?: string;
 }
 
 export interface ComplianceCheckResult {
@@ -135,6 +152,20 @@ export async function listRegulations(
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);
   return unwrapList<Regulation>(result);
+}
+
+export async function listRequirements(
+  baseUrl: string,
+  token: string,
+  filters?: Record<string, string>,
+  orgId?: string,
+): Promise<Requirement[]> {
+  const params = filters !== undefined ? `?${new URLSearchParams(filters).toString()}` : '';
+  const sep = params ? '&' : '?';
+  const result = await apiFetch<unknown>(`${baseUrl}/api/v1/requirements${params}${sep}limit=500`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, orgId);
+  return unwrapList<Requirement>(result);
 }
 
 export interface ComplianceIssueInput {

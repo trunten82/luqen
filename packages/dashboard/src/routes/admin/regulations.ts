@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import {
   listJurisdictions,
   listRegulations,
+  listRequirements,
   createRegulation,
   updateRegulation,
   deleteRegulation,
@@ -167,17 +168,6 @@ export async function regulationRoutes(
             hx-swap="innerHTML"
             class="btn btn--sm btn--secondary"
             aria-label="View ${created.name}">View</button>
-    <button hx-get="/admin/regulations/${encodeURIComponent(created.id)}/edit"
-            hx-target="#modal-container"
-            hx-swap="innerHTML"
-            class="btn btn--sm btn--ghost"
-            aria-label="Edit ${created.name}">Edit</button>
-    <button hx-delete="/admin/regulations/${encodeURIComponent(created.id)}"
-            hx-confirm="Delete regulation ${created.name}?"
-            hx-target="closest tr"
-            hx-swap="outerHTML swap:500ms"
-            class="btn btn--sm btn--danger"
-            aria-label="Delete ${created.name}">Delete</button>
   </td>
 </tr>`;
 
@@ -199,9 +189,10 @@ export async function regulationRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
-        const [jurisdictions, regulations] = await Promise.all([
+        const [jurisdictions, regulations, requirements] = await Promise.all([
           listJurisdictions(baseUrl, getToken(request), getOrgId(request)),
           listRegulations(baseUrl, getToken(request), undefined, getOrgId(request)),
+          listRequirements(baseUrl, getToken(request), { regulationId: id }, getOrgId(request)),
         ]);
         const regulation = regulations.find((r) => r.id === id);
         if (regulation === undefined) {
@@ -209,7 +200,8 @@ export async function regulationRoutes(
         }
         const jurisdiction = jurisdictions.find((j) => j.id === regulation.jurisdictionId);
         const jurisdictionName = jurisdiction?.name ?? regulation.jurisdictionId;
-        return reply.view('admin/regulation-view.hbs', { regulation, jurisdictionName });
+        const isSystem = regulation.orgId === 'system' || regulation.orgId === undefined;
+        return reply.view('admin/regulation-view.hbs', { regulation, jurisdictionName, requirements, isSystem });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load regulation';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
@@ -290,17 +282,6 @@ export async function regulationRoutes(
             hx-swap="innerHTML"
             class="btn btn--sm btn--secondary"
             aria-label="View ${updated.name}">View</button>
-    <button hx-get="/admin/regulations/${encodeURIComponent(updated.id)}/edit"
-            hx-target="#modal-container"
-            hx-swap="innerHTML"
-            class="btn btn--sm btn--ghost"
-            aria-label="Edit ${updated.name}">Edit</button>
-    <button hx-delete="/admin/regulations/${encodeURIComponent(updated.id)}"
-            hx-confirm="Delete regulation ${updated.name}?"
-            hx-target="closest tr"
-            hx-swap="outerHTML swap:500ms"
-            class="btn btn--sm btn--danger"
-            aria-label="Delete ${updated.name}">Delete</button>
   </td>
 </tr>`;
 

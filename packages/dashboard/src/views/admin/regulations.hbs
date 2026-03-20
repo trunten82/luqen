@@ -79,17 +79,6 @@
                     hx-swap="innerHTML"
                     class="btn btn--sm btn--secondary"
                     aria-label="View {{name}}">View</button>
-            <button hx-get="/admin/regulations/{{id}}/edit"
-                    hx-target="#modal-container"
-                    hx-swap="innerHTML"
-                    class="btn btn--sm btn--ghost"
-                    aria-label="Edit {{name}}">Edit</button>
-            <button hx-delete="/admin/regulations/{{id}}"
-                    hx-confirm="Delete regulation {{name}}?"
-                    hx-target="closest tr"
-                    hx-swap="outerHTML swap:500ms"
-                    class="btn btn--sm btn--danger"
-                    aria-label="Delete {{name}}">Delete</button>
           </td>
         </tr>
         {{else}}
