@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { readFile, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { ScanDb } from '../db/scans.js';
+import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 
 interface ReportsQuery {
   q?: string;
@@ -66,6 +67,13 @@ interface JsonReportFile {
         enforcementDate?: string;
       }>;
     }>;
+    issueAnnotations?: Record<string, Array<{
+      shortName: string;
+      url?: string;
+      obligation?: string;
+      jurisdictionId?: string;
+      regulationName?: string;
+    }>>;
   };
   templateIssues?: Array<{
     type: string;
@@ -90,7 +98,7 @@ interface JsonReportFile {
   errors_count?: number;
   warnings?: number;
   notices?: number;
-  issues?: Array<{ code: string; type: string; message: string; selector: string; context: string }>;
+  issues?: Array<{ code: string; type: string; message: string; selector: string; context: string; wcagCriterion?: string; wcagTitle?: string; wcagDescription?: string; wcagImpact?: string; wcagUrl?: string; regulations?: Array<{ shortName: string; url?: string; obligation?: string }> }>;
 }
 
 function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string; pagesScanned?: number; errors?: number; warnings?: number; notices?: number }) {
@@ -119,32 +127,115 @@ function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string; pages
       : []
   );
 
-  // Add issueCount helper to each page if missing
-  const pagesWithCount = pages.map((p) => ({
-    ...p,
-    issueCount: p.issueCount ?? p.issues?.length ?? 0,
-  }));
+  // ── ENRICH ISSUES ──
+  // Extract WCAG criterion from pa11y code and add WCAG descriptions + regulation annotations
+  const issueAnnotations = raw.compliance?.issueAnnotations ?? {};
 
-  const complianceMatrix = raw.compliance?.matrix
-    ? Object.values(raw.compliance.matrix)
-    : null;
+  const enrichedPages = pages.map((page) => {
+    const enrichedIssues = (page.issues ?? []).map((issue) => {
+      // Already enriched (from core report)?
+      if (issue.wcagCriterion) return issue;
 
-  const templateIssues = raw.templateIssues && raw.templateIssues.length > 0
+      const criterion = extractCriterion(issue.code);
+      const wcag = criterion ? getWcagDescription(criterion) : null;
+      const regs = issueAnnotations[issue.code] ?? null;
+
+      return {
+        ...issue,
+        ...(criterion ? { wcagCriterion: criterion } : {}),
+        ...(wcag ? { wcagTitle: wcag.title, wcagDescription: wcag.description, wcagImpact: wcag.impact, wcagUrl: wcag.url } : {}),
+        ...(regs ? { regulations: regs } : {}),
+      };
+    });
+
+    return {
+      ...page,
+      issues: enrichedIssues,
+      issueCount: page.issueCount ?? page.issues?.length ?? 0,
+    };
+  });
+
+  // ── TEMPLATE DEDUP ──
+  // Issues appearing on 3+ pages are grouped as templateIssues
+  let templateIssues = raw.templateIssues && raw.templateIssues.length > 0
     ? raw.templateIssues
     : null;
 
-  const templateIssueCount = templateIssues?.length ?? 0;
-  const templateOccurrenceCount = templateIssues
-    ? templateIssues.reduce((sum, ti) => sum + (ti.affectedCount ?? 0), 0)
+  if (!templateIssues && enrichedPages.length >= 3) {
+    const fpMap = new Map<string, { pages: string[]; issue: (typeof enrichedPages)[0]['issues'][0] }>();
+    for (const page of enrichedPages) {
+      for (const issue of page.issues) {
+        const fp = `${issue.code}||${issue.selector}||${issue.context}`;
+        const existing = fpMap.get(fp);
+        if (existing) {
+          existing.pages.push(page.url);
+        } else {
+          fpMap.set(fp, { pages: [page.url], issue });
+        }
+      }
+    }
+    const deduped: Array<(typeof enrichedPages)[0]['issues'][0] & { affectedPages: string[]; affectedCount: number }> = [];
+    const templateFps = new Set<string>();
+    for (const [fp, { pages: affectedPages, issue }] of fpMap) {
+      if (affectedPages.length >= 3) {
+        templateFps.add(fp);
+        deduped.push({ ...issue, affectedPages, affectedCount: affectedPages.length });
+      }
+    }
+    if (deduped.length > 0) {
+      templateIssues = deduped;
+      // Remove template issues from individual pages
+      for (const page of enrichedPages) {
+        page.issues = page.issues.filter((i) => !templateFps.has(`${i.code}||${i.selector}||${i.context}`));
+      }
+    }
+  }
+
+  // Enrich template issues with WCAG data if not already present
+  const enrichedTemplateIssues = templateIssues?.map((ti) => {
+    if (ti.wcagCriterion) return ti;
+    const criterion = extractCriterion(ti.code);
+    const wcag = criterion ? getWcagDescription(criterion) : null;
+    const regs = issueAnnotations[ti.code] ?? null;
+    return {
+      ...ti,
+      ...(criterion ? { wcagCriterion: criterion } : {}),
+      ...(wcag ? { wcagTitle: wcag.title, wcagUrl: wcag.url } : {}),
+      ...(regs && !ti.regulations ? { regulations: regs } : {}),
+    };
+  }) ?? null;
+
+  const templateIssueCount = enrichedTemplateIssues?.length ?? 0;
+  const templateOccurrenceCount = enrichedTemplateIssues
+    ? enrichedTemplateIssues.reduce((sum, ti) => sum + (('affectedCount' in ti ? ti.affectedCount : 0) ?? 0), 0)
     : 0;
+
+  // ── COMPLIANCE MATRIX ──
+  // Compute reviewStatus if missing from confirmedViolations / needsReview counts
+  const complianceMatrix = raw.compliance?.matrix
+    ? Object.values(raw.compliance.matrix).map((entry) => {
+        if (entry.reviewStatus) return entry;
+        const confirmed = entry.confirmedViolations ?? 0;
+        const review = entry.needsReview ?? 0;
+        let reviewStatus: string;
+        if (confirmed > 0) {
+          reviewStatus = 'fail';
+        } else if (review > 0) {
+          reviewStatus = 'review';
+        } else {
+          reviewStatus = 'pass';
+        }
+        return { ...entry, reviewStatus };
+      })
+    : null;
 
   return {
     summary,
-    pages: pagesWithCount,
+    pages: enrichedPages,
     errors: raw.errors ?? [],
     compliance: raw.compliance ?? null,
     complianceMatrix,
-    templateIssues,
+    templateIssues: enrichedTemplateIssues,
     templateIssueCount,
     templateOccurrenceCount,
   };
