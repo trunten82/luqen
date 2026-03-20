@@ -197,7 +197,8 @@ body {
 /* ---- Sidebar ---- */
 .sidebar {
   width: var(--sidebar-width);
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; /* dynamic viewport height — respects mobile browser chrome */
   background-color: var(--bg-sidebar);
   color: var(--text-sidebar);
   display: flex;
@@ -205,9 +206,9 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  bottom: 0;
   z-index: 100;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   transition: transform var(--transition-base);
 }
 
@@ -281,9 +282,11 @@ body {
 
 .sidebar__footer {
   padding: var(--space-md);
+  padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   font-size: var(--font-size-xs);
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 /* ---- Main Content ---- */
