@@ -63,7 +63,7 @@ export interface DbAdapter {
 
   // Update proposals
   listUpdateProposals(
-    filters?: { status?: string },
+    filters?: { status?: string; orgId?: string },
   ): Promise<UpdateProposal[]>;
   getUpdateProposal(id: string): Promise<UpdateProposal | null>;
   createUpdateProposal(
@@ -75,7 +75,7 @@ export interface DbAdapter {
   ): Promise<UpdateProposal>;
 
   // Monitored sources
-  listSources(): Promise<MonitoredSource[]>;
+  listSources(filters?: { orgId?: string }): Promise<MonitoredSource[]>;
   createSource(data: CreateSourceInput): Promise<MonitoredSource>;
   deleteSource(id: string): Promise<void>;
   updateSourceLastChecked(
@@ -98,9 +98,12 @@ export interface DbAdapter {
   deactivateUser(id: string): Promise<void>;
 
   // Webhooks
-  listWebhooks(): Promise<Webhook[]>;
+  listWebhooks(filters?: { orgId?: string }): Promise<Webhook[]>;
   createWebhook(data: CreateWebhookInput): Promise<Webhook>;
   deleteWebhook(id: string): Promise<void>;
+
+  // Org data
+  deleteOrgData(orgId: string): Promise<void>;
 
   // Lifecycle
   initialize(): Promise<void>;
