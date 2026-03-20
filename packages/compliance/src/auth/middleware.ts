@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { TokenVerifier, TokenPayload } from './oauth.js';
 import { scopeCoversEndpoint } from './scopes.js';
@@ -25,6 +26,21 @@ export function createAuthMiddleware(verifier: TokenVerifier) {
       return;
     }
 
+    // API key authentication (service-to-service)
+    const apiKey = process.env['COMPLIANCE_API_KEY'];
+    if (apiKey != null && apiKey.length > 0) {
+      const expected = Buffer.from(`Bearer ${apiKey}`);
+      const received = Buffer.from(authHeader);
+      if (expected.length === received.length && timingSafeEqual(expected, received)) {
+        (request as FastifyRequest & { tokenPayload: TokenPayload }).tokenPayload = {
+          sub: 'api-key',
+          scopes: ['read', 'write', 'admin'],
+        };
+        return;
+      }
+    }
+
+    // JWT authentication
     const token = authHeader.slice(7);
     try {
       const payload = await verifier(token);
