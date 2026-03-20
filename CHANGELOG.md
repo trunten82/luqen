@@ -41,6 +41,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Compliance route handlers pass org context from X-Org-Id header to database queries
 - All dashboard routes pass orgId from session to compliance service and scan DB
 - Sidebar shows Organizations link in admin section
+- Consolidated admin route helpers (getToken, getOrgId, toastHtml, escapeHtml) into shared module
+
+### Fixed
+- adminGuard missing return after reply — allowed handler chain to continue after 403
+- Open redirect via unvalidated Referer header in org switch endpoint
+- X-Org-Id header now only accepted from API key auth (not JWT) — prevents tenant spoofing
+- Scan records now checked for org ownership on direct access — prevents cross-org scan viewing
+- Rate limiting added to POST /login (5 attempts per 15 minutes)
+- Org slug validation enforces lowercase alphanumeric + hyphens only
+- Password no longer trimmed before hashing
+- bulkCreateRequirements now includes org_id column
+- Org deletion now triggers compliance data cleanup via DELETE /api/v1/orgs/:id/data
+- Handlebars helpers registered directly on instance for @fastify/view v10 compatibility
 - AuthUser interface extended with currentOrgId
 
 ---
