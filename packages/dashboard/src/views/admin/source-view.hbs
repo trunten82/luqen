@@ -1,0 +1,49 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="modal-title">{{source.name}}</h2>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <dl class="detail-list">
+      <div class="detail-list__item">
+        <dt>URL</dt>
+        <dd><a href="{{source.url}}" target="_blank" rel="noopener noreferrer">{{source.url}} ↗</a></dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Type</dt>
+        <dd><span class="badge badge--info">{{source.type}}</span></dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Schedule</dt>
+        <dd>{{source.schedule}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Last Checked</dt>
+        <dd>{{#if source.lastChecked}}{{source.lastChecked}}{{else}}Never{{/if}}</dd>
+      </div>
+      {{#if source.lastContentHash}}
+      <div class="detail-list__item">
+        <dt>Content Hash</dt>
+        <dd><code class="text-xs">{{source.lastContentHash}}</code></dd>
+      </div>
+      {{/if}}
+    </dl>
+
+    <div class="modal__footer">
+      {{#unless isSystem}}
+      <button hx-delete="/admin/sources/{{source.id}}"
+              hx-confirm="Remove source &quot;{{source.name}}&quot;? This will stop monitoring this URL."
+              hx-target="#source-{{source.id}}"
+              hx-swap="outerHTML swap:500ms"
+              class="btn btn--danger"
+              onclick="setTimeout(function(){closeModal()},600)">
+        Remove Source
+      </button>
+      {{else}}
+      <p class="text-xs text-muted">System sources cannot be removed — they are maintained by the baseline data.</p>
+      {{/unless}}
+      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>

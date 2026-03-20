@@ -48,6 +48,27 @@ export async function sourceRoutes(
     },
   );
 
+  // GET /admin/sources/:id/view — view source detail modal
+  server.get(
+    '/admin/sources/:id/view',
+    { preHandler: adminGuard },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      try {
+        const sources = await listSources(baseUrl, getToken(request), getOrgId(request));
+        const source = sources.find((s) => s.id === id);
+        if (source === undefined) {
+          return reply.code(404).header('content-type', 'text/html').send(toastHtml('Source not found.', 'error'));
+        }
+        const isSystem = (source as { orgId?: string }).orgId === 'system' || (source as { orgId?: string }).orgId === undefined;
+        return reply.view('admin/source-view.hbs', { source, isSystem });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load source';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
   // POST /admin/sources — add new source
   server.post(
     '/admin/sources',
@@ -74,17 +95,15 @@ export async function sourceRoutes(
 
         const row = `<tr id="source-${created.id}">
   <td data-label="Name">${created.name}</td>
-  <td data-label="URL"><a href="${created.url}" target="_blank" rel="noopener noreferrer">${created.url}</a></td>
-  <td data-label="Type">${created.type}</td>
+  <td data-label="Type"><span class="badge badge--info">${created.type}</span></td>
   <td data-label="Schedule">${created.schedule}</td>
   <td data-label="Last Checked">${created.lastChecked ?? 'Never'}</td>
   <td>
-    <button hx-delete="/admin/sources/${encodeURIComponent(created.id)}"
-            hx-confirm="Remove source ${created.name}?"
-            hx-target="closest tr"
-            hx-swap="outerHTML swap:500ms"
-            class="btn btn--sm btn--danger"
-            aria-label="Remove ${created.name}">Remove</button>
+    <button hx-get="/admin/sources/${encodeURIComponent(created.id)}/view"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--sm btn--secondary"
+            aria-label="View ${created.name}">View</button>
   </td>
 </tr>`;
 

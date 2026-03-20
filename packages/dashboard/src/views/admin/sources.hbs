@@ -27,12 +27,10 @@
   {{/if}}
 
   <div class="table-wrapper" aria-live="polite" aria-atomic="false">
-    <table class="table" aria-label="Monitored sources">
-      <caption class="visually-hidden">List of monitored legal sources</caption>
+    <table aria-label="Monitored sources">
       <thead>
         <tr>
           <th scope="col">Name</th>
-          <th scope="col">URL</th>
           <th scope="col">Type</th>
           <th scope="col">Schedule</th>
           <th scope="col">Last Checked</th>
@@ -43,22 +41,20 @@
         {{#each sources}}
         <tr id="source-{{id}}">
           <td data-label="Name">{{name}}</td>
-          <td data-label="URL"><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
-          <td data-label="Type">{{type}}</td>
+          <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
           <td data-label="Schedule">{{schedule}}</td>
-          <td data-label="Last Checked">{{lastChecked}}</td>
+          <td data-label="Last Checked">{{#if lastChecked}}{{lastChecked}}{{else}}Never{{/if}}</td>
           <td>
-            <button hx-delete="/admin/sources/{{id}}"
-                    hx-confirm="Remove source {{name}}?"
-                    hx-target="closest tr"
-                    hx-swap="outerHTML swap:500ms"
-                    class="btn btn--sm btn--danger"
-                    aria-label="Remove {{name}}">Remove</button>
+            <button hx-get="/admin/sources/{{id}}/view"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="View {{name}}">View</button>
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="6" class="table__empty">No sources configured.</td>
+          <td colspan="5">No sources configured.</td>
         </tr>
         {{/each}}
       </tbody>
