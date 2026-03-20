@@ -2,7 +2,9 @@ import type { FastifyRequest } from 'fastify';
 
 export function getToken(request: FastifyRequest): string {
   const session = request.session as { token?: string };
-  return session.token ?? '';
+  // In solo/team mode there's no OAuth session token — fall back to the
+  // service-level API key so dashboard→compliance calls are authenticated.
+  return session.token ?? process.env['DASHBOARD_COMPLIANCE_API_KEY'] ?? '';
 }
 
 export function getOrgId(request: FastifyRequest): string | undefined {
