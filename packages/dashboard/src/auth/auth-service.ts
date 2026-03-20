@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import type { FastifyRequest } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import type { PluginManager } from '../plugins/manager.js';
 import type { AuthPlugin, AuthResult, PluginInstance } from '../plugins/types.js';
 import { UserDb } from '../db/users.js';
@@ -35,10 +36,35 @@ export class AuthService {
   private readonly userDb: UserDb;
   private readonly pluginManager: PluginManager;
 
+  private bootId: string;
+
   constructor(db: Database.Database, pluginManager: PluginManager) {
     this.db = db;
     this.userDb = new UserDb(db);
     this.pluginManager = pluginManager;
+
+    // Boot ID: unique per DB instance — invalidates sessions from previous DBs.
+    // Create settings table if missing (safe static SQL, no user input)
+    this.db.pragma('journal_mode'); // ensure DB is open
+    const tables = this.db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='dashboard_settings'"
+    ).all();
+    if (tables.length === 0) {
+      this.db.prepare(
+        'CREATE TABLE dashboard_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)'
+      ).run();
+    }
+    const row = this.db.prepare('SELECT value FROM dashboard_settings WHERE key = ?').get('boot_id') as { value: string } | undefined;
+    if (row != null) {
+      this.bootId = row.value;
+    } else {
+      this.bootId = randomUUID();
+      this.db.prepare('INSERT INTO dashboard_settings (key, value) VALUES (?, ?)').run('boot_id', this.bootId);
+    }
+  }
+
+  getBootId(): string {
+    return this.bootId;
   }
 
   // -----------------------------------------------------------------------
@@ -119,8 +145,11 @@ export class AuthService {
       const userId = session.get('userId') as string | undefined;
       const username = session.get('username') as string | undefined;
       const role = session.get('role') as string | undefined;
+      const sessionBootId = session.get('bootId') as string | undefined;
 
-      if (userId !== undefined && username !== undefined) {
+      // Verify session belongs to this database instance (invalidates
+      // stale sessions when the DB is recreated between restarts)
+      if (userId !== undefined && username !== undefined && sessionBootId === this.getBootId()) {
         return {
           authenticated: true,
           user: {

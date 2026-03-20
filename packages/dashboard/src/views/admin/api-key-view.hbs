@@ -1,0 +1,49 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 id="modal-title">API Key: {{key.label}}</h2>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <dl class="detail-list">
+      <div class="detail-list__item">
+        <dt>Label</dt>
+        <dd>{{key.label}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Status</dt>
+        <dd>
+          {{#if key.active}}
+          <span class="badge badge--completed">Active</span>
+          {{else}}
+          <span class="badge badge--failed">Revoked</span>
+          {{/if}}
+        </dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Created</dt>
+        <dd>{{key.createdDisplay}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Last Used</dt>
+        <dd>{{#if key.lastUsedDisplay}}{{key.lastUsedDisplay}}{{else}}Never{{/if}}</dd>
+      </div>
+    </dl>
+
+    <div class="modal__footer">
+      {{#if key.active}}
+      <button hx-post="/admin/api-keys/{{key.id}}/revoke"
+              hx-confirm="Revoke API key &quot;{{key.label}}&quot;? This cannot be undone. Any client using this key will lose access."
+              hx-target="#api-key-{{key.id}}"
+              hx-swap="outerHTML"
+              class="btn btn--danger"
+              onclick="setTimeout(function(){closeModal()},600)">
+        Revoke Key
+      </button>
+      {{else}}
+      <p class="text-xs text-muted">This key has been revoked and can no longer be used.</p>
+      {{/if}}
+      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>

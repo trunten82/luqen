@@ -200,6 +200,7 @@ describe('AuthService', () => {
         username: 'alice',
         role: 'admin',
         authMethod: 'password',
+        bootId: service.getBootId(),
       };
 
       const request = fakeRequest({}, sessionData);
