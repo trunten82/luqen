@@ -2,7 +2,7 @@
   "name": "pally-agent",
   "version": "0.5.1",
   "private": true,
-  "workspaces": ["packages/core", "packages/compliance", "packages/dashboard", "packages/monitor"],
+  "workspaces": ["packages/core", "packages/compliance", "packages/dashboard", "packages/monitor", "packages/plugins/auth-entra"],
   "scripts": {
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",

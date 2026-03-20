@@ -1,0 +1,13 @@
+{
+  "name": "auth-entra",
+  "displayName": "Azure Entra ID",
+  "type": "auth",
+  "version": "1.0.0",
+  "description": "Single sign-on via Azure Entra ID (formerly Azure AD)",
+  "configSchema": [
+    { "key": "tenantId", "label": "Tenant ID", "type": "string", "required": true },
+    { "key": "clientId", "label": "Application (Client) ID", "type": "string", "required": true },
+    { "key": "clientSecret", "label": "Client Secret", "type": "secret", "required": true },
+    { "key": "redirectUri", "label": "Redirect URI", "type": "string", "default": "/auth/callback/auth-entra" }
+  ]
+}
