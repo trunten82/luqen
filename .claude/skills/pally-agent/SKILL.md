@@ -196,6 +196,18 @@ Or via Docker: `docker compose up -d` (starts compliance + dashboard together)
 
 **Admin section:** CRUD jurisdictions/regulations/requirements, review/approve update proposals, manage sources/webhooks/users/OAuth clients, system health
 
+### Authentication Modes
+
+The dashboard uses progressive authentication:
+
+| Mode | Activates when | Login method |
+|------|----------------|--------------|
+| **Solo** | First start (default) | API key printed to console |
+| **Team** | First user created via dashboard | Username + password (bcrypt) |
+| **Enterprise** | SSO plugin installed | SSO button (e.g. Azure Entra ID) |
+
+Manage the API key: `pally-dashboard api-key` (show) or `pally-dashboard api-key regenerate`.
+
 ### Roles
 
 | Role | Access |
@@ -204,7 +216,7 @@ Or via Docker: `docker compose up -d` (starts compliance + dashboard together)
 | `user` | Scan + reports |
 | `admin` | Full admin section |
 
-Create users via compliance CLI: `pally-compliance users create --username admin --role admin`
+Create users via the dashboard admin page or CLI.
 
 ---
 

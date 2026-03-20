@@ -333,6 +333,40 @@ pally-dashboard self-audit --json
 
 ---
 
+### pally-dashboard api-key
+
+Display or regenerate the dashboard API key. The API key is generated automatically on first start and is used for solo-mode authentication and programmatic API access.
+
+```bash
+pally-dashboard api-key [subcommand] [options]
+```
+
+**Subcommands:**
+
+| Subcommand | Description |
+|------------|-------------|
+| `show` | Display the current API key (default if no subcommand given) |
+| `regenerate` | Generate a new API key and invalidate the previous one |
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-c, --config <path>` | Path to config file (default: `dashboard.config.json`) |
+| `-d, --db-path <path>` | Path to SQLite database file (overrides config) |
+
+**Examples:**
+
+```bash
+# Show the current API key
+pally-dashboard api-key
+
+# Regenerate the API key
+pally-dashboard api-key regenerate
+```
+
+---
+
 ### pally-dashboard plugin list
 
 List all installed plugins.

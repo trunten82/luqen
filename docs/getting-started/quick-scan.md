@@ -84,6 +84,12 @@ Errors are confirmed WCAG violations. Warnings need human review. Notices are in
 
 ---
 
+## Dashboard quick start
+
+When you start the dashboard for the first time, an API key is generated and printed to the console. Copy this key — it is the default authentication method (solo mode) and is also used for programmatic API access. You can regenerate it later with `pally-dashboard api-key regenerate`. See the [full dashboard guide](../paths/full-dashboard.md) for details.
+
+---
+
 ## Next steps
 
 - Add compliance checking: [Compliance guide](../paths/compliance-checking.md)
