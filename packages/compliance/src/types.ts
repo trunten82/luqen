@@ -103,6 +103,7 @@ export interface User {
   readonly username: string;
   readonly passwordHash: string;
   readonly role: 'admin' | 'editor' | 'viewer';
+  readonly active: boolean;
   readonly createdAt: string;
 }
 
@@ -278,16 +279,13 @@ export interface CreateWebhookInput {
 export interface ComplianceConfig {
   readonly port: number;
   readonly host: string;
-  readonly dbAdapter: 'sqlite' | 'mongodb' | 'postgres';
   readonly dbPath?: string;
-  readonly dbUrl?: string;
   readonly redisUrl?: string;
   readonly jwtKeyPair: {
     readonly publicKeyPath: string;
     readonly privateKeyPath: string;
   };
   readonly tokenExpiry: string;
-  readonly refreshTokenExpiry: string;
   readonly rateLimit: {
     readonly read: number;
     readonly write: number;
@@ -296,10 +294,6 @@ export interface ComplianceConfig {
   readonly cors: {
     readonly origin: readonly string[];
     readonly credentials: boolean;
-  };
-  readonly a2a: {
-    readonly enabled: boolean;
-    readonly peers: readonly string[];
   };
 }
 
@@ -313,5 +307,3 @@ export interface BaselineSeedData {
   readonly requirements: readonly CreateRequirementInput[];
 }
 
-// Version export
-export type ComplianceServiceVersion = '0.1.0';

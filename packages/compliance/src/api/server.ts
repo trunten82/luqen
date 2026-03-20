@@ -16,7 +16,10 @@ import { registerComplianceRoutes } from './routes/compliance.js';
 import { registerUpdateRoutes } from './routes/updates.js';
 import { registerSourceRoutes } from './routes/sources.js';
 import { registerWebhookRoutes } from './routes/webhooks.js';
+import { registerUserRoutes } from './routes/users.js';
+import { registerClientRoutes } from './routes/clients.js';
 import { registerSeedRoutes } from './routes/seed.js';
+import { VERSION } from '../version.js';
 
 export interface ServerOptions {
   readonly db: DbAdapter;
@@ -71,7 +74,7 @@ export async function createServer(options: ServerOptions) {
       info: {
         title: 'Pally Compliance Service',
         description: 'Accessibility compliance rule engine — check WCAG issues against 60+ country-specific legal requirements',
-        version: '0.1.0',
+        version: VERSION,
       },
       servers: [{ url: 'http://localhost:4000' }],
       components: {
@@ -116,6 +119,8 @@ export async function createServer(options: ServerOptions) {
   await registerUpdateRoutes(app, db);
   await registerSourceRoutes(app, db);
   await registerWebhookRoutes(app, db);
+  await registerUserRoutes(app, db);
+  await registerClientRoutes(app, db);
   await registerSeedRoutes(app, db);
 
   return app;
