@@ -267,4 +267,55 @@ Response envelope:
 
 ---
 
+## Multi-Tenancy Headers
+
+### `X-Org-Id`
+
+Optional header sent on all `/api/v1/*` requests. Defaults to `"system"` when omitted.
+
+When present, the header scopes all CRUD operations (jurisdictions, regulations, requirements, compliance checks, etc.) to the specified organization. Records created under an org are only visible to requests carrying the same `X-Org-Id`.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+     -H "X-Org-Id: acme-corp" \
+     http://localhost:4000/api/v1/jurisdictions
+```
+
+System-level seed data (org_id = `"system"`) is readable by all organizations but cannot be modified through org-scoped requests.
+
+---
+
+## Organization Data Cleanup
+
+### `DELETE /api/v1/orgs/:id/data` — `admin` scope
+
+Remove all data belonging to a specific organization. Use this when decommissioning an org.
+
+- Returns `204 No Content` on success.
+- Returns `400 Bad Request` if `:id` is `"system"` (system data cannot be bulk-deleted).
+
+```bash
+curl -X DELETE http://localhost:4000/api/v1/orgs/acme-corp/data \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## Dashboard API — Organization Management
+
+Base URL: `http://localhost:5000` (dashboard service). All organization endpoints require admin role authentication via session cookie.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin/organizations` | List all organizations (HTML page) |
+| `POST` | `/admin/organizations` | Create a new organization |
+| `POST` | `/admin/organizations/:id/delete` | Delete an organization |
+| `GET` | `/admin/organizations/:id/members` | List members of an organization |
+| `POST` | `/admin/organizations/:id/members` | Add a member to an organization |
+| `POST` | `/admin/organizations/:id/members/:userId/remove` | Remove a member from an organization |
+| `POST` | `/orgs/switch` | Switch the active organization context for the current session |
+| `GET` | `/orgs/current` | Get the current organization context (JSON response) |
+
+---
+
 *See also: [compliance/README.md](../compliance/README.md) | [integrations/claude-code.md](claude-code.md) | [configuration/compliance.md](../configuration/compliance.md)*

@@ -195,6 +195,21 @@ cd ~/pally-agent && git pull && docker compose up -d --build
 
 ---
 
+## Organization Management
+
+When multi-tenancy is enabled, the dashboard provides organization management under **Settings > Organizations**.
+
+| Action | How |
+|--------|-----|
+| **Create an organization** | Go to **Settings > Organizations** and click **New Organization**. Provide a name and optional description. |
+| **Manage members** | Click an organization to view its members. Add users by username or email, and remove members from the member list. |
+| **Switch organization** | Use the **org switcher** in the sidebar to change your active organization context. All scans, reports, and compliance data are scoped to the selected org. |
+| **Data isolation** | Each organization's data is isolated at the query level. Users only see scans, reports, and compliance results belonging to their active organization. System-level seed data (jurisdictions, regulations) remains globally readable. |
+
+For the full multi-tenancy setup guide, including API headers, data lifecycle, and administration, see [Multi-Tenant Guide](multi-tenant.md).
+
+---
+
 ## Next steps
 
 - Add regulatory monitoring: [Regulatory monitoring](regulatory-monitoring.md)
