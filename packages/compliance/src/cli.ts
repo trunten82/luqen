@@ -63,6 +63,17 @@ export function createProgram(): Command {
         process.exit(1);
       }
 
+      // Optional Redis cache — only constructed when COMPLIANCE_REDIS_URL is set
+      let cache: import('./cache/redis.js').ComplianceCache | undefined;
+      if (config.redisUrl) {
+        const { createRedisClient, ComplianceCache } = await import('./cache/redis.js');
+        const redisClient = createRedisClient(config.redisUrl);
+        if (redisClient !== null) {
+          cache = new ComplianceCache(redisClient);
+          console.log('Compliance Redis cache enabled.');
+        }
+      }
+
       const app = await createServer({
         db,
         signToken,
@@ -73,6 +84,7 @@ export function createProgram(): Command {
         rateLimitWrite: config.rateLimit.write,
         rateLimitWindowMs: config.rateLimit.windowMs,
         logger: true,
+        cache,
       });
 
       await app.register(registerAgentCardPlugin);

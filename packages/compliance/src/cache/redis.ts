@@ -1,4 +1,4 @@
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 
 /**
  * Creates a Redis client if a URL is provided. Returns null when Redis is not
@@ -22,7 +22,7 @@ export function createRedisClient(url?: string): Redis | null {
 }
 
 export class ComplianceCache {
-  constructor(private readonly redis: Redis) {}
+  constructor(private readonly redis: InstanceType<typeof Redis>) {}
 
   async getCachedCheck(key: string): Promise<string | null> {
     try {

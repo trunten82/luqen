@@ -18,6 +18,7 @@ import { clientRoutes } from './routes/admin/clients.js';
 import { systemRoutes } from './routes/admin/system.js';
 import { ScanDb } from './db/scans.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
+import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -37,11 +38,25 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     },
   });
 
-  // ── Database & orchestrator ──────────────────────────────────────────────
+  // ── Database ──────────────────────────────────────────────────────────────
   const db = new ScanDb(config.dbPath);
   db.initialize();
 
-  const orchestrator = new ScanOrchestrator(db, config.reportsDir, config.maxConcurrentScans);
+  // ── Optional Redis ────────────────────────────────────────────────────────
+  const redisClient = createRedisClient(config.redisUrl);
+  const ssePublisher = redisClient !== null ? new SsePublisher(redisClient) : undefined;
+  const redisScanQueue = redisClient !== null ? new RedisScanQueue(redisClient) : undefined;
+
+  if (redisClient !== null) {
+    server.log.info('Dashboard Redis enabled (SSE pub/sub + scan queue).');
+  }
+
+  // ── Orchestrator ──────────────────────────────────────────────────────────
+  const orchestrator = new ScanOrchestrator(db, config.reportsDir, {
+    maxConcurrent: config.maxConcurrentScans,
+    ssePublisher,
+    redisQueue: redisScanQueue,
+  });
 
   // ── Plugins ──────────────────────────────────────────────────────────────
   await server.register(import('@fastify/formbody'));

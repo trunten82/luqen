@@ -25,3 +25,7 @@ data:
 
   # Maximum number of concurrent scans the dashboard will dispatch
   DASHBOARD_MAX_CONCURRENT_SCANS: "2"
+
+  # Optional Redis for SSE pub/sub and scan queue (enables multi-instance scaling).
+  # Uncomment to enable — requires Redis deployed to the cluster.
+  # DASHBOARD_REDIS_URL: "redis://pally-redis:6379"

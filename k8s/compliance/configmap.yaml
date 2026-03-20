@@ -28,3 +28,7 @@ data:
   # CORS: comma-separated list of allowed origins
   # Override in overlays to match the actual ingress hostname
   COMPLIANCE_CORS_ORIGIN: "http://pally-dashboard:5000"
+
+  # Optional Redis cache for compliance check results (5 min TTL).
+  # Uncomment to enable — requires Redis deployed to the cluster.
+  # COMPLIANCE_REDIS_URL: "redis://pally-redis:6379"
