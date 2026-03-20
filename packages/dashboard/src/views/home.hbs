@@ -39,15 +39,32 @@
 
       {{#if jurisdictions.length}}
       <div class="form-group">
-        <label>Jurisdictions</label>
-        <p class="form-hint mb-md">Select jurisdictions to check legal compliance. Leave empty to skip.</p>
-        <div class="checkbox-group">
-          {{#each jurisdictions}}
-          <label class="checkbox-label">
-            <input type="checkbox" name="jurisdictions" value="{{id}}">
-            {{name}}
-          </label>
-          {{/each}}
+        <label>Compliance Check <span class="text-xs text-muted">(optional)</span></label>
+        <p class="form-hint mb-sm">Search and select jurisdictions or regulations to check against.</p>
+
+        <div class="picker" id="compliance-picker">
+          <div class="picker__tabs">
+            <button type="button" class="picker__tab picker__tab--active" onclick="pickerTab('jurisdictions',this)">Jurisdictions</button>
+            <button type="button" class="picker__tab" onclick="pickerTab('regulations',this)">Regulations</button>
+          </div>
+          <input type="search" class="picker__search" placeholder="Search..." oninput="pickerSearch(this.value)" aria-label="Search jurisdictions or regulations">
+          <div class="picker__list" id="picker-list">
+            {{#each jurisdictions}}
+            <label class="picker__item" data-tab="jurisdictions" data-name="{{name}}">
+              <input type="checkbox" name="jurisdictions" value="{{id}}">
+              <span>{{name}}</span>
+              <span class="text-xs text-muted">{{id}}</span>
+            </label>
+            {{/each}}
+            {{#each regulations}}
+            <label class="picker__item" data-tab="regulations" data-name="{{name}} {{shortName}}" style="display:none">
+              <input type="checkbox" name="jurisdictions" value="{{jurisdictionId}}">
+              <span>{{shortName}}</span>
+              <span class="text-xs text-muted">{{name}}</span>
+            </label>
+            {{/each}}
+          </div>
+          <div class="picker__selected" id="picker-selected"></div>
         </div>
       </div>
       {{/if}}

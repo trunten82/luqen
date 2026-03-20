@@ -7,7 +7,8 @@
 export { scanUrls, type ScanOptions, type ScanResults } from './scanner/scanner.js';
 export { WebserviceClient } from './scanner/webservice-client.js';
 export { discoverUrls } from './discovery/discover.js';
-export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanError, ProgressListener } from './types.js';
+export { buildAnnotatedPages } from './reporter/html-reporter.js';
+export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanError, ProgressListener, ComplianceEnrichment } from './types.js';
 
 import { discoverUrls } from './discovery/discover.js';
 import { scanUrls, type ScanOptions } from './scanner/scanner.js';

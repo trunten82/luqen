@@ -108,6 +108,45 @@
       });
     });
 
+    /* ── Picker (searchable multi-select for jurisdictions/regulations) ── */
+    var _pickerTab = 'jurisdictions';
+    function pickerTab(tab, btn) {
+      _pickerTab = tab;
+      btn.parentElement.querySelectorAll('.picker__tab').forEach(function(t) { t.classList.remove('picker__tab--active'); });
+      btn.classList.add('picker__tab--active');
+      var search = btn.closest('.picker').querySelector('.picker__search');
+      if (search) { search.value = ''; }
+      pickerSearch('');
+    }
+    function pickerSearch(q) {
+      var lq = q.toLowerCase();
+      document.querySelectorAll('.picker__item').forEach(function(el) {
+        var tab = el.getAttribute('data-tab');
+        var name = (el.getAttribute('data-name') || '').toLowerCase();
+        el.style.display = (tab === _pickerTab && (!lq || name.indexOf(lq) !== -1)) ? '' : 'none';
+      });
+    }
+    document.addEventListener('change', function(e) {
+      if (!e.target.closest('.picker__item')) return;
+      var picker = e.target.closest('.picker');
+      if (!picker) return;
+      var sel = picker.querySelector('.picker__selected');
+      while (sel.firstChild) sel.removeChild(sel.firstChild);
+      picker.querySelectorAll('.picker__item input:checked').forEach(function(cb) {
+        var labelText = cb.closest('.picker__item').querySelector('span').textContent;
+        var tag = document.createElement('span');
+        tag.className = 'picker__tag';
+        tag.textContent = labelText + ' ';
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = '\u00d7';
+        removeBtn.setAttribute('aria-label', 'Remove ' + labelText);
+        removeBtn.addEventListener('click', function() { cb.checked = false; cb.dispatchEvent(new Event('change', {bubbles:true})); });
+        tag.appendChild(removeBtn);
+        sel.appendChild(tag);
+      });
+    });
+
     /* ── Mobile: tap card row → open view ──────────────────────────────── */
     document.addEventListener('click', function (e) {
       if (window.innerWidth > 767) return;

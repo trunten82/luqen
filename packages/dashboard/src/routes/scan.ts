@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { ScanDb } from '../db/scans.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
-import { listJurisdictions } from '../compliance-client.js';
+import { listJurisdictions, listRegulations } from '../compliance-client.js';
 import { getToken, getOrgId } from './admin/helpers.js';
 
 interface NewScanBody {
@@ -32,12 +32,17 @@ export async function scanRoutes(
     '/scan/new',
     async (request: FastifyRequest, reply: FastifyReply) => {
       let jurisdictions: Array<{ id: string; name: string }> = [];
+      let regulations: Array<{ id: string; name: string; shortName: string; jurisdictionId: string }> = [];
 
       try {
-        const raw = await listJurisdictions(config.complianceUrl, getToken(request), getOrgId(request));
-        jurisdictions = raw.map((j) => ({ id: j.id, name: j.name }));
+        const token = getToken(request);
+        const orgId = getOrgId(request);
+        const rawJ = await listJurisdictions(config.complianceUrl, token, orgId);
+        jurisdictions = rawJ.map((j) => ({ id: j.id, name: j.name }));
+        const rawR = await listRegulations(config.complianceUrl, token, undefined, orgId);
+        regulations = rawR.map((r) => ({ id: r.id, name: r.name, shortName: r.shortName, jurisdictionId: r.jurisdictionId }));
       } catch {
-        // Non-fatal — render page without jurisdictions if compliance is unreachable
+        // Non-fatal
       }
 
       return reply.view('scan-new.hbs', {
@@ -45,6 +50,7 @@ export async function scanRoutes(
         currentPath: '/scan/new',
         user: request.user,
         jurisdictions,
+        regulations,
         standards: VALID_STANDARDS,
         defaultStandard: 'WCAG2AA',
         maxConcurrency: 10,

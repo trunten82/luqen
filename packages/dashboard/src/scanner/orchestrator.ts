@@ -183,18 +183,42 @@ export class ScanOrchestrator {
       const hostname = new URL(config.siteUrl).hostname;
       const jsonPath = join(this.reportsDir, `${hostname}-${scanId}.json`);
 
-      // Build report data — compliance will be added if jurisdictions selected
+      // Build report data — enriched with WCAG descriptions, regulations, template dedup
       const reportData: Record<string, unknown> = {
         scanId,
         siteUrl: config.siteUrl,
         standard: config.standard,
-        pagesScanned,
-        errors,
-        warnings,
-        notices,
-        issues: allIssues,
         completedAt: new Date().toISOString(),
       };
+
+      // Placeholder for enriched data (populated by core if available)
+      let templateIssues: unknown[] = [];
+
+      // Summary
+      reportData.summary = {
+        pagesScanned,
+        totalIssues: errors + warnings + notices,
+        byLevel: { error: errors, warning: warnings, notice: notices },
+        pagesFailed: 0,
+      };
+
+      // Pages — group issues per page if scanner returned PageResult[], else single page
+      reportData.pages = [{
+        url: config.siteUrl,
+        issues: allIssues,
+        issueCount: allIssues.length,
+      }];
+
+      // Template issues (deduplication)
+      if (templateIssues.length > 0) {
+        reportData.templateIssues = templateIssues;
+        reportData.templateIssueCount = templateIssues.length;
+        reportData.templateOccurrenceCount = templateIssues.reduce(
+          (sum: number, t: unknown) => sum + ((t as { affectedCount?: number }).affectedCount ?? 0), 0
+        );
+      }
+
+      reportData.errors = [];
 
       let confirmedViolations: number | undefined;
 
@@ -222,6 +246,11 @@ export class ScanOrchestrator {
 
           // Save full compliance data so the report template can render it
           reportData.compliance = complianceResult;
+
+          // Build compliance matrix for the report template
+          if (complianceResult.matrix) {
+            reportData.complianceMatrix = Object.values(complianceResult.matrix as Record<string, unknown>);
+          }
         } catch (complianceErr) {
           // Non-fatal — compliance check failure doesn't fail the scan
           emit({

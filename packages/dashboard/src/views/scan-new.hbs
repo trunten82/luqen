@@ -41,18 +41,32 @@
 
     {{#if jurisdictions.length}}
     <div class="card mb-md">
-      <h3 class="card__title mb-md">Jurisdictions</h3>
-      <p class="form-hint mb-md">
-        Select jurisdictions to check compliance against their regulations.
-        Leave all unselected to skip compliance checking.
-      </p>
-      <div class="checkbox-group" role="group" aria-label="Jurisdiction selection">
-        {{#each jurisdictions}}
-        <label class="checkbox-label">
-          <input type="checkbox" name="jurisdictions" value="{{id}}">
-          {{name}}
-        </label>
-        {{/each}}
+      <h3 class="card__title mb-md">Compliance Check</h3>
+      <p class="form-hint mb-sm">Search and select jurisdictions or regulations. Leave empty to skip.</p>
+
+      <div class="picker" id="scan-picker">
+        <div class="picker__tabs">
+          <button type="button" class="picker__tab picker__tab--active" onclick="pickerTab('jurisdictions',this)">Jurisdictions</button>
+          <button type="button" class="picker__tab" onclick="pickerTab('regulations',this)">Regulations</button>
+        </div>
+        <input type="search" class="picker__search" placeholder="Search..." oninput="pickerSearch(this.value)" aria-label="Search">
+        <div class="picker__list">
+          {{#each jurisdictions}}
+          <label class="picker__item" data-tab="jurisdictions" data-name="{{name}}">
+            <input type="checkbox" name="jurisdictions" value="{{id}}">
+            <span>{{name}}</span>
+            <span class="text-xs text-muted">{{id}}</span>
+          </label>
+          {{/each}}
+          {{#each regulations}}
+          <label class="picker__item" data-tab="regulations" data-name="{{name}} {{shortName}}" style="display:none">
+            <input type="checkbox" name="jurisdictions" value="{{jurisdictionId}}">
+            <span>{{shortName}}</span>
+            <span class="text-xs text-muted">{{name}}</span>
+          </label>
+          {{/each}}
+        </div>
+        <div class="picker__selected"></div>
       </div>
     </div>
     {{/if}}
