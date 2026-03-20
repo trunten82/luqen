@@ -31,6 +31,7 @@ import { getOrCreateApiKey } from './auth/api-key.js';
 import { UserDb } from './db/users.js';
 import { OrgDb } from './db/orgs.js';
 import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
+import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -196,6 +197,17 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         currentOrgId,
       };
     }
+
+    // Populate org context for sidebar org switcher
+    const userOrgs = orgDb.getUserOrgs(request.user.id);
+    const currentOrg = currentOrgId !== undefined && currentOrgId !== ''
+      ? orgDb.getOrg(currentOrgId)
+      : null;
+
+    (request as FastifyRequest & { orgContext?: unknown }).orgContext = {
+      userOrgs,
+      currentOrg,
+    };
   });
 
   // ── Routes ────────────────────────────────────────────────────────────────
@@ -222,6 +234,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   await dashboardUserRoutes(server, userDb);
+  await organizationRoutes(server, orgDb, userDb);
 
   await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
 
