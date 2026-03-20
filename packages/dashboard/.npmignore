@@ -1,0 +1,22 @@
+# Source files
+src/
+tsconfig.json
+vitest.config.ts
+
+# Tests
+tests/
+coverage/
+*.test.ts
+*.spec.ts
+
+# Development
+.env
+.env.*
+node_modules/
+*.db
+*.db-shm
+*.db-wal
+dashboard.config.json
+
+# Build artifacts (not dist)
+*.tgz

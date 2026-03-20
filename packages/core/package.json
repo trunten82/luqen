@@ -13,6 +13,35 @@
     "lint": "tsc --noEmit"
   },
   "license": "MIT",
+  "author": "alanna82",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alanna82/pally-agent.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/alanna82/pally-agent/issues"
+  },
+  "homepage": "https://github.com/alanna82/pally-agent#readme",
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "pa11y",
+    "compliance",
+    "testing",
+    "scanner",
+    "source-mapping",
+    "fix-proposals"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "cheerio": "^1.2.0",
