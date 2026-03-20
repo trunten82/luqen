@@ -57,44 +57,52 @@
   <script src="/static/htmx.min.js"></script>
   <script src="/static/htmx-sse.js"></script>
   <script>
-    // ── Sidebar toggle (mobile) ──────────────────────────────────────────
-    (function () {
-      var btn = document.getElementById('mobile-menu-btn');
+    // ── Sidebar toggle (mobile) — uses event delegation for resilience ──
+    function closeSidebar() {
       var sidebar = document.getElementById('sidebar');
       var backdrop = document.getElementById('sidebar-backdrop');
-      if (!btn || !sidebar) return;
-
-      function openSidebar() {
-        sidebar.classList.add('is-open');
-        if (backdrop) backdrop.classList.add('is-visible');
-        btn.setAttribute('aria-expanded', 'true');
-        btn.setAttribute('aria-label', 'Close navigation menu');
-        document.body.style.overflow = 'hidden';
-      }
-
-      function closeSidebar() {
-        sidebar.classList.remove('is-open');
-        if (backdrop) backdrop.classList.remove('is-visible');
+      var btn = document.getElementById('mobile-menu-btn');
+      if (sidebar) sidebar.classList.remove('is-open');
+      if (backdrop) backdrop.classList.remove('is-visible');
+      if (btn) {
         btn.setAttribute('aria-expanded', 'false');
         btn.setAttribute('aria-label', 'Open navigation menu');
-        document.body.style.overflow = '';
       }
+      document.body.style.overflow = '';
+    }
 
-      btn.addEventListener('click', function () {
-        if (sidebar.classList.contains('is-open')) {
+    function openSidebar() {
+      var sidebar = document.getElementById('sidebar');
+      var backdrop = document.getElementById('sidebar-backdrop');
+      var btn = document.getElementById('mobile-menu-btn');
+      if (sidebar) sidebar.classList.add('is-open');
+      if (backdrop) backdrop.classList.add('is-visible');
+      if (btn) {
+        btn.setAttribute('aria-expanded', 'true');
+        btn.setAttribute('aria-label', 'Close navigation menu');
+      }
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Use document-level delegation so it survives DOM changes
+    document.addEventListener('click', function (evt) {
+      var target = evt.target;
+      // Burger menu button (or child SVG/path)
+      if (target && target.closest('#mobile-menu-btn')) {
+        var sidebar = document.getElementById('sidebar');
+        if (sidebar && sidebar.classList.contains('is-open')) {
           closeSidebar();
         } else {
           openSidebar();
         }
-      });
-
-      if (backdrop) {
-        backdrop.addEventListener('click', closeSidebar);
+        return;
       }
-
-      // Expose for use by other handlers
-      window._closeSidebar = closeSidebar;
-    }());
+      // Sidebar backdrop
+      if (target && target.id === 'sidebar-backdrop') {
+        closeSidebar();
+        return;
+      }
+    });
 
     // ── Toast auto-dismiss ───────────────────────────────────────────────
     document.addEventListener('htmx:afterSwap', function () {
@@ -114,6 +122,10 @@
       var container = document.getElementById('modal-container');
       if (container) {
         while (container.firstChild) container.removeChild(container.firstChild);
+      }
+      // Ensure body scroll is restored (modal overlay may have locked it)
+      if (!document.getElementById('sidebar') || !document.getElementById('sidebar').classList.contains('is-open')) {
+        document.body.style.overflow = '';
       }
     }
 
