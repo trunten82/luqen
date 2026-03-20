@@ -192,32 +192,36 @@ export interface WebhookPayload {
 export interface JurisdictionFilters {
   readonly type?: 'supranational' | 'country' | 'state';
   readonly parentId?: string;
+  readonly orgId?: string;
 }
 
 export interface RegulationFilters {
   readonly jurisdictionId?: string;
   readonly status?: 'active' | 'draft' | 'repealed';
   readonly scope?: 'public' | 'private' | 'all';
+  readonly orgId?: string;
 }
 
 export interface RequirementFilters {
   readonly regulationId?: string;
   readonly wcagCriterion?: string;
   readonly obligation?: 'mandatory' | 'recommended' | 'optional';
+  readonly orgId?: string;
 }
 
 // === Input types (for create operations) ===
 
 export interface CreateJurisdictionInput {
-  readonly id: string;
+  readonly id?: string;
   readonly name: string;
   readonly type: 'supranational' | 'country' | 'state';
   readonly parentId?: string;
   readonly iso3166?: string;
+  readonly orgId?: string;
 }
 
 export interface CreateRegulationInput {
-  readonly id: string;
+  readonly id?: string;
   readonly jurisdictionId: string;
   readonly name: string;
   readonly shortName: string;
@@ -228,6 +232,7 @@ export interface CreateRegulationInput {
   readonly scope: 'public' | 'private' | 'all';
   readonly sectors: readonly string[];
   readonly description: string;
+  readonly orgId?: string;
 }
 
 export interface CreateRequirementInput {
@@ -237,15 +242,18 @@ export interface CreateRequirementInput {
   readonly wcagCriterion: string;
   readonly obligation: 'mandatory' | 'recommended' | 'optional';
   readonly notes?: string;
+  readonly orgId?: string;
 }
 
 export interface CreateUpdateProposalInput {
   readonly source: string;
+  readonly detectedAt?: string;
   readonly type: 'new_regulation' | 'amendment' | 'repeal' | 'new_requirement' | 'new_jurisdiction';
   readonly affectedRegulationId?: string;
   readonly affectedJurisdictionId?: string;
   readonly summary: string;
-  readonly proposedChanges: ProposedChange;
+  readonly proposedChanges: ProposedChange | string;
+  readonly orgId?: string;
 }
 
 export interface CreateSourceInput {
@@ -253,6 +261,7 @@ export interface CreateSourceInput {
   readonly url: string;
   readonly type: 'html' | 'rss' | 'api';
   readonly schedule: 'daily' | 'weekly' | 'monthly';
+  readonly orgId?: string;
 }
 
 export interface CreateClientInput {
@@ -272,6 +281,7 @@ export interface CreateWebhookInput {
   readonly url: string;
   readonly secret: string;
   readonly events: readonly string[];
+  readonly orgId?: string;
 }
 
 // === Configuration ===
