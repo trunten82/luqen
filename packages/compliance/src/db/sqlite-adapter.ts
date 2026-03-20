@@ -264,18 +264,20 @@ export class SqliteAdapter implements DbAdapter {
   }
 
   private createTables(): void {
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS jurisdictions (
+    const ddl = [
+      `CREATE TABLE IF NOT EXISTS jurisdictions (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         type TEXT NOT NULL,
         parentId TEXT REFERENCES jurisdictions(id),
         iso3166 TEXT,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
-      );
+        updatedAt TEXT NOT NULL,
+        org_id TEXT NOT NULL DEFAULT 'system'
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_jurisdictions_org_id ON jurisdictions(org_id)`,
 
-      CREATE TABLE IF NOT EXISTS regulations (
+      `CREATE TABLE IF NOT EXISTS regulations (
         id TEXT PRIMARY KEY,
         jurisdictionId TEXT NOT NULL REFERENCES jurisdictions(id),
         name TEXT NOT NULL,
@@ -288,10 +290,12 @@ export class SqliteAdapter implements DbAdapter {
         sectors TEXT NOT NULL DEFAULT '[]',
         description TEXT NOT NULL,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
-      );
+        updatedAt TEXT NOT NULL,
+        org_id TEXT NOT NULL DEFAULT 'system'
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_regulations_org_id ON regulations(org_id)`,
 
-      CREATE TABLE IF NOT EXISTS requirements (
+      `CREATE TABLE IF NOT EXISTS requirements (
         id TEXT PRIMARY KEY,
         regulationId TEXT NOT NULL REFERENCES regulations(id),
         wcagVersion TEXT NOT NULL,
@@ -300,10 +304,12 @@ export class SqliteAdapter implements DbAdapter {
         obligation TEXT NOT NULL,
         notes TEXT,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
-      );
+        updatedAt TEXT NOT NULL,
+        org_id TEXT NOT NULL DEFAULT 'system'
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_requirements_org_id ON requirements(org_id)`,
 
-      CREATE TABLE IF NOT EXISTS update_proposals (
+      `CREATE TABLE IF NOT EXISTS update_proposals (
         id TEXT PRIMARY KEY,
         source TEXT NOT NULL,
         detectedAt TEXT NOT NULL,
@@ -315,10 +321,12 @@ export class SqliteAdapter implements DbAdapter {
         status TEXT NOT NULL DEFAULT 'pending',
         reviewedBy TEXT,
         reviewedAt TEXT,
-        createdAt TEXT NOT NULL
-      );
+        createdAt TEXT NOT NULL,
+        org_id TEXT NOT NULL DEFAULT 'system'
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_update_proposals_org_id ON update_proposals(org_id)`,
 
-      CREATE TABLE IF NOT EXISTS monitored_sources (
+      `CREATE TABLE IF NOT EXISTS monitored_sources (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         url TEXT NOT NULL,
@@ -326,37 +334,48 @@ export class SqliteAdapter implements DbAdapter {
         schedule TEXT NOT NULL,
         lastCheckedAt TEXT,
         lastContentHash TEXT,
-        createdAt TEXT NOT NULL
-      );
+        createdAt TEXT NOT NULL,
+        org_id TEXT NOT NULL DEFAULT 'system'
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_monitored_sources_org_id ON monitored_sources(org_id)`,
 
-      CREATE TABLE IF NOT EXISTS oauth_clients (
+      `CREATE TABLE IF NOT EXISTS oauth_clients (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         secretHash TEXT NOT NULL,
         scopes TEXT NOT NULL DEFAULT '[]',
         grantTypes TEXT NOT NULL DEFAULT '[]',
         redirectUris TEXT,
-        createdAt TEXT NOT NULL
-      );
+        createdAt TEXT NOT NULL,
+        org_id TEXT NOT NULL DEFAULT 'system'
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_oauth_clients_org_id ON oauth_clients(org_id)`,
 
-      CREATE TABLE IF NOT EXISTS users (
+      `CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
         passwordHash TEXT NOT NULL,
         role TEXT NOT NULL,
         active INTEGER NOT NULL DEFAULT 1,
-        createdAt TEXT NOT NULL
-      );
+        createdAt TEXT NOT NULL,
+        org_id TEXT NOT NULL DEFAULT 'system'
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_users_org_id ON users(org_id)`,
 
-      CREATE TABLE IF NOT EXISTS webhooks (
+      `CREATE TABLE IF NOT EXISTS webhooks (
         id TEXT PRIMARY KEY,
         url TEXT NOT NULL,
         secret TEXT NOT NULL,
         events TEXT NOT NULL DEFAULT '[]',
         active INTEGER NOT NULL DEFAULT 1,
-        createdAt TEXT NOT NULL
-      );
-    `);
+        createdAt TEXT NOT NULL,
+        org_id TEXT NOT NULL DEFAULT 'system'
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_webhooks_org_id ON webhooks(org_id)`,
+    ];
+    for (const statement of ddl) {
+      this.db.prepare(statement).run();
+    }
   }
 
   // --- Jurisdictions ---
@@ -373,6 +392,10 @@ export class SqliteAdapter implements DbAdapter {
       sql += ' AND parentId = ?';
       params.push(filters.parentId);
     }
+    if (filters?.orgId != null) {
+      sql += ' AND org_id = ?';
+      params.push(filters.orgId);
+    }
 
     const rows = this.db.prepare(sql).all(...params) as JurisdictionRow[];
     return rows.map(toJurisdiction);
@@ -384,12 +407,13 @@ export class SqliteAdapter implements DbAdapter {
   }
 
   async createJurisdiction(data: CreateJurisdictionInput): Promise<Jurisdiction> {
+    const id = data.id ?? randomUUID();
     const now = new Date().toISOString();
     this.db.prepare(`
-      INSERT INTO jurisdictions (id, name, type, parentId, iso3166, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(data.id, data.name, data.type, data.parentId ?? null, data.iso3166 ?? null, now, now);
-    const row = this.db.prepare('SELECT * FROM jurisdictions WHERE id = ?').get(data.id) as JurisdictionRow;
+      INSERT INTO jurisdictions (id, name, type, parentId, iso3166, createdAt, updatedAt, org_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, data.name, data.type, data.parentId ?? null, data.iso3166 ?? null, now, now, data.orgId ?? 'system');
+    const row = this.db.prepare('SELECT * FROM jurisdictions WHERE id = ?').get(id) as JurisdictionRow;
     return toJurisdiction(row);
   }
 
@@ -433,6 +457,10 @@ export class SqliteAdapter implements DbAdapter {
       sql += ' AND scope = ?';
       params.push(filters.scope);
     }
+    if (filters?.orgId != null) {
+      sql += ' AND org_id = ?';
+      params.push(filters.orgId);
+    }
 
     const rows = this.db.prepare(sql).all(...params) as RegulationRow[];
     return rows.map(toRegulation);
@@ -444,12 +472,13 @@ export class SqliteAdapter implements DbAdapter {
   }
 
   async createRegulation(data: CreateRegulationInput): Promise<Regulation> {
+    const id = data.id ?? randomUUID();
     const now = new Date().toISOString();
     this.db.prepare(`
-      INSERT INTO regulations (id, jurisdictionId, name, shortName, reference, url, enforcementDate, status, scope, sectors, description, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO regulations (id, jurisdictionId, name, shortName, reference, url, enforcementDate, status, scope, sectors, description, createdAt, updatedAt, org_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      data.id,
+      id,
       data.jurisdictionId,
       data.name,
       data.shortName,
@@ -462,8 +491,9 @@ export class SqliteAdapter implements DbAdapter {
       data.description,
       now,
       now,
+      data.orgId ?? 'system',
     );
-    const row = this.db.prepare('SELECT * FROM regulations WHERE id = ?').get(data.id) as RegulationRow;
+    const row = this.db.prepare('SELECT * FROM regulations WHERE id = ?').get(id) as RegulationRow;
     return toRegulation(row);
   }
 
@@ -513,6 +543,10 @@ export class SqliteAdapter implements DbAdapter {
       sql += ' AND obligation = ?';
       params.push(filters.obligation);
     }
+    if (filters?.orgId != null) {
+      sql += ' AND org_id = ?';
+      params.push(filters.orgId);
+    }
 
     const rows = this.db.prepare(sql).all(...params) as RequirementRow[];
     return rows.map(toRequirement);
@@ -527,9 +561,9 @@ export class SqliteAdapter implements DbAdapter {
     const id = randomUUID();
     const now = new Date().toISOString();
     this.db.prepare(`
-      INSERT INTO requirements (id, regulationId, wcagVersion, wcagLevel, wcagCriterion, obligation, notes, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, data.regulationId, data.wcagVersion, data.wcagLevel, data.wcagCriterion, data.obligation, data.notes ?? null, now, now);
+      INSERT INTO requirements (id, regulationId, wcagVersion, wcagLevel, wcagCriterion, obligation, notes, createdAt, updatedAt, org_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, data.regulationId, data.wcagVersion, data.wcagLevel, data.wcagCriterion, data.obligation, data.notes ?? null, now, now, data.orgId ?? 'system');
     const row = this.db.prepare('SELECT * FROM requirements WHERE id = ?').get(id) as RequirementRow;
     return toRequirement(row);
   }
@@ -607,13 +641,17 @@ export class SqliteAdapter implements DbAdapter {
 
   // --- Update Proposals ---
 
-  async listUpdateProposals(filters?: { status?: string }): Promise<UpdateProposal[]> {
+  async listUpdateProposals(filters?: { status?: string; orgId?: string }): Promise<UpdateProposal[]> {
     let sql = 'SELECT * FROM update_proposals WHERE 1=1';
     const params: unknown[] = [];
 
     if (filters?.status != null) {
       sql += ' AND status = ?';
       params.push(filters.status);
+    }
+    if (filters?.orgId != null) {
+      sql += ' AND org_id = ?';
+      params.push(filters.orgId);
     }
 
     const rows = this.db.prepare(sql).all(...params) as UpdateProposalRow[];
@@ -628,19 +666,23 @@ export class SqliteAdapter implements DbAdapter {
   async createUpdateProposal(data: CreateUpdateProposalInput): Promise<UpdateProposal> {
     const id = randomUUID();
     const now = new Date().toISOString();
+    const proposedChanges = typeof data.proposedChanges === 'string'
+      ? data.proposedChanges
+      : JSON.stringify(data.proposedChanges);
     this.db.prepare(`
-      INSERT INTO update_proposals (id, source, detectedAt, type, affectedRegulationId, affectedJurisdictionId, summary, proposedChanges, status, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+      INSERT INTO update_proposals (id, source, detectedAt, type, affectedRegulationId, affectedJurisdictionId, summary, proposedChanges, status, createdAt, org_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
     `).run(
       id,
       data.source,
-      now,
+      data.detectedAt ?? now,
       data.type,
       data.affectedRegulationId ?? null,
       data.affectedJurisdictionId ?? null,
       data.summary,
-      JSON.stringify(data.proposedChanges),
+      proposedChanges,
       now,
+      data.orgId ?? 'system',
     );
     const row = this.db.prepare('SELECT * FROM update_proposals WHERE id = ?').get(id) as UpdateProposalRow;
     return toUpdateProposal(row);
@@ -664,8 +706,16 @@ export class SqliteAdapter implements DbAdapter {
 
   // --- Monitored Sources ---
 
-  async listSources(): Promise<MonitoredSource[]> {
-    const rows = this.db.prepare('SELECT * FROM monitored_sources').all() as MonitoredSourceRow[];
+  async listSources(filters?: { orgId?: string }): Promise<MonitoredSource[]> {
+    let sql = 'SELECT * FROM monitored_sources WHERE 1=1';
+    const params: unknown[] = [];
+
+    if (filters?.orgId != null) {
+      sql += ' AND org_id = ?';
+      params.push(filters.orgId);
+    }
+
+    const rows = this.db.prepare(sql).all(...params) as MonitoredSourceRow[];
     return rows.map(toMonitoredSource);
   }
 
@@ -673,9 +723,9 @@ export class SqliteAdapter implements DbAdapter {
     const id = randomUUID();
     const now = new Date().toISOString();
     this.db.prepare(`
-      INSERT INTO monitored_sources (id, name, url, type, schedule, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, data.name, data.url, data.type, data.schedule, now);
+      INSERT INTO monitored_sources (id, name, url, type, schedule, createdAt, org_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, data.name, data.url, data.type, data.schedule, now, data.orgId ?? 'system');
     const row = this.db.prepare('SELECT * FROM monitored_sources WHERE id = ?').get(id) as MonitoredSourceRow;
     return toMonitoredSource(row);
   }
@@ -762,8 +812,16 @@ export class SqliteAdapter implements DbAdapter {
 
   // --- Webhooks ---
 
-  async listWebhooks(): Promise<Webhook[]> {
-    const rows = this.db.prepare('SELECT * FROM webhooks').all() as WebhookRow[];
+  async listWebhooks(filters?: { orgId?: string }): Promise<Webhook[]> {
+    let sql = 'SELECT * FROM webhooks WHERE 1=1';
+    const params: unknown[] = [];
+
+    if (filters?.orgId != null) {
+      sql += ' AND org_id = ?';
+      params.push(filters.orgId);
+    }
+
+    const rows = this.db.prepare(sql).all(...params) as WebhookRow[];
     return rows.map(toWebhook);
   }
 
@@ -771,14 +829,33 @@ export class SqliteAdapter implements DbAdapter {
     const id = randomUUID();
     const now = new Date().toISOString();
     this.db.prepare(`
-      INSERT INTO webhooks (id, url, secret, events, active, createdAt)
-      VALUES (?, ?, ?, ?, 1, ?)
-    `).run(id, data.url, data.secret, JSON.stringify(data.events), now);
+      INSERT INTO webhooks (id, url, secret, events, active, createdAt, org_id)
+      VALUES (?, ?, ?, ?, 1, ?, ?)
+    `).run(id, data.url, data.secret, JSON.stringify(data.events), now, data.orgId ?? 'system');
     const row = this.db.prepare('SELECT * FROM webhooks WHERE id = ?').get(id) as WebhookRow;
     return toWebhook(row);
   }
 
   async deleteWebhook(id: string): Promise<void> {
     this.db.prepare('DELETE FROM webhooks WHERE id = ?').run(id);
+  }
+
+  // --- Org Data ---
+
+  async deleteOrgData(orgId: string): Promise<void> {
+    if (orgId === 'system') {
+      throw new Error('Cannot delete system org data');
+    }
+    const transaction = this.db.transaction(() => {
+      this.db.prepare('DELETE FROM requirements WHERE org_id = ?').run(orgId);
+      this.db.prepare('DELETE FROM regulations WHERE org_id = ?').run(orgId);
+      this.db.prepare('DELETE FROM jurisdictions WHERE org_id = ?').run(orgId);
+      this.db.prepare('DELETE FROM update_proposals WHERE org_id = ?').run(orgId);
+      this.db.prepare('DELETE FROM monitored_sources WHERE org_id = ?').run(orgId);
+      this.db.prepare('DELETE FROM webhooks WHERE org_id = ?').run(orgId);
+      this.db.prepare('DELETE FROM oauth_clients WHERE org_id = ?').run(orgId);
+      this.db.prepare('DELETE FROM users WHERE org_id = ?').run(orgId);
+    });
+    transaction();
   }
 }
