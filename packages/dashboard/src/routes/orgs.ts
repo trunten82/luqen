@@ -1,6 +1,13 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { OrgDb } from '../db/orgs.js';
 
+function safeRedirect(referer: string | undefined): string {
+  if (referer == null || referer === '') return '/';
+  // Only allow relative paths starting with /
+  if (referer.startsWith('/') && !referer.startsWith('//')) return referer;
+  return '/';
+}
+
 export async function orgRoutes(
   server: FastifyInstance,
   orgDb: OrgDb,
@@ -23,8 +30,8 @@ export async function orgRoutes(
     // Clear org context when orgId is 'system' or empty
     if (orgId === undefined || orgId === '' || orgId === 'system') {
       session.set('currentOrgId', '');
-      const referer = (request.headers.referer as string | undefined) ?? '/';
-      await reply.redirect(referer);
+      const redirectTo = safeRedirect(request.headers.referer as string | undefined);
+      await reply.redirect(redirectTo);
       return;
     }
 
@@ -38,8 +45,8 @@ export async function orgRoutes(
     }
 
     session.set('currentOrgId', orgId);
-    const referer = (request.headers.referer as string | undefined) ?? '/';
-    await reply.redirect(referer);
+    const redirectTo = safeRedirect(request.headers.referer as string | undefined);
+    await reply.redirect(redirectTo);
   });
 
   // ── GET /orgs/current — return current org context (JSON) ───────────────

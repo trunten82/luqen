@@ -42,6 +42,7 @@ export async function adminGuard(
 ): Promise<void> {
   if (request.user?.role !== 'admin') {
     await reply.code(403).send({ error: 'Forbidden: admin role required' });
+    return;
   }
 }
 
@@ -58,6 +59,7 @@ export function requireRole(role: 'viewer' | 'user' | 'admin') {
 
     if (userLevel < requiredLevel) {
       await reply.code(403).send({ error: `Forbidden: ${role} role required` });
+      return;
     }
   };
 }

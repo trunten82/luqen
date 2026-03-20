@@ -10,6 +10,8 @@ export interface TestContext {
   readToken: string;
   writeToken: string;
   clientId: string;
+  /** API key for service-to-service auth (allows X-Org-Id header) */
+  apiKey: string;
 }
 
 export async function createTestApp(): Promise<TestContext> {
@@ -17,6 +19,10 @@ export async function createTestApp(): Promise<TestContext> {
   const { privateKey, publicKey } = await generateKeyPair('RS256', { extractable: true });
   const privateKeyPem = await exportPKCS8(privateKey);
   const publicKeyPem = await exportSPKI(publicKey);
+
+  // Set a test API key for service-to-service auth
+  const testApiKey = 'test-compliance-api-key';
+  process.env['COMPLIANCE_API_KEY'] = testApiKey;
 
   // Create in-memory SQLite adapter
   const db = new SqliteAdapter(':memory:');
@@ -80,6 +86,7 @@ export async function createTestApp(): Promise<TestContext> {
     readToken,
     writeToken,
     clientId: adminClient.id,
+    apiKey: testApiKey,
   };
 }
 
