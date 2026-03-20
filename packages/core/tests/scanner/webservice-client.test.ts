@@ -48,4 +48,30 @@ describe('WebserviceClient', () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' });
     await expect(client.createTask({ name: 'Test', url: 'https://example.com', standard: 'WCAG2AA' })).rejects.toThrow(/500/);
   });
+
+  it('shows helpful setup instructions when fetch throws ECONNREFUSED', async () => {
+    const connError = new TypeError('fetch failed');
+    (connError as any).cause = { code: 'ECONNREFUSED' };
+    mockFetch.mockRejectedValueOnce(connError);
+    await expect(client.createTask({ name: 'Test', url: 'https://example.com', standard: 'WCAG2AA' })).rejects.toThrow(
+      /Cannot connect to pa11y webservice at http:\/\/pa11y:3000/,
+    );
+    // Verify the full message includes setup instructions
+    mockFetch.mockRejectedValueOnce(connError);
+    try {
+      await client.createTask({ name: 'Test', url: 'https://example.com', standard: 'WCAG2AA' });
+    } catch (e: any) {
+      expect(e.message).toContain('npm install -g pa11y-webservice');
+      expect(e.message).toContain('docker run -p 3000:3000');
+      expect(e.message).toContain('Then retry your scan.');
+    }
+  });
+
+  it('shows helpful instructions for ECONNREFUSED error message', async () => {
+    const connError = new Error('connect ECONNREFUSED 127.0.0.1:3000');
+    mockFetch.mockRejectedValueOnce(connError);
+    await expect(client.createTask({ name: 'Test', url: 'https://example.com', standard: 'WCAG2AA' })).rejects.toThrow(
+      /Cannot connect to pa11y webservice/,
+    );
+  });
 });
