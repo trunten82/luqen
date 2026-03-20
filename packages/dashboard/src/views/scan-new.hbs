@@ -1,125 +1,80 @@
-{{! New scan form — URL, jurisdictions, standard, concurrency }}
-
-<form method="POST" action="/scan/new" novalidate aria-describedby="scan-form-desc">
-  <p id="scan-form-desc" class="form-hint">
-    Configure and launch a new accessibility scan. All fields marked with
-    <span aria-hidden="true">*</span><span class="sr-only">asterisk</span> are required.
+<section aria-label="New accessibility scan">
+  <p class="form-hint mb-md">
+    Configure and launch a new accessibility scan. Fields marked with
+    <span class="required" aria-hidden="true">*</span> are required.
   </p>
 
-  <fieldset class="form-section">
-    <legend class="form-section__title">Target URL</legend>
-
-    <div class="form-group">
-      <label for="siteUrl">
-        Website URL
-        <span class="required" aria-hidden="true">*</span>
-      </label>
-      <input
-        type="url"
-        id="siteUrl"
-        name="siteUrl"
-        class="form-control"
-        placeholder="https://example.com"
-        autocomplete="url"
-        required
-        aria-required="true"
-        aria-describedby="siteUrl-hint"
-      >
-      <p id="siteUrl-hint" class="form-hint">
-        Enter the full URL including <code>https://</code>. The scanner will crawl all linked pages.
-      </p>
+  <form method="POST" action="/scan/new" novalidate>
+    <div class="card mb-md">
+      <h3 class="card__title mb-md">Target URL</h3>
+      <div class="form-group">
+        <label for="siteUrl">
+          Website URL <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input type="url" id="siteUrl" name="siteUrl"
+               placeholder="https://example.com"
+               autocomplete="url" required aria-required="true"
+               aria-describedby="siteUrl-hint">
+        <p id="siteUrl-hint" class="form-hint">
+          Enter the full URL including <code>https://</code>. The scanner will crawl linked pages.
+        </p>
+      </div>
     </div>
-  </fieldset>
 
-  <fieldset class="form-section">
-    <legend class="form-section__title">WCAG Standard</legend>
+    <div class="card mb-md">
+      <h3 class="card__title mb-md">WCAG Standard</h3>
+      <div class="form-group">
+        <label for="standard">
+          Conformance Level <span class="required" aria-hidden="true">*</span>
+        </label>
+        <select id="standard" name="standard" required aria-required="true"
+                aria-describedby="standard-hint">
+          {{#each standards}}
+          <option value="{{this}}" {{#if (eq this ../defaultStandard)}}selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+        <p id="standard-hint" class="form-hint">
+          WCAG2AA is recommended for most compliance requirements.
+        </p>
+      </div>
+    </div>
 
-    <div class="form-group">
-      <label for="standard">
-        Conformance Level
-        <span class="required" aria-hidden="true">*</span>
-      </label>
-      <select
-        id="standard"
-        name="standard"
-        class="form-control"
-        required
-        aria-required="true"
-        aria-describedby="standard-hint"
-      >
-        {{#each standards}}
-        <option value="{{this}}" {{#if (eq this ../defaultStandard)}}selected{{/if}}>{{this}}</option>
+    {{#if jurisdictions.length}}
+    <div class="card mb-md">
+      <h3 class="card__title mb-md">Jurisdictions</h3>
+      <p class="form-hint mb-md">
+        Select jurisdictions to check compliance against their regulations.
+        Leave all unselected to skip compliance checking.
+      </p>
+      <div class="checkbox-group" role="group" aria-label="Jurisdiction selection">
+        {{#each jurisdictions}}
+        <label class="checkbox-label">
+          <input type="checkbox" name="jurisdictions" value="{{id}}">
+          {{name}}
+        </label>
         {{/each}}
-      </select>
-      <p id="standard-hint" class="form-hint">
-        WCAG2AA is recommended for most compliance requirements.
-      </p>
-    </div>
-  </fieldset>
-
-  {{#if jurisdictions.length}}
-  <fieldset class="form-section" aria-describedby="jurisdictions-hint">
-    <legend class="form-section__title">Jurisdictions</legend>
-    <p id="jurisdictions-hint" class="form-hint">
-      Select jurisdictions to check compliance against their accessibility regulations.
-      Leave all unselected to skip compliance checking.
-    </p>
-
-    <div class="checkbox-grid" role="group" aria-label="Jurisdiction selection">
-      {{#each jurisdictions}}
-      <div class="checkbox-item">
-        <input
-          type="checkbox"
-          id="jurisdiction-{{id}}"
-          name="jurisdictions"
-          value="{{id}}"
-        >
-        <label for="jurisdiction-{{id}}">{{name}}</label>
       </div>
-      {{/each}}
     </div>
-  </fieldset>
-  {{/if}}
+    {{/if}}
 
-  <fieldset class="form-section">
-    <legend class="form-section__title">Scan Options</legend>
-
-    <div class="form-group">
-      <label for="concurrency">
-        Concurrent Pages
-        <span class="badge badge--secondary" aria-hidden="true">{{defaultConcurrency}}</span>
-      </label>
-      <div class="range-group">
-        <input
-          type="range"
-          id="concurrency"
-          name="concurrency"
-          min="1"
-          max="{{maxConcurrency}}"
-          value="{{defaultConcurrency}}"
-          class="form-range"
-          aria-valuemin="1"
-          aria-valuemax="{{maxConcurrency}}"
-          aria-valuenow="{{defaultConcurrency}}"
-          aria-describedby="concurrency-hint"
-          oninput="document.getElementById('concurrency-value').textContent = this.value; this.setAttribute('aria-valuenow', this.value);"
-        >
-        <output id="concurrency-value" for="concurrency" aria-live="polite">{{defaultConcurrency}}</output>
+    <div class="card mb-md">
+      <h3 class="card__title mb-md">Scan Options</h3>
+      <div class="form-group">
+        <label for="concurrency">Concurrent Pages</label>
+        <input type="range" id="concurrency" name="concurrency"
+               min="1" max="{{maxConcurrency}}" value="{{defaultConcurrency}}"
+               aria-describedby="concurrency-hint"
+               oninput="document.getElementById('concurrency-value').textContent = this.value">
+        <output id="concurrency-value" for="concurrency" aria-live="polite" class="text-sm text-muted">{{defaultConcurrency}}</output>
+        <p id="concurrency-hint" class="form-hint">
+          Number of pages scanned simultaneously (1–{{maxConcurrency}}).
+        </p>
       </div>
-      <p id="concurrency-hint" class="form-hint">
-        Number of pages scanned simultaneously. Higher values are faster but use more memory (1–{{maxConcurrency}}).
-      </p>
     </div>
-  </fieldset>
 
-  <div class="form-actions">
-    <button type="submit" class="btn btn--primary">
-      <svg class="btn__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M7 10l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      Start Scan
-    </button>
-    <a href="/home" class="btn btn--ghost">Cancel</a>
-  </div>
-</form>
+    <div class="page-actions">
+      <button type="submit" class="btn btn--primary">Start Scan</button>
+      <a href="/home" class="btn btn--ghost">Cancel</a>
+    </div>
+  </form>
+</section>

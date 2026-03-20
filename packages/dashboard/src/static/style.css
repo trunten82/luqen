@@ -369,6 +369,213 @@ body {
   margin-bottom: var(--space-xl);
 }
 
+/* ---- Stat Cards (home page) ---- */
+.stat-card {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-card__value {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.1;
+}
+
+.stat-card__label {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-top: var(--space-xs);
+}
+
+/* ---- Section Title ---- */
+.section-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* ---- Quick Scan (home page) ---- */
+.quick-scan-section {
+  margin-bottom: var(--space-xl);
+}
+
+.quick-scan-form .input-group {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  margin-bottom: var(--space-sm);
+}
+
+.quick-scan-form .input-group input {
+  flex: 1;
+}
+
+@media (max-width: 767px) {
+  .quick-scan-form .input-group {
+    flex-direction: column;
+  }
+
+  .quick-scan-form .input-group .btn {
+    width: 100%;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ---- Table Responsive (home page) ---- */
+.table-responsive {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.data-table th {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background-color: var(--bg-secondary);
+}
+
+.cell--url {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell--url a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.cell--url a:hover {
+  text-decoration: underline;
+}
+
+/* ---- Text color helpers ---- */
+.text--error { color: var(--status-error); }
+.text--warning { color: var(--status-warning); }
+.text--success { color: var(--status-success); }
+
+/* ---- Empty State ---- */
+.empty-state {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-md);
+  color: var(--text-muted);
+}
+
+/* ---- Mobile: home page data-table → cards ---- */
+@media (max-width: 767px) {
+  .table-responsive {
+    border: none;
+    overflow-x: visible;
+  }
+
+  .data-table, .data-table thead, .data-table tbody,
+  .data-table th, .data-table tr, .data-table td {
+    display: block;
+  }
+
+  .data-table thead {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+
+  .data-table tbody tr {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--space-sm);
+    padding: var(--space-sm);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .data-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid var(--bg-tertiary);
+    font-size: var(--font-size-sm);
+    text-align: right;
+    min-height: 36px;
+  }
+
+  .data-table td:last-child {
+    border-bottom: none;
+    justify-content: flex-end;
+  }
+
+  .data-table td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    text-align: left;
+    flex-shrink: 0;
+    margin-right: var(--space-sm);
+  }
+
+  .cell--url {
+    max-width: none;
+    white-space: normal;
+    word-break: break-all;
+  }
+}
+
 /* ---- Tables ---- */
 .table-wrapper {
   overflow-x: auto;
