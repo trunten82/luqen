@@ -22,7 +22,12 @@
       </div>
 
       <h1 class="login-card__title">Sign in</h1>
-      <p class="login-card__subtitle">Enter your credentials to access the dashboard</p>
+      <p class="login-card__subtitle">
+        {{#if (eq mode "solo")}}Enter your API key to access the dashboard{{/if}}
+        {{#if (eq mode "team")}}Enter your credentials to access the dashboard{{/if}}
+        {{#if (eq mode "enterprise")}}Choose a sign-in method{{/if}}
+        {{#unless mode}}Enter your credentials to access the dashboard{{/unless}}
+      </p>
 
       {{#if error}}
       <div class="alert alert--error" role="alert" aria-live="assertive" id="login-error">
@@ -37,6 +42,95 @@
       </div>
       {{/if}}
 
+      {{!-- Solo mode: API key form --}}
+      {{#if (eq mode "solo")}}
+      <form method="POST" action="/login" novalidate>
+        <div class="form-group">
+          <label for="apiKey">
+            API Key
+            <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            type="password"
+            id="apiKey"
+            name="apiKey"
+            autocomplete="off"
+            required
+            aria-required="true"
+            {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
+          >
+        </div>
+
+        <div class="form-group" style="margin-top: var(--space-lg)">
+          <button type="submit" class="btn btn--primary btn--full btn--lg">
+            Sign in
+          </button>
+        </div>
+      </form>
+      {{/if}}
+
+      {{!-- Enterprise mode: SSO buttons --}}
+      {{#if (eq mode "enterprise")}}
+      <div class="login-sso" style="margin-bottom: var(--space-lg, 1.5rem)">
+        {{#each loginMethods}}
+          {{#if (eq this.type "sso")}}
+          <a href="/auth/sso/{{this.pluginId}}" class="btn btn--primary btn--full btn--lg" style="margin-bottom: var(--space-sm, 0.5rem); display: block; text-align: center; text-decoration: none;">
+            Sign in with {{this.label}}
+          </a>
+          {{/if}}
+        {{/each}}
+      </div>
+
+      <details class="login-password-fallback">
+        <summary style="cursor: pointer; margin-bottom: var(--space-md, 1rem); color: var(--text-secondary, #666);">Or sign in with password</summary>
+        <form method="POST" action="/login" novalidate>
+          <div class="form-group">
+            <label for="username">
+              Username
+              <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              autocomplete="username"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              required
+              aria-required="true"
+              {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
+              value="{{username}}"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="password">
+              Password
+              <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              autocomplete="current-password"
+              required
+              aria-required="true"
+              {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
+            >
+          </div>
+
+          <div class="form-group" style="margin-top: var(--space-lg)">
+            <button type="submit" class="btn btn--primary btn--full btn--lg">
+              Sign in
+            </button>
+          </div>
+        </form>
+      </details>
+      {{/if}}
+
+      {{!-- Team mode (or fallback when mode is not set): username/password form --}}
+      {{#if (eq mode "team")}}
       <form method="POST" action="/login" novalidate>
         <div class="form-group">
           <label for="username">
@@ -80,6 +174,54 @@
           </button>
         </div>
       </form>
+      {{/if}}
+
+      {{!-- Fallback when mode is not set (backward compat) --}}
+      {{#unless mode}}
+      <form method="POST" action="/login" novalidate>
+        <div class="form-group">
+          <label for="username">
+            Username
+            <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            autocomplete="username"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            required
+            aria-required="true"
+            {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
+            value="{{username}}"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">
+            Password
+            <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            required
+            aria-required="true"
+            {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
+          >
+        </div>
+
+        <div class="form-group" style="margin-top: var(--space-lg)">
+          <button type="submit" class="btn btn--primary btn--full btn--lg">
+            Sign in
+          </button>
+        </div>
+      </form>
+      {{/unless}}
     </div>
   </main>
 </body>

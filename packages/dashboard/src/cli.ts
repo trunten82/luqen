@@ -257,4 +257,31 @@ pluginCmd
     }
   });
 
+// ── API key management ────────────────────────────────────────────────────
+
+program
+  .command('api-key')
+  .description('Generate a new API key (revokes all previous keys)')
+  .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
+  .action(async (options: { config: string }) => {
+    try {
+      const { revokeAllKeys, getOrCreateApiKey } = await import('./auth/api-key.js');
+
+      const config = loadConfig(options.config);
+      const db = new ScanDb(config.dbPath);
+      db.initialize();
+
+      revokeAllKeys(db.getDatabase());
+      const { key } = getOrCreateApiKey(db.getDatabase());
+
+      console.log('New API key generated (all previous keys revoked):');
+      console.log(key);
+
+      db.close();
+    } catch (err) {
+      console.error('API key generation failed:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);
