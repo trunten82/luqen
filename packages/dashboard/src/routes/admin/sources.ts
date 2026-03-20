@@ -12,6 +12,10 @@ function getToken(request: FastifyRequest): string {
   return session.token ?? '';
 }
 
+function getOrgId(request: FastifyRequest): string | undefined {
+  return request.user?.currentOrgId;
+}
+
 function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
   return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
 }
@@ -29,7 +33,7 @@ export async function sourceRoutes(
       let error: string | undefined;
 
       try {
-        sources = await listSources(baseUrl, getToken(request));
+        sources = await listSources(baseUrl, getToken(request), getOrgId(request));
       } catch (err) {
         error = err instanceof Error ? err.message : 'Failed to load sources';
       }
@@ -78,7 +82,7 @@ export async function sourceRoutes(
           url: body.url.trim(),
           type: body.type?.trim() ?? 'rss',
           schedule: body.schedule?.trim() ?? 'daily',
-        });
+        }, getOrgId(request));
 
         const row = `<tr id="source-${created.id}">
   <td>${created.name}</td>
@@ -115,7 +119,7 @@ export async function sourceRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        await deleteSource(baseUrl, getToken(request), id);
+        await deleteSource(baseUrl, getToken(request), id, getOrgId(request));
         return reply.code(200).header('content-type', 'text/html').send(toastHtml('Source removed successfully.'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to remove source';

@@ -11,6 +11,10 @@ function getToken(request: FastifyRequest): string {
   return session.token ?? '';
 }
 
+function getOrgId(request: FastifyRequest): string | undefined {
+  return request.user?.currentOrgId;
+}
+
 function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
   return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
 }
@@ -31,7 +35,7 @@ export async function proposalRoutes(
       let error: string | undefined;
 
       try {
-        proposals = await listUpdateProposals(baseUrl, getToken(request), statusFilter);
+        proposals = await listUpdateProposals(baseUrl, getToken(request), statusFilter, getOrgId(request));
       } catch (err) {
         error = err instanceof Error ? err.message : 'Failed to load proposals';
       }
@@ -61,7 +65,7 @@ export async function proposalRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        const updated = await approveProposal(baseUrl, getToken(request), id);
+        const updated = await approveProposal(baseUrl, getToken(request), id, getOrgId(request));
 
         const rowHtml = `<tr id="proposal-${updated.id}">
   <td>${updated.source}</td>
@@ -91,7 +95,7 @@ export async function proposalRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        const updated = await rejectProposal(baseUrl, getToken(request), id);
+        const updated = await rejectProposal(baseUrl, getToken(request), id, getOrgId(request));
 
         const rowHtml = `<tr id="proposal-${updated.id}">
   <td>${updated.source}</td>
