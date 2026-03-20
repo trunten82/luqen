@@ -144,6 +144,39 @@ The progress page shows real-time updates via Server-Sent Events. When complete,
 
 ---
 
+## Managing Plugins
+
+The dashboard supports plugins for authentication (SSO), notifications, storage, and custom scanners. Manage plugins from **Settings > Plugins** in the dashboard UI.
+
+### Installing a plugin
+
+1. Go to **Settings > Plugins**
+2. Browse the **Plugin Registry** tab to see available plugins (e.g., Azure Entra ID, Slack Notifications, AWS S3 Storage)
+3. Click **Install** on the plugin you want
+4. The plugin is downloaded and registered with `inactive` status
+
+### Configuring a plugin
+
+1. Click the installed plugin to open its settings
+2. Fill in the configuration fields (e.g., webhook URL, API keys). Secret fields are encrypted with AES-256-GCM before storage.
+3. Click **Save**
+
+### Activating and deactivating
+
+- Click **Activate** to start the plugin. The system runs a health check to confirm it is working.
+- Click **Deactivate** to stop the plugin without removing it.
+- Active plugins are automatically re-activated on server restart.
+
+### Removing a plugin
+
+Click **Remove** to deactivate and uninstall the plugin completely.
+
+### CLI and API alternatives
+
+Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|activate|deactivate|remove`) or REST API (`/api/v1/plugins/*`). See the [CLI reference](../reference/cli-reference.md) and [API reference](../reference/api-reference.md).
+
+---
+
 ## Admin features
 
 | Feature | Description |

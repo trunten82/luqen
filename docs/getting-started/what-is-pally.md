@@ -17,6 +17,8 @@ Tier 3  @pally-agent/monitor      Regulatory change detection (CLI + MCP)
 
 Each tier depends only on the tiers below it. Core stands alone. Compliance adds legal mapping. Dashboard adds a browser UI on top of both. Monitor watches legal sources and feeds proposals into compliance.
 
+The dashboard includes a **plugin system** for extending functionality without modifying the core codebase. Plugin types include authentication providers (e.g., Azure Entra ID, Okta, Google), notification channels (Slack, Teams), storage backends (S3, Azure Blob), and custom scanners. Plugins are managed via the dashboard UI, CLI, or REST API.
+
 ---
 
 ## Composition Paths

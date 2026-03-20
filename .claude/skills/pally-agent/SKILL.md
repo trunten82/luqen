@@ -449,6 +449,43 @@ pally-monitor serve --port 4200
 
 ---
 
+### Plugin CLI
+
+```bash
+# List installed plugins
+pally-dashboard plugin list
+
+# Install a plugin from the registry
+pally-dashboard plugin install @pally-agent/plugin-notify-slack
+
+# Configure a plugin
+pally-dashboard plugin configure <plugin-id> --set webhookUrl=https://hooks.slack.com/xxx channel=#a11y
+
+# Activate / deactivate / remove
+pally-dashboard plugin activate <plugin-id>
+pally-dashboard plugin deactivate <plugin-id>
+pally-dashboard plugin remove <plugin-id>
+```
+
+### Plugin REST API
+
+Base URL: `http://localhost:5000` (dashboard). All endpoints require admin session.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/plugins` | List installed plugins |
+| `GET` | `/api/v1/plugins/registry` | List available plugins from registry |
+| `POST` | `/api/v1/plugins/install` | Install (`{ "packageName": "..." }`) |
+| `PATCH` | `/api/v1/plugins/:id/config` | Configure (`{ "config": {...} }`) |
+| `POST` | `/api/v1/plugins/:id/activate` | Activate |
+| `POST` | `/api/v1/plugins/:id/deactivate` | Deactivate |
+| `DELETE` | `/api/v1/plugins/:id` | Remove |
+| `GET` | `/api/v1/plugins/:id/health` | Health check |
+
+Plugin types: `auth`, `notification`, `storage`, `scanner`.
+
+---
+
 ### Full Audit Workflow (all MCP servers)
 
 ```

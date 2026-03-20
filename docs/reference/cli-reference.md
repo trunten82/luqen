@@ -333,6 +333,117 @@ pally-dashboard self-audit --json
 
 ---
 
+### pally-dashboard plugin list
+
+List all installed plugins.
+
+```bash
+pally-dashboard plugin list [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-c, --config <path>` | Path to config file (default: `dashboard.config.json`) |
+
+Output columns: ID, Package, Type, Version, Status.
+
+---
+
+### pally-dashboard plugin install \<package\>
+
+Install a plugin from the registry.
+
+```bash
+pally-dashboard plugin install <package> [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-c, --config <path>` | Path to config file (default: `dashboard.config.json`) |
+
+**Example:**
+
+```bash
+pally-dashboard plugin install @pally-agent/plugin-notify-slack
+```
+
+---
+
+### pally-dashboard plugin configure \<id\>
+
+Configure an installed plugin with key=value pairs.
+
+```bash
+pally-dashboard plugin configure <id> --set <key=value...> [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--set <pairs...>` | One or more `key=value` pairs |
+| `-c, --config <path>` | Path to config file (default: `dashboard.config.json`) |
+
+**Example:**
+
+```bash
+pally-dashboard plugin configure abc-123 --set webhookUrl=https://hooks.slack.com/xxx channel=#a11y
+```
+
+---
+
+### pally-dashboard plugin activate \<id\>
+
+Activate an installed plugin. The plugin is loaded, its `activate()` hook is called, and periodic health checks begin.
+
+```bash
+pally-dashboard plugin activate <id> [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-c, --config <path>` | Path to config file (default: `dashboard.config.json`) |
+
+---
+
+### pally-dashboard plugin deactivate \<id\>
+
+Deactivate a running plugin. Calls the plugin's `deactivate()` hook and stops health checks.
+
+```bash
+pally-dashboard plugin deactivate <id> [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-c, --config <path>` | Path to config file (default: `dashboard.config.json`) |
+
+---
+
+### pally-dashboard plugin remove \<id\>
+
+Remove an installed plugin. Deactivates it first if active, then deletes the database record and package files.
+
+```bash
+pally-dashboard plugin remove <id> [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-c, --config <path>` | Path to config file (default: `dashboard.config.json`) |
+
+---
+
 ## @pally-agent/monitor (`pally-monitor`)
 
 ### pally-monitor scan

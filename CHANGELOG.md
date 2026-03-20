@@ -6,6 +6,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.8.0] - 2026-03-20
+
+### Added
+- **Database migration framework** — versioned schema migrations with `pally-dashboard migrate`
+- **Plugin system foundation** — `PluginManager` with install, configure, activate, deactivate, remove lifecycle; plugin registry with 7 built-in entries (3 auth, 2 notification, 2 storage)
+- **Plugin marketplace UI** — Settings > Plugins page for browsing, installing, configuring, and activating plugins from the dashboard
+- **Plugin CLI** — `pally-dashboard plugin list|install|configure|activate|deactivate|remove` subcommands
+- **Plugin REST API** — `/api/v1/plugins/*` endpoints for programmatic plugin management (list, registry, install, config, activate, deactivate, remove, health)
+- **AES-256-GCM encrypted plugin secrets** — config fields marked as `secret` are encrypted at rest
+- **Plugin health checks** — periodic health monitoring with auto-deactivation after 3 consecutive failures
+- **Auth middleware JSON API support** — admin guard returns JSON errors for API requests
+
+---
+
 ## [0.7.0] - 2026-03-20
 
 ### Added
@@ -215,6 +229,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [0.8.0] | 2026-03-20 | Plugin system (manager, registry, marketplace UI, CLI, REST API, encrypted secrets) |
 | [0.7.0] | 2026-03-20 | Path-based docs, REST API routes, dead code removal, env var fixes |
 | [0.6.0] | 2026-03-20 | Dashboard self-audit, report comparison, monitor admin UI, npm publish prep |
 | [0.5.0] | 2026-03-20 | Regulatory monitor agent, npm publish prep, security fixes, Redis support |
