@@ -393,8 +393,13 @@ export class SqliteAdapter implements DbAdapter {
       params.push(filters.parentId);
     }
     if (filters?.orgId != null) {
-      sql += ' AND org_id = ?';
-      params.push(filters.orgId);
+      if (filters.orgId === 'system') {
+        sql += ' AND org_id = ?';
+        params.push('system');
+      } else {
+        sql += ' AND org_id IN (?, ?)';
+        params.push('system', filters.orgId);
+      }
     }
 
     const rows = this.db.prepare(sql).all(...params) as JurisdictionRow[];
@@ -458,8 +463,13 @@ export class SqliteAdapter implements DbAdapter {
       params.push(filters.scope);
     }
     if (filters?.orgId != null) {
-      sql += ' AND org_id = ?';
-      params.push(filters.orgId);
+      if (filters.orgId === 'system') {
+        sql += ' AND org_id = ?';
+        params.push('system');
+      } else {
+        sql += ' AND org_id IN (?, ?)';
+        params.push('system', filters.orgId);
+      }
     }
 
     const rows = this.db.prepare(sql).all(...params) as RegulationRow[];
@@ -544,8 +554,13 @@ export class SqliteAdapter implements DbAdapter {
       params.push(filters.obligation);
     }
     if (filters?.orgId != null) {
-      sql += ' AND org_id = ?';
-      params.push(filters.orgId);
+      if (filters.orgId === 'system') {
+        sql += ' AND org_id = ?';
+        params.push('system');
+      } else {
+        sql += ' AND org_id IN (?, ?)';
+        params.push('system', filters.orgId);
+      }
     }
 
     const rows = this.db.prepare(sql).all(...params) as RequirementRow[];
@@ -650,8 +665,13 @@ export class SqliteAdapter implements DbAdapter {
       params.push(filters.status);
     }
     if (filters?.orgId != null) {
-      sql += ' AND org_id = ?';
-      params.push(filters.orgId);
+      if (filters.orgId === 'system') {
+        sql += ' AND org_id = ?';
+        params.push('system');
+      } else {
+        sql += ' AND org_id IN (?, ?)';
+        params.push('system', filters.orgId);
+      }
     }
 
     const rows = this.db.prepare(sql).all(...params) as UpdateProposalRow[];
@@ -711,8 +731,13 @@ export class SqliteAdapter implements DbAdapter {
     const params: unknown[] = [];
 
     if (filters?.orgId != null) {
-      sql += ' AND org_id = ?';
-      params.push(filters.orgId);
+      if (filters.orgId === 'system') {
+        sql += ' AND org_id = ?';
+        params.push('system');
+      } else {
+        sql += ' AND org_id IN (?, ?)';
+        params.push('system', filters.orgId);
+      }
     }
 
     const rows = this.db.prepare(sql).all(...params) as MonitoredSourceRow[];
@@ -817,8 +842,13 @@ export class SqliteAdapter implements DbAdapter {
     const params: unknown[] = [];
 
     if (filters?.orgId != null) {
-      sql += ' AND org_id = ?';
-      params.push(filters.orgId);
+      if (filters.orgId === 'system') {
+        sql += ' AND org_id = ?';
+        params.push('system');
+      } else {
+        sql += ' AND org_id IN (?, ?)';
+        params.push('system', filters.orgId);
+      }
     }
 
     const rows = this.db.prepare(sql).all(...params) as WebhookRow[];
