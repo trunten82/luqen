@@ -18,7 +18,8 @@ export async function registerUpdateRoutes(
   }, async (request, reply) => {
     try {
       const body = request.body as Parameters<typeof proposeUpdate>[1];
-      const proposal = await proposeUpdate(db, body);
+      const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
+      const proposal = await proposeUpdate(db, { ...body, orgId });
       await reply.status(201).send(proposal);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Bad request';
@@ -33,7 +34,13 @@ export async function registerUpdateRoutes(
     try {
       const query = request.query as Record<string, unknown>;
       const statusFilter = query.status ? String(query.status) : undefined;
-      const items = await db.listUpdateProposals(statusFilter ? { status: statusFilter } : undefined);
+      const orgId = (request as unknown as { orgId?: string }).orgId;
+      const filters: Record<string, string> = {};
+      if (statusFilter) filters.status = statusFilter;
+      if (orgId != null) filters.orgId = orgId;
+      const items = await db.listUpdateProposals(
+        Object.keys(filters).length > 0 ? filters : undefined,
+      );
       const pagination = parsePagination(query);
       await reply.send(paginateArray(items, pagination));
     } catch (err) {

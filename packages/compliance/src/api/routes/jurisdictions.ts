@@ -17,6 +17,8 @@ export async function registerJurisdictionRoutes(
       const filters: Record<string, string> = {};
       if (query.type) filters.type = String(query.type);
       if (query.parentId) filters.parentId = String(query.parentId);
+      const orgId = (request as unknown as { orgId?: string }).orgId;
+      if (orgId != null) filters.orgId = orgId;
 
       const items = await db.listJurisdictions(
         Object.keys(filters).length > 0 ? filters as Parameters<typeof db.listJurisdictions>[0] : undefined,
@@ -53,7 +55,8 @@ export async function registerJurisdictionRoutes(
   }, async (request, reply) => {
     try {
       const body = request.body as Parameters<typeof crud.createJurisdiction>[1];
-      const jurisdiction = await crud.createJurisdiction(db, body);
+      const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
+      const jurisdiction = await crud.createJurisdiction(db, { ...body, orgId });
       await reply.status(201).send(jurisdiction);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Bad request';

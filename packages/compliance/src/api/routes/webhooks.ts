@@ -9,9 +9,11 @@ export async function registerWebhookRoutes(
   // GET /api/v1/webhooks
   app.get('/api/v1/webhooks', {
     preHandler: [requireScope('admin')],
-  }, async (_request, reply) => {
+  }, async (request, reply) => {
     try {
-      const webhooks = await db.listWebhooks();
+      const orgId = (request as unknown as { orgId?: string }).orgId;
+      const filters = orgId != null ? { orgId } : undefined;
+      const webhooks = await db.listWebhooks(filters);
       await reply.send(webhooks);
     } catch (err) {
       await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
@@ -23,7 +25,9 @@ export async function registerWebhookRoutes(
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
-      const body = request.body as Parameters<typeof db.createWebhook>[0];
+      const rawBody = request.body as Parameters<typeof db.createWebhook>[0];
+      const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
+      const body = { ...rawBody, orgId };
       if (!body.url || !body.secret || !Array.isArray(body.events)) {
         await reply.status(400).send({
           error: 'url, secret, and events are required',

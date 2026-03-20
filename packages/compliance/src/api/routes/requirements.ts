@@ -18,6 +18,8 @@ export async function registerRequirementRoutes(
       if (query.regulationId) filters.regulationId = String(query.regulationId);
       if (query.wcagCriterion) filters.wcagCriterion = String(query.wcagCriterion);
       if (query.obligation) filters.obligation = String(query.obligation);
+      const orgId = (request as unknown as { orgId?: string }).orgId;
+      if (orgId != null) filters.orgId = orgId;
 
       const items = await db.listRequirements(
         Object.keys(filters).length > 0 ? filters as Parameters<typeof db.listRequirements>[0] : undefined,
@@ -53,7 +55,8 @@ export async function registerRequirementRoutes(
   }, async (request, reply) => {
     try {
       const body = request.body as Parameters<typeof crud.createRequirement>[1];
-      const requirement = await crud.createRequirement(db, body);
+      const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
+      const requirement = await crud.createRequirement(db, { ...body, orgId });
       await reply.status(201).send(requirement);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Bad request';

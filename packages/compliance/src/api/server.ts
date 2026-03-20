@@ -19,6 +19,7 @@ import { registerWebhookRoutes } from './routes/webhooks.js';
 import { registerUserRoutes } from './routes/users.js';
 import { registerClientRoutes } from './routes/clients.js';
 import { registerSeedRoutes } from './routes/seed.js';
+import { registerOrgRoutes } from './routes/orgs.js';
 import { VERSION } from '../version.js';
 
 export interface ServerOptions {
@@ -101,6 +102,15 @@ export async function createServer(options: ServerOptions) {
   const authMiddleware = createAuthMiddleware(verifyToken);
   app.addHook('preHandler', authMiddleware);
 
+  // Decorate request with orgId from X-Org-Id header
+  app.decorateRequest('orgId', 'system');
+  app.addHook('preHandler', async (request) => {
+    const headerVal = request.headers['x-org-id'];
+    if (typeof headerVal === 'string' && headerVal.length > 0) {
+      (request as unknown as { orgId: string }).orgId = headerVal;
+    }
+  });
+
   // Initialize DB
   await db.initialize();
 
@@ -122,6 +132,7 @@ export async function createServer(options: ServerOptions) {
   await registerUserRoutes(app, db);
   await registerClientRoutes(app, db);
   await registerSeedRoutes(app, db);
+  await registerOrgRoutes(app, db);
 
   return app;
 }
