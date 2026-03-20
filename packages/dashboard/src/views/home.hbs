@@ -49,9 +49,12 @@
         Scan Now
       </button>
     </div>
-    <p class="form-hint">
-      <a href="/scan/new">Advanced scan options</a> — choose jurisdictions, WCAG level, and concurrency.
-    </p>
+    <details class="advanced-toggle">
+      <summary class="btn btn--ghost btn--sm">Advanced scan options</summary>
+      <p class="form-hint">
+        <a href="/scan/new">Configure jurisdictions, WCAG level, and concurrency</a> on the full scan page.
+      </p>
+    </details>
   </form>
 </section>
 
@@ -107,11 +110,11 @@
           </td>
           <td>
             {{#if (eq status 'completed')}}
-            <a href="/reports/{{id}}" class="btn btn--sm btn--ghost">View Report</a>
+            <a href="/reports/{{id}}" class="btn btn--sm btn--secondary">View Report</a>
             {{else if (eq status 'running')}}
-            <a href="/scan/{{id}}/progress" class="btn btn--sm btn--ghost">View Progress</a>
+            <a href="/scan/{{id}}/progress" class="btn btn--sm btn--secondary">View Progress</a>
             {{else if (eq status 'queued')}}
-            <a href="/scan/{{id}}/progress" class="btn btn--sm btn--ghost">View Queue</a>
+            <a href="/scan/{{id}}/progress" class="btn btn--sm btn--secondary">View Queue</a>
             {{/if}}
           </td>
         </tr>

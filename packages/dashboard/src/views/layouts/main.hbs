@@ -124,7 +124,7 @@
         t.classList.contains('close-modal-btn') ||
         t.classList.contains('modal__close')
       )) {
-        evt.stopPropagation(); // prevent other handlers from firing
+        evt.preventDefault();
         closeModal();
       }
     });
