@@ -12,9 +12,9 @@ The monitor agent watches legal sources for content changes and creates UpdatePr
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `COMPLIANCE_URL` | Yes | Base URL of the compliance service (e.g. `http://localhost:4000`) |
-| `COMPLIANCE_CLIENT_ID` | Yes | OAuth client ID with `admin` scope |
-| `COMPLIANCE_CLIENT_SECRET` | Yes | OAuth client secret |
+| `MONITOR_COMPLIANCE_URL` | Yes | Base URL of the compliance service (e.g. `http://localhost:4000`) |
+| `MONITOR_CLIENT_ID` | Yes | OAuth client ID with `admin` scope |
+| `MONITOR_CLIENT_SECRET` | Yes | OAuth client secret |
 
 ---
 
@@ -29,9 +29,9 @@ pally-compliance clients create \
 # → note the client_id and client_secret
 
 # Set env vars
-export COMPLIANCE_URL=http://localhost:4000
-export COMPLIANCE_CLIENT_ID=<client-id>
-export COMPLIANCE_CLIENT_SECRET=<client-secret>
+export MONITOR_COMPLIANCE_URL=http://localhost:4000
+export MONITOR_CLIENT_ID=<client-id>
+export MONITOR_CLIENT_SECRET=<client-secret>
 ```
 
 ---
@@ -115,7 +115,7 @@ Schedules (`daily`, `weekly`, `monthly`) are informational — the monitor agent
 
 ```bash
 # Run every Monday at 06:00 UTC
-0 6 * * 1 COMPLIANCE_URL=http://localhost:4000 COMPLIANCE_CLIENT_ID=xxx COMPLIANCE_CLIENT_SECRET=xxx pally-monitor scan
+0 6 * * 1 MONITOR_COMPLIANCE_URL=http://localhost:4000 MONITOR_CLIENT_ID=xxx MONITOR_CLIENT_SECRET=xxx pally-monitor scan
 ```
 
 ---

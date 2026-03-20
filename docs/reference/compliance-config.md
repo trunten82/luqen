@@ -75,6 +75,7 @@ Place in the working directory where you run `pally-compliance serve`. All field
 | `COMPLIANCE_JWT_PUBLIC_KEY` | `jwtKeyPair.publicKeyPath` | `./keys/public.pem` |
 | `COMPLIANCE_CORS_ORIGIN` | `cors.origin` | `https://app.example.com` |
 | `COMPLIANCE_URL` | A2A agent card URL | `https://compliance.example.com` |
+| `COMPLIANCE_REDIS_URL` | — | Optional Redis URL for caching compliance check results. When set, enables Redis-based caching with automatic fallback to no-cache. |
 
 **Precedence:** Environment variables > `compliance.config.json` > built-in defaults.
 
