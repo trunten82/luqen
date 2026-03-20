@@ -1,4 +1,6 @@
 import Database from 'better-sqlite3';
+import { MigrationRunner } from './migrations.js';
+import type { Migration } from './migrations.js';
 
 export interface ScanRecord {
   readonly id: string;
@@ -73,7 +75,11 @@ function rowToRecord(row: ScanRow): ScanRecord {
   };
 }
 
-const CREATE_TABLE_SQL = `
+export const DASHBOARD_MIGRATIONS: readonly Migration[] = [
+  {
+    id: '001',
+    name: 'create-scan-records',
+    sql: `
 CREATE TABLE IF NOT EXISTS scan_records (
   id TEXT PRIMARY KEY,
   site_url TEXT NOT NULL,
@@ -97,7 +103,9 @@ CREATE INDEX IF NOT EXISTS idx_scan_records_status ON scan_records(status);
 CREATE INDEX IF NOT EXISTS idx_scan_records_created_by ON scan_records(created_by);
 CREATE INDEX IF NOT EXISTS idx_scan_records_site_url ON scan_records(site_url);
 CREATE INDEX IF NOT EXISTS idx_scan_records_created_at ON scan_records(created_at);
-`;
+    `,
+  },
+];
 
 export class ScanDb {
   private readonly db: Database.Database;
@@ -109,7 +117,11 @@ export class ScanDb {
   }
 
   initialize(): void {
-    this.db.exec(CREATE_TABLE_SQL);
+    new MigrationRunner(this.db).run(DASHBOARD_MIGRATIONS);
+  }
+
+  getDatabase(): Database.Database {
+    return this.db;
   }
 
   createScan(data: {
