@@ -105,6 +105,26 @@ CREATE INDEX IF NOT EXISTS idx_scan_records_site_url ON scan_records(site_url);
 CREATE INDEX IF NOT EXISTS idx_scan_records_created_at ON scan_records(created_at);
     `,
   },
+  {
+    id: '002',
+    name: 'create-plugins',
+    sql: `
+CREATE TABLE IF NOT EXISTS plugins (
+  id TEXT PRIMARY KEY,
+  package_name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  version TEXT NOT NULL,
+  config TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'inactive',
+  installed_at TEXT NOT NULL,
+  activated_at TEXT,
+  error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_plugins_type ON plugins(type);
+CREATE INDEX IF NOT EXISTS idx_plugins_status ON plugins(status);
+    `,
+  },
 ];
 
 export class ScanDb {
