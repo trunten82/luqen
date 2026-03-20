@@ -120,6 +120,15 @@
       Dashboard Users
     </a>
 
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/api-keys')}}is-active{{/if}}"
+       href="/admin/api-keys"
+       aria-current="{{#if (startsWith currentPath '/admin/api-keys')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M15 7a4 4 0 00-8 0 4 4 0 003 3.87V18l2 2 2-2v-1l-1-1 1-1v-1l-1-1 1-1v-1.13A4 4 0 0015 7zm-4-1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      API Keys
+    </a>
+
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/organizations')}}is-active{{/if}}"
        href="/admin/organizations"
        aria-current="{{#if (startsWith currentPath '/admin/organizations')}}page{{/if}}">
