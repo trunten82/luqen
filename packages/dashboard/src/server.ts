@@ -218,7 +218,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Routes ────────────────────────────────────────────────────────────────
   await authRoutes(server, config, authService);
-  await homeRoutes(server, db);
+  await homeRoutes(server, db, config);
   await scanRoutes(server, db, orchestrator, config);
   await compareRoutes(server, db);
   await reportRoutes(server, db);

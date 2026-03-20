@@ -23,7 +23,7 @@
 </section>
 
 <section aria-labelledby="quick-scan-heading">
-  <h2 id="quick-scan-heading" class="section-title">Quick Scan</h2>
+  <h2 id="quick-scan-heading" class="section-title">New Scan</h2>
   <div class="card mb-lg">
     <form method="POST" action="/scan/new" novalidate>
       <div class="form-group">
@@ -34,7 +34,24 @@
                aria-describedby="quick-url-hint">
         <p id="quick-url-hint" class="form-hint">Enter the full URL including <code>https://</code>.</p>
       </div>
+
       <input type="hidden" name="standard" value="WCAG2AA">
+
+      {{#if jurisdictions.length}}
+      <div class="form-group">
+        <label>Jurisdictions</label>
+        <p class="form-hint mb-md">Select jurisdictions to check legal compliance. Leave empty to skip.</p>
+        <div class="checkbox-group">
+          {{#each jurisdictions}}
+          <label class="checkbox-label">
+            <input type="checkbox" name="jurisdictions" value="{{id}}">
+            {{name}}
+          </label>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+
       <div class="page-actions">
         <button type="submit" class="btn btn--primary">Start Scan</button>
         <a href="/scan/new" class="btn btn--ghost">Advanced Options</a>
