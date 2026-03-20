@@ -155,6 +155,32 @@ CREATE TABLE IF NOT EXISTS api_keys (
 CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(active);
     `,
   },
+  {
+    id: '005',
+    name: 'add-multi-tenancy',
+    sql: `
+ALTER TABLE scan_records ADD COLUMN org_id TEXT NOT NULL DEFAULT 'system';
+CREATE INDEX IF NOT EXISTS idx_scan_records_org_id ON scan_records(org_id);
+
+ALTER TABLE api_keys ADD COLUMN org_id TEXT NOT NULL DEFAULT 'system';
+CREATE INDEX IF NOT EXISTS idx_api_keys_org_id ON api_keys(org_id);
+
+CREATE TABLE IF NOT EXISTS organizations (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS org_members (
+  org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member',
+  joined_at TEXT NOT NULL,
+  PRIMARY KEY (org_id, user_id)
+);
+    `,
+  },
 ];
 
 export class ScanDb {
