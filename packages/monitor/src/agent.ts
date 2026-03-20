@@ -14,6 +14,7 @@ import {
   type MonitoredSource,
   type UpdateProposal,
 } from './compliance-client.js';
+import { loadLocalSources } from './local-sources.js';
 
 // ---- Types ----
 
@@ -30,6 +31,8 @@ export interface ScanResult {
 export interface AgentOptions {
   readonly config?: MonitorConfig;
   readonly fetchOptions?: FetchOptions;
+  /** Path to a local sources JSON file (--sources-file). Enables standalone mode. */
+  readonly sourcesFile?: string;
 }
 
 // ---- Main scan loop ----
@@ -52,15 +55,34 @@ export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
 
   const baseUrl = config.complianceUrl;
 
-  // Step 1: Get token
-  const token = await getToken(
-    baseUrl,
-    config.complianceClientId,
-    config.complianceClientSecret,
-  );
+  // Determine whether we can reach the compliance service or must use local sources
+  let sources: readonly MonitoredSource[];
+  let token: string | undefined;
+  let standaloneMode = false;
 
-  // Step 2: List sources
-  const sources = await listSources(baseUrl, token);
+  if (options.sourcesFile !== undefined) {
+    // Explicit local sources file — go straight to standalone mode
+    sources = await loadLocalSources(options.sourcesFile);
+    standaloneMode = true;
+    console.warn('[monitor] Using local source config from', options.sourcesFile);
+  } else {
+    try {
+      // Step 1: Get token
+      token = await getToken(
+        baseUrl,
+        config.complianceClientId,
+        config.complianceClientSecret,
+      );
+
+      // Step 2: List sources
+      sources = await listSources(baseUrl, token);
+    } catch {
+      // Compliance service unavailable — try local fallback
+      console.warn('[monitor] Compliance service unavailable, using local source config');
+      sources = await loadLocalSources();
+      standaloneMode = true;
+    }
+  }
 
   const proposalsCreated: UpdateProposal[] = [];
   const errorDetails: { sourceId: string; error: string }[] = [];
@@ -80,8 +102,10 @@ export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
 
       if (!diff.changed) {
         unchanged++;
-        // Still update lastCheckedAt even when unchanged
-        await updateSourceLastChecked(baseUrl, token, source.id, fetched.contentHash);
+        // Still update lastCheckedAt even when unchanged (only when connected)
+        if (!standaloneMode && token !== undefined) {
+          await updateSourceLastChecked(baseUrl, token, source.id, fetched.contentHash);
+        }
         continue;
       }
 
@@ -92,33 +116,40 @@ export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
         fetched.content,
       );
 
-      // Build a meaningful summary
-      const proposalSummary = buildProposalSummary(source, analysis.summary);
+      if (standaloneMode) {
+        // In standalone mode, log changes but skip proposal creation
+        console.warn(
+          `[monitor] Change detected in "${source.name}" (${source.url}): ${analysis.summary}`,
+        );
+      } else if (token !== undefined) {
+        // Build a meaningful summary
+        const proposalSummary = buildProposalSummary(source, analysis.summary);
 
-      // Create update proposal
-      const proposal = await proposeUpdate(baseUrl, token, {
-        source: source.url,
-        type: 'amendment',
-        summary: proposalSummary,
-        proposedChanges: {
-          action: 'update',
-          entityType: 'regulation',
-          after: {
-            sourceUrl: source.url,
-            contentHash: fetched.contentHash,
-            detectedChangeAt: fetched.fetchedAt,
-            analysisSummary: analysis.summary,
-            addedSections: analysis.sections.added,
-            removedSections: analysis.sections.removed,
-            modifiedSections: analysis.sections.modified,
+        // Create update proposal
+        const proposal = await proposeUpdate(baseUrl, token, {
+          source: source.url,
+          type: 'amendment',
+          summary: proposalSummary,
+          proposedChanges: {
+            action: 'update',
+            entityType: 'regulation',
+            after: {
+              sourceUrl: source.url,
+              contentHash: fetched.contentHash,
+              detectedChangeAt: fetched.fetchedAt,
+              analysisSummary: analysis.summary,
+              addedSections: analysis.sections.added,
+              removedSections: analysis.sections.removed,
+              modifiedSections: analysis.sections.modified,
+            },
           },
-        },
-      });
+        });
 
-      proposalsCreated.push(proposal);
+        proposalsCreated.push(proposal);
 
-      // Update source tracking
-      await updateSourceLastChecked(baseUrl, token, source.id, fetched.contentHash);
+        // Update source tracking
+        await updateSourceLastChecked(baseUrl, token, source.id, fetched.contentHash);
+      }
     } catch (err) {
       errorDetails.push({
         sourceId: source.id,
@@ -129,7 +160,7 @@ export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
 
   return {
     scanned: sources.length,
-    changed: proposalsCreated.length,
+    changed: standaloneMode ? sources.length - unchanged - errorDetails.length : proposalsCreated.length,
     unchanged,
     errors: errorDetails.length,
     proposalsCreated,
