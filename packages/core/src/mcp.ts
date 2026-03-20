@@ -10,6 +10,7 @@ import { generateJsonReport } from './reporter/json-reporter.js';
 import { proposeFixesFromReport } from './fixer/fix-proposer.js';
 import { applyFix } from './fixer/fix-applier.js';
 import type { ScanReport, FixProposal, PageResult } from './types.js';
+import { VERSION } from './version.js';
 
 export interface PallyMcpServer {
   readonly mcpServer: McpServer;
@@ -20,7 +21,7 @@ export interface PallyMcpServer {
 export function createServer(): PallyMcpServer {
   const mcpServer = new McpServer({
     name: 'pally-agent',
-    version: '0.1.0',
+    version: VERSION,
   });
 
   const toolNames: string[] = [];

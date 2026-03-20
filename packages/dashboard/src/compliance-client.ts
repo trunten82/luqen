@@ -579,3 +579,36 @@ export async function getSystemHealth(
     pa11y,
   };
 }
+
+// ── Safe Wrappers (graceful degradation) ─────────────────────────────────────
+
+export async function safeListJurisdictions(
+  baseUrl: string,
+  token: string,
+): Promise<Jurisdiction[]> {
+  try {
+    return await listJurisdictions(baseUrl, token);
+  } catch {
+    return [];
+  }
+}
+
+export async function safeGetSystemHealth(
+  complianceUrl: string,
+  webserviceUrl?: string,
+): Promise<SystemHealth> {
+  try {
+    const health = await getSystemHealth(complianceUrl, webserviceUrl);
+    return {
+      compliance: {
+        status: health.compliance.status === 'error' ? 'degraded' : health.compliance.status,
+      },
+      pa11y: health.pa11y,
+    };
+  } catch {
+    return {
+      compliance: { status: 'degraded' },
+      pa11y: undefined,
+    };
+  }
+}

@@ -1,4 +1,5 @@
 // Monitor configuration
+import { VERSION } from './version.js';
 
 export interface MonitorConfig {
   readonly complianceUrl: string;
@@ -18,6 +19,6 @@ export function loadConfig(): MonitorConfig {
     checkInterval: process.env.MONITOR_CHECK_INTERVAL ?? 'manual',
     userAgent:
       process.env.MONITOR_USER_AGENT ??
-      'pally-monitor/0.1.0 (+https://github.com/pally-agent)',
+      `pally-monitor/${VERSION} (+https://github.com/pally-agent)`,
   };
 }

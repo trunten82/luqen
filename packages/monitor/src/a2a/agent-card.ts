@@ -1,4 +1,5 @@
 // A2A agent card for the regulatory monitor agent.
+import { VERSION } from '../version.js';
 
 export interface AgentSkill {
   readonly id: string;
@@ -26,7 +27,7 @@ export const agentCard: AgentCard = {
   description:
     'Regulatory monitor agent — watches legal sources for accessibility regulation changes and proposes updates to the compliance service',
   url: process.env.MONITOR_URL ?? 'http://localhost:4200',
-  version: '0.1.0',
+  version: VERSION,
   capabilities: {
     streaming: false,
     pushNotifications: false,

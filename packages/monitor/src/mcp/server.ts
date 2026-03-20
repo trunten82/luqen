@@ -4,6 +4,7 @@ import { loadConfig } from '../config.js';
 import { runScan, getStatus } from '../agent.js';
 import { addSource } from '../compliance-client.js';
 import { getToken } from '../compliance-client.js';
+import { VERSION } from '../version.js';
 
 // ---- Tool name constants ----
 
@@ -20,7 +21,7 @@ export type MonitorToolName = (typeof MONITOR_TOOL_NAMES)[number];
 export function createMonitorMcpServer(): McpServer {
   const server = new McpServer({
     name: 'pally-monitor',
-    version: '0.1.0',
+    version: VERSION,
   });
 
   // ---- monitor_scan_sources ----

@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { getSystemHealth, getSeedStatus } from '../../compliance-client.js';
+import { safeGetSystemHealth, getSeedStatus } from '../../compliance-client.js';
 import { adminGuard } from '../../auth/middleware.js';
 import { statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -37,15 +37,15 @@ export async function systemRoutes(
 
       const [complianceHealth, pa11yHealth, seedStatus, packageVersion] =
         await Promise.allSettled([
-          getSystemHealth(config.complianceUrl, config.webserviceUrl),
+          safeGetSystemHealth(config.complianceUrl, config.webserviceUrl),
           Promise.resolve(undefined), // pa11y health is part of getSystemHealth
           getSeedStatus(config.complianceUrl, token),
           getPackageVersion(),
         ]);
 
       const complianceStatus =
-        complianceHealth.status === 'fulfilled' && complianceHealth.value.compliance.status === 'ok'
-          ? 'ok'
+        complianceHealth.status === 'fulfilled'
+          ? complianceHealth.value.compliance.status
           : 'error';
 
       const pa11yStatus =
