@@ -18,7 +18,11 @@ import { userRoutes } from './routes/admin/users.js';
 import { clientRoutes } from './routes/admin/clients.js';
 import { systemRoutes } from './routes/admin/system.js';
 import { monitorRoutes } from './routes/admin/monitor.js';
+import { pluginAdminRoutes } from './routes/admin/plugins.js';
+import { pluginApiRoutes } from './routes/api/plugins.js';
 import { ScanDb } from './db/scans.js';
+import { PluginManager } from './plugins/manager.js';
+import { loadRegistry } from './plugins/registry.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
 import { VERSION } from './version.js';
@@ -44,6 +48,17 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Database ──────────────────────────────────────────────────────────────
   const db = new ScanDb(config.dbPath);
   db.initialize();
+
+  // ── Plugin Manager ──────────────────────────────────────────────────────
+  const registryEntries = loadRegistry();
+  const pluginManager = new PluginManager({
+    db: db.getDatabase(),
+    pluginsDir: resolve(config.reportsDir, '..', 'plugins'),
+    encryptionKey: config.sessionSecret,
+    registryEntries,
+  });
+  await pluginManager.initializeOnStartup();
+  pluginManager.startHealthChecks(60_000);
 
   // ── Optional Redis ────────────────────────────────────────────────────────
   const redisClient = createRedisClient(config.redisUrl);
@@ -160,6 +175,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     webserviceUrl: config.webserviceUrl,
     dbPath: config.dbPath,
   });
+
+  await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
+
+  // ── Plugin API routes ────────────────────────────────────────────────────
+  await pluginApiRoutes(server, pluginManager);
 
   // ── Health endpoint ───────────────────────────────────────────────────────
   server.get('/health', async (_request, _reply) => {
