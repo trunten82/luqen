@@ -1,0 +1,13 @@
+{
+  "name": "notify-slack",
+  "displayName": "Slack Notifications",
+  "type": "notification",
+  "version": "1.0.0",
+  "description": "Send scan results and alerts to Slack channels",
+  "configSchema": [
+    { "key": "webhookUrl", "label": "Webhook URL", "type": "secret", "required": true },
+    { "key": "channel", "label": "Channel", "type": "string", "default": "#accessibility" },
+    { "key": "username", "label": "Bot Username", "type": "string", "default": "Pally Agent" },
+    { "key": "events", "label": "Events to notify", "type": "string", "default": "scan.complete,scan.failed,violation.found,regulation.changed" }
+  ]
+}
