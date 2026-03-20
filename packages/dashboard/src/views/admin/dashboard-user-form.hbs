@@ -1,0 +1,42 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h2 id="modal-title">Add Dashboard User</h2>
+
+    <form hx-post="/admin/dashboard-users"
+          hx-target="#dashboard-users-table"
+          hx-swap="beforeend"
+          hx-on::after-request="if(event.detail.successful) document.getElementById('modal-container').replaceChildren()"
+          novalidate>
+
+      <div class="form-group">
+        <label for="du-username" class="form-label">Username <span aria-hidden="true">*</span></label>
+        <input id="du-username" name="username" type="text" class="input"
+               required aria-required="true" autocomplete="username">
+      </div>
+
+      <div class="form-group">
+        <label for="du-password" class="form-label">Password <span aria-hidden="true">*</span></label>
+        <input id="du-password" name="password" type="password" class="input"
+               required aria-required="true" autocomplete="new-password"
+               aria-describedby="du-password-hint">
+        <span id="du-password-hint" class="form-hint">Minimum 8 characters</span>
+      </div>
+
+      <div class="form-group">
+        <label for="du-role" class="form-label">Role <span aria-hidden="true">*</span></label>
+        <select id="du-role" name="role" class="select"
+                required aria-required="true">
+          {{#each roles}}
+          <option value="{{this}}">{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Create User</button>
+        <button type="button" class="btn btn--ghost close-modal-btn"
+                aria-label="Cancel and close dialog">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
