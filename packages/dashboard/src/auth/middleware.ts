@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { decodeJwt } from 'jose';
+import type { AuthService } from './auth-service.js';
 
 export interface AuthUser {
   readonly id: string;
@@ -13,72 +13,26 @@ declare module 'fastify' {
   }
 }
 
-function isTokenExpired(token: string): boolean {
-  try {
-    const payload = decodeJwt(token);
-    if (payload.exp === undefined) return false;
-    return Date.now() >= payload.exp * 1000;
-  } catch {
-    return true;
-  }
-}
+export function createAuthGuard(authService: AuthService) {
+  return async function authGuard(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const isApiRequest = request.url.startsWith('/api/');
+    const result = await authService.authenticateRequest(request);
 
-function extractUserFromToken(token: string): AuthUser | null {
-  try {
-    const payload = decodeJwt(token);
-    const sub = payload.sub;
-    const username = payload.username ?? payload.sub ?? '';
-    const role = payload.role ?? 'viewer';
-    if (typeof sub !== 'string' || sub === '') return null;
-    return {
-      id: sub,
-      username: typeof username === 'string' ? username : String(username),
-      role: typeof role === 'string' ? role : 'viewer',
+    if (!result.authenticated) {
+      if (isApiRequest) {
+        await reply.code(401).send({ error: result.error ?? 'Authentication required' });
+        return;
+      }
+      await reply.redirect('/login');
+      return;
+    }
+
+    request.user = {
+      id: result.user!.id,
+      username: result.user!.username,
+      role: result.user!.role ?? 'viewer',
     };
-  } catch {
-    return null;
-  }
-}
-
-export async function authGuard(
-  request: FastifyRequest,
-  reply: FastifyReply,
-): Promise<void> {
-  const isApiRequest = request.url.startsWith('/api/');
-  const session = request.session as { token?: string };
-  const token = session.token;
-
-  if (token === undefined || token === '') {
-    if (isApiRequest) {
-      await reply.code(401).send({ error: 'Authentication required' });
-    } else {
-      await reply.redirect('/login');
-    }
-    return;
-  }
-
-  if (isTokenExpired(token)) {
-    request.session.delete();
-    if (isApiRequest) {
-      await reply.code(401).send({ error: 'Token expired' });
-    } else {
-      await reply.redirect('/login');
-    }
-    return;
-  }
-
-  const user = extractUserFromToken(token);
-  if (user === null) {
-    request.session.delete();
-    if (isApiRequest) {
-      await reply.code(401).send({ error: 'Invalid token' });
-    } else {
-      await reply.redirect('/login');
-    }
-    return;
-  }
-
-  request.user = user;
+  };
 }
 
 export async function adminGuard(
