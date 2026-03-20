@@ -614,9 +614,9 @@ export class SqliteAdapter implements DbAdapter {
         const id = randomUUID();
         const now = new Date().toISOString();
         this.db.prepare(`
-          INSERT INTO requirements (id, regulationId, wcagVersion, wcagLevel, wcagCriterion, obligation, notes, createdAt, updatedAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(id, item.regulationId, item.wcagVersion, item.wcagLevel, item.wcagCriterion, item.obligation, item.notes ?? null, now, now);
+          INSERT INTO requirements (id, regulationId, wcagVersion, wcagLevel, wcagCriterion, obligation, notes, createdAt, updatedAt, org_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(id, item.regulationId, item.wcagVersion, item.wcagLevel, item.wcagCriterion, item.obligation, item.notes ?? null, now, now, item.orgId ?? 'system');
         const row = this.db.prepare('SELECT * FROM requirements WHERE id = ?').get(id) as RequirementRow;
         results.push(toRequirement(row));
       }

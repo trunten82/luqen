@@ -130,6 +130,11 @@ export async function scanRoutes(
         return reply.code(404).send({ error: 'Scan not found' });
       }
 
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Scan not found' });
+      }
+
       return reply.view('scan-progress.hbs', {
         pageTitle: 'Scan Progress',
         currentPath: `/scan/${id}/progress`,
@@ -150,6 +155,11 @@ export async function scanRoutes(
 
       const scan = db.getScan(id);
       if (scan === null) {
+        return reply.code(404).send({ error: 'Scan not found' });
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Scan not found' });
       }
 

@@ -36,6 +36,7 @@ export function createAuthMiddleware(verifier: TokenVerifier) {
           sub: 'api-key',
           scopes: ['read', 'write', 'admin'],
         };
+        (request as FastifyRequest & { authType: string }).authType = 'apikey';
         return;
       }
     }
@@ -45,6 +46,7 @@ export function createAuthMiddleware(verifier: TokenVerifier) {
     try {
       const payload = await verifier(token);
       (request as FastifyRequest & { tokenPayload: TokenPayload }).tokenPayload = payload;
+      (request as FastifyRequest & { authType: string }).authType = 'jwt';
     } catch {
       await reply.status(401).send({ error: 'Invalid or expired token', statusCode: 401 });
     }

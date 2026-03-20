@@ -232,6 +232,11 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
       const scanMeta = {
         ...scan,
         jurisdictions: scan.jurisdictions.join(', '),
@@ -284,6 +289,11 @@ export async function reportRoutes(
       const scan = db.getScan(id);
 
       if (scan === null) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 

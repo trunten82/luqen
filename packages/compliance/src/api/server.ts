@@ -102,9 +102,15 @@ export async function createServer(options: ServerOptions) {
   const authMiddleware = createAuthMiddleware(verifyToken);
   app.addHook('preHandler', authMiddleware);
 
-  // Decorate request with orgId from X-Org-Id header
+  // Decorate request with orgId from X-Org-Id header and authType
   app.decorateRequest('orgId', 'system');
+  app.decorateRequest('authType', '');
   app.addHook('preHandler', async (request) => {
+    // Only accept X-Org-Id when authenticated via API key (service-to-service),
+    // not from regular JWT tokens — prevents users from spoofing org context.
+    const authType = (request as unknown as { authType: string }).authType;
+    if (authType !== 'apikey') return;
+
     const headerVal = request.headers['x-org-id'];
     if (typeof headerVal === 'string' && headerVal.length > 0) {
       (request as unknown as { orgId: string }).orgId = headerVal;
