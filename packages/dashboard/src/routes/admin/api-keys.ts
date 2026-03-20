@@ -29,21 +29,18 @@ function formatDate(iso: string | null): string {
 }
 
 function keyRowHtml(row: ApiKeyRow): string {
-  const revokeBtn = row.active
-    ? `<button hx-post="/admin/api-keys/${encodeURIComponent(row.id)}/revoke"
-              hx-confirm="Revoke API key &quot;${escapeHtml(row.label)}&quot;?"
-              hx-target="closest tr"
-              hx-swap="outerHTML"
-              class="btn btn--sm btn--danger"
-              aria-label="Revoke ${escapeHtml(row.label)}">Revoke</button>`
-    : '';
-
   return `<tr id="api-key-${row.id}">
   <td data-label="Label">${escapeHtml(row.label)}</td>
   <td data-label="Status">${statusBadge(row.active)}</td>
   <td data-label="Created">${formatDate(row.created_at)}</td>
   <td data-label="Last Used">${formatDate(row.last_used_at)}</td>
-  <td data-label="Actions">${revokeBtn}</td>
+  <td>
+    <button hx-get="/admin/api-keys/${encodeURIComponent(row.id)}/view"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            class="btn btn--sm btn--secondary"
+            aria-label="View ${escapeHtml(row.label)}">View</button>
+  </td>
 </tr>`;
 }
 
@@ -67,6 +64,30 @@ export async function apiKeyRoutes(
         currentPath: '/admin/api-keys',
         user: request.user,
         keys,
+      });
+    },
+  );
+
+  // GET /admin/api-keys/:id/view — view key detail with revoke option
+  server.get(
+    '/admin/api-keys/:id/view',
+    { preHandler: adminGuard },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const row = db.prepare(
+        'SELECT id, label, active, created_at, last_used_at FROM api_keys WHERE id = ?',
+      ).get(id) as ApiKeyRow | undefined;
+
+      if (row === undefined) {
+        return reply.code(404).header('content-type', 'text/html').send(toastHtml('API key not found.', 'error'));
+      }
+
+      return reply.view('admin/api-key-view.hbs', {
+        key: {
+          ...row,
+          createdDisplay: formatDate(row.created_at),
+          lastUsedDisplay: formatDate(row.last_used_at),
+        },
       });
     },
   );

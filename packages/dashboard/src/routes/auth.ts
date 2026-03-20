@@ -72,6 +72,7 @@ export async function authRoutes(
         session.set('username', 'admin');
         session.set('role', 'admin');
         session.set('authMethod', 'api-key');
+        session.set('bootId', authService.getBootId());
 
         await reply.redirect('/');
         return;
@@ -130,6 +131,7 @@ export async function authRoutes(
           session.set('username', displayUsername);
           session.set('role', userRole);
           session.set('authMethod', 'oauth');
+          session.set('bootId', authService.getBootId());
 
           await reply.redirect('/');
           return;
@@ -155,6 +157,7 @@ export async function authRoutes(
       session.set('username', result.user!.username);
       session.set('role', result.user!.role ?? 'user');
       session.set('authMethod', 'password');
+      session.set('bootId', authService.getBootId());
 
       await reply.redirect('/');
     },
@@ -206,6 +209,7 @@ export async function authRoutes(
       session.set('username', result.user!.username);
       session.set('role', result.user!.role ?? 'user');
       session.set('authMethod', 'sso');
+      session.set('bootId', authService.getBootId());
 
       await reply.redirect('/');
     },

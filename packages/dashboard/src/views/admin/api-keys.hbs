@@ -35,20 +35,13 @@
             {{/if}}
           </td>
           <td data-label="Created">{{this.created_at}}</td>
-          <td data-label="Last Used">{{#if this.last_used_at}}{{this.last_used_at}}{{else}}—{{/if}}</td>
+          <td data-label="Last Used">{{#if this.last_used_at}}{{this.last_used_at}}{{else}}Never{{/if}}</td>
           <td>
-            {{#if this.active}}
-            <button hx-post="/admin/api-keys/{{this.id}}/revoke"
-                    hx-confirm="Revoke API key &quot;{{this.label}}&quot;? This cannot be undone."
-                    hx-target="closest tr"
-                    hx-swap="outerHTML"
-                    class="btn btn--sm btn--danger"
-                    aria-label="Revoke {{this.label}}">
-              Revoke
-            </button>
-            {{else}}
-            <span class="text-muted text-xs">Revoked</span>
-            {{/if}}
+            <button hx-get="/admin/api-keys/{{this.id}}/view"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="View {{this.label}}">View</button>
           </td>
         </tr>
         {{/each}}
