@@ -1,63 +1,61 @@
 <section aria-label="API key management">
-  <div class="admin-header">
-    <h1 class="page-title">API Keys</h1>
+  <div class="page-actions">
     <button class="btn btn--primary"
             hx-get="/admin/api-keys/new"
             hx-target="#modal-container"
             hx-swap="innerHTML"
-            aria-label="Create new API key">
+            aria-haspopup="dialog">
       Create API Key
     </button>
   </div>
 
-  <div id="modal-container"></div>
   <div id="new-key-alert"></div>
 
   {{#if keys.length}}
-  <table class="table" aria-label="API keys list">
-    <thead>
-      <tr>
-        <th scope="col">Label</th>
-        <th scope="col">Status</th>
-        <th scope="col">Created</th>
-        <th scope="col">Last Used</th>
-        <th scope="col">Actions</th>
-      </tr>
-    </thead>
-    <tbody id="api-keys-table">
-      {{#each keys}}
-      <tr id="api-key-{{this.id}}">
-        <td data-label="Label">{{this.label}}</td>
-        <td data-label="Status">
-          {{#if this.active}}
-          <span class="badge badge--success">Active</span>
-          {{else}}
-          <span class="badge badge--error">Revoked</span>
-          {{/if}}
-        </td>
-        <td data-label="Created">{{this.created_at}}</td>
-        <td data-label="Last Used">{{#if this.last_used_at}}{{this.last_used_at}}{{else}}—{{/if}}</td>
-        <td data-label="Actions">
-          {{#if this.active}}
-          <button hx-post="/admin/api-keys/{{this.id}}/revoke"
-                  hx-confirm="Revoke API key &quot;{{this.label}}&quot;?"
-                  hx-target="closest tr"
-                  hx-swap="outerHTML"
-                  class="btn btn--sm btn--warning"
-                  aria-label="Revoke {{this.label}}">
-            Revoke
-          </button>
-          {{/if}}
-        </td>
-      </tr>
-      {{/each}}
-    </tbody>
-  </table>
-  {{else}}
-  <div class="empty-state" role="status">
-    <p>No API keys found. Create one to allow programmatic access.</p>
+  <div class="table-wrapper">
+    <table aria-label="API keys">
+      <thead>
+        <tr>
+          <th scope="col">Label</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created</th>
+          <th scope="col">Last Used</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="api-keys-table">
+        {{#each keys}}
+        <tr id="api-key-{{this.id}}">
+          <td data-label="Label">{{this.label}}</td>
+          <td data-label="Status">
+            {{#if this.active}}
+            <span class="badge badge--completed">Active</span>
+            {{else}}
+            <span class="badge badge--failed">Revoked</span>
+            {{/if}}
+          </td>
+          <td data-label="Created">{{this.created_at}}</td>
+          <td data-label="Last Used">{{#if this.last_used_at}}{{this.last_used_at}}{{else}}—{{/if}}</td>
+          <td>
+            {{#if this.active}}
+            <button hx-post="/admin/api-keys/{{this.id}}/revoke"
+                    hx-confirm="Revoke API key &quot;{{this.label}}&quot;? This cannot be undone."
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Revoke {{this.label}}">
+              Revoke
+            </button>
+            {{else}}
+            <span class="text-muted text-xs">Revoked</span>
+            {{/if}}
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
   </div>
+  {{else}}
+  <p class="text-muted">No API keys found. Create one to allow programmatic access.</p>
   {{/if}}
-
-  <div id="toast"></div>
 </section>

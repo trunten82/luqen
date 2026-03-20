@@ -8,23 +8,21 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <!-- Skip to main content: first focusable element on every page -->
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
-  <!-- Sidebar backdrop (mobile overlay) -->
-  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <!-- Sidebar backdrop -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
-  <!-- Sidebar navigation -->
   {{> sidebar}}
 
-  <!-- Mobile top bar (visible below 1024px, fixed at top) -->
-  <header class="mobile-header" role="banner" id="mobile-header">
+  <!-- Mobile top bar -->
+  <header class="mobile-header" role="banner">
     <button class="mobile-menu-toggle"
             aria-label="Open navigation menu"
             aria-expanded="false"
-            aria-controls="sidebar"
             id="mobile-menu-btn"
-            type="button">
+            type="button"
+            onclick="toggleSidebar()">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
         <path d="M2 5h16M2 10h16M2 15h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
@@ -32,7 +30,6 @@
     <span style="font-size:1.125rem;font-weight:700;color:var(--accent)">Pally</span>
   </header>
 
-  <!-- Main content area -->
   <main id="main-content" class="main-content" role="main" tabindex="-1">
     {{#if pageTitle}}
     <header class="page-header">
@@ -42,123 +39,83 @@
       {{/if}}
     </header>
     {{/if}}
-
     <div class="page-body">
       {{{body}}}
     </div>
   </main>
 
-  <!-- Toast notification container (populated by HTMX OOB swaps) -->
   <div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
-
-  <!-- Modal container (populated by HTMX fragment loads) -->
   <div id="modal-container"></div>
 
   <script src="/static/htmx.min.js"></script>
   <script src="/static/htmx-sse.js"></script>
   <script>
-    // ── Sidebar toggle (mobile) — uses event delegation for resilience ──
-    function closeSidebar() {
-      var sidebar = document.getElementById('sidebar');
-      var backdrop = document.getElementById('sidebar-backdrop');
+    /* ── Sidebar (mobile) ─────────────────────────────────────────────── */
+    function toggleSidebar() {
+      var s = document.getElementById('sidebar');
+      if (s && s.classList.contains('is-open')) { closeSidebar(); } else { openSidebar(); }
+    }
+    function openSidebar() {
+      var s = document.getElementById('sidebar');
+      var b = document.getElementById('sidebar-backdrop');
       var btn = document.getElementById('mobile-menu-btn');
-      if (sidebar) sidebar.classList.remove('is-open');
-      if (backdrop) backdrop.classList.remove('is-visible');
-      if (btn) {
-        btn.setAttribute('aria-expanded', 'false');
-        btn.setAttribute('aria-label', 'Open navigation menu');
-      }
+      if (s) s.classList.add('is-open');
+      if (b) b.classList.add('is-visible');
+      if (btn) { btn.setAttribute('aria-expanded','true'); btn.setAttribute('aria-label','Close navigation menu'); }
+      document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar() {
+      var s = document.getElementById('sidebar');
+      var b = document.getElementById('sidebar-backdrop');
+      var btn = document.getElementById('mobile-menu-btn');
+      if (s) s.classList.remove('is-open');
+      if (b) b.classList.remove('is-visible');
+      if (btn) { btn.setAttribute('aria-expanded','false'); btn.setAttribute('aria-label','Open navigation menu'); }
       document.body.style.overflow = '';
     }
 
-    function openSidebar() {
-      var sidebar = document.getElementById('sidebar');
-      var backdrop = document.getElementById('sidebar-backdrop');
-      var btn = document.getElementById('mobile-menu-btn');
-      if (sidebar) sidebar.classList.add('is-open');
-      if (backdrop) backdrop.classList.add('is-visible');
-      if (btn) {
-        btn.setAttribute('aria-expanded', 'true');
-        btn.setAttribute('aria-label', 'Close navigation menu');
-      }
-      document.body.style.overflow = 'hidden';
+    /* ── Modal ─────────────────────────────────────────────────────────── */
+    function closeModal() {
+      var c = document.getElementById('modal-container');
+      if (c) { while (c.firstChild) c.removeChild(c.firstChild); }
     }
 
-    // Use document-level delegation so it survives DOM changes
-    document.addEventListener('click', function (evt) {
-      var target = evt.target;
-      // Burger menu button (or child SVG/path)
-      if (target && target.closest('#mobile-menu-btn')) {
-        var sidebar = document.getElementById('sidebar');
-        if (sidebar && sidebar.classList.contains('is-open')) {
-          closeSidebar();
-        } else {
-          openSidebar();
-        }
-        return;
-      }
-      // Sidebar backdrop
-      if (target && target.id === 'sidebar-backdrop') {
-        closeSidebar();
-        return;
-      }
-    });
+    /* Close modal on overlay/cancel/close click — use MutationObserver to
+       bind onclick on dynamically loaded modal elements (from HTMX).
+       This avoids document-level click handlers that interfere with the burger. */
+    new MutationObserver(function () {
+      var c = document.getElementById('modal-container');
+      if (!c) return;
+      c.querySelectorAll('.modal-overlay').forEach(function (el) {
+        if (!el._bound) { el._bound = true; el.addEventListener('click', function (e) { if (e.target === el) closeModal(); }); }
+      });
+      c.querySelectorAll('.close-modal-btn, .modal__close').forEach(function (el) {
+        if (!el._bound) { el._bound = true; el.addEventListener('click', function () { closeModal(); }); }
+      });
+    }).observe(document.getElementById('modal-container'), { childList: true, subtree: true });
 
-    // ── Toast auto-dismiss ───────────────────────────────────────────────
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+    /* ── Toast auto-dismiss ───────────────────────────────────────────── */
     document.addEventListener('htmx:afterSwap', function () {
-      var toastContainer = document.getElementById('toast-container');
-      if (!toastContainer) return;
-      toastContainer.querySelectorAll('.toast').forEach(function (toast) {
+      var tc = document.getElementById('toast-container');
+      if (!tc) return;
+      tc.querySelectorAll('.toast').forEach(function (t) {
         setTimeout(function () {
-          toast.style.opacity = '0';
-          toast.style.transition = 'opacity 300ms ease';
-          setTimeout(function () { toast.parentNode && toast.parentNode.removeChild(toast); }, 300);
+          t.style.opacity = '0'; t.style.transition = 'opacity 300ms ease';
+          setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
         }, 5000);
       });
     });
 
-    // ── Modal management ─────────────────────────────────────────────────
-    function closeModal() {
-      var container = document.getElementById('modal-container');
-      if (container) {
-        while (container.firstChild) container.removeChild(container.firstChild);
-      }
-      // Ensure body scroll is restored (modal overlay may have locked it)
-      if (!document.getElementById('sidebar') || !document.getElementById('sidebar').classList.contains('is-open')) {
-        document.body.style.overflow = '';
-      }
-    }
-
-    document.addEventListener('click', function (evt) {
-      var t = evt.target;
-      if (t && (
-        t.classList.contains('modal-overlay') ||
-        t.classList.contains('close-modal-btn') ||
-        t.classList.contains('modal__close')
-      )) {
-        evt.preventDefault();
-        closeModal();
-      }
-    });
-
-    document.addEventListener('keydown', function (evt) {
-      if (evt.key === 'Escape') closeModal();
-    });
-
-    // ── Mobile: tap card row to open view/detail ─────────────────────────
-    document.addEventListener('click', function (evt) {
-      // Only on mobile
+    /* ── Mobile: tap card row → open view ──────────────────────────────── */
+    document.addEventListener('click', function (e) {
       if (window.innerWidth > 767) return;
-      var target = evt.target;
-      // Don't intercept clicks on interactive elements
-      if (target.closest('button, a, input, select, textarea, .btn')) return;
-      var row = target.closest('tbody tr');
+      if (e.target.closest('button, a, input, select, textarea, .btn')) return;
+      var row = e.target.closest('tbody tr');
       if (!row) return;
-      // Find the View or Edit button in this row
-      var viewBtn = row.querySelector('[hx-get*="/view"], [hx-get*="/edit"], .btn--secondary');
-      if (viewBtn) {
-        viewBtn.click();
-      }
+      var v = row.querySelector('[hx-get*="/view"], [hx-get*="/edit"], .btn--secondary');
+      if (v) v.click();
     });
   </script>
 </body>

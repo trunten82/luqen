@@ -14,8 +14,8 @@ interface ApiKeyRow {
 
 function statusBadge(active: number): string {
   return active
-    ? '<span class="badge badge--success">Active</span>'
-    : '<span class="badge badge--error">Revoked</span>';
+    ? '<span class="badge badge--completed">Active</span>'
+    : '<span class="badge badge--failed">Revoked</span>';
 }
 
 function formatDate(iso: string | null): string {
@@ -34,7 +34,7 @@ function keyRowHtml(row: ApiKeyRow): string {
               hx-confirm="Revoke API key &quot;${escapeHtml(row.label)}&quot;?"
               hx-target="closest tr"
               hx-swap="outerHTML"
-              class="btn btn--sm btn--warning"
+              class="btn btn--sm btn--danger"
               aria-label="Revoke ${escapeHtml(row.label)}">Revoke</button>`
     : '';
 
