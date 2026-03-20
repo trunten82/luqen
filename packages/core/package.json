@@ -3,9 +3,13 @@
   "version": "0.10.0",
   "description": "Accessibility testing agent using pa11y webservice",
   "type": "module",
-  "main": "dist/cli.js",
-  "types": "dist/cli.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": { "pally-agent": "dist/cli.js" },
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli.js"
+  },
   "scripts": {
     "build": "tsc && cp src/reporter/report.hbs dist/reporter/report.hbs",
     "test": "vitest run",
