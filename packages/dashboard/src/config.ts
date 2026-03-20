@@ -11,6 +11,8 @@ export interface DashboardConfig {
   readonly maxConcurrentScans: number;
   readonly complianceClientId: string;
   readonly complianceClientSecret: string;
+  readonly pluginsDir: string;
+  readonly pluginsConfigFile?: string;
   /** Optional Redis URL — enables scan queue and SSE pub/sub when set. */
   readonly redisUrl?: string;
 }
@@ -25,6 +27,7 @@ const DEFAULTS: DashboardConfig = {
   maxConcurrentScans: 2,
   complianceClientId: '',
   complianceClientSecret: '',
+  pluginsDir: './plugins',
 };
 
 function loadConfigFile(configPath: string): Partial<DashboardConfig> {
@@ -54,6 +57,8 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
       : config.maxConcurrentScans,
     complianceClientId: process.env['DASHBOARD_COMPLIANCE_CLIENT_ID'] ?? config.complianceClientId,
     complianceClientSecret: process.env['DASHBOARD_COMPLIANCE_CLIENT_SECRET'] ?? config.complianceClientSecret,
+    pluginsDir: process.env['DASHBOARD_PLUGINS_DIR'] ?? config.pluginsDir,
+    pluginsConfigFile: process.env['DASHBOARD_PLUGINS_CONFIG'] ?? config.pluginsConfigFile,
     redisUrl: process.env['DASHBOARD_REDIS_URL'] ?? config.redisUrl,
   };
 }
@@ -84,6 +89,16 @@ export function validateConfig(config: DashboardConfig): void {
       mkdirSync(resolvedReportsDir, { recursive: true });
     } catch (err) {
       throw new Error(`Cannot create reportsDir at ${resolvedReportsDir}: ${String(err)}`);
+    }
+  }
+
+  // Ensure pluginsDir exists
+  const resolvedPluginsDir = resolve(config.pluginsDir);
+  if (!existsSync(resolvedPluginsDir)) {
+    try {
+      mkdirSync(resolvedPluginsDir, { recursive: true });
+    } catch (err) {
+      throw new Error(`Cannot create pluginsDir at ${resolvedPluginsDir}: ${String(err)}`);
     }
   }
 
