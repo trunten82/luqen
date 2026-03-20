@@ -28,6 +28,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Notification events: scan.complete, scan.failed, violation.found, regulation.changed
 - Rich Slack Block Kit message formatting for all event types
 - Configurable event filtering (subscribe to specific event types)
+- @pally-agent/plugin-notify-teams — Microsoft Teams notification plugin via webhooks
+- @pally-agent/plugin-storage-s3 — AWS S3 report/scan storage plugin (native AWS4 signing)
+- @pally-agent/plugin-storage-azure — Azure Blob Storage plugin (native SharedKey auth)
+- Monitor multi-tenant: X-Org-Id header support, --org-id CLI flag, MONITOR_ORG_ID env var
+- Hybrid compliance queries: read operations return system + org data combined
 
 ### Changed
 - ScanRecord now includes orgId field (defaults to 'system')
