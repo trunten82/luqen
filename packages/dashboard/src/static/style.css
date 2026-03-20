@@ -974,8 +974,21 @@ select {
   margin-bottom: var(--space-xl);
 }
 
+/* ---- Sidebar Backdrop (mobile overlay) ---- */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
 /* ---- Responsive (Mobile / Tablet) ---- */
 @media (max-width: 1024px) {
+  .sidebar-backdrop.is-visible {
+    display: block;
+  }
+
   .sidebar {
     transform: translateX(-100%);
   }
@@ -1008,6 +1021,10 @@ select {
     padding: var(--space-md) var(--space-lg);
     border-bottom: 1px solid var(--border-color);
     background-color: var(--bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-sm);
   }
 
   .stats-grid {
@@ -1028,8 +1045,86 @@ select {
     padding: var(--space-md);
   }
 
+  /* Table mobile improvements */
+  th, td {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-size-xs);
+  }
+
+  /* Visual scroll indicator */
   .table-wrapper {
+    position: relative;
     border-radius: 0;
+  }
+
+  .table-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to right, transparent, var(--bg-primary));
+    pointer-events: none;
+    border-radius: 0 var(--border-radius-lg) var(--border-radius-lg) 0;
+  }
+
+  /* Hide less important columns on mobile */
+  .hide-mobile {
+    display: none;
+  }
+
+  /* Page actions stack on mobile */
+  .page-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .page-actions .btn {
+    width: 100%;
+  }
+
+  /* Form improvements for mobile */
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  .login-card {
+    padding: var(--space-lg);
+  }
+
+  .search-bar {
+    flex-direction: column;
+  }
+
+  .search-bar input {
+    max-width: 100%;
+  }
+
+  /* Issue counters mobile */
+  .issue-counters {
+    justify-content: center;
+  }
+
+  .issue-counter {
+    min-width: 60px;
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  /* Badge mobile */
+  .badge {
+    font-size: 0.65rem;
+  }
+
+  /* Log area mobile */
+  .log-area {
+    height: 150px;
+    font-size: 0.65rem;
   }
 
   .modal {
@@ -1048,6 +1143,21 @@ select {
     left: var(--space-md);
     right: var(--space-md);
     max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+
+  .card {
+    padding: var(--space-md);
+  }
+
+  .card__value {
+    font-size: var(--font-size-2xl);
   }
 }
 
