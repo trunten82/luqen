@@ -23,7 +23,7 @@ describe('GET /api/v1/health', () => {
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as Record<string, unknown>;
     expect(body.status).toBe('ok');
-    expect(body.version).toBe('0.5.1');
+    expect(body.version).toBe('0.10.0');
     expect(typeof body.timestamp).toBe('string');
   });
 
