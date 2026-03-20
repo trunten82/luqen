@@ -49,8 +49,8 @@ export async function jurisdictionRoutes(
       const isHtmx = request.headers['hx-request'] === 'true';
 
       if (isPartialRows) {
-        // "Load more" — return just table rows + optional new load-more button
         const escQ = encodeURIComponent(q);
+        const shown = offset + page.length;
         let html = page.map((j) =>
           `<tr id="jurisdiction-${j.id}">
   <td data-label="ID">${j.id}</td>
@@ -61,19 +61,16 @@ export async function jurisdictionRoutes(
 </tr>`
         ).join('\n');
 
+        // OOB swap: replace the load-more div and the counter
+        const counterOob = `<span id="jurisdictions-counter" hx-swap-oob="true">Showing ${shown} of ${total}</span>`;
+        let loadMoreOob: string;
         if (hasNext) {
-          html += `\n<tr id="load-more-row" hx-swap-oob="true"><td colspan="5" style="text-align:center;padding:var(--space-md)">
-  <button hx-get="/admin/jurisdictions?offset=${offset + limit}&limit=${limit}&q=${escQ}&partial=rows"
-          hx-target="#jurisdictions-table-body"
-          hx-swap="beforeend"
-          class="btn btn--ghost"
-          hx-on::after-request="document.getElementById('load-more-row')?.remove()">
-    Load more (${offset + limit} of ${total})
-  </button>
-</td></tr>`;
+          loadMoreOob = `<div id="load-more-jurisdictions" hx-swap-oob="true" class="load-more"><button hx-get="/admin/jurisdictions?offset=${shown}&limit=${limit}&q=${escQ}&partial=rows" hx-target="#jurisdictions-table-body" hx-swap="beforeend" class="btn btn--ghost btn--full">Load more (${shown} of ${total})</button></div>`;
+        } else {
+          loadMoreOob = `<div id="load-more-jurisdictions" hx-swap-oob="true"></div>`;
         }
 
-        return reply.code(200).header('content-type', 'text/html').send(html);
+        return reply.code(200).header('content-type', 'text/html').send(`${html}\n${counterOob}\n${loadMoreOob}`);
       }
 
       if (isHtmx && !isPartialRows) {
