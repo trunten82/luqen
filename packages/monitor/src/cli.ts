@@ -4,23 +4,27 @@ import { runScan, getStatus } from './agent.js';
 import { createMonitorMcpServer } from './mcp/server.js';
 import { agentCard } from './a2a/agent-card.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { VERSION } from './version.js';
 
 const program = new Command();
 
 program
   .name('pally-monitor')
   .description('Regulatory monitor agent for accessibility regulation changes')
-  .version('0.1.0');
+  .version(VERSION);
 
 // ---- scan ----
 
 program
   .command('scan')
   .description('Run one full scan cycle over all monitored legal sources')
-  .action(async () => {
+  .option('--sources-file <path>', 'Path to a local sources JSON file (standalone mode)')
+  .action(async (opts: { sourcesFile?: string }) => {
     try {
       console.error('[monitor] Starting scan…');
-      const result = await runScan();
+      const result = await runScan(
+        opts.sourcesFile !== undefined ? { sourcesFile: opts.sourcesFile } : {},
+      );
       console.error(
         `[monitor] Scan complete: ${result.scanned} sources, ` +
           `${result.changed} changed, ${result.unchanged} unchanged, ` +
