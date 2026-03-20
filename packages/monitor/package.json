@@ -1,9 +1,10 @@
 {
   "name": "@pally-agent/monitor",
-  "version": "0.1.0",
+  "version": "0.5.1",
   "description": "Regulatory monitor agent — watches legal sources for accessibility regulation changes",
   "type": "module",
   "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
   "bin": {
     "pally-monitor": "dist/cli.js"
   },
@@ -42,6 +43,9 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "commander": "^14.0.3",

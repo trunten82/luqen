@@ -1,0 +1,16 @@
+src/
+tests/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+*.map
+tsconfig.json
+vitest.config.*
+.eslintrc*
+.prettierrc*
+.editorconfig
+.github/
+.vscode/
+coverage/
+node_modules/

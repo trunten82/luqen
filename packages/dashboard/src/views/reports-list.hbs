@@ -46,6 +46,14 @@
         </select>
       </div>
 
+      <button
+        id="compare-btn"
+        class="btn btn--sm btn--ghost"
+        disabled
+        onclick="cmpNavigate()"
+        aria-label="Compare two selected reports"
+      >Compare</button>
+
       <a href="/scan/new" class="btn btn--primary btn--sm">
         New Scan
       </a>
@@ -65,6 +73,7 @@
       <caption class="sr-only">Accessibility scan reports — sorted by date, newest first</caption>
       <thead>
         <tr>
+          <th scope="col" class="cell--checkbox"><span class="sr-only">Select</span></th>
           <th scope="col">Site URL</th>
           <th scope="col">Status</th>
           <th scope="col">Standard</th>
@@ -80,6 +89,17 @@
       <tbody>
         {{#each scans}}
         <tr id="report-{{id}}">
+          <td class="cell--checkbox">
+            {{#if (eq status 'completed')}}
+            <input
+              type="checkbox"
+              class="cmp-check"
+              value="{{id}}"
+              onchange="cmpUpdateBtn()"
+              aria-label="Select report for {{siteUrl}} for comparison"
+            >
+            {{/if}}
+          </td>
           <td class="cell--url">
             <a href="/reports/{{id}}" aria-label="View report for {{siteUrl}}">
               {{siteUrl}}
@@ -156,3 +176,25 @@
   </div>
   {{/if}}
 </div>
+
+<script>
+  function cmpUpdateBtn() {
+    var checked = document.querySelectorAll('.cmp-check:checked');
+    var btn = document.getElementById('compare-btn');
+    if (!btn) return;
+    btn.disabled = checked.length !== 2;
+    // Uncheck extras beyond 2
+    if (checked.length > 2) {
+      checked[0].checked = false;
+      cmpUpdateBtn();
+    }
+  }
+
+  function cmpNavigate() {
+    var checked = document.querySelectorAll('.cmp-check:checked');
+    if (checked.length !== 2) return;
+    var a = checked[0].value;
+    var b = checked[1].value;
+    window.location.href = '/reports/compare?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b);
+  }
+</script>
