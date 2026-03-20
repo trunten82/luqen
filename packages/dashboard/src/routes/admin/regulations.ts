@@ -13,6 +13,10 @@ function getToken(request: FastifyRequest): string {
   return session.token ?? '';
 }
 
+function getOrgId(request: FastifyRequest): string | undefined {
+  return request.user?.currentOrgId;
+}
+
 function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
   return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
 }
@@ -38,13 +42,14 @@ export async function regulationRoutes(
 
       try {
         [jurisdictions, regulations] = await Promise.all([
-          listJurisdictions(baseUrl, getToken(request)),
+          listJurisdictions(baseUrl, getToken(request), getOrgId(request)),
           listRegulations(
             baseUrl,
             getToken(request),
             jurisdictionId !== undefined && jurisdictionId !== ''
               ? { jurisdictionId }
               : undefined,
+            getOrgId(request),
           ),
         ]);
 
@@ -109,7 +114,7 @@ export async function regulationRoutes(
       let jurisdictions: Awaited<ReturnType<typeof listJurisdictions>> = [];
 
       try {
-        jurisdictions = await listJurisdictions(baseUrl, getToken(request));
+        jurisdictions = await listJurisdictions(baseUrl, getToken(request), getOrgId(request));
       } catch {
         // non-fatal; jurisdictions list will be empty
       }
@@ -158,7 +163,7 @@ export async function regulationRoutes(
           enforcementDate: body.enforcementDate?.trim() ?? '',
           status: body.status?.trim() ?? 'active',
           scope: body.scope?.trim() ?? '',
-        });
+        }, getOrgId(request));
 
         const row = `<tr id="regulation-${created.id}">
   <td>${created.id}</td>
@@ -203,8 +208,8 @@ export async function regulationRoutes(
 
       try {
         const [jurisdictions, regulations] = await Promise.all([
-          listJurisdictions(baseUrl, getToken(request)),
-          listRegulations(baseUrl, getToken(request)),
+          listJurisdictions(baseUrl, getToken(request), getOrgId(request)),
+          listRegulations(baseUrl, getToken(request), undefined, getOrgId(request)),
         ]);
         const regulation = regulations.find((r) => r.id === id);
 
@@ -251,7 +256,7 @@ export async function regulationRoutes(
           enforcementDate: body.enforcementDate?.trim(),
           status: body.status?.trim(),
           scope: body.scope?.trim(),
-        });
+        }, getOrgId(request));
 
         const row = `<tr id="regulation-${updated.id}">
   <td>${updated.id}</td>
@@ -295,7 +300,7 @@ export async function regulationRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        await deleteRegulation(baseUrl, getToken(request), id);
+        await deleteRegulation(baseUrl, getToken(request), id, getOrgId(request));
         return reply.code(200).header('content-type', 'text/html').send(toastHtml('Regulation deleted successfully.'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to delete regulation';

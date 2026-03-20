@@ -37,7 +37,8 @@ export async function scanRoutes(
 
       try {
         if (token !== '') {
-          const raw = await listJurisdictions(config.complianceUrl, token);
+          const orgId = request.user?.currentOrgId;
+          const raw = await listJurisdictions(config.complianceUrl, token, orgId);
           jurisdictions = raw.map((j) => ({ id: j.id, name: j.name }));
         }
       } catch {
@@ -101,6 +102,7 @@ export async function scanRoutes(
         jurisdictions,
         createdBy: request.user?.username ?? 'unknown',
         createdAt: new Date().toISOString(),
+        orgId: request.user?.currentOrgId ?? 'system',
       });
 
       orchestrator.startScan(scanId, {

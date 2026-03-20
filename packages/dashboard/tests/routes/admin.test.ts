@@ -435,6 +435,7 @@ describe('GET /admin/regulations', () => {
       COMPLIANCE_URL,
       expect.any(String),
       { jurisdictionId: 'EU' },
+      undefined,
     );
   });
 });

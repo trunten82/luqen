@@ -11,6 +11,10 @@ function getToken(request: FastifyRequest): string {
   return session.token ?? '';
 }
 
+function getOrgId(request: FastifyRequest): string | undefined {
+  return request.user?.currentOrgId;
+}
+
 function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
   return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
 }
@@ -28,7 +32,7 @@ export async function userRoutes(
       let error: string | undefined;
 
       try {
-        users = await listUsers(baseUrl, getToken(request));
+        users = await listUsers(baseUrl, getToken(request), getOrgId(request));
       } catch (err) {
         error = err instanceof Error ? err.message : 'Failed to load users';
       }
@@ -86,7 +90,7 @@ export async function userRoutes(
           username: body.username.trim(),
           password: body.password.trim(),
           role: role as 'viewer' | 'user' | 'admin',
-        });
+        }, getOrgId(request));
 
         const row = `<tr id="user-${created.id}">
   <td>${created.username}</td>
@@ -123,7 +127,7 @@ export async function userRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        await deactivateUser(baseUrl, getToken(request), id);
+        await deactivateUser(baseUrl, getToken(request), id, getOrgId(request));
 
         const rowHtml = `<tr id="user-${id}">
   <td colspan="4">User deactivated.</td>

@@ -12,6 +12,10 @@ function getToken(request: FastifyRequest): string {
   return session.token ?? '';
 }
 
+function getOrgId(request: FastifyRequest): string | undefined {
+  return request.user?.currentOrgId;
+}
+
 function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
   return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
 }
@@ -34,7 +38,7 @@ export async function jurisdictionRoutes(
       let error: string | undefined;
 
       try {
-        jurisdictions = await listJurisdictions(baseUrl, getToken(request));
+        jurisdictions = await listJurisdictions(baseUrl, getToken(request), getOrgId(request));
         if (q !== '') {
           jurisdictions = jurisdictions.filter(
             (j) =>
@@ -115,7 +119,7 @@ export async function jurisdictionRoutes(
           name: body.name.trim(),
           type: body.type.trim(),
           parentId: body.parentId?.trim() || undefined,
-        });
+        }, getOrgId(request));
 
         const row = `<tr id="jurisdiction-${created.id}">
   <td>${created.id}</td>
@@ -160,7 +164,7 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
       const { id } = request.params as { id: string };
 
       try {
-        const jurisdictions = await listJurisdictions(baseUrl, getToken(request));
+        const jurisdictions = await listJurisdictions(baseUrl, getToken(request), getOrgId(request));
         const jurisdiction = jurisdictions.find((j) => j.id === id);
 
         if (jurisdiction === undefined) {
@@ -195,7 +199,7 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
           name: body.name.trim(),
           type: body.type.trim(),
           parentId: body.parentId?.trim() || undefined,
-        });
+        }, getOrgId(request));
 
         const row = `<tr id="jurisdiction-${updated.id}">
   <td>${updated.id}</td>
@@ -240,7 +244,7 @@ ${toastHtml(`Jurisdiction "${updated.name}" updated successfully.`)}`,
       const { id } = request.params as { id: string };
 
       try {
-        await deleteJurisdiction(baseUrl, getToken(request), id);
+        await deleteJurisdiction(baseUrl, getToken(request), id, getOrgId(request));
         return reply
           .code(200)
           .header('content-type', 'text/html')

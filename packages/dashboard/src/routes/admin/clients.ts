@@ -11,6 +11,10 @@ function getToken(request: FastifyRequest): string {
   return session.token ?? '';
 }
 
+function getOrgId(request: FastifyRequest): string | undefined {
+  return request.user?.currentOrgId;
+}
+
 function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
   return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
 }
@@ -28,7 +32,7 @@ export async function clientRoutes(
       let error: string | undefined;
 
       try {
-        clients = await listClients(baseUrl, getToken(request));
+        clients = await listClients(baseUrl, getToken(request), getOrgId(request));
       } catch (err) {
         error = err instanceof Error ? err.message : 'Failed to load OAuth clients';
       }
@@ -94,7 +98,7 @@ export async function clientRoutes(
           name: body.name.trim(),
           scopes,
           grantTypes,
-        });
+        }, getOrgId(request));
 
         // Secret is shown once in a modal dialog; no inline JS handlers needed
         const secretModal = `<div id="modal-container" hx-swap-oob="true">

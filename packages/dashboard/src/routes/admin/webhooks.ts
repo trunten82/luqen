@@ -12,6 +12,10 @@ function getToken(request: FastifyRequest): string {
   return session.token ?? '';
 }
 
+function getOrgId(request: FastifyRequest): string | undefined {
+  return request.user?.currentOrgId;
+}
+
 function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
   return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
 }
@@ -29,7 +33,7 @@ export async function webhookRoutes(
       let error: string | undefined;
 
       try {
-        webhooks = await listWebhooks(baseUrl, getToken(request));
+        webhooks = await listWebhooks(baseUrl, getToken(request), getOrgId(request));
       } catch (err) {
         error = err instanceof Error ? err.message : 'Failed to load webhooks';
       }
@@ -89,7 +93,7 @@ export async function webhookRoutes(
           url: body.url.trim(),
           events,
           secret: body.secret?.trim(),
-        });
+        }, getOrgId(request));
 
         const row = `<tr id="webhook-${created.id}">
   <td><a href="${created.url}" target="_blank" rel="noopener noreferrer">${created.url}</a></td>
@@ -147,7 +151,7 @@ export async function webhookRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        await deleteWebhook(baseUrl, getToken(request), id);
+        await deleteWebhook(baseUrl, getToken(request), id, getOrgId(request));
         return reply.code(200).header('content-type', 'text/html').send(toastHtml('Webhook deleted successfully.'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to delete webhook';
