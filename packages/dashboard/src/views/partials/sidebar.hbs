@@ -132,7 +132,9 @@
   <div class="sidebar__footer">
     <div class="flex items-center justify-between">
       <span>{{user.username}}</span>
-      <a href="/logout" class="btn btn--ghost btn--sm">Sign out</a>
+      <form method="POST" action="/logout" style="display:inline">
+        <button type="submit" class="btn btn--ghost btn--sm">Sign out</button>
+      </form>
     </div>
   </div>
 </nav>

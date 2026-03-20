@@ -102,9 +102,7 @@ export async function authRoutes(
     await reply.redirect('/login');
   });
 
-  // GET /logout — also support GET for convenience (e.g. sidebar link)
-  server.get('/logout', async (request: FastifyRequest, reply: FastifyReply) => {
-    request.session.delete();
-    await reply.redirect('/login');
-  });
+  // GET /logout — removed; use POST /logout to avoid CSRF risk
+  // (sameSite:strict mitigates cross-site CSRF, but GET logout remains a
+  // best-practice anti-pattern per OWASP A01 session management guidelines)
 }

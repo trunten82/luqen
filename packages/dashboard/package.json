@@ -14,6 +14,35 @@
     "start": "node dist/cli.js serve"
   },
   "license": "MIT",
+  "author": "alanna82",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alanna82/pally-agent.git",
+    "directory": "packages/dashboard"
+  },
+  "bugs": {
+    "url": "https://github.com/alanna82/pally-agent/issues"
+  },
+  "homepage": "https://github.com/alanna82/pally-agent#readme",
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "pa11y",
+    "compliance",
+    "testing",
+    "dashboard",
+    "htmx",
+    "report-viewer"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "@fastify/formbody": "^8.0.0",
     "@fastify/secure-session": "^8.0.0",

@@ -5,3 +5,18 @@ dist/
 coverage/
 packages/*/dist/
 packages/*/node_modules/
+
+# Secrets and key material — NEVER commit these
+packages/compliance/keys/
+packages/compliance/*.db
+packages/compliance/*.db-shm
+packages/compliance/*.db-wal
+packages/dashboard/*.db
+packages/dashboard/*.db-shm
+packages/dashboard/*.db-wal
+
+# Local config overrides
+packages/*/compliance.config.json
+packages/*/dashboard.config.json
+.env
+.env.*
