@@ -21,6 +21,7 @@ import { systemRoutes } from './routes/admin/system.js';
 import { monitorRoutes } from './routes/admin/monitor.js';
 import { pluginAdminRoutes } from './routes/admin/plugins.js';
 import { pluginApiRoutes } from './routes/api/plugins.js';
+import { orgRoutes } from './routes/orgs.js';
 import { ScanDb } from './db/scans.js';
 import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
@@ -28,6 +29,7 @@ import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
 import { getOrCreateApiKey } from './auth/api-key.js';
 import { UserDb } from './db/users.js';
+import { OrgDb } from './db/orgs.js';
 import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { VERSION } from './version.js';
 
@@ -69,6 +71,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Auth Service ────────────────────────────────────────────────────────
   const authService = new AuthService(db.getDatabase(), pluginManager);
   const userDb = new UserDb(db.getDatabase());
+  const orgDb = new OrgDb(db.getDatabase());
 
   // ── Solo mode: first-start API key ──────────────────────────────────────
   if (authService.getAuthMode() === 'solo') {
@@ -179,12 +182,29 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     await authGuard(request, reply);
   });
 
+  // ── Org context injection ────────────────────────────────────────────────
+  server.addHook('preHandler', async (request: FastifyRequest) => {
+    if (request.user === undefined) return;
+
+    const session = request.session as { get(key: string): unknown } | undefined;
+    if (session === undefined || typeof session.get !== 'function') return;
+
+    const currentOrgId = session.get('currentOrgId') as string | undefined;
+    if (currentOrgId !== undefined && currentOrgId !== '') {
+      request.user = {
+        ...request.user,
+        currentOrgId,
+      };
+    }
+  });
+
   // ── Routes ────────────────────────────────────────────────────────────────
   await authRoutes(server, config, authService);
   await homeRoutes(server, db);
   await scanRoutes(server, db, orchestrator, config);
   await compareRoutes(server, db);
   await reportRoutes(server, db);
+  await orgRoutes(server, orgDb);
 
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);

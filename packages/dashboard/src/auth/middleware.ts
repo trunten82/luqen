@@ -5,6 +5,7 @@ export interface AuthUser {
   readonly id: string;
   readonly username: string;
   readonly role: string;
+  readonly currentOrgId?: string;
 }
 
 declare module 'fastify' {
