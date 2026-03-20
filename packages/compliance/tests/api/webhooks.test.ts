@@ -94,6 +94,51 @@ describe('Webhooks API', () => {
     expect(deleteResponse.statusCode).toBe(204);
   });
 
+  it('POST /api/v1/webhooks/:id/test sends a test payload', async () => {
+    // Create a webhook first
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/webhooks',
+      headers: { ...authHeader(adminToken), 'content-type': 'application/json' },
+      body: JSON.stringify({
+        url: 'https://example.com/webhook-test-target',
+        secret: 'test-secret',
+        events: ['regulation.created'],
+      }),
+    });
+    const { id } = JSON.parse(createRes.body) as { id: string };
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/webhooks/${id}/test`,
+      headers: authHeader(adminToken),
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    expect(body.success).toBeDefined();
+  });
+
+  it('POST /api/v1/webhooks/:id/test returns 404 for unknown id', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/webhooks/nonexistent-id/test',
+      headers: authHeader(adminToken),
+    });
+
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('requires admin scope to POST /api/v1/webhooks/:id/test', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/webhooks/some-id/test',
+      headers: authHeader(readToken),
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
   it('requires admin scope to POST /api/v1/webhooks', async () => {
     const response = await app.inject({
       method: 'POST',

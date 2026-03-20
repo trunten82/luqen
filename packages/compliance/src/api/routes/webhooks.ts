@@ -39,6 +39,38 @@ export async function registerWebhookRoutes(
     }
   });
 
+  // POST /api/v1/webhooks/:id/test
+  app.post('/api/v1/webhooks/:id/test', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const webhooks = await db.listWebhooks();
+      const webhook = webhooks.find(w => w.id === id);
+      if (webhook === undefined) return reply.code(404).send({ error: 'Webhook not found' });
+
+      const testPayload = {
+        event: 'webhook.test',
+        timestamp: new Date().toISOString(),
+        data: { message: 'This is a test webhook delivery' },
+      };
+
+      try {
+        const res = await fetch(webhook.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testPayload),
+        });
+        await reply.send({ success: true, statusCode: res.status });
+      } catch (fetchErr) {
+        const message = fetchErr instanceof Error ? fetchErr.message : 'Request failed';
+        await reply.send({ success: false, error: message });
+      }
+    } catch (err) {
+      await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+
   // DELETE /api/v1/webhooks/:id
   app.delete('/api/v1/webhooks/:id', {
     preHandler: [requireScope('admin')],
