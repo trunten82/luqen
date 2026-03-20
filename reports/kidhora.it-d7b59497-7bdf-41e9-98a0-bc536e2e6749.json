@@ -1,0 +1,1228 @@
+{
+  "scanId": "d7b59497-7bdf-41e9-98a0-bc536e2e6749",
+  "siteUrl": "https://kidhora.it/",
+  "standard": "WCAG2AA",
+  "pagesScanned": 1,
+  "errors": 12,
+  "warnings": 55,
+  "notices": 85,
+  "issues": [
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_2.H25.2",
+      "type": "notice",
+      "message": "Check that the title element describes the document.",
+      "selector": "html > head > title",
+      "context": "<title>Kidhora: Organizza il Tempo Lib...</title>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_2.H25.2"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "html > body > header > nav > div > div:nth-child(1) > a",
+      "context": "<a class=\"navbar-brand d-flex align-items-center\" href=\"https://www.kidhora.it/\">\n                              ...</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.G94.Image",
+      "type": "notice",
+      "message": "Ensure that the img element's alt text serves the same purpose and presents the same information as the image.",
+      "selector": "#header-logo-69bdb08c55ca0",
+      "context": "<img id=\"header-logo-69bdb08c55ca0\" src=\"https://www.kidhora.it/wp-content/uploads/2026/01/logo_inline.png\" alt=\"kidhora\" class=\"custom-logo lazyloaded\" data-src=\"https://www.kidhora.it/wp-content/uploads/2026/01/logo_inline.png\" decoding=\"async\" dat...",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_1.1_1_1.G94.Image"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.G73,G74",
+      "type": "notice",
+      "message": "If this image cannot be fully described in a short text alternative, ensure a long text alternative is also available, such as in the body text or through a link.",
+      "selector": "#header-logo-69bdb08c55ca0",
+      "context": "<img id=\"header-logo-69bdb08c55ca0\" src=\"https://www.kidhora.it/wp-content/uploads/2026/01/logo_inline.png\" alt=\"kidhora\" class=\"custom-logo lazyloaded\" data-src=\"https://www.kidhora.it/wp-content/uploads/2026/01/logo_inline.png\" decoding=\"async\" dat...",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_1.1_1_1.G73,G74"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "html > body > header > nav > div > button",
+      "context": "<button class=\"navbar-toggler\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#primaryNavbar\" aria-controls=\"primaryNavbar\" aria-expanded=\"false\" aria-label=\"Toggle navigation\">\n                    <span clas...</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#mega-toggle-block-0 > button",
+      "context": "<button aria-label=\"Toggle Menu\" class=\"mega-toggle-animated mega-toggle-animated-slider\" type=\"button\" aria-expanded=\"false\">\n                  <span class=...</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#mega-menu-item-2206 > a",
+      "context": "<a class=\"mega-menu-link\" href=\"#\" aria-expanded=\"false\" tabindex=\"0\">Scopri<span class=\"mega-indicat...</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#mega-menu-item-559 > a",
+      "context": "<a class=\"mega-menu-link\" href=\"https://www.kidhora.it/chi-siamo/\" tabindex=\"0\">Chi siamo</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#mega-menu-item-1274 > a",
+      "context": "<a class=\"mega-menu-link\" href=\"https://www.kidhora.it/suggerisci-una-attivita/\" tabindex=\"0\">Suggerisci una Attività</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#mega-menu-wrap-primary > button",
+      "context": "<button class=\"mega-close\" aria-label=\"Close\"></button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#primaryNavbar > div:nth-child(2) > a",
+      "context": "<a class=\"btn btn-primary btn-sm navbar-profile-btn me-lg-2\" href=\"https://www.kidhora.it/accedi\" aria-label=\"Vai alla pagina di accesso\">\n                            Ac...</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#primaryNavbar > div:nth-child(2) > a",
+      "context": "<a class=\"btn btn-primary btn-sm navbar-profile-btn me-lg-2\" href=\"https://www.kidhora.it/accedi\" aria-label=\"Vai alla pagina di accesso\">\n                            Ac...</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_5.2_5_3.F96",
+      "type": "warning",
+      "message": "Accessible name for this element does not contain the visible label text. Check that for user interface components with labels that include text or images of text, the name contains the text that is presented visually.",
+      "selector": "#primaryNavbar > div:nth-child(2) > a",
+      "context": "<a class=\"btn btn-primary btn-sm navbar-profile-btn me-lg-2\" href=\"https://www.kidhora.it/accedi\" aria-label=\"Vai alla pagina di accesso\">\n                            Ac...</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_5.2_5_3.F96"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#primaryNavbar > div:nth-child(3) > a",
+      "context": "<a class=\"btn btn-primary btn-sm navbar-profile-btn w-100 d-inline-flex justify-content-center align-items-center gap-2 mobile-navbar-profile-btn\" href=\"https://www.kidhora.it/accedi\" aria-label=\"Vai alla pagina di accesso\">\n                         ...",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_5.2_5_3.F96",
+      "type": "warning",
+      "message": "Accessible name for this element does not contain the visible label text. Check that for user interface components with labels that include text or images of text, the name contains the text that is presented visually.",
+      "selector": "#primaryNavbar > div:nth-child(3) > a",
+      "context": "<a class=\"btn btn-primary btn-sm navbar-profile-btn w-100 d-inline-flex justify-content-center align-items-center gap-2 mobile-navbar-profile-btn\" href=\"https://www.kidhora.it/accedi\" aria-label=\"Vai alla pagina di accesso\">\n                         ...",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_5.2_5_3.F96"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_10.C32,C31,C33,C38,SCR34,G206",
+      "type": "warning",
+      "message": "This element has \"position: fixed\". This may require scrolling in two dimensions, which is considered a failure of this Success Criterion.",
+      "selector": "#menuOffcanvas",
+      "context": "<div class=\"offcanvas offcanvas-start\" tabindex=\"-1\" id=\"menuOffcanvas\" aria-labelledby=\"menuOffcanvasLabel\">\n        <div class=\"offcanvas-...</div>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_10.C32,C31,C33,C38,SCR34,G206"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1_A.G141",
+      "type": "warning",
+      "message": "The heading structure is not logically nested. This h5 element appears to be the primary document heading, so should be an h1 element.",
+      "selector": "#menuOffcanvasLabel",
+      "context": "<h5 class=\"offcanvas-title\" id=\"menuOffcanvasLabel\">Menu</h5>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1_A.G141"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1_A.G141",
+      "type": "warning",
+      "message": "The heading structure is not logically nested. This h5 element should be an h1 to be properly nested.",
+      "selector": "#menuOffcanvasLabel",
+      "context": "<h5 class=\"offcanvas-title\" id=\"menuOffcanvasLabel\">Menu</h5>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1_A.G141"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#menuOffcanvas > div:nth-child(1) > button",
+      "context": "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"offcanvas\" aria-label=\"Chiudi\"></button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3_F24.F24.FGColour",
+      "type": "warning",
+      "message": "Check that this element has an inherited background colour or image to complement the corresponding inline foreground colour.",
+      "selector": "#typed-target",
+      "context": "<span id=\"typed-target\" style=\"color: var(--color-primary)\" aria-live=\"polite\">avventura in f</span>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3_F24.F24.FGColour"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#kidTabs > button:nth-child(2)",
+      "context": "<button type=\"button\" class=\"tab-btn active\" data-kidtab=\"ristorante\">\n\t\t\t\t\t\t\t\t\t<span class=\"material...</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#kidTabs > button:nth-child(3)",
+      "context": "<button type=\"button\" class=\"tab-btn\" data-kidtab=\"attivita\">\n\t\t\t\t\t\t\t\t\t<span class=\"material...</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#kidTabs > button:nth-child(4)",
+      "context": "<button type=\"button\" class=\"tab-btn\" data-kidtab=\"event\">\n\t\t\t\t\t\t\t\t\t<span class=\"material...</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_3.3_3_1.G83,G84,G85",
+      "type": "notice",
+      "message": "If an input error is automatically detected in this form, check that the item(s) in error are identified and the error(s) are described to the user in text.",
+      "selector": "#homeSearchForm",
+      "context": "<form id=\"homeSearchForm\" class=\"row g-3 align-items-end\">\n\t\t\t\t\t\t\t<div class=\"col-12 col-...</form>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_3.3_3_1.G83,G84,G85"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_3.3_3_2.G131,G89,G184,H90",
+      "type": "notice",
+      "message": "Check that descriptive labels or instructions (including for required fields) are provided for user input in this form.",
+      "selector": "#homeSearchForm",
+      "context": "<form id=\"homeSearchForm\" class=\"row g-3 align-items-end\">\n\t\t\t\t\t\t\t<div class=\"col-12 col-...</form>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_3.3_3_2.G131,G89,G184,H90"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_3.3_3_3.G177",
+      "type": "notice",
+      "message": "Check that this form provides suggested corrections to errors in user input, unless it would jeopardize the security or purpose of the content.",
+      "selector": "#homeSearchForm",
+      "context": "<form id=\"homeSearchForm\" class=\"row g-3 align-items-end\">\n\t\t\t\t\t\t\t<div class=\"col-12 col-...</form>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_3.3_3_3.G177"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_3.3_3_4.G98,G99,G155,G164,G168.LegalForms",
+      "type": "notice",
+      "message": "If this form would bind a user to a financial or legal commitment, modify/delete user-controllable data, or submit test responses, ensure that submissions are either reversible, checked for input errors, and/or confirmed by the user.",
+      "selector": "#homeSearchForm",
+      "context": "<form id=\"homeSearchForm\" class=\"row g-3 align-items-end\">\n\t\t\t\t\t\t\t<div class=\"col-12 col-...</form>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_3.3_3_4.G98,G99,G155,G164,G168.LegalForms"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "#homeSearchForm > div:nth-child(1) > label",
+      "context": "<label class=\"form-label small text-muted\">Destinazione</label>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.InputText.Name",
+      "type": "error",
+      "message": "This textinput element does not have a name available to an accessibility API. Valid names are: label element, title , aria-label , aria-labelledby .",
+      "selector": "#hs-destinazione",
+      "context": "<input type=\"text\" class=\"form-control\" id=\"hs-destinazione\" placeholder=\"Dove vuoi andare?\" autocomplete=\"off\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.InputText.Name"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1.F68",
+      "type": "error",
+      "message": "This form field should be labelled in some way. Use the label element (either with a \"for\" attribute or wrapped around the form field), or \"title\", \"aria-label\" or \"aria-labelledby\" attributes as appropriate.",
+      "selector": "#hs-destinazione",
+      "context": "<input type=\"text\" class=\"form-control\" id=\"hs-destinazione\" placeholder=\"Dove vuoi andare?\" autocomplete=\"off\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1.F68"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_5.H98",
+      "type": "notice",
+      "message": "Check that the input field serves a purpose identified in the Input Purposes for User Interface Components section; and that the content is implemented using technologies with support for identifying the expected meaning for form input data.",
+      "selector": "#hs-destinazione",
+      "context": "<input type=\"text\" class=\"form-control\" id=\"hs-destinazione\" placeholder=\"Dove vuoi andare?\" autocomplete=\"off\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_5.H98"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#hs-destinazione",
+      "context": "<input type=\"text\" class=\"form-control\" id=\"hs-destinazione\" placeholder=\"Dove vuoi andare?\" autocomplete=\"off\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_5.H98",
+      "type": "notice",
+      "message": "Check that the input field serves a purpose identified in the Input Purposes for User Interface Components section; and that the content is implemented using technologies with support for identifying the expected meaning for form input data.",
+      "selector": "#hs-user-lat",
+      "context": "<input type=\"hidden\" id=\"hs-user-lat\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_5.H98"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#hs-user-lat",
+      "context": "<input type=\"hidden\" id=\"hs-user-lat\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_5.H98",
+      "type": "notice",
+      "message": "Check that the input field serves a purpose identified in the Input Purposes for User Interface Components section; and that the content is implemented using technologies with support for identifying the expected meaning for form input data.",
+      "selector": "#hs-user-lng",
+      "context": "<input type=\"hidden\" id=\"hs-user-lng\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_5.H98"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#hs-user-lng",
+      "context": "<input type=\"hidden\" id=\"hs-user-lng\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#homeSearchForm > div:nth-child(1) > div > button",
+      "context": "<button type=\"button\" class=\"btn btn-link position-absolute top-50 end-0 translate-middle-y me-2 clear-btn\" style=\"display: none; padding: 0; border: none; background: none; color: #6c757d; z-index: 10;\">\n\t\t\t\t\t\t\t\t\t\t<span class=\"materia...</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "#homeSearchForm > div:nth-child(2) > label",
+      "context": "<label class=\"form-label small text-muted\">Categoria</label>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.Select.Name",
+      "type": "error",
+      "message": "This select element does not have a name available to an accessibility API. Valid names are: label element, title , aria-label , aria-labelledby .",
+      "selector": "#hs-categoria",
+      "context": "<select class=\"form-select\" id=\"hs-categoria\"><option value=\"\">Tutte le categ...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.Select.Name"
+    },
+    {
+      "code": "WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.Select.Value",
+      "type": "warning",
+      "message": "This select element does not have a value available to an accessibility API.",
+      "selector": "#hs-categoria",
+      "context": "<select class=\"form-select\" id=\"hs-categoria\"><option value=\"\">Tutte le categ...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.Select.Value"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1.F68",
+      "type": "error",
+      "message": "This form field should be labelled in some way. Use the label element (either with a \"for\" attribute or wrapped around the form field), or \"title\", \"aria-label\" or \"aria-labelledby\" attributes as appropriate.",
+      "selector": "#hs-categoria",
+      "context": "<select class=\"form-select\" id=\"hs-categoria\"><option value=\"\">Tutte le categ...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1.F68"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1.H85.2",
+      "type": "warning",
+      "message": "If this selection list contains groups of related options, they should be grouped with optgroup.",
+      "selector": "#hs-categoria",
+      "context": "<select class=\"form-select\" id=\"hs-categoria\"><option value=\"\">Tutte le categ...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1.H85.2"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_5.H98",
+      "type": "notice",
+      "message": "Check that the input field serves a purpose identified in the Input Purposes for User Interface Components section; and that the content is implemented using technologies with support for identifying the expected meaning for form input data.",
+      "selector": "#hs-categoria",
+      "context": "<select class=\"form-select\" id=\"hs-categoria\"><option value=\"\">Tutte le categ...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_5.H98"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_5.H98",
+      "type": "notice",
+      "message": "This element does not have an autocomplete attribute. If this field collects information about the user, consider adding one to comply with this Success Criterion.",
+      "selector": "#hs-categoria",
+      "context": "<select class=\"form-select\" id=\"hs-categoria\"><option value=\"\">Tutte le categ...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_5.H98"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#hs-categoria",
+      "context": "<select class=\"form-select\" id=\"hs-categoria\"><option value=\"\">Tutte le categ...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-categoria > option:nth-child(1)",
+      "context": "<option value=\"\">Tutte le categorie</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-categoria > option:nth-child(2)",
+      "context": "<option value=\"agriturismo\">Agriturismo</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-categoria > option:nth-child(3)",
+      "context": "<option value=\"pizzeria\">Pizzeria</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-categoria > option:nth-child(4)",
+      "context": "<option value=\"pub\">Pub</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-categoria > option:nth-child(5)",
+      "context": "<option value=\"ristorante\">Ristorante</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-categoria > option:nth-child(6)",
+      "context": "<option value=\"trattoria\">Trattoria</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "#homeSearchForm > div:nth-child(3) > label",
+      "context": "<label class=\"form-label small text-muted\">Età bambini</label>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.Select.Name",
+      "type": "error",
+      "message": "This select element does not have a name available to an accessibility API. Valid names are: label element, title , aria-label , aria-labelledby .",
+      "selector": "#hs-eta",
+      "context": "<select class=\"form-select\" id=\"hs-eta\"><option value=\"\">Tutte le età</...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.Select.Name"
+    },
+    {
+      "code": "WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.Select.Value",
+      "type": "warning",
+      "message": "This select element does not have a value available to an accessibility API.",
+      "selector": "#hs-eta",
+      "context": "<select class=\"form-select\" id=\"hs-eta\"><option value=\"\">Tutte le età</...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.Select.Value"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1.F68",
+      "type": "error",
+      "message": "This form field should be labelled in some way. Use the label element (either with a \"for\" attribute or wrapped around the form field), or \"title\", \"aria-label\" or \"aria-labelledby\" attributes as appropriate.",
+      "selector": "#hs-eta",
+      "context": "<select class=\"form-select\" id=\"hs-eta\"><option value=\"\">Tutte le età</...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1.F68"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1.H85.2",
+      "type": "warning",
+      "message": "If this selection list contains groups of related options, they should be grouped with optgroup.",
+      "selector": "#hs-eta",
+      "context": "<select class=\"form-select\" id=\"hs-eta\"><option value=\"\">Tutte le età</...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1.H85.2"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_5.H98",
+      "type": "notice",
+      "message": "Check that the input field serves a purpose identified in the Input Purposes for User Interface Components section; and that the content is implemented using technologies with support for identifying the expected meaning for form input data.",
+      "selector": "#hs-eta",
+      "context": "<select class=\"form-select\" id=\"hs-eta\"><option value=\"\">Tutte le età</...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_5.H98"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_5.H98",
+      "type": "notice",
+      "message": "This element does not have an autocomplete attribute. If this field collects information about the user, consider adding one to comply with this Success Criterion.",
+      "selector": "#hs-eta",
+      "context": "<select class=\"form-select\" id=\"hs-eta\"><option value=\"\">Tutte le età</...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_5.H98"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#hs-eta",
+      "context": "<select class=\"form-select\" id=\"hs-eta\"><option value=\"\">Tutte le età</...</select>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-eta > option:nth-child(1)",
+      "context": "<option value=\"\">Tutte le età</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-eta > option:nth-child(2)",
+      "context": "<option value=\"0-3\">0-3 anni</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-eta > option:nth-child(3)",
+      "context": "<option value=\"3-6\">3-6 anni</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-eta > option:nth-child(4)",
+      "context": "<option value=\"6-12\">6-12 anni</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#hs-eta > option:nth-child(5)",
+      "context": "<option value=\"12+\">12+ anni</option>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#homeSearchForm > div:nth-child(4) > button",
+      "context": "<button class=\"btn btn-primary w-100\" type=\"submit\"><span class=\"material-symbols-o...</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#homeSearchForm > div:nth-child(4) > button",
+      "context": "<button class=\"btn btn-primary w-100\" type=\"submit\"><span class=\"material-symbols-o...</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G145.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 3:1.",
+      "selector": "#homeSearchForm > div:nth-child(4) > button > span",
+      "context": "<span class=\"material-symbols-outlined align-middle me-1\">search</span>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G145.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(2) > div > div > div:nth-child(2) > p:nth-child(1)",
+      "context": "<p class=\"text-uppercase small text-muted mb-2\">Innovazione</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(2) > div > div > div:nth-child(2) > div:nth-child(4) > div:nth-child(1) > p",
+      "context": "<p class=\"mb-0 text-muted\">Filtri su misura per trovare l'...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(2) > div > div > div:nth-child(2) > div:nth-child(4) > div:nth-child(2) > p",
+      "context": "<p class=\"mb-0 text-muted\">Scopri le migliori opzioni vici...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+      "type": "error",
+      "message": "This element has insufficient contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 3.19:1. Recommendation:  change text colour to #3e0900.",
+      "selector": "html > body > main > section:nth-child(2) > div > div > div:nth-child(2) > div:nth-child(5) > a",
+      "context": "<a href=\"https://www.kidhora.it/accedi/\" class=\"btn btn-outline-primary\">Iscriviti</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "html > body > main > section:nth-child(2) > div > div > div:nth-child(2) > div:nth-child(5) > a",
+      "context": "<a href=\"https://www.kidhora.it/accedi/\" class=\"btn btn-outline-primary\">Iscriviti</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(3) > div > div:nth-child(1) > div > p:nth-child(1)",
+      "context": "<p class=\"text-uppercase small text-muted mb-2\">Funzionalità</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(3) > div > div:nth-child(1) > div > p:nth-child(3)",
+      "context": "<p class=\"mb-5 text-muted\">Abbiamo pensato a ogni dettagli...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(3) > div > div:nth-child(2) > div:nth-child(1) > p",
+      "context": "<p class=\"text-muted mb-0\">Trova esperienze su misura per ...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(3) > div > div:nth-child(2) > div:nth-child(2) > p",
+      "context": "<p class=\"text-muted mb-0\">Scegli il locale perfetto per t...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(3) > div > div:nth-child(2) > div:nth-child(3) > p",
+      "context": "<p class=\"text-muted mb-0\">Scopri le esperienze più amate ...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+      "type": "error",
+      "message": "This element has insufficient contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 3.19:1. Recommendation:  change text colour to #3e0900.",
+      "selector": "html > body > main > section:nth-child(3) > div > div:nth-child(3) > div > a",
+      "context": "<a href=\"https://www.kidhora.it/accedi/\" class=\"btn btn-outline-primary\">Iscriviti</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "html > body > main > section:nth-child(3) > div > div:nth-child(3) > div > a",
+      "context": "<a href=\"https://www.kidhora.it/accedi/\" class=\"btn btn-outline-primary\">Iscriviti</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(4) > div > div > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > p",
+      "context": "<p class=\"text-muted mb-0\">Seleziona città ed età dei bamb...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(4) > div > div > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > p",
+      "context": "<p class=\"text-muted mb-0\">Usa i nostri filtri avanzati pe...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(4) > div > div > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > p",
+      "context": "<p class=\"text-muted mb-3\">Prenota direttamente dalla piat...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+      "type": "error",
+      "message": "This element has insufficient contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 3.19:1. Recommendation:  change text colour to #3e0900.",
+      "selector": "html > body > main > section:nth-child(4) > div > div > div:nth-child(1) > div:nth-child(4) > a",
+      "context": "<a href=\"https://www.kidhora.it/accedi/\" class=\"btn btn-outline-primary\">Iscriviti</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "html > body > main > section:nth-child(4) > div > div > div:nth-child(1) > div:nth-child(4) > a",
+      "context": "<a href=\"https://www.kidhora.it/accedi/\" class=\"btn btn-outline-primary\">Iscriviti</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(5) > div > div:nth-child(1) > div:nth-child(2) > p",
+      "context": "<p class=\"text-muted mb-0\">Ogni giorno lavoriamo per migli...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(5) > div > div:nth-child(2) > div:nth-child(1) > div > p:nth-child(1)",
+      "context": "<p class=\"text-muted mb-2\">Tempo libero</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(5) > div > div:nth-child(2) > div:nth-child(1) > div > p:nth-child(4)",
+      "context": "<p class=\"text-muted mb-0 text-right\">Esperienze uniche per tutte le ...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(5) > div > div:nth-child(2) > div:nth-child(2) > div > p:nth-child(1)",
+      "context": "<p class=\"text-muted mb-2\">Ristoranti</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(5) > div > div:nth-child(2) > div:nth-child(2) > div > p:nth-child(4)",
+      "context": "<p class=\"text-muted mb-0 text-right\">Locali family‑friendly</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(5) > div > div:nth-child(2) > div:nth-child(3) > div > p:nth-child(1)",
+      "context": "<p class=\"text-muted mb-2\">Famiglie</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(5) > div > div:nth-child(2) > div:nth-child(3) > div > p:nth-child(4)",
+      "context": "<p class=\"text-muted mb-0 text-right\">Genitori soddisfatti ogni mese</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(6) > div > div > div > p:nth-child(2)",
+      "context": "<p class=\"text-muted mb-4\">Ricevi le ultime novità, offert...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_3.3_3_1.G83,G84,G85",
+      "type": "notice",
+      "message": "If an input error is automatically detected in this form, check that the item(s) in error are identified and the error(s) are described to the user in text.",
+      "selector": "#newsletterForm",
+      "context": "<form id=\"newsletterForm\" class=\"d-flex justify-content-center\" method=\"post\" action=\"#\">\n                        <div c...</form>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_3.3_3_1.G83,G84,G85"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_3.3_3_2.G131,G89,G184,H90",
+      "type": "notice",
+      "message": "Check that descriptive labels or instructions (including for required fields) are provided for user input in this form.",
+      "selector": "#newsletterForm",
+      "context": "<form id=\"newsletterForm\" class=\"d-flex justify-content-center\" method=\"post\" action=\"#\">\n                        <div c...</form>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_3.3_3_2.G131,G89,G184,H90"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_3.3_3_3.G177",
+      "type": "notice",
+      "message": "Check that this form provides suggested corrections to errors in user input, unless it would jeopardize the security or purpose of the content.",
+      "selector": "#newsletterForm",
+      "context": "<form id=\"newsletterForm\" class=\"d-flex justify-content-center\" method=\"post\" action=\"#\">\n                        <div c...</form>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_3.3_3_3.G177"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_3.3_3_4.G98,G99,G155,G164,G168.LegalForms",
+      "type": "notice",
+      "message": "If this form would bind a user to a financial or legal commitment, modify/delete user-controllable data, or submit test responses, ensure that submissions are either reversible, checked for input errors, and/or confirmed by the user.",
+      "selector": "#newsletterForm",
+      "context": "<form id=\"newsletterForm\" class=\"d-flex justify-content-center\" method=\"post\" action=\"#\">\n                        <div c...</form>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_3.3_3_4.G98,G99,G155,G164,G168.LegalForms"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_5.H98",
+      "type": "notice",
+      "message": "Check that the input field serves a purpose identified in the Input Purposes for User Interface Components section; and that the content is implemented using technologies with support for identifying the expected meaning for form input data.",
+      "selector": "#newsletterForm > div > input",
+      "context": "<input type=\"email\" name=\"email\" required=\"\" class=\"form-control\" placeholder=\"Inserisci la tua email\" aria-label=\"Email\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_5.H98"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_5.H98",
+      "type": "notice",
+      "message": "This element does not have an autocomplete attribute. If this field collects information about the user, consider adding one to comply with this Success Criterion.",
+      "selector": "#newsletterForm > div > input",
+      "context": "<input type=\"email\" name=\"email\" required=\"\" class=\"form-control\" placeholder=\"Inserisci la tua email\" aria-label=\"Email\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_5.H98"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#newsletterForm > div > input",
+      "context": "<input type=\"email\" name=\"email\" required=\"\" class=\"form-control\" placeholder=\"Inserisci la tua email\" aria-label=\"Email\">",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#newsletterForm > div > button",
+      "context": "<button class=\"btn btn-primary\" type=\"submit\">Iscriviti</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#newsletterForm > div > button",
+      "context": "<button class=\"btn btn-primary\" type=\"submit\">Iscriviti</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha",
+      "type": "warning",
+      "message": "This element's text or background contains transparency. Ensure the contrast ratio between the text and background are at least 4.5:1.",
+      "selector": "html > body > main > section:nth-child(6) > div > div > div > p:nth-child(5)",
+      "context": "<p class=\"mt-2 small text-muted\">Iscrivendoti accetti i nostri t...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Alpha"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "html > body > footer > div > div > div:nth-child(1) > a",
+      "context": "<a href=\"https://www.kidhora.it/\" class=\"d-inline-flex align-items-center text-decoration-none text-light\">\n\t\t\t\t\t\t\t\t\t\t\t<strong class=\"h4 m...</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1_A.G141",
+      "type": "warning",
+      "message": "The heading structure is not logically nested. This h6 element should be an h3 to be properly nested.",
+      "selector": "html > body > footer > div > div > div:nth-child(2) > h6",
+      "context": "<h6 class=\"text-uppercase small mb-3\">Link utili</h6>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1_A.G141"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#menu-item-1275 > a",
+      "context": "<a href=\"https://www.kidhora.it/termini-e-condizioni/\">Termini e Condizioni</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#menu-item-2118 > a",
+      "context": "<a href=\"https://www.iubenda.com/privacy-policy/20022544\">Privacy Policy</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#menu-item-2141 > a",
+      "context": "<a href=\"https://www.kidhora.it/contatti/\">Contatti</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#menu-item-1931 > a",
+      "context": "<a href=\"https://www.kidhora.it/faq/\">FAQ</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "html > body > footer > div > div > div:nth-child(3) > ul > li:nth-child(1) > a",
+      "context": "<a class=\"text-light\" href=\"https://www.facebook.com/people/Kidhora/61583957854447/\" target=\"_blank\" rel=\"noopener\" aria-label=\"Facebook\">\n\t\t\t\t\t\t\t<svg xmlns=\"http://www....</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "html > body > footer > div > div > div:nth-child(3) > ul > li:nth-child(2) > a",
+      "context": "<a class=\"text-light\" href=\"https://www.instagram.com/kidhora.website/\" target=\"_blank\" rel=\"noopener\" aria-label=\"Instagram\">\n\t\t\t\t\t\t\t<svg xmlns=\"http://www....</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+      "type": "error",
+      "message": "This element has insufficient contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 3.76:1. Recommendation:  change background to #101418.",
+      "selector": "html > body > footer > div > p",
+      "context": "<p class=\"small text-secondary mb-0\">© 2026 kidhora. Tutti i diritti...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_10.C32,C31,C33,C38,SCR34,G206",
+      "type": "warning",
+      "message": "This element has \"position: fixed\". This may require scrolling in two dimensions, which is considered a failure of this Success Criterion.",
+      "selector": "#iubenda-cs-banner",
+      "context": "<div id=\"iubenda-cs-banner\" style=\"z-index:99999998 !important;\" class=\"iubenda-cs-default-floating iubenda-cs-top iubenda-cs-center iubenda-cs-slidein iubenda-cs-visible\"><div class=\"iubenda-cs-containe...</div>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_10.C32,C31,C33,C38,SCR34,G206"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3_F24.F24.FGColour",
+      "type": "warning",
+      "message": "Check that this element has an inherited background colour or image to complement the corresponding inline foreground colour.",
+      "selector": "#iubenda-cs-banner > div > div:nth-child(1)",
+      "context": "<div class=\"iubenda-cs-content\" style=\"background-color: #FFFFFF !important;color: #000000 !important;font-size: 14px !important;\"><div class=\"iubenda-cs-rational...</div>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3_F24.F24.FGColour"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#iubenda-cs-banner > div > div:nth-child(1) > div > button",
+      "context": "<button type=\"button\" class=\"iubenda-cs-close-btn\" tabindex=\"0\" role=\"button\" aria-label=\"Chiudi questa informativa\" style=\"display:none!important;\">\n      <span aria-hidden=\"true\"...</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1.H48",
+      "type": "warning",
+      "message": "If this element contains a navigation section, it is recommended that it be marked up as a list.",
+      "selector": "#iubenda-cs-paragraph > p:nth-child(1)",
+      "context": "<p class=\"iub-p\"> Noi  (kidora.it)   e terze par...</p>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1.H48"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#iubenda-cs-paragraph > p:nth-child(1) > a:nth-child(1)",
+      "context": "<a href=\"https://www.kidhora.it/privacy-policy/\" role=\"button\" class=\"iubenda-privacy-policy-link\">privacy policy</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context identifies the purpose of the link.",
+      "selector": "#iubenda-cs-paragraph > p:nth-child(1) > a:nth-child(3)",
+      "context": "<a href=\"https://www.kidhora.it/privacy-policy/\" role=\"button\" target=\"_blank\" rel=\"noopener\" class=\"iubenda-cs-cookie-policy-lnk\">cookie policy</a>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3_F24.F24.FGColour",
+      "type": "warning",
+      "message": "Check that this element has an inherited background colour or image to complement the corresponding inline foreground colour.",
+      "selector": "#iubenda-cs-banner > div > div:nth-child(1) > div > div:nth-child(4)",
+      "context": "<div class=\"iubenda-cs-opt-group\" style=\"color:#FFFFFF!important;\"><div class=\"iubenda-cs-opt-grou...</div>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3_F24.F24.FGColour"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#iubenda-cs-banner > div > div:nth-child(1) > div > div:nth-child(4) > div:nth-child(1) > button",
+      "context": "<button class=\"iubenda-cs-customize-btn\" tabindex=\"0\" role=\"button\">Scopri di più e personalizza</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#iubenda-cs-banner > div > div:nth-child(1) > div > div:nth-child(4) > div:nth-child(2) > button:nth-child(1)",
+      "context": "<button class=\"iubenda-cs-reject-btn iubenda-cs-btn-primary\" tabindex=\"0\" role=\"button\">Rifiuta</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_1.G107",
+      "type": "notice",
+      "message": "Check that a change of context does not occur when this input field receives focus.",
+      "selector": "#iubenda-cs-banner > div > div:nth-child(1) > div > div:nth-child(4) > div:nth-child(2) > button:nth-child(2)",
+      "context": "<button class=\"iubenda-cs-accept-btn iubenda-cs-btn-primary\" tabindex=\"0\" role=\"button\">Accetta</button>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_1.G107"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81,H33",
+      "type": "notice",
+      "message": "Check that the link text combined with programmatically determined link context, or its title attribute, identifies the purpose of the link.",
+      "selector": "#iubenda-cs-banner > div > div:nth-child(2) > a",
+      "context": "<a class=\"iubenda-cs-brand-badge\" href=\"https://www.iubenda.com/it/cookie-solution?utm_source=cs&amp;utm_medium=web&amp;utm_campaign=csbr2\" target=\"_blank\" rel=\"noopener\" title=\"iubenda - Cookie Policy e Gestione della conformità dei cookie\"><span>Cr...",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_4.H77,H78,H79,H80,H81,H33"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#iubenda-cs-banner > div > div:nth-child(2) > a > span",
+      "context": "<span>Created with <span>iubenda</spa...</span>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage",
+      "type": "warning",
+      "message": "This element's text is placed on a background image. Ensure the contrast ratio between the text and all covered parts of the image are at least 4.5:1.",
+      "selector": "#iubenda-cs-banner > div > div:nth-child(2) > a > span > span:nth-child(1)",
+      "context": "<span>iubenda</span>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.BgImage"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_2.G57",
+      "type": "notice",
+      "message": "Check that the content is ordered in a meaningful sequence when linearised, such as when style sheets are disabled.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_2.G57"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_3.G96",
+      "type": "notice",
+      "message": "Where instructions are provided for understanding the content, do not rely on sensory characteristics alone (such as shape, size or location) to describe objects.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_3.G96"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_4.",
+      "type": "notice",
+      "message": "Check that content does not restrict its view and operation to a single display orientation, such as portrait or landscape, unless a specific display orientation is essential.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_4."
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_1.G14,G182",
+      "type": "notice",
+      "message": "Check that any information conveyed using colour alone is also available in text, or through other visual cues.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_1.G14,G182"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_4.G142",
+      "type": "notice",
+      "message": "Check that text can be resized without assistive technology up to 200 percent without loss of content or functionality.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_4.G142"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_5.G140,C22,C30.AALevel",
+      "type": "notice",
+      "message": "If the technologies being used can achieve the visual presentation, check that text is used to convey information rather than images of text, except when the image of text is essential to the information being conveyed, or can be visually customised to the user's requirements.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_5.G140,C22,C30.AALevel"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_10.C32,C31,C33,C38,SCR34,G206",
+      "type": "notice",
+      "message": "Check that content can be presented without loss of information or functionality, and without requiring scrolling in two dimensions for:     Vertical scrolling content at a width equivalent to 320 CSS pixels;     Horizontal scrolling content at a height equivalent to 256 CSS pixels;     Except for parts of the content which require two-dimensional layout for usage or meaning.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_10.C32,C31,C33,C38,SCR34,G206"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_11.G195,G207,G18,G145,G174,F78",
+      "type": "notice",
+      "message": "Check that the visual presentation of the following have a contrast ratio of at least 3:1 against adjacent color(s):     User Interface Components: Visual information required to identify user interface components and states, except for inactive components or where the appearance of the component is determined by the user agent and not modified by the author;     Graphical Objects: Parts of graphics required to understand the content, except when a particular presentation of graphics is essential to the information being conveyed.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_11.G195,G207,G18,G145,G174,F78"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_12.C36,C35",
+      "type": "notice",
+      "message": "Check that no loss of content or functionality occurs by setting all of the following and by changing no other style property:              Line height (line spacing) to at least 1.5 times the font size;         Spacing following paragraphs to at least 2 times the font size;         Letter spacing (tracking) to at least 0.12 times the font size;         Word spacing to at least 0.16 times the font size.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_12.C36,C35"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_13.F95",
+      "type": "notice",
+      "message": "Check that where receiving and then removing pointer hover or keyboard focus triggers additional content to become visible and then hidden, the following are true:              Dismissable: A mechanism is available to dismiss the additional content without moving pointer hover or keyboard focus, unless the additional content communicates an input error or does not obscure or replace other content;         Hoverable: If pointer hover can trigger the additional content, then the pointer can be moved over the additional content without the additional content disappearing;         Persistent: The additional content remains visible until the hover or focus trigger is removed, the user dismisses it, or its information is no longer valid.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_4.1_4_13.F95"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_1.2_1_4.",
+      "type": "notice",
+      "message": "Check that if a keyboard shortcut is implemented in content using only letter (including upper- and lower-case letters), punctuation, number, or symbol characters, then at least one of the following is true:              Turn off: A mechanism is available to turn the shortcut off;         Remap: A mechanism is available to remap the shortcut to use one or more non-printable keyboard characters (e.g. Ctrl, Alt, etc);         Active only on focus: The keyboard shortcut for a user interface component is only active when that component has focus.     ",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_1.2_1_4."
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_2.2_2_2.SCR33,SCR22,G187,G152,G186,G191",
+      "type": "notice",
+      "message": "If any part of the content moves, scrolls or blinks for more than 5 seconds, or auto-updates, check that there is a mechanism available to pause, stop, or hide the content.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_2.2_2_2.SCR33,SCR22,G187,G152,G186,G191"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_3.2_3_1.G19,G176",
+      "type": "notice",
+      "message": "Check that no component of the content flashes more than three times in any 1-second period, or that the size of any flashing area is sufficiently small.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_3.2_3_1.G19,G176"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_1.G1,G123,G124,H69",
+      "type": "notice",
+      "message": "Ensure that any common navigation elements can be bypassed; for instance, by use of skip links, header elements, or ARIA landmark roles.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_1.G1,G123,G124,H69"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_3.H4.2",
+      "type": "notice",
+      "message": "If tabindex is used, check that the tab order specified by the tabindex attributes follows relationships in the content.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_3.H4.2"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_5.G125,G64,G63,G161,G126,G185",
+      "type": "notice",
+      "message": "If this Web page is not part of a linear process, check that there is more than one way of locating this Web page within a set of Web pages.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_5.G125,G64,G63,G161,G126,G185"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_6.G130,G131",
+      "type": "notice",
+      "message": "Check that headings and labels describe topic or purpose.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_6.G130,G131"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_4.2_4_7.G149,G165,G195,C15,SCR31",
+      "type": "notice",
+      "message": "Check that there is at least one mode of operation where the keyboard focus indicator can be visually located on user interface controls.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_4.2_4_7.G149,G165,G195,C15,SCR31"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_5.2_5_1.",
+      "type": "notice",
+      "message": "Check that all functionality that uses multipoint or path-based gestures for operation can be operated with a single pointer without a path-based gesture, unless a multipoint or path-based gesture is essential.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_5.2_5_1."
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_5.2_5_2.",
+      "type": "notice",
+      "message": "Check that for functionality that can be operated using a single pointer, at least one of the following is true:         No Down-Event: The down-event of the pointer is not used to execute any part of the function;         Abort or Undo: Completion of the function is on the up-event, and a mechanism is available to abort the function before completion or to undo the function after completion;         Up Reversal: The up-event reverses any outcome of the preceding down-event;         Essential: Completing the function on the down-event is essential.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_5.2_5_2."
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_5.2_5_3.F96",
+      "type": "notice",
+      "message": "Check that for user interface components with labels that include text or images of text, the name contains the text that is presented visually.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_5.2_5_3.F96"
+    },
+    {
+      "code": "WCAG2AA.Principle2.Guideline2_5.2_5_4.",
+      "type": "notice",
+      "message": "Check that functionality that can be operated by device motion or user motion can also be operated by user interface components and responding to the motion can be disabled to prevent accidental actuation, except when:              Supported Interface: The motion is used to operate functionality through an accessibility supported interface;         Essential: The motion is essential for the function and doing so would invalidate the activity.     ",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle2.Guideline2_5.2_5_4."
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_1.3_1_2.H58",
+      "type": "notice",
+      "message": "Ensure that any change in language is marked using the lang and/or xml:lang attribute on an element, as appropriate.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_1.3_1_2.H58"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_3.G61",
+      "type": "notice",
+      "message": "Check that navigational mechanisms that are repeated on multiple Web pages occur in the same relative order each time they are repeated, unless a change is initiated by the user.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_3.G61"
+    },
+    {
+      "code": "WCAG2AA.Principle3.Guideline3_2.3_2_4.G197",
+      "type": "notice",
+      "message": "Check that components that have the same functionality within this Web page are identified consistently in the set of Web pages to which it belongs.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle3.Guideline3_2.3_2_4.G197"
+    },
+    {
+      "code": "WCAG2AA.Principle4.Guideline4_1.4_1_3.",
+      "type": "notice",
+      "message": "Check that status messages can be programmatically determined through role or properties such that they can be presented to the user by assistive technologies without receiving focus.",
+      "selector": "",
+      "context": null,
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle4.Guideline4_1.4_1_3."
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1.F92,ARIA4",
+      "type": "error",
+      "message": "This element's role is \"presentation\" but contains child elements with semantic meaning.",
+      "selector": "#mega-menu-item-2206 > ul",
+      "context": "<ul class=\"mega-sub-menu\" role=\"presentation\" style=\"width: 1140px; left: -147px;\">\n<li class=\"mega-menu-row\" id=\"...</ul>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1.F92,ARIA4"
+    },
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1.F92,ARIA4",
+      "type": "error",
+      "message": "This element's role is \"presentation\" but contains child elements with semantic meaning.",
+      "selector": "#mega-menu-2206-0 > ul",
+      "context": "<ul class=\"mega-sub-menu\" style=\"--columns:12\" role=\"presentation\">\n<li class=\"mega-menu-column me...</ul>",
+      "fixSuggestion": "Refer to WCAG documentation for WCAG2AA.Principle1.Guideline1_3.1_3_1.F92,ARIA4"
+    }
+  ],
+  "completedAt": "2026-03-20T20:39:42.209Z"
+}
