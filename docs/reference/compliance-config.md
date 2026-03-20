@@ -166,4 +166,35 @@ Roles: `admin`, `editor`, `viewer`.
 
 ---
 
+## Multi-Tenancy / Org-Aware Queries
+
+The compliance service supports multi-tenancy through a shared-database model. All tenancy is handled at the query level — no separate databases or schemas are needed.
+
+### `org_id` column
+
+All data tables include an `org_id` column with `DEFAULT 'system'`. Seed data and baseline datasets are stored under the `"system"` org and are globally readable by all organizations.
+
+### `X-Org-Id` header extraction
+
+The compliance service reads the `X-Org-Id` header from incoming requests. When present, all queries are scoped to that organization. When absent, the value defaults to `"system"`.
+
+### Filter interfaces
+
+Repository filter interfaces (e.g., `JurisdictionFilter`, `RegulationFilter`, `RequirementFilter`) accept an optional `orgId` parameter. When provided, queries are restricted to records matching that org.
+
+### Hybrid data model
+
+The data model is hybrid — system-level and org-specific data coexist in the same tables:
+
+- **System data** (`org_id = 'system'`): Seed jurisdictions, regulations, and requirements. Read-only to org-scoped requests.
+- **Org-specific data** (`org_id = '<org-name>'`): Custom jurisdictions, regulations, and requirements created by an organization. Only visible to requests carrying the same `X-Org-Id`.
+
+Organizations can read system data but cannot modify or delete it. Write operations always target the org specified in the `X-Org-Id` header.
+
+### Data cleanup
+
+Use `DELETE /api/v1/orgs/:id/data` (admin scope) to remove all records belonging to a specific organization. This endpoint returns `400` if the org ID is `"system"` to prevent accidental deletion of baseline data. Returns `204` on success.
+
+---
+
 *See also: [guides/compliance-check.md](../guides/compliance-check.md) | [compliance/README.md](../compliance/README.md) | [configuration/dashboard.md](dashboard.md)*

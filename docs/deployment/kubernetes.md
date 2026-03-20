@@ -166,4 +166,36 @@ livenessProbe:
 
 ---
 
+## Multi-Tenant Considerations
+
+Multi-tenancy in pally-agent is entirely query-level — no separate databases, schemas, or per-org pods are required. A single deployment serves all organizations.
+
+### Request routing
+
+The `X-Org-Id` header is passed from the dashboard to the compliance service on every API call. Ensure your ingress and service mesh do not strip custom headers.
+
+### Service-to-service authentication
+
+In production, set the `COMPLIANCE_API_KEY` environment variable on both the dashboard and compliance service. The dashboard sends this key as a shared secret when calling the compliance API, providing an additional layer of trust beyond JWT tokens.
+
+```yaml
+# Add to dashboard and compliance secrets
+kubectl create secret generic pally-service-auth \
+  --from-literal=COMPLIANCE_API_KEY="$(openssl rand -base64 32)"
+```
+
+### Session management
+
+The dashboard stores the user's active organization context in their session. When a user switches orgs via the sidebar org switcher, the session is updated and all subsequent requests carry the new `X-Org-Id`.
+
+### Data cleanup
+
+When decommissioning an organization, call `DELETE /api/v1/orgs/:id/data` to remove all org-specific data. This is safe to run while other orgs continue operating — it only affects records matching the specified org ID.
+
+### Scaling
+
+Because tenancy is query-level, scaling works the same as a single-tenant deployment. Add replicas via HPA as load increases — all replicas serve all organizations. If using SQLite, switch to PostgreSQL before scaling beyond one replica (see [Persistent volumes](#persistent-volumes)).
+
+---
+
 *See also: [installation/docker.md](docker.md) | [installation/cloud.md](cloud.md) | [configuration/compliance.md](../configuration/compliance.md)*

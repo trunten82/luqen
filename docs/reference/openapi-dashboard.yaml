@@ -1,0 +1,476 @@
+openapi: 3.1.0
+info:
+  title: Pally Dashboard API
+  description: >-
+    JSON API endpoints exposed by the Pally Dashboard. This spec covers only
+    the machine-consumable JSON APIs (plugin management and org context), not
+    the HTML/Handlebars UI routes.
+  version: 0.1.0
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: plugins
+    description: Plugin lifecycle management
+  - name: orgs
+    description: Organization context switching
+  - name: health
+    description: Service health
+
+paths:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Health
+  # ────────────────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      operationId: getDashboardHealth
+      tags: [health]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, version]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+              example:
+                status: ok
+                version: "0.1.0"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Plugins
+  # ────────────────────────────────────────────────────────────────────────────
+  /api/v1/plugins:
+    get:
+      operationId: listPlugins
+      tags: [plugins]
+      summary: List installed plugins
+      description: Returns all installed plugins with their current status and configuration.
+      responses:
+        "200":
+          description: List of installed plugins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PluginRecord"
+
+  /api/v1/plugins/registry:
+    get:
+      operationId: listPluginRegistry
+      tags: [plugins]
+      summary: List available plugins from registry
+      description: >-
+        Returns all plugins known to the registry, with an `installed` boolean
+        indicating whether each one is currently installed.
+      responses:
+        "200":
+          description: Registry entries with install status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegistryEntryWithStatus"
+
+  /api/v1/plugins/install:
+    post:
+      operationId: installPlugin
+      tags: [plugins]
+      summary: Install a plugin by package name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [packageName]
+              properties:
+                packageName:
+                  type: string
+                  description: npm package name of the plugin.
+                  example: "@pally-agent/plugin-auth-entra"
+      responses:
+        "201":
+          description: Plugin installed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PluginRecord"
+        "400":
+          description: Invalid request or plugin not found in registry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Installation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/plugins/{id}/config:
+    patch:
+      operationId: configurePlugin
+      tags: [plugins]
+      summary: Update plugin configuration
+      parameters:
+        - $ref: "#/components/parameters/PluginId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [config]
+              properties:
+                config:
+                  type: object
+                  additionalProperties: true
+                  description: >-
+                    Key-value configuration. Keys must match the plugin's
+                    `configSchema` fields.
+              example:
+                config:
+                  tenantId: "abc123"
+                  clientId: "my-client"
+                  clientSecret: "s3cret"
+      responses:
+        "200":
+          description: Plugin configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PluginRecord"
+        "400":
+          description: Config object missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Plugin not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Configuration failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/plugins/{id}/activate:
+    post:
+      operationId: activatePlugin
+      tags: [plugins]
+      summary: Activate a plugin
+      parameters:
+        - $ref: "#/components/parameters/PluginId"
+      responses:
+        "200":
+          description: Plugin activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PluginRecord"
+        "404":
+          description: Plugin not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Activation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/plugins/{id}/deactivate:
+    post:
+      operationId: deactivatePlugin
+      tags: [plugins]
+      summary: Deactivate a plugin
+      parameters:
+        - $ref: "#/components/parameters/PluginId"
+      responses:
+        "200":
+          description: Plugin deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PluginRecord"
+        "404":
+          description: Plugin not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Deactivation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/plugins/{id}:
+    delete:
+      operationId: removePlugin
+      tags: [plugins]
+      summary: Remove (uninstall) a plugin
+      parameters:
+        - $ref: "#/components/parameters/PluginId"
+      responses:
+        "204":
+          description: Plugin removed
+        "404":
+          description: Plugin not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Removal failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/plugins/{id}/health:
+    get:
+      operationId: getPluginHealth
+      tags: [plugins]
+      summary: Check plugin health
+      parameters:
+        - $ref: "#/components/parameters/PluginId"
+      responses:
+        "200":
+          description: Plugin health status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PluginHealthResponse"
+        "404":
+          description: Plugin not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Org context
+  # ────────────────────────────────────────────────────────────────────────────
+  /orgs/switch:
+    post:
+      operationId: switchOrg
+      tags: [orgs]
+      summary: Switch the current org context
+      description: >-
+        Sets the active organization in the user's session. Passing `system`
+        or an empty `orgId` clears the org context. On success the server
+        redirects back to the `Referer` header (or `/`).
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                orgId:
+                  type: string
+                  description: >-
+                    Organization ID to switch to. Use `system` or omit to
+                    clear org context.
+          application/json:
+            schema:
+              type: object
+              properties:
+                orgId:
+                  type: string
+      responses:
+        "302":
+          description: Redirect to previous page
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User does not belong to the requested organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orgs/current:
+    get:
+      operationId: getCurrentOrg
+      tags: [orgs]
+      summary: Get current org context
+      description: >-
+        Returns the currently active organization, its details, and all
+        organizations the authenticated user belongs to.
+      responses:
+        "200":
+          description: Current org context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgContextResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+# ==============================================================================
+# Components
+# ==============================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token obtained from the compliance service OAuth endpoint.
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: >-
+        API key generated on first dashboard start (solo auth mode). Shown
+        once in server logs.
+
+  parameters:
+    PluginId:
+      name: id
+      in: path
+      required: true
+      description: Plugin ID (typically the npm package name slug).
+      schema:
+        type: string
+
+  schemas:
+    # ── Error ──────────────────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    # ── Plugin ─────────────────────────────────────────────────────────────────
+    PluginRecord:
+      type: object
+      required: [id, packageName, type, version, config, status, installedAt]
+      properties:
+        id:
+          type: string
+        packageName:
+          type: string
+          example: "@pally-agent/plugin-auth-entra"
+        type:
+          type: string
+          enum: [auth, notification, storage, scanner]
+        version:
+          type: string
+        config:
+          type: object
+          additionalProperties: true
+          description: Current plugin configuration (secrets are masked).
+        status:
+          type: string
+          enum: [inactive, active, error, install-failed, unhealthy]
+        installedAt:
+          type: string
+          format: date-time
+        activatedAt:
+          type: string
+          format: date-time
+        error:
+          type: string
+          description: Error message when status is `error` or `install-failed`.
+
+    RegistryEntryWithStatus:
+      type: object
+      required: [name, displayName, type, version, description, packageName, installed]
+      properties:
+        name:
+          type: string
+        displayName:
+          type: string
+        type:
+          type: string
+          enum: [auth, notification, storage, scanner]
+        version:
+          type: string
+        description:
+          type: string
+        packageName:
+          type: string
+        icon:
+          type: string
+        installed:
+          type: boolean
+          description: Whether this plugin is currently installed.
+
+    PluginHealthResponse:
+      type: object
+      description: >-
+        Health check result. Shape depends on the plugin's `healthCheck()`
+        implementation; typically includes a boolean status.
+      additionalProperties: true
+
+    # ── Org context ────────────────────────────────────────────────────────────
+    OrgContextResponse:
+      type: object
+      required: [currentOrgId, currentOrg, userOrgs]
+      properties:
+        currentOrgId:
+          type: string
+          nullable: true
+          description: Active org ID, or `null` when no org is selected.
+        currentOrg:
+          nullable: true
+          $ref: "#/components/schemas/Organization"
+        userOrgs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Organization"
+
+    Organization:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
