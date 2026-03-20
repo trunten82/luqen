@@ -4,6 +4,7 @@ import type { ScanDb } from '../db/scans.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
 import { listJurisdictions } from '../compliance-client.js';
+import { getToken, getOrgId } from './admin/helpers.js';
 
 interface NewScanBody {
   siteUrl: string;
@@ -32,15 +33,9 @@ export async function scanRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       let jurisdictions: Array<{ id: string; name: string }> = [];
 
-      const session = request.session as { token?: string };
-      const token = session.token ?? '';
-
       try {
-        if (token !== '') {
-          const orgId = request.user?.currentOrgId;
-          const raw = await listJurisdictions(config.complianceUrl, token, orgId);
-          jurisdictions = raw.map((j) => ({ id: j.id, name: j.name }));
-        }
+        const raw = await listJurisdictions(config.complianceUrl, getToken(request), getOrgId(request));
+        jurisdictions = raw.map((j) => ({ id: j.id, name: j.name }));
       } catch {
         // Non-fatal — render page without jurisdictions if compliance is unreachable
       }
@@ -92,8 +87,6 @@ export async function scanRoutes(
       const jurisdictions = normalizeJurisdictions(body.jurisdictions);
 
       const scanId = randomUUID();
-      const session = request.session as { token?: string };
-      const token = session.token ?? '';
 
       db.createScan({
         id: scanId,
@@ -112,7 +105,7 @@ export async function scanRoutes(
         jurisdictions,
         webserviceUrl: config.webserviceUrl,
         complianceUrl: config.complianceUrl,
-        complianceToken: token,
+        complianceToken: getToken(request),
       });
 
       await reply.redirect(`/scan/${scanId}/progress`);
