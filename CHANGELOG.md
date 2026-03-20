@@ -24,6 +24,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - GET /orgs/current JSON endpoint for org context
 - Dashboard compliance client passes X-Org-Id header on all requests
 - deleteOrgData() function in compliance client for org cleanup
+- @pally-agent/plugin-notify-slack — Slack notification plugin via webhooks
+- Notification events: scan.complete, scan.failed, violation.found, regulation.changed
+- Rich Slack Block Kit message formatting for all event types
+- Configurable event filtering (subscribe to specific event types)
 
 ### Changed
 - ScanRecord now includes orgId field (defaults to 'system')
