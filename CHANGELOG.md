@@ -17,12 +17,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - X-Org-Id header extraction in compliance service for cross-service org context
 - DELETE /api/v1/orgs/:id/data endpoint for org data cleanup
 - deleteOrgData() transactional cleanup across all compliance tables
+- Organization management admin UI (create, list, delete orgs)
+- Organization member management (add, remove, role assignment)
+- Org switcher in dashboard sidebar (visible when user belongs to multiple orgs)
+- Session org context with POST /orgs/switch endpoint
+- GET /orgs/current JSON endpoint for org context
+- Dashboard compliance client passes X-Org-Id header on all requests
+- deleteOrgData() function in compliance client for org cleanup
 
 ### Changed
 - ScanRecord now includes orgId field (defaults to 'system')
 - All compliance filter interfaces support optional orgId
 - All compliance create inputs support optional orgId
 - Compliance route handlers pass org context from X-Org-Id header to database queries
+- All dashboard routes pass orgId from session to compliance service and scan DB
+- Sidebar shows Organizations link in admin section
+- AuthUser interface extended with currentOrgId
 
 ---
 
