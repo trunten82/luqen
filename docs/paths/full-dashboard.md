@@ -39,18 +39,12 @@ This starts:
 
 The dashboard depends on the compliance service and waits for its health check before starting.
 
-### Seed and create OAuth client
+### Seed compliance data
 
 ```bash
 # Seed baseline data (58 jurisdictions, 62 regulations)
 docker exec pally-compliance node dist/cli.js seed
-
-# Create an OAuth client for the dashboard
-docker exec pally-compliance node dist/cli.js clients create \
-  --name pally-dashboard --scope "read write"
 ```
-
-Save the `client_id` and `client_secret` output.
 
 ### Environment variables
 
@@ -85,14 +79,6 @@ node dist/cli.js serve
 # Listening on port 4000
 ```
 
-### Create OAuth client
-
-```bash
-cd ~/pally-agent/packages/compliance
-node dist/cli.js clients create --name pally-dashboard --scope "read write"
-# Save client_id and client_secret
-```
-
 ### Start dashboard
 
 ```bash
@@ -100,35 +86,37 @@ cd ~/pally-agent/packages/dashboard
 DASHBOARD_PORT=5000 \
   DASHBOARD_COMPLIANCE_URL=http://localhost:4000 \
   DASHBOARD_WEBSERVICE_URL=http://localhost:3000 \
-  DASHBOARD_COMPLIANCE_CLIENT_ID=$CLIENT_ID \
-  DASHBOARD_COMPLIANCE_CLIENT_SECRET=$CLIENT_SECRET \
   DASHBOARD_SESSION_SECRET="$(openssl rand -base64 32)" \
   node dist/cli.js serve
 ```
 
+On first start, an API key is printed to the console. This is your default login credential (solo mode).
+
 ---
 
-## Create an admin user
+## Authentication Modes
 
-The dashboard authenticates against the compliance service OAuth2 system. Create a user with the `admin` role:
+The dashboard uses progressive authentication — start simple and add security as your needs grow:
 
-```bash
-cd ~/pally-agent/packages/compliance
-node dist/cli.js users create --username admin --role admin
-```
+| Mode | Activates when | Login method |
+|------|----------------|--------------|
+| **Solo** | First start (default) | API key printed to console. No password needed. |
+| **Team** | First user created via dashboard | Username + password (bcrypt hashed, stored in dashboard SQLite) |
+| **Enterprise** | SSO plugin installed and activated | SSO button on login page (e.g. Azure Entra ID via OIDC) |
 
-Or in Docker:
-```bash
-docker exec pally-compliance node dist/cli.js users create --username admin --role admin
-```
+All three modes coexist — API key access remains available for programmatic use even after team or enterprise mode activates. Regenerate the API key with `pally-dashboard api-key regenerate`.
+
+See [Enterprise SSO](enterprise-sso.md) for the Azure Entra ID setup guide.
 
 ---
 
 ## First login
 
-1. Open `http://localhost:5000`
-2. Log in with the admin credentials created above
-3. The dashboard home shows recent scans and system status
+**Solo mode (default):** Open `http://localhost:5000`. The API key printed on first start is accepted automatically — no login form required.
+
+**Team mode:** Open `http://localhost:5000` and log in with the credentials of a user created via the dashboard admin page.
+
+**Enterprise mode:** Open `http://localhost:5000` and click the SSO button for your identity provider.
 
 ---
 

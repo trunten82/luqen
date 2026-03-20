@@ -6,6 +6,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.9.0] - 2026-03-20
+
+### Added
+- Progressive authentication: Solo (API key) → Team (local users) → Enterprise (SSO)
+- AuthService abstraction for pluggable authentication
+- Dashboard users table with bcrypt password hashing
+- API key generation on first start with CLI regeneration command
+- Dashboard user management admin page
+- Compliance service API key auth for service-to-service calls
+- @pally-agent/plugin-auth-entra — Azure Entra ID SSO plugin
+- SSO login flow with callback handling
+
+### Changed
+- Auth middleware refactored to delegate to AuthService
+- Login page supports all three auth modes (API key, password, SSO buttons)
+- Dashboard no longer requires compliance service for authentication
+
+---
+
 ## [0.8.0] - 2026-03-20
 
 ### Added
@@ -229,6 +248,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [0.9.0] | 2026-03-20 | Progressive auth (API key → local users → SSO), AuthService, Entra ID plugin |
 | [0.8.0] | 2026-03-20 | Plugin system (manager, registry, marketplace UI, CLI, REST API, encrypted secrets) |
 | [0.7.0] | 2026-03-20 | Path-based docs, REST API routes, dead code removal, env var fixes |
 | [0.6.0] | 2026-03-20 | Dashboard self-audit, report comparison, monitor admin UI, npm publish prep |

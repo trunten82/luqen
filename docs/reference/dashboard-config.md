@@ -18,9 +18,7 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
   "reportsDir": "./reports",
   "dbPath": "./dashboard.db",
   "sessionSecret": "",
-  "maxConcurrentScans": 2,
-  "complianceClientId": "",
-  "complianceClientSecret": ""
+  "maxConcurrentScans": 2
 }
 ```
 
@@ -35,8 +33,6 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `dbPath` | `string` | `./dashboard.db` | Path to the SQLite database file |
 | `sessionSecret` | `string` | — | Secret used to sign session cookies. **Required. Minimum 32 bytes.** |
 | `maxConcurrentScans` | `number` | `2` | Maximum number of scans that may run simultaneously |
-| `complianceClientId` | `string` | — | OAuth2 client ID registered in the compliance service |
-| `complianceClientSecret` | `string` | — | OAuth2 client secret |
 | `pluginsDir` | `string` | `./plugins` | Directory where plugin packages are installed |
 | `pluginsConfigFile` | `string` | — | Optional path to a plugins configuration JSON file |
 
@@ -53,11 +49,10 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `DASHBOARD_DB_PATH` | `dbPath` | SQLite database path |
 | `DASHBOARD_SESSION_SECRET` | `sessionSecret` | Cookie signing secret (min 32 bytes) |
 | `DASHBOARD_MAX_CONCURRENT_SCANS` | `maxConcurrentScans` | Max parallel scan limit |
-| `DASHBOARD_COMPLIANCE_CLIENT_ID` | `complianceClientId` | OAuth2 client ID |
-| `DASHBOARD_COMPLIANCE_CLIENT_SECRET` | `complianceClientSecret` | OAuth2 client secret |
 | `DASHBOARD_PLUGINS_DIR` | `pluginsDir` | Directory for plugin packages (default: `./plugins`) |
 | `DASHBOARD_PLUGINS_CONFIG` | `pluginsConfigFile` | Path to plugins configuration file |
 | `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |
+| `COMPLIANCE_API_KEY` | — | API key for service-to-service calls to the compliance service. Set this on the compliance service side; the dashboard sends it in the `X-API-Key` header when making compliance API requests. |
 
 **Precedence:** Environment variables > `dashboard.config.json` > built-in defaults.
 
@@ -117,21 +112,9 @@ pally-dashboard self-audit
 
 ## Required setup in the compliance service
 
-The dashboard authenticates via the compliance service's OAuth2 password grant. Before starting the dashboard:
+The dashboard communicates with the compliance service using an API key for service-to-service calls. Set the `COMPLIANCE_API_KEY` environment variable on the compliance service to enable this. The dashboard sends the key in the `X-API-Key` header.
 
-```bash
-# Create a dashboard OAuth client
-pally-compliance clients create \
-  --name "dashboard" \
-  --scope "admin" \
-  --grant password
-
-# Create at least one user
-pally-compliance users create \
-  --username admin \
-  --role admin \
-  --password "your-secure-password"
-```
+Authentication for dashboard users is handled locally by the dashboard (see [Authentication Modes](../paths/full-dashboard.md#authentication-modes)) and does not require compliance service user accounts.
 
 ---
 

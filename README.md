@@ -2,9 +2,9 @@
 
 **Site-wide WCAG accessibility scanning with legal compliance mapping — CLI, MCP server, and REST API.**
 
-![Version](https://img.shields.io/badge/version-v0.7.0-blue)
+![Version](https://img.shields.io/badge/version-v0.9.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-850%2B%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1025%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
 
 ---
@@ -29,6 +29,7 @@ Running pa11y on one page at a time is tedious, and translating WCAG violations 
 - **Four interfaces** — CLI for humans, MCP server for AI agents (Claude Code), OAuth2 REST API with OpenAPI/Swagger, web dashboard
 - **Regulatory monitoring** — watches legal sources for changes and creates update proposals when regulations evolve
 - **WAF detection** — detects and reports when a Web Application Firewall blocks scanning
+- **Progressive authentication** — starts with API key (solo mode), add local users (team mode), or install an SSO plugin (enterprise mode) — no external auth service required
 - **Plugin system** — extensible via plugins for authentication (Entra ID, Okta, Google), notifications (Slack, Teams), storage (S3, Azure Blob), and custom scanners; managed via dashboard UI, CLI, or REST API
 
 ---
@@ -119,6 +120,7 @@ Reports are written to `./pally-reports/`.
 | [`@pally-agent/compliance`](packages/compliance) | Compliance rule engine, REST API, MCP server | [docs/reference/compliance-config.md](docs/reference/compliance-config.md) |
 | [`@pally-agent/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, admin UI | [docs/reference/dashboard-config.md](docs/reference/dashboard-config.md) |
 | [`@pally-agent/monitor`](packages/monitor) | Regulatory monitor agent — watches legal sources, creates update proposals | [docs/reference/monitor-config.md](docs/reference/monitor-config.md) |
+| [`@pally-agent/plugin-auth-entra`](packages/plugin-auth-entra) | Azure Entra ID SSO plugin for dashboard enterprise auth | [docs/paths/enterprise-sso.md](docs/paths/enterprise-sso.md) |
 
 ---
 
@@ -264,11 +266,12 @@ npm test --workspaces
 
 Expected output:
 ```
-packages/core:       186 tests passing
-packages/compliance: 417 tests passing
-packages/dashboard:  176 tests passing
-packages/monitor:     71 tests passing
-✓ 850+ tests passed
+packages/core:              186 tests passing
+packages/compliance:        424 tests passing
+packages/dashboard:         315 tests passing
+packages/monitor:            71 tests passing
+packages/plugin-auth-entra:  29 tests passing
+✓ 1025 tests passed
 ```
 
 Run with coverage:
