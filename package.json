@@ -2,7 +2,7 @@
   "name": "pally-agent",
   "version": "0.5.1",
   "private": true,
-  "workspaces": ["packages/core", "packages/compliance", "packages/dashboard", "packages/monitor", "packages/plugins/auth-entra", "packages/plugins/notify-slack", "packages/plugins/notify-teams"],
+  "workspaces": ["packages/core", "packages/compliance", "packages/dashboard", "packages/monitor", "packages/plugins/auth-entra", "packages/plugins/notify-slack", "packages/plugins/notify-teams", "packages/plugins/storage-s3", "packages/plugins/storage-azure"],
   "scripts": {
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
