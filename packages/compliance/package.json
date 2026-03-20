@@ -1,6 +1,6 @@
 {
   "name": "@pally-agent/compliance",
-  "version": "0.5.1",
+  "version": "0.10.0",
   "description": "Accessibility compliance rule engine service",
   "type": "module",
   "main": "dist/cli.js",
