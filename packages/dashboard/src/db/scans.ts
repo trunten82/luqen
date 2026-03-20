@@ -125,6 +125,36 @@ CREATE INDEX IF NOT EXISTS idx_plugins_type ON plugins(type);
 CREATE INDEX IF NOT EXISTS idx_plugins_status ON plugins(status);
     `,
   },
+  {
+    id: '003',
+    name: 'create-dashboard-users',
+    sql: `
+CREATE TABLE IF NOT EXISTS dashboard_users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'admin',
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_dashboard_users_username ON dashboard_users(username);
+    `,
+  },
+  {
+    id: '004',
+    name: 'create-api-keys',
+    sql: `
+CREATE TABLE IF NOT EXISTS api_keys (
+  id TEXT PRIMARY KEY,
+  key_hash TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT 'default',
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  last_used_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(active);
+    `,
+  },
 ];
 
 export class ScanDb {
