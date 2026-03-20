@@ -31,6 +31,7 @@ import { getOrCreateApiKey } from './auth/api-key.js';
 import { UserDb } from './db/users.js';
 import { OrgDb } from './db/orgs.js';
 import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
+import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 
@@ -239,6 +240,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   await dashboardUserRoutes(server, userDb);
+  await apiKeyRoutes(server, db.getDatabase());
   await organizationRoutes(server, orgDb, userDb, config.complianceUrl);
 
   await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
