@@ -1,3 +1,5 @@
+[Docs](README.md) > Licensing
+
 # Licensing
 
 ## Pally Ecosystem License

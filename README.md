@@ -72,26 +72,15 @@ Running pa11y on one page at a time is tedious, and translating WCAG violations 
 
 ## Quick Start
 
+See [docs/QUICKSTART.md](docs/QUICKSTART.md) for the full step-by-step guide.
+
 ```bash
 git clone https://github.com/your-org/pally-agent.git
-cd pally-agent
-npm install
-npm run build --workspaces
+cd pally-agent && npm install && npm run build --workspaces
+cd packages/core && npm link
 
-# Scan a site (requires pa11y webservice running)
-cd packages/core
-node dist/cli.js scan https://example.com --format json,html
-
-# Or if installed globally via npm link
-pally-agent scan https://example.com --format json,html
-
-# Compliance-enriched scan
-pally-agent scan https://example.com \
-  --format both \
-  --compliance-url http://localhost:4000 \
-  --jurisdictions EU,US,UK \
-  --compliance-client-id $CLIENT_ID \
-  --compliance-client-secret $CLIENT_SECRET
+export PALLY_WEBSERVICE_URL=http://localhost:3000
+pally-agent scan https://example.com --format both
 ```
 
 Reports are written to `./pally-reports/`.
@@ -231,9 +220,16 @@ This gives Claude Code **20 MCP tools**: 6 for scanning/fixing (`pally_scan`, `p
 
 ## Documentation
 
-- [docs/README.md](docs/README.md) — full core package docs (CLI, MCP tools, source mapping, reports, configuration)
-- [docs/compliance/README.md](docs/compliance/README.md) — compliance service docs (REST API, MCP tools, jurisdictions, regulations)
-- [docs/dashboard/README.md](docs/dashboard/README.md) — dashboard docs (user guide, admin guide, configuration, Docker, accessibility)
+- [docs/README.md](docs/README.md) — documentation hub and index
+- [docs/QUICKSTART.md](docs/QUICKSTART.md) — get scanning in 5 minutes
+- [docs/USER-GUIDE.md](docs/USER-GUIDE.md) — plain-language guide for non-technical users
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system design, data flow, technology stack
+- [docs/installation/](docs/installation/) — local, Docker, Kubernetes, cloud, one-line installer
+- [docs/configuration/](docs/configuration/) — config reference for all four packages
+- [docs/guides/](docs/guides/) — how-to guides: scanning, compliance, fixes, reports, CI/CD
+- [docs/integrations/](docs/integrations/) — Claude Code, Power Automate, n8n, REST API reference
+- [docs/compliance/README.md](docs/compliance/README.md) — compliance service deep dive
+- [docs/dashboard/README.md](docs/dashboard/README.md) — dashboard deep dive
 - [CHANGELOG.md](CHANGELOG.md) — full version history
 
 ---
