@@ -405,7 +405,64 @@ CREATE TABLE IF NOT EXISTS smtp_config (
 );
     `,
   },
+  {
+    id: '014',
+    name: 'create-teams',
+    sql: `
+CREATE TABLE IF NOT EXISTS teams (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  org_id TEXT NOT NULL DEFAULT 'system',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_teams_org ON teams(org_id);
+
+CREATE TABLE IF NOT EXISTS team_members (
+  team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member',
+  PRIMARY KEY (team_id, user_id)
+);
+    `,
+  },
 ];
+
+export interface Team {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly orgId: string;
+  readonly createdAt: string;
+  readonly memberCount?: number;
+  readonly members?: ReadonlyArray<TeamMember>;
+}
+
+export interface TeamMember {
+  readonly userId: string;
+  readonly username: string;
+  readonly role: string;
+}
+
+interface TeamRow {
+  id: string;
+  name: string;
+  description: string;
+  org_id: string;
+  created_at: string;
+  member_count?: number;
+}
+
+function teamRowToRecord(row: TeamRow): Team {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    orgId: row.org_id,
+    createdAt: row.created_at,
+    ...(row.member_count !== undefined ? { memberCount: row.member_count } : {}),
+  };
+}
 
 export interface SmtpConfig {
   readonly id: string;
@@ -1209,6 +1266,10 @@ export class ScanDb {
     stmt.run(params);
   }
 
+  deleteAssignment(id: string): void {
+    this.db.prepare('DELETE FROM issue_assignments WHERE id = ?').run(id);
+  }
+
   getAssignmentStats(scanId: string): AssignmentStats {
     const stmt = this.db.prepare(
       'SELECT status, COUNT(*) as cnt FROM issue_assignments WHERE scan_id = ? GROUP BY status'
@@ -1622,6 +1683,123 @@ export class ScanDb {
     );
     const rows = stmt.all({ now }) as EmailReportRow[];
     return rows.map(emailReportRowToRecord);
+  }
+
+  // ── Teams ──────────────────────────────────────────────────────────
+
+  listTeams(orgId?: string): Team[] {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+
+    if (orgId !== undefined) {
+      conditions.push("(t.org_id = @orgId OR t.org_id = 'system')");
+      params['orgId'] = orgId;
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const sql = `
+      SELECT t.*, COUNT(tm.user_id) as member_count
+      FROM teams t
+      LEFT JOIN team_members tm ON tm.team_id = t.id
+      ${where}
+      GROUP BY t.id
+      ORDER BY t.name ASC
+    `;
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(params) as TeamRow[];
+    return rows.map(teamRowToRecord);
+  }
+
+  getTeam(id: string): Team | null {
+    const stmt = this.db.prepare('SELECT * FROM teams WHERE id = ?');
+    const row = stmt.get(id) as TeamRow | undefined;
+    if (row === undefined) return null;
+
+    const members = this.listTeamMembers(id);
+    return {
+      ...teamRowToRecord(row),
+      memberCount: members.length,
+      members,
+    };
+  }
+
+  createTeam(data: { readonly name: string; readonly description: string; readonly orgId: string }): Team {
+    const id = `team-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const now = new Date().toISOString();
+
+    const stmt = this.db.prepare(`
+      INSERT INTO teams (id, name, description, org_id, created_at)
+      VALUES (@id, @name, @description, @orgId, @createdAt)
+    `);
+
+    stmt.run({
+      id,
+      name: data.name,
+      description: data.description,
+      orgId: data.orgId,
+      createdAt: now,
+    });
+
+    const created = this.getTeam(id);
+    if (created === null) {
+      throw new Error(`Failed to retrieve team after creation: ${id}`);
+    }
+    return created;
+  }
+
+  updateTeam(id: string, data: { readonly name?: string; readonly description?: string }): void {
+    const setClauses: string[] = [];
+    const params: Record<string, unknown> = { id };
+
+    if (data.name !== undefined) {
+      setClauses.push('name = @name');
+      params['name'] = data.name;
+    }
+    if (data.description !== undefined) {
+      setClauses.push('description = @description');
+      params['description'] = data.description;
+    }
+
+    if (setClauses.length === 0) return;
+
+    const stmt = this.db.prepare(
+      `UPDATE teams SET ${setClauses.join(', ')} WHERE id = @id`,
+    );
+    stmt.run(params);
+  }
+
+  deleteTeam(id: string): void {
+    this.db.prepare('DELETE FROM teams WHERE id = ?').run(id);
+  }
+
+  addTeamMember(teamId: string, userId: string, role = 'member'): void {
+    const stmt = this.db.prepare(`
+      INSERT OR IGNORE INTO team_members (team_id, user_id, role)
+      VALUES (@teamId, @userId, @role)
+    `);
+    stmt.run({ teamId, userId, role });
+  }
+
+  removeTeamMember(teamId: string, userId: string): void {
+    this.db.prepare(
+      'DELETE FROM team_members WHERE team_id = @teamId AND user_id = @userId',
+    ).run({ teamId, userId });
+  }
+
+  listTeamMembers(teamId: string): TeamMember[] {
+    const stmt = this.db.prepare(`
+      SELECT tm.user_id, du.username, tm.role
+      FROM team_members tm
+      LEFT JOIN dashboard_users du ON du.id = tm.user_id
+      WHERE tm.team_id = ?
+      ORDER BY du.username ASC
+    `);
+    const rows = stmt.all(teamId) as Array<{ user_id: string; username: string | null; role: string }>;
+    return rows.map((r) => ({
+      userId: r.user_id,
+      username: r.username ?? r.user_id,
+      role: r.role,
+    }));
   }
 
   close(): void {

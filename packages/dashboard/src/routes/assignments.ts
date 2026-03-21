@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import type { ScanDb, IssueAssignmentStatus } from '../db/scans.js';
+import { UserDb } from '../db/users.js';
 import { hasPermission } from '../permissions.js';
 
 const VALID_STATUSES = new Set<IssueAssignmentStatus>([
@@ -77,6 +78,15 @@ export async function assignmentRoutes(
       });
       const stats = db.getAssignmentStats(id);
 
+      // Build assignees list (users + teams) for the assignment picker
+      const userDb = new UserDb(db.getDatabase());
+      const dashboardUsers = userDb.listUsers();
+      const teams = db.listTeams(orgId);
+      const assignees = [
+        ...dashboardUsers.filter((u) => u.active).map((u) => ({ type: 'user', id: u.username, label: u.username })),
+        ...teams.map((t) => ({ type: 'team', id: `team:${t.id}`, label: `Team: ${t.name}` })),
+      ];
+
       return reply.view('assignments.hbs', {
         pageTitle: `Assignments — ${scan.siteUrl}`,
         currentPath: `/reports/${id}/assignments`,
@@ -89,6 +99,7 @@ export async function assignmentRoutes(
         assignments,
         stats,
         activeFilter: filterStatus ?? 'all',
+        assignees,
       });
     },
   );
@@ -209,6 +220,37 @@ export async function assignmentRoutes(
       return reply.type('text/html').send(html);
     },
   );
+
+  // DELETE /assignments/:id — remove an assignment
+  server.delete(
+    '/assignments/:id',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!hasPermission(request, 'issues.assign')) {
+        return reply.code(403).send({ error: 'Insufficient permissions' });
+      }
+
+      const { id } = request.params as { id: string };
+      const assignment = db.getAssignment(id);
+      if (assignment === null) {
+        return reply.code(404).send({ error: 'Assignment not found' });
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (assignment.orgId !== orgId && assignment.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Assignment not found' });
+      }
+
+      const scanId = assignment.scanId;
+      db.deleteAssignment(id);
+
+      const stats = db.getAssignmentStats(scanId);
+
+      // Return empty content + updated stats for HTMX swap
+      return reply.type('text/html').send(
+        `<span hidden data-asgn-stats data-open="${stats.open}" data-assigned="${stats.assigned}" data-in-progress="${stats.inProgress}" data-fixed="${stats.fixed}" data-verified="${stats.verified}" data-total="${stats.total}"></span>`
+      );
+    },
+  );
 }
 
 function renderAssignmentCard(a: {
@@ -253,12 +295,15 @@ function renderAssignmentCard(a: {
       <select class="asgn-select" data-field="status">${statusOptions}</select>
     </label>
     <label class="asgn-label">Assigned To
-      <input type="text" class="asgn-input" data-field="assignedTo" value="${escapedAssignee}" placeholder="team member...">
+      <select class="asgn-select" data-field="assignedTo" data-current-value="${escapedAssignee}">
+        <option value="">Unassigned</option>
+      </select>
     </label>
     <label class="asgn-label asgn-label--wide">Notes
       <textarea class="asgn-textarea" data-field="notes" rows="2" placeholder="Notes...">${escapedNotes}</textarea>
     </label>
     <button type="button" class="btn btn--sm btn--primary asgn-save-btn" onclick="asgnSave('${a.id}', this)">Save</button>
+    <button type="button" class="btn btn--sm btn--ghost asgn-delete-btn" onclick="asgnDelete('${a.id}', this)" title="Remove assignment">Remove</button>
   </div>
   <div class="asgn-card__meta">
     Created by ${escapeHtml(a.createdBy)} &middot; Updated ${new Date(a.updatedAt).toLocaleString()}

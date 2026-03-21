@@ -152,6 +152,15 @@
       Dashboard Users
     </a>
 
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/teams')}}is-active{{/if}}"
+       href="/admin/teams"
+       aria-current="{{#if (startsWith currentPath '/admin/teams')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M17 20v-2a4 4 0 00-3-3.87M13 6a3 3 0 010 6M9 11a4 4 0 00-4 4v2M9 7a3 3 0 110-6 3 3 0 010 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Teams
+    </a>
+
     {{#if perm.adminRoles}}
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/roles')}}is-active{{/if}}"
        href="/admin/roles"

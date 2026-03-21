@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ScanDb } from '../db/scans.js';
+import { UserDb } from '../db/users.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 import { MANUAL_CRITERIA } from '../manual-criteria.js';
 
@@ -673,9 +674,23 @@ export async function reportRoutes(
       const manualTotal = MANUAL_CRITERIA.length;
       const manualPct = manualTotal > 0 ? Math.round((manualTested / manualTotal) * 100) : 0;
 
-      // Compute issue assignment stats
+      // Compute issue assignment stats + build assigned fingerprint lookup
       const assignmentStats = db.getAssignmentStats(id);
       const assignmentActiveCount = assignmentStats.open + assignmentStats.assigned + assignmentStats.inProgress;
+      const allAssignments = db.listAssignments({ scanId: id });
+      const assignedMap: Record<string, { status: string; assignedTo: string | null }> = {};
+      for (const a of allAssignments) {
+        assignedMap[a.issueFingerprint] = { status: a.status, assignedTo: a.assignedTo };
+      }
+
+      // Build assignees list (users + teams) for the assignment picker
+      const userDb = new UserDb(db.getDatabase());
+      const dashboardUsers = userDb.listUsers();
+      const teams = db.listTeams(orgId);
+      const assignees = [
+        ...dashboardUsers.filter((u) => u.active).map((u) => ({ type: 'user', id: u.username, label: u.username })),
+        ...teams.map((t) => ({ type: 'team', id: `team:${t.id}`, label: `Team: ${t.name}` })),
+      ];
 
       return reply.view('report-detail.hbs', {
         pageTitle: `Report — ${scan.siteUrl}`,
@@ -690,6 +705,8 @@ export async function reportRoutes(
         },
         assignmentStats,
         assignmentActiveCount,
+        assignedMap,
+        assignees,
       });
     },
   );
