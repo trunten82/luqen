@@ -1,7 +1,10 @@
 {{! Trends — issue trends over time per site }}
 
 <section aria-labelledby="trends-heading">
-  <h2 id="trends-heading" class="section-title">Issue Trends</h2>
+  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <h2 id="trends-heading" class="section-title" style="margin:0;">Issue Trends</h2>
+    <a href="/api/v1/export/trends.csv" class="btn btn--ghost btn--sm" aria-label="Export trend data as CSV">Export CSV</a>
+  </div>
 
   {{#if hasTrends}}
   <div class="card mb-lg">

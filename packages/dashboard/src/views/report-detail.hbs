@@ -45,6 +45,7 @@
     <a href="/reports/{{scan.id}}/print" target="_blank" class="btn btn--ghost btn--sm" aria-label="Open print-friendly version for PDF export">
       Print / PDF
     </a>
+    <a href="/api/v1/export/scans/{{scan.id}}/issues.csv" class="btn btn--ghost btn--sm" aria-label="Export issues as CSV">Export CSV</a>
     {{/if}}
   </div>
 </section>

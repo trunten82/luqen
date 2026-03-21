@@ -23,6 +23,8 @@ import { systemRoutes } from './routes/admin/system.js';
 import { monitorRoutes } from './routes/admin/monitor.js';
 import { pluginAdminRoutes } from './routes/admin/plugins.js';
 import { pluginApiRoutes } from './routes/api/plugins.js';
+import { exportRoutes } from './routes/api/export.js';
+import { dataApiRoutes } from './routes/api/data.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { ScanDb } from './db/scans.js';
@@ -273,6 +275,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await organizationRoutes(server, orgDb, userDb, config.complianceUrl);
 
   await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
+
+  // ── Export API routes ────────────────────────────────────────────────────
+  await exportRoutes(server, db);
+
+  // ── Data API routes (Power BI / external integrations) ──────────────────
+  await dataApiRoutes(server, db);
 
   // ── Plugin API routes ────────────────────────────────────────────────────
   await pluginApiRoutes(server, pluginManager);

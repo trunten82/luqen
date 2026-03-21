@@ -119,11 +119,15 @@ export class AuthService {
   // -----------------------------------------------------------------------
 
   async authenticateRequest(request: FastifyRequest): Promise<AuthResult> {
-    // 1. Check Authorization: Bearer header -> try API key
+    // 1. Check Authorization: Bearer header OR X-API-Key header -> try API key
     const authHeader = request.headers.authorization;
-    if (authHeader !== undefined && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.slice(7);
-      const valid = validateApiKey(this.db, token);
+    const xApiKey = request.headers['x-api-key'] as string | undefined;
+    const apiKeyToken = authHeader !== undefined && authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : xApiKey;
+
+    if (apiKeyToken !== undefined && apiKeyToken !== '') {
+      const valid = validateApiKey(this.db, apiKeyToken);
       if (valid) {
         return {
           authenticated: true,
