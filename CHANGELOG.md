@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.0] - 2026-03-21
+
+### Breaking Changes
+- **Rebrand:** pally-agent → Luqen
+- All package names changed from `@pally-agent/*` to `@luqen/*`
+- CLI commands renamed: `pally-agent` → `luqen`, `pally-dashboard` → `luqen-dashboard`, `pally-compliance` → `luqen-compliance`, `pally-monitor` → `luqen-monitor`
+- MCP tool names renamed: `pally_scan` → `luqen_scan`, `pally_get_issues` → `luqen_get_issues`, etc.
+- Environment variables renamed: `PALLY_*` → `LUQEN_*`
+- Config file renamed: `.pally-agent.json` → `.luqen.json`
+- Redis keys renamed: `pally:*` → `luqen:*`
+- Webhook header renamed: `X-Pally-Signature` → `X-Luqen-Signature`
+
+All features from v0.22.0 are unchanged. This is a naming-only change.
+
+---
+
 ## [0.10.0] - 2026-03-20
 
 ### Added

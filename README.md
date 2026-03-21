@@ -1,8 +1,8 @@
 # Luqen
 
-**Site-wide WCAG accessibility scanning with legal compliance mapping — CLI, MCP server, and REST API.**
+**Digital accessibility platform — scan, track, and guide teams toward WCAG compliance.**
 
-![Version](https://img.shields.io/badge/version-v0.9.0-blue)
+![Version](https://img.shields.io/badge/version-v1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Tests](https://img.shields.io/badge/tests-1025%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
@@ -11,7 +11,11 @@
 
 ## What is Luqen?
 
-Running pa11y on one page at a time is tedious, and translating WCAG violations into legal obligations requires specialist knowledge of dozens of jurisdictions. Luqen orchestrates site-wide accessibility scanning via a pa11y webservice instance — discovering all pages, aggregating results, mapping issues to source files, and proposing concrete code fixes. The companion compliance service maps every WCAG violation to the regulations that require it across 58 jurisdictions and 62 regulations, so you know exactly what is a legal obligation and what is best practice. The dashboard brings everything together in a browser UI — start scans, watch progress live, browse reports, and administer the compliance service without touching the command line. The regulatory monitor agent watches legal sources for changes and creates update proposals when regulations evolve.
+Luqen is an enterprise accessibility platform that gives teams visibility into digital accessibility and guides them toward being more accessible and inclusive. It orchestrates site-wide WCAG scanning, maps violations to legal obligations across 58 jurisdictions, tracks issues through assignment and remediation workflows, and monitors regulatory changes — all through a unified dashboard, CLI, MCP server, and REST API.
+
+Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://github.com/dequelabs/axe-core) for scanning, but wraps them in a complete platform: team management, role-based access, issue assignment lifecycles, scheduled scans, email reports, plugin ecosystem, and more. The goal is not just to find accessibility problems, but to help organizations systematically fix them.
+
+> **Why "Luqen"?** A coined name, unique to this project. Pronounced "LOO-ken".
 
 ---
 
