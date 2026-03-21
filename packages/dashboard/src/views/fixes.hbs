@@ -1,0 +1,173 @@
+{{! Fix Proposals — proposed accessibility fixes for a scan report }}
+
+<section aria-labelledby="fixes-heading">
+  <div class="report-actions" role="group" aria-label="Navigation" style="margin-bottom:1rem;">
+    <a href="/reports/{{scan.id}}" class="btn btn--ghost btn--sm" aria-label="Back to report">
+      &larr; Back to Report
+    </a>
+  </div>
+
+  <h2 id="fixes-heading" class="section-title">Fix Proposals</h2>
+
+  <div class="detail-list detail-list--horizontal" style="margin-bottom:1.5rem;">
+    <div class="detail-list__item">
+      <dt>Site</dt>
+      <dd><a href="{{scan.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scan.siteUrl}}</a></dd>
+    </div>
+    {{#if connectedRepo}}
+    <div class="detail-list__item">
+      <dt>Repository</dt>
+      <dd>
+        <a href="{{connectedRepo.repoUrl}}" target="_blank" rel="noopener noreferrer">
+          {{connectedRepo.repoUrl}}
+        </a>
+        <span class="badge badge--success" style="margin-left:0.5rem;">Connected</span>
+      </dd>
+    </div>
+    <div class="detail-list__item">
+      <dt>Branch</dt>
+      <dd><code>{{connectedRepo.branch}}</code></dd>
+    </div>
+    {{#if connectedRepo.repoPath}}
+    <div class="detail-list__item">
+      <dt>Local Path</dt>
+      <dd><code>{{connectedRepo.repoPath}}</code></dd>
+    </div>
+    {{/if}}
+    {{else}}
+    <div class="detail-list__item">
+      <dt>Repository</dt>
+      <dd>
+        <span style="color:var(--text-muted);">Not connected</span>
+        {{#if (isAdmin user.role)}}
+        <a href="/admin/repos" class="btn btn--ghost btn--sm" style="margin-left:0.5rem;">Connect a repository</a>
+        {{/if}}
+      </dd>
+    </div>
+    {{/if}}
+  </div>
+
+  {{#if noReport}}
+  <div class="card" style="text-align:center;padding:2rem;">
+    <p style="color:var(--text-muted);">Report data is not available. Fixes can only be proposed for completed scans.</p>
+  </div>
+  {{else}}
+
+  {{! ── Summary Bar ──────────────────────────────────────────────────── }}
+  <div class="rpt-summary-bar" role="region" aria-label="Fix proposal summary" style="margin-bottom:1.5rem;">
+    <span class="rpt-badge rpt-badge--neutral">{{fixCount}} fix proposals</span>
+    {{#if fixGroups.length}}
+    <span class="rpt-badge rpt-badge--neutral">{{fixGroups.length}} WCAG criteria</span>
+    {{/if}}
+  </div>
+
+  {{#unless fixes.length}}
+  <div class="card" style="text-align:center;padding:2rem;">
+    <p style="color:var(--text-muted);">No automated fix proposals available for the issues in this report.</p>
+    <p style="color:var(--text-muted);margin-top:0.5rem;">
+      Fix suggestions are shown inline on the report detail page for issues that match known patterns.
+    </p>
+  </div>
+  {{/unless}}
+
+  {{! ── Fix Groups by WCAG Criterion ───────────────────────────────── }}
+  {{#each fixGroups}}
+  <div class="card mb-lg">
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+      <h3 style="margin:0;">WCAG {{this.criterion}}: {{this.title}}</h3>
+      <span class="badge badge--neutral">{{this.fixes.length}} fix{{#unless (eq this.fixes.length 1)}}es{{/unless}}</span>
+    </div>
+
+    {{#each this.fixes}}
+    <div class="rpt-fix-proposal" style="border:1px solid var(--border);border-radius:var(--radius, 6px);padding:1rem;margin-bottom:0.75rem;">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+        <span class="badge badge--{{this.severity}}">{{this.severity}}</span>
+        <span class="rpt-fix-effort rpt-fix-effort--{{this.effort}}">{{this.effort}} effort</span>
+        <span class="badge badge--neutral" style="font-size:0.75rem;">{{this.confidence}}</span>
+      </div>
+
+      <p style="margin:0 0 0.5rem;font-weight:500;">{{this.description}}</p>
+
+      <details style="margin-bottom:0.5rem;">
+        <summary style="cursor:pointer;color:var(--text-muted);font-size:0.875rem;">Issue details</summary>
+        <div style="padding:0.5rem 0;">
+          <p style="margin:0 0 0.25rem;font-size:0.875rem;"><strong>Message:</strong> {{this.message}}</p>
+          <p style="margin:0 0 0.25rem;font-size:0.875rem;"><strong>Selector:</strong> <code>{{this.selector}}</code></p>
+          <p style="margin:0 0 0.25rem;font-size:0.875rem;"><strong>Page:</strong> <a href="{{this.pageUrl}}" target="_blank" rel="noopener noreferrer">{{this.pageUrl}}</a></p>
+          {{#if this.context}}
+          <pre style="margin:0.5rem 0 0;font-size:0.8rem;overflow-x:auto;background:var(--bg-secondary);padding:0.5rem;border-radius:4px;"><code>{{this.context}}</code></pre>
+          {{/if}}
+        </div>
+      </details>
+
+      <div style="margin-top:0.75rem;">
+        <p style="margin:0 0 0.25rem;font-size:0.8rem;font-weight:600;color:var(--text-muted);">Suggested fix:</p>
+        <pre class="rpt-fix-hint__code" style="position:relative;"><code id="fix-code-{{this.index}}">{{this.codeExample}}</code><button type="button" class="btn btn--ghost btn--sm" style="position:absolute;top:0.25rem;right:0.25rem;font-size:0.7rem;" onclick="copyFixCode({{this.index}})" aria-label="Copy fix code to clipboard">Copy</button></pre>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  {{/each}}
+
+  {{! ── Integration Notes ──────────────────────────────────────────── }}
+  <div class="card mt-lg" style="background:var(--surface-alt, var(--bg-secondary));">
+    <h3 style="margin:0 0 0.75rem;">Automated Fix Options</h3>
+    <ul style="color:var(--text-muted);margin:0;padding-left:1.5rem;">
+      <li style="margin-bottom:0.5rem;">
+        <strong>MCP tools in your IDE:</strong> Use <code>pally_propose_fixes</code> and <code>pally_apply_fix</code>
+        to propose and apply fixes directly from VS Code, Cursor, or any MCP-compatible editor.
+      </li>
+      <li style="margin-bottom:0.5rem;">
+        <strong>REST API:</strong> <code>GET /api/v1/scans/{{scan.id}}/fixes</code> returns fix proposals as JSON.
+      </li>
+      <li>
+        <strong>A2A protocol:</strong> For automated pipelines, use the Agent-to-Agent protocol
+        to request fixes programmatically. Agents can call the REST API to propose and apply fixes.
+      </li>
+    </ul>
+  </div>
+
+  {{/if}}
+</section>
+
+<script>
+function copyFixCode(index) {
+  var codeEl = document.getElementById('fix-code-' + index);
+  if (!codeEl) return;
+  var text = codeEl.textContent || codeEl.innerText;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showCopyToast('Fix code copied to clipboard');
+    }).catch(function() {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); showCopyToast('Fix code copied to clipboard'); }
+  catch(e) { showCopyToast('Could not copy — please select and copy manually'); }
+  document.body.removeChild(ta);
+}
+
+function showCopyToast(msg) {
+  var existing = document.getElementById('copy-toast');
+  if (existing) existing.remove();
+  var toast = document.createElement('div');
+  toast.id = 'copy-toast';
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.className = 'toast toast--success';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 3000);
+}
+</script>

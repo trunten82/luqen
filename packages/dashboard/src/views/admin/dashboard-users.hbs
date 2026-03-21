@@ -38,8 +38,10 @@
                     name="role"
                     class="input input--sm"
                     aria-label="Change role for {{this.username}}">
+              <option value="executive" {{#if (eq this.role 'executive')}}selected{{/if}}>executive</option>
               <option value="viewer" {{#if (eq this.role 'viewer')}}selected{{/if}}>viewer</option>
               <option value="user" {{#if (eq this.role 'user')}}selected{{/if}}>user</option>
+              <option value="developer" {{#if (eq this.role 'developer')}}selected{{/if}}>developer</option>
               <option value="admin" {{#if (eq this.role 'admin')}}selected{{/if}}>admin</option>
             </select>
             {{else}}

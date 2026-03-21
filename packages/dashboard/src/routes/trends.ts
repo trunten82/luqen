@@ -34,6 +34,22 @@ interface SiteSummaryRow {
   readonly trend: 'improving' | 'regressing' | 'stable' | 'new';
 }
 
+interface OrgTotalPoint {
+  readonly date: string;
+  readonly totalIssues: number;
+  readonly errors: number;
+  readonly warnings: number;
+  readonly notices: number;
+}
+
+interface SiteScoreEntry {
+  readonly siteUrl: string;
+  readonly score: number;
+  readonly trend: 'improving' | 'stable' | 'regressing' | 'new';
+  readonly lastScanned: string;
+  readonly scoreClass: string;
+}
+
 function groupBySite(scans: readonly ScanRecord[]): readonly SiteTrend[] {
   const siteMap = new Map<string, TrendPoint[]>();
 
@@ -56,6 +72,104 @@ function groupBySite(scans: readonly ScanRecord[]): readonly SiteTrend[] {
     trends.push({ siteUrl, points });
   }
   return trends;
+}
+
+function buildOrgTotals(scans: readonly ScanRecord[]): readonly OrgTotalPoint[] {
+  // Group scans by date (day granularity) and sum across all sites
+  const dateMap = new Map<string, { totalIssues: number; errors: number; warnings: number; notices: number }>();
+
+  for (const scan of scans) {
+    const dateKey = scan.createdAt.slice(0, 10); // YYYY-MM-DD
+    const existing = dateMap.get(dateKey) ?? { totalIssues: 0, errors: 0, warnings: 0, notices: 0 };
+    dateMap.set(dateKey, {
+      totalIssues: existing.totalIssues + (scan.totalIssues ?? 0),
+      errors: existing.errors + (scan.errors ?? 0),
+      warnings: existing.warnings + (scan.warnings ?? 0),
+      notices: existing.notices + (scan.notices ?? 0),
+    });
+  }
+
+  const sorted = Array.from(dateMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+  return sorted.map(([date, totals]) => ({
+    date,
+    totalIssues: totals.totalIssues,
+    errors: totals.errors,
+    warnings: totals.warnings,
+    notices: totals.notices,
+  }));
+}
+
+function computeOrgScore(scans: readonly ScanRecord[]): number {
+  // Use the latest scan per site to compute the org-wide score
+  const latestBySite = new Map<string, ScanRecord>();
+  for (const scan of scans) {
+    const existing = latestBySite.get(scan.siteUrl);
+    if (existing === undefined || scan.createdAt > existing.createdAt) {
+      latestBySite.set(scan.siteUrl, scan);
+    }
+  }
+
+  if (latestBySite.size === 0) return 100;
+
+  let totalErrors = 0;
+  let totalWarnings = 0;
+  let totalNotices = 0;
+  let totalPages = 0;
+
+  for (const scan of latestBySite.values()) {
+    totalErrors += scan.errors ?? 0;
+    totalWarnings += scan.warnings ?? 0;
+    totalNotices += scan.notices ?? 0;
+    totalPages += scan.pagesScanned ?? 1;
+  }
+
+  const pagesScanned = Math.max(totalPages, 1);
+  const rawScore = 100 - (totalErrors * 10 + totalWarnings * 3 + totalNotices * 0.5) / pagesScanned;
+  return Math.round(Math.max(0, Math.min(100, rawScore)));
+}
+
+function buildSiteScores(trends: readonly SiteTrend[]): readonly SiteScoreEntry[] {
+  const entries: SiteScoreEntry[] = [];
+
+  for (const site of trends) {
+    const points = site.points;
+    if (points.length === 0) continue;
+
+    const latest = points[points.length - 1];
+    const pagesScanned = Math.max(latest.pagesScanned, 1);
+    const rawScore = 100 - (latest.errors * 10 + latest.warnings * 3 + latest.notices * 0.5) / pagesScanned;
+    const score = Math.round(Math.max(0, Math.min(100, rawScore)));
+
+    let trend: SiteScoreEntry['trend'];
+    if (points.length < 2) {
+      trend = 'new';
+    } else {
+      const previous = points[points.length - 2];
+      const prevPages = Math.max(previous.pagesScanned, 1);
+      const prevRaw = 100 - (previous.errors * 10 + previous.warnings * 3 + previous.notices * 0.5) / prevPages;
+      const prevScore = Math.round(Math.max(0, Math.min(100, prevRaw)));
+
+      if (score > prevScore) {
+        trend = 'improving';
+      } else if (score < prevScore) {
+        trend = 'regressing';
+      } else {
+        trend = 'stable';
+      }
+    }
+
+    const scoreClass = score > 80 ? 'text--success' : score >= 50 ? 'text--warning' : 'text--error';
+
+    entries.push({
+      siteUrl: site.siteUrl,
+      score,
+      trend,
+      lastScanned: latest.date,
+      scoreClass,
+    });
+  }
+
+  return entries;
 }
 
 function buildSummaryTable(trends: readonly SiteTrend[]): readonly SiteSummaryRow[] {
@@ -119,11 +233,41 @@ export async function trendRoutes(
       const summaryTable = buildSummaryTable(trends);
       const siteUrls = trends.map((t) => t.siteUrl);
 
+      const orgTotals = buildOrgTotals(scans);
+      const orgScore = computeOrgScore(scans);
+      const siteScores = buildSiteScores(trends);
+
+      const orgScoreClass = orgScore > 80 ? 'text--success' : orgScore >= 50 ? 'text--warning' : 'text--error';
+
       return reply.view('trends.hbs', {
         pageTitle: 'Trends',
         currentPath: '/reports/trends',
         user: request.user,
         trendData: trends,
+        orgTotals,
+        orgScore,
+        orgScoreClass,
+        siteScores: siteScores.map((s) => ({
+          ...s,
+          lastScannedDisplay: new Date(s.lastScanned).toLocaleDateString(),
+          trendLabel: s.trend === 'improving'
+            ? 'Improving'
+            : s.trend === 'regressing'
+              ? 'Regressing'
+              : s.trend === 'new'
+                ? 'New'
+                : 'Stable',
+          trendArrow: s.trend === 'improving'
+            ? '&#9650;'
+            : s.trend === 'regressing'
+              ? '&#9660;'
+              : '&#9644;',
+          trendClass: s.trend === 'improving'
+            ? 'text--success'
+            : s.trend === 'regressing'
+              ? 'text--error'
+              : 'text--muted',
+        })),
         summaryTable: summaryTable.map((row) => ({
           ...row,
           latestDateDisplay: new Date(row.latestDate).toLocaleDateString(),

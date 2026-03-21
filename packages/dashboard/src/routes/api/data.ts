@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { ScanDb, ScanRecord } from '../../db/scans.js';
+import { getFixSuggestion } from '../../fix-suggestions.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -421,6 +422,76 @@ export async function dataApiRoutes(
 
       return reply.header('content-type', 'application/json').send({
         data: summaries,
+      });
+    },
+  );
+
+  // ── GET /api/v1/scans/:id/fixes ────────────────────────────────────
+  server.get<{ Params: ScanParams }>(
+    '/api/v1/scans/:id/fixes',
+    { config: rateLimitConfig },
+    async (
+      request: FastifyRequest<{ Params: ScanParams }>,
+      reply: FastifyReply,
+    ) => {
+      const orgId = getOrgId(request);
+      const scan = db.getScan(request.params.id);
+
+      if (scan === null || scan.orgId !== orgId) {
+        return reply.code(404).send({ error: 'Scan not found' });
+      }
+
+      const report = await readReport(scan.jsonReportPath);
+      if (report === null || report.pages === undefined) {
+        return reply.send({ data: [], total: 0, connectedRepo: null });
+      }
+
+      // Find connected repo
+      const connectedRepo = db.findRepoForUrl(scan.siteUrl, orgId);
+
+      // Collect all issues and generate fix proposals
+      const fixes: Array<Record<string, unknown>> = [];
+      const seen = new Set<string>();
+
+      for (const page of report.pages) {
+        for (const issue of page.issues) {
+          const criterion = issue.wcagCriterion ?? '';
+          const suggestion = getFixSuggestion(criterion, issue.message);
+          if (suggestion === null) continue;
+
+          const fingerprint = `${suggestion.criterion}:${suggestion.issuePattern}:${issue.selector}`;
+          if (seen.has(fingerprint)) continue;
+          seen.add(fingerprint);
+
+          fixes.push({
+            criterion: suggestion.criterion,
+            title: suggestion.title,
+            description: suggestion.description,
+            codeExample: suggestion.codeExample,
+            effort: suggestion.effort,
+            severity: issue.type,
+            message: issue.message,
+            selector: issue.selector,
+            pageUrl: page.url,
+            repoPath: connectedRepo?.repoPath ?? null,
+            repoUrl: connectedRepo?.repoUrl ?? null,
+            branch: connectedRepo?.branch ?? null,
+          });
+        }
+      }
+
+      return reply.header('content-type', 'application/json').send({
+        data: fixes,
+        total: fixes.length,
+        connectedRepo: connectedRepo !== null
+          ? {
+              repoUrl: connectedRepo.repoUrl,
+              repoPath: connectedRepo.repoPath,
+              branch: connectedRepo.branch,
+            }
+          : null,
+        mcpTools: ['pally_propose_fixes', 'pally_apply_fix'],
+        a2aHint: 'Agents can call GET /api/v1/scans/:id/fixes for fix proposals',
       });
     },
   );

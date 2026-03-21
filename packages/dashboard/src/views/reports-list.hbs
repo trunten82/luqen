@@ -125,6 +125,14 @@
           </td>
           <td class="cell--actions">
             <a href="/reports/{{id}}" class="btn btn--sm btn--secondary" aria-label="View report for {{siteUrl}}">View</a>
+            {{#if previousScanId}}
+            <a
+              href="/reports/compare?a={{previousScanId}}&b={{id}}"
+              class="btn btn--sm btn--ghost"
+              aria-label="Compare with previous scan for {{siteUrl}}"
+              title="Compare with previous scan"
+            >Compare</a>
+            {{/if}}
             <button
               class="btn btn--sm btn--danger"
               hx-delete="/reports/{{id}}"
@@ -173,9 +181,15 @@
   {{else}}
   <div class="empty-state" role="status">
     {{#if q}}
-    <p>No reports match <strong>"{{q}}"</strong>. <a href="/reports">Clear search</a></p>
+    <div class="empty-state__icon">&#128269;</div>
+    <div class="empty-state__title">No matching reports</div>
+    <div class="empty-state__desc">No reports match <strong>"{{q}}"</strong>.</div>
+    <a href="/reports" class="btn btn--ghost btn--sm">Clear search</a>
     {{else}}
-    <p>No scan reports yet. <a href="/scan/new">Start your first scan</a>.</p>
+    <div class="empty-state__icon">&#128269;</div>
+    <div class="empty-state__title">No reports yet</div>
+    <div class="empty-state__desc">Run your first accessibility scan to see results here.</div>
+    <a href="/scan/new" class="btn btn--primary">New Scan</a>
     {{/if}}
   </div>
   {{/if}}

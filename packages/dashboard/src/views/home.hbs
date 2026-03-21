@@ -22,6 +22,7 @@
   </div>
 </section>
 
+{{#unless (isExecutive user.role)}}
 <section aria-labelledby="stats-heading">
   <h2 id="stats-heading" class="section-title">Overview</h2>
   <div class="stats-grid" role="list" aria-label="Summary statistics">
@@ -43,7 +44,9 @@
     </article>
   </div>
 </section>
+{{/unless}}
 
+{{#if (canRunScans user.role)}}
 <section aria-labelledby="quick-scan-heading">
   <h2 id="quick-scan-heading" class="section-title">New Scan</h2>
   <div class="card mb-lg">
@@ -113,6 +116,7 @@
     </form>
   </div>
 </section>
+{{/if}}
 
 <section aria-labelledby="recent-scans-heading">
   <div class="section-header">
@@ -121,6 +125,41 @@
   </div>
 
   {{#if recentScans.length}}
+  {{#if (isExecutive user.role)}}
+  {{! Executive view — simplified recent scans }}
+  <div class="table-responsive" role="region" aria-label="Recent scans table" tabindex="0">
+    <table class="data-table" aria-label="Recent scans">
+      <caption class="sr-only">Most recent accessibility scans</caption>
+      <thead>
+        <tr>
+          <th scope="col">Site URL</th>
+          <th scope="col">Status</th>
+          <th scope="col">Issues</th>
+          <th scope="col">Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each recentScans}}
+        <tr id="scan-{{id}}">
+          <td data-label="Site URL" class="cell--url">{{siteUrl}}</td>
+          <td data-label="Status">
+            <span class="badge badge--{{status}}" aria-label="Status: {{status}}">
+              {{status}}
+            </span>
+          </td>
+          <td data-label="Issues">
+            {{#if totalIssues}}{{totalIssues}}{{else}}&mdash;{{/if}}
+          </td>
+          <td data-label="Date">
+            <time datetime="{{createdAt}}">{{createdAtDisplay}}</time>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  {{! Full view — all columns and actions }}
   <div class="table-responsive" role="region" aria-label="Recent scans table" tabindex="0">
     <table class="data-table" aria-label="Recent scans">
       <caption class="sr-only">Most recent accessibility scans</caption>
@@ -180,6 +219,7 @@
       </tbody>
     </table>
   </div>
+  {{/if}}
   {{else}}
   <div class="empty-state" role="status">
     <p>No scans yet. Start your first scan using the quick scan form above.</p>

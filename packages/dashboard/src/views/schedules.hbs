@@ -1,0 +1,123 @@
+{{! Scan Schedules — manage recurring scans }}
+
+<section aria-labelledby="schedules-heading">
+  <h2 id="schedules-heading" class="section-title">Scan Schedules</h2>
+
+  {{! ── Create New Schedule ──────────────────────────────────────── }}
+  <div class="card mb-lg">
+    <h3 style="margin:0 0 1rem;">New Schedule</h3>
+    <form method="POST" action="/schedules"
+          hx-post="/schedules" hx-swap="none"
+          style="display:grid;gap:0.75rem;max-width:600px;">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label for="siteUrl">Site URL</label>
+        <input type="url" id="siteUrl" name="siteUrl" class="input" required
+               placeholder="https://example.com" aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="standard">Standard</label>
+        <select id="standard" name="standard" class="select">
+          {{#each standards}}
+          <option value="{{this}}" {{#if (eq this "WCAG2AA")}}selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="frequency">Frequency</label>
+        <select id="frequency" name="frequency" class="select">
+          {{#each frequencies}}
+          <option value="{{this}}" {{#if (eq this "weekly")}}selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="scanMode">Scan Mode</label>
+        <select id="scanMode" name="scanMode" class="select">
+          <option value="single">Single Page</option>
+          <option value="site" selected>Full Site</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="runner">Runner</label>
+        <select id="runner" name="runner" class="select">
+          <option value="htmlcs" selected>HTML CodeSniffer</option>
+          <option value="axe">axe-core</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="display:flex;align-items:center;gap:0.5rem;">
+        <input type="checkbox" id="incremental" name="incremental" value="true">
+        <label for="incremental" style="margin:0;">Incremental (skip unchanged pages)</label>
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn--primary">Create Schedule</button>
+      </div>
+    </form>
+  </div>
+
+  {{! ── Schedule List ────────────────────────────────────────────── }}
+  {{#if hasSchedules}}
+  <div class="card">
+    <div class="table-responsive" role="region" aria-label="Scheduled scans table" tabindex="0">
+      <table class="data-table" aria-label="Scan schedules">
+        <caption class="sr-only">List of scheduled recurring scans</caption>
+        <thead>
+          <tr>
+            <th scope="col">Site URL</th>
+            <th scope="col">Standard</th>
+            <th scope="col">Frequency</th>
+            <th scope="col">Next Run</th>
+            <th scope="col">Last Run</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each schedules}}
+          <tr>
+            <td data-label="Site URL" class="cell--url">{{siteUrl}}</td>
+            <td data-label="Standard">{{standard}}</td>
+            <td data-label="Frequency" style="text-transform:capitalize;">{{frequency}}</td>
+            <td data-label="Next Run">{{nextRunAtDisplay}}</td>
+            <td data-label="Last Run">{{lastRunAtDisplay}}</td>
+            <td data-label="Status">
+              <span class="badge {{enabledClass}}">{{enabledLabel}}</span>
+            </td>
+            <td data-label="Actions" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <button class="btn btn--sm {{toggleClass}}"
+                      hx-patch="/schedules/{{id}}/toggle"
+                      hx-headers='{"x-csrf-token": "{{../csrfToken}}"}'
+                      hx-swap="none"
+                      aria-label="{{toggleLabel}} schedule for {{siteUrl}}">
+                {{toggleLabel}}
+              </button>
+              <button class="btn btn--sm btn--danger"
+                      hx-delete="/schedules/{{id}}"
+                      hx-headers='{"x-csrf-token": "{{../csrfToken}}"}'
+                      hx-swap="none"
+                      hx-confirm="Delete this schedule?"
+                      aria-label="Delete schedule for {{siteUrl}}">
+                Delete
+              </button>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{else}}
+  <div class="empty-state" role="status">
+    <p>No scheduled scans yet. Create one above to start automated scanning.</p>
+  </div>
+  {{/if}}
+</section>
+
+<div id="toast" role="alert" aria-live="assertive"></div>
