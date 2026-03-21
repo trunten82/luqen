@@ -784,6 +784,11 @@
 
   function rptBulkAssign() {
     var assignee = (document.getElementById('rpt-bulk-assignee') || {}).value || '';
+    if (!assignee) {
+      var tc = document.getElementById('toast-container');
+      if (tc) { var t = document.createElement('div'); t.className = 'toast toast--error'; t.textContent = 'Please select an assignee'; tc.appendChild(t); setTimeout(function(){t.remove();}, 3000); }
+      return;
+    }
     var checked = document.querySelectorAll('.rpt-bulk-cb:checked');
     if (checked.length === 0) return;
 
