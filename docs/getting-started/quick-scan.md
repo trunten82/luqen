@@ -39,7 +39,7 @@ npm install -g @pally-agent/core
 
 Or install from source:
 ```bash
-git clone https://github.com/alanna82/pally-agent.git
+git clone https://github.com/trunten82/pally-agent.git
 cd pally-agent && npm install && npm run build --workspaces
 cd packages/core && npm link
 ```

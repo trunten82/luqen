@@ -16,7 +16,7 @@ npx pally-monitor scan
 
 ## Documentation
 
-See the [main repository](https://github.com/alanna82/pally-agent) for full documentation.
+See the [main repository](https://github.com/trunten82/pally-agent) for full documentation.
 
 ## License
 

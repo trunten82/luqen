@@ -13,7 +13,7 @@ Use pally-agent as an MCP (Model Context Protocol) server inside your AI-powered
 - pally-agent installed from source (the MCP server runs from the built JS files)
 
 ```bash
-git clone https://github.com/alanna82/pally-agent.git ~/pally-agent
+git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
 cd ~/pally-agent && npm install && npm run build --workspaces
 ```
 

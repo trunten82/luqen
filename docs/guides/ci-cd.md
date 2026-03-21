@@ -78,7 +78,7 @@ jobs:
 
       - name: Install pally-agent
         run: |
-          git clone https://github.com/alanna82/pally-agent.git /tmp/pally-agent
+          git clone https://github.com/trunten82/pally-agent.git /tmp/pally-agent
           cd /tmp/pally-agent
           npm install
           npm run build:all
@@ -149,7 +149,7 @@ steps:
       versionSpec: '20.x'
 
   - script: |
-      git clone https://github.com/alanna82/pally-agent.git $(Agent.TempDirectory)/pally-agent
+      git clone https://github.com/trunten82/pally-agent.git $(Agent.TempDirectory)/pally-agent
       cd $(Agent.TempDirectory)/pally-agent
       npm install
       npm run build:all
@@ -193,7 +193,7 @@ a11y-scan:
     PALLY_WEBSERVICE_URL: http://pa11y:3000
 
   before_script:
-    - git clone https://github.com/alanna82/pally-agent.git /tmp/pally-agent
+    - git clone https://github.com/trunten82/pally-agent.git /tmp/pally-agent
     - cd /tmp/pally-agent && npm install && npm run build:all
     - cd packages/core && npm link
 

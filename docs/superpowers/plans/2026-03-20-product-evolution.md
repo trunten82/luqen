@@ -484,7 +484,7 @@ Test that JSON report includes a `nextSteps` field. When no compliance data is p
 - [ ] **Step 2: Add nextSteps to JSON reporter**
 
 Add a `nextSteps` field to the JSON output based on what data is present:
-- No compliance data → `"Want legal compliance mapping? Add @pally-agent/compliance. See: https://github.com/alanna82/pally-agent"`
+- No compliance data → `"Want legal compliance mapping? Add @pally-agent/compliance. See: https://github.com/trunten82/pally-agent"`
 - Has compliance data → `"Want a web dashboard to track compliance over time? Add @pally-agent/dashboard."`
 
 - [ ] **Step 3: Add hint to HTML report footer**
@@ -751,7 +751,7 @@ git commit -m "docs: add consolidated MCP tools, CLI reference, and publish guid
 - Add architecture diagram including monitor package
 - Replace documentation links with new path-based structure
 - Add composition paths table as the primary navigation
-- Fix `your-org` placeholder → `alanna82`
+- Fix `your-org` placeholder → `trunten82`
 - Fix monitor env var names
 
 - [ ] **Step 2: Update CHANGELOG.md**
@@ -844,7 +844,7 @@ gh release create v0.7.0 --title "v0.7.0 — Composable Accessibility Platform" 
 - Consolidated MCP tools and CLI reference
 - Fixed all doc inaccuracies (env var names, versions, test counts)
 
-**Full Changelog:** https://github.com/alanna82/pally-agent/compare/v0.6.0...v0.7.0
+**Full Changelog:** https://github.com/trunten82/pally-agent/compare/v0.6.0...v0.7.0
 EOF
 )"
 ```

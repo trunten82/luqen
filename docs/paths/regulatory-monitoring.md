@@ -16,7 +16,7 @@ Composition path 7: monitor legal sources for accessibility regulation changes a
 ## Install
 
 ```bash
-git clone https://github.com/alanna82/pally-agent.git ~/pally-agent
+git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
 cd ~/pally-agent && npm install && npm run build --workspaces
 ```
 

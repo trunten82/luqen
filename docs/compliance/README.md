@@ -69,7 +69,7 @@ The compliance service is independent. pally-agent is one of its clients. Power 
 
 ```bash
 # Clone the monorepo
-git clone https://github.com/alanna82/pally-agent.git
+git clone https://github.com/trunten82/pally-agent.git
 cd pally-agent
 
 # Install dependencies

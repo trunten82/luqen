@@ -16,12 +16,12 @@ The installer clones the monorepo, builds all 4 packages (core, compliance, dash
 
 **Local (Node.js):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alanna82/pally-agent/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/trunten82/pally-agent/master/install.sh | bash
 ```
 
 **Docker:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alanna82/pally-agent/master/install.sh | bash -s -- --docker
+curl -fsSL https://raw.githubusercontent.com/trunten82/pally-agent/master/install.sh | bash -s -- --docker
 ```
 
 Options: `--port PORT` (compliance port, dashboard = port+1000), `--pa11y-url URL`, `--no-seed`.
