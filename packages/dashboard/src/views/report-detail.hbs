@@ -168,7 +168,7 @@
     {{#each reportData.allIssueGroups}}
     <div class="rpt-group rpt-group--collapsed" data-issue-group data-criterion="{{criterion}}" data-criterion-title="{{title}}" data-severity="{{#if errorCount}}error{{else}}{{#if warningCount}}warning{{else}}notice{{/if}}{{/if}}" data-regulatory="{{isRegulatory}}" data-template="{{hasTemplate}}" data-total-count="{{totalCount}}" data-error-count="{{errorCount}}" data-warning-count="{{warningCount}}" data-notice-count="{{noticeCount}}" data-page-count="{{pageCount}}">
       <div class="rpt-group__header" onclick="rptToggleGroup(this)" role="button" tabindex="0" aria-expanded="false">
-        {{#if ../perm.issuesAssign}}<input type="checkbox" class="rpt-bulk-cb" onclick="event.stopPropagation();rptBulkUpdate()" aria-label="Select {{criterion}}">{{/if}}
+        {{#if ../perm.issuesAssign}}{{#unless (issueAssignStatus ../assignedMap "" "" "" criterion)}}<input type="checkbox" class="rpt-bulk-cb" onclick="event.stopPropagation();rptBulkUpdate()" aria-label="Select {{criterion}}">{{/unless}}{{/if}}
         <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
         {{#if wcagUrl}}
           <a class="rpt-code rpt-wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{criterion}}</a>
