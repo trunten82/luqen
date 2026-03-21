@@ -235,6 +235,35 @@ View and manage auto-generated fix proposals across scans.
 
 ---
 
+## Data API endpoints
+
+The dashboard provides read-only JSON and CSV endpoints for external consumption (Power BI, custom integrations, CI/CD pipelines).
+
+### Available endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/scans` | List scans (filters: `siteUrl`, `from`, `to`, `limit`, `offset`) |
+| `GET /api/v1/scans/:id` | Single scan detail |
+| `GET /api/v1/scans/:id/issues` | Issues for a scan (filters: `severity`, `criterion`) |
+| `GET /api/v1/trends` | Time-series issue counts per site |
+| `GET /api/v1/compliance-summary` | Latest compliance status per jurisdiction |
+| `GET /api/v1/export/scans.csv` | CSV download of scans list |
+| `GET /api/v1/export/scans/:id/issues.csv` | CSV download of issues |
+| `GET /api/v1/export/trends.csv` | CSV download of trend data |
+
+### Authentication
+
+All data API endpoints require an `X-API-Key` header. Generate keys from **Settings > API Keys** (`/admin/api-keys`).
+
+### Rate limiting
+
+Data API endpoints are rate limited to 60 requests per minute per API key.
+
+For full documentation with request/response examples, see [API Reference — Dashboard Data API](../reference/api-reference.md#dashboard-data-api).
+
+---
+
 ## Session management
 
 - Sessions are stored server-side and encrypted with `DASHBOARD_SESSION_SECRET`.

@@ -316,6 +316,74 @@ The dashboard can be configured to run periodic scans through its webhook integr
 
 ---
 
+## Using the data API in pipelines
+
+The dashboard data API (v0.14.0+) provides JSON endpoints you can query from CI/CD pipelines to check scan results programmatically without running a new scan.
+
+### Check latest scan status
+
+```bash
+# Get the most recent scan for a site
+SCAN=$(curl -s -H "X-API-Key: $PALLY_API_KEY" \
+  "http://dashboard:5000/api/v1/scans?siteUrl=https://staging.example.com&limit=1")
+
+ERRORS=$(echo "$SCAN" | jq '.data[0].errors')
+echo "Latest scan has $ERRORS errors"
+
+if [ "$ERRORS" -gt 0 ]; then
+  echo "FAIL: $ERRORS accessibility errors found"
+  exit 1
+fi
+```
+
+### Check compliance status
+
+```bash
+# Get compliance summary for a site
+COMPLIANCE=$(curl -s -H "X-API-Key: $PALLY_API_KEY" \
+  "http://dashboard:5000/api/v1/compliance-summary?siteUrl=https://staging.example.com")
+
+# Check if any jurisdiction is failing
+FAILING=$(echo "$COMPLIANCE" | jq '[.data[0].jurisdictions | to_entries[] | select(.value.status == "fail")] | length')
+
+if [ "$FAILING" -gt 0 ]; then
+  echo "FAIL: $FAILING jurisdiction(s) failing compliance"
+  echo "$COMPLIANCE" | jq '.data[0].jurisdictions | to_entries[] | select(.value.status == "fail") | "\(.key): \(.value.mandatoryViolations) violations"'
+  exit 1
+fi
+```
+
+### Download issues as CSV for reporting
+
+```bash
+# Get the latest scan ID
+SCAN_ID=$(curl -s -H "X-API-Key: $PALLY_API_KEY" \
+  "http://dashboard:5000/api/v1/scans?siteUrl=https://staging.example.com&limit=1" \
+  | jq -r '.data[0].id')
+
+# Download issues CSV as a pipeline artifact
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://dashboard:5000/api/v1/export/scans/$SCAN_ID/issues.csv" \
+  -o ./a11y-reports/issues.csv
+```
+
+### Monitor trends
+
+```bash
+# Check if errors are increasing over the last 5 scans
+TRENDS=$(curl -s -H "X-API-Key: $PALLY_API_KEY" \
+  "http://dashboard:5000/api/v1/trends?siteUrl=https://staging.example.com")
+
+LATEST=$(echo "$TRENDS" | jq '.data[0].errors')
+PREVIOUS=$(echo "$TRENDS" | jq '.data[1].errors')
+
+if [ "$LATEST" -gt "$PREVIOUS" ]; then
+  echo "WARNING: Error count increased from $PREVIOUS to $LATEST"
+fi
+```
+
+---
+
 ## Best practices
 
 1. **Scan staging, not production** — scan your staging environment so you catch issues before deployment.

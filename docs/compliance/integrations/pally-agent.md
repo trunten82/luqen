@@ -234,6 +234,12 @@ pally-agent can also call the compliance service via the A2A protocol. This uses
 4. Streams progress: `GET /a2a/tasks/:id/stream`
 5. Retrieves result: `GET /a2a/tasks/:id`
 
+## Data API for external integrations
+
+The dashboard (v0.14.0+) provides read-only JSON and CSV endpoints for programmatic access to scan results, issue data, trends, and compliance summaries. These endpoints use `X-API-Key` header authentication (separate from the OAuth credentials above) and are rate limited to 60 requests per minute.
+
+Use these endpoints to feed scan data into Power BI, custom dashboards, or CI/CD pipelines without re-running scans. See [API Reference — Dashboard Data API](../../reference/api-reference.md#dashboard-data-api) for full endpoint documentation.
+
 ## Jurisdiction selection guide
 
 Choose jurisdictions based on where your users are located or where you operate:
