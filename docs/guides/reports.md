@@ -8,7 +8,7 @@ How to read, filter, and compare accessibility reports in the dashboard and CLI.
 
 ## Report layout
 
-Dashboard reports use a **4-tab layout** with a summary bar at the top.
+Dashboard reports use a **4-tab layout** with a summary bar at the top. Additional features include print/PDF export, manual testing checklists, and trend tracking — described after the tab sections below.
 
 ### Summary bar
 
@@ -148,6 +148,56 @@ Toggle independently:
 - Multiple filters can be active simultaneously (they combine with AND logic within a category, OR between severity filters).
 - Counts update live as filters are toggled.
 - All filters default to "on" — everything is shown initially.
+
+---
+
+## Print / PDF export
+
+Each report has a print-optimized view at `/reports/:id/print`. This is a standalone page that strips navigation, filters, and interactive elements — designed for `window.print()`.
+
+To export a report as PDF:
+
+1. Open the report in the dashboard.
+2. Click the **Print** button (or navigate directly to `/reports/:id/print`).
+3. Use your browser's Print dialog (Ctrl+P / Cmd+P) and select "Save as PDF" as the destination.
+
+The print layout includes the summary bar, compliance matrix, issues list, and template groups in a linear format suitable for paper or PDF.
+
+---
+
+## Manual testing checklists
+
+Automated scanning covers approximately 30-40% of WCAG criteria. The manual testing feature provides structured checklists for the criteria that require human judgement.
+
+**Path:** `/reports/:id/manual`
+
+The checklist includes 27 WCAG 2.1 AA success criteria that cannot be fully automated, such as:
+
+- Meaningful alternative text (1.1.1 — beyond just checking for presence)
+- Logical reading order (1.3.2)
+- Visible focus indicators (2.4.7)
+- Consistent navigation (3.2.3)
+- Error identification and suggestions (3.3.1, 3.3.3)
+
+For each criterion, testers record:
+
+| Status | Meaning |
+|--------|---------|
+| **Pass** | The criterion is satisfied |
+| **Fail** | The criterion is not met — record a description of the failure |
+| **N/A** | The criterion does not apply to this page/site |
+
+Results are saved per scan and persist across sessions. Manual test results appear alongside automated findings in the full report view.
+
+---
+
+## Trend tracking
+
+The dashboard tracks scan results over time for each URL.
+
+**Trends page:** `/reports/trends` displays Chart.js line charts plotting error, warning, and notice counts across successive scans of the same URL. Use this to monitor whether accessibility is improving or regressing.
+
+**Home page cards:** The dashboard home page shows executive summary cards with trend indicators for recently scanned URLs — arrows showing whether issue counts are increasing, decreasing, or stable compared to the previous scan.
 
 ---
 

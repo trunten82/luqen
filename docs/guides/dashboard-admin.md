@@ -36,6 +36,9 @@ The dashboard depends on two external services:
 | `DASHBOARD_PLUGINS_DIR` | No | `./plugins` | Directory for installed plugins |
 | `DASHBOARD_PLUGINS_CONFIG` | No | — | Path to plugins configuration file |
 | `DASHBOARD_REDIS_URL` | No | — | Redis URL for scan queue and SSE pub/sub |
+| `DASHBOARD_SCANNER_RUNNER` | No | `htmlcs` | Pa11y test runner: `htmlcs` or `axe`. The `axe` runner requires `pa11y-runner-axe` on the webservice. |
+| `DASHBOARD_WEBSERVICE_URLS` | No | — | Comma-separated list of additional pa11y webservice URLs for multi-worker scaling (round-robin distribution). |
+| `DASHBOARD_MAX_PAGES` | No | `50` | Maximum pages per full-site scan (1-1000). |
 
 ### Starting with environment variables
 

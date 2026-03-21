@@ -1,6 +1,6 @@
 {
   "name": "@pally-agent/monitor",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Regulatory monitor agent — watches legal sources for accessibility regulation changes",
   "type": "module",
   "main": "dist/cli.js",

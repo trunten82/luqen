@@ -5,209 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Accessibility Report — {{scan.siteUrl}}</title>
   <style>
-    /* ── Base ─────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: #1a1a1a;
-      background: #fff;
-      margin: 0;
-      padding: 2rem;
-      font-size: 11pt;
-      line-height: 1.5;
+      color: #1a1a1a; background: #fff; margin: 0; padding: 2rem; font-size: 11pt; line-height: 1.5;
     }
-    h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
-    h2 { font-size: 1.15rem; margin: 1.5rem 0 0.75rem; border-bottom: 2px solid #0056b3; padding-bottom: 0.35rem; }
-    h3 { font-size: 1rem; margin: 1rem 0 0.5rem; }
+    h1 { font-size: 1.4rem; margin: 0 0 0.15rem; }
+    h2 { font-size: 1.1rem; margin: 1.5rem 0 0.6rem; border-bottom: 2px solid #0056b3; padding-bottom: 0.25rem; color: #0056b3; }
     a { color: #0056b3; text-decoration: none; }
-    a:hover { text-decoration: underline; }
 
-    /* ── Print button ────────────────────────────────────────── */
-    .print-bar {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid #d0d4de;
-    }
-    .print-btn {
-      display: inline-block;
-      padding: 0.5rem 1.25rem;
-      background: #0056b3;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      text-decoration: none;
-    }
+    .print-bar { display: flex; justify-content: flex-end; gap: 0.75rem; margin-bottom: 1.25rem; padding: 0.5rem 0; border-bottom: 1px solid #d0d4de; }
+    .print-btn { display: inline-block; padding: 0.45rem 1.1rem; background: #0056b3; color: #fff; border: none; border-radius: 4px; font-size: 0.85rem; cursor: pointer; }
     .print-btn:hover { background: #003d82; }
+    .print-btn--secondary { background: #6b6b6b; }
 
-    /* ── Meta grid ───────────────────────────────────────────── */
-    .meta-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 0.5rem 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-    .meta-grid dt { font-size: 0.75rem; color: #6b6b6b; text-transform: uppercase; letter-spacing: 0.04em; margin: 0; }
-    .meta-grid dd { margin: 0 0 0.5rem; font-weight: 600; }
+    .header-meta { font-size: 0.85rem; color: #4a4a4a; margin-bottom: 1.25rem; }
+    .header-meta span { margin-right: 1.5rem; }
 
-    /* ── Summary bar ─────────────────────────────────────────── */
-    .summary-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-    }
-    .stat-badge {
-      display: inline-block;
-      padding: 0.3rem 0.75rem;
-      border-radius: 4px;
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-    .stat-badge--neutral { background: #eef0f7; color: #1a1a1a; }
-    .stat-badge--error   { background: #f8d7da; color: #8b1a1a; }
-    .stat-badge--warning { background: #fff3cd; color: #7a4f00; }
-    .stat-badge--notice  { background: #d1ecf1; color: #00416a; }
+    /* Summary cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .kpi { border: 1px solid #d0d4de; border-radius: 6px; padding: 0.75rem; text-align: center; }
+    .kpi__value { font-size: 1.6rem; font-weight: 800; display: block; }
+    .kpi__label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #6b6b6b; }
+    .kpi--error .kpi__value { color: #8b1a1a; }
+    .kpi--warning .kpi__value { color: #7a4f00; }
+    .kpi--notice .kpi__value { color: #00416a; }
 
-    /* ── Severity tags ───────────────────────────────────────── */
-    .severity {
-      display: inline-block;
-      padding: 0.15rem 0.5rem;
-      border-radius: 3px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-    .severity--error   { background: #f8d7da; color: #8b1a1a; }
-    .severity--warning { background: #fff3cd; color: #7a4f00; }
-    .severity--notice  { background: #d1ecf1; color: #00416a; }
-
-    /* ── Regulation tags ─────────────────────────────────────── */
-    .reg-tag {
-      display: inline-block;
-      padding: 0.1rem 0.4rem;
-      border-radius: 3px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      margin-right: 0.25rem;
-    }
-    .reg-tag--mandatory  { background: #f8d7da; color: #8b1a1a; }
-    .reg-tag--recommended { background: #fff3cd; color: #7a4f00; }
-    .reg-tag--optional   { background: #d1ecf1; color: #00416a; }
-
-    /* ── Compliance cards ────────────────────────────────────── */
-    .juris-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-    .juris-card {
-      border: 1px solid #d0d4de;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .juris-card__head {
-      padding: 0.5rem 0.75rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .juris-card__head--pass   { background: #d4edda; }
-    .juris-card__head--fail   { background: #f8d7da; }
-    .juris-card__head--review { background: #fff3cd; }
-    .juris-card__name { font-weight: 700; font-size: 0.9rem; }
-    .juris-card__id   { font-size: 0.75rem; color: #6b6b6b; }
-    .juris-card__status { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
-    .juris-card__body { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
-
-    /* ── Issue groups ────────────────────────────────────────── */
-    .issue-group {
-      border: 1px solid #d0d4de;
-      border-radius: 6px;
-      margin-bottom: 0.75rem;
-      page-break-inside: avoid;
-    }
-    .issue-group__header {
-      padding: 0.6rem 0.75rem;
-      background: #f5f6fa;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .issue-group__criterion { font-weight: 700; font-size: 0.9rem; color: #0056b3; }
-    .issue-group__title { font-size: 0.85rem; }
-    .issue-group__counts { display: flex; gap: 0.4rem; margin-left: auto; }
-    .issue-group__body { padding: 0.5rem 0.75rem; }
-
-    .issue-item {
-      padding: 0.4rem 0;
-      border-bottom: 1px solid #eef0f7;
-    }
-    .issue-item:last-child { border-bottom: none; }
-    .issue-item__head { display: flex; align-items: center; gap: 0.5rem; }
-    .issue-item__message { font-size: 0.85rem; margin-top: 0.15rem; }
-    .issue-item__detail { font-size: 0.8rem; color: #4a4a4a; margin-top: 0.15rem; }
-    .code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 0.8rem; background: #eef0f7; padding: 0.1rem 0.3rem; border-radius: 3px; word-break: break-all; }
-
-    /* ── Template block ──────────────────────────────────────── */
-    .template-block {
-      background: #fffacc;
-      border-left: 3px solid #7a4f00;
-      padding: 0.4rem 0.6rem;
-      margin-bottom: 0.5rem;
-      font-size: 0.8rem;
-    }
-    .template-block__label { font-weight: 700; color: #7a4f00; margin-bottom: 0.25rem; }
-
-    /* ── Component tag ───────────────────────────────────────── */
-    .component-tag {
-      display: inline-block;
-      padding: 0.1rem 0.4rem;
-      border-radius: 3px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      background: #eef0f7;
-      color: #4a4a4a;
-    }
-
-    /* ── Tables ───────────────────────────────────────────────── */
+    /* Priority action table */
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 1rem; }
-    th, td { padding: 0.4rem 0.5rem; text-align: left; border-bottom: 1px solid #d0d4de; }
-    th { background: #f5f6fa; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    th, td { padding: 0.45rem 0.6rem; text-align: left; border-bottom: 1px solid #d0d4de; }
+    th { background: #f5f6fa; font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    tr:nth-child(even) { background: #fafbfc; }
 
-    /* ── Page sections ───────────────────────────────────────── */
-    .page-section {
-      margin-bottom: 1.25rem;
-      page-break-inside: avoid;
-    }
-    .page-url { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .severity { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 3px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+    .severity--error { background: #f8d7da; color: #8b1a1a; }
+    .severity--warning { background: #fff3cd; color: #7a4f00; }
+    .severity--notice { background: #d1ecf1; color: #00416a; }
 
-    /* ── Footer ──────────────────────────────────────────────── */
-    .report-footer {
-      margin-top: 2rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid #d0d4de;
-      font-size: 0.75rem;
-      color: #6b6b6b;
-      text-align: center;
-    }
+    .reg-tag { display: inline-block; padding: 0.08rem 0.35rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600; margin-right: 0.15rem; }
+    .reg-tag--mandatory { background: #f8d7da; color: #8b1a1a; }
+    .reg-tag--recommended { background: #fff3cd; color: #7a4f00; }
+    .reg-tag--optional { background: #d1ecf1; color: #00416a; }
 
-    /* ── Affected pages list ─────────────────────────────────── */
-    .affected-list { font-size: 0.75rem; color: #6b6b6b; margin: 0.2rem 0 0 1rem; padding: 0; }
-    .affected-list li { margin-bottom: 0.1rem; }
+    .component-tag { display: inline-block; padding: 0.08rem 0.35rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600; background: #eef0f7; color: #4a4a4a; }
 
-    /* ── Print styles ────────────────────────────────────────── */
+    /* Compliance cards */
+    .juris-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+    .juris-card { border: 1px solid #d0d4de; border-radius: 6px; overflow: hidden; }
+    .juris-card__head { padding: 0.45rem 0.65rem; display: flex; justify-content: space-between; align-items: center; }
+    .juris-card__head--pass { background: #d4edda; }
+    .juris-card__head--fail { background: #f8d7da; }
+    .juris-card__head--review { background: #fff3cd; }
+    .juris-card__name { font-weight: 700; font-size: 0.85rem; }
+    .juris-card__status { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+    .juris-card__body { padding: 0.4rem 0.65rem; font-size: 0.8rem; }
+
+    .text-muted { color: #6b6b6b; }
+    .text-sm { font-size: 0.8rem; }
+    .mb-0 { margin-bottom: 0; }
+
+    .report-footer { margin-top: 2rem; padding-top: 0.5rem; border-top: 1px solid #d0d4de; font-size: 0.72rem; color: #6b6b6b; text-align: center; }
+
     @media print {
-      body { padding: 0; font-size: 10pt; }
+      body { padding: 0; font-size: 9.5pt; }
       .print-bar { display: none !important; }
-      .issue-group { break-inside: avoid; }
-      .page-section { break-inside: avoid; }
+      .kpi-grid { gap: 0.5rem; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; }
       a { color: #1a1a1a; }
       a[href]::after { content: none !important; }
     }
@@ -217,249 +81,143 @@
 
 <div class="print-bar">
   <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
-  <button class="print-btn" onclick="window.close()" style="background:#6b6b6b;">Close</button>
+  <button class="print-btn print-btn--secondary" onclick="window.close()">Close</button>
 </div>
 
 <h1>Accessibility Report</h1>
-
-<dl class="meta-grid">
-  <div>
-    <dt>Site URL</dt>
-    <dd>{{scan.siteUrl}}</dd>
-  </div>
-  <div>
-    <dt>Standard</dt>
-    <dd>{{formatStandard scan.standard}}</dd>
-  </div>
-  {{#if scan.jurisdictions}}
-  <div>
-    <dt>Jurisdictions</dt>
-    <dd>{{scan.jurisdictions}}</dd>
-  </div>
-  {{/if}}
-  <div>
-    <dt>Scanned</dt>
-    <dd>{{scan.createdAtDisplay}}</dd>
-  </div>
-  {{#if scan.completedAtDisplay}}
-  <div>
-    <dt>Completed</dt>
-    <dd>{{scan.completedAtDisplay}}</dd>
-  </div>
-  {{/if}}
-</dl>
+<div class="header-meta">
+  <span><strong>{{scan.siteUrl}}</strong></span>
+  <span>{{formatStandard scan.standard}}</span>
+  {{#if scan.jurisdictions}}<span>{{scan.jurisdictions}}</span>{{/if}}
+  <span>{{scan.createdAtDisplay}}</span>
+</div>
 
 {{#if reportData}}
 
-{{! ── Executive Summary ──────────────────────────────────────── }}
-<h2>Executive Summary</h2>
-<div class="summary-bar">
-  <span class="stat-badge stat-badge--neutral">Pages: {{reportData.summary.pagesScanned}}</span>
-  <span class="stat-badge stat-badge--neutral">Total Issues: {{reportData.summary.totalIssues}}</span>
-  <span class="stat-badge stat-badge--error">Errors: {{reportData.summary.byLevel.error}}</span>
-  <span class="stat-badge stat-badge--warning">Warnings: {{reportData.summary.byLevel.warning}}</span>
-  <span class="stat-badge stat-badge--notice">Notices: {{reportData.summary.byLevel.notice}}</span>
+{{! ── Key Metrics ──────────────────────────────────────────── }}
+<div class="kpi-grid">
+  <div class="kpi"><span class="kpi__value">{{reportData.summary.pagesScanned}}</span><span class="kpi__label">Pages Scanned</span></div>
+  <div class="kpi"><span class="kpi__value">{{reportData.summary.totalIssues}}</span><span class="kpi__label">Total Issues</span></div>
+  <div class="kpi kpi--error"><span class="kpi__value">{{reportData.summary.byLevel.error}}</span><span class="kpi__label">Errors</span></div>
+  <div class="kpi kpi--warning"><span class="kpi__value">{{reportData.summary.byLevel.warning}}</span><span class="kpi__label">Warnings</span></div>
+  <div class="kpi kpi--notice"><span class="kpi__value">{{reportData.summary.byLevel.notice}}</span><span class="kpi__label">Notices</span></div>
+  {{#if reportData.templateIssueCount}}
+  <div class="kpi"><span class="kpi__value">{{reportData.templateIssueCount}}</span><span class="kpi__label">Template Issues</span></div>
+  {{/if}}
 </div>
 
-{{#if reportData.templateIssueCount}}
-<p style="font-size:0.85rem;color:#7a4f00;">
-  <strong>{{reportData.templateIssueCount}} template issues</strong> found across shared components,
-  accounting for {{reportData.templateOccurrenceCount}} total occurrences.
-  Fixing these components will resolve issues on multiple pages at once.
-</p>
-{{/if}}
-
-{{! ── Compliance Matrix ──────────────────────────────────────── }}
+{{! ── Legal Compliance ─────────────────────────────────────── }}
 {{#if reportData.complianceMatrix}}
-<h2>Legal Compliance Matrix</h2>
-{{#if reportData.compliance.summary}}
-<div class="summary-bar" style="margin-bottom:0.75rem;">
-  <span class="stat-badge" style="background:#d4edda;color:#1a6e34;">{{reportData.compliance.summary.passing}} Passing</span>
-  <span class="stat-badge" style="background:#f8d7da;color:#8b1a1a;">{{reportData.compliance.summary.failing}} Failing</span>
-</div>
-{{/if}}
-
+<h2>Legal Compliance</h2>
 <div class="juris-grid">
   {{#each reportData.complianceMatrix}}
   <div class="juris-card">
     <div class="juris-card__head juris-card__head--{{reviewStatusClass reviewStatus}}">
       <div>
         <div class="juris-card__name">{{jurisdictionName}}</div>
-        <div class="juris-card__id">{{jurisdictionId}}</div>
       </div>
       <div class="juris-card__status">{{reviewStatusLabel reviewStatus}}</div>
     </div>
     <div class="juris-card__body">
-      <div>WCAG criteria violated: <strong>{{confirmedViolations}}</strong></div>
-      {{#if needsReview}}<div>Needs review: <strong>{{needsReview}}</strong></div>{{/if}}
-      {{#if regulations.length}}
-      <div style="margin-top:0.35rem;">
-        {{#each regulations}}
-        <span class="reg-tag reg-tag--{{obligationClass obligation}}">{{shortName}}</span>
-        {{/each}}
-      </div>
-      {{/if}}
+      WCAG criteria violated: <strong>{{confirmedViolations}}</strong>
+      {{#if needsReview}} &middot; Needs review: <strong>{{needsReview}}</strong>{{/if}}
     </div>
   </div>
   {{/each}}
 </div>
 {{/if}}
 
-{{! ── Issues by WCAG Criterion ───────────────────────────────── }}
-{{#if reportData.allIssueGroups}}
-<h2>Issues by WCAG Criterion</h2>
-<p style="font-size:0.85rem;color:#6b6b6b;margin-bottom:1rem;">
-  {{reportData.summary.totalIssues}} issues grouped by {{reportData.allIssueGroups.length}} WCAG criteria
-</p>
+{{! ── Priority Action Items (errors + warnings only) ────────── }}
+<h2>Priority Action Items</h2>
+<p class="text-sm text-muted">Errors and warnings grouped by WCAG criterion — address these first. Notices omitted for clarity.</p>
 
-{{#each reportData.allIssueGroups}}
-<div class="issue-group">
-  <div class="issue-group__header">
-    <span class="issue-group__criterion">{{criterion}}</span>
-    <span class="issue-group__title">{{title}}</span>
-    <div class="issue-group__counts">
-      {{#if errorCount}}<span class="severity severity--error">{{errorCount}} error{{#unless (eq errorCount 1)}}s{{/unless}}</span>{{/if}}
-      {{#if warningCount}}<span class="severity severity--warning">{{warningCount}} warning{{#unless (eq warningCount 1)}}s{{/unless}}</span>{{/if}}
-      {{#if noticeCount}}<span class="severity severity--notice">{{noticeCount}} notice{{#unless (eq noticeCount 1)}}s{{/unless}}</span>{{/if}}
-    </div>
-    {{#each regulations}}
-    <span class="reg-tag reg-tag--{{obligationClass obligation}}">{{shortName}}</span>
-    {{/each}}
-    {{#each components}}
-    <span class="component-tag">{{this}}</span>
-    {{/each}}
-  </div>
-  <div class="issue-group__body">
-    {{#if templateItems.length}}
-    <div class="template-block">
-      <div class="template-block__label">Shared components — fix once, fix everywhere</div>
-      {{#each templateItems}}
-      <div class="issue-item">
-        <div class="issue-item__head">
-          <span class="severity severity--{{type}}">{{type}}</span>
-          <span class="component-tag">{{componentName}}</span>
-          <span style="font-size:0.8rem;color:#6b6b6b;">({{affectedCount}} pages)</span>
-        </div>
-        <div class="issue-item__message">{{message}}</div>
-        {{#if selector}}<div class="issue-item__detail"><span class="code">{{selector}}</span></div>{{/if}}
-        {{#if context}}<div class="issue-item__detail"><span class="code">{{context}}</span></div>{{/if}}
-        {{#if affectedPages}}
-        <ul class="affected-list">
-          {{#each affectedPages}}<li>{{this}}</li>{{/each}}
-        </ul>
-        {{/if}}
-      </div>
-      {{/each}}
-    </div>
+<table>
+  <thead>
+    <tr>
+      <th style="width:70px;">Severity</th>
+      <th style="width:90px;">WCAG</th>
+      <th>Issue</th>
+      <th style="width:110px;">Impact</th>
+      <th style="width:80px;">Pages</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each reportData.allIssueGroups}}
+    {{#if errorCount}}
+    <tr>
+      <td><span class="severity severity--error">{{errorCount}} err</span></td>
+      <td><strong>{{criterion}}</strong></td>
+      <td>
+        {{title}}
+        {{#each regulations}}<span class="reg-tag reg-tag--{{obligationClass obligation}}">{{shortName}}</span>{{/each}}
+        {{#each components}}<span class="component-tag">{{this}}</span>{{/each}}
+      </td>
+      <td>{{#if templateItems.length}}Template{{else}}Page-specific{{/if}}</td>
+      <td>{{pageCount}}</td>
+    </tr>
     {{/if}}
-    {{#each issues}}
-    <div class="issue-item">
-      <div class="issue-item__head">
-        <span class="severity severity--{{type}}">{{type}}</span>
-        <span class="issue-item__message">{{message}}</span>
-      </div>
-      {{#if selector}}<div class="issue-item__detail"><span class="code">{{selector}}</span></div>{{/if}}
-      {{#if context}}<div class="issue-item__detail"><span class="code">{{context}}</span></div>{{/if}}
-    </div>
+    {{#if warningCount}}
+    {{#unless errorCount}}
+    <tr>
+      <td><span class="severity severity--warning">{{warningCount}} warn</span></td>
+      <td><strong>{{criterion}}</strong></td>
+      <td>
+        {{title}}
+        {{#each regulations}}<span class="reg-tag reg-tag--{{obligationClass obligation}}">{{shortName}}</span>{{/each}}
+        {{#each components}}<span class="component-tag">{{this}}</span>{{/each}}
+      </td>
+      <td>{{#if templateItems.length}}Template{{else}}Page-specific{{/if}}</td>
+      <td>{{pageCount}}</td>
+    </tr>
+    {{/unless}}
+    {{#if errorCount}}
+    <tr>
+      <td><span class="severity severity--warning">+{{warningCount}} warn</span></td>
+      <td colspan="4" class="text-sm text-muted" style="padding-left:1.5rem;">Additional warnings for same criterion</td>
+    </tr>
+    {{/if}}
+    {{/if}}
     {{/each}}
-  </div>
-</div>
-{{/each}}
-{{/if}}
+  </tbody>
+</table>
 
-{{! ── Template Components ────────────────────────────────────── }}
+{{! ── Template / Shared Component Issues ───────────────────── }}
 {{#if reportData.templateComponents.length}}
-<h2>Template Issues by Component</h2>
-<p style="font-size:0.85rem;color:#6b6b6b;margin-bottom:1rem;">
-  Issues appearing on multiple pages from shared components. Fixing the component resolves all affected pages.
-</p>
+<h2>Shared Component Issues</h2>
+<p class="text-sm text-muted">These issues appear in shared components — fixing the component resolves all affected pages.</p>
 
-{{#each reportData.templateComponents}}
-<div class="issue-group">
-  <div class="issue-group__header">
-    <span class="component-tag" style="font-size:0.85rem;">{{componentName}}</span>
-    <span class="stat-badge stat-badge--neutral" style="font-size:0.75rem;">{{issueCount}} issues</span>
-    <span class="stat-badge stat-badge--neutral" style="font-size:0.75rem;">{{maxAffectedPages}} pages</span>
-  </div>
-  <div class="issue-group__body">
+<table>
+  <thead>
+    <tr>
+      <th style="width:130px;">Component</th>
+      <th style="width:70px;">Severity</th>
+      <th style="width:80px;">WCAG</th>
+      <th>Issue</th>
+      <th style="width:70px;">Pages</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each reportData.templateComponents}}
     {{#each issues}}
-    <div class="issue-item">
-      <div class="issue-item__head">
-        <span class="severity severity--{{type}}">{{type}}</span>
-        {{#if wcagCriterion}}
-        <span style="font-weight:600;font-size:0.85rem;">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
-        {{else}}
-        <span class="code">{{code}}</span>
-        {{/if}}
-        <span style="font-size:0.8rem;color:#6b6b6b;">({{affectedCount}} pages)</span>
-      </div>
-      <div class="issue-item__message">{{message}}</div>
-      {{#if selector}}<div class="issue-item__detail"><span class="code">{{selector}}</span></div>{{/if}}
-      {{#if context}}<div class="issue-item__detail"><span class="code">{{context}}</span></div>{{/if}}
-      {{#if regulations}}
-      <div style="margin-top:0.2rem;">
-        {{#each regulations}}
-        <span class="reg-tag reg-tag--{{obligationClass obligation}}">{{shortName}}</span>
-        {{/each}}
-      </div>
-      {{/if}}
-      {{#if affectedPages}}
-      <ul class="affected-list">
-        {{#each affectedPages}}<li>{{this}}</li>{{/each}}
-      </ul>
-      {{/if}}
-    </div>
+    <tr>
+      {{#if @first}}<td rowspan="{{../issueCount}}"><strong>{{../componentName}}</strong></td>{{/if}}
+      <td><span class="severity severity--{{type}}">{{type}}</span></td>
+      <td>{{#if wcagCriterion}}{{wcagCriterion}}{{else}}<span class="text-muted">—</span>{{/if}}</td>
+      <td>{{message}}</td>
+      <td>{{affectedCount}}</td>
+    </tr>
     {{/each}}
-  </div>
-</div>
-{{/each}}
+    {{/each}}
+  </tbody>
+</table>
 {{/if}}
 
-{{! ── Per-Page Breakdown ─────────────────────────────────────── }}
-{{#if reportData.pages.length}}
-<h2>Issues by Page</h2>
-
-{{#each reportData.pages}}
-{{#if issueCount}}
-<div class="page-section">
-  <div class="page-url">{{url}} <span style="font-weight:400;font-size:0.8rem;color:#6b6b6b;">({{issueCount}} issues)</span></div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:80px;">Severity</th>
-        <th style="width:180px;">WCAG Criterion</th>
-        <th>Description</th>
-        <th style="width:200px;">Element</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{#each issues}}
-      <tr>
-        <td><span class="severity severity--{{type}}">{{type}}</span></td>
-        <td>
-          {{#if wcagCriterion}}
-          {{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}
-          {{else}}
-          <span class="code">{{code}}</span>
-          {{/if}}
-        </td>
-        <td>{{message}}</td>
-        <td><span class="code">{{selector}}</span></td>
-      </tr>
-      {{/each}}
-    </tbody>
-  </table>
-</div>
-{{/if}}
-{{/each}}
-{{/if}}
-
-{{! ── Scan Errors ────────────────────────────────────────────── }}
+{{! ── Scan Errors ──────────────────────────────────────────── }}
 {{#if reportData.errors.length}}
 <h2>Scan Errors</h2>
 {{#each reportData.errors}}
-<div style="padding:0.4rem 0.6rem;background:#f8d7da;border-radius:4px;margin-bottom:0.5rem;font-size:0.85rem;">
-  <strong>{{url}}</strong> &mdash; {{code}}: {{message}}
+<div style="padding:0.35rem 0.6rem;background:#f8d7da;border-radius:4px;margin-bottom:0.4rem;font-size:0.82rem;">
+  <strong>{{url}}</strong> — {{code}}: {{message}}
 </div>
 {{/each}}
 {{/if}}
@@ -467,7 +225,7 @@
 {{/if}}
 
 <div class="report-footer">
-  Generated by Pally Accessibility Dashboard &middot; {{scan.createdAtDisplay}}
+  Generated by Pally Dashboard &middot; {{scan.createdAtDisplay}}
 </div>
 
 </body>

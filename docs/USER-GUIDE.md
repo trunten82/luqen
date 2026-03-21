@@ -23,7 +23,7 @@ Pally-agent uses a tool called **pa11y**, which controls a headless browser to l
 
 **Discovery:** Before scanning, pally-agent reads your site's `sitemap.xml` to find all pages. If there is no sitemap, it crawls the site by following links. You can also combine both methods with `--also-crawl`.
 
-**Scanning:** Each page is loaded in the browser, and pa11y checks it against the WCAG standard you choose (WCAG 2.1 AA is the legal standard in most jurisdictions).
+**Scanning:** Each page is loaded in the browser, and pa11y checks it against the WCAG standard you choose (WCAG 2.1 AA is the legal standard in most jurisdictions). You can select the test runner — HTML_CodeSniffer (default) or axe-core — via the `--runner` flag, `DASHBOARD_SCANNER_RUNNER` env var, or the scan form dropdown.
 
 **Reporting:** Results are saved as a timestamped JSON file and, optionally, a self-contained HTML file you can open in any browser.
 
@@ -154,6 +154,11 @@ The scan form offers two modes:
 - **Single Page** (default) — scans only the URL you enter. Fastest option for checking a single page.
 - **Full Site** — discovers all pages via sitemap/crawl and scans each one. Enables template issue detection and the Templates tab.
 
+The scan form also offers:
+
+- **Runner** dropdown — choose between HTML_CodeSniffer (`htmlcs`) and axe-core (`axe`) test runners.
+- **Incremental scan** checkbox — when enabled, pally-agent computes a SHA-256 content hash for each page and only re-scans pages whose content has changed since the last scan. Unchanged pages reuse their previous results. This is tracked in a `page_hashes` database table.
+
 ### Report layout
 
 Reports use a tabbed layout with a **summary bar** at the top showing total errors, warnings, and notices. The tabs are:
@@ -173,6 +178,22 @@ The Issues tab provides a multi-select filter system:
 - Counts update live as filters are toggled.
 
 For a complete reference, see [guides/dashboard-admin.md](guides/dashboard-admin.md).
+
+### Trend tracking
+
+The dashboard tracks scan results over time. Visit `/reports/trends` to see Chart.js line charts showing error, warning, and notice counts across scans for each URL. The home page displays executive summary cards with trend indicators — whether issues are increasing, decreasing, or stable compared to previous scans.
+
+### Print / PDF export
+
+Each report has a print-friendly view at `/reports/:id/print`. This is a standalone page optimized for `window.print()` — open it and use your browser's Print dialog to save as PDF or send to a printer. The layout removes navigation and interactive elements for a clean printed output.
+
+### Manual testing checklists
+
+Automated scanning catches approximately 30-40% of accessibility issues. For the rest, the dashboard provides manual testing checklists at `/reports/:id/manual`. These cover 27 WCAG 2.1 AA criteria that require human judgement (e.g., meaningful alt text, reading order, focus indicators). For each criterion, testers can record a pass, fail, or N/A result. Results are saved per scan and appear alongside automated findings in the report.
+
+### Browser bookmarklet
+
+Visit `/tools/bookmarklet` in the dashboard to find a drag-to-install bookmarklet. Drag it to your browser's bookmarks bar. When viewing any web page, click the bookmarklet to open the dashboard scan form with the current page's URL pre-filled — a quick way to scan pages you encounter during browsing.
 
 ---
 

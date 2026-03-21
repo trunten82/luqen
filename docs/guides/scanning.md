@@ -35,6 +35,54 @@ Use `WCAG2AA` unless you have a specific reason to change it.
 
 ---
 
+## Runner selection
+
+Pally-agent supports two test runners:
+
+| Runner | Value | Description |
+|--------|-------|-------------|
+| **HTML_CodeSniffer** | `htmlcs` | The default runner. Comprehensive WCAG 2.1 coverage with detailed rule codes. |
+| **axe-core** | `axe` | Deque's axe-core engine. Requires `pa11y-runner-axe` installed on the pa11y webservice. Provides partial coverage for some WCAG 2.2 criteria. |
+
+Configure the runner at multiple levels:
+
+- **CLI flag:** `--runner axe`
+- **Config file:** `"runner": "axe"` in `.pally-agent.json`
+- **Environment variable:** `PALLY_RUNNER=axe` (core) or `DASHBOARD_SCANNER_RUNNER=axe` (dashboard)
+- **Dashboard scan form:** Select from the **Runner** dropdown when creating a scan
+
+---
+
+## Incremental scanning
+
+For sites scanned repeatedly, incremental scanning avoids re-testing pages that have not changed. When enabled, pally-agent computes a SHA-256 hash of each page's HTML content and compares it against hashes stored from the previous scan (in the `page_hashes` database table).
+
+- **Changed pages** are scanned normally and their hashes updated.
+- **Unchanged pages** reuse results from the previous scan.
+
+This significantly reduces scan time for large sites where only a few pages change between deployments.
+
+**Enable incremental scanning:**
+
+- **Dashboard:** Check the **Incremental scan** checkbox on the scan form.
+- **CLI:** Use `--incremental` flag.
+
+---
+
+## Page limits
+
+The `maxPages` setting caps how many pages are discovered and scanned during a Full Site scan.
+
+| Context | Setting | Default |
+|---------|---------|---------|
+| CLI config | `maxPages` in `.pally-agent.json` | `100` |
+| Dashboard env | `DASHBOARD_MAX_PAGES` | `50` |
+| Dashboard config | `maxPages` in `dashboard.config.json` | `50` |
+
+The dashboard accepts values from 1 to 1000. Adjust this based on your site size and available resources.
+
+---
+
 ## CLI scanning
 
 ### Basic scan

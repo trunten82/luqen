@@ -174,6 +174,13 @@ Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|a
 | **Report viewer** | Interactive HTML report with compliance matrix. |
 | **Self-audit** | Run `pally-dashboard self-audit` to scan the dashboard itself. |
 | **Health checks** | `/health` endpoint for load balancer probes. |
+| **Trend tracking** | Line charts at `/reports/trends` showing error/warning/notice counts over time. Executive summary cards on the home page. |
+| **Print/PDF export** | Print-optimized report view at `/reports/:id/print` for saving as PDF via browser Print dialog. |
+| **Manual testing** | 27-item WCAG 2.1 AA checklist at `/reports/:id/manual` with pass/fail/NA recording per scan. |
+| **Browser bookmarklet** | Drag-to-install bookmarklet at `/tools/bookmarklet` that pre-fills the scan form with the current page URL. |
+| **Runner selection** | Choose between HTML_CodeSniffer and axe-core runners via scan form dropdown or `DASHBOARD_SCANNER_RUNNER` env var. |
+| **Incremental scanning** | SHA-256 content hash delta detection — only re-scans pages whose content changed since the last scan. |
+| **Multi-worker scaling** | Distribute scans across multiple pa11y webservice instances via `DASHBOARD_WEBSERVICE_URLS`. |
 
 ---
 
