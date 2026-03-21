@@ -833,33 +833,12 @@
     });
   })();
 
-  /* ── Unassign issue ───────────────────────────────────────────────────── */
-  function rptUnassign(assignmentId, btn) {
-    if (!confirm('Remove this assignment?')) return;
-    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
-    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
-    btn.disabled = true;
-    fetch('/assignments/' + assignmentId, {
-      method: 'DELETE',
-      headers: { 'x-csrf-token': csrfToken }
-    }).then(function(r) {
-      if (!r.ok) throw new Error('Failed');
-      // Replace badge + unassign button with Assign button
-      var badge = btn.previousElementSibling;
-      if (badge && badge.classList.contains('rpt-assigned-badge')) badge.remove();
-      btn.remove();
-      // Reload to get fresh assign buttons — simplest approach
-      window.location.reload();
-    }).catch(function() {
-      btn.disabled = false;
-      var tc = document.getElementById('toast-container');
-      if (tc) { var t = document.createElement('div'); t.className = 'toast toast--error'; t.textContent = 'Failed to remove assignment'; tc.appendChild(t); setTimeout(function(){t.remove();}, 3000); }
-    });
-  }
+  /* ── Toggle assignment (assign / unassign) ────────────────────────────── */
+  var _scanId = '{{scan.id}}';
+  var _csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || '';
 
-  /* ── Assign issue via popover dropdown ─────────────────────────────────── */
+  /* Click "Assign" button → show user picker, then assign */
   function rptAssignIssue(btn, code, selector, message, severity, wcagCriterion, wcagTitle) {
-    // Close any existing popover
     var existing = document.querySelector('.rpt-assign-popover');
     if (existing) existing.remove();
 
@@ -868,82 +847,102 @@
 
     var select = document.createElement('select');
     select.className = 'rpt-assign-popover__select';
-    // Add default option using DOM methods (no innerHTML for XSS safety)
-    var defaultOpt = document.createElement('option');
-    defaultOpt.value = '';
-    defaultOpt.textContent = 'Unassigned';
-    select.appendChild(defaultOpt);
+    var def = document.createElement('option');
+    def.value = ''; def.textContent = 'Select assignee...';
+    select.appendChild(def);
 
-    var assignees = window.__pallyAssignees || [];
-    assignees.forEach(function(a) {
+    (window.__pallyAssignees || []).forEach(function(a) {
       var opt = document.createElement('option');
       opt.value = a.id;
       opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
       select.appendChild(opt);
     });
 
-    var confirmBtn = document.createElement('button');
-    confirmBtn.className = 'btn btn--primary btn--sm';
-    confirmBtn.textContent = 'Assign';
-    confirmBtn.onclick = function() {
-      var assignedTo = select.value;
-      rptDoAssign(btn, code, selector, message, severity, wcagCriterion, wcagTitle, assignedTo);
+    var go = document.createElement('button');
+    go.className = 'btn btn--primary btn--sm';
+    go.textContent = 'Assign';
+    go.onclick = function() {
+      if (!select.value) return;
       popover.remove();
+      rptDoAssign(btn, code, selector, message, severity, wcagCriterion, wcagTitle, select.value);
     };
 
-    var cancelBtn = document.createElement('button');
-    cancelBtn.className = 'btn btn--ghost btn--sm';
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.onclick = function() { popover.remove(); };
+    var cancel = document.createElement('button');
+    cancel.className = 'btn btn--ghost btn--sm';
+    cancel.textContent = 'Cancel';
+    cancel.onclick = function() { popover.remove(); };
 
     popover.appendChild(select);
-    popover.appendChild(confirmBtn);
-    popover.appendChild(cancelBtn);
-
+    popover.appendChild(go);
+    popover.appendChild(cancel);
     btn.parentElement.style.position = 'relative';
     btn.parentElement.appendChild(popover);
   }
 
   function rptDoAssign(btn, code, selector, message, severity, wcagCriterion, wcagTitle, assignedTo) {
-    var scanId = '{{scan.id}}';
-    var fingerprint = code + '|' + selector + '|' + message;
-
-    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
-    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
-
-    var formData = new URLSearchParams();
-    formData.append('issueFingerprint', fingerprint);
-    formData.append('severity', severity);
-    formData.append('message', message);
-    if (code) formData.append('code', code);
-    if (selector) formData.append('selector', selector);
-    if (wcagCriterion) formData.append('wcagCriterion', wcagCriterion);
-    if (wcagTitle) formData.append('wcagTitle', wcagTitle);
-    if (assignedTo) formData.append('assignedTo', assignedTo);
+    var fp = code + '|' + selector + '|' + message;
+    var fd = new URLSearchParams();
+    fd.append('issueFingerprint', fp);
+    fd.append('severity', severity);
+    fd.append('message', message);
+    if (code) fd.append('code', code);
+    if (selector) fd.append('selector', selector);
+    if (wcagCriterion) fd.append('wcagCriterion', wcagCriterion);
+    if (wcagTitle) fd.append('wcagTitle', wcagTitle);
+    if (assignedTo) fd.append('assignedTo', assignedTo);
 
     btn.disabled = true;
     btn.textContent = 'Assigning...';
 
-    fetch('/reports/' + scanId + '/assignments', {
+    fetch('/reports/' + _scanId + '/assignments', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'x-csrf-token': csrfToken,
-        'HX-Request': 'true'
-      },
-      body: formData.toString()
-    })
-    .then(function(response) {
-      if (!response.ok) throw new Error('Assign failed');
-      return response.text();
-    })
-    .then(function() {
-      btn.textContent = assignedTo ? 'Assigned: ' + assignedTo : 'Assigned';
-      btn.classList.add('rpt-assign-btn--done');
-    })
-    .catch(function() {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-csrf-token': _csrfToken, 'Accept': 'application/json' },
+      body: fd.toString()
+    }).then(function(r) {
+      if (!r.ok) throw new Error('Failed');
+      return r.json();
+    }).then(function(data) {
+      // Replace Assign button with toggle badge
+      var toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'rpt-assigned-toggle rpt-assigned-toggle--assigned';
+      toggle.setAttribute('data-assignment-id', data.id || '');
+      toggle.textContent = 'assigned' + (assignedTo ? ' \u00B7 ' + assignedTo : '');
+      toggle.title = 'Click to unassign';
+      toggle.onclick = function() { rptToggleAssignment(toggle); };
+      btn.replaceWith(toggle);
+    }).catch(function() {
       btn.disabled = false;
       btn.textContent = 'Assign';
+    });
+  }
+
+  /* Click assigned badge → confirm and unassign */
+  function rptToggleAssignment(badge) {
+    if (!confirm('Remove this assignment?')) return;
+    var id = badge.getAttribute('data-assignment-id');
+    if (!id) return;
+    badge.disabled = true;
+    badge.textContent = 'Removing...';
+
+    fetch('/assignments/' + id, {
+      method: 'DELETE',
+      headers: { 'x-csrf-token': _csrfToken }
+    }).then(function(r) {
+      if (!r.ok) throw new Error('Failed');
+      // Replace badge with Assign button
+      var assignBtn = document.createElement('button');
+      assignBtn.type = 'button';
+      assignBtn.className = 'rpt-assign-btn';
+      assignBtn.textContent = 'Assign';
+      assignBtn.title = 'Assign this issue';
+      // Reconstruct onclick from parent context — simplest: reload
+      badge.replaceWith(assignBtn);
+      // Need issue data to re-wire — reload is cleanest
+      window.location.reload();
+    }).catch(function() {
+      badge.disabled = false;
+      badge.textContent = 'Unassign failed';
     });
   }
 
@@ -951,8 +950,7 @@
   (function() {
     var bulkSelect = document.getElementById('rpt-bulk-assignee');
     if (!bulkSelect) return;
-    var assignees = window.__pallyAssignees || [];
-    assignees.forEach(function(a) {
+    (window.__pallyAssignees || []).forEach(function(a) {
       var opt = document.createElement('option');
       opt.value = a.id;
       opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
@@ -967,17 +965,14 @@
     border-radius: 3px; background: transparent; cursor: pointer; white-space: nowrap; margin-left: auto;
   }
   .rpt-assign-btn:hover { background: var(--primary-color, #2563eb); color: #fff; border-color: var(--primary-color, #2563eb); }
-  .rpt-assign-btn--done { background: #d1fae5; color: #065f46; border-color: #a7f3d0; cursor: default; }
-
-  /* Assigned badge + unassign button */
-  .rpt-assigned-badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 3px; font-size: 0.7rem; font-weight: 600; background: var(--status-info-bg, #dbeafe); color: var(--status-info, #1e40af); }
-  .rpt-assigned-badge--open { background: var(--status-error-bg, #fee2e2); color: var(--status-error, #991b1b); }
-  .rpt-assigned-badge--assigned { background: var(--status-info-bg, #dbeafe); color: var(--status-info, #1e40af); }
-  .rpt-assigned-badge--in-progress { background: var(--status-warning-bg, #fef3c7); color: var(--status-warning, #92400e); }
-  .rpt-assigned-badge--fixed { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
-  .rpt-assigned-badge--verified { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
-  .rpt-unassign-btn { padding: 0 0.3rem; font-size: 0.8rem; border: none; background: transparent; cursor: pointer; color: var(--text-muted, #888); line-height: 1; vertical-align: middle; }
-  .rpt-unassign-btn:hover { color: var(--status-error, #991b1b); }
+  /* Toggle badge (click to unassign) */
+  .rpt-assigned-toggle { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 3px; font-size: 0.7rem; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+  .rpt-assigned-toggle--open { background: var(--status-error-bg, #fee2e2); color: var(--status-error, #991b1b); }
+  .rpt-assigned-toggle--assigned { background: var(--status-info-bg, #dbeafe); color: var(--status-info, #1e40af); }
+  .rpt-assigned-toggle--in-progress { background: var(--status-warning-bg, #fef3c7); color: var(--status-warning, #92400e); }
+  .rpt-assigned-toggle--fixed { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
+  .rpt-assigned-toggle--verified { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
+  .rpt-assigned-toggle:hover { opacity: 0.8; }
 
   /* Assign popover */
   .rpt-assign-popover {

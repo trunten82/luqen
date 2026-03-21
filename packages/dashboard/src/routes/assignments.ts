@@ -169,7 +169,18 @@ export async function assignmentRoutes(
 
       const stats = db.getAssignmentStats(id);
 
-      // Return HTMX response — a confirmation toast + updated stats
+      // JSON response for programmatic callers (Issues tab JS)
+      const accept = request.headers['accept'] ?? '';
+      if (accept.includes('application/json')) {
+        return reply.send({
+          id: assignment.id,
+          status: assignment.status,
+          assignedTo: assignment.assignedTo,
+          stats,
+        });
+      }
+
+      // HTMX HTML response for assignments page
       const html = `<div class="asgn-toast asgn-toast--success">Assigned: ${escapeHtml(truncate(assignment.message, 60))}</div>
 <span hidden data-asgn-stats data-open="${stats.open}" data-assigned="${stats.assigned}" data-in-progress="${stats.inProgress}" data-fixed="${stats.fixed}" data-verified="${stats.verified}" data-total="${stats.total}"></span>`;
 
