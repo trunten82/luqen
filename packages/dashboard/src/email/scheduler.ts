@@ -68,7 +68,7 @@ export async function processEmailReport(
         hostname = scan.siteUrl.replace(/[^a-zA-Z0-9.-]/g, '_');
       }
       attachments.push({
-        filename: `pally-report-${hostname}.html`,
+        filename: `luqen-report-${hostname}.html`,
         content: html,
         contentType: 'text/html',
       });
@@ -85,7 +85,7 @@ export async function processEmailReport(
         hostname = scan.siteUrl.replace(/[^a-zA-Z0-9.-]/g, '_');
       }
       attachments.push({
-        filename: `pally-issues-${hostname}.csv`,
+        filename: `luqen-issues-${hostname}.csv`,
         content: csv,
         contentType: 'text/csv',
       });
@@ -108,7 +108,7 @@ export async function processEmailReport(
   const emailBody = buildEmailBody(scan);
 
   // Try the notify-email plugin first, fall back to legacy smtp_config
-  const emailPlugin = pluginManager?.getActiveInstanceByPackageName('@pally-agent/plugin-notify-email');
+  const emailPlugin = pluginManager?.getActiveInstanceByPackageName('@luqen/plugin-notify-email');
 
   if (emailPlugin !== undefined && emailPlugin !== null) {
     // Plugin is active — use it to send

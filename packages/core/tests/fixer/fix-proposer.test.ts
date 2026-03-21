@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 describe('proposeFixesFromReport', () => {
   let repoDir: string;
   beforeEach(() => {
-    repoDir = join(tmpdir(), `pally-fix-test-${Date.now()}`);
+    repoDir = join(tmpdir(), `luqen-fix-test-${Date.now()}`);
     mkdirSync(repoDir, { recursive: true });
     writeFileSync(join(repoDir, 'next.config.js'), '');
     writeFileSync(join(repoDir, 'package.json'), JSON.stringify({ dependencies: { next: '14' } }));

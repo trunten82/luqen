@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 
 describe('generateHtmlReport', () => {
   let outputDir: string;
-  beforeEach(() => { outputDir = join(tmpdir(), `pally-html-test-${Date.now()}`); mkdirSync(outputDir, { recursive: true }); });
+  beforeEach(() => { outputDir = join(tmpdir(), `luqen-html-test-${Date.now()}`); mkdirSync(outputDir, { recursive: true }); });
   afterEach(() => { rmSync(outputDir, { recursive: true, force: true }); });
 
   const pages: PageResult[] = [
@@ -390,7 +390,7 @@ describe('buildAnnotatedPages — confirmed violations vs. needs review', () => 
   });
 
   it('shows REVIEW NEEDED status in HTML when only warnings present', async () => {
-    const outputDir = join(tmpdir(), `pally-review-test-${Date.now()}`);
+    const outputDir = join(tmpdir(), `luqen-review-test-${Date.now()}`);
     mkdirSync(outputDir, { recursive: true });
     const reviewPages = [
       { url: 'https://example.com/', discoveryMethod: 'sitemap' as const, issueCount: 1, issues: [warningIssue] },
@@ -408,7 +408,7 @@ describe('buildAnnotatedPages — confirmed violations vs. needs review', () => 
   });
 
   it('shows FAIL status in HTML when error-type issues present', async () => {
-    const outputDir = join(tmpdir(), `pally-fail-test-${Date.now()}`);
+    const outputDir = join(tmpdir(), `luqen-fail-test-${Date.now()}`);
     mkdirSync(outputDir, { recursive: true });
     const failPages = [
       { url: 'https://example.com/', discoveryMethod: 'sitemap' as const, issueCount: 1, issues: [errorIssue] },
@@ -527,7 +527,7 @@ describe('buildAnnotatedPages — template issue deduplication', () => {
       makePage('https://example.com/p3', [sharedIssue]),
       makePage('https://example.com/p4', [sharedIssue]),
     ];
-    const outputDir = join(tmpdir(), `pally-template-test-${Date.now()}`);
+    const outputDir = join(tmpdir(), `luqen-template-test-${Date.now()}`);
     mkdirSync(outputDir, { recursive: true });
     try {
       const reportPath = await generateHtmlReport({ siteUrl: 'https://example.com', pages: templatePages, errors: [], outputDir });
@@ -544,7 +544,7 @@ describe('buildAnnotatedPages — template issue deduplication', () => {
     const uniquePages: PageResult[] = [
       makePage('https://example.com/x', [makeIssue({ selector: 'div.x' })]),
     ];
-    const outputDir = join(tmpdir(), `pally-notemplate-test-${Date.now()}`);
+    const outputDir = join(tmpdir(), `luqen-notemplate-test-${Date.now()}`);
     mkdirSync(outputDir, { recursive: true });
     try {
       const reportPath = await generateHtmlReport({ siteUrl: 'https://example.com', pages: uniquePages, errors: [], outputDir });

@@ -11,7 +11,7 @@ export class S3Client {
     private readonly bucket: string,
     private readonly region: string,
     private readonly credentials: AwsCredentials,
-    private readonly prefix: string = 'pally-agent/',
+    private readonly prefix: string = 'luqen/',
   ) {
     this.endpoint = `https://${bucket}.s3.${region}.amazonaws.com`;
   }

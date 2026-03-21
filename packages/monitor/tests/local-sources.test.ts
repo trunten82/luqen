@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { loadLocalSources } from '../src/local-sources.js';
 
 function makeTmpDir(): string {
-  const dir = join(tmpdir(), `pally-monitor-test-${randomUUID()}`);
+  const dir = join(tmpdir(), `luqen-monitor-test-${randomUUID()}`);
   mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -109,7 +109,7 @@ describe('loadLocalSources', () => {
 
   it('explicit path takes precedence over cwd fallback', async () => {
     // Create a config in cwd-like directory
-    const cwdConfig = join(tmpDir, '.pally-monitor.json');
+    const cwdConfig = join(tmpDir, '.luqen-monitor.json');
     writeFileSync(
       cwdConfig,
       JSON.stringify({
@@ -133,8 +133,8 @@ describe('loadLocalSources', () => {
 
   // ---- Lookup order: cwd fallback ----
 
-  it('falls back to .pally-monitor.json in provided directory', async () => {
-    const configPath = join(tmpDir, '.pally-monitor.json');
+  it('falls back to .luqen-monitor.json in provided directory', async () => {
+    const configPath = join(tmpDir, '.luqen-monitor.json');
     writeFileSync(
       configPath,
       JSON.stringify({
@@ -150,7 +150,7 @@ describe('loadLocalSources', () => {
 
   it('falls back to home dir config when cwd config is absent', async () => {
     const homeDir = makeTmpDir();
-    const homeConfig = join(homeDir, '.pally-monitor.json');
+    const homeConfig = join(homeDir, '.luqen-monitor.json');
     writeFileSync(
       homeConfig,
       JSON.stringify({

@@ -1,5 +1,5 @@
 /**
- * @pally-agent/core — public API
+ * @luqen/core — public API
  *
  * Exports the scanner factory for programmatic use by the dashboard and other consumers.
  */
@@ -31,7 +31,7 @@ export interface CreateScannerOptions {
   readonly onProgress?: ProgressListener;
   /** When true, scan only the given URL without discovery/crawling. Default: false. */
   readonly singlePage?: boolean;
-  /** Maximum pages to discover and scan. Default: 50. Env override: PALLY_MAX_PAGES. */
+  /** Maximum pages to discover and scan. Default: 50. Env override: LUQEN_MAX_PAGES. */
   readonly maxPages?: number;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Requires the runner installed alongside the webservice. */
   readonly runner?: 'htmlcs' | 'axe';
@@ -89,7 +89,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
         urls = [{ url, discoveryMethod: 'crawl' as const }];
       } else {
         const effectiveMaxPages = opts.maxPages
-          ?? (process.env['PALLY_MAX_PAGES'] ? parseInt(process.env['PALLY_MAX_PAGES'], 10) : 50);
+          ?? (process.env['LUQEN_MAX_PAGES'] ? parseInt(process.env['LUQEN_MAX_PAGES'], 10) : 50);
         try {
           const result = await discoverUrls(url, {
             maxPages: effectiveMaxPages,

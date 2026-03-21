@@ -5,7 +5,7 @@
 
   <p style="margin-bottom:1.5rem;color:var(--text-muted);max-width:60ch;">
     Connect a git repository to a site URL pattern to enable automated fix proposals.
-    When viewing a scan report, Pally can suggest source-level code fixes for accessibility issues.
+    When viewing a scan report, Luqen can suggest source-level code fixes for accessibility issues.
   </p>
 
   {{! ── Create New Connection ──────────────────────────────────────── }}
@@ -115,7 +115,7 @@
       Fix proposals are also available via:
     </p>
     <ul style="color:var(--text-muted);margin:0;padding-left:1.5rem;">
-      <li><strong>MCP tools:</strong> <code>pally_propose_fixes</code>, <code>pally_apply_fix</code> — use from your IDE</li>
+      <li><strong>MCP tools:</strong> <code>luqen_propose_fixes</code>, <code>luqen_apply_fix</code> — use from your IDE</li>
       <li><strong>REST API:</strong> <code>GET /api/v1/scans/:id/fixes</code> — for external integrations</li>
       <li><strong>A2A protocol:</strong> agents can call the REST API to propose and apply fixes programmatically</li>
     </ul>

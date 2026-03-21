@@ -70,7 +70,7 @@ describe('RedisScanQueue', () => {
       mockRedis.rpush.mockResolvedValue(1);
       await queue.enqueue('scan-1', { siteUrl: 'https://example.com' });
       expect(mockRedis.rpush).toHaveBeenCalledWith(
-        'pally:scan:queue',
+        'luqen:scan:queue',
         JSON.stringify({ scanId: 'scan-1', config: { siteUrl: 'https://example.com' } }),
       );
     });
@@ -81,7 +81,7 @@ describe('RedisScanQueue', () => {
       const item = { scanId: 'scan-1', config: { siteUrl: 'https://example.com' } };
       mockRedis.lpop.mockResolvedValue(JSON.stringify(item));
       const result = await queue.dequeue();
-      expect(mockRedis.lpop).toHaveBeenCalledWith('pally:scan:queue');
+      expect(mockRedis.lpop).toHaveBeenCalledWith('luqen:scan:queue');
       expect(result).toEqual(item);
     });
 
@@ -96,7 +96,7 @@ describe('RedisScanQueue', () => {
     it('returns the queue length', async () => {
       mockRedis.llen.mockResolvedValue(5);
       const len = await queue.getQueueLength();
-      expect(mockRedis.llen).toHaveBeenCalledWith('pally:scan:queue');
+      expect(mockRedis.llen).toHaveBeenCalledWith('luqen:scan:queue');
       expect(len).toBe(5);
     });
   });
@@ -120,7 +120,7 @@ describe('SsePublisher', () => {
       const event = { type: 'complete', data: {} };
       await publisher.publish('scan-1', event);
       expect(mockRedis.publish).toHaveBeenCalledWith(
-        'pally:sse:scan-1',
+        'luqen:sse:scan-1',
         JSON.stringify(event),
       );
     });
@@ -135,7 +135,7 @@ describe('SsePublisher', () => {
       publisher.subscribe('scan-1', vi.fn());
 
       expect(mockRedis.duplicate).toHaveBeenCalled();
-      expect(mockSub.subscribe).toHaveBeenCalledWith('pally:sse:scan-1');
+      expect(mockSub.subscribe).toHaveBeenCalledWith('luqen:sse:scan-1');
     });
 
     it('calls the callback with parsed event on message', () => {
@@ -155,7 +155,7 @@ describe('SsePublisher', () => {
       publisher.subscribe('scan-1', callback);
 
       const event = { type: 'scan_complete', data: {} };
-      mockSub._messageHandler?.('pally:sse:scan-1', JSON.stringify(event));
+      mockSub._messageHandler?.('luqen:sse:scan-1', JSON.stringify(event));
 
       expect(callback).toHaveBeenCalledWith(event);
     });
@@ -169,7 +169,7 @@ describe('SsePublisher', () => {
       const unsubscribe = publisher.subscribe('scan-1', vi.fn());
       unsubscribe();
 
-      expect(mockSub.unsubscribe).toHaveBeenCalledWith('pally:sse:scan-1');
+      expect(mockSub.unsubscribe).toHaveBeenCalledWith('luqen:sse:scan-1');
       expect(mockSub.disconnect).toHaveBeenCalled();
     });
   });

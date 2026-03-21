@@ -18,7 +18,7 @@ const SAMPLE_REGISTRY: readonly RegistryEntry[] = [
     type: 'notification',
     version: '1.0.0',
     description: 'Send alerts to Slack',
-    packageName: '@pally-agent/plugin-notify-slack',
+    packageName: '@luqen/plugin-notify-slack',
     icon: 'slack',
   },
 ];
@@ -81,7 +81,7 @@ describe('plugin list', () => {
       )
       .run({
         id: 'plugin-1',
-        package_name: '@pally-agent/plugin-notify-slack',
+        package_name: '@luqen/plugin-notify-slack',
         type: 'notification',
         version: '1.0.0',
         config: '{}',
@@ -92,7 +92,7 @@ describe('plugin list', () => {
     const plugins = ctx.manager.list();
     expect(plugins).toHaveLength(1);
     expect(plugins[0].id).toBe('plugin-1');
-    expect(plugins[0].packageName).toBe('@pally-agent/plugin-notify-slack');
+    expect(plugins[0].packageName).toBe('@luqen/plugin-notify-slack');
     expect(plugins[0].type).toBe('notification');
     expect(plugins[0].version).toBe('1.0.0');
     expect(plugins[0].status).toBe('active');
@@ -106,7 +106,7 @@ describe('plugin list', () => {
       )
       .run({
         id: 'aaa-bbb-ccc',
-        package_name: '@pally-agent/plugin-notify-slack',
+        package_name: '@luqen/plugin-notify-slack',
         type: 'notification',
         version: '1.0.0',
         config: '{}',
@@ -137,7 +137,7 @@ describe('plugin list', () => {
 
     const output = lines.join('\n');
     expect(output).toContain('aaa-bbb-ccc');
-    expect(output).toContain('@pally-agent/plugin-notify-slack');
+    expect(output).toContain('@luqen/plugin-notify-slack');
     expect(output).toContain('notification');
     expect(output).toContain('inactive');
   });

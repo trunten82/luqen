@@ -1,6 +1,6 @@
 {{! Issue Assignments — lifecycle tracking for WCAG issues }}
 
-<script>window.__pallyAssignees = {{{json assignees}}};</script>
+<script>window.__luqenAssignees = {{{json assignees}}};</script>
 
 <section aria-labelledby="asgn-heading" class="report-meta" style="margin-bottom:1.5rem;">
   <div class="detail-list detail-list--horizontal">
@@ -241,11 +241,11 @@
     });
   }
 
-  /* Populate assignee dropdowns from window.__pallyAssignees */
+  /* Populate assignee dropdowns from window.__luqenAssignees */
   function asgnPopulateSelects(root) {
     var container = root || document;
     var selects = container.querySelectorAll('select[data-field="assignedTo"]');
-    var assignees = window.__pallyAssignees || [];
+    var assignees = window.__luqenAssignees || [];
     selects.forEach(function(sel) {
       var currentVal = sel.getAttribute('data-current-value') || '';
       // Only add options if not already populated (beyond the default option)
@@ -283,7 +283,7 @@
     if (_asgnBulkMode) {
       var sel = document.getElementById('asgn-bulk-assignee');
       if (sel && sel.options.length <= 1) {
-        (window.__pallyAssignees || []).forEach(function(a) {
+        (window.__luqenAssignees || []).forEach(function(a) {
           var opt = document.createElement('option'); opt.value = a.id;
           opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
           sel.appendChild(opt);

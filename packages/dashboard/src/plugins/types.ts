@@ -101,7 +101,7 @@ export interface AuthPlugin extends PluginInstance {
 // Notification plugin
 // ---------------------------------------------------------------------------
 
-export interface PallyEvent {
+export interface LuqenEvent {
   readonly type:
     | 'scan.complete'
     | 'scan.failed'
@@ -112,7 +112,7 @@ export interface PallyEvent {
 }
 
 export interface NotificationPlugin extends PluginInstance {
-  send(event: PallyEvent): Promise<void>;
+  send(event: LuqenEvent): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------

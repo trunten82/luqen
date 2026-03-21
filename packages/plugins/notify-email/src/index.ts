@@ -22,7 +22,7 @@ interface PluginManifest {
   readonly configSchema: readonly ConfigField[];
 }
 
-interface PallyEvent {
+interface LuqenEvent {
   readonly type: 'scan.complete' | 'scan.failed' | 'violation.found' | 'regulation.changed';
   readonly timestamp: string;
   readonly data: Readonly<Record<string, unknown>>;
@@ -50,7 +50,7 @@ export const manifest: PluginManifest = Object.freeze(rawManifest);
 let client: EmailClient | null = null;
 let enabledEvents: Set<string> = new Set();
 let fromAddress = '';
-let fromName = 'Pally Dashboard';
+let fromName = 'Luqen';
 
 // -- Lifecycle ---------------------------------------------------------------
 
@@ -77,7 +77,7 @@ export async function activate(config: Readonly<Record<string, unknown>>): Promi
   const secure = (config.secure as boolean | undefined) ?? true;
 
   fromAddress = from;
-  fromName = (config.fromName as string | undefined) ?? 'Pally Dashboard';
+  fromName = (config.fromName as string | undefined) ?? 'Luqen';
 
   const events = (config.events as string | undefined) ?? 'scan.complete,scan.failed';
   enabledEvents = new Set(events.split(',').map((e) => e.trim()));
@@ -100,7 +100,7 @@ export async function deactivate(): Promise<void> {
   }
   enabledEvents = new Set();
   fromAddress = '';
-  fromName = 'Pally Dashboard';
+  fromName = 'Luqen';
 }
 
 export async function healthCheck(): Promise<boolean> {
@@ -110,7 +110,7 @@ export async function healthCheck(): Promise<boolean> {
 
 // -- Notification (scan events) ----------------------------------------------
 
-export async function send(event: PallyEvent): Promise<void> {
+export async function send(event: LuqenEvent): Promise<void> {
   if (client === null) {
     throw new Error('Email plugin is not activated');
   }
@@ -157,7 +157,7 @@ export async function testConnection(): Promise<boolean> {
 
 // -- Formatting --------------------------------------------------------------
 
-function formatEvent(event: PallyEvent): { subject: string; html: string } {
+function formatEvent(event: LuqenEvent): { subject: string; html: string } {
   const data = event.data;
 
   switch (event.type) {
@@ -228,7 +228,7 @@ function buildNotificationHtml(title: string, body: string): string {
     ${body}
   </div>
   <div style="background: #f5f6fa; padding: 16px; text-align: center; font-size: 12px; color: #6b6b6b; border-top: 1px solid #e0e0e0;">
-    Sent by Pally Dashboard — Email Notifications Plugin
+    Sent by Luqen — Email Notifications Plugin
   </div>
 </div>
 </body>

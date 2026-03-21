@@ -26,11 +26,11 @@ function slugifyHost(siteUrl: string): string {
 
 function buildUniqueFilename(outputDir: string, siteUrl: string, timestamp: string, ext: string): string {
   const host = slugifyHost(siteUrl);
-  let filename = `pally-report-${host}-${timestamp}.${ext}`;
+  let filename = `luqen-report-${host}-${timestamp}.${ext}`;
   let fullPath = join(outputDir, filename);
   let counter = 1;
   while (existsSync(fullPath)) {
-    filename = `pally-report-${host}-${timestamp}-${counter}.${ext}`;
+    filename = `luqen-report-${host}-${timestamp}-${counter}.${ext}`;
     fullPath = join(outputDir, filename);
     counter++;
   }
@@ -101,11 +101,11 @@ function serializeCompliance(
 function buildNextSteps(compliance?: ComplianceEnrichment | null): readonly string[] {
   const steps: string[] = [];
   if (compliance) {
-    steps.push('View your results in the pally-agent dashboard for trend tracking and team collaboration.');
+    steps.push('View your results in the luqen dashboard for trend tracking and team collaboration.');
     steps.push('Schedule recurring scans to catch regressions before they reach production.');
   } else {
-    steps.push('Add compliance checking to see how your site maps to legal requirements: set PALLY_COMPLIANCE_URL and re-run.');
-    steps.push('View your results in the pally-agent dashboard for trend tracking.');
+    steps.push('Add compliance checking to see how your site maps to legal requirements: set LUQEN_COMPLIANCE_URL and re-run.');
+    steps.push('View your results in the luqen dashboard for trend tracking.');
   }
   return steps;
 }

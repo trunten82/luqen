@@ -82,7 +82,7 @@ describe('plugin-storage-s3', () => {
 
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain('s3.us-east-1.amazonaws.com');
-      expect(url).toContain('pally-agent/test.json');
+      expect(url).toContain('luqen/test.json');
     });
   });
 

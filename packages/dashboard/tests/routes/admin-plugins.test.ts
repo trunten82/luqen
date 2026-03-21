@@ -21,7 +21,7 @@ const SAMPLE_REGISTRY: readonly RegistryEntry[] = [
     type: 'notification',
     version: '1.0.0',
     description: 'Send alerts to Slack',
-    packageName: '@pally-agent/plugin-notify-slack',
+    packageName: '@luqen/plugin-notify-slack',
     icon: 'slack',
   },
   {
@@ -30,7 +30,7 @@ const SAMPLE_REGISTRY: readonly RegistryEntry[] = [
     type: 'auth',
     version: '1.0.0',
     description: 'SSO via Azure Entra ID',
-    packageName: '@pally-agent/plugin-auth-entra',
+    packageName: '@luqen/plugin-auth-entra',
     icon: 'entra',
   },
 ];
@@ -144,7 +144,7 @@ describe('GET /admin/plugins', () => {
       )
       .run({
         id: 'test-plugin-1',
-        package_name: '@pally-agent/plugin-notify-slack',
+        package_name: '@luqen/plugin-notify-slack',
         type: 'notification',
         version: '1.0.0',
         config: '{}',
@@ -166,7 +166,7 @@ describe('GET /admin/plugins', () => {
     };
     expect(body.data.counts.installed).toBe(1);
     expect(body.data.counts.available).toBe(1);
-    expect(body.data.installed[0].packageName).toBe('@pally-agent/plugin-notify-slack');
+    expect(body.data.installed[0].packageName).toBe('@luqen/plugin-notify-slack');
   });
 });
 
@@ -303,7 +303,7 @@ describe('DELETE /admin/plugins/:id', () => {
       )
       .run({
         id: 'del-plugin-1',
-        package_name: '@pally-agent/plugin-notify-slack',
+        package_name: '@luqen/plugin-notify-slack',
         type: 'notification',
         version: '1.0.0',
         config: '{}',
@@ -358,7 +358,7 @@ describe('GET /admin/plugins/:id/configure', () => {
       )
       .run({
         id: 'cfg-plugin-1',
-        package_name: '@pally-agent/plugin-notify-slack',
+        package_name: '@luqen/plugin-notify-slack',
         type: 'notification',
         version: '1.0.0',
         config: '{}',

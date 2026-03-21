@@ -18,7 +18,7 @@ export async function registerSession(
 ): Promise<void> {
   await server.register(secureSession, {
     secret: sessionSecret,
-    salt: 'pally-dash-salt!',
+    salt: 'luqen-dash-salt!',
     cookie: {
       path: '/',
       httpOnly: true,

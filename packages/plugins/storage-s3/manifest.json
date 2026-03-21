@@ -9,6 +9,6 @@
     { "key": "region", "label": "AWS Region", "type": "string", "default": "us-east-1" },
     { "key": "accessKeyId", "label": "Access Key ID", "type": "secret", "required": true },
     { "key": "secretAccessKey", "label": "Secret Access Key", "type": "secret", "required": true },
-    { "key": "prefix", "label": "Key Prefix", "type": "string", "default": "pally-agent/" }
+    { "key": "prefix", "label": "Key Prefix", "type": "string", "default": "luqen-agent/" }
   ]
 }

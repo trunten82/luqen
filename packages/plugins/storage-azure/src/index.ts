@@ -47,7 +47,7 @@ export async function activate(config: Readonly<Record<string, unknown>>): Promi
     throw new Error('Azure containerName is required');
   }
 
-  const prefix = (config.prefix as string | undefined) ?? 'pally-agent/';
+  const prefix = (config.prefix as string | undefined) ?? 'luqen/';
 
   client = new AzureBlobClient(connectionString, containerName, prefix);
 }

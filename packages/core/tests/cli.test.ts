@@ -4,7 +4,7 @@ describe('CLI', () => {
   it('exports a commander program', async () => {
     const { program } = await import('../src/cli.js');
     expect(program).toBeDefined();
-    expect(program.name()).toBe('pally-agent');
+    expect(program.name()).toBe('luqen');
   });
 
   it('has scan and fix commands', async () => {

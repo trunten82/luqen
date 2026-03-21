@@ -53,7 +53,7 @@ export async function activate(config: Readonly<Record<string, unknown>>): Promi
   }
 
   const region = (config.region as string | undefined) ?? 'us-east-1';
-  const prefix = (config.prefix as string | undefined) ?? 'pally-agent/';
+  const prefix = (config.prefix as string | undefined) ?? 'luqen/';
 
   client = new S3Client(bucket, region, { accessKeyId, secretAccessKey }, prefix);
 }

@@ -83,7 +83,7 @@ describe('plugin-storage-azure', () => {
       await plugin.save('test.json', new Uint8Array([1]));
 
       const [url] = mockFetch.mock.calls[0];
-      expect(url).toContain('pally-agent/test.json');
+      expect(url).toContain('luqen/test.json');
     });
   });
 

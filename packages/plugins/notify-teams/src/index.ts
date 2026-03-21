@@ -22,7 +22,7 @@ interface PluginManifest {
   readonly configSchema: readonly ConfigField[];
 }
 
-interface PallyEvent {
+interface LuqenEvent {
   readonly type: 'scan.complete' | 'scan.failed' | 'violation.found' | 'regulation.changed';
   readonly timestamp: string;
   readonly data: Readonly<Record<string, unknown>>;
@@ -76,7 +76,7 @@ export async function healthCheck(): Promise<boolean> {
 
 // ── Notification ────────────────────────────────────────────────────────────
 
-export async function send(event: PallyEvent): Promise<void> {
+export async function send(event: LuqenEvent): Promise<void> {
   if (client === null) {
     throw new Error('Teams plugin is not activated');
   }
@@ -91,7 +91,7 @@ export async function send(event: PallyEvent): Promise<void> {
 
 // ── Formatting ──────────────────────────────────────────────────────────────
 
-function formatEvent(event: PallyEvent): TeamsMessageCard {
+function formatEvent(event: LuqenEvent): TeamsMessageCard {
   const data = event.data;
   const themeColor = THEME_COLORS[event.type] ?? '0078D7';
 

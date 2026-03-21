@@ -490,7 +490,7 @@ export async function dataApiRoutes(
               branch: connectedRepo.branch,
             }
           : null,
-        mcpTools: ['pally_propose_fixes', 'pally_apply_fix'],
+        mcpTools: ['luqen_propose_fixes', 'luqen_apply_fix'],
         a2aHint: 'Agents can call GET /api/v1/scans/:id/fixes for fix proposals',
       });
     },

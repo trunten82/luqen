@@ -66,7 +66,7 @@ export function resolveEnvVars(
 // ---------------------------------------------------------------------------
 
 /**
- * Reads a `pally-plugins.json` config file and reconciles the declared
+ * Reads a `luqen-plugins.json` config file and reconciles the declared
  * plugins against the current state managed by `PluginManager`.
  *
  * For each plugin entry:

@@ -43,7 +43,7 @@ async function sendWithRetry(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Pally-Signature': signature,
+        'X-Luqen-Signature': signature,
       },
       body,
     });

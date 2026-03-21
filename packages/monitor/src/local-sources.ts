@@ -18,7 +18,7 @@ interface LocalConfig {
   readonly sources: readonly LocalSourceEntry[];
 }
 
-const CONFIG_FILENAME = '.pally-monitor.json';
+const CONFIG_FILENAME = '.luqen-monitor.json';
 const VALID_TYPES = new Set(['html', 'rss', 'api']);
 
 /**
@@ -26,8 +26,8 @@ const VALID_TYPES = new Set(['html', 'rss', 'api']);
  *
  * Lookup order:
  * 1. Explicit path (from --sources-file CLI flag)
- * 2. `.pally-monitor.json` in the current working directory
- * 3. `$HOME/.pally-monitor.json`
+ * 2. `.luqen-monitor.json` in the current working directory
+ * 3. `$HOME/.luqen-monitor.json`
  *
  * Returns an empty array when no config file is found at any location.
  * Throws on malformed JSON or missing required fields.

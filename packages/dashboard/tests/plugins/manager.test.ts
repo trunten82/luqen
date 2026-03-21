@@ -43,7 +43,7 @@ const testRegistryEntries: readonly RegistryEntry[] = [
     type: 'auth',
     version: '1.0.0',
     description: 'A test auth plugin',
-    packageName: '@pally/plugin-test-auth',
+    packageName: '@luqen/plugin-test-auth',
   },
   {
     name: 'test-notify',
@@ -51,7 +51,7 @@ const testRegistryEntries: readonly RegistryEntry[] = [
     type: 'notification',
     version: '1.0.0',
     description: 'A test notification plugin',
-    packageName: '@pally/plugin-test-notify',
+    packageName: '@luqen/plugin-test-notify',
   },
 ];
 
@@ -97,18 +97,18 @@ describe('PluginManager', () => {
   describe('install', () => {
     it('creates DB entry with status inactive', async () => {
       // Create a fake installed package with manifest
-      const pkgDir = join(tmpDir, 'node_modules', '@pally', 'plugin-test-auth');
+      const pkgDir = join(tmpDir, 'node_modules', '@luqen', 'plugin-test-auth');
       mkdirSync(pkgDir, { recursive: true });
       writeFileSync(join(pkgDir, 'manifest.json'), JSON.stringify(testManifest));
-      writeFileSync(join(pkgDir, 'package.json'), JSON.stringify({ name: '@pally/plugin-test-auth', main: 'index.js' }));
+      writeFileSync(join(pkgDir, 'package.json'), JSON.stringify({ name: '@luqen/plugin-test-auth', main: 'index.js' }));
 
       // Mock execFileAsync to skip real npm install
       const execFileMock = vi.fn().mockResolvedValue({ stdout: '', stderr: '' });
       manager._setExecFile(execFileMock);
 
-      const record = await manager.install('@pally/plugin-test-auth');
+      const record = await manager.install('@luqen/plugin-test-auth');
 
-      expect(record.packageName).toBe('@pally/plugin-test-auth');
+      expect(record.packageName).toBe('@luqen/plugin-test-auth');
       expect(record.status).toBe('inactive');
       expect(record.type).toBe('auth');
       expect(record.version).toBe('1.0.0');
@@ -137,7 +137,7 @@ describe('PluginManager', () => {
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
       ).run({
         id,
-        package_name: '@pally/plugin-test-auth',
+        package_name: '@luqen/plugin-test-auth',
         type: 'auth',
         version: '1.0.0',
         config: '{}',
@@ -146,7 +146,7 @@ describe('PluginManager', () => {
       });
 
       // Set up manifest for this plugin
-      const pkgDir = join(tmpDir, 'node_modules', '@pally', 'plugin-test-auth');
+      const pkgDir = join(tmpDir, 'node_modules', '@luqen', 'plugin-test-auth');
       mkdirSync(pkgDir, { recursive: true });
       writeFileSync(join(pkgDir, 'manifest.json'), JSON.stringify(testManifest));
 
@@ -175,7 +175,7 @@ describe('PluginManager', () => {
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
       ).run({
         id,
-        package_name: '@pally/plugin-test-auth',
+        package_name: '@luqen/plugin-test-auth',
         type: 'auth',
         version: '1.0.0',
         config: JSON.stringify({ clientId: 'test' }),
@@ -183,7 +183,7 @@ describe('PluginManager', () => {
         installed_at: new Date().toISOString(),
       });
 
-      const pkgDir = join(tmpDir, 'node_modules', '@pally', 'plugin-test-auth');
+      const pkgDir = join(tmpDir, 'node_modules', '@luqen', 'plugin-test-auth');
       mkdirSync(pkgDir, { recursive: true });
       writeFileSync(join(pkgDir, 'manifest.json'), JSON.stringify(testManifest));
 
@@ -204,7 +204,7 @@ describe('PluginManager', () => {
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
       ).run({
         id,
-        package_name: '@pally/plugin-test-auth',
+        package_name: '@luqen/plugin-test-auth',
         type: 'auth',
         version: '1.0.0',
         config: JSON.stringify({ clientId: 'test' }),
@@ -212,7 +212,7 @@ describe('PluginManager', () => {
         installed_at: new Date().toISOString(),
       });
 
-      const pkgDir = join(tmpDir, 'node_modules', '@pally', 'plugin-test-auth');
+      const pkgDir = join(tmpDir, 'node_modules', '@luqen', 'plugin-test-auth');
       mkdirSync(pkgDir, { recursive: true });
       writeFileSync(join(pkgDir, 'manifest.json'), JSON.stringify(testManifest));
 
@@ -234,7 +234,7 @@ describe('PluginManager', () => {
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at, @activated_at)`,
       ).run({
         id,
-        package_name: '@pally/plugin-test-auth',
+        package_name: '@luqen/plugin-test-auth',
         type: 'auth',
         version: '1.0.0',
         config: '{}',
@@ -262,7 +262,7 @@ describe('PluginManager', () => {
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
       ).run({
         id,
-        package_name: '@pally/plugin-test-auth',
+        package_name: '@luqen/plugin-test-auth',
         type: 'auth',
         version: '1.0.0',
         config: '{}',
@@ -285,7 +285,7 @@ describe('PluginManager', () => {
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
       ).run({
         id,
-        package_name: '@pally/plugin-test-auth',
+        package_name: '@luqen/plugin-test-auth',
         type: 'auth',
         version: '1.0.0',
         config: JSON.stringify({ clientId: 'visible', clientSecret: 'encrypted-value' }),
@@ -294,7 +294,7 @@ describe('PluginManager', () => {
       });
 
       // Need manifest to mask secrets
-      const pkgDir = join(tmpDir, 'node_modules', '@pally', 'plugin-test-auth');
+      const pkgDir = join(tmpDir, 'node_modules', '@luqen', 'plugin-test-auth');
       mkdirSync(pkgDir, { recursive: true });
       writeFileSync(join(pkgDir, 'manifest.json'), JSON.stringify(testManifest));
 
@@ -315,7 +315,7 @@ describe('PluginManager', () => {
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
       ).run({
         id,
-        package_name: '@pally/plugin-test-auth',
+        package_name: '@luqen/plugin-test-auth',
         type: 'auth',
         version: '1.0.0',
         config: '{}',
@@ -342,7 +342,7 @@ describe('PluginManager', () => {
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at, @activated_at)`,
       ).run({
         id,
-        package_name: '@pally/plugin-test-auth',
+        package_name: '@luqen/plugin-test-auth',
         type: 'auth',
         version: '1.0.0',
         config: '{}',
@@ -365,7 +365,7 @@ describe('PluginManager', () => {
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at, @activated_at)`,
       ).run({
         id,
-        package_name: '@pally/plugin-test-auth',
+        package_name: '@luqen/plugin-test-auth',
         type: 'auth',
         version: '1.0.0',
         config: '{}',
@@ -374,7 +374,7 @@ describe('PluginManager', () => {
         activated_at: new Date().toISOString(),
       });
 
-      const pkgDir = join(tmpDir, 'node_modules', '@pally', 'plugin-test-auth');
+      const pkgDir = join(tmpDir, 'node_modules', '@luqen', 'plugin-test-auth');
       mkdirSync(pkgDir, { recursive: true });
       writeFileSync(join(pkgDir, 'manifest.json'), JSON.stringify(testManifest));
 

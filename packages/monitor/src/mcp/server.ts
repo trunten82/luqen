@@ -20,7 +20,7 @@ export type MonitorToolName = (typeof MONITOR_TOOL_NAMES)[number];
 
 export function createMonitorMcpServer(): McpServer {
   const server = new McpServer({
-    name: 'pally-monitor',
+    name: 'luqen-monitor',
     version: VERSION,
   });
 

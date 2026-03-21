@@ -7,8 +7,8 @@ import { VERSION } from './version.js';
 const program = new Command();
 
 program
-  .name('pally-dashboard')
-  .description('Pally accessibility dashboard server')
+  .name('luqen-dashboard')
+  .description('Luqen accessibility dashboard server')
   .version(VERSION);
 
 program
@@ -30,7 +30,7 @@ program
       const server = await createServer(resolved);
 
       await server.listen({ port: resolved.port, host: '0.0.0.0' });
-      console.log(`Pally Dashboard listening on http://0.0.0.0:${resolved.port}`);
+      console.log(`Luqen listening on http://0.0.0.0:${resolved.port}`);
     } catch (err) {
       console.error('Failed to start server:', err instanceof Error ? err.message : String(err));
       process.exit(1);

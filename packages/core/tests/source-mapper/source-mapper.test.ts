@@ -9,7 +9,7 @@ describe('mapIssuesToSource', () => {
   let repoDir: string;
 
   beforeEach(() => {
-    repoDir = join(tmpdir(), `pally-map-test-${Date.now()}`);
+    repoDir = join(tmpdir(), `luqen-map-test-${Date.now()}`);
     mkdirSync(repoDir, { recursive: true });
     writeFileSync(join(repoDir, 'next.config.js'), 'module.exports = {}');
     writeFileSync(join(repoDir, 'package.json'), JSON.stringify({ dependencies: { next: '14' } }));
