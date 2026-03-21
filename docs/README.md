@@ -11,10 +11,10 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 | Get scanning in 5 minutes | [QUICKSTART.md](QUICKSTART.md) |
 | Understand what pally-agent does | [USER-GUIDE.md](USER-GUIDE.md) |
 | Install it properly | [Installation guides](#installation) |
-| Understand the system design | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Understand the system design | [contributing/architecture.md](contributing/architecture.md) |
 | Configure a specific package | [Configuration reference](#configuration-reference) |
 | Learn how to scan | [guides/scanning.md](guides/scanning.md) |
-| Integrate with Claude Code | [integrations/claude-code.md](integrations/claude-code.md) |
+| Integrate with Claude Code | [compliance/integrations/claude-code.md](compliance/integrations/claude-code.md) |
 | Set up CI/CD | [guides/ci-cd.md](guides/ci-cd.md) |
 
 ---
@@ -23,11 +23,11 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 
 | Guide | Description |
 |-------|-------------|
-| [installation/local.md](installation/local.md) | Node.js installation from source |
-| [installation/docker.md](installation/docker.md) | Docker Compose — all services |
-| [installation/kubernetes.md](installation/kubernetes.md) | Kubernetes with Kustomize |
-| [installation/cloud.md](installation/cloud.md) | AWS (ECS/Lambda) and Azure (Container Apps/Functions) |
-| [installation/one-line.md](installation/one-line.md) | One-line curl installer |
+| [getting-started/one-line-install.md](getting-started/one-line-install.md) | Node.js installation from source |
+| [deployment/docker.md](deployment/docker.md) | Docker Compose — all services |
+| [deployment/kubernetes.md](deployment/kubernetes.md) | Kubernetes with Kustomize |
+| [deployment/cloud.md](deployment/cloud.md) | AWS (ECS/Lambda) and Azure (Container Apps/Functions) |
+| [getting-started/one-line-install.md](getting-started/one-line-install.md) | One-line curl installer |
 
 ---
 
@@ -35,10 +35,10 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 
 | Guide | Description |
 |-------|-------------|
-| [configuration/core.md](configuration/core.md) | `@pally-agent/core` — `.pally-agent.json`, env vars, CLI flags |
-| [configuration/compliance.md](configuration/compliance.md) | `@pally-agent/compliance` — `compliance.config.json`, env vars, CLI |
-| [configuration/dashboard.md](configuration/dashboard.md) | `@pally-agent/dashboard` — `dashboard.config.json`, env vars, CLI |
-| [configuration/monitor.md](configuration/monitor.md) | `@pally-agent/monitor` — env vars, CLI |
+| [reference/core-config.md](reference/core-config.md) | `@pally-agent/core` — `.pally-agent.json`, env vars, CLI flags |
+| [reference/compliance-config.md](reference/compliance-config.md) | `@pally-agent/compliance` — `compliance.config.json`, env vars, CLI |
+| [reference/dashboard-config.md](reference/dashboard-config.md) | `@pally-agent/dashboard` — `dashboard.config.json`, env vars, CLI |
+| [reference/monitor-config.md](reference/monitor-config.md) | `@pally-agent/monitor` — env vars, CLI |
 
 ---
 
@@ -59,10 +59,10 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 
 | Guide | Description |
 |-------|-------------|
-| [integrations/claude-code.md](integrations/claude-code.md) | MCP server setup for Claude Code — all 4 servers |
-| [integrations/power-automate.md](integrations/power-automate.md) | Power Automate custom connector |
-| [integrations/n8n.md](integrations/n8n.md) | n8n workflow setup |
-| [integrations/api-reference.md](integrations/api-reference.md) | REST API quick reference — all endpoints |
+| [compliance/integrations/claude-code.md](compliance/integrations/claude-code.md) | MCP server setup for Claude Code — all 4 servers |
+| [compliance/integrations/power-automate.md](compliance/integrations/power-automate.md) | Power Automate custom connector |
+| [compliance/integrations/n8n.md](compliance/integrations/n8n.md) | n8n workflow setup |
+| [reference/api-reference.md](reference/api-reference.md) | REST API quick reference — all endpoints |
 
 ---
 
@@ -78,7 +78,7 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 
 ## Other
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — system design and data flow
+- [contributing/architecture.md](contributing/architecture.md) — system design and data flow
 - [SECURITY-REVIEW.md](SECURITY-REVIEW.md) — security review findings
 - [LICENSING.md](LICENSING.md) — license information
 

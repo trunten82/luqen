@@ -197,4 +197,10 @@ Use `DELETE /api/v1/orgs/:id/data` (admin scope) to remove all records belonging
 
 ---
 
-*See also: [guides/compliance-check.md](../guides/compliance-check.md) | [compliance/README.md](../compliance/README.md) | [configuration/dashboard.md](dashboard.md)*
+## Request Limits
+
+The compliance API accepts request bodies up to **10 MB** for the `POST /api/v1/compliance/check` endpoint. This accommodates large site scans with thousands of issues. Other endpoints use the default body size limit (1 MB).
+
+---
+
+*See also: [guides/compliance-check.md](../guides/compliance-check.md) | [compliance/README.md](../compliance/README.md) | [dashboard-config.md](dashboard-config.md)*

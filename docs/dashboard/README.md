@@ -269,7 +269,7 @@ Fill in the form:
 - **WCAG Standard** — choose `WCAG2A`, `WCAG2AA` (default), or `WCAG2AAA`. The report displays this as a human-readable label (e.g. "WCAG 2.1 Level AA") via `formatStandard`.
 - **Concurrency** — number of pages to scan in parallel (1–10, default from config).
 
-The scan endpoint (`POST /scan/new`) is rate-limited to prevent abuse.
+The scan endpoint (`POST /scan/new`) is rate-limited: 10 requests per 10 minutes per session. The `scanMode` parameter accepts `single` or `site` (default: `site` for API, `single` for dashboard UI).
 
 Click **Start Scan**. The server creates a scan record and immediately redirects to the progress page.
 
@@ -441,7 +441,7 @@ Displays:
 
 ## Docker Deployment
 
-See [installation/docker.md](installation/docker.md) for full Docker and Docker Compose setup instructions.
+See [../deployment/docker.md](../deployment/docker.md) for full Docker and Docker Compose setup instructions.
 
 ### Quick start with Docker Compose
 
