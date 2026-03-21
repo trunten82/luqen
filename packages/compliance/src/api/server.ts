@@ -49,7 +49,7 @@ export async function createServer(options: ServerOptions) {
     cache,
   } = options;
 
-  const app = Fastify({ logger });
+  const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }); // 10MB for large site scans
 
   // Register CORS
   await app.register(cors, {

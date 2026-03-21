@@ -1,6 +1,6 @@
 {
   "name": "@pally-agent/core",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Accessibility testing agent using pa11y webservice",
   "type": "module",
   "main": "dist/index.js",

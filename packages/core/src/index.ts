@@ -26,6 +26,8 @@ export interface CreateScannerOptions {
   readonly headers?: Readonly<Record<string, string>>;
   readonly wait?: number;
   readonly onProgress?: ProgressListener;
+  /** When true, scan only the given URL without discovery/crawling. Default: false. */
+  readonly singlePage?: boolean;
 }
 
 export interface Scanner {
@@ -58,17 +60,21 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
 
   return {
     async scan(url: string) {
-      // Discover pages first
+      // Discover pages (or use single page in single-page mode)
       let urls: DiscoveredUrl[];
-      try {
-        const result = await discoverUrls(url, {
-          maxPages: 50,
-          crawlDepth: 2,
-          alsoCrawl: true,
-        }, true);
-        urls = result.urls;
-      } catch {
+      if (opts.singlePage) {
         urls = [{ url, discoveryMethod: 'crawl' as const }];
+      } else {
+        try {
+          const result = await discoverUrls(url, {
+            maxPages: 50,
+            crawlDepth: 2,
+            alsoCrawl: true,
+          }, true);
+          urls = result.urls;
+        } catch {
+          urls = [{ url, discoveryMethod: 'crawl' as const }];
+        }
       }
 
       // Scan all discovered URLs

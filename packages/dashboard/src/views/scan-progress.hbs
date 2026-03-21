@@ -11,7 +11,7 @@
       </div>
       <div class="detail-list__item">
         <dt>Standard</dt>
-        <dd>{{scan.standard}}</dd>
+        <dd>{{formatStandard scan.standard}}</dd>
       </div>
       {{#if scan.jurisdictions}}
       <div class="detail-list__item">
@@ -144,9 +144,9 @@
   }
 
   source.addEventListener('scan_start', function (e) {
-    if (statusText) statusText.textContent = 'Scanning in progress\u2026';
+    if (statusText) statusText.textContent = 'Discovering pages\u2026';
     if (statusBanner) { statusBanner.className = 'status-banner status-banner--running'; }
-    addLog('Scan started.');
+    addLog('Scan started — discovering pages.');
   });
 
   source.addEventListener('discovery', function (e) {
@@ -155,7 +155,8 @@
       if (evt.data && evt.data.pagesDiscovered !== undefined && pagesDiscoveredEl) {
         pagesDiscoveredEl.textContent = evt.data.pagesDiscovered;
       }
-      addLog('Discovered ' + (evt.data ? evt.data.pagesDiscovered : '?') + ' pages.');
+      if (statusText) statusText.textContent = 'Scanning ' + (evt.data ? evt.data.pagesDiscovered : '') + ' pages\u2026';
+      addLog('Discovered ' + (evt.data ? evt.data.pagesDiscovered : '?') + ' pages — scanning started.');
     } catch (_) {}
   });
 
@@ -163,8 +164,10 @@
     try {
       var evt = JSON.parse(e.data);
       var d = evt.data || {};
+      var scanned = d.pagesScanned !== undefined ? d.pagesScanned : '?';
+      var total = d.totalPages || '?';
       if (d.pagesScanned !== undefined && pagesScannedEl) {
-        pagesScannedEl.textContent = d.pagesScanned;
+        pagesScannedEl.textContent = scanned + ' / ' + total;
       }
       if (d.totalPages && d.pagesScanned !== undefined && progressContainer && progressBar) {
         var pct = Math.round((d.pagesScanned / d.totalPages) * 100);
@@ -175,8 +178,12 @@
         currentUrlEl.textContent = 'Scanning: ' + d.currentUrl;
       }
       if (d.issues && issuesCountEl) {
-        issuesCountEl.textContent = (d.issues.errors || 0) + ' errors, ' + (d.issues.warnings || 0) + ' warnings';
+        var errCount = d.issues.errors || 0;
+        var warnCount = d.issues.warnings || 0;
+        var noticeCount = d.issues.notices || 0;
+        issuesCountEl.textContent = errCount + ' errors, ' + warnCount + ' warnings, ' + noticeCount + ' notices';
       }
+      addLog('Page ' + scanned + '/' + total + (d.currentUrl ? ' — ' + d.currentUrl : ''));
     } catch (_) {}
   });
 
@@ -189,7 +196,8 @@
     source.close();
     try {
       var evt = JSON.parse(e.data);
-      var reportUrl = (evt.data && evt.data.reportUrl) ? evt.data.reportUrl : '/reports';
+      var raw = (evt.data && evt.data.reportUrl) ? evt.data.reportUrl : '/reports';
+      var reportUrl = (typeof raw === 'string' && raw.indexOf('/reports') === 0) ? raw : '/reports';
       if (progressBar) progressBar.style.width = '100%';
       if (progressContainer) progressContainer.setAttribute('aria-valuenow', '100');
       if (statusText) statusText.textContent = 'Scan completed! Redirecting to report\u2026';

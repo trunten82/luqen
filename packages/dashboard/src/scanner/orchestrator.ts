@@ -25,6 +25,7 @@ export interface ScanConfig {
   readonly standard: string;
   readonly concurrency: number;
   readonly jurisdictions: string[];
+  readonly scanMode?: 'single' | 'site';
   readonly webserviceUrl: string;
   readonly complianceUrl?: string;
   readonly complianceToken?: string;
@@ -56,6 +57,10 @@ class ScanQueue {
       this.queue.push(wrapped);
       this.processNext();
     });
+  }
+
+  isAtCapacity(): boolean {
+    return this.running >= this.maxConcurrent;
   }
 
   private processNext(): void {
@@ -122,6 +127,14 @@ export class ScanOrchestrator {
 
   startScan(scanId: string, config: ScanConfig): void {
     // Enqueue without awaiting — background execution
+    // Emit queued event so the UI knows the scan is waiting if queue is full
+    if (this.queue.isAtCapacity()) {
+      this.emitter.emit(`scan:${scanId}`, {
+        type: 'scan_start',
+        timestamp: new Date().toISOString(),
+        data: {},
+      } satisfies ScanProgressEvent);
+    }
     void this.queue.enqueue(() => this.runScan(scanId, config));
   }
 
@@ -149,32 +162,59 @@ export class ScanOrchestrator {
       let warnings = 0;
       let notices = 0;
       let allIssues: Array<{ code: string; type: string; message: string; selector: string; context: string }> = [];
+      let scanPages: Array<{ url: string; issueCount: number; issues: Array<{ code: string; type: string; message: string; selector: string; context: string }> }> = [];
 
       if (createScanner !== null) {
         const scanner = createScanner({
           webserviceUrl: config.webserviceUrl,
           standard: config.standard as 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA',
           concurrency: config.concurrency,
+          singlePage: config.scanMode !== 'site',
           onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
-            emit({
-              type: 'scan_complete',
-              timestamp: new Date().toISOString(),
-              data: {
-                pagesScanned: progress.current,
-                totalPages: progress.total,
-                currentUrl: progress.url,
-              },
-            });
+            if (progress.type === 'scan:start') {
+              // First scan:start event tells us discovery is done
+              if (progress.current === 1) {
+                emit({
+                  type: 'discovery',
+                  timestamp: new Date().toISOString(),
+                  data: { pagesDiscovered: progress.total },
+                });
+              }
+              emit({
+                type: 'scan_complete',
+                timestamp: new Date().toISOString(),
+                data: {
+                  pagesScanned: progress.current - 1,
+                  totalPages: progress.total,
+                  currentUrl: progress.url,
+                },
+              });
+            } else {
+              emit({
+                type: 'scan_complete',
+                timestamp: new Date().toISOString(),
+                data: {
+                  pagesScanned: progress.current,
+                  totalPages: progress.total,
+                  currentUrl: progress.url,
+                },
+              });
+            }
           },
         } as Parameters<typeof createScanner>[0]);
 
-        const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } } }> }).scan(config.siteUrl);
+        const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ url: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } } }> }).scan(config.siteUrl);
 
         pagesScanned = result.summary.pagesScanned;
         errors = result.summary.byLevel.error;
         warnings = result.summary.byLevel.warning;
         notices = result.summary.byLevel.notice;
         allIssues = result.pages.flatMap((p) => p.issues);
+        scanPages = result.pages.map((p) => ({
+          url: p.url,
+          issueCount: p.issueCount ?? p.issues.length,
+          issues: p.issues,
+        }));
       }
 
       // Ensure reports dir exists
@@ -202,12 +242,10 @@ export class ScanOrchestrator {
         pagesFailed: 0,
       };
 
-      // Pages — group issues per page if scanner returned PageResult[], else single page
-      reportData.pages = [{
-        url: config.siteUrl,
-        issues: allIssues,
-        issueCount: allIssues.length,
-      }];
+      // Pages — preserve per-page structure from scanner if available
+      reportData.pages = scanPages.length > 0
+        ? scanPages
+        : [{ url: config.siteUrl, issues: allIssues, issueCount: allIssues.length }];
 
       // Template issues (deduplication)
       if (templateIssues.length > 0) {
@@ -236,11 +274,19 @@ export class ScanOrchestrator {
             data: {},
           });
 
+          // Deduplicate issues by code — compliance only needs unique issue types
+          const seenCodes = new Set<string>();
+          const uniqueIssues = allIssues.filter((issue) => {
+            if (seenCodes.has(issue.code)) return false;
+            seenCodes.add(issue.code);
+            return true;
+          });
+
           const complianceResult = await checkCompliance(
             config.complianceUrl,
             config.complianceToken,
             config.jurisdictions,
-            allIssues,
+            uniqueIssues,
           );
           confirmedViolations = complianceResult.summary.totalConfirmedViolations ?? 0;
 

@@ -16,8 +16,24 @@
                autocomplete="url" required aria-required="true"
                aria-describedby="siteUrl-hint">
         <p id="siteUrl-hint" class="form-hint">
-          Enter the full URL including <code>https://</code>. The scanner will crawl linked pages.
+          Enter the full URL including <code>https://</code>.
         </p>
+      </div>
+
+      <div class="form-group">
+        <label>Scan Mode</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="scanMode" value="single" checked>
+            <span>Single Page</span>
+            <span class="form-hint">Scan only the specified URL (fast, pa11y default)</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="scanMode" value="site">
+            <span>Full Site</span>
+            <span class="form-hint">Discover and scan up to 50 pages via sitemap &amp; crawl</span>
+          </label>
+        </div>
       </div>
     </div>
 

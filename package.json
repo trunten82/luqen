@@ -1,13 +1,31 @@
 {
   "name": "pally-agent",
-  "version": "0.5.1",
+  "version": "0.11.0",
   "private": true,
   "workspaces": ["packages/core", "packages/compliance", "packages/dashboard", "packages/monitor", "packages/plugins/auth-entra", "packages/plugins/notify-slack", "packages/plugins/notify-teams", "packages/plugins/storage-s3", "packages/plugins/storage-azure"],
   "scripts": {
     "build": "npm run build --workspaces",
+    "build:all": "npm run build --workspaces",
+    "build:core": "npm run build -w packages/core",
+    "build:compliance": "npm run build -w packages/compliance",
+    "build:dashboard": "npm run build -w packages/dashboard",
+    "build:monitor": "npm run build -w packages/monitor",
     "test": "npm run test --workspaces",
+    "test:all": "npm run test --workspaces",
     "test:coverage": "npm run test:coverage --workspaces",
-    "lint": "npm run lint --workspaces"
+    "test:core": "npm run test -w packages/core",
+    "test:compliance": "npm run test -w packages/compliance",
+    "test:dashboard": "npm run test -w packages/dashboard",
+    "test:monitor": "npm run test -w packages/monitor",
+    "lint": "npm run lint --workspaces",
+    "lint:all": "npm run lint --workspaces",
+    "dev:compliance": "npm run build -w packages/compliance && npm run start -w packages/compliance",
+    "dev:dashboard": "npm run build -w packages/dashboard && npm run start -w packages/dashboard",
+    "dev:all": "npm run build --workspaces && npm run start -w packages/compliance & npm run start -w packages/dashboard",
+    "clean": "rm -rf packages/*/dist"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "license": "MIT"
 }

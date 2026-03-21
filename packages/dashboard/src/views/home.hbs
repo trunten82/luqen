@@ -37,6 +37,20 @@
 
       <input type="hidden" name="standard" value="WCAG2AA">
 
+      <div class="form-group">
+        <label>Scan Mode</label>
+        <div class="radio-group radio-group--inline">
+          <label class="radio-label">
+            <input type="radio" name="scanMode" value="single" checked>
+            <span>Single Page</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="scanMode" value="site">
+            <span>Full Site</span>
+          </label>
+        </div>
+      </div>
+
       {{#if jurisdictions.length}}
       <div class="form-group">
         <label>Compliance Check <span class="text-xs text-muted">(optional)</span></label>
@@ -92,6 +106,7 @@
           <th scope="col">Site URL</th>
           <th scope="col">Status</th>
           <th scope="col">Standard</th>
+          <th scope="col">Jurisdictions</th>
           <th scope="col">Pages</th>
           <th scope="col">Issues</th>
           <th scope="col">Date</th>
@@ -111,7 +126,8 @@
               {{status}}
             </span>
           </td>
-          <td data-label="Standard">{{standard}}</td>
+          <td data-label="Standard">{{formatStandard standard}}</td>
+          <td data-label="Jurisdictions">{{#if jurisdictions}}{{jurisdictions}}{{else}}&mdash;{{/if}}</td>
           <td data-label="Pages">{{pagesScanned}}</td>
           <td data-label="Issues">
             {{#if totalIssues}}
