@@ -234,9 +234,18 @@ Select multiple issues at once using checkboxes:
 
 All selected issues are assigned in a single operation.
 
-### Deleting assignments
+### Removing assignments
 
-Click the **Remove** button next to any assignment. A confirmation dialog appears before the assignment is deleted. The issue returns to **Open** status.
+Assignments can be removed from two places:
+
+- **Assignments page** — click the **Remove** button next to any assignment. A confirmation dialog appears before deletion.
+- **Issues tab** — click the **x** button next to the status badge on any assigned issue to unassign it inline.
+
+In both cases, the issue returns to **Open** status.
+
+### Role requirements
+
+Admin, Developer, and User roles can create, update, and remove assignments. The Executive role has read-only access and cannot manage assignments.
 
 Status transitions are logged with timestamps. Filter the issue list by assignment status using the **Status** filter.
 

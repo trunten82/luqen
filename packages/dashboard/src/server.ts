@@ -207,14 +207,17 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
   handlebars.registerHelper('json', (context: unknown) => JSON.stringify(context));
 
-  handlebars.registerHelper('issueAssignStatus', (assignedMap: Record<string, { status: string; assignedTo: string | null }> | undefined, code: string, selector: string, message: string) => {
+  handlebars.registerHelper('issueAssignStatus', (assignedMap: Record<string, { id: string; status: string; assignedTo: string | null }> | undefined, code: string, selector: string, message: string) => {
     if (assignedMap == null) return '';
     const fp = `${code}|${selector}|${message}`;
     if (!(fp in assignedMap)) return '';
     const a = assignedMap[fp];
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const who = a.assignedTo ? ` &middot; ${esc(a.assignedTo)}` : '';
-    return new handlebars.SafeString(`<span class="rpt-assigned-badge rpt-assigned-badge--${a.status}">${esc(a.status)}${who}</span>`);
+    return new handlebars.SafeString(
+      `<span class="rpt-assigned-badge rpt-assigned-badge--${a.status}">${esc(a.status)}${who}</span>` +
+      `<button type="button" class="rpt-unassign-btn" onclick="rptUnassign('${esc(a.id)}', this)" title="Remove assignment">&times;</button>`
+    );
   });
 
   handlebars.registerHelper('fixSuggestion', (criterion: string, message: string) => {
