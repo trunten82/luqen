@@ -6,7 +6,7 @@
       "type": "auth",
       "version": "1.0.0",
       "description": "Single sign-on via Azure Entra ID (formerly Azure AD)",
-      "packageName": "@pally-agent/plugin-auth-entra",
+      "packageName": "@luqen/plugin-auth-entra",
       "icon": "entra"
     },
     {
@@ -15,7 +15,7 @@
       "type": "auth",
       "version": "1.0.0",
       "description": "Single sign-on via Okta",
-      "packageName": "@pally-agent/plugin-auth-okta",
+      "packageName": "@luqen/plugin-auth-okta",
       "icon": "okta"
     },
     {
@@ -24,7 +24,7 @@
       "type": "auth",
       "version": "1.0.0",
       "description": "Single sign-on via Google Workspace",
-      "packageName": "@pally-agent/plugin-auth-google",
+      "packageName": "@luqen/plugin-auth-google",
       "icon": "google"
     },
     {
@@ -33,7 +33,7 @@
       "type": "notification",
       "version": "1.0.0",
       "description": "Send scan results and alerts to Slack channels",
-      "packageName": "@pally-agent/plugin-notify-slack",
+      "packageName": "@luqen/plugin-notify-slack",
       "icon": "slack"
     },
     {
@@ -42,7 +42,7 @@
       "type": "notification",
       "version": "1.0.0",
       "description": "Send scan results and alerts to Microsoft Teams channels",
-      "packageName": "@pally-agent/plugin-notify-teams",
+      "packageName": "@luqen/plugin-notify-teams",
       "icon": "teams"
     },
     {
@@ -51,7 +51,7 @@
       "type": "notification",
       "version": "1.0.0",
       "description": "Send scan notifications and scheduled email reports via SMTP",
-      "packageName": "@pally-agent/plugin-notify-email",
+      "packageName": "@luqen/plugin-notify-email",
       "icon": "email",
       "adminPages": [
         { "path": "/admin/email-reports", "title": "Email Reports", "icon": "envelope", "permission": "admin.system" }
@@ -63,7 +63,7 @@
       "type": "storage",
       "version": "1.0.0",
       "description": "Store reports and scan data in AWS S3",
-      "packageName": "@pally-agent/plugin-storage-s3",
+      "packageName": "@luqen/plugin-storage-s3",
       "icon": "aws"
     },
     {
@@ -72,7 +72,7 @@
       "type": "storage",
       "version": "1.0.0",
       "description": "Store reports and scan data in Azure Blob Storage",
-      "packageName": "@pally-agent/plugin-storage-azure",
+      "packageName": "@luqen/plugin-storage-azure",
       "icon": "azure"
     }
   ]

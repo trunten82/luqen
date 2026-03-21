@@ -1,12 +1,12 @@
 {
-  "name": "@pally-agent/compliance",
+  "name": "@luqen/compliance",
   "version": "0.22.0",
   "description": "Accessibility compliance rule engine service",
   "type": "module",
   "main": "dist/cli.js",
   "types": "dist/cli.d.ts",
   "bin": {
-    "pally-compliance": "dist/cli.js"
+    "luqen-compliance": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc && cp src/seed/baseline.json dist/seed/baseline.json",
@@ -20,13 +20,13 @@
   "author": "trunten82",
   "repository": {
     "type": "git",
-    "url": "https://github.com/trunten82/pally-agent.git",
+    "url": "https://github.com/trunten82/luqen.git",
     "directory": "packages/compliance"
   },
   "bugs": {
-    "url": "https://github.com/trunten82/pally-agent/issues"
+    "url": "https://github.com/trunten82/luqen/issues"
   },
-  "homepage": "https://github.com/trunten82/pally-agent#readme",
+  "homepage": "https://github.com/trunten82/luqen#readme",
   "keywords": [
     "accessibility",
     "a11y",

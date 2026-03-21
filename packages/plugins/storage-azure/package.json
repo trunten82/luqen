@@ -1,5 +1,5 @@
 {
-  "name": "@pally-agent/plugin-storage-azure",
+  "name": "@luqen/plugin-storage-azure",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
