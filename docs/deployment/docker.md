@@ -158,6 +158,12 @@ curl -I http://localhost:5000
 
 ---
 
+## SMTP access for email reports
+
+If the dashboard is behind a firewall, ensure outbound access to your SMTP server's port (typically 587 or 465). No inbound ports are needed — the dashboard initiates the connection. When using Docker, the default bridge network allows outbound traffic; no extra `docker-compose.yml` changes are required unless your host firewall blocks outgoing SMTP.
+
+---
+
 ## Reverse proxy
 
 For production behind nginx, add to your server block:

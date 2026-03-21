@@ -151,6 +151,12 @@ Toggle independently:
 
 ---
 
+## Email delivery
+
+Reports can be delivered by email on a recurring schedule. Configure SMTP settings and create delivery schedules under **Admin > Email Reports** in the dashboard. Each email includes an inline-styled HTML summary with key metrics, plus PDF and/or CSV attachments matching the formats available in the dashboard. See [dashboard-admin.md](dashboard-admin.md#email-reports) for setup details.
+
+---
+
 ## Print / PDF export
 
 Each report has a print-optimized view at `/reports/:id/print`. This is a standalone page that strips navigation, filters, and interactive elements — designed for `window.print()`.

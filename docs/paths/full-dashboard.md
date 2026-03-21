@@ -192,6 +192,7 @@ Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|a
 | **Multi-worker scaling** | Distribute scans across multiple pa11y webservice instances via `DASHBOARD_WEBSERVICE_URLS`. |
 | **REST API** | 5 JSON endpoints for external data consumption (scans, issues, trends, compliance summary). Auth via `X-API-Key` header, rate limited 60/min. |
 | **CSV export** | Download scans, issues, and trend data as CSV from the UI or via `/api/v1/export/*` endpoints. |
+| **Email reports** | Scheduled email delivery of reports (daily/weekly/monthly) with PDF and/or CSV attachments. SMTP configured via the UI at Admin > Email Reports. |
 | **Power BI integration** | Connect Power BI to the data API using Web data source with `X-API-Key` header. See [API Reference](../reference/api-reference.md#power-bi-integration). |
 
 ---
