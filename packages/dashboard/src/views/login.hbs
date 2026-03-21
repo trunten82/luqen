@@ -45,6 +45,7 @@
       {{!-- Solo mode: API key form --}}
       {{#if (eq mode "solo")}}
       <form method="POST" action="/login" novalidate>
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <div class="form-group">
           <label for="apiKey">
             API Key
@@ -132,6 +133,7 @@
       {{!-- Team mode (or fallback when mode is not set): username/password form --}}
       {{#if (eq mode "team")}}
       <form method="POST" action="/login" novalidate>
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <div class="form-group">
           <label for="username">
             Username
@@ -179,6 +181,7 @@
       {{!-- Fallback when mode is not set (backward compat) --}}
       {{#unless mode}}
       <form method="POST" action="/login" novalidate>
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <div class="form-group">
           <label for="username">
             Username

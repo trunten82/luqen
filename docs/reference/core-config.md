@@ -73,6 +73,7 @@ Place this file in your project root (or any ancestor directory). All fields are
 | `PALLY_WEBSERVICE_URL` | `webserviceUrl` | Base URL of the pa11y webservice |
 | `PALLY_WEBSERVICE_AUTH` | `webserviceHeaders.Authorization` | Authorization header for the webservice |
 | `PALLY_AGENT_CONFIG` | Config file path | Absolute path to a `.pally-agent.json` file |
+| `PALLY_MAX_PAGES` | `maxPages` | Maximum pages to discover and scan (dashboard uses this via `DASHBOARD_MAX_PAGES`) |
 
 ---
 

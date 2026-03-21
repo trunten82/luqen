@@ -28,6 +28,8 @@ export interface CreateScannerOptions {
   readonly onProgress?: ProgressListener;
   /** When true, scan only the given URL without discovery/crawling. Default: false. */
   readonly singlePage?: boolean;
+  /** Maximum pages to discover and scan. Default: 50. Env override: PALLY_MAX_PAGES. */
+  readonly maxPages?: number;
 }
 
 export interface Scanner {
@@ -65,9 +67,11 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       if (opts.singlePage) {
         urls = [{ url, discoveryMethod: 'crawl' as const }];
       } else {
+        const effectiveMaxPages = opts.maxPages
+          ?? (process.env['PALLY_MAX_PAGES'] ? parseInt(process.env['PALLY_MAX_PAGES'], 10) : 50);
         try {
           const result = await discoverUrls(url, {
-            maxPages: 50,
+            maxPages: effectiveMaxPages,
             crawlDepth: 2,
             alsoCrawl: true,
           }, true);

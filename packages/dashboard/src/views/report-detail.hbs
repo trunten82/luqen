@@ -612,7 +612,13 @@
     rptAllGroups.forEach(function(group) {
       var show = rptGroupMatchesFilters(group);
       if (show && rptSearchQuery) {
-        show = group.textContent.toLowerCase().indexOf(rptSearchQuery) !== -1;
+        var header = group.querySelector('.rpt-group__header');
+        var criterion = header ? (header.querySelector('.rpt-code') || {}).textContent || '' : '';
+        var title = header ? (header.querySelector('.rpt-group__title') || {}).textContent || '' : '';
+        var tags = [];
+        if (header) header.querySelectorAll('.rpt-reg-tag, .rpt-component-tag').forEach(function(t) { tags.push(t.textContent); });
+        var searchable = (criterion + ' ' + title + ' ' + tags.join(' ')).toLowerCase();
+        show = searchable.indexOf(rptSearchQuery) !== -1;
       }
       group.style.display = show ? '' : 'none';
       if (show) {

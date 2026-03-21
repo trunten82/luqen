@@ -15,6 +15,8 @@ export interface DashboardConfig {
   readonly pluginsConfigFile?: string;
   /** Optional Redis URL — enables scan queue and SSE pub/sub when set. */
   readonly redisUrl?: string;
+  /** Maximum pages to scan in full-site mode. Default: 50. */
+  readonly maxPages: number;
 }
 
 const DEFAULTS: DashboardConfig = {
@@ -28,6 +30,7 @@ const DEFAULTS: DashboardConfig = {
   complianceClientId: '',
   complianceClientSecret: '',
   pluginsDir: './plugins',
+  maxPages: 50,
 };
 
 function loadConfigFile(configPath: string): Partial<DashboardConfig> {
@@ -60,6 +63,9 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
     pluginsDir: process.env['DASHBOARD_PLUGINS_DIR'] ?? config.pluginsDir,
     pluginsConfigFile: process.env['DASHBOARD_PLUGINS_CONFIG'] ?? config.pluginsConfigFile,
     redisUrl: process.env['DASHBOARD_REDIS_URL'] ?? config.redisUrl,
+    maxPages: process.env['DASHBOARD_MAX_PAGES'] !== undefined
+      ? parseInt(process.env['DASHBOARD_MAX_PAGES'], 10)
+      : config.maxPages,
   };
 }
 
@@ -74,6 +80,10 @@ export function validateConfig(config: DashboardConfig): void {
 
   if (isNaN(config.maxConcurrentScans) || config.maxConcurrentScans < 1) {
     throw new Error(`Invalid maxConcurrentScans: ${config.maxConcurrentScans}. Must be at least 1.`);
+  }
+
+  if (isNaN(config.maxPages) || config.maxPages < 1 || config.maxPages > 1000) {
+    throw new Error(`Invalid maxPages: ${config.maxPages}. Must be between 1 and 1000.`);
   }
 
   try {

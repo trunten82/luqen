@@ -26,6 +26,7 @@
   <h2 id="quick-scan-heading" class="section-title">New Scan</h2>
   <div class="card mb-lg">
     <form method="POST" action="/scan/new" novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
       <div class="form-group">
         <label for="quick-url">Website URL <span class="required" aria-hidden="true">*</span></label>
         <input type="url" id="quick-url" name="siteUrl"

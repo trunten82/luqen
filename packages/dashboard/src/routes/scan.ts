@@ -34,6 +34,7 @@ export async function scanRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       let jurisdictions: Array<{ id: string; name: string }> = [];
       let regulations: Array<{ id: string; name: string; shortName: string; jurisdictionId: string }> = [];
+      let complianceWarning = '';
 
       try {
         const token = getToken(request);
@@ -43,7 +44,7 @@ export async function scanRoutes(
         const rawR = await listRegulations(config.complianceUrl, token, undefined, orgId);
         regulations = rawR.map((r) => ({ id: r.id, name: r.name, shortName: r.shortName, jurisdictionId: r.jurisdictionId }));
       } catch {
-        // Non-fatal
+        complianceWarning = 'Compliance service is unreachable. Jurisdiction and regulation selection is unavailable. Scans will still work without compliance checking.';
       }
 
       return reply.view('scan-new.hbs', {
@@ -52,10 +53,12 @@ export async function scanRoutes(
         user: request.user,
         jurisdictions,
         regulations,
+        complianceWarning,
         standards: VALID_STANDARDS,
         defaultStandard: 'WCAG2AA',
         maxConcurrency: 10,
         defaultConcurrency: config.maxConcurrentScans,
+        maxPages: config.maxPages,
       });
     },
   );
@@ -123,6 +126,7 @@ export async function scanRoutes(
         webserviceUrl: config.webserviceUrl,
         complianceUrl: config.complianceUrl,
         complianceToken: getToken(request),
+        maxPages: config.maxPages,
       });
 
       await reply.redirect(`/scan/${scanId}/progress`);

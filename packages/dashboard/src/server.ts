@@ -115,6 +115,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   await registerSession(server, config.sessionSecret);
 
+  // CSRF protection for state-changing methods
+  await server.register(import('@fastify/csrf-protection'), {
+    sessionPlugin: '@fastify/secure-session',
+  });
+
   // Static files
   const staticDir = resolve(join(__dirname, 'static'));
   await server.register(import('@fastify/static'), {
@@ -195,6 +200,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       return;
     }
     await authGuard(request, reply);
+  });
+
+  // ── CSRF token injection into all view renders ─────────────────────────
+  server.addHook('preHandler', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const csrfToken = reply.generateCsrf();
+    const originalView = reply.view.bind(reply) as typeof reply.view;
+    reply.view = (page: string, data?: Record<string, unknown>) => {
+      return originalView(page, { ...data, csrfToken });
+    };
   });
 
   // ── Org context injection ────────────────────────────────────────────────

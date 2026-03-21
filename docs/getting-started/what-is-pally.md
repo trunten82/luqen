@@ -75,4 +75,18 @@ Use [Path 8: Standalone monitor](../paths/regulatory-monitoring.md#standalone-mo
 
 ---
 
+## Known Limitations
+
+### WCAG 2.2 support
+
+Pally Agent currently tests against **WCAG 2.1** (Levels A, AA, AAA). The underlying pa11y engine and HTML_CodeSniffer ruleset do not yet fully support WCAG 2.2 success criteria (2.4.11 Focus Not Obscured, 2.4.12 Focus Not Obscured (Enhanced), 2.4.13 Focus Appearance, 2.5.7 Dragging Movements, 2.5.8 Target Size, 3.2.6 Consistent Help, 3.3.7 Redundant Entry, 3.3.8 Accessible Authentication, 3.3.9 Accessible Authentication (Enhanced)).
+
+**Impact:** If your compliance requirements reference WCAG 2.2, Pally Agent will not flag violations specific to the nine new success criteria. Existing WCAG 2.0/2.1 criteria are fully covered.
+
+**Workaround:** Supplement automated scanning with manual testing for WCAG 2.2 criteria. See the [W3C What's New in WCAG 2.2](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/) guide.
+
+**Status:** Tracking upstream at [pa11y/pa11y#635](https://github.com/pa11y/pa11y/issues/635). When pa11y adds WCAG 2.2 support, Pally Agent will inherit it automatically.
+
+---
+
 *See also: [Docs home](../README.md) | [User Guide](../USER-GUIDE.md) | [Quickstart](../QUICKSTART.md)*
