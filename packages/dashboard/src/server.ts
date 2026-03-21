@@ -10,6 +10,8 @@ import { homeRoutes } from './routes/home.js';
 import { scanRoutes } from './routes/scan.js';
 import { reportRoutes } from './routes/reports.js';
 import { compareRoutes } from './routes/compare.js';
+import { trendRoutes } from './routes/trends.js';
+import { manualTestRoutes } from './routes/manual-tests.js';
 import { jurisdictionRoutes } from './routes/admin/jurisdictions.js';
 import { regulationRoutes } from './routes/admin/regulations.js';
 import { proposalRoutes } from './routes/admin/proposals.js';
@@ -22,6 +24,7 @@ import { monitorRoutes } from './routes/admin/monitor.js';
 import { pluginAdminRoutes } from './routes/admin/plugins.js';
 import { pluginApiRoutes } from './routes/api/plugins.js';
 import { orgRoutes } from './routes/orgs.js';
+import { toolRoutes } from './routes/tools.js';
 import { ScanDb } from './db/scans.js';
 import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
@@ -180,6 +183,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (n < 0) return `${n}`;
     return '0';
   });
+  handlebars.registerHelper('json', (context: unknown) => JSON.stringify(context));
 
   await server.register(import('@fastify/view'), {
     engine: { handlebars },
@@ -243,8 +247,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await homeRoutes(server, db, config);
   await scanRoutes(server, db, orchestrator, config);
   await compareRoutes(server, db);
+  await trendRoutes(server, db);
   await reportRoutes(server, db);
+  await manualTestRoutes(server, db);
   await orgRoutes(server, orgDb);
+  await toolRoutes(server);
 
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);

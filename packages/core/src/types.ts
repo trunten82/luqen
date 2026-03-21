@@ -15,6 +15,10 @@ export interface PallyConfig {
   readonly outputDir: string;
   readonly sourceMap: Readonly<Record<string, string>>;
   readonly complianceUrl?: string;
+  /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Requires the runner installed alongside the webservice. */
+  readonly runner?: 'htmlcs' | 'axe';
+  /** Additional pa11y webservice URLs for horizontal scaling (round-robin distribution). */
+  readonly webserviceUrls?: readonly string[];
 }
 
 export interface DiscoveredUrl {

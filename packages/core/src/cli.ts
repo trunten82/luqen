@@ -43,6 +43,7 @@ program
   .option('--output <dir>', 'Output directory for reports')
   .option('--format <format>', 'Report format: json, html, or both (default: json)', 'json')
   .option('--also-crawl', 'Also crawl the site in addition to using sitemaps')
+  .option('--runner <runner>', 'Pa11y test runner: htmlcs (default) or axe')
   .option('--config <path>', 'Path to configuration file')
   .option('--compliance-url <url>', 'URL of the compliance service for legal enrichment')
   .option('--jurisdictions <list>', 'Comma-separated jurisdiction IDs (e.g. EU,US)', 'EU,US')
@@ -55,6 +56,7 @@ program
     output?: string;
     format?: string;
     alsoCrawl?: boolean;
+    runner?: string;
     config?: string;
     complianceUrl?: string;
     jurisdictions?: string;
@@ -68,12 +70,18 @@ program
       });
 
       // CLI options override config file
+      const validRunners = ['htmlcs', 'axe'];
+      const runnerFromOpts = opts.runner !== undefined && validRunners.includes(opts.runner)
+        ? (opts.runner as 'htmlcs' | 'axe')
+        : undefined;
+
       const effectiveConfig = {
         ...config,
         ...(opts.standard ? { standard: opts.standard as typeof config.standard } : {}),
         ...(opts.concurrency !== undefined ? { concurrency: opts.concurrency } : {}),
         ...(opts.output ? { outputDir: opts.output } : {}),
         ...(opts.alsoCrawl !== undefined ? { alsoCrawl: opts.alsoCrawl } : {}),
+        ...(runnerFromOpts !== undefined ? { runner: runnerFromOpts } : {}),
       };
 
       console.log(`Discovering URLs from ${url}...`);
@@ -104,6 +112,7 @@ program
         hideElements: effectiveConfig.hideElements,
         headers: effectiveConfig.headers,
         wait: effectiveConfig.wait,
+        ...(effectiveConfig.runner !== undefined ? { runner: effectiveConfig.runner } : {}),
         onProgress: (progress) => {
           if (progress.type === 'scan:start') {
             console.log(`[${progress.current}/${progress.total}] Scanning ${progress.url}`);

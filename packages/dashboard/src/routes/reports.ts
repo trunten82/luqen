@@ -1,8 +1,13 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { readFile, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { ScanDb } from '../db/scans.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
+import { MANUAL_CRITERIA } from '../manual-criteria.js';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 function inferComponent(selector: string, context: string): string {
   const s = (selector + ' ' + context).toLowerCase();
@@ -640,13 +645,86 @@ export async function reportRoutes(
         // Render without report data — template handles the missing case
       }
 
+      // Compute manual testing completion stats
+      const manualResults = db.getManualTests(id);
+      const manualTested = manualResults.filter(
+        (r) => r.status === 'pass' || r.status === 'fail' || r.status === 'na',
+      ).length;
+      const manualTotal = MANUAL_CRITERIA.length;
+      const manualPct = manualTotal > 0 ? Math.round((manualTested / manualTotal) * 100) : 0;
+
       return reply.view('report-detail.hbs', {
         pageTitle: `Report — ${scan.siteUrl}`,
         currentPath: `/reports/${id}`,
         user: request.user,
         scan: scanMeta,
         reportData,
+        manualTestStats: {
+          tested: manualTested,
+          total: manualTotal,
+          percentage: manualPct,
+        },
       });
+    },
+  );
+
+  // GET /reports/:id/print — standalone print-friendly HTML for browser print-to-PDF
+  server.get(
+    '/reports/:id/print',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = db.getScan(id);
+
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      if (
+        scan.status !== 'completed' ||
+        scan.jsonReportPath === undefined ||
+        !existsSync(scan.jsonReportPath)
+      ) {
+        return reply.code(404).send({ error: 'Report data not available' });
+      }
+
+      let reportData: ReturnType<typeof normalizeReportData> | null = null;
+      try {
+        const raw = JSON.parse(
+          await readFile(scan.jsonReportPath, 'utf-8'),
+        ) as JsonReportFile;
+        reportData = normalizeReportData(raw, scan);
+      } catch {
+        return reply.code(500).send({ error: 'Failed to read report data' });
+      }
+
+      const scanMeta = {
+        ...scan,
+        jurisdictions: scan.jurisdictions.join(', '),
+        createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
+        completedAtDisplay: scan.completedAt
+          ? new Date(scan.completedAt).toLocaleString()
+          : '',
+      };
+
+      // Compile the print template directly with Handlebars to bypass layout
+      const handlebars = (await import('handlebars')).default;
+      const viewsDir = resolve(join(__dirname, '..', 'views'));
+      const templateSource = await readFile(
+        join(viewsDir, 'report-print.hbs'),
+        'utf-8',
+      );
+      const template = handlebars.compile(templateSource);
+      const html = template({
+        scan: scanMeta,
+        reportData,
+      });
+
+      return reply.type('text/html').send(html);
     },
   );
 

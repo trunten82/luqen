@@ -7,6 +7,8 @@ export interface CreateTaskInput {
   readonly wait?: number;
   readonly hideElements?: string;
   readonly headers?: Readonly<Record<string, string>>;
+  /** Pa11y test runner. Requires the runner package installed alongside the webservice (e.g. `pa11y-runner-axe`). */
+  readonly runner?: string;
 }
 
 export interface Pa11yTask {
@@ -91,5 +93,31 @@ export class WebserviceClient {
 
   async deleteTask(taskId: string): Promise<void> {
     await this.request<void>(`/tasks/${taskId}`, { method: 'DELETE' });
+  }
+}
+
+/**
+ * Round-robin pool of WebserviceClient instances for horizontal scaling.
+ * Each call to `next()` returns the next client in rotation.
+ */
+export class WebservicePool {
+  private readonly clients: readonly WebserviceClient[];
+  private index = 0;
+
+  constructor(urls: readonly string[], headers: Readonly<Record<string, string>>) {
+    if (urls.length === 0) {
+      throw new Error('WebservicePool requires at least one URL');
+    }
+    this.clients = urls.map((url) => new WebserviceClient(url, headers));
+  }
+
+  next(): WebserviceClient {
+    const client = this.clients[this.index % this.clients.length];
+    this.index++;
+    return client;
+  }
+
+  get size(): number {
+    return this.clients.length;
   }
 }

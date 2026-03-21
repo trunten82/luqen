@@ -39,6 +39,7 @@ export function createServer(): PallyMcpServer {
       ignore: z.array(z.string()).optional().describe('Issue codes to ignore'),
       headers: z.record(z.string(), z.string()).optional().describe('Additional HTTP headers'),
       wait: z.number().int().nonnegative().optional().describe('Milliseconds to wait after page load'),
+      runner: z.enum(['htmlcs', 'axe']).optional().describe('Pa11y test runner (default: htmlcs). axe requires pa11y-runner-axe installed on the webservice.'),
     },
     async (args) => {
       try {
@@ -53,6 +54,7 @@ export function createServer(): PallyMcpServer {
           ...(args.ignore !== undefined ? { ignore: args.ignore } : {}),
           ...(args.headers !== undefined ? { headers: { ...config.headers, ...args.headers } } : {}),
           ...(args.wait !== undefined ? { wait: args.wait } : {}),
+          ...(args.runner !== undefined ? { runner: args.runner } : {}),
         };
 
         const urls = await discoverUrls(args.url, {
@@ -72,6 +74,7 @@ export function createServer(): PallyMcpServer {
           hideElements: mergedConfig.hideElements,
           headers: mergedConfig.headers,
           wait: mergedConfig.wait,
+          ...(mergedConfig.runner !== undefined ? { runner: mergedConfig.runner } : {}),
         });
 
         const report = await generateJsonReport({
@@ -272,6 +275,7 @@ export function createServer(): PallyMcpServer {
       hideElements: z.string().optional().describe('CSS selector for elements to hide'),
       headers: z.record(z.string(), z.string()).optional().describe('HTTP headers sent to the target page'),
       actions: z.array(z.string()).optional().describe('Pa11y actions to run before testing (e.g. "click element #tab", "wait for element .loaded")'),
+      runner: z.enum(['htmlcs', 'axe']).optional().describe('Pa11y test runner (default: htmlcs)'),
     },
     async (args) => {
       try {
@@ -288,6 +292,7 @@ export function createServer(): PallyMcpServer {
           ignore: args.ignore,
           hideElements: args.hideElements,
           headers: args.headers,
+          ...(args.runner !== undefined ? { runner: args.runner } : {}),
         });
 
         // Run and poll
@@ -347,6 +352,7 @@ export function createServer(): PallyMcpServer {
       ignore: z.array(z.string()).optional().describe('Issue codes to ignore'),
       hideElements: z.string().optional().describe('CSS selector for elements to hide'),
       headers: z.record(z.string(), z.string()).optional().describe('HTTP headers sent to target pages'),
+      runner: z.enum(['htmlcs', 'axe']).optional().describe('Pa11y test runner (default: htmlcs)'),
     },
     async (args) => {
       try {
@@ -370,6 +376,7 @@ export function createServer(): PallyMcpServer {
               ignore: args.ignore,
               hideElements: args.hideElements,
               headers: args.headers,
+              ...(args.runner !== undefined ? { runner: args.runner } : {}),
             });
 
             await client.runTask(task.id);

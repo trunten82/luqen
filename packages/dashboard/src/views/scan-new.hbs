@@ -24,6 +24,7 @@
         </label>
         <input type="url" id="siteUrl" name="siteUrl"
                placeholder="https://example.com"
+               {{#if prefillUrl}}value="{{prefillUrl}}"{{/if}}
                autocomplete="url" required aria-required="true"
                aria-describedby="siteUrl-hint">
         <p id="siteUrl-hint" class="form-hint">
@@ -101,6 +102,16 @@
     <div class="card mb-md">
       <h3 class="card__title mb-md">Scan Options</h3>
       <div class="form-group">
+        <label for="runner">Test Runner</label>
+        <select id="runner" name="runner" aria-describedby="runner-hint">
+          <option value="htmlcs" {{#if (eq defaultRunner "htmlcs")}}selected{{/if}}>HTML_CodeSniffer (htmlcs)</option>
+          <option value="axe" {{#if (eq defaultRunner "axe")}}selected{{/if}}>axe-core (axe)</option>
+        </select>
+        <p id="runner-hint" class="form-hint">
+          The accessibility test runner. axe-core requires <code>pa11y-runner-axe</code> installed on the webservice.
+        </p>
+      </div>
+      <div class="form-group">
         <label for="concurrency">Concurrent Pages</label>
         <input type="range" id="concurrency" name="concurrency"
                min="1" max="{{maxConcurrency}}" value="{{defaultConcurrency}}"
@@ -109,6 +120,16 @@
         <output id="concurrency-value" for="concurrency" aria-live="polite" class="text-sm text-muted">{{defaultConcurrency}}</output>
         <p id="concurrency-hint" class="form-hint">
           Number of pages scanned simultaneously (1–{{maxConcurrency}}).
+        </p>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="incremental" value="true">
+          <span>Incremental scan</span>
+        </label>
+        <p class="form-hint" id="incremental-hint">
+          Only re-scan pages that changed since the last scan of this URL.
+          Works with Full Site scan mode only.
         </p>
       </div>
     </div>

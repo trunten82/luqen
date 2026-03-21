@@ -17,6 +17,10 @@ export interface DashboardConfig {
   readonly redisUrl?: string;
   /** Maximum pages to scan in full-site mode. Default: 50. */
   readonly maxPages: number;
+  /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Requires the runner installed on the webservice. */
+  readonly runner?: 'htmlcs' | 'axe';
+  /** Additional pa11y webservice URLs for horizontal scaling (comma-separated via env). */
+  readonly webserviceUrls?: readonly string[];
 }
 
 const DEFAULTS: DashboardConfig = {
@@ -66,6 +70,13 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
     maxPages: process.env['DASHBOARD_MAX_PAGES'] !== undefined
       ? parseInt(process.env['DASHBOARD_MAX_PAGES'], 10)
       : config.maxPages,
+    ...(process.env['DASHBOARD_SCANNER_RUNNER'] !== undefined &&
+        (process.env['DASHBOARD_SCANNER_RUNNER'] === 'htmlcs' || process.env['DASHBOARD_SCANNER_RUNNER'] === 'axe')
+      ? { runner: process.env['DASHBOARD_SCANNER_RUNNER'] as 'htmlcs' | 'axe' }
+      : config.runner !== undefined ? { runner: config.runner } : {}),
+    webserviceUrls: process.env['DASHBOARD_WEBSERVICE_URLS'] !== undefined
+      ? process.env['DASHBOARD_WEBSERVICE_URLS'].split(',').map((u) => u.trim()).filter(Boolean)
+      : config.webserviceUrls,
   };
 }
 

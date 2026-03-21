@@ -70,6 +70,14 @@
           aria-live="polite"
         >{{scan.pagesScanned}}</span>
       </div>
+      <div class="progress-stat" id="pages-skipped-stat" style="display:none">
+        <span class="progress-stat__label">Pages Skipped (unchanged)</span>
+        <span
+          id="pages-skipped"
+          class="progress-stat__value"
+          aria-live="polite"
+        >0</span>
+      </div>
       <div class="progress-stat">
         <span class="progress-stat__label">Issues Found</span>
         <span
@@ -133,6 +141,9 @@
   var pagesScannedEl = document.getElementById('pages-scanned');
   var issuesCountEl = document.getElementById('issues-count');
   var pagesDiscoveredEl = document.getElementById('pages-discovered');
+  var pagesSkippedEl = document.getElementById('pages-skipped');
+  var pagesSkippedStat = document.getElementById('pages-skipped-stat');
+  var skippedCount = 0;
 
   function addLog(msg) {
     if (!log) return;
@@ -164,6 +175,16 @@
     try {
       var evt = JSON.parse(e.data);
       var d = evt.data || {};
+
+      // Handle skipped (unchanged) pages in incremental mode
+      if (d.skipped === true) {
+        skippedCount++;
+        if (pagesSkippedEl) pagesSkippedEl.textContent = skippedCount;
+        if (pagesSkippedStat) pagesSkippedStat.style.display = '';
+        addLog('Skipped (unchanged): ' + (d.currentUrl || ''));
+        return;
+      }
+
       var scanned = d.pagesScanned !== undefined ? d.pagesScanned : '?';
       var total = d.totalPages || '?';
       if (d.pagesScanned !== undefined && pagesScannedEl) {
@@ -203,7 +224,11 @@
       if (statusText) statusText.textContent = 'Scan completed! Redirecting to report\u2026';
       if (statusBanner) statusBanner.className = 'status-banner status-banner--completed';
       if (currentUrlEl) currentUrlEl.textContent = '';
-      addLog('Scan complete.');
+      var completeMsg = 'Scan complete.';
+      if (evt.data && evt.data.pagesSkipped) {
+        completeMsg += ' (' + evt.data.pagesSkipped + ' pages skipped — unchanged)';
+      }
+      addLog(completeMsg);
       setTimeout(function () { window.location.href = reportUrl; }, 1500);
     } catch (_) {
       window.location.href = '/reports';

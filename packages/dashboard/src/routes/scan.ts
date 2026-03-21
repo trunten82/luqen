@@ -12,6 +12,8 @@ interface NewScanBody {
   scanMode?: string;
   jurisdictions?: string | string[];
   concurrency?: string;
+  runner?: string;
+  incremental?: string;
 }
 
 const VALID_STANDARDS = ['WCAG2A', 'WCAG2AA', 'WCAG2AAA'];
@@ -32,6 +34,11 @@ export async function scanRoutes(
   server.get(
     '/scan/new',
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const query = request.query as { prefill?: string };
+      const prefillUrl = typeof query.prefill === 'string' && query.prefill.trim() !== ''
+        ? query.prefill.trim()
+        : undefined;
+
       let jurisdictions: Array<{ id: string; name: string }> = [];
       let regulations: Array<{ id: string; name: string; shortName: string; jurisdictionId: string }> = [];
       let complianceWarning = '';
@@ -59,6 +66,8 @@ export async function scanRoutes(
         maxConcurrency: 10,
         defaultConcurrency: config.maxConcurrentScans,
         maxPages: config.maxPages,
+        defaultRunner: config.runner ?? 'htmlcs',
+        prefillUrl,
       });
     },
   );
@@ -105,6 +114,11 @@ export async function scanRoutes(
       }
       const scanMode = body.scanMode === 'single' ? 'single' : 'site';
 
+      const VALID_RUNNERS = ['htmlcs', 'axe'];
+      const runner = body.runner !== undefined && VALID_RUNNERS.includes(body.runner)
+        ? (body.runner as 'htmlcs' | 'axe')
+        : config.runner;
+
       const scanId = randomUUID();
 
       db.createScan({
@@ -117,6 +131,8 @@ export async function scanRoutes(
         orgId: request.user?.currentOrgId ?? 'system',
       });
 
+      const incremental = body.incremental === 'true';
+
       orchestrator.startScan(scanId, {
         siteUrl: parsedUrl.toString(),
         standard,
@@ -124,9 +140,14 @@ export async function scanRoutes(
         jurisdictions,
         scanMode,
         webserviceUrl: config.webserviceUrl,
+        ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
+          ? { webserviceUrls: config.webserviceUrls }
+          : {}),
         complianceUrl: config.complianceUrl,
         complianceToken: getToken(request),
         maxPages: config.maxPages,
+        ...(runner !== undefined ? { runner } : {}),
+        ...(incremental ? { incremental, orgId: request.user?.currentOrgId ?? 'system' } : {}),
       });
 
       await reply.redirect(`/scan/${scanId}/progress`);

@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ScanDb } from '../db/scans.js';
+import type { PageHashEntry } from '../db/scans.js';
 import { checkCompliance } from '../compliance-client.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 
@@ -13,6 +14,8 @@ export interface ScanProgressEvent {
     readonly pagesScanned?: number;
     readonly totalPages?: number;
     readonly currentUrl?: string;
+    readonly skipped?: boolean;
+    readonly pagesSkipped?: number;
     readonly issues?: { errors: number; warnings: number; notices: number };
     readonly confirmedViolations?: number;
     readonly reportUrl?: string;
@@ -27,9 +30,14 @@ export interface ScanConfig {
   readonly jurisdictions: string[];
   readonly scanMode?: 'single' | 'site';
   readonly webserviceUrl: string;
+  readonly webserviceUrls?: readonly string[];
   readonly complianceUrl?: string;
   readonly complianceToken?: string;
   readonly maxPages?: number;
+  readonly incremental?: boolean;
+  readonly orgId?: string;
+  /** Pa11y test runner: 'htmlcs' (default) or 'axe'. */
+  readonly runner?: 'htmlcs' | 'axe';
 }
 
 class ScanQueue {
@@ -154,69 +162,224 @@ export class ScanOrchestrator {
       });
 
       // Dynamically import core scanner to avoid circular dependency issues
-      const { createScanner } = await import(
+      const coreModule = await import(
         /* webpackIgnore: true */ '@pally-agent/core'
-      ).catch(() => ({ createScanner: null })) as { createScanner: null | ((opts: unknown) => unknown) };
+      ).catch(() => null) as null | {
+        createScanner: (opts: unknown) => unknown;
+        discoverUrls: (url: string, opts: unknown, returnResult: true) => Promise<{ urls: Array<{ url: string; discoveryMethod: string }> }>;
+        scanUrls: (urls: unknown[], client: unknown, opts: unknown) => Promise<{ pages: Array<{ url: string; discoveryMethod: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; errors: unknown[] }>;
+        WebserviceClient: new (url: string, headers: Record<string, string>) => unknown;
+        WebservicePool: new (urls: readonly string[], headers: Record<string, string>) => unknown;
+        computeContentHashes: (urls: readonly string[], concurrency?: number, headers?: Readonly<Record<string, string>>) => Promise<Map<string, string>>;
+      };
 
       let pagesScanned = 0;
+      let pagesSkipped = 0;
       let errors = 0;
       let warnings = 0;
       let notices = 0;
       let allIssues: Array<{ code: string; type: string; message: string; selector: string; context: string }> = [];
       let scanPages: Array<{ url: string; issueCount: number; issues: Array<{ code: string; type: string; message: string; selector: string; context: string }> }> = [];
 
-      if (createScanner !== null) {
-        const scanner = createScanner({
-          webserviceUrl: config.webserviceUrl,
-          standard: config.standard as 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA',
-          concurrency: config.concurrency,
-          singlePage: config.scanMode !== 'site',
-          maxPages: config.maxPages,
-          onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
-            if (progress.type === 'scan:start') {
-              // First scan:start event tells us discovery is done
-              if (progress.current === 1) {
+      if (coreModule !== null) {
+        const { createScanner, discoverUrls, scanUrls, WebserviceClient, WebservicePool, computeContentHashes } = coreModule;
+
+        if (config.incremental === true && config.scanMode === 'site') {
+          // --- Incremental scan: discover, hash, filter, scan changed pages only ---
+          const orgId = config.orgId ?? 'system';
+
+          // 1. Discover URLs
+          const effectiveMaxPages = config.maxPages ?? 50;
+          let discoveredUrls: Array<{ url: string; discoveryMethod: string }>;
+          try {
+            const result = await discoverUrls(config.siteUrl, {
+              maxPages: effectiveMaxPages,
+              crawlDepth: 2,
+              alsoCrawl: true,
+            }, true);
+            discoveredUrls = result.urls;
+          } catch {
+            discoveredUrls = [{ url: config.siteUrl, discoveryMethod: 'crawl' }];
+          }
+
+          emit({
+            type: 'discovery',
+            timestamp: new Date().toISOString(),
+            data: { pagesDiscovered: discoveredUrls.length },
+          });
+
+          // 2. Compute content hashes for all discovered URLs in parallel
+          const currentHashes = await computeContentHashes(
+            discoveredUrls.map((u) => u.url),
+            config.concurrency,
+          );
+
+          // 3. Compare with stored hashes to find changed/new pages
+          const storedHashes = this.db.getPageHashes(config.siteUrl, orgId);
+          const changedUrls: Array<{ url: string; discoveryMethod: string }> = [];
+          const skippedUrls: string[] = [];
+
+          for (const discovered of discoveredUrls) {
+            const currentHash = currentHashes.get(discovered.url);
+            const storedHash = storedHashes.get(discovered.url);
+
+            if (currentHash === undefined) {
+              // Could not fetch — scan it to be safe
+              changedUrls.push(discovered);
+            } else if (storedHash === undefined || storedHash !== currentHash) {
+              // New page or changed content
+              changedUrls.push(discovered);
+            } else {
+              // Unchanged — skip
+              skippedUrls.push(discovered.url);
+            }
+          }
+
+          pagesSkipped = skippedUrls.length;
+
+          // Emit skip events for unchanged pages
+          for (const url of skippedUrls) {
+            emit({
+              type: 'scan_complete',
+              timestamp: new Date().toISOString(),
+              data: {
+                pagesScanned: 0,
+                totalPages: discoveredUrls.length,
+                currentUrl: url,
+                skipped: true,
+              },
+            });
+          }
+
+          // 4. Scan only changed URLs
+          if (changedUrls.length > 0) {
+            const allUrls = config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
+              ? [...new Set([...config.webserviceUrls, config.webserviceUrl])]
+              : [config.webserviceUrl];
+            const client = allUrls.length > 1
+              ? new WebservicePool(allUrls, {})
+              : new WebserviceClient(config.webserviceUrl, {});
+            const scanOptions = {
+              standard: config.standard as 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA',
+              concurrency: config.concurrency,
+              timeout: 30_000,
+              pollTimeout: 60_000,
+              ignore: [] as string[],
+              hideElements: '',
+              headers: {},
+              wait: 0,
+              ...(config.runner !== undefined ? { runner: config.runner } : {}),
+              onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
+                if (progress.type === 'scan:start') {
+                  emit({
+                    type: 'scan_complete',
+                    timestamp: new Date().toISOString(),
+                    data: {
+                      pagesScanned: pagesSkipped + progress.current - 1,
+                      totalPages: discoveredUrls.length,
+                      currentUrl: progress.url,
+                    },
+                  });
+                } else {
+                  emit({
+                    type: 'scan_complete',
+                    timestamp: new Date().toISOString(),
+                    data: {
+                      pagesScanned: pagesSkipped + progress.current,
+                      totalPages: discoveredUrls.length,
+                      currentUrl: progress.url,
+                    },
+                  });
+                }
+              },
+            };
+
+            const result = await scanUrls(changedUrls, client, scanOptions);
+
+            pagesScanned = result.pages.length + pagesSkipped;
+            for (const page of result.pages) {
+              for (const issue of page.issues) {
+                if (issue.type === 'error') errors++;
+                else if (issue.type === 'warning') warnings++;
+                else notices++;
+              }
+            }
+            allIssues = result.pages.flatMap((p) => p.issues);
+            scanPages = result.pages.map((p) => ({
+              url: p.url,
+              issueCount: p.issueCount ?? p.issues.length,
+              issues: p.issues,
+            }));
+          } else {
+            pagesScanned = pagesSkipped;
+          }
+
+          // 5. Update stored hashes for all pages we computed hashes for
+          const hashEntries: PageHashEntry[] = [];
+          for (const [pageUrl, hash] of currentHashes) {
+            hashEntries.push({ siteUrl: config.siteUrl, pageUrl, hash, orgId });
+          }
+          if (hashEntries.length > 0) {
+            this.db.upsertPageHashes(hashEntries);
+          }
+        } else {
+          // --- Standard (non-incremental) scan ---
+          const scanner = createScanner({
+            webserviceUrl: config.webserviceUrl,
+            ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
+              ? { webserviceUrls: config.webserviceUrls }
+              : {}),
+            standard: config.standard as 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA',
+            concurrency: config.concurrency,
+            singlePage: config.scanMode !== 'site',
+            maxPages: config.maxPages,
+            ...(config.runner !== undefined ? { runner: config.runner } : {}),
+            onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
+              if (progress.type === 'scan:start') {
+                // First scan:start event tells us discovery is done
+                if (progress.current === 1) {
+                  emit({
+                    type: 'discovery',
+                    timestamp: new Date().toISOString(),
+                    data: { pagesDiscovered: progress.total },
+                  });
+                }
                 emit({
-                  type: 'discovery',
+                  type: 'scan_complete',
                   timestamp: new Date().toISOString(),
-                  data: { pagesDiscovered: progress.total },
+                  data: {
+                    pagesScanned: progress.current - 1,
+                    totalPages: progress.total,
+                    currentUrl: progress.url,
+                  },
+                });
+              } else {
+                emit({
+                  type: 'scan_complete',
+                  timestamp: new Date().toISOString(),
+                  data: {
+                    pagesScanned: progress.current,
+                    totalPages: progress.total,
+                    currentUrl: progress.url,
+                  },
                 });
               }
-              emit({
-                type: 'scan_complete',
-                timestamp: new Date().toISOString(),
-                data: {
-                  pagesScanned: progress.current - 1,
-                  totalPages: progress.total,
-                  currentUrl: progress.url,
-                },
-              });
-            } else {
-              emit({
-                type: 'scan_complete',
-                timestamp: new Date().toISOString(),
-                data: {
-                  pagesScanned: progress.current,
-                  totalPages: progress.total,
-                  currentUrl: progress.url,
-                },
-              });
-            }
-          },
-        } as Parameters<typeof createScanner>[0]);
+            },
+          } as Parameters<typeof createScanner>[0]);
 
-        const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ url: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } } }> }).scan(config.siteUrl);
+          const result = await (scanner as { scan: (url: string) => Promise<{ pages: Array<{ url: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; summary: { pagesScanned: number; byLevel: { error: number; warning: number; notice: number } } }> }).scan(config.siteUrl);
 
-        pagesScanned = result.summary.pagesScanned;
-        errors = result.summary.byLevel.error;
-        warnings = result.summary.byLevel.warning;
-        notices = result.summary.byLevel.notice;
-        allIssues = result.pages.flatMap((p) => p.issues);
-        scanPages = result.pages.map((p) => ({
-          url: p.url,
-          issueCount: p.issueCount ?? p.issues.length,
-          issues: p.issues,
-        }));
+          pagesScanned = result.summary.pagesScanned;
+          errors = result.summary.byLevel.error;
+          warnings = result.summary.byLevel.warning;
+          notices = result.summary.byLevel.notice;
+          allIssues = result.pages.flatMap((p) => p.issues);
+          scanPages = result.pages.map((p) => ({
+            url: p.url,
+            issueCount: p.issueCount ?? p.issues.length,
+            issues: p.issues,
+          }));
+        }
       }
 
       // Ensure reports dir exists
@@ -242,6 +405,7 @@ export class ScanOrchestrator {
         totalIssues: errors + warnings + notices,
         byLevel: { error: errors, warning: warnings, notice: notices },
         pagesFailed: 0,
+        ...(pagesSkipped > 0 ? { pagesSkipped } : {}),
       };
 
       // Pages — preserve per-page structure from scanner if available
@@ -328,6 +492,7 @@ export class ScanOrchestrator {
         timestamp: new Date().toISOString(),
         data: {
           pagesScanned,
+          ...(pagesSkipped > 0 ? { pagesSkipped } : {}),
           issues: { errors, warnings, notices },
           confirmedViolations,
           reportUrl: `/reports/${scanId}`,
