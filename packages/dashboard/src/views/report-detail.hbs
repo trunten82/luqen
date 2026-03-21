@@ -833,6 +833,30 @@
     });
   })();
 
+  /* ── Unassign issue ───────────────────────────────────────────────────── */
+  function rptUnassign(assignmentId, btn) {
+    if (!confirm('Remove this assignment?')) return;
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    btn.disabled = true;
+    fetch('/assignments/' + assignmentId, {
+      method: 'DELETE',
+      headers: { 'x-csrf-token': csrfToken }
+    }).then(function(r) {
+      if (!r.ok) throw new Error('Failed');
+      // Replace badge + unassign button with Assign button
+      var badge = btn.previousElementSibling;
+      if (badge && badge.classList.contains('rpt-assigned-badge')) badge.remove();
+      btn.remove();
+      // Reload to get fresh assign buttons — simplest approach
+      window.location.reload();
+    }).catch(function() {
+      btn.disabled = false;
+      var tc = document.getElementById('toast-container');
+      if (tc) { var t = document.createElement('div'); t.className = 'toast toast--error'; t.textContent = 'Failed to remove assignment'; tc.appendChild(t); setTimeout(function(){t.remove();}, 3000); }
+    });
+  }
+
   /* ── Assign issue via popover dropdown ─────────────────────────────────── */
   function rptAssignIssue(btn, code, selector, message, severity, wcagCriterion, wcagTitle) {
     // Close any existing popover
@@ -944,6 +968,16 @@
   }
   .rpt-assign-btn:hover { background: var(--primary-color, #2563eb); color: #fff; border-color: var(--primary-color, #2563eb); }
   .rpt-assign-btn--done { background: #d1fae5; color: #065f46; border-color: #a7f3d0; cursor: default; }
+
+  /* Assigned badge + unassign button */
+  .rpt-assigned-badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 3px; font-size: 0.7rem; font-weight: 600; background: var(--status-info-bg, #dbeafe); color: var(--status-info, #1e40af); }
+  .rpt-assigned-badge--open { background: var(--status-error-bg, #fee2e2); color: var(--status-error, #991b1b); }
+  .rpt-assigned-badge--assigned { background: var(--status-info-bg, #dbeafe); color: var(--status-info, #1e40af); }
+  .rpt-assigned-badge--in-progress { background: var(--status-warning-bg, #fef3c7); color: var(--status-warning, #92400e); }
+  .rpt-assigned-badge--fixed { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
+  .rpt-assigned-badge--verified { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
+  .rpt-unassign-btn { padding: 0 0.3rem; font-size: 0.8rem; border: none; background: transparent; cursor: pointer; color: var(--text-muted, #888); line-height: 1; vertical-align: middle; }
+  .rpt-unassign-btn:hover { color: var(--status-error, #991b1b); }
 
   /* Assign popover */
   .rpt-assign-popover {

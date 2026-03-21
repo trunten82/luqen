@@ -678,9 +678,9 @@ export async function reportRoutes(
       const assignmentStats = db.getAssignmentStats(id);
       const assignmentActiveCount = assignmentStats.open + assignmentStats.assigned + assignmentStats.inProgress;
       const allAssignments = db.listAssignments({ scanId: id });
-      const assignedMap: Record<string, { status: string; assignedTo: string | null }> = {};
+      const assignedMap: Record<string, { id: string; status: string; assignedTo: string | null }> = {};
       for (const a of allAssignments) {
-        assignedMap[a.issueFingerprint] = { status: a.status, assignedTo: a.assignedTo };
+        assignedMap[a.issueFingerprint] = { id: a.id, status: a.status, assignedTo: a.assignedTo };
       }
 
       // Build assignees list (users + teams) for the assignment picker

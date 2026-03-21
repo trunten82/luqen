@@ -191,9 +191,14 @@ To assign multiple issues at once:
 4. Choose an assignee from the user/team picker dropdown.
 5. All selected issues are assigned in a single operation.
 
-#### Deleting assignments
+#### Removing assignments
 
-Click the **Remove** button next to any assignment to delete it. A confirmation dialog appears before the assignment is removed. The issue returns to **Open** status.
+Assignments can be removed from two places:
+
+- **Assignments page** — click the **Remove** button next to any assignment. A confirmation dialog appears before deletion.
+- **Issues tab** — click the **x** button next to the status badge on any assigned issue to unassign it inline.
+
+In both cases, the issue returns to **Open** status. Admin, Developer, and User roles can manage assignments; the Executive role has read-only access.
 
 ### Connected repositories
 

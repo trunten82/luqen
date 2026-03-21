@@ -94,6 +94,7 @@
         <textarea class="asgn-textarea" data-field="notes" rows="2" placeholder="Notes...">{{notes}}</textarea>
       </label>
       <button type="button" class="btn btn--sm btn--primary asgn-save-btn" onclick="asgnSave('{{id}}', this)">Save</button>
+      <button type="button" class="btn btn--sm btn--ghost asgn-delete-btn" onclick="asgnDelete('{{id}}', this)" title="Remove assignment">Remove</button>
     </div>
     <div class="asgn-card__meta">
       Created by {{createdBy}} &middot; Updated {{updatedAt}}
