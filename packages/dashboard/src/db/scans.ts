@@ -371,7 +371,151 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
   ('executive', 'trends.view');
     `,
   },
+  {
+    id: '013',
+    name: 'create-email-reports-and-smtp',
+    sql: `
+CREATE TABLE IF NOT EXISTS email_reports (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  site_url TEXT NOT NULL,
+  recipients TEXT NOT NULL,
+  frequency TEXT NOT NULL DEFAULT 'weekly',
+  format TEXT NOT NULL DEFAULT 'pdf',
+  include_csv INTEGER NOT NULL DEFAULT 0,
+  next_send_at TEXT NOT NULL,
+  last_sent_at TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_by TEXT NOT NULL,
+  org_id TEXT NOT NULL DEFAULT 'system',
+  created_at_ts TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_email_reports_next ON email_reports(next_send_at, enabled);
+
+CREATE TABLE IF NOT EXISTS smtp_config (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  host TEXT NOT NULL,
+  port INTEGER NOT NULL DEFAULT 587,
+  secure INTEGER NOT NULL DEFAULT 1,
+  username TEXT NOT NULL,
+  password TEXT NOT NULL,
+  from_address TEXT NOT NULL,
+  from_name TEXT NOT NULL DEFAULT 'Pally Dashboard',
+  org_id TEXT NOT NULL DEFAULT 'system'
+);
+    `,
+  },
 ];
+
+export interface SmtpConfig {
+  readonly id: string;
+  readonly host: string;
+  readonly port: number;
+  readonly secure: boolean;
+  readonly username: string;
+  readonly password: string;
+  readonly fromAddress: string;
+  readonly fromName: string;
+  readonly orgId: string;
+}
+
+export interface SmtpConfigInput {
+  readonly host: string;
+  readonly port: number;
+  readonly secure: boolean;
+  readonly username: string;
+  readonly password: string;
+  readonly fromAddress: string;
+  readonly fromName?: string;
+  readonly orgId?: string;
+}
+
+interface SmtpConfigRow {
+  id: string;
+  host: string;
+  port: number;
+  secure: number;
+  username: string;
+  password: string;
+  from_address: string;
+  from_name: string;
+  org_id: string;
+}
+
+function smtpConfigRowToRecord(row: SmtpConfigRow): SmtpConfig {
+  return {
+    id: row.id,
+    host: row.host,
+    port: row.port,
+    secure: row.secure === 1,
+    username: row.username,
+    password: row.password,
+    fromAddress: row.from_address,
+    fromName: row.from_name,
+    orgId: row.org_id,
+  };
+}
+
+export interface EmailReport {
+  readonly id: string;
+  readonly name: string;
+  readonly siteUrl: string;
+  readonly recipients: string;
+  readonly frequency: string;
+  readonly format: string;
+  readonly includeCsv: boolean;
+  readonly nextSendAt: string;
+  readonly lastSentAt: string | null;
+  readonly enabled: boolean;
+  readonly createdBy: string;
+  readonly orgId: string;
+}
+
+export interface CreateEmailReportInput {
+  readonly id: string;
+  readonly name: string;
+  readonly siteUrl: string;
+  readonly recipients: string;
+  readonly frequency: string;
+  readonly format?: string;
+  readonly includeCsv?: boolean;
+  readonly nextSendAt: string;
+  readonly createdBy: string;
+  readonly orgId?: string;
+}
+
+interface EmailReportRow {
+  id: string;
+  name: string;
+  site_url: string;
+  recipients: string;
+  frequency: string;
+  format: string;
+  include_csv: number;
+  next_send_at: string;
+  last_sent_at: string | null;
+  enabled: number;
+  created_by: string;
+  org_id: string;
+  created_at_ts: string;
+}
+
+function emailReportRowToRecord(row: EmailReportRow): EmailReport {
+  return {
+    id: row.id,
+    name: row.name,
+    siteUrl: row.site_url,
+    recipients: row.recipients,
+    frequency: row.frequency,
+    format: row.format,
+    includeCsv: row.include_csv === 1,
+    nextSendAt: row.next_send_at,
+    lastSentAt: row.last_sent_at,
+    enabled: row.enabled === 1,
+    createdBy: row.created_by,
+    orgId: row.org_id,
+  };
+}
 
 export interface ConnectedRepo {
   readonly id: string;
@@ -1337,6 +1481,147 @@ export class ScanDb {
     }
 
     return new Set(role.permissions);
+  }
+
+  // ── Email reports & SMTP config ──────────────────────────────────
+
+  getSmtpConfig(orgId = 'system'): SmtpConfig | null {
+    const stmt = this.db.prepare(
+      'SELECT * FROM smtp_config WHERE org_id = ? LIMIT 1',
+    );
+    const row = stmt.get(orgId) as SmtpConfigRow | undefined;
+    return row !== undefined ? smtpConfigRowToRecord(row) : null;
+  }
+
+  upsertSmtpConfig(data: SmtpConfigInput): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO smtp_config (id, host, port, secure, username, password, from_address, from_name, org_id)
+      VALUES (@id, @host, @port, @secure, @username, @password, @fromAddress, @fromName, @orgId)
+      ON CONFLICT (id)
+      DO UPDATE SET host = @host, port = @port, secure = @secure, username = @username,
+                    password = @password, from_address = @fromAddress, from_name = @fromName
+    `);
+
+    stmt.run({
+      id: data.orgId ?? 'default',
+      host: data.host,
+      port: data.port,
+      secure: data.secure ? 1 : 0,
+      username: data.username,
+      password: data.password,
+      fromAddress: data.fromAddress,
+      fromName: data.fromName ?? 'Pally Dashboard',
+      orgId: data.orgId ?? 'system',
+    });
+  }
+
+  listEmailReports(orgId?: string): EmailReport[] {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+
+    if (orgId !== undefined) {
+      conditions.push('org_id = @orgId');
+      params['orgId'] = orgId;
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const sql = `SELECT * FROM email_reports ${where} ORDER BY created_at_ts DESC`;
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(params) as EmailReportRow[];
+    return rows.map(emailReportRowToRecord);
+  }
+
+  getEmailReport(id: string): EmailReport | null {
+    const stmt = this.db.prepare('SELECT * FROM email_reports WHERE id = ?');
+    const row = stmt.get(id) as EmailReportRow | undefined;
+    return row !== undefined ? emailReportRowToRecord(row) : null;
+  }
+
+  createEmailReport(data: CreateEmailReportInput): EmailReport {
+    const stmt = this.db.prepare(`
+      INSERT INTO email_reports (id, name, site_url, recipients, frequency, format, include_csv, next_send_at, enabled, created_by, org_id, created_at_ts)
+      VALUES (@id, @name, @siteUrl, @recipients, @frequency, @format, @includeCsv, @nextSendAt, 1, @createdBy, @orgId, @createdAtTs)
+    `);
+
+    stmt.run({
+      id: data.id,
+      name: data.name,
+      siteUrl: data.siteUrl,
+      recipients: data.recipients,
+      frequency: data.frequency,
+      format: data.format ?? 'pdf',
+      includeCsv: data.includeCsv ? 1 : 0,
+      nextSendAt: data.nextSendAt,
+      createdBy: data.createdBy,
+      orgId: data.orgId ?? 'system',
+      createdAtTs: new Date().toISOString(),
+    });
+
+    const created = this.getEmailReport(data.id);
+    if (created === null) {
+      throw new Error(`Failed to retrieve email report after creation: ${data.id}`);
+    }
+    return created;
+  }
+
+  updateEmailReport(id: string, data: Partial<{
+    name: string;
+    siteUrl: string;
+    recipients: string;
+    frequency: string;
+    format: string;
+    includeCsv: boolean;
+    nextSendAt: string;
+    lastSentAt: string;
+    enabled: boolean;
+  }>): void {
+    const fieldMap: Record<string, string> = {
+      name: 'name',
+      siteUrl: 'site_url',
+      recipients: 'recipients',
+      frequency: 'frequency',
+      format: 'format',
+      nextSendAt: 'next_send_at',
+      lastSentAt: 'last_sent_at',
+    };
+
+    const setClauses: string[] = [];
+    const params: Record<string, unknown> = { id };
+
+    for (const [key, value] of Object.entries(data)) {
+      if (key === 'includeCsv') {
+        setClauses.push('include_csv = @includeCsv');
+        params['includeCsv'] = value ? 1 : 0;
+      } else if (key === 'enabled') {
+        setClauses.push('enabled = @enabled');
+        params['enabled'] = value ? 1 : 0;
+      } else {
+        const col = fieldMap[key];
+        if (col === undefined) continue;
+        setClauses.push(`${col} = @${key}`);
+        params[key] = value;
+      }
+    }
+
+    if (setClauses.length === 0) return;
+
+    const stmt = this.db.prepare(
+      `UPDATE email_reports SET ${setClauses.join(', ')} WHERE id = @id`,
+    );
+    stmt.run(params);
+  }
+
+  deleteEmailReport(id: string): void {
+    this.db.prepare('DELETE FROM email_reports WHERE id = ?').run(id);
+  }
+
+  getDueEmailReports(): EmailReport[] {
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(
+      'SELECT * FROM email_reports WHERE next_send_at <= @now AND enabled = 1',
+    );
+    const rows = stmt.all({ now }) as EmailReportRow[];
+    return rows.map(emailReportRowToRecord);
   }
 
   close(): void {

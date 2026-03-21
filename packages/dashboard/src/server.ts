@@ -46,6 +46,8 @@ import { VERSION } from './version.js';
 import { getFixSuggestion } from './fix-suggestions.js';
 import { ALL_PERMISSIONS, ALL_PERMISSION_IDS } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
+import { emailReportRoutes } from './routes/admin/email-reports.js';
+import { startEmailScheduler } from './email/scheduler.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -344,6 +346,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await apiKeyRoutes(server, db.getDatabase());
   await organizationRoutes(server, orgDb, userDb, config.complianceUrl);
   await roleRoutes(server, db);
+  await emailReportRoutes(server, db);
 
   await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
 
@@ -364,8 +367,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Scheduler — start after server is ready ────────────────────────────
   server.addHook('onReady', () => {
     const timer = startScheduler(db, orchestrator, config);
+    const emailTimer = startEmailScheduler(db);
     server.addHook('onClose', () => {
       clearInterval(timer);
+      clearInterval(emailTimer);
     });
   });
 

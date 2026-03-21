@@ -1,0 +1,202 @@
+<section aria-label="Email Reports management">
+  <h2>Email Reports</h2>
+
+  {{!-- SMTP Configuration --}}
+  <div class="card" style="margin-bottom: 24px;">
+    <h3>SMTP Configuration</h3>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      Configure your SMTP server to enable email report delivery.
+      {{#unless smtpConfigured}}<strong>Not yet configured.</strong>{{/unless}}
+      <br><em>Note: The SMTP password is stored in the database without encryption (MVP).</em>
+    </p>
+
+    <form hx-post="/admin/email-reports/smtp"
+          hx-target="#toast-container"
+          hx-swap="innerHTML"
+          class="form-grid"
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 600px;">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label for="smtp-host">Host</label>
+        <input type="text" id="smtp-host" name="host" class="input"
+               value="{{smtpConfig.host}}" placeholder="smtp.example.com" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="smtp-port">Port</label>
+        <input type="number" id="smtp-port" name="port" class="input"
+               value="{{smtpConfig.port}}" placeholder="587" min="1" max="65535" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="smtp-username">Username</label>
+        <input type="text" id="smtp-username" name="username" class="input"
+               value="{{smtpConfig.username}}" placeholder="user@example.com" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="smtp-password">Password</label>
+        <input type="password" id="smtp-password" name="password" class="input"
+               value="{{smtpConfig.password}}" placeholder="••••••••" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="smtp-from-address">From Address</label>
+        <input type="email" id="smtp-from-address" name="fromAddress" class="input"
+               value="{{smtpConfig.fromAddress}}" placeholder="noreply@example.com" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="smtp-from-name">From Name</label>
+        <input type="text" id="smtp-from-name" name="fromName" class="input"
+               value="{{smtpConfig.fromName}}" placeholder="Pally Dashboard">
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
+        <input type="checkbox" id="smtp-secure" name="secure"
+               {{#if smtpConfig.secure}}checked{{/if}}>
+        <label for="smtp-secure" style="margin: 0;">Use TLS/SSL</label>
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: end; gap: 8px;">
+        <button type="submit" class="btn btn--primary">Save SMTP</button>
+        <button type="button"
+                hx-post="/admin/email-reports/smtp/test"
+                hx-target="#toast-container"
+                hx-swap="innerHTML"
+                hx-include="[name='_csrf']"
+                class="btn btn--secondary">Test Connection</button>
+      </div>
+    </form>
+  </div>
+
+  {{!-- Create Email Report --}}
+  <div class="card" style="margin-bottom: 24px;">
+    <h3>Create Email Report Schedule</h3>
+
+    <form hx-post="/admin/email-reports"
+          hx-target="#email-reports-table-body"
+          hx-swap="beforeend"
+          class="form-grid"
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 600px;">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label for="report-name">Report Name</label>
+        <input type="text" id="report-name" name="name" class="input"
+               placeholder="Weekly Homepage Report" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="report-site-url">Site URL</label>
+        <input type="url" id="report-site-url" name="siteUrl" class="input"
+               placeholder="https://example.com" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label for="report-recipients">Recipients (comma-separated)</label>
+        <input type="text" id="report-recipients" name="recipients" class="input"
+               placeholder="user1@example.com, user2@example.com" required
+               aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="report-frequency">Frequency</label>
+        <select id="report-frequency" name="frequency" class="select">
+          <option value="daily">Daily</option>
+          <option value="weekly" selected>Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="report-format">Attachment Format</label>
+        <select id="report-format" name="format" class="select">
+          <option value="pdf" selected>HTML Report</option>
+          <option value="csv">CSV Only</option>
+          <option value="both">HTML + CSV</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
+        <input type="checkbox" id="report-include-csv" name="includeCsv">
+        <label for="report-include-csv" style="margin: 0;">Also include CSV attachment</label>
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: end;">
+        <button type="submit" class="btn btn--primary">Create Schedule</button>
+      </div>
+    </form>
+  </div>
+
+  {{!-- Email Report Schedules Table --}}
+  <div class="card">
+    <h3>Scheduled Reports</h3>
+    <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+      <table class="table" aria-label="Email report schedules">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Site URL</th>
+            <th scope="col">Recipients</th>
+            <th scope="col">Frequency</th>
+            <th scope="col">Format</th>
+            <th scope="col">Next Send</th>
+            <th scope="col">Last Sent</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="email-reports-table-body">
+          {{#each reports}}
+          <tr id="report-row-{{id}}">
+            <td data-label="Name">{{name}}</td>
+            <td data-label="Site URL">{{siteUrl}}</td>
+            <td data-label="Recipients">{{recipients}}</td>
+            <td data-label="Frequency">{{frequency}}</td>
+            <td data-label="Format">{{format}}</td>
+            <td data-label="Next Send">{{nextSendAtDisplay}}</td>
+            <td data-label="Last Sent">{{lastSentAtDisplay}}</td>
+            <td data-label="Status" id="status-{{id}}">
+              <span class="badge {{enabledClass}}">{{enabledLabel}}</span>
+            </td>
+            <td>
+              <button hx-patch="/admin/email-reports/{{id}}/toggle"
+                      hx-target="#report-row-{{id}}"
+                      hx-swap="outerHTML"
+                      hx-include="[name='_csrf']"
+                      class="btn btn--sm btn--secondary"
+                      id="toggle-btn-{{id}}">{{#if enabled}}Disable{{else}}Enable{{/if}}</button>
+              <button hx-post="/admin/email-reports/{{id}}/send-now"
+                      hx-target="#toast-container"
+                      hx-swap="innerHTML"
+                      hx-include="[name='_csrf']"
+                      class="btn btn--sm btn--secondary"
+                      aria-label="Send report now">Send Now</button>
+              <button hx-delete="/admin/email-reports/{{id}}"
+                      hx-confirm="Delete this email report?"
+                      hx-target="closest tr"
+                      hx-swap="outerHTML swap:500ms"
+                      hx-include="[name='_csrf']"
+                      class="btn btn--sm btn--danger"
+                      aria-label="Delete email report">Delete</button>
+            </td>
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="9" class="table__empty">No email report schedules configured.</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

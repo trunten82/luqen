@@ -1,6 +1,6 @@
 {
   "name": "@pally-agent/dashboard",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "Web dashboard for pally accessibility scanner",
   "type": "module",
   "main": "dist/cli.js",
@@ -62,13 +62,15 @@
     "fastify": "^5.0.0",
     "handlebars": "^4.7.8",
     "ioredis": "^5.10.1",
-    "jose": "^6.0.0"
+    "jose": "^6.0.0",
+    "nodemailer": "^8.0.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.12",
     "@types/ioredis": "^4.28.10",
     "@types/node": "^25.5.0",
+    "@types/nodemailer": "^7.0.11",
     "@vitest/coverage-v8": "^4.1.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
