@@ -128,4 +128,4 @@ Authentication for dashboard users is handled locally by the dashboard (see [Aut
 
 ---
 
-*See also: [guides/dashboard-admin.md](../guides/dashboard-admin.md) | [installation/docker.md](../installation/docker.md) | [configuration/compliance.md](compliance.md)*
+*See also: [guides/dashboard-admin.md](../guides/dashboard-admin.md) | [deployment/docker.md](../deployment/docker.md) | [compliance-config.md](compliance-config.md)*

@@ -197,4 +197,4 @@ pally-agent fix --from-report <path> --repo <path> [options]
 
 ---
 
-*See also: [guides/scanning.md](../guides/scanning.md) | [guides/ci-cd.md](../guides/ci-cd.md) | [configuration/compliance.md](compliance.md)*
+*See also: [guides/scanning.md](../guides/scanning.md) | [guides/ci-cd.md](../guides/ci-cd.md) | [compliance-config.md](compliance-config.md)*

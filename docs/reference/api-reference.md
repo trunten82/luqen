@@ -77,6 +77,8 @@ curl -X POST http://localhost:4000/api/v1/compliance/check \
 
 Response: `{ "matrix": {...}, "annotatedIssues": [...], "summary": {...} }`
 
+Accepts request bodies up to 10 MB to accommodate large site scans.
+
 ---
 
 ## Jurisdictions
@@ -171,6 +173,28 @@ Signature verification: `X-Webhook-Signature: sha256=<hmac-sha256-of-body>`
 | `GET` | `/a2a/tasks/:id` | Get task status and result |
 | `GET` | `/a2a/tasks/:id/stream` | SSE stream for progress |
 | `GET` | `/a2a/agents` | List known peer agents |
+
+---
+
+## Dashboard Scan API
+
+Base URL: `http://localhost:5000` (dashboard service). Requires user role authentication via session cookie.
+
+### `POST /scan/new`
+
+Start a new accessibility scan.
+
+Parameters:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | `string` | Target URL (required, must be `http` or `https`) |
+| `scanMode` | `string` | `single` or `site` (default: `site` for API, `single` for dashboard UI) |
+| `standard` | `string` | `WCAG2A`, `WCAG2AA` (default), or `WCAG2AAA` |
+| `jurisdictions` | `string[]` | Jurisdiction codes for compliance enrichment (max 50) |
+| `concurrency` | `number` | Pages to scan in parallel (1-10) |
+
+Rate limited: 10 requests per 10 minutes per session.
 
 ---
 

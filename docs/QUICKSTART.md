@@ -105,7 +105,7 @@ The HTML report now shows a per-jurisdiction pass/fail table and regulation badg
 | **CI/CD pipeline** | **CLI in Docker** | Run `pally-agent scan` as a pipeline step. Fail builds on violations. No servers needed — just the Docker image. |
 | **Consultancy** scanning client sites | **Dashboard + compliance** (Docker or K8s) | Centralized scanning with compliance matrix. Generate reports per client per jurisdiction. |
 
-For detailed setup instructions, see the [installation guides](installation/).
+For detailed setup instructions, see the [installation guides](getting-started/).
 
 ---
 
@@ -189,7 +189,7 @@ Once connected, your AI assistant has these capabilities:
 | "What regulations apply in Germany?" | `compliance_list_regulations` |
 | "Check for any legal changes we should know about" | `monitor_scan_sources` |
 
-For the full 20-tool reference, see [integrations/claude-code.md](integrations/claude-code.md).
+For the full 20-tool reference, see [compliance/integrations/claude-code.md](compliance/integrations/claude-code.md).
 
 ---
 
@@ -198,8 +198,8 @@ For the full 20-tool reference, see [integrations/claude-code.md](integrations/c
 | I want to... | Go to |
 |--------------|-------|
 | Understand the results | [USER-GUIDE.md](USER-GUIDE.md) |
-| Configure scanning options | [configuration/core.md](configuration/core.md) |
-| Use with Claude Code | [integrations/claude-code.md](integrations/claude-code.md) |
+| Configure scanning options | [reference/core-config.md](reference/core-config.md) |
+| Use with Claude Code | [compliance/integrations/claude-code.md](compliance/integrations/claude-code.md) |
 | Set up in CI/CD | [guides/ci-cd.md](guides/ci-cd.md) |
 | Run the dashboard | [guides/dashboard-admin.md](guides/dashboard-admin.md) |
 
