@@ -8,7 +8,7 @@ Send real-time accessibility scan results and compliance alerts to a Slack chann
 
 ## Prerequisites
 
-- Running pally-agent dashboard (see [Full Dashboard](full-dashboard.md))
+- Running luqen dashboard (see [Full Dashboard](full-dashboard.md))
 - Admin access to the dashboard
 - A Slack workspace where you can create apps
 
@@ -17,7 +17,7 @@ Send real-time accessibility scan results and compliance alerts to a Slack chann
 ## 1. Create a Slack webhook
 
 1. Go to [https://api.slack.com/apps](https://api.slack.com/apps) and click **Create New App**
-2. Choose **From scratch**, name the app (e.g. `Pally Agent`), and select your workspace
+2. Choose **From scratch**, name the app (e.g. `Luqen`), and select your workspace
 3. In the app settings, go to **Incoming Webhooks** and toggle it **On**
 4. Click **Add New Webhook to Workspace**
 5. Select the channel where notifications should be posted (e.g. `#accessibility`)
@@ -40,18 +40,18 @@ Keep this URL safe. It will be stored encrypted in the dashboard.
 ### Via CLI
 
 ```bash
-pally-dashboard plugin install @pally-agent/plugin-notify-slack
+luqen-dashboard plugin install @luqen/plugin-notify-slack
 ```
 
 ### Via config file
 
-Add the plugin to your `pally-plugins.json`:
+Add the plugin to your `luqen-plugins.json`:
 
 ```json
 {
   "plugins": [
     {
-      "package": "@pally-agent/plugin-notify-slack"
+      "package": "@luqen/plugin-notify-slack"
     }
   ]
 }
@@ -70,10 +70,10 @@ Add the plugin to your `pally-plugins.json`:
 ### Via CLI
 
 ```bash
-pally-dashboard plugin configure <plugin-id> \
+luqen-dashboard plugin configure <plugin-id> \
   --set webhookUrl=https://hooks.slack.com/services/T00.../B00.../xxxx \
         channel=#accessibility \
-        username="Pally Agent" \
+        username="Luqen" \
         events=scan.complete,violation.found
 ```
 
@@ -83,7 +83,7 @@ pally-dashboard plugin configure <plugin-id> \
 |-------|----------|---------|-------------|
 | `webhookUrl` | Yes | — | The Slack Incoming Webhook URL. Stored encrypted (AES-256-GCM). |
 | `channel` | No | `#accessibility` | Override the default channel set in the Slack app. |
-| `username` | No | `Pally Agent` | Bot display name shown in Slack messages. |
+| `username` | No | `Luqen` | Bot display name shown in Slack messages. |
 | `events` | No | All events | Comma-separated list of event types to send. See section 4. |
 
 ---
@@ -102,7 +102,7 @@ Subscribe to specific events by setting the `events` configuration field. If omi
 Example — subscribe only to scan results:
 
 ```bash
-pally-dashboard plugin configure <plugin-id> \
+luqen-dashboard plugin configure <plugin-id> \
   --set events=scan.complete,scan.failed
 ```
 
@@ -115,7 +115,7 @@ pally-dashboard plugin configure <plugin-id> \
 Click **Activate** on the plugin card in the dashboard, or run:
 
 ```bash
-pally-dashboard plugin activate <plugin-id>
+luqen-dashboard plugin activate <plugin-id>
 ```
 
 The system runs a health check to verify the webhook URL is reachable.
@@ -149,7 +149,7 @@ Send scan results and scheduled accessibility reports by email using the Email N
 
 ### Install
 
-1. Go to **Settings > Plugins** and install `@pally-agent/plugin-notify-email`
+1. Go to **Settings > Plugins** and install `@luqen/plugin-notify-email`
 2. Configure SMTP settings (host, port, TLS, credentials, from address) in the plugin config
 3. Activate the plugin — a health check verifies SMTP connectivity
 

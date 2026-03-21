@@ -1,8 +1,8 @@
-# Pally Agent — Design Specification
+# Luqen — Design Specification
 
 ## Overview
 
-Pally Agent is a Node.js/TypeScript tool that orchestrates accessibility testing across entire websites using a pa11y webservice instance. It discovers all pages via sitemap.xml (with crawl fallback), runs pa11y scans via the webservice REST API, aggregates results into JSON and HTML reports, and when given access to source code, maps issues to specific files and proposes code fixes.
+Luqen is a Node.js/TypeScript tool that orchestrates accessibility testing across entire websites using a pa11y webservice instance. It discovers all pages via sitemap.xml (with crawl fallback), runs pa11y scans via the webservice REST API, aggregates results into JSON and HTML reports, and when given access to source code, maps issues to specific files and proposes code fixes.
 
 It exposes two interfaces over a shared core library: a CLI and an MCP server.
 
@@ -109,7 +109,7 @@ interface ScanProgress {
 ```
 
 - CLI subscribes and displays a progress counter
-- MCP emits these via the `notifications/progress` method. The `pally_scan` tool accepts `_meta.progressToken` in its input. The `ScanProgress` fields map to the MCP progress notification payload: `progressToken` from the request, `progress` = `current`, `total` = `total`, and `message` = `url`
+- MCP emits these via the `notifications/progress` method. The `luqen_scan` tool accepts `_meta.progressToken` in its input. The `ScanProgress` fields map to the MCP progress notification payload: `progressToken` from the request, `progress` = `current`, `total` = `total`, and `message` = `url`
 
 ### Error Handling
 
@@ -190,7 +190,7 @@ When a repository path is provided, the agent maps accessibility issues to sourc
 
 ### User Override Config
 
-In `.pally-agent.json`:
+In `.luqen.json`:
 
 ```json
 {
@@ -258,10 +258,10 @@ interface PageResult {
 
 ### Output File Naming
 
-Reports are written to `outputDir` (default: `./pally-reports`) with timestamped names:
+Reports are written to `outputDir` (default: `./luqen-reports`) with timestamped names:
 
-- `pally-report-2026-03-18T120000Z.json`
-- `pally-report-2026-03-18T120000Z.html`
+- `luqen-report-2026-03-18T120000Z.json`
+- `luqen-report-2026-03-18T120000Z.html`
 
 Existing files are never overwritten.
 
@@ -285,9 +285,9 @@ Code fix proposals require a `--repo` argument. For common issues, the agent gen
 
 ## Configuration
 
-### Config File (`.pally-agent.json`)
+### Config File (`.luqen.json`)
 
-Config file discovery: search from the current working directory upward to the filesystem root, using the first `.pally-agent.json` found. If `--repo` is specified, also check the repo root. An explicit `--config <path>` flag overrides discovery.
+Config file discovery: search from the current working directory upward to the filesystem root, using the first `.luqen.json` found. If `--repo` is specified, also check the repo root. An explicit `--config <path>` flag overrides discovery.
 
 ```json
 {
@@ -304,7 +304,7 @@ Config file discovery: search from the current working directory upward to the f
   "hideElements": "",
   "headers": {},
   "wait": 0,
-  "outputDir": "./pally-reports",
+  "outputDir": "./luqen-reports",
   "sourceMap": {}
 }
 ```
@@ -313,49 +313,49 @@ All values have sensible defaults. Environment variables override config file va
 
 | Env Variable | Overrides |
 |---|---|
-| `PALLY_WEBSERVICE_URL` | `webserviceUrl` |
-| `PALLY_WEBSERVICE_AUTH` | `webserviceHeaders.Authorization` |
-| `PALLY_AGENT_CONFIG` | config file path (equivalent to `--config`) |
+| `LUQEN_WEBSERVICE_URL` | `webserviceUrl` |
+| `LUQEN_WEBSERVICE_AUTH` | `webserviceHeaders.Authorization` |
+| `LUQEN_CONFIG` | config file path (equivalent to `--config`) |
 
 ### CLI Interface
 
 ```bash
 # Full site scan
-pally-agent scan https://example.com
+luqen scan https://example.com
 
 # With options
-pally-agent scan https://example.com --standard WCAG2AAA --concurrency 3
+luqen scan https://example.com --standard WCAG2AAA --concurrency 3
 
 # Scan with repo for source mapping + fixes
-pally-agent scan https://example.com --repo ./my-project
+luqen scan https://example.com --repo ./my-project
 
 # Output options
-pally-agent scan https://example.com --output ./reports --format json,html
+luqen scan https://example.com --output ./reports --format json,html
 
 # Crawl in addition to sitemap
-pally-agent scan https://example.com --also-crawl
+luqen scan https://example.com --also-crawl
 
 # Explicit config file
-pally-agent scan https://example.com --config ./custom-config.json
+luqen scan https://example.com --config ./custom-config.json
 
 # Apply fixes interactively (re-scans the site, then proposes fixes)
-pally-agent fix https://example.com --repo ./my-project
+luqen fix https://example.com --repo ./my-project
 
 # Apply fixes from a previous scan report (no re-scan)
-pally-agent fix --from-report ./pally-reports/pally-report-2026-03-18T120000Z.json --repo ./my-project
+luqen fix --from-report ./luqen-reports/luqen-report-2026-03-18T120000Z.json --repo ./my-project
 ```
 
-**`fix` subcommand:** By default, `fix` runs a full scan first, then proposes fixes. Use `--from-report <path>` to skip the scan and propose fixes from a previously generated JSON report (must conform to the `PallyScanOutput` schema). The `--repo` flag is required for `fix`.
+**`fix` subcommand:** By default, `fix` runs a full scan first, then proposes fixes. Use `--from-report <path>` to skip the scan and propose fixes from a previously generated JSON report (must conform to the `LuqenScanOutput` schema). The `--repo` flag is required for `fix`.
 
 ### MCP Server Tools
 
-#### `pally_scan`
+#### `luqen_scan`
 
 Scan a website for accessibility issues.
 
 ```typescript
 // Input
-interface PallyScanInput {
+interface LuqenScanInput {
   url: string;                    // Website URL to scan
   standard?: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';  // Default: WCAG2AA
   concurrency?: number;           // Default: 5
@@ -367,7 +367,7 @@ interface PallyScanInput {
 }
 
 // Output
-interface PallyScanOutput {
+interface LuqenScanOutput {
   summary: {
     url: string;
     pagesScanned: number;
@@ -381,13 +381,13 @@ interface PallyScanOutput {
 }
 ```
 
-#### `pally_get_issues`
+#### `luqen_get_issues`
 
 Get issues filtered by URL pattern, severity, or rule code.
 
 ```typescript
 // Input
-interface PallyGetIssuesInput {
+interface LuqenGetIssuesInput {
   reportPath: string;             // Path to a JSON report
   urlPattern?: string;            // Glob pattern to filter URLs
   severity?: 'error' | 'warning' | 'notice';
@@ -397,19 +397,19 @@ interface PallyGetIssuesInput {
 // Output: filtered array of PageResult
 ```
 
-#### `pally_propose_fixes`
+#### `luqen_propose_fixes`
 
 Generate code fix proposals for issues in a repo.
 
 ```typescript
 // Input
-interface PallyProposeFixesInput {
+interface LuqenProposeFixesInput {
   reportPath: string;             // Path to a JSON report
   repoPath: string;               // Path to source code repo
 }
 
 // Output
-interface PallyProposeFixesOutput {
+interface LuqenProposeFixesOutput {
   fixable: number;
   unfixable: number;
   fixes: Array<{
@@ -424,13 +424,13 @@ interface PallyProposeFixesOutput {
 }
 ```
 
-#### `pally_apply_fix`
+#### `luqen_apply_fix`
 
 Apply a specific proposed fix to a source file.
 
 ```typescript
 // Input
-interface PallyApplyFixInput {
+interface LuqenApplyFixInput {
   file: string;                   // Absolute file path
   line: number;                   // Line number
   oldText: string;                // Text to replace
@@ -438,14 +438,14 @@ interface PallyApplyFixInput {
 }
 
 // Output
-interface PallyApplyFixOutput {
+interface LuqenApplyFixOutput {
   applied: boolean;
   file: string;
   diff: string;                   // Unified diff of the change
 }
 ```
 
-The MCP server does not prompt for confirmation — the calling agent is responsible for confirming with the user before invoking `pally_apply_fix`.
+The MCP server does not prompt for confirmation — the calling agent is responsible for confirming with the user before invoking `luqen_apply_fix`.
 
 ## Tech Stack
 
@@ -475,12 +475,12 @@ Key scenarios that drive the test suite:
 11. **Source mapping override:** Given a `sourceMap` config entry, the override takes precedence over auto-detection
 12. **Fix proposal:** Given an `<img>` without `alt` in a mapped source file, the agent proposes adding `alt=""`
 13. **CLI exit codes:** Exit 0 on clean scan, 1 on issues found, 2 on partial failure, 3 on fatal error
-14. **Config discovery:** The agent finds `.pally-agent.json` by walking up from CWD; `--config` overrides
+14. **Config discovery:** The agent finds `.luqen.json` by walking up from CWD; `--config` overrides
 15. **Interactive fix flow:** Given a proposed fix, when the user selects 's' (show diff), a unified diff is printed and the prompt repeats; 'n' skips the file; 'a' aborts remaining fixes
 16. **Fix from report:** Given `--from-report` with a valid JSON report, the fix command skips scanning and proposes fixes directly
-17. **MCP pally_scan:** Given a valid URL, the MCP tool returns a `PallyScanOutput` with summary and page results
+17. **MCP luqen_scan:** Given a valid URL, the MCP tool returns a `LuqenScanOutput` with summary and page results
 18. **Also-crawl:** Given `--also-crawl` with a site that has a partial sitemap, crawled pages are merged with sitemap pages
-19. **Env var override:** Given `PALLY_WEBSERVICE_URL` set, it overrides the config file `webserviceUrl`
+19. **Env var override:** Given `LUQEN_WEBSERVICE_URL` set, it overrides the config file `webserviceUrl`
 20. **Output naming:** Reports use timestamped filenames and never overwrite existing files
 
 ## Non-Goals

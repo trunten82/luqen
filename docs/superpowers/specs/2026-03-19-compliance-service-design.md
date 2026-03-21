@@ -1,20 +1,20 @@
-# Pally Compliance Service — Design Specification (Milestone 1)
+# Luqen Compliance Service — Design Specification (Milestone 1)
 
 ## Overview
 
 The Compliance Service is a standalone accessibility compliance rule engine that maps WCAG technical issues to country-specific legal requirements. It stores regulations for 60+ jurisdictions, marks requirements as mandatory/recommended/optional, and provides a compliance check that annotates pa11y scan results with legal context and a per-jurisdiction pass/fail matrix.
 
-It is an independent service consumed by pally-agent, Power Automate, n8n, or any HTTP/MCP/A2A client. It is **not** embedded in pally-agent — pally-agent is one of its clients.
+It is an independent service consumed by luqen, Power Automate, n8n, or any HTTP/MCP/A2A client. It is **not** embedded in luqen — luqen is one of its clients.
 
 **Milestone scope:** Database, rule engine, REST API with OAuth2, OpenAPI docs, MCP server, A2A agent, baseline seed data, CLI admin, pluggable DB adapters.
 
-**Out of scope for this milestone:** Regulatory Monitor Agent, pally-agent integration, CI/CD pipelines, Kubernetes/serverless manifests. These are milestones 2 and 3.
+**Out of scope for this milestone:** Regulatory Monitor Agent, luqen integration, CI/CD pipelines, Kubernetes/serverless manifests. These are milestones 2 and 3.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│               @pally-agent/compliance                   │
+│               @luqen/compliance                   │
 │                                                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐ │
 │  │  REST API     │  │  MCP Server  │  │  A2A Agent    │ │
@@ -517,7 +517,7 @@ The compliance service publishes an A2A agent card at `/.well-known/agent.json`:
 
 ```json
 {
-  "name": "pally-compliance",
+  "name": "luqen-compliance",
   "description": "Accessibility compliance rule engine — check WCAG issues against 60+ country-specific legal requirements, manage regulations, and monitor legal changes",
   "url": "http://localhost:4000",
   "version": "1.0.0",
@@ -561,7 +561,7 @@ The compliance service publishes an A2A agent card at `/.well-known/agent.json`:
 
 A2A tasks map to the same skill implementations as MCP tools. The A2A layer adds task lifecycle (submitted → working → completed/failed) and SSE streaming.
 
-**OAuth2 between agents:** When pally-agent calls the compliance service via A2A, it authenticates using the client_credentials flow. The agent's `client_id`/`client_secret` are configured in its config file.
+**OAuth2 between agents:** When luqen calls the compliance service via A2A, it authenticates using the client_credentials flow. The agent's `client_id`/`client_secret` are configured in its config file.
 
 ## Database Adapter Interface
 
@@ -813,27 +813,27 @@ The seed endpoint is idempotent — running it multiple times does not create du
 
 ```bash
 # Start the server
-pally-compliance serve                           # REST + MCP + A2A
-pally-compliance serve --port 4000
+luqen-compliance serve                           # REST + MCP + A2A
+luqen-compliance serve --port 4000
 
 # Seed baseline data
-pally-compliance seed
+luqen-compliance seed
 
 # Manage OAuth clients
-pally-compliance clients create --name "pally-agent" --scope "read" --grant client_credentials
-pally-compliance clients create --name "n8n" --scope "read write" --grant client_credentials
-pally-compliance clients list
-pally-compliance clients revoke <client-id>
+luqen-compliance clients create --name "luqen" --scope "read" --grant client_credentials
+luqen-compliance clients create --name "n8n" --scope "read write" --grant client_credentials
+luqen-compliance clients list
+luqen-compliance clients revoke <client-id>
 
 # Manage users (for Authorization Code flow)
-pally-compliance users create --username admin --role admin
-pally-compliance users list
+luqen-compliance users create --username admin --role admin
+luqen-compliance users list
 
 # Generate JWT key pair
-pally-compliance keys generate
+luqen-compliance keys generate
 
 # Run as MCP server (stdio, for Claude Code)
-pally-compliance mcp
+luqen-compliance mcp
 ```
 
 ## Tech Stack
@@ -889,7 +889,7 @@ The following documentation must be produced as part of this milestone:
 
 Comprehensive documentation covering:
 
-- **Overview** — what the compliance service is, the problem it solves, how it fits in the pally ecosystem
+- **Overview** — what the compliance service is, the problem it solves, how it fits in the luqen ecosystem
 - **Getting Started** — prerequisites, installation (npm, Docker, from source), first-run walkthrough
 - **Configuration** — all config fields, env vars, precedence order, example configs
 - **Authentication** — OAuth2 setup, creating clients, obtaining tokens, scope reference
@@ -914,11 +914,11 @@ Per-environment installation guides:
 - `bare-metal.md` — Direct Node.js installation on Linux/macOS/Windows
 - `kubernetes.md` — K8s deployment overview (manifest structure, not full manifests — those are milestone 3)
 - `cloud.md` — AWS (Lambda/ECS) and Azure (Functions/Container Apps) overview
-- `all-in-one.md` — All-in-one mode with pally-agent
+- `all-in-one.md` — All-in-one mode with luqen
 
 ### 3. Integration Guides (`docs/compliance/integrations/`)
 
-- `pally-agent.md` — How pally-agent connects (config, A2A flow)
+- `luqen.md` — How luqen connects (config, A2A flow)
 - `power-automate.md` — Power Automate custom connector setup, OAuth2 config, example flows
 - `n8n.md` — n8n HTTP Request node setup, OAuth2 credentials, example workflows
 - `claude-code.md` — MCP server config, skill usage, example conversations
@@ -926,12 +926,12 @@ Per-environment installation guides:
 
 ### 4. Updated Claude Code Skill
 
-Update `~/.claude/skills/pally-agent/SKILL.md` and `.claude/skills/pally-agent/SKILL.md` to include all compliance tools and workflows.
+Update `~/.claude/skills/luqen/SKILL.md` and `.claude/skills/luqen/SKILL.md` to include all compliance tools and workflows.
 
 ## Non-Goals (This Milestone)
 
 - Regulatory Monitor Agent (milestone 3)
-- Pally-agent integration / enriched reports (milestone 2)
+- Luqen-agent integration / enriched reports (milestone 2)
 - CI/CD pipelines (milestone 3)
 - Kubernetes/serverless deployment manifests (milestone 3)
 - Admin UI (future)

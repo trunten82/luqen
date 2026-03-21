@@ -9,15 +9,15 @@ Composition path 7: monitor legal sources for accessibility regulation changes a
 ## Prerequisites
 
 - Node.js 20+
-- `@pally-agent/compliance` service running (for path 7; not needed for standalone mode)
+- `@luqen/compliance` service running (for path 7; not needed for standalone mode)
 
 ---
 
 ## Install
 
 ```bash
-git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
-cd ~/pally-agent && npm install && npm run build --workspaces
+git clone https://github.com/trunten82/luqen.git ~/luqen
+cd ~/luqen && npm install && npm run build --workspaces
 ```
 
 ---
@@ -64,7 +64,7 @@ export MONITOR_CLIENT_SECRET=$CLIENT_SECRET
 ## Run a scan
 
 ```bash
-cd ~/pally-agent/packages/monitor
+cd ~/luqen/packages/monitor
 node dist/cli.js scan
 ```
 
@@ -115,7 +115,7 @@ Proposals include the source URL, a summary of the detected change, and the prop
 
 Run the monitor without a compliance service by configuring sources in a local JSON file.
 
-Create `.pally-monitor.json` in your project root or home directory:
+Create `.luqen-monitor.json` in your project root or home directory:
 
 ```json
 {
@@ -139,12 +139,12 @@ Create `.pally-monitor.json` in your project root or home directory:
 Run with the local sources file:
 
 ```bash
-node dist/cli.js scan --sources-file .pally-monitor.json
+node dist/cli.js scan --sources-file .luqen-monitor.json
 ```
 
 The monitor fetches each source and reports changes to stdout. Without a compliance service, proposals are printed as JSON but not persisted.
 
-Lookup order: explicit `--sources-file` path, then `.pally-monitor.json` in the current directory, then `~/.pally-monitor.json`.
+Lookup order: explicit `--sources-file` path, then `.luqen-monitor.json` in the current directory, then `~/.luqen-monitor.json`.
 
 ---
 
@@ -168,4 +168,4 @@ See [IDE integration](ide-integration.md) for MCP server setup.
 
 ---
 
-*See also: [What is Pally Agent?](../getting-started/what-is-pally.md) | [Compliance guide](../guides/compliance-check.md)*
+*See also: [What is Luqen?](../getting-started/what-is-luqen.md) | [Compliance guide](../guides/compliance-check.md)*

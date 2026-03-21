@@ -1,6 +1,6 @@
 # n8n Integration
 
-Connect n8n to the Pally Compliance Service using HTTP Request nodes with OAuth2 authentication.
+Connect n8n to the Luqen Compliance Service using HTTP Request nodes with OAuth2 authentication.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Connect n8n to the Pally Compliance Service using HTTP Request nodes with OAuth2
 On the compliance service:
 
 ```bash
-pally-compliance clients create \
+luqen-compliance clients create \
   --name "n8n" \
   --scope "read" \
   --grant client_credentials
@@ -26,7 +26,7 @@ Note the `client_id` and `client_secret`.
 1. In n8n, go to **Settings** → **Credentials** → **Add Credential**
 2. Search for **OAuth2 API**
 3. Configure:
-   - **Credential Name:** Pally Compliance
+   - **Credential Name:** Luqen Compliance
    - **Grant Type:** Client Credentials
    - **Access Token URL:** `https://your-compliance-service.example.com/api/v1/oauth/token`
    - **Client ID:** `<your client_id>`
@@ -101,7 +101,7 @@ return [{
 - Node type: **HTTP Request**
 - Method: POST
 - URL: `https://your-compliance-service.example.com/api/v1/compliance/check`
-- Authentication: **Predefined Credential Type** → **OAuth2 API** → select "Pally Compliance"
+- Authentication: **Predefined Credential Type** → **OAuth2 API** → select "Luqen Compliance"
 - Content Type: JSON
 - Body (JSON):
   ```json
@@ -185,7 +185,7 @@ A simple workflow to look up regulations for a jurisdiction:
 
 - Method: GET
 - URL: `https://your-compliance-service.example.com/api/v1/regulations`
-- Authentication: OAuth2 API (Pally Compliance)
+- Authentication: OAuth2 API (Luqen Compliance)
 - Query Parameters:
   - `jurisdictionId`: `EU`
   - `status`: `active`

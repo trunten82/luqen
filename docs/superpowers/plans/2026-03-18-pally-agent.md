@@ -1,4 +1,4 @@
-# Pally Agent Implementation Plan
+# Luqen Implementation Plan
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,14 +8,14 @@
 
 **Tech Stack:** TypeScript (strict), Node.js, commander, @modelcontextprotocol/sdk, xml2js, robots-parser, cheerio, handlebars, vitest
 
-**Spec:** `docs/superpowers/specs/2026-03-18-pally-agent-design.md`
+**Spec:** `docs/superpowers/specs/2026-03-18-luqen-design.md`
 
 ---
 
 ## File Structure
 
 ```
-pally-agent/
+luqen/
 ├── package.json
 ├── tsconfig.json
 ├── vitest.config.ts
@@ -72,9 +72,9 @@ pally-agent/
 └── docs/
     └── superpowers/
         ├── specs/
-        │   └── 2026-03-18-pally-agent-design.md
+        │   └── 2026-03-18-luqen-design.md
         └── plans/
-            └── 2026-03-18-pally-agent.md
+            └── 2026-03-18-luqen.md
 ```
 
 ---
@@ -90,7 +90,7 @@ pally-agent/
 - [ ] **Step 1: Initialize package.json**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 npm init -y
 ```
 
@@ -98,13 +98,13 @@ Then edit `package.json`:
 
 ```json
 {
-  "name": "pally-agent",
+  "name": "luqen",
   "version": "0.1.0",
   "description": "Accessibility testing agent using pa11y webservice",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
-    "pally-agent": "dist/cli.js"
+    "luqen": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc && cp src/reporter/report.hbs dist/reporter/report.hbs",
@@ -173,7 +173,7 @@ export default defineConfig({
 - [ ] **Step 5: Create src/types.ts with all shared interfaces**
 
 ```typescript
-export interface PallyConfig {
+export interface LuqenConfig {
   readonly webserviceUrl: string;
   readonly webserviceHeaders: Readonly<Record<string, string>>;
   readonly standard: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';
@@ -313,15 +313,15 @@ describe('loadConfig', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = join(tmpdir(), `pally-test-${Date.now()}`);
+    tempDir = join(tmpdir(), `luqen-test-${Date.now()}`);
     mkdirSync(tempDir, { recursive: true });
   });
 
   afterEach(() => {
     rmSync(tempDir, { recursive: true, force: true });
-    delete process.env.PALLY_WEBSERVICE_URL;
-    delete process.env.PALLY_WEBSERVICE_AUTH;
-    delete process.env.PALLY_AGENT_CONFIG;
+    delete process.env.LUQEN_WEBSERVICE_URL;
+    delete process.env.LUQEN_WEBSERVICE_AUTH;
+    delete process.env.LUQEN_CONFIG;
   });
 
   it('returns defaults when no config file exists', async () => {
@@ -335,9 +335,9 @@ describe('loadConfig', () => {
     expect(config.alsoCrawl).toBe(false);
   });
 
-  it('loads config from .pally-agent.json in cwd', async () => {
+  it('loads config from .luqen.json in cwd', async () => {
     writeFileSync(
-      join(tempDir, '.pally-agent.json'),
+      join(tempDir, '.luqen.json'),
       JSON.stringify({ standard: 'WCAG2AAA', concurrency: 3 })
     );
     const config = await loadConfig({ cwd: tempDir });
@@ -350,7 +350,7 @@ describe('loadConfig', () => {
     const child = join(tempDir, 'sub', 'dir');
     mkdirSync(child, { recursive: true });
     writeFileSync(
-      join(tempDir, '.pally-agent.json'),
+      join(tempDir, '.luqen.json'),
       JSON.stringify({ concurrency: 10 })
     );
     const config = await loadConfig({ cwd: child });
@@ -361,36 +361,36 @@ describe('loadConfig', () => {
     const configPath = join(tempDir, 'custom.json');
     writeFileSync(configPath, JSON.stringify({ concurrency: 42 }));
     writeFileSync(
-      join(tempDir, '.pally-agent.json'),
+      join(tempDir, '.luqen.json'),
       JSON.stringify({ concurrency: 1 })
     );
     const config = await loadConfig({ cwd: tempDir, configPath });
     expect(config.concurrency).toBe(42);
   });
 
-  it('overrides webserviceUrl from PALLY_WEBSERVICE_URL env', async () => {
-    process.env.PALLY_WEBSERVICE_URL = 'http://custom:9000';
+  it('overrides webserviceUrl from LUQEN_WEBSERVICE_URL env', async () => {
+    process.env.LUQEN_WEBSERVICE_URL = 'http://custom:9000';
     const config = await loadConfig({ cwd: tempDir });
     expect(config.webserviceUrl).toBe('http://custom:9000');
   });
 
-  it('overrides webserviceHeaders.Authorization from PALLY_WEBSERVICE_AUTH', async () => {
-    process.env.PALLY_WEBSERVICE_AUTH = 'Bearer secret';
+  it('overrides webserviceHeaders.Authorization from LUQEN_WEBSERVICE_AUTH', async () => {
+    process.env.LUQEN_WEBSERVICE_AUTH = 'Bearer secret';
     const config = await loadConfig({ cwd: tempDir });
     expect(config.webserviceHeaders.Authorization).toBe('Bearer secret');
   });
 
-  it('uses PALLY_AGENT_CONFIG env as config path', async () => {
+  it('uses LUQEN_CONFIG env as config path', async () => {
     const configPath = join(tempDir, 'env-config.json');
     writeFileSync(configPath, JSON.stringify({ concurrency: 99 }));
-    process.env.PALLY_AGENT_CONFIG = configPath;
+    process.env.LUQEN_CONFIG = configPath;
     const config = await loadConfig({ cwd: tempDir });
     expect(config.concurrency).toBe(99);
   });
 
   it('validates standard is a valid WCAG level', async () => {
     writeFileSync(
-      join(tempDir, '.pally-agent.json'),
+      join(tempDir, '.luqen.json'),
       JSON.stringify({ standard: 'INVALID' })
     );
     await expect(loadConfig({ cwd: tempDir })).rejects.toThrow(/standard/);
@@ -412,13 +412,13 @@ Expected: FAIL — `loadConfig` not found
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, dirname, parse } from 'node:path';
-import type { PallyConfig } from './types.js';
+import type { LuqenConfig } from './types.js';
 
-const CONFIG_FILENAME = '.pally-agent.json';
+const CONFIG_FILENAME = '.luqen.json';
 
 const VALID_STANDARDS = new Set(['WCAG2A', 'WCAG2AA', 'WCAG2AAA']);
 
-export const DEFAULT_CONFIG: PallyConfig = {
+export const DEFAULT_CONFIG: LuqenConfig = {
   webserviceUrl: 'http://localhost:3000',
   webserviceHeaders: {},
   standard: 'WCAG2AA',
@@ -432,7 +432,7 @@ export const DEFAULT_CONFIG: PallyConfig = {
   hideElements: '',
   headers: {},
   wait: 0,
-  outputDir: './pally-reports',
+  outputDir: './luqen-reports',
   sourceMap: {},
 };
 
@@ -461,7 +461,7 @@ async function readJsonFile(filePath: string): Promise<Record<string, unknown>> 
   return JSON.parse(content) as Record<string, unknown>;
 }
 
-function validate(config: PallyConfig): void {
+function validate(config: LuqenConfig): void {
   if (!VALID_STANDARDS.has(config.standard)) {
     throw new Error(
       `Invalid standard "${config.standard}". Must be one of: ${[...VALID_STANDARDS].join(', ')}`
@@ -475,13 +475,13 @@ function validate(config: PallyConfig): void {
   }
 }
 
-export async function loadConfig(options: LoadConfigOptions = {}): Promise<PallyConfig> {
+export async function loadConfig(options: LoadConfigOptions = {}): Promise<LuqenConfig> {
   const cwd = options.cwd ?? process.cwd();
 
   // Determine config file path: explicit > env > discovery
   const configPath =
     options.configPath ??
-    process.env.PALLY_AGENT_CONFIG ??
+    process.env.LUQEN_CONFIG ??
     findConfigFile(cwd) ??
     (options.repoPath ? findConfigFile(options.repoPath) : undefined);
 
@@ -492,20 +492,20 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Pally
   }
 
   // Merge: defaults < file < env overrides
-  const merged: PallyConfig = {
+  const merged: LuqenConfig = {
     ...DEFAULT_CONFIG,
     ...fileConfig,
     webserviceHeaders: {
       ...DEFAULT_CONFIG.webserviceHeaders,
       ...(fileConfig.webserviceHeaders as Record<string, string> | undefined),
     },
-  } as PallyConfig;
+  } as LuqenConfig;
 
   // Apply env var overrides
-  const envUrl = process.env.PALLY_WEBSERVICE_URL;
-  const envAuth = process.env.PALLY_WEBSERVICE_AUTH;
+  const envUrl = process.env.LUQEN_WEBSERVICE_URL;
+  const envAuth = process.env.LUQEN_WEBSERVICE_AUTH;
 
-  const withEnv: PallyConfig = {
+  const withEnv: LuqenConfig = {
     ...merged,
     ...(envUrl ? { webserviceUrl: envUrl } : {}),
     ...(envAuth
@@ -1840,7 +1840,7 @@ async function scanSingleUrl(
 
   try {
     const task = await client.createTask({
-      name: `pally-agent: ${discovered.url}`,
+      name: `luqen: ${discovered.url}`,
       url: discovered.url,
       standard: options.standard,
       ignore: [...options.ignore],
@@ -2036,7 +2036,7 @@ describe('generateJsonReport', () => {
   let outputDir: string;
 
   beforeEach(() => {
-    outputDir = join(tmpdir(), `pally-json-test-${Date.now()}`);
+    outputDir = join(tmpdir(), `luqen-json-test-${Date.now()}`);
     mkdirSync(outputDir, { recursive: true });
   });
 
@@ -2089,7 +2089,7 @@ describe('generateJsonReport', () => {
     });
 
     expect(existsSync(report.reportPath)).toBe(true);
-    expect(report.reportPath).toMatch(/pally-report-.*\.json$/);
+    expect(report.reportPath).toMatch(/luqen-report-.*\.json$/);
 
     const content = JSON.parse(readFileSync(report.reportPath, 'utf-8'));
     expect(content.summary.totalIssues).toBe(2);
@@ -2151,12 +2151,12 @@ function generateTimestamp(): string {
 }
 
 function buildUniqueFilename(outputDir: string, timestamp: string): string {
-  let filename = `pally-report-${timestamp}.json`;
+  let filename = `luqen-report-${timestamp}.json`;
   let fullPath = join(outputDir, filename);
   let counter = 1;
 
   while (existsSync(fullPath)) {
-    filename = `pally-report-${timestamp}-${counter}.json`;
+    filename = `luqen-report-${timestamp}-${counter}.json`;
     fullPath = join(outputDir, filename);
     counter++;
   }
@@ -2236,7 +2236,7 @@ Create `src/reporter/report.hbs`:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pally Agent Report — {{summary.url}}</title>
+<title>Luqen Report — {{summary.url}}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px; color: #1a1a1a; background: #f8f9fa; }
@@ -2372,7 +2372,7 @@ describe('generateHtmlReport', () => {
   let outputDir: string;
 
   beforeEach(() => {
-    outputDir = join(tmpdir(), `pally-html-test-${Date.now()}`);
+    outputDir = join(tmpdir(), `luqen-html-test-${Date.now()}`);
     mkdirSync(outputDir, { recursive: true });
   });
 
@@ -2501,12 +2501,12 @@ function generateTimestamp(): string {
 }
 
 function buildUniqueFilename(outputDir: string, timestamp: string): string {
-  let filename = `pally-report-${timestamp}.html`;
+  let filename = `luqen-report-${timestamp}.html`;
   let fullPath = join(outputDir, filename);
   let counter = 1;
 
   while (existsSync(fullPath)) {
-    filename = `pally-report-${timestamp}-${counter}.html`;
+    filename = `luqen-report-${timestamp}-${counter}.html`;
     fullPath = join(outputDir, filename);
     counter++;
   }
@@ -2595,7 +2595,7 @@ describe('detectFramework', () => {
   let repoDir: string;
 
   beforeEach(() => {
-    repoDir = join(tmpdir(), `pally-fw-test-${Date.now()}`);
+    repoDir = join(tmpdir(), `luqen-fw-test-${Date.now()}`);
     mkdirSync(repoDir, { recursive: true });
   });
 
@@ -2795,7 +2795,7 @@ describe('resolveUrlToFile', () => {
   let repoDir: string;
 
   beforeEach(() => {
-    repoDir = join(tmpdir(), `pally-route-test-${Date.now()}`);
+    repoDir = join(tmpdir(), `luqen-route-test-${Date.now()}`);
     mkdirSync(repoDir, { recursive: true });
   });
 
@@ -3230,7 +3230,7 @@ describe('mapIssuesToSource', () => {
   let repoDir: string;
 
   beforeEach(() => {
-    repoDir = join(tmpdir(), `pally-map-test-${Date.now()}`);
+    repoDir = join(tmpdir(), `luqen-map-test-${Date.now()}`);
     mkdirSync(repoDir, { recursive: true });
     // Set up a Next.js App Router project
     writeFileSync(join(repoDir, 'next.config.js'), 'module.exports = {}');
@@ -3592,7 +3592,7 @@ describe('proposeFixesFromReport', () => {
   let repoDir: string;
 
   beforeEach(() => {
-    repoDir = join(tmpdir(), `pally-fix-test-${Date.now()}`);
+    repoDir = join(tmpdir(), `luqen-fix-test-${Date.now()}`);
     mkdirSync(repoDir, { recursive: true });
     writeFileSync(join(repoDir, 'next.config.js'), '');
     writeFileSync(join(repoDir, 'package.json'), JSON.stringify({ dependencies: { next: '14' } }));
@@ -3786,7 +3786,7 @@ describe('applyFix', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = join(tmpdir(), `pally-apply-test-${Date.now()}`);
+    tempDir = join(tmpdir(), `luqen-apply-test-${Date.now()}`);
     mkdirSync(tempDir, { recursive: true });
   });
 
@@ -3960,7 +3960,7 @@ describe('CLI', () => {
   it('exports a commander program', async () => {
     const { program } = await import('../src/cli.js');
     expect(program).toBeDefined();
-    expect(program.name()).toBe('pally-agent');
+    expect(program.name()).toBe('luqen');
   });
 
   it('has scan and fix commands', async () => {
@@ -4036,7 +4036,7 @@ import type { ScanReport, FixProposal } from './types.js';
 export const program = new Command();
 
 program
-  .name('pally-agent')
+  .name('luqen')
   .description('Accessibility testing agent using pa11y webservice')
   .version('0.1.0');
 
@@ -4327,10 +4327,10 @@ describe('MCP Server', () => {
     expect(server).toBeDefined();
     // The server object should be an MCP Server instance
     // We verify tool registration through the server's internal state
-    expect(server.toolNames).toContain('pally_scan');
-    expect(server.toolNames).toContain('pally_get_issues');
-    expect(server.toolNames).toContain('pally_propose_fixes');
-    expect(server.toolNames).toContain('pally_apply_fix');
+    expect(server.toolNames).toContain('luqen_scan');
+    expect(server.toolNames).toContain('luqen_get_issues');
+    expect(server.toolNames).toContain('luqen_propose_fixes');
+    expect(server.toolNames).toContain('luqen_apply_fix');
   });
 });
 ```
@@ -4361,16 +4361,16 @@ import type { ScanReport, PageResult } from './types.js';
 
 export function createServer(): McpServer & { toolNames: string[] } {
   const server = new McpServer({
-    name: 'pally-agent',
+    name: 'luqen',
     version: '0.1.0',
   });
 
   const toolNames: string[] = [];
 
-  // pally_scan
-  toolNames.push('pally_scan');
+  // luqen_scan
+  toolNames.push('luqen_scan');
   server.tool(
-    'pally_scan',
+    'luqen_scan',
     'Scan a website for accessibility issues',
     {
       url: z.string().describe('Website URL to scan'),
@@ -4440,10 +4440,10 @@ export function createServer(): McpServer & { toolNames: string[] } {
     },
   );
 
-  // pally_get_issues
-  toolNames.push('pally_get_issues');
+  // luqen_get_issues
+  toolNames.push('luqen_get_issues');
   server.tool(
-    'pally_get_issues',
+    'luqen_get_issues',
     'Get issues filtered by URL pattern, severity, or rule code',
     {
       reportPath: z.string().describe('Path to a JSON report'),
@@ -4485,10 +4485,10 @@ export function createServer(): McpServer & { toolNames: string[] } {
     },
   );
 
-  // pally_propose_fixes
-  toolNames.push('pally_propose_fixes');
+  // luqen_propose_fixes
+  toolNames.push('luqen_propose_fixes');
   server.tool(
-    'pally_propose_fixes',
+    'luqen_propose_fixes',
     'Generate code fix proposals for issues in a repo',
     {
       reportPath: z.string().describe('Path to a JSON report'),
@@ -4511,10 +4511,10 @@ export function createServer(): McpServer & { toolNames: string[] } {
     },
   );
 
-  // pally_apply_fix
-  toolNames.push('pally_apply_fix');
+  // luqen_apply_fix
+  toolNames.push('luqen_apply_fix');
   server.tool(
-    'pally_apply_fix',
+    'luqen_apply_fix',
     'Apply a specific proposed fix to a source file',
     {
       file: z.string().describe('Absolute file path'),
@@ -4564,7 +4564,7 @@ Expected: All 2 tests PASS
 
 ```bash
 git add src/mcp.ts tests/mcp.test.ts
-git commit -m "feat: add MCP server with pally_scan, pally_get_issues, pally_propose_fixes, pally_apply_fix"
+git commit -m "feat: add MCP server with luqen_scan, luqen_get_issues, luqen_propose_fixes, luqen_apply_fix"
 ```
 
 ---
@@ -4640,7 +4640,7 @@ Expected: No errors
 Verify `.gitignore`:
 
 ```bash
-echo "node_modules/\ndist/\n*.tgz\n.pally-reports/" > .gitignore
+echo "node_modules/\ndist/\n*.tgz\n.luqen-reports/" > .gitignore
 git add .gitignore
 git commit -m "chore: add .gitignore"
 ```

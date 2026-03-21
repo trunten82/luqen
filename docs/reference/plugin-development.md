@@ -2,7 +2,7 @@
 
 # Plugin Development Guide
 
-How to build plugins for the Pally Agent dashboard.
+How to build plugins for the Luqen dashboard.
 
 ---
 
@@ -114,7 +114,7 @@ refreshToken?(token: string): Promise<string>;
 **NotificationPlugin** extends `PluginInstance`:
 
 ```typescript
-send(event: PallyEvent): Promise<void>;
+send(event: LuqenEvent): Promise<void>;
 ```
 
 Events: `scan.complete`, `scan.failed`, `violation.found`, `regulation.changed`.
@@ -123,8 +123,8 @@ Events: `scan.complete`, `scan.failed`, `violation.found`, `regulation.changed`.
 
 | Package | Purpose |
 |---------|---------|
-| `@pally-agent/plugin-notify-slack` | Slack channel notifications |
-| `@pally-agent/plugin-notify-email` | Email notifications and scheduled report delivery with PDF/CSV attachments |
+| `@luqen/plugin-notify-slack` | Slack channel notifications |
+| `@luqen/plugin-notify-email` | Email notifications and scheduled report delivery with PDF/CSV attachments |
 
 **StoragePlugin** extends `PluginInstance`:
 
@@ -231,7 +231,7 @@ To add a plugin to the built-in registry, add an entry to `packages/dashboard/pl
   "type": "notification",
   "version": "1.0.0",
   "description": "Does something useful",
-  "packageName": "@pally-agent/plugin-my-plugin",
+  "packageName": "@luqen/plugin-my-plugin",
   "icon": "custom"
 }
 ```

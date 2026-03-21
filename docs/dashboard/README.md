@@ -1,8 +1,8 @@
-# Pally Dashboard
+# Luqen
 
 **Browser-based interface for accessibility scanning, report management, and compliance administration.**
 
-The Pally Dashboard is a server-rendered web application built with Fastify, Handlebars, and [HTMX](https://htmx.org/). It provides a visual interface for launching site-wide accessibility scans, monitoring progress in real time, browsing and comparing reports, and administering the compliance service — all from a standard browser with no JavaScript build step required.
+The Luqen is a server-rendered web application built with Fastify, Handlebars, and [HTMX](https://htmx.org/). It provides a visual interface for launching site-wide accessibility scans, monitoring progress in real time, browsing and comparing reports, and administering the compliance service — all from a standard browser with no JavaScript build step required.
 
 ---
 
@@ -27,7 +27,7 @@ The Pally Dashboard is a server-rendered web application built with Fastify, Han
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  @pally-agent/dashboard                      │
+│                  @luqen/dashboard                      │
 │                                                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐ │
 │  │  Routes       │  │  Views       │  │  Static Assets    │ │
@@ -43,7 +43,7 @@ The Pally Dashboard is a server-rendered web application built with Fastify, Han
 │  │  ┌──────────┐  ┌──────────────┐  ┌────────────────┐  │   │
 │  │  │ Auth     │  │ Scanner      │  │ Compliance     │  │   │
 │  │  │ (JWT     │  │ Orchestrator │  │ Client         │  │   │
-│  │  │  cookie, │  │ (@pally-     │  │ (HTTP REST     │  │   │
+│  │  │  cookie, │  │ (@luqen-     │  │ (HTTP REST     │  │   │
 │  │  │  roles)  │  │  agent/core) │  │  to compliance │  │   │
 │  │  └──────────┘  └──────────────┘  │  service)      │  │   │
 │  │                                   └────────────────┘  │   │
@@ -54,7 +54,7 @@ The Pally Dashboard is a server-rendered web application built with Fastify, Han
 │                                                             │
 │  External Dependencies:                                      │
 │  ┌─────────────────┐  ┌──────────────────────────────────┐  │
-│  │ @pally-agent/   │  │ Compliance Service (REST API)    │  │
+│  │ @luqen/   │  │ Compliance Service (REST API)    │  │
 │  │ core            │  │ http://localhost:4000             │  │
 │  │ (workspace dep) │  └──────────────────────────────────┘  │
 │  └─────────────────┘                                        │
@@ -67,7 +67,7 @@ The Pally Dashboard is a server-rendered web application built with Fastify, Han
 - **No SPA** — progressive enhancement via HTMX. Pages degrade gracefully without JavaScript; HTMX adds live updates and partial page swaps.
 - **Local SQLite** — scan records and history are stored locally in a single SQLite file.
 - **Auth via compliance service** — the dashboard delegates authentication to the compliance service via an OAuth2 password grant. JWTs are verified locally using the compliance service's public key.
-- **Self-auditing** — the dashboard is required to pass its own WCAG 2.1 AA accessibility audit using pally-agent against the EU jurisdiction. Zero confirmed violations is the acceptance criterion.
+- **Self-auditing** — the dashboard is required to pass its own WCAG 2.1 AA accessibility audit using luqen against the EU jurisdiction. Zero confirmed violations is the acceptance criterion.
 
 ---
 
@@ -417,7 +417,7 @@ Approved proposals update the compliance service's jurisdiction/regulation data 
 - **Create** — modal form with username, password, and role dropdown (shows all available roles including custom ones).
 - **Deactivate** — marks the user inactive (does not delete the account). Confirmation required.
 
-Note: Dashboard Users are stored in the dashboard's local SQLite database. These are separate from API Users (Compliance) managed via `pally-compliance users create`.
+Note: Dashboard Users are stored in the dashboard's local SQLite database. These are separate from API Users (Compliance) managed via `luqen-compliance users create`.
 
 ### Managing OAuth clients
 
@@ -457,10 +457,10 @@ docker compose up -d
 ```
 
 Services started:
-- `pally-compliance` on port 4000
-- `pally-dashboard` on port 5000
+- `luqen-compliance` on port 4000
+- `luqen-dashboard` on port 5000
 
-The dashboard container runs `pally-dashboard migrate` automatically before starting the server.
+The dashboard container runs `luqen-dashboard migrate` automatically before starting the server.
 
 ### Environment variables for Docker
 
@@ -486,14 +486,14 @@ DASHBOARD_COMPLIANCE_CLIENT_SECRET=<client secret>
 
 ## Accessibility
 
-The dashboard must meet WCAG 2.1 Level AA. Because it is part of the pally ecosystem, it is self-audited using pally-agent.
+The dashboard must meet WCAG 2.1 Level AA. Because it is part of the luqen ecosystem, it is self-audited using luqen.
 
 ### Acceptance criterion
 
 Zero confirmed violations when scanning the running dashboard against the EU jurisdiction:
 
 ```bash
-pally-agent scan http://localhost:5000 \
+luqen scan http://localhost:5000 \
   --compliance-url http://localhost:4000 \
   --jurisdictions EU
 ```
@@ -524,14 +524,14 @@ pally-agent scan http://localhost:5000 \
 
 ## CLI Reference
 
-The dashboard package installs a `pally-dashboard` binary.
+The dashboard package installs a `luqen-dashboard` binary.
 
-### `pally-dashboard serve`
+### `luqen-dashboard serve`
 
 Start the web server.
 
 ```
-pally-dashboard serve [options]
+luqen-dashboard serve [options]
 
 Options:
   -p, --port <number>    Port to listen on (overrides config)
@@ -547,12 +547,12 @@ Startup sequence:
 6. Register all routes
 7. Start listening
 
-### `pally-dashboard migrate`
+### `luqen-dashboard migrate`
 
 Create or update the SQLite schema. Safe to run multiple times (`CREATE TABLE IF NOT EXISTS`).
 
 ```
-pally-dashboard migrate [options]
+luqen-dashboard migrate [options]
 
 Options:
   -d, --db-path <path>   Path to SQLite database file (overrides config)

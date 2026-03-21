@@ -1,13 +1,13 @@
 # Claude Code Integration
 
-Use the Pally Compliance Service as an MCP server in Claude Code to check accessibility compliance, look up regulations, and manage the compliance database directly from your AI assistant.
+Use the Luqen Compliance Service as an MCP server in Claude Code to check accessibility compliance, look up regulations, and manage the compliance database directly from your AI assistant.
 
 ## Setup
 
 ### Step 1: Build the compliance package
 
 ```bash
-cd /path/to/pally-agent
+cd /path/to/luqen
 npm install
 cd packages/compliance
 npm run build
@@ -20,18 +20,18 @@ Add to `~/.claude/settings.json` (global) or `.claude/settings.json` (project-le
 ```json
 {
   "mcpServers": {
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "node",
-      "args": ["/absolute/path/to/pally-agent/packages/compliance/dist/cli.js", "mcp"],
+      "args": ["/absolute/path/to/luqen/packages/compliance/dist/cli.js", "mcp"],
       "env": {
-        "COMPLIANCE_DB_PATH": "/absolute/path/to/pally-agent/packages/compliance/compliance.db"
+        "COMPLIANCE_DB_PATH": "/absolute/path/to/luqen/packages/compliance/compliance.db"
       }
     }
   }
 }
 ```
 
-Replace `/absolute/path/to/pally-agent` with the actual path on your system.
+Replace `/absolute/path/to/luqen` with the actual path on your system.
 
 **Important:** Use absolute paths. Relative paths will not work because Claude Code's working directory is not guaranteed.
 
@@ -46,7 +46,7 @@ Use the compliance_seed tool to load the baseline compliance dataset.
 Or seed via CLI before starting Claude Code:
 
 ```bash
-cd /path/to/pally-agent/packages/compliance
+cd /path/to/luqen/packages/compliance
 node dist/cli.js seed
 ```
 
@@ -54,7 +54,7 @@ node dist/cli.js seed
 
 MCP servers are connected at startup. Restart Claude Code after adding the server config.
 
-Verify the tools are available: in Claude Code, the `pally-compliance` MCP server should appear in the tools list.
+Verify the tools are available: in Claude Code, the `luqen-compliance` MCP server should appear in the tools list.
 
 ## Available tools
 
@@ -162,14 +162,14 @@ Use compliance_add_source with:
 
 ## Workflow: full accessibility audit with legal context
 
-A complete audit workflow using both `pally-agent` and `pally-compliance` MCP servers:
+A complete audit workflow using both `luqen` and `luqen-compliance` MCP servers:
 
 ```
 1. Scan the site:
-   pally_scan { "url": "https://example.com", "standard": "WCAG2AA" }
+   luqen_scan { "url": "https://example.com", "standard": "WCAG2AA" }
 
 2. Get the issues:
-   pally_get_issues { "reportPath": "...", "severity": "error" }
+   luqen_get_issues { "reportPath": "...", "severity": "error" }
 
 3. Check legal compliance:
    compliance_check {
@@ -178,7 +178,7 @@ A complete audit workflow using both `pally-agent` and `pally-compliance` MCP se
    }
 
 4. Propose fixes for the mandatory violations:
-   pally_propose_fixes { "reportPath": "...", "repoPath": "/path/to/repo" }
+   luqen_propose_fixes { "reportPath": "...", "repoPath": "/path/to/repo" }
 
 5. Prioritize: fix mandatory violations first (they're legal requirements),
    then recommended, then optional
@@ -186,14 +186,14 @@ A complete audit workflow using both `pally-agent` and `pally-compliance` MCP se
 
 ## Authentication note
 
-When running as an MCP server via `pally-compliance mcp`, the server runs in **local mode** with full admin access. No OAuth tokens are needed. This is appropriate for single-user Claude Code setups where the user controls the compliance database.
+When running as an MCP server via `luqen-compliance mcp`, the server runs in **local mode** with full admin access. No OAuth tokens are needed. This is appropriate for single-user Claude Code setups where the user controls the compliance database.
 
 For multi-user or remote compliance service access, set the MCP server config to authenticate via OAuth:
 
 ```json
 {
   "mcpServers": {
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "node",
       "args": ["/path/to/compliance/dist/cli.js", "mcp"],
       "env": {

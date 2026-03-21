@@ -2,16 +2,16 @@
 
 # Licensing
 
-## Pally Ecosystem License
+## Luqen Ecosystem License
 
 All packages in this monorepo are published under the **MIT License**.
 
 | Package | License |
 |---|---|
-| `@pally-agent/core` | MIT |
-| `@pally-agent/compliance` | MIT |
-| `@pally-agent/dashboard` | MIT |
-| `@pally-agent/monitor` | MIT |
+| `@luqen/core` | MIT |
+| `@luqen/compliance` | MIT |
+| `@luqen/dashboard` | MIT |
+| `@luqen/monitor` | MIT |
 
 The full license text is in [`LICENSE`](../LICENSE) at the repository root.
 

@@ -2,22 +2,22 @@
 
 # Developer CLI — Scan, Gate, Fix
 
-Covers composition paths 1-3: quick scanning, CI/CD gating, and fix proposals. Uses `@pally-agent/core` only.
+Covers composition paths 1-3: quick scanning, CI/CD gating, and fix proposals. Uses `@luqen/core` only.
 
 ---
 
 ## Prerequisites
 
 - Node.js 20+
-- pa11y webservice running (Docker: `docker run -d -p 3000:3000 pally/webservice:latest`)
+- pa11y webservice running (Docker: `docker run -d -p 3000:3000 luqen/webservice:latest`)
 
 ---
 
 ## Install
 
 ```bash
-npm install -g @pally-agent/core
-export PALLY_WEBSERVICE_URL=http://localhost:3000
+npm install -g @luqen/core
+export LUQEN_WEBSERVICE_URL=http://localhost:3000
 ```
 
 ---
@@ -26,13 +26,13 @@ export PALLY_WEBSERVICE_URL=http://localhost:3000
 
 ```bash
 # JSON report (default)
-pally-agent scan https://example.com
+luqen scan https://example.com
 
 # HTML report
-pally-agent scan https://example.com --format html
+luqen scan https://example.com --format html
 
 # Both formats
-pally-agent scan https://example.com --format both
+luqen scan https://example.com --format both
 ```
 
 ### Scan options
@@ -42,10 +42,10 @@ pally-agent scan https://example.com --format both
 | `--standard <std>` | WCAG level: `WCAG2A`, `WCAG2AA`, `WCAG2AAA` | `WCAG2AA` |
 | `--concurrency <n>` | Pages scanned in parallel | `5` |
 | `--format <fmt>` | Output: `json`, `html`, `both` | `json` |
-| `--output <dir>` | Report output directory | `./pally-reports` |
+| `--output <dir>` | Report output directory | `./luqen-reports` |
 | `--also-crawl` | Crawl links in addition to sitemap | off |
 | `--repo <path>` | Source repo for source mapping | none |
-| `--config <path>` | Custom config file path | `.pally-agent.json` |
+| `--config <path>` | Custom config file path | `.luqen.json` |
 
 ### Output formats
 
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       pa11y:
-        image: pally/webservice:latest
+        image: luqen/webservice:latest
         ports:
           - 3000:3000
 
@@ -95,19 +95,19 @@ jobs:
         with:
           node-version: 20
 
-      - run: npm install -g @pally-agent/core
+      - run: npm install -g @luqen/core
 
       - name: Scan
         env:
-          PALLY_WEBSERVICE_URL: http://localhost:3000
-        run: pally-agent scan ${{ vars.SITE_URL }} --format json
+          LUQEN_WEBSERVICE_URL: http://localhost:3000
+        run: luqen scan ${{ vars.SITE_URL }} --format json
 
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: a11y-report
-          path: pally-reports/
+          path: luqen-reports/
 ```
 
 The job fails on exit code 1 (issues found) or higher. Artifacts preserve the report regardless of outcome.
@@ -124,7 +124,7 @@ pool:
 
 services:
   pa11y:
-    image: pally/webservice:latest
+    image: luqen/webservice:latest
     ports:
       - 3000:3000
 
@@ -133,18 +133,18 @@ steps:
     inputs:
       versionSpec: '20.x'
 
-  - script: npm install -g @pally-agent/core
-    displayName: Install pally-agent
+  - script: npm install -g @luqen/core
+    displayName: Install luqen
 
-  - script: pally-agent scan $(SITE_URL) --format json
+  - script: luqen scan $(SITE_URL) --format json
     displayName: Accessibility scan
     env:
-      PALLY_WEBSERVICE_URL: http://localhost:3000
+      LUQEN_WEBSERVICE_URL: http://localhost:3000
 
   - task: PublishBuildArtifacts@1
     condition: always()
     inputs:
-      pathToPublish: pally-reports
+      pathToPublish: luqen-reports
       artifactName: a11y-report
 ```
 
@@ -156,10 +156,10 @@ Generate code fixes for issues found in a scan:
 
 ```bash
 # Scan first
-pally-agent scan https://example.com --format json --repo ./my-project
+luqen scan https://example.com --format json --repo ./my-project
 
 # Propose fixes from the report
-pally-agent fix --repo ./my-project --from-report pally-reports/pally-report-*.json
+luqen fix --repo ./my-project --from-report luqen-reports/luqen-report-*.json
 ```
 
 The fix command reads the scan report, maps issues to source files using the `--repo` path, and presents fixes interactively. Each fix shows a diff preview. Accept or skip each one.
@@ -170,7 +170,7 @@ Fix proposals cover common issues: missing `alt` attributes, missing form labels
 
 ## Configuration file
 
-Create `.pally-agent.json` in your project root to avoid repeating flags:
+Create `.luqen.json` in your project root to avoid repeating flags:
 
 ```json
 {
@@ -178,7 +178,7 @@ Create `.pally-agent.json` in your project root to avoid repeating flags:
   "standard": "WCAG2AA",
   "concurrency": 5,
   "format": "both",
-  "outputDir": "./pally-reports",
+  "outputDir": "./luqen-reports",
   "alsoCrawl": true
 }
 ```

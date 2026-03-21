@@ -1,17 +1,17 @@
-# Integrating pally-agent with the Compliance Service
+# Integrating luqen with the Compliance Service
 
-Connect pally-agent to the compliance service to automatically annotate accessibility scan results with legal context.
+Connect luqen to the compliance service to automatically annotate accessibility scan results with legal context.
 
 ## Overview
 
 Without the compliance service:
 ```
-pally-agent scan → WCAG violations list
+luqen scan → WCAG violations list
 ```
 
 With the compliance service:
 ```
-pally-agent scan → WCAG violations → compliance check → enriched report
+luqen scan → WCAG violations → compliance check → enriched report
                                            ↓
                            per-jurisdiction pass/fail matrix
                            legal obligation levels
@@ -25,17 +25,17 @@ pally-agent scan → WCAG violations → compliance check → enriched report
 On the compliance service:
 
 ```bash
-pally-compliance clients create \
-  --name "pally-agent" \
+luqen-compliance clients create \
+  --name "luqen" \
   --scope "read" \
   --grant client_credentials
 ```
 
 Note the `client_id` and `client_secret`.
 
-### Step 2: Configure pally-agent
+### Step 2: Configure luqen
 
-Add a `compliance` section to `.pally-agent.json`:
+Add a `compliance` section to `.luqen.json`:
 
 ```json
 {
@@ -79,10 +79,10 @@ Use environment variables for secrets:
 
 ### Integrated workflow (recommended — v0.2.0+)
 
-pally-agent has native compliance integration. Pass credentials on the CLI and the enriched report is produced in a single step:
+luqen has native compliance integration. Pass credentials on the CLI and the enriched report is produced in a single step:
 
 ```bash
-pally-agent scan https://example.com \
+luqen scan https://example.com \
   --format both \
   --compliance-url http://localhost:4000 \
   --jurisdictions EU,US,UK \
@@ -102,11 +102,11 @@ The JSON report includes:
 
 ### Manual workflow (shell pipeline)
 
-If you need more control or are scripting outside of pally-agent:
+If you need more control or are scripting outside of luqen:
 
 ```bash
 # Step 1: Scan the website
-pally-agent scan https://example.com --format json
+luqen scan https://example.com --format json
 
 # Step 2: Obtain a token
 TOKEN=$(curl -s -X POST http://localhost:4000/api/v1/oauth/token \
@@ -116,7 +116,7 @@ TOKEN=$(curl -s -X POST http://localhost:4000/api/v1/oauth/token \
 
 # Step 3: Extract issues and check compliance
 ISSUES=$(jq '[.pages[].issues[] | {code:.code,type:.type,message:.message,selector:.selector,context:.context}]' \
-  pally-reports/pally-report-*.json)
+  luqen-reports/luqen-report-*.json)
 
 curl -X POST http://localhost:4000/api/v1/compliance/check \
   -H "Authorization: Bearer $TOKEN" \
@@ -207,16 +207,16 @@ Each pa11y issue is enriched with the regulations it violates:
 
 ## A2A integration (agent-to-agent)
 
-pally-agent can also call the compliance service via the A2A protocol. This uses task semantics with SSE streaming for progress updates.
+luqen can also call the compliance service via the A2A protocol. This uses task semantics with SSE streaming for progress updates.
 
-### A2A config in pally-agent
+### A2A config in luqen
 
 ```json
 {
   "a2a": {
     "peers": [
       {
-        "name": "pally-compliance",
+        "name": "luqen-compliance",
         "url": "http://localhost:4000",
         "clientId": "YOUR_CLIENT_ID",
         "clientSecret": "YOUR_CLIENT_SECRET"
@@ -228,7 +228,7 @@ pally-agent can also call the compliance service via the A2A protocol. This uses
 
 ### How it works
 
-1. pally-agent discovers the compliance service via `GET http://localhost:4000/.well-known/agent.json`
+1. luqen discovers the compliance service via `GET http://localhost:4000/.well-known/agent.json`
 2. Authenticates using client credentials: `POST /api/v1/oauth/token`
 3. Submits a task: `POST /a2a/tasks` with `skill: "compliance-check"`
 4. Streams progress: `GET /a2a/tasks/:id/stream`

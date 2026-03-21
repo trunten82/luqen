@@ -2,16 +2,16 @@
 
 # User Guide
 
-A plain-language guide to understanding and using pally-agent.
+A plain-language guide to understanding and using luqen.
 
 ---
 
-## What pally-agent does
+## What luqen does
 
-Pally-agent visits every page on your website and checks each one for accessibility problems — things that make a site difficult or impossible to use for people with disabilities. It then tells you:
+Luqen-agent visits every page on your website and checks each one for accessibility problems — things that make a site difficult or impossible to use for people with disabilities. It then tells you:
 
 1. **What problems exist** — each issue is described in plain language with the HTML it came from.
-2. **Where in your code the problem lives** — if you provide your source code, pally-agent points to the specific file and line.
+2. **Where in your code the problem lives** — if you provide your source code, luqen points to the specific file and line.
 3. **What fix to apply** — for common problems, it generates a code diff you can apply with a single keypress.
 4. **Which laws require you to fix it** — the compliance service tells you whether each issue is a legal obligation in the EU, US, UK, or 55 other jurisdictions.
 
@@ -19,9 +19,9 @@ Pally-agent visits every page on your website and checks each one for accessibil
 
 ## How accessibility scanning works
 
-Pally-agent uses a tool called **pa11y**, which controls a headless browser to load each page and run automated accessibility checks based on WCAG (Web Content Accessibility Guidelines).
+Luqen-agent uses a tool called **pa11y**, which controls a headless browser to load each page and run automated accessibility checks based on WCAG (Web Content Accessibility Guidelines).
 
-**Discovery:** Before scanning, pally-agent reads your site's `sitemap.xml` to find all pages. If there is no sitemap, it crawls the site by following links. You can also combine both methods with `--also-crawl`.
+**Discovery:** Before scanning, luqen reads your site's `sitemap.xml` to find all pages. If there is no sitemap, it crawls the site by following links. You can also combine both methods with `--also-crawl`.
 
 **Scanning:** Each page is loaded in the browser, and pa11y checks it against the WCAG standard you choose (WCAG 2.1 AA is the legal standard in most jurisdictions). You can select the test runner — HTML_CodeSniffer (default) or axe-core — via the `--runner` flag, `DASHBOARD_SCANNER_RUNNER` env var, or the scan form dropdown.
 
@@ -77,7 +77,7 @@ Each issue in the report shows regulation badges (e.g. `EAA`, `ADA`) linking to 
 
 Many pages share the same header, footer, or navigation. If a shared component has an accessibility problem, it appears identically on every page — a single missing `alt` attribute on a logo could show up 50 times across a large site.
 
-Pally-agent detects this: any issue appearing on 3 or more pages with the same selector and context is deduplicated and grouped by **inferred component**. The system analyses selectors, DOM context, and page positions to assign each template issue to a named component — Navigation, Footer, Cookie Banner, Form, Header, or a general Layout group. Each component group shows its affected page count and severity breakdown.
+Luqen-agent detects this: any issue appearing on 3 or more pages with the same selector and context is deduplicated and grouped by **inferred component**. The system analyses selectors, DOM context, and page positions to assign each template issue to a named component — Navigation, Footer, Cookie Banner, Form, Header, or a general Layout group. Each component group shows its affected page count and severity breakdown.
 
 In the dashboard, template issues appear in a dedicated **Templates** tab (only visible on full-site scans). Fix an issue once in the shared component and all occurrences resolve across the site.
 
@@ -189,7 +189,7 @@ Each issue in a report can be assigned to a user or team and tracked through a l
 
 ### Connected repositories
 
-Link GitHub or GitLab repositories under **Settings > Connected Repos**. When a scan completes, pally-agent analyses the issues against connected repo source files and generates fix proposals (up to 21 suggestion types) via MCP/A2A integration. View proposals in the report under the **Fixes** tab or at `/admin/proposals`.
+Link GitHub or GitLab repositories under **Settings > Connected Repos**. When a scan completes, luqen analyses the issues against connected repo source files and generates fix proposals (up to 21 suggestion types) via MCP/A2A integration. View proposals in the report under the **Fixes** tab or at `/admin/proposals`.
 
 ### Role-based experience
 
@@ -202,7 +202,7 @@ The dashboard adapts its navigation and default views based on the user's role a
 | **User** | Report list | Scan creation, report browsing, manual testing |
 | **Executive** | Org score dashboard | Aggregated score, trends, compliance summary |
 
-> **Dashboard Users vs API Users (Compliance):** Dashboard Users log in to the web UI and are managed at `/admin/users`. API Users are accounts on the compliance service for direct API access, managed via `pally-compliance users create`. These are separate user stores.
+> **Dashboard Users vs API Users (Compliance):** Dashboard Users log in to the web UI and are managed at `/admin/users`. API Users are accounts on the compliance service for direct API access, managed via `luqen-compliance users create`. These are separate user stores.
 
 ### Scan modes
 
@@ -214,7 +214,7 @@ The scan form offers two modes:
 The scan form also offers:
 
 - **Runner** dropdown — choose between HTML_CodeSniffer (`htmlcs`) and axe-core (`axe`) test runners.
-- **Incremental scan** checkbox — when enabled, pally-agent computes a SHA-256 content hash for each page and only re-scans pages whose content has changed since the last scan. Unchanged pages reuse their previous results. This is tracked in a `page_hashes` database table.
+- **Incremental scan** checkbox — when enabled, luqen computes a SHA-256 content hash for each page and only re-scans pages whose content has changed since the last scan. Unchanged pages reuse their previous results. This is tracked in a `page_hashes` database table.
 
 ### Report layout
 
@@ -242,7 +242,7 @@ The dashboard tracks scan results over time. Visit `/reports/trends` to see Char
 
 ### Email reports
 
-The dashboard can send scheduled accessibility reports and event notifications by email, powered by the `@pally-agent/plugin-notify-email` plugin.
+The dashboard can send scheduled accessibility reports and event notifications by email, powered by the `@luqen/plugin-notify-email` plugin.
 
 1. **Install the plugin** — go to **Admin > Plugins**, find **Email Notifications**, and click **Install**.
 2. **Configure SMTP** — open the plugin settings and enter your mail server host, port, TLS setting, credentials, and "from" address. Activate the plugin to verify connectivity.
@@ -301,7 +301,7 @@ Connect Power BI to the data API using **Get Data > Web** (Advanced mode). Enter
 
 ---
 
-## What pally-agent cannot check automatically
+## What luqen cannot check automatically
 
 Automated tools catch approximately 30–40% of accessibility issues. Things that require human review:
 
@@ -311,7 +311,7 @@ Automated tools catch approximately 30–40% of accessibility issues. Things tha
 - **Cognitive accessibility** — plain language, consistent navigation, error prevention.
 - **Complex interactions** — carousels, drag-and-drop, custom widgets.
 
-Use pally-agent to find and fix the issues it can confirm automatically, then do a manual review for the rest.
+Use luqen to find and fix the issues it can confirm automatically, then do a manual review for the rest.
 
 ---
 

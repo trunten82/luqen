@@ -447,13 +447,13 @@ Add a new entry at the top of CHANGELOG.md:
 - [ ] **Step 4: Rename doc files containing "pally"**
 
 ```bash
-mv docs/getting-started/what-is-pally.md docs/getting-started/what-is-luqen.md
+mv docs/getting-started/what-is-luqen.md docs/getting-started/what-is-luqen.md
 ```
 
 Then update any cross-references to the old filename:
 
 ```bash
-grep -rl "what-is-pally" docs/ | xargs sed -i 's/what-is-pally/what-is-luqen/g'
+grep -rl "what-is-luqen" docs/ | xargs sed -i 's/what-is-luqen/what-is-luqen/g'
 ```
 
 - [ ] **Step 5: Update OpenAPI spec files**

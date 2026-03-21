@@ -4,7 +4,7 @@
 
 **Goal:** Refactor authentication into a progressive system — Solo (API key, default), Team (local users), Enterprise (SSO plugin) — where each mode activates based on configuration, not code changes.
 
-**Architecture:** The dashboard becomes self-sufficient for auth. A new `AuthService` abstraction sits between the auth middleware and the actual auth providers (API key, local password, SSO plugins). The compliance service gains a simple API key auth option for service-to-service calls. The first SSO plugin (`@pally-agent/plugin-auth-entra`) proves the auth plugin interface works end-to-end.
+**Architecture:** The dashboard becomes self-sufficient for auth. A new `AuthService` abstraction sits between the auth middleware and the actual auth providers (API key, local password, SSO plugins). The compliance service gains a simple API key auth option for service-to-service calls. The first SSO plugin (`@luqen/plugin-auth-entra`) proves the auth plugin interface works end-to-end.
 
 **Tech Stack:** TypeScript, Fastify 5, better-sqlite3, jose, bcrypt, @azure/msal-node (for Entra plugin)
 
@@ -29,7 +29,7 @@ packages/dashboard/tests/
     auth-service.test.ts
     api-key.test.ts
 
-packages/plugins/auth-entra/   # New package: @pally-agent/plugin-auth-entra
+packages/plugins/auth-entra/   # New package: @luqen/plugin-auth-entra
   package.json
   manifest.json
   tsconfig.json
@@ -556,7 +556,7 @@ The first auth plugin — Azure Entra ID SSO via OIDC.
 
 ```
 packages/plugins/auth-entra/
-  package.json          # @pally-agent/plugin-auth-entra
+  package.json          # @luqen/plugin-auth-entra
   manifest.json         # Plugin manifest with configSchema
   tsconfig.json
   src/
@@ -624,7 +624,7 @@ cd packages/plugins/auth-entra && npm test
 - [ ] **Step 5: Commit**
 
 ```bash
-git commit -m "feat: add @pally-agent/plugin-auth-entra — Azure Entra ID SSO plugin"
+git commit -m "feat: add @luqen/plugin-auth-entra — Azure Entra ID SSO plugin"
 ```
 
 ---
@@ -638,7 +638,7 @@ git commit -m "feat: add @pally-agent/plugin-auth-entra — Azure Entra ID SSO p
 - `docs/reference/dashboard-config.md` — new auth config
 - `docs/reference/cli-reference.md` — api-key command
 - `CHANGELOG.md` — v0.9.0 entry
-- `.claude/skills/pally-agent/SKILL.md` — update
+- `.claude/skills/luqen/SKILL.md` — update
 
 - [ ] **Step 1: Update existing docs**
 - [ ] **Step 2: Create enterprise-sso.md path guide**

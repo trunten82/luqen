@@ -2,13 +2,13 @@
 
 # CI/CD Integration Guide
 
-How to integrate pally-agent into your continuous integration and deployment pipelines.
+How to integrate luqen into your continuous integration and deployment pipelines.
 
 ---
 
 ## Exit codes
 
-Pally-agent uses exit codes to signal scan results to pipeline runners:
+Luqen-agent uses exit codes to signal scan results to pipeline runners:
 
 | Code | Meaning | Pipeline action |
 |------|---------|-----------------|
@@ -17,7 +17,7 @@ Pally-agent uses exit codes to signal scan results to pipeline runners:
 | `2` | Partial failure — some pages could not be scanned | Fail the build (unreliable result) |
 | `3` | Fatal error — scan could not run at all | Fail the build (infrastructure problem) |
 
-In most pipelines, exit code `0` passes and anything else fails. This means pally-agent will fail your pipeline whenever accessibility issues are found — which is the desired behaviour for a quality gate.
+In most pipelines, exit code `0` passes and anything else fails. This means luqen will fail your pipeline whenever accessibility issues are found — which is the desired behaviour for a quality gate.
 
 ---
 
@@ -26,7 +26,7 @@ In most pipelines, exit code `0` passes and anything else fails. This means pall
 ### Minimal example
 
 ```bash
-pally-agent scan https://staging.example.com --standard WCAG2AA --format json
+luqen scan https://staging.example.com --standard WCAG2AA --format json
 ```
 
 If any issues are found, the command exits with code `1` and the pipeline step fails.
@@ -34,7 +34,7 @@ If any issues are found, the command exits with code `1` and the pipeline step f
 ### With compliance gate
 
 ```bash
-pally-agent scan https://staging.example.com \
+luqen scan https://staging.example.com \
   --standard WCAG2AA \
   --format json \
   --compliance-url https://compliance.internal:4100 \
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       pa11y:
-        image: pally/webservice:latest
+        image: luqen/webservice:latest
         ports:
           - 3000:3000
 
@@ -76,19 +76,19 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install pally-agent
+      - name: Install luqen
         run: |
-          git clone https://github.com/trunten82/pally-agent.git /tmp/pally-agent
-          cd /tmp/pally-agent
+          git clone https://github.com/trunten82/luqen.git /tmp/luqen
+          cd /tmp/luqen
           npm install
           npm run build:all
           cd packages/core && npm link
 
       - name: Run accessibility scan
         env:
-          PALLY_WEBSERVICE_URL: http://localhost:3000
+          LUQEN_WEBSERVICE_URL: http://localhost:3000
         run: |
-          pally-agent scan ${{ vars.STAGING_URL }} \
+          luqen scan ${{ vars.STAGING_URL }} \
             --standard WCAG2AA \
             --format both \
             --output ./a11y-reports
@@ -109,7 +109,7 @@ Add a compliance service container and pass credentials:
 ```yaml
     services:
       pa11y:
-        image: pally/webservice:latest
+        image: luqen/webservice:latest
         ports:
           - 3000:3000
 
@@ -118,9 +118,9 @@ Add a compliance service container and pass credentials:
 
       - name: Run accessibility scan with compliance
         env:
-          PALLY_WEBSERVICE_URL: http://localhost:3000
+          LUQEN_WEBSERVICE_URL: http://localhost:3000
         run: |
-          pally-agent scan ${{ vars.STAGING_URL }} \
+          luqen scan ${{ vars.STAGING_URL }} \
             --standard WCAG2AA \
             --format json \
             --compliance-url ${{ vars.COMPLIANCE_URL }} \
@@ -149,25 +149,25 @@ steps:
       versionSpec: '20.x'
 
   - script: |
-      git clone https://github.com/trunten82/pally-agent.git $(Agent.TempDirectory)/pally-agent
-      cd $(Agent.TempDirectory)/pally-agent
+      git clone https://github.com/trunten82/luqen.git $(Agent.TempDirectory)/luqen
+      cd $(Agent.TempDirectory)/luqen
       npm install
       npm run build:all
       cd packages/core && npm link
-    displayName: 'Install pally-agent'
+    displayName: 'Install luqen'
 
   - script: |
-      docker run -d --name pa11y -p 3000:3000 pally/webservice:latest
+      docker run -d --name pa11y -p 3000:3000 luqen/webservice:latest
       sleep 5
     displayName: 'Start pa11y webservice'
 
   - script: |
-      pally-agent scan $(STAGING_URL) \
+      luqen scan $(STAGING_URL) \
         --standard WCAG2AA \
         --format both \
         --output $(Build.ArtifactStagingDirectory)/a11y-reports
     env:
-      PALLY_WEBSERVICE_URL: http://localhost:3000
+      LUQEN_WEBSERVICE_URL: http://localhost:3000
     displayName: 'Run accessibility scan'
 
   - task: PublishBuildArtifacts@1
@@ -186,19 +186,19 @@ a11y-scan:
   stage: test
   image: node:20
   services:
-    - name: pally/webservice:latest
+    - name: luqen/webservice:latest
       alias: pa11y
 
   variables:
-    PALLY_WEBSERVICE_URL: http://pa11y:3000
+    LUQEN_WEBSERVICE_URL: http://pa11y:3000
 
   before_script:
-    - git clone https://github.com/trunten82/pally-agent.git /tmp/pally-agent
-    - cd /tmp/pally-agent && npm install && npm run build:all
+    - git clone https://github.com/trunten82/luqen.git /tmp/luqen
+    - cd /tmp/luqen && npm install && npm run build:all
     - cd packages/core && npm link
 
   script:
-    - pally-agent scan $STAGING_URL
+    - luqen scan $STAGING_URL
         --standard WCAG2AA
         --format both
         --output ./a11y-reports
@@ -247,7 +247,7 @@ Use this script as a separate pipeline step after the scan:
 
 ```yaml
       - name: Run scan
-        run: pally-agent scan $URL --format json --compliance-url $COMPLIANCE_URL --jurisdictions EU,US
+        run: luqen scan $URL --format json --compliance-url $COMPLIANCE_URL --jurisdictions EU,US
         continue-on-error: true  # Don't fail on issues alone
 
       - name: Compliance gate
@@ -394,7 +394,7 @@ fi
 
 4. **Pin the WCAG standard** — always specify `--standard WCAG2AA` explicitly rather than relying on the default. This prevents surprises if the default changes.
 
-5. **Cache the pally-agent installation** — clone and build once, then cache the `node_modules` and `dist` directories to speed up subsequent pipeline runs.
+5. **Cache the luqen installation** — clone and build once, then cache the `node_modules` and `dist` directories to speed up subsequent pipeline runs.
 
 6. **Archive reports** — keep reports for at least 30 days so you can compare results over time and demonstrate compliance progress.
 

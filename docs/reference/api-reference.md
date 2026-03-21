@@ -2,7 +2,7 @@
 
 # REST API Quick Reference
 
-All endpoints for `@pally-agent/compliance`. Base URL: `http://localhost:4000/api/v1`
+All endpoints for `@luqen/compliance`. Base URL: `http://localhost:4000/api/v1`
 
 Authentication: `Authorization: Bearer <token>` on all endpoints except `/health` and `/oauth/token`.
 
@@ -220,7 +220,7 @@ Response: `[{ "name": "auth-entra", "displayName": "Azure Entra ID", "type": "au
 
 Install a plugin from the registry.
 
-Request: `{ "packageName": "@pally-agent/plugin-notify-slack" }`
+Request: `{ "packageName": "@luqen/plugin-notify-slack" }`
 
 Response (201): `{ "id": "...", "packageName": "...", "type": "notification", "version": "1.0.0", "config": {}, "status": "inactive", "installedAt": "..." }`
 
@@ -691,7 +691,7 @@ The dashboard provides download buttons for CSV export:
 
 ## Power BI Integration
 
-Connect Power BI to the pally-agent data API to build accessibility dashboards and compliance reports.
+Connect Power BI to the luqen data API to build accessibility dashboards and compliance reports.
 
 ### Step 1: Get your API key
 

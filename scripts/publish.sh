@@ -15,7 +15,7 @@ echo ""
 echo "==> Pack dry-run for each package..."
 for pkg in "${PACKAGES[@]}"; do
   echo ""
-  echo "--- @pally-agent/$pkg ---"
+  echo "--- @luqen/$pkg ---"
   cd "$ROOT/packages/$pkg" && npm pack --dry-run
 done
 

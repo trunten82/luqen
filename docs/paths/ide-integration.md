@@ -2,7 +2,7 @@
 
 # IDE Integration — MCP Setup
 
-Use pally-agent as an MCP (Model Context Protocol) server inside your AI-powered editor. Your coding assistant gets 6 accessibility tools to scan, filter, fix, and test — without leaving the IDE.
+Use luqen as an MCP (Model Context Protocol) server inside your AI-powered editor. Your coding assistant gets 6 accessibility tools to scan, filter, fix, and test — without leaving the IDE.
 
 ---
 
@@ -10,11 +10,11 @@ Use pally-agent as an MCP (Model Context Protocol) server inside your AI-powered
 
 - Node.js 20+
 - pa11y webservice running
-- pally-agent installed from source (the MCP server runs from the built JS files)
+- luqen installed from source (the MCP server runs from the built JS files)
 
 ```bash
-git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
-cd ~/pally-agent && npm install && npm run build --workspaces
+git clone https://github.com/trunten82/luqen.git ~/luqen
+cd ~/luqen && npm install && npm run build --workspaces
 ```
 
 ---
@@ -26,15 +26,15 @@ Add to `.claude/settings.json` (project-level) or `~/.claude/settings.json` (glo
 ```json
 {
   "mcpServers": {
-    "pally-agent": {
+    "luqen": {
       "command": "node",
-      "args": ["~/pally-agent/packages/core/dist/mcp.js"]
+      "args": ["~/luqen/packages/core/dist/mcp.js"]
     },
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "node",
-      "args": ["~/pally-agent/packages/compliance/dist/cli.js", "mcp"],
+      "args": ["~/luqen/packages/compliance/dist/cli.js", "mcp"],
       "env": {
-        "COMPLIANCE_DB_PATH": "~/pally-agent/packages/compliance/compliance.db"
+        "COMPLIANCE_DB_PATH": "~/luqen/packages/compliance/compliance.db"
       }
     }
   }
@@ -49,13 +49,13 @@ Restart VS Code. The tools appear in Claude Code's chat.
 
 1. Open **Settings > MCP Servers**
 2. Add a server:
-   - Name: `pally-agent`
+   - Name: `luqen`
    - Command: `node`
-   - Args: `~/pally-agent/packages/core/dist/mcp.js`
+   - Args: `~/luqen/packages/core/dist/mcp.js`
 3. Add a second server for compliance:
-   - Name: `pally-compliance`
+   - Name: `luqen-compliance`
    - Command: `node`
-   - Args: `~/pally-agent/packages/compliance/dist/cli.js mcp`
+   - Args: `~/luqen/packages/compliance/dist/cli.js mcp`
 4. Tools appear automatically in Cursor's AI chat
 
 ---
@@ -73,7 +73,7 @@ Restart VS Code. The tools appear in Claude Code's chat.
 Requires the [AI Assistant plugin](https://plugins.jetbrains.com/plugin/22282-ai-assistant):
 
 1. **Settings > AI Assistant > MCP Servers**
-2. Add server — command: `node`, args: `["~/pally-agent/packages/core/dist/mcp.js"]`
+2. Add server — command: `node`, args: `["~/luqen/packages/core/dist/mcp.js"]`
 3. Use in the AI chat panel
 
 ---
@@ -85,18 +85,18 @@ For Neovim with an MCP-compatible plugin (e.g., avante.nvim):
 ```lua
 {
   servers = {
-    ["pally-agent"] = {
+    ["luqen"] = {
       command = "node",
-      args = { os.getenv("HOME") .. "/pally-agent/packages/core/dist/mcp.js" },
+      args = { os.getenv("HOME") .. "/luqen/packages/core/dist/mcp.js" },
     },
-    ["pally-compliance"] = {
+    ["luqen-compliance"] = {
       command = "node",
       args = {
-        os.getenv("HOME") .. "/pally-agent/packages/compliance/dist/cli.js",
+        os.getenv("HOME") .. "/luqen/packages/compliance/dist/cli.js",
         "mcp",
       },
       env = {
-        COMPLIANCE_DB_PATH = os.getenv("HOME") .. "/pally-agent/packages/compliance/compliance.db",
+        COMPLIANCE_DB_PATH = os.getenv("HOME") .. "/luqen/packages/compliance/compliance.db",
       },
     },
   },
@@ -111,12 +111,12 @@ For Neovim with an MCP-compatible plugin (e.g., avante.nvim):
 
 | Tool | Description |
 |------|-------------|
-| `pally_scan` | Scan a website for WCAG issues (full site discovery + scan) |
-| `pally_get_issues` | Read and filter issues from a JSON report |
-| `pally_propose_fixes` | Generate code fix proposals from a scan report |
-| `pally_apply_fix` | Apply a single fix to a source file |
-| `pally_raw` | Single-page scan with raw pa11y output |
-| `pally_raw_batch` | Batch scan multiple URLs with raw pa11y output |
+| `luqen_scan` | Scan a website for WCAG issues (full site discovery + scan) |
+| `luqen_get_issues` | Read and filter issues from a JSON report |
+| `luqen_propose_fixes` | Generate code fix proposals from a scan report |
+| `luqen_apply_fix` | Apply a single fix to a source file |
+| `luqen_raw` | Single-page scan with raw pa11y output |
+| `luqen_raw_batch` | Batch scan multiple URLs with raw pa11y output |
 
 ### Compliance tools (11)
 
@@ -164,4 +164,4 @@ Once connected, try these in your AI chat:
 
 ---
 
-*See also: [What is Pally Agent?](../getting-started/what-is-pally.md) | [Quickstart IDE section](../QUICKSTART.md#ide-integration)*
+*See also: [What is Luqen?](../getting-started/what-is-luqen.md) | [Quickstart IDE section](../QUICKSTART.md#ide-integration)*

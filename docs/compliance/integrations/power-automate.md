@@ -1,6 +1,6 @@
 # Power Automate Integration
 
-Connect Power Automate to the Pally Compliance Service using a custom connector with OAuth2 client credentials authentication.
+Connect Power Automate to the Luqen Compliance Service using a custom connector with OAuth2 client credentials authentication.
 
 ## Overview
 
@@ -21,7 +21,7 @@ This integration enables Power Automate flows to:
 On the compliance service:
 
 ```bash
-pally-compliance clients create \
+luqen-compliance clients create \
   --name "power-automate" \
   --scope "read" \
   --grant client_credentials
@@ -35,7 +35,7 @@ Note the `client_id` and `client_secret`.
 
 1. In Power Automate, go to **Data** → **Custom connectors** → **New custom connector** → **Import an OpenAPI from URL**
 2. Enter: `https://your-compliance-service.example.com/api/v1/openapi.json`
-3. Name it: **Pally Compliance**
+3. Name it: **Luqen Compliance**
 
 ### Or configure manually
 
@@ -132,7 +132,7 @@ Action: **Parse JSON**
 
 ### Step 3: Check compliance
 
-Action: **Pally Compliance — Check Compliance**
+Action: **Luqen Compliance — Check Compliance**
 - jurisdictions: `["EU", "US", "UK"]`
 - issues: `@{body('Parse_JSON')?['results']?[0]?['issues']}`
 - sectors: `[]`
@@ -227,7 +227,7 @@ module.exports = async function (context, req) {
 To share the connector with your team:
 
 1. In Power Automate, go to **Custom connectors**
-2. Click **Share** on the Pally Compliance connector
+2. Click **Share** on the Luqen Compliance connector
 3. Add team members or share with the entire organization
 
 Each user who runs a flow with this connector needs to create their own connection (using the shared client credentials or their own).

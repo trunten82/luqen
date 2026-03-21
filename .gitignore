@@ -1,7 +1,7 @@
 node_modules/
 dist/
 *.tgz
-pally-reports/
+luqen-reports/
 coverage/
 packages/*/dist/
 packages/*/node_modules/

@@ -2,7 +2,7 @@
 
 # Compliance Checking — Legal Requirement Mapping
 
-Covers composition paths 4-5: scanning with compliance enrichment, and using the compliance API standalone. Uses `@pally-agent/core` + `@pally-agent/compliance`.
+Covers composition paths 4-5: scanning with compliance enrichment, and using the compliance API standalone. Uses `@luqen/core` + `@luqen/compliance`.
 
 ---
 
@@ -16,8 +16,8 @@ Covers composition paths 4-5: scanning with compliance enrichment, and using the
 ## Install
 
 ```bash
-git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
-cd ~/pally-agent && npm install && npm run build --workspaces
+git clone https://github.com/trunten82/luqen.git ~/luqen
+cd ~/luqen && npm install && npm run build --workspaces
 cd packages/core && npm link
 ```
 
@@ -26,7 +26,7 @@ cd packages/core && npm link
 ## Start the compliance service
 
 ```bash
-cd ~/pally-agent/packages/compliance
+cd ~/luqen/packages/compliance
 
 # Generate JWT keys (first time only)
 node dist/cli.js keys generate
@@ -47,7 +47,7 @@ Verify: `curl http://localhost:4000/api/v1/health`
 The compliance API requires OAuth2 `client_credentials` authentication:
 
 ```bash
-cd ~/pally-agent/packages/compliance
+cd ~/luqen/packages/compliance
 node dist/cli.js clients create --name scanner --scope "read write" --grant client_credentials
 ```
 
@@ -58,9 +58,9 @@ Save the `client_id` and `client_secret` from the output.
 ## Scan with compliance
 
 ```bash
-export PALLY_WEBSERVICE_URL=http://localhost:3000
+export LUQEN_WEBSERVICE_URL=http://localhost:3000
 
-pally-agent scan https://example.com \
+luqen scan https://example.com \
   --format both \
   --compliance-url http://localhost:4000 \
   --jurisdictions EU,US,UK \
@@ -174,4 +174,4 @@ See [IDE integration](ide-integration.md) for MCP server setup.
 
 ---
 
-*See also: [What is Pally Agent?](../getting-started/what-is-pally.md) | [Compliance guide](../guides/compliance-check.md)*
+*See also: [What is Luqen?](../getting-started/what-is-luqen.md) | [Compliance guide](../guides/compliance-check.md)*

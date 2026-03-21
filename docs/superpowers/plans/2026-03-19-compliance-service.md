@@ -15,10 +15,10 @@
 ## File Structure
 
 ```
-pally-agent/
+luqen/
 ├── package.json                          # Updated: npm workspaces
 ├── packages/
-│   ├── core/                             # Existing pally-agent code (moved)
+│   ├── core/                             # Existing luqen code (moved)
 │   │   ├── package.json
 │   │   ├── tsconfig.json
 │   │   ├── vitest.config.ts
@@ -117,20 +117,20 @@ pally-agent/
 ### Task 0.1: Convert to npm workspaces and scaffold compliance package
 
 **Files:**
-- Modify: `/root/pally-agent/package.json`
-- Create: `/root/pally-agent/packages/core/package.json`
-- Create: `/root/pally-agent/packages/core/tsconfig.json`
-- Create: `/root/pally-agent/packages/core/vitest.config.ts`
-- Create: `/root/pally-agent/packages/compliance/package.json`
-- Create: `/root/pally-agent/packages/compliance/tsconfig.json`
-- Create: `/root/pally-agent/packages/compliance/vitest.config.ts`
-- Move: `/root/pally-agent/src/` to `/root/pally-agent/packages/core/src/`
-- Move: `/root/pally-agent/tests/` to `/root/pally-agent/packages/core/tests/`
+- Modify: `/root/luqen/package.json`
+- Create: `/root/luqen/packages/core/package.json`
+- Create: `/root/luqen/packages/core/tsconfig.json`
+- Create: `/root/luqen/packages/core/vitest.config.ts`
+- Create: `/root/luqen/packages/compliance/package.json`
+- Create: `/root/luqen/packages/compliance/tsconfig.json`
+- Create: `/root/luqen/packages/compliance/vitest.config.ts`
+- Move: `/root/luqen/src/` to `/root/luqen/packages/core/src/`
+- Move: `/root/luqen/tests/` to `/root/luqen/packages/core/tests/`
 
 - [ ] **Step 1: Create packages directories and move existing code**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 mkdir -p packages/core packages/compliance/src packages/compliance/tests
 cp -r src packages/core/
 cp -r tests packages/core/
@@ -142,13 +142,13 @@ cp vitest.config.ts packages/core/vitest.config.ts
 
 ```json
 {
-  "name": "@pally-agent/core",
+  "name": "@luqen/core",
   "version": "0.1.0",
   "description": "Accessibility testing agent using pa11y webservice",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
-    "pally-agent": "dist/cli.js"
+    "luqen": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc && cp src/reporter/report.hbs dist/reporter/report.hbs",
@@ -181,7 +181,7 @@ cp vitest.config.ts packages/core/vitest.config.ts
 
 ```json
 {
-  "name": "pally-agent",
+  "name": "luqen",
   "version": "0.1.0",
   "private": true,
   "workspaces": [
@@ -202,13 +202,13 @@ cp vitest.config.ts packages/core/vitest.config.ts
 
 ```json
 {
-  "name": "@pally-agent/compliance",
+  "name": "@luqen/compliance",
   "version": "0.1.0",
   "description": "Accessibility compliance rule engine service",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
-    "pally-compliance": "dist/cli.js"
+    "luqen-compliance": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -294,7 +294,7 @@ export default defineConfig({
 - [ ] **Step 7: Install dependencies and verify builds**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 npm install
 cd packages/core && npx vitest run && cd ../..
 ```
@@ -302,14 +302,14 @@ cd packages/core && npx vitest run && cd ../..
 - [ ] **Step 8: Remove old root-level src/tests (now in packages/core)**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 rm -rf src tests tsconfig.json vitest.config.ts
 ```
 
 - [ ] **Step 9: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add -A
 git commit -m "chore: convert to npm workspaces monorepo, scaffold compliance package"
 ```
@@ -508,7 +508,7 @@ describe('Types', () => {
 - [ ] **Step 2: Run test -- expect FAIL (module not found)**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/types.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/types.test.ts
 ```
 
 - [ ] **Step 3: Implement types**
@@ -834,13 +834,13 @@ export interface BaselineSeedData {
 - [ ] **Step 4: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/types.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/types.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/types.ts packages/compliance/tests/types.test.ts
 git commit -m "feat(compliance): add all TypeScript interfaces and domain types"
 ```
@@ -928,7 +928,7 @@ describe('Config', () => {
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/config.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/config.test.ts
 ```
 
 - [ ] **Step 3: Implement config**
@@ -1020,13 +1020,13 @@ export function loadConfig(
 - [ ] **Step 4: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/config.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/config.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/config.ts packages/compliance/tests/config.test.ts
 git commit -m "feat(compliance): add config module with env var overrides"
 ```
@@ -1138,7 +1138,7 @@ describe('Matcher', () => {
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/matcher.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/matcher.test.ts
 ```
 
 - [ ] **Step 3: Implement matcher**
@@ -1179,13 +1179,13 @@ export function parseIssueCode(code: string): ParsedIssueCode | null {
 - [ ] **Step 4: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/matcher.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/matcher.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/engine/matcher.ts packages/compliance/tests/engine/matcher.test.ts
 git commit -m "feat(compliance): add WCAG criterion matcher (pa11y code parser)"
 ```
@@ -1785,7 +1785,7 @@ describe('SqliteAdapter', () => {
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/db/sqlite-adapter.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/db/sqlite-adapter.test.ts
 ```
 
 - [ ] **Step 3: Implement DB adapter interface**
@@ -1914,13 +1914,13 @@ Table schemas:
 - [ ] **Step 5: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/db/sqlite-adapter.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/db/sqlite-adapter.test.ts
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/db/adapter.ts packages/compliance/src/db/sqlite-adapter.ts packages/compliance/tests/db/sqlite-adapter.test.ts
 git commit -m "feat(compliance): add DB adapter interface and SQLite implementation"
 ```
@@ -2071,7 +2071,7 @@ describe('OAuth token signing and verification', () => {
 - [ ] **Step 2: Run tests -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/auth/
+cd /root/luqen/packages/compliance && npx vitest run tests/auth/
 ```
 
 - [ ] **Step 3: Implement scopes**
@@ -2178,13 +2178,13 @@ export async function createTokenVerifier(
 - [ ] **Step 5: Run tests -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/auth/
+cd /root/luqen/packages/compliance && npx vitest run tests/auth/
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/auth/ packages/compliance/tests/auth/
 git commit -m "feat(compliance): add OAuth2 token signing/verification and scope system"
 ```
@@ -2415,7 +2415,7 @@ describe('Compliance Checker', () => {
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/checker.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/checker.test.ts
 ```
 
 - [ ] **Step 3: Implement checker**
@@ -2437,13 +2437,13 @@ The implementing agent should create a function `checkCompliance(db: DbAdapter, 
 - [ ] **Step 4: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/checker.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/checker.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/engine/checker.ts packages/compliance/tests/engine/checker.test.ts
 git commit -m "feat(compliance): add compliance checker algorithm with jurisdiction inheritance"
 ```
@@ -2614,7 +2614,7 @@ describe('CRUD Operations', () => {
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/crud.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/crud.test.ts
 ```
 
 - [ ] **Step 3: Implement CRUD**
@@ -2631,13 +2631,13 @@ Validation: throw `Error` with descriptive message for empty required fields.
 - [ ] **Step 4: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/crud.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/crud.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/engine/crud.ts packages/compliance/tests/engine/crud.test.ts
 git commit -m "feat(compliance): add validated CRUD operations for all entities"
 ```
@@ -2801,7 +2801,7 @@ describe('Update Proposal Workflow', () => {
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/proposals.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/proposals.test.ts
 ```
 
 - [ ] **Step 3: Implement proposals**
@@ -2827,13 +2827,13 @@ Throw if proposal not found or not pending.
 - [ ] **Step 4: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/proposals.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/proposals.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/engine/proposals.ts packages/compliance/tests/engine/proposals.test.ts
 git commit -m "feat(compliance): add update proposal workflow with approve/reject/apply"
 ```
@@ -2920,7 +2920,7 @@ describe('Seed Loader', () => {
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/seed/loader.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/seed/loader.test.ts
 ```
 
 - [ ] **Step 3: Create baseline.json**
@@ -2955,13 +2955,13 @@ The loader should use `import.meta.url` to resolve the default baseline.json pat
 - [ ] **Step 5: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/seed/loader.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/seed/loader.test.ts
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/seed/ packages/compliance/tests/seed/
 git commit -m "feat(compliance): add baseline seed data (11 jurisdictions) and loader"
 ```
@@ -3076,7 +3076,7 @@ describe('Webhook Dispatch', () => {
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/webhooks.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/webhooks.test.ts
 ```
 
 - [ ] **Step 3: Implement webhook dispatch**
@@ -3091,13 +3091,13 @@ The implementing agent should create:
 - [ ] **Step 4: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/engine/webhooks.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/engine/webhooks.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/engine/webhooks.ts packages/compliance/tests/engine/webhooks.test.ts
 git commit -m "feat(compliance): add webhook dispatch with HMAC-SHA256 signatures"
 ```
@@ -3126,7 +3126,7 @@ Test setup: create an in-memory SQLite adapter, create server with `{ db }`, use
 - [ ] **Step 2: Run tests -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/api/server.test.ts tests/api/health.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/api/server.test.ts tests/api/health.test.ts
 ```
 
 - [ ] **Step 3: Implement server and health route**
@@ -3144,13 +3144,13 @@ Create `packages/compliance/src/api/server.ts` with:
 - [ ] **Step 4: Run tests -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/api/server.test.ts tests/api/health.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/api/server.test.ts tests/api/health.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/api/ packages/compliance/tests/api/
 git commit -m "feat(compliance): add Fastify server with OpenAPI and health endpoint"
 ```
@@ -3177,7 +3177,7 @@ Test setup: generate RS256 key pair, create tokens with specific scopes, registe
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/auth/middleware.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/auth/middleware.test.ts
 ```
 
 - [ ] **Step 3: Implement auth middleware**
@@ -3196,13 +3196,13 @@ Create `packages/compliance/src/auth/middleware.ts`:
 - [ ] **Step 5: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/auth/middleware.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/auth/middleware.test.ts
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/auth/middleware.ts packages/compliance/tests/auth/middleware.test.ts packages/compliance/src/api/server.ts
 git commit -m "feat(compliance): add OAuth2 auth middleware with scope enforcement"
 ```
@@ -3232,7 +3232,7 @@ Regulation and requirement route tests follow the same pattern. Requirements tes
 - [ ] **Step 2: Run tests -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/api/jurisdictions.test.ts tests/api/pagination.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/api/jurisdictions.test.ts tests/api/pagination.test.ts
 ```
 
 - [ ] **Step 3: Implement pagination utility**
@@ -3255,13 +3255,13 @@ Create route files for jurisdictions, regulations, requirements. Each route:
 - [ ] **Step 6: Run all tests -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/api/
+cd /root/luqen/packages/compliance && npx vitest run tests/api/
 ```
 
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/api/ packages/compliance/tests/api/
 git commit -m "feat(compliance): add CRUD REST routes with pagination and scope guards"
 ```
@@ -3297,7 +3297,7 @@ Seed routes test: POST /seed (admin, verify idempotent), GET /seed/status (read,
 - [ ] **Step 2: Run tests -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/api/
+cd /root/luqen/packages/compliance && npx vitest run tests/api/
 ```
 
 - [ ] **Step 3: Implement all route files**
@@ -3314,13 +3314,13 @@ Each route file follows the established pattern:
 - [ ] **Step 5: Run tests -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/api/
+cd /root/luqen/packages/compliance && npx vitest run tests/api/
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/api/routes/ packages/compliance/tests/api/
 git commit -m "feat(compliance): add compliance check, updates, sources, webhooks, seed routes"
 ```
@@ -3344,7 +3344,7 @@ Rate limit test: Configure low rate limit (5 req/min), send requests up to limit
 - [ ] **Step 2: Run tests -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/api/oauth.test.ts tests/api/rate-limit.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/api/oauth.test.ts tests/api/rate-limit.test.ts
 ```
 
 - [ ] **Step 3: Implement OAuth token endpoint**
@@ -3368,13 +3368,13 @@ Server options should accept `privateKeyPem` and `rateLimit` config.
 - [ ] **Step 6: Run tests -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/api/oauth.test.ts tests/api/rate-limit.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/api/oauth.test.ts tests/api/rate-limit.test.ts
 ```
 
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/api/ packages/compliance/tests/api/
 git commit -m "feat(compliance): add OAuth2 token endpoint and rate limiting"
 ```
@@ -3404,7 +3404,7 @@ Tool names: `compliance_check`, `compliance_list_jurisdictions`, `compliance_lis
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/mcp/server.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/mcp/server.test.ts
 ```
 
 - [ ] **Step 3: Implement MCP server**
@@ -3422,13 +3422,13 @@ Each tool handler catches errors and returns them as error text content.
 - [ ] **Step 4: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/mcp/server.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/mcp/server.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/mcp/ packages/compliance/tests/mcp/
 git commit -m "feat(compliance): add MCP server with 11 compliance tools"
 ```
@@ -3445,14 +3445,14 @@ git commit -m "feat(compliance): add MCP server with 11 compliance tools"
 
 - [ ] **Step 1: Write tests**
 
-Agent card test: `GET /.well-known/agent.json` returns valid card with name `pally-compliance`, version `1.0.0`, 4 skills, streaming capability.
+Agent card test: `GET /.well-known/agent.json` returns valid card with name `luqen-compliance`, version `1.0.0`, 4 skills, streaming capability.
 
 Tasks test: `POST /a2a/tasks` with `compliance-check` skill executes and returns completed task with result. `GET /a2a/tasks/:id` returns task status. Unknown skill returns 400.
 
 - [ ] **Step 2: Run tests -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/a2a/
+cd /root/luqen/packages/compliance && npx vitest run tests/a2a/
 ```
 
 - [ ] **Step 3: Implement agent card and task endpoints**
@@ -3473,13 +3473,13 @@ Skill dispatch: `compliance-check` calls `checkCompliance()`, `regulation-lookup
 - [ ] **Step 5: Run tests -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/a2a/
+cd /root/luqen/packages/compliance && npx vitest run tests/a2a/
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/a2a/ packages/compliance/tests/a2a/
 git commit -m "feat(compliance): add A2A agent card and task endpoints"
 ```
@@ -3499,7 +3499,7 @@ Test should verify `createCli()` returns a commander program with commands: `ser
 - [ ] **Step 2: Run test -- expect FAIL**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/cli.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/cli.test.ts
 ```
 
 - [ ] **Step 3: Implement CLI**
@@ -3526,13 +3526,13 @@ Export `createCli()` function for testability. At bottom: `createCli().parse()`.
 - [ ] **Step 4: Run test -- expect PASS**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run tests/cli.test.ts
+cd /root/luqen/packages/compliance && npx vitest run tests/cli.test.ts
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/cli.ts packages/compliance/tests/cli.test.ts
 git commit -m "feat(compliance): add CLI with serve, seed, clients, users, keys, mcp commands"
 ```
@@ -3560,13 +3560,13 @@ This test is the single source of truth for adapter correctness. All adapters mu
 - [ ] **Step 2: Run with SQLite**
 
 ```bash
-cd /root/pally-agent/packages/compliance && DB_ADAPTER=sqlite npx vitest run tests/db/adapter-contract.test.ts
+cd /root/luqen/packages/compliance && DB_ADAPTER=sqlite npx vitest run tests/db/adapter-contract.test.ts
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/tests/db/adapter-contract.test.ts
 git commit -m "test(compliance): add shared DB adapter contract test suite"
 ```
@@ -3592,13 +3592,13 @@ Create `MongoAdapter implements DbAdapter`:
 - [ ] **Step 2: Run contract tests (requires MongoDB instance)**
 
 ```bash
-cd /root/pally-agent/packages/compliance && DB_ADAPTER=mongodb COMPLIANCE_DB_URL=mongodb://localhost:27017/compliance-test npx vitest run tests/db/adapter-contract.test.ts
+cd /root/luqen/packages/compliance && DB_ADAPTER=mongodb COMPLIANCE_DB_URL=mongodb://localhost:27017/compliance-test npx vitest run tests/db/adapter-contract.test.ts
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/db/mongodb-adapter.ts
 git commit -m "feat(compliance): add MongoDB adapter"
 ```
@@ -3624,13 +3624,13 @@ Create `PostgresAdapter implements DbAdapter`:
 - [ ] **Step 2: Run contract tests (requires PostgreSQL instance)**
 
 ```bash
-cd /root/pally-agent/packages/compliance && DB_ADAPTER=postgres COMPLIANCE_DB_URL=postgresql://localhost:5432/compliance-test npx vitest run tests/db/adapter-contract.test.ts
+cd /root/luqen/packages/compliance && DB_ADAPTER=postgres COMPLIANCE_DB_URL=postgresql://localhost:5432/compliance-test npx vitest run tests/db/adapter-contract.test.ts
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add packages/compliance/src/db/postgres-adapter.ts
 git commit -m "feat(compliance): add PostgreSQL adapter"
 ```
@@ -3667,7 +3667,7 @@ Sections to include (write based on actual built code):
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add docs/compliance/README.md
 git commit -m "docs(compliance): add comprehensive product documentation"
 ```
@@ -3689,12 +3689,12 @@ git commit -m "docs(compliance): add comprehensive product documentation"
 - `bare-metal.md`: Node.js prerequisites, npm install, key generation, systemd service
 - `kubernetes.md`: Architecture overview, ConfigMap/Secret structure (full manifests in milestone 3)
 - `cloud.md`: AWS (ECS/Lambda) and Azure (Container Apps/Functions) overview
-- `all-in-one.md`: Running alongside pally-agent in single process
+- `all-in-one.md`: Running alongside luqen in single process
 
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add docs/compliance/installation/
 git commit -m "docs(compliance): add installation guides"
 ```
@@ -3704,7 +3704,7 @@ git commit -m "docs(compliance): add installation guides"
 ### Task 6.3: Integration Guides + Updated Skill
 
 **Files:**
-- Create: `docs/compliance/integrations/pally-agent.md`
+- Create: `docs/compliance/integrations/luqen.md`
 - Create: `docs/compliance/integrations/power-automate.md`
 - Create: `docs/compliance/integrations/n8n.md`
 - Create: `docs/compliance/integrations/claude-code.md`
@@ -3712,7 +3712,7 @@ git commit -m "docs(compliance): add installation guides"
 
 - [ ] **Step 1: Write integration guides**
 
-- `pally-agent.md`: A2A connection config, OAuth client setup, enriched reports
+- `luqen.md`: A2A connection config, OAuth client setup, enriched reports
 - `power-automate.md`: Custom connector, OAuth2 config, example flows
 - `n8n.md`: HTTP Request node, OAuth2 credentials, example workflows
 - `claude-code.md`: MCP config in .claude.json, tool examples, conversations
@@ -3720,12 +3720,12 @@ git commit -m "docs(compliance): add installation guides"
 
 - [ ] **Step 2: Update Claude Code skill file**
 
-Update pally-agent skill to include all 11 compliance MCP tools and workflow examples.
+Update luqen skill to include all 11 compliance MCP tools and workflow examples.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add docs/compliance/integrations/
 git commit -m "docs(compliance): add integration guides and update skill"
 ```
@@ -3739,37 +3739,37 @@ git commit -m "docs(compliance): add integration guides and update skill"
 - [ ] **Step 1: Run full compliance test suite**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run
+cd /root/luqen/packages/compliance && npx vitest run
 ```
 
 - [ ] **Step 2: Run coverage check (80%+ required)**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx vitest run --coverage
+cd /root/luqen/packages/compliance && npx vitest run --coverage
 ```
 
 - [ ] **Step 3: Run TypeScript type check**
 
 ```bash
-cd /root/pally-agent/packages/compliance && npx tsc --noEmit
+cd /root/luqen/packages/compliance && npx tsc --noEmit
 ```
 
 - [ ] **Step 4: Run core package tests**
 
 ```bash
-cd /root/pally-agent/packages/core && npx vitest run
+cd /root/luqen/packages/core && npx vitest run
 ```
 
 - [ ] **Step 5: Verify workspaces build from root**
 
 ```bash
-cd /root/pally-agent && npm run test && npm run build
+cd /root/luqen && npm run test && npm run build
 ```
 
 - [ ] **Step 6: Verify CLI commands work**
 
 ```bash
-cd /root/pally-agent/packages/compliance
+cd /root/luqen/packages/compliance
 npx tsx src/cli.ts keys generate
 npx tsx src/cli.ts seed
 npx tsx src/cli.ts clients create --name test --scope read --grant client_credentials
@@ -3779,7 +3779,7 @@ npx tsx src/cli.ts clients list
 - [ ] **Step 7: Commit any final fixes**
 
 ```bash
-cd /root/pally-agent
+cd /root/luqen
 git add -A
 git commit -m "chore(compliance): final build verification fixes"
 ```

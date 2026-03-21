@@ -1,4 +1,4 @@
-# Security Review — pally-agent monorepo
+# Security Review — luqen monorepo
 
 **Date:** 2026-03-20
 **Scope:** packages/core, packages/compliance, packages/dashboard, packages/monitor

@@ -8,7 +8,7 @@ How to map accessibility issues to legal obligations across jurisdictions and re
 
 ## What compliance checking does
 
-After scanning a website, pally-agent can enrich every issue with legal context by querying the compliance service. This tells you:
+After scanning a website, luqen can enrich every issue with legal context by querying the compliance service. This tells you:
 
 - Which **jurisdictions** (countries or regions) have laws requiring you to fix each issue.
 - Which **regulations** (specific laws) apply, and whether compliance is mandatory, recommended, or optional.
@@ -66,7 +66,7 @@ Jurisdictions can inherit regulations from parent jurisdictions. For example:
 Pass a comma-separated list of jurisdiction IDs:
 
 ```bash
-pally-agent scan https://example.com \
+luqen scan https://example.com \
   --compliance-url http://localhost:4000 \
   --jurisdictions EU,US,UK,AU
 ```
@@ -137,7 +137,7 @@ Clicking a badge opens the official legal text (where the compliance service has
 
 ## Confirmed vs. needs review
 
-Pally-agent distinguishes between confirmed violations and issues that need review:
+Luqen-agent distinguishes between confirmed violations and issues that need review:
 
 | pa11y type | Compliance treatment |
 |------------|---------------------|
@@ -216,7 +216,7 @@ The compliance data is included in the JSON report under the `compliance` key:
 
 ## Setting up the compliance service
 
-The compliance service (`@pally-agent/compliance`) must be running and seeded with jurisdiction/regulation data before compliance checking works.
+The compliance service (`@luqen/compliance`) must be running and seeded with jurisdiction/regulation data before compliance checking works.
 
 ```bash
 # Generate encryption keys

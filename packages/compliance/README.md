@@ -1,22 +1,22 @@
-# @pally-agent/compliance
+# @luqen/compliance
 
 Accessibility compliance rule engine service with jurisdiction-aware regulation tracking.
 
 ## Install
 
 ```bash
-npm install @pally-agent/compliance
+npm install @luqen/compliance
 ```
 
 ## Usage
 
 ```bash
-npx pally-compliance serve
+npx luqen-compliance serve
 ```
 
 ## Documentation
 
-See the [main repository](https://github.com/trunten82/pally-agent) for full documentation.
+See the [main repository](https://github.com/trunten82/luqen) for full documentation.
 
 ## License
 

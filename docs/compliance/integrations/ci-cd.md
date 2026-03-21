@@ -4,7 +4,7 @@ Run accessibility compliance checks in CI/CD pipelines to block deployments when
 
 ## Pipeline templates
 
-Ready-to-use pipeline templates for building, testing, and deploying the pally-agent monorepo are in `pipelines/`:
+Ready-to-use pipeline templates for building, testing, and deploying the luqen monorepo are in `pipelines/`:
 
 ```
 pipelines/
@@ -27,9 +27,9 @@ pipelines/
 ### Azure DevOps quick start
 
 1. Import `pipelines/azure/build.yml` as a pipeline in Azure DevOps.
-2. Create variable groups `pally-agent-aks-dev`, `pally-agent-aks-staging`, `pally-agent-aks-prod` with the values listed in `deploy-aks.yml` comments.
+2. Create variable groups `luqen-aks-dev`, `luqen-aks-staging`, `luqen-aks-prod` with the values listed in `deploy-aks.yml` comments.
 3. Add a service connection named `azure-service-connection` (Azure Resource Manager, workload identity federation).
-4. For Container Apps, use `deploy-container-apps.yml` instead and create `pally-agent-aca-*` variable groups.
+4. For Container Apps, use `deploy-container-apps.yml` instead and create `luqen-aca-*` variable groups.
 5. All secrets (ACR credentials, JWT keys, DB passwords) must be stored in Azure Key Vault and referenced via variable groups — never committed to source.
 
 ### AWS / GitHub Actions quick start
@@ -90,7 +90,7 @@ COMPLIANCE_CLIENT_SECRET="${COMPLIANCE_CLIENT_SECRET:?COMPLIANCE_CLIENT_SECRET i
 TARGET_URL="${1:?Usage: $0 <target-url>}"
 JURISDICTIONS="${JURISDICTIONS:-EU,US,UK}"
 
-echo "=== Pally Compliance Check ==="
+echo "=== Luqen Compliance Check ==="
 echo "Target: $TARGET_URL"
 echo "Jurisdictions: $JURISDICTIONS"
 

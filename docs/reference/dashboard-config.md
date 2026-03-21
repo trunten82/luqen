@@ -2,13 +2,13 @@
 
 # Dashboard Configuration Reference
 
-`@pally-agent/dashboard` — `dashboard.config.json`, environment variables, and CLI flags.
+`@luqen/dashboard` — `dashboard.config.json`, environment variables, and CLI flags.
 
 ---
 
 ## Config file: `dashboard.config.json`
 
-Place in the working directory where you run `pally-dashboard serve`. All fields are optional except `sessionSecret`.
+Place in the working directory where you run `luqen-dashboard serve`. All fields are optional except `sessionSecret`.
 
 ```json
 {
@@ -87,36 +87,36 @@ Any failure exits immediately with a descriptive error message.
 
 ## CLI reference
 
-### `pally-dashboard serve`
+### `luqen-dashboard serve`
 
 Start the web server.
 
 ```bash
-pally-dashboard serve [options]
+luqen-dashboard serve [options]
 
 Options:
   -p, --port <number>    Port to listen on
   -c, --config <path>    Path to config file [default: dashboard.config.json]
 ```
 
-### `pally-dashboard migrate`
+### `luqen-dashboard migrate`
 
 Create or update the SQLite schema. Safe to run multiple times.
 
 ```bash
-pally-dashboard migrate [options]
+luqen-dashboard migrate [options]
 
 Options:
   -d, --db-path <path>   Path to SQLite database file
   -c, --config <path>    Path to config file [default: dashboard.config.json]
 ```
 
-### `pally-dashboard self-audit`
+### `luqen-dashboard self-audit`
 
 Run an accessibility scan against the dashboard itself and report any issues found. Useful for verifying the dashboard UI meets WCAG standards.
 
 ```bash
-pally-dashboard self-audit
+luqen-dashboard self-audit
 ```
 
 ---

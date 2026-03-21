@@ -1,6 +1,6 @@
 # Bare-Metal Installation (Linux / macOS)
 
-Install and run the Pally Compliance Service directly on a Linux or macOS host without containers.
+Install and run the Luqen Compliance Service directly on a Linux or macOS host without containers.
 
 ## System requirements
 
@@ -44,8 +44,8 @@ node --version
 
 ```bash
 # Clone
-git clone https://github.com/trunten82/pally-agent.git /opt/pally-agent
-cd /opt/pally-agent
+git clone https://github.com/trunten82/luqen.git /opt/luqen
+cd /opt/luqen
 
 # Install all workspace dependencies
 npm ci
@@ -62,51 +62,51 @@ ls dist/cli.js
 
 ```bash
 npm link
-pally-compliance --version  # should print 0.1.0
+luqen-compliance --version  # should print 0.1.0
 ```
 
-Alternatively, run as `node /opt/pally-agent/packages/compliance/dist/cli.js`.
+Alternatively, run as `node /opt/luqen/packages/compliance/dist/cli.js`.
 
 ### Step 4: Create data and config directories
 
 ```bash
 # Create a dedicated user (Linux)
-sudo useradd -r -s /bin/false -d /var/lib/pally-compliance compliance-svc
+sudo useradd -r -s /bin/false -d /var/lib/luqen-compliance compliance-svc
 
 # Create directories
-sudo mkdir -p /etc/pally-compliance /var/lib/pally-compliance/keys /var/lib/pally-compliance/data
-sudo chown -R compliance-svc:compliance-svc /var/lib/pally-compliance
+sudo mkdir -p /etc/luqen-compliance /var/lib/luqen-compliance/keys /var/lib/luqen-compliance/data
+sudo chown -R compliance-svc:compliance-svc /var/lib/luqen-compliance
 
 # Set tight permissions on keys directory
-sudo chmod 700 /var/lib/pally-compliance/keys
+sudo chmod 700 /var/lib/luqen-compliance/keys
 ```
 
 ### Step 5: Generate JWT keys
 
 ```bash
-cd /opt/pally-agent/packages/compliance
-sudo -u compliance-svc COMPLIANCE_DB_PATH=/var/lib/pally-compliance/data/compliance.db \
+cd /opt/luqen/packages/compliance
+sudo -u compliance-svc COMPLIANCE_DB_PATH=/var/lib/luqen-compliance/data/compliance.db \
   node dist/cli.js keys generate
 
 # Move keys to the keys directory
-sudo mv ./keys/private.pem /var/lib/pally-compliance/keys/
-sudo mv ./keys/public.pem /var/lib/pally-compliance/keys/
-sudo chmod 600 /var/lib/pally-compliance/keys/private.pem
-sudo chown compliance-svc:compliance-svc /var/lib/pally-compliance/keys/*
+sudo mv ./keys/private.pem /var/lib/luqen-compliance/keys/
+sudo mv ./keys/public.pem /var/lib/luqen-compliance/keys/
+sudo chmod 600 /var/lib/luqen-compliance/keys/private.pem
+sudo chown compliance-svc:compliance-svc /var/lib/luqen-compliance/keys/*
 ```
 
 ### Step 6: Create the config file
 
 ```bash
-sudo tee /etc/pally-compliance/compliance.config.json <<'EOF'
+sudo tee /etc/luqen-compliance/compliance.config.json <<'EOF'
 {
   "port": 4000,
   "host": "127.0.0.1",
   "dbAdapter": "sqlite",
-  "dbPath": "/var/lib/pally-compliance/data/compliance.db",
+  "dbPath": "/var/lib/luqen-compliance/data/compliance.db",
   "jwtKeyPair": {
-    "publicKeyPath": "/var/lib/pally-compliance/keys/public.pem",
-    "privateKeyPath": "/var/lib/pally-compliance/keys/private.pem"
+    "publicKeyPath": "/var/lib/luqen-compliance/keys/public.pem",
+    "privateKeyPath": "/var/lib/luqen-compliance/keys/private.pem"
   },
   "tokenExpiry": "1h",
   "rateLimit": {
@@ -120,22 +120,22 @@ sudo tee /etc/pally-compliance/compliance.config.json <<'EOF'
   }
 }
 EOF
-sudo chown compliance-svc:compliance-svc /etc/pally-compliance/compliance.config.json
+sudo chown compliance-svc:compliance-svc /etc/luqen-compliance/compliance.config.json
 ```
 
 ### Step 7: Seed the baseline data
 
 ```bash
-cd /opt/pally-agent/packages/compliance
+cd /opt/luqen/packages/compliance
 sudo -u compliance-svc node dist/cli.js seed
 ```
 
 ### Step 8: Create an OAuth client
 
 ```bash
-cd /opt/pally-agent/packages/compliance
+cd /opt/luqen/packages/compliance
 sudo -u compliance-svc node dist/cli.js clients create \
-  --name "pally-agent" \
+  --name "luqen" \
   --scope "read" \
   --grant client_credentials
 ```
@@ -146,7 +146,7 @@ Save the `client_id` and `client_secret`.
 
 ```bash
 # Start manually first to verify
-cd /opt/pally-agent/packages/compliance
+cd /opt/luqen/packages/compliance
 sudo -u compliance-svc node dist/cli.js serve
 
 # In another terminal
@@ -159,12 +159,12 @@ Stop with Ctrl-C, then proceed to set up the systemd service.
 
 ## Systemd service
 
-Create `/etc/systemd/system/pally-compliance.service`:
+Create `/etc/systemd/system/luqen-compliance.service`:
 
 ```ini
 [Unit]
-Description=Pally Compliance Service
-Documentation=https://github.com/trunten82/pally-agent/tree/main/docs/compliance
+Description=Luqen Compliance Service
+Documentation=https://github.com/trunten82/luqen/tree/main/docs/compliance
 After=network.target
 Wants=network-online.target
 
@@ -173,27 +173,27 @@ Type=simple
 User=compliance-svc
 Group=compliance-svc
 
-WorkingDirectory=/opt/pally-agent/packages/compliance
+WorkingDirectory=/opt/luqen/packages/compliance
 ExecStart=/usr/bin/node dist/cli.js serve
 ExecReload=/bin/kill -HUP $MAINPID
 
 # Config via environment
 Environment=NODE_ENV=production
-Environment=COMPLIANCE_DB_PATH=/var/lib/pally-compliance/data/compliance.db
-Environment=COMPLIANCE_JWT_PRIVATE_KEY=/var/lib/pally-compliance/keys/private.pem
-Environment=COMPLIANCE_JWT_PUBLIC_KEY=/var/lib/pally-compliance/keys/public.pem
+Environment=COMPLIANCE_DB_PATH=/var/lib/luqen-compliance/data/compliance.db
+Environment=COMPLIANCE_JWT_PRIVATE_KEY=/var/lib/luqen-compliance/keys/private.pem
+Environment=COMPLIANCE_JWT_PUBLIC_KEY=/var/lib/luqen-compliance/keys/public.pem
 
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=pally-compliance
+SyslogIdentifier=luqen-compliance
 
 # Security hardening
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=full
 ProtectHome=yes
-ReadWritePaths=/var/lib/pally-compliance/data
+ReadWritePaths=/var/lib/luqen-compliance/data
 
 # Restart policy
 Restart=on-failure
@@ -209,16 +209,16 @@ Enable and start:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable pally-compliance
-sudo systemctl start pally-compliance
-sudo systemctl status pally-compliance
+sudo systemctl enable luqen-compliance
+sudo systemctl start luqen-compliance
+sudo systemctl status luqen-compliance
 ```
 
 View logs:
 
 ```bash
-journalctl -u pally-compliance -f
-journalctl -u pally-compliance --since "1 hour ago"
+journalctl -u luqen-compliance -f
+journalctl -u luqen-compliance --since "1 hour ago"
 ```
 
 ## Nginx reverse proxy
@@ -233,7 +233,7 @@ sudo apt-get install -y nginx certbot python3-certbot-nginx
 
 ### Nginx configuration
 
-Create `/etc/nginx/sites-available/pally-compliance`:
+Create `/etc/nginx/sites-available/luqen-compliance`:
 
 ```nginx
 server {
@@ -293,7 +293,7 @@ server {
 Enable and test:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/pally-compliance /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/luqen-compliance /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -306,7 +306,7 @@ sudo certbot --nginx -d compliance.example.com
 
 ### Update config for public URL
 
-Update `/etc/pally-compliance/compliance.config.json`:
+Update `/etc/luqen-compliance/compliance.config.json`:
 
 ```json
 {
@@ -320,20 +320,20 @@ Update `/etc/pally-compliance/compliance.config.json`:
 And set the A2A agent card URL:
 
 ```ini
-# In /etc/systemd/system/pally-compliance.service
+# In /etc/systemd/system/luqen-compliance.service
 Environment=COMPLIANCE_URL=https://compliance.example.com
 ```
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl restart pally-compliance
+sudo systemctl restart luqen-compliance
 ```
 
 ## Updating
 
 ```bash
 # Pull new code
-cd /opt/pally-agent
+cd /opt/luqen
 git pull
 
 # Rebuild
@@ -342,12 +342,12 @@ npm ci
 npm run build
 
 # Restart service
-sudo systemctl restart pally-compliance
+sudo systemctl restart luqen-compliance
 ```
 
 ## macOS-specific notes
 
-On macOS, use `launchd` instead of systemd. Create `~/Library/LaunchAgents/com.pally.compliance.plist`:
+On macOS, use `launchd` instead of systemd. Create `~/Library/LaunchAgents/com.luqen.compliance.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -356,37 +356,37 @@ On macOS, use `launchd` instead of systemd. Create `~/Library/LaunchAgents/com.p
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.pally.compliance</string>
+  <string>com.luqen.compliance</string>
   <key>ProgramArguments</key>
   <array>
     <string>/usr/local/bin/node</string>
-    <string>/opt/pally-agent/packages/compliance/dist/cli.js</string>
+    <string>/opt/luqen/packages/compliance/dist/cli.js</string>
     <string>serve</string>
   </array>
   <key>WorkingDirectory</key>
-  <string>/opt/pally-agent/packages/compliance</string>
+  <string>/opt/luqen/packages/compliance</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>COMPLIANCE_DB_PATH</key>
-    <string>/var/lib/pally-compliance/compliance.db</string>
+    <string>/var/lib/luqen-compliance/compliance.db</string>
     <key>COMPLIANCE_JWT_PRIVATE_KEY</key>
-    <string>/var/lib/pally-compliance/keys/private.pem</string>
+    <string>/var/lib/luqen-compliance/keys/private.pem</string>
     <key>COMPLIANCE_JWT_PUBLIC_KEY</key>
-    <string>/var/lib/pally-compliance/keys/public.pem</string>
+    <string>/var/lib/luqen-compliance/keys/public.pem</string>
   </dict>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
   <true/>
   <key>StandardOutPath</key>
-  <string>/var/log/pally-compliance.log</string>
+  <string>/var/log/luqen-compliance.log</string>
   <key>StandardErrorPath</key>
-  <string>/var/log/pally-compliance.error.log</string>
+  <string>/var/log/luqen-compliance.error.log</string>
 </dict>
 </plist>
 ```
 
 ```bash
-launchctl load ~/Library/LaunchAgents/com.pally.compliance.plist
-launchctl start com.pally.compliance
+launchctl load ~/Library/LaunchAgents/com.luqen.compliance.plist
+launchctl start com.luqen.compliance
 ```

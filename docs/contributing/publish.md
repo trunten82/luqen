@@ -1,6 +1,6 @@
 # NPM Publish Workflow
 
-How to publish `@pally-agent/*` packages to npm.
+How to publish `@luqen/*` packages to npm.
 
 ---
 
@@ -8,10 +8,10 @@ How to publish `@pally-agent/*` packages to npm.
 
 | Package | npm Name | Current Version |
 |---------|----------|-----------------|
-| `packages/core` | `@pally-agent/core` | See `packages/core/package.json` |
-| `packages/compliance` | `@pally-agent/compliance` | See `packages/compliance/package.json` |
-| `packages/dashboard` | `@pally-agent/dashboard` | See `packages/dashboard/package.json` |
-| `packages/monitor` | `@pally-agent/monitor` | See `packages/monitor/package.json` |
+| `packages/core` | `@luqen/core` | See `packages/core/package.json` |
+| `packages/compliance` | `@luqen/compliance` | See `packages/compliance/package.json` |
+| `packages/dashboard` | `@luqen/dashboard` | See `packages/dashboard/package.json` |
+| `packages/monitor` | `@luqen/monitor` | See `packages/monitor/package.json` |
 
 ---
 

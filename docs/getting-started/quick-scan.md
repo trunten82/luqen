@@ -2,7 +2,7 @@
 
 # Quick Scan — Under 60 Seconds
 
-Scan a website for accessibility issues using the pally-agent CLI.
+Scan a website for accessibility issues using the luqen CLI.
 
 ---
 
@@ -19,7 +19,7 @@ Pick one method:
 
 **Docker (recommended):**
 ```bash
-docker run -d -p 3000:3000 --name pa11y-ws pally/webservice:latest
+docker run -d -p 3000:3000 --name pa11y-ws luqen/webservice:latest
 ```
 
 **npm (global):**
@@ -31,16 +31,16 @@ Verify it is running: `curl http://localhost:3000/tasks` should return `[]`.
 
 ---
 
-## 2. Install pally-agent
+## 2. Install luqen
 
 ```bash
-npm install -g @pally-agent/core
+npm install -g @luqen/core
 ```
 
 Or install from source:
 ```bash
-git clone https://github.com/trunten82/pally-agent.git
-cd pally-agent && npm install && npm run build --workspaces
+git clone https://github.com/trunten82/luqen.git
+cd luqen && npm install && npm run build --workspaces
 cd packages/core && npm link
 ```
 
@@ -49,11 +49,11 @@ cd packages/core && npm link
 ## 3. Scan
 
 ```bash
-export PALLY_WEBSERVICE_URL=http://localhost:3000
-pally-agent scan https://example.com
+export LUQEN_WEBSERVICE_URL=http://localhost:3000
+luqen scan https://example.com
 ```
 
-The report is saved to `./pally-reports/`. For an HTML report, add `--format both`.
+The report is saved to `./luqen-reports/`. For an HTML report, add `--format both`.
 
 ---
 
@@ -76,7 +76,7 @@ Errors are confirmed WCAG violations. Warnings need human review. Notices are in
 
 ## Troubleshooting
 
-**"Cannot connect to webservice"** — pa11y webservice is not running or `PALLY_WEBSERVICE_URL` is wrong. Verify with `curl $PALLY_WEBSERVICE_URL/tasks`.
+**"Cannot connect to webservice"** — pa11y webservice is not running or `LUQEN_WEBSERVICE_URL` is wrong. Verify with `curl $LUQEN_WEBSERVICE_URL/tasks`.
 
 **"0 URLs found"** — the target site has no `sitemap.xml` and returned no crawlable links. Try adding `--also-crawl` to follow links from the page.
 
@@ -86,7 +86,7 @@ Errors are confirmed WCAG violations. Warnings need human review. Notices are in
 
 ## Dashboard quick start
 
-When you start the dashboard for the first time, an API key is generated and printed to the console. Copy this key — it is the default authentication method (solo mode) and is also used for programmatic API access. You can regenerate it later with `pally-dashboard api-key regenerate`. See the [full dashboard guide](../paths/full-dashboard.md) for details.
+When you start the dashboard for the first time, an API key is generated and printed to the console. Copy this key — it is the default authentication method (solo mode) and is also used for programmatic API access. You can regenerate it later with `luqen-dashboard api-key regenerate`. See the [full dashboard guide](../paths/full-dashboard.md) for details.
 
 ---
 
@@ -98,4 +98,4 @@ When you start the dashboard for the first time, an API key is generated and pri
 
 ---
 
-*See also: [What is Pally Agent?](what-is-pally.md) | [User Guide](../USER-GUIDE.md)*
+*See also: [What is Luqen?](what-is-luqen.md) | [User Guide](../USER-GUIDE.md)*

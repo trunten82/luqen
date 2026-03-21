@@ -2,7 +2,7 @@
 
 # Kubernetes Installation
 
-Deploy pally-agent services to Kubernetes using Kustomize manifests from the `k8s/` directory.
+Deploy luqen services to Kubernetes using Kustomize manifests from the `k8s/` directory.
 
 ---
 
@@ -44,11 +44,11 @@ kubectl apply -k k8s/overlays/dev
 
 ```bash
 # 1. Create secrets (do not commit these)
-kubectl create secret generic pally-compliance-secrets \
+kubectl create secret generic luqen-compliance-secrets \
   --from-literal=JWT_PRIVATE_KEY="$(cat keys/private.pem)" \
   --from-literal=JWT_PUBLIC_KEY="$(cat keys/public.pem)"
 
-kubectl create secret generic pally-dashboard-secrets \
+kubectl create secret generic luqen-dashboard-secrets \
   --from-literal=DASHBOARD_SESSION_SECRET="$(openssl rand -base64 32)" \
   --from-literal=DASHBOARD_COMPLIANCE_CLIENT_SECRET="<client-secret>"
 
@@ -67,7 +67,7 @@ The base manifests use a ConfigMap for non-secret configuration:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: pally-compliance-config
+  name: luqen-compliance-config
 data:
   COMPLIANCE_PORT: "4000"
   COMPLIANCE_HOST: "0.0.0.0"
@@ -79,7 +79,7 @@ Override values in your overlay's `kustomization.yaml`:
 
 ```yaml
 configMapGenerator:
-  - name: pally-compliance-config
+  - name: luqen-compliance-config
     behavior: merge
     literals:
       - COMPLIANCE_DB_ADAPTER=postgres
@@ -96,7 +96,7 @@ The compliance service needs a persistent volume for SQLite data and JWT keys:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pally-compliance-data
+  name: luqen-compliance-data
 spec:
   accessModes: [ReadWriteOnce]
   resources:
@@ -114,19 +114,19 @@ For multi-replica deployments, switch to PostgreSQL (`COMPLIANCE_DB_ADAPTER=post
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: pally-ingress
+  name: luqen-ingress
   annotations:
     nginx.ingress.kubernetes.io/proxy-buffering: "off"   # Required for SSE
 spec:
   rules:
-    - host: pally.example.com
+    - host: luqen.example.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: pally-dashboard
+                name: luqen-dashboard
                 port:
                   number: 5000
     - host: compliance.example.com
@@ -136,7 +136,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: pally-compliance
+                name: luqen-compliance
                 port:
                   number: 4000
 ```
@@ -168,7 +168,7 @@ livenessProbe:
 
 ## Multi-Tenant Considerations
 
-Multi-tenancy in pally-agent is entirely query-level — no separate databases, schemas, or per-org pods are required. A single deployment serves all organizations.
+Multi-tenancy in luqen is entirely query-level — no separate databases, schemas, or per-org pods are required. A single deployment serves all organizations.
 
 ### Request routing
 
@@ -180,7 +180,7 @@ In production, set the `COMPLIANCE_API_KEY` environment variable on both the das
 
 ```yaml
 # Add to dashboard and compliance secrets
-kubectl create secret generic pally-service-auth \
+kubectl create secret generic luqen-service-auth \
   --from-literal=COMPLIANCE_API_KEY="$(openssl rand -base64 32)"
 ```
 

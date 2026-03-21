@@ -2,13 +2,13 @@
 
 # Plugin Configuration Guide
 
-A comprehensive reference for all available pally-agent plugins — what they do, how to configure them, and when to use each one.
+A comprehensive reference for all available luqen plugins — what they do, how to configure them, and when to use each one.
 
 ---
 
 ## Plugin architecture overview
 
-The pally-agent dashboard supports a plugin system that extends its capabilities in four areas:
+The luqen dashboard supports a plugin system that extends its capabilities in four areas:
 
 | Plugin type | Purpose | Example |
 |-------------|---------|---------|
@@ -17,7 +17,7 @@ The pally-agent dashboard supports a plugin system that extends its capabilities
 | **Storage** | External report storage backends | AWS S3, Azure Blob Storage |
 | **Scanner** | Custom WCAG rule evaluation | (custom implementations) |
 
-Plugins are managed from **Admin > Plugins** in the dashboard UI, or via the CLI (`pally-dashboard plugin install|configure|activate|deactivate|remove`).
+Plugins are managed from **Admin > Plugins** in the dashboard UI, or via the CLI (`luqen-dashboard plugin install|configure|activate|deactivate|remove`).
 
 ### How plugins work
 
@@ -85,7 +85,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 ### Azure Entra ID (`auth-entra`)
 
-**Package:** `@pally-agent/plugin-auth-entra`
+**Package:** `@luqen/plugin-auth-entra`
 **Type:** Auth
 **Description:** Single sign-on via Azure Entra ID (formerly Azure AD)
 
@@ -119,7 +119,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 ### Slack Notifications (`notify-slack`)
 
-**Package:** `@pally-agent/plugin-notify-slack`
+**Package:** `@luqen/plugin-notify-slack`
 **Type:** Notification
 **Description:** Send scan results and alerts to Slack channels
 
@@ -131,7 +131,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 |-------|-----|------|----------|---------|-------------|
 | Webhook URL | `webhookUrl` | secret | Yes | — | Slack incoming webhook URL (create at api.slack.com) |
 | Channel | `channel` | string | No | `#accessibility` | Default Slack channel to post to |
-| Bot Username | `username` | string | No | `Pally Agent` | Display name for the bot in Slack |
+| Bot Username | `username` | string | No | `Luqen` | Display name for the bot in Slack |
 | Events to notify | `events` | string | No | `scan.complete,scan.failed,violation.found,regulation.changed` | Comma-separated list of events that trigger notifications |
 
 #### Setup steps
@@ -151,7 +151,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 ### Microsoft Teams (`notify-teams`)
 
-**Package:** `@pally-agent/plugin-notify-teams`
+**Package:** `@luqen/plugin-notify-teams`
 **Type:** Notification
 **Description:** Send scan results and alerts to Microsoft Teams channels
 
@@ -167,7 +167,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 #### Setup steps
 
 1. In Microsoft Teams, go to the target channel > **Connectors** > **Incoming Webhook** > **Configure**
-2. Name the webhook (e.g., "Pally Agent") and copy the generated URL
+2. Name the webhook (e.g., "Luqen") and copy the generated URL
 3. Go to **Admin > Plugins** and install **Microsoft Teams**
 4. Paste the webhook URL and select which events to subscribe to
 5. Click **Save**, then **Activate**
@@ -181,7 +181,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 ### Email Notifications & Reports (`notify-email`)
 
-**Package:** `@pally-agent/plugin-notify-email`
+**Package:** `@luqen/plugin-notify-email`
 **Type:** Notification
 **Description:** Send scan notifications and scheduled reports via email (SMTP)
 
@@ -197,7 +197,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 | SMTP Username | `username` | string | Yes | — | SMTP authentication username |
 | SMTP Password | `password` | secret | Yes | — | SMTP authentication password |
 | From Email | `fromAddress` | string | Yes | — | Sender email address for outgoing messages |
-| From Name | `fromName` | string | No | `Pally Dashboard` | Display name for the sender |
+| From Name | `fromName` | string | No | `Luqen` | Display name for the sender |
 | Events to notify | `events` | string | No | `scan.complete,scan.failed` | Comma-separated list of events that trigger email notifications |
 
 #### Admin pages
@@ -227,7 +227,7 @@ This plugin registers an admin page:
 
 ### AWS S3 Storage (`storage-s3`)
 
-**Package:** `@pally-agent/plugin-storage-s3`
+**Package:** `@luqen/plugin-storage-s3`
 **Type:** Storage
 **Description:** Store reports and scan data in AWS S3
 
@@ -241,7 +241,7 @@ This plugin registers an admin page:
 | AWS Region | `region` | string | No | `us-east-1` | AWS region where the bucket is located |
 | Access Key ID | `accessKeyId` | secret | Yes | — | AWS IAM access key ID with S3 write permissions |
 | Secret Access Key | `secretAccessKey` | secret | Yes | — | AWS IAM secret access key |
-| Key Prefix | `prefix` | string | No | `pally-agent/` | Prefix added to all S3 object keys (acts as a folder path) |
+| Key Prefix | `prefix` | string | No | `luqen/` | Prefix added to all S3 object keys (acts as a folder path) |
 
 #### Setup steps
 
@@ -261,7 +261,7 @@ This plugin registers an admin page:
 
 ### Azure Blob Storage (`storage-azure`)
 
-**Package:** `@pally-agent/plugin-storage-azure`
+**Package:** `@luqen/plugin-storage-azure`
 **Type:** Storage
 **Description:** Store reports and scan data in Azure Blob Storage
 
@@ -273,7 +273,7 @@ This plugin registers an admin page:
 |-------|-----|------|----------|---------|-------------|
 | Connection String | `connectionString` | secret | Yes | — | Azure Storage account connection string |
 | Container Name | `containerName` | string | Yes | — | Blob container to store reports in |
-| Blob Prefix | `prefix` | string | No | `pally-agent/` | Prefix added to all blob names (acts as a virtual folder) |
+| Blob Prefix | `prefix` | string | No | `luqen/` | Prefix added to all blob names (acts as a virtual folder) |
 
 #### Setup steps
 

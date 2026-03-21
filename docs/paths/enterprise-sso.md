@@ -8,7 +8,7 @@ Connect the dashboard to Azure Entra ID (formerly Azure AD) for single sign-on v
 
 ## Prerequisites
 
-- Running pally-agent dashboard (see [Full Dashboard](full-dashboard.md))
+- Running luqen dashboard (see [Full Dashboard](full-dashboard.md))
 - Admin access to the dashboard
 - An Azure Entra ID tenant with permission to register applications
 
@@ -17,7 +17,7 @@ Connect the dashboard to Azure Entra ID (formerly Azure AD) for single sign-on v
 ## 1. Register an application in Azure Entra ID
 
 1. Go to **Azure Portal > Microsoft Entra ID > App registrations > New registration**
-2. Name: `pally-agent-dashboard`
+2. Name: `luqen-dashboard`
 3. Supported account types: choose your tenant model (single-tenant or multi-tenant)
 4. Redirect URI: `http://localhost:5000/auth/sso/callback` (adjust host/port for production)
 5. Click **Register**
@@ -46,7 +46,7 @@ Note the following values from the app overview page:
 ### Via CLI
 
 ```bash
-pally-dashboard plugin install @pally-agent/plugin-auth-entra
+luqen-dashboard plugin install @luqen/plugin-auth-entra
 ```
 
 ---
@@ -70,7 +70,7 @@ pally-dashboard plugin install @pally-agent/plugin-auth-entra
 ### Via CLI
 
 ```bash
-pally-dashboard plugin configure <plugin-id> \
+luqen-dashboard plugin configure <plugin-id> \
   --set tenantId=YOUR_TENANT_ID \
         clientId=YOUR_CLIENT_ID \
         clientSecret=YOUR_CLIENT_SECRET \
@@ -90,7 +90,7 @@ Click **Activate** on the plugin card. The system runs a health check to confirm
 ### Via CLI
 
 ```bash
-pally-dashboard plugin activate <plugin-id>
+luqen-dashboard plugin activate <plugin-id>
 ```
 
 ---
@@ -113,7 +113,7 @@ Map Azure Entra ID groups to dashboard teams so that team membership stays in sy
 
 ### Configure group claims in Azure
 
-1. Go to **Azure Portal > App registrations > pally-agent-dashboard > Token configuration**
+1. Go to **Azure Portal > App registrations > luqen-dashboard > Token configuration**
 2. Click **Add groups claim**
 3. Select **Security groups** (or **All groups** if using Microsoft 365 groups)
 4. Under **ID token**, check **Group ID**
