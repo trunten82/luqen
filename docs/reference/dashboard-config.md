@@ -18,7 +18,8 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
   "reportsDir": "./reports",
   "dbPath": "./dashboard.db",
   "sessionSecret": "",
-  "maxConcurrentScans": 2
+  "maxConcurrentScans": 2,
+  "runner": "htmlcs"
 }
 ```
 
@@ -36,6 +37,8 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `maxPages` | `number` | `50` | Maximum pages to discover and scan in full-site mode (1–1000) |
 | `pluginsDir` | `string` | `./plugins` | Directory where plugin packages are installed |
 | `pluginsConfigFile` | `string` | — | Optional path to a plugins configuration JSON file |
+| `runner` | `"htmlcs" \| "axe"` | `"htmlcs"` | Pa11y test runner. `axe` requires `pa11y-runner-axe` installed on the webservice. |
+| `webserviceUrls` | `string[]` | — | Additional pa11y webservice URLs for horizontal scaling. Scans are distributed round-robin across all URLs (including `webserviceUrl`). |
 
 ---
 
@@ -53,6 +56,8 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `DASHBOARD_MAX_PAGES` | `maxPages` | Maximum pages per full-site scan (1–1000, default 50) |
 | `DASHBOARD_PLUGINS_DIR` | `pluginsDir` | Directory for plugin packages (default: `./plugins`) |
 | `DASHBOARD_PLUGINS_CONFIG` | `pluginsConfigFile` | Path to plugins configuration file |
+| `DASHBOARD_SCANNER_RUNNER` | `runner` | Pa11y test runner: `htmlcs` or `axe` (default: `htmlcs`) |
+| `DASHBOARD_WEBSERVICE_URLS` | `webserviceUrls` | Comma-separated list of additional pa11y webservice URLs for horizontal scaling (round-robin distribution). |
 | `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |
 | `COMPLIANCE_API_KEY` | — | API key for service-to-service calls to the compliance service. Set this on the compliance service side; the dashboard sends it in the `X-API-Key` header when making compliance API requests. |
 

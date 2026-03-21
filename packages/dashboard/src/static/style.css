@@ -2053,10 +2053,66 @@ select {
 .rpt-scan-errors { margin-top: 1.5rem; }
 .rpt-scan-error { margin-bottom: 0.4rem; font-size: 0.82rem; }
 
+/* ── Executive Summary ────────────────────────────────────── */
+.exec-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.exec-summary__card {
+  background: var(--accent-light);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 1.25rem 1rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.exec-summary__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.exec-summary__value--trend {
+  font-size: 1.25rem;
+}
+
+.exec-summary__label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ── Trends chart ─────────────────────────────────────────── */
+.trends-chart-container {
+  position: relative;
+  height: 400px;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.trend-delta {
+  font-size: 0.8em;
+  margin-left: 0.25rem;
+}
+
+.text--success { color: var(--status-success); }
+.text--muted { color: var(--text-muted); }
+
 /* Dark mode report overrides handled via --accent-template / --accent-template-light variables */
 
 /* ── Mobile responsive ────────────────────────────────────── */
 @media (max-width: 640px) {
+  .exec-summary { grid-template-columns: repeat(2, 1fr); }
+  .trends-chart-container { height: 280px; }
   .rpt-tabs { overflow-x: auto; }
   .rpt-tab { padding: 0.5rem 0.85rem; font-size: 0.8rem; white-space: nowrap; }
   .rpt-summary-bar { gap: 0.35rem; }
@@ -2066,4 +2122,228 @@ select {
   .rpt-controls { gap: 0.3rem; }
   .rpt-search { width: 100%; }
   .rpt-group__header { padding: 0.45rem 0.65rem; font-size: 0.78rem; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANUAL TESTING CHECKLIST
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Progress bar ─────────────────────────────────────────────────────── */
+.mt-progress { margin-bottom: 1.5rem; }
+.mt-progress__bar {
+  height: 8px;
+  background: var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.mt-progress__fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--border-radius);
+  transition: width 0.3s ease;
+}
+.mt-progress__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.mt-stat-sep { color: var(--border-color); }
+.mt-stat--pass { color: var(--status-success); }
+.mt-stat--fail { color: var(--status-error); }
+.mt-stat--na { color: var(--text-secondary); }
+
+/* ── Filter buttons ───────────────────────────────────────────────────── */
+.mt-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1.5rem;
+}
+.mt-filter {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mt-filter:hover { border-color: var(--accent); color: var(--accent); }
+.mt-filter--active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ── Section headings ─────────────────────────────────────────────────── */
+.mt-section { margin-bottom: 2rem; }
+.mt-section__title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mt-section__count {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.mt-section__desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ── Criterion card ───────────────────────────────────────────────────── */
+.mt-criterion {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  margin-bottom: 0.5rem;
+  background: var(--bg-card);
+}
+.mt-criterion__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  cursor: default;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+}
+.mt-criterion__body {
+  padding: 0.75rem 0.85rem;
+  border-top: 1px solid var(--border-color);
+}
+.mt-criterion__body--collapsed { display: none; }
+
+/* ── Status badges ────────────────────────────────────────────────────── */
+.mt-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  min-width: 3.5rem;
+  text-align: center;
+}
+.mt-badge--untested { background: var(--border-color); color: var(--text-secondary); }
+.mt-badge--pass { background: var(--status-success-bg); color: var(--status-success); }
+.mt-badge--fail { background: var(--status-error-bg); color: var(--status-error); }
+.mt-badge--na { background: var(--status-warning-bg); color: var(--status-warning); }
+
+/* ── Level badge ──────────────────────────────────────────────────────── */
+.mt-level {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+.mt-level--A { border-left: 2px solid var(--status-success); }
+.mt-level--AA { border-left: 2px solid var(--accent); }
+.mt-level--AAA { border-left: 2px solid var(--status-warning); }
+
+/* ── Toggle button ────────────────────────────────────────────────────── */
+.mt-toggle {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.4rem;
+  transition: transform 0.15s;
+}
+.mt-toggle:hover { color: var(--accent); }
+
+/* ── Instructions & checklist ─────────────────────────────────────────── */
+.mt-instructions {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+.mt-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem 0;
+}
+.mt-checklist li {
+  font-size: 0.83rem;
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  position: relative;
+  color: var(--text-primary);
+}
+.mt-checklist li::before {
+  content: '\2610';
+  position: absolute;
+  left: 0;
+  color: var(--text-secondary);
+}
+
+/* ── Action buttons ───────────────────────────────────────────────────── */
+.mt-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+.mt-btn {
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.mt-btn:hover { opacity: 0.85; }
+.mt-btn--pass { color: var(--status-success); border-color: var(--status-success); }
+.mt-btn--pass.mt-btn--active { background: var(--status-success-bg); font-weight: 700; }
+.mt-btn--fail { color: var(--status-error); border-color: var(--status-error); }
+.mt-btn--fail.mt-btn--active { background: var(--status-error-bg); font-weight: 700; }
+.mt-btn--na { color: var(--status-warning); border-color: var(--status-warning); }
+.mt-btn--na.mt-btn--active { background: var(--status-warning-bg); font-weight: 700; }
+
+/* ── Notes textarea ───────────────────────────────────────────────────── */
+.mt-notes-wrap { margin-bottom: 0.5rem; }
+.mt-notes-wrap label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+.mt-notes {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-family: inherit;
+  resize: vertical;
+}
+.mt-notes:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* ── Tested info ──────────────────────────────────────────────────────── */
+.mt-tested-info {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-style: italic;
 }

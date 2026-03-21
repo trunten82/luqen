@@ -34,6 +34,46 @@ export async function homeRoutes(
       0,
     );
 
+    // Executive summary data
+    const completedScans = allScans.filter((s) => s.status === 'completed');
+    const uniqueSiteUrls = new Set(completedScans.map((s) => s.siteUrl));
+    const sitesMonitored = uniqueSiteUrls.size;
+
+    // Overall trend: compare latest vs previous scan per URL
+    let improvingCount = 0;
+    let regressingCount = 0;
+    for (const url of uniqueSiteUrls) {
+      const siteScans = completedScans
+        .filter((s) => s.siteUrl === url)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      if (siteScans.length >= 2) {
+        const latest = siteScans[siteScans.length - 1];
+        const previous = siteScans[siteScans.length - 2];
+        const latestTotal = latest.totalIssues ?? 0;
+        const previousTotal = previous.totalIssues ?? 0;
+        if (latestTotal < previousTotal) improvingCount++;
+        if (latestTotal > previousTotal) regressingCount++;
+      }
+    }
+
+    let trendDirection: string;
+    if (improvingCount > regressingCount) {
+      trendDirection = 'Improving';
+    } else if (regressingCount > improvingCount) {
+      trendDirection = 'Regressing';
+    } else if (completedScans.length === 0) {
+      trendDirection = 'No data';
+    } else {
+      trendDirection = 'Stable';
+    }
+
+    const compliantScans = completedScans.filter(
+      (s) => (s.confirmedViolations ?? 0) === 0,
+    ).length;
+    const complianceRate = completedScans.length > 0
+      ? Math.round((compliantScans / completedScans.length) * 100)
+      : 0;
+
     // Load jurisdictions + regulations for quick scan form
     let jurisdictions: Array<{ id: string; name: string }> = [];
     let regulations: Array<{ id: string; name: string; shortName: string; jurisdictionId: string }> = [];
@@ -58,6 +98,9 @@ export async function homeRoutes(
         scansThisWeek,
         pagesScanned,
         issuesFound,
+        sitesMonitored,
+        trendDirection,
+        complianceRate,
       },
       jurisdictions,
       regulations,

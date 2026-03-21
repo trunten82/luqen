@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { MigrationRunner } from './migrations.js';
 import type { Migration } from './migrations.js';
+import type { ManualTestResult, ManualTestStatus } from '../manual-criteria.js';
 
 export interface ScanRecord {
   readonly id: string;
@@ -185,7 +186,47 @@ CREATE TABLE IF NOT EXISTS org_members (
 );
     `,
   },
+  {
+    id: '006',
+    name: 'create-page-hashes',
+    sql: `
+CREATE TABLE IF NOT EXISTS page_hashes (
+  site_url TEXT NOT NULL,
+  page_url TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  last_scanned_at TEXT NOT NULL,
+  org_id TEXT NOT NULL DEFAULT 'system',
+  PRIMARY KEY (site_url, page_url, org_id)
+);
+CREATE INDEX IF NOT EXISTS idx_page_hashes_site ON page_hashes(site_url, org_id);
+    `,
+  },
+  {
+    id: '007',
+    name: 'create-manual-test-results',
+    sql: `
+CREATE TABLE IF NOT EXISTS manual_test_results (
+  id TEXT PRIMARY KEY,
+  scan_id TEXT NOT NULL REFERENCES scan_records(id) ON DELETE CASCADE,
+  criterion_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'untested',
+  notes TEXT,
+  tested_by TEXT,
+  tested_at TEXT,
+  org_id TEXT NOT NULL DEFAULT 'system'
+);
+CREATE INDEX IF NOT EXISTS idx_manual_tests_scan ON manual_test_results(scan_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_manual_tests_unique ON manual_test_results(scan_id, criterion_id);
+    `,
+  },
 ];
+
+export interface PageHashEntry {
+  readonly siteUrl: string;
+  readonly pageUrl: string;
+  readonly hash: string;
+  readonly orgId: string;
+}
 
 export class ScanDb {
   private readonly db: Database.Database;
@@ -327,6 +368,144 @@ export class ScanDb {
 
   deleteOrgScans(orgId: string): void {
     this.db.prepare('DELETE FROM scan_records WHERE org_id = ?').run(orgId);
+  }
+
+  getTrendData(orgId?: string): ScanRecord[] {
+    const conditions = ["status = 'completed'"];
+    const params: Record<string, unknown> = {};
+
+    if (orgId !== undefined) {
+      conditions.push('org_id = @orgId');
+      params['orgId'] = orgId;
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const sql = `SELECT * FROM scan_records ${where} ORDER BY created_at ASC`;
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(params) as ScanRow[];
+    return rows.map(rowToRecord);
+  }
+
+  getPageHashes(siteUrl: string, orgId: string): Map<string, string> {
+    const stmt = this.db.prepare(
+      'SELECT page_url, content_hash FROM page_hashes WHERE site_url = @siteUrl AND org_id = @orgId'
+    );
+    const rows = stmt.all({ siteUrl, orgId }) as Array<{ page_url: string; content_hash: string }>;
+    const result = new Map<string, string>();
+    for (const row of rows) {
+      result.set(row.page_url, row.content_hash);
+    }
+    return result;
+  }
+
+  upsertPageHash(siteUrl: string, pageUrl: string, hash: string, orgId: string): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO page_hashes (site_url, page_url, content_hash, last_scanned_at, org_id)
+      VALUES (@siteUrl, @pageUrl, @hash, @lastScannedAt, @orgId)
+      ON CONFLICT (site_url, page_url, org_id)
+      DO UPDATE SET content_hash = @hash, last_scanned_at = @lastScannedAt
+    `);
+    stmt.run({
+      siteUrl,
+      pageUrl,
+      hash,
+      lastScannedAt: new Date().toISOString(),
+      orgId,
+    });
+  }
+
+  upsertPageHashes(entries: ReadonlyArray<PageHashEntry>): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO page_hashes (site_url, page_url, content_hash, last_scanned_at, org_id)
+      VALUES (@siteUrl, @pageUrl, @hash, @lastScannedAt, @orgId)
+      ON CONFLICT (site_url, page_url, org_id)
+      DO UPDATE SET content_hash = @hash, last_scanned_at = @lastScannedAt
+    `);
+
+    const upsertMany = this.db.transaction((rows: ReadonlyArray<PageHashEntry>) => {
+      const now = new Date().toISOString();
+      for (const entry of rows) {
+        stmt.run({
+          siteUrl: entry.siteUrl,
+          pageUrl: entry.pageUrl,
+          hash: entry.hash,
+          lastScannedAt: now,
+          orgId: entry.orgId,
+        });
+      }
+    });
+
+    upsertMany(entries);
+  }
+
+  // ── Manual test results ───────────────────────────────────────────────
+
+  getManualTests(scanId: string): ManualTestResult[] {
+    const stmt = this.db.prepare(
+      'SELECT * FROM manual_test_results WHERE scan_id = ? ORDER BY criterion_id'
+    );
+    const rows = stmt.all(scanId) as Array<{
+      id: string;
+      scan_id: string;
+      criterion_id: string;
+      status: string;
+      notes: string | null;
+      tested_by: string | null;
+      tested_at: string | null;
+      org_id: string;
+    }>;
+
+    return rows.map((row) => ({
+      id: row.id,
+      scanId: row.scan_id,
+      criterionId: row.criterion_id,
+      status: row.status as ManualTestStatus,
+      notes: row.notes,
+      testedBy: row.tested_by,
+      testedAt: row.tested_at,
+      orgId: row.org_id,
+    }));
+  }
+
+  upsertManualTest(data: {
+    readonly scanId: string;
+    readonly criterionId: string;
+    readonly status: ManualTestStatus;
+    readonly notes?: string;
+    readonly testedBy: string;
+    readonly orgId?: string;
+  }): ManualTestResult {
+    const now = new Date().toISOString();
+    const id = `mt-${data.scanId}-${data.criterionId}`;
+
+    const stmt = this.db.prepare(`
+      INSERT INTO manual_test_results (id, scan_id, criterion_id, status, notes, tested_by, tested_at, org_id)
+      VALUES (@id, @scanId, @criterionId, @status, @notes, @testedBy, @testedAt, @orgId)
+      ON CONFLICT (scan_id, criterion_id)
+      DO UPDATE SET status = @status, notes = @notes, tested_by = @testedBy, tested_at = @testedAt
+    `);
+
+    stmt.run({
+      id,
+      scanId: data.scanId,
+      criterionId: data.criterionId,
+      status: data.status,
+      notes: data.notes ?? null,
+      testedBy: data.testedBy,
+      testedAt: now,
+      orgId: data.orgId ?? 'system',
+    });
+
+    return {
+      id,
+      scanId: data.scanId,
+      criterionId: data.criterionId,
+      status: data.status,
+      notes: data.notes ?? null,
+      testedBy: data.testedBy,
+      testedAt: now,
+      orgId: data.orgId ?? 'system',
+    };
   }
 
   close(): void {

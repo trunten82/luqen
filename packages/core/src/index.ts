@@ -5,18 +5,21 @@
  */
 
 export { scanUrls, type ScanOptions, type ScanResults } from './scanner/scanner.js';
-export { WebserviceClient } from './scanner/webservice-client.js';
+export { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
 export { discoverUrls } from './discovery/discover.js';
 export { buildAnnotatedPages } from './reporter/html-reporter.js';
+export { computeContentHash, computeContentHashes } from './scanner/content-hash.js';
 export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanError, ProgressListener, ComplianceEnrichment } from './types.js';
 
 import { discoverUrls } from './discovery/discover.js';
 import { scanUrls, type ScanOptions } from './scanner/scanner.js';
-import { WebserviceClient } from './scanner/webservice-client.js';
+import { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
 import type { DiscoveredUrl, PageResult, ProgressListener } from './types.js';
 
 export interface CreateScannerOptions {
   readonly webserviceUrl: string;
+  /** Additional webservice URLs for horizontal scaling (round-robin distribution). */
+  readonly webserviceUrls?: readonly string[];
   readonly standard?: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';
   readonly concurrency?: number;
   readonly timeout?: number;
@@ -30,6 +33,8 @@ export interface CreateScannerOptions {
   readonly singlePage?: boolean;
   /** Maximum pages to discover and scan. Default: 50. Env override: PALLY_MAX_PAGES. */
   readonly maxPages?: number;
+  /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Requires the runner installed alongside the webservice. */
+  readonly runner?: 'htmlcs' | 'axe';
 }
 
 export interface Scanner {
@@ -47,7 +52,22 @@ export interface Scanner {
  * Used by the dashboard's ScanOrchestrator for programmatic scanning.
  */
 export function createScanner(opts: CreateScannerOptions): Scanner {
-  const client = new WebserviceClient(opts.webserviceUrl, opts.headers ?? {});
+  // Build all unique webservice URLs: primary + any additional pool URLs
+  const allUrls: string[] = [];
+  if (opts.webserviceUrls !== undefined && opts.webserviceUrls.length > 0) {
+    // Use the explicit list; include the primary URL if not already present
+    const urlSet = new Set(opts.webserviceUrls);
+    urlSet.add(opts.webserviceUrl);
+    allUrls.push(...urlSet);
+  } else {
+    allUrls.push(opts.webserviceUrl);
+  }
+
+  const headers = opts.headers ?? {};
+  const clientOrPool: WebserviceClient | WebservicePool = allUrls.length > 1
+    ? new WebservicePool(allUrls, headers)
+    : new WebserviceClient(allUrls[0], headers);
+
   const scanOptions: ScanOptions = {
     standard: opts.standard ?? 'WCAG2AA',
     concurrency: opts.concurrency ?? 5,
@@ -58,6 +78,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
     headers: opts.headers ?? {},
     wait: opts.wait ?? 0,
     onProgress: opts.onProgress,
+    ...(opts.runner !== undefined ? { runner: opts.runner } : {}),
   };
 
   return {
@@ -82,7 +103,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       }
 
       // Scan all discovered URLs
-      const results = await scanUrls(urls, client, scanOptions);
+      const results = await scanUrls(urls, clientOrPool, scanOptions);
 
       // Aggregate results
       let errorCount = 0;

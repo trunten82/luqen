@@ -8,6 +8,7 @@ const VALID_STANDARDS = new Set(['WCAG2A', 'WCAG2AA', 'WCAG2AAA']);
 
 export const DEFAULT_CONFIG: PallyConfig = {
   webserviceUrl: 'http://localhost:3000',
+  webserviceUrls: [],
   webserviceHeaders: {},
   standard: 'WCAG2AA',
   concurrency: 5,
@@ -80,12 +81,16 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Pally
   const envUrl = process.env.PALLY_WEBSERVICE_URL;
   const envAuth = process.env.PALLY_WEBSERVICE_AUTH;
   const envComplianceUrl = process.env.PALLY_COMPLIANCE_URL;
+  const envRunner = process.env.PALLY_RUNNER;
 
   const withEnv: PallyConfig = {
     ...merged,
     ...(envUrl ? { webserviceUrl: envUrl } : {}),
     ...(envAuth ? { webserviceHeaders: { ...merged.webserviceHeaders, Authorization: envAuth } } : {}),
     ...(envComplianceUrl ? { complianceUrl: envComplianceUrl } : {}),
+    ...(envRunner !== undefined && (envRunner === 'htmlcs' || envRunner === 'axe')
+      ? { runner: envRunner as 'htmlcs' | 'axe' }
+      : {}),
   };
 
   validate(withEnv);

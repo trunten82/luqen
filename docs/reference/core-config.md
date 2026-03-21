@@ -25,6 +25,7 @@ Place this file in your project root (or any ancestor directory). All fields are
   "hideElements": "",
   "headers": {},
   "wait": 0,
+  "runner": "htmlcs",
   "outputDir": "./pally-reports",
   "sourceMap": {},
   "compliance": {
@@ -43,6 +44,7 @@ Place this file in your project root (or any ancestor directory). All fields are
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `webserviceUrl` | `string` | `"http://localhost:3000"` | Base URL of the pa11y webservice instance |
+| `webserviceUrls` | `string[]` | `[]` | Additional pa11y webservice URLs for horizontal scaling. Scans are distributed round-robin across all URLs (including `webserviceUrl`). |
 | `webserviceHeaders` | `object` | `{}` | HTTP headers sent with every request **to the webservice** (e.g. for webservice authentication) |
 | `standard` | `"WCAG2A" \| "WCAG2AA" \| "WCAG2AAA"` | `"WCAG2AA"` | WCAG conformance level |
 | `concurrency` | `number` | `5` | Maximum number of pages scanned in parallel |
@@ -56,6 +58,7 @@ Place this file in your project root (or any ancestor directory). All fields are
 | `headers` | `object` | `{}` | HTTP headers sent by pa11y **to the target site** (e.g. staging auth) |
 | `wait` | `number` | `0` | Milliseconds to wait after page load before testing (for SPAs) |
 | `outputDir` | `string` | `"./pally-reports"` | Directory where reports are written |
+| `runner` | `"htmlcs" \| "axe"` | `"htmlcs"` | Pa11y test runner. `axe` requires `pa11y-runner-axe` installed on the webservice. |
 | `sourceMap` | `object` | `{}` | Manual URL-to-file overrides (glob patterns supported) |
 | `compliance.url` | `string` | `""` | Base URL of the compliance service |
 | `compliance.clientId` | `string` | `""` | OAuth client ID for the compliance service |
@@ -74,6 +77,7 @@ Place this file in your project root (or any ancestor directory). All fields are
 | `PALLY_WEBSERVICE_AUTH` | `webserviceHeaders.Authorization` | Authorization header for the webservice |
 | `PALLY_AGENT_CONFIG` | Config file path | Absolute path to a `.pally-agent.json` file |
 | `PALLY_MAX_PAGES` | `maxPages` | Maximum pages to discover and scan (dashboard uses this via `DASHBOARD_MAX_PAGES`) |
+| `PALLY_RUNNER` | `runner` | Pa11y test runner: `htmlcs` or `axe` |
 
 ---
 
@@ -120,6 +124,7 @@ pally-agent scan <url> [options]
 | `--output <dir>` | `string` | Output directory for reports |
 | `--format <format>` | `json \| html \| both` | Report format (default: `json`) |
 | `--also-crawl` | flag | Crawl the site in addition to the sitemap |
+| `--runner <runner>` | `htmlcs \| axe` | Pa11y test runner (default: `htmlcs`) |
 | `--config <path>` | `string` | Explicit path to a config file |
 | `--compliance-url <url>` | `string` | Base URL of the compliance service |
 | `--jurisdictions <list>` | `string` | Comma-separated jurisdiction IDs (e.g. `EU,US,UK`) |

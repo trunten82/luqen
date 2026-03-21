@@ -44,6 +44,26 @@
       Reports
     </a>
 
+    <a class="sidebar__item {{#if (eq currentPath '/reports/trends')}}is-active{{/if}}"
+       href="/reports/trends"
+       aria-current="{{#if (eq currentPath '/reports/trends')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M3 17l4-6 4 4 6-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Trends
+    </a>
+
+    <span class="sidebar__section-label">Tools</span>
+
+    <a class="sidebar__item {{#if (eq currentPath '/tools/bookmarklet')}}is-active{{/if}}"
+       href="/tools/bookmarklet"
+       aria-current="{{#if (eq currentPath '/tools/bookmarklet')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11l-3 6h2l3-6h-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Bookmarklet
+    </a>
+
     {{#if (isAdmin user.role)}}
     <!-- Admin section — visible to admins only -->
     <span class="sidebar__section-label">Administration</span>

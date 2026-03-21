@@ -1,5 +1,6 @@
 import type { DiscoveredUrl, ScanProgress, ScanError, PageResult, AccessibilityIssue, ProgressListener } from '../types.js';
 import type { WebserviceClient, Pa11yIssue, Pa11yResult } from './webservice-client.js';
+import type { WebservicePool } from './webservice-client.js';
 
 export interface ScanOptions {
   readonly standard: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';
@@ -11,6 +12,8 @@ export interface ScanOptions {
   readonly headers: Readonly<Record<string, string>>;
   readonly wait: number;
   readonly onProgress?: ProgressListener;
+  /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Passed through to the webservice task. */
+  readonly runner?: 'htmlcs' | 'axe';
 }
 
 export interface ScanResults {
@@ -101,6 +104,7 @@ async function scanUrl(
       wait: options.wait,
       hideElements: options.hideElements || undefined,
       headers: options.headers,
+      ...(options.runner !== undefined ? { runner: options.runner } : {}),
     });
 
     taskId = task.id;
@@ -192,9 +196,15 @@ async function scanUrl(
   }
 }
 
+/** Checks whether a value is a WebservicePool (has a `next` method). */
+function isPool(clientOrPool: WebserviceClient | WebservicePool): clientOrPool is WebservicePool {
+  return typeof (clientOrPool as WebservicePool).next === 'function'
+    && typeof (clientOrPool as WebservicePool).size === 'number';
+}
+
 export async function scanUrls(
   urls: DiscoveredUrl[],
-  client: WebserviceClient,
+  clientOrPool: WebserviceClient | WebservicePool,
   options: ScanOptions,
 ): Promise<ScanResults> {
   const concurrency = options.concurrency ?? 5;
@@ -214,6 +224,8 @@ export async function scanUrls(
       queueIndex++;
 
       const { url, index } = queue[current];
+      // Pick the next client from the pool (round-robin) or use the single client
+      const client = isPool(clientOrPool) ? clientOrPool.next() : clientOrPool;
       const result = await scanUrl(url, client, options, index, total);
 
       if (result.page !== undefined) {

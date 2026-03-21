@@ -38,6 +38,14 @@
     <a href="/reports" class="btn btn--ghost btn--sm" aria-label="Back to reports list">
       &larr; Back to Reports
     </a>
+    {{#if reportData}}
+    <a href="/reports/{{scan.id}}/manual" class="btn btn--ghost btn--sm" aria-label="Open manual testing checklist">
+      Manual Testing {{#if manualTestStats}}({{manualTestStats.percentage}}%){{/if}}
+    </a>
+    <a href="/reports/{{scan.id}}/print" target="_blank" class="btn btn--ghost btn--sm" aria-label="Open print-friendly version for PDF export">
+      Print / PDF
+    </a>
+    {{/if}}
   </div>
 </section>
 

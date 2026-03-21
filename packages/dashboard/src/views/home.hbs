@@ -1,5 +1,27 @@
 {{! Home page — summary stats and recent scans }}
 
+<section aria-labelledby="exec-summary-heading">
+  <h2 id="exec-summary-heading" class="section-title">Executive Summary</h2>
+  <div class="exec-summary" role="list" aria-label="Executive summary statistics">
+    <article class="exec-summary__card" role="listitem">
+      <span class="exec-summary__value" aria-label="{{stats.totalScans}} total scans completed">{{stats.totalScans}}</span>
+      <span class="exec-summary__label">Total Scans</span>
+    </article>
+    <article class="exec-summary__card" role="listitem">
+      <span class="exec-summary__value" aria-label="{{stats.sitesMonitored}} sites monitored">{{stats.sitesMonitored}}</span>
+      <span class="exec-summary__label">Sites Monitored</span>
+    </article>
+    <article class="exec-summary__card" role="listitem">
+      <span class="exec-summary__value exec-summary__value--trend" aria-label="Overall trend: {{stats.trendDirection}}">{{stats.trendDirection}}</span>
+      <span class="exec-summary__label">Overall Trend</span>
+    </article>
+    <article class="exec-summary__card" role="listitem">
+      <span class="exec-summary__value" aria-label="{{stats.complianceRate}} percent compliance rate">{{stats.complianceRate}}%</span>
+      <span class="exec-summary__label">Compliance Rate</span>
+    </article>
+  </div>
+</section>
+
 <section aria-labelledby="stats-heading">
   <h2 id="stats-heading" class="section-title">Overview</h2>
   <div class="stats-grid" role="list" aria-label="Summary statistics">
