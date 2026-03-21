@@ -9,7 +9,7 @@ import { VERSION } from './version.js';
 const program = new Command();
 
 program
-  .name('pally-monitor')
+  .name('luqen-monitor')
   .description('Regulatory monitor agent for accessibility regulation changes')
   .version(VERSION);
 

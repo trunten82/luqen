@@ -26,7 +26,7 @@ import { VERSION } from './version.js';
 export const program = new Command();
 
 program
-  .name('pally-agent')
+  .name('luqen')
   .description('Accessibility testing agent using pa11y webservice')
   .version(VERSION);
 

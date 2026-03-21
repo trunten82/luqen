@@ -469,7 +469,7 @@
 
 {{/if}}
 
-<script>window.__pallyAssignees = {{{json assignees}}};</script>
+<script>window.__luqenAssignees = {{{json assignees}}};</script>
 
 <script>
   /* ── Tab switching ──────────────────────────────────────────────────────── */
@@ -873,7 +873,7 @@
     def.value = ''; def.textContent = 'Select assignee...';
     select.appendChild(def);
 
-    (window.__pallyAssignees || []).forEach(function(a) {
+    (window.__luqenAssignees || []).forEach(function(a) {
       var opt = document.createElement('option');
       opt.value = a.id;
       opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
@@ -972,7 +972,7 @@
   (function() {
     var bulkSelect = document.getElementById('rpt-bulk-assignee');
     if (!bulkSelect) return;
-    (window.__pallyAssignees || []).forEach(function(a) {
+    (window.__luqenAssignees || []).forEach(function(a) {
       var opt = document.createElement('option');
       opt.value = a.id;
       opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;

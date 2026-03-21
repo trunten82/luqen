@@ -24,7 +24,7 @@ export interface AgentCard {
 }
 
 export const agentCard: AgentCard = {
-  name: 'pally-compliance',
+  name: 'luqen-compliance',
   description:
     'Accessibility compliance rule engine — check WCAG issues against 60+ country-specific legal requirements, manage regulations, and monitor legal changes',
   url: process.env.COMPLIANCE_URL ?? 'http://localhost:4000',

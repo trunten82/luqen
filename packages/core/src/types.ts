@@ -1,4 +1,4 @@
-export interface PallyConfig {
+export interface LuqenConfig {
   readonly webserviceUrl: string;
   readonly webserviceHeaders: Readonly<Record<string, string>>;
   readonly standard: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';

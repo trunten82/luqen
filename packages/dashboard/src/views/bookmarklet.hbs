@@ -2,10 +2,10 @@
   <h2 id="bookmarklet-heading" class="section-title">Browser Bookmarklet</h2>
 
   <div class="card mb-md">
-    <h3 class="card__title mb-md">Scan with Pally</h3>
+    <h3 class="card__title mb-md">Scan with Luqen</h3>
     <p class="form-hint mb-md">
       Drag the button below to your browser's bookmark bar. Then visit any website and click it to
-      open a new Pally scan with the URL pre-filled.
+      open a new Luqen scan with the URL pre-filled.
     </p>
 
     <div style="text-align:center; margin: 1.5rem 0;">
@@ -13,8 +13,8 @@
          href="javascript:void(function(){var d='{{dashboardUrl}}';var u=encodeURIComponent(window.location.href);window.open(d+'/scan/new?prefill='+u,'_blank');})()"
          onclick="event.preventDefault(); alert('Drag this button to your bookmark bar instead of clicking it.');"
          draggable="true"
-         aria-label="Drag this link to your bookmark bar to install the Pally bookmarklet">
-        Scan with Pally
+         aria-label="Drag this link to your bookmark bar to install the Luqen bookmarklet">
+        Scan with Luqen
       </a>
     </div>
   </div>
@@ -22,9 +22,9 @@
   <div class="card mb-md">
     <h3 class="card__title mb-md">How to Use</h3>
     <ol style="padding-left: 1.5rem; line-height: 1.8;">
-      <li><strong>Drag</strong> the "Scan with Pally" button above to your browser's bookmark bar.</li>
+      <li><strong>Drag</strong> the "Scan with Luqen" button above to your browser's bookmark bar.</li>
       <li><strong>Visit</strong> any website you want to scan for accessibility issues.</li>
-      <li><strong>Click</strong> the bookmark &mdash; Pally opens in a new tab with the URL pre-filled and ready to scan.</li>
+      <li><strong>Click</strong> the bookmark &mdash; Luqen opens in a new tab with the URL pre-filled and ready to scan.</li>
     </ol>
   </div>
 
@@ -39,7 +39,7 @@
   <div class="card mb-md">
     <h3 class="card__title mb-md">Requirements</h3>
     <ul style="padding-left: 1.5rem; line-height: 1.8;">
-      <li>The Pally dashboard must be running and accessible at <code>{{dashboardUrl}}</code>.</li>
+      <li>The Luqen dashboard must be running and accessible at <code>{{dashboardUrl}}</code>.</li>
       <li>You must be logged in to the dashboard for the scan to start.</li>
       <li>Pop-up blockers may need to allow pop-ups from the site you are scanning.</li>
     </ul>

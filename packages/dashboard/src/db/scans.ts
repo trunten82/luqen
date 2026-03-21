@@ -400,7 +400,7 @@ CREATE TABLE IF NOT EXISTS smtp_config (
   username TEXT NOT NULL,
   password TEXT NOT NULL,
   from_address TEXT NOT NULL,
-  from_name TEXT NOT NULL DEFAULT 'Pally Dashboard',
+  from_name TEXT NOT NULL DEFAULT 'Luqen',
   org_id TEXT NOT NULL DEFAULT 'system'
 );
     `,
@@ -1571,7 +1571,7 @@ export class ScanDb {
       username: data.username,
       password: data.password,
       fromAddress: data.fromAddress,
-      fromName: data.fromName ?? 'Pally Dashboard',
+      fromName: data.fromName ?? 'Luqen',
       orgId: data.orgId ?? 'system',
     });
   }

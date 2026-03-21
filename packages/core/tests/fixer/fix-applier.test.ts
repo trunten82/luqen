@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 
 describe('applyFix', () => {
   let tempDir: string;
-  beforeEach(() => { tempDir = join(tmpdir(), `pally-apply-test-${Date.now()}`); mkdirSync(tempDir, { recursive: true }); });
+  beforeEach(() => { tempDir = join(tmpdir(), `luqen-apply-test-${Date.now()}`); mkdirSync(tempDir, { recursive: true }); });
   afterEach(() => { rmSync(tempDir, { recursive: true, force: true }); });
 
   it('applies a fix and returns a diff', async () => {

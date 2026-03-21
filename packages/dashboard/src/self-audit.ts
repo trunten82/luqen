@@ -120,7 +120,7 @@ export function formatAuditSummary(summary: AuditSummary): string {
   const status = summary.totalErrors > 0 ? 'FAIL' : 'PASS';
 
   lines.push('');
-  lines.push(`=== Pally Dashboard Self-Audit: ${status} ===`);
+  lines.push(`=== Luqen Self-Audit: ${status} ===`);
   lines.push('');
   lines.push(`  ${summary.pagesScanned} pages scanned`);
 

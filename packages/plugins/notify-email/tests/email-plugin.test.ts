@@ -23,7 +23,7 @@ describe('plugin-notify-email', () => {
     username: 'user@example.com',
     password: 'secret123',
     fromAddress: 'noreply@example.com',
-    fromName: 'Pally Dashboard',
+    fromName: 'Luqen',
     events: 'scan.complete,scan.failed',
   };
 
@@ -157,7 +157,7 @@ describe('plugin-notify-email', () => {
       expect(mockSendMail).toHaveBeenCalledOnce();
       const mailOptions = mockSendMail.mock.calls[0][0];
       expect(mailOptions.from).toContain('noreply@example.com');
-      expect(mailOptions.from).toContain('Pally Dashboard');
+      expect(mailOptions.from).toContain('Luqen');
       expect(mailOptions.subject).toContain('example.com');
       expect(mailOptions.html).toContain('Scan Complete');
     });

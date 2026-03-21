@@ -32,7 +32,7 @@ function mockPluginManager(authPlugins: PluginInstance[] = []): PluginManager {
 
 function fakeAuthPlugin(overrides: Partial<AuthPlugin> = {}): AuthPlugin {
   const manifest: PluginManifest = {
-    name: '@pally/plugin-okta',
+    name: '@luqen/plugin-okta',
     displayName: 'Okta SSO',
     type: 'auth',
     version: '1.0.0',
@@ -303,7 +303,7 @@ describe('AuthService', () => {
     it('filters out non-auth plugins missing authenticate method', () => {
       const notAuthPlugin: PluginInstance = {
         manifest: {
-          name: '@pally/plugin-slack',
+          name: '@luqen/plugin-slack',
           displayName: 'Slack',
           type: 'notification',
           version: '1.0.0',

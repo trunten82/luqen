@@ -5,7 +5,7 @@ import { agentCard, registerAgentCardPlugin } from '../../src/a2a/agent-card.js'
 describe('A2A Agent Card', () => {
   describe('agentCard object', () => {
     it('has a name field', () => {
-      expect(agentCard.name).toBe('pally-compliance');
+      expect(agentCard.name).toBe('luqen-compliance');
     });
 
     it('has a description field', () => {
@@ -101,7 +101,7 @@ describe('A2A Agent Card', () => {
       });
 
       const body = JSON.parse(response.payload);
-      expect(body.name).toBe('pally-compliance');
+      expect(body.name).toBe('luqen-compliance');
       expect(body.version).toBe('1.0.0');
       expect(Array.isArray(body.skills)).toBe(true);
     });

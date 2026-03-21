@@ -5,7 +5,7 @@ import { tmpdir } from 'os';
 import { detectFramework } from '../../src/source-mapper/framework-detector.js';
 
 async function makeTmpDir(): Promise<string> {
-  return mkdtemp(join(tmpdir(), 'pally-fw-'));
+  return mkdtemp(join(tmpdir(), 'luqen-fw-'));
 }
 
 describe('detectFramework', () => {

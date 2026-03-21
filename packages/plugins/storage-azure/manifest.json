@@ -7,6 +7,6 @@
   "configSchema": [
     { "key": "connectionString", "label": "Connection String", "type": "secret", "required": true },
     { "key": "containerName", "label": "Container Name", "type": "string", "required": true },
-    { "key": "prefix", "label": "Blob Prefix", "type": "string", "default": "pally-agent/" }
+    { "key": "prefix", "label": "Blob Prefix", "type": "string", "default": "luqen-agent/" }
   ]
 }

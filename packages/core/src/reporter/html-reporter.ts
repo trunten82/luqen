@@ -44,11 +44,11 @@ function slugifyHost(siteUrl: string): string {
 
 function buildUniqueFilename(outputDir: string, siteUrl: string, timestamp: string, ext: string): string {
   const host = slugifyHost(siteUrl);
-  let filename = `pally-report-${host}-${timestamp}.${ext}`;
+  let filename = `luqen-report-${host}-${timestamp}.${ext}`;
   let fullPath = join(outputDir, filename);
   let counter = 1;
   while (existsSync(fullPath)) {
-    filename = `pally-report-${host}-${timestamp}-${counter}.${ext}`;
+    filename = `luqen-report-${host}-${timestamp}-${counter}.${ext}`;
     fullPath = join(outputDir, filename);
     counter++;
   }

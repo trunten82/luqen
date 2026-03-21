@@ -11,7 +11,7 @@
     { "key": "username", "label": "SMTP Username", "type": "string", "required": true },
     { "key": "password", "label": "SMTP Password", "type": "secret", "required": true },
     { "key": "fromAddress", "label": "From Email", "type": "string", "required": true },
-    { "key": "fromName", "label": "From Name", "type": "string", "default": "Pally Dashboard" },
+    { "key": "fromName", "label": "From Name", "type": "string", "default": "Luqen" },
     { "key": "events", "label": "Events to notify", "type": "string", "default": "scan.complete,scan.failed" }
   ],
   "adminPages": [

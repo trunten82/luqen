@@ -11,7 +11,7 @@ import { computeNextSendAt } from '../../email/scheduler.js';
 const VALID_FREQUENCIES = ['daily', 'weekly', 'monthly'];
 const VALID_FORMATS = ['pdf', 'csv', 'both'];
 
-const EMAIL_PLUGIN_PACKAGE = '@pally-agent/plugin-notify-email';
+const EMAIL_PLUGIN_PACKAGE = '@luqen/plugin-notify-email';
 
 function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -88,7 +88,7 @@ export async function emailReportRoutes(
           username: '',
           password: '',
           fromAddress: '',
-          fromName: 'Pally Dashboard',
+          fromName: 'Luqen',
         },
         smtpConfigured,
         reports: formatted,
@@ -143,7 +143,7 @@ export async function emailReportRoutes(
         username,
         password,
         fromAddress,
-        fromName: body.fromName?.trim() || 'Pally Dashboard',
+        fromName: body.fromName?.trim() || 'Luqen',
         orgId,
       });
 

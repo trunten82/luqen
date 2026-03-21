@@ -1,4 +1,4 @@
-// HTTP client for the pally-agent compliance service.
+// HTTP client for the luqen compliance service.
 // Enrichment is optional — if the service is unreachable, null is returned
 // so callers can degrade gracefully.
 

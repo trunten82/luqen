@@ -11,7 +11,7 @@ export class AzureBlobClient {
   constructor(
     connectionString: string,
     private readonly containerName: string,
-    private readonly prefix: string = 'pally-agent/',
+    private readonly prefix: string = 'luqen/',
   ) {
     this.credentials = parseConnectionString(connectionString);
     this.endpoint = `https://${this.credentials.accountName}.blob.core.windows.net`;

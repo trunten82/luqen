@@ -5,7 +5,7 @@ import { tmpdir } from 'os';
 import { resolveUrlToFile } from '../../src/source-mapper/routing-strategies.js';
 
 async function makeTmpDir(): Promise<string> {
-  return mkdtemp(join(tmpdir(), 'pally-route-'));
+  return mkdtemp(join(tmpdir(), 'luqen-route-'));
 }
 
 describe('resolveUrlToFile', () => {

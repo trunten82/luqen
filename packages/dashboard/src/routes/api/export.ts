@@ -119,7 +119,7 @@ export async function exportRoutes(
       ]);
 
       const csv = toCsv(headers, rows);
-      const filename = `pally-scans-${todayStamp()}.csv`;
+      const filename = `luqen-scans-${todayStamp()}.csv`;
 
       return reply
         .header('Content-Type', 'text/csv')
@@ -225,7 +225,7 @@ export async function exportRoutes(
       }
 
       const csv = toCsv(headers, rows);
-      const filename = `pally-issues-${id}-${todayStamp()}.csv`;
+      const filename = `luqen-issues-${id}-${todayStamp()}.csv`;
 
       return reply
         .header('Content-Type', 'text/csv')
@@ -269,7 +269,7 @@ export async function exportRoutes(
       ]);
 
       const csv = toCsv(headers, rows);
-      const filename = `pally-trends-${todayStamp()}.csv`;
+      const filename = `luqen-trends-${todayStamp()}.csv`;
 
       return reply
         .header('Content-Type', 'text/csv')

@@ -86,7 +86,7 @@ describe('MCP server tool names', () => {
 describe('A2A agent card', () => {
   it('has the correct agent name', async () => {
     const { agentCard } = await import('../src/a2a/agent-card.js');
-    expect(agentCard.name).toBe('pally-monitor');
+    expect(agentCard.name).toBe('luqen-monitor');
   });
 
   it('has source-scanning skill', async () => {
@@ -115,7 +115,7 @@ describe('loadConfig', () => {
     const config = loadConfig();
     expect(config.complianceUrl).toBe('http://localhost:4000');
     expect(config.checkInterval).toBe('manual');
-    expect(config.userAgent).toContain('pally-monitor');
+    expect(config.userAgent).toContain('luqen-monitor');
   });
 
   it('respects MONITOR_COMPLIANCE_URL env var', async () => {

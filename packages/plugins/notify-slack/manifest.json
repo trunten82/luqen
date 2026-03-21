@@ -7,7 +7,7 @@
   "configSchema": [
     { "key": "webhookUrl", "label": "Webhook URL", "type": "secret", "required": true },
     { "key": "channel", "label": "Channel", "type": "string", "default": "#accessibility" },
-    { "key": "username", "label": "Bot Username", "type": "string", "default": "Pally Agent" },
+    { "key": "username", "label": "Bot Username", "type": "string", "default": "Luqen Agent" },
     { "key": "events", "label": "Events to notify", "type": "string", "default": "scan.complete,scan.failed,violation.found,regulation.changed" }
   ]
 }

@@ -163,7 +163,7 @@ export class ScanOrchestrator {
 
       // Dynamically import core scanner to avoid circular dependency issues
       const coreModule = await import(
-        /* webpackIgnore: true */ '@pally-agent/core'
+        /* webpackIgnore: true */ '@luqen/core'
       ).catch(() => null) as null | {
         createScanner: (opts: unknown) => unknown;
         discoverUrls: (url: string, opts: unknown, returnResult: true) => Promise<{ urls: Array<{ url: string; discoveryMethod: string }> }>;

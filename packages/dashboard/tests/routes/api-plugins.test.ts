@@ -19,7 +19,7 @@ const MOCK_REGISTRY: readonly RegistryEntry[] = [
     type: 'notification',
     version: '1.0.0',
     description: 'Send notifications to Slack',
-    packageName: '@pally/plugin-slack',
+    packageName: '@luqen/plugin-slack',
     icon: 'slack',
   },
   {
@@ -28,7 +28,7 @@ const MOCK_REGISTRY: readonly RegistryEntry[] = [
     type: 'auth',
     version: '1.0.0',
     description: 'Azure AD authentication',
-    packageName: '@pally/plugin-azure-ad',
+    packageName: '@luqen/plugin-azure-ad',
     icon: 'azure',
   },
 ];
@@ -104,7 +104,7 @@ function insertPlugin(
     )
     .run({
       id,
-      package_name: overrides.package_name ?? '@pally/plugin-slack',
+      package_name: overrides.package_name ?? '@luqen/plugin-slack',
       type: overrides.type ?? 'notification',
       version: overrides.version ?? '1.0.0',
       config: overrides.config ?? '{}',
@@ -144,14 +144,14 @@ describe('Plugin API routes', () => {
       const body = res.json();
       expect(body).toHaveLength(1);
       expect(body[0].id).toBe(id);
-      expect(body[0].packageName).toBe('@pally/plugin-slack');
+      expect(body[0].packageName).toBe('@luqen/plugin-slack');
     });
   });
 
   // ── GET /api/v1/plugins/registry ────────────────────────────────────────
   describe('GET /api/v1/plugins/registry', () => {
     it('returns available plugins with installed flag', async () => {
-      insertPlugin(ctx.db, { package_name: '@pally/plugin-slack' });
+      insertPlugin(ctx.db, { package_name: '@luqen/plugin-slack' });
 
       const res = await ctx.server.inject({ method: 'GET', url: '/api/v1/plugins/registry' });
       expect(res.statusCode).toBe(200);
@@ -159,8 +159,8 @@ describe('Plugin API routes', () => {
       const body = res.json() as Array<{ packageName: string; installed: boolean }>;
       expect(body).toHaveLength(2);
 
-      const slack = body.find((e) => e.packageName === '@pally/plugin-slack');
-      const azure = body.find((e) => e.packageName === '@pally/plugin-azure-ad');
+      const slack = body.find((e) => e.packageName === '@luqen/plugin-slack');
+      const azure = body.find((e) => e.packageName === '@luqen/plugin-azure-ad');
       expect(slack?.installed).toBe(true);
       expect(azure?.installed).toBe(false);
     });
@@ -196,7 +196,7 @@ describe('Plugin API routes', () => {
       const res = await ctx.server.inject({
         method: 'POST',
         url: '/api/v1/plugins/install',
-        payload: { packageName: '@pally/plugin-slack' },
+        payload: { packageName: '@luqen/plugin-slack' },
       });
       expect(res.statusCode).toBe(500);
       expect(res.json().error).toContain('Install failed');

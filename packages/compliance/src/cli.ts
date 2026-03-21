@@ -23,8 +23,8 @@ export function createProgram(): Command {
   const program = new Command();
 
   program
-    .name('pally-compliance')
-    .description('Pally Compliance Service CLI')
+    .name('luqen-compliance')
+    .description('Luqen Compliance Service CLI')
     .version(VERSION);
 
   // ---- serve ----
@@ -59,7 +59,7 @@ export function createProgram(): Command {
         verifyToken = await createTokenVerifier(publicKeyPem);
       } catch {
         console.error(
-          'Warning: JWT key files not found. Run "pally-compliance keys generate" first.',
+          'Warning: JWT key files not found. Run "luqen-compliance keys generate" first.',
         );
         process.exit(1);
       }
@@ -248,7 +248,7 @@ const isMain =
   process.argv[1] != null &&
   (process.argv[1].endsWith('cli.js') ||
     process.argv[1].endsWith('cli.ts') ||
-    process.argv[1].includes('pally-compliance'));
+    process.argv[1].includes('luqen-compliance'));
 
 if (isMain) {
   const program = createProgram();

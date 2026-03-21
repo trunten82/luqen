@@ -23,7 +23,7 @@ export interface AgentCard {
 }
 
 export const agentCard: AgentCard = {
-  name: 'pally-monitor',
+  name: 'luqen-monitor',
   description:
     'Regulatory monitor agent — watches legal sources for accessibility regulation changes and proposes updates to the compliance service',
   url: process.env.MONITOR_URL ?? 'http://localhost:4200',

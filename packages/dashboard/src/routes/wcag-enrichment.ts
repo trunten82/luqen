@@ -1,5 +1,5 @@
 // WCAG criterion extraction and description lookup for report enrichment.
-// Derived from @pally-agent/core wcag-descriptions.ts to avoid a hard dependency.
+// Derived from @luqen/core wcag-descriptions.ts to avoid a hard dependency.
 
 export interface WcagCriterionInfo {
   readonly title: string;

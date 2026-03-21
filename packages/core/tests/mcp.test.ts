@@ -10,11 +10,11 @@ describe('MCP Server', () => {
     const { createServer } = await import('../src/mcp.js');
     const server = createServer();
     expect(server).toBeDefined();
-    expect(server.toolNames).toContain('pally_scan');
-    expect(server.toolNames).toContain('pally_get_issues');
-    expect(server.toolNames).toContain('pally_propose_fixes');
-    expect(server.toolNames).toContain('pally_apply_fix');
-    expect(server.toolNames).toContain('pally_raw');
-    expect(server.toolNames).toContain('pally_raw_batch');
+    expect(server.toolNames).toContain('luqen_scan');
+    expect(server.toolNames).toContain('luqen_get_issues');
+    expect(server.toolNames).toContain('luqen_propose_fixes');
+    expect(server.toolNames).toContain('luqen_apply_fix');
+    expect(server.toolNames).toContain('luqen_raw');
+    expect(server.toolNames).toContain('luqen_raw_batch');
   });
 });

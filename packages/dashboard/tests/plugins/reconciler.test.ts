@@ -135,65 +135,65 @@ describe('reconcile', () => {
   });
 
   function writeConfig(plugins: Array<{ name: string; config?: Record<string, unknown>; active?: boolean }>) {
-    const configPath = join(tmpDir, 'pally-plugins.json');
+    const configPath = join(tmpDir, 'luqen-plugins.json');
     writeFileSync(configPath, JSON.stringify({ plugins }));
     return configPath;
   }
 
   it('installs missing plugins', async () => {
     const configPath = writeConfig([
-      { name: '@pally/plugin-auth', config: { tenantId: 'abc' }, active: false },
+      { name: '@luqen/plugin-auth', config: { tenantId: 'abc' }, active: false },
     ]);
 
     const manager = createMockManager();
     const result = await reconcile(manager, configPath);
 
-    expect(result.installed).toContain('@pally/plugin-auth');
+    expect(result.installed).toContain('@luqen/plugin-auth');
     expect(result.errors).toHaveLength(0);
-    expect((manager.install as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('@pally/plugin-auth');
+    expect((manager.install as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('@luqen/plugin-auth');
   });
 
   it('activates plugins marked active', async () => {
     const configPath = writeConfig([
-      { name: '@pally/plugin-notify', config: {}, active: true },
+      { name: '@luqen/plugin-notify', config: {}, active: true },
     ]);
 
     const manager = createMockManager();
     const result = await reconcile(manager, configPath);
 
-    expect(result.activated).toContain('@pally/plugin-notify');
+    expect(result.activated).toContain('@luqen/plugin-notify');
     expect((manager.activate as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
   });
 
   it('skips already-installed plugins', async () => {
     const existing = makePluginRecord({
       id: 'existing-id',
-      packageName: '@pally/plugin-auth',
+      packageName: '@luqen/plugin-auth',
     });
     const configPath = writeConfig([
-      { name: '@pally/plugin-auth', config: { key: 'val' }, active: false },
+      { name: '@luqen/plugin-auth', config: { key: 'val' }, active: false },
     ]);
 
     const manager = createMockManager({ existingPlugins: [existing] });
     const result = await reconcile(manager, configPath);
 
-    expect(result.installed).not.toContain('@pally/plugin-auth');
+    expect(result.installed).not.toContain('@luqen/plugin-auth');
     expect((manager.install as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
     // But configure should still be called
-    expect(result.configured).toContain('@pally/plugin-auth');
+    expect(result.configured).toContain('@luqen/plugin-auth');
   });
 
   it('returns error for failed installs', async () => {
     const configPath = writeConfig([
-      { name: '@pally/plugin-bad', config: {}, active: true },
+      { name: '@luqen/plugin-bad', config: {}, active: true },
     ]);
 
-    const manager = createMockManager({ installThrows: ['@pally/plugin-bad'] });
+    const manager = createMockManager({ installThrows: ['@luqen/plugin-bad'] });
     const result = await reconcile(manager, configPath);
 
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toContain('@pally/plugin-bad');
-    expect(result.installed).not.toContain('@pally/plugin-bad');
-    expect(result.activated).not.toContain('@pally/plugin-bad');
+    expect(result.errors[0]).toContain('@luqen/plugin-bad');
+    expect(result.installed).not.toContain('@luqen/plugin-bad');
+    expect(result.activated).not.toContain('@luqen/plugin-bad');
   });
 });

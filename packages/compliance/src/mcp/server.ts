@@ -45,7 +45,7 @@ export async function createComplianceMcpServer(
   await db.initialize();
 
   const server = new McpServer({
-    name: 'pally-compliance',
+    name: 'luqen-compliance',
     version: '1.0.0',
   });
 

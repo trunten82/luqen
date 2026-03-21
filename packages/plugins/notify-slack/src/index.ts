@@ -22,7 +22,7 @@ interface PluginManifest {
   readonly configSchema: readonly ConfigField[];
 }
 
-interface PallyEvent {
+interface LuqenEvent {
   readonly type: 'scan.complete' | 'scan.failed' | 'violation.found' | 'regulation.changed';
   readonly timestamp: string;
   readonly data: Readonly<Record<string, unknown>>;
@@ -50,7 +50,7 @@ export async function activate(config: Readonly<Record<string, unknown>>): Promi
   }
 
   const channel = (config.channel as string | undefined) ?? '#accessibility';
-  const username = (config.username as string | undefined) ?? 'Pally Agent';
+  const username = (config.username as string | undefined) ?? 'Luqen Agent';
   const events = (config.events as string | undefined) ?? 'scan.complete,scan.failed,violation.found,regulation.changed';
 
   client = new SlackClient(webhookUrl, channel, username);
@@ -69,7 +69,7 @@ export async function healthCheck(): Promise<boolean> {
 
 // ── Notification ────────────────────────────────────────────────────────────
 
-export async function send(event: PallyEvent): Promise<void> {
+export async function send(event: LuqenEvent): Promise<void> {
   if (client === null) {
     throw new Error('Slack plugin is not activated');
   }
@@ -84,7 +84,7 @@ export async function send(event: PallyEvent): Promise<void> {
 
 // ── Formatting ──────────────────────────────────────────────────────────────
 
-function formatEvent(event: PallyEvent): SlackMessage {
+function formatEvent(event: LuqenEvent): SlackMessage {
   const data = event.data;
 
   switch (event.type) {

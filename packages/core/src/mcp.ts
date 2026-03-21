@@ -12,23 +12,23 @@ import { applyFix } from './fixer/fix-applier.js';
 import type { ScanReport, FixProposal, PageResult } from './types.js';
 import { VERSION } from './version.js';
 
-export interface PallyMcpServer {
+export interface LuqenMcpServer {
   readonly mcpServer: McpServer;
   readonly toolNames: readonly string[];
   connect(transport: StdioServerTransport): Promise<void>;
 }
 
-export function createServer(): PallyMcpServer {
+export function createServer(): LuqenMcpServer {
   const mcpServer = new McpServer({
-    name: 'pally-agent',
+    name: 'luqen',
     version: VERSION,
   });
 
   const toolNames: string[] = [];
 
-  // Tool: pally_scan
+  // Tool: luqen_scan
   mcpServer.tool(
-    'pally_scan',
+    'luqen_scan',
     'Scan a website for accessibility issues using pa11y webservice',
     {
       url: z.string().url().describe('The URL to scan'),
@@ -106,11 +106,11 @@ export function createServer(): PallyMcpServer {
       }
     },
   );
-  toolNames.push('pally_scan');
+  toolNames.push('luqen_scan');
 
-  // Tool: pally_get_issues
+  // Tool: luqen_get_issues
   mcpServer.tool(
-    'pally_get_issues',
+    'luqen_get_issues',
     'Read and filter issues from a JSON scan report',
     {
       reportPath: z.string().describe('Path to the JSON scan report'),
@@ -172,11 +172,11 @@ export function createServer(): PallyMcpServer {
       }
     },
   );
-  toolNames.push('pally_get_issues');
+  toolNames.push('luqen_get_issues');
 
-  // Tool: pally_propose_fixes
+  // Tool: luqen_propose_fixes
   mcpServer.tool(
-    'pally_propose_fixes',
+    'luqen_propose_fixes',
     'Propose code fixes for accessibility issues found in a scan report',
     {
       reportPath: z.string().describe('Path to the JSON scan report'),
@@ -212,11 +212,11 @@ export function createServer(): PallyMcpServer {
       }
     },
   );
-  toolNames.push('pally_propose_fixes');
+  toolNames.push('luqen_propose_fixes');
 
-  // Tool: pally_apply_fix
+  // Tool: luqen_apply_fix
   mcpServer.tool(
-    'pally_apply_fix',
+    'luqen_apply_fix',
     'Apply a proposed fix to a source file',
     {
       file: z.string().describe('Path to the file to modify'),
@@ -260,11 +260,11 @@ export function createServer(): PallyMcpServer {
       }
     },
   );
-  toolNames.push('pally_apply_fix');
+  toolNames.push('luqen_apply_fix');
 
-  // Tool: pally_raw — Direct pa11y webservice passthrough for backward compatibility
+  // Tool: luqen_raw — Direct pa11y webservice passthrough for backward compatibility
   mcpServer.tool(
-    'pally_raw',
+    'luqen_raw',
     'Run a single-page pa11y scan and return raw pa11y webservice output. Use this for backward compatibility with existing pa11y automations — the response format matches pa11y-webservice exactly.',
     {
       url: z.string().url().describe('The URL to test'),
@@ -284,7 +284,7 @@ export function createServer(): PallyMcpServer {
 
         // Create task
         const task = await client.createTask({
-          name: `pally_raw: ${args.url}`,
+          name: `luqen_raw: ${args.url}`,
           url: args.url,
           standard: args.standard ?? 'WCAG2AA',
           timeout: args.timeout,
@@ -337,11 +337,11 @@ export function createServer(): PallyMcpServer {
       }
     },
   );
-  toolNames.push('pally_raw');
+  toolNames.push('luqen_raw');
 
-  // Tool: pally_raw_batch — Batch multiple URLs through pa11y with raw output
+  // Tool: luqen_raw_batch — Batch multiple URLs through pa11y with raw output
   mcpServer.tool(
-    'pally_raw_batch',
+    'luqen_raw_batch',
     'Run pa11y scans on multiple URLs and return raw pa11y results per URL. Backward-compatible output format matching pa11y-webservice.',
     {
       urls: z.array(z.string().url()).describe('List of URLs to test'),
@@ -368,7 +368,7 @@ export function createServer(): PallyMcpServer {
         async function processUrl(url: string): Promise<{ url: string; result: unknown; error?: string }> {
           try {
             const task = await client.createTask({
-              name: `pally_raw_batch: ${url}`,
+              name: `luqen_raw_batch: ${url}`,
               url,
               standard: args.standard ?? 'WCAG2AA',
               timeout: args.timeout,
@@ -435,7 +435,7 @@ export function createServer(): PallyMcpServer {
       }
     },
   );
-  toolNames.push('pally_raw_batch');
+  toolNames.push('luqen_raw_batch');
 
   return {
     mcpServer,

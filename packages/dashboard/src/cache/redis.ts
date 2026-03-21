@@ -29,7 +29,7 @@ export interface QueuedScan {
 }
 
 export class RedisScanQueue {
-  private static readonly KEY = 'pally:scan:queue';
+  private static readonly KEY = 'luqen:scan:queue';
 
   constructor(private readonly redis: RedisInstance) {}
 
@@ -54,7 +54,7 @@ export class SsePublisher {
   constructor(private readonly redis: RedisInstance) {}
 
   async publish(scanId: string, event: object): Promise<void> {
-    await this.redis.publish(`pally:sse:${scanId}`, JSON.stringify(event));
+    await this.redis.publish(`luqen:sse:${scanId}`, JSON.stringify(event));
   }
 
   /**
@@ -63,7 +63,7 @@ export class SsePublisher {
    */
   subscribe(scanId: string, callback: (event: object) => void): () => void {
     const sub = this.redis.duplicate();
-    const channel = `pally:sse:${scanId}`;
+    const channel = `luqen:sse:${scanId}`;
 
     // duplicate() creates a disconnected copy; connect it now
     sub.subscribe(channel).catch((err: Error) => {

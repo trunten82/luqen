@@ -136,7 +136,7 @@ describe('webhooks', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const [_url, options] = mockFetch.mock.calls[0] as [string, RequestInit & { headers: Record<string, string> }];
-      expect(options.headers['X-Pally-Signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
+      expect(options.headers['X-Luqen-Signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
     });
 
     it('retries on fetch failure', async () => {

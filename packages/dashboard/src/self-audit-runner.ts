@@ -2,7 +2,7 @@
  * Self-audit runner: scans dashboard pages via the pa11y webservice API.
  *
  * Uses the same pa11y webservice HTTP API that the core scanner uses,
- * but implemented inline to avoid a dependency on @pally-agent/core.
+ * but implemented inline to avoid a dependency on @luqen/core.
  */
 
 import type { AuditIssue, AuditPageResult } from './self-audit.js';

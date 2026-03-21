@@ -73,7 +73,7 @@ export async function createServer(options: ServerOptions) {
     openapi: {
       openapi: '3.1.0',
       info: {
-        title: 'Pally Compliance Service',
+        title: 'Luqen Compliance Service',
         description: 'Accessibility compliance rule engine — check WCAG issues against 60+ country-specific legal requirements',
         version: VERSION,
       },

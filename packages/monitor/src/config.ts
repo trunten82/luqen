@@ -21,7 +21,7 @@ export function loadConfig(): MonitorConfig {
     checkInterval: process.env.MONITOR_CHECK_INTERVAL ?? 'manual',
     userAgent:
       process.env.MONITOR_USER_AGENT ??
-      `pally-monitor/${VERSION} (+https://github.com/pally-agent)`,
+      `luqen-monitor/${VERSION} (+https://github.com/luqen)`,
     orgId: process.env.MONITOR_ORG_ID ?? undefined,
   };
 }

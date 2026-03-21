@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 
 describe('generateJsonReport', () => {
   let outputDir: string;
-  beforeEach(() => { outputDir = join(tmpdir(), `pally-json-test-${Date.now()}`); mkdirSync(outputDir, { recursive: true }); });
+  beforeEach(() => { outputDir = join(tmpdir(), `luqen-json-test-${Date.now()}`); mkdirSync(outputDir, { recursive: true }); });
   afterEach(() => { rmSync(outputDir, { recursive: true, force: true }); });
 
   const pages: PageResult[] = [
@@ -31,7 +31,7 @@ describe('generateJsonReport', () => {
   it('writes report to outputDir with timestamped name', async () => {
     const report = await generateJsonReport({ siteUrl: 'https://example.com', pages, errors, outputDir });
     expect(existsSync(report.reportPath)).toBe(true);
-    expect(report.reportPath).toMatch(/pally-report-.*\.json$/);
+    expect(report.reportPath).toMatch(/luqen-report-.*\.json$/);
     const content = JSON.parse(readFileSync(report.reportPath, 'utf-8'));
     expect(content.summary.totalIssues).toBe(2);
   });
