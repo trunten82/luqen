@@ -141,6 +141,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     root: staticDir,
     prefix: '/static/',
     decorateReply: false,
+    cacheControl: false,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    },
   });
 
   // Handlebars views
