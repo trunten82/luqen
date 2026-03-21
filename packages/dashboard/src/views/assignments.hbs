@@ -58,11 +58,23 @@
   <button type="button" class="asgn-filter{{#if (eq activeFilter 'verified')}} asgn-filter--active{{/if}}" onclick="asgnFilter('verified',this)">Verified ({{stats.verified}})</button>
 </div>
 
+{{! Bulk actions bar }}
+<div class="asgn-bulk-bar" id="asgn-bulk-bar" style="display:none;">
+  <label><input type="checkbox" id="asgn-bulk-select-all" onchange="asgnBulkToggleAll(this.checked)"> Select all visible</label>
+  <span id="asgn-bulk-count">0 selected</span>
+  <select id="asgn-bulk-assignee" class="asgn-select"></select>
+  <button type="button" class="btn btn--primary btn--sm" onclick="asgnBulkReassign()">Reassign</button>
+  <button type="button" class="btn btn--ghost btn--sm" style="color:var(--status-error)" onclick="asgnBulkRemove()">Remove</button>
+  <button type="button" class="btn btn--ghost btn--sm" onclick="asgnToggleBulkMode()">Cancel</button>
+</div>
+<button type="button" class="btn btn--ghost btn--sm" id="asgn-bulk-mode-btn" onclick="asgnToggleBulkMode()" style="margin-bottom:0.75rem;">Bulk Actions</button>
+
 {{! Assignment cards }}
 <div class="asgn-list" id="asgn-list">
   {{#each assignments}}
   <div class="asgn-card" id="asgn-card-{{id}}" data-status="{{status}}">
     <div class="asgn-card__header">
+      <input type="checkbox" class="asgn-bulk-cb" data-id="{{id}}" onclick="asgnBulkUpdate()" style="display:none;">
       <span class="asgn-sev asgn-sev--{{severity}}">{{severity}}</span>
       {{#if wcagCriterion}}
       <span class="asgn-card__criterion">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
@@ -258,6 +270,75 @@
   }
   asgnPopulateSelects();
 
+  /* Bulk actions */
+  var _asgnBulkMode = false;
+  function asgnToggleBulkMode() {
+    _asgnBulkMode = !_asgnBulkMode;
+    var bar = document.getElementById('asgn-bulk-bar');
+    var btn = document.getElementById('asgn-bulk-mode-btn');
+    var cbs = document.querySelectorAll('.asgn-bulk-cb');
+    if (bar) bar.style.display = _asgnBulkMode ? 'flex' : 'none';
+    if (btn) { btn.textContent = _asgnBulkMode ? 'Cancel Bulk' : 'Bulk Actions'; btn.classList.toggle('btn--primary', _asgnBulkMode); btn.classList.toggle('btn--ghost', !_asgnBulkMode); }
+    cbs.forEach(function(cb) { cb.style.display = _asgnBulkMode ? 'inline-block' : 'none'; cb.checked = false; });
+    if (_asgnBulkMode) {
+      var sel = document.getElementById('asgn-bulk-assignee');
+      if (sel && sel.options.length <= 1) {
+        (window.__pallyAssignees || []).forEach(function(a) {
+          var opt = document.createElement('option'); opt.value = a.id;
+          opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
+          sel.appendChild(opt);
+        });
+      }
+    }
+    asgnBulkUpdate();
+  }
+
+  function asgnBulkToggleAll(checked) {
+    document.querySelectorAll('.asgn-bulk-cb').forEach(function(cb) {
+      var card = cb.closest('.asgn-card');
+      if (card && card.style.display !== 'none') cb.checked = checked;
+    });
+    asgnBulkUpdate();
+  }
+
+  function asgnBulkUpdate() {
+    var count = document.querySelectorAll('.asgn-bulk-cb:checked').length;
+    var el = document.getElementById('asgn-bulk-count');
+    if (el) el.textContent = count + ' selected';
+  }
+
+  function asgnBulkReassign() {
+    var assignee = (document.getElementById('asgn-bulk-assignee') || {}).value || '';
+    if (!assignee) { asgnShowToast('Please select an assignee', 'error'); return; }
+    var checked = document.querySelectorAll('.asgn-bulk-cb:checked');
+    if (checked.length === 0) return;
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    var pending = checked.length, done = 0;
+    checked.forEach(function(cb) {
+      var id = cb.getAttribute('data-id');
+      var fd = new URLSearchParams();
+      fd.append('assignedTo', assignee);
+      fd.append('status', 'assigned');
+      fetch('/assignments/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrfToken, 'HX-Request': 'true' }, body: fd.toString() })
+      .then(function() { done++; if (done >= pending) window.location.reload(); });
+    });
+  }
+
+  function asgnBulkRemove() {
+    var checked = document.querySelectorAll('.asgn-bulk-cb:checked');
+    if (checked.length === 0) return;
+    if (!confirm('Remove ' + checked.length + ' assignment(s)?')) return;
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    var pending = checked.length, done = 0;
+    checked.forEach(function(cb) {
+      var id = cb.getAttribute('data-id');
+      fetch('/assignments/' + id, { method: 'DELETE', headers: { 'x-csrf-token': csrfToken } })
+      .then(function() { done++; if (done >= pending) window.location.reload(); });
+    });
+  }
+
   /* Toast notifications */
   function asgnShowToast(msg, type) {
     var container = document.getElementById('toast-container');
@@ -320,6 +401,8 @@
   }
   .asgn-textarea { resize: vertical; min-height: 2.5rem; }
   .asgn-save-btn { align-self: flex-end; }
+  .asgn-bulk-bar { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.85rem; background: var(--accent-light, #e8f0fb); border: 1px solid var(--accent, #0056b3); border-radius: 6px; margin-bottom: 0.75rem; flex-wrap: wrap; font-size: 0.84rem; }
+  .asgn-bulk-cb { cursor: pointer; }
 
   /* Severity badges */
   .asgn-sev { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }

@@ -821,16 +821,8 @@
       }).then(function() {
         done++;
         if (done >= pending) {
-          cb.checked = false;
-          rptBulkUpdate();
-          var tc = document.getElementById('toast-container');
-          if (tc) {
-            var t = document.createElement('div');
-            t.className = 'toast toast--success';
-            t.textContent = done + ' issues assigned' + (assignee ? ' to ' + assignee : '');
-            tc.appendChild(t);
-            setTimeout(function() { t.remove(); }, 3000);
-          }
+          // Reload to refresh assignment state
+          window.location.reload();
         }
       });
     });
