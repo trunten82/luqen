@@ -62,7 +62,7 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 | [compliance/integrations/claude-code.md](compliance/integrations/claude-code.md) | MCP server setup for Claude Code — all 4 servers |
 | [compliance/integrations/power-automate.md](compliance/integrations/power-automate.md) | Power Automate custom connector |
 | [compliance/integrations/n8n.md](compliance/integrations/n8n.md) | n8n workflow setup |
-| [reference/api-reference.md](reference/api-reference.md) | REST API quick reference — all endpoints |
+| [reference/api-reference.md](reference/api-reference.md) | REST API quick reference — all endpoints, data API, CSV export, Power BI |
 
 ---
 

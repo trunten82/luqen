@@ -293,6 +293,35 @@ The CLI and dashboard both produce JSON reports. The structure is:
 
 ---
 
+## CSV export
+
+Download scan data as CSV files directly from the dashboard or via the API.
+
+### From the dashboard UI
+
+- **Reports list** (`/reports`) — click the **Download CSV** button to export the scans list.
+- **Report detail** (`/reports/:id`) — click the **Download CSV** button to export the scan's issues.
+- **Trends page** (`/reports/trends`) — click the **Download CSV** button to export trend data.
+
+### From the API
+
+Three CSV endpoints are available (requires `X-API-Key` header):
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/export/scans.csv` | Scans list (supports `siteUrl`, `from`, `to`, `limit`, `offset` filters) |
+| `GET /api/v1/export/scans/:id/issues.csv` | Issues for a scan (supports `severity`, `criterion` filters) |
+| `GET /api/v1/export/trends.csv` | Trend data (supports `siteUrl`, `from`, `to` filters) |
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/export/scans.csv" -o scans.csv
+```
+
+See [API Reference — CSV Export](../reference/api-reference.md#csv-export) for full details.
+
+---
+
 ## Reports list
 
 The dashboard's **Reports** page shows all completed and in-progress scans with:

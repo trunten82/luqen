@@ -342,4 +342,357 @@ Base URL: `http://localhost:5000` (dashboard service). All organization endpoint
 
 ---
 
+## Dashboard Data API
+
+Base URL: `http://localhost:5000/api/v1` (dashboard service).
+
+These read-only endpoints expose scan data as JSON for external consumption (Power BI, custom integrations, reporting tools). They are separate from the compliance service API above.
+
+### Authentication
+
+All data API endpoints require an API key passed in the `X-API-Key` header.
+
+To obtain an API key:
+
+1. Log in to the dashboard as an admin.
+2. Go to **Settings > API Keys** (`/admin/api-keys`).
+3. Click **Generate Key** and copy the value.
+
+```bash
+# All examples below use this header
+export PALLY_API_KEY="your-api-key-here"
+```
+
+### Rate limiting
+
+All data API endpoints are rate limited to **60 requests per minute** per API key. Exceeding the limit returns `429 Too Many Requests` with a `Retry-After` header.
+
+---
+
+### `GET /api/v1/scans`
+
+List scans with optional filters. Returns paginated results.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `siteUrl` | string | Filter by site URL (exact match) |
+| `from` | string | Start date (ISO 8601, e.g. `2026-01-01`) |
+| `to` | string | End date (ISO 8601) |
+| `limit` | number | Results per page (default: 20, max: 100) |
+| `offset` | number | Skip N results (default: 0) |
+
+**Example request:**
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/scans?siteUrl=https://example.com&from=2026-01-01&limit=10"
+```
+
+**Example response:**
+
+```json
+{
+  "data": [
+    {
+      "id": "abc123",
+      "siteUrl": "https://example.com",
+      "scanMode": "site",
+      "status": "completed",
+      "standard": "WCAG2AA",
+      "pagesScanned": 12,
+      "totalIssues": 47,
+      "errors": 8,
+      "warnings": 15,
+      "notices": 24,
+      "createdAt": "2026-03-15T10:30:00Z",
+      "completedAt": "2026-03-15T10:32:45Z"
+    }
+  ],
+  "total": 42,
+  "limit": 10,
+  "offset": 0
+}
+```
+
+---
+
+### `GET /api/v1/scans/:id`
+
+Get full detail for a single scan.
+
+**Example request:**
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/scans/abc123"
+```
+
+**Example response:**
+
+```json
+{
+  "id": "abc123",
+  "siteUrl": "https://example.com",
+  "scanMode": "site",
+  "status": "completed",
+  "standard": "WCAG2AA",
+  "runner": "htmlcs",
+  "pagesScanned": 12,
+  "totalIssues": 47,
+  "errors": 8,
+  "warnings": 15,
+  "notices": 24,
+  "jurisdictions": ["EU", "US"],
+  "compliance": {
+    "EU": { "status": "fail", "mandatoryViolations": 3 },
+    "US": { "status": "fail", "mandatoryViolations": 5 }
+  },
+  "createdAt": "2026-03-15T10:30:00Z",
+  "completedAt": "2026-03-15T10:32:45Z"
+}
+```
+
+---
+
+### `GET /api/v1/scans/:id/issues`
+
+Get issues for a specific scan with optional severity and criterion filters.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `severity` | string | Filter by severity: `error`, `warning`, or `notice` |
+| `criterion` | string | Filter by WCAG criterion (e.g. `1.1.1`) |
+| `limit` | number | Results per page (default: 50, max: 200) |
+| `offset` | number | Skip N results (default: 0) |
+
+**Example request:**
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/scans/abc123/issues?severity=error&limit=20"
+```
+
+**Example response:**
+
+```json
+{
+  "data": [
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+      "type": "error",
+      "message": "Img element missing an alt attribute.",
+      "selector": "html > body > header > img",
+      "context": "<img src=\"logo.svg\">",
+      "wcagCriterion": "1.1.1",
+      "wcagTitle": "Non-text Content",
+      "pageUrl": "https://example.com/",
+      "regulations": [
+        { "shortName": "EAA", "obligation": "mandatory", "jurisdictionId": "EU" }
+      ]
+    }
+  ],
+  "total": 8,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+---
+
+### `GET /api/v1/trends`
+
+Time-series data showing issue counts per site across scans. Use this to build trend charts in Power BI or other tools.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `siteUrl` | string | Filter to a specific site URL |
+| `from` | string | Start date (ISO 8601) |
+| `to` | string | End date (ISO 8601) |
+
+**Example request:**
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/trends?siteUrl=https://example.com"
+```
+
+**Example response:**
+
+```json
+{
+  "data": [
+    {
+      "siteUrl": "https://example.com",
+      "scanId": "abc123",
+      "scanDate": "2026-03-15T10:30:00Z",
+      "errors": 8,
+      "warnings": 15,
+      "notices": 24,
+      "pagesScanned": 12
+    },
+    {
+      "siteUrl": "https://example.com",
+      "scanId": "def456",
+      "scanDate": "2026-03-08T10:30:00Z",
+      "errors": 12,
+      "warnings": 18,
+      "notices": 30,
+      "pagesScanned": 12
+    }
+  ]
+}
+```
+
+---
+
+### `GET /api/v1/compliance-summary`
+
+Latest compliance status per jurisdiction across all sites (or for a specific site). Useful for executive dashboards.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `siteUrl` | string | Filter to a specific site URL |
+
+**Example request:**
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/compliance-summary"
+```
+
+**Example response:**
+
+```json
+{
+  "data": [
+    {
+      "siteUrl": "https://example.com",
+      "scanId": "abc123",
+      "scanDate": "2026-03-15T10:30:00Z",
+      "jurisdictions": {
+        "EU": { "status": "fail", "mandatoryViolations": 3 },
+        "US": { "status": "fail", "mandatoryViolations": 5 },
+        "UK": { "status": "pass", "mandatoryViolations": 0 }
+      }
+    }
+  ]
+}
+```
+
+---
+
+## CSV Export
+
+Download scan data as CSV files for use in spreadsheets, Power BI, or other tools. All CSV endpoints require the same `X-API-Key` authentication.
+
+### `GET /api/v1/export/scans.csv`
+
+Download a CSV of all scans (same filters as `GET /api/v1/scans`).
+
+**Query parameters:** `siteUrl`, `from`, `to`, `limit`, `offset` (same as the scans endpoint).
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/export/scans.csv" -o scans.csv
+```
+
+**Columns:** `id`, `siteUrl`, `scanMode`, `status`, `standard`, `pagesScanned`, `totalIssues`, `errors`, `warnings`, `notices`, `createdAt`, `completedAt`
+
+### `GET /api/v1/export/scans/:id/issues.csv`
+
+Download a CSV of all issues for a specific scan.
+
+**Query parameters:** `severity`, `criterion` (same as the issues endpoint).
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/export/scans/abc123/issues.csv" -o issues.csv
+```
+
+**Columns:** `code`, `type`, `message`, `selector`, `context`, `wcagCriterion`, `wcagTitle`, `pageUrl`, `regulations`
+
+### `GET /api/v1/export/trends.csv`
+
+Download a CSV of trend data across scans.
+
+**Query parameters:** `siteUrl`, `from`, `to` (same as the trends endpoint).
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/export/trends.csv" -o trends.csv
+```
+
+**Columns:** `siteUrl`, `scanId`, `scanDate`, `errors`, `warnings`, `notices`, `pagesScanned`
+
+### CSV download buttons in the UI
+
+The dashboard provides download buttons for CSV export:
+
+- **Reports list** (`/reports`) — download button exports the scans list as CSV
+- **Report detail** (`/reports/:id`) — download button exports the scan's issues as CSV
+- **Trends page** (`/reports/trends`) — download button exports trend data as CSV
+
+---
+
+## Power BI Integration
+
+Connect Power BI to the pally-agent data API to build accessibility dashboards and compliance reports.
+
+### Step 1: Get your API key
+
+1. Log in to the dashboard as an admin.
+2. Go to **Settings > API Keys** (`/admin/api-keys`).
+3. Generate a key and copy it.
+
+### Step 2: Add a Web data source in Power BI
+
+1. Open Power BI Desktop.
+2. Click **Get Data > Web**.
+3. Select **Advanced**.
+4. Enter the URL: `http://your-dashboard-host:5000/api/v1/scans`
+5. Add an HTTP request header:
+   - Name: `X-API-Key`
+   - Value: your API key
+6. Click **OK**.
+
+### Step 3: Transform the data
+
+1. Power BI opens the Power Query editor.
+2. The JSON response contains a `data` array — expand it into rows.
+3. Set column types (dates, numbers) as needed.
+4. Click **Close & Apply**.
+
+### Step 4: Add more data sources
+
+Repeat Step 2 for the other endpoints:
+
+- `/api/v1/trends` — for time-series charts
+- `/api/v1/compliance-summary` — for compliance status
+- `/api/v1/scans/{id}/issues` — for issue-level detail
+
+You can also use the CSV endpoints directly: set the URL to `/api/v1/export/scans.csv` and Power BI will import it as a table without needing JSON transformation.
+
+### Step 5: Build your dashboard
+
+Suggested visualizations:
+
+- **Line chart** — errors/warnings/notices over time (from trends endpoint)
+- **Card** — current compliance status per jurisdiction (from compliance-summary)
+- **Table** — top issues by frequency (from issues endpoint)
+- **Bar chart** — issues by WCAG criterion
+
+### Refreshing data
+
+Set up **Scheduled Refresh** in the Power BI service to pull updated data automatically. The API key does not expire unless revoked.
+
+---
+
 *See also: [compliance/README.md](../compliance/README.md) | [integrations/claude-code.md](claude-code.md) | [configuration/compliance.md](../configuration/compliance.md)*

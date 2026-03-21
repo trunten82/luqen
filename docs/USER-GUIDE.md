@@ -197,6 +197,40 @@ Visit `/tools/bookmarklet` in the dashboard to find a drag-to-install bookmarkle
 
 ---
 
+## Data API and CSV export
+
+The dashboard exposes a read-only JSON API and CSV download endpoints for external tools.
+
+### REST API
+
+Five JSON endpoints are available at `http://localhost:5000/api/v1`:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/scans` | List scans with filters (siteUrl, date range, pagination) |
+| `GET /api/v1/scans/:id` | Single scan detail |
+| `GET /api/v1/scans/:id/issues` | Issues for a scan (filter by severity or WCAG criterion) |
+| `GET /api/v1/trends` | Time-series issue counts per site |
+| `GET /api/v1/compliance-summary` | Latest compliance status per jurisdiction |
+
+Authentication: pass your API key in the `X-API-Key` header. Generate a key at **Settings > API Keys** in the dashboard. Rate limit: 60 requests per minute.
+
+### CSV export
+
+Download scan data as CSV for use in spreadsheets or BI tools:
+
+- `GET /api/v1/export/scans.csv` — scans list
+- `GET /api/v1/export/scans/:id/issues.csv` — issues for a scan
+- `GET /api/v1/export/trends.csv` — trend data
+
+Download buttons are available on the reports list, report detail, and trends pages in the dashboard.
+
+### Power BI
+
+Connect Power BI to the data API using **Get Data > Web** (Advanced mode). Enter the endpoint URL and add an `X-API-Key` header with your API key. See [API Reference — Power BI Integration](reference/api-reference.md#power-bi-integration) for step-by-step instructions.
+
+---
+
 ## What pally-agent cannot check automatically
 
 Automated tools catch approximately 30–40% of accessibility issues. Things that require human review:

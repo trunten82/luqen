@@ -205,6 +205,12 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 
 ---
 
+## New in v0.14.0
+
+- **REST API** — 5 JSON endpoints at `/api/v1/*` for external data consumption (Power BI, custom integrations). Auth via `X-API-Key` header, rate limited 60/min.
+- **CSV export** — download scans, issues, and trend data as CSV from the dashboard UI or via `/api/v1/export/*` endpoints.
+- **Power BI integration** — connect Power BI directly to the data API. See [API Reference](reference/api-reference.md#power-bi-integration).
+
 ## New in v0.13.0
 
 - **Runner selection** — choose between HTML_CodeSniffer and axe-core via `--runner axe` (CLI), `DASHBOARD_SCANNER_RUNNER` (env), or the scan form dropdown.

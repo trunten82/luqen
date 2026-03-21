@@ -181,6 +181,9 @@ Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|a
 | **Runner selection** | Choose between HTML_CodeSniffer and axe-core runners via scan form dropdown or `DASHBOARD_SCANNER_RUNNER` env var. |
 | **Incremental scanning** | SHA-256 content hash delta detection — only re-scans pages whose content changed since the last scan. |
 | **Multi-worker scaling** | Distribute scans across multiple pa11y webservice instances via `DASHBOARD_WEBSERVICE_URLS`. |
+| **REST API** | 5 JSON endpoints for external data consumption (scans, issues, trends, compliance summary). Auth via `X-API-Key` header, rate limited 60/min. |
+| **CSV export** | Download scans, issues, and trend data as CSV from the UI or via `/api/v1/export/*` endpoints. |
+| **Power BI integration** | Connect Power BI to the data API using Web data source with `X-API-Key` header. See [API Reference](../reference/api-reference.md#power-bi-integration). |
 
 ---
 
