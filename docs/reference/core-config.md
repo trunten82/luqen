@@ -2,11 +2,11 @@
 
 # Core Configuration Reference
 
-`@pally-agent/core` — `.pally-agent.json` fields, environment variables, and CLI flags.
+`@luqen/core` — `.luqen.json` fields, environment variables, and CLI flags.
 
 ---
 
-## Config file: `.pally-agent.json`
+## Config file: `.luqen.json`
 
 Place this file in your project root (or any ancestor directory). All fields are optional.
 
@@ -26,7 +26,7 @@ Place this file in your project root (or any ancestor directory). All fields are
   "headers": {},
   "wait": 0,
   "runner": "htmlcs",
-  "outputDir": "./pally-reports",
+  "outputDir": "./luqen-reports",
   "sourceMap": {},
   "compliance": {
     "url": "http://localhost:4000",
@@ -57,7 +57,7 @@ Place this file in your project root (or any ancestor directory). All fields are
 | `hideElements` | `string` | `""` | CSS selector for elements pa11y should ignore |
 | `headers` | `object` | `{}` | HTTP headers sent by pa11y **to the target site** (e.g. staging auth) |
 | `wait` | `number` | `0` | Milliseconds to wait after page load before testing (for SPAs) |
-| `outputDir` | `string` | `"./pally-reports"` | Directory where reports are written |
+| `outputDir` | `string` | `"./luqen-reports"` | Directory where reports are written |
 | `runner` | `"htmlcs" \| "axe"` | `"htmlcs"` | Pa11y test runner. `axe` requires `pa11y-runner-axe` installed on the webservice. |
 | `sourceMap` | `object` | `{}` | Manual URL-to-file overrides (glob patterns supported) |
 | `compliance.url` | `string` | `""` | Base URL of the compliance service |
@@ -73,11 +73,11 @@ Place this file in your project root (or any ancestor directory). All fields are
 
 | Variable | Overrides | Description |
 |----------|-----------|-------------|
-| `PALLY_WEBSERVICE_URL` | `webserviceUrl` | Base URL of the pa11y webservice |
-| `PALLY_WEBSERVICE_AUTH` | `webserviceHeaders.Authorization` | Authorization header for the webservice |
-| `PALLY_AGENT_CONFIG` | Config file path | Absolute path to a `.pally-agent.json` file |
-| `PALLY_MAX_PAGES` | `maxPages` | Maximum pages to discover and scan (dashboard uses this via `DASHBOARD_MAX_PAGES`) |
-| `PALLY_RUNNER` | `runner` | Pa11y test runner: `htmlcs` or `axe` |
+| `LUQEN_WEBSERVICE_URL` | `webserviceUrl` | Base URL of the pa11y webservice |
+| `LUQEN_WEBSERVICE_AUTH` | `webserviceHeaders.Authorization` | Authorization header for the webservice |
+| `LUQEN_CONFIG` | Config file path | Absolute path to a `.luqen.json` file |
+| `LUQEN_MAX_PAGES` | `maxPages` | Maximum pages to discover and scan (dashboard uses this via `DASHBOARD_MAX_PAGES`) |
+| `LUQEN_RUNNER` | `runner` | Pa11y test runner: `htmlcs` or `axe` |
 
 ---
 
@@ -91,7 +91,7 @@ CLI flags  >  Environment variables  >  Config file  >  Defaults
 
 ## Config file discovery
 
-When no `--config` flag is given, pally-agent searches for `.pally-agent.json` by:
+When no `--config` flag is given, luqen searches for `.luqen.json` by:
 
 1. Starting from the current working directory
 2. Walking up to the filesystem root, checking each directory
@@ -101,19 +101,19 @@ When no `--config` flag is given, pally-agent searches for `.pally-agent.json` b
 Specify explicitly:
 
 ```bash
-pally-agent scan https://example.com --config /path/to/.pally-agent.json
+luqen scan https://example.com --config /path/to/.luqen.json
 # or:
-export PALLY_AGENT_CONFIG=/shared/pally-agent.json
+export LUQEN_CONFIG=/shared/luqen.json
 ```
 
 ---
 
 ## CLI reference
 
-### `pally-agent scan`
+### `luqen scan`
 
 ```
-pally-agent scan <url> [options]
+luqen scan <url> [options]
 ```
 
 | Option | Type | Description |
@@ -131,11 +131,11 @@ pally-agent scan <url> [options]
 | `--compliance-client-id <id>` | `string` | OAuth client ID for compliance service |
 | `--compliance-client-secret <secret>` | `string` | OAuth client secret |
 
-### `pally-agent fix`
+### `luqen fix`
 
 ```
-pally-agent fix [url] --repo <path> [options]
-pally-agent fix --from-report <path> --repo <path> [options]
+luqen fix [url] --repo <path> [options]
+luqen fix --from-report <path> --repo <path> [options]
 ```
 
 | Option | Type | Description |

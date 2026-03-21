@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Transform pally-agent from a component-organized project into a composable accessibility platform with path-based documentation and zero dead code.
+**Goal:** Transform luqen from a component-organized project into a composable accessibility platform with path-based documentation and zero dead code.
 
 **Architecture:** Fix all code review findings first (integration gaps, dead code, version strings), then restructure documentation around user composition paths. Each task produces working, testable software.
 
@@ -267,7 +267,7 @@ Remove orphaned files, unused dependencies, stale templates, and broken links.
 - Modify: `packages/compliance/src/types.ts:317` (remove ComplianceServiceVersion)
 - Modify: `packages/compliance/src/types.ts` (remove dbAdapter, dbUrl, refreshTokenExpiry, a2a from ComplianceConfig)
 - Modify: `packages/compliance/src/config.ts` (remove dbAdapter, dbUrl, a2a defaults and env overrides)
-- Modify: `.gitignore` (fix pally-reports pattern)
+- Modify: `.gitignore` (fix luqen-reports pattern)
 - Delete: `packages/compliance/tests/db/adapter-contract.test.ts` (tests the dead adapters — verify first)
 
 - [ ] **Step 1: Remove orphaned adapter files**
@@ -308,10 +308,10 @@ In `packages/dashboard/src/views/partials/sidebar.hbs`, remove lines 71-77 (the 
 
 - [ ] **Step 5: Fix .gitignore**
 
-In `.gitignore` line 4, change `.pally-reports/` to `pally-reports/`.
+In `.gitignore` line 4, change `.luqen-reports/` to `luqen-reports/`.
 Also add committed report files to .gitignore and untrack them:
 ```bash
-git rm --cached pally-reports/*.json 2>/dev/null || true
+git rm --cached luqen-reports/*.json 2>/dev/null || true
 ```
 
 - [ ] **Step 6: Run all tests**
@@ -399,7 +399,7 @@ git commit -m "chore: make version strings dynamic — read from package.json at
 
 ---
 
-### Task 8: Add PALLY_COMPLIANCE_URL Env Var to Core
+### Task 8: Add LUQEN_COMPLIANCE_URL Env Var to Core
 
 Make it easier to connect core to compliance service via environment variable.
 
@@ -409,11 +409,11 @@ Make it easier to connect core to compliance service via environment variable.
 
 - [ ] **Step 1: Write failing test**
 
-Add test: setting `PALLY_COMPLIANCE_URL` env var populates `config.compliance.url`.
+Add test: setting `LUQEN_COMPLIANCE_URL` env var populates `config.compliance.url`.
 
 - [ ] **Step 2: Add env var support**
 
-In `packages/core/src/config.ts`, add `PALLY_COMPLIANCE_URL` to the env override logic.
+In `packages/core/src/config.ts`, add `LUQEN_COMPLIANCE_URL` to the env override logic.
 
 - [ ] **Step 3: Run tests, verify pass**
 
@@ -424,7 +424,7 @@ Expected: All pass
 
 ```bash
 git add packages/core/src/config.ts packages/core/tests/config.test.ts
-git commit -m "feat: add PALLY_COMPLIANCE_URL env var for easier compliance integration"
+git commit -m "feat: add LUQEN_COMPLIANCE_URL env var for easier compliance integration"
 ```
 
 ---
@@ -484,8 +484,8 @@ Test that JSON report includes a `nextSteps` field. When no compliance data is p
 - [ ] **Step 2: Add nextSteps to JSON reporter**
 
 Add a `nextSteps` field to the JSON output based on what data is present:
-- No compliance data → `"Want legal compliance mapping? Add @pally-agent/compliance. See: https://github.com/trunten82/pally-agent"`
-- Has compliance data → `"Want a web dashboard to track compliance over time? Add @pally-agent/dashboard."`
+- No compliance data → `"Want legal compliance mapping? Add @luqen/compliance. See: https://github.com/trunten82/luqen"`
+- Has compliance data → `"Want a web dashboard to track compliance over time? Add @luqen/dashboard."`
 
 - [ ] **Step 3: Add hint to HTML report footer**
 
@@ -515,7 +515,7 @@ Allow monitor to work without a compliance service by reading sources from a loc
 - [ ] **Step 1: Write failing test**
 
 Create `packages/monitor/tests/local-sources.test.ts`:
-- Test loading sources from a `.pally-monitor.json` file
+- Test loading sources from a `.luqen-monitor.json` file
 - Test fallback: returns empty array when file doesn't exist
 - Test validation: rejects malformed JSON
 
@@ -642,13 +642,13 @@ git commit -m "docs: create path-based directory structure and fix reference doc
 ### Task 14: Write Getting Started Guides
 
 **Files:**
-- Create: `docs/getting-started/what-is-pally.md`
+- Create: `docs/getting-started/what-is-luqen.md`
 - Create: `docs/getting-started/quick-scan.md`
 - Create: `docs/getting-started/one-line-install.md`
 
-- [ ] **Step 1: Write what-is-pally.md**
+- [ ] **Step 1: Write what-is-luqen.md**
 
-Overview: what pally-agent is, the tiered architecture, how pieces fit together, which path to choose. Include the composition paths table from the spec. Link to each path guide.
+Overview: what luqen is, the tiered architecture, how pieces fit together, which path to choose. Include the composition paths table from the spec. Link to each path guide.
 
 - [ ] **Step 2: Write quick-scan.md**
 
@@ -741,7 +741,7 @@ git commit -m "docs: add consolidated MCP tools, CLI reference, and publish guid
 - Modify: `README.md`
 - Modify: `CHANGELOG.md`
 - Modify: `docs/SECURITY-REVIEW.md`
-- Modify: `.claude/skills/pally-agent/SKILL.md`
+- Modify: `.claude/skills/luqen/SKILL.md`
 - Remove: old docs directories (after verifying no broken links)
 
 - [ ] **Step 1: Rewrite README.md**
@@ -832,7 +832,7 @@ gh release create v0.7.0 --title "v0.7.0 — Composable Accessibility Platform" 
 - Made version strings dynamic (read from package.json)
 
 ### New Features
-- `PALLY_COMPLIANCE_URL` env var for easier core→compliance integration
+- `LUQEN_COMPLIANCE_URL` env var for easier core→compliance integration
 - Helpful error message when pa11y webservice is unreachable
 - Report "next steps" hints for progressive discovery
 - Monitor standalone mode with local config fallback
@@ -844,11 +844,11 @@ gh release create v0.7.0 --title "v0.7.0 — Composable Accessibility Platform" 
 - Consolidated MCP tools and CLI reference
 - Fixed all doc inaccuracies (env var names, versions, test counts)
 
-**Full Changelog:** https://github.com/trunten82/pally-agent/compare/v0.6.0...v0.7.0
+**Full Changelog:** https://github.com/trunten82/luqen/compare/v0.6.0...v0.7.0
 EOF
 )"
 ```
 
 - [ ] **Step 5: Update project memory**
 
-Update `/root/.claude/projects/-root-pally-agent/memory/project_pally_ecosystem.md` with new test counts, version, and documentation structure.
+Update `/root/.claude/projects/-root-luqen/memory/project_luqen_ecosystem.md` with new test counts, version, and documentation structure.

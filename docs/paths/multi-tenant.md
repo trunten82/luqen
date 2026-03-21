@@ -2,20 +2,20 @@
 
 # Multi-Tenant Organizations
 
-Isolate scans, compliance data, and users across multiple organizations within a single pally-agent deployment.
+Isolate scans, compliance data, and users across multiple organizations within a single luqen deployment.
 
 ---
 
 ## Prerequisites
 
-- Running pally-agent dashboard (see [Full Dashboard](full-dashboard.md))
+- Running luqen dashboard (see [Full Dashboard](full-dashboard.md))
 - Admin access to the dashboard
 
 ---
 
 ## 1. Understanding the multi-tenancy model
 
-A fresh pally-agent install stores all data under a built-in `system` organization. This acts as single-tenant mode — the org layer is invisible and everything works out of the box.
+A fresh luqen install stores all data under a built-in `system` organization. This acts as single-tenant mode — the org layer is invisible and everything works out of the box.
 
 Multi-tenancy activates automatically when you create your first organization. From that point:
 
@@ -42,7 +42,7 @@ Each organization receives a unique slug used for identification across the syst
 ### Via CLI
 
 ```bash
-pally-dashboard org create --name "Acme Corp" --slug acme-corp
+luqen-dashboard org create --name "Acme Corp" --slug acme-corp
 ```
 
 ---

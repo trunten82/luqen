@@ -2,26 +2,26 @@
 
 # Scanning Guide
 
-How to scan websites for accessibility issues using pally-agent's CLI and dashboard interfaces.
+How to scan websites for accessibility issues using luqen's CLI and dashboard interfaces.
 
 ---
 
 ## Scan modes
 
-Pally-agent supports two scan modes:
+Luqen-agent supports two scan modes:
 
 | Mode | Behaviour | When to use |
 |------|-----------|-------------|
 | **Single Page** | Scans only the URL you provide. No discovery step. | Quick check on a specific page, CI/CD gate on a landing page. |
 | **Full Site** | Discovers pages via sitemap and/or crawl, then scans each one (up to `maxPages`, default 100). | Comprehensive audit. Enables template issue detection and the Templates tab in reports. |
 
-In the CLI, Full Site mode is the default — it always runs discovery. Pass a single URL and pally-agent will find the rest. In the dashboard, the scan form has a **Scan Mode** toggle that defaults to Single Page for speed.
+In the CLI, Full Site mode is the default — it always runs discovery. Pass a single URL and luqen will find the rest. In the dashboard, the scan form has a **Scan Mode** toggle that defaults to Single Page for speed.
 
 ---
 
 ## WCAG standards
 
-Pally-agent supports three WCAG 2.1 conformance levels:
+Luqen-agent supports three WCAG 2.1 conformance levels:
 
 | Standard | Flag value | What it checks |
 |----------|-----------|----------------|
@@ -37,7 +37,7 @@ Use `WCAG2AA` unless you have a specific reason to change it.
 
 ## Runner selection
 
-Pally-agent supports two test runners:
+Luqen-agent supports two test runners:
 
 | Runner | Value | Description |
 |--------|-------|-------------|
@@ -47,15 +47,15 @@ Pally-agent supports two test runners:
 Configure the runner at multiple levels:
 
 - **CLI flag:** `--runner axe`
-- **Config file:** `"runner": "axe"` in `.pally-agent.json`
-- **Environment variable:** `PALLY_RUNNER=axe` (core) or `DASHBOARD_SCANNER_RUNNER=axe` (dashboard)
+- **Config file:** `"runner": "axe"` in `.luqen.json`
+- **Environment variable:** `LUQEN_RUNNER=axe` (core) or `DASHBOARD_SCANNER_RUNNER=axe` (dashboard)
 - **Dashboard scan form:** Select from the **Runner** dropdown when creating a scan
 
 ---
 
 ## Incremental scanning
 
-For sites scanned repeatedly, incremental scanning avoids re-testing pages that have not changed. When enabled, pally-agent computes a SHA-256 hash of each page's HTML content and compares it against hashes stored from the previous scan (in the `page_hashes` database table).
+For sites scanned repeatedly, incremental scanning avoids re-testing pages that have not changed. When enabled, luqen computes a SHA-256 hash of each page's HTML content and compares it against hashes stored from the previous scan (in the `page_hashes` database table).
 
 - **Changed pages** are scanned normally and their hashes updated.
 - **Unchanged pages** reuse results from the previous scan.
@@ -81,7 +81,7 @@ The dashboard supports recurring scans without external cron. When creating a sc
 
 Scheduled scans inherit the original scan's URL, standard, jurisdictions, runner, and concurrency settings. Manage active schedules from **Settings > Schedules** in the dashboard sidebar. Each schedule shows its next run time, last result, and can be paused or deleted.
 
-CLI equivalent: use `pally-agent scan --schedule daily|weekly|monthly` to create a schedule via the API.
+CLI equivalent: use `luqen scan --schedule daily|weekly|monthly` to create a schedule via the API.
 
 ---
 
@@ -91,7 +91,7 @@ The `maxPages` setting caps how many pages are discovered and scanned during a F
 
 | Context | Setting | Default |
 |---------|---------|---------|
-| CLI config | `maxPages` in `.pally-agent.json` | `100` |
+| CLI config | `maxPages` in `.luqen.json` | `100` |
 | Dashboard env | `DASHBOARD_MAX_PAGES` | `50` |
 | Dashboard config | `maxPages` in `dashboard.config.json` | `50` |
 
@@ -104,15 +104,15 @@ The dashboard accepts values from 1 to 1000. Adjust this based on your site size
 ### Basic scan
 
 ```bash
-pally-agent scan https://example.com
+luqen scan https://example.com
 ```
 
-This discovers all pages (sitemap + crawl) and scans each one at WCAG 2.1 AA. Results are saved as a JSON report in `./pally-reports/`.
+This discovers all pages (sitemap + crawl) and scans each one at WCAG 2.1 AA. Results are saved as a JSON report in `./luqen-reports/`.
 
 ### Common options
 
 ```bash
-pally-agent scan https://example.com \
+luqen scan https://example.com \
   --standard WCAG2AAA \
   --concurrency 3 \
   --format both \
@@ -125,15 +125,15 @@ pally-agent scan https://example.com \
 | `--standard <level>` | `WCAG2A`, `WCAG2AA`, or `WCAG2AAA` | `WCAG2AA` |
 | `--concurrency <n>` | Number of pages to scan in parallel (1-10) | `5` |
 | `--format <fmt>` | `json`, `html`, or `both` | `json` |
-| `--output <dir>` | Directory for report files | `./pally-reports` |
+| `--output <dir>` | Directory for report files | `./luqen-reports` |
 | `--also-crawl` | Crawl the site in addition to reading `sitemap.xml` | `false` |
 | `--repo <path>` | Path to source repository for source mapping | none |
-| `--config <path>` | Path to `.pally-agent.json` config file | auto-detected |
+| `--config <path>` | Path to `.luqen.json` config file | auto-detected |
 
 ### Adding compliance enrichment
 
 ```bash
-pally-agent scan https://example.com \
+luqen scan https://example.com \
   --format both \
   --compliance-url http://localhost:4000 \
   --jurisdictions EU,US,UK \
@@ -147,14 +147,14 @@ This annotates every issue with the regulations that require it and adds a per-j
 
 | Variable | Equivalent flag |
 |----------|----------------|
-| `PALLY_WEBSERVICE_URL` | pa11y webservice URL (default `http://localhost:3000`) |
-| `PALLY_WEBSERVICE_AUTH` | `Authorization` header for the webservice |
-| `PALLY_COMPLIANCE_URL` | `--compliance-url` |
-| `PALLY_AGENT_CONFIG` | `--config` |
+| `LUQEN_WEBSERVICE_URL` | pa11y webservice URL (default `http://localhost:3000`) |
+| `LUQEN_WEBSERVICE_AUTH` | `Authorization` header for the webservice |
+| `LUQEN_COMPLIANCE_URL` | `--compliance-url` |
+| `LUQEN_CONFIG` | `--config` |
 
 ### Configuration file
 
-Create `.pally-agent.json` in your project root:
+Create `.luqen.json` in your project root:
 
 ```json
 {
@@ -166,7 +166,7 @@ Create `.pally-agent.json` in your project root:
   "alsoCrawl": false,
   "timeout": 30000,
   "pollTimeout": 60000,
-  "outputDir": "./pally-reports",
+  "outputDir": "./luqen-reports",
   "ignore": [],
   "hideElements": "",
   "headers": {},
@@ -216,13 +216,13 @@ SSE event types:
 
 ### Discovery methods
 
-When running a Full Site scan, pally-agent discovers pages in two phases:
+When running a Full Site scan, luqen discovers pages in two phases:
 
 1. **Sitemap** — Fetches `robots.txt` to find sitemap URLs. If none are declared, falls back to `/sitemap.xml`. Supports sitemap index files (nested sitemaps). URLs disallowed by `robots.txt` are excluded.
 
 2. **Crawl** — Follows links from the base URL up to `crawlDepth` levels deep (default 3). Only same-origin URLs are followed. Respects `robots.txt` disallow rules.
 
-By default, pally-agent uses the sitemap if available and only crawls if no sitemap is found. Use `--also-crawl` (CLI) or Full Site mode (dashboard) to combine both methods — useful when the sitemap is incomplete.
+By default, luqen uses the sitemap if available and only crawls if no sitemap is found. Use `--also-crawl` (CLI) or Full Site mode (dashboard) to combine both methods — useful when the sitemap is incomplete.
 
 All discovered URLs are deduplicated. The total is capped at `maxPages` (default 100).
 
@@ -250,7 +250,7 @@ The dashboard enforces a maximum of 10. The CLI default is 5.
 
 Some websites use Web Application Firewalls (WAFs) or bot detection (Cloudflare, AWS WAF, Akamai) that block automated scanners.
 
-Pally-agent detects common WAF responses during crawling and reports a warning:
+Luqen-agent detects common WAF responses during crawling and reports a warning:
 
 ```
 WARNING: Possible WAF/bot protection detected on https://example.com
@@ -259,7 +259,7 @@ WARNING: Possible WAF/bot protection detected on https://example.com
 **Workarounds:**
 
 - Add custom headers to bypass WAF rules: `--headers '{"Authorization": "Bearer xxx"}'`
-- Use the `wait` option to add a delay after page load: configure `"wait": 2000` in `.pally-agent.json`
+- Use the `wait` option to add a delay after page load: configure `"wait": 2000` in `.luqen.json`
 - Allowlist the scanner's IP address in your WAF configuration
 - Use the `hideElements` option to ignore WAF-injected challenge elements
 
@@ -287,9 +287,9 @@ Two timeout settings control scan behaviour:
 | Setting | Default | Purpose |
 |---------|---------|---------|
 | `timeout` | 30,000 ms | How long pa11y waits for a page to load |
-| `pollTimeout` | 60,000 ms | How long pally-agent waits for scan results before retrying |
+| `pollTimeout` | 60,000 ms | How long luqen waits for scan results before retrying |
 
-If a scan times out, pally-agent retries once with exponential backoff. If both attempts fail, the page is recorded as an error and scanning continues with the remaining pages.
+If a scan times out, luqen retries once with exponential backoff. If both attempts fail, the page is recorded as an error and scanning continues with the remaining pages.
 
 ---
 

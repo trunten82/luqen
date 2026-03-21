@@ -1,17 +1,17 @@
 # MCP Tools Reference
 
-Pally Agent exposes **20 MCP tools** across three packages. Each package runs its own MCP server over stdio.
+Luqen exposes **20 MCP tools** across three packages. Each package runs its own MCP server over stdio.
 
 ---
 
 ## Server Connection Config
 
-### Core (pally-agent)
+### Core (luqen)
 
 Start the server:
 
 ```bash
-npx @pally-agent/core mcp
+npx @luqen/core mcp
 ```
 
 Claude Desktop / VS Code config:
@@ -19,20 +19,20 @@ Claude Desktop / VS Code config:
 ```json
 {
   "mcpServers": {
-    "pally-agent": {
+    "luqen": {
       "command": "npx",
-      "args": ["@pally-agent/core", "mcp"]
+      "args": ["@luqen/core", "mcp"]
     }
   }
 }
 ```
 
-### Compliance (pally-compliance)
+### Compliance (luqen-compliance)
 
 Start the server:
 
 ```bash
-npx @pally-agent/compliance mcp
+npx @luqen/compliance mcp
 ```
 
 Claude Desktop / VS Code config:
@@ -40,20 +40,20 @@ Claude Desktop / VS Code config:
 ```json
 {
   "mcpServers": {
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "npx",
-      "args": ["@pally-agent/compliance", "mcp"]
+      "args": ["@luqen/compliance", "mcp"]
     }
   }
 }
 ```
 
-### Monitor (pally-monitor)
+### Monitor (luqen-monitor)
 
 Start the server:
 
 ```bash
-npx @pally-agent/monitor mcp
+npx @luqen/monitor mcp
 ```
 
 Claude Desktop / VS Code config:
@@ -61,9 +61,9 @@ Claude Desktop / VS Code config:
 ```json
 {
   "mcpServers": {
-    "pally-monitor": {
+    "luqen-monitor": {
       "command": "npx",
-      "args": ["@pally-agent/monitor", "mcp"]
+      "args": ["@luqen/monitor", "mcp"]
     }
   }
 }
@@ -73,7 +73,7 @@ Claude Desktop / VS Code config:
 
 ## Core Tools (6)
 
-### pally_scan
+### luqen_scan
 
 Scan a website for accessibility issues using pa11y webservice. Discovers URLs via sitemap/crawling, runs concurrent scans, and returns a full JSON report.
 
@@ -103,7 +103,7 @@ Scan a website for accessibility issues using pa11y webservice. Discovers URLs v
 
 ---
 
-### pally_get_issues
+### luqen_get_issues
 
 Read and filter issues from a JSON scan report.
 
@@ -128,7 +128,7 @@ Read and filter issues from a JSON scan report.
 
 ---
 
-### pally_propose_fixes
+### luqen_propose_fixes
 
 Propose code fixes for accessibility issues found in a scan report.
 
@@ -150,7 +150,7 @@ Propose code fixes for accessibility issues found in a scan report.
 
 ---
 
-### pally_apply_fix
+### luqen_apply_fix
 
 Apply a proposed fix to a source file.
 
@@ -176,7 +176,7 @@ Apply a proposed fix to a source file.
 
 ---
 
-### pally_raw
+### luqen_raw
 
 Run a single-page pa11y scan and return raw pa11y webservice output. Use this for backward compatibility with existing pa11y automations -- the response format matches pa11y-webservice exactly.
 
@@ -206,7 +206,7 @@ Run a single-page pa11y scan and return raw pa11y webservice output. Use this fo
 
 ---
 
-### pally_raw_batch
+### luqen_raw_batch
 
 Run pa11y scans on multiple URLs and return raw pa11y results per URL. Backward-compatible output format matching pa11y-webservice.
 

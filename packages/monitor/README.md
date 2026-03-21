@@ -1,22 +1,22 @@
-# @pally-agent/monitor
+# @luqen/monitor
 
 Regulatory monitor agent that watches legal sources for accessibility regulation changes.
 
 ## Install
 
 ```bash
-npm install @pally-agent/monitor
+npm install @luqen/monitor
 ```
 
 ## Usage
 
 ```bash
-npx pally-monitor scan
+npx luqen-monitor scan
 ```
 
 ## Documentation
 
-See the [main repository](https://github.com/trunten82/pally-agent) for full documentation.
+See the [main repository](https://github.com/trunten82/luqen) for full documentation.
 
 ## License
 

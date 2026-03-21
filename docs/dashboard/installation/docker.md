@@ -1,13 +1,13 @@
-# Docker Deployment — Pally Dashboard
+# Docker Deployment — Luqen
 
-This guide covers deploying the Pally Dashboard using Docker and Docker Compose.
+This guide covers deploying the Luqen using Docker and Docker Compose.
 
 ---
 
 ## Prerequisites
 
 - Docker 24+ and Docker Compose v2
-- The monorepo cloned locally: `git clone https://github.com/trunten82/pally-agent.git`
+- The monorepo cloned locally: `git clone https://github.com/trunten82/luqen.git`
 - A pa11y webservice instance (external — not provided by this compose file). [pa11y-webservice on Docker Hub](https://hub.docker.com/r/pa11y/pa11y-webservice).
 
 ---
@@ -15,7 +15,7 @@ This guide covers deploying the Pally Dashboard using Docker and Docker Compose.
 ## Quick Start
 
 ```bash
-cd /path/to/pally-agent
+cd /path/to/luqen
 
 # Generate a session secret (required)
 export DASHBOARD_SESSION_SECRET="$(openssl rand -base64 32)"
@@ -28,8 +28,8 @@ Services started:
 
 | Service | Container | Port |
 |---------|-----------|------|
-| Compliance service | `pally-compliance` | 4000 |
-| Dashboard | `pally-dashboard` | 5000 |
+| Compliance service | `luqen-compliance` | 4000 |
+| Dashboard | `luqen-dashboard` | 5000 |
 
 Open `http://localhost:5000` and log in with a user account registered in the compliance service.
 
@@ -45,7 +45,7 @@ services:
     build:
       context: .
       dockerfile: packages/compliance/Dockerfile
-    container_name: pally-compliance
+    container_name: luqen-compliance
     ports:
       - "4000:4000"
     volumes:
@@ -68,7 +68,7 @@ services:
     build:
       context: .
       dockerfile: packages/dashboard/Dockerfile
-    container_name: pally-dashboard
+    container_name: luqen-dashboard
     ports:
       - "5000:5000"
     volumes:
@@ -77,7 +77,7 @@ services:
     environment:
       - DASHBOARD_PORT=5000
       - DASHBOARD_COMPLIANCE_URL=http://compliance:4000
-      - DASHBOARD_WEBSERVICE_URL=${PALLY_WEBSERVICE_URL:-http://host.docker.internal:3000}
+      - DASHBOARD_WEBSERVICE_URL=${LUQEN_WEBSERVICE_URL:-http://host.docker.internal:3000}
       - DASHBOARD_REPORTS_DIR=/app/reports
       - DASHBOARD_DB_PATH=/app/data/dashboard.db
       - DASHBOARD_SESSION_SECRET=${DASHBOARD_SESSION_SECRET}
@@ -130,7 +130,7 @@ Create a `.env` file at the repo root (never commit this file):
 
 ```dotenv
 DASHBOARD_SESSION_SECRET=your-random-secret-here-must-be-32-bytes
-PALLY_WEBSERVICE_URL=http://my-pa11y-webservice:3000
+LUQEN_WEBSERVICE_URL=http://my-pa11y-webservice:3000
 DASHBOARD_COMPLIANCE_CLIENT_ID=dashboard
 DASHBOARD_COMPLIANCE_CLIENT_SECRET=your-client-secret
 ```
@@ -169,7 +169,7 @@ Stage 2 (production): node:20-slim
   - CMD: migrate then serve
 ```
 
-The container entrypoint runs `pally-dashboard migrate` before starting the server, so schema updates apply automatically on container restart.
+The container entrypoint runs `luqen-dashboard migrate` before starting the server, so schema updates apply automatically on container restart.
 
 ---
 
@@ -182,18 +182,18 @@ On first startup the compliance service database is empty. Run these commands on
 docker compose ps
 
 # Generate JWT signing keys (one-time)
-docker exec pally-compliance node dist/cli.js keys generate
+docker exec luqen-compliance node dist/cli.js keys generate
 
 # Seed baseline data: 58 jurisdictions, 62 regulations
-docker exec pally-compliance node dist/cli.js seed
+docker exec luqen-compliance node dist/cli.js seed
 
 # Create an admin user
-docker exec -it pally-compliance node dist/cli.js users create \
+docker exec -it luqen-compliance node dist/cli.js users create \
   --username admin \
   --role admin
 
 # Register the dashboard as an OAuth2 client
-docker exec pally-compliance node dist/cli.js clients create \
+docker exec luqen-compliance node dist/cli.js clients create \
   --name dashboard \
   --scope admin \
   --grant password
@@ -210,13 +210,13 @@ docker compose restart dashboard
 
 ## Connecting to an External Pa11y Webservice
 
-The dashboard uses the pa11y webservice for scanning. If you have an existing webservice, set `PALLY_WEBSERVICE_URL` in your `.env`:
+The dashboard uses the pa11y webservice for scanning. If you have an existing webservice, set `LUQEN_WEBSERVICE_URL` in your `.env`:
 
 ```dotenv
-PALLY_WEBSERVICE_URL=http://my-pa11y-host:3000
+LUQEN_WEBSERVICE_URL=http://my-pa11y-host:3000
 ```
 
-To run pa11y webservice in Docker alongside pally-agent services, add it to your `docker-compose.override.yml`:
+To run pa11y webservice in Docker alongside luqen services, add it to your `docker-compose.override.yml`:
 
 ```yaml
 services:
@@ -285,7 +285,7 @@ Example backup command:
 
 ```bash
 docker run --rm \
-  -v pally-agent_dashboard-reports:/source \
+  -v luqen_dashboard-reports:/source \
   -v $(pwd)/backups:/dest \
   alpine tar czf /dest/reports-$(date +%Y%m%d).tar.gz -C /source .
 ```
@@ -330,7 +330,7 @@ If you changed `DASHBOARD_REPORTS_DIR` between deployments, the old report files
 
 ```bash
 docker compose logs compliance
-docker exec pally-compliance node dist/cli.js keys generate
-docker exec pally-compliance node dist/cli.js seed
+docker exec luqen-compliance node dist/cli.js keys generate
+docker exec luqen-compliance node dist/cli.js seed
 docker compose restart compliance
 ```

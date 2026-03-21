@@ -2,13 +2,13 @@
 
 # Fix Proposals Guide
 
-How pally-agent generates and applies code fixes for accessibility issues.
+How luqen generates and applies code fixes for accessibility issues.
 
 ---
 
 ## What fix proposals are
 
-Fix proposals are auto-generated code diffs that resolve common accessibility violations. When pally-agent finds an issue it knows how to fix, it:
+Fix proposals are auto-generated code diffs that resolve common accessibility violations. When luqen finds an issue it knows how to fix, it:
 
 1. Maps the issue to a source file using the source mapper.
 2. Locates the relevant HTML element in your code.
@@ -19,7 +19,7 @@ Fix proposals are auto-generated code diffs that resolve common accessibility vi
 
 ## Supported fix rules
 
-Pally-agent includes built-in fix rules for these common issues:
+Luqen-agent includes built-in fix rules for these common issues:
 
 | WCAG criterion | Issue | Fix applied |
 |----------------|-------|-------------|
@@ -33,7 +33,7 @@ These rules handle the most frequently occurring WCAG violations. Issues not cov
 
 ## Source mapping
 
-Before generating fix proposals, pally-agent maps browser-rendered HTML back to your source code.
+Before generating fix proposals, luqen maps browser-rendered HTML back to your source code.
 
 ### How it works
 
@@ -43,7 +43,7 @@ Before generating fix proposals, pally-agent maps browser-rendered HTML back to 
 
 ### Configuring source maps
 
-Use the `sourceMap` field in `.pally-agent.json` to define URL-to-file mappings:
+Use the `sourceMap` field in `.luqen.json` to define URL-to-file mappings:
 
 ```json
 {
@@ -55,7 +55,7 @@ Use the `sourceMap` field in `.pally-agent.json` to define URL-to-file mappings:
 }
 ```
 
-This is optional — pally-agent attempts automatic mapping first. Manual overrides are useful when the automatic mapper cannot determine the correct file (e.g., server-rendered templates, CMS-generated pages).
+This is optional — luqen attempts automatic mapping first. Manual overrides are useful when the automatic mapper cannot determine the correct file (e.g., server-rendered templates, CMS-generated pages).
 
 ### Confidence levels
 
@@ -73,13 +73,13 @@ This is optional — pally-agent attempts automatic mapping first. Manual overri
 Run a scan and interactively apply fixes:
 
 ```bash
-pally-agent fix https://example.com --repo ./my-project
+luqen fix https://example.com --repo ./my-project
 ```
 
 Or apply fixes from an existing report:
 
 ```bash
-pally-agent fix --from-report ./pally-reports/report.json --repo ./my-project
+luqen fix --from-report ./luqen-reports/report.json --repo ./my-project
 ```
 
 The CLI presents each fix one at a time:
@@ -103,7 +103,7 @@ Options:
 
 ### Diff preview
 
-When you press `s`, pally-agent shows the change in unified diff format:
+When you press `s`, luqen shows the change in unified diff format:
 
 ```diff
 --- src/pages/index.html
@@ -117,24 +117,24 @@ When you press `s`, pally-agent shows the change in unified diff format:
 
 ## MCP integration
 
-When using pally-agent as an MCP server in Claude Code (or another MCP-compatible IDE), fix proposals are available through two tools:
+When using luqen as an MCP server in Claude Code (or another MCP-compatible IDE), fix proposals are available through two tools:
 
-### `pally_propose_fixes`
+### `luqen_propose_fixes`
 
 Scans a URL or loads an existing report and returns all fix proposals as structured data. Your AI assistant can then review and explain each fix.
 
-### `pally_apply_fix`
+### `luqen_apply_fix`
 
 Applies a specific fix proposal to the source file. The AI assistant can call this tool to make changes directly in your codebase.
 
 ### Typical MCP workflow
 
 1. Ask your AI assistant: "Scan my site and propose accessibility fixes"
-2. The assistant calls `pally_scan` to run the scan
-3. Then calls `pally_propose_fixes` to generate fixes
+2. The assistant calls `luqen_scan` to run the scan
+3. Then calls `luqen_propose_fixes` to generate fixes
 4. Presents each fix with an explanation
 5. You approve or reject each fix
-6. The assistant calls `pally_apply_fix` for approved fixes
+6. The assistant calls `luqen_apply_fix` for approved fixes
 
 For MCP setup instructions, see [QUICKSTART.md](../QUICKSTART.md#ide-integration).
 

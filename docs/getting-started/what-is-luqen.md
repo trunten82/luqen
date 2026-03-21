@@ -1,18 +1,18 @@
-[Docs](../README.md) > [Getting Started](./) > What is Pally Agent?
+[Docs](../README.md) > [Getting Started](./) > What is Luqen?
 
-# What is Pally Agent?
+# What is Luqen?
 
-Pally Agent is a composable accessibility platform that scans websites for WCAG violations, maps every issue to the laws that require you to fix it, proposes source-level code fixes, and tracks regulatory changes across 58 jurisdictions. It supports multiple test runners (HTML_CodeSniffer and axe-core), incremental scanning for changed pages only, trend tracking over time, manual testing checklists, and multi-worker scaling. You install only the tiers you need — from a single CLI command to a full web dashboard with legal monitoring.
+Luqen is a composable accessibility platform that scans websites for WCAG violations, maps every issue to the laws that require you to fix it, proposes source-level code fixes, and tracks regulatory changes across 58 jurisdictions. It supports multiple test runners (HTML_CodeSniffer and axe-core), incremental scanning for changed pages only, trend tracking over time, manual testing checklists, and multi-worker scaling. You install only the tiers you need — from a single CLI command to a full web dashboard with legal monitoring.
 
 ---
 
 ## Tiered Architecture
 
 ```
-Tier 0  @pally-agent/core        Scan, fix, report (CLI + MCP)
-Tier 1  @pally-agent/compliance   Legal compliance engine (API + MCP)
-Tier 2  @pally-agent/dashboard    Web UI for scans, reports, admin
-Tier 3  @pally-agent/monitor      Regulatory change detection (CLI + MCP)
+Tier 0  @luqen/core        Scan, fix, report (CLI + MCP)
+Tier 1  @luqen/compliance   Legal compliance engine (API + MCP)
+Tier 2  @luqen/dashboard    Web UI for scans, reports, admin
+Tier 3  @luqen/monitor      Regulatory change detection (CLI + MCP)
 ```
 
 Each tier depends only on the tiers below it. Core stands alone. Compliance adds legal mapping. Dashboard adds a browser UI on top of both. Monitor watches legal sources and feeds proposals into compliance.
@@ -79,13 +79,13 @@ Use [Path 8: Standalone monitor](../paths/regulatory-monitoring.md#standalone-mo
 
 ### WCAG 2.2 support
 
-Pally Agent currently tests against **WCAG 2.1** (Levels A, AA, AAA). The underlying pa11y engine and HTML_CodeSniffer ruleset do not yet fully support WCAG 2.2 success criteria (2.4.11 Focus Not Obscured, 2.4.12 Focus Not Obscured (Enhanced), 2.4.13 Focus Appearance, 2.5.7 Dragging Movements, 2.5.8 Target Size, 3.2.6 Consistent Help, 3.3.7 Redundant Entry, 3.3.8 Accessible Authentication, 3.3.9 Accessible Authentication (Enhanced)).
+Luqen currently tests against **WCAG 2.1** (Levels A, AA, AAA). The underlying pa11y engine and HTML_CodeSniffer ruleset do not yet fully support WCAG 2.2 success criteria (2.4.11 Focus Not Obscured, 2.4.12 Focus Not Obscured (Enhanced), 2.4.13 Focus Appearance, 2.5.7 Dragging Movements, 2.5.8 Target Size, 3.2.6 Consistent Help, 3.3.7 Redundant Entry, 3.3.8 Accessible Authentication, 3.3.9 Accessible Authentication (Enhanced)).
 
-**Impact:** If your compliance requirements reference WCAG 2.2, Pally Agent will not flag violations specific to the nine new success criteria. Existing WCAG 2.0/2.1 criteria are fully covered.
+**Impact:** If your compliance requirements reference WCAG 2.2, Luqen will not flag violations specific to the nine new success criteria. Existing WCAG 2.0/2.1 criteria are fully covered.
 
 **Partial workaround:** Switch to the **axe-core runner** (`--runner axe` or `DASHBOARD_SCANNER_RUNNER=axe`), which provides coverage for some WCAG 2.2 criteria (e.g., Target Size 2.5.8). Supplement with manual testing for the remaining WCAG 2.2 criteria — the dashboard's manual testing checklists at `/reports/:id/manual` can help structure this review. See the [W3C What's New in WCAG 2.2](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/) guide.
 
-**Status:** Tracking upstream at [pa11y/pa11y#635](https://github.com/pa11y/pa11y/issues/635). When pa11y adds WCAG 2.2 support, Pally Agent will inherit it automatically.
+**Status:** Tracking upstream at [pa11y/pa11y#635](https://github.com/pa11y/pa11y/issues/635). When pa11y adds WCAG 2.2 support, Luqen will inherit it automatically.
 
 ---
 

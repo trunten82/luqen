@@ -6,7 +6,7 @@
 
 ## Problem Statement
 
-Pally-agent currently has a single deployment model: install everything, configure services manually, authenticate via OAuth2 client credentials. This works for developers but creates friction for two important scenarios:
+Luqen-agent currently has a single deployment model: install everything, configure services manually, authenticate via OAuth2 client credentials. This works for developers but creates friction for two important scenarios:
 
 1. **Solo/small team use** — Too much setup for someone who just wants to scan and report. OAuth2 client credentials is overkill.
 2. **Enterprise deployment** — No organization isolation, no SSO, no centralized user management. Not viable for multi-team or multi-client use.
@@ -47,7 +47,7 @@ Each state is additive — nothing breaks when capability grows. Solo API key ke
 A plugin is a standard npm package with a manifest:
 
 ```
-@pally-agent/plugin-auth-entra/
+@luqen/plugin-auth-entra/
   package.json
   manifest.json         # metadata + config schema
   dist/
@@ -94,7 +94,7 @@ interface AuthPlugin {
 ```typescript
 interface NotificationPlugin {
   readonly type: 'notification';
-  send(event: PallyEvent): Promise<void>;
+  send(event: LuqenEvent): Promise<void>;
 }
 ```
 
@@ -142,7 +142,7 @@ New module in the dashboard package: `PluginManager` class.
 ```sql
 CREATE TABLE plugins (
   id TEXT PRIMARY KEY,           -- slug derived from manifest name (e.g., 'auth-entra')
-  package_name TEXT NOT NULL,    -- npm package (e.g., '@pally-agent/plugin-auth-entra')
+  package_name TEXT NOT NULL,    -- npm package (e.g., '@luqen/plugin-auth-entra')
   type TEXT NOT NULL,
   version TEXT NOT NULL,
   config TEXT NOT NULL DEFAULT '{}',  -- secrets encrypted with AES-256-GCM
@@ -164,11 +164,11 @@ Settings → Plugins page with installed plugins, available plugins, install/con
 
 **2. CLI:**
 ```bash
-pally-dashboard plugin install @pally-agent/plugin-auth-entra
-pally-dashboard plugin configure auth-entra --set tenantId=xxx
-pally-dashboard plugin activate auth-entra
-pally-dashboard plugin list
-pally-dashboard plugin remove auth-entra
+luqen-dashboard plugin install @luqen/plugin-auth-entra
+luqen-dashboard plugin configure auth-entra --set tenantId=xxx
+luqen-dashboard plugin activate auth-entra
+luqen-dashboard plugin list
+luqen-dashboard plugin remove auth-entra
 ```
 
 **3. REST API:**
@@ -183,12 +183,12 @@ GET    /api/plugins/:id/health
 GET    /api/plugins/registry
 ```
 
-**4. Config file** (`pally-plugins.json`):
+**4. Config file** (`luqen-plugins.json`):
 ```json
 {
   "plugins": [
     {
-      "name": "@pally-agent/plugin-auth-entra",
+      "name": "@luqen/plugin-auth-entra",
       "config": { "tenantId": "...", "clientId": "..." },
       "active": true
     }
@@ -212,7 +212,7 @@ All four interfaces use the same `PluginManager` underneath.
 
 **Secret storage:** Config values with `"type": "secret"` in the manifest are encrypted at rest using AES-256-GCM with the dashboard's session secret as the encryption key. Decrypted only when passed to `activate()`. Never returned in API responses — masked as `"***"`.
 
-**Config file secrets:** The `pally-plugins.json` config file supports environment variable references for secrets: `"clientSecret": "${ENTRA_CLIENT_SECRET}"`. The plugin manager resolves these at startup. Plain secrets in the config file are accepted but a warning is logged recommending env var references. The config file should be in `.gitignore`.
+**Config file secrets:** The `luqen-plugins.json` config file supports environment variable references for secrets: `"clientSecret": "${ENTRA_CLIENT_SECRET}"`. The plugin manager resolves these at startup. Plain secrets in the config file are accepted but a warning is logged recommending env var references. The config file should be in `.gitignore`.
 
 ## Auth Migration Strategy
 
@@ -264,7 +264,7 @@ The dashboard currently serves only HTML pages. The plugin system and future ext
 
 ### Enterprise (activates when SSO plugin installed)
 
-- Admin installs SSO plugin (e.g., `@pally-agent/plugin-auth-entra`) via marketplace
+- Admin installs SSO plugin (e.g., `@luqen/plugin-auth-entra`) via marketplace
 - Configures tenant ID, client ID, etc. via dashboard form
 - SSO becomes primary auth method for browser users
 - Org management UI appears when first org is created
@@ -362,9 +362,9 @@ Build the plugin framework with no actual plugins:
 - Plugin registry (static JSON)
 - Dashboard API architecture (JSON endpoints at `/api/v1/plugins/*`, updated auth middleware)
 - Dashboard Settings → Plugins page (marketplace UI)
-- CLI commands (`pally-dashboard plugin install/configure/activate/list/remove`)
+- CLI commands (`luqen-dashboard plugin install/configure/activate/list/remove`)
 - REST API endpoints for plugin management
-- Config file support (`pally-plugins.json` with env var substitution for secrets)
+- Config file support (`luqen-plugins.json` with env var substitution for secrets)
 - Health check polling (60s interval, 3-failure threshold)
 - Tests for plugin manager lifecycle
 
@@ -374,7 +374,7 @@ Refactor auth and build the first auth plugin:
 - Refactor current auth into built-in `auth-local` module
 - Solo mode: API key generation on first start, browser cookie auth
 - Team mode: progressive activation when first user created
-- Build `@pally-agent/plugin-auth-entra` (Azure Entra ID SSO)
+- Build `@luqen/plugin-auth-entra` (Azure Entra ID SSO)
 - Auth plugin integration with PluginManager
 - Tests for auth flow transitions
 
@@ -404,7 +404,7 @@ User-facing features:
 ### Phase 4: First Non-Auth Plugin (~1 week)
 
 Prove the plugin system works beyond auth:
-- `@pally-agent/plugin-notify-slack` or `plugin-notify-teams`
+- `@luqen/plugin-notify-slack` or `plugin-notify-teams`
 - Sends notifications on scan complete, violations found
 - Validates the notification plugin interface
 
@@ -413,9 +413,9 @@ Prove the plugin system works beyond auth:
 Each phase includes documentation as a deliverable, not an afterthought. Guides must be updated before the phase is considered complete.
 
 **After Phase 1 (Plugin System):**
-- Update `docs/getting-started/what-is-pally.md` — add plugin system to architecture overview
+- Update `docs/getting-started/what-is-luqen.md` — add plugin system to architecture overview
 - Update `docs/paths/full-dashboard.md` — add Settings → Plugins section
-- Update `docs/reference/cli-reference.md` — add `pally-dashboard plugin *` commands
+- Update `docs/reference/cli-reference.md` — add `luqen-dashboard plugin *` commands
 - Update `docs/reference/api-reference.md` — add `/api/v1/plugins/*` endpoints
 - Create `docs/reference/plugin-development.md` — manifest format, type interfaces, config schema
 - Update `README.md` — mention plugin extensibility

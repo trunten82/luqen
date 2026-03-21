@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# install.sh — one-line installer for Pally Agent
-# Usage (local):  curl -fsSL https://raw.githubusercontent.com/alanna82/pally-agent/master/install.sh | bash
-# Usage (docker): curl -fsSL https://raw.githubusercontent.com/alanna82/pally-agent/master/install.sh | bash -s -- --docker
+# install.sh — one-line installer for Luqen
+# Usage (local):  curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh | bash
+# Usage (docker): curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh | bash -s -- --docker
 # Options:
 #   --docker          use Docker Compose instead of local Node.js
 #   --port PORT       override compliance port (default: 4000); dashboard uses PORT+1000
@@ -39,15 +39,15 @@ COMPLIANCE_PORT=4000
 DASHBOARD_PORT=5000
 PA11Y_URL="http://localhost:3000"
 SEED=true
-REPO_URL="https://github.com/alanna82/pally-agent.git"
-INSTALL_DIR="${HOME}/pally-agent"
+REPO_URL="https://github.com/trunten82/luqen.git"
+INSTALL_DIR="${HOME}/luqen"
 
 # ──────────────────────────────────────────────
 # Argument parsing
 # ──────────────────────────────────────────────
 show_help() {
   cat <<EOF
-${BOLD}Pally Agent Installer${RESET}
+${BOLD}Luqen Installer${RESET}
 
 Usage:
   curl -fsSL ${REPO_URL}/raw/master/install.sh | bash
@@ -93,7 +93,7 @@ clone_or_pull() {
 # LOCAL DEPLOYMENT
 # ──────────────────────────────────────────────
 local_install() {
-  header "Pally Agent — Local Installation"
+  header "Luqen — Local Installation"
 
   # ── Prerequisites ──────────────────────────
   info "Checking prerequisites..."
@@ -169,7 +169,7 @@ local_install() {
     CLIENT_SECRET=$(grep "^client_secret=" "${CLIENT_CACHE}" | cut -d= -f2-)
   else
     info "Creating default OAuth2 client..."
-    CLIENT_OUT=$(cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js clients create --name "pally-dashboard" --scope "read write")
+    CLIENT_OUT=$(cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js clients create --name "luqen-dashboard" --scope "read write")
     CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "client_id:" | awk '{print $2}')
     CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "client_secret:" | awk '{print $2}')
     printf "client_id=%s\nclient_secret=%s\n" "${CLIENT_ID}" "${CLIENT_SECRET}" > "${CLIENT_CACHE}"
@@ -181,7 +181,7 @@ local_install() {
   cat <<EOF
 
 ${GREEN}${BOLD}═══════════════════════════════════════════════════════${RESET}
-${GREEN}${BOLD}  Pally Agent installed successfully!${RESET}
+${GREEN}${BOLD}  Luqen installed successfully!${RESET}
 ${GREEN}${BOLD}═══════════════════════════════════════════════════════${RESET}
 
 ${BOLD}Installation directory:${RESET}  ${INSTALL_DIR}
@@ -224,7 +224,7 @@ EOF
 # DOCKER DEPLOYMENT
 # ──────────────────────────────────────────────
 docker_install() {
-  header "Pally Agent — Docker Installation"
+  header "Luqen — Docker Installation"
 
   # ── Prerequisites ──────────────────────────
   info "Checking prerequisites..."
@@ -271,7 +271,7 @@ docker_install() {
     fi
   }
 
-  set_env_var "PALLY_WEBSERVICE_URL" "${PA11Y_URL}"
+  set_env_var "LUQEN_WEBSERVICE_URL" "${PA11Y_URL}"
   # Port overrides: rebuild compose with custom ports if changed
   if [ "${COMPLIANCE_PORT}" != "4000" ]; then
     set_env_var "COMPLIANCE_PORT" "${COMPLIANCE_PORT}"
@@ -295,7 +295,7 @@ docker_install() {
   info "Waiting for compliance service to be healthy..."
   ATTEMPTS=0
   MAX_ATTEMPTS=30
-  until docker inspect --format='{{.State.Health.Status}}' pally-compliance 2>/dev/null | grep -q "healthy"; do
+  until docker inspect --format='{{.State.Health.Status}}' luqen-compliance 2>/dev/null | grep -q "healthy"; do
     ATTEMPTS=$(( ATTEMPTS + 1 ))
     if [ "${ATTEMPTS}" -ge "${MAX_ATTEMPTS}" ]; then
       error "Compliance service did not become healthy within 90 seconds."
@@ -310,7 +310,7 @@ docker_install() {
 
   info "Waiting for dashboard to be healthy..."
   ATTEMPTS=0
-  until docker inspect --format='{{.State.Health.Status}}' pally-dashboard 2>/dev/null | grep -q "healthy"; do
+  until docker inspect --format='{{.State.Health.Status}}' luqen-dashboard 2>/dev/null | grep -q "healthy"; do
     ATTEMPTS=$(( ATTEMPTS + 1 ))
     if [ "${ATTEMPTS}" -ge "${MAX_ATTEMPTS}" ]; then
       error "Dashboard did not become healthy within 90 seconds."
@@ -328,7 +328,7 @@ docker_install() {
 
   if [ "${SEED}" = "true" ]; then
     info "Seeding baseline compliance data inside container..."
-    docker exec pally-compliance node dist/cli.js seed
+    docker exec luqen-compliance node dist/cli.js seed
     success "Baseline data seeded."
   else
     warn "Skipping baseline seeding (--no-seed)."
@@ -340,7 +340,7 @@ docker_install() {
     CLIENT_SECRET=$(grep "^client_secret=" "${CLIENT_CACHE}" | cut -d= -f2-)
   else
     info "Creating default OAuth2 client inside container..."
-    CLIENT_OUT=$(docker exec pally-compliance node dist/cli.js clients create --name "pally-dashboard" --scope "read write")
+    CLIENT_OUT=$(docker exec luqen-compliance node dist/cli.js clients create --name "luqen-dashboard" --scope "read write")
     CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "client_id:" | awk '{print $2}')
     CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "client_secret:" | awk '{print $2}')
     printf "client_id=%s\nclient_secret=%s\n" "${CLIENT_ID}" "${CLIENT_SECRET}" > "${CLIENT_CACHE}"
@@ -352,7 +352,7 @@ docker_install() {
   cat <<EOF
 
 ${GREEN}${BOLD}═══════════════════════════════════════════════════════${RESET}
-${GREEN}${BOLD}  Pally Agent (Docker) installed successfully!${RESET}
+${GREEN}${BOLD}  Luqen (Docker) installed successfully!${RESET}
 ${GREEN}${BOLD}═══════════════════════════════════════════════════════${RESET}
 
 ${BOLD}Installation directory:${RESET}  ${INSTALL_DIR}

@@ -25,7 +25,7 @@ packages/dashboard/src/
     manager.ts                 # PluginManager class (lifecycle, health checks)
     registry.ts                # Load + query plugin registry
     crypto.ts                  # AES-256-GCM encrypt/decrypt for plugin secrets
-    reconciler.ts              # Reconcile pally-plugins.json on startup
+    reconciler.ts              # Reconcile luqen-plugins.json on startup
   routes/
     api/
       plugins.ts               # REST API: /api/v1/plugins/*
@@ -136,8 +136,8 @@ Create `packages/dashboard/src/plugins/types.ts` with all interfaces:
 - `PluginInstance` — manifest, activate(), deactivate(), healthCheck()
 - `AuthPlugin` extends PluginInstance — authenticate, getLoginUrl, handleCallback, getUserInfo, getLogoutUrl, refreshToken
 - `AuthResult`, `UserInfo` — auth response types
-- `NotificationPlugin` extends PluginInstance — send(event: PallyEvent)
-- `PallyEvent` — type (scan.complete/scan.failed/violation.found/regulation.changed), timestamp, data
+- `NotificationPlugin` extends PluginInstance — send(event: LuqenEvent)
+- `LuqenEvent` — type (scan.complete/scan.failed/violation.found/regulation.changed), timestamp, data
 - `StoragePlugin` extends PluginInstance — save/load/delete with Uint8Array
 - `ScannerPlugin` extends PluginInstance — rules: WcagRule[], evaluate(page: { url: string; html: string; issues: ScannerIssue[] })
 - `WcagRule`, `ScannerIssue` — scanner types
@@ -340,7 +340,7 @@ git commit -m "feat: implement PluginManager with full lifecycle management"
 
 ## Task 7: Plugin Config File Reconciler
 
-Support `pally-plugins.json` declarative config with env var substitution.
+Support `luqen-plugins.json` declarative config with env var substitution.
 
 **Files:**
 - Create: `packages/dashboard/src/plugins/reconciler.ts`
@@ -360,7 +360,7 @@ Support `pally-plugins.json` declarative config with env var substitution.
 
 Create `packages/dashboard/src/plugins/reconciler.ts`:
 - `resolveEnvVars(config)` — replaces `${VAR_NAME}` patterns with `process.env` values
-- `reconcile(manager, configPath)` — reads pally-plugins.json, installs/configures/activates
+- `reconcile(manager, configPath)` — reads luqen-plugins.json, installs/configures/activates
 - Returns: `{ installed: string[], configured: string[], activated: string[], errors: string[] }`
 
 - [ ] **Step 3: Run tests, verify pass**
@@ -604,14 +604,14 @@ Update all docs for the plugin system.
 - Modify: `docs/reference/api-reference.md` — add /api/v1/plugins/* endpoints
 - Modify: `docs/reference/dashboard-config.md` — add DASHBOARD_PLUGINS_DIR, DASHBOARD_PLUGINS_CONFIG
 - Modify: `docs/paths/full-dashboard.md` — add "Managing Plugins" section
-- Modify: `docs/getting-started/what-is-pally.md` — add plugin system to overview
+- Modify: `docs/getting-started/what-is-luqen.md` — add plugin system to overview
 - Create: `docs/reference/plugin-development.md` — manifest format, interfaces, lifecycle
 - Modify: `README.md` — mention plugin extensibility
 - Modify: `CHANGELOG.md` — add v0.8.0 entry
-- Modify: `.claude/skills/pally-agent/SKILL.md` — add plugin CLI and API docs
+- Modify: `.claude/skills/luqen/SKILL.md` — add plugin CLI and API docs
 
 - [ ] **Step 1: Update reference docs** (cli-reference, api-reference, dashboard-config)
-- [ ] **Step 2: Update path guides** (full-dashboard, what-is-pally)
+- [ ] **Step 2: Update path guides** (full-dashboard, what-is-luqen)
 - [ ] **Step 3: Create plugin-development.md**
 - [ ] **Step 4: Update README, CHANGELOG, and SKILL.md**
 - [ ] **Step 5: Commit**

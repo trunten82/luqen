@@ -2,7 +2,7 @@
 
 # Architecture
 
-System design, data flow, and technology stack for the pally-agent monorepo.
+System design, data flow, and technology stack for the luqen monorepo.
 
 ---
 
@@ -10,29 +10,29 @@ System design, data flow, and technology stack for the pally-agent monorepo.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                      pally-agent monorepo                    │
+│                      luqen monorepo                    │
 │                                                              │
 │  ┌───────────────────────────┐                               │
-│  │   @pally-agent/dashboard  │  Web UI (browser)             │
+│  │   @luqen/dashboard  │  Web UI (browser)             │
 │  │                           │  ─ start scans, view reports  │
-│  │  pally-dashboard serve    │  ─ HTMX, no JS build step     │
-│  │  pally-dashboard migrate  │  ─ admin: jurisdictions,      │
+│  │  luqen-dashboard serve    │  ─ HTMX, no JS build step     │
+│  │  luqen-dashboard migrate  │  ─ admin: jurisdictions,      │
 │  └──────────┬────────────────┘    users, webhooks, health    │
 │             │ HTTP (REST)                                     │
 │             ▼                                                │
 │  ┌───────────────────────────┐                               │
-│  │  @pally-agent/compliance  │  REST API + MCP server        │
+│  │  @luqen/compliance  │  REST API + MCP server        │
 │  │                           │  ─ 58 jurisdictions           │
-│  │  pally-compliance serve   │  ─ 62 regulations             │
-│  │  pally-compliance mcp     │  ─ OAuth2 / JWT auth          │
+│  │  luqen-compliance serve   │  ─ 62 regulations             │
+│  │  luqen-compliance mcp     │  ─ OAuth2 / JWT auth          │
 │  └──────────┬────────────────┘  ─ SQLite + OpenAPI           │
 │             │ uses as library                                 │
 │             ▼                                                │
 │  ┌───────────────────────────┐                               │
-│  │   @pally-agent/core       │  CLI + MCP server             │
+│  │   @luqen/core       │  CLI + MCP server             │
 │  │                           │  ─ site scan & crawl          │
-│  │  pally-agent scan ...     │  ─ source mapping             │
-│  │  pally-agent fix  ...     │  ─ fix proposals              │
+│  │  luqen scan ...     │  ─ source mapping             │
+│  │  luqen fix  ...     │  ─ fix proposals              │
 │  └──────────┬────────────────┘  ─ HTML/JSON reports          │
 │             │ HTTP                                            │
 │             ▼                                                │
@@ -49,10 +49,10 @@ System design, data flow, and technology stack for the pally-agent monorepo.
 
 | Package | Purpose | Port | Binary |
 |---------|---------|------|--------|
-| `@pally-agent/core` | Site scanner, source mapper, fix engine, CLI, MCP | — | `pally-agent` |
-| `@pally-agent/compliance` | Rule engine, REST API, MCP, A2A agent | 4000 | `pally-compliance` |
-| `@pally-agent/dashboard` | Web UI for scans, reports, admin | 5000 | `pally-dashboard` |
-| `@pally-agent/monitor` | Regulatory change monitor | — | `pally-monitor` |
+| `@luqen/core` | Site scanner, source mapper, fix engine, CLI, MCP | — | `luqen` |
+| `@luqen/compliance` | Rule engine, REST API, MCP, A2A agent | 4000 | `luqen-compliance` |
+| `@luqen/dashboard` | Web UI for scans, reports, admin | 5000 | `luqen-dashboard` |
+| `@luqen/monitor` | Regulatory change monitor | — | `luqen-monitor` |
 
 ---
 
@@ -76,7 +76,7 @@ System design, data flow, and technology stack for the pally-agent monorepo.
 ## Data flow: scan to report
 
 ```
-1. User runs: pally-agent scan https://example.com
+1. User runs: luqen scan https://example.com
 
 2. Discovery
    ├── Fetch /robots.txt → extract Disallow rules + Sitemap directive
@@ -105,8 +105,8 @@ System design, data flow, and technology stack for the pally-agent monorepo.
    └── Search source files for offending elements (CSS selector + context)
 
 7. Report generation
-   ├── Write JSON: pally-report-<timestamp>.json
-   └── Write HTML: pally-report-<timestamp>.html (self-contained)
+   ├── Write JSON: luqen-report-<timestamp>.json
+   └── Write HTML: luqen-report-<timestamp>.html (self-contained)
 ```
 
 ---
@@ -114,9 +114,9 @@ System design, data flow, and technology stack for the pally-agent monorepo.
 ## Core package internals
 
 ```
-@pally-agent/core
+@luqen/core
 ├── Interfaces
-│   ├── CLI (commander)        — pally-agent scan / fix
+│   ├── CLI (commander)        — luqen scan / fix
 │   └── MCP server (stdio)     — 6 tools for AI agents
 │
 └── Core library
@@ -133,7 +133,7 @@ System design, data flow, and technology stack for the pally-agent monorepo.
 ## Compliance service internals
 
 ```
-@pally-agent/compliance
+@luqen/compliance
 ├── Interfaces
 │   ├── REST API (Fastify)     — OpenAPI 3.1, Swagger UI at /docs
 │   ├── MCP server (stdio)     — 11 compliance tools
@@ -174,17 +174,17 @@ System design, data flow, and technology stack for the pally-agent monorepo.
 ## Package dependency graph
 
 ```
-@pally-agent/dashboard
-    └── depends on @pally-agent/compliance (HTTP REST client)
-    └── depends on @pally-agent/core (Node.js library import)
+@luqen/dashboard
+    └── depends on @luqen/compliance (HTTP REST client)
+    └── depends on @luqen/core (Node.js library import)
 
-@pally-agent/monitor
-    └── depends on @pally-agent/compliance (HTTP REST client)
+@luqen/monitor
+    └── depends on @luqen/compliance (HTTP REST client)
 
-@pally-agent/core
+@luqen/core
     └── no internal dependencies (standalone)
 
-@pally-agent/compliance
+@luqen/compliance
     └── no internal dependencies (standalone)
 ```
 
@@ -194,13 +194,13 @@ System design, data flow, and technology stack for the pally-agent monorepo.
 
 | Server | Tools | Description |
 |--------|-------|-------------|
-| `pally-agent` (core) | `pally_scan` | Site-wide scan with discovery |
-| | `pally_get_issues` | Filter issues from a report |
-| | `pally_propose_fixes` | Generate fix proposals |
-| | `pally_apply_fix` | Apply a single fix |
-| | `pally_raw` | Single-page pa11y passthrough |
-| | `pally_raw_batch` | Multi-page pa11y passthrough |
-| `pally-compliance` | `compliance_check` | Check issues against jurisdictions |
+| `luqen` (core) | `luqen_scan` | Site-wide scan with discovery |
+| | `luqen_get_issues` | Filter issues from a report |
+| | `luqen_propose_fixes` | Generate fix proposals |
+| | `luqen_apply_fix` | Apply a single fix |
+| | `luqen_raw` | Single-page pa11y passthrough |
+| | `luqen_raw_batch` | Multi-page pa11y passthrough |
+| `luqen-compliance` | `compliance_check` | Check issues against jurisdictions |
 | | `compliance_list_jurisdictions` | List jurisdictions |
 | | `compliance_list_regulations` | List regulations |
 | | `compliance_list_requirements` | List WCAG requirements |
@@ -211,7 +211,7 @@ System design, data flow, and technology stack for the pally-agent monorepo.
 | | `compliance_list_sources` | List monitored sources |
 | | `compliance_add_source` | Add a monitored source |
 | | `compliance_seed` | Load baseline data |
-| `pally-monitor` | `monitor_scan_sources` | Scan all monitored sources |
+| `luqen-monitor` | `monitor_scan_sources` | Scan all monitored sources |
 | | `monitor_status` | Show source count and pending proposals |
 | | `monitor_add_source` | Add a source to monitor |
 

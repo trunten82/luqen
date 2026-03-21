@@ -2,13 +2,13 @@
 
 # Compliance Service Configuration Reference
 
-`@pally-agent/compliance` — `compliance.config.json`, environment variables, and CLI flags.
+`@luqen/compliance` — `compliance.config.json`, environment variables, and CLI flags.
 
 ---
 
 ## Config file: `compliance.config.json`
 
-Place in the working directory where you run `pally-compliance serve`. All fields are optional.
+Place in the working directory where you run `luqen-compliance serve`. All fields are optional.
 
 ```json
 {
@@ -83,47 +83,47 @@ Place in the working directory where you run `pally-compliance serve`. All field
 
 ## CLI reference
 
-### `pally-compliance serve`
+### `luqen-compliance serve`
 
 Start the REST + MCP + A2A server.
 
 ```bash
-pally-compliance serve [--port 4000]
+luqen-compliance serve [--port 4000]
 ```
 
 Requires JWT key files. Run `keys generate` first.
 
-### `pally-compliance seed`
+### `luqen-compliance seed`
 
 Load the baseline compliance dataset (58 jurisdictions, 62 regulations). Idempotent.
 
 ```bash
-pally-compliance seed
+luqen-compliance seed
 ```
 
-### `pally-compliance mcp`
+### `luqen-compliance mcp`
 
 Start the MCP server on stdio for use with Claude Code.
 
 ```bash
-pally-compliance mcp
+luqen-compliance mcp
 ```
 
-### `pally-compliance keys generate`
+### `luqen-compliance keys generate`
 
 Generate a new RS256 key pair for JWT signing.
 
 ```bash
-pally-compliance keys generate
+luqen-compliance keys generate
 # Creates: ./keys/private.pem (mode 0600) and ./keys/public.pem
 ```
 
-### `pally-compliance clients create`
+### `luqen-compliance clients create`
 
 Create a new OAuth2 client.
 
 ```bash
-pally-compliance clients create \
+luqen-compliance clients create \
   --name "my-app" \
   --scope "read" \
   --grant client_credentials
@@ -133,20 +133,20 @@ Options: `--name` (required), `--scope` (default: `"read"`), `--grant` (default:
 
 Prints `client_id` and `client_secret` — the secret is shown **only once**.
 
-### `pally-compliance clients list`
+### `luqen-compliance clients list`
 
 List all registered OAuth clients.
 
-### `pally-compliance clients revoke <client_id>`
+### `luqen-compliance clients revoke <client_id>`
 
 Delete an OAuth client. Existing tokens remain valid until expiry.
 
-### `pally-compliance users create`
+### `luqen-compliance users create`
 
 Create a user for the authorization code / password grant flow.
 
 ```bash
-pally-compliance users create \
+luqen-compliance users create \
   --username admin \
   --role admin \
   --password "secure-password"

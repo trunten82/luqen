@@ -2,7 +2,7 @@
 
 # Docker Installation
 
-Run all pally-agent services with Docker Compose.
+Run all luqen services with Docker Compose.
 
 ---
 
@@ -26,15 +26,15 @@ docker compose up -d
 ```
 
 Services:
-- `pally-compliance` on port **4000** (REST API + MCP)
-- `pally-dashboard` on port **5000** (Web UI)
+- `luqen-compliance` on port **4000** (REST API + MCP)
+- `luqen-dashboard` on port **5000** (Web UI)
 
-The dashboard container runs `pally-dashboard migrate` automatically on first start.
+The dashboard container runs `luqen-dashboard migrate` automatically on first start.
 
-For pa11y webservice, run it separately and point `PALLY_WEBSERVICE_URL` at it:
+For pa11y webservice, run it separately and point `LUQEN_WEBSERVICE_URL` at it:
 
 ```bash
-docker run -d --name pa11y-webservice -p 3000:3000 pally/webservice:latest
+docker run -d --name pa11y-webservice -p 3000:3000 luqen/webservice:latest
 ```
 
 ---
@@ -45,7 +45,7 @@ Create a `.env` file in the monorepo root:
 
 ```bash
 # Pa11y webservice
-PALLY_WEBSERVICE_URL=http://host.docker.internal:3000
+LUQEN_WEBSERVICE_URL=http://host.docker.internal:3000
 
 # Compliance service
 COMPLIANCE_DB_PATH=/data/compliance.db

@@ -1,22 +1,22 @@
-# @pally-agent/dashboard
+# @luqen/dashboard
 
-Web dashboard for viewing and managing pally accessibility scan results.
+Web dashboard for viewing and managing luqen accessibility scan results.
 
 ## Install
 
 ```bash
-npm install @pally-agent/dashboard
+npm install @luqen/dashboard
 ```
 
 ## Usage
 
 ```bash
-npx pally-dashboard serve
+npx luqen-dashboard serve
 ```
 
 ## Documentation
 
-See the [main repository](https://github.com/trunten82/pally-agent) for full documentation.
+See the [main repository](https://github.com/trunten82/luqen) for full documentation.
 
 ## License
 

@@ -1,9 +1,9 @@
 ---
-name: pally-agent
+name: luqen
 description: Use when the user asks to check accessibility, run a11y scans, fix WCAG issues, audit a website for accessibility compliance, or when working on frontend code that should meet WCAG standards. Also use when user mentions pa11y, WCAG, or accessibility testing.
 ---
 
-# Pally Agent — Accessibility Scanner
+# Luqen Agent — Accessibility Scanner
 
 Scan entire websites for WCAG accessibility issues via pa11y, map issues to source files, and propose/apply code fixes.
 
@@ -16,20 +16,20 @@ Add to `.claude/settings.json` (all 4 servers — 20 tools total):
 ```json
 {
   "mcpServers": {
-    "pally-agent": {
+    "luqen": {
       "command": "node",
-      "args": ["/root/pally-agent/packages/core/dist/mcp.js"]
+      "args": ["/root/luqen/packages/core/dist/mcp.js"]
     },
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "node",
-      "args": ["/root/pally-agent/packages/compliance/dist/cli.js", "mcp"],
+      "args": ["/root/luqen/packages/compliance/dist/cli.js", "mcp"],
       "env": {
-        "COMPLIANCE_DB_PATH": "/root/pally-agent/packages/compliance/compliance.db"
+        "COMPLIANCE_DB_PATH": "/root/luqen/packages/compliance/compliance.db"
       }
     },
-    "pally-monitor": {
+    "luqen-monitor": {
       "command": "node",
-      "args": ["/root/pally-agent/packages/monitor/dist/cli.js", "mcp"],
+      "args": ["/root/luqen/packages/monitor/dist/cli.js", "mcp"],
       "env": {
         "MONITOR_COMPLIANCE_URL": "http://localhost:4000",
         "MONITOR_COMPLIANCE_CLIENT_ID": "<client-id>",
@@ -40,19 +40,19 @@ Add to `.claude/settings.json` (all 4 servers — 20 tools total):
 }
 ```
 
-Build first: `cd /root/pally-agent && npm run build --workspaces`
+Build first: `cd /root/luqen && npm run build --workspaces`
 
-This gives Claude Code **20 MCP tools**: 6 for scanning/fixing (pally-agent), 11 for compliance (pally-compliance), and 3 for regulatory monitoring (pally-monitor).
+This gives Claude Code **20 MCP tools**: 6 for scanning/fixing (luqen), 11 for compliance (luqen-compliance), and 3 for regulatory monitoring (luqen-monitor).
 
 ### As CLI
 
 ```bash
-cd /root/pally-agent && npm link
+cd /root/luqen && npm link
 ```
 
 ## MCP Tools
 
-### `pally_scan` — Scan a website
+### `luqen_scan` — Scan a website
 
 ```json
 { "url": "https://example.com", "standard": "WCAG2AA", "alsoCrawl": true }
@@ -60,29 +60,29 @@ cd /root/pally-agent && npm link
 
 Returns: summary (pages, issues, severity counts) + per-page results with CSS selectors.
 
-### `pally_get_issues` — Filter issues from a report
+### `luqen_get_issues` — Filter issues from a report
 
 ```json
-{ "reportPath": "./pally-reports/report.json", "severity": "error" }
+{ "reportPath": "./luqen-reports/report.json", "severity": "error" }
 ```
 
 Filter by `urlPattern`, `severity` (error/warning/notice), or `ruleCode`.
 
-### `pally_propose_fixes` — Get fix proposals for a repo
+### `luqen_propose_fixes` — Get fix proposals for a repo
 
 ```json
-{ "reportPath": "./pally-reports/report.json", "repoPath": "/path/to/repo" }
+{ "reportPath": "./luqen-reports/report.json", "repoPath": "/path/to/repo" }
 ```
 
 Returns fixable/unfixable counts + concrete `oldText`/`newText` diffs per file.
 
-### `pally_apply_fix` — Apply a single fix
+### `luqen_apply_fix` — Apply a single fix
 
 ```json
 { "file": "/path/to/file.tsx", "line": 12, "oldText": "<img src=\"x\">", "newText": "<img alt=\"\" src=\"x\">" }
 ```
 
-### `pally_raw` — Single-page pa11y passthrough (backward compatible)
+### `luqen_raw` — Single-page pa11y passthrough (backward compatible)
 
 ```json
 { "url": "https://example.com/page", "standard": "WCAG2AA" }
@@ -90,7 +90,7 @@ Returns fixable/unfixable counts + concrete `oldText`/`newText` diffs per file.
 
 Returns raw pa11y-webservice output (identical format). Supports `actions` for pre-test interactions.
 
-### `pally_raw_batch` — Multi-page pa11y passthrough
+### `luqen_raw_batch` — Multi-page pa11y passthrough
 
 ```json
 { "urls": ["https://example.com/", "https://example.com/about"], "concurrency": 5 }
@@ -102,13 +102,13 @@ Returns array of `{ url, result, error? }` with raw pa11y output per URL.
 
 ```bash
 # Scan a site
-pally-agent scan https://example.com --format both
+luqen scan https://example.com --format both
 
 # Scan with source mapping
-pally-agent scan https://example.com --repo ./my-project
+luqen scan https://example.com --repo ./my-project
 
 # Compliance-enriched scan (v0.2.0+)
-pally-agent scan https://example.com \
+luqen scan https://example.com \
   --format both \
   --compliance-url http://localhost:4000 \
   --jurisdictions EU,US,UK \
@@ -116,10 +116,10 @@ pally-agent scan https://example.com \
   --compliance-client-secret $CLIENT_SECRET
 
 # Fix interactively
-pally-agent fix https://example.com --repo ./my-project
+luqen fix https://example.com --repo ./my-project
 
 # Fix from existing report
-pally-agent fix --from-report ./pally-reports/report.json --repo ./my-project
+luqen fix --from-report ./luqen-reports/report.json --repo ./my-project
 ```
 
 ### Compliance CLI Options (v0.2.0+)
@@ -139,15 +139,15 @@ pally-agent fix --from-report ./pally-reports/report.json --repo ./my-project
 
 ## Typical Workflow
 
-1. **Scan:** `pally_scan` with the target URL
-2. **Review:** `pally_get_issues` filtered to errors first
-3. **Map:** `pally_propose_fixes` with repo path to get file-level diffs
-4. **Fix:** `pally_apply_fix` per issue (confirm with user before each)
-5. **Re-scan:** `pally_scan` again to verify fixes
+1. **Scan:** `luqen_scan` with the target URL
+2. **Review:** `luqen_get_issues` filtered to errors first
+3. **Map:** `luqen_propose_fixes` with repo path to get file-level diffs
+4. **Fix:** `luqen_apply_fix` per issue (confirm with user before each)
+5. **Re-scan:** `luqen_scan` again to verify fixes
 
 ## Configuration
 
-Place `.pally-agent.json` in repo root:
+Place `.luqen.json` in repo root:
 
 ```json
 {
@@ -176,14 +176,14 @@ Issues like empty links and heading hierarchy are flagged but require human judg
 
 ---
 
-## Pally Dashboard
+## Luqen Dashboard
 
 Web dashboard for browsing reports and managing scans. HTMX-powered, no JS build step.
 
 ### Start Dashboard
 
 ```bash
-cd /root/pally-agent/packages/dashboard && npm run build
+cd /root/luqen/packages/dashboard && npm run build
 node dist/cli.js serve --port 5000
 # Open http://localhost:5000
 ```
@@ -206,7 +206,7 @@ The dashboard uses progressive authentication:
 | **Team** | First user created via dashboard | Username + password (bcrypt) |
 | **Enterprise** | SSO plugin installed | SSO button (e.g. Azure Entra ID) |
 
-Manage the API key: `pally-dashboard api-key` (show) or `pally-dashboard api-key regenerate`.
+Manage the API key: `luqen-dashboard api-key` (show) or `luqen-dashboard api-key regenerate`.
 
 ### Roles
 
@@ -220,26 +220,26 @@ Create users via the dashboard admin page or CLI.
 
 ---
 
-## Pally Compliance Service
+## Luqen Compliance Service
 
-The compliance service (`@pally-agent/compliance`) maps WCAG violations to country-specific legal requirements. It is a separate service that pally-agent and Claude Code can call.
+The compliance service (`@luqen/compliance`) maps WCAG violations to country-specific legal requirements. It is a separate service that luqen and Claude Code can call.
 
 ### MCP Setup (compliance service)
 
-Add alongside `pally-agent` in `.claude/settings.json`:
+Add alongside `luqen` in `.claude/settings.json`:
 
 ```json
 {
   "mcpServers": {
-    "pally-agent": {
+    "luqen": {
       "command": "node",
-      "args": ["/root/pally-agent/packages/core/dist/mcp.js"]
+      "args": ["/root/luqen/packages/core/dist/mcp.js"]
     },
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "node",
-      "args": ["/root/pally-agent/packages/compliance/dist/cli.js", "mcp"],
+      "args": ["/root/luqen/packages/compliance/dist/cli.js", "mcp"],
       "env": {
-        "COMPLIANCE_DB_PATH": "/root/pally-agent/packages/compliance/compliance.db"
+        "COMPLIANCE_DB_PATH": "/root/luqen/packages/compliance/compliance.db"
       }
     }
   }
@@ -248,7 +248,7 @@ Add alongside `pally-agent` in `.claude/settings.json`:
 
 Build first:
 ```bash
-cd /root/pally-agent/packages/compliance && npm run build
+cd /root/luqen/packages/compliance && npm run build
 node dist/cli.js keys generate
 node dist/cli.js seed
 ```
@@ -375,7 +375,7 @@ Loads baseline data (idempotent). Run once on setup. Returns counts of jurisdict
 
 ---
 
-## Pally Monitor Agent
+## Luqen Monitor Agent
 
 Watches monitored legal sources (HTML pages, RSS feeds, APIs) for content changes. When a source changes it creates an UpdateProposal in the compliance service for human review.
 
@@ -386,20 +386,20 @@ Add alongside the other servers in `.claude/settings.json`:
 ```json
 {
   "mcpServers": {
-    "pally-agent": {
+    "luqen": {
       "command": "node",
-      "args": ["/root/pally-agent/packages/core/dist/mcp.js"]
+      "args": ["/root/luqen/packages/core/dist/mcp.js"]
     },
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "node",
-      "args": ["/root/pally-agent/packages/compliance/dist/cli.js", "mcp"],
+      "args": ["/root/luqen/packages/compliance/dist/cli.js", "mcp"],
       "env": {
-        "COMPLIANCE_DB_PATH": "/root/pally-agent/packages/compliance/compliance.db"
+        "COMPLIANCE_DB_PATH": "/root/luqen/packages/compliance/compliance.db"
       }
     },
-    "pally-monitor": {
+    "luqen-monitor": {
       "command": "node",
-      "args": ["/root/pally-agent/packages/monitor/dist/cli.js", "mcp"],
+      "args": ["/root/luqen/packages/monitor/dist/cli.js", "mcp"],
       "env": {
         "MONITOR_COMPLIANCE_URL": "http://localhost:4000",
         "MONITOR_COMPLIANCE_CLIENT_ID": "<client-id>",
@@ -410,7 +410,7 @@ Add alongside the other servers in `.claude/settings.json`:
 }
 ```
 
-Build first: `cd /root/pally-agent/packages/monitor && npm run build`
+Build first: `cd /root/luqen/packages/monitor && npm run build`
 
 ### Monitor MCP Tools (3 total)
 
@@ -447,16 +447,16 @@ Registers a new URL for monitoring. Source types: `html`, `rss`, `api`. Schedule
 
 ```bash
 # Run one full scan cycle (detect changes, create proposals)
-pally-monitor scan
+luqen-monitor scan
 
 # Show current status (source count, last scan, pending proposals)
-pally-monitor status
+luqen-monitor status
 
 # Start MCP server on stdio (for Claude Code)
-pally-monitor mcp
+luqen-monitor mcp
 
 # Start HTTP server with A2A agent card endpoint
-pally-monitor serve --port 4200
+luqen-monitor serve --port 4200
 ```
 
 ---
@@ -465,18 +465,18 @@ pally-monitor serve --port 4200
 
 ```bash
 # List installed plugins
-pally-dashboard plugin list
+luqen-dashboard plugin list
 
 # Install a plugin from the registry
-pally-dashboard plugin install @pally-agent/plugin-notify-slack
+luqen-dashboard plugin install @luqen/plugin-notify-slack
 
 # Configure a plugin
-pally-dashboard plugin configure <plugin-id> --set webhookUrl=https://hooks.slack.com/xxx channel=#a11y
+luqen-dashboard plugin configure <plugin-id> --set webhookUrl=https://hooks.slack.com/xxx channel=#a11y
 
 # Activate / deactivate / remove
-pally-dashboard plugin activate <plugin-id>
-pally-dashboard plugin deactivate <plugin-id>
-pally-dashboard plugin remove <plugin-id>
+luqen-dashboard plugin activate <plugin-id>
+luqen-dashboard plugin deactivate <plugin-id>
+luqen-dashboard plugin remove <plugin-id>
 ```
 
 ### Plugin REST API
@@ -501,14 +501,14 @@ Plugin types: `auth`, `notification`, `storage`, `scanner`.
 ### Full Audit Workflow (all MCP servers)
 
 ```
-1. pally_scan — scan the website for WCAG issues
-2. pally_get_issues — filter to errors first
+1. luqen_scan — scan the website for WCAG issues
+2. luqen_get_issues — filter to errors first
 3. compliance_check — check issues against EU, US, UK (or relevant jurisdictions)
 4. Review matrix: mandatory violations = legal exposure
-5. pally_propose_fixes — get code-level fix suggestions
+5. luqen_propose_fixes — get code-level fix suggestions
 6. Prioritize: fix mandatory violations first (legal), then recommended
-7. pally_apply_fix — apply fixes one at a time
-8. pally_scan — re-scan to verify
+7. luqen_apply_fix — apply fixes one at a time
+8. luqen_scan — re-scan to verify
 9. monitor_scan_sources — detect any regulation changes that may affect obligations
 10. monitor_status — confirm no pending proposals require review
 ```
@@ -532,22 +532,22 @@ Checking `DE` automatically includes EU regulations (jurisdiction inheritance).
 
 ```bash
 # Start the REST+MCP+A2A server
-pally-compliance serve --port 4000
+luqen-compliance serve --port 4000
 
 # Load baseline data
-pally-compliance seed
+luqen-compliance seed
 
 # Create OAuth client for automated tools
-pally-compliance clients create --name "ci-pipeline" --scope "read" --grant client_credentials
+luqen-compliance clients create --name "ci-pipeline" --scope "read" --grant client_credentials
 
 # List clients
-pally-compliance clients list
+luqen-compliance clients list
 
 # Generate JWT key pair (required before first serve)
-pally-compliance keys generate
+luqen-compliance keys generate
 
 # Start MCP server on stdio (for Claude Code)
-pally-compliance mcp
+luqen-compliance mcp
 ```
 
 ### REST API Quick Reference

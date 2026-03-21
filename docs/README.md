@@ -1,6 +1,6 @@
-# Pally Agent — Documentation Hub
+# Luqen — Documentation Hub
 
-Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapping. It orchestrates pa11y scanning across entire websites, maps violations to source files, proposes code fixes, and checks every issue against 58 jurisdictions and 62 regulations.
+Luqen is a site-wide WCAG accessibility scanner with legal compliance mapping. It orchestrates pa11y scanning across entire websites, maps violations to source files, proposes code fixes, and checks every issue against 58 jurisdictions and 62 regulations.
 
 ---
 
@@ -9,7 +9,7 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 | I want to... | Go to |
 |--------------|-------|
 | Get scanning in 5 minutes | [QUICKSTART.md](QUICKSTART.md) |
-| Understand what pally-agent does | [USER-GUIDE.md](USER-GUIDE.md) |
+| Understand what luqen does | [USER-GUIDE.md](USER-GUIDE.md) |
 | Install it properly | [Installation guides](#installation) |
 | Understand the system design | [contributing/architecture.md](contributing/architecture.md) |
 | Configure a specific package | [Configuration reference](#configuration-reference) |
@@ -35,10 +35,10 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 
 | Guide | Description |
 |-------|-------------|
-| [reference/core-config.md](reference/core-config.md) | `@pally-agent/core` — `.pally-agent.json`, env vars, CLI flags |
-| [reference/compliance-config.md](reference/compliance-config.md) | `@pally-agent/compliance` — `compliance.config.json`, env vars, CLI |
-| [reference/dashboard-config.md](reference/dashboard-config.md) | `@pally-agent/dashboard` — `dashboard.config.json`, env vars, CLI |
-| [reference/monitor-config.md](reference/monitor-config.md) | `@pally-agent/monitor` — env vars, CLI |
+| [reference/core-config.md](reference/core-config.md) | `@luqen/core` — `.luqen.json`, env vars, CLI flags |
+| [reference/compliance-config.md](reference/compliance-config.md) | `@luqen/compliance` — `compliance.config.json`, env vars, CLI |
+| [reference/dashboard-config.md](reference/dashboard-config.md) | `@luqen/dashboard` — `dashboard.config.json`, env vars, CLI |
+| [reference/monitor-config.md](reference/monitor-config.md) | `@luqen/monitor` — env vars, CLI |
 | [reference/plugin-guide.md](reference/plugin-guide.md) | Plugin configuration — all 6 plugins (auth, notification, storage) with setup guides |
 
 ---
@@ -71,9 +71,9 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 
 | Package | Full docs |
 |---------|-----------|
-| `@pally-agent/core` | [This directory](README.md) and [guides/](guides/) |
-| `@pally-agent/compliance` | [compliance/README.md](compliance/README.md) |
-| `@pally-agent/dashboard` | [dashboard/README.md](dashboard/README.md) |
+| `@luqen/core` | [This directory](README.md) and [guides/](guides/) |
+| `@luqen/compliance` | [compliance/README.md](compliance/README.md) |
+| `@luqen/dashboard` | [dashboard/README.md](dashboard/README.md) |
 
 ---
 

@@ -1,17 +1,17 @@
 # CLI Reference
 
-All CLI commands across the four Pally Agent packages.
+All CLI commands across the four Luqen packages.
 
 ---
 
-## @pally-agent/core (`pally-agent`)
+## @luqen/core (`luqen`)
 
-### pally-agent scan \<url\>
+### luqen scan \<url\>
 
 Discover and scan URLs for accessibility issues.
 
 ```bash
-pally-agent scan https://example.com [options]
+luqen scan https://example.com [options]
 ```
 
 **Options:**
@@ -43,28 +43,28 @@ pally-agent scan https://example.com [options]
 
 ```bash
 # Basic scan with default settings
-pally-agent scan https://example.com
+luqen scan https://example.com
 
 # Scan with HTML report, higher concurrency, and source mapping
-pally-agent scan https://example.com \
+luqen scan https://example.com \
   --format html \
   --concurrency 5 \
   --repo ./my-website
 
 # Scan with compliance enrichment
-pally-agent scan https://example.com \
+luqen scan https://example.com \
   --compliance-url http://localhost:4000 \
   --jurisdictions EU,US
 ```
 
 ---
 
-### pally-agent fix \[url\]
+### luqen fix \[url\]
 
 Propose and interactively apply accessibility fixes.
 
 ```bash
-pally-agent fix [url] --repo <path> [options]
+luqen fix [url] --repo <path> [options]
 ```
 
 **Options:**
@@ -95,22 +95,22 @@ Either a URL or `--from-report` must be provided.
 
 ```bash
 # Fix from a live scan
-pally-agent fix https://example.com --repo ./my-website
+luqen fix https://example.com --repo ./my-website
 
 # Fix from an existing report
-pally-agent fix --from-report ./reports/scan.json --repo ./my-website
+luqen fix --from-report ./reports/scan.json --repo ./my-website
 ```
 
 ---
 
-## @pally-agent/compliance (`pally-compliance`)
+## @luqen/compliance (`luqen-compliance`)
 
-### pally-compliance serve
+### luqen-compliance serve
 
 Start the Fastify REST + MCP + A2A server.
 
 ```bash
-pally-compliance serve [options]
+luqen-compliance serve [options]
 ```
 
 **Options:**
@@ -119,28 +119,28 @@ pally-compliance serve [options]
 |------|-------------|
 | `--port <number>` | Port to listen on (default: `4000`) |
 
-**Prerequisites:** JWT keys must be generated first with `pally-compliance keys generate`.
+**Prerequisites:** JWT keys must be generated first with `luqen-compliance keys generate`.
 
 **Example:**
 
 ```bash
-pally-compliance serve --port 4000
+luqen-compliance serve --port 4000
 ```
 
 ---
 
-### pally-compliance seed
+### luqen-compliance seed
 
 Load the baseline compliance dataset (jurisdictions, regulations, requirements).
 
 ```bash
-pally-compliance seed
+luqen-compliance seed
 ```
 
 **Example:**
 
 ```bash
-pally-compliance seed
+luqen-compliance seed
 # Seed complete:
 #   Jurisdictions: 8
 #   Regulations:   12
@@ -149,12 +149,12 @@ pally-compliance seed
 
 ---
 
-### pally-compliance clients create
+### luqen-compliance clients create
 
 Create a new OAuth2 client.
 
 ```bash
-pally-compliance clients create --name <name> [options]
+luqen-compliance clients create --name <name> [options]
 ```
 
 **Options:**
@@ -168,7 +168,7 @@ pally-compliance clients create --name <name> [options]
 **Example:**
 
 ```bash
-pally-compliance clients create --name "my-scanner" --scope "read write"
+luqen-compliance clients create --name "my-scanner" --scope "read write"
 # Client created:
 #   client_id:     abc123
 #   client_secret: secret456
@@ -176,38 +176,38 @@ pally-compliance clients create --name "my-scanner" --scope "read write"
 
 ---
 
-### pally-compliance clients list
+### luqen-compliance clients list
 
 List all OAuth2 clients.
 
 ```bash
-pally-compliance clients list
+luqen-compliance clients list
 ```
 
 ---
 
-### pally-compliance clients revoke \<id\>
+### luqen-compliance clients revoke \<id\>
 
 Delete an OAuth2 client.
 
 ```bash
-pally-compliance clients revoke <client-id>
+luqen-compliance clients revoke <client-id>
 ```
 
 **Example:**
 
 ```bash
-pally-compliance clients revoke abc123
+luqen-compliance clients revoke abc123
 ```
 
 ---
 
-### pally-compliance users create
+### luqen-compliance users create
 
 Create a new user.
 
 ```bash
-pally-compliance users create --username <username> --password <password> [options]
+luqen-compliance users create --username <username> --password <password> [options]
 ```
 
 **Options:**
@@ -221,17 +221,17 @@ pally-compliance users create --username <username> --password <password> [optio
 **Example:**
 
 ```bash
-pally-compliance users create --username admin --password secret --role admin
+luqen-compliance users create --username admin --password secret --role admin
 ```
 
 ---
 
-### pally-compliance keys generate
+### luqen-compliance keys generate
 
 Generate an RS256 JWT key pair and save to `./keys/`.
 
 ```bash
-pally-compliance keys generate
+luqen-compliance keys generate
 # Key pair generated:
 #   ./keys/private.pem
 #   ./keys/public.pem
@@ -239,24 +239,24 @@ pally-compliance keys generate
 
 ---
 
-### pally-compliance mcp
+### luqen-compliance mcp
 
 Start the MCP server on stdio (for use with Claude Code or Claude Desktop).
 
 ```bash
-pally-compliance mcp
+luqen-compliance mcp
 ```
 
 ---
 
-## @pally-agent/dashboard (`pally-dashboard`)
+## @luqen/dashboard (`luqen-dashboard`)
 
-### pally-dashboard serve
+### luqen-dashboard serve
 
 Start the dashboard web server.
 
 ```bash
-pally-dashboard serve [options]
+luqen-dashboard serve [options]
 ```
 
 **Options:**
@@ -269,17 +269,17 @@ pally-dashboard serve [options]
 **Example:**
 
 ```bash
-pally-dashboard serve --port 3000
+luqen-dashboard serve --port 3000
 ```
 
 ---
 
-### pally-dashboard migrate
+### luqen-dashboard migrate
 
 Create or update the SQLite database schema.
 
 ```bash
-pally-dashboard migrate [options]
+luqen-dashboard migrate [options]
 ```
 
 **Options:**
@@ -292,17 +292,17 @@ pally-dashboard migrate [options]
 **Example:**
 
 ```bash
-pally-dashboard migrate --db-path ./data/dashboard.db
+luqen-dashboard migrate --db-path ./data/dashboard.db
 ```
 
 ---
 
-### pally-dashboard self-audit
+### luqen-dashboard self-audit
 
 Scan the dashboard itself for WCAG 2.1 AA accessibility issues.
 
 ```bash
-pally-dashboard self-audit [options]
+luqen-dashboard self-audit [options]
 ```
 
 **Options:**
@@ -325,20 +325,20 @@ pally-dashboard self-audit [options]
 
 ```bash
 # Audit a running instance
-pally-dashboard self-audit --url http://localhost:3000
+luqen-dashboard self-audit --url http://localhost:3000
 
 # Output as JSON
-pally-dashboard self-audit --json
+luqen-dashboard self-audit --json
 ```
 
 ---
 
-### pally-dashboard api-key
+### luqen-dashboard api-key
 
 Display or regenerate the dashboard API key. The API key is generated automatically on first start and is used for solo-mode authentication and programmatic API access.
 
 ```bash
-pally-dashboard api-key [subcommand] [options]
+luqen-dashboard api-key [subcommand] [options]
 ```
 
 **Subcommands:**
@@ -359,20 +359,20 @@ pally-dashboard api-key [subcommand] [options]
 
 ```bash
 # Show the current API key
-pally-dashboard api-key
+luqen-dashboard api-key
 
 # Regenerate the API key
-pally-dashboard api-key regenerate
+luqen-dashboard api-key regenerate
 ```
 
 ---
 
-### pally-dashboard plugin list
+### luqen-dashboard plugin list
 
 List all installed plugins.
 
 ```bash
-pally-dashboard plugin list [options]
+luqen-dashboard plugin list [options]
 ```
 
 **Options:**
@@ -385,12 +385,12 @@ Output columns: ID, Package, Type, Version, Status.
 
 ---
 
-### pally-dashboard plugin install \<package\>
+### luqen-dashboard plugin install \<package\>
 
 Install a plugin from the registry.
 
 ```bash
-pally-dashboard plugin install <package> [options]
+luqen-dashboard plugin install <package> [options]
 ```
 
 **Options:**
@@ -402,17 +402,17 @@ pally-dashboard plugin install <package> [options]
 **Example:**
 
 ```bash
-pally-dashboard plugin install @pally-agent/plugin-notify-slack
+luqen-dashboard plugin install @luqen/plugin-notify-slack
 ```
 
 ---
 
-### pally-dashboard plugin configure \<id\>
+### luqen-dashboard plugin configure \<id\>
 
 Configure an installed plugin with key=value pairs.
 
 ```bash
-pally-dashboard plugin configure <id> --set <key=value...> [options]
+luqen-dashboard plugin configure <id> --set <key=value...> [options]
 ```
 
 **Options:**
@@ -425,17 +425,17 @@ pally-dashboard plugin configure <id> --set <key=value...> [options]
 **Example:**
 
 ```bash
-pally-dashboard plugin configure abc-123 --set webhookUrl=https://hooks.slack.com/xxx channel=#a11y
+luqen-dashboard plugin configure abc-123 --set webhookUrl=https://hooks.slack.com/xxx channel=#a11y
 ```
 
 ---
 
-### pally-dashboard plugin activate \<id\>
+### luqen-dashboard plugin activate \<id\>
 
 Activate an installed plugin. The plugin is loaded, its `activate()` hook is called, and periodic health checks begin.
 
 ```bash
-pally-dashboard plugin activate <id> [options]
+luqen-dashboard plugin activate <id> [options]
 ```
 
 **Options:**
@@ -446,12 +446,12 @@ pally-dashboard plugin activate <id> [options]
 
 ---
 
-### pally-dashboard plugin deactivate \<id\>
+### luqen-dashboard plugin deactivate \<id\>
 
 Deactivate a running plugin. Calls the plugin's `deactivate()` hook and stops health checks.
 
 ```bash
-pally-dashboard plugin deactivate <id> [options]
+luqen-dashboard plugin deactivate <id> [options]
 ```
 
 **Options:**
@@ -462,12 +462,12 @@ pally-dashboard plugin deactivate <id> [options]
 
 ---
 
-### pally-dashboard plugin remove \<id\>
+### luqen-dashboard plugin remove \<id\>
 
 Remove an installed plugin. Deactivates it first if active, then deletes the database record and package files.
 
 ```bash
-pally-dashboard plugin remove <id> [options]
+luqen-dashboard plugin remove <id> [options]
 ```
 
 **Options:**
@@ -478,14 +478,14 @@ pally-dashboard plugin remove <id> [options]
 
 ---
 
-## @pally-agent/monitor (`pally-monitor`)
+## @luqen/monitor (`luqen-monitor`)
 
-### pally-monitor scan
+### luqen-monitor scan
 
 Run one full scan cycle over all monitored legal sources.
 
 ```bash
-pally-monitor scan [options]
+luqen-monitor scan [options]
 ```
 
 **Options:**
@@ -505,40 +505,40 @@ pally-monitor scan [options]
 
 ```bash
 # Scan using compliance service sources
-pally-monitor scan
+luqen-monitor scan
 
 # Scan from a local file
-pally-monitor scan --sources-file ./sources.json
+luqen-monitor scan --sources-file ./sources.json
 ```
 
 ---
 
-### pally-monitor status
+### luqen-monitor status
 
 Show current monitor status (source count, last scan time, pending proposals).
 
 ```bash
-pally-monitor status
+luqen-monitor status
 ```
 
 ---
 
-### pally-monitor mcp
+### luqen-monitor mcp
 
 Start the MCP server on stdio (for use with Claude Code or Claude Desktop).
 
 ```bash
-pally-monitor mcp
+luqen-monitor mcp
 ```
 
 ---
 
-### pally-monitor serve
+### luqen-monitor serve
 
 Start an HTTP server with A2A endpoints.
 
 ```bash
-pally-monitor serve [options]
+luqen-monitor serve [options]
 ```
 
 **Options:**
@@ -557,5 +557,5 @@ pally-monitor serve [options]
 **Example:**
 
 ```bash
-pally-monitor serve --port 4200
+luqen-monitor serve --port 4200
 ```

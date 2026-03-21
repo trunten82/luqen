@@ -1,4 +1,4 @@
-# All-in-One: Running pally-agent + Compliance Service Together
+# All-in-One: Running luqen + Compliance Service Together
 
 Run both services in a single Docker Compose stack for a complete accessibility scanning and compliance checking environment.
 
@@ -7,7 +7,7 @@ Run both services in a single Docker Compose stack for a complete accessibility 
 ```
 User / CI Pipeline
       │
-      ├── pally-agent (MCP + CLI)     → scans websites with pa11y
+      ├── luqen (MCP + CLI)     → scans websites with pa11y
       │         │
       │         └── compliance-check  → annotates issues with legal context
       │
@@ -16,7 +16,7 @@ User / CI Pipeline
                 └── SQLite database
 ```
 
-pally-agent calls the compliance service over the internal Docker network. Each service can also be accessed directly.
+luqen calls the compliance service over the internal Docker network. Each service can also be accessed directly.
 
 ## Docker Compose
 
@@ -29,8 +29,8 @@ services:
     build:
       context: .
       dockerfile: packages/compliance/Dockerfile
-    image: pally-compliance:latest
-    container_name: pally-compliance
+    image: luqen-compliance:latest
+    container_name: luqen-compliance
     restart: unless-stopped
     ports:
       - "4000:4000"
@@ -52,21 +52,21 @@ services:
       timeout: 10s
       retries: 3
 
-  # ---- Pally Agent ----
-  pally-agent:
+  # ---- Luqen ----
+  luqen:
     build:
       context: .
       dockerfile: Dockerfile
-    image: pally-agent:latest
-    container_name: pally-agent
+    image: luqen:latest
+    container_name: luqen
     restart: unless-stopped
     ports:
       - "3001:3001"
     volumes:
-      - pally-reports:/reports
+      - luqen-reports:/reports
     environment:
-      PALLY_WEBSERVICE_URL: "http://pa11y-webservice:3000"
-      PALLY_COMPLIANCE_URL: "http://compliance:4000"
+      LUQEN_WEBSERVICE_URL: "http://pa11y-webservice:3000"
+      LUQEN_COMPLIANCE_URL: "http://compliance:4000"
       PALLY_COMPLIANCE_CLIENT_ID: "${PALLY_COMPLIANCE_CLIENT_ID}"
       PALLY_COMPLIANCE_CLIENT_SECRET: "${PALLY_COMPLIANCE_CLIENT_SECRET}"
     depends_on:
@@ -98,7 +98,7 @@ services:
 volumes:
   compliance-data:
   compliance-keys:
-  pally-reports:
+  luqen-reports:
   mongo-data:
 ```
 
@@ -125,11 +125,11 @@ docker compose up -d
 docker compose exec compliance node dist/cli.js seed
 ```
 
-### Step 4: Create an OAuth client for pally-agent
+### Step 4: Create an OAuth client for luqen
 
 ```bash
 docker compose exec compliance node dist/cli.js clients create \
-  --name "pally-agent" \
+  --name "luqen" \
   --scope "read" \
   --grant client_credentials
 ```
@@ -151,16 +151,16 @@ EOF
 # Check compliance service
 curl http://localhost:4000/api/v1/health
 
-# Check pally-agent
+# Check luqen
 curl http://localhost:3001/health
 
 # Check pa11y webservice
 curl http://localhost:3000/
 ```
 
-## Pally-agent configuration
+## Luqen-agent configuration
 
-Create `.pally-agent.json` (mounted into the pally-agent container or in the project root):
+Create `.luqen.json` (mounted into the luqen container or in the project root):
 
 ```json
 {
@@ -177,7 +177,7 @@ Create `.pally-agent.json` (mounted into the pally-agent container or in the pro
 }
 ```
 
-The `compliance` section tells pally-agent to call the compliance service after each scan, enriching results with legal context.
+The `compliance` section tells luqen to call the compliance service after each scan, enriching results with legal context.
 
 ## Accessing services
 
@@ -187,24 +187,24 @@ The `compliance` section tells pally-agent to call the compliance service after 
 | Compliance Swagger UI | `http://compliance:4000/api/v1/docs` | `http://localhost:4000/api/v1/docs` |
 | Compliance A2A card | `http://compliance:4000/.well-known/agent.json` | `http://localhost:4000/.well-known/agent.json` |
 | Pa11y webservice | `http://pa11y-webservice:3000` | `http://localhost:3000` |
-| Pally-agent API | `http://pally-agent:3001` | `http://localhost:3001` |
+| Luqen-agent API | `http://luqen:3001` | `http://localhost:3001` |
 
 ## Claude Code MCP config
 
-To use both pally-agent and compliance MCP servers in Claude Code, add to `.claude/settings.json`:
+To use both luqen and compliance MCP servers in Claude Code, add to `.claude/settings.json`:
 
 ```json
 {
   "mcpServers": {
-    "pally-agent": {
+    "luqen": {
       "command": "node",
-      "args": ["/absolute/path/pally-agent/dist/mcp.js"]
+      "args": ["/absolute/path/luqen/dist/mcp.js"]
     },
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "node",
-      "args": ["/absolute/path/pally-agent/packages/compliance/dist/cli.js", "mcp"],
+      "args": ["/absolute/path/luqen/packages/compliance/dist/cli.js", "mcp"],
       "env": {
-        "COMPLIANCE_DB_PATH": "/absolute/path/pally-agent/packages/compliance/compliance.db"
+        "COMPLIANCE_DB_PATH": "/absolute/path/luqen/packages/compliance/compliance.db"
       }
     }
   }

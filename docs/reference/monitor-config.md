@@ -2,7 +2,7 @@
 
 # Monitor Agent Configuration Reference
 
-`@pally-agent/monitor` — environment variables and CLI flags.
+`@luqen/monitor` — environment variables and CLI flags.
 
 The monitor agent watches legal sources for content changes and creates UpdateProposals in the compliance service when a change is detected. It has no config file — all configuration is via environment variables.
 
@@ -22,7 +22,7 @@ The monitor agent watches legal sources for content changes and creates UpdatePr
 
 ```bash
 # Create an OAuth client for the monitor in the compliance service
-pally-compliance clients create \
+luqen-compliance clients create \
   --name "monitor" \
   --scope "admin" \
   --grant client_credentials
@@ -38,12 +38,12 @@ export MONITOR_CLIENT_SECRET=<client-secret>
 
 ## CLI reference
 
-### `pally-monitor scan`
+### `luqen-monitor scan`
 
 Run a one-off scan of all monitored sources. For each source, fetches the content, computes a SHA-256 hash, and compares to the stored hash. If changed, creates an UpdateProposal in the compliance service.
 
 ```bash
-pally-monitor scan
+luqen-monitor scan
 ```
 
 Output:
@@ -52,12 +52,12 @@ Scanned 3 sources
 1 proposal created: W3C WAI Policies (https://www.w3.org/WAI/policies/)
 ```
 
-### `pally-monitor status`
+### `luqen-monitor status`
 
 Show the current state of monitored sources.
 
 ```bash
-pally-monitor status
+luqen-monitor status
 ```
 
 Output:
@@ -67,12 +67,12 @@ Last scan: 2026-03-19T10:00:00Z
 Pending proposals: 1
 ```
 
-### `pally-monitor mcp`
+### `luqen-monitor mcp`
 
 Start the MCP server on stdio for use with Claude Code.
 
 ```bash
-pally-monitor mcp
+luqen-monitor mcp
 ```
 
 This provides 3 MCP tools: `monitor_scan_sources`, `monitor_status`, `monitor_add_source`.
@@ -107,7 +107,7 @@ Or via the dashboard admin section at `/admin/sources`.
 
 ### Schedules
 
-Schedules (`daily`, `weekly`, `monthly`) are informational — the monitor agent does not run automatically on a schedule. Use a cron job or scheduled CI pipeline to call `pally-monitor scan` at the desired frequency.
+Schedules (`daily`, `weekly`, `monthly`) are informational — the monitor agent does not run automatically on a schedule. Use a cron job or scheduled CI pipeline to call `luqen-monitor scan` at the desired frequency.
 
 ---
 
@@ -115,7 +115,7 @@ Schedules (`daily`, `weekly`, `monthly`) are informational — the monitor agent
 
 ```bash
 # Run every Monday at 06:00 UTC
-0 6 * * 1 MONITOR_COMPLIANCE_URL=http://localhost:4000 MONITOR_CLIENT_ID=xxx MONITOR_CLIENT_SECRET=xxx pally-monitor scan
+0 6 * * 1 MONITOR_COMPLIANCE_URL=http://localhost:4000 MONITOR_CLIENT_ID=xxx MONITOR_CLIENT_SECRET=xxx luqen-monitor scan
 ```
 
 ---

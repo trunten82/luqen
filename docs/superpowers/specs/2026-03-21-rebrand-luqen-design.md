@@ -187,7 +187,7 @@ Volume names (`compliance-data`, `dashboard-data`, etc.) stay unchanged.
 - GitHub repo: `trunten82/pally-agent` → `trunten82/luqen`
 - All `package.json` repository URLs updated
 - README title: "# Luqen"
-- `docs/getting-started/what-is-pally.md` → `what-is-luqen.md`
+- `docs/getting-started/what-is-luqen.md` → `what-is-luqen.md`
 - All doc content referencing "Pally" / "pally-agent" updated to "Luqen" / "luqen"
 - `CHANGELOG.md`: Historical entries left as-is (they document what happened at that version). Add a v1.0.0 entry noting the rebrand.
 - Claude skill directory: `.claude/skills/pally-agent/` → `.claude/skills/luqen/`

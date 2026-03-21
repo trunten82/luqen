@@ -12,19 +12,19 @@
 ## Step 1 — Install
 
 ```bash
-git clone https://github.com/trunten82/pally-agent.git
-cd pally-agent
+git clone https://github.com/trunten82/luqen.git
+cd luqen
 npm install
 npm run build --workspaces
 cd packages/core && npm link
 ```
 
-After linking, `pally-agent` is a global command.
+After linking, `luqen` is a global command.
 
 **Don't have a pa11y webservice?** The fastest way is Docker:
 
 ```bash
-docker run -d -p 3000:3000 pally/webservice:latest
+docker run -d -p 3000:3000 luqen/webservice:latest
 ```
 
 ---
@@ -33,8 +33,8 @@ docker run -d -p 3000:3000 pally/webservice:latest
 
 ```bash
 export DASHBOARD_WEBSERVICE_URL=http://localhost:3000   # dashboard uses DASHBOARD_WEBSERVICE_URL
-export PALLY_WEBSERVICE_URL=http://localhost:3000       # CLI uses PALLY_WEBSERVICE_URL
-pally-agent scan https://example.com
+export LUQEN_WEBSERVICE_URL=http://localhost:3000       # CLI uses LUQEN_WEBSERVICE_URL
+luqen scan https://example.com
 ```
 
 Output:
@@ -44,7 +44,7 @@ Found 12 URLs to scan
 [1/12] Scanning https://example.com/
 [1/12] Done: https://example.com/
 ...
-JSON report written to: ./pally-reports/pally-report-2026-03-18T120000Z.json
+JSON report written to: ./luqen-reports/luqen-report-2026-03-18T120000Z.json
 ```
 
 ---
@@ -54,14 +54,14 @@ JSON report written to: ./pally-reports/pally-report-2026-03-18T120000Z.json
 Open the HTML report:
 
 ```bash
-pally-agent scan https://example.com --format both
-open pally-reports/*.html
+luqen scan https://example.com --format both
+open luqen-reports/*.html
 ```
 
 Or parse the JSON:
 
 ```bash
-cat pally-reports/*.json | jq '.summary'
+cat luqen-reports/*.json | jq '.summary'
 ```
 
 ---
@@ -82,7 +82,7 @@ node dist/cli.js clients create --name scanner --scope read --grant client_crede
 # → note the client_id and client_secret
 
 # 3. Scan with compliance
-pally-agent scan https://example.com \
+luqen scan https://example.com \
   --format both \
   --compliance-url http://localhost:4000 \
   --jurisdictions EU,US,UK \
@@ -102,7 +102,7 @@ The HTML report now shows a per-jurisdiction pass/fail table and regulation badg
 | **Solo developer** wanting AI integration | **Local install + MCP in your IDE** | Same as above, but your AI assistant (Claude/Cursor) can scan and fix for you. |
 | **Small team** (2-5 developers) | **Docker Compose** (compliance + dashboard) | One `docker compose up`. Everyone accesses the dashboard at `http://your-server:5000`. Shared compliance data. |
 | **Large team / enterprise** | **Kubernetes + Redis** | Full HA deployment. Shared Redis for caching/queues. Multiple dashboard replicas. SSO via OAuth2. |
-| **CI/CD pipeline** | **CLI in Docker** | Run `pally-agent scan` as a pipeline step. Fail builds on violations. No servers needed — just the Docker image. |
+| **CI/CD pipeline** | **CLI in Docker** | Run `luqen scan` as a pipeline step. Fail builds on violations. No servers needed — just the Docker image. |
 | **Consultancy** scanning client sites | **Dashboard + compliance** (Docker or K8s) | Centralized scanning with compliance matrix. Generate reports per client per jurisdiction. |
 
 For detailed setup instructions, see the [installation guides](getting-started/).
@@ -111,7 +111,7 @@ For detailed setup instructions, see the [installation guides](getting-started/)
 
 ## IDE Integration
 
-Pally Agent works as an MCP server inside any IDE that supports the Model Context Protocol. This gives your AI coding assistant 20 accessibility tools — scan sites, check compliance, propose fixes — all from your editor.
+Luqen works as an MCP server inside any IDE that supports the Model Context Protocol. This gives your AI coding assistant 20 accessibility tools — scan sites, check compliance, propose fixes — all from your editor.
 
 ### VS Code (with Claude Code extension)
 
@@ -121,15 +121,15 @@ Pally Agent works as an MCP server inside any IDE that supports the Model Contex
 ```json
 {
   "mcpServers": {
-    "pally-agent": {
+    "luqen": {
       "command": "node",
-      "args": ["/path/to/pally-agent/packages/core/dist/mcp.js"]
+      "args": ["/path/to/luqen/packages/core/dist/mcp.js"]
     },
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "node",
-      "args": ["/path/to/pally-agent/packages/compliance/dist/cli.js", "mcp"],
+      "args": ["/path/to/luqen/packages/compliance/dist/cli.js", "mcp"],
       "env": {
-        "COMPLIANCE_DB_PATH": "/path/to/pally-agent/packages/compliance/compliance.db"
+        "COMPLIANCE_DB_PATH": "/path/to/luqen/packages/compliance/compliance.db"
       }
     }
   }
@@ -141,8 +141,8 @@ Pally Agent works as an MCP server inside any IDE that supports the Model Contex
 ### Cursor
 
 1. Open Cursor Settings → MCP Servers
-2. Add server with command: `node /path/to/pally-agent/packages/core/dist/mcp.js`
-3. Add a second server for compliance: `node /path/to/pally-agent/packages/compliance/dist/cli.js mcp`
+2. Add server with command: `node /path/to/luqen/packages/core/dist/mcp.js`
+3. Add a second server for compliance: `node /path/to/luqen/packages/compliance/dist/cli.js mcp`
 4. The tools appear automatically in Cursor's AI chat — ask it to scan, check compliance, or fix issues
 
 ### Windsurf
@@ -156,7 +156,7 @@ Pally Agent works as an MCP server inside any IDE that supports the Model Contex
 JetBrains IDEs support MCP via the [AI Assistant plugin](https://plugins.jetbrains.com/plugin/22282-ai-assistant):
 
 1. Settings → AI Assistant → MCP Servers
-2. Add: command `node`, args `["/path/to/pally-agent/packages/core/dist/mcp.js"]`
+2. Add: command `node`, args `["/path/to/luqen/packages/core/dist/mcp.js"]`
 3. Use in the AI chat panel
 
 ### Neovim (with avante.nvim or similar)
@@ -167,9 +167,9 @@ For Neovim users with MCP-compatible plugins:
 -- In your MCP configuration
 {
   servers = {
-    ["pally-agent"] = {
+    ["luqen"] = {
       command = "node",
-      args = { "/path/to/pally-agent/packages/core/dist/mcp.js" },
+      args = { "/path/to/luqen/packages/core/dist/mcp.js" },
     },
   },
 }
@@ -181,11 +181,11 @@ Once connected, your AI assistant has these capabilities:
 
 | Ask this... | Tool used |
 |-------------|-----------|
-| "Scan example.com for accessibility issues" | `pally_scan` |
-| "What WCAG errors does our site have?" | `pally_get_issues` |
+| "Scan example.com for accessibility issues" | `luqen_scan` |
+| "What WCAG errors does our site have?" | `luqen_get_issues` |
 | "Check if these issues violate EU law" | `compliance_check` |
-| "Propose fixes for this file" | `pally_propose_fixes` |
-| "Fix the missing alt text on line 42" | `pally_apply_fix` |
+| "Propose fixes for this file" | `luqen_propose_fixes` |
+| "Fix the missing alt text on line 42" | `luqen_apply_fix` |
 | "What regulations apply in Germany?" | `compliance_list_regulations` |
 | "Check for any legal changes we should know about" | `monitor_scan_sources` |
 
@@ -216,7 +216,7 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 
 ## New in v0.18.0
 
-- **Email reports plugin** — email reports refactored to the `@pally-agent/plugin-notify-email` plugin. SMTP config moves from the dashboard DB to plugin config at **Admin > Plugins**. Supports event notifications (`scan.complete`, `scan.failed`) and scheduled report delivery with PDF/CSV attachments. Legacy `smtp_config` table still works as fallback.
+- **Email reports plugin** — email reports refactored to the `@luqen/plugin-notify-email` plugin. SMTP config moves from the dashboard DB to plugin config at **Admin > Plugins**. Supports event notifications (`scan.complete`, `scan.failed`) and scheduled report delivery with PDF/CSV attachments. Legacy `smtp_config` table still works as fallback.
 
 ## New in v0.17.0
 

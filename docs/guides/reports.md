@@ -78,7 +78,7 @@ Within each tier, groups are sorted by total issue count (descending).
 
 Visible only on **Full Site** scans where template issues were detected.
 
-Template issues are accessibility problems that appear identically on 3 or more pages — typically from shared components like headers, footers, and navigation. Pally-agent detects these by fingerprinting each issue (code + selector + context) and grouping duplicates.
+Template issues are accessibility problems that appear identically on 3 or more pages — typically from shared components like headers, footers, and navigation. Luqen-agent detects these by fingerprinting each issue (code + selector + context) and grouping duplicates.
 
 ### Component grouping
 
@@ -267,7 +267,7 @@ Status transitions are logged with timestamps. Filter the issue list by assignme
 
 ## Fix proposals from connected repos
 
-When repositories are connected (see [dashboard-admin.md](dashboard-admin.md#connected-repositories)), pally-agent generates AI-powered fix proposals for scan issues. The system supports 21 suggestion types covering common WCAG violations, delivered via MCP/A2A integration.
+When repositories are connected (see [dashboard-admin.md](dashboard-admin.md#connected-repositories)), luqen generates AI-powered fix proposals for scan issues. The system supports 21 suggestion types covering common WCAG violations, delivered via MCP/A2A integration.
 
 Fix proposals appear in a **Fixes** tab on the report detail page. Each proposal shows:
 

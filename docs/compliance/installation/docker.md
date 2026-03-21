@@ -1,6 +1,6 @@
 # Docker Installation
 
-Run the Pally Compliance Service in Docker with SQLite (single container) or with an external database.
+Run the Luqen Compliance Service in Docker with SQLite (single container) or with an external database.
 
 ## Prerequisites
 
@@ -66,15 +66,15 @@ services:
     build:
       context: .
       dockerfile: packages/compliance/Dockerfile
-    image: pally-compliance:latest
-    container_name: pally-compliance
+    image: luqen-compliance:latest
+    container_name: luqen-compliance
     restart: unless-stopped
     ports:
       - "4000:4000"
     volumes:
       # SQLite database file persisted on host
       - compliance-data:/data
-      # JWT key pair — generate with: docker run --rm -v ./keys:/keys pally-compliance keys generate
+      # JWT key pair — generate with: docker run --rm -v ./keys:/keys luqen-compliance keys generate
       - ./keys:/keys:ro
     environment:
       COMPLIANCE_PORT: "4000"
@@ -106,7 +106,7 @@ mkdir -p ./keys
 # Generate keys using the container image
 docker run --rm \
   -v "$(pwd)/keys:/app/keys" \
-  pally-compliance:latest \
+  luqen-compliance:latest \
   node dist/cli.js keys generate
 ```
 

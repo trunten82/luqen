@@ -1,10 +1,10 @@
-# Pally Dashboard — Design Specification
+# Luqen — Design Specification
 
 ## Overview
 
-The Pally Dashboard is a web application for browsing accessibility scan reports and managing the pally ecosystem. It provides a visual interface for launching scans, viewing results, comparing reports, and administering the compliance service — all from a browser.
+The Luqen is a web application for browsing accessibility scan reports and managing the luqen ecosystem. It provides a visual interface for launching scans, viewing results, comparing reports, and administering the compliance service — all from a browser.
 
-It is a new package at `packages/dashboard` in the pally-agent monorepo. It uses `@pally-agent/core` as a library for scanning (direct import, no webservice dependency) and calls the compliance service via its REST API for jurisdiction/regulation data and compliance checks.
+It is a new package at `packages/dashboard` in the luqen monorepo. It uses `@luqen/core` as a library for scanning (direct import, no webservice dependency) and calls the compliance service via its REST API for jurisdiction/regulation data and compliance checks.
 
 **Key design decisions:**
 
@@ -12,13 +12,13 @@ It is a new package at `packages/dashboard` in the pally-agent monorepo. It uses
 - **No SPA** — progressive enhancement via HTMX. Pages work without JS, HTMX adds interactivity.
 - **Local SQLite** — scan records stored locally, reports written to disk.
 - **Auth via compliance service** — OAuth2 password grant flow, JWT in secure cookies.
-- **Self-auditing** — the dashboard must pass its own WCAG 2.1 AA accessibility audit using pally-agent against the EU jurisdiction.
+- **Self-auditing** — the dashboard must pass its own WCAG 2.1 AA accessibility audit using luqen against the EU jurisdiction.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  @pally-agent/dashboard                      │
+│                  @luqen/dashboard                      │
 │                                                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────┐ │
 │  │  Routes       │  │  Views       │  │  Static Assets    │ │
@@ -34,7 +34,7 @@ It is a new package at `packages/dashboard` in the pally-agent monorepo. It uses
 │  │  ┌──────────┐  ┌──────────────┐  ┌────────────────┐  │   │
 │  │  │ Auth     │  │ Scanner      │  │ Compliance     │  │   │
 │  │  │ (JWT     │  │ Orchestrator │  │ Client         │  │   │
-│  │  │  cookie, │  │ (@pally-agent│  │ (HTTP REST     │  │   │
+│  │  │  cookie, │  │ (@luqen│  │ (HTTP REST     │  │   │
 │  │  │  roles)  │  │  /core)      │  │  to compliance │  │   │
 │  │  └──────────┘  └──────────────┘  │  service)      │  │   │
 │  │                                   └────────────────┘  │   │
@@ -45,7 +45,7 @@ It is a new package at `packages/dashboard` in the pally-agent monorepo. It uses
 │                                                             │
 │  External Dependencies:                                      │
 │  ┌─────────────────┐  ┌──────────────────────────────────┐  │
-│  │ @pally-agent/core│  │ Compliance Service (REST API)    │  │
+│  │ @luqen/core│  │ Compliance Service (REST API)    │  │
 │  │ (workspace dep)  │  │ http://localhost:4000             │  │
 │  └─────────────────┘  └──────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -68,7 +68,7 @@ Browser                    Dashboard (Fastify)              Compliance Service
   │─────────────────────────────▶│                                │
   │                              │  Create ScanRecord (SQLite)    │
   │                              │  Spawn background scan         │
-  │  302 → /scan/:id/progress    │  (pally-agent core)            │
+  │  302 → /scan/:id/progress    │  (luqen core)            │
   │◀─────────────────────────────│                                │
   │                              │                                │
   │  GET /scan/:id/progress      │                                │
@@ -408,7 +408,7 @@ Dashboard creates a `ScanRecord` in SQLite:
 
 ### Step 3: Background Scan
 
-Dashboard spawns an async scan using `@pally-agent/core`:
+Dashboard spawns an async scan using `@luqen/core`:
 
 ```typescript
 // Pseudocode — runs in background, not blocking the request
@@ -422,7 +422,7 @@ async function runScan(scanRecord: ScanRecord, emitter: EventEmitter): Promise<v
     onProgress: (event) => emitter.emit(`scan:${scanRecord.id}`, event)
   };
 
-  const result = await pallyAgentCore.scan(config);
+  const result = await luqenAgentCore.scan(config);
 
   // Write reports to disk
   const hostname = new URL(scanRecord.siteUrl).hostname;
@@ -694,7 +694,7 @@ The compliance client uses its own OAuth2 client credentials (separate from the 
 
 ## Accessibility
 
-The dashboard must meet WCAG 2.1 AA. Since it is built by the pally ecosystem, it must pass its own audit.
+The dashboard must meet WCAG 2.1 AA. Since it is built by the luqen ecosystem, it must pass its own audit.
 
 ### Requirements
 
@@ -714,10 +714,10 @@ The dashboard must meet WCAG 2.1 AA. Since it is built by the pally ecosystem, i
 
 ### Acceptance Criterion
 
-Zero confirmed violations when scanning the dashboard itself against the EU jurisdiction using pally-agent:
+Zero confirmed violations when scanning the dashboard itself against the EU jurisdiction using luqen:
 
 ```bash
-pally-agent scan http://localhost:5000 --compliance-url http://localhost:4000 --jurisdictions EU
+luqen scan http://localhost:5000 --compliance-url http://localhost:4000 --jurisdictions EU
 ```
 
 ## Configuration
@@ -768,13 +768,13 @@ Missing or invalid required config causes a startup error with a clear message.
 
 ```bash
 # Start the server
-pally-dashboard serve                    # uses dashboard.config.json
-pally-dashboard serve --port 5000        # override port
-pally-dashboard serve --config /path/to/config.json
+luqen-dashboard serve                    # uses dashboard.config.json
+luqen-dashboard serve --port 5000        # override port
+luqen-dashboard serve --config /path/to/config.json
 
 # Database migration
-pally-dashboard migrate                  # create/update SQLite schema
-pally-dashboard migrate --db-path ./dashboard.db
+luqen-dashboard migrate                  # create/update SQLite schema
+luqen-dashboard migrate --db-path ./dashboard.db
 ```
 
 ### `serve` Command
@@ -893,7 +893,7 @@ packages/dashboard/
     "handlebars": "^4.x",
     "commander": "^13.x",
     "jose": "^6.x",
-    "@pally-agent/core": "workspace:*"
+    "@luqen/core": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^3.x",
@@ -971,7 +971,7 @@ Report view page includes print-specific CSS:
 16. **Session expires after token expiry** — after JWT expiry, subsequent requests redirect to /login.
 17. **HTMX search filters table without page reload** — typing in the search input triggers HTMX request, table body updates without navigation.
 18. **SSE connection auto-reconnects on drop** — if SSE connection drops, HTMX reconnects automatically (built-in HTMX SSE behavior).
-19. **Dashboard passes WCAG 2.1 AA self-audit** — scanning the dashboard with pally-agent against EU jurisdiction produces zero confirmed violations.
+19. **Dashboard passes WCAG 2.1 AA self-audit** — scanning the dashboard with luqen against EU jurisdiction produces zero confirmed violations.
 20. **Responsive layout works on mobile** — all pages render correctly at 375px viewport width with no horizontal scrolling.
 21. **Dark mode via prefers-color-scheme** — switching system dark mode preference updates dashboard colors without reload.
 22. **Print-friendly report view** — printing the report viewer page produces a clean report without navigation chrome.
@@ -980,6 +980,6 @@ Report view page includes print-specific CSS:
 
 - **Real-time collaboration** — no WebSocket-based multi-user editing or live cursors.
 - **Multi-tenant deployment** — single-tenant only; all users share the same scan history.
-- **Custom report templates** — reports use the standard pally-agent HTML template.
+- **Custom report templates** — reports use the standard luqen HTML template.
 - **Email notifications** — use webhooks instead; email delivery is out of scope.
 - **API for the dashboard itself** — the compliance service REST API covers programmatic access; the dashboard is a UI-only consumer.

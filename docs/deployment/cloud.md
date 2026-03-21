@@ -2,7 +2,7 @@
 
 # Cloud Deployment
 
-Deploy pally-agent services to AWS or Azure.
+Deploy luqen services to AWS or Azure.
 
 > Full infrastructure-as-code manifests (Terraform, Pulumi, ARM templates) are planned for a future release. This guide covers architecture decisions and key configuration for each approach.
 
@@ -50,9 +50,9 @@ Internet → ALB (HTTPS) → ECS Fargate service → RDS PostgreSQL
    ```bash
    aws ecr get-login-password --region us-east-1 | \
      docker login --username AWS --password-stdin <account>.dkr.ecr.us-east-1.amazonaws.com
-   docker build -t pally-compliance packages/compliance/
-   docker tag pally-compliance:latest <account>.dkr.ecr.us-east-1.amazonaws.com/pally-compliance:latest
-   docker push <account>.dkr.ecr.us-east-1.amazonaws.com/pally-compliance:latest
+   docker build -t luqen-compliance packages/compliance/
+   docker tag luqen-compliance:latest <account>.dkr.ecr.us-east-1.amazonaws.com/luqen-compliance:latest
+   docker push <account>.dkr.ecr.us-east-1.amazonaws.com/luqen-compliance:latest
    ```
 
 2. Create ECS task definition with environment variables:
@@ -101,20 +101,20 @@ Internet → Container Apps Environment → Compliance App → Azure SQL / Mongo
 
 ```bash
 # Create resource group
-az group create --name pally-rg --location westeurope
+az group create --name luqen-rg --location westeurope
 
 # Create Container Apps environment
 az containerapp env create \
-  --name pally-env \
-  --resource-group pally-rg \
+  --name luqen-env \
+  --resource-group luqen-rg \
   --location westeurope
 
 # Deploy compliance service
 az containerapp create \
-  --name pally-compliance \
-  --resource-group pally-rg \
-  --environment pally-env \
-  --image <your-registry>/pally-compliance:latest \
+  --name luqen-compliance \
+  --resource-group luqen-rg \
+  --environment luqen-env \
+  --image <your-registry>/luqen-compliance:latest \
   --target-port 4000 \
   --ingress external \
   --env-vars \

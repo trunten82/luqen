@@ -1,6 +1,6 @@
 # Cloud Deployment Overview
 
-Deploy the Pally Compliance Service to AWS or Azure. This guide covers the key deployment patterns for each platform.
+Deploy the Luqen Compliance Service to AWS or Azure. This guide covers the key deployment patterns for each platform.
 
 Note: Full infrastructure-as-code manifests (Terraform, Pulumi, ARM templates) are planned for a future release. This guide covers architecture decisions and key configuration for each approach.
 
@@ -45,9 +45,9 @@ Internet → ALB (HTTPS) → ECS Fargate service → RDS PostgreSQL
 1. **Push image to ECR:**
    ```bash
    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account>.dkr.ecr.us-east-1.amazonaws.com
-   docker build -t pally-compliance packages/compliance/
-   docker tag pally-compliance:latest <account>.dkr.ecr.us-east-1.amazonaws.com/pally-compliance:latest
-   docker push <account>.dkr.ecr.us-east-1.amazonaws.com/pally-compliance:latest
+   docker build -t luqen-compliance packages/compliance/
+   docker tag luqen-compliance:latest <account>.dkr.ecr.us-east-1.amazonaws.com/luqen-compliance:latest
+   docker push <account>.dkr.ecr.us-east-1.amazonaws.com/luqen-compliance:latest
    ```
 
 2. **Create RDS PostgreSQL** (Aurora Serverless v2 is cost-effective for variable load)
@@ -55,10 +55,10 @@ Internet → ALB (HTTPS) → ECS Fargate service → RDS PostgreSQL
 3. **Store JWT keys in Secrets Manager:**
    ```bash
    aws secretsmanager create-secret \
-     --name /pally-compliance/jwt-private-key \
+     --name /luqen-compliance/jwt-private-key \
      --secret-string file://keys/private.pem
    aws secretsmanager create-secret \
-     --name /pally-compliance/jwt-public-key \
+     --name /luqen-compliance/jwt-public-key \
      --secret-string file://keys/public.pem
    ```
 
@@ -73,7 +73,7 @@ Internet → ALB (HTTPS) → ECS Fargate service → RDS PostgreSQL
      "secrets": [
        {
          "name": "COMPLIANCE_DB_URL",
-         "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:/pally-compliance/db-url"
+         "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:/luqen-compliance/db-url"
        }
      ]
    }
@@ -140,9 +140,9 @@ Internet → Container Apps (with built-in ingress/TLS) → Azure Database for P
 1. **Push image to Azure Container Registry:**
    ```bash
    az acr login --name yourregistry
-   docker build -t pally-compliance packages/compliance/
-   docker tag pally-compliance:latest yourregistry.azurecr.io/pally-compliance:latest
-   docker push yourregistry.azurecr.io/pally-compliance:latest
+   docker build -t luqen-compliance packages/compliance/
+   docker tag luqen-compliance:latest yourregistry.azurecr.io/luqen-compliance:latest
+   docker push yourregistry.azurecr.io/luqen-compliance:latest
    ```
 
 2. **Create Azure Database for PostgreSQL — Flexible Server**
@@ -156,16 +156,16 @@ Internet → Container Apps (with built-in ingress/TLS) → Azure Database for P
 4. **Create Container App with managed identity** to access Key Vault:
    ```bash
    az containerapp create \
-     --name pally-compliance \
+     --name luqen-compliance \
      --resource-group my-rg \
      --environment my-env \
-     --image yourregistry.azurecr.io/pally-compliance:latest \
+     --image yourregistry.azurecr.io/luqen-compliance:latest \
      --target-port 4000 \
      --ingress external \
      --env-vars \
        COMPLIANCE_DB_ADAPTER=postgres \
        COMPLIANCE_PORT=4000 \
-       COMPLIANCE_URL=https://pally-compliance.nicemeadow-abc123.eastus.azurecontainerapps.io
+       COMPLIANCE_URL=https://luqen-compliance.nicemeadow-abc123.eastus.azurecontainerapps.io
    ```
 
 5. **Mount Key Vault secrets as files** using Container Apps secret volumes (see Azure docs for `secretVolumeMount`).

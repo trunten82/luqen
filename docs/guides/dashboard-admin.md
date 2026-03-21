@@ -2,13 +2,13 @@
 
 # Dashboard Administration Guide
 
-How to set up, configure, and administer the pally-agent dashboard.
+How to set up, configure, and administer the luqen dashboard.
 
 ---
 
 ## Starting the dashboard
 
-The dashboard (`@pally-agent/dashboard`) is a Fastify web application that provides a browser interface for scanning, viewing reports, and managing compliance data.
+The dashboard (`@luqen/dashboard`) is a Fastify web application that provides a browser interface for scanning, viewing reports, and managing compliance data.
 
 ### Required services
 
@@ -99,7 +99,7 @@ The dashboard supports a progressive authentication model:
 
 ### Enterprise mode (OAuth/SSO)
 
-- Activated when an SSO plugin is installed (e.g., `@pally-agent/plugin-auth-entra` for Microsoft Entra ID).
+- Activated when an SSO plugin is installed (e.g., `@luqen/plugin-auth-entra` for Microsoft Entra ID).
 - Login redirects to the identity provider.
 - User roles can be mapped from SSO claims.
 - Suitable for organisations with existing identity infrastructure.
@@ -117,7 +117,7 @@ The dashboard supports four default role-based personas, each with tailored navi
 | **user** | Report list | Start scans, view all reports, run manual testing checklists, delete own reports. Cannot access admin pages. |
 | **executive** | Org score dashboard | Read-only. View org-wide accessibility score (0-100), aggregated trends, and compliance summaries. Cannot start scans or modify data. |
 
-> **Note:** The dashboard distinguishes between **Dashboard Users** (accounts that log in to the web UI, managed at `/admin/users`) and **API Users (Compliance)** (accounts on the compliance service used for direct API access, managed via `pally-compliance users create`). These are separate user stores.
+> **Note:** The dashboard distinguishes between **Dashboard Users** (accounts that log in to the web UI, managed at `/admin/users`) and **API Users (Compliance)** (accounts on the compliance service used for direct API access, managed via `luqen-compliance users create`). These are separate user stores.
 
 ---
 
@@ -295,11 +295,11 @@ Link GitHub or GitLab repositories to enable source-aware fix proposals:
 
 Configure scheduled email delivery of accessibility reports.
 
-> **v0.18.0:** Email reports is now powered by the `@pally-agent/plugin-notify-email` plugin. Install and activate it from **Admin > Plugins** before creating email schedules. SMTP configuration has moved from the dashboard database to the plugin's config panel at **Admin > Plugins**. The legacy `smtp_config` table still works as a fallback if the plugin is not installed.
+> **v0.18.0:** Email reports is now powered by the `@luqen/plugin-notify-email` plugin. Install and activate it from **Admin > Plugins** before creating email schedules. SMTP configuration has moved from the dashboard database to the plugin's config panel at **Admin > Plugins**. The legacy `smtp_config` table still works as a fallback if the plugin is not installed.
 
 #### Prerequisites
 
-1. Go to **Admin > Plugins** and install `@pally-agent/plugin-notify-email`
+1. Go to **Admin > Plugins** and install `@luqen/plugin-notify-email`
 2. Configure SMTP settings in the plugin config (host, port, TLS, credentials, from address)
 3. Activate the plugin — a health check verifies SMTP connectivity
 4. Return to **Admin > Email Reports** to create schedules
@@ -420,7 +420,7 @@ The dashboard includes several security hardening measures:
 After making changes to dashboard source code, rebuild from the dashboard directory:
 
 ```bash
-cd /root/pally-agent/packages/dashboard
+cd /root/luqen/packages/dashboard
 rm -rf dist/views dist/static
 npm run build
 ```

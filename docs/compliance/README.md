@@ -1,6 +1,6 @@
-# Pally Compliance Service
+# Luqen Compliance Service
 
-`@pally-agent/compliance` is a standalone accessibility compliance rule engine that maps WCAG technical issues to country-specific legal requirements. It stores regulations for 60+ jurisdictions, marks requirements as mandatory/recommended/optional, and provides a compliance check that annotates pa11y scan results with legal context and a per-jurisdiction pass/fail matrix.
+`@luqen/compliance` is a standalone accessibility compliance rule engine that maps WCAG technical issues to country-specific legal requirements. It stores regulations for 60+ jurisdictions, marks requirements as mandatory/recommended/optional, and provides a compliance check that annotates pa11y scan results with legal context and a per-jurisdiction pass/fail matrix.
 
 ## Table of Contents
 
@@ -28,7 +28,7 @@
 
 ### What it is
 
-The Pally Compliance Service answers the question: "Given these WCAG accessibility violations, which laws are we breaking and in which countries?"
+The Luqen Compliance Service answers the question: "Given these WCAG accessibility violations, which laws are we breaking and in which countries?"
 
 It is a self-contained HTTP service with REST API, MCP server (for Claude Code), and A2A agent protocol support. It ships with a baseline dataset covering the major accessibility regulations across 60+ jurisdictions — EU, US, UK, Germany, France, Australia, Canada, Japan, and more.
 
@@ -43,17 +43,17 @@ Running a pa11y accessibility scan produces technical issue codes like `WCAG2AA.
 
 The compliance service provides this legal context. Feed it pa11y issues and a list of jurisdictions, get back a compliance matrix with pass/fail per jurisdiction and annotated issues with regulation metadata.
 
-### How it fits in the pally ecosystem
+### How it fits in the luqen ecosystem
 
 ```
-pa11y-webservice              pally-agent                  compliance service
+pa11y-webservice              luqen                  compliance service
 (accessibility scanner)  →   (scan + fix agent)       →   (legal annotation)
                              ↕ MCP                         ↕ REST / MCP / A2A
                          Claude Code                    Power Automate, n8n,
                                                         other LLM agents
 ```
 
-The compliance service is independent. pally-agent is one of its clients. Power Automate, n8n, and any HTTP client can call it directly.
+The compliance service is independent. luqen is one of its clients. Power Automate, n8n, and any HTTP client can call it directly.
 
 ---
 
@@ -69,8 +69,8 @@ The compliance service is independent. pally-agent is one of its clients. Power 
 
 ```bash
 # Clone the monorepo
-git clone https://github.com/trunten82/pally-agent.git
-cd pally-agent
+git clone https://github.com/trunten82/luqen.git
+cd luqen
 
 # Install dependencies
 npm install
@@ -89,7 +89,7 @@ cd packages/compliance
 npm link
 ```
 
-This makes `pally-compliance` available as a global command.
+This makes `luqen-compliance` available as a global command.
 
 ### First run
 
@@ -97,7 +97,7 @@ This makes `pally-compliance` available as a global command.
 
 ```bash
 cd packages/compliance
-pally-compliance keys generate
+luqen-compliance keys generate
 ```
 
 Output:
@@ -123,7 +123,7 @@ Create `compliance.config.json` in the `packages/compliance` directory:
 **Step 3: Start the server**
 
 ```bash
-pally-compliance serve
+luqen-compliance serve
 ```
 
 Output:
@@ -136,7 +136,7 @@ Compliance service running on port 4000
 In a separate terminal:
 
 ```bash
-pally-compliance seed
+luqen-compliance seed
 ```
 
 Output:
@@ -157,7 +157,7 @@ curl -X POST http://localhost:4000/api/v1/seed \
 ### Create your first OAuth client
 
 ```bash
-pally-compliance clients create --name "my-app" --scope "read" --grant client_credentials
+luqen-compliance clients create --name "my-app" --scope "read" --grant client_credentials
 ```
 
 Output:
@@ -222,7 +222,7 @@ The response includes a compliance matrix with pass/fail per jurisdiction and th
 
 ### Config file: `compliance.config.json`
 
-Place this file in the working directory where you run `pally-compliance serve`. All fields are optional — the defaults shown below apply if a field is missing.
+Place this file in the working directory where you run `luqen-compliance serve`. All fields are optional — the defaults shown below apply if a field is missing.
 
 ```json
 {
@@ -313,14 +313,14 @@ All API endpoints except `/api/v1/health` and `/api/v1/oauth/token` require a Be
 Use the CLI to create clients:
 
 ```bash
-# Read-only client (for pally-agent, n8n, etc.)
-pally-compliance clients create --name "pally-agent" --scope "read" --grant client_credentials
+# Read-only client (for luqen, n8n, etc.)
+luqen-compliance clients create --name "luqen" --scope "read" --grant client_credentials
 
 # Read/write client (for automated tools that propose updates)
-pally-compliance clients create --name "monitor-bot" --scope "read write" --grant client_credentials
+luqen-compliance clients create --name "monitor-bot" --scope "read write" --grant client_credentials
 
 # Admin client (for management tools)
-pally-compliance clients create --name "admin-cli" --scope "read write admin" --grant client_credentials
+luqen-compliance clients create --name "admin-cli" --scope "read write admin" --grant client_credentials
 ```
 
 ### Obtaining a token (client credentials flow)
@@ -392,7 +392,7 @@ The public key for verification is available at `GET /api/v1/oauth/jwks` (JWKS f
 For interactive clients (admin UI, browser-based tools), use the authorization code flow with PKCE:
 
 1. Redirect user to `GET /api/v1/oauth/authorize?response_type=code&client_id=xxx&redirect_uri=http://...&code_challenge=yyy&code_challenge_method=S256`
-2. User authenticates (see `pally-compliance users create`)
+2. User authenticates (see `luqen-compliance users create`)
 3. Service redirects to `redirect_uri?code=zzz`
 4. Exchange code: `POST /api/v1/oauth/token` with `grant_type=authorization_code&code=zzz&code_verifier=original_verifier`
 
@@ -405,7 +405,7 @@ curl -X POST http://localhost:4000/api/v1/oauth/revoke \
   -H "Authorization: Bearer <token>"
 ```
 
-To truly invalidate access, rotate the JWT key pair with `pally-compliance keys generate` and restart the server.
+To truly invalidate access, rotate the JWT key pair with `luqen-compliance keys generate` and restart the server.
 
 ### Rate limiting
 
@@ -1227,7 +1227,7 @@ Jurisdiction (1) ──< (many) Regulation (1) ──< (many) Requirement
 
 ## MCP Server
 
-The compliance service runs as an MCP server for use by Claude Code and other LLM agents. When running via `pally-compliance mcp`, it communicates over stdio and does not require a running HTTP server.
+The compliance service runs as an MCP server for use by Claude Code and other LLM agents. When running via `luqen-compliance mcp`, it communicates over stdio and does not require a running HTTP server.
 
 ### Setup in Claude Code
 
@@ -1236,7 +1236,7 @@ Add to your Claude Code settings (`.claude/settings.json` or `~/.claude/settings
 ```json
 {
   "mcpServers": {
-    "pally-compliance": {
+    "luqen-compliance": {
       "command": "node",
       "args": ["/absolute/path/to/packages/compliance/dist/cli.js", "mcp"],
       "env": {
@@ -1442,7 +1442,7 @@ Available at `GET /.well-known/agent.json` (no auth required):
 
 ```json
 {
-  "name": "pally-compliance",
+  "name": "luqen-compliance",
   "description": "Accessibility compliance rule engine — check WCAG issues against 60+ country-specific legal requirements, manage regulations, and monitor legal changes",
   "url": "http://localhost:4000",
   "version": "1.0.0",
@@ -1527,9 +1527,9 @@ curl -N http://localhost:4000/a2a/tasks/task-01HXXX/stream \
 
 ### Inter-agent authentication
 
-When pally-agent calls the compliance service via A2A, it authenticates using the OAuth2 client credentials flow:
+When luqen calls the compliance service via A2A, it authenticates using the OAuth2 client credentials flow:
 
-1. pally-agent has a `client_id` and `client_secret` configured
+1. luqen has a `client_id` and `client_secret` configured
 2. Before calling A2A tasks, it obtains a token from `/api/v1/oauth/token`
 3. All A2A requests include `Authorization: Bearer <token>`
 
@@ -1629,7 +1629,7 @@ All regulations in the baseline use `wcagCriterion: "*"` requirements, meaning t
 
 **Via CLI:**
 ```bash
-pally-compliance seed
+luqen-compliance seed
 ```
 
 **Via API (requires admin token):**
@@ -1917,13 +1917,13 @@ The service delivers webhooks synchronously after the triggering action. On `5xx
 
 ## CLI Reference
 
-### `pally-compliance serve`
+### `luqen-compliance serve`
 
 Start the Fastify REST + MCP + A2A server.
 
 ```bash
-pally-compliance serve
-pally-compliance serve --port 4000
+luqen-compliance serve
+luqen-compliance serve --port 4000
 ```
 
 Options:
@@ -1931,23 +1931,23 @@ Options:
 
 Requires JWT key files. Run `keys generate` first.
 
-### `pally-compliance seed`
+### `luqen-compliance seed`
 
 Load the baseline compliance dataset.
 
 ```bash
-pally-compliance seed
+luqen-compliance seed
 ```
 
 Reads `compliance.config.json` or `COMPLIANCE_DB_PATH` to find the database.
 
-### `pally-compliance clients create`
+### `luqen-compliance clients create`
 
 Create a new OAuth2 client.
 
 ```bash
-pally-compliance clients create --name "pally-agent" --scope "read" --grant client_credentials
-pally-compliance clients create --name "admin-tool" --scope "read write admin" --grant client_credentials
+luqen-compliance clients create --name "luqen" --scope "read" --grant client_credentials
+luqen-compliance clients create --name "admin-tool" --scope "read write admin" --grant client_credentials
 ```
 
 Options:
@@ -1957,30 +1957,30 @@ Options:
 
 Prints `client_id` and `client_secret` — the secret is shown only once.
 
-### `pally-compliance clients list`
+### `luqen-compliance clients list`
 
 List all registered OAuth clients.
 
 ```bash
-pally-compliance clients list
+luqen-compliance clients list
 ```
 
 Output format: `<client_id>  <name>  [<scopes>]`
 
-### `pally-compliance clients revoke`
+### `luqen-compliance clients revoke`
 
 Delete an OAuth client. Existing tokens remain valid until expiry (stateless JWTs).
 
 ```bash
-pally-compliance clients revoke 01HXXXXXXXXXXXXXXXXXXXXX
+luqen-compliance clients revoke 01HXXXXXXXXXXXXXXXXXXXXX
 ```
 
-### `pally-compliance users create`
+### `luqen-compliance users create`
 
 Create a user for the authorization code flow (interactive admin UI).
 
 ```bash
-pally-compliance users create --username admin --role admin --password "secure-password"
+luqen-compliance users create --username admin --role admin --password "secure-password"
 ```
 
 Options:
@@ -1988,22 +1988,22 @@ Options:
 - `--role <role>` — Role: `admin`, `editor`, or `viewer` (default: `viewer`)
 - `--password <password>` — Password (required; will prompt in a future release)
 
-### `pally-compliance keys generate`
+### `luqen-compliance keys generate`
 
 Generate a new RS256 key pair for JWT signing.
 
 ```bash
-pally-compliance keys generate
+luqen-compliance keys generate
 ```
 
 Creates `./keys/private.pem` (mode 0600) and `./keys/public.pem`. Run this before the first `serve`.
 
-### `pally-compliance mcp`
+### `luqen-compliance mcp`
 
 Start the MCP server on stdio for use with Claude Code.
 
 ```bash
-pally-compliance mcp
+luqen-compliance mcp
 ```
 
 This is the command used in Claude Code's `mcpServers` config. It connects to the SQLite database at `COMPLIANCE_DB_PATH` (or `./compliance.db`).
@@ -2018,7 +2018,7 @@ This is the command used in Claude Code's `mcpServers` config. It connects to th
 
 **Fix:**
 ```bash
-pally-compliance keys generate
+luqen-compliance keys generate
 ```
 
 Verify the paths in `compliance.config.json` match where the files were created.
@@ -2059,7 +2059,7 @@ Verify the paths in `compliance.config.json` match where the files were created.
 
 **Fix:**
 ```bash
-pally-compliance seed
+luqen-compliance seed
 # or
 curl -X POST http://localhost:4000/api/v1/seed -H "Authorization: Bearer <admin-token>"
 ```

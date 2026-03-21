@@ -18,12 +18,12 @@ Composition path 6: all services with a browser interface for scans, reports, an
 The monorepo includes a `docker-compose.yml` that starts Redis, the compliance service, and the dashboard.
 
 ```bash
-git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
-cd ~/pally-agent
+git clone https://github.com/trunten82/luqen.git ~/luqen
+cd ~/luqen
 
 # Set required secrets
 export DASHBOARD_SESSION_SECRET="$(openssl rand -base64 32)"
-export PALLY_WEBSERVICE_URL=http://host.docker.internal:3000
+export LUQEN_WEBSERVICE_URL=http://host.docker.internal:3000
 
 # Start all services
 docker compose up -d
@@ -33,9 +33,9 @@ This starts:
 
 | Service | Port | Description |
 |---------|------|-------------|
-| `pally-redis` | 6379 | Optional cache, SSE pub/sub, scan queue |
-| `pally-compliance` | 4000 | Compliance API with JWT auth |
-| `pally-dashboard` | 5000 | Web UI |
+| `luqen-redis` | 6379 | Optional cache, SSE pub/sub, scan queue |
+| `luqen-compliance` | 4000 | Compliance API with JWT auth |
+| `luqen-dashboard` | 5000 | Web UI |
 
 The dashboard depends on the compliance service and waits for its health check before starting.
 
@@ -43,7 +43,7 @@ The dashboard depends on the compliance service and waits for its health check b
 
 ```bash
 # Seed baseline data (58 jurisdictions, 62 regulations)
-docker exec pally-compliance node dist/cli.js seed
+docker exec luqen-compliance node dist/cli.js seed
 ```
 
 ### Environment variables
@@ -65,14 +65,14 @@ Uncomment `DASHBOARD_REDIS_URL` and `COMPLIANCE_REDIS_URL` in `docker-compose.ym
 ## Manual setup (without Docker)
 
 ```bash
-git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
-cd ~/pally-agent && npm install && npm run build --workspaces
+git clone https://github.com/trunten82/luqen.git ~/luqen
+cd ~/luqen && npm install && npm run build --workspaces
 ```
 
 ### Start compliance service
 
 ```bash
-cd ~/pally-agent/packages/compliance
+cd ~/luqen/packages/compliance
 node dist/cli.js keys generate
 node dist/cli.js seed
 node dist/cli.js serve
@@ -82,7 +82,7 @@ node dist/cli.js serve
 ### Start dashboard
 
 ```bash
-cd ~/pally-agent/packages/dashboard
+cd ~/luqen/packages/dashboard
 DASHBOARD_PORT=5000 \
   DASHBOARD_COMPLIANCE_URL=http://localhost:4000 \
   DASHBOARD_WEBSERVICE_URL=http://localhost:3000 \
@@ -104,7 +104,7 @@ The dashboard uses progressive authentication — start simple and add security 
 | **Team** | First user created via dashboard | Username + password (bcrypt hashed, stored in dashboard SQLite) |
 | **Enterprise** | SSO plugin installed and activated | SSO button on login page (e.g. Azure Entra ID via OIDC) |
 
-All three modes coexist — API key access remains available for programmatic use even after team or enterprise mode activates. Regenerate the API key with `pally-dashboard api-key regenerate`.
+All three modes coexist — API key access remains available for programmatic use even after team or enterprise mode activates. Regenerate the API key with `luqen-dashboard api-key regenerate`.
 
 See [Enterprise SSO](enterprise-sso.md) for the Azure Entra ID setup guide.
 
@@ -161,7 +161,7 @@ Click **Remove** to deactivate and uninstall the plugin completely.
 
 ### CLI and API alternatives
 
-Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|activate|deactivate|remove`) or REST API (`/api/v1/plugins/*`). See the [CLI reference](../reference/cli-reference.md) and [API reference](../reference/api-reference.md).
+Plugins can also be managed via CLI (`luqen-dashboard plugin install|configure|activate|deactivate|remove`) or REST API (`/api/v1/plugins/*`). See the [CLI reference](../reference/cli-reference.md) and [API reference](../reference/api-reference.md).
 
 ---
 
@@ -182,7 +182,7 @@ Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|a
 | **User management** | Create, edit, delete Dashboard Users. Assign built-in or custom roles. |
 | **Scan history** | Browse all past scans. Filter by URL, date, status. |
 | **Report viewer** | Interactive HTML report with compliance matrix. |
-| **Self-audit** | Run `pally-dashboard self-audit` to scan the dashboard itself. |
+| **Self-audit** | Run `luqen-dashboard self-audit` to scan the dashboard itself. |
 | **Health checks** | `/health` endpoint for load balancer probes. |
 | **Trend tracking** | Line charts at `/reports/trends` showing error/warning/notice counts over time. Executive summary cards on the home page. |
 | **Print/PDF export** | Print-optimized report view at `/reports/:id/print` for saving as PDF via browser Print dialog. |
@@ -193,7 +193,7 @@ Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|a
 | **Multi-worker scaling** | Distribute scans across multiple pa11y webservice instances via `DASHBOARD_WEBSERVICE_URLS`. |
 | **REST API** | 5 JSON endpoints for external data consumption (scans, issues, trends, compliance summary). Auth via `X-API-Key` header, rate limited 60/min. |
 | **CSV export** | Download scans, issues, and trend data as CSV from the UI or via `/api/v1/export/*` endpoints. |
-| **Email reports** | Scheduled email delivery of reports (daily/weekly/monthly) with PDF/CSV attachments, plus event notifications (`scan.complete`, `scan.failed`). Powered by `@pally-agent/plugin-notify-email` — install from **Admin > Plugins**, then create schedules at **Admin > Email Reports**. |
+| **Email reports** | Scheduled email delivery of reports (daily/weekly/monthly) with PDF/CSV attachments, plus event notifications (`scan.complete`, `scan.failed`). Powered by `@luqen/plugin-notify-email` — install from **Admin > Plugins**, then create schedules at **Admin > Email Reports**. |
 | **Power BI integration** | Connect Power BI to the data API using Web data source with `X-API-Key` header. See [API Reference](../reference/api-reference.md#power-bi-integration). |
 
 ---
@@ -211,7 +211,7 @@ docker compose restart
 docker compose down
 
 # Update and rebuild
-cd ~/pally-agent && git pull && docker compose up -d --build
+cd ~/luqen && git pull && docker compose up -d --build
 ```
 
 ---
@@ -239,4 +239,4 @@ For the full multi-tenancy setup guide, including API headers, data lifecycle, a
 
 ---
 
-*See also: [What is Pally Agent?](../getting-started/what-is-pally.md) | [One-line installer](../getting-started/one-line-install.md)*
+*See also: [What is Luqen?](../getting-started/what-is-luqen.md) | [One-line installer](../getting-started/one-line-install.md)*
