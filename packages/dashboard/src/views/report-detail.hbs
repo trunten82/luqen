@@ -205,8 +205,8 @@
               <span class="rpt-component-tag">{{componentName}}</span>
               <span class="rpt-text--muted">({{affectedCount}} pages)</span>
               {{#if ../../perm.issuesAssign}}
-              {{{issueAssignStatus ../../assignedMap code selector message}}}
-              {{#unless (issueAssignStatus ../../assignedMap code selector message)}}
+              {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
+              {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
               <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
               {{/unless}}
               {{/if}}
@@ -236,8 +236,8 @@
             <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
             <span class="rpt-issue-item__message">{{message}}</span>
             {{#if ../../perm.issuesAssign}}
-            {{{issueAssignStatus ../../assignedMap code selector message}}}
-            {{#unless (issueAssignStatus ../../assignedMap code selector message)}}
+            {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
+            {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
             <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
             {{/unless}}
             {{/if}}

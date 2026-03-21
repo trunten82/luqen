@@ -211,11 +211,24 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
   handlebars.registerHelper('json', (context: unknown) => JSON.stringify(context));
 
-  handlebars.registerHelper('issueAssignStatus', (assignedMap: Record<string, { id: string; status: string; assignedTo: string | null }> | undefined, code: string, selector: string, message: string) => {
+  handlebars.registerHelper('issueAssignStatus', (assignedMap: Record<string, { id: string; status: string; assignedTo: string | null }> | undefined, code: string, selector: string, message: string, wcagCriterion?: string) => {
     if (assignedMap == null) return '';
+    // Check exact fingerprint first
     const fp = `${code}|${selector}|${message}`;
-    if (!(fp in assignedMap)) return '';
-    const a = assignedMap[fp];
+    let a = assignedMap[fp];
+    // Fall back to criterion-based match (for bulk-assigned items)
+    if (!a && wcagCriterion && typeof wcagCriterion === 'string') {
+      a = assignedMap[`criterion:${wcagCriterion}`];
+    }
+    // Fall back to extracting criterion from pa11y code
+    if (!a && code) {
+      const m = code.match(/(\d+_\d+(?:_\d+)?)/);
+      if (m) {
+        const criterion = m[1].replace(/_/g, '.');
+        a = assignedMap[`criterion:${criterion}`];
+      }
+    }
+    if (!a) return '';
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const who = a.assignedTo ? ` &middot; ${esc(a.assignedTo)}` : '';
     return new handlebars.SafeString(
