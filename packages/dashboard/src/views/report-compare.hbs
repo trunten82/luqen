@@ -3,6 +3,87 @@
 <section aria-labelledby="compare-heading" class="report-meta" style="margin-bottom:1.5rem;">
   <h1 id="compare-heading" class="section-title" style="margin-bottom:1rem;">Report Comparison</h1>
 
+  {{! ── Regression / Improvement Banner ───────────────────────────────────── }}
+  {{#if (cmpPositive diff.summaryDelta.errors)}}
+  <div class="compare-alert compare-alert--regression" role="alert">
+    <strong>Regression detected:</strong> {{diff.summaryDelta.errors}} new error{{#unless (eq diff.summaryDelta.errors 1)}}s{{/unless}} since previous scan
+  </div>
+  {{else}}
+    {{#if (cmpNegative diff.summaryDelta.errors)}}
+    <div class="compare-alert compare-alert--improvement" role="status">
+      <strong>Improvement:</strong> {{cmpSign diff.summaryDelta.errors}} error{{#unless (eq diff.summaryDelta.errors -1)}}s{{/unless}} since previous scan
+    </div>
+    {{/if}}
+  {{/if}}
+
+  {{! ── Side-by-side summary ──────────────────────────────────────────────── }}
+  <div class="cmp-summary-grid" role="region" aria-label="Side-by-side scan summary">
+    <div class="cmp-summary-col">
+      <div class="cmp-summary-col__heading">Scan A (Baseline)</div>
+      <div class="cmp-summary-stats">
+        <div class="cmp-summary-stat">
+          <span class="cmp-summary-stat__label">Total Issues</span>
+          <span class="cmp-summary-stat__value">{{scanA.totalIssues}}</span>
+        </div>
+        <div class="cmp-summary-stat">
+          <span class="cmp-summary-stat__label">Errors</span>
+          <span class="cmp-summary-stat__value text--error">{{scanA.errors}}</span>
+        </div>
+        <div class="cmp-summary-stat">
+          <span class="cmp-summary-stat__label">Warnings</span>
+          <span class="cmp-summary-stat__value text--warning">{{scanA.warnings}}</span>
+        </div>
+        <div class="cmp-summary-stat">
+          <span class="cmp-summary-stat__label">Notices</span>
+          <span class="cmp-summary-stat__value">{{scanA.notices}}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmp-summary-delta" aria-label="Delta between scans">
+      <div class="cmp-summary-delta__item">
+        <span class="cmp-summary-delta__label">Errors</span>
+        <span class="cmp-summary-delta__value {{#if (cmpPositive diff.summaryDelta.errors)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.errors)}}cmp-delta--down{{else}}cmp-delta--neutral{{/if}}{{/if}}">
+          {{#if (cmpPositive diff.summaryDelta.errors)}}+{{diff.summaryDelta.errors}}{{else}}{{#if (cmpNegative diff.summaryDelta.errors)}}{{cmpSign diff.summaryDelta.errors}}{{else}}={{/if}}{{/if}}
+        </span>
+      </div>
+      <div class="cmp-summary-delta__item">
+        <span class="cmp-summary-delta__label">Warnings</span>
+        <span class="cmp-summary-delta__value {{#if (cmpPositive diff.summaryDelta.warnings)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.warnings)}}cmp-delta--down{{else}}cmp-delta--neutral{{/if}}{{/if}}">
+          {{#if (cmpPositive diff.summaryDelta.warnings)}}+{{diff.summaryDelta.warnings}}{{else}}{{#if (cmpNegative diff.summaryDelta.warnings)}}{{cmpSign diff.summaryDelta.warnings}}{{else}}={{/if}}{{/if}}
+        </span>
+      </div>
+      <div class="cmp-summary-delta__item">
+        <span class="cmp-summary-delta__label">Notices</span>
+        <span class="cmp-summary-delta__value {{#if (cmpPositive diff.summaryDelta.notices)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.notices)}}cmp-delta--down{{else}}cmp-delta--neutral{{/if}}{{/if}}">
+          {{#if (cmpPositive diff.summaryDelta.notices)}}+{{diff.summaryDelta.notices}}{{else}}{{#if (cmpNegative diff.summaryDelta.notices)}}{{cmpSign diff.summaryDelta.notices}}{{else}}={{/if}}{{/if}}
+        </span>
+      </div>
+    </div>
+
+    <div class="cmp-summary-col">
+      <div class="cmp-summary-col__heading">Scan B (Latest)</div>
+      <div class="cmp-summary-stats">
+        <div class="cmp-summary-stat">
+          <span class="cmp-summary-stat__label">Total Issues</span>
+          <span class="cmp-summary-stat__value">{{scanB.totalIssues}}</span>
+        </div>
+        <div class="cmp-summary-stat">
+          <span class="cmp-summary-stat__label">Errors</span>
+          <span class="cmp-summary-stat__value text--error">{{scanB.errors}}</span>
+        </div>
+        <div class="cmp-summary-stat">
+          <span class="cmp-summary-stat__label">Warnings</span>
+          <span class="cmp-summary-stat__value text--warning">{{scanB.warnings}}</span>
+        </div>
+        <div class="cmp-summary-stat">
+          <span class="cmp-summary-stat__label">Notices</span>
+          <span class="cmp-summary-stat__value">{{scanB.notices}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="cmp-scans-grid" role="region" aria-label="Compared scans metadata">
     <div class="cmp-scan-card">
       <div class="cmp-scan-card__label">Scan A (Baseline)</div>
@@ -104,9 +185,13 @@
         <tr>
           <th scope="col">Severity</th>
           <th scope="col">Code</th>
+          <th scope="col">WCAG Criterion</th>
           <th scope="col">Message</th>
           <th scope="col">Selector</th>
           <th scope="col">Page</th>
+          {{#if diff.hasRegulations}}
+          <th scope="col">Regulations</th>
+          {{/if}}
         </tr>
       </thead>
       <tbody>
@@ -114,9 +199,28 @@
         <tr class="rpt-row rpt-row--{{type}}">
           <td><span class="rpt-severity rpt-severity--{{type}}">{{type}}</span></td>
           <td><span class="rpt-code">{{code}}</span></td>
+          <td>
+            {{#if wcagCriterion}}
+            <a href="{{wcagUrl}}" target="_blank" rel="noopener noreferrer" class="rpt-wcag-link" title="{{wcagTitle}}">
+              {{wcagCriterion}}
+            </a>
+            <span class="rpt-wcag-title">{{wcagTitle}}</span>
+            {{else}}
+            <span class="text--muted">&mdash;</span>
+            {{/if}}
+          </td>
           <td>{{message}}</td>
           <td><span class="rpt-code">{{selector}}</span></td>
           <td class="cell--url">{{pageUrl}}</td>
+          {{#if ../diff.hasRegulations}}
+          <td>
+            {{#if regulationTags}}
+            {{#each regulationTags}}<span class="rpt-regulation-tag">{{this}}</span> {{/each}}
+            {{else}}
+            <span class="text--muted">&mdash;</span>
+            {{/if}}
+          </td>
+          {{/if}}
         </tr>
         {{/each}}
       </tbody>
@@ -124,7 +228,9 @@
   </div>
   {{else}}
   <div class="empty-state" role="status">
-    <p>No new issues found. The latest scan did not introduce any regressions.</p>
+    <div class="empty-state__icon">&#9989;</div>
+    <div class="empty-state__title">No new issues</div>
+    <div class="empty-state__desc">The latest scan did not introduce any regressions.</div>
   </div>
   {{/if}}
 </div>
@@ -138,9 +244,13 @@
         <tr>
           <th scope="col">Severity</th>
           <th scope="col">Code</th>
+          <th scope="col">WCAG Criterion</th>
           <th scope="col">Message</th>
           <th scope="col">Selector</th>
           <th scope="col">Page</th>
+          {{#if diff.hasRegulations}}
+          <th scope="col">Regulations</th>
+          {{/if}}
         </tr>
       </thead>
       <tbody>
@@ -148,9 +258,28 @@
         <tr class="rpt-row rpt-row--{{type}}">
           <td><span class="rpt-severity rpt-severity--{{type}}">{{type}}</span></td>
           <td><span class="rpt-code">{{code}}</span></td>
+          <td>
+            {{#if wcagCriterion}}
+            <a href="{{wcagUrl}}" target="_blank" rel="noopener noreferrer" class="rpt-wcag-link" title="{{wcagTitle}}">
+              {{wcagCriterion}}
+            </a>
+            <span class="rpt-wcag-title">{{wcagTitle}}</span>
+            {{else}}
+            <span class="text--muted">&mdash;</span>
+            {{/if}}
+          </td>
           <td>{{message}}</td>
           <td><span class="rpt-code">{{selector}}</span></td>
           <td class="cell--url">{{pageUrl}}</td>
+          {{#if ../diff.hasRegulations}}
+          <td>
+            {{#if regulationTags}}
+            {{#each regulationTags}}<span class="rpt-regulation-tag">{{this}}</span> {{/each}}
+            {{else}}
+            <span class="text--muted">&mdash;</span>
+            {{/if}}
+          </td>
+          {{/if}}
         </tr>
         {{/each}}
       </tbody>
@@ -158,7 +287,9 @@
   </div>
   {{else}}
   <div class="empty-state" role="status">
-    <p>No issues were resolved between the two scans.</p>
+    <div class="empty-state__icon">&#128269;</div>
+    <div class="empty-state__title">No resolved issues</div>
+    <div class="empty-state__desc">No issues were resolved between the two scans.</div>
   </div>
   {{/if}}
 </div>
@@ -172,9 +303,13 @@
         <tr>
           <th scope="col">Severity</th>
           <th scope="col">Code</th>
+          <th scope="col">WCAG Criterion</th>
           <th scope="col">Message</th>
           <th scope="col">Selector</th>
           <th scope="col">Page</th>
+          {{#if diff.hasRegulations}}
+          <th scope="col">Regulations</th>
+          {{/if}}
         </tr>
       </thead>
       <tbody>
@@ -182,9 +317,28 @@
         <tr class="rpt-row rpt-row--{{type}}">
           <td><span class="rpt-severity rpt-severity--{{type}}">{{type}}</span></td>
           <td><span class="rpt-code">{{code}}</span></td>
+          <td>
+            {{#if wcagCriterion}}
+            <a href="{{wcagUrl}}" target="_blank" rel="noopener noreferrer" class="rpt-wcag-link" title="{{wcagTitle}}">
+              {{wcagCriterion}}
+            </a>
+            <span class="rpt-wcag-title">{{wcagTitle}}</span>
+            {{else}}
+            <span class="text--muted">&mdash;</span>
+            {{/if}}
+          </td>
           <td>{{message}}</td>
           <td><span class="rpt-code">{{selector}}</span></td>
           <td class="cell--url">{{pageUrl}}</td>
+          {{#if ../diff.hasRegulations}}
+          <td>
+            {{#if regulationTags}}
+            {{#each regulationTags}}<span class="rpt-regulation-tag">{{this}}</span> {{/each}}
+            {{else}}
+            <span class="text--muted">&mdash;</span>
+            {{/if}}
+          </td>
+          {{/if}}
         </tr>
         {{/each}}
       </tbody>
@@ -192,13 +346,113 @@
   </div>
   {{else}}
   <div class="empty-state" role="status">
-    <p>No issues are shared between the two scans.</p>
+    <div class="empty-state__icon">&#128196;</div>
+    <div class="empty-state__title">No shared issues</div>
+    <div class="empty-state__desc">No issues are shared between the two scans.</div>
   </div>
   {{/if}}
 </div>
 
 <style>
   /* ── Compare scoped styles ─────────────────────────────────────────────── */
+
+  /* Alert banners */
+  .compare-alert {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid;
+  }
+  .compare-alert--regression {
+    background-color: var(--status-error-bg);
+    border-left-color: var(--status-error);
+    color: var(--status-error);
+  }
+  .compare-alert--improvement {
+    background-color: var(--status-success-bg);
+    border-left-color: var(--status-success);
+    color: var(--status-success);
+  }
+
+  /* Side-by-side summary grid */
+  .cmp-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: stretch;
+  }
+  .cmp-summary-col {
+    background: var(--surface, var(--bg-primary));
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid var(--border-color);
+  }
+  .cmp-summary-col__heading {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .cmp-summary-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .cmp-summary-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .cmp-summary-stat__label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .cmp-summary-stat__value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  /* Delta column in summary */
+  .cmp-summary-delta {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    min-width: 80px;
+  }
+  .cmp-summary-delta__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+  }
+  .cmp-summary-delta__label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .cmp-summary-delta__value {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .cmp-delta--neutral { color: var(--text-muted) !important; }
+
+  /* Scan metadata cards */
   .cmp-scans-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -206,17 +460,17 @@
     margin-bottom: 1rem;
   }
   .cmp-scan-card {
-    background: var(--surface, #fff);
+    background: var(--surface, var(--bg-primary));
     border-radius: 8px;
     padding: 1rem 1.25rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    border-top: 3px solid var(--border, #e5e7eb);
+    border-top: 3px solid var(--border-color);
   }
   .cmp-scan-card__label {
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--text-muted, #6b7280);
+    color: var(--text-muted);
     font-weight: 700;
     margin-bottom: 0.5rem;
   }
@@ -225,11 +479,41 @@
   .cmp-delta--up { color: #dc2626 !important; }
   .cmp-delta--down { color: #16a34a !important; }
 
+  /* WCAG criterion styling in tables */
+  .rpt-wcag-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+  .rpt-wcag-link:hover {
+    text-decoration: underline;
+  }
+  .rpt-wcag-title {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+    margin-top: 0.1rem;
+  }
+  .rpt-regulation-tag {
+    display: inline-block;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 0.68rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-right: 0.2rem;
+    margin-bottom: 0.15rem;
+  }
+  .text--muted { color: var(--text-muted); }
+
   /* Tabs */
   .cmp-tabs {
     display: flex;
     gap: 0;
-    border-bottom: 2px solid var(--border, #e5e7eb);
+    border-bottom: 2px solid var(--border-color, #e5e7eb);
     margin-bottom: 0;
   }
   .cmp-tab {
@@ -244,15 +528,15 @@
     color: var(--text-muted, #6b7280);
     transition: color 0.15s, border-color 0.15s;
   }
-  .cmp-tab:hover { color: var(--text, #111827); }
+  .cmp-tab:hover { color: var(--text-primary, #111827); }
   .cmp-tab--active {
-    color: var(--text, #111827);
+    color: var(--text-primary, #111827);
     border-bottom-color: #2563eb;
   }
 
   /* Panels */
   .cmp-panel {
-    background: var(--surface, #fff);
+    background: var(--surface, var(--bg-primary));
     border-radius: 0 0 8px 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     padding: 1rem;
@@ -262,6 +546,8 @@
 
   @media (max-width: 640px) {
     .cmp-scans-grid { grid-template-columns: 1fr; }
+    .cmp-summary-grid { grid-template-columns: 1fr; }
+    .cmp-summary-delta { flex-direction: row; justify-content: center; }
     .cmp-tab { padding: 0.5rem 0.7rem; font-size: 0.76rem; }
   }
 </style>

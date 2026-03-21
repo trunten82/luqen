@@ -5,7 +5,9 @@ import { toastHtml } from './helpers.js';
 
 function roleBadgeClass(role: string): string {
   if (role === 'admin') return 'badge--error';
+  if (role === 'developer') return 'badge--warning';
   if (role === 'user' || role === 'editor') return 'badge--warning';
+  if (role === 'executive') return 'badge--neutral';
   return 'badge--neutral';
 }
 
@@ -33,8 +35,10 @@ function userRowHtml(user: DashboardUser): string {
               name="role"
               class="input input--sm"
               aria-label="Change role for ${user.username}">
+        <option value="executive" ${user.role === 'executive' ? 'selected' : ''}>executive</option>
         <option value="viewer" ${user.role === 'viewer' ? 'selected' : ''}>viewer</option>
         <option value="user" ${user.role === 'user' ? 'selected' : ''}>user</option>
+        <option value="developer" ${user.role === 'developer' ? 'selected' : ''}>developer</option>
         <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>admin</option>
       </select>`
     : roleBadge;
@@ -47,7 +51,7 @@ function userRowHtml(user: DashboardUser): string {
 </tr>`;
 }
 
-const VALID_ROLES = new Set(['viewer', 'user', 'admin']);
+const VALID_ROLES = new Set(['viewer', 'user', 'developer', 'admin', 'executive']);
 
 export async function dashboardUserRoutes(
   server: FastifyInstance,
@@ -77,7 +81,7 @@ export async function dashboardUserRoutes(
       return reply.view('admin/dashboard-user-form.hbs', {
         isNew: true,
         formUser: { username: '', role: 'user', password: '' },
-        roles: ['viewer', 'user', 'admin'],
+        roles: ['executive', 'viewer', 'user', 'developer', 'admin'],
       });
     },
   );
@@ -108,7 +112,7 @@ export async function dashboardUserRoutes(
         return reply
           .code(400)
           .header('content-type', 'text/html')
-          .send(toastHtml('Invalid role. Must be viewer, user, or admin.', 'error'));
+          .send(toastHtml('Invalid role. Must be executive, viewer, user, developer, or admin.', 'error'));
       }
 
       // Check for duplicate username
@@ -150,7 +154,7 @@ export async function dashboardUserRoutes(
         return reply
           .code(400)
           .header('content-type', 'text/html')
-          .send(toastHtml('Invalid role. Must be viewer, user, or admin.', 'error'));
+          .send(toastHtml('Invalid role. Must be executive, viewer, user, developer, or admin.', 'error'));
       }
 
       try {

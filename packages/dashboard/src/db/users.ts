@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 export interface DashboardUser {
   readonly id: string;
   readonly username: string;
-  readonly role: 'admin' | 'editor' | 'user' | 'viewer';
+  readonly role: 'admin' | 'developer' | 'editor' | 'user' | 'viewer' | 'executive';
   readonly active: boolean;
   readonly createdAt: string;
 }

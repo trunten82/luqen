@@ -2,7 +2,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { ScanDb } from '../db/scans.js';
-import { diffReports, type NormalizedReport } from '../compare/diff.js';
+import { diffReports, type NormalizedReport, type DiffIssue } from '../compare/diff.js';
+import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 
 interface CompareQuery {
   a?: string;
@@ -41,6 +42,25 @@ interface JsonReportFile {
   issues?: Array<{ code: string; type: string; message: string; selector: string; context: string }>;
 }
 
+interface EnrichedDiffIssue extends DiffIssue {
+  readonly regulationTags?: readonly string[];
+}
+
+/** Enrich a diff issue with WCAG criterion info if not already present. */
+function enrichIssueWithWcag(issue: DiffIssue): EnrichedDiffIssue {
+  const criterion = issue.wcagCriterion ?? extractCriterion(issue.code);
+  if (criterion !== null) {
+    const info = getWcagDescription(criterion);
+    return {
+      ...issue,
+      wcagCriterion: criterion,
+      wcagTitle: issue.wcagTitle ?? info?.title ?? undefined,
+      wcagUrl: issue.wcagUrl ?? info?.url ?? undefined,
+    };
+  }
+  return { ...issue };
+}
+
 function normalizeForDiff(
   raw: JsonReportFile,
   scan: { siteUrl: string; errors?: number; warnings?: number; notices?: number },
@@ -67,9 +87,20 @@ function normalizeForDiff(
   };
 }
 
-function formatScanMeta(scan: { siteUrl: string; standard: string; createdAt: string; completedAt?: string }) {
+function formatScanMeta(scan: {
+  id: string;
+  siteUrl: string;
+  standard: string;
+  createdAt: string;
+  completedAt?: string;
+  errors?: number;
+  warnings?: number;
+  notices?: number;
+  totalIssues?: number;
+}) {
   return {
     ...scan,
+    totalIssues: scan.totalIssues ?? ((scan.errors ?? 0) + (scan.warnings ?? 0) + (scan.notices ?? 0)),
     createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
     completedAtDisplay: scan.completedAt
       ? new Date(scan.completedAt).toLocaleString()
@@ -131,6 +162,15 @@ export async function compareRoutes(
       const normalB = normalizeForDiff(rawB, scanB);
       const diff = diffReports(normalA, normalB);
 
+      // Enrich all diff issues with WCAG criterion info
+      const enrichedAdded = diff.added.map(enrichIssueWithWcag);
+      const enrichedRemoved = diff.removed.map(enrichIssueWithWcag);
+      const enrichedUnchanged = diff.unchanged.map(enrichIssueWithWcag);
+
+      // Check if any issues have regulation tags
+      const allIssues = [...enrichedAdded, ...enrichedRemoved, ...enrichedUnchanged];
+      const hasRegulations = allIssues.some((i) => i.regulationTags !== undefined && i.regulationTags.length > 0);
+
       return reply.view('report-compare.hbs', {
         pageTitle: 'Compare Reports',
         currentPath: '/reports/compare',
@@ -138,13 +178,14 @@ export async function compareRoutes(
         scanA: formatScanMeta(scanA),
         scanB: formatScanMeta(scanB),
         diff: {
-          added: diff.added,
-          removed: diff.removed,
-          unchanged: diff.unchanged,
+          added: enrichedAdded,
+          removed: enrichedRemoved,
+          unchanged: enrichedUnchanged,
           addedCount: diff.added.length,
           removedCount: diff.removed.length,
           unchangedCount: diff.unchanged.length,
           summaryDelta: diff.summaryDelta,
+          hasRegulations,
         },
       });
     },

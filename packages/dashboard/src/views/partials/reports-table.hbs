@@ -37,6 +37,14 @@
         <td><time datetime="{{createdAt}}">{{createdAtDisplay}}</time></td>
         <td class="cell--actions">
           <a href="/reports/{{id}}" class="btn btn--sm btn--ghost" aria-label="View report for {{siteUrl}}">View</a>
+          {{#if previousScanId}}
+          <a
+            href="/reports/compare?a={{previousScanId}}&b={{id}}"
+            class="btn btn--sm btn--ghost"
+            aria-label="Compare with previous scan for {{siteUrl}}"
+            title="Compare with previous scan"
+          >Compare</a>
+          {{/if}}
           <button
             class="btn btn--sm btn--danger"
             hx-delete="/reports/{{id}}"

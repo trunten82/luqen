@@ -1,4 +1,4 @@
-{{! Trends — issue trends over time per site }}
+{{! Trends — org-wide overview + per-site detail }}
 
 <section aria-labelledby="trends-heading">
   <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
@@ -7,20 +7,71 @@
   </div>
 
   {{#if hasTrends}}
-  <div class="card mb-lg">
-    <div class="form-group">
-      <label for="site-selector">Select Site</label>
-      <select id="site-selector" class="select" aria-label="Select site to view trends">
-        {{#each siteUrls}}
-        <option value="{{this}}">{{this}}</option>
-        {{/each}}
-      </select>
+  {{! ── Organization Overview ─────────────────────────────────────── }}
+  <section aria-labelledby="org-overview-heading" class="mb-lg">
+    <h3 id="org-overview-heading" class="section-title">Organization Overview</h3>
+
+    <div class="card mb-lg" style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap;padding:1.5rem;">
+      <div style="text-align:center;min-width:120px;">
+        <div class="{{orgScoreClass}}" style="font-size:3rem;font-weight:700;line-height:1;">{{orgScore}}</div>
+        <div class="text--muted" style="font-size:0.875rem;margin-top:0.25rem;">Accessibility Score</div>
+      </div>
+      <div style="flex:1;min-width:300px;">
+        <div class="trends-chart-container" style="height:200px;">
+          <canvas id="org-trends-chart" aria-label="Organization-wide issue trends chart" role="img"></canvas>
+        </div>
+      </div>
     </div>
 
-    <div class="trends-chart-container">
-      <canvas id="trends-chart" aria-label="Issue trends chart" role="img"></canvas>
+    <div class="card mb-lg">
+      <h4 style="margin:0 0 0.75rem;">Site Scorecard</h4>
+      <div class="table-responsive" role="region" aria-label="Site scorecard table" tabindex="0">
+        <table class="data-table" aria-label="Site scores and trends">
+          <caption class="sr-only">Accessibility scores per site with trend indicators</caption>
+          <thead>
+            <tr>
+              <th scope="col">Site URL</th>
+              <th scope="col">Score</th>
+              <th scope="col">Trend</th>
+              <th scope="col">Last Scanned</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each siteScores}}
+            <tr>
+              <td data-label="Site URL" class="cell--url">{{siteUrl}}</td>
+              <td data-label="Score"><span class="{{scoreClass}}" style="font-weight:700;">{{score}}</span></td>
+              <td data-label="Trend">
+                <span class="{{trendClass}}">{{{trendArrow}}} {{trendLabel}}</span>
+              </td>
+              <td data-label="Last Scanned">{{lastScannedDisplay}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
+  </section>
+
+  {{! ── Per-Site Detail ───────────────────────────────────────────── }}
+  <section aria-labelledby="per-site-heading">
+    <h3 id="per-site-heading" class="section-title">Per-Site Detail</h3>
+
+    <div class="card mb-lg">
+      <div class="form-group">
+        <label for="site-selector">Select Site</label>
+        <select id="site-selector" class="select" aria-label="Select site to view trends">
+          {{#each siteUrls}}
+          <option value="{{this}}">{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="trends-chart-container">
+        <canvas id="trends-chart" aria-label="Issue trends chart" role="img"></canvas>
+      </div>
+    </div>
+  </section>
 
   <section aria-labelledby="summary-table-heading">
     <h2 id="summary-table-heading" class="section-title">Site Summary</h2>
@@ -87,7 +138,10 @@
 
   {{else}}
   <div class="empty-state" role="status">
-    <p>No completed scans yet. Run some scans to see trend data here.</p>
+    <div class="empty-state__icon">&#128200;</div>
+    <div class="empty-state__title">No trend data yet</div>
+    <div class="empty-state__desc">Complete at least two scans for the same site to see issue trends over time.</div>
+    <a href="/scan/new" class="btn btn--primary">New Scan</a>
   </div>
   {{/if}}
 </section>
@@ -96,8 +150,59 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
   var trendData = {{{json trendData}}};
+  var orgTotals = {{{json orgTotals}}};
 
   (function () {
+    // ── Org-wide trend chart ──────────────────────────────────────
+    var orgCtx = document.getElementById('org-trends-chart');
+    if (orgCtx && orgTotals.length > 0) {
+      new Chart(orgCtx.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: orgTotals.map(function (p) { return p.date; }),
+          datasets: [
+            {
+              label: 'Errors',
+              data: orgTotals.map(function (p) { return p.errors; }),
+              borderColor: '#8b1a1a',
+              backgroundColor: 'rgba(139, 26, 26, 0.1)',
+              tension: 0.3,
+              fill: false
+            },
+            {
+              label: 'Warnings',
+              data: orgTotals.map(function (p) { return p.warnings; }),
+              borderColor: '#7a4f00',
+              backgroundColor: 'rgba(122, 79, 0, 0.1)',
+              tension: 0.3,
+              fill: false
+            },
+            {
+              label: 'Notices',
+              data: orgTotals.map(function (p) { return p.notices; }),
+              borderColor: '#00416a',
+              backgroundColor: 'rgba(0, 65, 106, 0.1)',
+              tension: 0.3,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Organization-wide Issues Over Time' }
+          },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Issue Count' } },
+            x: { title: { display: true, text: 'Date' } }
+          }
+        }
+      });
+    }
+
+    // ── Per-site trend chart ──────────────────────────────────────
     var ctx = document.getElementById('trends-chart').getContext('2d');
     var selector = document.getElementById('site-selector');
     var chart = null;

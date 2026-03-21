@@ -77,6 +77,31 @@
           <li>{{this}}</li>
           {{/each}}
         </ul>
+        {{#if steps.length}}
+        <details class="mt-steps-detail">
+          <summary class="mt-steps-toggle">Step-by-step guide</summary>
+          <ol class="mt-steps">
+            {{#each steps}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ol>
+        </details>
+        {{/if}}
+        {{#if goodExample}}
+        <details class="mt-examples-detail">
+          <summary class="mt-examples-toggle">Examples</summary>
+          <div class="mt-examples">
+            <div class="mt-example mt-example--good">
+              <div class="mt-example__label">Good</div>
+              <pre class="mt-example__code"><code>{{goodExample}}</code></pre>
+            </div>
+            <div class="mt-example mt-example--bad">
+              <div class="mt-example__label">Bad</div>
+              <pre class="mt-example__code"><code>{{badExample}}</code></pre>
+            </div>
+          </div>
+        </details>
+        {{/if}}
         <div class="mt-actions">
           <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">Pass</button>
           <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">Fail</button>
@@ -121,6 +146,31 @@
           <li>{{this}}</li>
           {{/each}}
         </ul>
+        {{#if steps.length}}
+        <details class="mt-steps-detail">
+          <summary class="mt-steps-toggle">Step-by-step guide</summary>
+          <ol class="mt-steps">
+            {{#each steps}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ol>
+        </details>
+        {{/if}}
+        {{#if goodExample}}
+        <details class="mt-examples-detail">
+          <summary class="mt-examples-toggle">Examples</summary>
+          <div class="mt-examples">
+            <div class="mt-example mt-example--good">
+              <div class="mt-example__label">Good</div>
+              <pre class="mt-example__code"><code>{{goodExample}}</code></pre>
+            </div>
+            <div class="mt-example mt-example--bad">
+              <div class="mt-example__label">Bad</div>
+              <pre class="mt-example__code"><code>{{badExample}}</code></pre>
+            </div>
+          </div>
+        </details>
+        {{/if}}
         <div class="mt-actions">
           <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">Pass</button>
           <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">Fail</button>

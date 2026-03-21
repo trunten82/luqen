@@ -11,7 +11,10 @@ import { scanRoutes } from './routes/scan.js';
 import { reportRoutes } from './routes/reports.js';
 import { compareRoutes } from './routes/compare.js';
 import { trendRoutes } from './routes/trends.js';
+import { scheduleRoutes } from './routes/schedules.js';
+import { startScheduler } from './scheduler.js';
 import { manualTestRoutes } from './routes/manual-tests.js';
+import { assignmentRoutes } from './routes/assignments.js';
 import { jurisdictionRoutes } from './routes/admin/jurisdictions.js';
 import { regulationRoutes } from './routes/admin/regulations.js';
 import { proposalRoutes } from './routes/admin/proposals.js';
@@ -27,6 +30,7 @@ import { exportRoutes } from './routes/api/export.js';
 import { dataApiRoutes } from './routes/api/data.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
+import { repoRoutes } from './routes/repos.js';
 import { ScanDb } from './db/scans.js';
 import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
@@ -39,6 +43,7 @@ import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
+import { getFixSuggestion } from './fix-suggestions.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -139,8 +144,16 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // Register helpers on Handlebars instance directly (required by @fastify/view v10)
   handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
-  handlebars.registerHelper('canScan', (role: string) => role === 'user' || role === 'admin');
+  handlebars.registerHelper('canScan', (role: string) => role === 'user' || role === 'admin' || role === 'developer');
   handlebars.registerHelper('isAdmin', (role: string) => role === 'admin');
+  handlebars.registerHelper('isDeveloper', (role: string) => role === 'developer' || role === 'admin');
+  handlebars.registerHelper('isExecutive', (role: string) => role === 'executive');
+  handlebars.registerHelper('canRunScans', (role: string) => role === 'admin' || role === 'developer' || role === 'user');
+  handlebars.registerHelper('canViewTechnical', (role: string) => role === 'admin' || role === 'developer');
+  handlebars.registerHelper('canFixCode', (role: string) => role === 'admin' || role === 'developer');
+  handlebars.registerHelper('canManageSchedules', (role: string) => role === 'admin' || role === 'user');
+  handlebars.registerHelper('canDoManualTesting', (role: string) => role !== 'executive');
+  handlebars.registerHelper('canAssignIssues', (role: string) => role !== 'executive');
   handlebars.registerHelper('startsWith', (str: string, prefix: string) =>
     typeof str === 'string' && str.startsWith(prefix));
   handlebars.registerHelper('issuesByType', (issues: readonly { type: string }[], type: string) =>
@@ -186,6 +199,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     return '0';
   });
   handlebars.registerHelper('json', (context: unknown) => JSON.stringify(context));
+
+  handlebars.registerHelper('fixSuggestion', (criterion: string, message: string) => {
+    const fix = getFixSuggestion(criterion, message);
+    if (!fix) return '';
+    const escaped = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return new handlebars.SafeString(
+      `<details class="rpt-fix-hint"><summary class="rpt-fix-hint__toggle">How to fix: ${escaped(fix.title)} <span class="rpt-fix-effort rpt-fix-effort--${fix.effort}">${fix.effort}</span></summary><p class="rpt-fix-hint__desc">${escaped(fix.description)}</p><pre class="rpt-fix-hint__code"><code>${escaped(fix.codeExample)}</code></pre></details>`
+    );
+  });
 
   await server.register(import('@fastify/view'), {
     engine: { handlebars },
@@ -250,10 +272,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await scanRoutes(server, db, orchestrator, config);
   await compareRoutes(server, db);
   await trendRoutes(server, db);
+  await scheduleRoutes(server, db);
   await reportRoutes(server, db);
   await manualTestRoutes(server, db);
+  await assignmentRoutes(server, db);
   await orgRoutes(server, orgDb);
   await toolRoutes(server);
+  await repoRoutes(server, db);
 
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);
@@ -288,6 +313,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Health endpoint ───────────────────────────────────────────────────────
   server.get('/health', async (_request, _reply) => {
     return { status: 'ok', version: VERSION };
+  });
+
+  // ── Scheduler — start after server is ready ────────────────────────────
+  server.addHook('onReady', () => {
+    const timer = startScheduler(db, orchestrator, config);
+    server.addHook('onClose', () => {
+      clearInterval(timer);
+    });
   });
 
   return server;

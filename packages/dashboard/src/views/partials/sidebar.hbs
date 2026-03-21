@@ -34,6 +34,18 @@
     </a>
     {{/if}}
 
+    {{#if (canManageSchedules user.role)}}
+    <a class="sidebar__item {{#if (eq currentPath '/schedules')}}is-active{{/if}}"
+       href="/schedules"
+       aria-current="{{#if (eq currentPath '/schedules')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="3" y="4" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M3 8h14M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Schedules
+    </a>
+    {{/if}}
+
     <a class="sidebar__item {{#if (eq currentPath '/reports')}}is-active{{/if}}"
        href="/reports"
        aria-current="{{#if (eq currentPath '/reports')}}page{{/if}}">
@@ -53,6 +65,7 @@
       Trends
     </a>
 
+    {{#if (canRunScans user.role)}}
     <a class="sidebar__item {{#if (eq currentPath '/tools/bookmarklet')}}is-active{{/if}}"
        href="/tools/bookmarklet"
        aria-current="{{#if (eq currentPath '/tools/bookmarklet')}}page{{/if}}">
@@ -61,6 +74,7 @@
       </svg>
       Bookmarklet
     </a>
+    {{/if}}
 
     {{#if (isAdmin user.role)}}
     <!-- Admin section — visible to admins only -->
@@ -164,6 +178,15 @@
         <path d="M7 6V5a3 3 0 016 0v1" stroke="currentColor" stroke-width="1.5"/>
       </svg>
       OAuth Clients
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/repos')}}is-active{{/if}}"
+       href="/admin/repos"
+       aria-current="{{#if (startsWith currentPath '/admin/repos')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M7 3C5.34 3 4 4.34 4 6c0 1.3.84 2.4 2 2.82V15.18C4.84 15.6 4 16.7 4 18c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V8.82C9.16 8.4 10 7.3 10 6c0-.27-.04-.53-.1-.78L12.17 7.5l.03 3.68c-1.16.42-2 1.52-2 2.82 0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V7.5L10.83 4.12C10.15 3.44 9.12 3 8 3H7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      </svg>
+      Connected Repos
     </a>
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/plugins')}}is-active{{/if}}"

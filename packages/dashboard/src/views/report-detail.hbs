@@ -39,13 +39,25 @@
       &larr; Back to Reports
     </a>
     {{#if reportData}}
+    {{#if (canDoManualTesting user.role)}}
     <a href="/reports/{{scan.id}}/manual" class="btn btn--ghost btn--sm" aria-label="Open manual testing checklist">
       Manual Testing {{#if manualTestStats}}({{manualTestStats.percentage}}%){{/if}}
     </a>
+    {{/if}}
     <a href="/reports/{{scan.id}}/print" target="_blank" class="btn btn--ghost btn--sm" aria-label="Open print-friendly version for PDF export">
       Print / PDF
     </a>
     <a href="/api/v1/export/scans/{{scan.id}}/issues.csv" class="btn btn--ghost btn--sm" aria-label="Export issues as CSV">Export CSV</a>
+    {{#if (canAssignIssues user.role)}}
+    <a href="/reports/{{scan.id}}/assignments" class="btn btn--ghost btn--sm" aria-label="View issue assignments" id="assignments-link">
+      Assignments{{#if assignmentActiveCount}} ({{assignmentActiveCount}}){{/if}}
+    </a>
+    {{/if}}
+    {{#if (canFixCode user.role)}}
+    <a href="/reports/{{scan.id}}/fixes" class="btn btn--ghost btn--sm" aria-label="Propose code fixes for accessibility issues">
+      Propose Fixes
+    </a>
+    {{/if}}
     {{/if}}
   </div>
 </section>
@@ -175,15 +187,23 @@
               <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
               <span class="rpt-component-tag">{{componentName}}</span>
               <span class="rpt-text--muted">({{affectedCount}} pages)</span>
+              {{#if (canAssignIssues ../../user.role)}}
+              <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
+              {{/if}}
             </div>
             <div class="rpt-issue-item__message">{{message}}</div>
+            {{#if (canViewTechnical ../../user.role)}}
             {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
             {{#if context}}<div class="rpt-issue-item__detail"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
+            {{/if}}
             {{#if affectedPages}}
             <details class="rpt-issue-item__affected">
               <summary>Affected pages ({{affectedCount}})</summary>
               <ul>{{#each affectedPages}}<li>{{this}}</li>{{/each}}</ul>
             </details>
+            {{/if}}
+            {{#if (canFixCode ../../user.role)}}
+            {{{fixSuggestion wcagCriterion message}}}
             {{/if}}
           </div>
           {{/each}}
@@ -195,9 +215,17 @@
           <div class="rpt-issue-item__head">
             <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
             <span class="rpt-issue-item__message">{{message}}</span>
+            {{#if (canAssignIssues ../../user.role)}}
+            <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
+            {{/if}}
           </div>
+          {{#if (canViewTechnical ../../user.role)}}
           {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
           {{#if context}}<div class="rpt-issue-item__detail"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
+          {{/if}}
+          {{#if (canFixCode ../../user.role)}}
+          {{{fixSuggestion wcagCriterion message}}}
+          {{/if}}
         </div>
         {{/each}}
       </div>
@@ -242,8 +270,10 @@
             <span class="rpt-text--muted">({{affectedCount}} pages)</span>
           </div>
           <div class="rpt-issue-item__message">{{message}}</div>
+          {{#if (canViewTechnical ../../user.role)}}
           {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
           {{#if context}}<div class="rpt-issue-item__detail"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
+          {{/if}}
           {{#if regulations}}
           <div class="rpt-issue-item__regs">
             {{#each regulations}}
@@ -260,6 +290,9 @@
             <summary>Affected pages ({{affectedCount}})</summary>
             <ul>{{#each affectedPages}}<li>{{this}}</li>{{/each}}</ul>
           </details>
+          {{/if}}
+          {{#if (canFixCode ../../user.role)}}
+          {{{fixSuggestion wcagCriterion message}}}
           {{/if}}
         </div>
         {{/each}}
@@ -310,7 +343,7 @@
                 <th scope="col">WCAG Criterion</th>
                 <th scope="col">What&apos;s Wrong</th>
                 <th scope="col">Legal Impact</th>
-                <th scope="col">Element</th>
+                {{#if (canViewTechnical ../user.role)}}<th scope="col">Element</th>{{/if}}
               </tr>
             </thead>
             <tbody>
@@ -336,6 +369,9 @@
                     <div class="rpt-wcag-info__desc">{{wcagDescription}}</div>
                   </div>
                   {{/if}}
+                  {{#if (canFixCode ../../user.role)}}
+                  {{{fixSuggestion wcagCriterion message}}}
+                  {{/if}}
                 </td>
                 <td>
                   {{#if regulations}}
@@ -350,7 +386,7 @@
                   &mdash;
                   {{/if}}
                 </td>
-                <td><span class="rpt-code">{{selector}}</span></td>
+                {{#if (canViewTechnical ../../user.role)}}<td><span class="rpt-code">{{selector}}</span></td>{{/if}}
               </tr>
               {{/each}}
             </tbody>
@@ -707,4 +743,56 @@
       }
     });
   })();
+
+  /* ── Assign issue via POST ──────────────────────────────────────────────── */
+  function rptAssignIssue(btn, code, selector, message, severity, wcagCriterion, wcagTitle) {
+    var scanId = '{{scan.id}}';
+    var fingerprint = code + '|' + selector + '|' + message;
+
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+    var formData = new URLSearchParams();
+    formData.append('issueFingerprint', fingerprint);
+    formData.append('severity', severity);
+    formData.append('message', message);
+    if (code) formData.append('code', code);
+    if (selector) formData.append('selector', selector);
+    if (wcagCriterion) formData.append('wcagCriterion', wcagCriterion);
+    if (wcagTitle) formData.append('wcagTitle', wcagTitle);
+
+    btn.disabled = true;
+    btn.textContent = 'Assigning...';
+
+    fetch('/reports/' + scanId + '/assignments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'x-csrf-token': csrfToken,
+        'HX-Request': 'true'
+      },
+      body: formData.toString()
+    })
+    .then(function(response) {
+      if (!response.ok) throw new Error('Assign failed');
+      return response.text();
+    })
+    .then(function() {
+      btn.textContent = 'Assigned';
+      btn.classList.add('rpt-assign-btn--done');
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.textContent = 'Assign';
+    });
+  }
 </script>
+
+<style>
+  .rpt-assign-btn {
+    padding: 0.2rem 0.5rem; font-size: 0.7rem; border: 1px solid var(--border-color, #ccc);
+    border-radius: 3px; background: transparent; cursor: pointer; white-space: nowrap; margin-left: auto;
+  }
+  .rpt-assign-btn:hover { background: var(--primary-color, #2563eb); color: #fff; border-color: var(--primary-color, #2563eb); }
+  .rpt-assign-btn--done { background: #d1fae5; color: #065f46; border-color: #a7f3d0; cursor: default; }
+</style>

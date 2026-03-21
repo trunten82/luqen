@@ -552,14 +552,34 @@ export async function reportRoutes(
       const hasPrev = offset > 0;
       const currentPage = Math.floor(offset / limit) + 1;
 
-      const formatted = page.map((s) => ({
-        ...s,
-        jurisdictions: s.jurisdictions.join(', '),
-        createdAtDisplay: new Date(s.createdAt).toLocaleString(),
-        completedAtDisplay: s.completedAt
-          ? new Date(s.completedAt).toLocaleString()
-          : '',
-      }));
+      // For each completed scan, find the previous completed scan of the same URL
+      // to enable "Compare with previous" links
+      const formatted = page.map((s) => {
+        let previousScanId: string | undefined;
+        if (s.status === 'completed') {
+          const previousScans = db.listScans({
+            siteUrl: s.siteUrl,
+            status: 'completed',
+            limit: 10,
+          });
+          // listScans returns descending by date; find first one older than current
+          const prev = previousScans.find(
+            (ps) => ps.id !== s.id && new Date(ps.createdAt) < new Date(s.createdAt),
+          );
+          if (prev !== undefined) {
+            previousScanId = prev.id;
+          }
+        }
+        return {
+          ...s,
+          jurisdictions: s.jurisdictions.join(', '),
+          createdAtDisplay: new Date(s.createdAt).toLocaleString(),
+          completedAtDisplay: s.completedAt
+            ? new Date(s.completedAt).toLocaleString()
+            : '',
+          previousScanId,
+        };
+      });
 
       // HTMX partial request — return table fragment only
       const isHtmx = request.headers['hx-request'] === 'true';
@@ -653,6 +673,10 @@ export async function reportRoutes(
       const manualTotal = MANUAL_CRITERIA.length;
       const manualPct = manualTotal > 0 ? Math.round((manualTested / manualTotal) * 100) : 0;
 
+      // Compute issue assignment stats
+      const assignmentStats = db.getAssignmentStats(id);
+      const assignmentActiveCount = assignmentStats.open + assignmentStats.assigned + assignmentStats.inProgress;
+
       return reply.view('report-detail.hbs', {
         pageTitle: `Report — ${scan.siteUrl}`,
         currentPath: `/reports/${id}`,
@@ -664,6 +688,8 @@ export async function reportRoutes(
           total: manualTotal,
           percentage: manualPct,
         },
+        assignmentStats,
+        assignmentActiveCount,
       });
     },
   );
@@ -719,9 +745,12 @@ export async function reportRoutes(
         'utf-8',
       );
       const template = handlebars.compile(templateSource);
+      const userRole = request.user?.role ?? 'user';
       const html = template({
         scan: scanMeta,
         reportData,
+        userRole,
+        isExecutive: userRole === 'executive',
       });
 
       return reply.type('text/html').send(html);

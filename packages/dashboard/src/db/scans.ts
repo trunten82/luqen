@@ -219,7 +219,253 @@ CREATE INDEX IF NOT EXISTS idx_manual_tests_scan ON manual_test_results(scan_id)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_manual_tests_unique ON manual_test_results(scan_id, criterion_id);
     `,
   },
+  {
+    id: '008',
+    name: 'create-scan-schedules',
+    sql: `
+CREATE TABLE IF NOT EXISTS scan_schedules (
+  id TEXT PRIMARY KEY,
+  site_url TEXT NOT NULL,
+  standard TEXT NOT NULL DEFAULT 'WCAG2AA',
+  scan_mode TEXT NOT NULL DEFAULT 'single',
+  jurisdictions TEXT NOT NULL DEFAULT '[]',
+  frequency TEXT NOT NULL DEFAULT 'weekly',
+  next_run_at TEXT NOT NULL,
+  last_run_at TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_by TEXT NOT NULL,
+  org_id TEXT NOT NULL DEFAULT 'system',
+  runner TEXT DEFAULT 'htmlcs',
+  incremental INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_scan_schedules_next ON scan_schedules(next_run_at, enabled);
+    `,
+  },
+  {
+    id: '009',
+    name: 'create-issue-assignments',
+    sql: `
+CREATE TABLE IF NOT EXISTS issue_assignments (
+  id TEXT PRIMARY KEY,
+  scan_id TEXT NOT NULL,
+  issue_fingerprint TEXT NOT NULL,
+  wcag_criterion TEXT,
+  wcag_title TEXT,
+  severity TEXT NOT NULL,
+  message TEXT NOT NULL,
+  selector TEXT,
+  page_url TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  assigned_to TEXT,
+  notes TEXT,
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  org_id TEXT NOT NULL DEFAULT 'system'
+);
+CREATE INDEX IF NOT EXISTS idx_issue_assignments_scan ON issue_assignments(scan_id);
+CREATE INDEX IF NOT EXISTS idx_issue_assignments_status ON issue_assignments(status);
+CREATE INDEX IF NOT EXISTS idx_issue_assignments_assigned ON issue_assignments(assigned_to);
+    `,
+  },
+  {
+    id: '010',
+    name: 'create-connected-repos',
+    sql: `
+CREATE TABLE IF NOT EXISTS connected_repos (
+  id TEXT PRIMARY KEY,
+  site_url_pattern TEXT NOT NULL,
+  repo_url TEXT NOT NULL,
+  repo_path TEXT,
+  branch TEXT NOT NULL DEFAULT 'main',
+  auth_token TEXT,
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  org_id TEXT NOT NULL DEFAULT 'system'
+);
+CREATE INDEX IF NOT EXISTS idx_connected_repos_site ON connected_repos(site_url_pattern, org_id);
+    `,
+  },
 ];
+
+export interface ConnectedRepo {
+  readonly id: string;
+  readonly siteUrlPattern: string;
+  readonly repoUrl: string;
+  readonly repoPath: string | null;
+  readonly branch: string;
+  readonly authToken: string | null;
+  readonly createdBy: string;
+  readonly createdAt: string;
+  readonly orgId: string;
+}
+
+interface ConnectedRepoRow {
+  id: string;
+  site_url_pattern: string;
+  repo_url: string;
+  repo_path: string | null;
+  branch: string;
+  auth_token: string | null;
+  created_by: string;
+  created_at: string;
+  org_id: string;
+}
+
+function repoRowToRecord(row: ConnectedRepoRow): ConnectedRepo {
+  return {
+    id: row.id,
+    siteUrlPattern: row.site_url_pattern,
+    repoUrl: row.repo_url,
+    repoPath: row.repo_path,
+    branch: row.branch,
+    authToken: row.auth_token,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    orgId: row.org_id,
+  };
+}
+
+export type IssueAssignmentStatus = 'open' | 'assigned' | 'in-progress' | 'fixed' | 'verified';
+
+export interface IssueAssignment {
+  readonly id: string;
+  readonly scanId: string;
+  readonly issueFingerprint: string;
+  readonly wcagCriterion: string | null;
+  readonly wcagTitle: string | null;
+  readonly severity: string;
+  readonly message: string;
+  readonly selector: string | null;
+  readonly pageUrl: string | null;
+  readonly status: IssueAssignmentStatus;
+  readonly assignedTo: string | null;
+  readonly notes: string | null;
+  readonly createdBy: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly orgId: string;
+}
+
+export interface AssignmentFilters {
+  readonly scanId?: string;
+  readonly status?: IssueAssignmentStatus;
+  readonly assignedTo?: string;
+  readonly orgId?: string;
+}
+
+export interface AssignmentStats {
+  readonly open: number;
+  readonly assigned: number;
+  readonly inProgress: number;
+  readonly fixed: number;
+  readonly verified: number;
+  readonly total: number;
+}
+
+interface AssignmentRow {
+  id: string;
+  scan_id: string;
+  issue_fingerprint: string;
+  wcag_criterion: string | null;
+  wcag_title: string | null;
+  severity: string;
+  message: string;
+  selector: string | null;
+  page_url: string | null;
+  status: string;
+  assigned_to: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  org_id: string;
+}
+
+function assignmentRowToRecord(row: AssignmentRow): IssueAssignment {
+  return {
+    id: row.id,
+    scanId: row.scan_id,
+    issueFingerprint: row.issue_fingerprint,
+    wcagCriterion: row.wcag_criterion,
+    wcagTitle: row.wcag_title,
+    severity: row.severity,
+    message: row.message,
+    selector: row.selector,
+    pageUrl: row.page_url,
+    status: row.status as IssueAssignmentStatus,
+    assignedTo: row.assigned_to,
+    notes: row.notes,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    orgId: row.org_id,
+  };
+}
+
+export interface ScanSchedule {
+  readonly id: string;
+  readonly siteUrl: string;
+  readonly standard: string;
+  readonly scanMode: string;
+  readonly jurisdictions: string[];
+  readonly frequency: string;
+  readonly nextRunAt: string;
+  readonly lastRunAt: string | null;
+  readonly enabled: boolean;
+  readonly createdBy: string;
+  readonly orgId: string;
+  readonly runner: string | null;
+  readonly incremental: boolean;
+}
+
+export interface CreateScheduleInput {
+  readonly id: string;
+  readonly siteUrl: string;
+  readonly standard: string;
+  readonly scanMode: string;
+  readonly jurisdictions: string[];
+  readonly frequency: string;
+  readonly nextRunAt: string;
+  readonly createdBy: string;
+  readonly orgId: string;
+  readonly runner?: string;
+  readonly incremental?: boolean;
+}
+
+interface ScheduleRow {
+  id: string;
+  site_url: string;
+  standard: string;
+  scan_mode: string;
+  jurisdictions: string;
+  frequency: string;
+  next_run_at: string;
+  last_run_at: string | null;
+  enabled: number;
+  created_by: string;
+  org_id: string;
+  runner: string | null;
+  incremental: number;
+}
+
+function scheduleRowToRecord(row: ScheduleRow): ScanSchedule {
+  return {
+    id: row.id,
+    siteUrl: row.site_url,
+    standard: row.standard,
+    scanMode: row.scan_mode,
+    jurisdictions: JSON.parse(row.jurisdictions) as string[],
+    frequency: row.frequency,
+    nextRunAt: row.next_run_at,
+    lastRunAt: row.last_run_at,
+    enabled: row.enabled === 1,
+    createdBy: row.created_by,
+    orgId: row.org_id,
+    runner: row.runner,
+    incremental: row.incremental === 1,
+  };
+}
 
 export interface PageHashEntry {
   readonly siteUrl: string;
@@ -506,6 +752,316 @@ export class ScanDb {
       testedAt: now,
       orgId: data.orgId ?? 'system',
     };
+  }
+
+  // ── Scan schedules ──────────────────────────────────────────────────
+
+  listSchedules(orgId?: string): ScanSchedule[] {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+
+    if (orgId !== undefined) {
+      conditions.push('org_id = @orgId');
+      params['orgId'] = orgId;
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const sql = `SELECT * FROM scan_schedules ${where} ORDER BY next_run_at ASC`;
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(params) as ScheduleRow[];
+    return rows.map(scheduleRowToRecord);
+  }
+
+  getSchedule(id: string): ScanSchedule | null {
+    const stmt = this.db.prepare('SELECT * FROM scan_schedules WHERE id = ?');
+    const row = stmt.get(id) as ScheduleRow | undefined;
+    return row !== undefined ? scheduleRowToRecord(row) : null;
+  }
+
+  createSchedule(data: CreateScheduleInput): ScanSchedule {
+    const stmt = this.db.prepare(`
+      INSERT INTO scan_schedules (id, site_url, standard, scan_mode, jurisdictions, frequency, next_run_at, created_by, org_id, runner, incremental)
+      VALUES (@id, @siteUrl, @standard, @scanMode, @jurisdictions, @frequency, @nextRunAt, @createdBy, @orgId, @runner, @incremental)
+    `);
+
+    stmt.run({
+      id: data.id,
+      siteUrl: data.siteUrl,
+      standard: data.standard,
+      scanMode: data.scanMode,
+      jurisdictions: JSON.stringify(data.jurisdictions),
+      frequency: data.frequency,
+      nextRunAt: data.nextRunAt,
+      createdBy: data.createdBy,
+      orgId: data.orgId,
+      runner: data.runner ?? 'htmlcs',
+      incremental: data.incremental ? 1 : 0,
+    });
+
+    const created = this.getSchedule(data.id);
+    if (created === null) {
+      throw new Error(`Failed to retrieve schedule after creation: ${data.id}`);
+    }
+    return created;
+  }
+
+  updateSchedule(id: string, data: Partial<{ enabled: boolean; nextRunAt: string; lastRunAt: string }>): void {
+    const setClauses: string[] = [];
+    const params: Record<string, unknown> = { id };
+
+    if (data.enabled !== undefined) {
+      setClauses.push('enabled = @enabled');
+      params['enabled'] = data.enabled ? 1 : 0;
+    }
+    if (data.nextRunAt !== undefined) {
+      setClauses.push('next_run_at = @nextRunAt');
+      params['nextRunAt'] = data.nextRunAt;
+    }
+    if (data.lastRunAt !== undefined) {
+      setClauses.push('last_run_at = @lastRunAt');
+      params['lastRunAt'] = data.lastRunAt;
+    }
+
+    if (setClauses.length === 0) return;
+
+    const stmt = this.db.prepare(
+      `UPDATE scan_schedules SET ${setClauses.join(', ')} WHERE id = @id`
+    );
+    stmt.run(params);
+  }
+
+  deleteSchedule(id: string): void {
+    this.db.prepare('DELETE FROM scan_schedules WHERE id = ?').run(id);
+  }
+
+  getDueSchedules(): ScanSchedule[] {
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(
+      'SELECT * FROM scan_schedules WHERE next_run_at <= @now AND enabled = 1'
+    );
+    const rows = stmt.all({ now }) as ScheduleRow[];
+    return rows.map(scheduleRowToRecord);
+  }
+
+  // ── Issue assignments ─────────────────────────────────────────────
+
+  listAssignments(filters: AssignmentFilters = {}): IssueAssignment[] {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+
+    if (filters.scanId !== undefined) {
+      conditions.push('scan_id = @scanId');
+      params['scanId'] = filters.scanId;
+    }
+    if (filters.status !== undefined) {
+      conditions.push('status = @status');
+      params['status'] = filters.status;
+    }
+    if (filters.assignedTo !== undefined) {
+      conditions.push('assigned_to = @assignedTo');
+      params['assignedTo'] = filters.assignedTo;
+    }
+    if (filters.orgId !== undefined) {
+      conditions.push('org_id = @orgId');
+      params['orgId'] = filters.orgId;
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const sql = `SELECT * FROM issue_assignments ${where} ORDER BY created_at DESC`;
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(params) as AssignmentRow[];
+    return rows.map(assignmentRowToRecord);
+  }
+
+  getAssignment(id: string): IssueAssignment | null {
+    const stmt = this.db.prepare('SELECT * FROM issue_assignments WHERE id = ?');
+    const row = stmt.get(id) as AssignmentRow | undefined;
+    return row !== undefined ? assignmentRowToRecord(row) : null;
+  }
+
+  getAssignmentByFingerprint(scanId: string, fingerprint: string): IssueAssignment | null {
+    const stmt = this.db.prepare(
+      'SELECT * FROM issue_assignments WHERE scan_id = @scanId AND issue_fingerprint = @fingerprint'
+    );
+    const row = stmt.get({ scanId, fingerprint }) as AssignmentRow | undefined;
+    return row !== undefined ? assignmentRowToRecord(row) : null;
+  }
+
+  createAssignment(data: {
+    readonly id: string;
+    readonly scanId: string;
+    readonly issueFingerprint: string;
+    readonly wcagCriterion?: string;
+    readonly wcagTitle?: string;
+    readonly severity: string;
+    readonly message: string;
+    readonly selector?: string;
+    readonly pageUrl?: string;
+    readonly assignedTo?: string;
+    readonly notes?: string;
+    readonly createdBy: string;
+    readonly orgId?: string;
+  }): IssueAssignment {
+    const now = new Date().toISOString();
+
+    const stmt = this.db.prepare(`
+      INSERT INTO issue_assignments (id, scan_id, issue_fingerprint, wcag_criterion, wcag_title, severity, message, selector, page_url, status, assigned_to, notes, created_by, created_at, updated_at, org_id)
+      VALUES (@id, @scanId, @issueFingerprint, @wcagCriterion, @wcagTitle, @severity, @message, @selector, @pageUrl, @status, @assignedTo, @notes, @createdBy, @createdAt, @updatedAt, @orgId)
+    `);
+
+    const assignedTo = data.assignedTo?.trim() || null;
+    const status: IssueAssignmentStatus = assignedTo !== null ? 'assigned' : 'open';
+
+    stmt.run({
+      id: data.id,
+      scanId: data.scanId,
+      issueFingerprint: data.issueFingerprint,
+      wcagCriterion: data.wcagCriterion ?? null,
+      wcagTitle: data.wcagTitle ?? null,
+      severity: data.severity,
+      message: data.message,
+      selector: data.selector ?? null,
+      pageUrl: data.pageUrl ?? null,
+      status,
+      assignedTo,
+      notes: data.notes ?? null,
+      createdBy: data.createdBy,
+      createdAt: now,
+      updatedAt: now,
+      orgId: data.orgId ?? 'system',
+    });
+
+    const created = this.getAssignment(data.id);
+    if (created === null) {
+      throw new Error(`Failed to retrieve assignment after creation: ${data.id}`);
+    }
+    return created;
+  }
+
+  updateAssignment(id: string, data: { status?: IssueAssignmentStatus; assignedTo?: string; notes?: string }): void {
+    const setClauses: string[] = ['updated_at = @updatedAt'];
+    const params: Record<string, unknown> = { id, updatedAt: new Date().toISOString() };
+
+    if (data.status !== undefined) {
+      setClauses.push('status = @status');
+      params['status'] = data.status;
+    }
+    if (data.assignedTo !== undefined) {
+      setClauses.push('assigned_to = @assignedTo');
+      params['assignedTo'] = data.assignedTo.trim() || null;
+    }
+    if (data.notes !== undefined) {
+      setClauses.push('notes = @notes');
+      params['notes'] = data.notes.trim() || null;
+    }
+
+    const stmt = this.db.prepare(
+      `UPDATE issue_assignments SET ${setClauses.join(', ')} WHERE id = @id`
+    );
+    stmt.run(params);
+  }
+
+  getAssignmentStats(scanId: string): AssignmentStats {
+    const stmt = this.db.prepare(
+      'SELECT status, COUNT(*) as cnt FROM issue_assignments WHERE scan_id = ? GROUP BY status'
+    );
+    const rows = stmt.all(scanId) as Array<{ status: string; cnt: number }>;
+
+    const stats: AssignmentStats = {
+      open: 0,
+      assigned: 0,
+      inProgress: 0,
+      fixed: 0,
+      verified: 0,
+      total: 0,
+    };
+
+    let total = 0;
+    const result = { ...stats };
+    for (const row of rows) {
+      total += row.cnt;
+      switch (row.status) {
+        case 'open': result.open = row.cnt; break;
+        case 'assigned': result.assigned = row.cnt; break;
+        case 'in-progress': result.inProgress = row.cnt; break;
+        case 'fixed': result.fixed = row.cnt; break;
+        case 'verified': result.verified = row.cnt; break;
+      }
+    }
+
+    return { ...result, total };
+  }
+
+  // ── Connected repos ──────────────────────────────────────────────────
+
+  listRepos(orgId?: string): ConnectedRepo[] {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+
+    if (orgId !== undefined) {
+      conditions.push('org_id = @orgId');
+      params['orgId'] = orgId;
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const sql = `SELECT * FROM connected_repos ${where} ORDER BY created_at DESC`;
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(params) as ConnectedRepoRow[];
+    return rows.map(repoRowToRecord);
+  }
+
+  getRepo(id: string): ConnectedRepo | null {
+    const stmt = this.db.prepare('SELECT * FROM connected_repos WHERE id = ?');
+    const row = stmt.get(id) as ConnectedRepoRow | undefined;
+    return row !== undefined ? repoRowToRecord(row) : null;
+  }
+
+  findRepoForUrl(siteUrl: string, orgId: string): ConnectedRepo | null {
+    const stmt = this.db.prepare(
+      'SELECT * FROM connected_repos WHERE @siteUrl LIKE site_url_pattern AND org_id = @orgId ORDER BY created_at DESC LIMIT 1'
+    );
+    const row = stmt.get({ siteUrl, orgId }) as ConnectedRepoRow | undefined;
+    return row !== undefined ? repoRowToRecord(row) : null;
+  }
+
+  createRepo(data: {
+    readonly id: string;
+    readonly siteUrlPattern: string;
+    readonly repoUrl: string;
+    readonly repoPath?: string;
+    readonly branch?: string;
+    readonly authToken?: string;
+    readonly createdBy: string;
+    readonly orgId?: string;
+  }): ConnectedRepo {
+    const now = new Date().toISOString();
+
+    const stmt = this.db.prepare(`
+      INSERT INTO connected_repos (id, site_url_pattern, repo_url, repo_path, branch, auth_token, created_by, created_at, org_id)
+      VALUES (@id, @siteUrlPattern, @repoUrl, @repoPath, @branch, @authToken, @createdBy, @createdAt, @orgId)
+    `);
+
+    stmt.run({
+      id: data.id,
+      siteUrlPattern: data.siteUrlPattern,
+      repoUrl: data.repoUrl,
+      repoPath: data.repoPath ?? null,
+      branch: data.branch ?? 'main',
+      authToken: data.authToken ?? null,
+      createdBy: data.createdBy,
+      createdAt: now,
+      orgId: data.orgId ?? 'system',
+    });
+
+    const created = this.getRepo(data.id);
+    if (created === null) {
+      throw new Error(`Failed to retrieve connected repo after creation: ${data.id}`);
+    }
+    return created;
+  }
+
+  deleteRepo(id: string): void {
+    this.db.prepare('DELETE FROM connected_repos WHERE id = ?').run(id);
   }
 
   close(): void {
