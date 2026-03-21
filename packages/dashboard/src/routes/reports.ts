@@ -680,7 +680,12 @@ export async function reportRoutes(
       const allAssignments = db.listAssignments({ scanId: id });
       const assignedMap: Record<string, { id: string; status: string; assignedTo: string | null }> = {};
       for (const a of allAssignments) {
+        // Store by exact fingerprint
         assignedMap[a.issueFingerprint] = { id: a.id, status: a.status, assignedTo: a.assignedTo };
+        // Also store by wcag_criterion for bulk-assigned items (criterion||bulk||title format)
+        if (a.wcagCriterion) {
+          assignedMap[`criterion:${a.wcagCriterion}`] = { id: a.id, status: a.status, assignedTo: a.assignedTo };
+        }
       }
 
       // Build assignees list (users + teams) for the assignment picker
