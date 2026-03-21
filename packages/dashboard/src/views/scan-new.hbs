@@ -124,12 +124,12 @@
       </div>
       <div class="form-group">
         <label class="checkbox-label">
-          <input type="checkbox" name="incremental" value="true">
+          <input type="checkbox" name="incremental" value="true" id="incremental-cb">
           <span>Incremental scan</span>
         </label>
         <p class="form-hint" id="incremental-hint">
           Only re-scan pages that changed since the last scan of this URL.
-          Works with Full Site scan mode only.
+          Automatically selects Full Site mode.
         </p>
       </div>
     </div>
@@ -140,3 +140,22 @@
     </div>
   </form>
 </section>
+
+<script>
+  (function() {
+    var incrementalCb = document.getElementById('incremental-cb');
+    var modeRadios = document.querySelectorAll('input[name="scanMode"]');
+    if (!incrementalCb) return;
+
+    incrementalCb.addEventListener('change', function() {
+      if (this.checked) {
+        modeRadios.forEach(function(r) {
+          if (r.value === 'site') { r.checked = true; }
+          r.disabled = true;
+        });
+      } else {
+        modeRadios.forEach(function(r) { r.disabled = false; });
+      }
+    });
+  })();
+</script>

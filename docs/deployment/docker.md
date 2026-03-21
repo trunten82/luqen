@@ -60,6 +60,15 @@ DASHBOARD_DB_PATH=/app/data/dashboard.db
 DASHBOARD_SESSION_SECRET=<min 32 random bytes>
 DASHBOARD_COMPLIANCE_CLIENT_ID=dashboard
 DASHBOARD_COMPLIANCE_CLIENT_SECRET=<client secret>
+
+# Optional: multi-worker scaling (comma-separated additional webservice URLs)
+# DASHBOARD_WEBSERVICE_URLS=http://pa11y-2:3000,http://pa11y-3:3000
+
+# Optional: test runner (htmlcs or axe)
+# DASHBOARD_SCANNER_RUNNER=htmlcs
+
+# Optional: max pages per full-site scan (1-1000, default 50)
+# DASHBOARD_MAX_PAGES=50
 ```
 
 Note: use the Docker Compose service name (`compliance`) instead of `localhost` for inter-service communication.

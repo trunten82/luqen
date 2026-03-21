@@ -205,4 +205,16 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 
 ---
 
+## New in v0.13.0
+
+- **Runner selection** — choose between HTML_CodeSniffer and axe-core via `--runner axe` (CLI), `DASHBOARD_SCANNER_RUNNER` (env), or the scan form dropdown.
+- **Incremental scanning** — re-scan only pages whose content has changed (SHA-256 content hash delta detection). Enable with the "Incremental scan" checkbox in the dashboard.
+- **Trend tracking** — view error/warning/notice trends over time at `/reports/trends`, with executive summary cards on the home page.
+- **Print/PDF export** — open `/reports/:id/print` for a print-optimized view; use your browser's Print dialog to save as PDF.
+- **Manual testing checklists** — 27 WCAG 2.1 AA criteria at `/reports/:id/manual` with pass/fail/NA recording per scan.
+- **Browser bookmarklet** — drag-to-install from `/tools/bookmarklet`; pre-fills the scan form with the current page URL.
+- **Multi-worker scaling** — distribute scans across multiple pa11y webservice instances via `DASHBOARD_WEBSERVICE_URLS`.
+
+---
+
 *See also: [Docs home](README.md) | [USER-GUIDE.md](USER-GUIDE.md) | [guides/scanning.md](guides/scanning.md)*

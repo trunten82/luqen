@@ -2,7 +2,7 @@
 
 # What is Pally Agent?
 
-Pally Agent is a composable accessibility platform that scans websites for WCAG violations, maps every issue to the laws that require you to fix it, proposes source-level code fixes, and tracks regulatory changes across 58 jurisdictions. You install only the tiers you need — from a single CLI command to a full web dashboard with legal monitoring.
+Pally Agent is a composable accessibility platform that scans websites for WCAG violations, maps every issue to the laws that require you to fix it, proposes source-level code fixes, and tracks regulatory changes across 58 jurisdictions. It supports multiple test runners (HTML_CodeSniffer and axe-core), incremental scanning for changed pages only, trend tracking over time, manual testing checklists, and multi-worker scaling. You install only the tiers you need — from a single CLI command to a full web dashboard with legal monitoring.
 
 ---
 
@@ -83,7 +83,7 @@ Pally Agent currently tests against **WCAG 2.1** (Levels A, AA, AAA). The underl
 
 **Impact:** If your compliance requirements reference WCAG 2.2, Pally Agent will not flag violations specific to the nine new success criteria. Existing WCAG 2.0/2.1 criteria are fully covered.
 
-**Workaround:** Supplement automated scanning with manual testing for WCAG 2.2 criteria. See the [W3C What's New in WCAG 2.2](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/) guide.
+**Partial workaround:** Switch to the **axe-core runner** (`--runner axe` or `DASHBOARD_SCANNER_RUNNER=axe`), which provides coverage for some WCAG 2.2 criteria (e.g., Target Size 2.5.8). Supplement with manual testing for the remaining WCAG 2.2 criteria — the dashboard's manual testing checklists at `/reports/:id/manual` can help structure this review. See the [W3C What's New in WCAG 2.2](https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/) guide.
 
 **Status:** Tracking upstream at [pa11y/pa11y#635](https://github.com/pa11y/pa11y/issues/635). When pa11y adds WCAG 2.2 support, Pally Agent will inherit it automatically.
 
