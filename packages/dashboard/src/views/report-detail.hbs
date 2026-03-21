@@ -135,18 +135,6 @@
 {{! ── Tab 2: Issues — unified list grouped by WCAG criterion ─────────────── }}
 <div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-issues" role="tabpanel" aria-labelledby="tab-issues">
 
-  {{! Bulk assign toolbar }}
-  {{#if perm.issuesAssign}}
-  <div class="rpt-bulk-bar" id="rpt-bulk-bar" style="display:none;">
-    <label class="rpt-bulk-bar__select-all"><input type="checkbox" id="rpt-bulk-select-all" onchange="rptBulkToggleAll(this.checked)"> Select all visible</label>
-    <span id="rpt-bulk-count">0 selected</span>
-    <select id="rpt-bulk-assignee" class="rpt-bulk-bar__select">
-      <option value="">Unassigned</option>
-    </select>
-    <button type="button" class="btn btn--primary btn--sm" onclick="rptBulkAssign()">Assign Selected</button>
-  </div>
-  {{/if}}
-
   {{! Summary + filters }}
   <div class="rpt-issues-header">
     <div class="rpt-issues-summary" id="rpt-issues-summary">
@@ -156,8 +144,24 @@
     <div class="rpt-controls" role="toolbar" aria-label="Filter controls">
       <div class="rpt-filter-bar" id="rpt-filter-bar"></div>
       <input type="text" class="rpt-search" placeholder="Search&hellip;" aria-label="Search issues" oninput="rptSearchIssues(this.value)">
+      {{#if perm.issuesAssign}}
+      <button type="button" class="btn btn--ghost btn--sm" id="rpt-bulk-mode-btn" onclick="rptToggleBulkMode()">Bulk Assign</button>
+      {{/if}}
     </div>
   </div>
+
+  {{! Bulk assign toolbar — shown when bulk mode active }}
+  {{#if perm.issuesAssign}}
+  <div class="rpt-bulk-bar" id="rpt-bulk-bar" style="display:none;">
+    <label class="rpt-bulk-bar__select-all"><input type="checkbox" id="rpt-bulk-select-all" onchange="rptBulkToggleAll(this.checked)"> Select all visible</label>
+    <span id="rpt-bulk-count">0 selected</span>
+    <select id="rpt-bulk-assignee" class="rpt-bulk-bar__select">
+      <option value="">Select assignee...</option>
+    </select>
+    <button type="button" class="btn btn--primary btn--sm" onclick="rptBulkAssign()">Assign Selected</button>
+    <button type="button" class="btn btn--ghost btn--sm" onclick="rptToggleBulkMode()">Cancel</button>
+  </div>
+  {{/if}}
 
   {{#if reportData.allIssueGroups}}
   <div class="rpt-issue-list" id="rpt-issue-list">
@@ -741,11 +745,32 @@
   }
 
   /* ── Bulk assign ─────────────────────────────────────────────────────── */
+  var _bulkMode = false;
+
+  function rptToggleBulkMode() {
+    _bulkMode = !_bulkMode;
+    var issueList = document.getElementById('rpt-issue-list');
+    var bar = document.getElementById('rpt-bulk-bar');
+    var modeBtn = document.getElementById('rpt-bulk-mode-btn');
+    if (issueList) issueList.classList.toggle('rpt-bulk-active', _bulkMode);
+    if (bar) bar.style.display = _bulkMode ? 'flex' : 'none';
+    if (modeBtn) {
+      modeBtn.textContent = _bulkMode ? 'Cancel Bulk' : 'Bulk Assign';
+      modeBtn.classList.toggle('btn--primary', _bulkMode);
+      modeBtn.classList.toggle('btn--ghost', !_bulkMode);
+    }
+    if (!_bulkMode) {
+      // Uncheck all
+      document.querySelectorAll('.rpt-bulk-cb').forEach(function(cb) { cb.checked = false; });
+      var selectAll = document.getElementById('rpt-bulk-select-all');
+      if (selectAll) selectAll.checked = false;
+      rptBulkUpdate();
+    }
+  }
+
   function rptBulkUpdate() {
     var checked = document.querySelectorAll('.rpt-bulk-cb:checked');
-    var bar = document.getElementById('rpt-bulk-bar');
     var countEl = document.getElementById('rpt-bulk-count');
-    if (bar) bar.style.display = checked.length > 0 ? 'flex' : 'none';
     if (countEl) countEl.textContent = checked.length + ' selected';
   }
 

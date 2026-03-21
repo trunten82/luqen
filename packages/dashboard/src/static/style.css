@@ -2027,7 +2027,9 @@ select {
 .rpt-bulk-bar { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.85rem; background: var(--accent-light); border: 1px solid var(--accent); border-radius: 6px; margin-bottom: 0.75rem; flex-wrap: wrap; font-size: 0.84rem; }
 .rpt-bulk-bar__select-all { display: flex; align-items: center; gap: 0.3rem; cursor: pointer; font-weight: 600; }
 .rpt-bulk-bar__input { padding: 0.3rem 0.6rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.82rem; width: 160px; }
-.rpt-bulk-cb { cursor: pointer; margin-right: 0.2rem; }
+.rpt-bulk-cb { cursor: pointer; margin-right: 0.2rem; display: none; }
+.rpt-bulk-active .rpt-bulk-cb { display: inline-block; }
+.rpt-bulk-bar__select { padding: 0.3rem 0.6rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.82rem; }
 .rpt-issues-summary { font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.5rem; }
 .rpt-filter-bar { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
 .rpt-filter-sep { color: var(--border-color); font-size: 0.85rem; margin: 0 0.1rem; }
