@@ -224,6 +224,16 @@ For a complete reference, see [guides/dashboard-admin.md](guides/dashboard-admin
 
 The dashboard tracks scan results over time. Visit `/reports/trends` to see Chart.js line charts showing error, warning, and notice counts across scans for each URL. The home page displays executive summary cards with trend indicators — whether issues are increasing, decreasing, or stable compared to previous scans.
 
+### Email reports
+
+The dashboard can send scheduled accessibility reports by email. Configure this under **Admin > Email Reports**:
+
+1. **SMTP setup** — enter your mail server host, port, TLS setting, credentials, and "from" address. Use **Test Connection** to verify.
+2. **Create a schedule** — give it a name, enter the site URL, add one or more recipient addresses, and choose a frequency (daily, weekly, or monthly) and format (PDF, CSV, or both).
+3. **Manage schedules** — enable/disable, send immediately, or delete from the schedule list.
+
+The email body contains an inline-styled HTML summary with key metrics. PDF attachments use the same print template as the browser export; CSV attachments use the same export logic as the Data API.
+
 ### Print / PDF export
 
 Each report has a print-friendly view at `/reports/:id/print`. This is a standalone page optimized for `window.print()` — open it and use your browser's Print dialog to save as PDF or send to a printer. The layout removes navigation and interactive elements for a clean printed output.

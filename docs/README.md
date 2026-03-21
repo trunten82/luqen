@@ -50,7 +50,7 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 | [guides/compliance-check.md](guides/compliance-check.md) | Jurisdictions, reading the matrix, confirmed vs review |
 | [guides/fix-proposals.md](guides/fix-proposals.md) | Auto-fixable issues, interactive CLI, MCP flow |
 | [guides/reports.md](guides/reports.md) | JSON structure, HTML features, template dedup, issue assignments, fix proposals, report comparison, manual testing, trends |
-| [guides/dashboard-admin.md](guides/dashboard-admin.md) | Dashboard user guide, admin reference, customizable roles & permissions, connected repos, scan scheduling |
+| [guides/dashboard-admin.md](guides/dashboard-admin.md) | Dashboard user guide, admin reference, customizable roles & permissions, connected repos, scan scheduling, email reports |
 | [guides/ci-cd.md](guides/ci-cd.md) | Pipeline integration, exit codes, fail-on-violations |
 
 ---

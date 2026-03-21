@@ -272,6 +272,57 @@ Link GitHub or GitLab repositories to enable source-aware fix proposals:
 - View proposal statistics per repo
 - Disconnect repos when no longer needed
 
+### Email Reports
+
+**Path:** `/admin/email-reports`
+
+Configure scheduled email delivery of accessibility reports.
+
+#### SMTP configuration
+
+Enter your mail server settings at the top of the page:
+
+| Field | Description |
+|-------|-------------|
+| **Host** | SMTP server hostname (e.g., `smtp.example.com`) |
+| **Port** | SMTP port (typically 587 for STARTTLS, 465 for implicit TLS) |
+| **TLS** | Enable TLS encryption |
+| **Username** | SMTP authentication username |
+| **Password** | SMTP authentication password |
+| **From address** | Sender address for outgoing reports |
+
+Click **Test Connection** to verify the SMTP settings before saving. Credentials are stored in the dashboard database — no environment variables are needed.
+
+#### Creating a schedule
+
+Click **New Email Report** and fill in:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | A label for this schedule (e.g., "Weekly staging report") |
+| **Site URL** | The site to report on (must have existing scan data) |
+| **Recipients** | One or more email addresses (comma-separated) |
+| **Frequency** | Daily, weekly, or monthly |
+| **Format** | PDF, CSV, or both |
+
+#### Format options
+
+- **PDF** — uses the same print template as the browser PDF export, attached to the email.
+- **CSV** — uses the same export logic as the Data API CSV endpoints, attached to the email.
+- **Both** — attaches both PDF and CSV files.
+
+The email body contains an inline-styled HTML summary with KPI metrics (errors, warnings, notices, compliance status).
+
+#### Managing schedules
+
+Each schedule row provides:
+
+- **Enable / Disable** toggle — pause delivery without deleting the schedule
+- **Send Now** — trigger an immediate send outside the normal schedule
+- **Delete** — remove the schedule permanently
+
+The dashboard uses [nodemailer](https://nodemailer.com/) (MIT licensed) for SMTP delivery.
+
 ### Scan Schedules
 
 **Path:** `/admin/schedules`

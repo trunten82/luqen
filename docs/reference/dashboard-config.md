@@ -62,6 +62,8 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `COMPLIANCE_API_KEY` | — | API key for service-to-service calls to the compliance service. Set this on the compliance service side; the dashboard sends it in the `X-API-Key` header when making compliance API requests. |
 | `DASHBOARD_API_KEY` | — | API key for the dashboard data API endpoints (`/api/v1/scans`, `/api/v1/trends`, etc.) and CSV export. Clients authenticate by sending `X-API-Key: <key>` in the request header. Generate keys from the admin UI at `/admin/api-keys`. |
 
+**SMTP configuration:** Email report settings (host, port, TLS, credentials, from address) are managed entirely through the dashboard UI at **Admin > Email Reports**. No environment variables or config file entries are needed — credentials are stored in the dashboard database.
+
 **Precedence:** Environment variables > `dashboard.config.json` > built-in defaults.
 
 ---

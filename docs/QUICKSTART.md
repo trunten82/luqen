@@ -205,6 +205,10 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 
 ---
 
+## New in v0.17.0
+
+- **Scheduled email reports** — configure SMTP and create report delivery schedules (daily/weekly/monthly) with PDF and/or CSV attachments from **Admin > Email Reports**.
+
 ## New in v0.15.0
 
 - **Org-wide accessibility score** — a 0-100 score aggregated across all scanned sites, with trend tracking over time.
