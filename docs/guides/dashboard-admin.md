@@ -278,9 +278,20 @@ Link GitHub or GitLab repositories to enable source-aware fix proposals:
 
 Configure scheduled email delivery of accessibility reports.
 
-#### SMTP configuration
+> **v0.18.0:** Email reports is now powered by the `@pally-agent/plugin-notify-email` plugin. Install and activate it from **Admin > Plugins** before creating email schedules. SMTP configuration has moved from the dashboard database to the plugin's config panel at **Admin > Plugins**. The legacy `smtp_config` table still works as a fallback if the plugin is not installed.
 
-Enter your mail server settings at the top of the page:
+#### Prerequisites
+
+1. Go to **Admin > Plugins** and install `@pally-agent/plugin-notify-email`
+2. Configure SMTP settings in the plugin config (host, port, TLS, credentials, from address)
+3. Activate the plugin — a health check verifies SMTP connectivity
+4. Return to **Admin > Email Reports** to create schedules
+
+The plugin also supports event notifications (`scan.complete`, `scan.failed`) in addition to scheduled report delivery.
+
+#### SMTP configuration (plugin)
+
+Configure SMTP in the plugin settings at **Admin > Plugins > Email Notifications**:
 
 | Field | Description |
 |-------|-------------|
@@ -291,7 +302,7 @@ Enter your mail server settings at the top of the page:
 | **Password** | SMTP authentication password |
 | **From address** | Sender address for outgoing reports |
 
-Click **Test Connection** to verify the SMTP settings before saving. Credentials are stored in the dashboard database — no environment variables are needed.
+The plugin runs a connectivity health check on activation. Credentials are encrypted with AES-256-GCM in the plugin config store.
 
 #### Creating a schedule
 

@@ -143,6 +143,38 @@ Plugin health status is visible at **Settings > Plugins** — a green indicator 
 
 ---
 
+## Email Notifications
+
+Send scan results and scheduled accessibility reports by email using the Email Notifications plugin.
+
+### Install
+
+1. Go to **Settings > Plugins** and install `@pally-agent/plugin-notify-email`
+2. Configure SMTP settings (host, port, TLS, credentials, from address) in the plugin config
+3. Activate the plugin — a health check verifies SMTP connectivity
+
+### Event notifications
+
+The plugin subscribes to dashboard events and sends email alerts:
+
+| Event | Trigger |
+|-------|---------|
+| `scan.complete` | A scan finishes successfully |
+| `scan.failed` | A scan fails with an error |
+
+Configure subscribed events in the plugin settings.
+
+### Scheduled report delivery
+
+After the plugin is active, create email schedules at **Admin > Email Reports**:
+- Choose frequency (daily, weekly, monthly)
+- Attach PDF, CSV, or both
+- Send to multiple recipients
+
+See [Dashboard Admin — Email Reports](../guides/dashboard-admin.md#email-reports) for full details.
+
+---
+
 ## Next steps
 
 - [Full Dashboard guide](full-dashboard.md) — setup and administration

@@ -119,6 +119,13 @@ send(event: PallyEvent): Promise<void>;
 
 Events: `scan.complete`, `scan.failed`, `violation.found`, `regulation.changed`.
 
+**Available notification plugins:**
+
+| Package | Purpose |
+|---------|---------|
+| `@pally-agent/plugin-notify-slack` | Slack channel notifications |
+| `@pally-agent/plugin-notify-email` | Email notifications and scheduled report delivery with PDF/CSV attachments |
+
 **StoragePlugin** extends `PluginInstance`:
 
 ```typescript
