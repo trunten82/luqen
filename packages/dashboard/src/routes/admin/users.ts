@@ -31,7 +31,7 @@ export async function userRoutes(
       }));
 
       return reply.view('admin/users.hbs', {
-        pageTitle: 'Users',
+        pageTitle: 'API Users (Compliance)',
         currentPath: '/admin/users',
         user: request.user,
         users: formatted,

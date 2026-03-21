@@ -145,7 +145,7 @@ export DASHBOARD_SESSION_SECRET="$(openssl rand -base64 32)"
 docker compose up -d
 ```
 
-Open `http://localhost:5000` and log in with a compliance service user account.
+Open `http://localhost:5000` and log in with a Dashboard User account (or an API key in solo mode).
 
 ### Scan scheduling
 
@@ -177,14 +177,16 @@ Link GitHub or GitLab repositories under **Settings > Connected Repos**. When a 
 
 ### Role-based experience
 
-The dashboard adapts its navigation and default views based on four user roles:
+The dashboard adapts its navigation and default views based on the user's role and permissions. Four default roles are provided, and admins can create custom roles with any combination of 15 granular permissions via **Admin > Roles**:
 
 | Role | Default view | Tailored experience |
 |------|-------------|---------------------|
-| **Admin** | System overview | Full settings, user management, connected repos |
+| **Admin** | System overview | Full settings, user management, role management, connected repos |
 | **Developer** | Issue list | Fix proposals, code diffs, assignment queue |
 | **User** | Report list | Scan creation, report browsing, manual testing |
 | **Executive** | Org score dashboard | Aggregated score, trends, compliance summary |
+
+> **Dashboard Users vs API Users (Compliance):** Dashboard Users log in to the web UI and are managed at `/admin/users`. API Users are accounts on the compliance service for direct API access, managed via `pally-compliance users create`. These are separate user stores.
 
 ### Scan modes
 

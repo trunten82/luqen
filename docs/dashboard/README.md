@@ -232,26 +232,27 @@ The JWT is stored in an `httpOnly`, `SameSite=Strict`, signed cookie and verifie
 
 ### Roles
 
-The JWT contains a `role` claim set by the compliance service when the user logs in.
+Roles are DB-managed and customizable via **Admin > Roles** (`/admin/roles`). The dashboard ships with four default roles. Admins can modify their permissions or create custom roles with any combination of 15 granular permissions.
 
-| Role | Permissions |
+| Role | Default permissions |
 |------|-------------|
-| `viewer` | Browse and view reports, view home page, compare reports |
-| `user` | All viewer permissions + create scans, delete own reports |
-| `admin` | All user permissions + full admin section (jurisdictions, regulations, requirements, proposals, sources, webhooks, users, OAuth clients, system health) |
+| `executive` | `reports.view`, `analytics.view` — read-only access to reports, trends, and compliance summaries |
+| `user` | Executive defaults + `scans.create`, `scans.view`, `testing.manual`, `reports.delete` — create scans, manual testing, delete own reports |
+| `developer` | User defaults + `issues.view`, `issues.manage`, `repos.view` — fix proposals, code diffs, assignment queue |
+| `admin` | All 15 permissions — full admin section including roles, users, system settings |
 
 ### Route protection
 
-| Route | Required role |
-|-------|---------------|
+| Route | Required permission |
+|-------|---------------------|
 | `GET /login` | none |
 | `GET /static/*` | none |
-| `GET /home` | viewer |
-| `GET /reports`, `GET /reports/*` | viewer |
-| `GET /scan/new`, `POST /scan/new` | user |
-| `GET /scan/:id/progress` | user |
-| `DELETE /reports/:id` | user (own reports only) |
-| `GET /admin/*`, `POST /admin/*`, `PUT /admin/*`, `DELETE /admin/*` | admin |
+| `GET /home` | `reports.view` or `analytics.view` |
+| `GET /reports`, `GET /reports/*` | `reports.view` |
+| `GET /scan/new`, `POST /scan/new` | `scans.create` |
+| `GET /scan/:id/progress` | `scans.view` |
+| `DELETE /reports/:id` | `reports.delete` (own reports only) |
+| `GET /admin/*`, `POST /admin/*`, `PUT /admin/*`, `DELETE /admin/*` | `admin.system` |
 
 ---
 
@@ -413,10 +414,10 @@ Approved proposals update the compliance service's jurisdiction/regulation data 
 **`/admin/users`** — list and manage user accounts in the compliance service.
 
 - Columns: username, role, created date, status.
-- **Create** — modal form with username, password, and role dropdown (`viewer`, `user`, `admin`).
+- **Create** — modal form with username, password, and role dropdown (shows all available roles including custom ones).
 - **Deactivate** — marks the user inactive (does not delete the account). Confirmation required.
 
-Note: User passwords are managed in the compliance service. The dashboard provides a convenient UI but does not store credentials locally.
+Note: Dashboard Users are stored in the dashboard's local SQLite database. These are separate from API Users (Compliance) managed via `pally-compliance users create`.
 
 ### Managing OAuth clients
 

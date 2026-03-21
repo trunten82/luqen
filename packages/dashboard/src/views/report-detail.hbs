@@ -39,7 +39,7 @@
       &larr; Back to Reports
     </a>
     {{#if reportData}}
-    {{#if (canDoManualTesting user.role)}}
+    {{#if perm.manualTesting}}
     <a href="/reports/{{scan.id}}/manual" class="btn btn--ghost btn--sm" aria-label="Open manual testing checklist">
       Manual Testing {{#if manualTestStats}}({{manualTestStats.percentage}}%){{/if}}
     </a>
@@ -48,12 +48,12 @@
       Print / PDF
     </a>
     <a href="/api/v1/export/scans/{{scan.id}}/issues.csv" class="btn btn--ghost btn--sm" aria-label="Export issues as CSV">Export CSV</a>
-    {{#if (canAssignIssues user.role)}}
+    {{#if perm.issuesAssign}}
     <a href="/reports/{{scan.id}}/assignments" class="btn btn--ghost btn--sm" aria-label="View issue assignments" id="assignments-link">
       Assignments{{#if assignmentActiveCount}} ({{assignmentActiveCount}}){{/if}}
     </a>
     {{/if}}
-    {{#if (canFixCode user.role)}}
+    {{#if perm.issuesFix}}
     <a href="/reports/{{scan.id}}/fixes" class="btn btn--ghost btn--sm" aria-label="Propose code fixes for accessibility issues">
       Propose Fixes
     </a>
@@ -187,12 +187,12 @@
               <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
               <span class="rpt-component-tag">{{componentName}}</span>
               <span class="rpt-text--muted">({{affectedCount}} pages)</span>
-              {{#if (canAssignIssues ../../user.role)}}
+              {{#if ../../perm.issuesAssign}}
               <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
               {{/if}}
             </div>
             <div class="rpt-issue-item__message">{{message}}</div>
-            {{#if (canViewTechnical ../../user.role)}}
+            {{#if ../../perm.reportsViewTechnical}}
             {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
             {{#if context}}<div class="rpt-issue-item__detail"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
             {{/if}}
@@ -202,7 +202,7 @@
               <ul>{{#each affectedPages}}<li>{{this}}</li>{{/each}}</ul>
             </details>
             {{/if}}
-            {{#if (canFixCode ../../user.role)}}
+            {{#if ../../perm.issuesFix}}
             {{{fixSuggestion wcagCriterion message}}}
             {{/if}}
           </div>
@@ -215,15 +215,15 @@
           <div class="rpt-issue-item__head">
             <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
             <span class="rpt-issue-item__message">{{message}}</span>
-            {{#if (canAssignIssues ../../user.role)}}
+            {{#if ../../perm.issuesAssign}}
             <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
             {{/if}}
           </div>
-          {{#if (canViewTechnical ../../user.role)}}
+          {{#if ../../perm.reportsViewTechnical}}
           {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
           {{#if context}}<div class="rpt-issue-item__detail"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
           {{/if}}
-          {{#if (canFixCode ../../user.role)}}
+          {{#if ../../perm.issuesFix}}
           {{{fixSuggestion wcagCriterion message}}}
           {{/if}}
         </div>
@@ -270,7 +270,7 @@
             <span class="rpt-text--muted">({{affectedCount}} pages)</span>
           </div>
           <div class="rpt-issue-item__message">{{message}}</div>
-          {{#if (canViewTechnical ../../user.role)}}
+          {{#if ../../perm.reportsViewTechnical}}
           {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
           {{#if context}}<div class="rpt-issue-item__detail"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
           {{/if}}
@@ -291,7 +291,7 @@
             <ul>{{#each affectedPages}}<li>{{this}}</li>{{/each}}</ul>
           </details>
           {{/if}}
-          {{#if (canFixCode ../../user.role)}}
+          {{#if ../../perm.issuesFix}}
           {{{fixSuggestion wcagCriterion message}}}
           {{/if}}
         </div>
@@ -343,7 +343,7 @@
                 <th scope="col">WCAG Criterion</th>
                 <th scope="col">What&apos;s Wrong</th>
                 <th scope="col">Legal Impact</th>
-                {{#if (canViewTechnical ../user.role)}}<th scope="col">Element</th>{{/if}}
+                {{#if ../perm.reportsViewTechnical}}<th scope="col">Element</th>{{/if}}
               </tr>
             </thead>
             <tbody>
@@ -369,7 +369,7 @@
                     <div class="rpt-wcag-info__desc">{{wcagDescription}}</div>
                   </div>
                   {{/if}}
-                  {{#if (canFixCode ../../user.role)}}
+                  {{#if ../../perm.issuesFix}}
                   {{{fixSuggestion wcagCriterion message}}}
                   {{/if}}
                 </td>
@@ -386,7 +386,7 @@
                   &mdash;
                   {{/if}}
                 </td>
-                {{#if (canViewTechnical ../../user.role)}}<td><span class="rpt-code">{{selector}}</span></td>{{/if}}
+                {{#if ../../perm.reportsViewTechnical}}<td><span class="rpt-code">{{selector}}</span></td>{{/if}}
               </tr>
               {{/each}}
             </tbody>

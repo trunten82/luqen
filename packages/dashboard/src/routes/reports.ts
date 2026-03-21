@@ -746,11 +746,12 @@ export async function reportRoutes(
       );
       const template = handlebars.compile(templateSource);
       const userRole = request.user?.role ?? 'user';
+      const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined ?? new Set<string>();
       const html = template({
         scan: scanMeta,
         reportData,
         userRole,
-        isExecutive: userRole === 'executive',
+        isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
       });
 
       return reply.type('text/html').send(html);
@@ -773,12 +774,11 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
-      // Only the creator or admin can delete
+      // Only users with reports.delete permission can delete (or the creator)
       const user = request.user;
-      if (
-        user?.role !== 'admin' &&
-        scan.createdBy !== user?.username
-      ) {
+      const permsSet = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
+      const canDelete = permsSet?.has('reports.delete') === true || scan.createdBy === user?.username;
+      if (!canDelete) {
         return reply.code(403).send({ error: 'You can only delete your own reports' });
       }
 

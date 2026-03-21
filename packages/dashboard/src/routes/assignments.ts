@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import type { ScanDb, IssueAssignmentStatus } from '../db/scans.js';
+import { hasPermission } from '../permissions.js';
 
 const VALID_STATUSES = new Set<IssueAssignmentStatus>([
   'open',
@@ -49,8 +50,7 @@ export async function assignmentRoutes(
   server.get(
     '/reports/:id/assignments',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      // Executive role cannot view assignments
-      if (request.user?.role === 'executive') {
+      if (!hasPermission(request, 'issues.assign')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
       }
 
@@ -97,8 +97,7 @@ export async function assignmentRoutes(
   server.post(
     '/reports/:id/assignments',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      // Executive role cannot create assignments
-      if (request.user?.role === 'executive') {
+      if (!hasPermission(request, 'issues.assign')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
       }
 

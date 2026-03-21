@@ -1,6 +1,6 @@
 {
   "name": "@pally-agent/dashboard",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Web dashboard for pally accessibility scanner",
   "type": "module",
   "main": "dist/cli.js",

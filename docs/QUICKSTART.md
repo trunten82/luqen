@@ -213,7 +213,8 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 - **Connected repos with fix proposals** — link GitHub/GitLab repos to receive AI-generated fix suggestions (21 proposal types via MCP/A2A integration).
 - **Enhanced manual testing** — step-by-step guides with good/bad examples for each manual check criterion.
 - **Report comparison improvements** — side-by-side delta view with regression alerts when new issues appear.
-- **Role-based UX** — four personas (admin, developer, user, executive) with tailored navigation and default views.
+- **Role-based UX** — four default personas (admin, developer, user, executive) with tailored navigation and default views.
+- **Customizable roles & permissions** — DB-driven roles with 15 granular permissions across 7 groups. Create custom roles or modify system role permissions via Admin > Roles.
 - **UI polish** — page transition animations, empty-state illustrations, and skeleton loading placeholders.
 
 ## New in v0.14.0

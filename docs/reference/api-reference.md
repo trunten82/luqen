@@ -178,7 +178,9 @@ Signature verification: `X-Webhook-Signature: sha256=<hmac-sha256-of-body>`
 
 ## Dashboard Scan API
 
-Base URL: `http://localhost:5000` (dashboard service). Requires user role authentication via session cookie.
+Base URL: `http://localhost:5000` (dashboard service). Requires user authentication via session cookie.
+
+All dashboard endpoints respect the user's permission set (derived from their assigned role). For example, `POST /scan/new` requires the `scans.create` permission, report endpoints require `reports.view`, and all `/admin/*` endpoints require the `admin.system` permission. See the [Role reference](dashboard-config.md#role-reference) for the full permission matrix.
 
 ### `POST /scan/new`
 
@@ -200,7 +202,7 @@ Rate limited: 10 requests per 10 minutes per session.
 
 ## Dashboard Plugin API
 
-Base URL: `http://localhost:5000` (dashboard service). All plugin endpoints require admin role authentication via session cookie.
+Base URL: `http://localhost:5000` (dashboard service). All plugin endpoints require the `admin.system` permission via session cookie.
 
 ### `GET /api/v1/plugins`
 
@@ -327,7 +329,7 @@ curl -X DELETE http://localhost:4000/api/v1/orgs/acme-corp/data \
 
 ## Dashboard API — Organization Management
 
-Base URL: `http://localhost:5000` (dashboard service). All organization endpoints require admin role authentication via session cookie.
+Base URL: `http://localhost:5000` (dashboard service). All organization endpoints require the `admin.system` permission via session cookie.
 
 | Method | Path | Description |
 |--------|------|-------------|
