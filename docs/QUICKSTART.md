@@ -205,6 +205,15 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 
 ---
 
+## New in v0.20.0
+
+- **Teams** — create and manage teams at **Admin > Teams**. Add/remove members, assign issues to teams, and map IdP groups to teams for automatic membership sync with your identity provider.
+- **User/team picker** — issue assignments now use a searchable dropdown instead of free-text input, listing all users and teams.
+- **Bulk assign** — select multiple issue groups with checkboxes and assign them to a user or team in one operation.
+- **Delete assignments** — remove assignments with a confirmation dialog; the issue returns to Open status.
+- **Inline assignment status** — when an issue is already assigned, an inline status badge replaces the Assign button showing the current assignee and status.
+- **Plugin guide** — new [Plugin Configuration Guide](reference/plugin-guide.md) documenting all 6 available plugins with their configuration fields and setup instructions.
+
 ## New in v0.18.0
 
 - **Email reports plugin** — email reports refactored to the `@pally-agent/plugin-notify-email` plugin. SMTP config moves from the dashboard DB to plugin config at **Admin > Plugins**. Supports event notifications (`scan.complete`, `scan.failed`) and scheduled report delivery with PDF/CSV attachments. Legacy `smtp_config` table still works as fallback.

@@ -131,7 +131,7 @@ Authentication for dashboard users is handled locally by the dashboard (see [Aut
 
 ## Role reference
 
-Roles are now **DB-managed and customizable** via **Admin > Roles** (`/admin/roles`). The four roles below are created as defaults during migration. Admins can modify their permissions or create entirely new roles.
+Roles are now **DB-managed and customizable** via **Admin > Roles** (`/admin/roles`). The four roles below are created as defaults during migration. Admins can modify their permissions or create entirely new roles. Users can also be organised into **teams** at **Admin > Teams** (`/admin/teams`) — teams are used for issue assignment and can be synced with IdP groups when SSO is active.
 
 | Role | Default permissions | Default view |
 |------|---------------------|-------------|

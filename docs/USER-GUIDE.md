@@ -157,19 +157,43 @@ The dashboard supports recurring scans. From the scan form, enable **Schedule** 
 
 Scheduled scans use the same settings (URL, standard, jurisdictions, runner) as the original scan. View and manage schedules from **Settings > Schedules** in the sidebar.
 
+### Teams
+
+Teams let you organise dashboard users into groups for issue assignment and collaboration. Manage teams at **Admin > Teams**:
+
+- **Create a team** — give it a name and optional description.
+- **Add/remove members** — use the user picker dropdown to add members; click **Remove** to take them off the team.
+- **IdP group mapping** — when using SSO (e.g., Azure Entra ID), map IdP groups to dashboard teams so membership stays in sync with your identity provider.
+
+Teams appear in the assignee picker when assigning issues, so you can assign work to a team rather than an individual.
+
 ### Issue assignments
 
-Each issue in a report can be assigned to a team member and tracked through a lifecycle:
+Each issue in a report can be assigned to a user or team and tracked through a lifecycle:
 
 | Status | Meaning |
 |--------|---------|
 | **Open** | New issue, not yet assigned |
-| **Assigned** | Assigned to a developer |
+| **Assigned** | Assigned to a user or team |
 | **In Progress** | Developer is working on the fix |
 | **Fixed** | Fix applied, awaiting verification |
 | **Verified** | Re-scanned and confirmed resolved |
 
-Assign issues from the report Issues tab by clicking the assignee dropdown on any issue row.
+Assign issues from the report Issues tab using the **assignee dropdown** (a searchable user/team picker). When an issue is already assigned, an inline **status badge** replaces the Assign button showing the current status and assignee.
+
+#### Bulk assignment
+
+To assign multiple issues at once:
+
+1. Enable checkboxes by clicking the **Select** toggle on the Issues tab.
+2. Check the issues (or issue groups) you want to assign.
+3. Click **Bulk Assign** in the toolbar that appears.
+4. Choose an assignee from the user/team picker dropdown.
+5. All selected issues are assigned in a single operation.
+
+#### Deleting assignments
+
+Click the **Remove** button next to any assignment to delete it. A confirmation dialog appears before the assignment is removed. The issue returns to **Open** status.
 
 ### Connected repositories
 

@@ -39,6 +39,7 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 | [reference/compliance-config.md](reference/compliance-config.md) | `@pally-agent/compliance` — `compliance.config.json`, env vars, CLI |
 | [reference/dashboard-config.md](reference/dashboard-config.md) | `@pally-agent/dashboard` — `dashboard.config.json`, env vars, CLI |
 | [reference/monitor-config.md](reference/monitor-config.md) | `@pally-agent/monitor` — env vars, CLI |
+| [reference/plugin-guide.md](reference/plugin-guide.md) | Plugin configuration — all 6 plugins (auth, notification, storage) with setup guides |
 
 ---
 
@@ -50,7 +51,7 @@ Pally Agent is a site-wide WCAG accessibility scanner with legal compliance mapp
 | [guides/compliance-check.md](guides/compliance-check.md) | Jurisdictions, reading the matrix, confirmed vs review |
 | [guides/fix-proposals.md](guides/fix-proposals.md) | Auto-fixable issues, interactive CLI, MCP flow |
 | [guides/reports.md](guides/reports.md) | JSON structure, HTML features, template dedup, issue assignments, fix proposals, report comparison, manual testing, trends |
-| [guides/dashboard-admin.md](guides/dashboard-admin.md) | Dashboard user guide, admin reference, customizable roles & permissions, connected repos, scan scheduling, email reports |
+| [guides/dashboard-admin.md](guides/dashboard-admin.md) | Dashboard user guide, admin reference, teams, customizable roles & permissions, connected repos, scan scheduling, email reports |
 | [guides/ci-cd.md](guides/ci-cd.md) | Pipeline integration, exit codes, fail-on-violations |
 
 ---

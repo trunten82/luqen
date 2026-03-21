@@ -209,17 +209,36 @@ The dashboard tracks scan results over time for each URL.
 
 ## Issue assignments
 
-Each issue in a report can be assigned to a team member and tracked through a lifecycle:
+Each issue in a report can be assigned to a user or team and tracked through a lifecycle:
 
 | Status | Meaning |
 |--------|---------|
 | **Open** | Newly detected, not yet assigned |
-| **Assigned** | Assigned to a developer via the assignee dropdown |
+| **Assigned** | Assigned to a user or team via the assignee picker |
 | **In Progress** | Developer is actively working on the fix |
 | **Fixed** | Fix applied, awaiting verification scan |
 | **Verified** | Re-scanned and confirmed resolved |
 
-Click the assignee dropdown on any issue row in the Issues tab to assign it. Status transitions are logged with timestamps. Filter the issue list by assignment status using the **Status** filter.
+### Assigning issues
+
+Click the **assignee dropdown** on any issue row in the Issues tab. The dropdown is a searchable picker listing all dashboard users and teams — no more free-text entry. When an issue is already assigned, an inline **status badge** replaces the Assign button, showing the current assignee and status.
+
+### Bulk assignment
+
+Select multiple issues at once using checkboxes:
+
+1. Click the **Select** toggle to show checkboxes on issue groups.
+2. Check the issues you want to assign.
+3. Click **Bulk Assign** in the toolbar.
+4. Choose an assignee from the user/team picker.
+
+All selected issues are assigned in a single operation.
+
+### Deleting assignments
+
+Click the **Remove** button next to any assignment. A confirmation dialog appears before the assignment is deleted. The issue returns to **Open** status.
+
+Status transitions are logged with timestamps. Filter the issue list by assignment status using the **Status** filter.
 
 ---
 
