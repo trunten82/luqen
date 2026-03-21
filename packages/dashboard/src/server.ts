@@ -215,8 +215,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const who = a.assignedTo ? ` &middot; ${esc(a.assignedTo)}` : '';
     return new handlebars.SafeString(
-      `<span class="rpt-assigned-badge rpt-assigned-badge--${a.status}">${esc(a.status)}${who}</span>` +
-      `<button type="button" class="rpt-unassign-btn" onclick="rptUnassign('${esc(a.id)}', this)" title="Remove assignment">&times;</button>`
+      `<button type="button" class="rpt-assigned-toggle rpt-assigned-toggle--${a.status}" data-assignment-id="${esc(a.id)}" onclick="rptToggleAssignment(this)" title="Click to unassign">${esc(a.status)}${who}</button>`
     );
   });
 
