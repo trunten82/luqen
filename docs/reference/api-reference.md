@@ -503,6 +503,51 @@ curl -H "X-API-Key: $PALLY_API_KEY" \
 
 ---
 
+### `GET /api/v1/scans/:id/fixes`
+
+Get AI-generated fix proposals for a scan. Requires connected repos to be configured.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Filter by proposal status: `pending`, `applied`, `dismissed` |
+| `limit` | number | Results per page (default: 50, max: 200) |
+| `offset` | number | Skip N results (default: 0) |
+
+**Example request:**
+
+```bash
+curl -H "X-API-Key: $PALLY_API_KEY" \
+  "http://localhost:5000/api/v1/scans/abc123/fixes?status=pending"
+```
+
+**Example response:**
+
+```json
+{
+  "data": [
+    {
+      "id": "fix-001",
+      "scanId": "abc123",
+      "issueCode": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+      "wcagCriterion": "1.1.1",
+      "repo": "github.com/org/frontend",
+      "filePath": "src/components/Header.tsx",
+      "lineRange": [12, 12],
+      "diff": "- <img src=\"logo.svg\">\n+ <img src=\"logo.svg\" alt=\"Company logo\">",
+      "status": "pending",
+      "createdAt": "2026-03-15T10:33:00Z"
+    }
+  ],
+  "total": 21,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+---
+
 ### `GET /api/v1/trends`
 
 Time-series data showing issue counts per site across scans. Use this to build trend charts in Power BI or other tools.

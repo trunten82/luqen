@@ -108,11 +108,14 @@ The dashboard supports a progressive authentication model:
 
 ## User roles
 
-| Role | Capabilities |
-|------|-------------|
-| **admin** | Full access. Can manage users, jurisdictions, regulations, webhooks, OAuth clients, and system settings. Can delete any report. |
-| **user** | Can start scans, view all reports, and delete their own reports. Cannot access admin pages. |
-| **viewer** | Read-only. Can view reports but cannot start scans or delete anything. |
+The dashboard supports four role-based personas, each with tailored navigation and default views:
+
+| Role | Default view | Capabilities |
+|------|-------------|-------------|
+| **admin** | System overview | Full access. Manage users, jurisdictions, regulations, webhooks, OAuth clients, connected repos, schedules, and system settings. Can delete any report. |
+| **developer** | Issue list | View fix proposals and code diffs, manage assignment queue, start scans, delete own reports. Cannot access admin settings. |
+| **user** | Report list | Start scans, view all reports, run manual testing checklists, delete own reports. Cannot access admin pages. |
+| **executive** | Org score dashboard | Read-only. View org-wide accessibility score (0-100), aggregated trends, and compliance summaries. Cannot start scans or modify data. |
 
 ---
 
@@ -231,7 +234,27 @@ View and manage the legislation monitor:
 
 **Path:** `/admin/proposals`
 
-View and manage auto-generated fix proposals across scans.
+View and manage auto-generated fix proposals across scans. When connected repos are configured, proposals include AI-generated code diffs (21 suggestion types via MCP/A2A integration).
+
+### Connected Repositories
+
+**Path:** `/admin/repos`
+
+Link GitHub or GitLab repositories to enable source-aware fix proposals:
+- Add repos by URL with authentication tokens
+- Map repos to scan URL patterns (e.g., `https://staging.example.com` maps to `github.com/org/frontend`)
+- View proposal statistics per repo
+- Disconnect repos when no longer needed
+
+### Scan Schedules
+
+**Path:** `/admin/schedules`
+
+Manage recurring scan schedules:
+- View all active schedules with next run time and last result
+- Create new schedules (daily, weekly, or monthly) from existing scan configurations
+- Pause, resume, or delete schedules
+- View execution history per schedule
 
 ---
 

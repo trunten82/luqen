@@ -205,6 +205,17 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 
 ---
 
+## New in v0.15.0
+
+- **Org-wide accessibility score** — a 0-100 score aggregated across all scanned sites, with trend tracking over time.
+- **Scan scheduling** — configure daily, weekly, or monthly recurring scans from the dashboard. No external cron needed.
+- **Issue assignment lifecycle** — assign issues to team members and track them through open, assigned, in-progress, fixed, and verified states.
+- **Connected repos with fix proposals** — link GitHub/GitLab repos to receive AI-generated fix suggestions (21 proposal types via MCP/A2A integration).
+- **Enhanced manual testing** — step-by-step guides with good/bad examples for each manual check criterion.
+- **Report comparison improvements** — side-by-side delta view with regression alerts when new issues appear.
+- **Role-based UX** — four personas (admin, developer, user, executive) with tailored navigation and default views.
+- **UI polish** — page transition animations, empty-state illustrations, and skeleton loading placeholders.
+
 ## New in v0.14.0
 
 - **REST API** — 5 JSON endpoints at `/api/v1/*` for external data consumption (Power BI, custom integrations). Auth via `X-API-Key` header, rate limited 60/min.

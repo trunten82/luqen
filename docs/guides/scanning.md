@@ -69,6 +69,22 @@ This significantly reduces scan time for large sites where only a few pages chan
 
 ---
 
+## Scan scheduling
+
+The dashboard supports recurring scans without external cron. When creating a scan, enable the **Schedule** toggle and select a frequency:
+
+| Frequency | Behaviour |
+|-----------|-----------|
+| **Daily** | Runs at the configured time every day |
+| **Weekly** | Runs on a selected day of the week |
+| **Monthly** | Runs on a selected day of the month |
+
+Scheduled scans inherit the original scan's URL, standard, jurisdictions, runner, and concurrency settings. Manage active schedules from **Settings > Schedules** in the dashboard sidebar. Each schedule shows its next run time, last result, and can be paused or deleted.
+
+CLI equivalent: use `pally-agent scan --schedule daily|weekly|monthly` to create a schedule via the API.
+
+---
+
 ## Page limits
 
 The `maxPages` setting caps how many pages are discovered and scanned during a Full Site scan.

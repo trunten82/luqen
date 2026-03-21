@@ -129,11 +129,12 @@ Authentication for dashboard users is handled locally by the dashboard (see [Aut
 
 ## Role reference
 
-| Role | Permissions in dashboard |
-|------|--------------------------|
-| `viewer` | Browse and view reports, compare reports |
-| `user` | viewer + create scans, delete own reports |
-| `admin` | user + full admin section (jurisdictions, regulations, users, OAuth clients, webhooks, health) |
+| Role | Permissions in dashboard | Default view |
+|------|--------------------------|-------------|
+| `executive` | Browse reports, view org-wide accessibility score, aggregated trends, compliance summaries (read-only) | Org score dashboard |
+| `user` | executive + create scans, run manual testing, delete own reports | Report list |
+| `developer` | user + view fix proposals, manage issue assignments, access code diffs | Issue list |
+| `admin` | developer + full admin section (jurisdictions, regulations, users, OAuth clients, webhooks, connected repos, schedules, health) | System overview |
 
 ---
 

@@ -147,6 +147,45 @@ docker compose up -d
 
 Open `http://localhost:5000` and log in with a compliance service user account.
 
+### Scan scheduling
+
+The dashboard supports recurring scans. From the scan form, enable **Schedule** and choose a frequency:
+
+- **Daily** — runs at the configured time each day
+- **Weekly** — runs on a chosen day of the week
+- **Monthly** — runs on a chosen day of the month
+
+Scheduled scans use the same settings (URL, standard, jurisdictions, runner) as the original scan. View and manage schedules from **Settings > Schedules** in the sidebar.
+
+### Issue assignments
+
+Each issue in a report can be assigned to a team member and tracked through a lifecycle:
+
+| Status | Meaning |
+|--------|---------|
+| **Open** | New issue, not yet assigned |
+| **Assigned** | Assigned to a developer |
+| **In Progress** | Developer is working on the fix |
+| **Fixed** | Fix applied, awaiting verification |
+| **Verified** | Re-scanned and confirmed resolved |
+
+Assign issues from the report Issues tab by clicking the assignee dropdown on any issue row.
+
+### Connected repositories
+
+Link GitHub or GitLab repositories under **Settings > Connected Repos**. When a scan completes, pally-agent analyses the issues against connected repo source files and generates fix proposals (up to 21 suggestion types) via MCP/A2A integration. View proposals in the report under the **Fixes** tab or at `/admin/proposals`.
+
+### Role-based experience
+
+The dashboard adapts its navigation and default views based on four user roles:
+
+| Role | Default view | Tailored experience |
+|------|-------------|---------------------|
+| **Admin** | System overview | Full settings, user management, connected repos |
+| **Developer** | Issue list | Fix proposals, code diffs, assignment queue |
+| **User** | Report list | Scan creation, report browsing, manual testing |
+| **Executive** | Org score dashboard | Aggregated score, trends, compliance summary |
+
 ### Scan modes
 
 The scan form offers two modes:
@@ -189,7 +228,7 @@ Each report has a print-friendly view at `/reports/:id/print`. This is a standal
 
 ### Manual testing checklists
 
-Automated scanning catches approximately 30-40% of accessibility issues. For the rest, the dashboard provides manual testing checklists at `/reports/:id/manual`. These cover 27 WCAG 2.1 AA criteria that require human judgement (e.g., meaningful alt text, reading order, focus indicators). For each criterion, testers can record a pass, fail, or N/A result. Results are saved per scan and appear alongside automated findings in the report.
+Automated scanning catches approximately 30-40% of accessibility issues. For the rest, the dashboard provides manual testing checklists at `/reports/:id/manual`. These cover 27 WCAG 2.1 AA criteria that require human judgement (e.g., meaningful alt text, reading order, focus indicators). Each criterion now includes step-by-step testing guides with annotated good and bad examples. For each criterion, testers can record a pass, fail, or N/A result. Results are saved per scan and appear alongside automated findings in the report.
 
 ### Browser bookmarklet
 
