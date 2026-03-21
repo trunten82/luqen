@@ -52,7 +52,10 @@
       "version": "1.0.0",
       "description": "Send scan notifications and scheduled email reports via SMTP",
       "packageName": "@pally-agent/plugin-notify-email",
-      "icon": "email"
+      "icon": "email",
+      "adminPages": [
+        { "path": "/admin/email-reports", "title": "Email Reports", "icon": "envelope", "permission": "admin.system" }
+      ]
     },
     {
       "name": "storage-s3",

@@ -52,9 +52,17 @@ export async function emailReportRoutes(
     '/admin/email-reports',
     { preHandler: adminGuard },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const pluginActive = isEmailPluginActive(pluginManager);
+      if (!pluginActive) {
+        // No legacy smtp_config either — redirect to plugins page
+        const orgId = request.user?.currentOrgId ?? 'system';
+        const legacySmtp = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');
+        if (legacySmtp === null) {
+          return reply.redirect('/admin/plugins');
+        }
+      }
       const orgId = request.user?.currentOrgId ?? 'system';
       const reports = db.listEmailReports(orgId);
-      const pluginActive = isEmailPluginActive(pluginManager);
 
       // Legacy: check if smtp_config exists for backward compat
       const smtpConfig = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');

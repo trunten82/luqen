@@ -155,6 +155,17 @@ export interface ScannerPlugin extends PluginInstance {
 }
 
 // ---------------------------------------------------------------------------
+// Admin pages declared by plugins
+// ---------------------------------------------------------------------------
+
+export interface AdminPage {
+  readonly path: string;
+  readonly title: string;
+  readonly icon: string;
+  readonly permission: string;
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -166,4 +177,5 @@ export interface RegistryEntry {
   readonly description: string;
   readonly packageName: string;
   readonly icon?: string;
+  readonly adminPages?: readonly AdminPage[];
 }
