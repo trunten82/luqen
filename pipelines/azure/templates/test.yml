@@ -15,7 +15,7 @@ parameters:
 
 jobs:
   - job: Test_${{ parameters.package }}
-    displayName: Test @pally-agent/${{ parameters.package }}
+    displayName: Test @luqen/${{ parameters.package }}
 
     steps:
       - checkout: self

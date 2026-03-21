@@ -33,7 +33,7 @@ on:
 env:
   AWS_REGION: eu-west-1
   SAM_TEMPLATE: infra/sam/compliance-template.yml
-  S3_BUCKET_PREFIX: pally-agent-sam-artifacts
+  S3_BUCKET_PREFIX: luqen-sam-artifacts
 
 jobs:
 
@@ -104,7 +104,7 @@ jobs:
 
       - name: SAM package (upload to S3)
         run: |
-          STACK_NAME="pally-compliance-${{ env.DEPLOY_ENV }}"
+          STACK_NAME="luqen-compliance-${{ env.DEPLOY_ENV }}"
           S3_BUCKET="${{ env.S3_BUCKET_PREFIX }}-${{ env.DEPLOY_ENV }}"
 
           sam package \
@@ -175,7 +175,7 @@ jobs:
 
       - name: SAM deploy
         run: |
-          STACK_NAME="pally-compliance-${{ env.DEPLOY_ENV }}"
+          STACK_NAME="luqen-compliance-${{ env.DEPLOY_ENV }}"
           S3_BUCKET="${{ env.S3_BUCKET_PREFIX }}-${{ env.DEPLOY_ENV }}"
 
           sam deploy \
@@ -195,7 +195,7 @@ jobs:
         id: get-url
         run: |
           API_URL=$(aws cloudformation describe-stacks \
-            --stack-name "pally-compliance-${{ env.DEPLOY_ENV }}" \
+            --stack-name "luqen-compliance-${{ env.DEPLOY_ENV }}" \
             --query 'Stacks[0].Outputs[?OutputKey==`ComplianceApiUrl`].OutputValue' \
             --output text \
             --region ${{ env.AWS_REGION }})
@@ -230,12 +230,12 @@ jobs:
         run: |
           echo "Deployment failed — rolling back CloudFormation stack..."
           aws cloudformation continue-update-rollback \
-            --stack-name "pally-compliance-${{ env.DEPLOY_ENV }}" \
+            --stack-name "luqen-compliance-${{ env.DEPLOY_ENV }}" \
             --region ${{ env.AWS_REGION }} || true
 
           # Wait for rollback to complete
           aws cloudformation wait stack-rollback-complete \
-            --stack-name "pally-compliance-${{ env.DEPLOY_ENV }}" \
+            --stack-name "luqen-compliance-${{ env.DEPLOY_ENV }}" \
             --region ${{ env.AWS_REGION }} || true
 
           echo "Rollback complete."

@@ -1,7 +1,7 @@
 # GitHub Actions — Reusable workflow: Docker build + push to ECR
 # Inputs:
 #   service          — "compliance" or "core"
-#   ecr-repository   — ECR repository URI, e.g. "123456789.dkr.ecr.eu-west-1.amazonaws.com/pally-compliance"
+#   ecr-repository   — ECR repository URI, e.g. "123456789.dkr.ecr.eu-west-1.amazonaws.com/luqen-compliance"
 #   image-tag        — tag to apply (default: github.sha)
 #   aws-region       — AWS region (default: "eu-west-1")
 

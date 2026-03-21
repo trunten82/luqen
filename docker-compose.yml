@@ -1,7 +1,7 @@
 services:
   redis:
     image: redis:7-alpine
-    container_name: pally-redis
+    container_name: luqen-redis
     ports:
       - "6379:6379"
     restart: unless-stopped
@@ -15,7 +15,7 @@ services:
     build:
       context: .
       dockerfile: packages/compliance/Dockerfile
-    container_name: pally-compliance
+    container_name: luqen-compliance
     ports:
       - "4000:4000"
     volumes:
@@ -39,7 +39,7 @@ services:
     build:
       context: .
       dockerfile: packages/dashboard/Dockerfile
-    container_name: pally-dashboard
+    container_name: luqen-dashboard
     ports:
       - "5000:5000"
     volumes:
@@ -48,7 +48,7 @@ services:
     environment:
       - DASHBOARD_PORT=5000
       - DASHBOARD_COMPLIANCE_URL=http://compliance:4000
-      - DASHBOARD_WEBSERVICE_URL=${PALLY_WEBSERVICE_URL:-http://host.docker.internal:3000}
+      - DASHBOARD_WEBSERVICE_URL=${LUQEN_WEBSERVICE_URL:-http://host.docker.internal:3000}
       - DASHBOARD_REPORTS_DIR=/app/reports
       - DASHBOARD_DB_PATH=/app/data/dashboard.db
       - DASHBOARD_SESSION_SECRET=${DASHBOARD_SESSION_SECRET:-change-me-this-must-be-at-least-32-bytes-long}

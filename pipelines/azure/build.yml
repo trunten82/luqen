@@ -20,7 +20,7 @@ pool:
 variables:
   NODE_VERSION: '20'
   # Set in Azure Pipelines variable groups — do NOT hardcode secrets here
-  # Variable group: pally-agent-secrets (COMPLIANCE_CLIENT_ID, COMPLIANCE_CLIENT_SECRET, etc.)
+  # Variable group: luqen-secrets (COMPLIANCE_CLIENT_ID, COMPLIANCE_CLIENT_SECRET, etc.)
 
 stages:
 
@@ -78,7 +78,7 @@ stages:
             displayName: Detect changed packages
 
   # ─────────────────────────────────────────────
-  # Stage 2: Build and test @pally-agent/core
+  # Stage 2: Build and test @luqen/core
   # ─────────────────────────────────────────────
   - stage: BuildCore
     displayName: Build and test core
@@ -95,7 +95,7 @@ stages:
           nodeVersion: $(NODE_VERSION)
 
   # ─────────────────────────────────────────────
-  # Stage 3: Build and test @pally-agent/compliance
+  # Stage 3: Build and test @luqen/compliance
   # ─────────────────────────────────────────────
   - stage: BuildCompliance
     displayName: Build and test compliance

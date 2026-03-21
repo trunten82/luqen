@@ -1,11 +1,11 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: pally
-  namespace: pally
+  name: luqen
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/name: luqen
+    app.kubernetes.io/part-of: luqen-ecosystem
   annotations:
     # nginx ingress controller
     kubernetes.io/ingress.class: "nginx"
@@ -29,11 +29,11 @@ metadata:
       more_set_headers "Permissions-Policy: geolocation=(), microphone=(), camera=()";
 spec:
   # Replace REPLACE_WITH_YOUR_HOSTNAME with the public DNS hostname,
-  # e.g. pally.example.com
+  # e.g. luqen.example.com
   tls:
     - hosts:
         - REPLACE_WITH_YOUR_HOSTNAME
-      secretName: pally-tls
+      secretName: luqen-tls
 
   rules:
     - host: REPLACE_WITH_YOUR_HOSTNAME
@@ -44,7 +44,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: pally-compliance
+                name: luqen-compliance
                 port:
                   name: http
 
@@ -53,6 +53,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: pally-dashboard
+                name: luqen-dashboard
                 port:
                   name: http

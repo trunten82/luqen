@@ -34,7 +34,7 @@ jobs:
         displayName: Build and push ${{ parameters.service }} image
         inputs:
           command: buildAndPush
-          repository: pally-agent/${{ parameters.service }}
+          repository: luqen/${{ parameters.service }}
           dockerfile: packages/${{ parameters.service }}/Dockerfile
           containerRegistry: acr-service-connection
           tags: |
@@ -42,11 +42,11 @@ jobs:
             latest
           arguments: |
             --build-arg NODE_VERSION=20
-            --cache-from=${{ parameters.registry }}/pally-agent/${{ parameters.service }}:latest
+            --cache-from=${{ parameters.registry }}/luqen/${{ parameters.service }}:latest
             --build-arg BUILDKIT_INLINE_CACHE=1
 
       - script: |
           echo "##vso[task.setvariable variable=imageTag;isOutput=true]${{ parameters.tag }}"
-          echo "##vso[task.setvariable variable=imageFull;isOutput=true]${{ parameters.registry }}/pally-agent/${{ parameters.service }}:${{ parameters.tag }}"
+          echo "##vso[task.setvariable variable=imageFull;isOutput=true]${{ parameters.registry }}/luqen/${{ parameters.service }}:${{ parameters.tag }}"
         name: outputVars
         displayName: Export image tag variables

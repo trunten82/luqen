@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: pally-compliance-config
-  namespace: pally
+  name: luqen-compliance-config
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally-compliance
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/name: luqen-compliance
+    app.kubernetes.io/part-of: luqen-ecosystem
 data:
   # HTTP server configuration
   COMPLIANCE_PORT: "4000"
@@ -27,8 +27,8 @@ data:
 
   # CORS: comma-separated list of allowed origins
   # Override in overlays to match the actual ingress hostname
-  COMPLIANCE_CORS_ORIGIN: "http://pally-dashboard:5000"
+  COMPLIANCE_CORS_ORIGIN: "http://luqen-dashboard:5000"
 
   # Optional Redis cache for compliance check results (5 min TTL).
   # Uncomment to enable — requires Redis deployed to the cluster.
-  # COMPLIANCE_REDIS_URL: "redis://pally-redis:6379"
+  # COMPLIANCE_REDIS_URL: "redis://luqen-redis:6379"
