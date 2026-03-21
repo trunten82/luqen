@@ -159,6 +159,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (reviewStatus === 'review') return 'REVIEW NEEDED';
     return 'PASS';
   });
+  handlebars.registerHelper('formatStandard', (code: string) => {
+    const map: Record<string, string> = {
+      'WCAG2A': 'WCAG 2.1 Level A',
+      'WCAG2AA': 'WCAG 2.1 Level AA',
+      'WCAG2AAA': 'WCAG 2.1 Level AAA',
+    };
+    return map[code] ?? code;
+  });
   handlebars.registerHelper('cmpPositive', (n: number) => typeof n === 'number' && n > 0);
   handlebars.registerHelper('cmpNegative', (n: number) => typeof n === 'number' && n < 0);
   handlebars.registerHelper('cmpSign', (n: number) => {

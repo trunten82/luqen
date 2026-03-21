@@ -9,6 +9,7 @@ import { getToken, getOrgId } from './admin/helpers.js';
 interface NewScanBody {
   siteUrl: string;
   standard: string;
+  scanMode?: string;
   jurisdictions?: string | string[];
   concurrency?: string;
 }
@@ -62,6 +63,7 @@ export async function scanRoutes(
   // POST /scan/new — validate, create record, queue scan
   server.post(
     '/scan/new',
+    { config: { rateLimit: { max: 10, timeWindow: '10 minutes' } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as NewScanBody;
 
@@ -75,6 +77,10 @@ export async function scanRoutes(
         parsedUrl = new URL(body.siteUrl.trim());
       } catch {
         return reply.code(400).send({ error: 'siteUrl must be a valid URL' });
+      }
+
+      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+        return reply.code(400).send({ error: 'URL must use http or https' });
       }
 
       const standard = body.standard ?? 'WCAG2AA';
@@ -91,6 +97,10 @@ export async function scanRoutes(
       }
 
       const jurisdictions = normalizeJurisdictions(body.jurisdictions);
+      if (jurisdictions.length > 50) {
+        return reply.code(400).send({ error: 'Maximum 50 jurisdictions per scan' });
+      }
+      const scanMode = body.scanMode === 'single' ? 'single' : 'site';
 
       const scanId = randomUUID();
 
@@ -109,6 +119,7 @@ export async function scanRoutes(
         standard,
         concurrency,
         jurisdictions,
+        scanMode,
         webserviceUrl: config.webserviceUrl,
         complianceUrl: config.complianceUrl,
         complianceToken: getToken(request),

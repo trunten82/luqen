@@ -4,7 +4,7 @@
 
 ## What you need
 
-- Node.js 18 or later
+- Node.js 20 or later
 - A running pa11y webservice (see below if you don't have one)
 
 ---
@@ -12,7 +12,7 @@
 ## Step 1 — Install
 
 ```bash
-git clone https://github.com/your-org/pally-agent.git
+git clone https://github.com/alanna82/pally-agent.git
 cd pally-agent
 npm install
 npm run build --workspaces
@@ -32,7 +32,8 @@ docker run -d -p 3000:3000 pally/webservice:latest
 ## Step 2 — Run your first scan
 
 ```bash
-export PALLY_WEBSERVICE_URL=http://localhost:3000
+export DASHBOARD_WEBSERVICE_URL=http://localhost:3000   # dashboard uses DASHBOARD_WEBSERVICE_URL
+export PALLY_WEBSERVICE_URL=http://localhost:3000       # CLI uses PALLY_WEBSERVICE_URL
 pally-agent scan https://example.com
 ```
 

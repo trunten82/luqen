@@ -77,7 +77,9 @@ Each issue in the report shows regulation badges (e.g. `EAA`, `ADA`) linking to 
 
 Many pages share the same header, footer, or navigation. If a shared component has an accessibility problem, it appears identically on every page — a single missing `alt` attribute on a logo could show up 50 times across a large site.
 
-Pally-agent detects this: any issue appearing on 3 or more pages with the same selector and context is moved to a **Template & Layout Issues** section. The entry shows how many pages are affected. Fix it once in the shared component and all occurrences resolve.
+Pally-agent detects this: any issue appearing on 3 or more pages with the same selector and context is deduplicated and grouped by **inferred component**. The system analyses selectors, DOM context, and page positions to assign each template issue to a named component — Navigation, Footer, Cookie Banner, Form, Header, or a general Layout group. Each component group shows its affected page count and severity breakdown.
+
+In the dashboard, template issues appear in a dedicated **Templates** tab (only visible on full-site scans). Fix an issue once in the shared component and all occurrences resolve across the site.
 
 This deduplication removes approximately 84% of duplicate noise on typical sites.
 
@@ -144,6 +146,31 @@ docker compose up -d
 ```
 
 Open `http://localhost:5000` and log in with a compliance service user account.
+
+### Scan modes
+
+The scan form offers two modes:
+
+- **Single Page** (default) — scans only the URL you enter. Fastest option for checking a single page.
+- **Full Site** — discovers all pages via sitemap/crawl and scans each one. Enables template issue detection and the Templates tab.
+
+### Report layout
+
+Reports use a tabbed layout with a **summary bar** at the top showing total errors, warnings, and notices. The tabs are:
+
+- **Compliance** — jurisdiction cards showing the number of WCAG criteria violated per jurisdiction. Each card links to the relevant regulations. Only appears when jurisdictions were selected for the scan.
+- **Issues** — all issues grouped by WCAG criterion (e.g. "1.1.1 Non-text Content"). Each criterion group shows a severity breakdown (error/warning/notice counts). The WCAG standard displays as "WCAG 2.1 Level AA" rather than a raw code.
+- **Templates** — issues grouped by inferred component (Navigation, Footer, Cookie Banner, Form, etc.) with affected page counts. This tab only appears on full-site scans where template issues were detected.
+- **Pages** — per-page issue list for full-site scans.
+
+### Filtering issues
+
+The Issues tab provides a multi-select filter system:
+
+- **Severity filters** — toggle Errors, Warnings, and Notices independently. Each filter shows a live count.
+- **Category filters** — toggle Regulatory (issues linked to a regulation) and Template (issues detected as cross-page duplicates).
+- Filters with zero matching results are automatically hidden.
+- Counts update live as filters are toggled.
 
 For a complete reference, see [guides/dashboard-admin.md](guides/dashboard-admin.md).
 

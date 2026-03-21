@@ -8,6 +8,7 @@
         <th scope="col">Site URL</th>
         <th scope="col">Status</th>
         <th scope="col">Standard</th>
+        <th scope="col">Jurisdictions</th>
         <th scope="col">Pages</th>
         <th scope="col">Errors</th>
         <th scope="col">Warnings</th>
@@ -26,7 +27,8 @@
         <td>
           <span class="badge badge--{{status}}" aria-label="Status: {{status}}">{{status}}</span>
         </td>
-        <td>{{standard}}</td>
+        <td>{{formatStandard standard}}</td>
+        <td>{{#if jurisdictions}}{{jurisdictions}}{{else}}&mdash;{{/if}}</td>
         <td>{{pagesScanned}}</td>
         <td class="text--error">{{errors}}</td>
         <td class="text--warning">{{warnings}}</td>

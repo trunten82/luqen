@@ -1,4 +1,4 @@
-{{! Report detail — renders JSON report data within the dashboard layout }}
+{{! Report detail — 3-tab layout: Compliance | Issues | Pages }}
 
 <section aria-labelledby="report-meta-heading" class="report-meta" style="margin-bottom:1.5rem;">
   <div class="detail-list detail-list--horizontal">
@@ -8,7 +8,7 @@
     </div>
     <div class="detail-list__item">
       <dt>Standard</dt>
-      <dd>{{scan.standard}}</dd>
+      <dd>{{formatStandard scan.standard}}</dd>
     </div>
     <div class="detail-list__item">
       <dt>Status</dt>
@@ -43,97 +43,54 @@
 
 {{#if reportData}}
 
-{{! ── Summary cards ─────────────────────────────────────────────────────── }}
-<div class="rpt-summary-grid" role="region" aria-label="Scan summary">
-  <div class="rpt-card rpt-card--neutral">
-    <div class="rpt-card__label">Pages Scanned</div>
-    <div class="rpt-card__value">{{reportData.summary.pagesScanned}}</div>
-  </div>
-  <div class="rpt-card rpt-card--neutral">
-    <div class="rpt-card__label">Total Issues</div>
-    <div class="rpt-card__value">{{reportData.summary.totalIssues}}</div>
-  </div>
-  <div class="rpt-card rpt-card--error">
-    <div class="rpt-card__label">Errors</div>
-    <div class="rpt-card__value">{{reportData.summary.byLevel.error}}</div>
-  </div>
-  <div class="rpt-card rpt-card--warning">
-    <div class="rpt-card__label">Warnings</div>
-    <div class="rpt-card__value">{{reportData.summary.byLevel.warning}}</div>
-  </div>
-  <div class="rpt-card rpt-card--notice">
-    <div class="rpt-card__label">Notices</div>
-    <div class="rpt-card__value">{{reportData.summary.byLevel.notice}}</div>
-  </div>
-  {{#if reportData.summary.pagesFailed}}
-  <div class="rpt-card rpt-card--neutral">
-    <div class="rpt-card__label">Pages Failed</div>
-    <div class="rpt-card__value">{{reportData.summary.pagesFailed}}</div>
-  </div>
-  {{/if}}
+{{! ── Summary bar (above tabs) ─────────────────────────────────────────── }}
+<div class="rpt-summary-bar" role="region" aria-label="Scan summary">
+  <span class="rpt-badge rpt-badge--neutral" id="rpt-stat-pages">Pages: {{reportData.summary.pagesScanned}}</span>
+  <span class="rpt-badge rpt-badge--neutral" id="rpt-stat-issues">Issues: {{reportData.summary.totalIssues}}</span>
+  <span class="rpt-badge rpt-badge--error-light" id="rpt-stat-errors">Errors: {{reportData.summary.byLevel.error}}</span>
+  <span class="rpt-badge rpt-badge--warning-light" id="rpt-stat-warnings">Warnings: {{reportData.summary.byLevel.warning}}</span>
+  <span class="rpt-badge rpt-badge--notice-light" id="rpt-stat-notices">Notices: {{reportData.summary.byLevel.notice}}</span>
 </div>
 
-{{! ── Compliance matrix ──────────────────────────────────────────────────── }}
-{{#if reportData.complianceMatrix}}
-<section class="rpt-section" aria-labelledby="compliance-heading" style="margin-bottom:1.5rem;">
-  <div class="rpt-section__header rpt-section__header--dark">
-    <h2 id="compliance-heading" class="rpt-section__title">Legal Compliance Matrix</h2>
-    {{#if reportData.compliance.summary}}
-    <div class="rpt-section__meta">
-      <span class="rpt-badge rpt-badge--pass">{{reportData.compliance.summary.passing}} Passing</span>
-      <span class="rpt-badge rpt-badge--fail">{{reportData.compliance.summary.failing}} Failing</span>
-    </div>
-    {{/if}}
-  </div>
+{{! ── Tab bar ─────────────────────────────────────────────────────────────── }}
+<div class="rpt-tabs" role="tablist">
+  <button role="tab" class="rpt-tab rpt-tab--active" id="tab-compliance" aria-controls="panel-compliance" aria-selected="true" onclick="rptSwitchTab('compliance')">Compliance</button>
+  <button role="tab" class="rpt-tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" onclick="rptSwitchTab('issues')">Issues</button>
+  {{#if reportData.templateComponents.length}}<button role="tab" class="rpt-tab" id="tab-templates" aria-controls="panel-templates" aria-selected="false" onclick="rptSwitchTab('templates')">Templates</button>{{/if}}
+  <button role="tab" class="rpt-tab" id="tab-pages" aria-controls="panel-pages" aria-selected="false" onclick="rptSwitchTab('pages')">Pages</button>
+</div>
 
-  <div class="rpt-juris-grid">
-    {{#each reportData.complianceMatrix}}
-    <div class="rpt-juris-card">
-      <div class="rpt-juris-card__head rpt-juris-card__head--{{reviewStatusClass reviewStatus}}">
-        <div>
-          <div class="rpt-juris-card__name">{{jurisdictionName}}</div>
-          <div class="rpt-juris-card__id">{{jurisdictionId}}</div>
-        </div>
-        <div class="rpt-juris-card__status rpt-juris-card__status--{{reviewStatusLabelClass reviewStatus}}">{{reviewStatusLabel reviewStatus}}</div>
-      </div>
-      <div class="rpt-juris-card__body">
-        <div class="rpt-juris-card__viol">Confirmed violations (errors): <strong class="{{#if confirmedViolations}}rpt-text--fail{{/if}}">{{confirmedViolations}}</strong></div>
-        <div class="rpt-juris-card__viol">Need manual review (warnings/notices): <strong>{{needsReview}}</strong></div>
-        {{#if regulations.length}}
-        <div class="rpt-juris-card__regs">
-          {{#each regulations}}
-          {{#if url}}
-            <a class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
-          {{else}}
-            <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{shortName}}</span>
-          {{/if}}
-          {{/each}}
-        </div>
-        {{/if}}
-      </div>
-    </div>
-    {{/each}}
-  </div>
+{{! ── Tab 1: Compliance Overview ──────────────────────────────────────────── }}
+<div class="rpt-tab-panel" id="panel-compliance" role="tabpanel" aria-labelledby="tab-compliance">
 
-  <div class="rpt-table-wrap">
-    <table class="rpt-table" aria-label="Compliance status by jurisdiction">
-      <thead>
-        <tr>
-          <th scope="col">Jurisdiction</th>
-          <th scope="col">Status</th>
-          <th scope="col">Confirmed Violations</th>
-          <th scope="col">Need Review</th>
-          <th scope="col">Key Regulations</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each reportData.complianceMatrix}}
-        <tr>
-          <td><strong>{{jurisdictionName}}</strong><br><span class="rpt-text--muted" style="font-size:0.72rem;">{{jurisdictionId}}</span></td>
-          <td><span class="rpt-status-badge rpt-status-badge--{{reviewStatus}}">{{reviewStatusLabel reviewStatus}}</span></td>
-          <td class="{{complianceStatusClass status}}">{{confirmedViolations}}</td>
-          <td>{{needsReview}}</td>
-          <td>
+  {{! Compliance matrix }}
+  {{#if reportData.complianceMatrix}}
+  <section class="rpt-section" aria-labelledby="compliance-heading">
+    <div class="rpt-section__header rpt-section__header--dark">
+      <h2 id="compliance-heading" class="rpt-section__title">Legal Compliance Matrix</h2>
+      {{#if reportData.compliance.summary}}
+      <div class="rpt-section__meta">
+        <span class="rpt-badge rpt-badge--pass">{{reportData.compliance.summary.passing}} Passing</span>
+        <span class="rpt-badge rpt-badge--fail">{{reportData.compliance.summary.failing}} Failing</span>
+      </div>
+      {{/if}}
+    </div>
+
+    <div class="rpt-juris-grid">
+      {{#each reportData.complianceMatrix}}
+      <div class="rpt-juris-card">
+        <div class="rpt-juris-card__head rpt-juris-card__head--{{reviewStatusClass reviewStatus}}">
+          <div>
+            <div class="rpt-juris-card__name">{{jurisdictionName}}</div>
+            <div class="rpt-juris-card__id">{{jurisdictionId}}</div>
+          </div>
+          <div class="rpt-juris-card__status rpt-juris-card__status--{{reviewStatusLabelClass reviewStatus}}">{{reviewStatusLabel reviewStatus}}</div>
+        </div>
+        <div class="rpt-juris-card__body">
+          <div class="rpt-juris-card__viol">WCAG criteria violated: <strong class="{{#if confirmedViolations}}rpt-text--fail{{/if}}">{{confirmedViolations}}</strong></div>
+          {{#if needsReview}}<div class="rpt-juris-card__viol">Recommended regulations needing review: <strong>{{needsReview}}</strong></div>{{/if}}
+          {{#if regulations.length}}
+          <div class="rpt-juris-card__regs">
             {{#each regulations}}
             {{#if url}}
               <a class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
@@ -141,72 +98,174 @@
               <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{shortName}}</span>
             {{/if}}
             {{/each}}
-          </td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
-  </div>
-</section>
-{{/if}}
+          </div>
+          {{/if}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </section>
+  {{else}}
+  <div class="alert alert--info" role="status">No jurisdictions selected during scan.</div>
+  {{/if}}
 
-{{! ── Template issues ────────────────────────────────────────────────────── }}
-{{#if reportData.templateIssues}}
-<section class="rpt-section rpt-section--template" aria-labelledby="template-heading" style="margin-bottom:1.5rem;">
-  <div class="rpt-section__header rpt-section__header--purple">
-    <div>
-      <h2 id="template-heading" class="rpt-section__title">Template &amp; Layout Issues</h2>
-      <div class="rpt-section__subtitle">These affect multiple pages and likely come from shared components (header, footer, navigation).</div>
+</div>
+
+{{! ── Tab 2: Issues — unified list grouped by WCAG criterion ─────────────── }}
+<div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-issues" role="tabpanel" aria-labelledby="tab-issues">
+
+  {{! Summary + filters }}
+  <div class="rpt-issues-header">
+    <div class="rpt-issues-summary" id="rpt-issues-summary">
+      <strong id="rpt-issues-count">{{reportData.summary.totalIssues}} issues</strong>
+      <span id="rpt-issues-detail"> grouped by {{reportData.allIssueGroups.length}} WCAG criteria</span>
     </div>
-    <div class="rpt-section__meta">
-      <span class="rpt-badge rpt-badge--white">{{reportData.templateIssueCount}} template issues</span>
-      <span class="rpt-badge rpt-badge--white">{{reportData.templateOccurrenceCount}}+ occurrences</span>
+    <div class="rpt-controls" role="toolbar" aria-label="Filter controls">
+      <div class="rpt-filter-bar" id="rpt-filter-bar"></div>
+      <input type="text" class="rpt-search" placeholder="Search&hellip;" aria-label="Search issues" oninput="rptSearchIssues(this.value)">
     </div>
   </div>
-  {{#each reportData.templateIssues}}
-  <div class="rpt-template-issue">
-    <div class="rpt-template-issue__head">
-      <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
-      {{#if wcagCriterion}}
+
+  {{#if reportData.allIssueGroups}}
+  <div class="rpt-issue-list" id="rpt-issue-list">
+    {{#each reportData.allIssueGroups}}
+    <div class="rpt-group rpt-group--collapsed" data-issue-group data-regulatory="{{isRegulatory}}" data-template="{{hasTemplate}}" data-total-count="{{totalCount}}" data-error-count="{{errorCount}}" data-warning-count="{{warningCount}}" data-notice-count="{{noticeCount}}" data-page-count="{{pageCount}}">
+      <div class="rpt-group__header" onclick="rptToggleGroup(this)" role="button" tabindex="0" aria-expanded="false">
+        <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
         {{#if wcagUrl}}
-          <a class="rpt-code rpt-wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</a>
+          <a class="rpt-code rpt-wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{criterion}}</a>
         {{else}}
-          <span class="rpt-code">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
+          <span class="rpt-code">{{criterion}}</span>
         {{/if}}
-      {{else}}
-        <span class="rpt-code">{{code}}</span>
-      {{/if}}
-      {{#if regulations}}
+        <span class="rpt-group__title">{{title}}</span>
+        <div class="rpt-group__counts">
+          {{#if errorCount}}<span class="rpt-severity rpt-severity--error">{{errorCount}} error{{#unless (eq errorCount 1)}}s{{/unless}}</span>{{/if}}
+          {{#if warningCount}}<span class="rpt-severity rpt-severity--warning">{{warningCount}} warning{{#unless (eq warningCount 1)}}s{{/unless}}</span>{{/if}}
+          {{#if noticeCount}}<span class="rpt-severity rpt-severity--notice">{{noticeCount}} notice{{#unless (eq noticeCount 1)}}s{{/unless}}</span>{{/if}}
+          <span class="rpt-text--muted">{{pageCount}} pg</span>
+        </div>
         {{#each regulations}}
-        {{#if url}}
-          <a class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
-        {{else}}
-          <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{shortName}}</span>
+          {{#if url}}
+            <a class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{shortName}}</a>
+          {{else}}
+            <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{shortName}}</span>
+          {{/if}}
+        {{/each}}
+        {{#each components}}
+          <span class="rpt-component-tag">{{this}}</span>
+        {{/each}}
+      </div>
+      <div class="rpt-group__body">
+        {{! Template items (fix-once-fix-everywhere) }}
+        {{#if templateItems.length}}
+        <div class="rpt-template-block">
+          <div class="rpt-template-block__label">Shared components — fix once, fix everywhere</div>
+          {{#each templateItems}}
+          <div class="rpt-issue-item" data-severity="{{type}}">
+            <div class="rpt-issue-item__head">
+              <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
+              <span class="rpt-component-tag">{{componentName}}</span>
+              <span class="rpt-text--muted">({{affectedCount}} pages)</span>
+            </div>
+            <div class="rpt-issue-item__message">{{message}}</div>
+            {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
+            {{#if context}}<div class="rpt-issue-item__detail"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
+            {{#if affectedPages}}
+            <details class="rpt-issue-item__affected">
+              <summary>Affected pages ({{affectedCount}})</summary>
+              <ul>{{#each affectedPages}}<li>{{this}}</li>{{/each}}</ul>
+            </details>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
         {{/if}}
+        {{! Page-specific issues }}
+        {{#each issues}}
+        <div class="rpt-issue-item" data-severity="{{type}}">
+          <div class="rpt-issue-item__head">
+            <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
+            <span class="rpt-issue-item__message">{{message}}</span>
+          </div>
+          {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
+          {{#if context}}<div class="rpt-issue-item__detail"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
+        </div>
         {{/each}}
-      {{/if}}
+      </div>
     </div>
-    <div class="rpt-template-issue__msg">{{message}}</div>
-    {{#if selector}}<div class="rpt-template-issue__sel"><span class="rpt-code">{{selector}}</span></div>{{/if}}
-    {{#if context}}<div class="rpt-template-issue__ctx"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
-    <details class="rpt-template-issue__affected">
-      <summary>Affects {{affectedCount}} pages</summary>
-      <ul>
-        {{#each affectedPages}}
-        <li>{{this}}</li>
-        {{/each}}
-      </ul>
-    </details>
+    {{/each}}
   </div>
-  {{/each}}
-</section>
+  {{else}}
+  <div class="alert alert--info" role="status">No issues found in this report.</div>
+  {{/if}}
+
+</div>
+
+{{! ── Tab 3: Templates (only if template issues exist) ──────────────────── }}
+{{#if reportData.templateComponents.length}}
+<div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-templates" role="tabpanel" aria-labelledby="tab-templates">
+
+  <p class="rpt-template-intro">These issues appear on multiple pages and likely come from shared components. Fixing the component fixes all affected pages.</p>
+
+  <div class="rpt-issue-list">
+    {{#each reportData.templateComponents}}
+    <div class="rpt-group rpt-group--collapsed rpt-group--template">
+      <div class="rpt-group__header" onclick="rptToggleGroup(this)" role="button" tabindex="0" aria-expanded="false">
+        <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
+        <span class="rpt-component-tag">{{componentName}}</span>
+        <span class="rpt-badge rpt-badge--neutral">{{issueCount}} issues</span>
+        <span class="rpt-badge rpt-badge--neutral">{{maxAffectedPages}} pages</span>
+      </div>
+      <div class="rpt-group__body">
+        {{#each issues}}
+        <div class="rpt-issue-item" data-severity="{{type}}">
+          <div class="rpt-issue-item__head">
+            <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
+            {{#if wcagCriterion}}
+              {{#if wcagUrl}}
+                <a class="rpt-wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</a>
+              {{else}}
+                <span class="rpt-code">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
+              {{/if}}
+            {{else}}
+              <span class="rpt-code">{{code}}</span>
+            {{/if}}
+            <span class="rpt-text--muted">({{affectedCount}} pages)</span>
+          </div>
+          <div class="rpt-issue-item__message">{{message}}</div>
+          {{#if selector}}<div class="rpt-issue-item__detail"><span class="rpt-code">{{selector}}</span></div>{{/if}}
+          {{#if context}}<div class="rpt-issue-item__detail"><span class="rpt-code-ctx">{{context}}</span></div>{{/if}}
+          {{#if regulations}}
+          <div class="rpt-issue-item__regs">
+            {{#each regulations}}
+            {{#if url}}
+              <a class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener">{{shortName}}</a>
+            {{else}}
+              <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{shortName}}</span>
+            {{/if}}
+            {{/each}}
+          </div>
+          {{/if}}
+          {{#if affectedPages}}
+          <details class="rpt-issue-item__affected">
+            <summary>Affected pages ({{affectedCount}})</summary>
+            <ul>{{#each affectedPages}}<li>{{this}}</li>{{/each}}</ul>
+          </details>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/each}}
+  </div>
+
+</div>
 {{/if}}
 
-{{! ── Per-page results ───────────────────────────────────────────────────── }}
-<section aria-labelledby="pages-heading" style="margin-bottom:1.5rem;">
-  <h2 id="pages-heading" class="section-title" style="margin-bottom:1rem;">Page Results</h2>
+{{! ── Tab 4: Pages ────────────────────────────────────────────────────────── }}
+<div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-pages" role="tabpanel" aria-labelledby="tab-pages">
 
-  <div class="rpt-controls" role="toolbar" aria-label="Filter and search controls">
+  <div class="rpt-controls" role="toolbar" aria-label="Page search">
     <input
       type="text"
       class="rpt-search"
@@ -214,33 +273,25 @@
       aria-label="Search pages by URL"
       oninput="rptSearchPages(this.value)"
     />
-    <button class="btn btn--sm btn--active rpt-filter-btn" data-filter="all" onclick="rptFilter('all',this)" aria-pressed="true">All</button>
-    <button class="btn btn--sm rpt-filter-btn rpt-filter-btn--error" data-filter="error" onclick="rptFilter('error',this)" aria-pressed="false">Errors</button>
-    <button class="btn btn--sm rpt-filter-btn rpt-filter-btn--warning" data-filter="warning" onclick="rptFilter('warning',this)" aria-pressed="false">Warnings</button>
-    <button class="btn btn--sm rpt-filter-btn rpt-filter-btn--notice" data-filter="notice" onclick="rptFilter('notice',this)" aria-pressed="false">Notices</button>
-    <div class="rpt-expand-controls">
-      <button class="btn btn--sm btn--ghost" onclick="rptExpandAll()">Expand All</button>
-      <button class="btn btn--sm btn--ghost" onclick="rptCollapseAll()">Collapse All</button>
-    </div>
   </div>
 
   <div id="rpt-page-list">
     {{#each reportData.pages}}
     <div class="rpt-page" data-url="{{url}}" data-issue-count="{{issueCount}}">
-      <div class="rpt-page__header{{#if issueCount}} rpt-page__header--has-issues{{/if}}" onclick="rptToggle(this)" role="button" tabindex="0" aria-expanded="{{#if issueCount}}true{{else}}false{{/if}}">
+      <div class="rpt-page__header" onclick="rptTogglePage(this)" role="button" tabindex="0" aria-expanded="false">
         <span class="rpt-page__url">{{url}}</span>
         <div class="rpt-page__meta">
           {{#if issueCount}}
-            {{#if (issuesByType issues 'error')}}<span class="rpt-severity rpt-severity--error">{{countByType issues 'error'}} error{{#if (eq (countByType issues 'error') 1)}}{{else}}s{{/if}}</span>{{/if}}
-            {{#if (issuesByType issues 'warning')}}<span class="rpt-severity rpt-severity--warning">{{countByType issues 'warning'}} warning{{#if (eq (countByType issues 'warning') 1)}}{{else}}s{{/if}}</span>{{/if}}
-            {{#if (issuesByType issues 'notice')}}<span class="rpt-severity rpt-severity--notice">{{countByType issues 'notice'}} notice{{#if (eq (countByType issues 'notice') 1)}}{{else}}s{{/if}}</span>{{/if}}
+            {{#if (issuesByType issues 'error')}}<span class="rpt-severity rpt-severity--error">{{countByType issues 'error'}} error{{#unless (eq (countByType issues 'error') 1)}}s{{/unless}}</span>{{/if}}
+            {{#if (issuesByType issues 'warning')}}<span class="rpt-severity rpt-severity--warning">{{countByType issues 'warning'}} warning{{#unless (eq (countByType issues 'warning') 1)}}s{{/unless}}</span>{{/if}}
+            {{#if (issuesByType issues 'notice')}}<span class="rpt-severity rpt-severity--notice">{{countByType issues 'notice'}} notice{{#unless (eq (countByType issues 'notice') 1)}}s{{/unless}}</span>{{/if}}
           {{else}}
             <span class="rpt-severity rpt-severity--clean">Clean</span>
           {{/if}}
           <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
         </div>
       </div>
-      <div class="rpt-page__body{{#unless issueCount}} rpt-page__body--collapsed{{/unless}}">
+      <div class="rpt-page__body rpt-page__body--collapsed">
         {{#if issueCount}}
         <div class="rpt-table-wrap">
           <table class="rpt-table" aria-label="Issues on {{url}}">
@@ -264,18 +315,16 @@
                     {{else}}
                       <span class="rpt-code">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
                     {{/if}}
-                    <br><span class="rpt-text--muted" style="font-size:0.68rem;">WCAG {{wcagCriterion}}</span>
                   {{else}}
                     <span class="rpt-code">{{code}}</span>
                   {{/if}}
                 </td>
                 <td>
                   {{message}}
-                  {{#if wcagTitle}}
+                  {{#if wcagDescription}}
                   <div class="rpt-wcag-info">
-                    <div class="rpt-wcag-info__title">{{wcagTitle}}</div>
-                    {{#if wcagDescription}}<div class="rpt-wcag-info__desc">{{wcagDescription}}</div>{{/if}}
-                    {{#if wcagImpact}}<div class="rpt-wcag-info__impact">Impact: {{wcagImpact}}</div>{{/if}}
+                    {{#if wcagTitle}}<div class="rpt-wcag-info__title">{{wcagTitle}}</div>{{/if}}
+                    <div class="rpt-wcag-info__desc">{{wcagDescription}}</div>
                   </div>
                   {{/if}}
                 </td>
@@ -311,16 +360,17 @@
   </div>
 
   {{#if reportData.errors.length}}
-  <div class="rpt-scan-errors" style="margin-top:1.5rem;" aria-labelledby="scan-errors-heading">
-    <h3 id="scan-errors-heading" class="rpt-text--fail" style="margin-bottom:0.5rem;">Scan Errors ({{reportData.errors.length}})</h3>
+  <section class="rpt-scan-errors" aria-labelledby="scan-errors-heading">
+    <h3 id="scan-errors-heading" class="rpt-text--fail">Scan Errors ({{reportData.errors.length}})</h3>
     {{#each reportData.errors}}
-    <div class="alert alert--error" style="margin-bottom:0.4rem;font-size:0.82rem;">
+    <div class="alert alert--error rpt-scan-error">
       <strong>{{url}}</strong> &mdash; {{code}}: {{message}}
     </div>
     {{/each}}
-  </div>
+  </section>
   {{/if}}
-</section>
+
+</div>
 
 {{else}}
 
@@ -351,150 +401,79 @@
 
 {{/if}}
 
-<style>
-  /* ── Report detail scoped styles ───────────────────────────────────────── */
-  .rpt-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-  .rpt-card {
-    background: var(--bg-primary);
-    border-radius: 8px;
-    padding: 1rem;
-    text-align: center;
-    border-top: 3px solid var(--border-color);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  }
-  .rpt-card__label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 600; }
-  .rpt-card__value { font-size: 1.8rem; font-weight: 800; margin-top: 0.15rem; }
-  .rpt-card--error { border-top-color: var(--status-error); }
-  .rpt-card--error .rpt-card__value { color: var(--status-error); }
-  .rpt-card--warning { border-top-color: var(--status-warning); }
-  .rpt-card--warning .rpt-card__value { color: var(--status-warning); }
-  .rpt-card--notice { border-top-color: var(--status-info); }
-  .rpt-card--notice .rpt-card__value { color: var(--status-info); }
-
-  /* Section wrapper */
-  .rpt-section { background: var(--bg-primary); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; }
-  .rpt-section__header { padding: 0.85rem 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
-  .rpt-section__header--dark { background: var(--bg-sidebar); color: var(--text-inverse); }
-  .rpt-section__header--purple { background: #7c3aed; color: #fff; }
-  .rpt-section__title { font-size: 1rem; font-weight: 700; }
-  .rpt-section__subtitle { font-size: 0.78rem; opacity: 0.85; margin-top: 0.2rem; }
-  .rpt-section__meta { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-
-  /* Badges */
-  .rpt-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; }
-  .rpt-badge--pass { background: var(--status-success); color: #fff; }
-  .rpt-badge--fail { background: var(--status-error); color: #fff; }
-  .rpt-badge--white { background: rgba(255,255,255,0.2); color: #fff; }
-
-  /* Jurisdiction cards */
-  .rpt-juris-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; padding: 1.25rem; }
-  .rpt-juris-card { border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
-  .rpt-juris-card__head { padding: 0.7rem 1rem; display: flex; align-items: center; justify-content: space-between; }
-  .rpt-juris-card__head--pass-head { background: var(--status-success-bg); border-bottom: 2px solid var(--status-success); }
-  .rpt-juris-card__head--fail-head { background: var(--status-error-bg); border-bottom: 2px solid var(--status-error); }
-  .rpt-juris-card__head--review-head { background: var(--status-warning-bg); border-bottom: 2px solid var(--status-warning); }
-  .rpt-juris-card__name { font-weight: 700; font-size: 0.9rem; }
-  .rpt-juris-card__id { font-size: 0.7rem; color: var(--text-muted); }
-  .rpt-juris-card__status { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
-  .rpt-juris-card__status--s-pass { color: var(--status-success); }
-  .rpt-juris-card__status--s-fail { color: var(--status-error); }
-  .rpt-juris-card__status--s-review { color: var(--status-warning); }
-  .rpt-juris-card__body { padding: 0.7rem 1rem; font-size: 0.82rem; }
-  .rpt-juris-card__viol { margin-bottom: 0.3rem; }
-  .rpt-juris-card__regs { margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.3rem; }
-  .rpt-text--fail { color: var(--status-error); }
-  .rpt-text--muted { color: var(--text-muted); }
-
-  /* Status badge */
-  .rpt-status-badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; }
-  .rpt-status-badge--pass { background: var(--status-success-bg); color: var(--status-success); }
-  .rpt-status-badge--fail { background: var(--status-error-bg); color: var(--status-error); }
-  .rpt-status-badge--review { background: var(--status-warning-bg); color: var(--status-warning); }
-
-  /* Compliance / issue table */
-  .rpt-table-wrap { overflow-x: auto; }
-  .rpt-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-  .rpt-table th { background: var(--bg-secondary); padding: 0.55rem 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border-color); }
-  .rpt-table td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border-color); vertical-align: top; }
-  .rpt-table tr:last-child td { border-bottom: none; }
-  .rpt-row--error td:first-child { border-left: 3px solid var(--status-error); }
-  .rpt-row--warning td:first-child { border-left: 3px solid var(--status-warning); }
-  .rpt-row--notice td:first-child { border-left: 3px solid var(--status-info); }
-
-  /* Reg tags */
-  .rpt-reg-tag { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; margin: 0.1rem 0.1rem 0.1rem 0; white-space: nowrap; text-decoration: none; }
-  .rpt-reg-tag--obligation-mandatory { background: var(--status-error-bg); color: var(--status-error); border: 1px solid var(--status-error); }
-  .rpt-reg-tag--obligation-recommended { background: var(--status-warning-bg); color: var(--status-warning); border: 1px solid var(--status-warning); }
-  .rpt-reg-tag--obligation-optional { background: var(--status-info-bg); color: var(--status-info); border: 1px solid var(--status-info); }
-
-  /* Severity badge */
-  .rpt-severity { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
-  .rpt-severity--error { background: var(--status-error-bg); color: var(--status-error); }
-  .rpt-severity--warning { background: var(--status-warning-bg); color: var(--status-warning); }
-  .rpt-severity--notice { background: var(--status-info-bg); color: var(--status-info); }
-  .rpt-severity--clean { background: var(--status-success-bg); color: var(--status-success); }
-
-  /* Code / context */
-  .rpt-code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.75rem; color: #7c3aed; word-break: break-all; }
-  .rpt-code-ctx { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.75rem; background: var(--bg-secondary); padding: 0.15rem 0.35rem; border-radius: 4px; word-break: break-all; display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
-  .rpt-wcag-link { color: inherit; text-decoration: underline dotted; }
-  .rpt-wcag-link:hover { text-decoration: underline; }
-  .rpt-wcag-info { margin-top: 0.25rem; }
-  .rpt-wcag-info__title { font-weight: 600; font-size: 0.78rem; }
-  .rpt-wcag-info__desc { font-size: 0.73rem; color: var(--text-muted); margin-top: 0.1rem; }
-  .rpt-wcag-info__impact { font-size: 0.7rem; color: var(--status-warning); background: var(--status-warning-bg); padding: 0.1rem 0.35rem; border-radius: 3px; display: inline-block; margin-top: 0.15rem; }
-
-  /* Template issues */
-  .rpt-template-issue { border-bottom: 1px solid var(--border-color); padding: 0.85rem 1.25rem; font-size: 0.82rem; }
-  .rpt-template-issue:last-child { border-bottom: none; }
-  .rpt-template-issue__head { display: flex; align-items: flex-start; gap: 0.4rem; flex-wrap: wrap; }
-  .rpt-template-issue__msg { margin-top: 0.3rem; }
-  .rpt-template-issue__sel { margin-top: 0.2rem; }
-  .rpt-template-issue__ctx { margin-top: 0.2rem; }
-  .rpt-template-issue__affected { margin-top: 0.35rem; font-size: 0.75rem; color: var(--text-muted); }
-  .rpt-template-issue__affected summary { cursor: pointer; color: #7c3aed; font-weight: 600; }
-  .rpt-template-issue__affected ul { margin-top: 0.3rem; padding-left: 1.2rem; }
-  .rpt-template-issue__affected li { font-size: 0.72rem; word-break: break-all; }
-
-  /* Controls */
-  .rpt-controls { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; }
-  .rpt-search { padding: 0.38rem 0.7rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-size: 0.84rem; width: 200px; }
-  .rpt-filter-btn { color: var(--text-muted); }
-  .rpt-filter-btn--error[aria-pressed="true"] { background: var(--status-error); border-color: var(--status-error); color: #fff; }
-  .rpt-filter-btn--warning[aria-pressed="true"] { background: var(--status-warning); border-color: var(--status-warning); color: #fff; }
-  .rpt-filter-btn--notice[aria-pressed="true"] { background: var(--status-info); border-color: var(--status-info); color: #fff; }
-  .btn--active { background: var(--bg-sidebar); border-color: var(--bg-sidebar); color: var(--text-inverse); }
-  .rpt-expand-controls { margin-left: auto; display: flex; gap: 0.35rem; }
-
-  /* Page sections */
-  .rpt-page { background: var(--bg-primary); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 0.6rem; overflow: hidden; }
-  .rpt-page__header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: background 0.1s; }
-  .rpt-page__header:hover { background: var(--bg-secondary); }
-  .rpt-page__header--has-issues { border-bottom-color: var(--border-color); }
-  .rpt-page__url { font-size: 0.85rem; font-weight: 600; color: var(--status-info); word-break: break-all; }
-  .rpt-page__meta { display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; margin-left: 0.75rem; flex-wrap: wrap; }
-  .rpt-chevron { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
-  .rpt-page__body { padding: 0; }
-  .rpt-page__body--collapsed { display: none; }
-  .rpt-no-issues { padding: 0.85rem 1.1rem; color: var(--status-success); font-size: 0.84rem; font-weight: 500; }
-
-  @media (max-width: 640px) {
-    .rpt-summary-grid { grid-template-columns: repeat(3, 1fr); }
-    .rpt-juris-grid { grid-template-columns: 1fr; }
-    .rpt-table { font-size: 0.75rem; }
-    .rpt-table th, .rpt-table td { padding: 0.45rem 0.6rem; }
-    .rpt-controls { gap: 0.3rem; }
-    .rpt-search { width: 100%; }
-  }
-</style>
-
 <script>
-  function rptToggle(header) {
+  /* ── Tab switching ──────────────────────────────────────────────────────── */
+  function rptSwitchTab(tab) {
+    if (!document.getElementById('panel-' + tab)) return;
+    var tabs = document.querySelectorAll('.rpt-tab');
+    var panels = document.querySelectorAll('.rpt-tab-panel');
+
+    tabs.forEach(function(t) {
+      var isActive = t.id === 'tab-' + tab;
+      t.classList.toggle('rpt-tab--active', isActive);
+      t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    panels.forEach(function(p) {
+      var isActive = p.id === 'panel-' + tab;
+      p.classList.toggle('rpt-tab-panel--hidden', !isActive);
+    });
+
+    history.replaceState(null, '', '#' + tab);
+  }
+
+  /* Activate tab from URL hash on load */
+  (function() {
+    var hash = window.location.hash.replace('#', '');
+    if (hash && document.getElementById('panel-' + hash)) {
+      rptSwitchTab(hash);
+    }
+  })();
+
+  /* Keyboard navigation for tabs */
+  document.querySelectorAll('.rpt-tab').forEach(function(tab) {
+    tab.addEventListener('keydown', function(evt) {
+      var tabs = Array.from(document.querySelectorAll('.rpt-tab'));
+      var idx = tabs.indexOf(evt.target);
+      var next;
+      if (evt.key === 'ArrowRight') {
+        next = tabs[(idx + 1) % tabs.length];
+      } else if (evt.key === 'ArrowLeft') {
+        next = tabs[(idx - 1 + tabs.length) % tabs.length];
+      } else if (evt.key === 'Home') {
+        next = tabs[0];
+      } else if (evt.key === 'End') {
+        next = tabs[tabs.length - 1];
+      }
+      if (next) {
+        evt.preventDefault();
+        next.focus();
+        next.click();
+      }
+    });
+  });
+
+  /* ── Collapsible groups ─────────────────────────────────────────────────── */
+  function rptToggleGroup(header) {
+    var group = header.parentElement;
+    var collapsed = group.classList.toggle('rpt-group--collapsed');
+    header.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    var chevron = header.querySelector('.rpt-chevron');
+    if (chevron) chevron.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+  }
+
+  /* Keyboard support for groups */
+  document.querySelectorAll('.rpt-group__header').forEach(function(header) {
+    header.addEventListener('keydown', function(evt) {
+      if (evt.key === 'Enter' || evt.key === ' ') {
+        evt.preventDefault();
+        rptToggleGroup(header);
+      }
+    });
+  });
+
+  /* ── Page toggle (Tab 3) ────────────────────────────────────────────────── */
+  function rptTogglePage(header) {
     var body = header.nextElementSibling;
     var chevron = header.querySelector('.rpt-chevron');
     var collapsed = body.classList.toggle('rpt-page__body--collapsed');
@@ -502,55 +481,194 @@
     if (chevron) chevron.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
   }
 
-  function rptExpandAll() {
-    document.querySelectorAll('.rpt-page__body').forEach(function(b) {
-      b.classList.remove('rpt-page__body--collapsed');
-    });
-    document.querySelectorAll('.rpt-page__header').forEach(function(h) {
-      h.setAttribute('aria-expanded', 'true');
-    });
-    document.querySelectorAll('.rpt-chevron').forEach(function(c) {
-      c.style.transform = 'rotate(0deg)';
-    });
-  }
-
-  function rptCollapseAll() {
-    document.querySelectorAll('.rpt-page__body').forEach(function(b) {
-      b.classList.add('rpt-page__body--collapsed');
-    });
-    document.querySelectorAll('.rpt-page__header').forEach(function(h) {
-      h.setAttribute('aria-expanded', 'false');
-    });
-    document.querySelectorAll('.rpt-chevron').forEach(function(c) {
-      c.style.transform = 'rotate(-90deg)';
-    });
-  }
-
-  function rptFilter(type, btn) {
-    document.querySelectorAll('.rpt-filter-btn').forEach(function(b) {
-      b.classList.remove('btn--active');
-      b.setAttribute('aria-pressed', 'false');
-    });
-    btn.classList.add('btn--active');
-    btn.setAttribute('aria-pressed', 'true');
-
-    document.querySelectorAll('.rpt-page').forEach(function(section) {
-      if (type === 'all') {
-        section.style.display = '';
-        section.querySelectorAll('tr[data-type]').forEach(function(row) { row.style.display = ''; });
-      } else {
-        var rows = section.querySelectorAll('tr[data-type]');
-        if (rows.length === 0) { section.style.display = ''; return; }
-        var visible = 0;
-        rows.forEach(function(row) {
-          if (row.dataset.type === type) { row.style.display = ''; visible++; }
-          else { row.style.display = 'none'; }
-        });
-        section.style.display = visible === 0 ? 'none' : '';
+  /* Keyboard support for pages */
+  document.querySelectorAll('.rpt-page__header').forEach(function(header) {
+    header.addEventListener('keydown', function(evt) {
+      if (evt.key === 'Enter' || evt.key === ' ') {
+        evt.preventDefault();
+        rptTogglePage(header);
       }
     });
+  });
+
+  /* ── Issue filter system (Tab 2) ───────────────────────────────────────── */
+  var rptActiveFilters = new Set();
+  var rptSearchQuery = '';
+  var rptAllGroups = Array.from(document.querySelectorAll('#panel-issues [data-issue-group]'));
+
+  /* Compute totals from data attributes */
+  var rptTotals = { issues: 0, errors: 0, warnings: 0, notices: 0, criteria: rptAllGroups.length };
+  var rptCatIssueCounts = { regulatory: 0, template: 0, other: 0 };
+  rptAllGroups.forEach(function(g) {
+    var e = parseInt(g.getAttribute('data-error-count') || '0', 10);
+    var w = parseInt(g.getAttribute('data-warning-count') || '0', 10);
+    var n = parseInt(g.getAttribute('data-notice-count') || '0', 10);
+    var t = parseInt(g.getAttribute('data-total-count') || '0', 10);
+    rptTotals.issues += t;
+    rptTotals.errors += e;
+    rptTotals.warnings += w;
+    rptTotals.notices += n;
+    var isReg = g.getAttribute('data-regulatory') === 'true';
+    var isTpl = g.getAttribute('data-template') === 'true';
+    if (isReg) rptCatIssueCounts.regulatory += t;
+    if (isTpl) rptCatIssueCounts.template += t;
+    if (!isReg && !isTpl) rptCatIssueCounts.other += t;
+  });
+
+  /* Build filter buttons — severity + category, only those with results */
+  (function() {
+    var bar = document.getElementById('rpt-filter-bar');
+    if (!bar) return;
+
+    var sevFilters = [
+      { key: 'error', label: 'Errors', count: rptTotals.errors, cls: 'rpt-filter-btn--error' },
+      { key: 'warning', label: 'Warnings', count: rptTotals.warnings, cls: 'rpt-filter-btn--warning' },
+      { key: 'notice', label: 'Notices', count: rptTotals.notices, cls: 'rpt-filter-btn--notice' }
+    ];
+    sevFilters.forEach(function(f) {
+      if (f.count === 0) return;
+      var btn = document.createElement('button');
+      btn.className = 'btn btn--sm rpt-issue-filter-btn ' + f.cls;
+      btn.setAttribute('data-filter', f.key);
+      btn.textContent = f.label + ' (' + f.count + ')';
+      btn.onclick = function() { rptToggleFilter(f.key); };
+      bar.appendChild(btn);
+    });
+
+    /* Category filters — only show when there's a meaningful distinction */
+    var catFilters = [
+      { key: 'regulatory', label: 'Regulatory', count: rptCatIssueCounts.regulatory, cls: 'rpt-filter-btn--regulatory' },
+      { key: 'template', label: 'Template', count: rptCatIssueCounts.template, cls: 'rpt-filter-btn--template' },
+      { key: 'other', label: 'Other', count: rptCatIssueCounts.other, cls: '' }
+    ];
+    /* Skip category filters if only one category has all the issues (no useful filter) */
+    var nonZeroCats = catFilters.filter(function(f) { return f.count > 0; });
+    if (nonZeroCats.length > 1) {
+      if (sevFilters.some(function(f) { return f.count > 0; })) {
+        var sep = document.createElement('span');
+        sep.className = 'rpt-filter-sep';
+        sep.textContent = '|';
+        bar.appendChild(sep);
+      }
+      catFilters.forEach(function(f) {
+        if (f.count === 0) return;
+        var btn = document.createElement('button');
+        btn.className = 'btn btn--sm rpt-issue-filter-btn ' + f.cls;
+        btn.setAttribute('data-filter', f.key);
+        btn.textContent = f.label + ' (' + f.count + ')';
+        btn.onclick = function() { rptToggleFilter(f.key); };
+        bar.appendChild(btn);
+      });
+    }
+  })();
+
+  function rptToggleFilter(filter) {
+    if (rptActiveFilters.has(filter)) {
+      rptActiveFilters.delete(filter);
+    } else {
+      rptActiveFilters.add(filter);
+    }
+    rptApplyFilters();
   }
 
+  function rptGroupMatchesFilters(group) {
+    var severityFilters = ['error', 'warning', 'notice'];
+    var categoryFilters = ['regulatory', 'template', 'other'];
+    var activeSev = [];
+    var activeCat = [];
+    rptActiveFilters.forEach(function(f) {
+      if (severityFilters.indexOf(f) !== -1) activeSev.push(f);
+      else if (categoryFilters.indexOf(f) !== -1) activeCat.push(f);
+    });
+    if (activeSev.length === 0 && activeCat.length === 0) return true;
+
+    var matchSev = activeSev.length === 0 || activeSev.some(function(s) {
+      return parseInt(group.getAttribute('data-' + s + '-count') || '0', 10) > 0;
+    });
+    var matchCat = true;
+    if (activeCat.length > 0) {
+      var isReg = group.getAttribute('data-regulatory') === 'true';
+      var isTpl = group.getAttribute('data-template') === 'true';
+      var isOther = !isReg && !isTpl;
+      matchCat = (activeCat.indexOf('regulatory') !== -1 && isReg) ||
+                 (activeCat.indexOf('template') !== -1 && isTpl) ||
+                 (activeCat.indexOf('other') !== -1 && isOther);
+    }
+    return matchSev && matchCat;
+  }
+
+  function rptApplyFilters() {
+    var severityFilters = ['error', 'warning', 'notice'];
+    var activeSev = [];
+    rptActiveFilters.forEach(function(f) {
+      if (severityFilters.indexOf(f) !== -1) activeSev.push(f);
+    });
+
+    var visibleCriteria = 0;
+    var visibleErrors = 0;
+    var visibleWarnings = 0;
+    var visibleNotices = 0;
+
+    rptAllGroups.forEach(function(group) {
+      var show = rptGroupMatchesFilters(group);
+      if (show && rptSearchQuery) {
+        show = group.textContent.toLowerCase().indexOf(rptSearchQuery) !== -1;
+      }
+      group.style.display = show ? '' : 'none';
+      if (show) {
+        visibleCriteria++;
+        visibleErrors += parseInt(group.getAttribute('data-error-count') || '0', 10);
+        visibleWarnings += parseInt(group.getAttribute('data-warning-count') || '0', 10);
+        visibleNotices += parseInt(group.getAttribute('data-notice-count') || '0', 10);
+      }
+    });
+
+    /* When severity filter is active, only count filtered severities */
+    var displayTotal;
+    if (activeSev.length > 0) {
+      displayTotal = 0;
+      if (activeSev.indexOf('error') !== -1) displayTotal += visibleErrors;
+      if (activeSev.indexOf('warning') !== -1) displayTotal += visibleWarnings;
+      if (activeSev.indexOf('notice') !== -1) displayTotal += visibleNotices;
+    } else {
+      displayTotal = visibleErrors + visibleWarnings + visibleNotices;
+    }
+
+    /* Update button active states */
+    document.querySelectorAll('.rpt-issue-filter-btn').forEach(function(btn) {
+      btn.classList.toggle('btn--active', rptActiveFilters.has(btn.getAttribute('data-filter')));
+    });
+
+    /* Update summary text */
+    var countEl = document.getElementById('rpt-issues-count');
+    var detailEl = document.getElementById('rpt-issues-detail');
+    if (!countEl || !detailEl) return;
+
+    if (rptActiveFilters.size === 0 && !rptSearchQuery) {
+      countEl.textContent = rptTotals.issues + ' issues';
+      detailEl.textContent = ' grouped by ' + rptTotals.criteria + ' WCAG criteria';
+    } else {
+      var parts = [];
+      if (activeSev.length > 0) {
+        if (activeSev.indexOf('error') !== -1) parts.push(visibleErrors + ' errors');
+        if (activeSev.indexOf('warning') !== -1) parts.push(visibleWarnings + ' warnings');
+        if (activeSev.indexOf('notice') !== -1) parts.push(visibleNotices + ' notices');
+      } else {
+        if (visibleErrors) parts.push(visibleErrors + ' errors');
+        if (visibleWarnings) parts.push(visibleWarnings + ' warnings');
+        if (visibleNotices) parts.push(visibleNotices + ' notices');
+      }
+      countEl.textContent = displayTotal + ' issues';
+      detailEl.textContent = ' across ' + visibleCriteria + ' criteria' + (parts.length ? ' \u2014 ' + parts.join(', ') : '');
+    }
+  }
+
+  function rptSearchIssues(query) {
+    rptSearchQuery = query.toLowerCase();
+    rptApplyFilters();
+  }
+
+  /* ── Page search (Tab 3) ────────────────────────────────────────────────── */
   function rptSearchPages(query) {
     var q = query.toLowerCase();
     document.querySelectorAll('.rpt-page').forEach(function(section) {
@@ -559,13 +677,19 @@
     });
   }
 
-  // Keyboard accessibility for collapsible page headers
-  document.querySelectorAll('.rpt-page__header').forEach(function(header) {
-    header.addEventListener('keydown', function(evt) {
-      if (evt.key === 'Enter' || evt.key === ' ') {
-        evt.preventDefault();
-        rptToggle(header);
+  /* ── Initialize collapsed state chevrons ────────────────────────────────── */
+  (function() {
+    document.querySelectorAll('.rpt-group--collapsed .rpt-chevron, .rpt-page__body--collapsed').forEach(function(el) {
+      if (el.classList.contains('rpt-chevron')) {
+        el.style.transform = 'rotate(-90deg)';
       }
     });
-  });
+    document.querySelectorAll('.rpt-page__body--collapsed').forEach(function(body) {
+      var header = body.previousElementSibling;
+      if (header) {
+        var chevron = header.querySelector('.rpt-chevron');
+        if (chevron) chevron.style.transform = 'rotate(-90deg)';
+      }
+    });
+  })();
 </script>

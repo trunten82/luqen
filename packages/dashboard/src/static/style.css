@@ -499,6 +499,11 @@ body {
 .cell--url a:hover {
   text-decoration: underline;
 }
+.cell--jurisdictions {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
 
 /* ---- Text color helpers ---- */
 .text--error { color: var(--status-error); }
@@ -835,6 +840,12 @@ input[readonly] {
   color: var(--text-muted);
   margin-top: var(--space-xs);
 }
+
+.radio-group { display: flex; flex-direction: column; gap: var(--space-xs); }
+.radio-group--inline { flex-direction: row; gap: var(--space-md); }
+.radio-label { display: flex; align-items: flex-start; gap: var(--space-xs); cursor: pointer; font-size: var(--font-size-sm); }
+.radio-label input[type="radio"] { margin-top: 0.2rem; accent-color: var(--accent); }
+.radio-label .form-hint { margin-top: 0; margin-left: 0; display: block; }
 
 .form-error {
   font-size: var(--font-size-xs);
@@ -1581,15 +1592,7 @@ select {
     position: relative;
   }
 
-  tbody tr::after {
-    content: '›';
-    position: absolute;
-    top: var(--space-sm);
-    right: var(--space-sm);
-    font-size: var(--font-size-xl);
-    color: var(--text-muted);
-    font-weight: 300;
-  }
+  /* Row arrow removed — View button serves the same purpose */
 
   /* Better touch targets for buttons inside cards */
   td .btn {
@@ -1833,3 +1836,232 @@ select {
 .text-xs { font-size: var(--font-size-xs); }
 .font-mono { font-family: var(--font-mono); }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ============================================================
+   Report Detail — .rpt-* namespace
+   ============================================================ */
+
+/* ── Tabs ──────────────────────────────────────────────────── */
+.rpt-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 1.25rem;
+}
+.rpt-tab {
+  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.15s, border-color 0.15s;
+}
+.rpt-tab:hover { color: var(--text-primary); }
+.rpt-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.rpt-tab-panel--hidden { display: none; }
+
+/* ── Summary bar (compact inline badges) ──────────────────── */
+.rpt-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  padding: 0.6rem 0;
+}
+.rpt-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 700; }
+.rpt-badge--pass { background: var(--status-success); color: #fff; }
+.rpt-badge--fail { background: var(--status-error); color: #fff; }
+.rpt-badge--neutral { background: var(--bg-tertiary); color: var(--text-secondary); }
+.rpt-badge--white { background: rgba(255,255,255,0.2); color: #fff; }
+.rpt-badge--error-light { background: var(--status-error-bg); color: var(--status-error); }
+.rpt-badge--warning-light { background: var(--status-warning-bg); color: var(--status-warning); }
+.rpt-badge--notice-light { background: var(--status-info-bg); color: var(--status-info); }
+
+/* ── Section wrapper ──────────────────────────────────────── */
+.rpt-section { background: var(--bg-primary); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 1.25rem; }
+.rpt-section__header { padding: 0.85rem 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+.rpt-section__header--dark { background: var(--bg-sidebar); color: var(--text-inverse); }
+.rpt-section__title { font-size: 1rem; font-weight: 700; }
+.rpt-section__subtitle { font-size: 0.78rem; opacity: 0.85; margin-top: 0.2rem; }
+.rpt-section__meta { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+/* ── Issue section headers (Tab 2) ────────────────────────── */
+.rpt-issue-section { margin-bottom: 1.25rem; }
+.rpt-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+.rpt-section-header__title { font-size: 0.92rem; font-weight: 700; margin: 0; }
+.rpt-section-header__hint { font-size: 0.72rem; font-style: italic; margin-left: auto; }
+.rpt-section-header--regulatory { background: var(--status-error-bg); border-left: 4px solid var(--status-error); }
+.rpt-section-header--template { background: #f3eaff; border-left: 4px solid #7c3aed; }
+.rpt-section-header--other { background: var(--bg-tertiary); border-left: 4px solid var(--border-color); }
+
+/* ── Collapsible issue groups ─────────────────────────────── */
+.rpt-issue-list { display: flex; flex-direction: column; gap: 0.35rem; }
+.rpt-group {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.rpt-group__header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  user-select: none;
+  flex-wrap: wrap;
+  transition: background 0.1s;
+}
+.rpt-group__header:hover { background: var(--bg-secondary); }
+.rpt-group__title { font-weight: 600; font-size: 0.84rem; }
+.rpt-component-tag { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px; font-size: 0.78rem; font-weight: 700; background: #7c3aed; color: #fff; white-space: nowrap; }
+.rpt-group__body { padding: 0 0.85rem 0.65rem; }
+.rpt-group--collapsed .rpt-group__body { display: none; }
+
+/* ── Individual issue items ───────────────────────────────── */
+.rpt-issue-item {
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.82rem;
+}
+.rpt-issue-item:last-child { border-bottom: none; }
+.rpt-template-block { border-left: 3px solid #7c3aed; padding-left: 0.6rem; margin-bottom: 0.5rem; }
+.rpt-template-block__label { font-size: 0.72rem; font-weight: 600; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
+
+/* ── Templates tab ────────────────────────────────────── */
+.rpt-template-intro { font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1rem; }
+.rpt-group--template { border-left: 3px solid #7c3aed; }
+.rpt-issue-item__head { display: flex; align-items: flex-start; gap: 0.4rem; flex-wrap: wrap; }
+.rpt-issue-item__message { flex: 1; min-width: 0; }
+.rpt-issue-item__detail { margin-top: 0.2rem; }
+.rpt-issue-item__regs { margin-top: 0.3rem; display: flex; flex-wrap: wrap; gap: 0.2rem; }
+.rpt-issue-item__wcag-desc { font-size: 0.73rem; margin-top: 0.1rem; }
+.rpt-issue-item__affected { margin-top: 0.35rem; font-size: 0.75rem; color: var(--text-muted); }
+.rpt-issue-item__affected summary { cursor: pointer; color: #7c3aed; font-weight: 600; }
+.rpt-issue-item__affected ul { margin-top: 0.3rem; padding-left: 1.2rem; }
+.rpt-issue-item__affected li { font-size: 0.72rem; word-break: break-all; }
+
+/* ── Jurisdiction cards ───────────────────────────────────── */
+.rpt-juris-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; padding: 1.25rem; }
+.rpt-juris-card { border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
+.rpt-juris-card__head { padding: 0.7rem 1rem; display: flex; align-items: center; justify-content: space-between; }
+.rpt-juris-card__head--pass-head { background: var(--status-success-bg); border-bottom: 2px solid var(--status-success); }
+.rpt-juris-card__head--fail-head { background: var(--status-error-bg); border-bottom: 2px solid var(--status-error); }
+.rpt-juris-card__head--review-head { background: var(--status-warning-bg); border-bottom: 2px solid var(--status-warning); }
+.rpt-juris-card__name { font-weight: 700; font-size: 0.9rem; }
+.rpt-juris-card__id { font-size: 0.7rem; color: var(--text-muted); }
+.rpt-juris-card__status { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+.rpt-juris-card__status--s-pass { color: var(--status-success); }
+.rpt-juris-card__status--s-fail { color: var(--status-error); }
+.rpt-juris-card__status--s-review { color: var(--status-warning); }
+.rpt-juris-card__body { padding: 0.7rem 1rem; font-size: 0.82rem; }
+.rpt-juris-card__viol { margin-bottom: 0.3rem; }
+.rpt-juris-card__regs { margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.rpt-text--fail { color: var(--status-error); }
+.rpt-text--muted { color: var(--text-muted); }
+
+/* ── Severity badge ───────────────────────────────────────── */
+.rpt-severity { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
+.rpt-severity--error { background: var(--status-error-bg); color: var(--status-error); }
+.rpt-severity--warning { background: var(--status-warning-bg); color: var(--status-warning); }
+.rpt-severity--notice { background: var(--status-info-bg); color: var(--status-info); }
+.rpt-severity--clean { background: var(--status-success-bg); color: var(--status-success); }
+
+/* ── Regulation tags ──────────────────────────────────────── */
+.rpt-reg-tag { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; margin: 0.1rem 0.1rem 0.1rem 0; white-space: nowrap; text-decoration: none; }
+.rpt-reg-tag--obligation-mandatory { background: var(--status-error-bg); color: var(--status-error); border: 1px solid var(--status-error); }
+.rpt-reg-tag--obligation-recommended { background: var(--status-warning-bg); color: var(--status-warning); border: 1px solid var(--status-warning); }
+.rpt-reg-tag--obligation-optional { background: var(--status-info-bg); color: var(--status-info); border: 1px solid var(--status-info); }
+
+/* ── Code / WCAG references ───────────────────────────────── */
+.rpt-code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.75rem; color: #7c3aed; word-break: break-all; }
+.rpt-code-ctx { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.75rem; background: var(--bg-secondary); padding: 0.15rem 0.35rem; border-radius: 4px; word-break: break-all; display: inline-block; max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
+.rpt-wcag-link { color: inherit; text-decoration: underline dotted; }
+.rpt-wcag-link:hover { text-decoration: underline; }
+.rpt-wcag-info { margin-top: 0.25rem; }
+.rpt-wcag-info__title { font-weight: 600; font-size: 0.78rem; }
+.rpt-wcag-info__desc { font-size: 0.73rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+/* ── Issue table (per-page, Tab 3) ────────────────────────── */
+.rpt-table-wrap { overflow-x: auto; }
+.rpt-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; table-layout: fixed; }
+.rpt-table th { background: var(--bg-secondary); padding: 0.55rem 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border-color); }
+.rpt-table th:nth-child(1) { width: 7%; }   /* Severity */
+.rpt-table th:nth-child(2) { width: 20%; }  /* WCAG Criterion */
+.rpt-table th:nth-child(3) { width: 38%; }  /* What's Wrong */
+.rpt-table th:nth-child(4) { width: 15%; }  /* Legal Impact */
+.rpt-table th:nth-child(5) { width: 20%; }  /* Element */
+.rpt-table td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border-color); vertical-align: top; overflow-wrap: break-word; word-break: break-word; }
+.rpt-table tr:last-child td { border-bottom: none; }
+.rpt-row--error td:first-child { border-left: 3px solid var(--status-error); }
+.rpt-row--warning td:first-child { border-left: 3px solid var(--status-warning); }
+.rpt-row--notice td:first-child { border-left: 3px solid var(--status-info); }
+
+/* ── Controls (filter bar, search) ────────────────────────── */
+.rpt-controls { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.rpt-search { padding: 0.38rem 0.7rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-size: 0.84rem; width: 200px; }
+.rpt-issues-header { margin-bottom: 1rem; }
+.rpt-issues-summary { font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.5rem; }
+.rpt-filter-bar { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
+.rpt-filter-sep { color: var(--border-color); font-size: 0.85rem; margin: 0 0.1rem; }
+.rpt-filter-btn--error.btn--active { background: var(--status-error); border-color: var(--status-error); color: #fff; }
+.rpt-filter-btn--warning.btn--active { background: var(--status-warning); border-color: var(--status-warning); color: #fff; }
+.rpt-filter-btn--notice.btn--active { background: var(--status-info); border-color: var(--status-info); color: #fff; }
+.rpt-filter-btn--regulatory.btn--active { background: var(--status-error); border-color: var(--status-error); color: #fff; }
+.rpt-filter-btn--template.btn--active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.rpt-filter-summary { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; min-height: 1.2em; }
+.rpt-group__counts { display: flex; gap: 0.25rem; align-items: center; margin-left: auto; flex-shrink: 0; }
+
+/* ── Page sections (Tab 3) ────────────────────────────────── */
+.rpt-page { background: var(--bg-primary); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 0.6rem; overflow: hidden; }
+.rpt-page__header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: background 0.1s; }
+.rpt-page__header:hover { background: var(--bg-secondary); }
+.rpt-page__url { font-size: 0.85rem; font-weight: 600; color: var(--status-info); word-break: break-all; min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.rpt-page__meta { display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; margin-left: 0.75rem; flex-wrap: wrap; }
+.rpt-page__body { padding: 0; }
+.rpt-page__body--collapsed { display: none; }
+.rpt-no-issues { padding: 0.85rem 1.1rem; color: var(--status-success); font-size: 0.84rem; font-weight: 500; }
+
+/* ── Chevron indicator ────────────────────────────────────── */
+.rpt-chevron { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; transform: rotate(0deg); }
+.rpt-group--collapsed .rpt-chevron { transform: rotate(-90deg); }
+
+/* ── Scan errors ──────────────────────────────────────────── */
+.rpt-scan-errors { margin-top: 1.5rem; }
+.rpt-scan-error { margin-bottom: 0.4rem; font-size: 0.82rem; }
+
+/* ── Dark mode overrides for report ───────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .rpt-section-header--template { background: #2d1854; }
+  .rpt-code { color: #a78bfa; }
+  .rpt-issue-item__affected summary { color: #a78bfa; }
+}
+
+/* ── Mobile responsive ────────────────────────────────────── */
+@media (max-width: 640px) {
+  .rpt-tabs { overflow-x: auto; }
+  .rpt-tab { padding: 0.5rem 0.85rem; font-size: 0.8rem; white-space: nowrap; }
+  .rpt-summary-bar { gap: 0.35rem; }
+  .rpt-juris-grid { grid-template-columns: 1fr; padding: 0.75rem; }
+  .rpt-table { font-size: 0.75rem; }
+  .rpt-table th, .rpt-table td { padding: 0.45rem 0.6rem; }
+  .rpt-controls { gap: 0.3rem; }
+  .rpt-search { width: 100%; }
+  .rpt-group__header { padding: 0.45rem 0.65rem; font-size: 0.78rem; }
+}

@@ -263,10 +263,13 @@ Navigate to **New Scan** in the sidebar (requires `user` role).
 
 Fill in the form:
 
-- **URL** — the target website URL (e.g. `https://example.com`). Must be a valid URL.
-- **Jurisdictions** — select one or more jurisdictions to check compliance against (e.g. EU, US, UK). The list is fetched live from the compliance service and cached for 5 minutes. Selecting jurisdictions enriches the report with legal obligation context.
-- **WCAG Standard** — choose `WCAG2A`, `WCAG2AA` (default), or `WCAG2AAA`.
+- **URL** — the target website URL (e.g. `https://example.com`). Must be a valid URL with `http` or `https` protocol.
+- **Scan Mode** — choose **Single Page** (default, scans only the entered URL) or **Full Site** (discovers all pages via sitemap/crawl). Full Site mode enables template issue detection and the Templates tab in the report.
+- **Jurisdictions** — select one or more jurisdictions to check compliance against (e.g. EU, US, UK). The list is fetched live from the compliance service via a searchable picker component. Maximum 50 jurisdictions per scan. Selecting jurisdictions enriches the report with legal obligation context.
+- **WCAG Standard** — choose `WCAG2A`, `WCAG2AA` (default), or `WCAG2AAA`. The report displays this as a human-readable label (e.g. "WCAG 2.1 Level AA") via `formatStandard`.
 - **Concurrency** — number of pages to scan in parallel (1–10, default from config).
+
+The scan endpoint (`POST /scan/new`) is rate-limited to prevent abuse.
 
 Click **Start Scan**. The server creates a scan record and immediately redirects to the progress page.
 
@@ -289,9 +292,10 @@ SSE events streamed during a scan:
 |------------|---------|
 | `discovery` | Site discovery complete — total page count known |
 | `scan_start` | Scan started |
+| `page_progress` | A single page has been scanned — includes page URL and running issue counts |
 | `scan_complete` | All pages scanned — compliance check in progress |
 | `compliance` | Compliance check complete |
-| `complete` | Report written — browser redirected to viewer |
+| `complete` | Report written — browser redirected to viewer (URL is validated to prevent open redirects) |
 | `failed` | Scan encountered a fatal error |
 
 ### Browsing reports
@@ -314,12 +318,22 @@ The **Reports** page (`/reports`) lists all scan records as a sortable, searchab
 
 Click the report link in the Reports table to open the **Report Viewer** (`/reports/:id/view`).
 
-The page embeds the HTML report within the dashboard layout. Additional controls:
+The report uses a tabbed layout with a **summary bar** above the tabs showing total errors, warnings, and notices at a glance.
+
+**Tabs:**
+
+- **Compliance** — jurisdiction cards showing the count of WCAG criteria violated per jurisdiction, with regulation badges linking to official legal texts. Only visible when jurisdictions were selected.
+- **Issues** — all issues grouped by WCAG criterion (e.g. "1.1.1 Non-text Content"). Each criterion group displays a severity breakdown (errors/warnings/notices counts). Includes a multi-select filter system: severity filters (Errors, Warnings, Notices) and category filters (Regulatory, Template). Filters show live counts and those with zero results are hidden automatically.
+- **Templates** — issues grouped by inferred component (Navigation, Footer, Cookie Banner, Form, Header, etc.) with affected page counts. Only appears on full-site scans where template issues were detected.
+- **Pages** — per-page issue breakdown for full-site scans.
+
+Additional controls:
 
 - **Download JSON** — downloads the raw JSON report file.
 - **Download HTML** — downloads the standalone HTML report.
 - **Compare** — if a previous scan of the same URL exists, a Compare link appears.
-- **Compliance summary** — if jurisdictions were selected, a compliance breakdown is shown at the top.
+
+The WCAG standard displays as a human-readable label (e.g. "WCAG 2.1 Level AA") throughout the report.
 
 The page includes print-specific CSS: printing hides sidebar and navigation and produces a clean, full-width report.
 
