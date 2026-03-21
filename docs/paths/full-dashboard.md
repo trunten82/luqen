@@ -169,7 +169,15 @@ Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|a
 
 | Feature | Description |
 |---------|-------------|
-| **User management** | Create, edit, delete users. Assign roles (admin, user). |
+| **Org-wide accessibility score** | Aggregated 0-100 score across all scanned sites with trend tracking over time. Visible on the executive dashboard. |
+| **Scan scheduling** | Configure daily, weekly, or monthly recurring scans from the dashboard UI. Manage at `/admin/schedules`. |
+| **Issue assignment lifecycle** | Assign issues to team members and track through open, assigned, in-progress, fixed, and verified states. |
+| **Connected repos** | Link GitHub/GitLab repos to receive AI-generated fix proposals (21 suggestion types via MCP/A2A). Manage at `/admin/repos`. |
+| **Role-based UX** | Four personas (admin, developer, user, executive) with tailored navigation and default views. |
+| **Report comparison** | Side-by-side delta view with regression alerts when new issues appear between scans. |
+| **Enhanced manual testing** | Step-by-step guides with annotated good/bad examples for each manual check criterion. |
+| **UI polish** | Page transition animations, empty-state illustrations, and skeleton loading placeholders. |
+| **User management** | Create, edit, delete users. Assign roles (admin, developer, user, executive). |
 | **Scan history** | Browse all past scans. Filter by URL, date, status. |
 | **Report viewer** | Interactive HTML report with compliance matrix. |
 | **Self-audit** | Run `pally-dashboard self-audit` to scan the dashboard itself. |

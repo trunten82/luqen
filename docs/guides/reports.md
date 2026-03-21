@@ -171,7 +171,7 @@ Automated scanning covers approximately 30-40% of WCAG criteria. The manual test
 
 **Path:** `/reports/:id/manual`
 
-The checklist includes 27 WCAG 2.1 AA success criteria that cannot be fully automated, such as:
+The checklist includes 27 WCAG 2.1 AA success criteria that cannot be fully automated. Each criterion now includes step-by-step testing guides with annotated good and bad examples showing what passing and failing implementations look like. Criteria include:
 
 - Meaningful alternative text (1.1.1 — beyond just checking for presence)
 - Logical reading order (1.3.2)
@@ -201,6 +201,37 @@ The dashboard tracks scan results over time for each URL.
 
 ---
 
+## Issue assignments
+
+Each issue in a report can be assigned to a team member and tracked through a lifecycle:
+
+| Status | Meaning |
+|--------|---------|
+| **Open** | Newly detected, not yet assigned |
+| **Assigned** | Assigned to a developer via the assignee dropdown |
+| **In Progress** | Developer is actively working on the fix |
+| **Fixed** | Fix applied, awaiting verification scan |
+| **Verified** | Re-scanned and confirmed resolved |
+
+Click the assignee dropdown on any issue row in the Issues tab to assign it. Status transitions are logged with timestamps. Filter the issue list by assignment status using the **Status** filter.
+
+---
+
+## Fix proposals from connected repos
+
+When repositories are connected (see [dashboard-admin.md](dashboard-admin.md#connected-repositories)), pally-agent generates AI-powered fix proposals for scan issues. The system supports 21 suggestion types covering common WCAG violations, delivered via MCP/A2A integration.
+
+Fix proposals appear in a **Fixes** tab on the report detail page. Each proposal shows:
+
+- The target file and line range in the connected repo
+- A code diff with the suggested fix
+- The WCAG criterion and regulation it addresses
+- An **Apply** action (creates a branch/PR in the connected repo)
+
+View all proposals across scans at `/admin/proposals`.
+
+---
+
 ## Report comparison
 
 Compare two reports to see what changed between scans.
@@ -209,11 +240,12 @@ Compare two reports to see what changed between scans.
 
 1. Go to the **Reports** list page.
 2. Select two completed reports (they should be for the same site, scanned at different times).
-3. The comparison view shows:
-   - **Added issues** — new issues not present in the earlier scan
-   - **Removed issues** — issues that were fixed since the earlier scan
+3. The comparison view shows a **side-by-side delta** layout with:
+   - **Added issues** — new issues not present in the earlier scan (highlighted red)
+   - **Removed issues** — issues that were fixed since the earlier scan (highlighted green)
    - **Unchanged issues** — issues present in both scans
    - **Summary delta** — change in error, warning, and notice counts
+   - **Regression alerts** — prominent warnings when new issues appear that were not present before
 
 The comparison URL format is:
 
