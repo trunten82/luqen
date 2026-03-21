@@ -135,6 +135,18 @@
 {{! ── Tab 2: Issues — unified list grouped by WCAG criterion ─────────────── }}
 <div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-issues" role="tabpanel" aria-labelledby="tab-issues">
 
+  {{! Bulk assign toolbar }}
+  {{#if perm.issuesAssign}}
+  <div class="rpt-bulk-bar" id="rpt-bulk-bar" style="display:none;">
+    <label class="rpt-bulk-bar__select-all"><input type="checkbox" id="rpt-bulk-select-all" onchange="rptBulkToggleAll(this.checked)"> Select all visible</label>
+    <span id="rpt-bulk-count">0 selected</span>
+    <select id="rpt-bulk-assignee" class="rpt-bulk-bar__select">
+      <option value="">Unassigned</option>
+    </select>
+    <button type="button" class="btn btn--primary btn--sm" onclick="rptBulkAssign()">Assign Selected</button>
+  </div>
+  {{/if}}
+
   {{! Summary + filters }}
   <div class="rpt-issues-header">
     <div class="rpt-issues-summary" id="rpt-issues-summary">
@@ -150,8 +162,9 @@
   {{#if reportData.allIssueGroups}}
   <div class="rpt-issue-list" id="rpt-issue-list">
     {{#each reportData.allIssueGroups}}
-    <div class="rpt-group rpt-group--collapsed" data-issue-group data-regulatory="{{isRegulatory}}" data-template="{{hasTemplate}}" data-total-count="{{totalCount}}" data-error-count="{{errorCount}}" data-warning-count="{{warningCount}}" data-notice-count="{{noticeCount}}" data-page-count="{{pageCount}}">
+    <div class="rpt-group rpt-group--collapsed" data-issue-group data-criterion="{{criterion}}" data-criterion-title="{{title}}" data-severity="{{#if errorCount}}error{{else}}{{#if warningCount}}warning{{else}}notice{{/if}}{{/if}}" data-regulatory="{{isRegulatory}}" data-template="{{hasTemplate}}" data-total-count="{{totalCount}}" data-error-count="{{errorCount}}" data-warning-count="{{warningCount}}" data-notice-count="{{noticeCount}}" data-page-count="{{pageCount}}">
       <div class="rpt-group__header" onclick="rptToggleGroup(this)" role="button" tabindex="0" aria-expanded="false">
+        {{#if ../../perm.issuesAssign}}<input type="checkbox" class="rpt-bulk-cb" onclick="event.stopPropagation();rptBulkUpdate()" aria-label="Select {{criterion}}">{{/if}}
         <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
         {{#if wcagUrl}}
           <a class="rpt-code rpt-wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{criterion}}</a>
@@ -188,7 +201,10 @@
               <span class="rpt-component-tag">{{componentName}}</span>
               <span class="rpt-text--muted">({{affectedCount}} pages)</span>
               {{#if ../../perm.issuesAssign}}
+              {{{issueAssignStatus ../../../../assignedMap code selector message}}}
+              {{#unless (issueAssignStatus ../../../../assignedMap code selector message)}}
               <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
+              {{/unless}}
               {{/if}}
             </div>
             <div class="rpt-issue-item__message">{{message}}</div>
@@ -216,7 +232,10 @@
             <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
             <span class="rpt-issue-item__message">{{message}}</span>
             {{#if ../../perm.issuesAssign}}
+            {{{issueAssignStatus ../../../../assignedMap code selector message}}}
+            {{#unless (issueAssignStatus ../../../../assignedMap code selector message)}}
             <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
+            {{/unless}}
             {{/if}}
           </div>
           {{#if ../../perm.reportsViewTechnical}}
@@ -445,6 +464,8 @@
 {{/if}}
 
 {{/if}}
+
+<script>window.__pallyAssignees = {{{json assignees}}};</script>
 
 <script>
   /* ── Tab switching ──────────────────────────────────────────────────────── */
@@ -719,6 +740,74 @@
     rptApplyFilters();
   }
 
+  /* ── Bulk assign ─────────────────────────────────────────────────────── */
+  function rptBulkUpdate() {
+    var checked = document.querySelectorAll('.rpt-bulk-cb:checked');
+    var bar = document.getElementById('rpt-bulk-bar');
+    var countEl = document.getElementById('rpt-bulk-count');
+    if (bar) bar.style.display = checked.length > 0 ? 'flex' : 'none';
+    if (countEl) countEl.textContent = checked.length + ' selected';
+  }
+
+  function rptBulkToggleAll(checked) {
+    document.querySelectorAll('.rpt-bulk-cb').forEach(function(cb) {
+      var group = cb.closest('[data-issue-group]');
+      if (group && group.style.display !== 'none') cb.checked = checked;
+    });
+    rptBulkUpdate();
+  }
+
+  function rptBulkAssign() {
+    var assignee = (document.getElementById('rpt-bulk-assignee') || {}).value || '';
+    var checked = document.querySelectorAll('.rpt-bulk-cb:checked');
+    if (checked.length === 0) return;
+
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    var scanId = window.location.pathname.split('/')[2];
+    var pending = checked.length;
+    var done = 0;
+
+    checked.forEach(function(cb) {
+      var group = cb.closest('[data-issue-group]');
+      if (!group) return;
+      var criterion = group.getAttribute('data-criterion') || '';
+      var title = group.getAttribute('data-criterion-title') || '';
+      var severity = group.getAttribute('data-severity') || 'notice';
+      var fp = criterion + '||bulk||' + title;
+
+      var formData = new URLSearchParams();
+      formData.append('issueFingerprint', fp);
+      formData.append('wcagCriterion', criterion);
+      formData.append('wcagTitle', title);
+      formData.append('severity', severity);
+      formData.append('message', title);
+      if (assignee) formData.append('assignedTo', assignee);
+
+      fetch('/reports/' + scanId + '/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrfToken }
+      , body: formData.toString()
+      }).then(function() {
+        done++;
+        if (done >= pending) {
+          cb.checked = false;
+          rptBulkUpdate();
+          var tc = document.getElementById('toast-container');
+          if (tc) {
+            var t = document.createElement('div');
+            t.className = 'toast toast--success';
+            t.textContent = done + ' issues assigned' + (assignee ? ' to ' + assignee : '');
+            tc.appendChild(t);
+            setTimeout(function() { t.remove(); }, 3000);
+          }
+        }
+      });
+    });
+    checked.forEach(function(cb) { cb.checked = false; });
+    rptBulkUpdate();
+  }
+
   /* ── Page search (Tab 3) ────────────────────────────────────────────────── */
   function rptSearchPages(query) {
     var q = query.toLowerCase();
@@ -744,8 +833,54 @@
     });
   })();
 
-  /* ── Assign issue via POST ──────────────────────────────────────────────── */
+  /* ── Assign issue via popover dropdown ─────────────────────────────────── */
   function rptAssignIssue(btn, code, selector, message, severity, wcagCriterion, wcagTitle) {
+    // Close any existing popover
+    var existing = document.querySelector('.rpt-assign-popover');
+    if (existing) existing.remove();
+
+    var popover = document.createElement('div');
+    popover.className = 'rpt-assign-popover';
+
+    var select = document.createElement('select');
+    select.className = 'rpt-assign-popover__select';
+    // Add default option using DOM methods (no innerHTML for XSS safety)
+    var defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Unassigned';
+    select.appendChild(defaultOpt);
+
+    var assignees = window.__pallyAssignees || [];
+    assignees.forEach(function(a) {
+      var opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
+      select.appendChild(opt);
+    });
+
+    var confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn btn--primary btn--sm';
+    confirmBtn.textContent = 'Assign';
+    confirmBtn.onclick = function() {
+      var assignedTo = select.value;
+      rptDoAssign(btn, code, selector, message, severity, wcagCriterion, wcagTitle, assignedTo);
+      popover.remove();
+    };
+
+    var cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn--ghost btn--sm';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = function() { popover.remove(); };
+
+    popover.appendChild(select);
+    popover.appendChild(confirmBtn);
+    popover.appendChild(cancelBtn);
+
+    btn.parentElement.style.position = 'relative';
+    btn.parentElement.appendChild(popover);
+  }
+
+  function rptDoAssign(btn, code, selector, message, severity, wcagCriterion, wcagTitle, assignedTo) {
     var scanId = '{{scan.id}}';
     var fingerprint = code + '|' + selector + '|' + message;
 
@@ -760,6 +895,7 @@
     if (selector) formData.append('selector', selector);
     if (wcagCriterion) formData.append('wcagCriterion', wcagCriterion);
     if (wcagTitle) formData.append('wcagTitle', wcagTitle);
+    if (assignedTo) formData.append('assignedTo', assignedTo);
 
     btn.disabled = true;
     btn.textContent = 'Assigning...';
@@ -778,7 +914,7 @@
       return response.text();
     })
     .then(function() {
-      btn.textContent = 'Assigned';
+      btn.textContent = assignedTo ? 'Assigned: ' + assignedTo : 'Assigned';
       btn.classList.add('rpt-assign-btn--done');
     })
     .catch(function() {
@@ -786,6 +922,19 @@
       btn.textContent = 'Assign';
     });
   }
+
+  /* ── Populate bulk assign dropdown from assignees ────────────────────── */
+  (function() {
+    var bulkSelect = document.getElementById('rpt-bulk-assignee');
+    if (!bulkSelect) return;
+    var assignees = window.__pallyAssignees || [];
+    assignees.forEach(function(a) {
+      var opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
+      bulkSelect.appendChild(opt);
+    });
+  })();
 </script>
 
 <style>
@@ -795,4 +944,31 @@
   }
   .rpt-assign-btn:hover { background: var(--primary-color, #2563eb); color: #fff; border-color: var(--primary-color, #2563eb); }
   .rpt-assign-btn--done { background: #d1fae5; color: #065f46; border-color: #a7f3d0; cursor: default; }
+
+  /* Assign popover */
+  .rpt-assign-popover {
+    position: absolute; right: 0; top: 100%; z-index: 50;
+    display: flex; gap: 0.4rem; align-items: center; padding: 0.5rem;
+    background: var(--card-bg, #fff); border: 1px solid var(--border-color, #ccc);
+    border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    white-space: nowrap;
+  }
+  .rpt-assign-popover__select {
+    padding: 0.3rem 0.5rem; border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px; font-size: 0.8rem; background: var(--input-bg, #fff);
+    color: var(--text-color, #333); min-width: 150px;
+  }
+
+  /* Bulk assign select */
+  .rpt-bulk-bar__select {
+    padding: 0.3rem 0.5rem; border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px; font-size: 0.85rem; background: var(--input-bg, #fff);
+    color: var(--text-color, #333); min-width: 160px;
+  }
+
+  /* Assigned badge */
+  .rpt-assigned-badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 3px; font-size: 0.7rem; font-weight: 600; background: var(--status-info-bg, #dbeafe); color: var(--status-info, #1e40af); }
+  .rpt-assigned-badge--fixed { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
+  .rpt-assigned-badge--verified { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
+  .rpt-assigned-badge--open { background: var(--status-error-bg, #fee2e2); color: var(--status-error, #991b1b); }
 </style>

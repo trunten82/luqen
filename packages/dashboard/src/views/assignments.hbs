@@ -1,5 +1,7 @@
 {{! Issue Assignments — lifecycle tracking for WCAG issues }}
 
+<script>window.__pallyAssignees = {{{json assignees}}};</script>
+
 <section aria-labelledby="asgn-heading" class="report-meta" style="margin-bottom:1.5rem;">
   <div class="detail-list detail-list--horizontal">
     <div class="detail-list__item">
@@ -84,7 +86,9 @@
         </select>
       </label>
       <label class="asgn-label">Assigned To
-        <input type="text" class="asgn-input" data-field="assignedTo" value="{{assignedTo}}" placeholder="team member...">
+        <select class="asgn-select" data-field="assignedTo" data-current-value="{{assignedTo}}">
+          <option value="">Unassigned</option>
+        </select>
       </label>
       <label class="asgn-label asgn-label--wide">Notes
         <textarea class="asgn-textarea" data-field="notes" rows="2" placeholder="Notes...">{{notes}}</textarea>
@@ -162,6 +166,7 @@
       var newCard = doc.querySelector('.asgn-card');
       if (newCard && card) {
         card.replaceWith(newCard);
+        asgnPopulateSelects(newCard);
       }
 
       var statsEl = doc.querySelector('[data-asgn-stats]');
@@ -178,6 +183,38 @@
     });
   }
 
+  function asgnDelete(assignmentId, btn) {
+    if (!confirm('Remove this assignment?')) return;
+    var card = document.getElementById('asgn-card-' + assignmentId);
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+    btn.disabled = true;
+    btn.textContent = 'Removing...';
+
+    fetch('/assignments/' + assignmentId, {
+      method: 'DELETE',
+      headers: { 'x-csrf-token': csrfToken }
+    })
+    .then(function(response) {
+      if (!response.ok) throw new Error('Delete failed');
+      return response.text();
+    })
+    .then(function(html) {
+      if (card) card.remove();
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(html, 'text/html');
+      var statsEl = doc.querySelector('[data-asgn-stats]');
+      if (statsEl) asgnUpdateStats(statsEl);
+      asgnShowToast('Assignment removed', 'success');
+    })
+    .catch(function(err) {
+      asgnShowToast('Failed to remove: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Remove';
+    });
+  }
+
   /* Update pipeline stats from data attributes */
   function asgnUpdateStats(el) {
     var fields = ['open', 'assigned', 'in-progress', 'fixed', 'verified'];
@@ -190,6 +227,35 @@
       }
     });
   }
+
+  /* Populate assignee dropdowns from window.__pallyAssignees */
+  function asgnPopulateSelects(root) {
+    var container = root || document;
+    var selects = container.querySelectorAll('select[data-field="assignedTo"]');
+    var assignees = window.__pallyAssignees || [];
+    selects.forEach(function(sel) {
+      var currentVal = sel.getAttribute('data-current-value') || '';
+      // Only add options if not already populated (beyond the default option)
+      if (sel.options.length <= 1) {
+        assignees.forEach(function(a) {
+          var opt = document.createElement('option');
+          opt.value = a.id;
+          opt.textContent = (a.type === 'team' ? '\uD83D\uDC65 ' : '') + a.label;
+          if (a.id === currentVal) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        // If current value doesn't match any assignee but exists, add it as an option
+        if (currentVal && !sel.value) {
+          var opt = document.createElement('option');
+          opt.value = currentVal;
+          opt.textContent = currentVal;
+          opt.selected = true;
+          sel.appendChild(opt);
+        }
+      }
+    });
+  }
+  asgnPopulateSelects();
 
   /* Toast notifications */
   function asgnShowToast(msg, type) {

@@ -1,0 +1,67 @@
+{{! Team detail — view and manage members }}
+
+<div class="admin-header">
+  <h2>{{team.name}}</h2>
+  <p class="text-muted">{{team.description}}</p>
+  <div style="margin-top:0.5rem;">
+    <a href="/admin/teams" class="btn btn--ghost btn--sm">&larr; Back to Teams</a>
+  </div>
+</div>
+
+{{! Add member form }}
+<form hx-post="/admin/teams/{{team.id}}/members"
+      hx-target="#members-table-body"
+      hx-swap="beforeend"
+      hx-on::after-request="if(event.detail.successful) this.reset()"
+      class="card" style="margin-bottom:1.5rem; padding:1rem;">
+  <input type="hidden" name="_csrf" value="{{csrfToken}}">
+  <div style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;">
+    <label class="form-group" style="flex:1; min-width:200px; margin-bottom:0;">
+      <span class="form-label">Add Member</span>
+      <select name="userId" class="input" required>
+        <option value="">Select a user...</option>
+        {{#each availableUsers}}
+        <option value="{{id}}">{{username}} ({{role}})</option>
+        {{/each}}
+      </select>
+    </label>
+    <button type="submit" class="btn btn--primary">Add Member</button>
+  </div>
+</form>
+
+{{! Members table }}
+<div class="table-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Team Role</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="members-table-body">
+      {{#each team.members}}
+      <tr id="member-row-{{userId}}">
+        <td data-label="Username">{{username}}</td>
+        <td data-label="Role"><span class="badge badge--neutral">{{role}}</span></td>
+        <td>
+          <button hx-delete="/admin/teams/{{../team.id}}/members/{{userId}}"
+                  hx-confirm="Remove {{username}} from this team?"
+                  hx-target="#member-row-{{userId}}"
+                  hx-swap="outerHTML"
+                  class="btn btn--sm btn--warning"
+                  aria-label="Remove {{username}}">Remove</button>
+        </td>
+      </tr>
+      {{/each}}
+
+      {{#unless team.members.length}}
+      <tr id="members-empty-row">
+        <td colspan="3" style="text-align:center; padding:2rem;">
+          No members yet. Add dashboard users above.
+        </td>
+      </tr>
+      {{/unless}}
+    </tbody>
+  </table>
+</div>

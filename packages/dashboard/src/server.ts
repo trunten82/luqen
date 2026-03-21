@@ -46,6 +46,7 @@ import { VERSION } from './version.js';
 import { getFixSuggestion } from './fix-suggestions.js';
 import { ALL_PERMISSIONS, ALL_PERMISSION_IDS } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
+import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { startEmailScheduler } from './email/scheduler.js';
 
@@ -206,6 +207,16 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
   handlebars.registerHelper('json', (context: unknown) => JSON.stringify(context));
 
+  handlebars.registerHelper('issueAssignStatus', (assignedMap: Record<string, { status: string; assignedTo: string | null }> | undefined, code: string, selector: string, message: string) => {
+    if (assignedMap == null) return '';
+    const fp = `${code}|${selector}|${message}`;
+    if (!(fp in assignedMap)) return '';
+    const a = assignedMap[fp];
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const who = a.assignedTo ? ` &middot; ${esc(a.assignedTo)}` : '';
+    return new handlebars.SafeString(`<span class="rpt-assigned-badge rpt-assigned-badge--${a.status}">${esc(a.status)}${who}</span>`);
+  });
+
   handlebars.registerHelper('fixSuggestion', (criterion: string, message: string) => {
     const fix = getFixSuggestion(criterion, message);
     if (!fix) return '';
@@ -348,6 +359,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await apiKeyRoutes(server, db.getDatabase());
   await organizationRoutes(server, orgDb, userDb, config.complianceUrl);
   await roleRoutes(server, db);
+  await teamRoutes(server, db, userDb);
   await emailReportRoutes(server, db, pluginManager);
 
   await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
