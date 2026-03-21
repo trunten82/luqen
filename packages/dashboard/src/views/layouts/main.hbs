@@ -6,6 +6,7 @@
   <meta name="description" content="Pally Dashboard — Accessibility Scanner">
   <title>{{#if pageTitle}}{{pageTitle}} — {{/if}}Pally Dashboard</title>
   <link rel="stylesheet" href="/static/style.css">
+  <meta name="csrf-token" content="{{csrfToken}}">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -49,6 +50,13 @@
 
   <script src="/static/htmx.min.js"></script>
   <script src="/static/htmx-sse.js"></script>
+  <script>
+    /* ── CSRF: send token on every HTMX request ─────────────────────── */
+    document.body.addEventListener('htmx:configRequest', function(e) {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      if (meta) e.detail.headers['x-csrf-token'] = meta.getAttribute('content');
+    });
+  </script>
   <script>
     /* ── Sidebar (mobile) ─────────────────────────────────────────────── */
     function toggleSidebar() {

@@ -29,6 +29,7 @@ export interface ScanConfig {
   readonly webserviceUrl: string;
   readonly complianceUrl?: string;
   readonly complianceToken?: string;
+  readonly maxPages?: number;
 }
 
 class ScanQueue {
@@ -170,6 +171,7 @@ export class ScanOrchestrator {
           standard: config.standard as 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA',
           concurrency: config.concurrency,
           singlePage: config.scanMode !== 'site',
+          maxPages: config.maxPages,
           onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
             if (progress.type === 'scan:start') {
               // First scan:start event tells us discovery is done

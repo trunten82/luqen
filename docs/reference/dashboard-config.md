@@ -33,6 +33,7 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `dbPath` | `string` | `./dashboard.db` | Path to the SQLite database file |
 | `sessionSecret` | `string` | — | Secret used to sign session cookies. **Required. Minimum 32 bytes.** |
 | `maxConcurrentScans` | `number` | `2` | Maximum number of scans that may run simultaneously |
+| `maxPages` | `number` | `50` | Maximum pages to discover and scan in full-site mode (1–1000) |
 | `pluginsDir` | `string` | `./plugins` | Directory where plugin packages are installed |
 | `pluginsConfigFile` | `string` | — | Optional path to a plugins configuration JSON file |
 
@@ -49,6 +50,7 @@ Place in the working directory where you run `pally-dashboard serve`. All fields
 | `DASHBOARD_DB_PATH` | `dbPath` | SQLite database path |
 | `DASHBOARD_SESSION_SECRET` | `sessionSecret` | Cookie signing secret (min 32 bytes) |
 | `DASHBOARD_MAX_CONCURRENT_SCANS` | `maxConcurrentScans` | Max parallel scan limit |
+| `DASHBOARD_MAX_PAGES` | `maxPages` | Maximum pages per full-site scan (1–1000, default 50) |
 | `DASHBOARD_PLUGINS_DIR` | `pluginsDir` | Directory for plugin packages (default: `./plugins`) |
 | `DASHBOARD_PLUGINS_CONFIG` | `pluginsConfigFile` | Path to plugins configuration file |
 | `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |
@@ -65,6 +67,7 @@ On startup the dashboard validates:
 - `sessionSecret` is at least 32 bytes
 - `port` is between 1 and 65535
 - `maxConcurrentScans` is at least 1
+- `maxPages` is between 1 and 1000
 - `complianceUrl` is a valid URL
 - `reportsDir` exists and is writable (created if missing)
 - `pluginsDir` exists (created if missing)

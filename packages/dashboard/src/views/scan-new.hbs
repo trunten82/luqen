@@ -4,7 +4,18 @@
     <span class="required" aria-hidden="true">*</span> are required.
   </p>
 
+  {{#if complianceWarning}}
+  <div class="alert alert--warning" role="alert">
+    <svg class="alert__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M10 2L1 18h18L10 2z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <path d="M10 8v4M10 14v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div class="alert__body">{{complianceWarning}}</div>
+  </div>
+  {{/if}}
+
   <form method="POST" action="/scan/new" novalidate>
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
     <div class="card mb-md">
       <h3 class="card__title mb-md">Target URL</h3>
       <div class="form-group">
@@ -31,7 +42,7 @@
           <label class="radio-label">
             <input type="radio" name="scanMode" value="site">
             <span>Full Site</span>
-            <span class="form-hint">Discover and scan up to 50 pages via sitemap &amp; crawl</span>
+            <span class="form-hint">Discover and scan up to {{maxPages}} pages via sitemap &amp; crawl</span>
           </label>
         </div>
       </div>

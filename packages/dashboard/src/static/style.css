@@ -79,6 +79,10 @@
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 0px;
 
+  /* Template accent */
+  --accent-template: #7c3aed;
+  --accent-template-light: #f3eaff;
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-base: 250ms ease;
@@ -117,6 +121,9 @@
     --status-running-bg: #051d2e;
     --status-queued: #d29922;
     --status-queued-bg: #1d1700;
+
+    --accent-template: #a78bfa;
+    --accent-template-light: #2d1854;
 
     --border-color: #30363d;
     --border-color-strong: #6e7681;
@@ -1907,7 +1914,7 @@ select {
 .rpt-section-header__title { font-size: 0.92rem; font-weight: 700; margin: 0; }
 .rpt-section-header__hint { font-size: 0.72rem; font-style: italic; margin-left: auto; }
 .rpt-section-header--regulatory { background: var(--status-error-bg); border-left: 4px solid var(--status-error); }
-.rpt-section-header--template { background: #f3eaff; border-left: 4px solid #7c3aed; }
+.rpt-section-header--template { background: var(--accent-template-light); border-left: 4px solid var(--accent-template); }
 .rpt-section-header--other { background: var(--bg-tertiary); border-left: 4px solid var(--border-color); }
 
 /* ── Collapsible issue groups ─────────────────────────────── */
@@ -1930,7 +1937,7 @@ select {
 }
 .rpt-group__header:hover { background: var(--bg-secondary); }
 .rpt-group__title { font-weight: 600; font-size: 0.84rem; }
-.rpt-component-tag { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px; font-size: 0.78rem; font-weight: 700; background: #7c3aed; color: #fff; white-space: nowrap; }
+.rpt-component-tag { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px; font-size: 0.78rem; font-weight: 700; background: var(--accent-template); color: #fff; white-space: nowrap; }
 .rpt-group__body { padding: 0 0.85rem 0.65rem; }
 .rpt-group--collapsed .rpt-group__body { display: none; }
 
@@ -1941,19 +1948,19 @@ select {
   font-size: 0.82rem;
 }
 .rpt-issue-item:last-child { border-bottom: none; }
-.rpt-template-block { border-left: 3px solid #7c3aed; padding-left: 0.6rem; margin-bottom: 0.5rem; }
-.rpt-template-block__label { font-size: 0.72rem; font-weight: 600; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
+.rpt-template-block { border-left: 3px solid var(--accent-template); padding-left: 0.6rem; margin-bottom: 0.5rem; }
+.rpt-template-block__label { font-size: 0.72rem; font-weight: 600; color: var(--accent-template); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
 
 /* ── Templates tab ────────────────────────────────────── */
 .rpt-template-intro { font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1rem; }
-.rpt-group--template { border-left: 3px solid #7c3aed; }
+.rpt-group--template { border-left: 3px solid var(--accent-template); }
 .rpt-issue-item__head { display: flex; align-items: flex-start; gap: 0.4rem; flex-wrap: wrap; }
 .rpt-issue-item__message { flex: 1; min-width: 0; }
 .rpt-issue-item__detail { margin-top: 0.2rem; }
 .rpt-issue-item__regs { margin-top: 0.3rem; display: flex; flex-wrap: wrap; gap: 0.2rem; }
 .rpt-issue-item__wcag-desc { font-size: 0.73rem; margin-top: 0.1rem; }
 .rpt-issue-item__affected { margin-top: 0.35rem; font-size: 0.75rem; color: var(--text-muted); }
-.rpt-issue-item__affected summary { cursor: pointer; color: #7c3aed; font-weight: 600; }
+.rpt-issue-item__affected summary { cursor: pointer; color: var(--accent-template); font-weight: 600; }
 .rpt-issue-item__affected ul { margin-top: 0.3rem; padding-left: 1.2rem; }
 .rpt-issue-item__affected li { font-size: 0.72rem; word-break: break-all; }
 
@@ -1990,7 +1997,7 @@ select {
 .rpt-reg-tag--obligation-optional { background: var(--status-info-bg); color: var(--status-info); border: 1px solid var(--status-info); }
 
 /* ── Code / WCAG references ───────────────────────────────── */
-.rpt-code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.75rem; color: #7c3aed; word-break: break-all; }
+.rpt-code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.75rem; color: var(--accent-template); word-break: break-all; }
 .rpt-code-ctx { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.75rem; background: var(--bg-secondary); padding: 0.15rem 0.35rem; border-radius: 4px; word-break: break-all; display: inline-block; max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
 .rpt-wcag-link { color: inherit; text-decoration: underline dotted; }
 .rpt-wcag-link:hover { text-decoration: underline; }
@@ -2024,7 +2031,7 @@ select {
 .rpt-filter-btn--warning.btn--active { background: var(--status-warning); border-color: var(--status-warning); color: #fff; }
 .rpt-filter-btn--notice.btn--active { background: var(--status-info); border-color: var(--status-info); color: #fff; }
 .rpt-filter-btn--regulatory.btn--active { background: var(--status-error); border-color: var(--status-error); color: #fff; }
-.rpt-filter-btn--template.btn--active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.rpt-filter-btn--template.btn--active { background: var(--accent-template); border-color: var(--accent-template); color: #fff; }
 .rpt-filter-summary { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; min-height: 1.2em; }
 .rpt-group__counts { display: flex; gap: 0.25rem; align-items: center; margin-left: auto; flex-shrink: 0; }
 
@@ -2046,12 +2053,7 @@ select {
 .rpt-scan-errors { margin-top: 1.5rem; }
 .rpt-scan-error { margin-bottom: 0.4rem; font-size: 0.82rem; }
 
-/* ── Dark mode overrides for report ───────────────────────── */
-@media (prefers-color-scheme: dark) {
-  .rpt-section-header--template { background: #2d1854; }
-  .rpt-code { color: #a78bfa; }
-  .rpt-issue-item__affected summary { color: #a78bfa; }
-}
+/* Dark mode report overrides handled via --accent-template / --accent-template-light variables */
 
 /* ── Mobile responsive ────────────────────────────────────── */
 @media (max-width: 640px) {

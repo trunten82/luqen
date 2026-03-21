@@ -173,6 +173,7 @@
   <div class="sidebar__org-switcher">
     <span class="sidebar__section-label">Organization</span>
     <form method="POST" action="/orgs/switch" class="org-switch-form">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
       <select name="orgId" class="select select--sm" onchange="this.form.submit()"
               aria-label="Switch organization">
         <option value="system" {{#unless orgContext.currentOrg}}selected{{/unless}}>System (no org)</option>
@@ -189,6 +190,7 @@
     <div class="flex items-center justify-between">
       <span>{{user.username}}</span>
       <form method="POST" action="/logout" style="display:inline">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <button type="submit" class="btn btn--ghost btn--sm">Sign out</button>
       </form>
     </div>
