@@ -13,5 +13,13 @@
     { "key": "fromAddress", "label": "From Email", "type": "string", "required": true },
     { "key": "fromName", "label": "From Name", "type": "string", "default": "Pally Dashboard" },
     { "key": "events", "label": "Events to notify", "type": "string", "default": "scan.complete,scan.failed" }
+  ],
+  "adminPages": [
+    {
+      "path": "/admin/email-reports",
+      "title": "Email Reports",
+      "icon": "envelope",
+      "permission": "admin.system"
+    }
   ]
 }

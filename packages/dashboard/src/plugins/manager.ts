@@ -416,6 +416,30 @@ export class PluginManager {
   }
 
   // -----------------------------------------------------------------------
+  // Active admin pages (plugin-declared sidebar items)
+  // -----------------------------------------------------------------------
+
+  getActiveAdminPages(): Array<{ path: string; title: string; icon: string; permission: string; pluginName: string }> {
+    const activePackageNames = new Set<string>();
+    const rows = this.db
+      .prepare("SELECT package_name FROM plugins WHERE status = 'active'")
+      .all() as Array<{ package_name: string }>;
+    for (const row of rows) {
+      activePackageNames.add(row.package_name);
+    }
+
+    const pages: Array<{ path: string; title: string; icon: string; permission: string; pluginName: string }> = [];
+    for (const entry of this.registryEntries) {
+      if (!activePackageNames.has(entry.packageName)) continue;
+      if (!entry.adminPages) continue;
+      for (const page of entry.adminPages) {
+        pages.push({ ...page, pluginName: entry.name });
+      }
+    }
+    return pages;
+  }
+
+  // -----------------------------------------------------------------------
   // Private helpers
   // -----------------------------------------------------------------------
 

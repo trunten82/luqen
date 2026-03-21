@@ -282,6 +282,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           adminSystem: perms.has('admin.system'),
         },
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
+        pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
+        emailPluginActive: pluginManager.getActiveInstanceByPackageName?.('@pally-agent/plugin-notify-email') != null,
       });
     };
   });

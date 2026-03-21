@@ -2,6 +2,13 @@ import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+export interface AdminPage {
+  readonly path: string;
+  readonly title: string;
+  readonly icon: string;
+  readonly permission: string;
+}
+
 export interface RegistryEntry {
   readonly name: string;
   readonly displayName: string;
@@ -10,6 +17,7 @@ export interface RegistryEntry {
   readonly description: string;
   readonly packageName: string;
   readonly icon: string;
+  readonly adminPages?: readonly AdminPage[];
 }
 
 export type PluginType = 'auth' | 'notification' | 'storage';
