@@ -226,11 +226,14 @@ The dashboard tracks scan results over time. Visit `/reports/trends` to see Char
 
 ### Email reports
 
-The dashboard can send scheduled accessibility reports by email. Configure this under **Admin > Email Reports**:
+The dashboard can send scheduled accessibility reports and event notifications by email, powered by the `@pally-agent/plugin-notify-email` plugin.
 
-1. **SMTP setup** — enter your mail server host, port, TLS setting, credentials, and "from" address. Use **Test Connection** to verify.
-2. **Create a schedule** — give it a name, enter the site URL, add one or more recipient addresses, and choose a frequency (daily, weekly, or monthly) and format (PDF, CSV, or both).
-3. **Manage schedules** — enable/disable, send immediately, or delete from the schedule list.
+1. **Install the plugin** — go to **Admin > Plugins**, find **Email Notifications**, and click **Install**.
+2. **Configure SMTP** — open the plugin settings and enter your mail server host, port, TLS setting, credentials, and "from" address. Activate the plugin to verify connectivity.
+3. **Create a schedule** — go to **Admin > Email Reports**, give it a name, enter the site URL, add one or more recipient addresses, and choose a frequency (daily, weekly, or monthly) and format (PDF, CSV, or both).
+4. **Manage schedules** — enable/disable, send immediately, or delete from the schedule list.
+
+The plugin also supports event notifications (`scan.complete`, `scan.failed`) — configure subscribed events in the plugin settings. The legacy `smtp_config` table in the dashboard database still works as a fallback if the plugin is not installed.
 
 The email body contains an inline-styled HTML summary with key metrics. PDF attachments use the same print template as the browser export; CSV attachments use the same export logic as the Data API.
 

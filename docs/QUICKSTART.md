@@ -205,6 +205,10 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 
 ---
 
+## New in v0.18.0
+
+- **Email reports plugin** — email reports refactored to the `@pally-agent/plugin-notify-email` plugin. SMTP config moves from the dashboard DB to plugin config at **Admin > Plugins**. Supports event notifications (`scan.complete`, `scan.failed`) and scheduled report delivery with PDF/CSV attachments. Legacy `smtp_config` table still works as fallback.
+
 ## New in v0.17.0
 
 - **Scheduled email reports** — configure SMTP and create report delivery schedules (daily/weekly/monthly) with PDF and/or CSV attachments from **Admin > Email Reports**.
