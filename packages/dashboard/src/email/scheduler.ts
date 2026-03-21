@@ -1,7 +1,10 @@
 import type { ScanDb } from '../db/scans.js';
 import type { EmailReport } from '../db/scans.js';
-import { sendEmail } from './sender.js';
+import type { PluginManager } from '../plugins/manager.js';
 import { generateReportHtml, generateIssuesCsv, buildEmailBody } from './report-generator.js';
+
+// Legacy import kept for backward compatibility with smtp_config table
+import { sendEmail } from './sender.js';
 import type { EmailAttachment } from './sender.js';
 
 function computeNextSendAt(frequency: string, fromDate: Date = new Date()): string {
@@ -27,13 +30,8 @@ export { computeNextSendAt };
 export async function processEmailReport(
   db: ScanDb,
   report: EmailReport,
+  pluginManager?: PluginManager,
 ): Promise<void> {
-  const smtpConfig = db.getSmtpConfig(report.orgId) ?? db.getSmtpConfig('system');
-  if (smtpConfig === null) {
-    console.error(`[email-scheduler] No SMTP config found for report ${report.id}`);
-    return;
-  }
-
   // Find the latest completed scan for this site URL
   const scans = db.listScans({
     siteUrl: report.siteUrl,
@@ -109,21 +107,49 @@ export async function processEmailReport(
 
   const emailBody = buildEmailBody(scan);
 
-  await sendEmail({
-    smtp: {
-      host: smtpConfig.host,
-      port: smtpConfig.port,
-      secure: smtpConfig.secure,
-      username: smtpConfig.username,
-      password: smtpConfig.password,
-      fromAddress: smtpConfig.fromAddress,
-      fromName: smtpConfig.fromName,
-    },
-    to: recipients,
-    subject,
-    html: emailBody,
-    attachments,
-  });
+  // Try the notify-email plugin first, fall back to legacy smtp_config
+  const emailPlugin = pluginManager?.getActiveInstanceByPackageName('@pally-agent/plugin-notify-email');
+
+  if (emailPlugin !== undefined && emailPlugin !== null) {
+    // Plugin is active — use it to send
+    const pluginSendReport = (emailPlugin as unknown as {
+      sendReport: (opts: {
+        to: readonly string[];
+        subject: string;
+        html: string;
+        attachments?: readonly EmailAttachment[];
+      }) => Promise<void>;
+    }).sendReport;
+
+    if (typeof pluginSendReport === 'function') {
+      await pluginSendReport({ to: recipients, subject, html: emailBody, attachments });
+    } else {
+      throw new Error('Email plugin does not expose sendReport method');
+    }
+  } else {
+    // Fallback: use legacy smtp_config from dashboard DB
+    const smtpConfig = db.getSmtpConfig(report.orgId) ?? db.getSmtpConfig('system');
+    if (smtpConfig === null) {
+      console.error(`[email-scheduler] No email plugin active and no SMTP config found for report ${report.id}`);
+      return;
+    }
+
+    await sendEmail({
+      smtp: {
+        host: smtpConfig.host,
+        port: smtpConfig.port,
+        secure: smtpConfig.secure,
+        username: smtpConfig.username,
+        password: smtpConfig.password,
+        fromAddress: smtpConfig.fromAddress,
+        fromName: smtpConfig.fromName,
+      },
+      to: recipients,
+      subject,
+      html: emailBody,
+      attachments,
+    });
+  }
 
   // Update next_send_at and last_sent_at
   const now = new Date();
@@ -136,6 +162,7 @@ export async function processEmailReport(
 
 export function startEmailScheduler(
   db: ScanDb,
+  pluginManager?: PluginManager,
   intervalMs = 60_000,
 ): NodeJS.Timeout {
   return setInterval(async () => {
@@ -145,7 +172,7 @@ export function startEmailScheduler(
 
       for (const report of due) {
         try {
-          await processEmailReport(db, report);
+          await processEmailReport(db, report, pluginManager);
         } catch (err) {
           console.error(
             `[email-scheduler] Failed to send email report ${report.id}:`,

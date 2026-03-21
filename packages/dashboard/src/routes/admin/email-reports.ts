@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import type { ScanDb } from '../../db/scans.js';
+import type { PluginManager } from '../../plugins/manager.js';
 import { adminGuard } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { testSmtpConnection } from '../../email/sender.js';
@@ -9,6 +10,8 @@ import { computeNextSendAt } from '../../email/scheduler.js';
 
 const VALID_FREQUENCIES = ['daily', 'weekly', 'monthly'];
 const VALID_FORMATS = ['pdf', 'csv', 'both'];
+
+const EMAIL_PLUGIN_PACKAGE = '@pally-agent/plugin-notify-email';
 
 function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -32,19 +35,30 @@ function validateUrl(url: string): boolean {
   }
 }
 
+function isEmailPluginActive(pluginManager?: PluginManager): boolean {
+  if (!pluginManager) return false;
+  const instance = pluginManager.getActiveInstanceByPackageName(EMAIL_PLUGIN_PACKAGE);
+  return instance !== null;
+}
+
 export async function emailReportRoutes(
   server: FastifyInstance,
   db: ScanDb,
+  pluginManager?: PluginManager,
 ): Promise<void> {
 
-  // GET /admin/email-reports — list email reports + SMTP config
+  // GET /admin/email-reports — list email reports + config status
   server.get(
     '/admin/email-reports',
     { preHandler: adminGuard },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
-      const smtpConfig = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');
       const reports = db.listEmailReports(orgId);
+      const pluginActive = isEmailPluginActive(pluginManager);
+
+      // Legacy: check if smtp_config exists for backward compat
+      const smtpConfig = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');
+      const smtpConfigured = pluginActive || smtpConfig !== null;
 
       const formatted = reports.map((r) => ({
         ...r,
@@ -58,6 +72,7 @@ export async function emailReportRoutes(
         pageTitle: 'Email Reports',
         currentPath: '/admin/email-reports',
         user: request.user,
+        emailPluginActive: pluginActive,
         smtpConfig: smtpConfig ?? {
           host: '',
           port: 587,
@@ -67,13 +82,13 @@ export async function emailReportRoutes(
           fromAddress: '',
           fromName: 'Pally Dashboard',
         },
-        smtpConfigured: smtpConfig !== null,
+        smtpConfigured,
         reports: formatted,
       });
     },
   );
 
-  // POST /admin/email-reports/smtp — save SMTP config
+  // POST /admin/email-reports/smtp — save SMTP config (legacy)
   server.post(
     '/admin/email-reports/smtp',
     { preHandler: adminGuard },
@@ -133,11 +148,31 @@ export async function emailReportRoutes(
     '/admin/email-reports/smtp/test',
     { preHandler: adminGuard },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      // If the email plugin is active, use its test method
+      if (pluginManager) {
+        const instance = pluginManager.getActiveInstanceByPackageName(EMAIL_PLUGIN_PACKAGE);
+        if (instance !== null) {
+          try {
+            const testFn = (instance as unknown as { testConnection: () => Promise<boolean> }).testConnection;
+            if (typeof testFn === 'function') {
+              const success = await testFn();
+              if (success) {
+                return reply.code(200).header('content-type', 'text/html').send(toastHtml('SMTP connection successful (via Email plugin).'));
+              }
+              return reply.code(200).header('content-type', 'text/html').send(toastHtml('SMTP connection failed. Check plugin settings.', 'error'));
+            }
+          } catch {
+            // Fall through to legacy
+          }
+        }
+      }
+
+      // Legacy: use smtp_config from DB
       const orgId = request.user?.currentOrgId ?? 'system';
       const smtpConfig = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');
 
       if (smtpConfig === null) {
-        return reply.code(400).header('content-type', 'text/html').send(toastHtml('Save SMTP configuration first.', 'error'));
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml('No SMTP configuration found. Install and activate the Email Notifications plugin, or save SMTP settings below.', 'error'));
       }
 
       const success = await testSmtpConnection({
@@ -293,8 +328,19 @@ export async function emailReportRoutes(
         return reply.code(404).header('content-type', 'text/html').send(toastHtml('Email report not found.', 'error'));
       }
 
+      // Check if email sending is configured (plugin or legacy)
+      const pluginActive = isEmailPluginActive(pluginManager);
+      const orgId = request.user?.currentOrgId ?? 'system';
+      const smtpConfig = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');
+
+      if (!pluginActive && smtpConfig === null) {
+        return reply.code(400).header('content-type', 'text/html').send(
+          toastHtml('Email sending is not configured. Install and activate the Email Notifications plugin (Admin > Plugins), or configure SMTP settings.', 'error'),
+        );
+      }
+
       try {
-        await processEmailReport(db, report);
+        await processEmailReport(db, report, pluginManager);
         return reply.code(200).header('content-type', 'text/html').send(toastHtml('Email report sent successfully.'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to send email report';
