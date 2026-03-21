@@ -16,7 +16,7 @@ Covers composition paths 4-5: scanning with compliance enrichment, and using the
 ## Install
 
 ```bash
-git clone https://github.com/alanna82/pally-agent.git ~/pally-agent
+git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
 cd ~/pally-agent && npm install && npm run build --workspaces
 cd packages/core && npm link
 ```

@@ -44,7 +44,7 @@ node --version
 
 ```bash
 # Clone
-git clone https://github.com/alanna82/pally-agent.git /opt/pally-agent
+git clone https://github.com/trunten82/pally-agent.git /opt/pally-agent
 cd /opt/pally-agent
 
 # Install all workspace dependencies
@@ -164,7 +164,7 @@ Create `/etc/systemd/system/pally-compliance.service`:
 ```ini
 [Unit]
 Description=Pally Compliance Service
-Documentation=https://github.com/alanna82/pally-agent/tree/main/docs/compliance
+Documentation=https://github.com/trunten82/pally-agent/tree/main/docs/compliance
 After=network.target
 Wants=network-online.target
 

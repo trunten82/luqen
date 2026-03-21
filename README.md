@@ -100,7 +100,7 @@ See [docs/paths/](docs/paths/) for detailed guides on each path.
 See [docs/QUICKSTART.md](docs/QUICKSTART.md) for the full step-by-step guide.
 
 ```bash
-git clone https://github.com/alanna82/pally-agent.git
+git clone https://github.com/trunten82/pally-agent.git
 cd pally-agent && npm install && npm run build --workspaces
 cd packages/core && npm link
 

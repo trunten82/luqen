@@ -18,16 +18,16 @@
     "lint": "tsc --noEmit"
   },
   "license": "MIT",
-  "author": "alanna82",
+  "author": "trunten82",
   "repository": {
     "type": "git",
-    "url": "https://github.com/alanna82/pally-agent.git",
+    "url": "https://github.com/trunten82/pally-agent.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/alanna82/pally-agent/issues"
+    "url": "https://github.com/trunten82/pally-agent/issues"
   },
-  "homepage": "https://github.com/alanna82/pally-agent#readme",
+  "homepage": "https://github.com/trunten82/pally-agent#readme",
   "keywords": [
     "accessibility",
     "a11y",

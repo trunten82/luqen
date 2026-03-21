@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-20
 **Status:** Draft
-**Author:** alanna82 + Claude
+**Author:** trunten82 + Claude
 
 ## Problem Statement
 

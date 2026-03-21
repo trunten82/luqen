@@ -7,7 +7,7 @@ This guide covers deploying the Pally Dashboard using Docker and Docker Compose.
 ## Prerequisites
 
 - Docker 24+ and Docker Compose v2
-- The monorepo cloned locally: `git clone https://github.com/alanna82/pally-agent.git`
+- The monorepo cloned locally: `git clone https://github.com/trunten82/pally-agent.git`
 - A pa11y webservice instance (external — not provided by this compose file). [pa11y-webservice on Docker Hub](https://hub.docker.com/r/pa11y/pa11y-webservice).
 
 ---

@@ -18,7 +18,7 @@ Composition path 6: all services with a browser interface for scans, reports, an
 The monorepo includes a `docker-compose.yml` that starts Redis, the compliance service, and the dashboard.
 
 ```bash
-git clone https://github.com/alanna82/pally-agent.git ~/pally-agent
+git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
 cd ~/pally-agent
 
 # Set required secrets
@@ -65,7 +65,7 @@ Uncomment `DASHBOARD_REDIS_URL` and `COMPLIANCE_REDIS_URL` in `docker-compose.ym
 ## Manual setup (without Docker)
 
 ```bash
-git clone https://github.com/alanna82/pally-agent.git ~/pally-agent
+git clone https://github.com/trunten82/pally-agent.git ~/pally-agent
 cd ~/pally-agent && npm install && npm run build --workspaces
 ```
 
