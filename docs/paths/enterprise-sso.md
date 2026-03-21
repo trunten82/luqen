@@ -107,6 +107,33 @@ Users authenticated via SSO are matched by email address. If no dashboard user e
 
 ---
 
+## 6. IdP group mapping (v0.20.0+)
+
+Map Azure Entra ID groups to dashboard teams so that team membership stays in sync with your identity provider.
+
+### Configure group claims in Azure
+
+1. Go to **Azure Portal > App registrations > pally-agent-dashboard > Token configuration**
+2. Click **Add groups claim**
+3. Select **Security groups** (or **All groups** if using Microsoft 365 groups)
+4. Under **ID token**, check **Group ID**
+5. Click **Save**
+
+### Map groups to teams in the dashboard
+
+1. Go to **Admin > Teams** and create a team (or use an existing one)
+2. In the team settings, find the **IdP Group Mapping** field
+3. Enter the Azure group's **Object ID** (found in Azure Portal > Groups > your group > Overview)
+4. Click **Save**
+
+When an SSO user logs in, the dashboard reads the group claims from the token and automatically adds the user to any mapped teams. If the user is removed from the Azure group, they are removed from the corresponding dashboard team on their next login.
+
+### Multiple mappings
+
+Each team can be mapped to one IdP group. Multiple teams can map to different groups. A user can belong to multiple teams through multiple group memberships.
+
+---
+
 ## Production considerations
 
 - Use HTTPS for the redirect URI in production

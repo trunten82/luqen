@@ -171,7 +171,8 @@ Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|a
 |---------|-------------|
 | **Org-wide accessibility score** | Aggregated 0-100 score across all scanned sites with trend tracking over time. Visible on the executive dashboard. |
 | **Scan scheduling** | Configure daily, weekly, or monthly recurring scans from the dashboard UI. Manage at `/admin/schedules`. |
-| **Issue assignment lifecycle** | Assign issues to team members and track through open, assigned, in-progress, fixed, and verified states. |
+| **Teams** | Create teams at **Admin > Teams**, add/remove members, map IdP groups for SSO sync. Assign issues to teams or individuals. |
+| **Issue assignment lifecycle** | Assign issues to users or teams via searchable dropdown. Track through open, assigned, in-progress, fixed, and verified states. Bulk assign with checkboxes. Delete assignments with confirmation. Inline status badges on assigned issues. |
 | **Connected repos** | Link GitHub/GitLab repos to receive AI-generated fix proposals (21 suggestion types via MCP/A2A). Manage at `/admin/repos`. |
 | **Role-based UX** | Four default personas (admin, developer, user, executive) with tailored navigation and default views. Custom roles supported. |
 | **Roles management** | Customizable DB-driven roles with 15 granular permissions across 7 groups. Create custom roles, modify system role permissions. Admin > Roles (`/admin/roles`). |

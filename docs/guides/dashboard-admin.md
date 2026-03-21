@@ -164,6 +164,21 @@ All dashboard templates use `perm.*` flags for authorization rather than hardcod
 
 Manage Dashboard Users — accounts that log in to the web UI (separate from API Users on the compliance service).
 
+### Teams
+
+**Path:** `/admin/teams`
+
+Manage teams for collaborative issue assignment:
+
+- **Create a team** — click **New Team**, enter a name and optional description.
+- **View team members** — click a team to see its current members.
+- **Add members** — use the user picker dropdown to search and add dashboard users to the team.
+- **Remove members** — click **Remove** next to a member, confirm the removal.
+- **IdP group mapping** — when SSO is active (e.g., Azure Entra ID), you can map an IdP group to a dashboard team. Members of the IdP group are automatically added to the team on login. Configure mappings by entering the IdP group ID or name in the team settings.
+- **Delete a team** — removes the team and clears all its assignments (issues return to Open status).
+
+Teams appear alongside individual users in the assignee dropdown when assigning issues.
+
 ### Jurisdictions
 
 **Path:** `/admin/jurisdictions`
@@ -234,8 +249,10 @@ Manage multi-tenant organizations:
 
 View and configure installed plugins:
 - Auth plugins (e.g., Entra ID SSO)
-- Notification plugins (Slack, Teams)
+- Notification plugins (Slack, Teams, Email)
 - Storage plugins (S3, Azure Blob)
+
+For a comprehensive guide to all available plugins with their configuration fields and setup instructions, see [Plugin Configuration Guide](../reference/plugin-guide.md).
 
 ### System
 

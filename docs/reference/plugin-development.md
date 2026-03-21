@@ -174,6 +174,40 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 ---
 
+## Admin Pages System
+
+Plugins can register custom admin pages that appear in the dashboard sidebar when the plugin is active. Declare them in the `adminPages` array of the manifest:
+
+```json
+{
+  "adminPages": [
+    {
+      "path": "/admin/email-reports",
+      "title": "Email Reports",
+      "icon": "envelope",
+      "permission": "admin.system"
+    }
+  ]
+}
+```
+
+### Admin page fields
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `path` | `string` | Yes | Route path for the admin page (must start with `/admin/`) |
+| `title` | `string` | Yes | Display title in the sidebar |
+| `icon` | `string` | No | Icon identifier (uses the dashboard's icon set) |
+| `permission` | `string` | Yes | Required permission to access the page (e.g., `admin.system`) |
+
+When a plugin with `adminPages` is activated, the dashboard dynamically registers the routes and adds sidebar entries. When the plugin is deactivated, the pages are removed.
+
+The plugin is responsible for providing the route handler and view templates. Register handlers in the `activate()` method using the Fastify instance passed to the plugin.
+
+> For a user-facing guide to all available plugins and their configuration, see [Plugin Configuration Guide](plugin-guide.md).
+
+---
+
 ## Plugin Statuses
 
 | Status | Meaning |
