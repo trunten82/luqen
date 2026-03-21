@@ -1,11 +1,11 @@
 {
-  "name": "@pally-agent/core",
+  "name": "@luqen/core",
   "version": "0.22.0",
   "description": "Accessibility testing agent using pa11y webservice",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": { "pally-agent": "dist/cli.js" },
+  "bin": { "luqen": "dist/cli.js" },
   "exports": {
     ".": "./dist/index.js",
     "./cli": "./dist/cli.js"
@@ -21,13 +21,13 @@
   "author": "trunten82",
   "repository": {
     "type": "git",
-    "url": "https://github.com/trunten82/pally-agent.git",
+    "url": "https://github.com/trunten82/luqen.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/trunten82/pally-agent/issues"
+    "url": "https://github.com/trunten82/luqen/issues"
   },
-  "homepage": "https://github.com/trunten82/pally-agent#readme",
+  "homepage": "https://github.com/trunten82/luqen#readme",
   "keywords": [
     "accessibility",
     "a11y",

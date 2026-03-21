@@ -1,12 +1,12 @@
 {
-  "name": "@pally-agent/monitor",
+  "name": "@luqen/monitor",
   "version": "0.22.0",
   "description": "Regulatory monitor agent — watches legal sources for accessibility regulation changes",
   "type": "module",
   "main": "dist/cli.js",
   "types": "dist/cli.d.ts",
   "bin": {
-    "pally-monitor": "dist/cli.js"
+    "luqen-monitor": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -20,13 +20,13 @@
   "author": "trunten82",
   "repository": {
     "type": "git",
-    "url": "https://github.com/trunten82/pally-agent.git",
+    "url": "https://github.com/trunten82/luqen.git",
     "directory": "packages/monitor"
   },
   "bugs": {
-    "url": "https://github.com/trunten82/pally-agent/issues"
+    "url": "https://github.com/trunten82/luqen/issues"
   },
-  "homepage": "https://github.com/trunten82/pally-agent#readme",
+  "homepage": "https://github.com/trunten82/luqen#readme",
   "keywords": [
     "accessibility",
     "a11y",

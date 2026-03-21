@@ -1,5 +1,5 @@
 {
-  "name": "@pally-agent/plugin-auth-entra",
+  "name": "@luqen/plugin-auth-entra",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",

@@ -1,5 +1,5 @@
 {
-  "name": "@pally-agent/plugin-notify-email",
+  "name": "@luqen/plugin-notify-email",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
