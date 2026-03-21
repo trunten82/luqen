@@ -46,6 +46,15 @@
       "icon": "teams"
     },
     {
+      "name": "notify-email",
+      "displayName": "Email Notifications & Reports",
+      "type": "notification",
+      "version": "1.0.0",
+      "description": "Send scan notifications and scheduled email reports via SMTP",
+      "packageName": "@pally-agent/plugin-notify-email",
+      "icon": "email"
+    },
+    {
       "name": "storage-s3",
       "displayName": "AWS S3 Storage",
       "type": "storage",

@@ -1,13 +1,30 @@
 <section aria-label="Email Reports management">
   <h2>Email Reports</h2>
 
-  {{!-- SMTP Configuration --}}
+  {{!-- Email Plugin Status --}}
   <div class="card" style="margin-bottom: 24px;">
-    <h3>SMTP Configuration</h3>
+    <h3>Email Sending Configuration</h3>
+    {{#if emailPluginActive}}
+    <div style="padding: 12px 16px; background: var(--success-bg, #d4edda); border-radius: 6px; margin-bottom: 12px;">
+      <strong>Email Notifications plugin is active.</strong>
+      SMTP settings are managed via <a href="/admin/plugins">Admin &gt; Plugins &gt; Email Notifications &amp; Reports</a>.
+    </div>
+    {{else}}
+    <div style="padding: 12px 16px; background: var(--warning-bg, #fff3cd); border-radius: 6px; margin-bottom: 12px;">
+      <strong>Recommended:</strong> Install and activate the
+      <a href="/admin/plugins">Email Notifications &amp; Reports</a> plugin
+      for encrypted SMTP credential storage and scan event notifications.
+    </div>
+    {{/if}}
+  </div>
+
+  {{!-- Legacy SMTP Configuration (shown only when plugin is NOT active) --}}
+  {{#unless emailPluginActive}}
+  <div class="card" style="margin-bottom: 24px;">
+    <h3>SMTP Configuration (Legacy)</h3>
     <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
       Configure your SMTP server to enable email report delivery.
       {{#unless smtpConfigured}}<strong>Not yet configured.</strong>{{/unless}}
-      <br><em>Note: The SMTP password is stored in the database without encryption (MVP).</em>
     </p>
 
     <form hx-post="/admin/email-reports/smtp"
@@ -75,6 +92,7 @@
       </div>
     </form>
   </div>
+  {{/unless}}
 
   {{!-- Create Email Report --}}
   <div class="card" style="margin-bottom: 24px;">

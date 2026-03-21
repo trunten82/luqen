@@ -1,6 +1,6 @@
 {
   "name": "pally-agent",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "private": true,
   "workspaces": [
     "packages/core",
@@ -8,6 +8,7 @@
     "packages/dashboard",
     "packages/monitor",
     "packages/plugins/auth-entra",
+    "packages/plugins/notify-email",
     "packages/plugins/notify-slack",
     "packages/plugins/notify-teams",
     "packages/plugins/storage-s3",

@@ -403,6 +403,19 @@ export class PluginManager {
   }
 
   // -----------------------------------------------------------------------
+  // Get active instance by package name
+  // -----------------------------------------------------------------------
+
+  getActiveInstanceByPackageName(packageName: string): PluginInstance | null {
+    const row = this.db
+      .prepare("SELECT id FROM plugins WHERE package_name = @package_name AND status = 'active'")
+      .get({ package_name: packageName }) as { id: string } | undefined;
+
+    if (!row) return null;
+    return this.activeInstances.get(row.id) ?? null;
+  }
+
+  // -----------------------------------------------------------------------
   // Private helpers
   // -----------------------------------------------------------------------
 
