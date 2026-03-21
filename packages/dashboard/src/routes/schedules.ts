@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import type { ScanDb } from '../db/scans.js';
 import { toastHtml, escapeHtml } from './admin/helpers.js';
+import { hasPermission } from '../permissions.js';
 
 interface CreateScheduleBody {
   readonly siteUrl: string;
@@ -44,8 +45,7 @@ export async function scheduleRoutes(
   server.get(
     '/schedules',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const role = request.user?.role;
-      if (role !== 'admin' && role !== 'user') {
+      if (!hasPermission(request, 'scans.schedule')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
       }
 
@@ -79,8 +79,7 @@ export async function scheduleRoutes(
     '/schedules',
     { config: { rateLimit: { max: 20, timeWindow: '10 minutes' } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const role = request.user?.role;
-      if (role !== 'admin' && role !== 'user') {
+      if (!hasPermission(request, 'scans.schedule')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
       }
 
@@ -139,8 +138,7 @@ export async function scheduleRoutes(
   server.delete(
     '/schedules/:id',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const role = request.user?.role;
-      if (role !== 'admin' && role !== 'user') {
+      if (!hasPermission(request, 'scans.schedule')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
       }
 
@@ -167,8 +165,7 @@ export async function scheduleRoutes(
   server.patch(
     '/schedules/:id/toggle',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const role = request.user?.role;
-      if (role !== 'admin' && role !== 'user') {
+      if (!hasPermission(request, 'scans.schedule')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
       }
 

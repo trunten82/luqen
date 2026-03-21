@@ -39,7 +39,7 @@
       <dt>Repository</dt>
       <dd>
         <span style="color:var(--text-muted);">Not connected</span>
-        {{#if (isAdmin user.role)}}
+        {{#if perm.adminUsers}}
         <a href="/admin/repos" class="btn btn--ghost btn--sm" style="margin-left:0.5rem;">Connect a repository</a>
         {{/if}}
       </dd>

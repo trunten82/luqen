@@ -108,14 +108,16 @@ The dashboard supports a progressive authentication model:
 
 ## User roles
 
-The dashboard supports four role-based personas, each with tailored navigation and default views:
+The dashboard supports four default role-based personas, each with tailored navigation and default views. Roles are **DB-managed** — admins can modify permissions on existing roles or create entirely new custom roles via **Admin > Roles**.
 
-| Role | Default view | Capabilities |
+| Role | Default view | Default capabilities |
 |------|-------------|-------------|
-| **admin** | System overview | Full access. Manage users, jurisdictions, regulations, webhooks, OAuth clients, connected repos, schedules, and system settings. Can delete any report. |
+| **admin** | System overview | All 15 permissions. Manage users, roles, jurisdictions, regulations, webhooks, OAuth clients, connected repos, schedules, and system settings. Can delete any report. |
 | **developer** | Issue list | View fix proposals and code diffs, manage assignment queue, start scans, delete own reports. Cannot access admin settings. |
 | **user** | Report list | Start scans, view all reports, run manual testing checklists, delete own reports. Cannot access admin pages. |
 | **executive** | Org score dashboard | Read-only. View org-wide accessibility score (0-100), aggregated trends, and compliance summaries. Cannot start scans or modify data. |
+
+> **Note:** The dashboard distinguishes between **Dashboard Users** (accounts that log in to the web UI, managed at `/admin/users`) and **API Users (Compliance)** (accounts on the compliance service used for direct API access, managed via `pally-compliance users create`). These are separate user stores.
 
 ---
 
@@ -127,16 +129,40 @@ Admin pages are accessible from the sidebar when logged in as an admin user. Eac
 
 **Path:** `/admin/users`
 
-Manage dashboard user accounts:
+Manage Dashboard User accounts (users who log in to the web UI):
 - Create new users with username, password, and role
 - Edit existing users (change role, reset password)
 - Delete users
+
+### Roles & Permissions Management
+
+**Path:** `/admin/roles`
+
+Manage the permission model for all dashboard users:
+
+**Default roles:** The dashboard ships with four system roles — `admin`, `developer`, `user`, and `executive` — each pre-configured with appropriate permissions. System roles can have their permissions modified but cannot be deleted.
+
+**Custom roles:** Admins can create new roles with any combination of the 15 available permissions. This is useful for specialized personas (e.g., a "QA Tester" role with only scan and manual testing permissions).
+
+**Permission matrix:** The role editor displays checkboxes grouped into 7 categories:
+
+| Group | Permissions |
+|-------|------------|
+| **Scans** | `scans.create`, `scans.view` |
+| **Reports** | `reports.view`, `reports.delete`, `reports.export` |
+| **Issues** | `issues.view`, `issues.manage` |
+| **Testing** | `testing.manual` |
+| **Repositories** | `repos.view`, `repos.manage` |
+| **Analytics** | `analytics.view` |
+| **Administration** | `admin.system`, `admin.users`, `admin.roles` |
+
+All dashboard templates use `perm.*` flags for authorization rather than hardcoded role name checks, so custom roles work seamlessly throughout the UI.
 
 ### Dashboard Users
 
 **Path:** `/admin/dashboard-users`
 
-Manage users specific to the dashboard's local database (separate from compliance service users).
+Manage Dashboard Users — accounts that log in to the web UI (separate from API Users on the compliance service).
 
 ### Jurisdictions
 
@@ -306,7 +332,7 @@ The dashboard includes several security hardening measures:
 - **Rate limiting** — POST endpoints have configurable rate limits (login: 5/15min, scan creation: 10/10min)
 - **Input clamping** — concurrency, jurisdiction count, and pagination values are bounded
 - **Org isolation** — scans and reports are scoped to the current organization; cross-org access returns 404
-- **Admin guard** — admin routes return 403 and halt processing for non-admin users
+- **Permission-based guards** — all routes check `perm.*` flags from the user's role; admin routes require `admin.system` permission and return 403 for unauthorized users
 
 ---
 

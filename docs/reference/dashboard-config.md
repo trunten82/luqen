@@ -129,12 +129,32 @@ Authentication for dashboard users is handled locally by the dashboard (see [Aut
 
 ## Role reference
 
-| Role | Permissions in dashboard | Default view |
-|------|--------------------------|-------------|
-| `executive` | Browse reports, view org-wide accessibility score, aggregated trends, compliance summaries (read-only) | Org score dashboard |
-| `user` | executive + create scans, run manual testing, delete own reports | Report list |
-| `developer` | user + view fix proposals, manage issue assignments, access code diffs | Issue list |
-| `admin` | developer + full admin section (jurisdictions, regulations, users, OAuth clients, webhooks, connected repos, schedules, health) | System overview |
+Roles are now **DB-managed and customizable** via **Admin > Roles** (`/admin/roles`). The four roles below are created as defaults during migration. Admins can modify their permissions or create entirely new roles.
+
+| Role | Default permissions | Default view |
+|------|---------------------|-------------|
+| `executive` | `reports.view`, `analytics.view` — read-only access to reports, org-wide accessibility score, aggregated trends, and compliance summaries | Org score dashboard |
+| `user` | executive defaults + `scans.create`, `scans.view`, `testing.manual`, `reports.delete` — create scans, run manual testing, delete own reports | Report list |
+| `developer` | user defaults + `issues.view`, `issues.manage`, `repos.view` — view fix proposals, manage issue assignments, access code diffs | Issue list |
+| `admin` | All 15 permissions including `admin.system`, `admin.users`, `admin.roles` — full admin section (jurisdictions, regulations, users, roles, OAuth clients, webhooks, connected repos, schedules, health) | System overview |
+
+### Permission groups
+
+The dashboard uses 15 granular permissions organized into 7 groups:
+
+| Group | Permissions | Description |
+|-------|------------|-------------|
+| **Scans** | `scans.create`, `scans.view` | Start scans, view scan history |
+| **Reports** | `reports.view`, `reports.delete`, `reports.export` | View, delete, and export reports |
+| **Issues** | `issues.view`, `issues.manage` | View issues, manage assignments |
+| **Testing** | `testing.manual` | Run manual testing checklists |
+| **Repositories** | `repos.view`, `repos.manage` | View and manage connected repositories |
+| **Analytics** | `analytics.view` | View trends, org score, compliance summaries |
+| **Administration** | `admin.system`, `admin.users`, `admin.roles` | System settings, user management, role management |
+
+All templates use `perm.*` flags for authorization checks rather than hardcoded role names.
+
+> **Note:** System roles (the four defaults above) can have their permissions modified but cannot be deleted.
 
 ---
 

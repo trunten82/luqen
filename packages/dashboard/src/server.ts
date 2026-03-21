@@ -44,6 +44,8 @@ import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { getFixSuggestion } from './fix-suggestions.js';
+import { ALL_PERMISSIONS, ALL_PERMISSION_IDS } from './permissions.js';
+import { roleRoutes } from './routes/admin/roles.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -144,6 +146,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // Register helpers on Handlebars instance directly (required by @fastify/view v10)
   handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+  // Legacy role helpers kept for backward compatibility — they still work if
+  // templates reference them, but the canonical approach is the `perm.*` flags.
   handlebars.registerHelper('canScan', (role: string) => role === 'user' || role === 'admin' || role === 'developer');
   handlebars.registerHelper('isAdmin', (role: string) => role === 'admin');
   handlebars.registerHelper('isDeveloper', (role: string) => role === 'developer' || role === 'admin');
@@ -230,12 +234,53 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     await authGuard(request, reply);
   });
 
-  // ── CSRF token injection into all view renders ─────────────────────────
-  server.addHook('preHandler', async (_request: FastifyRequest, reply: FastifyReply) => {
+  // ── Permission loading ─────────────────────────────────────────────────
+  server.addHook('preHandler', async (request: FastifyRequest) => {
+    if (request.user === undefined) return;
+    const role = db.getRoleByName(request.user.role);
+    const permissions = role ? new Set(role.permissions) : new Set<string>();
+    // For admin role, always grant all permissions
+    if (request.user.role === 'admin') {
+      for (const p of ALL_PERMISSION_IDS) permissions.add(p);
+    }
+    // Fall back to 'user' permissions if role not found in DB
+    if (role === null) {
+      const fallback = db.getRoleByName('user');
+      if (fallback !== null) {
+        for (const p of fallback.permissions) permissions.add(p);
+      }
+    }
+    (request as unknown as Record<string, unknown>)['permissions'] = permissions;
+  });
+
+  // ── CSRF token + permission injection into all view renders ───────────
+  server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
     const csrfToken = reply.generateCsrf();
+    const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined ?? new Set<string>();
     const originalView = reply.view.bind(reply) as typeof reply.view;
     reply.view = (page: string, data?: Record<string, unknown>) => {
-      return originalView(page, { ...data, csrfToken });
+      return originalView(page, {
+        ...data,
+        csrfToken,
+        perm: {
+          scansCreate: perms.has('scans.create'),
+          scansSchedule: perms.has('scans.schedule'),
+          reportsView: perms.has('reports.view'),
+          reportsViewTechnical: perms.has('reports.view_technical'),
+          reportsExport: perms.has('reports.export'),
+          reportsDelete: perms.has('reports.delete'),
+          reportsCompare: perms.has('reports.compare'),
+          issuesAssign: perms.has('issues.assign'),
+          issuesFix: perms.has('issues.fix'),
+          manualTesting: perms.has('manual_testing'),
+          reposManage: perms.has('repos.manage'),
+          trendsView: perms.has('trends.view'),
+          adminUsers: perms.has('admin.users'),
+          adminRoles: perms.has('admin.roles'),
+          adminSystem: perms.has('admin.system'),
+        },
+        isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
+      });
     };
   });
 
@@ -298,6 +343,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await dashboardUserRoutes(server, userDb);
   await apiKeyRoutes(server, db.getDatabase());
   await organizationRoutes(server, orgDb, userDb, config.complianceUrl);
+  await roleRoutes(server, db);
 
   await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
 

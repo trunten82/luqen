@@ -6,6 +6,7 @@ import type { ScanDb, ConnectedRepo } from '../db/scans.js';
 import { adminGuard } from '../auth/middleware.js';
 import { toastHtml, escapeHtml } from './admin/helpers.js';
 import { getFixSuggestion, FIX_SUGGESTIONS } from '../fix-suggestions.js';
+import { hasPermission } from '../permissions.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -251,9 +252,8 @@ export async function repoRoutes(
   server.get(
     '/reports/:id/fixes',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      // Only admin and developer roles can view fix proposals
-      const role = request.user?.role;
-      if (role !== 'admin' && role !== 'developer') {
+      // Only users with issues.fix permission can view fix proposals
+      if (!hasPermission(request, 'issues.fix')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
       }
 

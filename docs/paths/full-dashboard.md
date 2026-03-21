@@ -173,11 +173,12 @@ Plugins can also be managed via CLI (`pally-dashboard plugin install|configure|a
 | **Scan scheduling** | Configure daily, weekly, or monthly recurring scans from the dashboard UI. Manage at `/admin/schedules`. |
 | **Issue assignment lifecycle** | Assign issues to team members and track through open, assigned, in-progress, fixed, and verified states. |
 | **Connected repos** | Link GitHub/GitLab repos to receive AI-generated fix proposals (21 suggestion types via MCP/A2A). Manage at `/admin/repos`. |
-| **Role-based UX** | Four personas (admin, developer, user, executive) with tailored navigation and default views. |
+| **Role-based UX** | Four default personas (admin, developer, user, executive) with tailored navigation and default views. Custom roles supported. |
+| **Roles management** | Customizable DB-driven roles with 15 granular permissions across 7 groups. Create custom roles, modify system role permissions. Admin > Roles (`/admin/roles`). |
 | **Report comparison** | Side-by-side delta view with regression alerts when new issues appear between scans. |
 | **Enhanced manual testing** | Step-by-step guides with annotated good/bad examples for each manual check criterion. |
 | **UI polish** | Page transition animations, empty-state illustrations, and skeleton loading placeholders. |
-| **User management** | Create, edit, delete users. Assign roles (admin, developer, user, executive). |
+| **User management** | Create, edit, delete Dashboard Users. Assign built-in or custom roles. |
 | **Scan history** | Browse all past scans. Filter by URL, date, status. |
 | **Report viewer** | Interactive HTML report with compliance matrix. |
 | **Self-audit** | Run `pally-dashboard self-audit` to scan the dashboard itself. |

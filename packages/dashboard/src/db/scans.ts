@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { MigrationRunner } from './migrations.js';
 import type { Migration } from './migrations.js';
 import type { ManualTestResult, ManualTestStatus } from '../manual-criteria.js';
+import { ALL_PERMISSION_IDS, DEFAULT_ROLES } from '../permissions.js';
 
 export interface ScanRecord {
   readonly id: string;
@@ -286,6 +287,90 @@ CREATE TABLE IF NOT EXISTS connected_repos (
 CREATE INDEX IF NOT EXISTS idx_connected_repos_site ON connected_repos(site_url_pattern, org_id);
     `,
   },
+  {
+    id: '011',
+    name: 'create-roles',
+    sql: `
+CREATE TABLE IF NOT EXISTS roles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT NOT NULL DEFAULT '',
+  is_system INTEGER NOT NULL DEFAULT 0,
+  org_id TEXT NOT NULL DEFAULT 'system',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_roles_org ON roles(org_id);
+    `,
+  },
+  {
+    id: '012',
+    name: 'create-role-permissions-and-seed',
+    sql: `
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  permission TEXT NOT NULL,
+  PRIMARY KEY (role_id, permission)
+);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+
+-- Seed default system roles
+INSERT OR IGNORE INTO roles (id, name, description, is_system, org_id, created_at) VALUES
+  ('admin', 'admin', 'Full system administrator with all permissions', 1, 'system', '2024-01-01T00:00:00.000Z'),
+  ('developer', 'developer', 'Developer with technical access and fix capabilities', 1, 'system', '2024-01-01T00:00:00.000Z'),
+  ('user', 'user', 'Standard user with scanning and reporting access', 1, 'system', '2024-01-01T00:00:00.000Z'),
+  ('executive', 'executive', 'Executive with read-only access to reports and trends', 1, 'system', '2024-01-01T00:00:00.000Z');
+
+-- Seed admin permissions (all)
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
+  ('admin', 'scans.create'),
+  ('admin', 'scans.schedule'),
+  ('admin', 'reports.view'),
+  ('admin', 'reports.view_technical'),
+  ('admin', 'reports.export'),
+  ('admin', 'reports.delete'),
+  ('admin', 'reports.compare'),
+  ('admin', 'issues.assign'),
+  ('admin', 'issues.fix'),
+  ('admin', 'manual_testing'),
+  ('admin', 'repos.manage'),
+  ('admin', 'trends.view'),
+  ('admin', 'admin.users'),
+  ('admin', 'admin.roles'),
+  ('admin', 'admin.system');
+
+-- Seed developer permissions
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
+  ('developer', 'scans.create'),
+  ('developer', 'reports.view'),
+  ('developer', 'reports.view_technical'),
+  ('developer', 'reports.export'),
+  ('developer', 'reports.delete'),
+  ('developer', 'reports.compare'),
+  ('developer', 'issues.assign'),
+  ('developer', 'issues.fix'),
+  ('developer', 'manual_testing'),
+  ('developer', 'repos.manage'),
+  ('developer', 'trends.view');
+
+-- Seed user permissions
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
+  ('user', 'scans.create'),
+  ('user', 'scans.schedule'),
+  ('user', 'reports.view'),
+  ('user', 'reports.export'),
+  ('user', 'reports.delete'),
+  ('user', 'reports.compare'),
+  ('user', 'issues.assign'),
+  ('user', 'manual_testing'),
+  ('user', 'trends.view');
+
+-- Seed executive permissions
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
+  ('executive', 'reports.view'),
+  ('executive', 'reports.export'),
+  ('executive', 'trends.view');
+    `,
+  },
 ];
 
 export interface ConnectedRepo {
@@ -298,6 +383,25 @@ export interface ConnectedRepo {
   readonly createdBy: string;
   readonly createdAt: string;
   readonly orgId: string;
+}
+
+export interface Role {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly isSystem: boolean;
+  readonly orgId: string;
+  readonly createdAt: string;
+  readonly permissions: readonly string[];
+}
+
+interface RoleRow {
+  id: string;
+  name: string;
+  description: string;
+  is_system: number;
+  org_id: string;
+  created_at: string;
 }
 
 interface ConnectedRepoRow {
@@ -1062,6 +1166,177 @@ export class ScanDb {
 
   deleteRepo(id: string): void {
     this.db.prepare('DELETE FROM connected_repos WHERE id = ?').run(id);
+  }
+
+  // ── Roles & Permissions ──────────────────────────────────────────────
+
+  private roleRowToRecord(row: RoleRow): Role {
+    const permissions = this.getRolePermissions(row.id);
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      isSystem: row.is_system === 1,
+      orgId: row.org_id,
+      createdAt: row.created_at,
+      permissions,
+    };
+  }
+
+  listRoles(orgId?: string): Role[] {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+
+    if (orgId !== undefined) {
+      conditions.push("(org_id = @orgId OR org_id = 'system')");
+      params['orgId'] = orgId;
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const sql = `SELECT * FROM roles ${where} ORDER BY is_system DESC, name ASC`;
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(params) as RoleRow[];
+    return rows.map((row) => this.roleRowToRecord(row));
+  }
+
+  getRole(id: string): Role | null {
+    const stmt = this.db.prepare('SELECT * FROM roles WHERE id = ?');
+    const row = stmt.get(id) as RoleRow | undefined;
+    return row !== undefined ? this.roleRowToRecord(row) : null;
+  }
+
+  getRoleByName(name: string): Role | null {
+    const stmt = this.db.prepare('SELECT * FROM roles WHERE name = ?');
+    const row = stmt.get(name) as RoleRow | undefined;
+    return row !== undefined ? this.roleRowToRecord(row) : null;
+  }
+
+  getRolePermissions(roleId: string): string[] {
+    const stmt = this.db.prepare(
+      'SELECT permission FROM role_permissions WHERE role_id = ? ORDER BY permission',
+    );
+    const rows = stmt.all(roleId) as Array<{ permission: string }>;
+    return rows.map((r) => r.permission);
+  }
+
+  createRole(data: {
+    readonly name: string;
+    readonly description: string;
+    readonly permissions: readonly string[];
+    readonly orgId: string;
+  }): Role {
+    const id = `role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const now = new Date().toISOString();
+
+    const insertRole = this.db.prepare(`
+      INSERT INTO roles (id, name, description, is_system, org_id, created_at)
+      VALUES (@id, @name, @description, 0, @orgId, @createdAt)
+    `);
+
+    const insertPerm = this.db.prepare(
+      'INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES (@roleId, @permission)',
+    );
+
+    this.db.transaction(() => {
+      insertRole.run({
+        id,
+        name: data.name,
+        description: data.description,
+        orgId: data.orgId,
+        createdAt: now,
+      });
+
+      for (const permission of data.permissions) {
+        insertPerm.run({ roleId: id, permission });
+      }
+    })();
+
+    const created = this.getRole(id);
+    if (created === null) {
+      throw new Error(`Failed to retrieve role after creation: ${id}`);
+    }
+    return created;
+  }
+
+  updateRole(id: string, data: {
+    readonly name?: string;
+    readonly description?: string;
+    readonly permissions?: readonly string[];
+  }): void {
+    const role = this.getRole(id);
+    if (role === null) {
+      throw new Error(`Role not found: ${id}`);
+    }
+
+    this.db.transaction(() => {
+      // Update role fields (name only if not system)
+      const setClauses: string[] = [];
+      const params: Record<string, unknown> = { id };
+
+      if (data.description !== undefined) {
+        setClauses.push('description = @description');
+        params['description'] = data.description;
+      }
+      if (data.name !== undefined && !role.isSystem) {
+        setClauses.push('name = @name');
+        params['name'] = data.name;
+      }
+
+      if (setClauses.length > 0) {
+        this.db.prepare(
+          `UPDATE roles SET ${setClauses.join(', ')} WHERE id = @id`,
+        ).run(params);
+      }
+
+      // Update permissions if provided
+      if (data.permissions !== undefined) {
+        this.db.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(id);
+        const insertPerm = this.db.prepare(
+          'INSERT INTO role_permissions (role_id, permission) VALUES (@roleId, @permission)',
+        );
+        for (const permission of data.permissions) {
+          insertPerm.run({ roleId: id, permission });
+        }
+      }
+    })();
+  }
+
+  deleteRole(id: string): void {
+    const role = this.getRole(id);
+    if (role === null) {
+      throw new Error(`Role not found: ${id}`);
+    }
+    if (role.isSystem) {
+      throw new Error('Cannot delete system roles');
+    }
+    this.db.prepare('DELETE FROM roles WHERE id = ? AND is_system = 0').run(id);
+  }
+
+  getUserPermissions(userId: string): Set<string> {
+    // Look up the user's role from dashboard_users table
+    const userRow = this.db.prepare(
+      'SELECT role FROM dashboard_users WHERE id = ?',
+    ).get(userId) as { role: string } | undefined;
+
+    if (userRow === undefined) {
+      // Fall back to 'user' role permissions
+      const fallbackRole = this.getRoleByName('user');
+      return new Set(fallbackRole?.permissions ?? []);
+    }
+
+    const role = this.getRoleByName(userRow.role);
+    if (role === null) {
+      // Fall back to 'user' role permissions
+      const fallbackRole = this.getRoleByName('user');
+      return new Set(fallbackRole?.permissions ?? []);
+    }
+
+    // For admin role, grant all permissions
+    if (role.name === 'admin') {
+      return new Set(ALL_PERMISSION_IDS);
+    }
+
+    return new Set(role.permissions);
   }
 
   close(): void {
