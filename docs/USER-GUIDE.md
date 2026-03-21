@@ -179,26 +179,13 @@ Each issue in a report can be assigned to a user or team and tracked through a l
 | **Fixed** | Fix applied, awaiting verification |
 | **Verified** | Re-scanned and confirmed resolved |
 
-Assign issues from the report Issues tab using the **assignee dropdown** (a searchable user/team picker). When an issue is already assigned, an inline **status badge** replaces the Assign button showing the current status and assignee.
+**Assigning from the Issues tab:** Each unassigned issue group has an **Assign** button that opens a user/team picker dropdown. Once assigned, the button is replaced by an **assigned badge** showing the assignee. Click the badge and confirm to unassign. Assigned items cannot be re-assigned — no picker or checkbox appears on them.
 
-#### Bulk assignment
+**Bulk assign (Issues tab):** Click the **Bulk Assign** toggle to enter bulk mode. Checkboxes appear on unassigned groups only. Use **Select All Visible** or pick individual groups, choose an assignee from the user/team picker (required), and click **Assign**. The page reloads after completion.
 
-To assign multiple issues at once:
+**Assignments page:** Each assignment card has **Save** and **Remove** buttons. Enter **Bulk Actions** mode to select multiple cards for bulk reassign (pick a new user/team) or bulk remove (with confirmation). The page reloads after bulk actions.
 
-1. Enable checkboxes by clicking the **Select** toggle on the Issues tab.
-2. Check the issues (or issue groups) you want to assign.
-3. Click **Bulk Assign** in the toolbar that appears.
-4. Choose an assignee from the user/team picker dropdown.
-5. All selected issues are assigned in a single operation.
-
-#### Removing assignments
-
-Assignments can be removed from two places:
-
-- **Assignments page** — click the **Remove** button next to any assignment. A confirmation dialog appears before deletion.
-- **Issues tab** — click the **x** button next to the status badge on any assigned issue to unassign it inline.
-
-In both cases, the issue returns to **Open** status. Admin, Developer, and User roles can manage assignments; the Executive role has read-only access.
+**Roles:** Admin, Developer, and User roles can manage assignments; the Executive role has read-only access.
 
 ### Connected repositories
 

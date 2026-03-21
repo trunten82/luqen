@@ -219,29 +219,43 @@ Each issue in a report can be assigned to a user or team and tracked through a l
 | **Fixed** | Fix applied, awaiting verification scan |
 | **Verified** | Re-scanned and confirmed resolved |
 
-### Assigning issues
+### Assigning issues (Issues tab)
 
-Click the **assignee dropdown** on any issue row in the Issues tab. The dropdown is a searchable picker listing all dashboard users and teams — no more free-text entry. When an issue is already assigned, an inline **status badge** replaces the Assign button, showing the current assignee and status.
+Each unassigned issue group shows an **Assign** button. Clicking it opens a user/team picker dropdown. Select an assignee and the issue is assigned immediately. Once assigned, the Assign button is replaced by an **assigned badge** showing the assignee name. Assigned items cannot be re-assigned — the badge is the only indicator and there is no picker on already-assigned items.
 
-### Bulk assignment
+To unassign, click the assigned badge. A confirmation dialog appears; confirming removes the assignment and returns the issue to **Open** status.
 
-Select multiple issues at once using checkboxes:
+### Bulk assignment (Issues tab)
 
-1. Click the **Select** toggle to show checkboxes on issue groups.
-2. Check the issues you want to assign.
-3. Click **Bulk Assign** in the toolbar.
-4. Choose an assignee from the user/team picker.
+Assign multiple unassigned issue groups at once:
 
-All selected issues are assigned in a single operation.
+1. Click the **Bulk Assign** toggle button to enter bulk mode.
+2. Checkboxes appear on **unassigned groups only** — already-assigned groups do not get checkboxes.
+3. Check the groups you want to assign, or use **Select All Visible** to check all unassigned groups on the current page.
+4. Choose an assignee from the user/team picker dropdown (required).
+5. Click **Assign**. All selected groups are assigned in a single operation and the page reloads.
 
-### Removing assignments
+### Assignments page
 
-Assignments can be removed from two places:
+The dedicated Assignments page (`/assignments`) shows all current assignments as cards. Each card has:
 
-- **Assignments page** — click the **Remove** button next to any assignment. A confirmation dialog appears before deletion.
-- **Issues tab** — click the **x** button next to the status badge on any assigned issue to unassign it inline.
+- **Save** — update the assignment (e.g. change status).
+- **Remove** — remove the assignment with a confirmation dialog. The issue returns to **Open** status.
 
-In both cases, the issue returns to **Open** status.
+#### Bulk actions (Assignments page)
+
+1. Click the **Bulk Actions** toggle to enter bulk mode.
+2. Select assignment cards using checkboxes.
+3. Choose an action:
+   - **Bulk Reassign** — pick a new user/team from the dropdown and reassign all selected cards.
+   - **Bulk Remove** — a confirmation dialog appears; confirming removes all selected assignments.
+4. The page reloads after bulk actions complete.
+
+### Consistency rules
+
+- Assigned items cannot be re-assigned through the Issues tab. The assigned badge replaces the Assign button and no checkbox appears in bulk mode.
+- Both single and bulk assignment require an assignee selection — submitting without one is not allowed.
+- The user/team picker dropdown is used across all assignment interfaces (Issues tab, Assignments page, bulk modes).
 
 ### Role requirements
 
