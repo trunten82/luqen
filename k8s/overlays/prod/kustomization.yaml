@@ -5,18 +5,18 @@ kind: Kustomization
 bases:
   - ../../
 
-namespace: pally
+namespace: luqen
 
 # Production image tags — set by CI/CD after a successful build:
 #   kustomize edit set image \
-#     ghcr.io/your-org/pally-compliance:$TAG \
-#     ghcr.io/your-org/pally-dashboard:$TAG
+#     ghcr.io/your-org/luqen-compliance:$TAG \
+#     ghcr.io/your-org/luqen-dashboard:$TAG
 images:
-  - name: "${REGISTRY}/pally-compliance:${TAG}"
-    newName: ghcr.io/your-org/pally-compliance
+  - name: "${REGISTRY}/luqen-compliance:${TAG}"
+    newName: ghcr.io/your-org/luqen-compliance
     newTag: latest
-  - name: "${REGISTRY}/pally-dashboard:${TAG}"
-    newName: ghcr.io/your-org/pally-dashboard
+  - name: "${REGISTRY}/luqen-dashboard:${TAG}"
+    newName: ghcr.io/your-org/luqen-dashboard
     newTag: latest
 
 patches:
@@ -25,8 +25,8 @@ patches:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
-        name: pally-compliance
-        namespace: pally
+        name: luqen-compliance
+        namespace: luqen
       spec:
         replicas: 3
         template:
@@ -46,8 +46,8 @@ patches:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
-        name: pally-dashboard
-        namespace: pally
+        name: luqen-dashboard
+        namespace: luqen
       spec:
         replicas: 3
         template:
@@ -67,8 +67,8 @@ patches:
       apiVersion: autoscaling/v2
       kind: HorizontalPodAutoscaler
       metadata:
-        name: pally-compliance
-        namespace: pally
+        name: luqen-compliance
+        namespace: luqen
       spec:
         minReplicas: 3
         maxReplicas: 20
@@ -77,8 +77,8 @@ patches:
       apiVersion: autoscaling/v2
       kind: HorizontalPodAutoscaler
       metadata:
-        name: pally-dashboard
-        namespace: pally
+        name: luqen-dashboard
+        namespace: luqen
       spec:
         minReplicas: 3
         maxReplicas: 10
@@ -88,8 +88,8 @@ patches:
       apiVersion: v1
       kind: PersistentVolumeClaim
       metadata:
-        name: pally-compliance-data
-        namespace: pally
+        name: luqen-compliance-data
+        namespace: luqen
       spec:
         resources:
           requests:
@@ -102,8 +102,8 @@ patches:
       apiVersion: networking.k8s.io/v1
       kind: Ingress
       metadata:
-        name: pally
-        namespace: pally
+        name: luqen
+        namespace: luqen
         annotations:
           cert-manager.io/cluster-issuer: "letsencrypt-prod"
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -112,7 +112,7 @@ patches:
         tls:
           - hosts:
               - REPLACE_WITH_YOUR_PROD_HOSTNAME
-            secretName: pally-tls-prod
+            secretName: luqen-tls-prod
         rules:
           - host: REPLACE_WITH_YOUR_PROD_HOSTNAME
             http:
@@ -121,21 +121,21 @@ patches:
                   pathType: ImplementationSpecific
                   backend:
                     service:
-                      name: pally-compliance
+                      name: luqen-compliance
                       port:
                         name: http
                 - path: /api(/|$)(.*)
                   pathType: ImplementationSpecific
                   backend:
                     service:
-                      name: pally-compliance
+                      name: luqen-compliance
                       port:
                         name: http
                 - path: /
                   pathType: Prefix
                   backend:
                     service:
-                      name: pally-dashboard
+                      name: luqen-dashboard
                       port:
                         name: http
 
@@ -144,8 +144,8 @@ patches:
       apiVersion: v1
       kind: ConfigMap
       metadata:
-        name: pally-compliance-config
-        namespace: pally
+        name: luqen-compliance-config
+        namespace: luqen
       data:
         COMPLIANCE_CORS_ORIGIN: "https://REPLACE_WITH_YOUR_PROD_HOSTNAME"
         COMPLIANCE_TOKEN_EXPIRY: "30m"

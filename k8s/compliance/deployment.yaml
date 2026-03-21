@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pally-compliance
-  namespace: pally
+  name: luqen-compliance
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally-compliance
+    app.kubernetes.io/name: luqen-compliance
     app.kubernetes.io/component: backend
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/part-of: luqen-ecosystem
     app.kubernetes.io/version: "${TAG}"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app.kubernetes.io/name: pally-compliance
+      app.kubernetes.io/name: luqen-compliance
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -21,12 +21,12 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: pally-compliance
+        app.kubernetes.io/name: luqen-compliance
         app.kubernetes.io/component: backend
-        app.kubernetes.io/part-of: pally-ecosystem
+        app.kubernetes.io/part-of: luqen-ecosystem
         app.kubernetes.io/version: "${TAG}"
     spec:
-      serviceAccountName: pally-compliance
+      serviceAccountName: luqen-compliance
       automountServiceAccountToken: false
 
       # Ensure pods are spread across different nodes for HA
@@ -37,7 +37,7 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/name: pally-compliance
+                    app.kubernetes.io/name: luqen-compliance
                 topologyKey: kubernetes.io/hostname
 
       # Init container: write JWT keys from secret into the keys PVC
@@ -61,12 +61,12 @@ spec:
             - name: COMPLIANCE_JWT_PRIVATE_KEY_CONTENT
               valueFrom:
                 secretKeyRef:
-                  name: pally-compliance-secret
+                  name: luqen-compliance-secret
                   key: COMPLIANCE_JWT_PRIVATE_KEY_CONTENT
             - name: COMPLIANCE_JWT_PUBLIC_KEY_CONTENT
               valueFrom:
                 secretKeyRef:
-                  name: pally-compliance-secret
+                  name: luqen-compliance-secret
                   key: COMPLIANCE_JWT_PUBLIC_KEY_CONTENT
           volumeMounts:
             - name: keys
@@ -84,7 +84,7 @@ spec:
           # Image is parameterized for CI/CD substitution:
           #   REGISTRY — e.g. ghcr.io/your-org
           #   TAG      — git SHA or semver tag
-          image: "${REGISTRY}/pally-compliance:${TAG}"
+          image: "${REGISTRY}/luqen-compliance:${TAG}"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -94,14 +94,14 @@ spec:
           # Load non-secret config from ConfigMap
           envFrom:
             - configMapRef:
-                name: pally-compliance-config
+                name: luqen-compliance-config
 
           # Load secret env vars individually so they are not accidentally logged
           env:
             - name: COMPLIANCE_DB_URL
               valueFrom:
                 secretKeyRef:
-                  name: pally-compliance-secret
+                  name: luqen-compliance-secret
                   key: COMPLIANCE_DB_URL
                   # optional: true when using SQLite (COMPLIANCE_DB_ADAPTER=sqlite)
                   optional: true
@@ -154,10 +154,10 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: pally-compliance-data
+            claimName: luqen-compliance-data
         - name: keys
           persistentVolumeClaim:
-            claimName: pally-compliance-keys
+            claimName: luqen-compliance-keys
         - name: tmp
           emptyDir: {}
 

@@ -5,15 +5,15 @@ kind: Kustomization
 bases:
   - ../../
 
-namespace: pally
+namespace: luqen
 
 # Dev image tags — CI/CD replaces these via `kustomize edit set image`
 images:
-  - name: "${REGISTRY}/pally-compliance:${TAG}"
-    newName: ghcr.io/your-org/pally-compliance
+  - name: "${REGISTRY}/luqen-compliance:${TAG}"
+    newName: ghcr.io/your-org/luqen-compliance
     newTag: dev
-  - name: "${REGISTRY}/pally-dashboard:${TAG}"
-    newName: ghcr.io/your-org/pally-dashboard
+  - name: "${REGISTRY}/luqen-dashboard:${TAG}"
+    newName: ghcr.io/your-org/luqen-dashboard
     newTag: dev
 
 patches:
@@ -22,8 +22,8 @@ patches:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
-        name: pally-compliance
-        namespace: pally
+        name: luqen-compliance
+        namespace: luqen
       spec:
         replicas: 1
         template:
@@ -43,8 +43,8 @@ patches:
       apiVersion: apps/v1
       kind: Deployment
       metadata:
-        name: pally-dashboard
-        namespace: pally
+        name: luqen-dashboard
+        namespace: luqen
       spec:
         replicas: 1
         template:
@@ -64,8 +64,8 @@ patches:
       apiVersion: autoscaling/v2
       kind: HorizontalPodAutoscaler
       metadata:
-        name: pally-compliance
-        namespace: pally
+        name: luqen-compliance
+        namespace: luqen
       spec:
         minReplicas: 1
         maxReplicas: 3
@@ -74,8 +74,8 @@ patches:
       apiVersion: autoscaling/v2
       kind: HorizontalPodAutoscaler
       metadata:
-        name: pally-dashboard
-        namespace: pally
+        name: luqen-dashboard
+        namespace: luqen
       spec:
         minReplicas: 1
         maxReplicas: 2
@@ -85,36 +85,36 @@ patches:
       apiVersion: networking.k8s.io/v1
       kind: Ingress
       metadata:
-        name: pally
-        namespace: pally
+        name: luqen
+        namespace: luqen
         annotations:
           cert-manager.io/cluster-issuer: null
           kubernetes.io/ingress.class: "nginx"
       spec:
         tls: []
         rules:
-          - host: pally.dev.local
+          - host: luqen.dev.local
             http:
               paths:
                 - path: /api/docs(/|$)(.*)
                   pathType: ImplementationSpecific
                   backend:
                     service:
-                      name: pally-compliance
+                      name: luqen-compliance
                       port:
                         name: http
                 - path: /api(/|$)(.*)
                   pathType: ImplementationSpecific
                   backend:
                     service:
-                      name: pally-compliance
+                      name: luqen-compliance
                       port:
                         name: http
                 - path: /
                   pathType: Prefix
                   backend:
                     service:
-                      name: pally-dashboard
+                      name: luqen-dashboard
                       port:
                         name: http
 
@@ -123,7 +123,7 @@ patches:
       apiVersion: v1
       kind: ConfigMap
       metadata:
-        name: pally-compliance-config
-        namespace: pally
+        name: luqen-compliance-config
+        namespace: luqen
       data:
-        COMPLIANCE_CORS_ORIGIN: "http://pally.dev.local"
+        COMPLIANCE_CORS_ORIGIN: "http://luqen.dev.local"

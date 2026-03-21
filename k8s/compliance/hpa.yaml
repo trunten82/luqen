@@ -1,16 +1,16 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: pally-compliance
-  namespace: pally
+  name: luqen-compliance
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally-compliance
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/name: luqen-compliance
+    app.kubernetes.io/part-of: luqen-ecosystem
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: pally-compliance
+    name: luqen-compliance
   minReplicas: 2
   maxReplicas: 10
   metrics:

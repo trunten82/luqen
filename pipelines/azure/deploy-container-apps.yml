@@ -21,7 +21,7 @@ parameters:
 
 variables:
   NODE_VERSION: '20'
-  # Variable group: pally-agent-aca-$(environment) must define:
+  # Variable group: luqen-aca-$(environment) must define:
   #   ACR_LOGIN_SERVER, AZURE_RESOURCE_GROUP
   #   CONTAINER_APP_NAME, CONTAINER_APP_ENV_NAME
   #   HEALTH_CHECK_URL
@@ -96,11 +96,11 @@ stages:
         )
       )
     variables:
-      - group: pally-agent-aca-${{ parameters.environment }}
+      - group: luqen-aca-${{ parameters.environment }}
     jobs:
       - deployment: DeployContainerApp
         displayName: Update Container App revision
-        environment: pally-agent-aca-${{ parameters.environment }}
+        environment: luqen-aca-${{ parameters.environment }}
         strategy:
           runOnce:
             deploy:
@@ -114,7 +114,7 @@ stages:
                     inlineScript: |
                       set -euo pipefail
 
-                      FULL_IMAGE="$(ACR_LOGIN_SERVER)/pally-agent/compliance:${{ parameters.imageTag }}"
+                      FULL_IMAGE="$(ACR_LOGIN_SERVER)/luqen/compliance:${{ parameters.imageTag }}"
                       REVISION_SUFFIX="${{ parameters.environment }}-${{ parameters.imageTag }}"
 
                       echo "Deploying image: $FULL_IMAGE"
@@ -148,7 +148,7 @@ stages:
       - job: HealthCheck
         displayName: Verify Container App health
         variables:
-          - group: pally-agent-aca-${{ parameters.environment }}
+          - group: luqen-aca-${{ parameters.environment }}
         steps:
           - script: |
               set -euo pipefail

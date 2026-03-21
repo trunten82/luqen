@@ -1,21 +1,21 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: pally-dashboard-config
-  namespace: pally
+  name: luqen-dashboard-config
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally-dashboard
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/name: luqen-dashboard
+    app.kubernetes.io/part-of: luqen-ecosystem
 data:
   # HTTP server configuration
   DASHBOARD_PORT: "5000"
 
   # URL of the compliance service (in-cluster DNS name)
-  DASHBOARD_COMPLIANCE_URL: "http://pally-compliance:4000"
+  DASHBOARD_COMPLIANCE_URL: "http://luqen-compliance:4000"
 
   # URL of the pa11y web service (external or in-cluster)
   # Override this in overlays or CI/CD to point at the real pa11y runner
-  DASHBOARD_WEBSERVICE_URL: "http://pally-webservice:3000"
+  DASHBOARD_WEBSERVICE_URL: "http://luqen-webservice:3000"
 
   # Path where generated accessibility reports are stored
   DASHBOARD_REPORTS_DIR: "/app/reports"
@@ -28,4 +28,4 @@ data:
 
   # Optional Redis for SSE pub/sub and scan queue (enables multi-instance scaling).
   # Uncomment to enable — requires Redis deployed to the cluster.
-  # DASHBOARD_REDIS_URL: "redis://pally-redis:6379"
+  # DASHBOARD_REDIS_URL: "redis://luqen-redis:6379"

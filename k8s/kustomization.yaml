@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: pally
+namespace: luqen
 
 resources:
   # Cluster-level resources
@@ -31,4 +31,4 @@ resources:
 
 commonLabels:
   app.kubernetes.io/managed-by: kustomize
-  app.kubernetes.io/part-of: pally-ecosystem
+  app.kubernetes.io/part-of: luqen-ecosystem

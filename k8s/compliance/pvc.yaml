@@ -3,11 +3,11 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pally-compliance-data
-  namespace: pally
+  name: luqen-compliance-data
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally-compliance
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/name: luqen-compliance
+    app.kubernetes.io/part-of: luqen-ecosystem
 spec:
   accessModes:
     - ReadWriteOnce
@@ -22,11 +22,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pally-compliance-keys
-  namespace: pally
+  name: luqen-compliance-keys
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally-compliance
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/name: luqen-compliance
+    app.kubernetes.io/part-of: luqen-ecosystem
 spec:
   accessModes:
     - ReadWriteOnce

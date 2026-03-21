@@ -31,10 +31,10 @@ on:
 
 env:
   AWS_REGION: eu-west-1
-  ECR_REPOSITORY: pally-compliance
-  ECS_CLUSTER: pally-agent
-  ECS_SERVICE: pally-compliance
-  CONTAINER_NAME: pally-compliance
+  ECR_REPOSITORY: luqen-compliance
+  ECS_CLUSTER: luqen
+  ECS_SERVICE: luqen-compliance
+  CONTAINER_NAME: luqen-compliance
 
 jobs:
 
@@ -112,7 +112,7 @@ jobs:
       - name: Download current ECS task definition
         run: |
           aws ecs describe-task-definition \
-            --task-definition pally-compliance-${{ env.DEPLOY_ENV }} \
+            --task-definition luqen-compliance-${{ env.DEPLOY_ENV }} \
             --query taskDefinition \
             > task-definition.json
 
@@ -167,7 +167,7 @@ jobs:
             --output text | sed 's/:[0-9]*$//')
 
           ROLLBACK_REVISION=$(aws ecs describe-task-definition \
-            --task-definition "pally-compliance-${{ env.DEPLOY_ENV }}" \
+            --task-definition "luqen-compliance-${{ env.DEPLOY_ENV }}" \
             --query 'taskDefinition.revision' \
             --output text)
 
@@ -178,7 +178,7 @@ jobs:
           aws ecs update-service \
             --cluster "${{ env.ECS_CLUSTER }}-${{ env.DEPLOY_ENV }}" \
             --service "${{ env.ECS_SERVICE }}-${{ env.DEPLOY_ENV }}" \
-            --task-definition "pally-compliance-${{ env.DEPLOY_ENV }}:$ROLLBACK_REVISION" \
+            --task-definition "luqen-compliance-${{ env.DEPLOY_ENV }}:$ROLLBACK_REVISION" \
             --force-new-deployment
 
           aws ecs wait services-stable \

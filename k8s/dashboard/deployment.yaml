@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pally-dashboard
-  namespace: pally
+  name: luqen-dashboard
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally-dashboard
+    app.kubernetes.io/name: luqen-dashboard
     app.kubernetes.io/component: frontend
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/part-of: luqen-ecosystem
     app.kubernetes.io/version: "${TAG}"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app.kubernetes.io/name: pally-dashboard
+      app.kubernetes.io/name: luqen-dashboard
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -21,12 +21,12 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: pally-dashboard
+        app.kubernetes.io/name: luqen-dashboard
         app.kubernetes.io/component: frontend
-        app.kubernetes.io/part-of: pally-ecosystem
+        app.kubernetes.io/part-of: luqen-ecosystem
         app.kubernetes.io/version: "${TAG}"
     spec:
-      serviceAccountName: pally-dashboard
+      serviceAccountName: luqen-dashboard
       automountServiceAccountToken: false
 
       # Ensure pods are spread across different nodes for HA
@@ -37,7 +37,7 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/name: pally-dashboard
+                    app.kubernetes.io/name: luqen-dashboard
                 topologyKey: kubernetes.io/hostname
 
       # Wait for the compliance service to be resolvable before starting
@@ -48,7 +48,7 @@ spec:
             - sh
             - -c
             - |
-              until wget -q --spider http://pally-compliance:4000/api/v1/health; do
+              until wget -q --spider http://luqen-compliance:4000/api/v1/health; do
                 echo "Waiting for compliance service..."
                 sleep 3
               done
@@ -65,7 +65,7 @@ spec:
           # Image is parameterized for CI/CD substitution:
           #   REGISTRY — e.g. ghcr.io/your-org
           #   TAG      — git SHA or semver tag
-          image: "${REGISTRY}/pally-dashboard:${TAG}"
+          image: "${REGISTRY}/luqen-dashboard:${TAG}"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -75,25 +75,25 @@ spec:
           # Load non-secret config from ConfigMap
           envFrom:
             - configMapRef:
-                name: pally-dashboard-config
+                name: luqen-dashboard-config
 
           # Load secrets individually
           env:
             - name: DASHBOARD_SESSION_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: pally-dashboard-secret
+                  name: luqen-dashboard-secret
                   key: DASHBOARD_SESSION_SECRET
             - name: DASHBOARD_COMPLIANCE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: pally-dashboard-secret
+                  name: luqen-dashboard-secret
                   key: DASHBOARD_COMPLIANCE_CLIENT_ID
                   optional: true
             - name: DASHBOARD_COMPLIANCE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: pally-dashboard-secret
+                  name: luqen-dashboard-secret
                   key: DASHBOARD_COMPLIANCE_CLIENT_SECRET
                   optional: true
 

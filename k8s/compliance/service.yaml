@@ -1,16 +1,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: pally-compliance
-  namespace: pally
+  name: luqen-compliance
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally-compliance
+    app.kubernetes.io/name: luqen-compliance
     app.kubernetes.io/component: backend
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/part-of: luqen-ecosystem
 spec:
   type: ClusterIP
   selector:
-    app.kubernetes.io/name: pally-compliance
+    app.kubernetes.io/name: luqen-compliance
   ports:
     - name: http
       port: 4000

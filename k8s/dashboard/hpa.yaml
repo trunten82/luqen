@@ -1,16 +1,16 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: pally-dashboard
-  namespace: pally
+  name: luqen-dashboard
+  namespace: luqen
   labels:
-    app.kubernetes.io/name: pally-dashboard
-    app.kubernetes.io/part-of: pally-ecosystem
+    app.kubernetes.io/name: luqen-dashboard
+    app.kubernetes.io/part-of: luqen-ecosystem
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: pally-dashboard
+    name: luqen-dashboard
   minReplicas: 2
   maxReplicas: 5
   metrics:
