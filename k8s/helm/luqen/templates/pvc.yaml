@@ -1,0 +1,53 @@
+{{- if .Values.compliance.persistence.data.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "luqen.fullname" . }}-compliance-data
+  labels:
+    {{- include "luqen.componentLabels" (dict "component" "compliance" "tier" "backend" "root" .) | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.compliance.persistence.data.storageClassName }}
+  storageClassName: {{ .Values.compliance.persistence.data.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.compliance.persistence.data.size }}
+{{- end }}
+---
+{{- if .Values.compliance.persistence.keys.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "luqen.fullname" . }}-compliance-keys
+  labels:
+    {{- include "luqen.componentLabels" (dict "component" "compliance" "tier" "backend" "root" .) | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.compliance.persistence.keys.storageClassName }}
+  storageClassName: {{ .Values.compliance.persistence.keys.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.compliance.persistence.keys.size }}
+{{- end }}
+---
+{{- if .Values.dashboard.persistence.reports.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "luqen.fullname" . }}-dashboard-reports
+  labels:
+    {{- include "luqen.componentLabels" (dict "component" "dashboard" "tier" "frontend" "root" .) | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.dashboard.persistence.reports.storageClassName }}
+  storageClassName: {{ .Values.dashboard.persistence.reports.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.dashboard.persistence.reports.size }}
+{{- end }}

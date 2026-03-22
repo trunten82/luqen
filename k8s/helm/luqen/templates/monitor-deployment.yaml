@@ -1,0 +1,59 @@
+{{- if .Values.monitor.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "luqen.fullname" . }}-monitor
+  labels:
+    {{- include "luqen.componentLabels" (dict "component" "monitor" "tier" "monitoring" "root" .) | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "luqen.selectorLabels" (dict "component" "monitor" "root" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "luqen.componentLabels" (dict "component" "monitor" "tier" "monitoring" "root" .) | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: monitor
+          image: "{{ .Values.monitor.image.repository }}:{{ include "luqen.imageTag" (dict "tag" .Values.monitor.image.tag "global" .Values.global) }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.monitor.port }}
+              protocol: TCP
+          env:
+            - name: COMPLIANCE_URL
+              value: "http://{{ include "luqen.fullname" . }}-compliance:{{ .Values.compliance.port }}"
+            - name: DASHBOARD_URL
+              value: "http://{{ include "luqen.fullname" . }}-dashboard:{{ .Values.dashboard.port }}"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.monitor.resources | nindent 12 }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      terminationGracePeriodSeconds: 15
+{{- end }}

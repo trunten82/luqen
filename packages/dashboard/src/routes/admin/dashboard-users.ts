@@ -2,6 +2,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { UserDb, DashboardUser } from '../../db/users.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml } from './helpers.js';
+import { validateUsername, validatePassword } from '../../validation.js';
+import type { AuditLogger } from '../../audit/logger.js';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -82,6 +84,7 @@ const VALID_ROLES = new Set(['viewer', 'user', 'developer', 'admin', 'executive'
 export async function dashboardUserRoutes(
   server: FastifyInstance,
   userDb: UserDb,
+  auditLogger?: AuditLogger,
 ): Promise<void> {
   const anyUserPerm = requirePermission('users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles');
 
@@ -136,6 +139,22 @@ export async function dashboardUserRoutes(
           .send(toastHtml('Username and password are required.', 'error'));
       }
 
+      const usernameCheck = validateUsername(username);
+      if (!usernameCheck.valid) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml(usernameCheck.error ?? 'Invalid username.', 'error'));
+      }
+
+      const passwordCheck = validatePassword(password);
+      if (!passwordCheck.valid) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml(passwordCheck.error ?? 'Invalid password.', 'error'));
+      }
+
       if (!VALID_ROLES.has(role)) {
         return reply
           .code(400)
@@ -156,6 +175,7 @@ export async function dashboardUserRoutes(
         const created = await userDb.createUser(username, password, role);
         const row = userRowHtml(created);
 
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.create', resourceType: 'user', resourceId: created.id, details: { username: created.username, role }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -205,6 +225,7 @@ export async function dashboardUserRoutes(
         }
 
         const row = userRowHtml(updated);
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.role_change', resourceType: 'user', resourceId: id, details: { username: updated.username, newRole: role }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -243,6 +264,7 @@ export async function dashboardUserRoutes(
         }
 
         const row = userRowHtml(deactivated);
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.deactivate', resourceType: 'user', resourceId: id, details: { username: deactivated.username }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -273,6 +295,7 @@ export async function dashboardUserRoutes(
         }
 
         const row = userRowHtml(activated);
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.activate', resourceType: 'user', resourceId: id, details: { username: activated.username }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -317,7 +340,7 @@ export async function dashboardUserRoutes(
         <div class="form-group">
           <label for="newPassword">New Password <span class="required" aria-hidden="true">*</span></label>
           <input type="password" id="newPassword" name="newPassword" class="input" required aria-required="true" minlength="8" autocomplete="new-password">
-          <span class="form-hint">Minimum 8 characters</span>
+          <span class="form-hint">Min 8 chars, uppercase, lowercase, number, special character</span>
         </div>
         <div class="form-group">
           <label for="confirmPassword">Confirm Password <span class="required" aria-hidden="true">*</span></label>
@@ -350,11 +373,19 @@ export async function dashboardUserRoutes(
           .send(toastHtml('User not found.', 'error'));
       }
 
-      if (!body.newPassword || body.newPassword.length < 8) {
+      if (!body.newPassword) {
         return reply
           .code(400)
           .header('content-type', 'text/html')
-          .send(toastHtml('Password must be at least 8 characters.', 'error'));
+          .send(toastHtml('Password is required.', 'error'));
+      }
+
+      const pwCheck = validatePassword(body.newPassword);
+      if (!pwCheck.valid) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml(pwCheck.error ?? 'Invalid password.', 'error'));
       }
 
       if (body.newPassword !== body.confirmPassword) {
@@ -401,6 +432,7 @@ export async function dashboardUserRoutes(
 
       try {
         userDb.deleteUser(id);
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.delete', resourceType: 'user', resourceId: id, details: { username: user.username }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')

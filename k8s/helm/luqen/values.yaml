@@ -1,0 +1,145 @@
+# -- Global configuration applied to all components
+global:
+  # -- Default image tag for all Luqen images
+  imageTag: "1.1.0"
+  # -- Image pull policy for all containers
+  imagePullPolicy: IfNotPresent
+
+# -- Compliance API service
+compliance:
+  image:
+    repository: ghcr.io/luqen/luqen-compliance
+    # -- Override global.imageTag for this component
+    tag: ""
+  port: 4000
+  replicas: 2
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "250m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  persistence:
+    data:
+      enabled: true
+      size: 2Gi
+      # -- Storage class name (empty = cluster default)
+      storageClassName: ""
+    keys:
+      enabled: true
+      size: 10Mi
+      storageClassName: ""
+  # -- Database adapter: sqlite | postgres | mongodb
+  dbAdapter: sqlite
+  dbPath: "/app/data/compliance.db"
+  # -- Database URL (used when dbAdapter is postgres or mongodb)
+  dbUrl: ""
+  tokenExpiry: "1h"
+  refreshTokenExpiry: "30d"
+  corsOrigin: ""
+
+# -- Dashboard web UI
+dashboard:
+  image:
+    repository: ghcr.io/luqen/luqen-dashboard
+    tag: ""
+  port: 5000
+  replicas: 2
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "250m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  persistence:
+    reports:
+      # -- Enable a PVC for generated reports (false = emptyDir)
+      enabled: false
+      size: 5Gi
+      storageClassName: ""
+  # -- Session signing secret (min 32 chars). Generate with: openssl rand -hex 32
+  sessionSecret: "REPLACE_WITH_AT_LEAST_32_CHAR_RANDOM_STRING"
+  # -- OAuth2 client ID for dashboard-to-compliance auth
+  complianceClientId: ""
+  # -- OAuth2 client secret for dashboard-to-compliance auth
+  complianceClientSecret: ""
+  # -- Maximum concurrent scans
+  maxConcurrentScans: 2
+  dbPath: "/app/data/dashboard.db"
+  reportsDir: "/app/reports"
+
+# -- Pa11y accessibility scanner sidecar / service
+pa11y:
+  enabled: true
+  image:
+    repository: ghcr.io/luqen/luqen-webservice
+    tag: ""
+  port: 3000
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# -- Redis cache (enables compliance caching, scan queue, SSE pub/sub)
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7-alpine"
+  resources:
+    requests:
+      memory: "32Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
+
+# -- Monitoring / health-check sidecar
+monitor:
+  enabled: false
+  image:
+    repository: ghcr.io/luqen/luqen-monitor
+    tag: ""
+  port: 9090
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
+
+# -- Ingress configuration
+ingress:
+  enabled: false
+  # -- Ingress class name (e.g. nginx)
+  className: nginx
+  host: luqen.example.com
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  tls:
+    enabled: false
+    # -- Secret name for TLS cert (auto-created by cert-manager if issuer is set)
+    secretName: luqen-tls
+    # -- cert-manager ClusterIssuer name
+    clusterIssuer: ""
+
+# -- Service account configuration
+serviceAccount:
+  create: true
+  automount: false
+
+# -- Secrets for JWT keys (compliance service)
+secrets:
+  # -- RSA private key PEM content for JWT signing
+  jwtPrivateKey: "REPLACE_WITH_RSA_PRIVATE_KEY_PEM"
+  # -- RSA public key PEM content for JWT verification
+  jwtPublicKey: "REPLACE_WITH_RSA_PUBLIC_KEY_PEM"

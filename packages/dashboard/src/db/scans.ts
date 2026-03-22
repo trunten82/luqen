@@ -439,6 +439,35 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
   ('admin', 'users.roles');
     `,
   },
+  {
+    id: '016',
+    name: 'create-audit-log',
+    sql: `
+CREATE TABLE IF NOT EXISTS audit_log (
+  id TEXT PRIMARY KEY,
+  timestamp TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  actor_id TEXT,
+  action TEXT NOT NULL,
+  resource_type TEXT NOT NULL,
+  resource_id TEXT,
+  details TEXT,
+  ip_address TEXT,
+  org_id TEXT NOT NULL DEFAULT 'system'
+);
+CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor);
+CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
+CREATE INDEX IF NOT EXISTS idx_audit_log_resource ON audit_log(resource_type, resource_id);
+    `,
+  },
+  {
+    id: '017',
+    name: 'add-audit-view-permission',
+    sql: `
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'audit.view');
+    `,
+  },
 ];
 
 export interface Team {

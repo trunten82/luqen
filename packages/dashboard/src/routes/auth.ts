@@ -3,7 +3,9 @@ import { getToken } from '../compliance-client.js';
 import type { DashboardConfig } from '../config.js';
 import type { AuthService } from '../auth/auth-service.js';
 import type { UserDb } from '../db/users.js';
+import type { AuditLogger } from '../audit/logger.js';
 import { decodeJwt } from 'jose';
+import { validatePassword } from '../validation.js';
 
 interface LoginBody {
   username?: string;
@@ -20,6 +22,7 @@ export async function authRoutes(
   config: DashboardConfig,
   authService: AuthService,
   userDb?: UserDb,
+  auditLogger?: AuditLogger,
 ): Promise<void> {
   // GET /login — render login page with mode-aware UI
   server.get('/login', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -52,6 +55,7 @@ export async function authRoutes(
         const valid = authService.validateApiKey(body.apiKey.trim());
 
         if (!valid) {
+          auditLogger?.log({ actor: 'unknown', action: 'login.failure', resourceType: 'session', details: 'Invalid API key', ipAddress: request.ip });
           return reply.view('login.hbs', {
             error: 'Invalid API key.',
             mode,
@@ -66,6 +70,7 @@ export async function authRoutes(
         session.set('authMethod', 'api-key');
         session.set('bootId', authService.getBootId());
 
+        auditLogger?.log({ actor: 'admin', actorId: 'api-key', action: 'login.success', resourceType: 'session', details: 'API key login', ipAddress: request.ip });
         await reply.redirect('/');
         return;
       }
@@ -134,6 +139,7 @@ export async function authRoutes(
           session.set('authMethod', 'oauth');
           session.set('bootId', authService.getBootId());
 
+          auditLogger?.log({ actor: displayUsername, actorId: userId, action: 'login.success', resourceType: 'session', details: 'OAuth login', ipAddress: request.ip });
           await reply.redirect('/');
           return;
         } catch {
@@ -145,6 +151,7 @@ export async function authRoutes(
       const result = await authService.loginWithPassword(username.trim(), password);
 
       if (!result.authenticated) {
+        auditLogger?.log({ actor: username.trim(), action: 'login.failure', resourceType: 'session', details: result.error ?? 'Invalid credentials', ipAddress: request.ip });
         return reply.view('login.hbs', {
           error: result.error ?? 'Invalid username or password.',
           username,
@@ -160,6 +167,7 @@ export async function authRoutes(
       session.set('authMethod', 'password');
       session.set('bootId', authService.getBootId());
 
+      auditLogger?.log({ actor: result.user!.username, actorId: result.user!.id, action: 'login.success', resourceType: 'session', details: 'Password login', ipAddress: request.ip });
       await reply.redirect('/');
     },
   );
@@ -278,8 +286,13 @@ export async function authRoutes(
       return reply.view('account/profile.hbs', { ...viewData, pwError: 'Current password is required.' });
     }
 
-    if (!body.newPassword || body.newPassword.length < 8) {
-      return reply.view('account/profile.hbs', { ...viewData, pwError: 'New password must be at least 8 characters.' });
+    if (!body.newPassword) {
+      return reply.view('account/profile.hbs', { ...viewData, pwError: 'New password is required.' });
+    }
+
+    const pwCheck = validatePassword(body.newPassword);
+    if (!pwCheck.valid) {
+      return reply.view('account/profile.hbs', { ...viewData, pwError: pwCheck.error ?? 'Invalid password.' });
     }
 
     if (body.newPassword !== body.confirmPassword) {

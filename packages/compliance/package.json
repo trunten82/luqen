@@ -1,6 +1,6 @@
 {
   "name": "@luqen/compliance",
-  "version": "0.22.0",
+  "version": "1.1.0",
   "description": "Accessibility compliance rule engine service",
   "type": "module",
   "main": "dist/cli.js",

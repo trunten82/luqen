@@ -69,7 +69,7 @@ describe('POST /api/v1/setup', () => {
         authorization: `Bearer ${VALID_API_KEY}`,
         'content-type': 'application/json',
       },
-      payload: JSON.stringify({ username: 'alice', password: 'secret1234', role: 'admin' }),
+      payload: JSON.stringify({ username: 'alice', password: 'Secret123!', role: 'admin' }),
     });
 
     expect(response.statusCode).toBe(201);
@@ -87,7 +87,7 @@ describe('POST /api/v1/setup', () => {
       method: 'POST',
       url: '/api/v1/setup',
       headers: { 'content-type': 'application/json' },
-      payload: JSON.stringify({ username: 'alice', password: 'secret1234' }),
+      payload: JSON.stringify({ username: 'alice', password: 'Secret123!' }),
     });
 
     expect(response.statusCode).toBe(401);
@@ -103,7 +103,7 @@ describe('POST /api/v1/setup', () => {
         authorization: 'Bearer wrong-api-key',
         'content-type': 'application/json',
       },
-      payload: JSON.stringify({ username: 'alice', password: 'secret1234' }),
+      payload: JSON.stringify({ username: 'alice', password: 'Secret123!' }),
     });
 
     expect(response.statusCode).toBe(401);
@@ -119,7 +119,7 @@ describe('POST /api/v1/setup', () => {
         authorization: `Bearer ${VALID_API_KEY}`,
         'content-type': 'application/json',
       },
-      payload: JSON.stringify({ password: 'secret1234' }),
+      payload: JSON.stringify({ password: 'Secret123!' }),
     });
 
     expect(response.statusCode).toBe(400);
@@ -160,7 +160,7 @@ describe('POST /api/v1/setup', () => {
   });
 
   it('returns 409 for duplicate username', async () => {
-    await ctx.userDb.createUser('alice', 'password123', 'admin');
+    await ctx.userDb.createUser('alice', 'Password123!', 'admin');
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -169,7 +169,7 @@ describe('POST /api/v1/setup', () => {
         authorization: `Bearer ${VALID_API_KEY}`,
         'content-type': 'application/json',
       },
-      payload: JSON.stringify({ username: 'alice', password: 'newpassword1' }),
+      payload: JSON.stringify({ username: 'alice', password: 'NewPass123!' }),
     });
 
     expect(response.statusCode).toBe(409);
@@ -185,7 +185,7 @@ describe('POST /api/v1/setup', () => {
         authorization: `Bearer ${VALID_API_KEY}`,
         'content-type': 'application/json',
       },
-      payload: JSON.stringify({ username: 'bob', password: 'secret1234' }),
+      payload: JSON.stringify({ username: 'bob', password: 'Secret123!' }),
     });
 
     expect(response.statusCode).toBe(201);
@@ -204,7 +204,7 @@ describe('POST /api/v1/setup', () => {
         'x-api-key': VALID_API_KEY,
         'content-type': 'application/json',
       },
-      payload: JSON.stringify({ username: 'carol', password: 'secret1234' }),
+      payload: JSON.stringify({ username: 'carol', password: 'Secret123!' }),
     });
 
     expect(response.statusCode).toBe(201);

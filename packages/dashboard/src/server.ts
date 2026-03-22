@@ -50,6 +50,8 @@ import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
+import { AuditLogger } from './audit/logger.js';
+import { auditRoutes } from './routes/admin/audit.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -91,6 +93,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   authService.setScanDb(db);
   const userDb = new UserDb(db.getDatabase());
   const orgDb = new OrgDb(db.getDatabase());
+  const auditLogger = new AuditLogger(db.getDatabase());
 
   // ── Solo mode: first-start API key ──────────────────────────────────────
   if (authService.getAuthMode() === 'solo') {
@@ -318,6 +321,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           adminUsers: perms.has('admin.users'),
           adminRoles: perms.has('admin.roles'),
           adminSystem: perms.has('admin.system'),
+          auditView: perms.has('audit.view'),
         },
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
@@ -354,7 +358,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Routes ────────────────────────────────────────────────────────────────
-  await authRoutes(server, config, authService, userDb);
+  await authRoutes(server, config, authService, userDb, auditLogger);
   await homeRoutes(server, db, config);
   await scanRoutes(server, db, orchestrator, config);
   await compareRoutes(server, db);
@@ -382,14 +386,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     dbPath: config.dbPath,
   });
 
-  await dashboardUserRoutes(server, userDb);
-  await apiKeyRoutes(server, db.getDatabase());
+  await dashboardUserRoutes(server, userDb, auditLogger);
+  await apiKeyRoutes(server, db.getDatabase(), auditLogger);
   await organizationRoutes(server, orgDb, userDb, config.complianceUrl);
   await roleRoutes(server, db);
   await teamRoutes(server, db, userDb);
   await emailReportRoutes(server, db, pluginManager);
 
-  await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
+  await auditRoutes(server, auditLogger);
+  await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir, auditLogger);
 
   // ── Export API routes ────────────────────────────────────────────────────
   await exportRoutes(server, db);
