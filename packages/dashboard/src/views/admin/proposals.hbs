@@ -1,6 +1,6 @@
 <section aria-label="Update proposals management">
   <div class="filter-bar">
-    <label for="proposal-status-filter" class="form-label">Status</label>
+    <label for="proposal-status-filter" class="form-label">{{t "common.status"}}</label>
     <select id="proposal-status-filter"
             name="status"
             hx-get="/admin/proposals"
@@ -8,10 +8,10 @@
             hx-target="#proposals-table-body"
             class="select"
             aria-label="Filter proposals by status">
-      <option value="" {{#if (eq statusFilter '')}}selected{{/if}}>All Statuses</option>
-      <option value="pending" {{#if (eq statusFilter 'pending')}}selected{{/if}}>Pending</option>
-      <option value="approved" {{#if (eq statusFilter 'approved')}}selected{{/if}}>Approved</option>
-      <option value="rejected" {{#if (eq statusFilter 'rejected')}}selected{{/if}}>Rejected</option>
+      <option value="" {{#if (eq statusFilter '')}}selected{{/if}}>{{t "admin.proposals.allStatuses"}}</option>
+      <option value="pending" {{#if (eq statusFilter 'pending')}}selected{{/if}}>{{t "admin.proposals.statusPending"}}</option>
+      <option value="approved" {{#if (eq statusFilter 'approved')}}selected{{/if}}>{{t "admin.proposals.statusApproved"}}</option>
+      <option value="rejected" {{#if (eq statusFilter 'rejected')}}selected{{/if}}>{{t "admin.proposals.statusRejected"}}</option>
     </select>
   </div>
 
@@ -25,12 +25,12 @@
     <table class="table" aria-label="Update proposals">
       <thead>
         <tr>
-          <th scope="col">Source</th>
-          <th scope="col">Type</th>
-          <th scope="col">Summary</th>
-          <th scope="col">Detected</th>
-          <th scope="col">Status</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "admin.proposals.colSource"}}</th>
+          <th scope="col">{{t "admin.proposals.colType"}}</th>
+          <th scope="col">{{t "admin.proposals.colSummary"}}</th>
+          <th scope="col">{{t "admin.proposals.colDetected"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody id="proposals-table-body">
@@ -48,23 +48,23 @@
           <td>
             {{#if isPending}}
             <button hx-post="/admin/proposals/{{id}}/approve"
-                    hx-confirm="Approve this proposal?"
+                    hx-confirm="{{t "admin.proposals.confirmApprove"}}"
                     hx-target="#proposal-{{id}}"
                     hx-swap="outerHTML"
                     class="btn btn--sm btn--success"
-                    aria-label="Approve proposal: {{summary}}">Approve</button>
+                    aria-label="Approve proposal: {{summary}}">{{t "admin.proposals.approve"}}</button>
             <button hx-post="/admin/proposals/{{id}}/reject"
-                    hx-confirm="Reject this proposal?"
+                    hx-confirm="{{t "admin.proposals.confirmReject"}}"
                     hx-target="#proposal-{{id}}"
                     hx-swap="outerHTML"
                     class="btn btn--sm btn--danger"
-                    aria-label="Reject proposal: {{summary}}">Reject</button>
+                    aria-label="Reject proposal: {{summary}}">{{t "admin.proposals.reject"}}</button>
             {{/if}}
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="6" class="table__empty">No proposals found.</td>
+          <td colspan="6" class="table__empty">{{t "admin.proposals.noProposals"}}</td>
         </tr>
         {{/each}}
       </tbody>

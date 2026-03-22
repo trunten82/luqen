@@ -1,19 +1,17 @@
 <section aria-label="Email Reports management">
-  <h2>Email Reports</h2>
+  <h2>{{t "admin.emailReports.title"}}</h2>
 
   {{!-- Email Plugin Status --}}
   <div class="card" style="margin-bottom: 24px;">
-    <h3>Email Sending Configuration</h3>
+    <h3>{{t "admin.emailReports.emailSendingConfig"}}</h3>
     {{#if emailPluginActive}}
     <div style="padding: 12px 16px; background: var(--success-bg, #d4edda); border-radius: 6px; margin-bottom: 12px;">
-      <strong>Email Notifications plugin is active.</strong>
-      SMTP settings are managed via <a href="/admin/plugins">Admin &gt; Plugins &gt; Email Notifications &amp; Reports</a>.
+      <strong>{{t "admin.emailReports.pluginActive"}}</strong>
+      {{{t "admin.emailReports.pluginActiveNote"}}}
     </div>
     {{else}}
     <div style="padding: 12px 16px; background: var(--warning-bg, #fff3cd); border-radius: 6px; margin-bottom: 12px;">
-      <strong>Recommended:</strong> Install and activate the
-      <a href="/admin/plugins">Email Notifications &amp; Reports</a> plugin
-      for encrypted SMTP credential storage and scan event notifications.
+      {{{t "admin.emailReports.pluginInactiveNote"}}}
     </div>
     {{/if}}
   </div>
@@ -21,10 +19,10 @@
   {{!-- Legacy SMTP Configuration (shown only when plugin is NOT active) --}}
   {{#unless emailPluginActive}}
   <div class="card" style="margin-bottom: 24px;">
-    <h3>SMTP Configuration (Legacy)</h3>
+    <h3>{{t "admin.emailReports.smtpLegacy"}}</h3>
     <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-      Configure your SMTP server to enable email report delivery.
-      {{#unless smtpConfigured}}<strong>Not yet configured.</strong>{{/unless}}
+      {{t "admin.emailReports.smtpDescription"}}
+      {{#unless smtpConfigured}}<strong>{{t "admin.emailReports.smtpNotConfigured"}}</strong>{{/unless}}
     </p>
 
     <form hx-post="/admin/email-reports/smtp"
@@ -35,60 +33,60 @@
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
-        <label for="smtp-host">Host</label>
+        <label for="smtp-host">{{t "admin.emailReports.smtpHost"}}</label>
         <input type="text" id="smtp-host" name="host" class="input"
                value="{{smtpConfig.host}}" placeholder="smtp.example.com" required
                aria-required="true">
       </div>
 
       <div class="form-group">
-        <label for="smtp-port">Port</label>
+        <label for="smtp-port">{{t "admin.emailReports.smtpPort"}}</label>
         <input type="number" id="smtp-port" name="port" class="input"
                value="{{smtpConfig.port}}" placeholder="587" min="1" max="65535" required
                aria-required="true">
       </div>
 
       <div class="form-group">
-        <label for="smtp-username">Username</label>
+        <label for="smtp-username">{{t "admin.emailReports.smtpUsername"}}</label>
         <input type="text" id="smtp-username" name="username" class="input"
                value="{{smtpConfig.username}}" placeholder="user@example.com" required
                aria-required="true">
       </div>
 
       <div class="form-group">
-        <label for="smtp-password">Password</label>
+        <label for="smtp-password">{{t "admin.emailReports.smtpPassword"}}</label>
         <input type="password" id="smtp-password" name="password" class="input"
                value="{{smtpConfig.password}}" placeholder="••••••••" required
                aria-required="true">
       </div>
 
       <div class="form-group">
-        <label for="smtp-from-address">From Address</label>
+        <label for="smtp-from-address">{{t "admin.emailReports.smtpFromAddress"}}</label>
         <input type="email" id="smtp-from-address" name="fromAddress" class="input"
                value="{{smtpConfig.fromAddress}}" placeholder="noreply@example.com" required
                aria-required="true">
       </div>
 
       <div class="form-group">
-        <label for="smtp-from-name">From Name</label>
+        <label for="smtp-from-name">{{t "admin.emailReports.smtpFromName"}}</label>
         <input type="text" id="smtp-from-name" name="fromName" class="input"
-               value="{{smtpConfig.fromName}}" placeholder="Luqen">
+               value="{{smtpConfig.fromName}}" placeholder="{{t "admin.emailReports.smtpFromNamePlaceholder"}}">
       </div>
 
       <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
         <input type="checkbox" id="smtp-secure" name="secure"
                {{#if smtpConfig.secure}}checked{{/if}}>
-        <label for="smtp-secure" style="margin: 0;">Use TLS/SSL</label>
+        <label for="smtp-secure" style="margin: 0;">{{t "admin.emailReports.smtpUseTls"}}</label>
       </div>
 
       <div class="form-group" style="display: flex; align-items: end; gap: 8px;">
-        <button type="submit" class="btn btn--primary">Save SMTP</button>
+        <button type="submit" class="btn btn--primary">{{t "admin.emailReports.saveSmtp"}}</button>
         <button type="button"
                 hx-post="/admin/email-reports/smtp/test"
                 hx-target="#toast-container"
                 hx-swap="innerHTML"
                 hx-include="[name='_csrf']"
-                class="btn btn--secondary">Test Connection</button>
+                class="btn btn--secondary">{{t "admin.emailReports.testConnection"}}</button>
       </div>
     </form>
   </div>
@@ -96,7 +94,7 @@
 
   {{!-- Create Email Report --}}
   <div class="card" style="margin-bottom: 24px;">
-    <h3>Create Email Report Schedule</h3>
+    <h3>{{t "admin.emailReports.createSchedule"}}</h3>
 
     <form hx-post="/admin/email-reports"
           hx-target="#email-reports-table-body"
@@ -106,71 +104,71 @@
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
-        <label for="report-name">Report Name</label>
+        <label for="report-name">{{t "admin.emailReports.reportName"}}</label>
         <input type="text" id="report-name" name="name" class="input"
-               placeholder="Weekly Homepage Report" required
+               placeholder="{{t "admin.emailReports.reportNamePlaceholder"}}" required
                aria-required="true">
       </div>
 
       <div class="form-group">
-        <label for="report-site-url">Site URL</label>
+        <label for="report-site-url">{{t "admin.emailReports.siteUrl"}}</label>
         <input type="url" id="report-site-url" name="siteUrl" class="input"
                placeholder="https://example.com" required
                aria-required="true">
       </div>
 
       <div class="form-group" style="grid-column: 1 / -1;">
-        <label for="report-recipients">Recipients (comma-separated)</label>
+        <label for="report-recipients">{{t "admin.emailReports.recipients"}}</label>
         <input type="text" id="report-recipients" name="recipients" class="input"
-               placeholder="user1@example.com, user2@example.com" required
+               placeholder="{{t "admin.emailReports.recipientsPlaceholder"}}" required
                aria-required="true">
       </div>
 
       <div class="form-group">
-        <label for="report-frequency">Frequency</label>
+        <label for="report-frequency">{{t "admin.emailReports.frequency"}}</label>
         <select id="report-frequency" name="frequency" class="select">
-          <option value="daily">Daily</option>
-          <option value="weekly" selected>Weekly</option>
-          <option value="monthly">Monthly</option>
+          <option value="daily">{{t "admin.emailReports.daily"}}</option>
+          <option value="weekly" selected>{{t "admin.emailReports.weekly"}}</option>
+          <option value="monthly">{{t "admin.emailReports.monthly"}}</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label for="report-format">Attachment Format</label>
+        <label for="report-format">{{t "admin.emailReports.attachmentFormat"}}</label>
         <select id="report-format" name="format" class="select">
-          <option value="pdf" selected>HTML Report</option>
-          <option value="csv">CSV Only</option>
-          <option value="both">HTML + CSV</option>
+          <option value="pdf" selected>{{t "admin.emailReports.htmlReport"}}</option>
+          <option value="csv">{{t "admin.emailReports.csvOnly"}}</option>
+          <option value="both">{{t "admin.emailReports.htmlAndCsv"}}</option>
         </select>
       </div>
 
       <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
         <input type="checkbox" id="report-include-csv" name="includeCsv">
-        <label for="report-include-csv" style="margin: 0;">Also include CSV attachment</label>
+        <label for="report-include-csv" style="margin: 0;">{{t "admin.emailReports.includeCsv"}}</label>
       </div>
 
       <div class="form-group" style="display: flex; align-items: end;">
-        <button type="submit" class="btn btn--primary">Create Schedule</button>
+        <button type="submit" class="btn btn--primary">{{t "admin.emailReports.createScheduleBtn"}}</button>
       </div>
     </form>
   </div>
 
   {{!-- Email Report Schedules Table --}}
   <div class="card">
-    <h3>Scheduled Reports</h3>
+    <h3>{{t "admin.emailReports.scheduledReports"}}</h3>
     <div class="table-wrapper" aria-live="polite" aria-atomic="false">
       <table class="table" aria-label="Email report schedules">
         <thead>
           <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Site URL</th>
-            <th scope="col">Recipients</th>
-            <th scope="col">Frequency</th>
-            <th scope="col">Format</th>
-            <th scope="col">Next Send</th>
-            <th scope="col">Last Sent</th>
-            <th scope="col">Status</th>
-            <th scope="col">Actions</th>
+            <th scope="col">{{t "common.name"}}</th>
+            <th scope="col">{{t "admin.emailReports.siteUrl"}}</th>
+            <th scope="col">{{t "admin.emailReports.recipients"}}</th>
+            <th scope="col">{{t "admin.emailReports.frequency"}}</th>
+            <th scope="col">{{t "admin.emailReports.format"}}</th>
+            <th scope="col">{{t "admin.emailReports.nextSend"}}</th>
+            <th scope="col">{{t "admin.emailReports.lastSent"}}</th>
+            <th scope="col">{{t "common.status"}}</th>
+            <th scope="col">{{t "common.actions"}}</th>
           </tr>
         </thead>
         <tbody id="email-reports-table-body">
@@ -192,25 +190,25 @@
                       hx-swap="outerHTML"
                       hx-include="[name='_csrf']"
                       class="btn btn--sm btn--secondary"
-                      id="toggle-btn-{{id}}">{{#if enabled}}Disable{{else}}Enable{{/if}}</button>
+                      id="toggle-btn-{{id}}">{{#if enabled}}{{t "admin.emailReports.disable"}}{{else}}{{t "admin.emailReports.enable"}}{{/if}}</button>
               <button hx-post="/admin/email-reports/{{id}}/send-now"
                       hx-target="#toast-container"
                       hx-swap="innerHTML"
                       hx-include="[name='_csrf']"
                       class="btn btn--sm btn--secondary"
-                      aria-label="Send report now">Send Now</button>
+                      aria-label="Send report now">{{t "admin.emailReports.sendNow"}}</button>
               <button hx-delete="/admin/email-reports/{{id}}"
                       hx-confirm="Delete this email report?"
                       hx-target="closest tr"
                       hx-swap="outerHTML swap:500ms"
                       hx-include="[name='_csrf']"
                       class="btn btn--sm btn--danger"
-                      aria-label="Delete email report">Delete</button>
+                      aria-label="Delete email report">{{t "common.delete"}}</button>
             </td>
           </tr>
           {{else}}
           <tr>
-            <td colspan="9" class="table__empty">No email report schedules configured.</td>
+            <td colspan="9" class="table__empty">{{t "admin.emailReports.noReports"}}</td>
           </tr>
           {{/each}}
         </tbody>

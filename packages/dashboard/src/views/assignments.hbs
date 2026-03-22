@@ -5,22 +5,22 @@
 <section aria-labelledby="asgn-heading" class="report-meta" style="margin-bottom:1.5rem;">
   <div class="detail-list detail-list--horizontal">
     <div class="detail-list__item">
-      <dt>Site URL</dt>
+      <dt>{{t "assignments.siteUrl"}}</dt>
       <dd><a href="{{scan.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scan.siteUrl}}</a></dd>
     </div>
     <div class="detail-list__item">
-      <dt>Standard</dt>
+      <dt>{{t "assignments.standard"}}</dt>
       <dd>{{formatStandard scan.standard}}</dd>
     </div>
     <div class="detail-list__item">
-      <dt>Status</dt>
+      <dt>{{t "assignments.status"}}</dt>
       <dd><span class="badge badge--{{scan.status}}">{{scan.status}}</span></dd>
     </div>
   </div>
 
   <div class="report-actions" role="group" aria-label="Navigation" style="margin-top:1rem;">
-    <a href="/reports/{{scan.id}}" class="btn btn--ghost btn--sm">&larr; Back to Report</a>
-    <a href="/reports" class="btn btn--ghost btn--sm">All Reports</a>
+    <a href="/reports/{{scan.id}}" class="btn btn--ghost btn--sm">&larr; {{t "assignments.backToReport"}}</a>
+    <a href="/reports" class="btn btn--ghost btn--sm">{{t "assignments.allReports"}}</a>
   </div>
 </section>
 
@@ -28,46 +28,46 @@
 <div class="asgn-pipeline" role="region" aria-label="Assignment pipeline">
   <div class="asgn-pipeline__stage asgn-pipeline__stage--open" id="asgn-stat-open">
     <div class="asgn-pipeline__count">{{stats.open}}</div>
-    <div class="asgn-pipeline__label">Open</div>
+    <div class="asgn-pipeline__label">{{t "assignments.open"}}</div>
   </div>
   <div class="asgn-pipeline__stage asgn-pipeline__stage--assigned" id="asgn-stat-assigned">
     <div class="asgn-pipeline__count">{{stats.assigned}}</div>
-    <div class="asgn-pipeline__label">Assigned</div>
+    <div class="asgn-pipeline__label">{{t "assignments.assigned"}}</div>
   </div>
   <div class="asgn-pipeline__stage asgn-pipeline__stage--in-progress" id="asgn-stat-in-progress">
     <div class="asgn-pipeline__count">{{stats.inProgress}}</div>
-    <div class="asgn-pipeline__label">In Progress</div>
+    <div class="asgn-pipeline__label">{{t "assignments.inProgress"}}</div>
   </div>
   <div class="asgn-pipeline__stage asgn-pipeline__stage--fixed" id="asgn-stat-fixed">
     <div class="asgn-pipeline__count">{{stats.fixed}}</div>
-    <div class="asgn-pipeline__label">Fixed</div>
+    <div class="asgn-pipeline__label">{{t "assignments.fixed"}}</div>
   </div>
   <div class="asgn-pipeline__stage asgn-pipeline__stage--verified" id="asgn-stat-verified">
     <div class="asgn-pipeline__count">{{stats.verified}}</div>
-    <div class="asgn-pipeline__label">Verified</div>
+    <div class="asgn-pipeline__label">{{t "assignments.verified"}}</div>
   </div>
 </div>
 
 {{! Filter buttons }}
 <div class="asgn-filters" role="group" aria-label="Filter assignments by status">
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'all')}} asgn-filter--active{{/if}}" onclick="asgnFilter('all',this)">All ({{stats.total}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'open')}} asgn-filter--active{{/if}}" onclick="asgnFilter('open',this)">Open ({{stats.open}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'assigned')}} asgn-filter--active{{/if}}" onclick="asgnFilter('assigned',this)">Assigned ({{stats.assigned}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'in-progress')}} asgn-filter--active{{/if}}" onclick="asgnFilter('in-progress',this)">In Progress ({{stats.inProgress}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'fixed')}} asgn-filter--active{{/if}}" onclick="asgnFilter('fixed',this)">Fixed ({{stats.fixed}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'verified')}} asgn-filter--active{{/if}}" onclick="asgnFilter('verified',this)">Verified ({{stats.verified}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'all')}} asgn-filter--active{{/if}}" onclick="asgnFilter('all',this)">{{t "assignments.filterAll"}} ({{stats.total}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'open')}} asgn-filter--active{{/if}}" onclick="asgnFilter('open',this)">{{t "assignments.open"}} ({{stats.open}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'assigned')}} asgn-filter--active{{/if}}" onclick="asgnFilter('assigned',this)">{{t "assignments.assigned"}} ({{stats.assigned}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'in-progress')}} asgn-filter--active{{/if}}" onclick="asgnFilter('in-progress',this)">{{t "assignments.inProgress"}} ({{stats.inProgress}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'fixed')}} asgn-filter--active{{/if}}" onclick="asgnFilter('fixed',this)">{{t "assignments.fixed"}} ({{stats.fixed}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'verified')}} asgn-filter--active{{/if}}" onclick="asgnFilter('verified',this)">{{t "assignments.verified"}} ({{stats.verified}})</button>
 </div>
 
 {{! Bulk actions bar }}
 <div class="asgn-bulk-bar" id="asgn-bulk-bar" style="display:none;">
-  <label><input type="checkbox" id="asgn-bulk-select-all" onchange="asgnBulkToggleAll(this.checked)"> Select all visible</label>
-  <span id="asgn-bulk-count">0 selected</span>
+  <label><input type="checkbox" id="asgn-bulk-select-all" onchange="asgnBulkToggleAll(this.checked)"> {{t "assignments.selectAllVisible"}}</label>
+  <span id="asgn-bulk-count">0 {{t "assignments.selected"}}</span>
   <select id="asgn-bulk-assignee" class="asgn-select"></select>
-  <button type="button" class="btn btn--primary btn--sm" onclick="asgnBulkReassign()">Reassign</button>
-  <button type="button" class="btn btn--ghost btn--sm" style="color:var(--status-error)" onclick="asgnBulkRemove()">Remove</button>
-  <button type="button" class="btn btn--ghost btn--sm" onclick="asgnToggleBulkMode()">Cancel</button>
+  <button type="button" class="btn btn--primary btn--sm" onclick="asgnBulkReassign()">{{t "assignments.reassign"}}</button>
+  <button type="button" class="btn btn--ghost btn--sm" style="color:var(--status-error)" onclick="asgnBulkRemove()">{{t "assignments.remove"}}</button>
+  <button type="button" class="btn btn--ghost btn--sm" onclick="asgnToggleBulkMode()">{{t "common.cancel"}}</button>
 </div>
-<button type="button" class="btn btn--ghost btn--sm" id="asgn-bulk-mode-btn" onclick="asgnToggleBulkMode()" style="margin-bottom:0.75rem;">Bulk Actions</button>
+<button type="button" class="btn btn--ghost btn--sm" id="asgn-bulk-mode-btn" onclick="asgnToggleBulkMode()" style="margin-bottom:0.75rem;">{{t "assignments.bulkActions"}}</button>
 
 {{! Assignment cards }}
 <div class="asgn-list" id="asgn-list">
@@ -88,34 +88,34 @@
     <div class="asgn-card__url">{{pageUrl}}</div>
     {{/if}}
     <div class="asgn-card__controls">
-      <label class="asgn-label">Status
+      <label class="asgn-label">{{t "assignments.statusLabel"}}
         <select class="asgn-select" data-field="status">
-          <option value="open"{{#if (eq status 'open')}} selected{{/if}}>open</option>
-          <option value="assigned"{{#if (eq status 'assigned')}} selected{{/if}}>assigned</option>
-          <option value="in-progress"{{#if (eq status 'in-progress')}} selected{{/if}}>in-progress</option>
-          <option value="fixed"{{#if (eq status 'fixed')}} selected{{/if}}>fixed</option>
-          <option value="verified"{{#if (eq status 'verified')}} selected{{/if}}>verified</option>
+          <option value="open"{{#if (eq status 'open')}} selected{{/if}}>{{t "assignments.open"}}</option>
+          <option value="assigned"{{#if (eq status 'assigned')}} selected{{/if}}>{{t "assignments.assigned"}}</option>
+          <option value="in-progress"{{#if (eq status 'in-progress')}} selected{{/if}}>{{t "assignments.inProgress"}}</option>
+          <option value="fixed"{{#if (eq status 'fixed')}} selected{{/if}}>{{t "assignments.fixed"}}</option>
+          <option value="verified"{{#if (eq status 'verified')}} selected{{/if}}>{{t "assignments.verified"}}</option>
         </select>
       </label>
-      <label class="asgn-label">Assigned To
+      <label class="asgn-label">{{t "assignments.assignedTo"}}
         <select class="asgn-select" data-field="assignedTo" data-current-value="{{assignedTo}}">
-          <option value="">Unassigned</option>
+          <option value="">{{t "assignments.unassigned"}}</option>
         </select>
       </label>
-      <label class="asgn-label asgn-label--wide">Notes
-        <textarea class="asgn-textarea" data-field="notes" rows="2" placeholder="Notes...">{{notes}}</textarea>
+      <label class="asgn-label asgn-label--wide">{{t "assignments.notes"}}
+        <textarea class="asgn-textarea" data-field="notes" rows="2" placeholder="{{t "assignments.notesPlaceholder"}}">{{notes}}</textarea>
       </label>
-      <button type="button" class="btn btn--sm btn--primary asgn-save-btn" onclick="asgnSave('{{id}}', this)">Save</button>
-      <button type="button" class="btn btn--sm btn--ghost asgn-delete-btn" onclick="asgnDelete('{{id}}', this)" title="Remove assignment">Remove</button>
+      <button type="button" class="btn btn--sm btn--primary asgn-save-btn" onclick="asgnSave('{{id}}', this)">{{t "common.save"}}</button>
+      <button type="button" class="btn btn--sm btn--ghost asgn-delete-btn" onclick="asgnDelete('{{id}}', this)" title="Remove assignment">{{t "assignments.remove"}}</button>
     </div>
     <div class="asgn-card__meta">
-      Created by {{createdBy}} &middot; Updated {{updatedAt}}
+      {{t "assignments.createdBy"}} {{createdBy}} &middot; {{t "assignments.updated"}} {{updatedAt}}
     </div>
   </div>
   {{/each}}
 
   {{#unless assignments.length}}
-  <div class="alert alert--info" role="status">No assignments yet. Use the "Assign" buttons on the report issues tab to create assignments.</div>
+  <div class="alert alert--info" role="status">{{t "assignments.noAssignments"}}</div>
   {{/unless}}
 </div>
 
@@ -153,7 +153,7 @@
     if (notesEl) formData.append('notes', notesEl.value);
 
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.textContent = '{{t "assignments.saving"}}';
 
     fetch('/assignments/' + assignmentId, {
       method: 'PATCH',
@@ -187,23 +187,23 @@
         asgnUpdateStats(statsEl);
       }
 
-      asgnShowToast('Assignment updated', 'success');
+      asgnShowToast('{{t "assignments.updatedSuccess"}}', 'success');
     })
     .catch(function(err) {
-      asgnShowToast('Failed to save: ' + err.message, 'error');
+      asgnShowToast('{{t "assignments.saveFailed"}} ' + err.message, 'error');
       btn.disabled = false;
-      btn.textContent = 'Save';
+      btn.textContent = '{{t "common.save"}}';
     });
   }
 
   function asgnDelete(assignmentId, btn) {
-    if (!confirm('Remove this assignment?')) return;
+    if (!confirm('{{t "assignments.confirmRemove"}}')) return;
     var card = document.getElementById('asgn-card-' + assignmentId);
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
     var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
 
     btn.disabled = true;
-    btn.textContent = 'Removing...';
+    btn.textContent = '{{t "assignments.removing"}}';
 
     fetch('/assignments/' + assignmentId, {
       method: 'DELETE',
@@ -219,12 +219,12 @@
       var doc = parser.parseFromString(html, 'text/html');
       var statsEl = doc.querySelector('[data-asgn-stats]');
       if (statsEl) asgnUpdateStats(statsEl);
-      asgnShowToast('Assignment removed', 'success');
+      asgnShowToast('{{t "assignments.removedSuccess"}}', 'success');
     })
     .catch(function(err) {
-      asgnShowToast('Failed to remove: ' + err.message, 'error');
+      asgnShowToast('{{t "assignments.removeFailed"}} ' + err.message, 'error');
       btn.disabled = false;
-      btn.textContent = 'Remove';
+      btn.textContent = '{{t "assignments.remove"}}';
     });
   }
 
@@ -278,7 +278,7 @@
     var btn = document.getElementById('asgn-bulk-mode-btn');
     var cbs = document.querySelectorAll('.asgn-bulk-cb');
     if (bar) bar.style.display = _asgnBulkMode ? 'flex' : 'none';
-    if (btn) { btn.textContent = _asgnBulkMode ? 'Cancel Bulk' : 'Bulk Actions'; btn.classList.toggle('btn--primary', _asgnBulkMode); btn.classList.toggle('btn--ghost', !_asgnBulkMode); }
+    if (btn) { btn.textContent = _asgnBulkMode ? '{{t "assignments.cancelBulk"}}' : '{{t "assignments.bulkActions"}}'; btn.classList.toggle('btn--primary', _asgnBulkMode); btn.classList.toggle('btn--ghost', !_asgnBulkMode); }
     cbs.forEach(function(cb) { cb.style.display = _asgnBulkMode ? 'inline-block' : 'none'; cb.checked = false; });
     if (_asgnBulkMode) {
       var sel = document.getElementById('asgn-bulk-assignee');
@@ -304,12 +304,12 @@
   function asgnBulkUpdate() {
     var count = document.querySelectorAll('.asgn-bulk-cb:checked').length;
     var el = document.getElementById('asgn-bulk-count');
-    if (el) el.textContent = count + ' selected';
+    if (el) el.textContent = count + ' {{t "assignments.selected"}}';
   }
 
   function asgnBulkReassign() {
     var assignee = (document.getElementById('asgn-bulk-assignee') || {}).value || '';
-    if (!assignee) { asgnShowToast('Please select an assignee', 'error'); return; }
+    if (!assignee) { asgnShowToast('{{t "assignments.selectAssignee"}}', 'error'); return; }
     var checked = document.querySelectorAll('.asgn-bulk-cb:checked');
     if (checked.length === 0) return;
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -328,7 +328,7 @@
   function asgnBulkRemove() {
     var checked = document.querySelectorAll('.asgn-bulk-cb:checked');
     if (checked.length === 0) return;
-    if (!confirm('Remove ' + checked.length + ' assignment(s)?')) return;
+    if (!confirm('{{t "assignments.confirmBulkRemove"}} ' + checked.length + ' {{t "assignments.assignmentsLabel"}}')) return;
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
     var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
     var pending = checked.length, done = 0;

@@ -1,6 +1,6 @@
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
-    <h2 id="modal-title">Create API Key</h2>
+    <h2 id="modal-title">{{t "admin.apiKeys.createApiKey"}}</h2>
 
     <form hx-post="/admin/api-keys"
           hx-target="#api-keys-table"
@@ -9,16 +9,16 @@
           novalidate>
 
       <div class="form-group">
-        <label for="ak-label" class="form-label">Label <span aria-hidden="true">*</span></label>
+        <label for="ak-label" class="form-label">{{t "admin.apiKeys.label"}} <span aria-hidden="true">*</span></label>
         <input id="ak-label" name="label" type="text" class="input"
                required aria-required="true" value="default"
-               placeholder="e.g. CI pipeline, monitoring">
+               placeholder="{{t "admin.apiKeys.labelPlaceholder"}}">
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn--primary">Generate Key</button>
+        <button type="submit" class="btn btn--primary">{{t "admin.apiKeys.generateKey"}}</button>
         <button type="button" class="btn btn--ghost close-modal-btn"
-                aria-label="Cancel and close dialog">Cancel</button>
+                aria-label="Cancel and close dialog">{{t "common.cancel"}}</button>
       </div>
     </form>
   </div>

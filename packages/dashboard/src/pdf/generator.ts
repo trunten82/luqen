@@ -48,14 +48,25 @@ export function isPuppeteerAvailable(): boolean {
 
   try {
     req.resolve('puppeteer');
-    _puppeteerAvailable = true;
   } catch {
     try {
       req.resolve('puppeteer-core');
-      _puppeteerAvailable = true;
     } catch {
       _puppeteerAvailable = false;
+      return false;
     }
+  }
+
+  // Package exists — verify the browser binary can actually launch.
+  // This catches missing system libraries (libglib, libnss, etc.)
+  try {
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
+    const puppeteer = req('puppeteer') as { executablePath: () => string };
+    const chromePath = puppeteer.executablePath();
+    execFileSync(chromePath, ['--version'], { timeout: 5000, stdio: 'pipe' });
+    _puppeteerAvailable = true;
+  } catch {
+    _puppeteerAvailable = false;
   }
 
   return _puppeteerAvailable;

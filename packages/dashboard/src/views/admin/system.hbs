@@ -17,67 +17,67 @@
   </div>
 
   <section class="admin-section" aria-label="Database statistics">
-    <h2 class="section-title">Database</h2>
+    <h2 class="section-title">{{t "admin.system.database"}}</h2>
     <dl class="stats-list">
       <div class="stats-list__item">
-        <dt>File Path</dt>
+        <dt>{{t "admin.system.filePath"}}</dt>
         <dd><code>{{db.path}}</code></dd>
       </div>
       <div class="stats-list__item">
-        <dt>File Size</dt>
+        <dt>{{t "admin.system.fileSize"}}</dt>
         <dd>{{db.sizeKb}} KB</dd>
       </div>
     </dl>
   </section>
 
   <section class="admin-section" aria-label="Compliance seed status">
-    <h2 class="section-title">Seed Status</h2>
+    <h2 class="section-title">{{t "admin.system.seedStatus"}}</h2>
     <dl class="stats-list">
       <div class="stats-list__item">
-        <dt>Seeded</dt>
+        <dt>{{t "admin.system.seeded"}}</dt>
         <dd>
           <span class="badge {{#if seed.seeded}}badge--success{{else}}badge--warning{{/if}}">
-            {{#if seed.seeded}}Yes{{else}}No{{/if}}
+            {{#if seed.seeded}}{{t "common.yes"}}{{else}}{{t "common.no"}}{{/if}}
           </span>
         </dd>
       </div>
       <div class="stats-list__item">
-        <dt>Jurisdictions</dt>
+        <dt>{{t "admin.system.jurisdictions"}}</dt>
         <dd>{{seed.jurisdictions}}</dd>
       </div>
       <div class="stats-list__item">
-        <dt>Regulations</dt>
+        <dt>{{t "admin.system.regulations"}}</dt>
         <dd>{{seed.regulations}}</dd>
       </div>
       <div class="stats-list__item">
-        <dt>Requirements</dt>
+        <dt>{{t "admin.system.requirements"}}</dt>
         <dd>{{seed.requirements}}</dd>
       </div>
     </dl>
   </section>
 
   <section class="admin-section" aria-label="Runtime information">
-    <h2 class="section-title">Runtime</h2>
+    <h2 class="section-title">{{t "admin.system.runtime"}}</h2>
     <dl class="stats-list">
       <div class="stats-list__item">
-        <dt>Dashboard Version</dt>
+        <dt>{{t "admin.system.dashboardVersion"}}</dt>
         <dd>{{version}}</dd>
       </div>
       <div class="stats-list__item">
-        <dt>Node.js Version</dt>
+        <dt>{{t "admin.system.nodeVersion"}}</dt>
         <dd>{{nodeVersion}}</dd>
       </div>
       <div class="stats-list__item">
-        <dt>Uptime</dt>
+        <dt>{{t "admin.system.uptime"}}</dt>
         <dd>{{uptime}}</dd>
       </div>
       <div class="stats-list__item">
-        <dt>Compliance URL</dt>
+        <dt>{{t "admin.system.complianceUrl"}}</dt>
         <dd><code>{{complianceUrl}}</code></dd>
       </div>
       {{#if webserviceUrl}}
       <div class="stats-list__item">
-        <dt>Webservice URL</dt>
+        <dt>{{t "admin.system.webserviceUrl"}}</dt>
         <dd><code>{{webserviceUrl}}</code></dd>
       </div>
       {{/if}}

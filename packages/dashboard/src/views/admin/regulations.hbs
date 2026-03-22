@@ -5,7 +5,7 @@
             hx-swap="innerHTML"
             class="btn btn--primary"
             aria-haspopup="dialog">
-      Add Regulation
+      {{t "admin.regulations.addRegulation"}}
     </button>
   </div>
 
@@ -16,7 +16,7 @@
   {{/if}}
 
   <div class="filter-bar">
-    <label for="jurisdiction-filter" class="form-label">Filter by Jurisdiction</label>
+    <label for="jurisdiction-filter" class="form-label">{{t "admin.regulations.filterByJurisdiction"}}</label>
     <select id="jurisdiction-filter"
             name="jurisdictionId"
             hx-get="/admin/regulations"
@@ -25,18 +25,18 @@
             hx-include="[name='q']"
             class="select"
             aria-label="Filter regulations by jurisdiction">
-      <option value="">All Jurisdictions</option>
+      <option value="">{{t "admin.regulations.allJurisdictions"}}</option>
       {{#each jurisdictions}}
       <option value="{{id}}" {{#if (eq id ../jurisdictionId)}}selected{{/if}}>{{name}}</option>
       {{/each}}
     </select>
 
-    <label for="regulation-search" class="visually-hidden">Search regulations</label>
+    <label for="regulation-search" class="visually-hidden">{{t "admin.regulations.searchLabel"}}</label>
     <input id="regulation-search"
            type="search"
            name="q"
            value="{{q}}"
-           placeholder="Search by name..."
+           placeholder="{{t "admin.regulations.searchPlaceholder"}}"
            hx-get="/admin/regulations"
            hx-trigger="input changed delay:300ms"
            hx-target="#regulations-table-body"
@@ -45,21 +45,21 @@
            class="input"
            aria-label="Search regulations by name"
            role="searchbox">
-    <span id="search-spinner" class="htmx-indicator" aria-hidden="true">Searching...</span>
+    <span id="search-spinner" class="htmx-indicator" aria-hidden="true">{{t "common.searching"}}</span>
   </div>
 
   <div class="table-wrapper" aria-live="polite" aria-atomic="false">
     <table class="table" aria-label="Regulations">
       <thead>
         <tr>
-          <th scope="col">ID</th>
-          <th scope="col">Name</th>
-          <th scope="col">Short Name</th>
-          <th scope="col">Jurisdiction</th>
-          <th scope="col">Enforcement Date</th>
-          <th scope="col">Status</th>
-          <th scope="col">Scope</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "admin.regulations.colId"}}</th>
+          <th scope="col">{{t "admin.regulations.colName"}}</th>
+          <th scope="col">{{t "admin.regulations.colShortName"}}</th>
+          <th scope="col">{{t "admin.regulations.colJurisdiction"}}</th>
+          <th scope="col">{{t "admin.regulations.colEnforcementDate"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "admin.regulations.colScope"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody id="regulations-table-body">
@@ -77,12 +77,12 @@
                     hx-target="#modal-container"
                     hx-swap="innerHTML"
                     class="btn btn--sm btn--secondary"
-                    aria-label="View {{name}}">View</button>
+                    aria-label="View {{name}}">{{t "common.view"}}</button>
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="8" class="table__empty">No regulations found.</td>
+          <td colspan="8" class="table__empty">{{t "admin.regulations.noRegulations"}}</td>
         </tr>
         {{/each}}
       </tbody>
@@ -97,7 +97,7 @@
             class="btn btn--ghost btn--full"
             aria-label="Load more regulations"
             hx-on::after-request="this.closest('.load-more').remove()">
-      Load more ({{nextOffset}} of {{total}})
+      {{t "admin.regulations.loadMore" offset=nextOffset total=total}}
     </button>
   </div>
   {{/if}}

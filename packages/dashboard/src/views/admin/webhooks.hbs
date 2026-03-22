@@ -5,7 +5,7 @@
             hx-swap="innerHTML"
             class="btn btn--primary"
             aria-haspopup="dialog">
-      Add Webhook
+      {{t "admin.webhooks.addWebhook"}}
     </button>
   </div>
 
@@ -19,11 +19,11 @@
     <table class="table" aria-label="Webhooks">
       <thead>
         <tr>
-          <th scope="col">URL</th>
-          <th scope="col">Events</th>
-          <th scope="col">Status</th>
-          <th scope="col">Created</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "admin.webhooks.url"}}</th>
+          <th scope="col">{{t "admin.webhooks.events"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "admin.webhooks.created"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody id="webhooks-table-body">
@@ -33,7 +33,7 @@
           <td data-label="Events">{{eventsDisplay}}</td>
           <td data-label="Status">
             <span class="badge {{#if active}}badge--success{{else}}badge--neutral{{/if}}">
-              {{#if active}}Active{{else}}Inactive{{/if}}
+              {{#if active}}{{t "common.active"}}{{else}}{{t "common.inactive"}}{{/if}}
             </span>
           </td>
           <td data-label="Created">{{createdAtDisplay}}</td>
@@ -42,18 +42,18 @@
                     hx-target="#toast-container"
                     hx-swap="innerHTML"
                     class="btn btn--sm btn--secondary"
-                    aria-label="Send test delivery to {{url}}">Test</button>
+                    aria-label="Send test delivery to {{url}}">{{t "admin.webhooks.test"}}</button>
             <button hx-delete="/admin/webhooks/{{id}}"
                     hx-confirm="Delete this webhook?"
                     hx-target="closest tr"
                     hx-swap="outerHTML swap:500ms"
                     class="btn btn--sm btn--danger"
-                    aria-label="Delete webhook {{url}}">Delete</button>
+                    aria-label="Delete webhook {{url}}">{{t "common.delete"}}</button>
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="5" class="table__empty">No webhooks registered.</td>
+          <td colspan="5" class="table__empty">{{t "admin.webhooks.noWebhooks"}}</td>
         </tr>
         {{/each}}
       </tbody>

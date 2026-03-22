@@ -3,22 +3,22 @@
 <section aria-labelledby="mt-heading" class="report-meta" style="margin-bottom:1.5rem;">
   <div class="detail-list detail-list--horizontal">
     <div class="detail-list__item">
-      <dt>Site URL</dt>
+      <dt>{{t "manualTests.siteUrl"}}</dt>
       <dd><a href="{{scan.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scan.siteUrl}}</a></dd>
     </div>
     <div class="detail-list__item">
-      <dt>Standard</dt>
+      <dt>{{t "manualTests.standard"}}</dt>
       <dd>{{formatStandard scan.standard}}</dd>
     </div>
     <div class="detail-list__item">
-      <dt>Status</dt>
+      <dt>{{t "manualTests.status"}}</dt>
       <dd><span class="badge badge--{{scan.status}}">{{scan.status}}</span></dd>
     </div>
   </div>
 
   <div class="report-actions" role="group" aria-label="Navigation" style="margin-top:1rem;">
-    <a href="/reports/{{scan.id}}" class="btn btn--ghost btn--sm">&larr; Back to Report</a>
-    <a href="/reports" class="btn btn--ghost btn--sm">All Reports</a>
+    <a href="/reports/{{scan.id}}" class="btn btn--ghost btn--sm">&larr; {{t "manualTests.backToReport"}}</a>
+    <a href="/reports" class="btn btn--ghost btn--sm">{{t "manualTests.allReports"}}</a>
   </div>
 </section>
 
@@ -28,43 +28,43 @@
     <div class="mt-progress__fill" id="mt-progress-fill" style="width:{{stats.percentage}}%"></div>
   </div>
   <div class="mt-progress__stats" id="mt-progress-stats">
-    <span id="mt-stat-pct"><strong>{{stats.percentage}}%</strong> complete</span>
+    <span id="mt-stat-pct"><strong>{{stats.percentage}}%</strong> {{t "manualTests.complete"}}</span>
     <span class="mt-stat-sep">|</span>
-    <span id="mt-stat-tested">{{stats.tested}} tested</span>
+    <span id="mt-stat-tested">{{stats.tested}} {{t "manualTests.tested"}}</span>
     <span class="mt-stat-sep">|</span>
-    <span class="mt-stat--pass" id="mt-stat-pass">{{stats.passed}} pass</span>
+    <span class="mt-stat--pass" id="mt-stat-pass">{{stats.passed}} {{t "manualTests.pass"}}</span>
     <span class="mt-stat-sep">|</span>
-    <span class="mt-stat--fail" id="mt-stat-fail">{{stats.failed}} fail</span>
+    <span class="mt-stat--fail" id="mt-stat-fail">{{stats.failed}} {{t "manualTests.fail"}}</span>
     <span class="mt-stat-sep">|</span>
-    <span class="mt-stat--na" id="mt-stat-na">{{stats.na}} N/A</span>
+    <span class="mt-stat--na" id="mt-stat-na">{{stats.na}} {{t "manualTests.na"}}</span>
     <span class="mt-stat-sep">|</span>
-    <span id="mt-stat-untested">{{stats.untested}} remaining</span>
+    <span id="mt-stat-untested">{{stats.untested}} {{t "manualTests.remaining"}}</span>
   </div>
 </div>
 
 {{! ── Filter buttons ─────────────────────────────────────────────────── }}
 <div class="mt-filters" role="group" aria-label="Filter criteria by status">
-  <button type="button" class="mt-filter mt-filter--active" onclick="mtFilter('all',this)">All</button>
-  <button type="button" class="mt-filter" onclick="mtFilter('untested',this)">Untested</button>
-  <button type="button" class="mt-filter" onclick="mtFilter('pass',this)">Pass</button>
-  <button type="button" class="mt-filter" onclick="mtFilter('fail',this)">Fail</button>
-  <button type="button" class="mt-filter" onclick="mtFilter('na',this)">N/A</button>
+  <button type="button" class="mt-filter mt-filter--active" onclick="mtFilter('all',this)">{{t "manualTests.filterAll"}}</button>
+  <button type="button" class="mt-filter" onclick="mtFilter('untested',this)">{{t "manualTests.filterUntested"}}</button>
+  <button type="button" class="mt-filter" onclick="mtFilter('pass',this)">{{t "manualTests.filterPass"}}</button>
+  <button type="button" class="mt-filter" onclick="mtFilter('fail',this)">{{t "manualTests.filterFail"}}</button>
+  <button type="button" class="mt-filter" onclick="mtFilter('na',this)">{{t "manualTests.filterNa"}}</button>
 </div>
 
 {{! ── Manual-only criteria ──────────────────────────────────────────── }}
 <section class="mt-section" aria-labelledby="mt-manual-heading">
   <h2 id="mt-manual-heading" class="mt-section__title">
-    Requires Manual Testing
-    <span class="mt-section__count">{{manualItems.length}} criteria</span>
+    {{t "manualTests.requiresManualTitle"}}
+    <span class="mt-section__count">{{manualItems.length}} {{t "manualTests.criteria"}}</span>
   </h2>
-  <p class="mt-section__desc">These criteria cannot be verified by automated scanning tools.</p>
+  <p class="mt-section__desc">{{t "manualTests.requiresManualDesc"}}</p>
 
   <div class="mt-list" id="mt-list-manual">
     {{#each manualItems}}
     <div class="mt-criterion" id="mt-row-{{id}}" data-status="{{status}}">
       <div class="mt-criterion__header">
         <span class="mt-badge {{#if (eq status 'pass')}}mt-badge--pass{{else if (eq status 'fail')}}mt-badge--fail{{else if (eq status 'na')}}mt-badge--na{{else}}mt-badge--untested{{/if}}">
-          {{#if (eq status 'pass')}}Pass{{else if (eq status 'fail')}}Fail{{else if (eq status 'na')}}N/A{{else}}Untested{{/if}}
+          {{#if (eq status 'pass')}}{{t "manualTests.pass"}}{{else if (eq status 'fail')}}{{t "manualTests.fail"}}{{else if (eq status 'na')}}{{t "manualTests.na"}}{{else}}{{t "manualTests.untested"}}{{/if}}
         </span>
         <strong>{{id}}</strong> &mdash; {{title}}
         <span class="mt-level mt-level--{{level}}">{{level}}</span>
@@ -79,7 +79,7 @@
         </ul>
         {{#if steps.length}}
         <details class="mt-steps-detail">
-          <summary class="mt-steps-toggle">Step-by-step guide</summary>
+          <summary class="mt-steps-toggle">{{t "manualTests.stepByStepGuide"}}</summary>
           <ol class="mt-steps">
             {{#each steps}}
             <li>{{this}}</li>
@@ -89,30 +89,30 @@
         {{/if}}
         {{#if goodExample}}
         <details class="mt-examples-detail">
-          <summary class="mt-examples-toggle">Examples</summary>
+          <summary class="mt-examples-toggle">{{t "manualTests.examples"}}</summary>
           <div class="mt-examples">
             <div class="mt-example mt-example--good">
-              <div class="mt-example__label">Good</div>
+              <div class="mt-example__label">{{t "manualTests.good"}}</div>
               <pre class="mt-example__code"><code>{{goodExample}}</code></pre>
             </div>
             <div class="mt-example mt-example--bad">
-              <div class="mt-example__label">Bad</div>
+              <div class="mt-example__label">{{t "manualTests.bad"}}</div>
               <pre class="mt-example__code"><code>{{badExample}}</code></pre>
             </div>
           </div>
         </details>
         {{/if}}
         <div class="mt-actions">
-          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">Pass</button>
-          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">Fail</button>
-          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','na',this)">N/A</button>
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">{{t "manualTests.pass"}}</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">{{t "manualTests.fail"}}</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','na',this)">{{t "manualTests.na"}}</button>
         </div>
         <div class="mt-notes-wrap">
-          <label for="mt-notes-{{id}}">Notes</label>
-          <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="Optional notes...">{{notes}}</textarea>
+          <label for="mt-notes-{{id}}">{{t "manualTests.notes"}}</label>
+          <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="{{t "manualTests.optionalNotes"}}">{{notes}}</textarea>
         </div>
         {{#if testedBy}}
-        <div class="mt-tested-info">Tested by {{testedBy}} on {{testedAt}}</div>
+        <div class="mt-tested-info">{{t "manualTests.testedBy"}} {{testedBy}} {{t "manualTests.on"}} {{testedAt}}</div>
         {{/if}}
       </div>
     </div>
@@ -123,17 +123,17 @@
 {{! ── Partially automatable criteria ────────────────────────────────── }}
 <section class="mt-section" aria-labelledby="mt-partial-heading">
   <h2 id="mt-partial-heading" class="mt-section__title">
-    Partially Automated &mdash; Verify Manually
-    <span class="mt-section__count">{{partialItems.length}} criteria</span>
+    {{t "manualTests.partiallyAutomatedTitle"}}
+    <span class="mt-section__count">{{partialItems.length}} {{t "manualTests.criteria"}}</span>
   </h2>
-  <p class="mt-section__desc">Automation catches some issues but human verification is needed to confirm full compliance.</p>
+  <p class="mt-section__desc">{{t "manualTests.partiallyAutomatedDesc"}}</p>
 
   <div class="mt-list" id="mt-list-partial">
     {{#each partialItems}}
     <div class="mt-criterion" id="mt-row-{{id}}" data-status="{{status}}">
       <div class="mt-criterion__header">
         <span class="mt-badge {{#if (eq status 'pass')}}mt-badge--pass{{else if (eq status 'fail')}}mt-badge--fail{{else if (eq status 'na')}}mt-badge--na{{else}}mt-badge--untested{{/if}}">
-          {{#if (eq status 'pass')}}Pass{{else if (eq status 'fail')}}Fail{{else if (eq status 'na')}}N/A{{else}}Untested{{/if}}
+          {{#if (eq status 'pass')}}{{t "manualTests.pass"}}{{else if (eq status 'fail')}}{{t "manualTests.fail"}}{{else if (eq status 'na')}}{{t "manualTests.na"}}{{else}}{{t "manualTests.untested"}}{{/if}}
         </span>
         <strong>{{id}}</strong> &mdash; {{title}}
         <span class="mt-level mt-level--{{level}}">{{level}}</span>
@@ -148,7 +148,7 @@
         </ul>
         {{#if steps.length}}
         <details class="mt-steps-detail">
-          <summary class="mt-steps-toggle">Step-by-step guide</summary>
+          <summary class="mt-steps-toggle">{{t "manualTests.stepByStepGuide"}}</summary>
           <ol class="mt-steps">
             {{#each steps}}
             <li>{{this}}</li>
@@ -158,30 +158,30 @@
         {{/if}}
         {{#if goodExample}}
         <details class="mt-examples-detail">
-          <summary class="mt-examples-toggle">Examples</summary>
+          <summary class="mt-examples-toggle">{{t "manualTests.examples"}}</summary>
           <div class="mt-examples">
             <div class="mt-example mt-example--good">
-              <div class="mt-example__label">Good</div>
+              <div class="mt-example__label">{{t "manualTests.good"}}</div>
               <pre class="mt-example__code"><code>{{goodExample}}</code></pre>
             </div>
             <div class="mt-example mt-example--bad">
-              <div class="mt-example__label">Bad</div>
+              <div class="mt-example__label">{{t "manualTests.bad"}}</div>
               <pre class="mt-example__code"><code>{{badExample}}</code></pre>
             </div>
           </div>
         </details>
         {{/if}}
         <div class="mt-actions">
-          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">Pass</button>
-          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">Fail</button>
-          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','na',this)">N/A</button>
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">{{t "manualTests.pass"}}</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">{{t "manualTests.fail"}}</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','na',this)">{{t "manualTests.na"}}</button>
         </div>
         <div class="mt-notes-wrap">
-          <label for="mt-notes-{{id}}">Notes</label>
-          <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="Optional notes...">{{notes}}</textarea>
+          <label for="mt-notes-{{id}}">{{t "manualTests.notes"}}</label>
+          <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="{{t "manualTests.optionalNotes"}}">{{notes}}</textarea>
         </div>
         {{#if testedBy}}
-        <div class="mt-tested-info">Tested by {{testedBy}} on {{testedAt}}</div>
+        <div class="mt-tested-info">{{t "manualTests.testedBy"}} {{testedBy}} {{t "manualTests.on"}} {{testedAt}}</div>
         {{/if}}
       </div>
     </div>

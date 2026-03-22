@@ -1,6 +1,6 @@
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
-    <h2 id="modal-title">Add Monitored Source</h2>
+    <h2 id="modal-title">{{t "admin.sources.addSource"}}</h2>
 
     <form hx-post="/admin/sources"
           hx-target="#sources-table-body"
@@ -9,43 +9,43 @@
           novalidate>
 
       <div class="form-group">
-        <label for="src-name" class="form-label">Name <span aria-hidden="true">*</span></label>
+        <label for="src-name" class="form-label">{{t "admin.sources.fieldName"}} <span aria-hidden="true">*</span></label>
         <input id="src-name" name="name" type="text" class="input"
                required aria-required="true"
                aria-describedby="src-name-hint">
-        <span id="src-name-hint" class="form-hint">A descriptive name for this source</span>
+        <span id="src-name-hint" class="form-hint">{{t "admin.sources.fieldNameHint"}}</span>
       </div>
 
       <div class="form-group">
-        <label for="src-url" class="form-label">URL <span aria-hidden="true">*</span></label>
+        <label for="src-url" class="form-label">{{t "admin.sources.fieldUrl"}} <span aria-hidden="true">*</span></label>
         <input id="src-url" name="url" type="url" class="input"
                required aria-required="true"
                placeholder="https://example.gov/feed.rss">
       </div>
 
       <div class="form-group">
-        <label for="src-type" class="form-label">Type</label>
+        <label for="src-type" class="form-label">{{t "admin.sources.fieldType"}}</label>
         <select id="src-type" name="type" class="select">
-          <option value="rss">RSS Feed</option>
-          <option value="atom">Atom Feed</option>
-          <option value="html">HTML Page</option>
-          <option value="json">JSON API</option>
+          <option value="rss">{{t "admin.sources.typeRss"}}</option>
+          <option value="atom">{{t "admin.sources.typeAtom"}}</option>
+          <option value="html">{{t "admin.sources.typeHtml"}}</option>
+          <option value="json">{{t "admin.sources.typeJson"}}</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label for="src-schedule" class="form-label">Schedule</label>
+        <label for="src-schedule" class="form-label">{{t "admin.sources.fieldSchedule"}}</label>
         <select id="src-schedule" name="schedule" class="select">
-          <option value="hourly">Hourly</option>
-          <option value="daily" selected>Daily</option>
-          <option value="weekly">Weekly</option>
+          <option value="hourly">{{t "admin.sources.scheduleHourly"}}</option>
+          <option value="daily" selected>{{t "admin.sources.scheduleDaily"}}</option>
+          <option value="weekly">{{t "admin.sources.scheduleWeekly"}}</option>
         </select>
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn--primary">Add Source</button>
+        <button type="submit" class="btn btn--primary">{{t "admin.sources.addSource"}}</button>
         <button type="button" class="btn btn--ghost close-modal-btn"
-                aria-label="Cancel and close dialog">Cancel</button>
+                aria-label="Cancel and close dialog">{{t "common.cancel"}}</button>
       </div>
     </form>
   </div>

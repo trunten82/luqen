@@ -1,6 +1,6 @@
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
-    <h2 id="modal-title">{{#if isNew}}Add Jurisdiction{{else}}Edit Jurisdiction{{/if}}</h2>
+    <h2 id="modal-title">{{#if isNew}}{{t "admin.jurisdictions.addJurisdiction"}}{{else}}{{t "admin.jurisdictions.editJurisdiction"}}{{/if}}</h2>
 
     <form {{#if isNew}}
           hx-post="/admin/jurisdictions"
@@ -15,7 +15,7 @@
           novalidate>
 
       <div class="form-group">
-        <label for="jur-id" class="form-label">ID <span aria-hidden="true">*</span></label>
+        <label for="jur-id" class="form-label">{{t "admin.jurisdictions.fieldId"}} <span aria-hidden="true">*</span></label>
         <input id="jur-id"
                name="id"
                type="text"
@@ -25,11 +25,11 @@
                required
                aria-required="true"
                aria-describedby="jur-id-hint">
-        <span id="jur-id-hint" class="form-hint">Short identifier, e.g. EU, US-CA</span>
+        <span id="jur-id-hint" class="form-hint">{{t "admin.jurisdictions.fieldIdHint"}}</span>
       </div>
 
       <div class="form-group">
-        <label for="jur-name" class="form-label">Name <span aria-hidden="true">*</span></label>
+        <label for="jur-name" class="form-label">{{t "admin.jurisdictions.fieldName"}} <span aria-hidden="true">*</span></label>
         <input id="jur-name"
                name="name"
                type="text"
@@ -40,7 +40,7 @@
       </div>
 
       <div class="form-group">
-        <label for="jur-type" class="form-label">Type <span aria-hidden="true">*</span></label>
+        <label for="jur-type" class="form-label">{{t "admin.jurisdictions.fieldType"}} <span aria-hidden="true">*</span></label>
         <input id="jur-type"
                name="type"
                type="text"
@@ -50,11 +50,11 @@
                required
                aria-required="true"
                aria-describedby="jur-type-hint">
-        <span id="jur-type-hint" class="form-hint">e.g. country, region, state</span>
+        <span id="jur-type-hint" class="form-hint">{{t "admin.jurisdictions.fieldTypeHint"}}</span>
       </div>
 
       <div class="form-group">
-        <label for="jur-parent" class="form-label">Parent ID</label>
+        <label for="jur-parent" class="form-label">{{t "admin.jurisdictions.fieldParentId"}}</label>
         <input id="jur-parent"
                name="parentId"
                type="text"
@@ -64,11 +64,11 @@
 
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">
-          {{#if isNew}}Create{{else}}Save{{/if}}
+          {{#if isNew}}{{t "common.create"}}{{else}}{{t "common.save"}}{{/if}}
         </button>
         <button type="button"
                 class="btn btn--ghost close-modal-btn"
-                aria-label="Cancel and close dialog">Cancel</button>
+                aria-label="Cancel and close dialog">{{t "common.cancel"}}</button>
       </div>
     </form>
   </div>

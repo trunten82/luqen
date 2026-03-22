@@ -2,19 +2,19 @@
 
 <section aria-labelledby="trends-heading">
   <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-    <h2 id="trends-heading" class="section-title" style="margin:0;">Issue Trends</h2>
-    <a href="/api/v1/export/trends.csv" class="btn btn--ghost btn--sm" aria-label="Export trend data as CSV">Export CSV</a>
+    <h2 id="trends-heading" class="section-title" style="margin:0;">{{t "trends.title"}}</h2>
+    <a href="/api/v1/export/trends.csv" class="btn btn--ghost btn--sm" aria-label="Export trend data as CSV">{{t "trends.exportCsv"}}</a>
   </div>
 
   {{#if hasTrends}}
   {{! ── Organization Overview ─────────────────────────────────────── }}
   <section aria-labelledby="org-overview-heading" class="mb-lg">
-    <h3 id="org-overview-heading" class="section-title">Organization Overview</h3>
+    <h3 id="org-overview-heading" class="section-title">{{t "trends.orgOverview"}}</h3>
 
     <div class="card mb-lg" style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap;padding:1.5rem;">
       <div style="text-align:center;min-width:120px;">
         <div class="{{orgScoreClass}}" style="font-size:3rem;font-weight:700;line-height:1;">{{orgScore}}</div>
-        <div class="text--muted" style="font-size:0.875rem;margin-top:0.25rem;">Accessibility Score</div>
+        <div class="text--muted" style="font-size:0.875rem;margin-top:0.25rem;">{{t "trends.accessibilityScore"}}</div>
       </div>
       <div style="flex:1;min-width:300px;">
         <div class="trends-chart-container" style="height:200px;">
@@ -24,16 +24,16 @@
     </div>
 
     <div class="card mb-lg">
-      <h4 style="margin:0 0 0.75rem;">Site Scorecard</h4>
+      <h4 style="margin:0 0 0.75rem;">{{t "trends.siteScorecard"}}</h4>
       <div class="table-responsive" role="region" aria-label="Site scorecard table" tabindex="0">
         <table class="data-table" aria-label="Site scores and trends">
-          <caption class="sr-only">Accessibility scores per site with trend indicators</caption>
+          <caption class="sr-only">{{t "trends.scorecardCaption"}}</caption>
           <thead>
             <tr>
-              <th scope="col">Site URL</th>
-              <th scope="col">Score</th>
-              <th scope="col">Trend</th>
-              <th scope="col">Last Scanned</th>
+              <th scope="col">{{t "trends.siteUrl"}}</th>
+              <th scope="col">{{t "trends.score"}}</th>
+              <th scope="col">{{t "trends.trend"}}</th>
+              <th scope="col">{{t "trends.lastScanned"}}</th>
             </tr>
           </thead>
           <tbody>
@@ -55,11 +55,11 @@
 
   {{! ── Per-Site Detail ───────────────────────────────────────────── }}
   <section aria-labelledby="per-site-heading">
-    <h3 id="per-site-heading" class="section-title">Per-Site Detail</h3>
+    <h3 id="per-site-heading" class="section-title">{{t "trends.perSiteDetail"}}</h3>
 
     <div class="card mb-lg">
       <div class="form-group">
-        <label for="site-selector">Select Site</label>
+        <label for="site-selector">{{t "trends.selectSite"}}</label>
         <select id="site-selector" class="select" aria-label="Select site to view trends">
           {{#each siteUrls}}
           <option value="{{this}}">{{this}}</option>
@@ -74,19 +74,19 @@
   </section>
 
   <section aria-labelledby="summary-table-heading">
-    <h2 id="summary-table-heading" class="section-title">Site Summary</h2>
+    <h2 id="summary-table-heading" class="section-title">{{t "trends.siteSummary"}}</h2>
     <div class="table-responsive" role="region" aria-label="Site trend summary table" tabindex="0">
       <table class="data-table" aria-label="Site trend summary">
-        <caption class="sr-only">Summary of latest scan results per site with trend indicators</caption>
+        <caption class="sr-only">{{t "trends.summaryCaption"}}</caption>
         <thead>
           <tr>
-            <th scope="col">Site URL</th>
-            <th scope="col">Latest Scan</th>
-            <th scope="col">Errors</th>
-            <th scope="col">Warnings</th>
-            <th scope="col">Notices</th>
-            <th scope="col">Total</th>
-            <th scope="col">Trend</th>
+            <th scope="col">{{t "trends.siteUrl"}}</th>
+            <th scope="col">{{t "trends.latestScan"}}</th>
+            <th scope="col">{{t "trends.errors"}}</th>
+            <th scope="col">{{t "trends.warnings"}}</th>
+            <th scope="col">{{t "trends.notices"}}</th>
+            <th scope="col">{{t "trends.total"}}</th>
+            <th scope="col">{{t "trends.trend"}}</th>
           </tr>
         </thead>
         <tbody>
@@ -139,9 +139,9 @@
   {{else}}
   <div class="empty-state" role="status">
     <div class="empty-state__icon">&#128200;</div>
-    <div class="empty-state__title">No trend data yet</div>
-    <div class="empty-state__desc">Complete at least two scans for the same site to see issue trends over time.</div>
-    <a href="/scan/new" class="btn btn--primary">New Scan</a>
+    <div class="empty-state__title">{{t "trends.noDataTitle"}}</div>
+    <div class="empty-state__desc">{{t "trends.noDataDesc"}}</div>
+    <a href="/scan/new" class="btn btn--primary">{{t "common.newScan"}}</a>
   </div>
   {{/if}}
 </section>
@@ -162,7 +162,7 @@
           labels: orgTotals.map(function (p) { return p.date; }),
           datasets: [
             {
-              label: 'Errors',
+              label: '{{t "trends.errors"}}',
               data: orgTotals.map(function (p) { return p.errors; }),
               borderColor: '#8b1a1a',
               backgroundColor: 'rgba(139, 26, 26, 0.1)',
@@ -170,7 +170,7 @@
               fill: false
             },
             {
-              label: 'Warnings',
+              label: '{{t "trends.warnings"}}',
               data: orgTotals.map(function (p) { return p.warnings; }),
               borderColor: '#7a4f00',
               backgroundColor: 'rgba(122, 79, 0, 0.1)',
@@ -178,7 +178,7 @@
               fill: false
             },
             {
-              label: 'Notices',
+              label: '{{t "trends.notices"}}',
               data: orgTotals.map(function (p) { return p.notices; }),
               borderColor: '#00416a',
               backgroundColor: 'rgba(0, 65, 106, 0.1)',
@@ -192,11 +192,11 @@
           maintainAspectRatio: false,
           plugins: {
             legend: { position: 'top' },
-            title: { display: true, text: 'Organization-wide Issues Over Time' }
+            title: { display: true, text: '{{t "trends.orgChartTitle"}}' }
           },
           scales: {
-            y: { beginAtZero: true, title: { display: true, text: 'Issue Count' } },
-            x: { title: { display: true, text: 'Date' } }
+            y: { beginAtZero: true, title: { display: true, text: '{{t "trends.issueCount"}}' } },
+            x: { title: { display: true, text: '{{t "trends.date"}}' } }
           }
         }
       });
@@ -228,7 +228,7 @@
           labels: labels,
           datasets: [
             {
-              label: 'Errors',
+              label: '{{t "trends.errors"}}',
               data: errors,
               borderColor: '#8b1a1a',
               backgroundColor: 'rgba(139, 26, 26, 0.1)',
@@ -236,7 +236,7 @@
               fill: false
             },
             {
-              label: 'Warnings',
+              label: '{{t "trends.warnings"}}',
               data: warnings,
               borderColor: '#7a4f00',
               backgroundColor: 'rgba(122, 79, 0, 0.1)',
@@ -244,7 +244,7 @@
               fill: false
             },
             {
-              label: 'Notices',
+              label: '{{t "trends.notices"}}',
               data: notices,
               borderColor: '#00416a',
               backgroundColor: 'rgba(0, 65, 106, 0.1)',
@@ -262,7 +262,7 @@
             },
             title: {
               display: true,
-              text: 'Issues Over Time — ' + siteUrl
+              text: '{{t "trends.siteChartTitle"}} — ' + siteUrl
             }
           },
           scales: {
@@ -270,13 +270,13 @@
               beginAtZero: true,
               title: {
                 display: true,
-                text: 'Issue Count'
+                text: '{{t "trends.issueCount"}}'
               }
             },
             x: {
               title: {
                 display: true,
-                text: 'Scan Date'
+                text: '{{t "trends.scanDate"}}'
               }
             }
           }

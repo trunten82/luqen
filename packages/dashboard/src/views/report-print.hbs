@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Accessibility Report — {{scan.siteUrl}}</title>
+  <title>{{t "reportPrint.pageTitle"}} — {{scan.siteUrl}}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -80,11 +80,11 @@
 <body>
 
 <div class="print-bar">
-  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
-  <button class="print-btn print-btn--secondary" onclick="window.close()">Close</button>
+  <button class="print-btn" onclick="window.print()">{{t "reportPrint.printSaveAsPdf"}}</button>
+  <button class="print-btn print-btn--secondary" onclick="window.close()">{{t "reportPrint.close"}}</button>
 </div>
 
-<h1>Accessibility Report</h1>
+<h1>{{t "reportPrint.heading"}}</h1>
 <div class="header-meta">
   <span><strong>{{scan.siteUrl}}</strong></span>
   <span>{{formatStandard scan.standard}}</span>
@@ -94,21 +94,21 @@
 
 {{#if reportData}}
 
-{{! ── Key Metrics ──────────────────────────────────────────── }}
+{{! ── Key Metrics ──────────────────────────────────────── }}
 <div class="kpi-grid">
-  <div class="kpi"><span class="kpi__value">{{reportData.summary.pagesScanned}}</span><span class="kpi__label">Pages Scanned</span></div>
-  <div class="kpi"><span class="kpi__value">{{reportData.summary.totalIssues}}</span><span class="kpi__label">Total Issues</span></div>
-  <div class="kpi kpi--error"><span class="kpi__value">{{reportData.summary.byLevel.error}}</span><span class="kpi__label">Errors</span></div>
-  <div class="kpi kpi--warning"><span class="kpi__value">{{reportData.summary.byLevel.warning}}</span><span class="kpi__label">Warnings</span></div>
-  <div class="kpi kpi--notice"><span class="kpi__value">{{reportData.summary.byLevel.notice}}</span><span class="kpi__label">Notices</span></div>
+  <div class="kpi"><span class="kpi__value">{{reportData.summary.pagesScanned}}</span><span class="kpi__label">{{t "reportPrint.pagesScanned"}}</span></div>
+  <div class="kpi"><span class="kpi__value">{{reportData.summary.totalIssues}}</span><span class="kpi__label">{{t "reportPrint.totalIssues"}}</span></div>
+  <div class="kpi kpi--error"><span class="kpi__value">{{reportData.summary.byLevel.error}}</span><span class="kpi__label">{{t "reportPrint.errors"}}</span></div>
+  <div class="kpi kpi--warning"><span class="kpi__value">{{reportData.summary.byLevel.warning}}</span><span class="kpi__label">{{t "reportPrint.warnings"}}</span></div>
+  <div class="kpi kpi--notice"><span class="kpi__value">{{reportData.summary.byLevel.notice}}</span><span class="kpi__label">{{t "reportPrint.notices"}}</span></div>
   {{#if reportData.templateIssueCount}}
-  <div class="kpi"><span class="kpi__value">{{reportData.templateIssueCount}}</span><span class="kpi__label">Template Issues</span></div>
+  <div class="kpi"><span class="kpi__value">{{reportData.templateIssueCount}}</span><span class="kpi__label">{{t "reportPrint.templateIssues"}}</span></div>
   {{/if}}
 </div>
 
-{{! ── Legal Compliance ─────────────────────────────────────── }}
+{{! ── Legal Compliance ─────────────────────────────────── }}
 {{#if reportData.complianceMatrix}}
-<h2>Legal Compliance</h2>
+<h2>{{t "reportPrint.legalCompliance"}}</h2>
 <div class="juris-grid">
   {{#each reportData.complianceMatrix}}
   <div class="juris-card">
@@ -119,8 +119,8 @@
       <div class="juris-card__status">{{reviewStatusLabel reviewStatus}}</div>
     </div>
     <div class="juris-card__body">
-      WCAG criteria violated: <strong>{{confirmedViolations}}</strong>
-      {{#if needsReview}} &middot; Needs review: <strong>{{needsReview}}</strong>{{/if}}
+      {{t "reportPrint.wcagCriteriaViolated"}} <strong>{{confirmedViolations}}</strong>
+      {{#if needsReview}} &middot; {{t "reportPrint.needsReview"}} <strong>{{needsReview}}</strong>{{/if}}
     </div>
   </div>
   {{/each}}
@@ -128,52 +128,52 @@
 {{/if}}
 
 {{! ── Priority Action Items (errors + warnings only) ────────── }}
-<h2>Priority Action Items</h2>
-<p class="text-sm text-muted">Errors and warnings grouped by WCAG criterion — address these first. Notices omitted for clarity.</p>
+<h2>{{t "reportPrint.priorityActionItems"}}</h2>
+<p class="text-sm text-muted">{{t "reportPrint.priorityActionDesc"}}</p>
 
 <table>
   <thead>
     <tr>
-      <th style="width:70px;">Severity</th>
-      <th style="width:90px;">WCAG</th>
-      <th>Issue</th>
-      <th style="width:110px;">Impact</th>
-      <th style="width:80px;">Pages</th>
+      <th style="width:70px;">{{t "reportPrint.severity"}}</th>
+      <th style="width:90px;">{{t "reportPrint.wcag"}}</th>
+      <th>{{t "reportPrint.issue"}}</th>
+      <th style="width:110px;">{{t "reportPrint.impact"}}</th>
+      <th style="width:80px;">{{t "reportPrint.pages"}}</th>
     </tr>
   </thead>
   <tbody>
     {{#each reportData.allIssueGroups}}
     {{#if errorCount}}
     <tr>
-      <td><span class="severity severity--error">{{errorCount}} err</span></td>
+      <td><span class="severity severity--error">{{errorCount}} {{t "reportPrint.errAbbr"}}</span></td>
       <td><strong>{{criterion}}</strong></td>
       <td>
         {{title}}
         {{#each regulations}}<span class="reg-tag reg-tag--{{obligationClass obligation}}">{{shortName}}</span>{{/each}}
         {{#each components}}<span class="component-tag">{{this}}</span>{{/each}}
       </td>
-      <td>{{#if templateItems.length}}Template{{else}}Page-specific{{/if}}</td>
+      <td>{{#if templateItems.length}}{{t "reportPrint.template"}}{{else}}{{t "reportPrint.pageSpecific"}}{{/if}}</td>
       <td>{{pageCount}}</td>
     </tr>
     {{/if}}
     {{#if warningCount}}
     {{#unless errorCount}}
     <tr>
-      <td><span class="severity severity--warning">{{warningCount}} warn</span></td>
+      <td><span class="severity severity--warning">{{warningCount}} {{t "reportPrint.warnAbbr"}}</span></td>
       <td><strong>{{criterion}}</strong></td>
       <td>
         {{title}}
         {{#each regulations}}<span class="reg-tag reg-tag--{{obligationClass obligation}}">{{shortName}}</span>{{/each}}
         {{#each components}}<span class="component-tag">{{this}}</span>{{/each}}
       </td>
-      <td>{{#if templateItems.length}}Template{{else}}Page-specific{{/if}}</td>
+      <td>{{#if templateItems.length}}{{t "reportPrint.template"}}{{else}}{{t "reportPrint.pageSpecific"}}{{/if}}</td>
       <td>{{pageCount}}</td>
     </tr>
     {{/unless}}
     {{#if errorCount}}
     <tr>
-      <td><span class="severity severity--warning">+{{warningCount}} warn</span></td>
-      <td colspan="4" class="text-sm text-muted" style="padding-left:1.5rem;">Additional warnings for same criterion</td>
+      <td><span class="severity severity--warning">+{{warningCount}} {{t "reportPrint.warnAbbr"}}</span></td>
+      <td colspan="4" class="text-sm text-muted" style="padding-left:1.5rem;">{{t "reportPrint.additionalWarnings"}}</td>
     </tr>
     {{/if}}
     {{/if}}
@@ -184,17 +184,17 @@
 {{! ── Template / Shared Component Issues ───────────────────── }}
 {{#unless isExecutiveView}}
 {{#if reportData.templateComponents.length}}
-<h2>Shared Component Issues</h2>
-<p class="text-sm text-muted">These issues appear in shared components — fixing the component resolves all affected pages.</p>
+<h2>{{t "reportPrint.sharedComponentIssues"}}</h2>
+<p class="text-sm text-muted">{{t "reportPrint.sharedComponentDesc"}}</p>
 
 <table>
   <thead>
     <tr>
-      <th style="width:130px;">Component</th>
-      <th style="width:70px;">Severity</th>
-      <th style="width:80px;">WCAG</th>
-      <th>Issue</th>
-      <th style="width:70px;">Pages</th>
+      <th style="width:130px;">{{t "reportPrint.component"}}</th>
+      <th style="width:70px;">{{t "reportPrint.severity"}}</th>
+      <th style="width:80px;">{{t "reportPrint.wcag"}}</th>
+      <th>{{t "reportPrint.issue"}}</th>
+      <th style="width:70px;">{{t "reportPrint.pages"}}</th>
     </tr>
   </thead>
   <tbody>
@@ -216,7 +216,7 @@
 
 {{! ── Scan Errors ──────────────────────────────────────────── }}
 {{#if reportData.errors.length}}
-<h2>Scan Errors</h2>
+<h2>{{t "reportPrint.scanErrors"}}</h2>
 {{#each reportData.errors}}
 <div style="padding:0.35rem 0.6rem;background:#f8d7da;border-radius:4px;margin-bottom:0.4rem;font-size:0.82rem;">
   <strong>{{url}}</strong> — {{code}}: {{message}}
@@ -227,7 +227,7 @@
 {{/if}}
 
 <div class="report-footer">
-  Generated by Luqen &middot; {{scan.createdAtDisplay}}
+  {{t "reportPrint.generatedBy"}} &middot; {{scan.createdAtDisplay}}
 </div>
 
 </body>

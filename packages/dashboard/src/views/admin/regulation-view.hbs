@@ -7,41 +7,41 @@
 
     {{#if regulation.url}}
     <a href="{{regulation.url}}" target="_blank" rel="noopener noreferrer" class="detail-source-link">
-      {{regulation.reference}} — View Official Source ↗
+      {{regulation.reference}} — {{t "admin.regulations.viewOfficialSource"}}
     </a>
     {{/if}}
 
     <dl class="detail-list">
       <div class="detail-list__item">
-        <dt>Short Name</dt>
+        <dt>{{t "admin.regulations.colShortName"}}</dt>
         <dd>{{regulation.shortName}}</dd>
       </div>
       <div class="detail-list__item">
-        <dt>Jurisdiction</dt>
+        <dt>{{t "admin.regulations.colJurisdiction"}}</dt>
         <dd>{{jurisdictionName}}</dd>
       </div>
       <div class="detail-list__item">
-        <dt>Status</dt>
+        <dt>{{t "common.status"}}</dt>
         <dd><span class="badge badge--{{#if (eq regulation.status 'active')}}completed{{else}}{{#if (eq regulation.status 'draft')}}queued{{else}}failed{{/if}}{{/if}}">{{regulation.status}}</span></dd>
       </div>
       <div class="detail-list__item">
-        <dt>Enforcement</dt>
+        <dt>{{t "admin.regulations.enforcement"}}</dt>
         <dd>{{regulation.enforcementDate}}</dd>
       </div>
       <div class="detail-list__item">
-        <dt>Scope</dt>
+        <dt>{{t "admin.regulations.colScope"}}</dt>
         <dd>{{regulation.scope}}</dd>
       </div>
       {{#if regulation.description}}
       <div class="detail-list__item">
-        <dt>Description</dt>
+        <dt>{{t "admin.regulations.description"}}</dt>
         <dd>{{regulation.description}}</dd>
       </div>
       {{/if}}
     </dl>
 
     {{#if requirements.length}}
-    <h3 class="detail-section-title">WCAG Requirements ({{requirements.length}})</h3>
+    <h3 class="detail-section-title">{{t "admin.regulations.wcagRequirementsCount" count=requirements.length}}</h3>
     <div class="detail-cards">
       {{#each requirements}}
       <div class="detail-card detail-card--compact">
@@ -50,7 +50,7 @@
           <span class="badge {{#if (eq obligation 'mandatory')}}badge--failed{{else}}{{#if (eq obligation 'recommended')}}badge--warning{{else}}badge--info{{/if}}{{/if}}">{{obligation}}</span>
         </div>
         <div class="detail-card__body">
-          <span class="text-sm">Criterion: <code>{{wcagCriterion}}</code></span>
+          <span class="text-sm">{{t "admin.regulations.criterion"}}: <code>{{wcagCriterion}}</code></span>
           {{#if notes}}
           <p class="text-xs text-muted mt-sm">{{notes}}</p>
           {{/if}}
@@ -59,7 +59,7 @@
       {{/each}}
     </div>
     {{else}}
-    <p class="text-muted mt-md">No specific WCAG requirements defined.</p>
+    <p class="text-muted mt-md">{{t "admin.regulations.noWcagRequirements"}}</p>
     {{/if}}
 
     <div class="modal__footer">
@@ -67,9 +67,9 @@
       <button hx-get="/admin/regulations/{{regulation.id}}/edit"
               hx-target="#modal-container"
               hx-swap="innerHTML"
-              class="btn btn--primary">Edit</button>
+              class="btn btn--primary">{{t "common.edit"}}</button>
       {{/unless}}
-      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+      <button type="button" class="btn btn--ghost close-modal-btn">{{t "common.close"}}</button>
     </div>
   </div>
 </div>

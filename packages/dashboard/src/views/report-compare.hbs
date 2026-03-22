@@ -1,17 +1,17 @@
 {{! Report comparison — side-by-side diff between two scan reports }}
 
 <section aria-labelledby="compare-heading" class="report-meta" style="margin-bottom:1.5rem;">
-  <h1 id="compare-heading" class="section-title" style="margin-bottom:1rem;">Report Comparison</h1>
+  <h1 id="compare-heading" class="section-title" style="margin-bottom:1rem;">{{t "reportCompare.title"}}</h1>
 
   {{! ── Regression / Improvement Banner ───────────────────────────────────── }}
   {{#if (cmpPositive diff.summaryDelta.errors)}}
   <div class="compare-alert compare-alert--regression" role="alert">
-    <strong>Regression detected:</strong> {{diff.summaryDelta.errors}} new error{{#unless (eq diff.summaryDelta.errors 1)}}s{{/unless}} since previous scan
+    <strong>{{t "reportCompare.regressionDetected"}}</strong> {{diff.summaryDelta.errors}} {{t "reportCompare.newErrorsSince"}}
   </div>
   {{else}}
     {{#if (cmpNegative diff.summaryDelta.errors)}}
     <div class="compare-alert compare-alert--improvement" role="status">
-      <strong>Improvement:</strong> {{cmpSign diff.summaryDelta.errors}} error{{#unless (eq diff.summaryDelta.errors -1)}}s{{/unless}} since previous scan
+      <strong>{{t "reportCompare.improvement"}}</strong> {{cmpSign diff.summaryDelta.errors}} {{t "reportCompare.errorsSince"}}
     </div>
     {{/if}}
   {{/if}}
@@ -19,22 +19,22 @@
   {{! ── Side-by-side summary ──────────────────────────────────────────────── }}
   <div class="cmp-summary-grid" role="region" aria-label="Side-by-side scan summary">
     <div class="cmp-summary-col">
-      <div class="cmp-summary-col__heading">Scan A (Baseline)</div>
+      <div class="cmp-summary-col__heading">{{t "reportCompare.scanABaseline"}}</div>
       <div class="cmp-summary-stats">
         <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">Total Issues</span>
+          <span class="cmp-summary-stat__label">{{t "reportCompare.totalIssues"}}</span>
           <span class="cmp-summary-stat__value">{{scanA.totalIssues}}</span>
         </div>
         <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">Errors</span>
+          <span class="cmp-summary-stat__label">{{t "reportCompare.errors"}}</span>
           <span class="cmp-summary-stat__value text--error">{{scanA.errors}}</span>
         </div>
         <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">Warnings</span>
+          <span class="cmp-summary-stat__label">{{t "reportCompare.warnings"}}</span>
           <span class="cmp-summary-stat__value text--warning">{{scanA.warnings}}</span>
         </div>
         <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">Notices</span>
+          <span class="cmp-summary-stat__label">{{t "reportCompare.notices"}}</span>
           <span class="cmp-summary-stat__value">{{scanA.notices}}</span>
         </div>
       </div>
@@ -42,19 +42,19 @@
 
     <div class="cmp-summary-delta" aria-label="Delta between scans">
       <div class="cmp-summary-delta__item">
-        <span class="cmp-summary-delta__label">Errors</span>
+        <span class="cmp-summary-delta__label">{{t "reportCompare.errors"}}</span>
         <span class="cmp-summary-delta__value {{#if (cmpPositive diff.summaryDelta.errors)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.errors)}}cmp-delta--down{{else}}cmp-delta--neutral{{/if}}{{/if}}">
           {{#if (cmpPositive diff.summaryDelta.errors)}}+{{diff.summaryDelta.errors}}{{else}}{{#if (cmpNegative diff.summaryDelta.errors)}}{{cmpSign diff.summaryDelta.errors}}{{else}}={{/if}}{{/if}}
         </span>
       </div>
       <div class="cmp-summary-delta__item">
-        <span class="cmp-summary-delta__label">Warnings</span>
+        <span class="cmp-summary-delta__label">{{t "reportCompare.warnings"}}</span>
         <span class="cmp-summary-delta__value {{#if (cmpPositive diff.summaryDelta.warnings)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.warnings)}}cmp-delta--down{{else}}cmp-delta--neutral{{/if}}{{/if}}">
           {{#if (cmpPositive diff.summaryDelta.warnings)}}+{{diff.summaryDelta.warnings}}{{else}}{{#if (cmpNegative diff.summaryDelta.warnings)}}{{cmpSign diff.summaryDelta.warnings}}{{else}}={{/if}}{{/if}}
         </span>
       </div>
       <div class="cmp-summary-delta__item">
-        <span class="cmp-summary-delta__label">Notices</span>
+        <span class="cmp-summary-delta__label">{{t "reportCompare.notices"}}</span>
         <span class="cmp-summary-delta__value {{#if (cmpPositive diff.summaryDelta.notices)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.notices)}}cmp-delta--down{{else}}cmp-delta--neutral{{/if}}{{/if}}">
           {{#if (cmpPositive diff.summaryDelta.notices)}}+{{diff.summaryDelta.notices}}{{else}}{{#if (cmpNegative diff.summaryDelta.notices)}}{{cmpSign diff.summaryDelta.notices}}{{else}}={{/if}}{{/if}}
         </span>
@@ -62,22 +62,22 @@
     </div>
 
     <div class="cmp-summary-col">
-      <div class="cmp-summary-col__heading">Scan B (Latest)</div>
+      <div class="cmp-summary-col__heading">{{t "reportCompare.scanBLatest"}}</div>
       <div class="cmp-summary-stats">
         <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">Total Issues</span>
+          <span class="cmp-summary-stat__label">{{t "reportCompare.totalIssues"}}</span>
           <span class="cmp-summary-stat__value">{{scanB.totalIssues}}</span>
         </div>
         <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">Errors</span>
+          <span class="cmp-summary-stat__label">{{t "reportCompare.errors"}}</span>
           <span class="cmp-summary-stat__value text--error">{{scanB.errors}}</span>
         </div>
         <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">Warnings</span>
+          <span class="cmp-summary-stat__label">{{t "reportCompare.warnings"}}</span>
           <span class="cmp-summary-stat__value text--warning">{{scanB.warnings}}</span>
         </div>
         <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">Notices</span>
+          <span class="cmp-summary-stat__label">{{t "reportCompare.notices"}}</span>
           <span class="cmp-summary-stat__value">{{scanB.notices}}</span>
         </div>
       </div>
@@ -86,79 +86,79 @@
 
   <div class="cmp-scans-grid" role="region" aria-label="Compared scans metadata">
     <div class="cmp-scan-card">
-      <div class="cmp-scan-card__label">Scan A (Baseline)</div>
+      <div class="cmp-scan-card__label">{{t "reportCompare.scanABaseline"}}</div>
       <div class="detail-list">
         <div class="detail-list__item">
-          <dt>URL</dt>
+          <dt>{{t "reportCompare.url"}}</dt>
           <dd><a href="{{scanA.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scanA.siteUrl}}</a></dd>
         </div>
         <div class="detail-list__item">
-          <dt>Standard</dt>
+          <dt>{{t "reportCompare.standard"}}</dt>
           <dd>{{formatStandard scanA.standard}}</dd>
         </div>
         <div class="detail-list__item">
-          <dt>Date</dt>
+          <dt>{{t "reportCompare.date"}}</dt>
           <dd><time datetime="{{scanA.createdAt}}">{{scanA.createdAtDisplay}}</time></dd>
         </div>
       </div>
-      <a href="/reports/{{scanA.id}}" class="btn btn--ghost btn--sm" style="margin-top:0.5rem;">View Full Report</a>
+      <a href="/reports/{{scanA.id}}" class="btn btn--ghost btn--sm" style="margin-top:0.5rem;">{{t "reportCompare.viewFullReport"}}</a>
     </div>
 
     <div class="cmp-scan-card">
-      <div class="cmp-scan-card__label">Scan B (Latest)</div>
+      <div class="cmp-scan-card__label">{{t "reportCompare.scanBLatest"}}</div>
       <div class="detail-list">
         <div class="detail-list__item">
-          <dt>URL</dt>
+          <dt>{{t "reportCompare.url"}}</dt>
           <dd><a href="{{scanB.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scanB.siteUrl}}</a></dd>
         </div>
         <div class="detail-list__item">
-          <dt>Standard</dt>
+          <dt>{{t "reportCompare.standard"}}</dt>
           <dd>{{formatStandard scanB.standard}}</dd>
         </div>
         <div class="detail-list__item">
-          <dt>Date</dt>
+          <dt>{{t "reportCompare.date"}}</dt>
           <dd><time datetime="{{scanB.createdAt}}">{{scanB.createdAtDisplay}}</time></dd>
         </div>
       </div>
-      <a href="/reports/{{scanB.id}}" class="btn btn--ghost btn--sm" style="margin-top:0.5rem;">View Full Report</a>
+      <a href="/reports/{{scanB.id}}" class="btn btn--ghost btn--sm" style="margin-top:0.5rem;">{{t "reportCompare.viewFullReport"}}</a>
     </div>
   </div>
 
   <div class="report-actions" role="group" aria-label="Navigation" style="margin-top:1rem;">
-    <a href="/reports" class="btn btn--ghost btn--sm">&larr; Back to Reports</a>
+    <a href="/reports" class="btn btn--ghost btn--sm">&larr; {{t "reportCompare.backToReports"}}</a>
   </div>
 </section>
 
 {{! ── Summary delta cards ────────────────────────────────────────────────── }}
 <div class="rpt-summary-grid" role="region" aria-label="Change summary">
   <div class="rpt-card rpt-card--error">
-    <div class="rpt-card__label">Errors</div>
+    <div class="rpt-card__label">{{t "reportCompare.errors"}}</div>
     <div class="rpt-card__value cmp-delta {{#if (cmpPositive diff.summaryDelta.errors)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.errors)}}cmp-delta--down{{/if}}{{/if}}">
       {{cmpSign diff.summaryDelta.errors}}
     </div>
   </div>
   <div class="rpt-card rpt-card--warning">
-    <div class="rpt-card__label">Warnings</div>
+    <div class="rpt-card__label">{{t "reportCompare.warnings"}}</div>
     <div class="rpt-card__value cmp-delta {{#if (cmpPositive diff.summaryDelta.warnings)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.warnings)}}cmp-delta--down{{/if}}{{/if}}">
       {{cmpSign diff.summaryDelta.warnings}}
     </div>
   </div>
   <div class="rpt-card rpt-card--notice">
-    <div class="rpt-card__label">Notices</div>
+    <div class="rpt-card__label">{{t "reportCompare.notices"}}</div>
     <div class="rpt-card__value cmp-delta {{#if (cmpPositive diff.summaryDelta.notices)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.notices)}}cmp-delta--down{{/if}}{{/if}}">
       {{cmpSign diff.summaryDelta.notices}}
     </div>
   </div>
   <div class="rpt-card rpt-card--neutral">
-    <div class="rpt-card__label">New Issues</div>
+    <div class="rpt-card__label">{{t "reportCompare.newIssues"}}</div>
     <div class="rpt-card__value" style="color:#dc2626;">{{diff.addedCount}}</div>
   </div>
   <div class="rpt-card rpt-card--neutral">
-    <div class="rpt-card__label">Resolved</div>
+    <div class="rpt-card__label">{{t "reportCompare.resolved"}}</div>
     <div class="rpt-card__value" style="color:#16a34a;">{{diff.removedCount}}</div>
   </div>
   <div class="rpt-card rpt-card--neutral">
-    <div class="rpt-card__label">Unchanged</div>
+    <div class="rpt-card__label">{{t "reportCompare.unchanged"}}</div>
     <div class="rpt-card__value">{{diff.unchangedCount}}</div>
   </div>
 </div>
@@ -166,13 +166,13 @@
 {{! ── Tabs ────────────────────────────────────────────────────────────────── }}
 <div class="cmp-tabs" role="tablist" aria-label="Comparison sections">
   <button class="cmp-tab cmp-tab--active" role="tab" aria-selected="true" aria-controls="cmp-panel-added" id="cmp-tab-added" onclick="cmpSwitchTab('added', this)">
-    New Issues ({{diff.addedCount}})
+    {{t "reportCompare.tabNewIssues"}} ({{diff.addedCount}})
   </button>
   <button class="cmp-tab" role="tab" aria-selected="false" aria-controls="cmp-panel-removed" id="cmp-tab-removed" onclick="cmpSwitchTab('removed', this)">
-    Resolved Issues ({{diff.removedCount}})
+    {{t "reportCompare.tabResolvedIssues"}} ({{diff.removedCount}})
   </button>
   <button class="cmp-tab" role="tab" aria-selected="false" aria-controls="cmp-panel-unchanged" id="cmp-tab-unchanged" onclick="cmpSwitchTab('unchanged', this)">
-    Unchanged ({{diff.unchangedCount}})
+    {{t "reportCompare.tabUnchanged"}} ({{diff.unchangedCount}})
   </button>
 </div>
 
@@ -183,14 +183,14 @@
     <table class="rpt-table" aria-label="New issues in scan B">
       <thead>
         <tr>
-          <th scope="col">Severity</th>
-          <th scope="col">Code</th>
-          <th scope="col">WCAG Criterion</th>
-          <th scope="col">Message</th>
-          <th scope="col">Selector</th>
-          <th scope="col">Page</th>
+          <th scope="col">{{t "reportCompare.severity"}}</th>
+          <th scope="col">{{t "reportCompare.code"}}</th>
+          <th scope="col">{{t "reportCompare.wcagCriterion"}}</th>
+          <th scope="col">{{t "reportCompare.message"}}</th>
+          <th scope="col">{{t "reportCompare.selector"}}</th>
+          <th scope="col">{{t "reportCompare.page"}}</th>
           {{#if diff.hasRegulations}}
-          <th scope="col">Regulations</th>
+          <th scope="col">{{t "reportCompare.regulations"}}</th>
           {{/if}}
         </tr>
       </thead>
@@ -229,8 +229,8 @@
   {{else}}
   <div class="empty-state" role="status">
     <div class="empty-state__icon">&#9989;</div>
-    <div class="empty-state__title">No new issues</div>
-    <div class="empty-state__desc">The latest scan did not introduce any regressions.</div>
+    <div class="empty-state__title">{{t "reportCompare.noNewIssuesTitle"}}</div>
+    <div class="empty-state__desc">{{t "reportCompare.noNewIssuesDesc"}}</div>
   </div>
   {{/if}}
 </div>
@@ -242,14 +242,14 @@
     <table class="rpt-table" aria-label="Resolved issues no longer in scan B">
       <thead>
         <tr>
-          <th scope="col">Severity</th>
-          <th scope="col">Code</th>
-          <th scope="col">WCAG Criterion</th>
-          <th scope="col">Message</th>
-          <th scope="col">Selector</th>
-          <th scope="col">Page</th>
+          <th scope="col">{{t "reportCompare.severity"}}</th>
+          <th scope="col">{{t "reportCompare.code"}}</th>
+          <th scope="col">{{t "reportCompare.wcagCriterion"}}</th>
+          <th scope="col">{{t "reportCompare.message"}}</th>
+          <th scope="col">{{t "reportCompare.selector"}}</th>
+          <th scope="col">{{t "reportCompare.page"}}</th>
           {{#if diff.hasRegulations}}
-          <th scope="col">Regulations</th>
+          <th scope="col">{{t "reportCompare.regulations"}}</th>
           {{/if}}
         </tr>
       </thead>
@@ -288,8 +288,8 @@
   {{else}}
   <div class="empty-state" role="status">
     <div class="empty-state__icon">&#128269;</div>
-    <div class="empty-state__title">No resolved issues</div>
-    <div class="empty-state__desc">No issues were resolved between the two scans.</div>
+    <div class="empty-state__title">{{t "reportCompare.noResolvedTitle"}}</div>
+    <div class="empty-state__desc">{{t "reportCompare.noResolvedDesc"}}</div>
   </div>
   {{/if}}
 </div>
@@ -301,14 +301,14 @@
     <table class="rpt-table" aria-label="Issues unchanged between scans">
       <thead>
         <tr>
-          <th scope="col">Severity</th>
-          <th scope="col">Code</th>
-          <th scope="col">WCAG Criterion</th>
-          <th scope="col">Message</th>
-          <th scope="col">Selector</th>
-          <th scope="col">Page</th>
+          <th scope="col">{{t "reportCompare.severity"}}</th>
+          <th scope="col">{{t "reportCompare.code"}}</th>
+          <th scope="col">{{t "reportCompare.wcagCriterion"}}</th>
+          <th scope="col">{{t "reportCompare.message"}}</th>
+          <th scope="col">{{t "reportCompare.selector"}}</th>
+          <th scope="col">{{t "reportCompare.page"}}</th>
           {{#if diff.hasRegulations}}
-          <th scope="col">Regulations</th>
+          <th scope="col">{{t "reportCompare.regulations"}}</th>
           {{/if}}
         </tr>
       </thead>
@@ -347,8 +347,8 @@
   {{else}}
   <div class="empty-state" role="status">
     <div class="empty-state__icon">&#128196;</div>
-    <div class="empty-state__title">No shared issues</div>
-    <div class="empty-state__desc">No issues are shared between the two scans.</div>
+    <div class="empty-state__title">{{t "reportCompare.noSharedTitle"}}</div>
+    <div class="empty-state__desc">{{t "reportCompare.noSharedDesc"}}</div>
   </div>
   {{/if}}
 </div>

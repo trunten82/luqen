@@ -7,29 +7,29 @@
 
     <dl class="detail-list">
       <div class="detail-list__item">
-        <dt>ID</dt>
+        <dt>{{t "admin.jurisdictions.colId"}}</dt>
         <dd><code>{{jurisdiction.id}}</code></dd>
       </div>
       <div class="detail-list__item">
-        <dt>Type</dt>
+        <dt>{{t "admin.jurisdictions.colType"}}</dt>
         <dd><span class="badge badge--info">{{jurisdiction.type}}</span></dd>
       </div>
       {{#if jurisdiction.iso3166}}
       <div class="detail-list__item">
-        <dt>ISO 3166</dt>
+        <dt>{{t "admin.jurisdictions.iso3166"}}</dt>
         <dd>{{jurisdiction.iso3166}}</dd>
       </div>
       {{/if}}
       {{#if jurisdiction.parentId}}
       <div class="detail-list__item">
-        <dt>Parent</dt>
+        <dt>{{t "admin.jurisdictions.colParent"}}</dt>
         <dd>{{jurisdiction.parentId}}</dd>
       </div>
       {{/if}}
     </dl>
 
     {{#if regulations.length}}
-    <h3 class="detail-section-title">Regulations ({{regulations.length}})</h3>
+    <h3 class="detail-section-title">{{t "admin.jurisdictions.regulationsCount" count=regulations.length}}</h3>
     <div class="detail-cards">
       {{#each regulations}}
       <div class="detail-card">
@@ -43,10 +43,10 @@
           <p class="text-sm mt-sm">{{description}}</p>
           {{/if}}
           <div class="detail-card__meta mt-sm">
-            <span class="text-xs text-muted">Enforcement: {{enforcementDate}}</span>
+            <span class="text-xs text-muted">{{t "admin.jurisdictions.enforcement"}}: {{enforcementDate}}</span>
             {{#if url}}
             <a href="{{url}}" target="_blank" rel="noopener noreferrer" class="btn btn--sm btn--ghost">
-              Official Source ↗
+              {{t "admin.jurisdictions.officialSource"}}
             </a>
             {{/if}}
           </div>
@@ -55,13 +55,13 @@
           <button hx-get="/admin/regulations/{{id}}/view"
                   hx-target="#modal-container"
                   hx-swap="innerHTML"
-                  class="btn btn--sm btn--secondary">View Details</button>
+                  class="btn btn--sm btn--secondary">{{t "admin.jurisdictions.viewDetails"}}</button>
         </div>
       </div>
       {{/each}}
     </div>
     {{else}}
-    <p class="text-muted mt-md">No regulations linked to this jurisdiction.</p>
+    <p class="text-muted mt-md">{{t "admin.jurisdictions.noRegulationsLinked"}}</p>
     {{/if}}
 
     <div class="modal__footer">
@@ -69,9 +69,9 @@
       <button hx-get="/admin/jurisdictions/{{jurisdiction.id}}/edit"
               hx-target="#modal-container"
               hx-swap="innerHTML"
-              class="btn btn--primary">Edit</button>
+              class="btn btn--primary">{{t "common.edit"}}</button>
       {{/unless}}
-      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+      <button type="button" class="btn btn--ghost close-modal-btn">{{t "common.close"}}</button>
     </div>
   </div>
 </div>

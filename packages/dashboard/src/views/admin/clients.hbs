@@ -5,7 +5,7 @@
             hx-swap="innerHTML"
             class="btn btn--primary"
             aria-haspopup="dialog">
-      Add OAuth Client
+      {{t "admin.clients.addClient"}}
     </button>
   </div>
 
@@ -19,12 +19,12 @@
     <table class="table" aria-label="OAuth clients">
       <thead>
         <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Client ID</th>
-          <th scope="col">Scopes</th>
-          <th scope="col">Grant Types</th>
-          <th scope="col">Created</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "common.name"}}</th>
+          <th scope="col">{{t "admin.clients.clientId"}}</th>
+          <th scope="col">{{t "admin.clients.scopes"}}</th>
+          <th scope="col">{{t "admin.clients.grantTypes"}}</th>
+          <th scope="col">{{t "admin.clients.created"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody id="clients-table-body">
@@ -41,12 +41,12 @@
                     hx-target="closest tr"
                     hx-swap="outerHTML swap:500ms"
                     class="btn btn--sm btn--danger"
-                    aria-label="Revoke {{name}}">Revoke</button>
+                    aria-label="Revoke {{name}}">{{t "admin.clients.revoke"}}</button>
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="6" class="table__empty">No OAuth clients registered.</td>
+          <td colspan="6" class="table__empty">{{t "admin.clients.noClients"}}</td>
         </tr>
         {{/each}}
       </tbody>

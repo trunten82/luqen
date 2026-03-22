@@ -1,32 +1,32 @@
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
     <div class="modal__header">
-      <h2 id="modal-title">API Key: {{key.label}}</h2>
+      <h2 id="modal-title">{{t "admin.apiKeys.apiKeyTitle"}}: {{key.label}}</h2>
       <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
     </div>
 
     <dl class="detail-list">
       <div class="detail-list__item">
-        <dt>Label</dt>
+        <dt>{{t "admin.apiKeys.label"}}</dt>
         <dd>{{key.label}}</dd>
       </div>
       <div class="detail-list__item">
-        <dt>Status</dt>
+        <dt>{{t "common.status"}}</dt>
         <dd>
           {{#if key.active}}
-          <span class="badge badge--completed">Active</span>
+          <span class="badge badge--completed">{{t "common.active"}}</span>
           {{else}}
-          <span class="badge badge--failed">Revoked</span>
+          <span class="badge badge--failed">{{t "admin.apiKeys.revoked"}}</span>
           {{/if}}
         </dd>
       </div>
       <div class="detail-list__item">
-        <dt>Created</dt>
+        <dt>{{t "admin.apiKeys.created"}}</dt>
         <dd>{{key.createdDisplay}}</dd>
       </div>
       <div class="detail-list__item">
-        <dt>Last Used</dt>
-        <dd>{{#if key.lastUsedDisplay}}{{key.lastUsedDisplay}}{{else}}Never{{/if}}</dd>
+        <dt>{{t "admin.apiKeys.lastUsed"}}</dt>
+        <dd>{{#if key.lastUsedDisplay}}{{key.lastUsedDisplay}}{{else}}{{t "admin.apiKeys.never"}}{{/if}}</dd>
       </div>
     </dl>
 
@@ -38,12 +38,12 @@
               hx-swap="outerHTML"
               class="btn btn--danger"
               onclick="setTimeout(function(){closeModal()},600)">
-        Revoke Key
+        {{t "admin.apiKeys.revokeKey"}}
       </button>
       {{else}}
-      <p class="text-xs text-muted">This key has been revoked and can no longer be used.</p>
+      <p class="text-xs text-muted">{{t "admin.apiKeys.revokedNote"}}</p>
       {{/if}}
-      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+      <button type="button" class="btn btn--ghost close-modal-btn">{{t "admin.apiKeys.close"}}</button>
     </div>
   </div>
 </div>

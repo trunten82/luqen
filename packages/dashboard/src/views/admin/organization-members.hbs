@@ -1,8 +1,8 @@
 <section aria-label="Organization members management">
   <div class="admin-header">
-    <h1 class="page-title">Members &mdash; {{org.name}}</h1>
+    <h1 class="page-title">{{t "admin.organizations.membersTitle"}} &mdash; {{org.name}}</h1>
     <a href="/admin/organizations" class="btn btn--ghost" aria-label="Back to organizations list">
-      &larr; Back to Organizations
+      &larr; {{t "admin.organizations.backToOrganizations"}}
     </a>
   </div>
 
@@ -10,10 +10,10 @@
   <table class="table" aria-label="Organization members list">
     <thead>
       <tr>
-        <th scope="col">Username</th>
-        <th scope="col">Role</th>
-        <th scope="col">Joined</th>
-        <th scope="col">Actions</th>
+        <th scope="col">{{t "admin.organizations.username"}}</th>
+        <th scope="col">{{t "admin.organizations.role"}}</th>
+        <th scope="col">{{t "admin.organizations.joined"}}</th>
+        <th scope="col">{{t "common.actions"}}</th>
       </tr>
     </thead>
     <tbody id="org-members-table">
@@ -29,7 +29,7 @@
                   hx-swap="outerHTML"
                   class="btn btn--sm btn--warning"
                   aria-label="Remove {{this.username}}">
-            Remove
+            {{t "admin.organizations.remove"}}
           </button>
         </td>
       </tr>
@@ -38,22 +38,22 @@
   </table>
   {{else}}
   <div class="empty-state" role="status">
-    <p>No members in this organization yet.</p>
+    <p>{{t "admin.organizations.noMembers"}}</p>
   </div>
   {{/if}}
 
   {{#if availableUsers.length}}
   <div class="card" style="margin-top: 1.5rem;">
-    <h2 class="card__title">Add Member</h2>
+    <h2 class="card__title">{{t "admin.organizations.addMember"}}</h2>
     <form hx-post="/admin/organizations/{{org.id}}/members"
           hx-target="#org-members-table"
           hx-swap="beforeend"
           class="form-inline">
 
       <div class="form-group">
-        <label for="add-member-user" class="form-label">User</label>
+        <label for="add-member-user" class="form-label">{{t "admin.organizations.user"}}</label>
         <select id="add-member-user" name="userId" class="select" required aria-required="true">
-          <option value="">Select a user&hellip;</option>
+          <option value="">{{t "admin.organizations.selectUser"}}</option>
           {{#each availableUsers}}
           <option value="{{this.id}}">{{this.username}}</option>
           {{/each}}
@@ -61,7 +61,7 @@
       </div>
 
       <div class="form-group">
-        <label for="add-member-role" class="form-label">Role</label>
+        <label for="add-member-role" class="form-label">{{t "admin.organizations.role"}}</label>
         <select id="add-member-role" name="role" class="select" required aria-required="true">
           {{#each roles}}
           <option value="{{this}}">{{this}}</option>
@@ -69,7 +69,7 @@
         </select>
       </div>
 
-      <button type="submit" class="btn btn--primary">Add Member</button>
+      <button type="submit" class="btn btn--primary">{{t "admin.organizations.addMember"}}</button>
     </form>
   </div>
   {{/if}}

@@ -7,24 +7,24 @@
 
     <dl class="detail-list">
       <div class="detail-list__item">
-        <dt>URL</dt>
+        <dt>{{t "admin.sources.fieldUrl"}}</dt>
         <dd><a href="{{source.url}}" target="_blank" rel="noopener noreferrer">{{source.url}} ↗</a></dd>
       </div>
       <div class="detail-list__item">
-        <dt>Type</dt>
+        <dt>{{t "admin.sources.colType"}}</dt>
         <dd><span class="badge badge--info">{{source.type}}</span></dd>
       </div>
       <div class="detail-list__item">
-        <dt>Schedule</dt>
+        <dt>{{t "admin.sources.colSchedule"}}</dt>
         <dd>{{source.schedule}}</dd>
       </div>
       <div class="detail-list__item">
-        <dt>Last Checked</dt>
-        <dd>{{#if source.lastChecked}}{{source.lastChecked}}{{else}}Never{{/if}}</dd>
+        <dt>{{t "admin.sources.colLastChecked"}}</dt>
+        <dd>{{#if source.lastChecked}}{{source.lastChecked}}{{else}}{{t "admin.sources.never"}}{{/if}}</dd>
       </div>
       {{#if source.lastContentHash}}
       <div class="detail-list__item">
-        <dt>Content Hash</dt>
+        <dt>{{t "admin.sources.contentHash"}}</dt>
         <dd><code class="text-xs">{{source.lastContentHash}}</code></dd>
       </div>
       {{/if}}
@@ -38,12 +38,12 @@
               hx-swap="outerHTML swap:500ms"
               class="btn btn--danger"
               onclick="setTimeout(function(){closeModal()},600)">
-        Remove Source
+        {{t "admin.sources.removeSource"}}
       </button>
       {{else}}
-      <p class="text-xs text-muted">System sources cannot be removed — they are maintained by the baseline data.</p>
+      <p class="text-xs text-muted">{{t "admin.sources.systemSourceNote"}}</p>
       {{/unless}}
-      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+      <button type="button" class="btn btn--ghost close-modal-btn">{{t "common.close"}}</button>
     </div>
   </div>
 </div>

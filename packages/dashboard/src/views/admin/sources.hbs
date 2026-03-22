@@ -5,7 +5,7 @@
             hx-swap="innerHTML"
             class="btn btn--primary"
             aria-haspopup="dialog">
-      Add Source
+      {{t "admin.sources.addSource"}}
     </button>
     <button hx-post="/admin/sources/scan"
             hx-target="#scan-results"
@@ -13,9 +13,9 @@
             hx-indicator="#scan-spinner"
             class="btn btn--secondary"
             aria-label="Trigger scan of all monitored sources now">
-      Scan Now
+      {{t "admin.sources.scanNow"}}
     </button>
-    <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">Scanning...</span>
+    <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">{{t "admin.sources.scanning"}}</span>
   </div>
 
   <div id="scan-results" aria-live="polite"></div>
@@ -30,11 +30,11 @@
     <table aria-label="Monitored sources">
       <thead>
         <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Type</th>
-          <th scope="col">Schedule</th>
-          <th scope="col">Last Checked</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "admin.sources.colName"}}</th>
+          <th scope="col">{{t "admin.sources.colType"}}</th>
+          <th scope="col">{{t "admin.sources.colSchedule"}}</th>
+          <th scope="col">{{t "admin.sources.colLastChecked"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody id="sources-table-body">
@@ -43,18 +43,18 @@
           <td data-label="Name">{{name}}</td>
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
           <td data-label="Schedule">{{schedule}}</td>
-          <td data-label="Last Checked">{{#if lastChecked}}{{lastChecked}}{{else}}Never{{/if}}</td>
+          <td data-label="Last Checked">{{#if lastChecked}}{{lastChecked}}{{else}}{{t "admin.sources.never"}}{{/if}}</td>
           <td>
             <button hx-get="/admin/sources/{{id}}/view"
                     hx-target="#modal-container"
                     hx-swap="innerHTML"
                     class="btn btn--sm btn--secondary"
-                    aria-label="View {{name}}">View</button>
+                    aria-label="View {{name}}">{{t "common.view"}}</button>
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="5">No sources configured.</td>
+          <td colspan="5">{{t "admin.sources.noSources"}}</td>
         </tr>
         {{/each}}
       </tbody>

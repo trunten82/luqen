@@ -1,14 +1,14 @@
 <section aria-label="Plugin management dashboard">
   <p class="text-sm text-muted mb-md">
-    <span class="badge badge--completed">{{counts.active}} active</span>
-    <span class="badge badge--info">{{counts.installed}} installed</span>
-    <span class="badge badge--queued">{{counts.available}} available</span>
+    <span class="badge badge--completed">{{counts.active}} {{t "admin.plugins.active"}}</span>
+    <span class="badge badge--info">{{counts.installed}} {{t "admin.plugins.installed"}}</span>
+    <span class="badge badge--queued">{{counts.available}} {{t "admin.plugins.available"}}</span>
   </p>
 
   <div id="plugin-messages"></div>
 
   <section class="admin-section" aria-label="Installed plugins">
-    <h2 class="section-title">Installed Plugins</h2>
+    <h2 class="section-title">{{t "admin.plugins.installedPlugins"}}</h2>
 
     {{#if installed.length}}
     <div class="plugin-grid">
@@ -21,11 +21,11 @@
         <div class="card__body">
           <dl class="stats-list">
             <div class="stats-list__item">
-              <dt>Version</dt>
+              <dt>{{t "admin.plugins.version"}}</dt>
               <dd>{{version}}</dd>
             </div>
             <div class="stats-list__item">
-              <dt>Status</dt>
+              <dt>{{t "common.status"}}</dt>
               <dd>
                 <span class="badge {{#if (eq status 'active')}}badge--success{{else if (eq status 'inactive')}}badge--neutral{{else if (eq status 'error')}}badge--error{{else if (eq status 'unhealthy')}}badge--warning{{else}}badge--neutral{{/if}}">
                   {{status}}
@@ -34,7 +34,7 @@
             </div>
             {{#if error}}
             <div class="stats-list__item">
-              <dt>Error</dt>
+              <dt>{{t "admin.plugins.error"}}</dt>
               <dd class="text--error">{{error}}</dd>
             </div>
             {{/if}}
@@ -46,14 +46,14 @@
                     hx-post="/admin/plugins/{{id}}/deactivate"
                     hx-target="#plugin-messages"
                     hx-swap="innerHTML">
-              Deactivate
+              {{t "admin.plugins.deactivate"}}
             </button>
             {{else}}
             <button class="btn btn--sm btn--primary"
                     hx-post="/admin/plugins/{{id}}/activate"
                     hx-target="#plugin-messages"
                     hx-swap="innerHTML">
-              Activate
+              {{t "admin.plugins.activate"}}
             </button>
             {{/if}}
 
@@ -61,7 +61,7 @@
                     hx-get="/admin/plugins/{{id}}/configure"
                     hx-target="#plugin-config-area"
                     hx-swap="innerHTML">
-              Configure
+              {{t "admin.plugins.configure"}}
             </button>
 
             <button class="btn btn--sm btn--danger"
@@ -69,7 +69,7 @@
                     hx-target="#plugin-messages"
                     hx-swap="innerHTML"
                     hx-confirm="Remove this plugin?">
-              Remove
+              {{t "admin.plugins.remove"}}
             </button>
           </div>
         </div>
@@ -77,14 +77,14 @@
       {{/each}}
     </div>
     {{else}}
-    <p>No plugins installed. Browse available plugins below.</p>
+    <p>{{t "admin.plugins.noInstalled"}}</p>
     {{/if}}
   </section>
 
   <div id="plugin-config-area"></div>
 
   <section class="admin-section" aria-label="Available plugins from registry">
-    <h2 class="section-title">Available Plugins</h2>
+    <h2 class="section-title">{{t "admin.plugins.availablePlugins"}}</h2>
 
     {{#if available.length}}
     <div class="plugin-grid">
@@ -98,11 +98,11 @@
           <p>{{description}}</p>
           <dl class="stats-list">
             <div class="stats-list__item">
-              <dt>Package</dt>
+              <dt>{{t "admin.plugins.package"}}</dt>
               <dd><code>{{packageName}}</code></dd>
             </div>
             <div class="stats-list__item">
-              <dt>Version</dt>
+              <dt>{{t "admin.plugins.version"}}</dt>
               <dd>{{version}}</dd>
             </div>
           </dl>
@@ -112,14 +112,14 @@
                   hx-vals='{"packageName": "{{packageName}}"}'
                   hx-target="#plugin-messages"
                   hx-swap="innerHTML">
-            Install
+            {{t "admin.plugins.install"}}
           </button>
         </div>
       </div>
       {{/each}}
     </div>
     {{else}}
-    <p>All available plugins are already installed.</p>
+    <p>{{t "admin.plugins.allInstalled"}}</p>
     {{/if}}
   </section>
 </section>

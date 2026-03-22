@@ -1,6 +1,6 @@
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
-    <h2 id="modal-title">Add Dashboard User</h2>
+    <h2 id="modal-title">{{t "admin.dashboardUsers.addUser"}}</h2>
 
     <form hx-post="/admin/dashboard-users"
           hx-target="#dashboard-users-table"
@@ -9,21 +9,21 @@
           novalidate>
 
       <div class="form-group">
-        <label for="du-username" class="form-label">Username <span aria-hidden="true">*</span></label>
+        <label for="du-username" class="form-label">{{t "admin.dashboardUsers.username"}} <span aria-hidden="true">*</span></label>
         <input id="du-username" name="username" type="text" class="input"
                required aria-required="true" autocomplete="username">
       </div>
 
       <div class="form-group">
-        <label for="du-password" class="form-label">Password <span aria-hidden="true">*</span></label>
+        <label for="du-password" class="form-label">{{t "admin.dashboardUsers.password"}} <span aria-hidden="true">*</span></label>
         <input id="du-password" name="password" type="password" class="input"
                required aria-required="true" autocomplete="new-password"
                aria-describedby="du-password-hint">
-        <span id="du-password-hint" class="form-hint">Min 8 chars, uppercase, lowercase, number, special character</span>
+        <span id="du-password-hint" class="form-hint">{{t "admin.dashboardUsers.passwordHint"}}</span>
       </div>
 
       <div class="form-group">
-        <label for="du-role" class="form-label">Role <span aria-hidden="true">*</span></label>
+        <label for="du-role" class="form-label">{{t "admin.dashboardUsers.role"}} <span aria-hidden="true">*</span></label>
         <select id="du-role" name="role" class="select"
                 required aria-required="true">
           {{#each roles}}
@@ -33,9 +33,9 @@
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn--primary">Create User</button>
+        <button type="submit" class="btn btn--primary">{{t "admin.dashboardUsers.createUser"}}</button>
         <button type="button" class="btn btn--ghost close-modal-btn"
-                aria-label="Cancel and close dialog">Cancel</button>
+                aria-label="Cancel and close dialog">{{t "common.cancel"}}</button>
       </div>
     </form>
   </div>

@@ -1,8 +1,8 @@
 {{! Teams administration }}
 
 <div class="admin-header">
-  <h2>Teams</h2>
-  <p class="text-muted">Manage teams for issue assignment. Teams appear in the assignee picker alongside individual users.</p>
+  <h2>{{t "admin.teams.title"}}</h2>
+  <p class="text-muted">{{t "admin.teams.description"}}</p>
 </div>
 
 {{! Create team form }}
@@ -14,14 +14,14 @@
   <input type="hidden" name="_csrf" value="{{csrfToken}}">
   <div style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;">
     <label class="form-group" style="flex:1; min-width:200px; margin-bottom:0;">
-      <span class="form-label">Team Name</span>
-      <input type="text" name="name" class="input" placeholder="e.g. Frontend Team" required>
+      <span class="form-label">{{t "admin.teams.teamName"}}</span>
+      <input type="text" name="name" class="input" placeholder="{{t "admin.teams.teamNamePlaceholder"}}" required>
     </label>
     <label class="form-group" style="flex:2; min-width:200px; margin-bottom:0;">
-      <span class="form-label">Description</span>
-      <input type="text" name="description" class="input" placeholder="Optional description">
+      <span class="form-label">{{t "admin.teams.teamDescription"}}</span>
+      <input type="text" name="description" class="input" placeholder="{{t "admin.teams.teamDescriptionPlaceholder"}}">
     </label>
-    <button type="submit" class="btn btn--primary">Create Team</button>
+    <button type="submit" class="btn btn--primary">{{t "admin.teams.createTeam"}}</button>
   </div>
 </form>
 
@@ -30,11 +30,11 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Description</th>
-        <th>Members</th>
-        <th>Created</th>
-        <th>Actions</th>
+        <th>{{t "common.name"}}</th>
+        <th>{{t "admin.teams.teamDescription"}}</th>
+        <th>{{t "admin.teams.members"}}</th>
+        <th>{{t "admin.teams.created"}}</th>
+        <th>{{t "common.actions"}}</th>
       </tr>
     </thead>
     <tbody id="teams-table-body">
@@ -50,7 +50,7 @@
                   hx-target="#team-row-{{id}}"
                   hx-swap="outerHTML"
                   class="btn btn--sm btn--warning"
-                  aria-label="Delete {{name}}">Delete</button>
+                  aria-label="Delete {{name}}">{{t "common.delete"}}</button>
         </td>
       </tr>
       {{/each}}
@@ -58,7 +58,7 @@
       {{#unless teams.length}}
       <tr id="teams-empty-row">
         <td colspan="5" style="text-align:center; padding:2rem;">
-          No teams yet. Create one above.
+          {{t "admin.teams.noTeams"}}
         </td>
       </tr>
       {{/unless}}

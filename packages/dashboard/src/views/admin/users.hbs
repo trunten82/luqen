@@ -5,7 +5,7 @@
             hx-swap="innerHTML"
             class="btn btn--primary"
             aria-haspopup="dialog">
-      Add User
+      {{t "admin.users.addUser"}}
     </button>
   </div>
 
@@ -19,11 +19,11 @@
     <table class="table" aria-label="Users">
       <thead>
         <tr>
-          <th scope="col">Username</th>
-          <th scope="col">Role</th>
-          <th scope="col">Created</th>
-          <th scope="col">Status</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "admin.users.username"}}</th>
+          <th scope="col">{{t "admin.users.role"}}</th>
+          <th scope="col">{{t "admin.users.created"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody id="users-table-body">
@@ -34,7 +34,7 @@
           <td data-label="Created">{{createdAtDisplay}}</td>
           <td data-label="Status">
             <span class="badge {{#if active}}badge--success{{else}}badge--error{{/if}}">
-              {{#if active}}Active{{else}}Inactive{{/if}}
+              {{#if active}}{{t "common.active"}}{{else}}{{t "common.inactive"}}{{/if}}
             </span>
           </td>
           <td>
@@ -44,13 +44,13 @@
                     hx-target="#user-{{id}}"
                     hx-swap="outerHTML"
                     class="btn btn--sm btn--warning"
-                    aria-label="Deactivate {{username}}">Deactivate</button>
+                    aria-label="Deactivate {{username}}">{{t "admin.users.deactivate"}}</button>
             {{/if}}
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="5" class="table__empty">No users found.</td>
+          <td colspan="5" class="table__empty">{{t "admin.users.noUsers"}}</td>
         </tr>
         {{/each}}
       </tbody>

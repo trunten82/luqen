@@ -1,6 +1,6 @@
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
-    <h2 id="modal-title">Add User</h2>
+    <h2 id="modal-title">{{t "admin.users.addUser"}}</h2>
 
     <form hx-post="/admin/users"
           hx-target="#users-table-body"
@@ -9,21 +9,21 @@
           novalidate>
 
       <div class="form-group">
-        <label for="usr-username" class="form-label">Username <span aria-hidden="true">*</span></label>
+        <label for="usr-username" class="form-label">{{t "admin.users.username"}} <span aria-hidden="true">*</span></label>
         <input id="usr-username" name="username" type="text" class="input"
                required aria-required="true" autocomplete="username">
       </div>
 
       <div class="form-group">
-        <label for="usr-password" class="form-label">Password <span aria-hidden="true">*</span></label>
+        <label for="usr-password" class="form-label">{{t "admin.users.password"}} <span aria-hidden="true">*</span></label>
         <input id="usr-password" name="password" type="password" class="input"
                required aria-required="true" autocomplete="new-password"
                aria-describedby="usr-password-hint">
-        <span id="usr-password-hint" class="form-hint">Minimum 8 characters</span>
+        <span id="usr-password-hint" class="form-hint">{{t "admin.users.passwordHint"}}</span>
       </div>
 
       <div class="form-group">
-        <label for="usr-role" class="form-label">Role <span aria-hidden="true">*</span></label>
+        <label for="usr-role" class="form-label">{{t "admin.users.role"}} <span aria-hidden="true">*</span></label>
         <select id="usr-role" name="role" class="select"
                 required aria-required="true">
           {{#each roles}}
@@ -33,9 +33,9 @@
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn--primary">Create User</button>
+        <button type="submit" class="btn btn--primary">{{t "admin.users.createUser"}}</button>
         <button type="button" class="btn btn--ghost close-modal-btn"
-                aria-label="Cancel and close dialog">Cancel</button>
+                aria-label="Cancel and close dialog">{{t "common.cancel"}}</button>
       </div>
     </form>
   </div>

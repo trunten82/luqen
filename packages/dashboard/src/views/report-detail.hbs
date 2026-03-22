@@ -3,32 +3,32 @@
 <section aria-labelledby="report-meta-heading" class="report-meta" style="margin-bottom:1.5rem;">
   <div class="detail-list detail-list--horizontal">
     <div class="detail-list__item">
-      <dt>Site URL</dt>
+      <dt>{{t "reportDetail.siteUrl"}}</dt>
       <dd><a href="{{scan.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scan.siteUrl}}</a></dd>
     </div>
     <div class="detail-list__item">
-      <dt>Standard</dt>
+      <dt>{{t "reportDetail.standard"}}</dt>
       <dd>{{formatStandard scan.standard}}</dd>
     </div>
     <div class="detail-list__item">
-      <dt>Status</dt>
+      <dt>{{t "reportDetail.status"}}</dt>
       <dd>
         <span class="badge badge--{{scan.status}}" aria-label="Status: {{scan.status}}">{{scan.status}}</span>
       </dd>
     </div>
     {{#if scan.jurisdictions}}
     <div class="detail-list__item">
-      <dt>Jurisdictions</dt>
+      <dt>{{t "reportDetail.jurisdictions"}}</dt>
       <dd>{{scan.jurisdictions}}</dd>
     </div>
     {{/if}}
     <div class="detail-list__item">
-      <dt>Started</dt>
+      <dt>{{t "reportDetail.started"}}</dt>
       <dd><time datetime="{{scan.createdAt}}">{{scan.createdAtDisplay}}</time></dd>
     </div>
     {{#if scan.completedAt}}
     <div class="detail-list__item">
-      <dt>Completed</dt>
+      <dt>{{t "reportDetail.completed"}}</dt>
       <dd><time datetime="{{scan.completedAt}}">{{scan.completedAtDisplay}}</time></dd>
     </div>
     {{/if}}
@@ -36,31 +36,31 @@
 
   <div class="report-actions" role="group" aria-label="Report actions" style="margin-top:1rem;">
     <a href="/reports" class="btn btn--ghost btn--sm" aria-label="Back to reports list">
-      &larr; Back to Reports
+      &larr; {{t "reportDetail.backToReports"}}
     </a>
     {{#if reportData}}
     {{#if perm.manualTesting}}
     <a href="/reports/{{scan.id}}/manual" class="btn btn--ghost btn--sm" aria-label="Open manual testing checklist">
-      Manual Testing {{#if manualTestStats}}({{manualTestStats.percentage}}%){{/if}}
+      {{t "reportDetail.manualTesting"}} {{#if manualTestStats}}({{manualTestStats.percentage}}%){{/if}}
     </a>
     {{/if}}
     <a href="/reports/{{scan.id}}/print" target="_blank" class="btn btn--ghost btn--sm" aria-label="Open print-friendly version for PDF export">
-      Print / PDF
+      {{t "reportDetail.printPdf"}}
     </a>
     {{#if pdfAvailable}}
     <a href="/api/v1/export/scans/{{scan.id}}/report.pdf" class="btn btn--ghost btn--sm" aria-label="Download report as PDF">
-      Download PDF
+      {{t "reportDetail.downloadPdf"}}
     </a>
     {{/if}}
-    <a href="/api/v1/export/scans/{{scan.id}}/issues.csv" class="btn btn--ghost btn--sm" aria-label="Export issues as CSV">Export CSV</a>
+    <a href="/api/v1/export/scans/{{scan.id}}/issues.csv" class="btn btn--ghost btn--sm" aria-label="Export issues as CSV">{{t "reportDetail.exportCsv"}}</a>
     {{#if perm.issuesAssign}}
     <a href="/reports/{{scan.id}}/assignments" class="btn btn--ghost btn--sm" aria-label="View issue assignments" id="assignments-link">
-      Assignments{{#if assignmentActiveCount}} ({{assignmentActiveCount}}){{/if}}
+      {{t "reportDetail.assignments"}}{{#if assignmentActiveCount}} ({{assignmentActiveCount}}){{/if}}
     </a>
     {{/if}}
     {{#if perm.issuesFix}}
     <a href="/reports/{{scan.id}}/fixes" class="btn btn--ghost btn--sm" aria-label="Propose code fixes for accessibility issues">
-      Propose Fixes
+      {{t "reportDetail.proposeFixes"}}
     </a>
     {{/if}}
     {{/if}}
@@ -71,19 +71,19 @@
 
 {{! ── Summary bar (above tabs) ─────────────────────────────────────────── }}
 <div class="rpt-summary-bar" role="region" aria-label="Scan summary">
-  <span class="rpt-badge rpt-badge--neutral" id="rpt-stat-pages">Pages: {{reportData.summary.pagesScanned}}</span>
-  <span class="rpt-badge rpt-badge--neutral" id="rpt-stat-issues">Issues: {{reportData.summary.totalIssues}}</span>
-  <span class="rpt-badge rpt-badge--error-light" id="rpt-stat-errors">Errors: {{reportData.summary.byLevel.error}}</span>
-  <span class="rpt-badge rpt-badge--warning-light" id="rpt-stat-warnings">Warnings: {{reportData.summary.byLevel.warning}}</span>
-  <span class="rpt-badge rpt-badge--notice-light" id="rpt-stat-notices">Notices: {{reportData.summary.byLevel.notice}}</span>
+  <span class="rpt-badge rpt-badge--neutral" id="rpt-stat-pages">{{t "reportDetail.pages"}}: {{reportData.summary.pagesScanned}}</span>
+  <span class="rpt-badge rpt-badge--neutral" id="rpt-stat-issues">{{t "reportDetail.issues"}}: {{reportData.summary.totalIssues}}</span>
+  <span class="rpt-badge rpt-badge--error-light" id="rpt-stat-errors">{{t "reportDetail.errors"}}: {{reportData.summary.byLevel.error}}</span>
+  <span class="rpt-badge rpt-badge--warning-light" id="rpt-stat-warnings">{{t "reportDetail.warnings"}}: {{reportData.summary.byLevel.warning}}</span>
+  <span class="rpt-badge rpt-badge--notice-light" id="rpt-stat-notices">{{t "reportDetail.notices"}}: {{reportData.summary.byLevel.notice}}</span>
 </div>
 
 {{! ── Tab bar ─────────────────────────────────────────────────────────────── }}
 <div class="rpt-tabs" role="tablist">
-  <button role="tab" class="rpt-tab rpt-tab--active" id="tab-compliance" aria-controls="panel-compliance" aria-selected="true" onclick="rptSwitchTab('compliance')">Compliance</button>
-  <button role="tab" class="rpt-tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" onclick="rptSwitchTab('issues')">Issues</button>
-  {{#if reportData.templateComponents.length}}<button role="tab" class="rpt-tab" id="tab-templates" aria-controls="panel-templates" aria-selected="false" onclick="rptSwitchTab('templates')">Templates</button>{{/if}}
-  <button role="tab" class="rpt-tab" id="tab-pages" aria-controls="panel-pages" aria-selected="false" onclick="rptSwitchTab('pages')">Pages</button>
+  <button role="tab" class="rpt-tab rpt-tab--active" id="tab-compliance" aria-controls="panel-compliance" aria-selected="true" onclick="rptSwitchTab('compliance')">{{t "reportDetail.tabCompliance"}}</button>
+  <button role="tab" class="rpt-tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" onclick="rptSwitchTab('issues')">{{t "reportDetail.tabIssues"}}</button>
+  {{#if reportData.templateComponents.length}}<button role="tab" class="rpt-tab" id="tab-templates" aria-controls="panel-templates" aria-selected="false" onclick="rptSwitchTab('templates')">{{t "reportDetail.tabTemplates"}}</button>{{/if}}
+  <button role="tab" class="rpt-tab" id="tab-pages" aria-controls="panel-pages" aria-selected="false" onclick="rptSwitchTab('pages')">{{t "reportDetail.tabPages"}}</button>
 </div>
 
 {{! ── Tab 1: Compliance Overview ──────────────────────────────────────────── }}
@@ -93,11 +93,11 @@
   {{#if reportData.complianceMatrix}}
   <section class="rpt-section" aria-labelledby="compliance-heading">
     <div class="rpt-section__header rpt-section__header--dark">
-      <h2 id="compliance-heading" class="rpt-section__title">Legal Compliance Matrix</h2>
+      <h2 id="compliance-heading" class="rpt-section__title">{{t "reportDetail.legalComplianceMatrix"}}</h2>
       {{#if reportData.compliance.summary}}
       <div class="rpt-section__meta">
-        <span class="rpt-badge rpt-badge--pass">{{reportData.compliance.summary.passing}} Passing</span>
-        <span class="rpt-badge rpt-badge--fail">{{reportData.compliance.summary.failing}} Failing</span>
+        <span class="rpt-badge rpt-badge--pass">{{reportData.compliance.summary.passing}} {{t "reportDetail.passing"}}</span>
+        <span class="rpt-badge rpt-badge--fail">{{reportData.compliance.summary.failing}} {{t "reportDetail.failing"}}</span>
       </div>
       {{/if}}
     </div>
@@ -113,8 +113,8 @@
           <div class="rpt-juris-card__status rpt-juris-card__status--{{reviewStatusLabelClass reviewStatus}}">{{reviewStatusLabel reviewStatus}}</div>
         </div>
         <div class="rpt-juris-card__body">
-          <div class="rpt-juris-card__viol">WCAG criteria violated: <strong class="{{#if confirmedViolations}}rpt-text--fail{{/if}}">{{confirmedViolations}}</strong></div>
-          {{#if needsReview}}<div class="rpt-juris-card__viol">Recommended regulations needing review: <strong>{{needsReview}}</strong></div>{{/if}}
+          <div class="rpt-juris-card__viol">{{t "reportDetail.wcagCriteriaViolated"}} <strong class="{{#if confirmedViolations}}rpt-text--fail{{/if}}">{{confirmedViolations}}</strong></div>
+          {{#if needsReview}}<div class="rpt-juris-card__viol">{{t "reportDetail.regsNeedingReview"}} <strong>{{needsReview}}</strong></div>{{/if}}
           {{#if regulations.length}}
           <div class="rpt-juris-card__regs">
             {{#each regulations}}
@@ -132,7 +132,7 @@
     </div>
   </section>
   {{else}}
-  <div class="alert alert--info" role="status">No jurisdictions selected during scan.</div>
+  <div class="alert alert--info" role="status">{{t "reportDetail.noJurisdictions"}}</div>
   {{/if}}
 
 </div>
@@ -143,14 +143,14 @@
   {{! Summary + filters }}
   <div class="rpt-issues-header">
     <div class="rpt-issues-summary" id="rpt-issues-summary">
-      <strong id="rpt-issues-count">{{reportData.summary.totalIssues}} issues</strong>
-      <span id="rpt-issues-detail"> grouped by {{reportData.allIssueGroups.length}} WCAG criteria</span>
+      <strong id="rpt-issues-count">{{reportData.summary.totalIssues}} {{t "reportDetail.issuesLabel"}}</strong>
+      <span id="rpt-issues-detail"> {{t "reportDetail.groupedBy"}} {{reportData.allIssueGroups.length}} {{t "reportDetail.wcagCriteriaLabel"}}</span>
     </div>
     <div class="rpt-controls" role="toolbar" aria-label="Filter controls">
       <div class="rpt-filter-bar" id="rpt-filter-bar"></div>
       <input type="text" class="rpt-search" placeholder="Search&hellip;" aria-label="Search issues" oninput="rptSearchIssues(this.value)">
       {{#if perm.issuesAssign}}
-      <button type="button" class="btn btn--ghost btn--sm" id="rpt-bulk-mode-btn" onclick="rptToggleBulkMode()">Bulk Assign</button>
+      <button type="button" class="btn btn--ghost btn--sm" id="rpt-bulk-mode-btn" onclick="rptToggleBulkMode()">{{t "reportDetail.bulkAssign"}}</button>
       {{/if}}
     </div>
   </div>
@@ -158,13 +158,13 @@
   {{! Bulk assign toolbar — shown when bulk mode active }}
   {{#if perm.issuesAssign}}
   <div class="rpt-bulk-bar" id="rpt-bulk-bar" style="display:none;">
-    <label class="rpt-bulk-bar__select-all"><input type="checkbox" id="rpt-bulk-select-all" onchange="rptBulkToggleAll(this.checked)"> Select all visible</label>
-    <span id="rpt-bulk-count">0 selected</span>
+    <label class="rpt-bulk-bar__select-all"><input type="checkbox" id="rpt-bulk-select-all" onchange="rptBulkToggleAll(this.checked)"> {{t "reportDetail.selectAllVisible"}}</label>
+    <span id="rpt-bulk-count">0 {{t "reportDetail.selected"}}</span>
     <select id="rpt-bulk-assignee" class="rpt-bulk-bar__select">
-      <option value="">Select assignee...</option>
+      <option value="">{{t "reportDetail.selectAssignee"}}</option>
     </select>
-    <button type="button" class="btn btn--primary btn--sm" onclick="rptBulkAssign()">Assign Selected</button>
-    <button type="button" class="btn btn--ghost btn--sm" onclick="rptToggleBulkMode()">Cancel</button>
+    <button type="button" class="btn btn--primary btn--sm" onclick="rptBulkAssign()">{{t "reportDetail.assignSelected"}}</button>
+    <button type="button" class="btn btn--ghost btn--sm" onclick="rptToggleBulkMode()">{{t "common.cancel"}}</button>
   </div>
   {{/if}}
 
@@ -202,7 +202,7 @@
         {{! Template items (fix-once-fix-everywhere) }}
         {{#if templateItems.length}}
         <div class="rpt-template-block">
-          <div class="rpt-template-block__label">Shared components — fix once, fix everywhere</div>
+          <div class="rpt-template-block__label">{{t "reportDetail.sharedComponentsLabel"}}</div>
           {{#each templateItems}}
           <div class="rpt-issue-item" data-severity="{{type}}">
             <div class="rpt-issue-item__head">
@@ -212,7 +212,7 @@
               {{#if ../../perm.issuesAssign}}
               {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
               {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
-              <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
+              <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">{{t "reportDetail.assign"}}</button>
               {{/unless}}
               {{/if}}
             </div>
@@ -223,7 +223,7 @@
             {{/if}}
             {{#if affectedPages}}
             <details class="rpt-issue-item__affected">
-              <summary>Affected pages ({{affectedCount}})</summary>
+              <summary>{{t "reportDetail.affectedPages"}} ({{affectedCount}})</summary>
               <ul>{{#each affectedPages}}<li>{{this}}</li>{{/each}}</ul>
             </details>
             {{/if}}
@@ -243,7 +243,7 @@
             {{#if ../../perm.issuesAssign}}
             {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
             {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
-            <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">Assign</button>
+            <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">{{t "reportDetail.assign"}}</button>
             {{/unless}}
             {{/if}}
           </div>
@@ -261,7 +261,7 @@
     {{/each}}
   </div>
   {{else}}
-  <div class="alert alert--info" role="status">No issues found in this report.</div>
+  <div class="alert alert--info" role="status">{{t "reportDetail.noIssues"}}</div>
   {{/if}}
 
 </div>
@@ -270,7 +270,7 @@
 {{#if reportData.templateComponents.length}}
 <div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-templates" role="tabpanel" aria-labelledby="tab-templates">
 
-  <p class="rpt-template-intro">These issues appear on multiple pages and likely come from shared components. Fixing the component fixes all affected pages.</p>
+  <p class="rpt-template-intro">{{t "reportDetail.templateIntro"}}</p>
 
   <div class="rpt-issue-list">
     {{#each reportData.templateComponents}}
@@ -278,8 +278,8 @@
       <div class="rpt-group__header" onclick="rptToggleGroup(this)" role="button" tabindex="0" aria-expanded="false">
         <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
         <span class="rpt-component-tag">{{componentName}}</span>
-        <span class="rpt-badge rpt-badge--neutral">{{issueCount}} issues</span>
-        <span class="rpt-badge rpt-badge--neutral">{{maxAffectedPages}} pages</span>
+        <span class="rpt-badge rpt-badge--neutral">{{issueCount}} {{t "reportDetail.issuesLabel"}}</span>
+        <span class="rpt-badge rpt-badge--neutral">{{maxAffectedPages}} {{t "reportDetail.pagesLabel"}}</span>
       </div>
       <div class="rpt-group__body">
         {{#each issues}}
@@ -315,7 +315,7 @@
           {{/if}}
           {{#if affectedPages}}
           <details class="rpt-issue-item__affected">
-            <summary>Affected pages ({{affectedCount}})</summary>
+            <summary>{{t "reportDetail.affectedPages"}} ({{affectedCount}})</summary>
             <ul>{{#each affectedPages}}<li>{{this}}</li>{{/each}}</ul>
           </details>
           {{/if}}
@@ -356,7 +356,7 @@
             {{#if (issuesByType issues 'warning')}}<span class="rpt-severity rpt-severity--warning">{{countByType issues 'warning'}} warning{{#unless (eq (countByType issues 'warning') 1)}}s{{/unless}}</span>{{/if}}
             {{#if (issuesByType issues 'notice')}}<span class="rpt-severity rpt-severity--notice">{{countByType issues 'notice'}} notice{{#unless (eq (countByType issues 'notice') 1)}}s{{/unless}}</span>{{/if}}
           {{else}}
-            <span class="rpt-severity rpt-severity--clean">Clean</span>
+            <span class="rpt-severity rpt-severity--clean">{{t "reportDetail.clean"}}</span>
           {{/if}}
           <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
         </div>
@@ -367,11 +367,11 @@
           <table class="rpt-table" aria-label="Issues on {{url}}">
             <thead>
               <tr>
-                <th scope="col">Severity</th>
-                <th scope="col">WCAG Criterion</th>
-                <th scope="col">What&apos;s Wrong</th>
-                <th scope="col">Legal Impact</th>
-                {{#if ../perm.reportsViewTechnical}}<th scope="col">Element</th>{{/if}}
+                <th scope="col">{{t "reportDetail.severity"}}</th>
+                <th scope="col">{{t "reportDetail.wcagCriterion"}}</th>
+                <th scope="col">{{t "reportDetail.whatsWrong"}}</th>
+                <th scope="col">{{t "reportDetail.legalImpact"}}</th>
+                {{#if ../perm.reportsViewTechnical}}<th scope="col">{{t "reportDetail.element"}}</th>{{/if}}
               </tr>
             </thead>
             <tbody>
@@ -421,20 +421,20 @@
           </table>
         </div>
         {{else}}
-        <div class="rpt-no-issues">No issues found on this page.</div>
+        <div class="rpt-no-issues">{{t "reportDetail.noIssuesOnPage"}}</div>
         {{/if}}
       </div>
     </div>
     {{/each}}
 
     {{#unless reportData.pages.length}}
-    <div class="alert alert--info" role="status">No page results in this report.</div>
+    <div class="alert alert--info" role="status">{{t "reportDetail.noPageResults"}}</div>
     {{/unless}}
   </div>
 
   {{#if reportData.errors.length}}
   <section class="rpt-scan-errors" aria-labelledby="scan-errors-heading">
-    <h3 id="scan-errors-heading" class="rpt-text--fail">Scan Errors ({{reportData.errors.length}})</h3>
+    <h3 id="scan-errors-heading" class="rpt-text--fail">{{t "reportDetail.scanErrors"}} ({{reportData.errors.length}})</h3>
     {{#each reportData.errors}}
     <div class="alert alert--error rpt-scan-error">
       <strong>{{url}}</strong> &mdash; {{code}}: {{message}}
@@ -450,25 +450,25 @@
 {{! ── No report data — show status message ───────────────────────────────── }}
 {{#if (eq scan.status 'failed')}}
 <div class="alert alert--error" role="alert">
-  <strong>Scan Failed</strong>
+  <strong>{{t "reportDetail.scanFailed"}}</strong>
   {{#if scan.error}}
   <p>{{scan.error}}</p>
   {{/if}}
-  <a href="/scan/new" class="btn btn--sm btn--primary">Try Again</a>
+  <a href="/scan/new" class="btn btn--sm btn--primary">{{t "reportDetail.tryAgain"}}</a>
 </div>
 {{else if (eq scan.status 'running')}}
 <div class="alert alert--info" role="status" aria-live="polite">
-  Scan is still in progress.
-  <a href="/scan/{{scan.id}}/progress" class="btn btn--sm btn--ghost">View Progress</a>
+  {{t "reportDetail.scanInProgress"}}
+  <a href="/scan/{{scan.id}}/progress" class="btn btn--sm btn--ghost">{{t "reportDetail.viewProgress"}}</a>
 </div>
 {{else if (eq scan.status 'queued')}}
 <div class="alert alert--info" role="status" aria-live="polite">
-  Scan is queued.
-  <a href="/scan/{{scan.id}}/progress" class="btn btn--sm btn--ghost">View Queue Status</a>
+  {{t "reportDetail.scanQueued"}}
+  <a href="/scan/{{scan.id}}/progress" class="btn btn--sm btn--ghost">{{t "reportDetail.viewQueueStatus"}}</a>
 </div>
 {{else}}
 <div class="alert alert--info" role="status">
-  No report data available.
+  {{t "reportDetail.noReportData"}}
 </div>
 {{/if}}
 
@@ -726,21 +726,21 @@
     if (!countEl || !detailEl) return;
 
     if (rptActiveFilters.size === 0 && !rptSearchQuery) {
-      countEl.textContent = rptTotals.issues + ' issues';
-      detailEl.textContent = ' grouped by ' + rptTotals.criteria + ' WCAG criteria';
+      countEl.textContent = rptTotals.issues + ' {{t "reportDetail.issuesLabel"}}';
+      detailEl.textContent = ' {{t "reportDetail.groupedBy"}} ' + rptTotals.criteria + ' {{t "reportDetail.wcagCriteriaLabel"}}';
     } else {
       var parts = [];
       if (activeSev.length > 0) {
-        if (activeSev.indexOf('error') !== -1) parts.push(visibleErrors + ' errors');
-        if (activeSev.indexOf('warning') !== -1) parts.push(visibleWarnings + ' warnings');
-        if (activeSev.indexOf('notice') !== -1) parts.push(visibleNotices + ' notices');
+        if (activeSev.indexOf('error') !== -1) parts.push(visibleErrors + ' {{t "reportDetail.errors"}}');
+        if (activeSev.indexOf('warning') !== -1) parts.push(visibleWarnings + ' {{t "reportDetail.warnings"}}');
+        if (activeSev.indexOf('notice') !== -1) parts.push(visibleNotices + ' {{t "reportDetail.notices"}}');
       } else {
-        if (visibleErrors) parts.push(visibleErrors + ' errors');
-        if (visibleWarnings) parts.push(visibleWarnings + ' warnings');
-        if (visibleNotices) parts.push(visibleNotices + ' notices');
+        if (visibleErrors) parts.push(visibleErrors + ' {{t "reportDetail.errors"}}');
+        if (visibleWarnings) parts.push(visibleWarnings + ' {{t "reportDetail.warnings"}}');
+        if (visibleNotices) parts.push(visibleNotices + ' {{t "reportDetail.notices"}}');
       }
-      countEl.textContent = displayTotal + ' issues';
-      detailEl.textContent = ' across ' + visibleCriteria + ' criteria' + (parts.length ? ' \u2014 ' + parts.join(', ') : '');
+      countEl.textContent = displayTotal + ' {{t "reportDetail.issuesLabel"}}';
+      detailEl.textContent = ' {{t "reportDetail.across"}} ' + visibleCriteria + ' {{t "reportDetail.criteriaLabel"}}' + (parts.length ? ' \u2014 ' + parts.join(', ') : '');
     }
   }
 
@@ -760,7 +760,7 @@
     if (issueList) issueList.classList.toggle('rpt-bulk-active', _bulkMode);
     if (bar) bar.style.display = _bulkMode ? 'flex' : 'none';
     if (modeBtn) {
-      modeBtn.textContent = _bulkMode ? 'Cancel Bulk' : 'Bulk Assign';
+      modeBtn.textContent = _bulkMode ? '{{t "reportDetail.cancelBulk"}}' : '{{t "reportDetail.bulkAssign"}}';
       modeBtn.classList.toggle('btn--primary', _bulkMode);
       modeBtn.classList.toggle('btn--ghost', !_bulkMode);
     }
@@ -776,7 +776,7 @@
   function rptBulkUpdate() {
     var checked = document.querySelectorAll('.rpt-bulk-cb:checked');
     var countEl = document.getElementById('rpt-bulk-count');
-    if (countEl) countEl.textContent = checked.length + ' selected';
+    if (countEl) countEl.textContent = checked.length + ' {{t "reportDetail.selected"}}';
   }
 
   function rptBulkToggleAll(checked) {
@@ -791,7 +791,7 @@
     var assignee = (document.getElementById('rpt-bulk-assignee') || {}).value || '';
     if (!assignee) {
       var tc = document.getElementById('toast-container');
-      if (tc) { var t = document.createElement('div'); t.className = 'toast toast--error'; t.textContent = 'Please select an assignee'; tc.appendChild(t); setTimeout(function(){t.remove();}, 3000); }
+      if (tc) { var t = document.createElement('div'); t.className = 'toast toast--error'; t.textContent = '{{t "reportDetail.selectAssigneePrompt"}}'; tc.appendChild(t); setTimeout(function(){t.remove();}, 3000); }
       return;
     }
     var checked = document.querySelectorAll('.rpt-bulk-cb:checked');
@@ -875,7 +875,7 @@
     var select = document.createElement('select');
     select.className = 'rpt-assign-popover__select';
     var def = document.createElement('option');
-    def.value = ''; def.textContent = 'Select assignee...';
+    def.value = ''; def.textContent = '{{t "reportDetail.selectAssignee"}}';
     select.appendChild(def);
 
     (window.__luqenAssignees || []).forEach(function(a) {
@@ -887,7 +887,7 @@
 
     var go = document.createElement('button');
     go.className = 'btn btn--primary btn--sm';
-    go.textContent = 'Assign';
+    go.textContent = '{{t "reportDetail.assign"}}';
     go.onclick = function() {
       if (!select.value) return;
       popover.remove();
@@ -896,7 +896,7 @@
 
     var cancel = document.createElement('button');
     cancel.className = 'btn btn--ghost btn--sm';
-    cancel.textContent = 'Cancel';
+    cancel.textContent = '{{t "common.cancel"}}';
     cancel.onclick = function() { popover.remove(); };
 
     popover.appendChild(select);
@@ -919,7 +919,7 @@
     if (assignedTo) fd.append('assignedTo', assignedTo);
 
     btn.disabled = true;
-    btn.textContent = 'Assigning...';
+    btn.textContent = '{{t "reportDetail.assigning"}}';
 
     fetch('/reports/' + _scanId + '/assignments', {
       method: 'POST',
@@ -934,23 +934,23 @@
       toggle.type = 'button';
       toggle.className = 'rpt-assigned-toggle rpt-assigned-toggle--assigned';
       toggle.setAttribute('data-assignment-id', data.id || '');
-      toggle.textContent = 'assigned' + (assignedTo ? ' \u00B7 ' + assignedTo : '');
-      toggle.title = 'Click to unassign';
+      toggle.textContent = '{{t "reportDetail.assigned"}}' + (assignedTo ? ' \u00B7 ' + assignedTo : '');
+      toggle.title = '{{t "reportDetail.clickToUnassign"}}';
       toggle.onclick = function() { rptToggleAssignment(toggle); };
       btn.replaceWith(toggle);
     }).catch(function() {
       btn.disabled = false;
-      btn.textContent = 'Assign';
+      btn.textContent = '{{t "reportDetail.assign"}}';
     });
   }
 
   /* Click assigned badge → confirm and unassign */
   function rptToggleAssignment(badge) {
-    if (!confirm('Remove this assignment?')) return;
+    if (!confirm('{{t "reportDetail.confirmRemoveAssignment"}}')) return;
     var id = badge.getAttribute('data-assignment-id');
     if (!id) return;
     badge.disabled = true;
-    badge.textContent = 'Removing...';
+    badge.textContent = '{{t "reportDetail.removing"}}';
 
     fetch('/assignments/' + id, {
       method: 'DELETE',
@@ -961,15 +961,15 @@
       var assignBtn = document.createElement('button');
       assignBtn.type = 'button';
       assignBtn.className = 'rpt-assign-btn';
-      assignBtn.textContent = 'Assign';
-      assignBtn.title = 'Assign this issue';
+      assignBtn.textContent = '{{t "reportDetail.assign"}}';
+      assignBtn.title = '{{t "reportDetail.assignThisIssue"}}';
       // Reconstruct onclick from parent context — simplest: reload
       badge.replaceWith(assignBtn);
       // Need issue data to re-wire — reload is cleanest
       window.location.reload();
     }).catch(function() {
       badge.disabled = false;
-      badge.textContent = 'Unassign failed';
+      badge.textContent = '{{t "reportDetail.unassignFailed"}}';
     });
   }
 

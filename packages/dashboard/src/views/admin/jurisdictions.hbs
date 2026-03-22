@@ -5,7 +5,7 @@
             hx-swap="innerHTML"
             class="btn btn--primary"
             aria-haspopup="dialog">
-      Add Jurisdiction
+      {{t "admin.jurisdictions.addJurisdiction"}}
     </button>
   </div>
 
@@ -15,23 +15,23 @@
   </div>
   {{/if}}
 
-  <p class="text-sm text-muted mb-md"><span id="jurisdictions-counter">Showing {{jurisdictions.length}} of {{total}}</span></p>
+  <p class="text-sm text-muted mb-md"><span id="jurisdictions-counter">{{t "admin.jurisdictions.showing" count=jurisdictions.length total=total}}</span></p>
 
   <div class="search-bar">
-    <label for="jurisdiction-search" class="sr-only">Search jurisdictions</label>
+    <label for="jurisdiction-search" class="sr-only">{{t "admin.jurisdictions.searchLabel"}}</label>
     <input id="jurisdiction-search"
            type="search"
            name="q"
            value="{{q}}"
-           placeholder="Search by name or ID..."
+           placeholder="{{t "admin.jurisdictions.searchPlaceholder"}}"
            hx-get="/admin/jurisdictions"
            hx-trigger="input changed delay:300ms"
            hx-target="#jurisdictions-list"
            hx-swap="innerHTML"
            hx-indicator="#search-spinner"
-           aria-label="Search jurisdictions by name or ID"
+           aria-label="{{t "admin.jurisdictions.searchAriaLabel"}}"
            role="searchbox">
-    <span id="search-spinner" class="htmx-indicator" aria-hidden="true">Searching...</span>
+    <span id="search-spinner" class="htmx-indicator" aria-hidden="true">{{t "common.searching"}}</span>
   </div>
 
   <div id="jurisdictions-list" aria-live="polite">
@@ -39,11 +39,11 @@
       <table aria-label="Jurisdictions">
         <thead>
           <tr>
-            <th scope="col">ID</th>
-            <th scope="col">Name</th>
-            <th scope="col">Type</th>
-            <th scope="col">Parent</th>
-            <th scope="col">Actions</th>
+            <th scope="col">{{t "admin.jurisdictions.colId"}}</th>
+            <th scope="col">{{t "admin.jurisdictions.colName"}}</th>
+            <th scope="col">{{t "admin.jurisdictions.colType"}}</th>
+            <th scope="col">{{t "admin.jurisdictions.colParent"}}</th>
+            <th scope="col">{{t "common.actions"}}</th>
           </tr>
         </thead>
         <tbody id="jurisdictions-table-body">
@@ -58,12 +58,12 @@
                       hx-target="#modal-container"
                       hx-swap="innerHTML"
                       class="btn btn--sm btn--secondary"
-                      aria-label="View {{name}}">View</button>
+                      aria-label="View {{name}}">{{t "common.view"}}</button>
             </td>
           </tr>
           {{else}}
           <tr>
-            <td colspan="5">No jurisdictions found.</td>
+            <td colspan="5">{{t "admin.jurisdictions.noJurisdictions"}}</td>
           </tr>
           {{/each}}
         </tbody>
@@ -78,7 +78,7 @@
               class="btn btn--ghost btn--full"
               aria-label="Load more jurisdictions"
               hx-on::after-request="this.closest('.load-more').remove()">
-        Load more ({{nextOffset}} of {{total}})
+        {{t "admin.jurisdictions.loadMore" offset=nextOffset total=total}}
       </button>
     </div>
     {{/if}}

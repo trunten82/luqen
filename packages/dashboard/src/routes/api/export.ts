@@ -14,21 +14,27 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 // ---------------------------------------------------------------------------
 
 function toCsv(headers: readonly string[], rows: readonly (readonly string[])[]): string {
-  const escape = (val: string): string => {
-    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-      return '"' + val.replace(/"/g, '""') + '"';
-    }
-    return val;
-  };
+  // Always quote every field to handle commas, semicolons, quotes, and newlines
+  // in issue messages, selectors, and HTML context snippets.
+  const escape = (val: string): string => '"' + val.replace(/"/g, '""') + '"';
   const lines = [headers.map(escape).join(',')];
   for (const row of rows) {
     lines.push(row.map((v) => escape(String(v ?? ''))).join(','));
   }
-  return lines.join('\r\n') + '\r\n';
+  // BOM + CRLF for Excel compatibility
+  return '\uFEFF' + lines.join('\r\n') + '\r\n';
 }
 
 function todayStamp(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function siteSlug(siteUrl: string): string {
+  try {
+    return new URL(siteUrl).hostname.replace(/^www\./, '');
+  } catch {
+    return 'unknown';
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -149,17 +155,20 @@ export async function exportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
-      if (
-        scan.status !== 'completed' ||
-        scan.jsonReportPath === undefined ||
-        !existsSync(scan.jsonReportPath)
-      ) {
+      if (scan.status !== 'completed') {
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
       let raw: JsonReportFile;
       try {
-        raw = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
+        const dbReport = db.getReport(id);
+        if (dbReport !== null) {
+          raw = dbReport as JsonReportFile;
+        } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
+          raw = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
+        } else {
+          return reply.code(404).send({ error: 'Report data not available' });
+        }
       } catch {
         return reply.code(500).send({ error: 'Failed to read report data' });
       }
@@ -230,7 +239,7 @@ export async function exportRoutes(
       }
 
       const csv = toCsv(headers, rows);
-      const filename = `luqen-issues-${id}-${todayStamp()}.csv`;
+      const filename = `luqen-issues-${siteSlug(scan.siteUrl)}-${todayStamp()}.csv`;
 
       return reply
         .header('Content-Type', 'text/csv')

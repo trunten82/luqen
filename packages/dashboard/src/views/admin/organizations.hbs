@@ -5,7 +5,7 @@
             hx-swap="innerHTML"
             class="btn btn--primary"
             aria-haspopup="dialog">
-      Add Organization
+      {{t "admin.organizations.addOrganization"}}
     </button>
   </div>
 
@@ -19,10 +19,10 @@
     <table class="table" aria-label="Organizations">
       <thead>
         <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Slug</th>
-          <th scope="col">Created</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "common.name"}}</th>
+          <th scope="col">{{t "admin.organizations.slug"}}</th>
+          <th scope="col">{{t "admin.organizations.created"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody id="organizations-table">
@@ -34,20 +34,20 @@
           <td>
             <a href="/admin/organizations/{{this.id}}/members"
                class="btn btn--sm btn--ghost"
-               aria-label="Manage members for {{this.name}}">Members</a>
+               aria-label="Manage members for {{this.name}}">{{t "admin.organizations.members"}}</a>
             <button hx-post="/admin/organizations/{{this.id}}/delete"
                     hx-confirm="Delete organization {{this.name}}? This cannot be undone."
                     hx-target="closest tr"
                     hx-swap="outerHTML"
                     class="btn btn--sm btn--danger"
                     aria-label="Delete {{this.name}}">
-              Delete
+              {{t "common.delete"}}
             </button>
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="4" class="table__empty">No organizations yet. Create one to enable multi-tenant scoping.</td>
+          <td colspan="4" class="table__empty">{{t "admin.organizations.noOrganizations"}}</td>
         </tr>
         {{/each}}
       </tbody>

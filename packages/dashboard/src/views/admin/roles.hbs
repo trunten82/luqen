@@ -1,6 +1,6 @@
 <section aria-label="Roles management">
   <div class="page-actions">
-    <a href="/admin/roles/new" class="btn btn--primary">Create Role</a>
+    <a href="/admin/roles/new" class="btn btn--primary">{{t "admin.roles.createRole"}}</a>
   </div>
 
   {{#if hasRoles}}
@@ -8,11 +8,11 @@
     <table class="table" aria-label="Roles">
       <thead>
         <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Description</th>
-          <th scope="col">Type</th>
-          <th scope="col">Permissions</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "common.name"}}</th>
+          <th scope="col">{{t "admin.roles.description"}}</th>
+          <th scope="col">{{t "admin.roles.type"}}</th>
+          <th scope="col">{{t "admin.roles.permissions"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody>
@@ -29,15 +29,15 @@
                 <rect x="5" y="9" width="10" height="9" rx="2" stroke="currentColor" stroke-width="1.5"/>
                 <path d="M7 9V6a3 3 0 016 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
-              System
+              {{t "admin.roles.system"}}
             </span>
             {{else}}
-            <span class="badge badge--success">Custom</span>
+            <span class="badge badge--success">{{t "admin.roles.custom"}}</span>
             {{/if}}
           </td>
           <td data-label="Permissions">{{this.permissionCount}}</td>
           <td>
-            <a href="/admin/roles/{{this.id}}/edit" class="btn btn--sm btn--secondary" aria-label="Edit role {{this.name}}">Edit</a>
+            <a href="/admin/roles/{{this.id}}/edit" class="btn btn--sm btn--secondary" aria-label="Edit role {{this.name}}">{{t "common.edit"}}</a>
             {{#if this.canDelete}}
             <button
               hx-delete="/admin/roles/{{this.id}}"
@@ -45,7 +45,7 @@
               hx-headers='{"X-CSRF-Token": "{{../../csrfToken}}"}'
               class="btn btn--sm btn--danger"
               aria-label="Delete role {{this.name}}"
-            >Delete</button>
+            >{{t "common.delete"}}</button>
             {{/if}}
           </td>
         </tr>
@@ -55,7 +55,7 @@
   </div>
   {{else}}
   <div class="empty-state" role="status">
-    <p>No roles found. Create your first custom role.</p>
+    <p>{{t "admin.roles.noRoles"}}</p>
   </div>
   {{/if}}
 </section>

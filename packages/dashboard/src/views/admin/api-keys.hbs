@@ -5,7 +5,7 @@
             hx-target="#modal-container"
             hx-swap="innerHTML"
             aria-haspopup="dialog">
-      Create API Key
+      {{t "admin.apiKeys.createApiKey"}}
     </button>
   </div>
 
@@ -16,11 +16,11 @@
     <table aria-label="API keys">
       <thead>
         <tr>
-          <th scope="col">Label</th>
-          <th scope="col">Status</th>
-          <th scope="col">Created</th>
-          <th scope="col">Last Used</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "admin.apiKeys.label"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "admin.apiKeys.created"}}</th>
+          <th scope="col">{{t "admin.apiKeys.lastUsed"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody id="api-keys-table">
@@ -29,19 +29,19 @@
           <td data-label="Label">{{this.label}}</td>
           <td data-label="Status">
             {{#if this.active}}
-            <span class="badge badge--completed">Active</span>
+            <span class="badge badge--completed">{{t "common.active"}}</span>
             {{else}}
-            <span class="badge badge--failed">Revoked</span>
+            <span class="badge badge--failed">{{t "admin.apiKeys.revoked"}}</span>
             {{/if}}
           </td>
           <td data-label="Created">{{this.created_at}}</td>
-          <td data-label="Last Used">{{#if this.last_used_at}}{{this.last_used_at}}{{else}}Never{{/if}}</td>
+          <td data-label="Last Used">{{#if this.last_used_at}}{{this.last_used_at}}{{else}}{{t "admin.apiKeys.never"}}{{/if}}</td>
           <td>
             <button hx-get="/admin/api-keys/{{this.id}}/view"
                     hx-target="#modal-container"
                     hx-swap="innerHTML"
                     class="btn btn--sm btn--secondary"
-                    aria-label="View {{this.label}}">View</button>
+                    aria-label="View {{this.label}}">{{t "common.view"}}</button>
           </td>
         </tr>
         {{/each}}
@@ -49,6 +49,6 @@
     </table>
   </div>
   {{else}}
-  <p class="text-muted">No API keys found. Create one to allow programmatic access.</p>
+  <p class="text-muted">{{t "admin.apiKeys.noKeys"}}</p>
   {{/if}}
 </section>
