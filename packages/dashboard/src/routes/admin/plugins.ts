@@ -3,6 +3,7 @@ import { requirePermission } from '../../auth/middleware.js';
 import type { PluginManager } from '../../plugins/manager.js';
 import type { RegistryEntry, ConfigField } from '../../plugins/types.js';
 import { escapeHtml } from './helpers.js';
+import type { AuditLogger } from '../../audit/logger.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -106,6 +107,7 @@ export async function pluginAdminRoutes(
   pluginManager: PluginManager,
   registryEntries: readonly RegistryEntry[],
   pluginsDir?: string,
+  auditLogger?: AuditLogger,
 ): Promise<void> {
   // GET /admin/plugins — render plugins page
   server.get(
@@ -153,6 +155,7 @@ export async function pluginAdminRoutes(
 
       try {
         const plugin = await pluginManager.install(packageName);
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'plugin.install', resourceType: 'plugin', resourceId: plugin.id, details: { packageName: plugin.packageName, version: plugin.version }, ipAddress: request.ip });
         return reply
           .header('content-type', 'text/html')
           .header('hx-trigger', 'pluginChanged')
@@ -176,6 +179,7 @@ export async function pluginAdminRoutes(
     async (request, reply) => {
       try {
         const plugin = await pluginManager.activate(request.params.id);
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'plugin.activate', resourceType: 'plugin', resourceId: request.params.id, details: { packageName: plugin.packageName }, ipAddress: request.ip });
         return reply
           .header('content-type', 'text/html')
           .header('hx-trigger', 'pluginChanged')
@@ -199,6 +203,7 @@ export async function pluginAdminRoutes(
     async (request, reply) => {
       try {
         const plugin = await pluginManager.deactivate(request.params.id);
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'plugin.deactivate', resourceType: 'plugin', resourceId: request.params.id, details: { packageName: plugin.packageName }, ipAddress: request.ip });
         return reply
           .header('content-type', 'text/html')
           .header('hx-trigger', 'pluginChanged')

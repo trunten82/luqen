@@ -26,6 +26,7 @@ export const ALL_PERMISSIONS = [
   { id: 'admin.users', label: 'Manage compliance API users', group: 'Administration' },
   { id: 'admin.roles', label: 'Manage roles', group: 'Administration' },
   { id: 'admin.system', label: 'System settings', group: 'Administration' },
+  { id: 'audit.view', label: 'View audit log', group: 'Administration' },
 ] as const;
 
 export type PermissionId = typeof ALL_PERMISSIONS[number]['id'];

@@ -1,0 +1,52 @@
+Thank you for installing {{ .Chart.Name }} v{{ .Chart.Version }}.
+
+Your release name is: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+== Components deployed ==
+
+  Compliance API:  {{ include "luqen.fullname" . }}-compliance:{{ .Values.compliance.port }}
+  Dashboard:       {{ include "luqen.fullname" . }}-dashboard:{{ .Values.dashboard.port }}
+{{- if .Values.pa11y.enabled }}
+  Pa11y Scanner:   {{ include "luqen.fullname" . }}-webservice:{{ .Values.pa11y.port }}
+{{- end }}
+{{- if .Values.redis.enabled }}
+  Redis:           {{ include "luqen.fullname" . }}-redis:6379
+{{- end }}
+{{- if .Values.monitor.enabled }}
+  Monitor:         {{ include "luqen.fullname" . }}-monitor:{{ .Values.monitor.port }}
+{{- end }}
+
+== Access ==
+
+{{- if .Values.ingress.enabled }}
+
+Ingress is enabled. Access the dashboard at:
+{{- if .Values.ingress.tls.enabled }}
+  https://{{ .Values.ingress.host }}
+{{- else }}
+  http://{{ .Values.ingress.host }}
+{{- end }}
+
+{{- else }}
+
+Ingress is not enabled. To access the dashboard, use port-forwarding:
+
+  kubectl port-forward svc/{{ include "luqen.fullname" . }}-dashboard {{ .Values.dashboard.port }}:{{ .Values.dashboard.port }} -n {{ .Release.Namespace }}
+
+Then open http://localhost:{{ .Values.dashboard.port }} in your browser.
+
+{{- end }}
+
+== Important ==
+
+1. Replace placeholder secrets before using in production:
+   - DASHBOARD_SESSION_SECRET (generate with: openssl rand -hex 32)
+   - JWT RSA key pair (generate with: openssl genrsa -out private.pem 4096)
+
+2. For multi-replica deployments, switch to PostgreSQL:
+   --set compliance.dbAdapter=postgres
+   --set compliance.dbUrl=postgresql://user:pass@host:5432/dbname
+
+3. View logs:
+   kubectl logs -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }} --all-containers

@@ -3,6 +3,7 @@ import type Database from 'better-sqlite3';
 import { requirePermission } from '../../auth/middleware.js';
 import { generateApiKey, hashApiKey, storeApiKey } from '../../auth/api-key.js';
 import { toastHtml, escapeHtml } from './helpers.js';
+import type { AuditLogger } from '../../audit/logger.js';
 
 interface ApiKeyRow {
   readonly id: string;
@@ -47,6 +48,7 @@ function keyRowHtml(row: ApiKeyRow): string {
 export async function apiKeyRoutes(
   server: FastifyInstance,
   db: Database.Database,
+  auditLogger?: AuditLogger,
 ): Promise<void> {
   // GET /admin/api-keys — list all keys
   server.get(
@@ -128,6 +130,8 @@ export async function apiKeyRoutes(
           last_used_at: null,
         };
 
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.create', resourceType: 'api_key', resourceId: id, details: { label }, ipAddress: request.ip });
+
         const newKeyAlert = `<div id="new-key-alert" hx-swap-oob="true" class="alert alert--warning" role="alert" style="margin-bottom:var(--space-md)">
   <div class="alert__body">
     <p class="alert__title">New API Key Generated</p>
@@ -175,6 +179,8 @@ export async function apiKeyRoutes(
             .header('content-type', 'text/html')
             .send(toastHtml('API key not found.', 'error'));
         }
+
+        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.delete', resourceType: 'api_key', resourceId: id, details: { label: row.label }, ipAddress: request.ip });
 
         return reply
           .code(200)

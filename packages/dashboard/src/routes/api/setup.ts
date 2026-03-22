@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { UserDb } from '../../db/users.js';
 import type { AuthService } from '../../auth/auth-service.js';
+import { validateUsername, validatePassword } from '../../validation.js';
 
 interface SetupBody {
   username?: string;
@@ -55,10 +56,14 @@ export async function setupRoutes(
         });
       }
 
-      if (password.length < 8) {
-        return reply.code(400).send({
-          error: 'Password must be at least 8 characters.',
-        });
+      const usernameCheck = validateUsername(username);
+      if (!usernameCheck.valid) {
+        return reply.code(400).send({ error: usernameCheck.error });
+      }
+
+      const passwordCheck = validatePassword(password);
+      if (!passwordCheck.valid) {
+        return reply.code(400).send({ error: passwordCheck.error });
       }
 
       const validRoles = new Set(['viewer', 'user', 'developer', 'admin', 'executive']);

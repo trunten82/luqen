@@ -91,7 +91,7 @@ describe('GET /admin/dashboard-users', () => {
   });
 
   it('includes users after creation', async () => {
-    await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/dashboard-users' });
 
@@ -147,7 +147,7 @@ describe('POST /admin/dashboard-users', () => {
     const response = await ctx.server.inject({
       method: 'POST',
       url: '/admin/dashboard-users',
-      payload: 'username=alice&password=s3cr3tpass&role=user',
+      payload: 'username=alice&password=S3cr3tPass!&role=user',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
@@ -161,7 +161,7 @@ describe('POST /admin/dashboard-users', () => {
     const response = await ctx.server.inject({
       method: 'POST',
       url: '/admin/dashboard-users',
-      payload: 'password=secret123',
+      payload: 'password=Secret123!',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
@@ -183,7 +183,7 @@ describe('POST /admin/dashboard-users', () => {
     const response = await ctx.server.inject({
       method: 'POST',
       url: '/admin/dashboard-users',
-      payload: 'username=alice&password=secret123&role=superuser',
+      payload: 'username=alice&password=Secret123!&role=superuser',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
@@ -191,12 +191,12 @@ describe('POST /admin/dashboard-users', () => {
   });
 
   it('returns 400 for duplicate username', async () => {
-    await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({
       method: 'POST',
       url: '/admin/dashboard-users',
-      payload: 'username=alice&password=newpassword&role=user',
+      payload: 'username=alice&password=NewPass123!&role=user',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
@@ -219,7 +219,7 @@ describe('PATCH /admin/dashboard-users/:id/role', () => {
   });
 
   it('updates user role and returns updated row', async () => {
-    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    const user = await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({
       method: 'PATCH',
@@ -236,7 +236,7 @@ describe('PATCH /admin/dashboard-users/:id/role', () => {
   });
 
   it('returns 400 for invalid role', async () => {
-    const user = await ctx.userDb.createUser('bob', 'password123', 'viewer');
+    const user = await ctx.userDb.createUser('bob', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({
       method: 'PATCH',
@@ -263,7 +263,7 @@ describe('POST /admin/dashboard-users/:id/deactivate', () => {
   });
 
   it('deactivates user and returns updated row', async () => {
-    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    const user = await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -296,7 +296,7 @@ describe('Dashboard users admin access control', () => {
     const response = await ctx.server.inject({
       method: 'POST',
       url: '/admin/dashboard-users',
-      payload: 'username=alice&password=secret123&role=viewer',
+      payload: 'username=alice&password=Secret123!&role=viewer',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
     expect(response.statusCode).toBe(403);
@@ -319,7 +319,7 @@ describe('POST /admin/dashboard-users/:id/activate', () => {
   });
 
   it('activates a deactivated user', async () => {
-    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    const user = await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
     ctx.userDb.deactivateUser(user.id);
 
     const response = await ctx.server.inject({
@@ -359,7 +359,7 @@ describe('DELETE /admin/dashboard-users/:id', () => {
   });
 
   it('deletes user permanently', async () => {
-    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    const user = await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({
       method: 'DELETE',
@@ -398,7 +398,7 @@ describe('GET /admin/dashboard-users/:id/reset-password', () => {
   });
 
   it('returns modal HTML for existing user', async () => {
-    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    const user = await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({
       method: 'GET',
@@ -437,12 +437,12 @@ describe('POST /admin/dashboard-users/:id/reset-password', () => {
   });
 
   it('resets password for existing user', async () => {
-    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    const user = await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({
       method: 'POST',
       url: `/admin/dashboard-users/${user.id}/reset-password`,
-      payload: 'newPassword=newsecret123&confirmPassword=newsecret123',
+      payload: 'newPassword=newSecret123!&confirmPassword=newSecret123!',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
@@ -450,12 +450,12 @@ describe('POST /admin/dashboard-users/:id/reset-password', () => {
     expect(response.body).toContain('Password reset successfully');
 
     // Verify the new password works
-    const valid = await ctx.userDb.verifyPassword('alice', 'newsecret123');
+    const valid = await ctx.userDb.verifyPassword('alice', 'newSecret123!');
     expect(valid).toBe(true);
   });
 
   it('rejects short password', async () => {
-    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    const user = await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -469,12 +469,12 @@ describe('POST /admin/dashboard-users/:id/reset-password', () => {
   });
 
   it('rejects mismatched passwords', async () => {
-    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    const user = await ctx.userDb.createUser('alice', 'Password123!', 'viewer');
 
     const response = await ctx.server.inject({
       method: 'POST',
       url: `/admin/dashboard-users/${user.id}/reset-password`,
-      payload: 'newPassword=newsecret123&confirmPassword=different123',
+      payload: 'newPassword=newSecret123!&confirmPassword=Different1!',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
@@ -486,7 +486,7 @@ describe('POST /admin/dashboard-users/:id/reset-password', () => {
     const response = await ctx.server.inject({
       method: 'POST',
       url: '/admin/dashboard-users/nonexistent-id/reset-password',
-      payload: 'newPassword=newsecret123&confirmPassword=newsecret123',
+      payload: 'newPassword=newSecret123!&confirmPassword=newSecret123!',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 

@@ -704,6 +704,29 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
 # ==============================================================================
+# Webhooks
+# ==============================================================================
+webhooks:
+  scanComplete:
+    post:
+      summary: Scan completed
+      description: Fired when an accessibility scan finishes successfully.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookScanEvent'
+  scanFailed:
+    post:
+      summary: Scan failed
+      description: Fired when an accessibility scan fails.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookScanEvent'
+
+# ==============================================================================
 # Components
 # ==============================================================================
 components:
@@ -862,3 +885,45 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    # ── Webhook events ────────────────────────────────────────────────────
+    WebhookScanEvent:
+      type: object
+      required: [event, timestamp, scan]
+      properties:
+        event:
+          type: string
+          enum: [scan.complete, scan.failed]
+        timestamp:
+          type: string
+          format: date-time
+        scan:
+          type: object
+          required: [id, siteUrl, status]
+          properties:
+            id:
+              type: string
+            siteUrl:
+              type: string
+            status:
+              type: string
+              enum: [completed, failed]
+            totalIssues:
+              type: integer
+            errors:
+              type: integer
+            warnings:
+              type: integer
+            notices:
+              type: integer
+            pagesScanned:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+            completedAt:
+              type: string
+              format: date-time
+        signature:
+          type: string
+          description: HMAC-SHA256 signature (X-Luqen-Signature header)

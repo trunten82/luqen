@@ -2,200 +2,274 @@
 
 # Kubernetes Installation
 
-Deploy luqen services to Kubernetes using Kustomize manifests from the `k8s/` directory.
+Deploy Luqen to Kubernetes using the Helm chart in `k8s/helm/luqen/`.
 
 ---
 
 ## Prerequisites
 
 - Kubernetes 1.28+
-- kubectl
-- kustomize (or `kubectl apply -k`)
+- kubectl configured for your cluster
+- Helm 3.12+
 
 ---
 
-## Repository layout
-
-The `k8s/` directory at the monorepo root contains:
-
-```
-k8s/
-├── base/                   # Shared base manifests
-│   ├── compliance/         # Compliance service Deployment, Service, ConfigMap
-│   ├── dashboard/          # Dashboard Deployment, Service
-│   └── kustomization.yaml
-├── overlays/
-│   ├── dev/                # Dev overlay (reduced replicas, NodePort)
-│   └── prod/               # Production overlay (PodDisruptionBudget, HPA)
-└── README.md
-```
-
----
-
-## Deploy to development
+## Quick start
 
 ```bash
-kubectl apply -k k8s/overlays/dev
+helm install luqen ./k8s/helm/luqen
 ```
 
----
+This deploys with default values: compliance API, dashboard, pa11y scanner, and Redis cache — all using SQLite and in-cluster networking.
 
-## Deploy to production
+Access via port-forward:
 
 ```bash
-# 1. Create secrets (do not commit these)
-kubectl create secret generic luqen-compliance-secrets \
-  --from-literal=JWT_PRIVATE_KEY="$(cat keys/private.pem)" \
-  --from-literal=JWT_PUBLIC_KEY="$(cat keys/public.pem)"
+kubectl port-forward svc/luqen-dashboard 5000:5000
+```
 
-kubectl create secret generic luqen-dashboard-secrets \
-  --from-literal=DASHBOARD_SESSION_SECRET="$(openssl rand -base64 32)" \
-  --from-literal=DASHBOARD_COMPLIANCE_CLIENT_SECRET="<client-secret>"
+Then open http://localhost:5000.
 
-# 2. Apply the production overlay
-kubectl apply -k k8s/overlays/prod
+---
+
+## Configuration
+
+All values are defined in `k8s/helm/luqen/values.yaml`. Override them with `--set` flags or a custom values file (`-f my-values.yaml`).
+
+### Minimal (development)
+
+```bash
+helm install luqen ./k8s/helm/luqen \
+  --set compliance.replicas=1 \
+  --set dashboard.replicas=1 \
+  --set redis.enabled=false \
+  --set pa11y.enabled=false
+```
+
+### Standard (staging)
+
+```bash
+helm install luqen ./k8s/helm/luqen \
+  --set dashboard.sessionSecret="$(openssl rand -hex 32)" \
+  --set ingress.enabled=true \
+  --set ingress.host=luqen.staging.example.com
+```
+
+### Full (production)
+
+Create a `production-values.yaml`:
+
+```yaml
+global:
+  imageTag: "1.1.0"
+  imagePullPolicy: Always
+
+compliance:
+  replicas: 3
+  dbAdapter: postgres
+  dbUrl: "postgresql://luqen:secret@pg-host:5432/compliance"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "500m"
+    limits:
+      memory: "512Mi"
+      cpu: "1000m"
+  persistence:
+    data:
+      enabled: false   # Not needed with PostgreSQL
+    keys:
+      enabled: true
+      size: 10Mi
+
+dashboard:
+  replicas: 3
+  sessionSecret: "<generate-with-openssl-rand-hex-32>"
+  complianceClientId: "<your-client-id>"
+  complianceClientSecret: "<your-client-secret>"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "500m"
+    limits:
+      memory: "512Mi"
+      cpu: "1000m"
+
+pa11y:
+  enabled: true
+
+redis:
+  enabled: true
+
+monitor:
+  enabled: true
+
+ingress:
+  enabled: true
+  host: luqen.example.com
+  tls:
+    enabled: true
+    clusterIssuer: letsencrypt-prod
+
+secrets:
+  jwtPrivateKey: |
+    -----BEGIN RSA PRIVATE KEY-----
+    <your-private-key>
+    -----END RSA PRIVATE KEY-----
+  jwtPublicKey: |
+    -----BEGIN PUBLIC KEY-----
+    <your-public-key>
+    -----END PUBLIC KEY-----
+```
+
+Deploy:
+
+```bash
+helm install luqen ./k8s/helm/luqen -f production-values.yaml
+```
+
+Upgrade:
+
+```bash
+helm upgrade luqen ./k8s/helm/luqen -f production-values.yaml
 ```
 
 ---
 
-## Configuration via ConfigMaps
+## Ingress configuration
 
-The base manifests use a ConfigMap for non-secret configuration:
+Enable ingress to expose the dashboard and compliance API through a single hostname:
 
-```yaml
-# k8s/base/compliance/configmap.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: luqen-compliance-config
-data:
-  COMPLIANCE_PORT: "4000"
-  COMPLIANCE_HOST: "0.0.0.0"
-  COMPLIANCE_DB_ADAPTER: "sqlite"
-  COMPLIANCE_DB_PATH: "/data/compliance.db"
+```bash
+helm install luqen ./k8s/helm/luqen \
+  --set ingress.enabled=true \
+  --set ingress.host=luqen.example.com \
+  --set ingress.className=nginx \
+  --set ingress.tls.enabled=true \
+  --set ingress.tls.clusterIssuer=letsencrypt-prod
 ```
 
-Override values in your overlay's `kustomization.yaml`:
+Routing rules:
+- `/api/*` routes to the compliance service
+- `/*` routes to the dashboard
+
+The ingress template includes security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) and configurable proxy timeouts for long-running scan operations.
+
+The `proxy-buffering: off` annotation may be needed for SSE progress streams — add it via `ingress.annotations`:
 
 ```yaml
-configMapGenerator:
-  - name: luqen-compliance-config
-    behavior: merge
-    literals:
-      - COMPLIANCE_DB_ADAPTER=postgres
-      - COMPLIANCE_DB_URL=postgres://user:pass@db-host:5432/compliance
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
 ```
+
+---
+
+## Scaling
+
+### Horizontal scaling
+
+Increase replicas for the compliance API and dashboard:
+
+```bash
+helm upgrade luqen ./k8s/helm/luqen \
+  --set compliance.replicas=5 \
+  --set dashboard.replicas=5
+```
+
+### Database considerations
+
+SQLite does not support concurrent writes. For multi-replica deployments, switch to PostgreSQL:
+
+```bash
+helm upgrade luqen ./k8s/helm/luqen \
+  --set compliance.dbAdapter=postgres \
+  --set compliance.dbUrl="postgresql://user:pass@host:5432/compliance" \
+  --set compliance.persistence.data.enabled=false
+```
+
+### Redis for multi-instance
+
+When running multiple dashboard replicas, enable Redis for SSE pub/sub and scan queue coordination:
+
+```bash
+helm upgrade luqen ./k8s/helm/luqen --set redis.enabled=true
+```
+
+---
+
+## Monitoring
+
+Enable the monitoring sidecar for health-check aggregation:
+
+```bash
+helm upgrade luqen ./k8s/helm/luqen --set monitor.enabled=true
+```
+
+The monitor service exposes metrics on port 9090 and checks the health of both the compliance API and dashboard.
 
 ---
 
 ## Persistent volumes
 
-The compliance service needs a persistent volume for SQLite data and JWT keys:
+The chart creates PVCs for:
+
+| PVC | Purpose | Default size |
+|-----|---------|-------------|
+| `*-compliance-data` | SQLite database | 2Gi |
+| `*-compliance-keys` | JWT RSA key pair | 10Mi |
+| `*-dashboard-reports` | Generated PDF reports (optional) | 5Gi |
+
+Disable PVCs you do not need:
 
 ```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: luqen-compliance-data
-spec:
-  accessModes: [ReadWriteOnce]
-  resources:
-    requests:
-      storage: 5Gi
-```
-
-For multi-replica deployments, switch to PostgreSQL (`COMPLIANCE_DB_ADAPTER=postgres`) — SQLite does not support concurrent writes from multiple pods.
-
----
-
-## Ingress
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: luqen-ingress
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-buffering: "off"   # Required for SSE
-spec:
-  rules:
-    - host: luqen.example.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: luqen-dashboard
-                port:
-                  number: 5000
-    - host: compliance.example.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: luqen-compliance
-                port:
-                  number: 4000
-```
-
-The `proxy-buffering: off` annotation is required for the dashboard's SSE progress stream to work correctly.
-
----
-
-## Health checks
-
-The compliance service exposes `GET /api/v1/health` (no auth required). Use this as your readiness and liveness probe:
-
-```yaml
-readinessProbe:
-  httpGet:
-    path: /api/v1/health
-    port: 4000
-  initialDelaySeconds: 5
-  periodSeconds: 10
-livenessProbe:
-  httpGet:
-    path: /api/v1/health
-    port: 4000
-  initialDelaySeconds: 15
-  periodSeconds: 30
+compliance:
+  persistence:
+    data:
+      enabled: false   # When using PostgreSQL
+    keys:
+      enabled: true    # Always needed for JWT signing
 ```
 
 ---
 
-## Multi-Tenant Considerations
+## Secrets management
 
-Multi-tenancy in luqen is entirely query-level — no separate databases, schemas, or per-org pods are required. A single deployment serves all organizations.
+The chart creates a single Secret resource containing all sensitive values. For production, consider using:
 
-### Request routing
+- [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets)
+- [External Secrets Operator](https://external-secrets.io/)
+- [Vault Agent Injector](https://developer.hashicorp.com/vault/docs/platform/k8s/injector)
 
-The `X-Org-Id` header is passed from the dashboard to the compliance service on every API call. Ensure your ingress and service mesh do not strip custom headers.
-
-### Service-to-service authentication
-
-In production, set the `COMPLIANCE_API_KEY` environment variable on both the dashboard and compliance service. The dashboard sends this key as a shared secret when calling the compliance API, providing an additional layer of trust beyond JWT tokens.
-
-```yaml
-# Add to dashboard and compliance secrets
-kubectl create secret generic luqen-service-auth \
-  --from-literal=COMPLIANCE_API_KEY="$(openssl rand -base64 32)"
-```
-
-### Session management
-
-The dashboard stores the user's active organization context in their session. When a user switches orgs via the sidebar org switcher, the session is updated and all subsequent requests carry the new `X-Org-Id`.
-
-### Data cleanup
-
-When decommissioning an organization, call `DELETE /api/v1/orgs/:id/data` to remove all org-specific data. This is safe to run while other orgs continue operating — it only affects records matching the specified org ID.
-
-### Scaling
-
-Because tenancy is query-level, scaling works the same as a single-tenant deployment. Add replicas via HPA as load increases — all replicas serve all organizations. If using SQLite, switch to PostgreSQL before scaling beyond one replica (see [Persistent volumes](#persistent-volumes)).
+The secret has `helm.sh/resource-policy: keep` to prevent deletion on `helm uninstall`.
 
 ---
 
-*See also: [installation/docker.md](docker.md) | [installation/cloud.md](cloud.md) | [configuration/compliance.md](../configuration/compliance.md)*
+## Multi-tenancy
+
+Multi-tenancy is query-level — no separate databases, schemas, or per-org pods are required. A single deployment serves all organizations. The `X-Org-Id` header is passed from the dashboard to the compliance service on every API call. Ensure your ingress does not strip custom headers.
+
+---
+
+## Uninstall
+
+```bash
+helm uninstall luqen
+```
+
+Note: PVCs and the secrets resource are retained by default. Delete manually if no longer needed:
+
+```bash
+kubectl delete pvc -l app.kubernetes.io/instance=luqen
+kubectl delete secret -l app.kubernetes.io/instance=luqen
+```
+
+---
+
+## Legacy Kustomize manifests
+
+The original Kustomize manifests remain available in `k8s/` (outside the `helm/` directory) for users who prefer `kubectl apply -k`. The Helm chart is the recommended approach for new deployments.
+
+---
+
+*See also: [installation/docker.md](docker.md) | [installation/cloud.md](cloud.md)*
