@@ -406,4 +406,104 @@ describe('PATCH /admin/plugins/:id/config', () => {
     expect(response.statusCode).toBe(500);
     expect(response.body).toContain('not found');
   });
+
+  it('returns text/html error response when manifest is missing for installed plugin', async () => {
+    // Plugin is in DB but no actual package installed on disk — configure will
+    // fail to read the manifest and return an HTML error fragment (not a 4xx JSON).
+    const db = ctx.storage.getRawDatabase();
+    db
+      .prepare(
+        `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
+         VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
+      )
+      .run({
+        id: 'patch-cfg-1',
+        package_name: '@luqen/plugin-notify-slack',
+        type: 'notification',
+        version: '1.0.0',
+        config: '{}',
+        status: 'inactive',
+        installed_at: new Date().toISOString(),
+      });
+
+    const response = await ctx.server.inject({
+      method: 'PATCH',
+      url: '/admin/plugins/patch-cfg-1/config',
+      payload: 'webhook_url=https%3A%2F%2Fhooks.slack.com%2Ftest',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    // Plugin configure fails when manifest.json cannot be read from disk
+    expect(response.statusCode).toBe(500);
+    expect(response.headers['content-type']).toContain('text/html');
+    expect(response.body).toContain('alert--error');
+  });
+});
+
+// ── Access control for write endpoints ───────────────────────────────────────
+
+describe('Plugin write endpoints require admin.system permission', () => {
+  it('non-admin gets 403 on POST /admin/plugins/install', async () => {
+    const ctx = await createTestServer('viewer');
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/plugins/install',
+      payload: 'packageName=%40luqen%2Fplugin-notify-slack',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on POST /admin/plugins/:id/activate', async () => {
+    const ctx = await createTestServer('user');
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/plugins/some-id/activate',
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on POST /admin/plugins/:id/deactivate', async () => {
+    const ctx = await createTestServer('user');
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/plugins/some-id/deactivate',
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on DELETE /admin/plugins/:id', async () => {
+    const ctx = await createTestServer('developer');
+    const response = await ctx.server.inject({
+      method: 'DELETE',
+      url: '/admin/plugins/some-id',
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on GET /admin/plugins/:id/configure', async () => {
+    const ctx = await createTestServer('developer');
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/plugins/some-id/configure',
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on PATCH /admin/plugins/:id/config', async () => {
+    const ctx = await createTestServer('developer');
+    const response = await ctx.server.inject({
+      method: 'PATCH',
+      url: '/admin/plugins/some-id/config',
+      payload: 'key=value',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
 });

@@ -239,6 +239,163 @@ describe('Dashboard users admin access control', () => {
   });
 });
 
+// ── Fine-grained permission tests ─────────────────────────────────────────────
+
+async function createServerWithPerms(permissions: string[]): Promise<TestContext> {
+  const dbPath = join(tmpdir(), `test-du-perms-${randomUUID()}.db`);
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
+
+  const server = Fastify({ logger: false });
+  await server.register(import('@fastify/formbody'));
+  await registerSession(server, TEST_SESSION_SECRET);
+
+  server.decorateReply(
+    'view',
+    function (this: FastifyReply, template: string, data: unknown) {
+      return this.code(200).header('content-type', 'application/json').send(
+        JSON.stringify({ template, data }),
+      );
+    },
+  );
+
+  server.addHook('preHandler', async (request) => {
+    request.user = { id: 'test-user-id', username: 'testadmin', role: 'user' };
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
+  });
+
+  await dashboardUserRoutes(server, storage);
+  await server.ready();
+
+  const cleanup = (): void => {
+    void storage.disconnect();
+    if (existsSync(dbPath)) rmSync(dbPath);
+    void server.close();
+  };
+
+  return { server, storage, cleanup };
+}
+
+describe('Dashboard users fine-grained permission checks', () => {
+  it('users.create allows POST /admin/dashboard-users', async () => {
+    const ctx = await createServerWithPerms(['users.create']);
+    const response = await ctx.server.inject({
+      method: 'POST', url: '/admin/dashboard-users',
+      payload: 'username=newuser&password=Secret123!&role=viewer',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(200);
+    ctx.cleanup();
+  });
+
+  it('missing users.create gets 403 on POST /admin/dashboard-users', async () => {
+    const ctx = await createServerWithPerms(['users.delete']);
+    const response = await ctx.server.inject({
+      method: 'POST', url: '/admin/dashboard-users',
+      payload: 'username=newuser&password=Secret123!&role=viewer',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('users.delete allows DELETE /admin/dashboard-users/:id', async () => {
+    const ctx = await createServerWithPerms(['users.delete']);
+    const user = await ctx.storage.users.createUser('todelete', 'Password123!', 'viewer');
+    const response = await ctx.server.inject({
+      method: 'DELETE', url: `/admin/dashboard-users/${user.id}`,
+    });
+    expect(response.statusCode).toBe(200);
+    ctx.cleanup();
+  });
+
+  it('missing users.delete gets 403 on DELETE /admin/dashboard-users/:id', async () => {
+    const ctx = await createServerWithPerms(['users.create']);
+    const user = await ctx.storage.users.createUser('todelete2', 'Password123!', 'viewer');
+    const response = await ctx.server.inject({
+      method: 'DELETE', url: `/admin/dashboard-users/${user.id}`,
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('users.activate allows POST /admin/dashboard-users/:id/activate', async () => {
+    const ctx = await createServerWithPerms(['users.activate']);
+    const user = await ctx.storage.users.createUser('toactivate', 'Password123!', 'viewer');
+    await ctx.storage.users.deactivateUser(user.id);
+    const response = await ctx.server.inject({
+      method: 'POST', url: `/admin/dashboard-users/${user.id}/activate`,
+    });
+    expect(response.statusCode).toBe(200);
+    ctx.cleanup();
+  });
+
+  it('missing users.activate gets 403 on POST /admin/dashboard-users/:id/activate', async () => {
+    const ctx = await createServerWithPerms(['users.create']);
+    const user = await ctx.storage.users.createUser('toactivate2', 'Password123!', 'viewer');
+    await ctx.storage.users.deactivateUser(user.id);
+    const response = await ctx.server.inject({
+      method: 'POST', url: `/admin/dashboard-users/${user.id}/activate`,
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('users.activate allows POST /admin/dashboard-users/:id/deactivate', async () => {
+    const ctx = await createServerWithPerms(['users.activate']);
+    const user = await ctx.storage.users.createUser('todeactivate', 'Password123!', 'viewer');
+    const response = await ctx.server.inject({
+      method: 'POST', url: `/admin/dashboard-users/${user.id}/deactivate`,
+    });
+    expect(response.statusCode).toBe(200);
+    ctx.cleanup();
+  });
+
+  it('users.reset_password allows GET /admin/dashboard-users/:id/reset-password', async () => {
+    const ctx = await createServerWithPerms(['users.reset_password']);
+    const user = await ctx.storage.users.createUser('resetme', 'Password123!', 'viewer');
+    const response = await ctx.server.inject({
+      method: 'GET', url: `/admin/dashboard-users/${user.id}/reset-password`,
+    });
+    expect(response.statusCode).toBe(200);
+    ctx.cleanup();
+  });
+
+  it('missing users.reset_password gets 403 on GET /admin/dashboard-users/:id/reset-password', async () => {
+    const ctx = await createServerWithPerms(['users.create']);
+    const user = await ctx.storage.users.createUser('resetme2', 'Password123!', 'viewer');
+    const response = await ctx.server.inject({
+      method: 'GET', url: `/admin/dashboard-users/${user.id}/reset-password`,
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('users.roles allows PATCH /admin/dashboard-users/:id/role', async () => {
+    const ctx = await createServerWithPerms(['users.roles']);
+    const user = await ctx.storage.users.createUser('rolechange', 'Password123!', 'viewer');
+    const response = await ctx.server.inject({
+      method: 'PATCH', url: `/admin/dashboard-users/${user.id}/role`,
+      payload: 'role=user',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(200);
+    ctx.cleanup();
+  });
+
+  it('missing users.roles gets 403 on PATCH /admin/dashboard-users/:id/role', async () => {
+    const ctx = await createServerWithPerms(['users.create']);
+    const user = await ctx.storage.users.createUser('rolechange2', 'Password123!', 'viewer');
+    const response = await ctx.server.inject({
+      method: 'PATCH', url: `/admin/dashboard-users/${user.id}/role`,
+      payload: 'role=user',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+});
+
 // ── POST /admin/dashboard-users/:id/activate ────────────────────────────────
 
 describe('POST /admin/dashboard-users/:id/activate', () => {
