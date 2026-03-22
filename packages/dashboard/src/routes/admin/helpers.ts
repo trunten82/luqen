@@ -24,7 +24,7 @@ export function getOrgId(request: FastifyRequest): string | undefined {
 }
 
 export function toastHtml(message: string, type: 'success' | 'error' = 'success'): string {
-  return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${message}</div>`;
+  return `<div id="toast" hx-swap-oob="true" role="alert" aria-live="assertive" class="toast toast--${type}">${escapeHtml(message)}</div>`;
 }
 
 export function escapeHtml(text: string): string {

@@ -471,6 +471,7 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'a
     `,
   },
   {
+    id: '018',
     name: 'add-json-report-column',
     sql: `
 ALTER TABLE scan_records ADD COLUMN json_report TEXT;

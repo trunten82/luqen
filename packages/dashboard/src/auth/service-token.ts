@@ -54,17 +54,22 @@ export class ServiceTokenManager {
     });
 
     if (!response.ok) {
+      const body = await response.text().catch(() => '');
       this.token = null;
-      return;
+      throw new Error(`Token endpoint returned ${response.status}: ${body.slice(0, 200)}`);
     }
 
-    const data = (await response.json()) as { access_token: string; expires_in: number };
-    this.token = data.access_token;
-    this.expiresAt = Date.now() + data.expires_in * 1000;
+    const raw = (await response.json()) as Record<string, unknown>;
+    if (typeof raw['access_token'] !== 'string' || typeof raw['expires_in'] !== 'number' || raw['expires_in'] <= 0) {
+      this.token = null;
+      throw new Error('Malformed token response from compliance service');
+    }
+    this.token = raw['access_token'];
+    this.expiresAt = Date.now() + (raw['expires_in'] as number) * 1000;
 
     // Schedule refresh 5 minutes before expiry
     if (this.refreshTimer !== null) clearTimeout(this.refreshTimer);
-    const refreshIn = Math.max((data.expires_in - 300) * 1000, 30_000);
+    const refreshIn = Math.max(((raw['expires_in'] as number) - 300) * 1000, 30_000);
     this.refreshTimer = setTimeout(() => { void this.refresh(); }, refreshIn);
     this.refreshTimer.unref(); // Don't prevent process exit
   }

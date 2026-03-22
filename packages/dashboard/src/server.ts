@@ -461,7 +461,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await server.register(mercurius, {
     schema: graphqlSchema,
     resolvers: graphqlResolvers as Parameters<typeof mercurius>[1]['resolvers'],
-    graphiql: true,
+    graphiql: process.env['NODE_ENV'] !== 'production',
     context: (request): GraphQLContext => ({
       db,
       userDb,

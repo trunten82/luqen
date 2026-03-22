@@ -168,11 +168,11 @@ export class ScanOrchestrator {
     // Enqueue without awaiting — background execution
     // Emit queued event so the UI knows the scan is waiting if queue is full
     if (this.queue.isAtCapacity()) {
-      this.emitter.emit(`scan:${scanId}`, {
+      this.emit(scanId, {
         type: 'scan_start',
         timestamp: new Date().toISOString(),
         data: {},
-      } satisfies ScanProgressEvent);
+      });
     }
     void this.queue.enqueue(() => this.runScan(scanId, config));
   }
@@ -423,9 +423,6 @@ export class ScanOrchestrator {
         completedAt: new Date().toISOString(),
       };
 
-      // Placeholder for enriched data (populated by core if available)
-      let templateIssues: unknown[] = [];
-
       // Summary
       reportData.summary = {
         pagesScanned,
@@ -439,15 +436,6 @@ export class ScanOrchestrator {
       reportData.pages = scanPages.length > 0
         ? scanPages
         : [{ url: config.siteUrl, issues: allIssues, issueCount: allIssues.length }];
-
-      // Template issues (deduplication)
-      if (templateIssues.length > 0) {
-        reportData.templateIssues = templateIssues;
-        reportData.templateIssueCount = templateIssues.length;
-        reportData.templateOccurrenceCount = templateIssues.reduce(
-          (sum: number, t: unknown) => sum + ((t as { affectedCount?: number }).affectedCount ?? 0), 0
-        );
-      }
 
       reportData.errors = [];
 
