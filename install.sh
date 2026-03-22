@@ -90,6 +90,11 @@ Plugins:
   --with-storage-s3     Install AWS S3 storage plugin
   --with-storage-azure  Install Azure Blob storage plugin
   --with-all-plugins    Install all plugins
+
+Storage adapter:
+  # Future: --db-adapter <sqlite|postgres|mongodb>
+  # Currently only SQLite is supported (default, no configuration needed).
+  # PostgreSQL and MongoDB adapters will be available as plugins.
 EOF
   exit 0
 }

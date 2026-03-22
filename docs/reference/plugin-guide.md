@@ -291,6 +291,23 @@ This plugin registers an admin page:
 
 ---
 
+## Storage plugins (coming soon)
+
+The dashboard's internal data layer uses a **StorageAdapter** architecture — a pluggable interface backed by 14 domain repositories (scans, users, roles, teams, organizations, plugins, etc.). Currently, only the built-in SQLite adapter is available.
+
+Future storage plugins will allow the dashboard to use external databases as its primary data store:
+
+| Package | Backend | Status |
+|---------|---------|--------|
+| `@luqen/plugin-storage-postgres` | PostgreSQL | Coming soon |
+| `@luqen/plugin-storage-mongodb` | MongoDB | Coming soon |
+
+These plugins are distinct from the existing **Storage** plugin type (S3, Azure Blob) which handles report file storage. Storage adapter plugins replace the dashboard's internal database engine and will be managed through the same plugin lifecycle (install, configure, activate) at **Admin > Plugins**.
+
+For multi-replica Kubernetes deployments or environments requiring a shared database, Postgres is the recommended adapter once available.
+
+---
+
 ## Developing custom plugins
 
 Plugins are standard npm packages with a `manifest.json` and a default export implementing the `PluginInstance` interface. The development guide covers:

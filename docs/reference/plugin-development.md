@@ -220,6 +220,59 @@ The plugin is responsible for providing the route handler and view templates. Re
 
 ---
 
+## Developing Storage Adapter Plugins
+
+Storage adapter plugins replace the dashboard's internal database engine. Unlike regular plugins (auth, notification, storage), a storage adapter plugin implements the `StorageAdapter` interface which provides the full data access layer for the dashboard.
+
+### StorageAdapter interface shape
+
+```typescript
+interface StorageAdapter {
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  migrate(): Promise<void>;
+  healthCheck(): Promise<boolean>;
+
+  // 14 domain repositories
+  readonly scans: ScanRepository;
+  readonly users: UserRepository;
+  readonly roles: RoleRepository;
+  readonly teams: TeamRepository;
+  readonly organizations: OrganizationRepository;
+  readonly plugins: PluginRepository;
+  readonly schedules: ScheduleRepository;
+  readonly emailSchedules: EmailScheduleRepository;
+  readonly apiKeys: ApiKeyRepository;
+  readonly auditLog: AuditLogRepository;
+  readonly smtp: SmtpConfigRepository;
+  readonly sessions: SessionRepository;
+  readonly settings: SettingsRepository;
+  readonly migrations: MigrationRepository;
+}
+```
+
+Each repository defines standard CRUD operations for its domain (e.g., `ScanRepository` has `create`, `findById`, `findAll`, `delete`, `updateStatus`, etc.). Repository interfaces are defined in `packages/dashboard/src/db/interfaces/`.
+
+### Implementation guidelines
+
+1. **Implement all 14 repositories** — the dashboard requires every repository to function.
+2. **`connect()`** — establish a connection pool or client session to your database.
+3. **`disconnect()`** — clean up connections gracefully on shutdown.
+4. **`migrate()`** — apply schema migrations for your database engine. The dashboard calls this on startup.
+5. **`healthCheck()`** — return `true` if the database is reachable and responsive.
+6. **Match SQLite semantics** — the SQLite implementation in `packages/dashboard/src/db/sqlite/` is the reference. Ensure your adapter returns the same data shapes and handles the same edge cases.
+
+### Planned packages
+
+| Package | Backend |
+|---------|---------|
+| `@luqen/plugin-storage-postgres` | PostgreSQL |
+| `@luqen/plugin-storage-mongodb` | MongoDB |
+
+These are not yet available. The `resolveStorageAdapter()` factory in `packages/dashboard/src/db/factory.ts` will select the appropriate adapter based on configuration.
+
+---
+
 ## Registry Entry Format
 
 To add a plugin to the built-in registry, add an entry to `packages/dashboard/plugin-registry.json`:

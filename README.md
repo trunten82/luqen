@@ -36,6 +36,7 @@ Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://gi
 - **Regulatory monitoring** — watches legal sources for changes and creates update proposals when regulations evolve
 - **WAF detection** — detects and reports when a Web Application Firewall blocks scanning
 - **Progressive authentication** — starts with API key (solo mode), add local users (team mode), or install an SSO plugin (enterprise mode) — no external auth service required
+- **Pluggable storage** — modular StorageAdapter architecture with 14 repositories; SQLite built-in, PostgreSQL and MongoDB adapters coming as plugins
 - **Plugin system** — extensible via plugins for authentication (Entra ID, Okta, Google), notifications (Slack, Teams), storage (S3, Azure Blob), and custom scanners; managed via dashboard UI, CLI, or REST API
 - **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop

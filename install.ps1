@@ -55,6 +55,11 @@
 .PARAMETER WithAllPlugins
     Install all plugins.
 
+.NOTES
+    Storage adapter: The dashboard uses SQLite by default (no configuration needed).
+    Future: A -DbAdapter parameter (sqlite|postgres|mongodb) will be added when
+    PostgreSQL and MongoDB storage adapter plugins become available.
+
 .EXAMPLE
     irm https://raw.githubusercontent.com/trunten82/luqen/master/install.ps1 | iex
 

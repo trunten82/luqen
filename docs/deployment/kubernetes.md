@@ -179,7 +179,7 @@ helm upgrade luqen ./k8s/helm/luqen \
 
 ### Database considerations
 
-SQLite does not support concurrent writes. For multi-replica deployments, switch to PostgreSQL:
+SQLite does not support concurrent writes. For multi-replica deployments of the **compliance service**, switch to PostgreSQL:
 
 ```bash
 helm upgrade luqen ./k8s/helm/luqen \
@@ -187,6 +187,8 @@ helm upgrade luqen ./k8s/helm/luqen \
   --set compliance.dbUrl="postgresql://user:pass@host:5432/compliance" \
   --set compliance.persistence.data.enabled=false
 ```
+
+For the **dashboard**, SQLite is the only storage adapter currently available. A PostgreSQL storage adapter plugin (`@luqen/plugin-storage-postgres`) is coming soon and is recommended for multi-replica dashboard deployments. Until then, limit the dashboard to a single replica or use session affinity when running with SQLite.
 
 ### Redis for multi-instance
 

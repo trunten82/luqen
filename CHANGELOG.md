@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.4.0] - 2026-03-22
+
+### Changed
+- **StorageAdapter architecture** — replaced the monolithic `ScanDb` class (1,886 lines) with a modular `StorageAdapter` interface backed by 14 pluggable repositories. The built-in SQLite adapter is the default and requires no configuration changes. This refactoring prepares the dashboard for PostgreSQL and MongoDB storage plugins (`@luqen/plugin-storage-postgres`, `@luqen/plugin-storage-mongodb`) in a future release.
+- `resolveStorageAdapter()` factory selects the appropriate storage backend based on configuration
+- New `StorageConfig` type: `{ type: 'sqlite', sqlite?: { dbPath: string } }`
+- All dashboard routes and services now consume the `StorageAdapter` interface instead of direct database calls
+
+### Documentation
+- Configuration reference updated with Storage Adapter section
+- Plugin guide and plugin development guide updated with storage adapter plugin information
+- Deployment guides (Docker, Kubernetes) updated with storage adapter notes
+- Install scripts annotated with future `--db-adapter` flag placeholder
+
+---
+
 ## [1.3.0] - 2026-03-22
 
 ### Added
@@ -374,6 +390,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [1.4.0] | 2026-03-22 | StorageAdapter architecture (14 pluggable repositories, SQLite default, Postgres/MongoDB coming) |
 | [1.3.0] | 2026-03-22 | GraphQL API (mercurius), multi-language UI (i18n — 6 languages) |
 | [1.1.0] | 2026-03-21 | Granular permissions, user lifecycle, Power BI connector, IdP group sync, PDF export, setup API |
 | [1.0.0] | 2026-03-21 | Rebrand pally-agent → Luqen |
