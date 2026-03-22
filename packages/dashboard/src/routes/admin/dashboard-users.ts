@@ -3,6 +3,14 @@ import type { UserDb, DashboardUser } from '../../db/users.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml } from './helpers.js';
 
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function isLastActiveAdmin(userDb: UserDb, userId: string): boolean {
+  const users = userDb.listUsers();
+  const activeAdmins = users.filter(u => u.active && u.role === 'admin' && u.id !== userId);
+  return activeAdmins.length === 0;
+}
+
 function roleBadgeClass(role: string): string {
   if (role === 'admin') return 'badge--error';
   if (role === 'developer') return 'badge--warning';
@@ -20,30 +28,30 @@ function userRowHtml(user: DashboardUser): string {
 
   const statusBtn = user.active
     ? `<button hx-post="/admin/dashboard-users/${encodeURIComponent(user.id)}/deactivate"
-              hx-confirm="Deactivate user ${user.username}?"
+              hx-confirm="Deactivate user ${esc(user.username)}?"
               hx-target="closest tr"
               hx-swap="outerHTML"
               class="btn btn--sm btn--warning"
-              aria-label="Deactivate ${user.username}">Deactivate</button>`
+              aria-label="Deactivate ${esc(user.username)}">Deactivate</button>`
     : `<button hx-post="/admin/dashboard-users/${encodeURIComponent(user.id)}/activate"
-              hx-confirm="Activate user ${user.username}?"
+              hx-confirm="Activate user ${esc(user.username)}?"
               hx-target="closest tr"
               hx-swap="outerHTML"
               class="btn btn--sm btn--success"
-              aria-label="Activate ${user.username}">Activate</button>`;
+              aria-label="Activate ${esc(user.username)}">Activate</button>`;
 
   const resetPwBtn = `<button hx-get="/admin/dashboard-users/${encodeURIComponent(user.id)}/reset-password"
               hx-target="#modal-container"
               hx-swap="innerHTML"
               class="btn btn--sm btn--ghost"
-              aria-label="Reset password for ${user.username}">Reset Password</button>`;
+              aria-label="Reset password for ${esc(user.username)}">Reset Password</button>`;
 
   const deleteBtn = `<button hx-delete="/admin/dashboard-users/${encodeURIComponent(user.id)}"
-              hx-confirm="Permanently delete user ${user.username}? This cannot be undone."
+              hx-confirm="Permanently delete user ${esc(user.username)}? This cannot be undone."
               hx-target="closest tr"
               hx-swap="outerHTML"
               class="btn btn--sm btn--danger"
-              aria-label="Delete ${user.username}">Delete</button>`;
+              aria-label="Delete ${esc(user.username)}">Delete</button>`;
 
   const roleSelect = user.active
     ? `<select hx-patch="/admin/dashboard-users/${encodeURIComponent(user.id)}/role"
@@ -52,7 +60,7 @@ function userRowHtml(user: DashboardUser): string {
               hx-include="this"
               name="role"
               class="input input--sm"
-              aria-label="Change role for ${user.username}">
+              aria-label="Change role for ${esc(user.username)}">
         <option value="executive" ${user.role === 'executive' ? 'selected' : ''}>executive</option>
         <option value="viewer" ${user.role === 'viewer' ? 'selected' : ''}>viewer</option>
         <option value="user" ${user.role === 'user' ? 'selected' : ''}>user</option>
@@ -62,7 +70,7 @@ function userRowHtml(user: DashboardUser): string {
     : roleBadge;
 
   return `<tr id="dashboard-user-${user.id}">
-  <td data-label="Username">${user.username}</td>
+  <td data-label="Username">${esc(user.username)}</td>
   <td data-label="Role">${roleSelect}</td>
   <td data-label="Status">${statusBadge}</td>
   <td>${statusBtn} ${resetPwBtn} ${deleteBtn}</td>
@@ -177,6 +185,14 @@ export async function dashboardUserRoutes(
           .send(toastHtml('Invalid role. Must be executive, viewer, user, developer, or admin.', 'error'));
       }
 
+      const currentUser = userDb.getUserById(id);
+      if (currentUser !== null && currentUser.role === 'admin' && role !== 'admin' && isLastActiveAdmin(userDb, id)) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Cannot change role of the last active admin user.', 'error'));
+      }
+
       try {
         userDb.updateUserRole(id, role);
         const updated = userDb.getUserById(id);
@@ -206,6 +222,14 @@ export async function dashboardUserRoutes(
     { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
+
+      const targetUser = userDb.getUserById(id);
+      if (targetUser !== null && targetUser.role === 'admin' && isLastActiveAdmin(userDb, id)) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Cannot deactivate the last active admin user.', 'error'));
+      }
 
       try {
         userDb.deactivateUser(id);
@@ -366,6 +390,13 @@ export async function dashboardUserRoutes(
           .code(404)
           .header('content-type', 'text/html')
           .send(toastHtml('User not found.', 'error'));
+      }
+
+      if (user.role === 'admin' && isLastActiveAdmin(userDb, id)) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Cannot delete the last active admin user.', 'error'));
       }
 
       try {

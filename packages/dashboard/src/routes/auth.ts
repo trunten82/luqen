@@ -240,7 +240,7 @@ export async function authRoutes(
   });
 
   // POST /account/change-password — update own password
-  server.post('/account/change-password', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/account/change-password', { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const session = request.session as { get(key: string): unknown };
     const authMethod = session.get('authMethod') as string | undefined;
     const canChangePassword = authMethod === 'password';

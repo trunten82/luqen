@@ -24,6 +24,7 @@ export async function setupRoutes(
 ): Promise<void> {
   server.post(
     '/api/v1/setup',
+    { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Authenticate via API key (header-based, not session)
       const authHeader = request.headers.authorization;
