@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { UserDb, DashboardUser } from '../../db/users.js';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml } from './helpers.js';
 
 function roleBadgeClass(role: string): string {
@@ -18,14 +18,32 @@ function userRowHtml(user: DashboardUser): string {
 
   const roleBadge = `<span class="badge ${roleBadgeClass(user.role)}">${user.role}</span>`;
 
-  const deactivateBtn = user.active
+  const statusBtn = user.active
     ? `<button hx-post="/admin/dashboard-users/${encodeURIComponent(user.id)}/deactivate"
               hx-confirm="Deactivate user ${user.username}?"
               hx-target="closest tr"
               hx-swap="outerHTML"
               class="btn btn--sm btn--warning"
               aria-label="Deactivate ${user.username}">Deactivate</button>`
-    : '';
+    : `<button hx-post="/admin/dashboard-users/${encodeURIComponent(user.id)}/activate"
+              hx-confirm="Activate user ${user.username}?"
+              hx-target="closest tr"
+              hx-swap="outerHTML"
+              class="btn btn--sm btn--success"
+              aria-label="Activate ${user.username}">Activate</button>`;
+
+  const resetPwBtn = `<button hx-get="/admin/dashboard-users/${encodeURIComponent(user.id)}/reset-password"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              class="btn btn--sm btn--ghost"
+              aria-label="Reset password for ${user.username}">Reset Password</button>`;
+
+  const deleteBtn = `<button hx-delete="/admin/dashboard-users/${encodeURIComponent(user.id)}"
+              hx-confirm="Permanently delete user ${user.username}? This cannot be undone."
+              hx-target="closest tr"
+              hx-swap="outerHTML"
+              class="btn btn--sm btn--danger"
+              aria-label="Delete ${user.username}">Delete</button>`;
 
   const roleSelect = user.active
     ? `<select hx-patch="/admin/dashboard-users/${encodeURIComponent(user.id)}/role"
@@ -47,7 +65,7 @@ function userRowHtml(user: DashboardUser): string {
   <td data-label="Username">${user.username}</td>
   <td data-label="Role">${roleSelect}</td>
   <td data-label="Status">${statusBadge}</td>
-  <td>${deactivateBtn}</td>
+  <td>${statusBtn} ${resetPwBtn} ${deleteBtn}</td>
 </tr>`;
 }
 
@@ -57,10 +75,12 @@ export async function dashboardUserRoutes(
   server: FastifyInstance,
   userDb: UserDb,
 ): Promise<void> {
+  const anyUserPerm = requirePermission('users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles');
+
   // GET /admin/dashboard-users — list local dashboard users
   server.get(
     '/admin/dashboard-users',
-    { preHandler: adminGuard },
+    { preHandler: anyUserPerm },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const users = userDb.listUsers();
 
@@ -76,7 +96,7 @@ export async function dashboardUserRoutes(
   // GET /admin/dashboard-users/new — create user form fragment
   server.get(
     '/admin/dashboard-users/new',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.create') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/dashboard-user-form.hbs', {
         isNew: true,
@@ -89,7 +109,7 @@ export async function dashboardUserRoutes(
   // POST /admin/dashboard-users — create user
   server.post(
     '/admin/dashboard-users',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.create') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         username?: string;
@@ -144,7 +164,7 @@ export async function dashboardUserRoutes(
   // PATCH /admin/dashboard-users/:id/role — update user role
   server.patch(
     '/admin/dashboard-users/:id/role',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.roles') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { role?: string };
@@ -183,7 +203,7 @@ export async function dashboardUserRoutes(
   // POST /admin/dashboard-users/:id/deactivate — deactivate user
   server.post(
     '/admin/dashboard-users/:id/deactivate',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -205,6 +225,157 @@ export async function dashboardUserRoutes(
           .send(`${row}\n${toastHtml(`User "${deactivated.username}" deactivated successfully.`)}`);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to deactivate user';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // POST /admin/dashboard-users/:id/activate — reactivate user
+  server.post(
+    '/admin/dashboard-users/:id/activate',
+    { preHandler: requirePermission('users.activate') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      try {
+        userDb.activateUser(id);
+        const activated = userDb.getUserById(id);
+
+        if (activated === null) {
+          return reply
+            .code(404)
+            .header('content-type', 'text/html')
+            .send(toastHtml('User not found.', 'error'));
+        }
+
+        const row = userRowHtml(activated);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(`${row}\n${toastHtml(`User "${activated.username}" activated successfully.`)}`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to activate user';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // GET /admin/dashboard-users/:id/reset-password — show reset password form
+  server.get(
+    '/admin/dashboard-users/:id/reset-password',
+    { preHandler: requirePermission('users.reset_password') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const user = userDb.getUserById(id);
+
+      if (user === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('User not found.', 'error'));
+      }
+
+      const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+      return reply
+        .code(200)
+        .header('content-type', 'text/html')
+        .send(`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+  <div class="modal" role="dialog" aria-labelledby="reset-pw-title" aria-modal="true">
+    <div class="modal__header">
+      <h2 id="reset-pw-title" class="modal__title">Reset Password — ${esc(user.username)}</h2>
+      <button class="modal__close close-modal-btn" aria-label="Close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+    </div>
+    <form hx-post="/admin/dashboard-users/${encodeURIComponent(id)}/reset-password"
+          hx-target="#modal-container"
+          hx-swap="innerHTML">
+      <div class="modal__body">
+        <div class="form-group">
+          <label for="newPassword">New Password <span class="required" aria-hidden="true">*</span></label>
+          <input type="password" id="newPassword" name="newPassword" class="input" required aria-required="true" minlength="8" autocomplete="new-password">
+          <span class="form-hint">Minimum 8 characters</span>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password <span class="required" aria-hidden="true">*</span></label>
+          <input type="password" id="confirmPassword" name="confirmPassword" class="input" required aria-required="true" minlength="8" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--ghost close-modal-btn" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button type="submit" class="btn btn--primary">Reset Password</button>
+      </div>
+    </form>
+  </div>
+</div>`);
+    },
+  );
+
+  // POST /admin/dashboard-users/:id/reset-password — update password
+  server.post(
+    '/admin/dashboard-users/:id/reset-password',
+    { preHandler: requirePermission('users.reset_password') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { newPassword?: string; confirmPassword?: string };
+
+      const user = userDb.getUserById(id);
+      if (user === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('User not found.', 'error'));
+      }
+
+      if (!body.newPassword || body.newPassword.length < 8) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Password must be at least 8 characters.', 'error'));
+      }
+
+      if (body.newPassword !== body.confirmPassword) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Passwords do not match.', 'error'));
+      }
+
+      try {
+        await userDb.updatePassword(id, body.newPassword);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(`${toastHtml(`Password reset successfully for "${user.username}".`)}`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to reset password';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // DELETE /admin/dashboard-users/:id — permanently delete a user
+  server.delete(
+    '/admin/dashboard-users/:id',
+    { preHandler: requirePermission('users.delete') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const user = userDb.getUserById(id);
+      if (user === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('User not found.', 'error'));
+      }
+
+      try {
+        userDb.deleteUser(id);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(`${toastHtml(`User "${user.username}" deleted permanently.`)}`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to delete user';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
     },

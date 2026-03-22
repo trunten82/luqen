@@ -18,7 +18,12 @@ export const ALL_PERMISSIONS = [
   { id: 'manual_testing', label: 'Manual testing checklists', group: 'Testing' },
   { id: 'repos.manage', label: 'Connect repositories', group: 'Repositories' },
   { id: 'trends.view', label: 'View trends and analytics', group: 'Analytics' },
-  { id: 'admin.users', label: 'Manage users', group: 'Administration' },
+  { id: 'users.create', label: 'Create dashboard users', group: 'User Management' },
+  { id: 'users.delete', label: 'Delete dashboard users', group: 'User Management' },
+  { id: 'users.activate', label: 'Activate and deactivate users', group: 'User Management' },
+  { id: 'users.reset_password', label: 'Reset user passwords', group: 'User Management' },
+  { id: 'users.roles', label: 'Change user roles', group: 'User Management' },
+  { id: 'admin.users', label: 'Manage compliance API users', group: 'Administration' },
   { id: 'admin.roles', label: 'Manage roles', group: 'Administration' },
   { id: 'admin.system', label: 'System settings', group: 'Administration' },
 ] as const;

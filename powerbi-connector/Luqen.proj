@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.PowerQuery.Sdk/0.2">
+  <PropertyGroup>
+    <RootNamespace>Luqen</RootNamespace>
+    <AssemblyName>Luqen</AssemblyName>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Luqen.pq" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="resources\Luqen.png" />
+  </ItemGroup>
+</Project>

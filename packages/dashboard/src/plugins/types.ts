@@ -79,6 +79,9 @@ export interface AuthResult {
   };
   readonly token?: string;
   readonly error?: string;
+  readonly groups?: readonly string[];
+  /** Dashboard team names resolved after IdP group sync. */
+  readonly teams?: readonly string[];
 }
 
 export interface UserInfo {

@@ -8,6 +8,7 @@ import { ScanDb } from '../../src/db/scans.js';
 import { UserDb } from '../../src/db/users.js';
 import { registerSession } from '../../src/auth/session.js';
 import { dashboardUserRoutes } from '../../src/routes/admin/dashboard-users.js';
+import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
@@ -40,9 +41,13 @@ async function createTestServer(role: string = 'admin'): Promise<TestContext> {
     },
   );
 
-  // Inject user into all requests
+  // Inject user and permissions into all requests
   server.addHook('preHandler', async (request) => {
     request.user = { id: 'test-user-id', username: 'testadmin', role };
+    const permissions = role === 'admin'
+      ? new Set(ALL_PERMISSION_IDS)
+      : new Set<string>();
+    (request as unknown as Record<string, unknown>)['permissions'] = permissions;
   });
 
   await dashboardUserRoutes(server, userDb);
@@ -121,7 +126,7 @@ describe('GET /admin/dashboard-users/new', () => {
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/dashboard-users/new' });
 
     const body = response.json() as { data: { roles: string[] } };
-    expect(body.data.roles).toEqual(['viewer', 'user', 'admin']);
+    expect(body.data.roles).toEqual(['executive', 'viewer', 'user', 'developer', 'admin']);
   });
 });
 
@@ -297,5 +302,195 @@ describe('Dashboard users admin access control', () => {
     expect(response.statusCode).toBe(403);
 
     ctx.cleanup();
+  });
+});
+
+// ── POST /admin/dashboard-users/:id/activate ────────────────────────────────
+
+describe('POST /admin/dashboard-users/:id/activate', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('activates a deactivated user', async () => {
+    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+    ctx.userDb.deactivateUser(user.id);
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/dashboard-users/${user.id}/activate`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('activated successfully');
+
+    const updated = ctx.userDb.getUserById(user.id);
+    expect(updated?.active).toBe(true);
+  });
+
+  it('returns 404 for unknown user', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/dashboard-users/nonexistent-id/activate',
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toContain('User not found');
+  });
+});
+
+// ── DELETE /admin/dashboard-users/:id ───────────────────────────────────────
+
+describe('DELETE /admin/dashboard-users/:id', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('deletes user permanently', async () => {
+    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+
+    const response = await ctx.server.inject({
+      method: 'DELETE',
+      url: `/admin/dashboard-users/${user.id}`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('deleted permanently');
+
+    const deleted = ctx.userDb.getUserById(user.id);
+    expect(deleted).toBeNull();
+  });
+
+  it('returns 404 for unknown user', async () => {
+    const response = await ctx.server.inject({
+      method: 'DELETE',
+      url: '/admin/dashboard-users/nonexistent-id',
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toContain('User not found');
+  });
+});
+
+// ── GET /admin/dashboard-users/:id/reset-password ───────────────────────────
+
+describe('GET /admin/dashboard-users/:id/reset-password', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('returns modal HTML for existing user', async () => {
+    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: `/admin/dashboard-users/${user.id}/reset-password`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/html');
+    expect(response.body).toContain('Reset Password');
+    expect(response.body).toContain('alice');
+    expect(response.body).toContain('modal');
+  });
+
+  it('returns 404 for unknown user', async () => {
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/dashboard-users/nonexistent-id/reset-password',
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toContain('User not found');
+  });
+});
+
+// ── POST /admin/dashboard-users/:id/reset-password ──────────────────────────
+
+describe('POST /admin/dashboard-users/:id/reset-password', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('resets password for existing user', async () => {
+    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/dashboard-users/${user.id}/reset-password`,
+      payload: 'newPassword=newsecret123&confirmPassword=newsecret123',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('Password reset successfully');
+
+    // Verify the new password works
+    const valid = await ctx.userDb.verifyPassword('alice', 'newsecret123');
+    expect(valid).toBe(true);
+  });
+
+  it('rejects short password', async () => {
+    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/dashboard-users/${user.id}/reset-password`,
+      payload: 'newPassword=short&confirmPassword=short',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toContain('at least 8 characters');
+  });
+
+  it('rejects mismatched passwords', async () => {
+    const user = await ctx.userDb.createUser('alice', 'password123', 'viewer');
+
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: `/admin/dashboard-users/${user.id}/reset-password`,
+      payload: 'newPassword=newsecret123&confirmPassword=different123',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toContain('do not match');
+  });
+
+  it('returns 404 for unknown user', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/dashboard-users/nonexistent-id/reset-password',
+      payload: 'newPassword=newsecret123&confirmPassword=newsecret123',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body).toContain('User not found');
   });
 });

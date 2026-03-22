@@ -128,6 +128,31 @@
           </div>
         </form>
       </details>
+
+      <details class="login-apikey-fallback" style="margin-top: var(--space-md, 1rem)">
+        <summary style="cursor: pointer; color: var(--text-secondary, #666);">Or sign in with API key</summary>
+        <form method="POST" action="/login" novalidate style="margin-top: var(--space-md, 1rem)">
+          <div class="form-group">
+            <label for="apiKeyEnterprise">
+              API Key
+              <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="password"
+              id="apiKeyEnterprise"
+              name="apiKey"
+              autocomplete="off"
+              required
+              aria-required="true"
+            >
+          </div>
+          <div class="form-group" style="margin-top: var(--space-lg)">
+            <button type="submit" class="btn btn--primary btn--full btn--lg">
+              Sign in with API key
+            </button>
+          </div>
+        </form>
+      </details>
       {{/if}}
 
       {{!-- Team mode (or fallback when mode is not set): username/password form --}}
@@ -176,6 +201,32 @@
           </button>
         </div>
       </form>
+
+      <details class="login-apikey-fallback" style="margin-top: var(--space-lg, 1.5rem)">
+        <summary style="cursor: pointer; color: var(--text-secondary, #666);">Sign in with API key</summary>
+        <form method="POST" action="/login" novalidate style="margin-top: var(--space-md, 1rem)">
+          <input type="hidden" name="_csrf" value="{{csrfToken}}">
+          <div class="form-group">
+            <label for="apiKeyTeam">
+              API Key
+              <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="password"
+              id="apiKeyTeam"
+              name="apiKey"
+              autocomplete="off"
+              required
+              aria-required="true"
+            >
+          </div>
+          <div class="form-group" style="margin-top: var(--space-lg)">
+            <button type="submit" class="btn btn--primary btn--full btn--lg">
+              Sign in with API key
+            </button>
+          </div>
+        </form>
+      </details>
       {{/if}}
 
       {{!-- Fallback when mode is not set (backward compat) --}}

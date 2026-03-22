@@ -7,6 +7,7 @@ import type { ScanDb } from '../db/scans.js';
 import { UserDb } from '../db/users.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 import { MANUAL_CRITERIA } from '../manual-criteria.js';
+import { isPuppeteerAvailable } from '../pdf/generator.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -653,6 +654,7 @@ export async function reportRoutes(
           user: request.user,
           scan: scanMeta,
           reportData: null,
+          pdfAvailable: isPuppeteerAvailable(),
         });
       }
 
@@ -703,6 +705,7 @@ export async function reportRoutes(
         user: request.user,
         scan: scanMeta,
         reportData,
+        pdfAvailable: isPuppeteerAvailable(),
         manualTestStats: {
           tested: manualTested,
           total: manualTotal,

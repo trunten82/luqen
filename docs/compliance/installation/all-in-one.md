@@ -67,8 +67,8 @@ services:
     environment:
       LUQEN_WEBSERVICE_URL: "http://pa11y-webservice:3000"
       LUQEN_COMPLIANCE_URL: "http://compliance:4000"
-      PALLY_COMPLIANCE_CLIENT_ID: "${PALLY_COMPLIANCE_CLIENT_ID}"
-      PALLY_COMPLIANCE_CLIENT_SECRET: "${PALLY_COMPLIANCE_CLIENT_SECRET}"
+      LUQEN_COMPLIANCE_CLIENT_ID: "${LUQEN_COMPLIANCE_CLIENT_ID}"
+      LUQEN_COMPLIANCE_CLIENT_SECRET: "${LUQEN_COMPLIANCE_CLIENT_SECRET}"
     depends_on:
       compliance:
         condition: service_healthy
@@ -140,8 +140,8 @@ Copy the output `client_id` and `client_secret`.
 
 ```bash
 cat > .env <<EOF
-PALLY_COMPLIANCE_CLIENT_ID=<client_id_from_step_4>
-PALLY_COMPLIANCE_CLIENT_SECRET=<client_secret_from_step_4>
+LUQEN_COMPLIANCE_CLIENT_ID=<client_id_from_step_4>
+LUQEN_COMPLIANCE_CLIENT_SECRET=<client_secret_from_step_4>
 EOF
 ```
 
@@ -158,7 +158,7 @@ curl http://localhost:3001/health
 curl http://localhost:3000/
 ```
 
-## Luqen-agent configuration
+## Luqen configuration
 
 Create `.luqen.json` (mounted into the luqen container or in the project root):
 
@@ -169,8 +169,8 @@ Create `.luqen.json` (mounted into the luqen container or in the project root):
   "concurrency": 3,
   "compliance": {
     "url": "http://compliance:4000",
-    "clientId": "${PALLY_COMPLIANCE_CLIENT_ID}",
-    "clientSecret": "${PALLY_COMPLIANCE_CLIENT_SECRET}",
+    "clientId": "${LUQEN_COMPLIANCE_CLIENT_ID}",
+    "clientSecret": "${LUQEN_COMPLIANCE_CLIENT_SECRET}",
     "jurisdictions": ["EU", "US", "UK"],
     "sectors": []
   }
@@ -187,7 +187,7 @@ The `compliance` section tells luqen to call the compliance service after each s
 | Compliance Swagger UI | `http://compliance:4000/api/v1/docs` | `http://localhost:4000/api/v1/docs` |
 | Compliance A2A card | `http://compliance:4000/.well-known/agent.json` | `http://localhost:4000/.well-known/agent.json` |
 | Pa11y webservice | `http://pa11y-webservice:3000` | `http://localhost:3000` |
-| Luqen-agent API | `http://luqen:3001` | `http://localhost:3001` |
+| Luqen API | `http://luqen:3001` | `http://localhost:3001` |
 
 ## Claude Code MCP config
 

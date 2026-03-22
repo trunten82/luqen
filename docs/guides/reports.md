@@ -78,7 +78,7 @@ Within each tier, groups are sorted by total issue count (descending).
 
 Visible only on **Full Site** scans where template issues were detected.
 
-Template issues are accessibility problems that appear identically on 3 or more pages — typically from shared components like headers, footers, and navigation. Luqen-agent detects these by fingerprinting each issue (code + selector + context) and grouping duplicates.
+Template issues are accessibility problems that appear identically on 3 or more pages — typically from shared components like headers, footers, and navigation. Luqen detects these by fingerprinting each issue (code + selector + context) and grouping duplicates.
 
 ### Component grouping
 
@@ -394,7 +394,7 @@ Three CSV endpoints are available (requires `X-API-Key` header):
 | `GET /api/v1/export/trends.csv` | Trend data (supports `siteUrl`, `from`, `to` filters) |
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/export/scans.csv" -o scans.csv
 ```
 

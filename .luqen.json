@@ -7,5 +7,5 @@
   "maxPages": 50,
   "crawlDepth": 3,
   "alsoCrawl": false,
-  "outputDir": "./pally-reports"
+  "outputDir": "./luqen-reports"
 }

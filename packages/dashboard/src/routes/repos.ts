@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { ScanDb, ConnectedRepo } from '../db/scans.js';
-import { adminGuard } from '../auth/middleware.js';
+import { requirePermission } from '../auth/middleware.js';
 import { toastHtml, escapeHtml } from './admin/helpers.js';
 import { getFixSuggestion, FIX_SUGGESTIONS } from '../fix-suggestions.js';
 import { hasPermission } from '../permissions.js';
@@ -153,7 +153,7 @@ export async function repoRoutes(
 
   server.get(
     '/admin/repos',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('repos.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const repos = db.listRepos(orgId);
@@ -171,7 +171,7 @@ export async function repoRoutes(
 
   server.post(
     '/admin/repos',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('repos.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateRepoBody;
       const orgId = request.user?.currentOrgId ?? 'system';
@@ -226,7 +226,7 @@ export async function repoRoutes(
 
   server.delete(
     '/admin/repos/:id',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('repos.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const repo = db.getRepo(id);

@@ -4,7 +4,7 @@ import {
   approveProposal,
   rejectProposal,
 } from '../../compliance-client.js';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
 
 export async function proposalRoutes(
@@ -14,7 +14,7 @@ export async function proposalRoutes(
   // GET /admin/proposals — list pending proposals
   server.get(
     '/admin/proposals',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { status?: string };
       const statusFilter = query.status;
@@ -48,7 +48,7 @@ export async function proposalRoutes(
   // POST /admin/proposals/:id/approve — approve proposal
   server.post(
     '/admin/proposals/:id/approve',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -78,7 +78,7 @@ export async function proposalRoutes(
   // POST /admin/proposals/:id/reject — reject proposal
   server.post(
     '/admin/proposals/:id/reject',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 

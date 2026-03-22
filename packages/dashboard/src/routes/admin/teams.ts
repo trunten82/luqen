@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { ScanDb } from '../../db/scans.js';
 import type { UserDb } from '../../db/users.js';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { escapeHtml } from './helpers.js';
 
 interface CreateTeamBody {
@@ -58,7 +58,7 @@ export async function teamRoutes(
   // GET /admin/teams — list teams
   server.get(
     '/admin/teams',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const teams = db.listTeams(orgId);
@@ -75,7 +75,7 @@ export async function teamRoutes(
   // POST /admin/teams — create team
   server.post(
     '/admin/teams',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateTeamBody;
       const name = (body.name ?? '').trim();
@@ -105,7 +105,7 @@ export async function teamRoutes(
   // DELETE /admin/teams/:id — delete team
   server.delete(
     '/admin/teams/:id',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const team = db.getTeam(id);
@@ -122,7 +122,7 @@ export async function teamRoutes(
   // GET /admin/teams/:id — team detail with members
   server.get(
     '/admin/teams/:id',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const team = db.getTeam(id);
@@ -148,7 +148,7 @@ export async function teamRoutes(
   // POST /admin/teams/:id/members — add member
   server.post(
     '/admin/teams/:id/members',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as AddMemberBody;
@@ -182,7 +182,7 @@ export async function teamRoutes(
   // DELETE /admin/teams/:id/members/:userId — remove member
   server.delete(
     '/admin/teams/:id/members/:userId',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
 

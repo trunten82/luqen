@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { OrgDb, Organization } from '../../db/orgs.js';
 import type { UserDb, DashboardUser } from '../../db/users.js';
 import { deleteOrgData } from '../../compliance-client.js';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { getToken, toastHtml } from './helpers.js';
 
 function orgRowHtml(org: Organization): string {
@@ -55,7 +55,7 @@ export async function organizationRoutes(
   // GET /admin/organizations — list all organizations
   server.get(
     '/admin/organizations',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgs = orgDb.listOrgs();
 
@@ -71,7 +71,7 @@ export async function organizationRoutes(
   // GET /admin/organizations/new — create org form fragment
   server.get(
     '/admin/organizations/new',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/organization-form.hbs', {});
     },
@@ -80,7 +80,7 @@ export async function organizationRoutes(
   // POST /admin/organizations — create org
   server.post(
     '/admin/organizations',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as { name?: string; slug?: string };
 
@@ -130,7 +130,7 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/delete — delete org
   server.post(
     '/admin/organizations/:id/delete',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -169,7 +169,7 @@ export async function organizationRoutes(
   // GET /admin/organizations/:id/members — show members page
   server.get(
     '/admin/organizations/:id/members',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -206,7 +206,7 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/members — add member
   server.post(
     '/admin/organizations/:id/members',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { userId?: string; role?: string };
@@ -256,7 +256,7 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/members/:userId/remove — remove member
   server.post(
     '/admin/organizations/:id/members/:userId/remove',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
 

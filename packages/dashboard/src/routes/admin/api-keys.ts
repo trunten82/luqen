@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type Database from 'better-sqlite3';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { generateApiKey, hashApiKey, storeApiKey } from '../../auth/api-key.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 
@@ -51,7 +51,7 @@ export async function apiKeyRoutes(
   // GET /admin/api-keys — list all keys
   server.get(
     '/admin/api-keys',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const keys = db
         .prepare(
@@ -71,7 +71,7 @@ export async function apiKeyRoutes(
   // GET /admin/api-keys/:id/view — view key detail with revoke option
   server.get(
     '/admin/api-keys/:id/view',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const row = db.prepare(
@@ -95,7 +95,7 @@ export async function apiKeyRoutes(
   // GET /admin/api-keys/new — modal form to create a new key
   server.get(
     '/admin/api-keys/new',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/api-key-form.hbs', {});
     },
@@ -104,7 +104,7 @@ export async function apiKeyRoutes(
   // POST /admin/api-keys — create new API key
   server.post(
     '/admin/api-keys',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as { label?: string };
       const label = body.label?.trim() || 'default';
@@ -156,7 +156,7 @@ export async function apiKeyRoutes(
   // POST /admin/api-keys/:id/revoke — revoke an API key
   server.post(
     '/admin/api-keys/:id/revoke',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 

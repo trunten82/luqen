@@ -362,7 +362,7 @@ To obtain an API key:
 
 ```bash
 # All examples below use this header
-export PALLY_API_KEY="your-api-key-here"
+export LUQEN_API_KEY="your-api-key-here"
 ```
 
 ### Rate limiting
@@ -388,7 +388,7 @@ List scans with optional filters. Returns paginated results.
 **Example request:**
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/scans?siteUrl=https://example.com&from=2026-01-01&limit=10"
 ```
 
@@ -427,7 +427,7 @@ Get full detail for a single scan.
 **Example request:**
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/scans/abc123"
 ```
 
@@ -474,7 +474,7 @@ Get issues for a specific scan with optional severity and criterion filters.
 **Example request:**
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/scans/abc123/issues?severity=error&limit=20"
 ```
 
@@ -520,7 +520,7 @@ Get AI-generated fix proposals for a scan. Requires connected repos to be config
 **Example request:**
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/scans/abc123/fixes?status=pending"
 ```
 
@@ -565,7 +565,7 @@ Time-series data showing issue counts per site across scans. Use this to build t
 **Example request:**
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/trends?siteUrl=https://example.com"
 ```
 
@@ -611,7 +611,7 @@ Latest compliance status per jurisdiction across all sites (or for a specific si
 **Example request:**
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/compliance-summary"
 ```
 
@@ -647,7 +647,7 @@ Download a CSV of all scans (same filters as `GET /api/v1/scans`).
 **Query parameters:** `siteUrl`, `from`, `to`, `limit`, `offset` (same as the scans endpoint).
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/export/scans.csv" -o scans.csv
 ```
 
@@ -660,7 +660,7 @@ Download a CSV of all issues for a specific scan.
 **Query parameters:** `severity`, `criterion` (same as the issues endpoint).
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/export/scans/abc123/issues.csv" -o issues.csv
 ```
 
@@ -673,7 +673,7 @@ Download a CSV of trend data across scans.
 **Query parameters:** `siteUrl`, `from`, `to` (same as the trends endpoint).
 
 ```bash
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://localhost:5000/api/v1/export/trends.csv" -o trends.csv
 ```
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   Pally Dashboard — style.css
+   Luqen Dashboard — style.css
    WCAG 2.1 AA compliant design system
    All contrast ratios >= 4.5:1 for normal text, >= 3:1 for large text
    ============================================================ */
@@ -249,6 +249,17 @@ body {
   text-transform: uppercase;
   color: var(--text-muted);
   margin-top: var(--space-md);
+}
+
+.sidebar__subsection-label {
+  padding: var(--space-xs) var(--space-md) var(--space-xs) calc(var(--space-md) + 4px);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.7;
+  margin-top: var(--space-sm);
 }
 
 .sidebar__item {
@@ -1455,6 +1466,47 @@ select {
 .detail-source-link:hover {
   background-color: var(--accent);
   color: var(--text-inverse);
+}
+
+/* ---- Profile page ---- */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  max-width: 900px;
+}
+
+@media (max-width: 767px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profile-details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-sm) var(--space-lg);
+  margin: 0;
+}
+
+.profile-details dt {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.profile-details dd {
+  margin: 0;
+}
+
+.sidebar__footer-user {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.sidebar__footer-user:hover {
+  text-decoration: underline;
+  color: var(--accent);
 }
 
 /* ---- Larger modal for detail views ---- */

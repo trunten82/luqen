@@ -2,7 +2,7 @@
 
 **Digital accessibility platform — scan, track, and guide teams toward WCAG compliance.**
 
-![Version](https://img.shields.io/badge/version-v1.0.0-blue)
+![Version](https://img.shields.io/badge/version-v1.1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Tests](https://img.shields.io/badge/tests-1025%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
@@ -35,6 +35,10 @@ Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://gi
 - **WAF detection** — detects and reports when a Web Application Firewall blocks scanning
 - **Progressive authentication** — starts with API key (solo mode), add local users (team mode), or install an SSO plugin (enterprise mode) — no external auth service required
 - **Plugin system** — extensible via plugins for authentication (Entra ID, Okta, Google), notifications (Slack, Teams), storage (S3, Azure Blob), and custom scanners; managed via dashboard UI, CLI, or REST API
+- **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
+- **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop
+- **IdP group → team sync** — Entra ID plugin reads group memberships from tokens and auto-syncs to dashboard teams on SSO login
+- **Server-side PDF export** — Puppeteer-based PDF generation at `GET /api/v1/export/scans/:id/report.pdf` with email attachment integration and graceful fallback
 
 ---
 
@@ -108,7 +112,7 @@ git clone https://github.com/trunten82/luqen.git
 cd luqen && npm install && npm run build --workspaces
 cd packages/core && npm link
 
-export PALLY_WEBSERVICE_URL=http://localhost:3000
+export LUQEN_WEBSERVICE_URL=http://localhost:3000
 luqen scan https://example.com --format both
 ```
 
@@ -207,7 +211,7 @@ export MONITOR_COMPLIANCE_CLIENT_SECRET=<client-secret>
 docker compose up
 ```
 
-This starts the compliance service (port 4000) and the dashboard (port 5000). For pa11y webservice, run it separately and set `PALLY_WEBSERVICE_URL` in a `.env` file.
+This starts the compliance service (port 4000) and the dashboard (port 5000). For pa11y webservice, run it separately and set `LUQEN_WEBSERVICE_URL` in a `.env` file.
 
 ---
 

@@ -16,6 +16,7 @@ import { webhookRoutes } from '../../src/routes/admin/webhooks.js';
 import { userRoutes } from '../../src/routes/admin/users.js';
 import { clientRoutes } from '../../src/routes/admin/clients.js';
 import { systemRoutes } from '../../src/routes/admin/system.js';
+import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 import type { DashboardConfig } from '../../src/config.js';
 
 // Mock the compliance client module so no real HTTP calls are made
@@ -107,6 +108,7 @@ async function createAdminTestServer(): Promise<AdminTestContext> {
   // Inject admin user into all requests (bypass JWT verification in tests)
   server.addHook('preHandler', async (request) => {
     request.user = { id: 'test-user-id', username: 'testuser', role: 'admin' };
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set(ALL_PERMISSION_IDS);
   });
 
   await homeRoutes(server, db);
@@ -155,6 +157,7 @@ describe('Admin route access control', () => {
     // Inject viewer role — no admin access
     server.addHook('preHandler', async (request) => {
       request.user = { id: 'viewer-id', username: 'viewer', role: 'viewer' };
+      (request as unknown as Record<string, unknown>)['permissions'] = new Set<string>();
     });
 
     await jurisdictionRoutes(server, COMPLIANCE_URL);
@@ -188,6 +191,7 @@ describe('Admin route access control', () => {
     // Inject user role — not admin
     server.addHook('preHandler', async (request) => {
       request.user = { id: 'user-id', username: 'regularuser', role: 'user' };
+      (request as unknown as Record<string, unknown>)['permissions'] = new Set<string>();
     });
 
     await jurisdictionRoutes(server, COMPLIANCE_URL);

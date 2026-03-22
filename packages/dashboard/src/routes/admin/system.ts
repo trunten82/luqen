@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { safeGetSystemHealth, getSeedStatus } from '../../compliance-client.js';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
@@ -27,7 +27,7 @@ export async function systemRoutes(
   // GET /admin/system — service health, DB stats, seed status
   server.get(
     '/admin/system',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
 

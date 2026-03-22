@@ -100,6 +100,22 @@ export class UserDb {
     stmt.run(id);
   }
 
+  activateUser(id: string): void {
+    const stmt = this.db.prepare('UPDATE dashboard_users SET active = 1 WHERE id = ?');
+    stmt.run(id);
+  }
+
+  async updatePassword(id: string, newPassword: string): Promise<void> {
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    const stmt = this.db.prepare('UPDATE dashboard_users SET password_hash = ? WHERE id = ?');
+    stmt.run(passwordHash, id);
+  }
+
+  deleteUser(id: string): boolean {
+    const result = this.db.prepare('DELETE FROM dashboard_users WHERE id = ?').run(id);
+    return result.changes > 0;
+  }
+
   countUsers(): number {
     const stmt = this.db.prepare('SELECT COUNT(*) as count FROM dashboard_users');
     const row = stmt.get() as { count: number };

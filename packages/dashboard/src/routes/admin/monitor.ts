@@ -6,7 +6,7 @@ import {
   type MonitoredSource,
   type UpdateProposal,
 } from '../../compliance-client.js';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { getToken, toastHtml } from './helpers.js';
 
 // ── Public types for testing ─────────────────────────────────────────────────
@@ -118,7 +118,7 @@ export async function monitorRoutes(
   // GET /admin/monitor — main monitor dashboard
   server.get(
     '/admin/monitor',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
       let error: string | undefined;
@@ -154,7 +154,7 @@ export async function monitorRoutes(
   // POST /admin/monitor/trigger — manually trigger a scan
   server.post(
     '/admin/monitor/trigger',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await scanSources(complianceUrl, getToken(request));

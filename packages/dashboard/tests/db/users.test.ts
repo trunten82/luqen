@@ -145,6 +145,60 @@ describe('UserDb', () => {
     });
   });
 
+  describe('activateUser', () => {
+    it('sets active to true (1)', async () => {
+      const user = await userDb.createUser('irene', 'pass123', 'admin');
+      userDb.deactivateUser(user.id);
+
+      const deactivated = userDb.getUserById(user.id);
+      expect(deactivated!.active).toBe(false);
+
+      userDb.activateUser(user.id);
+
+      const activated = userDb.getUserById(user.id);
+      expect(activated!.active).toBe(true);
+    });
+  });
+
+  describe('deleteUser', () => {
+    it('removes user from database', async () => {
+      const user = await userDb.createUser('jack', 'pass123', 'viewer');
+      expect(userDb.getUserById(user.id)).not.toBeNull();
+
+      const result = userDb.deleteUser(user.id);
+      expect(result).toBe(true);
+
+      const deleted = userDb.getUserById(user.id);
+      expect(deleted).toBeNull();
+    });
+
+    it('returns false for non-existent user', () => {
+      const result = userDb.deleteUser(randomUUID());
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('updatePassword', () => {
+    it('updates the password hash', async () => {
+      await userDb.createUser('kate', 'oldpass123', 'admin');
+
+      // Verify old password works
+      const oldValid = await userDb.verifyPassword('kate', 'oldpass123');
+      expect(oldValid).toBe(true);
+
+      const user = userDb.getUserByUsername('kate')!;
+      await userDb.updatePassword(user.id, 'newpass456');
+
+      // Old password should no longer work
+      const oldInvalid = await userDb.verifyPassword('kate', 'oldpass123');
+      expect(oldInvalid).toBe(false);
+
+      // New password should work
+      const newValid = await userDb.verifyPassword('kate', 'newpass456');
+      expect(newValid).toBe(true);
+    });
+  });
+
   describe('countUsers', () => {
     it('returns total count', async () => {
       expect(userDb.countUsers()).toBe(0);
