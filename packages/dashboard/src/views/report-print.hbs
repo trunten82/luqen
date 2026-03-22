@@ -94,6 +94,26 @@
 
 {{#if reportData}}
 
+{{! ── Executive Summary ───────────────────────────────── }}
+<h2>{{t "reportPrint.executiveSummary"}}</h2>
+<div style="background:#f5f6fa;border-radius:6px;padding:1rem;margin-bottom:1.5rem;font-size:0.9rem;">
+  <p style="margin:0 0 0.5rem;">
+    {{t "reportPrint.summaryIntro"}} <strong>{{scan.siteUrl}}</strong>
+    {{t "reportPrint.summaryFound"}} <strong style="color:#8b1a1a;">{{reportData.summary.byLevel.error}} {{t "reportPrint.errors"}}</strong>,
+    <strong style="color:#7a4f00;">{{reportData.summary.byLevel.warning}} {{t "reportPrint.warnings"}}</strong>,
+    {{t "reportPrint.summaryAnd"}} <strong>{{reportData.summary.byLevel.notice}} {{t "reportPrint.notices"}}</strong>
+    {{t "reportPrint.summaryAcross"}} <strong>{{reportData.summary.pagesScanned}}</strong> {{t "reportPrint.summaryPages"}}.
+  </p>
+  {{#if reportData.complianceMatrix}}
+  <p style="margin:0;">
+    <strong>{{t "reportPrint.complianceRisk"}}:</strong>
+    {{#each reportData.complianceMatrix}}
+      {{jurisdictionName}}: <strong>{{#if (eq reviewStatus 'fail')}}⚠ {{t "reportPrint.failing"}}{{else if (eq reviewStatus 'review')}}⚡ {{t "reportPrint.needsReview"}}{{else}}✓ {{t "reportPrint.passing"}}{{/if}}</strong>{{#unless @last}}, {{/unless}}
+    {{/each}}
+  </p>
+  {{/if}}
+</div>
+
 {{! ── Key Metrics ──────────────────────────────────────── }}
 <div class="kpi-grid">
   <div class="kpi"><span class="kpi__value">{{reportData.summary.pagesScanned}}</span><span class="kpi__label">{{t "reportPrint.pagesScanned"}}</span></div>

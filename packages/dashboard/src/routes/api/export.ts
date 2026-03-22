@@ -49,6 +49,7 @@ interface JsonReportIssue {
   readonly context: string;
   readonly wcagCriterion?: string;
   readonly wcagTitle?: string;
+  readonly fixSuggestion?: string;
   readonly regulations?: ReadonlyArray<{
     readonly shortName: string;
     readonly url?: string;
@@ -199,15 +200,33 @@ export async function exportRoutes(
           : []
       );
 
+      // Build page occurrence counts per issue code for "Affected Pages" column
+      const issuePageCounts = new Map<string, number>();
+      for (const page of pages) {
+        const codesOnPage = new Set<string>();
+        for (const issue of page.issues) {
+          codesOnPage.add(issue.code);
+        }
+        for (const code of codesOnPage) {
+          issuePageCounts.set(code, (issuePageCounts.get(code) ?? 0) + 1);
+        }
+      }
+      const totalPages = pages.length;
+
       const headers = [
         'Severity',
+        'Priority',
         'WCAG Criterion',
         'WCAG Title',
         'Message',
+        'Suggested Fix',
         'Selector',
+        'Context',
         'Page URL',
+        'Affected Pages',
         'Regulations',
         'Component',
+        'Code',
       ];
 
       const rows: string[][] = [];
@@ -225,15 +244,34 @@ export async function exportRoutes(
           // Infer component from selector + context
           const component = inferComponentForExport(issue.selector, issue.context);
 
+          // Affected pages count for this issue code
+          const affectedPages = issuePageCounts.get(issue.code) ?? 1;
+
+          // Priority: regulatory errors first, then by severity and spread
+          const severityScore = issue.type === 'error' ? 3 : issue.type === 'warning' ? 2 : 1;
+          const regulatoryScore = regs.length > 0 ? 2 : 0;
+          const spreadScore = affectedPages >= totalPages * 0.5 ? 1 : 0;
+          const priorityNum = severityScore + regulatoryScore + spreadScore;
+          const priority = priorityNum >= 5 ? 'Critical' : priorityNum >= 4 ? 'High' : priorityNum >= 3 ? 'Medium' : 'Low';
+
+          // Suggested fix from fix engine or generate from WCAG reference
+          const fixSuggestion = issue.fixSuggestion
+            ?? (wcag ? `Refer to WCAG ${criterion}: ${wcag.title} — ${wcag.url ?? ''}` : '');
+
           rows.push([
             issue.type,
+            priority,
             criterion ?? '',
             title,
             issue.message,
+            fixSuggestion,
             issue.selector,
+            (issue.context ?? '').slice(0, 200),
             page.url,
+            `${affectedPages}/${totalPages}`,
             regNames,
             component,
+            issue.code,
           ]);
         }
       }
