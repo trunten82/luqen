@@ -636,9 +636,9 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 ---
 
-## CSV Export
+## Data Export
 
-Download scan data as CSV files for use in spreadsheets, Power BI, or other tools. All CSV endpoints require the same `X-API-Key` authentication.
+Download scan data for use in spreadsheets, Power BI, or other tools. All export endpoints require the same `X-API-Key` authentication.
 
 ### `GET /api/v1/export/scans.csv`
 
@@ -655,13 +655,13 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 ### `GET /api/v1/export/scans/:id/issues.csv`
 
-Download a CSV of all issues for a specific scan.
+Download an Excel (XLSX) workbook of all issues for a specific scan. The URL retains the `.csv` suffix for backwards compatibility, but the response is an Excel file (`Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`).
 
 **Query parameters:** `severity`, `criterion` (same as the issues endpoint).
 
 ```bash
 curl -H "X-API-Key: $LUQEN_API_KEY" \
-  "http://localhost:5000/api/v1/export/scans/abc123/issues.csv" -o issues.csv
+  "http://localhost:5000/api/v1/export/scans/abc123/issues.csv" -o issues.xlsx
 ```
 
 **Columns:** `code`, `type`, `message`, `selector`, `context`, `wcagCriterion`, `wcagTitle`, `pageUrl`, `regulations`
@@ -679,12 +679,12 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 **Columns:** `siteUrl`, `scanId`, `scanDate`, `errors`, `warnings`, `notices`, `pagesScanned`
 
-### CSV download buttons in the UI
+### Download buttons in the UI
 
-The dashboard provides download buttons for CSV export:
+The dashboard provides download buttons for data export:
 
 - **Reports list** (`/reports`) — download button exports the scans list as CSV
-- **Report detail** (`/reports/:id`) — download button exports the scan's issues as CSV
+- **Report detail** (`/reports/:id`) — download button exports the scan's issues as Excel (XLSX)
 - **Trends page** (`/reports/trends`) — download button exports trend data as CSV
 
 ---
@@ -725,7 +725,7 @@ Repeat Step 2 for the other endpoints:
 - `/api/v1/compliance-summary` — for compliance status
 - `/api/v1/scans/{id}/issues` — for issue-level detail
 
-You can also use the CSV endpoints directly: set the URL to `/api/v1/export/scans.csv` and Power BI will import it as a table without needing JSON transformation.
+You can also use the CSV endpoints directly: set the URL to `/api/v1/export/scans.csv` and Power BI will import it as a table without needing JSON transformation. For issues export, use `/api/v1/export/scans/{id}/issues.csv` — Power BI can open the Excel (XLSX) response directly.
 
 ### Step 5: Build your dashboard
 

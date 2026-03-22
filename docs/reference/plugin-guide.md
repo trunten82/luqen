@@ -185,7 +185,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 **Type:** Notification
 **Description:** Send scan notifications and scheduled reports via email (SMTP)
 
-**When to use:** You need email-based alerts when scans complete or fail, and/or you want to deliver scheduled accessibility reports (PDF/CSV) to stakeholders by email.
+**When to use:** You need email-based alerts when scans complete or fail, and/or you want to deliver scheduled accessibility reports (PDF/Excel) to stakeholders by email.
 
 #### Configuration fields
 
@@ -219,7 +219,7 @@ This plugin registers an admin page:
 #### Usage notes
 
 - The plugin runs an SMTP connectivity health check on activation. Credentials are encrypted with AES-256-GCM.
-- Scheduled reports support PDF, CSV, or both attachment formats with configurable frequency (daily, weekly, monthly).
+- Scheduled reports support PDF, Excel (XLSX), or both attachment formats with configurable frequency (daily, weekly, monthly).
 - The email body contains an inline-styled HTML summary with key metrics.
 - The legacy `smtp_config` table in the dashboard database still works as a fallback if this plugin is not installed.
 

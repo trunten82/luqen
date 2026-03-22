@@ -153,7 +153,7 @@ Toggle independently:
 
 ## Email delivery
 
-Reports can be delivered by email on a recurring schedule. Configure SMTP settings and create delivery schedules under **Admin > Email Reports** in the dashboard. Each email includes an inline-styled HTML summary with key metrics, plus PDF and/or CSV attachments matching the formats available in the dashboard. See [dashboard-admin.md](dashboard-admin.md#email-reports) for setup details.
+Reports can be delivered by email on a recurring schedule. Configure SMTP settings and create delivery schedules under **Admin > Email Reports** in the dashboard. Each email includes an inline-styled HTML summary with key metrics, plus PDF and/or Excel (XLSX) attachments matching the formats available in the dashboard. See [dashboard-admin.md](dashboard-admin.md#email-reports) for setup details.
 
 ---
 
@@ -373,32 +373,33 @@ The CLI and dashboard both produce JSON reports. The structure is:
 
 ---
 
-## CSV export
+## Data export
 
-Download scan data as CSV files directly from the dashboard or via the API.
+Download scan data directly from the dashboard or via the API.
 
 ### From the dashboard UI
 
-- **Reports list** (`/reports`) — click the **Download CSV** button to export the scans list.
-- **Report detail** (`/reports/:id`) — click the **Download CSV** button to export the scan's issues.
-- **Trends page** (`/reports/trends`) — click the **Download CSV** button to export trend data.
+- **Reports list** (`/reports`) — click the **Download CSV** button to export the scans list as CSV.
+- **Report detail** (`/reports/:id`) — click the **Download Excel** button to export the scan's issues as an Excel (XLSX) workbook.
+- **Trends page** (`/reports/trends`) — click the **Download CSV** button to export trend data as CSV.
 
 ### From the API
 
-Three CSV endpoints are available (requires `X-API-Key` header):
+Three export endpoints are available (requires `X-API-Key` header):
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/v1/export/scans.csv` | Scans list (supports `siteUrl`, `from`, `to`, `limit`, `offset` filters) |
-| `GET /api/v1/export/scans/:id/issues.csv` | Issues for a scan (supports `severity`, `criterion` filters) |
-| `GET /api/v1/export/trends.csv` | Trend data (supports `siteUrl`, `from`, `to` filters) |
+| Endpoint | Format | Description |
+|----------|--------|-------------|
+| `GET /api/v1/export/scans.csv` | CSV | Scans list (supports `siteUrl`, `from`, `to`, `limit`, `offset` filters) |
+| `GET /api/v1/export/scans/:id/issues.csv` | Excel (XLSX) | Issues for a scan (supports `severity`, `criterion` filters) |
+| `GET /api/v1/export/trends.csv` | CSV | Trend data (supports `siteUrl`, `from`, `to` filters) |
 
 ```bash
+# Download issues as Excel
 curl -H "X-API-Key: $LUQEN_API_KEY" \
-  "http://localhost:5000/api/v1/export/scans.csv" -o scans.csv
+  "http://localhost:5000/api/v1/export/scans/abc123/issues.csv" -o issues.xlsx
 ```
 
-See [API Reference — CSV Export](../reference/api-reference.md#csv-export) for full details.
+See [API Reference — Data Export](../reference/api-reference.md#data-export) for full details.
 
 ---
 
