@@ -96,6 +96,30 @@ export async function scanRoutes(
         return reply.code(400).send({ error: 'URL must use http or https' });
       }
 
+      // Pre-validate URL is reachable before starting scan
+      try {
+        const probe = await fetch(parsedUrl.toString(), {
+          method: 'HEAD',
+          signal: AbortSignal.timeout(10_000),
+          redirect: 'follow',
+        });
+        if (!probe.ok && probe.status >= 500) {
+          return reply.code(400).send({ error: `Site returned ${probe.status} — check the URL and try again.` });
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('ENOTFOUND') || msg.includes('getaddrinfo')) {
+          return reply.code(400).send({ error: 'Domain not found — check the URL for typos.' });
+        }
+        if (msg.includes('ECONNREFUSED')) {
+          return reply.code(400).send({ error: 'Connection refused — the server is not responding.' });
+        }
+        if (msg.includes('TimeoutError') || msg.includes('timed out')) {
+          return reply.code(400).send({ error: 'Connection timed out — the site took too long to respond.' });
+        }
+        // Other network errors — let the scan proceed (WAFs may block HEAD)
+      }
+
       const standard = body.standard ?? 'WCAG2AA';
       if (!VALID_STANDARDS.includes(standard)) {
         return reply.code(400).send({ error: `standard must be one of: ${VALID_STANDARDS.join(', ')}` });

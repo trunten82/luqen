@@ -103,6 +103,7 @@ export class ScanOrchestrator {
   private readonly db: ScanDb;
   private readonly reportsDir: string;
   private readonly ssePublisher?: SsePublisher;
+  private readonly redisQueue?: RedisScanQueue;
   /** Buffer recent events per scan so late-connecting SSE clients catch up. */
   private readonly eventBuffers = new Map<string, ScanProgressEvent[]>();
 
@@ -117,6 +118,7 @@ export class ScanOrchestrator {
     this.queue = new ScanQueue(opts.maxConcurrent ?? 2);
     this.emitter.setMaxListeners(100);
     this.ssePublisher = opts.ssePublisher;
+    this.redisQueue = opts.redisQueue;
   }
 
   emit(scanId: string, event: ScanProgressEvent): void {
@@ -165,7 +167,13 @@ export class ScanOrchestrator {
   }
 
   startScan(scanId: string, config: ScanConfig): void {
-    // Enqueue without awaiting — background execution
+    // When Redis queue is available, publish for cross-instance distribution.
+    // The current instance also processes it locally — in a multi-instance setup
+    // a dedicated worker would dequeue and run scans from Redis.
+    if (this.redisQueue !== undefined) {
+      void this.redisQueue.enqueue(scanId, config);
+    }
+
     // Emit queued event so the UI knows the scan is waiting if queue is full
     if (this.queue.isAtCapacity()) {
       this.emit(scanId, {
@@ -175,6 +183,18 @@ export class ScanOrchestrator {
       });
     }
     void this.queue.enqueue(() => this.runScan(scanId, config));
+  }
+
+  /**
+   * Process a scan from the Redis queue (for multi-instance workers).
+   * Called by a polling loop in server.ts when Redis is available.
+   */
+  async processFromQueue(): Promise<boolean> {
+    if (this.redisQueue === undefined) return false;
+    const item = await this.redisQueue.dequeue();
+    if (item === null) return false;
+    void this.queue.enqueue(() => this.runScan(item.scanId, item.config as ScanConfig));
+    return true;
   }
 
   private async runScan(scanId: string, config: ScanConfig): Promise<void> {

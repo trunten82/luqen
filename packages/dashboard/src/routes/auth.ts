@@ -185,8 +185,8 @@ export async function authRoutes(
         return;
       }
 
-      // Find the plugin; currently uses first available plugin
-      const plugin = authPlugins[0];
+      // Match by plugin name or fall back to first available
+      const plugin = authPlugins.find((p) => p.manifest.name === pluginId) ?? authPlugins[0];
 
       if (plugin.getLoginUrl === undefined) {
         await reply.code(500).send({ error: `Auth plugin "${pluginId}" does not support SSO redirect` });

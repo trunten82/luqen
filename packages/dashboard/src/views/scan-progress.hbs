@@ -224,8 +224,19 @@
       if (evt.data && evt.data.pagesSkipped) {
         completeMsg += ' (' + evt.data.pagesSkipped + ' {{t "scanProgress.logPagesSkipped"}}';
       }
+      // Show issue summary if available
+      if (evt.data && evt.data.issues) {
+        var iss = evt.data.issues;
+        if (issuesCountEl) {
+          issuesCountEl.textContent = (iss.errors || 0) + ' {{t "scanProgress.issueErrors"}}, ' + (iss.warnings || 0) + ' {{t "scanProgress.issueWarnings"}}, ' + (iss.notices || 0) + ' {{t "scanProgress.issueNotices"}}';
+        }
+        if (pagesScannedEl && evt.data.pagesScanned) {
+          pagesScannedEl.textContent = evt.data.pagesScanned;
+        }
+      }
       addLog(completeMsg);
-      setTimeout(function () { window.location.href = reportUrl; }, 1500);
+      // Longer delay so user can see the results before redirect
+      setTimeout(function () { window.location.href = reportUrl; }, 3000);
     } catch (_) {
       window.location.href = '/reports';
     }

@@ -1,5 +1,24 @@
 import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
+import { z } from 'zod';
+
+const ConfigSchema = z.object({
+  port: z.number().int().min(1).max(65535).default(5000),
+  complianceUrl: z.string().url().default('http://localhost:4000'),
+  webserviceUrl: z.string().url().default('http://localhost:3000'),
+  reportsDir: z.string().default('./reports'),
+  dbPath: z.string().default('./dashboard.db'),
+  sessionSecret: z.string().min(32),
+  maxConcurrentScans: z.number().int().min(1).default(2),
+  complianceClientId: z.string().default(''),
+  complianceClientSecret: z.string().default(''),
+  pluginsDir: z.string().default('./plugins'),
+  pluginsConfigFile: z.string().optional(),
+  redisUrl: z.string().url().optional(),
+  maxPages: z.number().int().min(1).max(1000).default(50),
+  runner: z.enum(['htmlcs', 'axe']).optional(),
+  webserviceUrls: z.array(z.string().url()).optional(),
+}).strict();
 
 export interface DashboardConfig {
   readonly port: number;
@@ -43,8 +62,16 @@ function loadConfigFile(configPath: string): Partial<DashboardConfig> {
   }
   try {
     const raw = readFileSync(configPath, 'utf-8');
-    return JSON.parse(raw) as Partial<DashboardConfig>;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    // Validate known fields — strip unknown fields silently for forward compat
+    const result = ConfigSchema.partial().safeParse(parsed);
+    if (!result.success) {
+      const issues = result.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n');
+      throw new Error(`Invalid config:\n${issues}`);
+    }
+    return result.data as Partial<DashboardConfig>;
   } catch (err) {
+    if (err instanceof Error && err.message.startsWith('Invalid config')) throw err;
     throw new Error(`Failed to parse config file at ${configPath}: ${String(err)}`);
   }
 }
