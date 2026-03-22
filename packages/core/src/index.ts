@@ -88,8 +88,10 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       if (opts.singlePage) {
         urls = [{ url, discoveryMethod: 'crawl' as const }];
       } else {
+        const envMaxPages = process.env['LUQEN_MAX_PAGES'] !== undefined
+          ? parseInt(process.env['LUQEN_MAX_PAGES'], 10) : NaN;
         const effectiveMaxPages = opts.maxPages
-          ?? (process.env['LUQEN_MAX_PAGES'] ? parseInt(process.env['LUQEN_MAX_PAGES'], 10) : 50);
+          ?? (Number.isFinite(envMaxPages) && envMaxPages > 0 ? envMaxPages : 50);
         try {
           const result = await discoverUrls(url, {
             maxPages: effectiveMaxPages,

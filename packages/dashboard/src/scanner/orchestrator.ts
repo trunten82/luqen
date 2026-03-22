@@ -412,9 +412,6 @@ export class ScanOrchestrator {
         }
       }
 
-      // Ensure reports dir exists
-      await mkdir(this.reportsDir, { recursive: true });
-
       const hostname = new URL(config.siteUrl).hostname;
       const jsonPath = join(this.reportsDir, `${hostname}-${scanId}.json`);
 
@@ -503,8 +500,9 @@ export class ScanOrchestrator {
         }
       }
 
-      await writeFile(jsonPath, JSON.stringify(reportData, null, 2));
+      const reportJson = JSON.stringify(reportData, null, 2);
 
+      // Store report in DB (primary) and optionally on filesystem (backup)
       this.db.updateScan(scanId, {
         status: 'completed',
         completedAt: new Date().toISOString(),
@@ -514,8 +512,17 @@ export class ScanOrchestrator {
         warnings,
         notices,
         ...(confirmedViolations !== undefined ? { confirmedViolations } : {}),
+        jsonReport: reportJson,
         jsonReportPath: jsonPath,
       });
+
+      // Best-effort filesystem write for backward compatibility
+      try {
+        await mkdir(this.reportsDir, { recursive: true });
+        await writeFile(jsonPath, reportJson);
+      } catch {
+        // DB has the report — filesystem write failure is not critical
+      }
 
       emit({
         type: 'complete',

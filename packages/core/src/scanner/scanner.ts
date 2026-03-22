@@ -108,7 +108,7 @@ async function scanUrl(
     });
 
     taskId = task.id;
-    await client.runTask(taskId, options.runner);
+    await client.runTask(taskId);
 
     // First poll attempt
     let results = await pollForResults(client, taskId, options.pollTimeout);
@@ -117,7 +117,7 @@ async function scanUrl(
     if (results === null) {
       // Retry once on timeout
       retried = true;
-      await client.runTask(taskId, options.runner);
+      await client.runTask(taskId);
       results = await pollForResults(client, taskId, options.pollTimeout);
     }
 

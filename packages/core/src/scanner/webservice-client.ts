@@ -90,9 +90,8 @@ export class WebserviceClient {
     return this.request<Pa11yTask>('/tasks', { method: 'POST', body: JSON.stringify(cleaned) });
   }
 
-  async runTask(taskId: string, runner?: string): Promise<void> {
-    const body = runner !== undefined ? JSON.stringify({ runner }) : undefined;
-    await this.request<void>(`/tasks/${taskId}/run`, { method: 'POST', ...(body !== undefined ? { body } : {}) });
+  async runTask(taskId: string): Promise<void> {
+    await this.request<void>(`/tasks/${taskId}/run`, { method: 'POST' });
   }
 
   async getResults(taskId: string): Promise<Pa11yResult[]> {

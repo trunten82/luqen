@@ -20,6 +20,7 @@ export interface ScanRecord {
   readonly notices?: number;
   readonly confirmedViolations?: number;
   readonly jsonReportPath?: string;
+  readonly jsonReport?: string;
   readonly error?: string;
   readonly orgId: string;
 }
@@ -51,6 +52,7 @@ interface ScanRow {
   notices: number | null;
   confirmed_violations: number | null;
   json_report_path: string | null;
+  json_report: string | null;
   error: string | null;
   org_id: string;
 }
@@ -466,6 +468,12 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_resource ON audit_log(resource_type, re
     name: 'add-audit-view-permission',
     sql: `
 INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'audit.view');
+    `,
+  },
+  {
+    name: 'add-json-report-column',
+    sql: `
+ALTER TABLE scan_records ADD COLUMN json_report TEXT;
     `,
   },
 ];
@@ -919,6 +927,7 @@ export class ScanDb {
       notices: 'notices',
       confirmedViolations: 'confirmed_violations',
       jsonReportPath: 'json_report_path',
+      jsonReport: 'json_report',
       error: 'error',
     };
 
@@ -952,6 +961,16 @@ export class ScanDb {
       throw new Error(`Scan record not found after update: ${id}`);
     }
     return updated;
+  }
+
+  getReport(id: string): Record<string, unknown> | null {
+    const row = this.db.prepare('SELECT json_report FROM scan_records WHERE id = ?').get(id) as { json_report: string | null } | undefined;
+    if (row === undefined || row.json_report === null) return null;
+    try {
+      return JSON.parse(row.json_report) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
   }
 
   deleteScan(id: string): void {

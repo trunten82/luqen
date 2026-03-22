@@ -642,12 +642,8 @@ export async function reportRoutes(
           : '',
       };
 
-      // If scan is not completed or no JSON file, render a status-only view
-      if (
-        scan.status !== 'completed' ||
-        scan.jsonReportPath === undefined ||
-        !existsSync(scan.jsonReportPath)
-      ) {
+      // If scan is not completed, render a status-only view
+      if (scan.status !== 'completed') {
         return reply.view('report-detail.hbs', {
           pageTitle: `Report — ${scan.siteUrl}`,
           currentPath: `/reports/${id}`,
@@ -658,14 +654,31 @@ export async function reportRoutes(
         });
       }
 
+      // Load report data — try DB first, then filesystem fallback
       let reportData: ReturnType<typeof normalizeReportData> | null = null;
       try {
-        const raw = JSON.parse(
-          await readFile(scan.jsonReportPath, 'utf-8'),
-        ) as JsonReportFile;
-        reportData = normalizeReportData(raw, scan);
+        const dbReport = db.getReport(id);
+        if (dbReport !== null) {
+          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+        } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
+          const raw = JSON.parse(
+            await readFile(scan.jsonReportPath, 'utf-8'),
+          ) as JsonReportFile;
+          reportData = normalizeReportData(raw, scan);
+        }
       } catch {
         // Render without report data — template handles the missing case
+      }
+
+      if (reportData === null) {
+        return reply.view('report-detail.hbs', {
+          pageTitle: `Report — ${scan.siteUrl}`,
+          currentPath: `/reports/${id}`,
+          user: request.user,
+          scan: scanMeta,
+          reportData: null,
+          pdfAvailable: isPuppeteerAvailable(),
+        });
       }
 
       // Compute manual testing completion stats
@@ -735,22 +748,27 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
-      if (
-        scan.status !== 'completed' ||
-        scan.jsonReportPath === undefined ||
-        !existsSync(scan.jsonReportPath)
-      ) {
+      if (scan.status !== 'completed') {
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
       let reportData: ReturnType<typeof normalizeReportData> | null = null;
       try {
-        const raw = JSON.parse(
-          await readFile(scan.jsonReportPath, 'utf-8'),
-        ) as JsonReportFile;
-        reportData = normalizeReportData(raw, scan);
+        const dbReport = db.getReport(id);
+        if (dbReport !== null) {
+          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+        } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
+          const raw = JSON.parse(
+            await readFile(scan.jsonReportPath, 'utf-8'),
+          ) as JsonReportFile;
+          reportData = normalizeReportData(raw, scan);
+        }
       } catch {
         return reply.code(500).send({ error: 'Failed to read report data' });
+      }
+
+      if (reportData === null) {
+        return reply.code(404).send({ error: 'Report data not available' });
       }
 
       const scanMeta = {

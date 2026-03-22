@@ -18,10 +18,17 @@ async function fetchXml(url: string): Promise<string | null> {
   }
 }
 
+const MAX_SITEMAP_DEPTH = 3;
+
 export async function parseSitemap(sitemapUrl: string): Promise<string[]> {
   const urls = new Set<string>();
+  const visited = new Set<string>();
 
-  async function processSitemap(url: string): Promise<void> {
+  async function processSitemap(url: string, depth: number): Promise<void> {
+    if (depth > MAX_SITEMAP_DEPTH) return;
+    if (visited.has(url)) return;
+    visited.add(url);
+
     const xml = await fetchXml(url);
     if (!xml) return;
 
@@ -37,7 +44,7 @@ export async function parseSitemap(sitemapUrl: string): Promise<string[]> {
       const childUrls = parsed.sitemapindex.sitemap
         .map((entry) => entry.loc?.[0])
         .filter((loc): loc is string => typeof loc === 'string');
-      await Promise.all(childUrls.map(processSitemap));
+      await Promise.all(childUrls.map((child) => processSitemap(child, depth + 1)));
       return;
     }
 
@@ -49,6 +56,6 @@ export async function parseSitemap(sitemapUrl: string): Promise<string[]> {
     }
   }
 
-  await processSitemap(sitemapUrl);
+  await processSitemap(sitemapUrl, 0);
   return [...urls];
 }

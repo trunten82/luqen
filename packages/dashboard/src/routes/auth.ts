@@ -327,8 +327,19 @@ export async function authRoutes(
       await reply.redirect('/account?localeSaved=1');
       return;
     }
+    // Validate referer to prevent open redirect — only allow same-origin paths
     const referer = request.headers.referer ?? '/';
-    await reply.redirect(referer);
+    let redirectTo = '/';
+    try {
+      const url = new URL(referer);
+      const host = request.headers.host ?? '';
+      if (url.host === host) {
+        redirectTo = url.pathname + url.search;
+      }
+    } catch {
+      // Invalid URL — use root
+    }
+    await reply.redirect(redirectTo);
   });
 
   // POST /logout — clear session and redirect
