@@ -663,6 +663,7 @@
     "printPdf": "Print / PDF",
     "downloadPdf": "Download PDF",
     "exportCsv": "Export CSV",
+    "exportExcel": "Export Excel",
     "assignments": "Assignments",
     "proposeFixes": "Propose Fixes",
     "pages": "Pages",
