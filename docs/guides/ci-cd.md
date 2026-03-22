@@ -8,7 +8,7 @@ How to integrate luqen into your continuous integration and deployment pipelines
 
 ## Exit codes
 
-Luqen-agent uses exit codes to signal scan results to pipeline runners:
+Luqen uses exit codes to signal scan results to pipeline runners:
 
 | Code | Meaning | Pipeline action |
 |------|---------|-----------------|
@@ -324,7 +324,7 @@ The dashboard data API (v0.14.0+) provides JSON endpoints you can query from CI/
 
 ```bash
 # Get the most recent scan for a site
-SCAN=$(curl -s -H "X-API-Key: $PALLY_API_KEY" \
+SCAN=$(curl -s -H "X-API-Key: $LUQEN_API_KEY" \
   "http://dashboard:5000/api/v1/scans?siteUrl=https://staging.example.com&limit=1")
 
 ERRORS=$(echo "$SCAN" | jq '.data[0].errors')
@@ -340,7 +340,7 @@ fi
 
 ```bash
 # Get compliance summary for a site
-COMPLIANCE=$(curl -s -H "X-API-Key: $PALLY_API_KEY" \
+COMPLIANCE=$(curl -s -H "X-API-Key: $LUQEN_API_KEY" \
   "http://dashboard:5000/api/v1/compliance-summary?siteUrl=https://staging.example.com")
 
 # Check if any jurisdiction is failing
@@ -357,12 +357,12 @@ fi
 
 ```bash
 # Get the latest scan ID
-SCAN_ID=$(curl -s -H "X-API-Key: $PALLY_API_KEY" \
+SCAN_ID=$(curl -s -H "X-API-Key: $LUQEN_API_KEY" \
   "http://dashboard:5000/api/v1/scans?siteUrl=https://staging.example.com&limit=1" \
   | jq -r '.data[0].id')
 
 # Download issues CSV as a pipeline artifact
-curl -H "X-API-Key: $PALLY_API_KEY" \
+curl -H "X-API-Key: $LUQEN_API_KEY" \
   "http://dashboard:5000/api/v1/export/scans/$SCAN_ID/issues.csv" \
   -o ./a11y-reports/issues.csv
 ```
@@ -371,7 +371,7 @@ curl -H "X-API-Key: $PALLY_API_KEY" \
 
 ```bash
 # Check if errors are increasing over the last 5 scans
-TRENDS=$(curl -s -H "X-API-Key: $PALLY_API_KEY" \
+TRENDS=$(curl -s -H "X-API-Key: $LUQEN_API_KEY" \
   "http://dashboard:5000/api/v1/trends?siteUrl=https://staging.example.com")
 
 LATEST=$(echo "$TRENDS" | jq '.data[0].errors')

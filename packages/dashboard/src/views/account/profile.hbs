@@ -1,0 +1,112 @@
+<div class="page-header">
+  <h1 class="page-header__title">My Profile</h1>
+</div>
+
+<div class="profile-grid">
+  {{!-- Account info card --}}
+  <div class="card">
+    <h2 class="card__title">Account Details</h2>
+    <dl class="profile-details">
+      <dt>Username</dt>
+      <dd>{{user.username}}</dd>
+      <dt>Role</dt>
+      <dd><span class="badge badge--neutral">{{user.role}}</span></dd>
+      <dt>Authentication</dt>
+      <dd>
+        {{#if (eq authMethod "password")}}Password{{/if}}
+        {{#if (eq authMethod "api-key")}}API Key{{/if}}
+        {{#if (eq authMethod "sso")}}Single Sign-On (SSO){{/if}}
+        {{#if (eq authMethod "oauth")}}OAuth{{/if}}
+      </dd>
+    </dl>
+  </div>
+
+  {{!-- Change password card --}}
+  <div class="card">
+    <h2 class="card__title">Change Password</h2>
+
+    {{#unless canChangePassword}}
+    <div class="alert alert--info" role="status">
+      <div class="alert__body">
+        Password change is only available for password-based accounts.
+        {{#if (eq authMethod "api-key")}}You are signed in with an API key.{{/if}}
+        {{#if (eq authMethod "sso")}}Your password is managed by your SSO provider.{{/if}}
+        {{#if (eq authMethod "oauth")}}Your password is managed by the compliance service.{{/if}}
+      </div>
+    </div>
+    {{/unless}}
+
+    {{#if canChangePassword}}
+    {{#if pwError}}
+    <div class="alert alert--error" role="alert" aria-live="assertive">
+      <div class="alert__body">{{pwError}}</div>
+    </div>
+    {{/if}}
+
+    {{#if pwSuccess}}
+    <div class="alert alert--success" role="status" aria-live="polite">
+      <div class="alert__body">{{pwSuccess}}</div>
+    </div>
+    {{/if}}
+
+    <form method="POST" action="/account/change-password" novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label for="currentPassword">
+          Current Password
+          <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input
+          type="password"
+          id="currentPassword"
+          name="currentPassword"
+          class="input"
+          autocomplete="current-password"
+          required
+          aria-required="true"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="newPassword">
+          New Password
+          <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input
+          type="password"
+          id="newPassword"
+          name="newPassword"
+          class="input"
+          autocomplete="new-password"
+          required
+          aria-required="true"
+          minlength="8"
+        >
+        <span class="form-hint">Minimum 8 characters</span>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">
+          Confirm New Password
+          <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input
+          type="password"
+          id="confirmPassword"
+          name="confirmPassword"
+          class="input"
+          autocomplete="new-password"
+          required
+          aria-required="true"
+          minlength="8"
+        >
+      </div>
+
+      <div class="form-group" style="margin-top: var(--space-lg)">
+        <button type="submit" class="btn btn--primary">Change Password</button>
+      </div>
+    </form>
+    {{/if}}
+  </div>
+</div>

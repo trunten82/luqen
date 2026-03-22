@@ -39,6 +39,7 @@ interface AuthResult {
   };
   readonly token?: string;
   readonly error?: string;
+  readonly groups?: readonly string[];
 }
 
 interface MinimalRequest {
@@ -79,6 +80,7 @@ export default function createPlugin(): AuthPlugin {
   const manifest = loadManifest();
   let provider: EntraProvider | null = null;
   let redirectUri = '/auth/callback/auth-entra';
+  let groupClaimName = 'groups';
 
   return {
     manifest,
@@ -94,6 +96,8 @@ export default function createPlugin(): AuthPlugin {
 
       redirectUri =
         (config['redirectUri'] as string | undefined) ?? '/auth/callback/auth-entra';
+      groupClaimName =
+        (config['groupClaimName'] as string | undefined) ?? 'groups';
 
       provider = new EntraProvider({ tenantId, clientId, clientSecret, redirectUri });
       provider.initialise();
@@ -155,6 +159,25 @@ export default function createPlugin(): AuthPlugin {
       try {
         const authResult = await provider.acquireTokenByCode(code, redirectUri);
         const userInfo = provider.extractUserInfo(authResult);
+
+        // Extract groups from the ID token claims using the configured claim name
+        const claims = authResult.idTokenClaims as Record<string, unknown> | undefined;
+        let groups: string[] | undefined;
+
+        const rawGroups = claims?.[groupClaimName];
+        if (Array.isArray(rawGroups)) {
+          groups = rawGroups as string[];
+        } else if (claims?.['_claim_names'] !== undefined) {
+          // Token has an overage indicator — groups exceed the token size limit.
+          // Fall back to Microsoft Graph API to retrieve the full list.
+          try {
+            groups = await provider.fetchGroupsFromGraph(authResult.accessToken);
+          } catch {
+            // If Graph call fails, proceed without groups rather than blocking login
+            groups = undefined;
+          }
+        }
+
         return {
           authenticated: true,
           user: {
@@ -163,6 +186,7 @@ export default function createPlugin(): AuthPlugin {
             email: userInfo.email,
           },
           token: authResult.accessToken,
+          groups,
         };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Callback handling failed';
@@ -185,8 +209,8 @@ export default function createPlugin(): AuthPlugin {
         id: (payload['oid'] as string) ?? (payload['sub'] as string) ?? '',
         username: (payload['preferred_username'] as string) ?? '',
         email: (payload['email'] as string) ?? undefined,
-        groups: Array.isArray(payload['groups'])
-          ? (payload['groups'] as string[])
+        groups: Array.isArray(payload[groupClaimName])
+          ? (payload[groupClaimName] as string[])
           : undefined,
       };
     },

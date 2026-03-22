@@ -46,6 +46,20 @@ export async function adminGuard(
   }
 }
 
+export function requirePermission(...permissions: string[]) {
+  return async function permissionGuard(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
+    const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
+    const hasAny = perms !== undefined && permissions.some((p) => perms.has(p));
+    if (!hasAny) {
+      await reply.code(403).send({ error: `Forbidden: requires ${permissions.join(' or ')}` });
+      return;
+    }
+  };
+}
+
 export function requireRole(role: 'viewer' | 'user' | 'admin') {
   const roleOrder: Record<string, number> = { viewer: 0, user: 1, admin: 2 };
 

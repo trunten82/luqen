@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createAuthGuard, adminGuard, requireRole } from '../../src/auth/middleware.js';
+import { createAuthGuard, adminGuard, requireRole, requirePermission } from '../../src/auth/middleware.js';
 import type { AuthService } from '../../src/auth/auth-service.js';
 import type { AuthResult } from '../../src/plugins/types.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -205,6 +205,45 @@ describe('requireRole', () => {
     const reply = { code: codeFn } as unknown as FastifyReply;
 
     guard(request, reply);
+
+    expect(codeFn).toHaveBeenCalledWith(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// requirePermission
+// ---------------------------------------------------------------------------
+
+describe('requirePermission', () => {
+  it('returns 403 when user has no matching permissions', async () => {
+    const guard = requirePermission('users.create');
+    const request = { permissions: new Set(['reports.view', 'scans.create']) } as unknown as FastifyRequest;
+    const codeFn = vi.fn(() => ({ send: vi.fn() }));
+    const reply = { code: codeFn } as unknown as FastifyReply;
+
+    await guard(request, reply);
+
+    expect(codeFn).toHaveBeenCalledWith(403);
+  });
+
+  it('passes when user has at least one matching permission (OR logic)', async () => {
+    const guard = requirePermission('users.create', 'users.delete');
+    const request = { permissions: new Set(['users.delete', 'reports.view']) } as unknown as FastifyRequest;
+    const codeFn = vi.fn(() => ({ send: vi.fn() }));
+    const reply = { code: codeFn } as unknown as FastifyReply;
+
+    await guard(request, reply);
+
+    expect(codeFn).not.toHaveBeenCalled();
+  });
+
+  it('handles undefined permissions set gracefully', async () => {
+    const guard = requirePermission('users.create');
+    const request = {} as unknown as FastifyRequest;
+    const codeFn = vi.fn(() => ({ send: vi.fn() }));
+    const reply = { code: codeFn } as unknown as FastifyReply;
+
+    await guard(request, reply);
 
     expect(codeFn).toHaveBeenCalledWith(403);
   });

@@ -1,8 +1,13 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { ScanDb } from '../../db/scans.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
+import { generateReportPdf, isPuppeteerAvailable } from '../../pdf/generator.js';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 // ---------------------------------------------------------------------------
 // CSV helper
@@ -275,6 +280,81 @@ export async function exportRoutes(
         .header('Content-Type', 'text/csv')
         .header('Content-Disposition', `attachment; filename="${filename}"`)
         .send(csv);
+    },
+  );
+
+  // ── GET /api/v1/export/scans/:id/report.pdf ─────────────────────────────
+  server.get(
+    '/api/v1/export/scans/:id/report.pdf',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      // Check puppeteer availability before doing any work
+      if (!isPuppeteerAvailable()) {
+        return reply.code(501).send({
+          error: 'PDF generation is not available. Puppeteer is not installed on this server.',
+        });
+      }
+
+      const { id } = request.params as { id: string };
+      const scan = db.getScan(id);
+
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      if (
+        scan.status !== 'completed' ||
+        scan.jsonReportPath === undefined ||
+        !existsSync(scan.jsonReportPath)
+      ) {
+        return reply.code(404).send({ error: 'Report data not available' });
+      }
+
+      // Render the report-print.hbs template with scan data
+      let html: string;
+      try {
+        const { generateReportHtml } = await import('../../email/report-generator.js');
+        const result = await generateReportHtml(scan, scan.jsonReportPath);
+        if (result === null) {
+          return reply.code(500).send({ error: 'Failed to render report HTML' });
+        }
+        html = result;
+      } catch (err) {
+        return reply.code(500).send({
+          error: 'Failed to render report HTML',
+          detail: err instanceof Error ? err.message : String(err),
+        });
+      }
+
+      // Generate PDF from rendered HTML
+      try {
+        const pdfBuffer = await generateReportPdf(html, {
+          format: 'A4',
+          margin: { top: '15mm', right: '10mm', bottom: '15mm', left: '10mm' },
+        });
+
+        let hostname: string;
+        try {
+          hostname = new URL(scan.siteUrl).hostname;
+        } catch {
+          hostname = scan.siteUrl.replace(/[^a-zA-Z0-9.-]/g, '_');
+        }
+        const filename = `luqen-report-${hostname}-${todayStamp()}.pdf`;
+
+        return reply
+          .header('Content-Type', 'application/pdf')
+          .header('Content-Disposition', `attachment; filename="${filename}"`)
+          .send(pdfBuffer);
+      } catch (err) {
+        return reply.code(500).send({
+          error: 'PDF generation failed',
+          detail: err instanceof Error ? err.message : String(err),
+        });
+      }
     },
   );
 }

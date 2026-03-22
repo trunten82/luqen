@@ -402,6 +402,29 @@ export class PluginManager {
     return instances;
   }
 
+  /**
+   * Return decrypted configuration for all active plugins of the given type.
+   * Each entry pairs the plugin id with its full (decrypted) config object.
+   */
+  getActivePluginConfigs(
+    type: string,
+  ): Array<{ readonly id: string; readonly config: Readonly<Record<string, unknown>> }> {
+    const rows = this.db
+      .prepare("SELECT * FROM plugins WHERE type = @type AND status = 'active'")
+      .all({ type }) as PluginRow[];
+
+    const results: Array<{ id: string; config: Record<string, unknown> }> = [];
+    for (const row of rows) {
+      const manifest = this.tryReadManifest(row.package_name);
+      const raw = JSON.parse(row.config) as Record<string, unknown>;
+      const config = manifest
+        ? decryptConfig(raw, manifest.configSchema, this.encryptionKey)
+        : raw;
+      results.push({ id: row.id, config });
+    }
+    return results;
+  }
+
   // -----------------------------------------------------------------------
   // Get active instance by package name
   // -----------------------------------------------------------------------

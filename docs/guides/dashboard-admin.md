@@ -86,14 +86,14 @@ The dashboard supports a progressive authentication model:
 ### Solo mode (API key)
 
 - Default when no users exist in the database.
-- Login requires the compliance service API key (`DASHBOARD_COMPLIANCE_API_KEY` or the key printed at first startup).
+- Login requires the API key printed at first startup.
 - Single-user mode — no user management, no roles.
 - Suitable for local development and single-developer setups.
 
 ### Team mode (local users)
 
 - Activated when at least one user account is created.
-- Login with username and password.
+- Login with username and password (primary) or API key (fallback — available under "Sign in with API key" on the login page).
 - Supports user roles (see below).
 - Suitable for small teams sharing a dashboard instance.
 
@@ -101,8 +101,11 @@ The dashboard supports a progressive authentication model:
 
 - Activated when an SSO plugin is installed (e.g., `@luqen/plugin-auth-entra` for Microsoft Entra ID).
 - Login redirects to the identity provider.
+- Password and API key fallback methods are available under collapsible sections on the login page.
 - User roles can be mapped from SSO claims.
 - Suitable for organisations with existing identity infrastructure.
+
+> **API key login** is always available in all modes. In team and enterprise mode, it appears as a collapsible section on the login page. API key login always grants admin access.
 
 ---
 
@@ -148,21 +151,47 @@ Manage the permission model for all dashboard users:
 
 | Group | Permissions |
 |-------|------------|
-| **Scans** | `scans.create`, `scans.view` |
-| **Reports** | `reports.view`, `reports.delete`, `reports.export` |
-| **Issues** | `issues.view`, `issues.manage` |
-| **Testing** | `testing.manual` |
-| **Repositories** | `repos.view`, `repos.manage` |
-| **Analytics** | `analytics.view` |
-| **Administration** | `admin.system`, `admin.users`, `admin.roles` |
+| **Scans** | `scans.create`, `scans.schedule` |
+| **Reports** | `reports.view`, `reports.view_technical`, `reports.export`, `reports.delete`, `reports.compare` |
+| **Issues** | `issues.assign`, `issues.fix` |
+| **Testing** | `manual_testing` |
+| **Repositories** | `repos.manage` |
+| **Analytics** | `trends.view` |
+| **User Management** | `users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles` |
+| **Administration** | `admin.users` (compliance API users), `admin.roles`, `admin.system` |
 
 All dashboard templates use `perm.*` flags for authorization rather than hardcoded role name checks, so custom roles work seamlessly throughout the UI.
+
+> **v1.0.0 note:** User management actions (create, delete, activate, reset password, change role) are now governed by individual `users.*` permissions instead of the blanket `admin` role check. This allows fine-grained delegation of user management tasks to non-admin roles.
 
 ### Dashboard Users
 
 **Path:** `/admin/dashboard-users`
 
 Manage Dashboard Users — accounts that log in to the web UI (separate from API Users on the compliance service).
+
+Each user row provides:
+
+- **Role selector** — change the user's role via a dropdown (active users only)
+- **Deactivate** — prevent the user from logging in (preserves the user record)
+- **Activate** — restore login access for a deactivated user
+- **Reset Password** — open a modal to set a new password for the user (admin sets it directly; no email/token flow)
+- **Delete** — permanently remove the user. Requires confirmation. Historical references (e.g., issue assignments created by the user) remain intact as plain text but the login account is gone
+
+Each action is gated by a specific permission scope:
+
+| Action | Permission |
+|--------|-----------|
+| View user list | Any `users.*` permission |
+| Add User | `users.create` |
+| Change role | `users.roles` |
+| Activate / Deactivate | `users.activate` |
+| Reset Password | `users.reset_password` |
+| Delete | `users.delete` |
+
+The `admin` role and API key sessions receive all `users.*` permissions by default. Custom roles can be granted individual user management permissions for delegation (e.g., a "team lead" role with only `users.activate` and `users.reset_password`).
+
+**Self-service profile:** All authenticated users can view their profile and change their own password at `/account`, regardless of permissions. This is a built-in policy, not a permission scope.
 
 ### Teams
 
@@ -389,6 +418,72 @@ All data API endpoints require an `X-API-Key` header. Generate keys from **Setti
 Data API endpoints are rate limited to 60 requests per minute per API key.
 
 For full documentation with request/response examples, see [API Reference — Dashboard Data API](../reference/api-reference.md#dashboard-data-api).
+
+---
+
+## Setup API (admin recovery)
+
+The dashboard exposes a JSON API endpoint for creating dashboard users via API key, useful for bootstrapping the first admin user or recovering admin access when locked out.
+
+### `POST /api/v1/setup`
+
+**Authentication:** API key via `Authorization: Bearer <key>` or `X-API-Key` header (not session-based).
+
+**Request body (JSON):**
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `username` | Yes | — | Username for the new user |
+| `password` | Yes | — | Password (minimum 8 characters) |
+| `role` | No | `admin` | Role: `viewer`, `user`, `developer`, `admin`, or `executive` |
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:5000/api/v1/setup \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "SecurePass123!", "role": "admin"}'
+```
+
+**Response (201):**
+
+```json
+{
+  "message": "User \"admin\" created with role \"admin\".",
+  "user": { "id": "uuid", "username": "admin", "role": "admin" }
+}
+```
+
+**Error responses:**
+
+| Code | Reason |
+|------|--------|
+| 400 | Missing username/password, password < 8 chars, invalid role |
+| 401 | API key missing or invalid |
+| 409 | Username already exists |
+
+---
+
+## My Profile
+
+**Path:** `/account`
+
+Every logged-in user can access their profile page by clicking their username in the sidebar footer.
+
+The profile page shows:
+
+- **Account details** — username, role, authentication method
+- **Change password** — self-service password change (only for password-based accounts)
+
+API key and SSO users see an informational message explaining that password changes are managed elsewhere.
+
+### Changing your password
+
+1. Navigate to `/account` (click your username in the sidebar)
+2. Enter your current password
+3. Enter and confirm a new password (minimum 8 characters)
+4. Click **Change Password**
 
 ---
 

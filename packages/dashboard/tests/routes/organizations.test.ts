@@ -8,6 +8,7 @@ import { ScanDb } from '../../src/db/scans.js';
 import { OrgDb } from '../../src/db/orgs.js';
 import { UserDb } from '../../src/db/users.js';
 import { registerSession } from '../../src/auth/session.js';
+import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 import { organizationRoutes } from '../../src/routes/admin/organizations.js';
 
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
@@ -46,6 +47,10 @@ async function createTestServer(role: string = 'admin'): Promise<TestContext> {
   // Inject user into all requests
   server.addHook('preHandler', async (request) => {
     request.user = { id: 'test-user-id', username: 'testadmin', role };
+    const permissions = role === 'admin'
+      ? new Set(ALL_PERMISSION_IDS)
+      : new Set<string>();
+    (request as unknown as Record<string, unknown>)['permissions'] = permissions;
   });
 
   await organizationRoutes(server, orgDb, userDb);

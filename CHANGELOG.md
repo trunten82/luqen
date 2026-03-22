@@ -6,6 +6,38 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.1.0] - 2026-03-21
+
+### Added
+- **Granular user management permissions** — 5 new permission scopes (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) replace the blanket admin role check for user operations. Permissions are assignable to custom roles for delegation.
+- **User lifecycle management** — activate/deactivate users, admin password reset, permanent user deletion. Historical references (assignments, scans) are preserved when users are deleted.
+- **Self-service profile page** (`/account`) — all users can view their profile and change their own password. Accessible via username link in sidebar footer.
+- **Setup API** (`POST /api/v1/setup`) — create dashboard users via API key authentication. Used for bootstrapping the first admin user or recovering admin access when locked out.
+- **API key login in all modes** — API key authentication is now available as a fallback on the login page in team and enterprise modes (previously solo-mode only).
+- **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for use in Power BI Desktop. Supports scans, trends, compliance summary, and issues data sources.
+- **IdP group → team sync** — auth-entra plugin now reads group memberships from Entra ID tokens and auto-syncs to dashboard teams on SSO login. Configurable via `groupMapping`, `syncMode`, and `autoCreateTeams` settings.
+- **Server-side PDF generation** — Puppeteer-based PDF export at `GET /api/v1/export/scans/:id/report.pdf`. Integrates with email report attachments. Graceful fallback when Puppeteer is not installed.
+- **Sidebar reorganization** — admin navigation split into sections: Compliance, Plugins, Integrations, Users & Access, System.
+
+### Security
+- All admin routes migrated from hardcoded `adminGuard` to permission-based `requirePermission()` guards
+- New security administration guide (`docs/guides/security-administration.md`)
+- DB migration 015 seeds new user management permissions for admin role
+
+### Documentation
+- OpenAPI 3.1 spec updated to v0.2.0 with setup, user management, account, and PDF export endpoints
+- Dashboard admin guide updated with permission matrix, user management actions, setup API
+- New Power BI integration guide
+- New security administration guide
+
+### Chores
+- Root package.json bumped to v1.1.0
+- `alanna82` git remote updated to luqen repo
+- MIT license added to all plugin package.json files
+- Remaining "Pally" references cleaned from docs and source
+
+---
+
 ## [1.0.0] - 2026-03-21
 
 ### Breaking Changes
@@ -40,13 +72,13 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 - GET /orgs/current JSON endpoint for org context
 - Dashboard compliance client passes X-Org-Id header on all requests
 - deleteOrgData() function in compliance client for org cleanup
-- @pally-agent/plugin-notify-slack — Slack notification plugin via webhooks
+- @luqen/plugin-notify-slack — Slack notification plugin via webhooks
 - Notification events: scan.complete, scan.failed, violation.found, regulation.changed
 - Rich Slack Block Kit message formatting for all event types
 - Configurable event filtering (subscribe to specific event types)
-- @pally-agent/plugin-notify-teams — Microsoft Teams notification plugin via webhooks
-- @pally-agent/plugin-storage-s3 — AWS S3 report/scan storage plugin (native AWS4 signing)
-- @pally-agent/plugin-storage-azure — Azure Blob Storage plugin (native SharedKey auth)
+- @luqen/plugin-notify-teams — Microsoft Teams notification plugin via webhooks
+- @luqen/plugin-storage-s3 — AWS S3 report/scan storage plugin (native AWS4 signing)
+- @luqen/plugin-storage-azure — Azure Blob Storage plugin (native SharedKey auth)
 - Monitor multi-tenant: X-Org-Id header support, --org-id CLI flag, MONITOR_ORG_ID env var
 - Hybrid compliance queries: read operations return system + org data combined
 
@@ -83,7 +115,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 - API key generation on first start with CLI regeneration command
 - Dashboard user management admin page
 - Compliance service API key auth for service-to-service calls
-- @pally-agent/plugin-auth-entra — Azure Entra ID SSO plugin
+- @luqen/plugin-auth-entra — Azure Entra ID SSO plugin
 - SSO login flow with callback handling
 
 ### Changed
@@ -96,10 +128,10 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 ## [0.8.0] - 2026-03-20
 
 ### Added
-- **Database migration framework** — versioned schema migrations with `pally-dashboard migrate`
+- **Database migration framework** — versioned schema migrations with `luqen-dashboard migrate`
 - **Plugin system foundation** — `PluginManager` with install, configure, activate, deactivate, remove lifecycle; plugin registry with 7 built-in entries (3 auth, 2 notification, 2 storage)
 - **Plugin marketplace UI** — Settings > Plugins page for browsing, installing, configuring, and activating plugins from the dashboard
-- **Plugin CLI** — `pally-dashboard plugin list|install|configure|activate|deactivate|remove` subcommands
+- **Plugin CLI** — `luqen-dashboard plugin list|install|configure|activate|deactivate|remove` subcommands
 - **Plugin REST API** — `/api/v1/plugins/*` endpoints for programmatic plugin management (list, registry, install, config, activate, deactivate, remove, health)
 - **AES-256-GCM encrypted plugin secrets** — config fields marked as `secret` are encrypted at rest
 - **Plugin health checks** — periodic health monitoring with auto-deactivation after 3 consecutive failures
@@ -112,10 +144,10 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 ### Added
 - User and Client REST API routes in compliance service
 - Webhook test endpoint (POST /api/v1/webhooks/:id/test)
-- PALLY_COMPLIANCE_URL env var for core → compliance integration
+- LUQEN_COMPLIANCE_URL env var for core → compliance integration
 - Helpful pa11y webservice connection error with setup instructions
 - Report "next steps" hints for progressive discovery
-- Monitor standalone mode with .pally-monitor.json local config fallback
+- Monitor standalone mode with .luqen-monitor.json local config fallback
 - Dashboard graceful degradation when compliance service unavailable
 - Dynamic version strings (read from package.json at runtime)
 
@@ -143,7 +175,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 ### Added
 
-- **Dashboard self-audit** — `pally-dashboard self-audit` CLI command scans dashboard pages for WCAG 2.1 AA compliance, supports `--url`, `--port`, `--json` flags; exit code 1 when errors found
+- **Dashboard self-audit** — `luqen-dashboard self-audit` CLI command scans dashboard pages for WCAG 2.1 AA compliance, supports `--url`, `--port`, `--json` flags; exit code 1 when errors found
 - **Report comparison** — side-by-side diff of two scan reports at `/reports/compare?a=...&b=...`, with checkboxes on reports list, summary delta cards, and new/resolved/unchanged issue tabs
 - **Monitor admin UI** — `/admin/monitor` dashboard page showing source status, recent proposals, and HTMX "Trigger Scan" button
 - **NPM publish prep** — all packages synced to v0.5.1, `publishConfig`, `types` fields, per-package README + LICENSE, root `.npmignore`, `scripts/publish.sh` dry-run script
@@ -160,16 +192,16 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 ### Added
 
-- **Regulatory monitor agent** (`@pally-agent/monitor`) — new package that watches monitored legal sources for content changes, computes SHA-256 hashes, and creates UpdateProposals in the compliance service when changes are detected
+- **Regulatory monitor agent** (`@luqen/monitor`) — new package that watches monitored legal sources for content changes, computes SHA-256 hashes, and creates UpdateProposals in the compliance service when changes are detected
 - **Monitor MCP server** — 3 tools: `monitor_scan_sources`, `monitor_status`, `monitor_add_source`
-- **Monitor CLI** — `pally-monitor scan`, `pally-monitor status`, `pally-monitor mcp`, `pally-monitor serve` commands
+- **Monitor CLI** — `luqen-monitor scan`, `luqen-monitor status`, `luqen-monitor mcp`, `luqen-monitor serve` commands
 - **Monitor A2A agent** — Agent-to-Agent protocol support via `/.well-known/agent.json` endpoint
 - **npm publish preparation** — `package.json` metadata (description, keywords, repository, homepage), `LICENSE` file (MIT), and `.npmignore` files added to all publishable packages
 - **Redis support** — optional Redis adapter for caching, job queue, and SSE broadcasting (used by compliance service and dashboard when `REDIS_URL` is set)
 
 ### Security
 
-- **RSA private key removed** from repository history; keys are now generated at runtime with `pally-compliance keys generate` and stored outside the repo
+- **RSA private key removed** from repository history; keys are now generated at runtime with `luqen-compliance keys generate` and stored outside the repo
 - **CSRF protection** added to dashboard state-changing routes (SameSite=Strict cookies + origin validation)
 - **bcrypt upgraded** from 5.1.1 to 6.x — resolves vulnerable `tar` transitive dependency
 
@@ -190,7 +222,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 ### Added
 
-- **Web dashboard** (`@pally-agent/dashboard`) — new package providing a browser-based UI for the entire pally ecosystem
+- **Web dashboard** (`@luqen/dashboard`) — new package providing a browser-based UI for the entire Luqen ecosystem
 - **HTMX-powered interface** — server-rendered HTML with HTMX for interactivity, no JavaScript build step required
 - **Authentication** — OAuth2 password grant flow via the compliance service; JWT stored in signed httpOnly cookies
 - **Role-based access control** — three roles: `viewer` (browse reports), `user` (create scans), `admin` (full admin section)
@@ -211,7 +243,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 - **Scan queue** — global semaphore limits concurrent scans to `maxConcurrentScans`; excess scans queue with `queued` status
 - **Local SQLite** — `ScanRecord` table stores scan history, report paths, and issue counts
 - **Docker support** — `Dockerfile` for the dashboard and `docker-compose.yml` updated to include dashboard service with health check and named volumes
-- **CLI** — `pally-dashboard serve` and `pally-dashboard migrate` commands
+- **CLI** — `luqen-dashboard serve` and `luqen-dashboard migrate` commands
 - **WCAG 2.1 AA compliance** — self-audited; zero confirmed violations is the acceptance criterion
 
 ---
@@ -262,7 +294,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 ### Added
 
-- **Compliance service** (`@pally-agent/compliance`) — new package providing a REST API and MCP server for jurisdiction and regulation data
+- **Compliance service** (`@luqen/compliance`) — new package providing a REST API and MCP server for jurisdiction and regulation data
 - **58 jurisdictions** — EU, US, UK, DE, FR, AU, CA, and 51 more
 - **62 regulations** — EU EAA, Section 508, ADA, UK Equality Act, RGAA, BITV, JIS X 8341-3, and more
 - **OAuth2 / JWT authentication** — client credentials and password grant types; RS256 JWT signing
@@ -270,10 +302,10 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 - **Compliance check endpoint** — `POST /api/v1/compliance/check` maps pa11y issues to legal obligations
 - **MCP server** — 11 tools for AI agents: `compliance_check`, `compliance_list_jurisdictions`, `compliance_list_regulations`, and more
 - **A2A agent** — Agent-to-Agent protocol support for multi-agent workflows
-- **CLI** — `pally-compliance serve`, `pally-compliance mcp`, `pally-compliance keys generate`, `pally-compliance seed`, `pally-compliance clients create`
+- **CLI** — `luqen-compliance serve`, `luqen-compliance mcp`, `luqen-compliance keys generate`, `luqen-compliance seed`, `luqen-compliance clients create`
 - **Update proposals** — automated detection of regulation changes from monitored legal sources
 - **Webhook dispatch** — outbound webhooks on compliance events
-- **Baseline seed** — 60+ jurisdictions and regulations seeded on `pally-compliance seed`
+- **Baseline seed** — 60+ jurisdictions and regulations seeded on `luqen-compliance seed`
 - **MongoDB and PostgreSQL adapters** — in addition to SQLite, with shared contract tests
 - **Docker Compose** — `docker-compose.yml` for running compliance service and pa11y webservice together
 - **WAF detection** — detects and reports when a Web Application Firewall blocks scanning (core package)
@@ -298,14 +330,14 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 ### Added
 
-- **`@pally-agent/core`** — initial package: site-wide WCAG accessibility scanner
+- **`@luqen/core`** — initial package: site-wide WCAG accessibility scanner
 - **Discovery** — robots.txt parsing, sitemap parser (with index recursion and deduplication), BFS link crawler with depth/page limits and robots filtering
 - **Scanner** — pa11y webservice REST client, concurrent scanning with configurable concurrency and polling, progress events, error handling
 - **Source mapping** — framework detector (Next.js, Nuxt, SvelteKit, Angular, plain HTML), routing strategies, element matching to source files
 - **Fix proposals** — fix rules for common a11y issues (missing `alt`, missing `aria-label`, missing `lang`), unified diff generation
 - **Reporters** — JSON and HTML reporters with timestamped output; professional HTML report with dark mode, print styles, severity filtering
-- **CLI** (`pally-agent`) — `scan` and `fix` commands
-- **MCP server** — 6 tools: `pally_scan`, `pally_get_issues`, `pally_propose_fixes`, `pally_apply_fix`, `pally_raw`, `pally_raw_batch`
+- **CLI** (`luqen`) — `scan` and `fix` commands
+- **MCP server** — 6 tools: `luqen_scan`, `luqen_get_issues`, `luqen_propose_fixes`, `luqen_apply_fix`, `luqen_raw`, `luqen_raw_batch`
 - **Config module** — file discovery and environment variable overrides
 - **Claude Code skill** — custom skill for AI-assisted accessibility scanning
 - **CI/CD templates** — Azure DevOps and AWS pipeline templates
@@ -316,6 +348,8 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [1.1.0] | 2026-03-21 | Granular permissions, user lifecycle, Power BI connector, IdP group sync, PDF export, setup API |
+| [1.0.0] | 2026-03-21 | Rebrand pally-agent → Luqen |
 | [0.9.0] | 2026-03-20 | Progressive auth (API key → local users → SSO), AuthService, Entra ID plugin |
 | [0.8.0] | 2026-03-20 | Plugin system (manager, registry, marketplace UI, CLI, REST API, encrypted secrets) |
 | [0.7.0] | 2026-03-20 | Path-based docs, REST API routes, dead code removal, env var fixes |

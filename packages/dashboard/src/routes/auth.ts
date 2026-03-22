@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { getToken } from '../compliance-client.js';
 import type { DashboardConfig } from '../config.js';
 import type { AuthService } from '../auth/auth-service.js';
+import type { UserDb } from '../db/users.js';
 import { decodeJwt } from 'jose';
 
 interface LoginBody {
@@ -18,6 +19,7 @@ export async function authRoutes(
   server: FastifyInstance,
   config: DashboardConfig,
   authService: AuthService,
+  userDb?: UserDb,
 ): Promise<void> {
   // GET /login — render login page with mode-aware UI
   server.get('/login', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -45,19 +47,9 @@ export async function authRoutes(
       const body = request.body as LoginBody;
       const mode = authService.getAuthMode();
 
-      // ── Solo mode: validate API key ────────────────────────────────────
-      if (mode === 'solo') {
-        const apiKey = body.apiKey;
-
-        if (typeof apiKey !== 'string' || apiKey.trim() === '') {
-          return reply.view('login.hbs', {
-            error: 'API key is required.',
-            mode,
-            loginMethods: authService.getLoginMethods(),
-          });
-        }
-
-        const valid = authService.validateApiKey(apiKey.trim());
+      // ── API key login (available in all modes) ─────────────────────────
+      if (typeof body.apiKey === 'string' && body.apiKey.trim() !== '') {
+        const valid = authService.validateApiKey(body.apiKey.trim());
 
         if (!valid) {
           return reply.view('login.hbs', {
@@ -76,6 +68,15 @@ export async function authRoutes(
 
         await reply.redirect('/');
         return;
+      }
+
+      // ── Solo mode: API key is the only option ──────────────────────────
+      if (mode === 'solo') {
+        return reply.view('login.hbs', {
+          error: 'API key is required.',
+          mode,
+          loginMethods: authService.getLoginMethods(),
+        });
       }
 
       // ── Team mode: password login ──────────────────────────────────────
@@ -211,9 +212,93 @@ export async function authRoutes(
       session.set('authMethod', 'sso');
       session.set('bootId', authService.getBootId());
 
+      // Store IdP groups and resolved team names in the session
+      if (result.groups) {
+        session.set('groups', result.groups);
+      }
+      if (result.teams) {
+        session.set('teams', result.teams);
+      }
+
       await reply.redirect('/');
     },
   );
+
+  // GET /account — profile page
+  server.get('/account', async (request: FastifyRequest, reply: FastifyReply) => {
+    const session = request.session as { get(key: string): unknown };
+    const authMethod = session.get('authMethod') as string | undefined;
+    const canChangePassword = authMethod === 'password';
+
+    return reply.view('account/profile.hbs', {
+      pageTitle: 'My Profile',
+      currentPath: '/account',
+      user: request.user,
+      authMethod: authMethod ?? 'api-key',
+      canChangePassword,
+    });
+  });
+
+  // POST /account/change-password — update own password
+  server.post('/account/change-password', async (request: FastifyRequest, reply: FastifyReply) => {
+    const session = request.session as { get(key: string): unknown };
+    const authMethod = session.get('authMethod') as string | undefined;
+    const canChangePassword = authMethod === 'password';
+
+    const viewData = {
+      pageTitle: 'My Profile',
+      currentPath: '/account',
+      user: request.user,
+      authMethod: authMethod ?? 'api-key',
+      canChangePassword,
+    };
+
+    if (userDb === undefined || !canChangePassword) {
+      return reply.view('account/profile.hbs', {
+        ...viewData,
+        pwError: 'Password change is not available for your authentication method.',
+      });
+    }
+
+    const body = request.body as {
+      currentPassword?: string;
+      newPassword?: string;
+      confirmPassword?: string;
+    };
+
+    const userId = request.user?.id;
+    const username = request.user?.username;
+
+    if (!userId || !username) {
+      await reply.redirect('/login');
+      return;
+    }
+
+    if (!body.currentPassword) {
+      return reply.view('account/profile.hbs', { ...viewData, pwError: 'Current password is required.' });
+    }
+
+    if (!body.newPassword || body.newPassword.length < 8) {
+      return reply.view('account/profile.hbs', { ...viewData, pwError: 'New password must be at least 8 characters.' });
+    }
+
+    if (body.newPassword !== body.confirmPassword) {
+      return reply.view('account/profile.hbs', { ...viewData, pwError: 'New passwords do not match.' });
+    }
+
+    const valid = await userDb.verifyPassword(username, body.currentPassword);
+    if (!valid) {
+      return reply.view('account/profile.hbs', { ...viewData, pwError: 'Current password is incorrect.' });
+    }
+
+    try {
+      await userDb.updatePassword(userId, body.newPassword);
+      return reply.view('account/profile.hbs', { ...viewData, pwSuccess: 'Password changed successfully.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to change password';
+      return reply.view('account/profile.hbs', { ...viewData, pwError: message });
+    }
+  });
 
   // POST /logout — clear session and redirect
   server.post('/logout', async (request: FastifyRequest, reply: FastifyReply) => {

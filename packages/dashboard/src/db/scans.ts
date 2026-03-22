@@ -426,6 +426,19 @@ CREATE TABLE IF NOT EXISTS team_members (
 );
     `,
   },
+  {
+    id: '015',
+    name: 'add-user-management-permissions',
+    sql: `
+-- Add granular user management permissions for admin role
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
+  ('admin', 'users.create'),
+  ('admin', 'users.delete'),
+  ('admin', 'users.activate'),
+  ('admin', 'users.reset_password'),
+  ('admin', 'users.roles');
+    `,
+  },
 ];
 
 export interface Team {
@@ -1716,6 +1729,22 @@ export class ScanDb {
     if (row === undefined) return null;
 
     const members = this.listTeamMembers(id);
+    return {
+      ...teamRowToRecord(row),
+      memberCount: members.length,
+      members,
+    };
+  }
+
+  getTeamByName(name: string, orgId?: string): Team | null {
+    const sql = orgId !== undefined
+      ? 'SELECT * FROM teams WHERE name = ? AND org_id = ?'
+      : 'SELECT * FROM teams WHERE name = ?';
+    const params = orgId !== undefined ? [name, orgId] : [name];
+    const row = this.db.prepare(sql).get(...params) as TeamRow | undefined;
+    if (row === undefined) return null;
+
+    const members = this.listTeamMembers(row.id);
     return {
       ...teamRowToRecord(row),
       memberCount: members.length,

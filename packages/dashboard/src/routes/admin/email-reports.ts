@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import type { ScanDb } from '../../db/scans.js';
 import type { PluginManager } from '../../plugins/manager.js';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { testSmtpConnection } from '../../email/sender.js';
 import { processEmailReport } from '../../email/scheduler.js';
@@ -50,7 +50,7 @@ export async function emailReportRoutes(
   // GET /admin/email-reports — list email reports + config status
   server.get(
     '/admin/email-reports',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const pluginActive = isEmailPluginActive(pluginManager);
       if (!pluginActive) {
@@ -99,7 +99,7 @@ export async function emailReportRoutes(
   // POST /admin/email-reports/smtp — save SMTP config (legacy)
   server.post(
     '/admin/email-reports/smtp',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         host?: string;
@@ -154,7 +154,7 @@ export async function emailReportRoutes(
   // POST /admin/email-reports/smtp/test — test SMTP connection
   server.post(
     '/admin/email-reports/smtp/test',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // If the email plugin is active, use its test method
       if (pluginManager) {
@@ -203,7 +203,7 @@ export async function emailReportRoutes(
   // POST /admin/email-reports — create new email report schedule
   server.post(
     '/admin/email-reports',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         name?: string;
@@ -271,7 +271,7 @@ export async function emailReportRoutes(
   // DELETE /admin/email-reports/:id — delete email report
   server.delete(
     '/admin/email-reports/:id',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const report = db.getEmailReport(id);
@@ -288,7 +288,7 @@ export async function emailReportRoutes(
   // PATCH /admin/email-reports/:id/toggle — enable/disable
   server.patch(
     '/admin/email-reports/:id/toggle',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const report = db.getEmailReport(id);
@@ -327,7 +327,7 @@ export async function emailReportRoutes(
   // POST /admin/email-reports/:id/send-now — send immediately for testing
   server.post(
     '/admin/email-reports/:id/send-now',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const report = db.getEmailReport(id);

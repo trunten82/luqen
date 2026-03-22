@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type { PluginManager } from '../plugins/manager.js';
 import type { AuthPlugin, AuthResult, PluginInstance } from '../plugins/types.js';
 import { UserDb } from '../db/users.js';
+import { ScanDb } from '../db/scans.js';
 import { validateApiKey } from './api-key.js';
 
 // ---------------------------------------------------------------------------
@@ -31,10 +32,18 @@ function isAuthPlugin(instance: PluginInstance): instance is AuthPlugin {
 // AuthService
 // ---------------------------------------------------------------------------
 
+/** Parsed group-sync configuration from the auth plugin. */
+interface GroupSyncConfig {
+  readonly groupMapping: Readonly<Record<string, string>>;
+  readonly autoCreateTeams: boolean;
+  readonly syncMode: 'additive' | 'mirror';
+}
+
 export class AuthService {
   private readonly db: Database.Database;
   private readonly userDb: UserDb;
   private readonly pluginManager: PluginManager;
+  private scanDb: ScanDb | null = null;
 
   private bootId: string;
 
@@ -65,6 +74,14 @@ export class AuthService {
 
   getBootId(): string {
     return this.bootId;
+  }
+
+  /**
+   * Provide the ScanDb instance used for team operations.
+   * Must be called before team sync can work (typically during server setup).
+   */
+  setScanDb(scanDb: ScanDb): void {
+    this.scanDb = scanDb;
   }
 
   // -----------------------------------------------------------------------
@@ -227,7 +244,122 @@ export class AuthService {
       return { authenticated: false, error: `Auth plugin "${pluginId}" does not support callbacks` };
     }
 
-    return plugin.handleCallback(request);
+    const result = await plugin.handleCallback(request);
+
+    // Perform IdP group-to-team sync when the auth result contains groups
+    if (result.authenticated && result.groups && result.user) {
+      try {
+        const syncConfig = this.getGroupSyncConfig();
+        if (syncConfig !== null) {
+          const teamNames = await this.syncUserTeams(
+            result.user.id,
+            result.groups as string[],
+            syncConfig,
+          );
+          // Return a new result with the resolved team names for session storage
+          return { ...result, teams: teamNames };
+        }
+      } catch {
+        // Team sync failure should not block login — log but proceed
+      }
+    }
+
+    return result;
+  }
+
+  // -----------------------------------------------------------------------
+  // IdP group → team sync
+  // -----------------------------------------------------------------------
+
+  /**
+   * Read group-sync configuration from the first active auth plugin.
+   * Returns null when no mapping is configured.
+   */
+  private getGroupSyncConfig(): GroupSyncConfig | null {
+    const configs = this.pluginManager.getActivePluginConfigs('auth');
+    if (configs.length === 0) return null;
+
+    const { config } = configs[0];
+    const rawMapping = config['groupMapping'] as string | undefined;
+    if (rawMapping === undefined || rawMapping === '' || rawMapping === '{}') {
+      return null;
+    }
+
+    let groupMapping: Record<string, string>;
+    try {
+      groupMapping = JSON.parse(rawMapping) as Record<string, string>;
+    } catch {
+      return null;
+    }
+
+    if (Object.keys(groupMapping).length === 0) return null;
+
+    const autoCreateTeams = config['autoCreateTeams'] !== false;
+    const syncMode =
+      config['syncMode'] === 'mirror' ? 'mirror' as const : 'additive' as const;
+
+    return { groupMapping, autoCreateTeams, syncMode };
+  }
+
+  /**
+   * Synchronise a user's team memberships based on their IdP groups.
+   *
+   * Returns the list of dashboard team names the user now belongs to.
+   */
+  private async syncUserTeams(
+    userId: string,
+    idpGroups: readonly string[],
+    syncConfig: GroupSyncConfig,
+  ): Promise<string[]> {
+    if (this.scanDb === null) return [];
+
+    const { groupMapping, autoCreateTeams, syncMode } = syncConfig;
+
+    // Resolve which dashboard teams the user should belong to
+    const targetTeamNames = new Set<string>();
+    for (const groupId of idpGroups) {
+      const teamName = groupMapping[groupId];
+      if (teamName !== undefined) {
+        targetTeamNames.add(teamName);
+      }
+    }
+
+    const resolvedTeamIds = new Set<string>();
+    const defaultOrgId = 'system';
+
+    // Ensure each target team exists and add the user
+    for (const teamName of targetTeamNames) {
+      let team = this.scanDb.getTeamByName(teamName, defaultOrgId);
+
+      if (team === null && autoCreateTeams) {
+        team = this.scanDb.createTeam({
+          name: teamName,
+          description: `Auto-created from Entra ID group sync`,
+          orgId: defaultOrgId,
+        });
+      }
+
+      if (team !== null) {
+        this.scanDb.addTeamMember(team.id, userId);
+        resolvedTeamIds.add(team.id);
+      }
+    }
+
+    // Mirror mode: remove user from mapped teams they no longer belong to
+    if (syncMode === 'mirror') {
+      const allMappedTeamNames = new Set(Object.values(groupMapping));
+
+      for (const mappedTeamName of allMappedTeamNames) {
+        if (targetTeamNames.has(mappedTeamName)) continue;
+
+        const team = this.scanDb.getTeamByName(mappedTeamName, defaultOrgId);
+        if (team !== null) {
+          this.scanDb.removeTeamMember(team.id, userId);
+        }
+      }
+    }
+
+    return [...targetTeamNames];
   }
 
   // -----------------------------------------------------------------------

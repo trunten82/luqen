@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import type { PluginManager } from '../../plugins/manager.js';
 import type { RegistryEntry, ConfigField } from '../../plugins/types.js';
 import { escapeHtml } from './helpers.js';
@@ -110,7 +110,7 @@ export async function pluginAdminRoutes(
   // GET /admin/plugins — render plugins page
   server.get(
     '/admin/plugins',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const installed = pluginManager.list();
       const installedPackages = new Set(installed.map((p) => p.packageName));
@@ -141,7 +141,7 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/install — HTMX install (returns updated HTML fragment)
   server.post<{ Body: { packageName?: string } }>(
     '/admin/plugins/install',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       const { packageName } = request.body ?? {};
       if (!packageName || typeof packageName !== 'string') {
@@ -172,7 +172,7 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/:id/activate — HTMX activate
   server.post<{ Params: { id: string } }>(
     '/admin/plugins/:id/activate',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       try {
         const plugin = await pluginManager.activate(request.params.id);
@@ -195,7 +195,7 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/:id/deactivate — HTMX deactivate
   server.post<{ Params: { id: string } }>(
     '/admin/plugins/:id/deactivate',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       try {
         const plugin = await pluginManager.deactivate(request.params.id);
@@ -218,7 +218,7 @@ export async function pluginAdminRoutes(
   // DELETE /admin/plugins/:id — HTMX remove
   server.delete<{ Params: { id: string } }>(
     '/admin/plugins/:id',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       try {
         await pluginManager.remove(request.params.id);
@@ -239,7 +239,7 @@ export async function pluginAdminRoutes(
   // GET /admin/plugins/:id/configure — render config form
   server.get<{ Params: { id: string } }>(
     '/admin/plugins/:id/configure',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       try {
         const plugin = pluginManager.getPlugin(request.params.id);
@@ -302,7 +302,7 @@ export async function pluginAdminRoutes(
   // PATCH /admin/plugins/:id/config — HTMX save config
   server.patch<{ Params: { id: string }; Body: Record<string, unknown> }>(
     '/admin/plugins/:id/config',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       try {
         const config = (request.body ?? {}) as Record<string, unknown>;

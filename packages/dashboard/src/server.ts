@@ -48,12 +48,13 @@ import { ALL_PERMISSIONS, ALL_PERMISSION_IDS } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
+import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 // Routes that bypass auth guard
-const PUBLIC_PATHS = new Set(['/login', '/health']);
+const PUBLIC_PATHS = new Set(['/login', '/health', '/api/v1/setup']);
 
 function isPublicPath(path: string): boolean {
   if (PUBLIC_PATHS.has(path)) return true;
@@ -87,6 +88,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Auth Service ────────────────────────────────────────────────────────
   const authService = new AuthService(db.getDatabase(), pluginManager);
+  authService.setScanDb(db);
   const userDb = new UserDb(db.getDatabase());
   const orgDb = new OrgDb(db.getDatabase());
 
@@ -96,7 +98,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (isNew) {
       server.log.info('');
       server.log.info('========================================');
-      server.log.info('  PALLY DASHBOARD — First Start');
+      server.log.info('  LUQEN DASHBOARD — First Start');
       server.log.info('  API Key: ' + key);
       server.log.info('  Save this key — it will not be shown again.');
       server.log.info('========================================');
@@ -307,6 +309,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           manualTesting: perms.has('manual_testing'),
           reposManage: perms.has('repos.manage'),
           trendsView: perms.has('trends.view'),
+          usersCreate: perms.has('users.create'),
+          usersDelete: perms.has('users.delete'),
+          usersActivate: perms.has('users.activate'),
+          usersResetPassword: perms.has('users.reset_password'),
+          usersRoles: perms.has('users.roles'),
+          usersManageAny: perms.has('users.create') || perms.has('users.delete') || perms.has('users.activate') || perms.has('users.reset_password') || perms.has('users.roles'),
           adminUsers: perms.has('admin.users'),
           adminRoles: perms.has('admin.roles'),
           adminSystem: perms.has('admin.system'),
@@ -346,7 +354,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Routes ────────────────────────────────────────────────────────────────
-  await authRoutes(server, config, authService);
+  await authRoutes(server, config, authService, userDb);
   await homeRoutes(server, db, config);
   await scanRoutes(server, db, orchestrator, config);
   await compareRoutes(server, db);
@@ -388,6 +396,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Data API routes (Power BI / external integrations) ──────────────────
   await dataApiRoutes(server, db);
+
+  // ── Setup API (create admin user via API key) ──────────────────────────
+  await setupRoutes(server, userDb, authService);
 
   // ── Plugin API routes ────────────────────────────────────────────────────
   await pluginApiRoutes(server, pluginManager);

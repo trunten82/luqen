@@ -7,7 +7,7 @@ import {
   updateRegulation,
   deleteRegulation,
 } from '../../compliance-client.js';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
 
 export async function regulationRoutes(
@@ -17,7 +17,7 @@ export async function regulationRoutes(
   // GET /admin/regulations — list table
   server.get(
     '/admin/regulations',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { jurisdictionId?: string; q?: string; offset?: string; limit?: string };
       const jurisdictionId = query.jurisdictionId;
@@ -97,7 +97,7 @@ export async function regulationRoutes(
   // GET /admin/regulations/new — modal form fragment
   server.get(
     '/admin/regulations/new',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { jurisdictionId?: string };
       let jurisdictions: Awaited<ReturnType<typeof listJurisdictions>> = [];
@@ -127,7 +127,7 @@ export async function regulationRoutes(
   // POST /admin/regulations — create
   server.post(
     '/admin/regulations',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         id?: string;
@@ -185,7 +185,7 @@ export async function regulationRoutes(
   // GET /admin/regulations/:id/view — read-only detail modal
   server.get(
     '/admin/regulations/:id/view',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
@@ -212,7 +212,7 @@ export async function regulationRoutes(
   // GET /admin/regulations/:id/edit — edit form fragment
   server.get(
     '/admin/regulations/:id/edit',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -242,7 +242,7 @@ export async function regulationRoutes(
   // PATCH /admin/regulations/:id — update
   server.patch(
     '/admin/regulations/:id',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as {
@@ -299,7 +299,7 @@ export async function regulationRoutes(
   // DELETE /admin/regulations/:id — delete
   server.delete(
     '/admin/regulations/:id',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 

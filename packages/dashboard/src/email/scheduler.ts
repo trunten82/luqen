@@ -2,6 +2,7 @@ import type { ScanDb } from '../db/scans.js';
 import type { EmailReport } from '../db/scans.js';
 import type { PluginManager } from '../plugins/manager.js';
 import { generateReportHtml, generateIssuesCsv, buildEmailBody } from './report-generator.js';
+import { generateReportPdf, isPuppeteerAvailable } from '../pdf/generator.js';
 
 // Legacy import kept for backward compatibility with smtp_config table
 import { sendEmail } from './sender.js';
@@ -67,11 +68,38 @@ export async function processEmailReport(
       } catch {
         hostname = scan.siteUrl.replace(/[^a-zA-Z0-9.-]/g, '_');
       }
-      attachments.push({
-        filename: `luqen-report-${hostname}.html`,
-        content: html,
-        contentType: 'text/html',
-      });
+
+      // Generate a real PDF when Puppeteer is available; fall back to HTML attachment
+      if (isPuppeteerAvailable()) {
+        try {
+          const pdfBuffer = await generateReportPdf(html, {
+            format: 'A4',
+            margin: { top: '15mm', right: '10mm', bottom: '15mm', left: '10mm' },
+          });
+          attachments.push({
+            filename: `luqen-report-${hostname}.pdf`,
+            content: pdfBuffer.toString('base64'),
+            contentType: 'application/pdf',
+          });
+        } catch (err) {
+          console.warn(
+            `[email-scheduler] PDF generation failed for report ${report.id}, falling back to HTML attachment:`,
+            err instanceof Error ? err.message : String(err),
+          );
+          attachments.push({
+            filename: `luqen-report-${hostname}.html`,
+            content: html,
+            contentType: 'text/html',
+          });
+        }
+      } else {
+        // Puppeteer not installed — attach the HTML report instead
+        attachments.push({
+          filename: `luqen-report-${hostname}.html`,
+          content: html,
+          contentType: 'text/html',
+        });
+      }
     }
   }
 

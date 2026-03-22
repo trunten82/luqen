@@ -140,6 +140,51 @@ export class EntraProvider {
     return base;
   }
 
+  /**
+   * Fetch group memberships from Microsoft Graph API.
+   *
+   * This is the fallback for when the ID token does not contain group claims
+   * (Entra omits them when the user belongs to more than ~200 groups and
+   * instead sets `_claim_names` / `_claim_sources` in the token).
+   */
+  async fetchGroupsFromGraph(accessToken: string): Promise<string[]> {
+    const groups: string[] = [];
+    let url: string | null = 'https://graph.microsoft.com/v1.0/me/memberOf?$select=id,displayName&$top=999';
+
+    while (url !== null) {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Graph API /me/memberOf failed: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const body = (await response.json()) as {
+        value: Array<{ id: string; '@odata.type'?: string }>;
+        '@odata.nextLink'?: string;
+      };
+
+      for (const entry of body.value) {
+        // Only include security groups and Microsoft 365 groups
+        if (
+          entry['@odata.type'] === '#microsoft.graph.group' ||
+          entry['@odata.type'] === undefined
+        ) {
+          groups.push(entry.id);
+        }
+      }
+
+      url = body['@odata.nextLink'] ?? null;
+    }
+
+    return groups;
+  }
+
   /** Verify that the Entra metadata endpoint is reachable. */
   async checkHealth(): Promise<boolean> {
     const url = `https://login.microsoftonline.com/${this.config.tenantId}/v2.0/.well-known/openid-configuration`;

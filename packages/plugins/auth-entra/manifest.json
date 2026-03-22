@@ -2,12 +2,16 @@
   "name": "auth-entra",
   "displayName": "Azure Entra ID",
   "type": "auth",
-  "version": "1.0.0",
-  "description": "Single sign-on via Azure Entra ID (formerly Azure AD)",
+  "version": "1.1.0",
+  "description": "Single sign-on via Azure Entra ID (formerly Azure AD) with IdP group-to-team sync",
   "configSchema": [
     { "key": "tenantId", "label": "Tenant ID", "type": "string", "required": true },
     { "key": "clientId", "label": "Application (Client) ID", "type": "string", "required": true },
     { "key": "clientSecret", "label": "Client Secret", "type": "secret", "required": true },
-    { "key": "redirectUri", "label": "Redirect URI", "type": "string", "default": "/auth/callback/auth-entra" }
+    { "key": "redirectUri", "label": "Redirect URI", "type": "string", "default": "/auth/callback/auth-entra" },
+    { "key": "groupClaimName", "label": "Group Claim Name", "type": "string", "default": "groups", "description": "The JWT claim containing Entra group IDs" },
+    { "key": "groupMapping", "label": "Group Mapping (JSON)", "type": "string", "default": "{}", "description": "Maps Entra group IDs to dashboard team names, e.g. {\"group-uuid-1\": \"Frontend Team\"}" },
+    { "key": "autoCreateTeams", "label": "Auto-Create Teams", "type": "boolean", "default": true, "description": "Automatically create teams that do not yet exist in the dashboard" },
+    { "key": "syncMode", "label": "Sync Mode", "type": "select", "default": "additive", "options": ["additive", "mirror"], "description": "additive: only add memberships; mirror: also remove memberships not present in IdP groups" }
   ]
 }

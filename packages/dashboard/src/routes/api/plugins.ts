@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import type { PluginManager } from '../../plugins/manager.js';
 
 // ---------------------------------------------------------------------------
@@ -29,7 +29,7 @@ export async function pluginApiRoutes(
   // GET /api/v1/plugins — list installed plugins
   server.get(
     '/api/v1/plugins',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const plugins = pluginManager.list();
       return reply.send(plugins);
@@ -39,7 +39,7 @@ export async function pluginApiRoutes(
   // GET /api/v1/plugins/registry — list available from registry (mark installed ones)
   server.get(
     '/api/v1/plugins/registry',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const installed = pluginManager.list();
       const installedPackages = new Set(installed.map((p) => p.packageName));
@@ -57,7 +57,7 @@ export async function pluginApiRoutes(
   // POST /api/v1/plugins/install — { packageName: string }
   server.post<{ Body: InstallBody }>(
     '/api/v1/plugins/install',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       const { packageName } = request.body ?? {};
 
@@ -83,7 +83,7 @@ export async function pluginApiRoutes(
   // PATCH /api/v1/plugins/:id/config — { config: Record<string, unknown> }
   server.patch<{ Params: PluginParams; Body: ConfigBody }>(
     '/api/v1/plugins/:id/config',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       const { id } = request.params;
       const { config } = request.body ?? {};
@@ -110,7 +110,7 @@ export async function pluginApiRoutes(
   // POST /api/v1/plugins/:id/activate
   server.post<{ Params: PluginParams }>(
     '/api/v1/plugins/:id/activate',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       const { id } = request.params;
 
@@ -132,7 +132,7 @@ export async function pluginApiRoutes(
   // POST /api/v1/plugins/:id/deactivate
   server.post<{ Params: PluginParams }>(
     '/api/v1/plugins/:id/deactivate',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       const { id } = request.params;
 
@@ -154,7 +154,7 @@ export async function pluginApiRoutes(
   // DELETE /api/v1/plugins/:id
   server.delete<{ Params: PluginParams }>(
     '/api/v1/plugins/:id',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       const { id } = request.params;
 
@@ -176,7 +176,7 @@ export async function pluginApiRoutes(
   // GET /api/v1/plugins/:id/health
   server.get<{ Params: PluginParams }>(
     '/api/v1/plugins/:id/health',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       const { id } = request.params;
 

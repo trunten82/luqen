@@ -1,4 +1,5 @@
 <section aria-label="Dashboard user management">
+  {{#if perm.usersCreate}}
   <div class="page-actions">
     <button hx-get="/admin/dashboard-users/new"
             hx-target="#modal-container"
@@ -8,6 +9,7 @@
       Add User
     </button>
   </div>
+  {{/if}}
 
   {{#if error}}
   <div class="alert alert--error" role="alert">
@@ -30,6 +32,7 @@
         <tr id="dashboard-user-{{this.id}}">
           <td data-label="Username">{{this.username}}</td>
           <td data-label="Role">
+            {{#if ../perm.usersRoles}}
             {{#if this.active}}
             <select hx-patch="/admin/dashboard-users/{{this.id}}/role"
                     hx-target="closest tr"
@@ -47,6 +50,9 @@
             {{else}}
             <span class="badge badge--neutral">{{this.role}}</span>
             {{/if}}
+            {{else}}
+            <span class="badge badge--neutral">{{this.role}}</span>
+            {{/if}}
           </td>
           <td data-label="Status">
             {{#if this.active}}
@@ -56,6 +62,7 @@
             {{/if}}
           </td>
           <td>
+            {{#if ../perm.usersActivate}}
             {{#if this.active}}
             <button hx-post="/admin/dashboard-users/{{this.id}}/deactivate"
                     hx-confirm="Deactivate user {{this.username}}?"
@@ -64,6 +71,35 @@
                     class="btn btn--sm btn--warning"
                     aria-label="Deactivate {{this.username}}">
               Deactivate
+            </button>
+            {{else}}
+            <button hx-post="/admin/dashboard-users/{{this.id}}/activate"
+                    hx-confirm="Activate user {{this.username}}?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--success"
+                    aria-label="Activate {{this.username}}">
+              Activate
+            </button>
+            {{/if}}
+            {{/if}}
+            {{#if ../perm.usersResetPassword}}
+            <button hx-get="/admin/dashboard-users/{{this.id}}/reset-password"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--ghost"
+                    aria-label="Reset password for {{this.username}}">
+              Reset Password
+            </button>
+            {{/if}}
+            {{#if ../perm.usersDelete}}
+            <button hx-delete="/admin/dashboard-users/{{this.id}}"
+                    hx-confirm="Permanently delete user {{this.username}}? This cannot be undone."
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Delete {{this.username}}">
+              Delete
             </button>
             {{/if}}
           </td>

@@ -65,6 +65,9 @@
     "jose": "^6.0.0",
     "nodemailer": "^8.0.3"
   },
+  "optionalDependencies": {
+    "puppeteer": "^23.0.0"
+  },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.12",

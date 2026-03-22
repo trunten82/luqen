@@ -158,7 +158,7 @@ Place `.luqen.json` in repo root:
 }
 ```
 
-Env overrides: `PALLY_WEBSERVICE_URL`, `PALLY_WEBSERVICE_AUTH`, `PALLY_AGENT_CONFIG`.
+Env overrides: `LUQEN_WEBSERVICE_URL`, `LUQEN_WEBSERVICE_AUTH`, `LUQEN_AGENT_CONFIG`.
 
 ## Auto-fixable Issues
 

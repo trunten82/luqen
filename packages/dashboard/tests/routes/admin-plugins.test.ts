@@ -10,6 +10,7 @@ import { DASHBOARD_MIGRATIONS } from '../../src/db/scans.js';
 import { registerSession } from '../../src/auth/session.js';
 import { pluginAdminRoutes } from '../../src/routes/admin/plugins.js';
 import { PluginManager } from '../../src/plugins/manager.js';
+import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 import type { RegistryEntry } from '../../src/plugins/types.js';
 
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
@@ -77,6 +78,10 @@ async function createTestServer(role: string = 'admin'): Promise<TestContext> {
 
   server.addHook('preHandler', async (request) => {
     request.user = { id: 'test-user-id', username: 'testuser', role };
+    const permissions = role === 'admin'
+      ? new Set(ALL_PERMISSION_IDS)
+      : new Set<string>();
+    (request as unknown as Record<string, unknown>)['permissions'] = permissions;
   });
 
   await pluginAdminRoutes(server, pluginManager, SAMPLE_REGISTRY);

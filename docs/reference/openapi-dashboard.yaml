@@ -5,12 +5,12 @@ info:
     JSON API endpoints exposed by the Luqen. This spec covers only
     the machine-consumable JSON APIs (plugin management and org context), not
     the HTML/Handlebars UI routes.
-  version: 0.1.0
+  version: 0.2.0
   license:
     name: MIT
 
 servers:
-  - url: http://localhost:3000
+  - url: http://localhost:5000
     description: Local development
 
 security:
@@ -18,10 +18,18 @@ security:
   - apiKey: []
 
 tags:
+  - name: setup
+    description: Initial setup and admin recovery
+  - name: users
+    description: Dashboard user management (admin)
+  - name: account
+    description: Self-service account operations
   - name: plugins
     description: Plugin lifecycle management
   - name: orgs
     description: Organization context switching
+  - name: export
+    description: Report export (CSV, PDF)
   - name: health
     description: Service health
 
@@ -278,6 +286,356 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ────────────────────────────────────────────────────────────────────────────
+  # Setup & Admin Recovery
+  # ────────────────────────────────────────────────────────────────────────────
+  /api/v1/setup:
+    post:
+      operationId: createSetupUser
+      tags: [setup]
+      summary: Create a dashboard user via API key
+      description: >-
+        Bootstrap the first admin user or recover admin access when locked out
+        of password-based login. Requires a valid API key via header (not
+        session). Always available regardless of auth mode.
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  description: Username for the new dashboard user.
+                  example: admin
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: Password (minimum 8 characters).
+                  example: SecurePass123!
+                role:
+                  type: string
+                  enum: [viewer, user, developer, admin, executive]
+                  default: admin
+                  description: Role to assign. Defaults to `admin`.
+            example:
+              username: admin
+              password: SecurePass123!
+              role: admin
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupUserResponse"
+        "400":
+          description: Missing or invalid fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: API key missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Username already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Dashboard User Management (admin)
+  # ────────────────────────────────────────────────────────────────────────────
+  /admin/dashboard-users/{id}/activate:
+    post:
+      operationId: activateUser
+      tags: [users]
+      summary: Reactivate a deactivated dashboard user
+      description: >-
+        Restores login access for a previously deactivated user. Requires admin
+        role. Returns the updated user row as an HTMX HTML fragment.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User activated (HTMX HTML fragment)
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: User not found
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /admin/dashboard-users/{id}/deactivate:
+    post:
+      operationId: deactivateUser
+      tags: [users]
+      summary: Deactivate a dashboard user
+      description: >-
+        Prevents the user from logging in. Does not delete the user record.
+        Requires admin role.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User deactivated (HTMX HTML fragment)
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: User not found
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /admin/dashboard-users/{id}/reset-password:
+    get:
+      operationId: getResetPasswordForm
+      tags: [users]
+      summary: Render the reset password modal
+      description: >-
+        Returns an HTMX HTML fragment containing a modal dialog for resetting
+        the user's password. Requires admin role.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Reset password modal (HTMX HTML fragment)
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: User not found
+          content:
+            text/html:
+              schema:
+                type: string
+    post:
+      operationId: resetUserPassword
+      tags: [users]
+      summary: Reset a dashboard user's password
+      description: >-
+        Admin-initiated password reset. The admin sets a new password directly
+        (no email/token flow). Requires admin role.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [newPassword, confirmPassword]
+              properties:
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+                confirmPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        "200":
+          description: Password reset (HTMX toast fragment)
+          content:
+            text/html:
+              schema:
+                type: string
+        "400":
+          description: Validation error (passwords don't match or too short)
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: User not found
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /admin/dashboard-users/{id}:
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Permanently delete a dashboard user
+      description: >-
+        Removes the user record from the database. References to this user in
+        issue assignments, scan records, and other data remain as plain-text
+        strings but the user account is permanently deleted. Requires admin role.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User deleted (HTMX toast fragment)
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: User not found
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /admin/dashboard-users/{id}/role:
+    patch:
+      operationId: updateUserRole
+      tags: [users]
+      summary: Change a dashboard user's role
+      description: >-
+        Updates the role for a dashboard user. Requires admin role.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [viewer, user, developer, admin, executive]
+      responses:
+        "200":
+          description: Role updated (HTMX HTML fragment)
+          content:
+            text/html:
+              schema:
+                type: string
+        "400":
+          description: Invalid role
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: User not found
+          content:
+            text/html:
+              schema:
+                type: string
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Self-service Account
+  # ────────────────────────────────────────────────────────────────────────────
+  /account:
+    get:
+      operationId: getProfile
+      tags: [account]
+      summary: View your profile page
+      description: >-
+        Renders the user's profile page showing account details (username, role,
+        auth method) and a change password form (for password-based accounts).
+      responses:
+        "200":
+          description: Profile page (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+        "302":
+          description: Redirect to login if not authenticated
+
+  /account/change-password:
+    post:
+      operationId: changeOwnPassword
+      tags: [account]
+      summary: Change your own password
+      description: >-
+        Self-service password change for password-based accounts. Requires the
+        current password for verification. Not available for API key or SSO
+        authenticated sessions.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [currentPassword, newPassword, confirmPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  format: password
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+                confirmPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        "200":
+          description: Profile page with success or error message (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+        "302":
+          description: Redirect to login if not authenticated
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Export
+  # ────────────────────────────────────────────────────────────────────────────
+  /api/v1/export/scans/{scanId}/report.pdf:
+    get:
+      operationId: exportScanPdf
+      tags: [export]
+      summary: Download scan report as PDF
+      description: >-
+        Generates a PDF of the scan report using server-side rendering.
+        Returns 501 if Puppeteer is not installed on the server.
+      parameters:
+        - name: scanId
+          in: path
+          required: true
+          description: Scan record ID.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PDF file download
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Scan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "501":
+          description: PDF generation not available (Puppeteer not installed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ────────────────────────────────────────────────────────────────────────────
   # Org context
   # ────────────────────────────────────────────────────────────────────────────
   /orgs/switch:
@@ -373,7 +731,37 @@ components:
       schema:
         type: string
 
+    UserId:
+      name: id
+      in: path
+      required: true
+      description: Dashboard user UUID.
+      schema:
+        type: string
+        format: uuid
+
   schemas:
+    # ── Setup ─────────────────────────────────────────────────────────────────
+    SetupUserResponse:
+      type: object
+      required: [message, user]
+      properties:
+        message:
+          type: string
+          example: 'User "admin" created with role "admin".'
+        user:
+          type: object
+          required: [id, username, role]
+          properties:
+            id:
+              type: string
+              format: uuid
+            username:
+              type: string
+            role:
+              type: string
+              enum: [viewer, user, developer, admin, executive]
+
     # ── Error ──────────────────────────────────────────────────────────────────
     ErrorResponse:
       type: object

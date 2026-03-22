@@ -47,6 +47,11 @@
     <a href="/reports/{{scan.id}}/print" target="_blank" class="btn btn--ghost btn--sm" aria-label="Open print-friendly version for PDF export">
       Print / PDF
     </a>
+    {{#if pdfAvailable}}
+    <a href="/api/v1/export/scans/{{scan.id}}/report.pdf" class="btn btn--ghost btn--sm" aria-label="Download report as PDF">
+      Download PDF
+    </a>
+    {{/if}}
     <a href="/api/v1/export/scans/{{scan.id}}/issues.csv" class="btn btn--ghost btn--sm" aria-label="Export issues as CSV">Export CSV</a>
     {{#if perm.issuesAssign}}
     <a href="/reports/{{scan.id}}/assignments" class="btn btn--ghost btn--sm" aria-label="View issue assignments" id="assignments-link">

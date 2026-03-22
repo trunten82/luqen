@@ -4,7 +4,7 @@ import {
   createUser,
   deactivateUser,
 } from '../../compliance-client.js';
-import { adminGuard } from '../../auth/middleware.js';
+import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
 
 export async function userRoutes(
@@ -14,7 +14,7 @@ export async function userRoutes(
   // GET /admin/users — list users
   server.get(
     '/admin/users',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.users') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       let users: Awaited<ReturnType<typeof listUsers>> = [];
       let error: string | undefined;
@@ -43,7 +43,7 @@ export async function userRoutes(
   // GET /admin/users/new — modal form fragment
   server.get(
     '/admin/users/new',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.users') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/user-form.hbs', {
         isNew: true,
@@ -56,7 +56,7 @@ export async function userRoutes(
   // POST /admin/users — create user
   server.post(
     '/admin/users',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.users') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         username?: string;
@@ -110,7 +110,7 @@ export async function userRoutes(
   // POST /admin/users/:id/deactivate — deactivate user
   server.post(
     '/admin/users/:id/deactivate',
-    { preHandler: adminGuard },
+    { preHandler: requirePermission('admin.users') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 

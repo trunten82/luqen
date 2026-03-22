@@ -76,9 +76,9 @@
     </a>
     {{/if}}
 
-    {{#if perm.adminUsers}}
-    <!-- Admin section — visible to users with admin permissions -->
-    <span class="sidebar__section-label">Administration</span>
+    {{!-- Admin section — full admin permissions required --}}
+    {{#if perm.adminSystem}}
+    <span class="sidebar__section-label">Compliance</span>
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/jurisdictions')}}is-active{{/if}}"
        href="/admin/jurisdictions"
@@ -128,6 +128,36 @@
       Monitor
     </a>
 
+    {{#if pluginAdminPages.length}}
+    <span class="sidebar__section-label">Plugins</span>
+    {{#each pluginAdminPages}}
+    <a class="sidebar__item {{#if (startsWith ../currentPath this.path)}}is-active{{/if}}"
+       href="{{this.path}}"
+       aria-current="{{#if (startsWith ../currentPath this.path)}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        {{#if (eq this.icon 'envelope')}}
+        <rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2 6l8 5 8-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        {{else}}
+        <path d="M10 2a2 2 0 012 2v1h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+        {{/if}}
+      </svg>
+      {{this.title}}
+    </a>
+    {{/each}}
+    {{/if}}
+
+    <span class="sidebar__section-label">Integrations</span>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/repos')}}is-active{{/if}}"
+       href="/admin/repos"
+       aria-current="{{#if (startsWith currentPath '/admin/repos')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M7 3C5.34 3 4 4.34 4 6c0 1.3.84 2.4 2 2.82V15.18C4.84 15.6 4 16.7 4 18c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V8.82C9.16 8.4 10 7.3 10 6c0-.27-.04-.53-.1-.78L12.17 7.5l.03 3.68c-1.16.42-2 1.52-2 2.82 0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V7.5L10.83 4.12C10.15 3.44 9.12 3 8 3H7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      </svg>
+      Connected Repos
+    </a>
+
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/webhooks')}}is-active{{/if}}"
        href="/admin/webhooks">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -136,13 +166,20 @@
       Webhooks
     </a>
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/users')}}is-active{{/if}}"
-       href="/admin/users">
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/plugins')}}is-active{{/if}}"
+       href="/admin/plugins"
+       aria-current="{{#if (startsWith currentPath '/admin/plugins')}}page{{/if}}">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM5 16a7 7 0 0110 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M10 2a2 2 0 012 2v1h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
       </svg>
-      API Users (Compliance)
+      Plugins
     </a>
+
+    {{/if}}
+
+    {{!-- User Management — visible to anyone with users.* permissions --}}
+    {{#if perm.usersManageAny}}
+    <span class="sidebar__section-label">Users & Access</span>
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/dashboard-users')}}is-active{{/if}}"
        href="/admin/dashboard-users">
@@ -181,16 +218,6 @@
       API Keys
     </a>
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/organizations')}}is-active{{/if}}"
-       href="/admin/organizations"
-       aria-current="{{#if (startsWith currentPath '/admin/organizations')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M3 3h14a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M7 10a2 2 0 100-4 2 2 0 000 4zM13 8h3M13 11h3M4 14c0-1.5 1.5-3 3-3s3 1.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      Organizations
-    </a>
-
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/clients')}}is-active{{/if}}"
        href="/admin/clients">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -200,22 +227,26 @@
       OAuth Clients
     </a>
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/repos')}}is-active{{/if}}"
-       href="/admin/repos"
-       aria-current="{{#if (startsWith currentPath '/admin/repos')}}page{{/if}}">
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/users')}}is-active{{/if}}"
+       href="/admin/users">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M7 3C5.34 3 4 4.34 4 6c0 1.3.84 2.4 2 2.82V15.18C4.84 15.6 4 16.7 4 18c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V8.82C9.16 8.4 10 7.3 10 6c0-.27-.04-.53-.1-.78L12.17 7.5l.03 3.68c-1.16.42-2 1.52-2 2.82 0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V7.5L10.83 4.12C10.15 3.44 9.12 3 8 3H7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM5 16a7 7 0 0110 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      Connected Repos
+      API Users
     </a>
+    {{/if}}
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/plugins')}}is-active{{/if}}"
-       href="/admin/plugins"
-       aria-current="{{#if (startsWith currentPath '/admin/plugins')}}page{{/if}}">
+    {{#if perm.adminSystem}}
+    <span class="sidebar__section-label">System</span>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/organizations')}}is-active{{/if}}"
+       href="/admin/organizations"
+       aria-current="{{#if (startsWith currentPath '/admin/organizations')}}page{{/if}}">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 2a2 2 0 012 2v1h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M3 3h14a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7 10a2 2 0 100-4 2 2 0 000 4zM13 8h3M13 11h3M4 14c0-1.5 1.5-3 3-3s3 1.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      Plugins
+      Organizations
     </a>
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/system')}}is-active{{/if}}"
@@ -227,24 +258,6 @@
       System Health
     </a>
 
-    {{#if pluginAdminPages.length}}
-    <span class="sidebar__section-label">Plugin Pages</span>
-    {{#each pluginAdminPages}}
-    <a class="sidebar__item {{#if (startsWith ../currentPath this.path)}}is-active{{/if}}"
-       href="{{this.path}}"
-       aria-current="{{#if (startsWith ../currentPath this.path)}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        {{#if (eq this.icon 'envelope')}}
-        <rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M2 6l8 5 8-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        {{else}}
-        <path d="M10 2a2 2 0 012 2v1h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
-        {{/if}}
-      </svg>
-      {{this.title}}
-    </a>
-    {{/each}}
-    {{/if}}
     {{/if}}
   </div>
 
@@ -267,8 +280,8 @@
   {{/if}}
 
   <div class="sidebar__footer">
-    <div class="flex items-center justify-between">
-      <span>{{user.username}}</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-xs,0.25rem)">
+      <a href="/account" class="sidebar__footer-user" title="My Profile">{{user.username}}</a>
       <form method="POST" action="/logout" style="display:inline">
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <button type="submit" class="btn btn--ghost btn--sm">Sign out</button>
