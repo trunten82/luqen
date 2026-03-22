@@ -141,8 +141,8 @@ export async function exportRoutes(
     },
   );
 
-  // ── GET /api/v1/export/scans/:id/issues.xlsx — Excel export (primary)
-  // ── GET /api/v1/export/scans/:id/issues.csv  — CSV fallback (legacy)
+  // ── GET /api/v1/export/scans/:id/issues.xlsx — Excel export
+  // ── GET /api/v1/export/scans/:id/issues.csv  — legacy URL, serves Excel
   for (const ext of ['xlsx', 'csv'] as const) {
   server.get(
     `/api/v1/export/scans/:id/issues.${ext}`,
@@ -279,53 +279,39 @@ export async function exportRoutes(
         }
       }
 
-      // Determine format from URL extension or query param
-      const isXlsx = request.url.includes('.xlsx') || (request.query as { format?: string }).format === 'xlsx';
       const filename = `luqen-issues-${siteSlug(scan.siteUrl)}-${todayStamp()}`;
 
-      if (isXlsx) {
-        const wb = new ExcelJS.Workbook();
-        wb.creator = 'Luqen';
-        wb.created = new Date();
-        const ws = wb.addWorksheet('Issues');
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'Luqen';
+      wb.created = new Date();
+      const ws = wb.addWorksheet('Issues');
 
-        // Header row with styling
-        ws.columns = headers.map((h, i) => ({ header: h, key: `col${i}`, width: [8, 8, 10, 20, 40, 40, 30, 30, 40, 10, 20, 15, 30][i] ?? 20 }));
-        const headerRow = ws.getRow(1);
-        headerRow.font = { bold: true, size: 10 };
-        headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5F6FA' } };
+      // Header row with styling
+      ws.columns = headers.map((h, i) => ({ header: h, key: `col${i}`, width: [8, 8, 10, 20, 40, 40, 30, 30, 40, 10, 20, 15, 30][i] ?? 20 }));
+      const headerRow = ws.getRow(1);
+      headerRow.font = { bold: true, size: 10 };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F6FA' } };
 
-        // Data rows
-        for (const row of rows) {
-          const dataRow = ws.addRow(row);
-          // Color-code severity
-          const sev = row[0];
-          if (sev === 'error') dataRow.getCell(1).font = { color: { argb: '8B1A1A' }, bold: true };
-          else if (sev === 'warning') dataRow.getCell(1).font = { color: { argb: '7A4F00' }, bold: true };
-          // Color-code priority
-          const pri = row[1];
-          if (pri === 'Critical') dataRow.getCell(2).font = { color: { argb: '8B1A1A' }, bold: true };
-          else if (pri === 'High') dataRow.getCell(2).font = { color: { argb: '7A4F00' }, bold: true };
-        }
-
-        // Auto-filter for pivot-friendly experience
-        ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + headers.length)}1` };
-
-        // Freeze header row
-        ws.views = [{ state: 'frozen', ySplit: 1 }];
-
-        const buffer = await wb.xlsx.writeBuffer();
-        return reply
-          .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-          .header('Content-Disposition', `attachment; filename="${filename}.xlsx"`)
-          .send(Buffer.from(buffer as ArrayBuffer));
+      // Data rows
+      for (const row of rows) {
+        const dataRow = ws.addRow(row);
+        const sev = row[0];
+        if (sev === 'error') dataRow.getCell(1).font = { color: { argb: 'FF8B1A1A' }, bold: true };
+        else if (sev === 'warning') dataRow.getCell(1).font = { color: { argb: 'FF7A4F00' }, bold: true };
+        const pri = row[1];
+        if (pri === 'Critical') dataRow.getCell(2).font = { color: { argb: 'FF8B1A1A' }, bold: true };
+        else if (pri === 'High') dataRow.getCell(2).font = { color: { argb: 'FF7A4F00' }, bold: true };
       }
 
-      const csv = toCsv(headers, rows);
+      // Auto-filter and freeze header
+      ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + headers.length)}1` };
+      ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+      const buffer = await wb.xlsx.writeBuffer();
       return reply
-        .header('Content-Type', 'text/csv')
-        .header('Content-Disposition', `attachment; filename="${filename}.csv"`)
-        .send(csv);
+        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header('Content-Disposition', `attachment; filename="${filename}.xlsx"`)
+        .send(Buffer.from(buffer as ArrayBuffer));
     },
   );
   } // end for (xlsx/csv)
