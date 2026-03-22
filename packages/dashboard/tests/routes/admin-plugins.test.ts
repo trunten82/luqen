@@ -4,9 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync, mkdirSync } from 'node:fs';
-import Database from 'better-sqlite3';
-import { MigrationRunner } from '../../src/db/migrations.js';
-import { DASHBOARD_MIGRATIONS } from '../../src/db/scans.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { registerSession } from '../../src/auth/session.js';
 import { pluginAdminRoutes } from '../../src/routes/admin/plugins.js';
 import { PluginManager } from '../../src/plugins/manager.js';
@@ -38,7 +36,7 @@ const SAMPLE_REGISTRY: readonly RegistryEntry[] = [
 
 interface TestContext {
   server: FastifyInstance;
-  db: Database.Database;
+  storage: SqliteStorageAdapter;
   pluginManager: PluginManager;
   cleanup: () => void;
   dbPath: string;
@@ -50,10 +48,9 @@ async function createTestServer(role: string = 'admin'): Promise<TestContext> {
   const pluginsDir = join(tmpdir(), `test-pluginsdir-${randomUUID()}`);
   mkdirSync(pluginsDir, { recursive: true });
 
-  const db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  new MigrationRunner(db).run([...DASHBOARD_MIGRATIONS]);
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
+  const db = storage.getRawDatabase();
 
   const pluginManager = new PluginManager({
     db,
@@ -88,13 +85,13 @@ async function createTestServer(role: string = 'admin'): Promise<TestContext> {
   await server.ready();
 
   const cleanup = (): void => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     if (existsSync(pluginsDir)) rmSync(pluginsDir, { recursive: true });
     void server.close();
   };
 
-  return { server, db, pluginManager, cleanup, dbPath, pluginsDir };
+  return { server, storage, pluginManager, cleanup, dbPath, pluginsDir };
 }
 
 // ── GET /admin/plugins ─────────────────────────────────────────────────────
@@ -141,8 +138,9 @@ describe('GET /admin/plugins', () => {
   });
 
   it('shows installed plugins and reduces available count', async () => {
+    const db = ctx.storage.getRawDatabase();
     // Insert a plugin directly into DB
-    ctx.db
+    db
       .prepare(
         `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
@@ -301,7 +299,8 @@ describe('DELETE /admin/plugins/:id', () => {
   });
 
   it('removes an installed plugin', async () => {
-    ctx.db
+    const db = ctx.storage.getRawDatabase();
+    db
       .prepare(
         `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
@@ -325,7 +324,7 @@ describe('DELETE /admin/plugins/:id', () => {
     expect(response.body).toContain('removed successfully');
 
     // Verify it's gone from DB
-    const row = ctx.db
+    const row = db
       .prepare('SELECT * FROM plugins WHERE id = ?')
       .get('del-plugin-1');
     expect(row).toBeUndefined();
@@ -356,7 +355,8 @@ describe('GET /admin/plugins/:id/configure', () => {
   });
 
   it('returns config form for installed plugin', async () => {
-    ctx.db
+    const db = ctx.storage.getRawDatabase();
+    db
       .prepare(
         `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,

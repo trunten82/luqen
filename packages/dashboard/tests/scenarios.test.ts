@@ -8,7 +8,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ScanDb, type ScanRecord } from '../src/db/scans.js';
+import { SqliteStorageAdapter } from '../src/db/sqlite/index.js';
+import type { ScanRecord } from '../src/db/types.js';
 import { diffReports, type NormalizedReport } from '../src/compare/diff.js';
 import {
   parseAuditResults,
@@ -33,23 +34,23 @@ import { rmSync, existsSync } from 'node:fs';
 // ============================================================================
 
 describe('Scenario 1: Full Scan Lifecycle', () => {
-  let db: ScanDb;
+  let storage: SqliteStorageAdapter;
   let dbPath: string;
 
   beforeEach(() => {
     dbPath = join(tmpdir(), `scenario1-${randomUUID()}.db`);
-    db = new ScanDb(dbPath);
-    db.initialize();
+    storage = new SqliteStorageAdapter(dbPath);
+    void storage.migrate();
   });
 
   afterEach(() => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
   });
 
-  it('creates a scan record with synthetic data and retrieves it', () => {
+  it('creates a scan record with synthetic data and retrieves it', async () => {
     const id = randomUUID();
-    const record = db.createScan({
+    const record = await storage.scans.createScan({
       id,
       siteUrl: 'https://synthetic-site.example.com',
       standard: 'WCAG2AA',
@@ -63,9 +64,9 @@ describe('Scenario 1: Full Scan Lifecycle', () => {
     expect(record.jurisdictions).toEqual(['EU', 'US']);
   });
 
-  it('appears in listScans after creation', () => {
+  it('appears in listScans after creation', async () => {
     const id = randomUUID();
-    db.createScan({
+    await storage.scans.createScan({
       id,
       siteUrl: 'https://synthetic-site.example.com',
       standard: 'WCAG2AA',
@@ -74,13 +75,13 @@ describe('Scenario 1: Full Scan Lifecycle', () => {
       createdAt: new Date().toISOString(),
     });
 
-    const all = db.listScans();
+    const all = await storage.scans.listScans();
     expect(all.some((s) => s.id === id)).toBe(true);
   });
 
-  it('transitions through queued -> running -> completed lifecycle', () => {
+  it('transitions through queued -> running -> completed lifecycle', async () => {
     const id = randomUUID();
-    const created = db.createScan({
+    const created = await storage.scans.createScan({
       id,
       siteUrl: 'https://lifecycle.example.com',
       standard: 'WCAG2AA',
@@ -91,11 +92,11 @@ describe('Scenario 1: Full Scan Lifecycle', () => {
     expect(created.status).toBe('queued');
 
     // Transition to running
-    const running = db.updateScan(id, { status: 'running' });
+    const running = await storage.scans.updateScan(id, { status: 'running' });
     expect(running.status).toBe('running');
 
     // Transition to completed with report data
-    const completed = db.updateScan(id, {
+    const completed = await storage.scans.updateScan(id, {
       status: 'completed',
       completedAt: new Date().toISOString(),
       pagesScanned: 15,
@@ -117,32 +118,24 @@ describe('Scenario 1: Full Scan Lifecycle', () => {
     expect(completed.jsonReportPath).toBe('/reports/scan-report.json');
   });
 
-  it('filters listScans by status', () => {
+  it('filters listScans by status', async () => {
     const id1 = randomUUID();
     const id2 = randomUUID();
 
-    db.createScan({
-      id: id1,
-      siteUrl: 'https://a.example.com',
-      standard: 'WCAG2AA',
-      jurisdictions: [],
-      createdBy: 'test',
-      createdAt: new Date().toISOString(),
+    await storage.scans.createScan({
+      id: id1, siteUrl: 'https://a.example.com', standard: 'WCAG2AA',
+      jurisdictions: [], createdBy: 'test', createdAt: new Date().toISOString(),
     });
 
-    db.createScan({
-      id: id2,
-      siteUrl: 'https://b.example.com',
-      standard: 'WCAG2AA',
-      jurisdictions: [],
-      createdBy: 'test',
-      createdAt: new Date().toISOString(),
+    await storage.scans.createScan({
+      id: id2, siteUrl: 'https://b.example.com', standard: 'WCAG2AA',
+      jurisdictions: [], createdBy: 'test', createdAt: new Date().toISOString(),
     });
 
-    db.updateScan(id1, { status: 'completed' });
+    await storage.scans.updateScan(id1, { status: 'completed' });
 
-    const completed = db.listScans({ status: 'completed' });
-    const queued = db.listScans({ status: 'queued' });
+    const completed = await storage.scans.listScans({ status: 'completed' });
+    const queued = await storage.scans.listScans({ status: 'queued' });
 
     expect(completed).toHaveLength(1);
     expect(completed[0].id).toBe(id1);
@@ -150,38 +143,30 @@ describe('Scenario 1: Full Scan Lifecycle', () => {
     expect(queued[0].id).toBe(id2);
   });
 
-  it('deletes a scan and verifies it is gone', () => {
+  it('deletes a scan and verifies it is gone', async () => {
     const id = randomUUID();
-    db.createScan({
-      id,
-      siteUrl: 'https://delete-me.example.com',
-      standard: 'WCAG2AA',
-      jurisdictions: [],
-      createdBy: 'test',
-      createdAt: new Date().toISOString(),
+    await storage.scans.createScan({
+      id, siteUrl: 'https://delete-me.example.com', standard: 'WCAG2AA',
+      jurisdictions: [], createdBy: 'test', createdAt: new Date().toISOString(),
     });
 
-    expect(db.getScan(id)).not.toBeNull();
+    expect(await storage.scans.getScan(id)).not.toBeNull();
 
-    db.deleteScan(id);
+    await storage.scans.deleteScan(id);
 
-    expect(db.getScan(id)).toBeNull();
-    expect(db.listScans().some((s) => s.id === id)).toBe(false);
+    expect(await storage.scans.getScan(id)).toBeNull();
+    expect((await storage.scans.listScans()).some((s) => s.id === id)).toBe(false);
   });
 
-  it('handles the failed scan path', () => {
+  it('handles the failed scan path', async () => {
     const id = randomUUID();
-    db.createScan({
-      id,
-      siteUrl: 'https://fail.example.com',
-      standard: 'WCAG2AA',
-      jurisdictions: ['EU'],
-      createdBy: 'test',
-      createdAt: new Date().toISOString(),
+    await storage.scans.createScan({
+      id, siteUrl: 'https://fail.example.com', standard: 'WCAG2AA',
+      jurisdictions: ['EU'], createdBy: 'test', createdAt: new Date().toISOString(),
     });
 
-    db.updateScan(id, { status: 'running' });
-    const failed = db.updateScan(id, {
+    await storage.scans.updateScan(id, { status: 'running' });
+    const failed = await storage.scans.updateScan(id, {
       status: 'failed',
       error: 'Connection refused by target host',
     });
@@ -235,7 +220,7 @@ describe('Scenario 2: Report Comparison Edge Cases', () => {
     };
   };
 
-  it('compares report A with 0 issues against report B with many issues', () => {
+  it('compares report A with 0 issues against report B with many issues', async () => {
     const reportB = makeReport([
       {
         url: 'https://example.com/',
@@ -255,7 +240,7 @@ describe('Scenario 2: Report Comparison Edge Cases', () => {
     expect(diff.summaryDelta).toEqual({ errors: 1, warnings: 1, notices: 1 });
   });
 
-  it('compares two identical reports (delta should be 0)', () => {
+  it('compares two identical reports (delta should be 0)', async () => {
     const report = makeReport([
       {
         url: 'https://example.com/page1',
@@ -274,7 +259,7 @@ describe('Scenario 2: Report Comparison Edge Cases', () => {
     expect(diff.summaryDelta).toEqual({ errors: 0, warnings: 0, notices: 0 });
   });
 
-  it('compares reports with overlapping and unique issues', () => {
+  it('compares reports with overlapping and unique issues', async () => {
     const shared = makeIssue('WCAG2AA.1_1_1', 'img.logo', 'Missing alt');
     const onlyInA = makeIssue('WCAG2AA.2_1_1', 'div.menu', 'Not keyboard accessible');
     const onlyInB = makeIssue('WCAG2AA.4_1_1', 'span.badge', 'Invalid ARIA role', 'warning');
@@ -302,7 +287,7 @@ describe('Scenario 2: Report Comparison Edge Cases', () => {
     expect(diff.summaryDelta.warnings).toBe(1);
   });
 
-  it('compares report B with 0 issues against report A with many (all resolved)', () => {
+  it('compares report B with 0 issues against report A with many (all resolved)', async () => {
     const reportA = makeReport([
       {
         url: 'https://example.com/',
@@ -321,7 +306,7 @@ describe('Scenario 2: Report Comparison Edge Cases', () => {
     expect(diff.summaryDelta.errors).toBe(-2);
   });
 
-  it('handles reports without byLevel in summary', () => {
+  it('handles reports without byLevel in summary', async () => {
     const reportA: NormalizedReport = {
       summary: {},
       pages: [
@@ -346,7 +331,7 @@ describe('Scenario 2: Report Comparison Edge Cases', () => {
 // ============================================================================
 
 describe('Scenario 3: Self-Audit Result Parsing', () => {
-  it('correctly counts errors, warnings, and notices', () => {
+  it('correctly counts errors, warnings, and notices', async () => {
     const pages: AuditPageResult[] = [
       {
         url: 'http://localhost:3000/login',
@@ -377,7 +362,7 @@ describe('Scenario 3: Self-Audit Result Parsing', () => {
     expect(summary.pagesFailed).toBe(0);
   });
 
-  it('determines FAIL when errors exist', () => {
+  it('determines FAIL when errors exist', async () => {
     const pages: AuditPageResult[] = [
       {
         url: 'http://localhost:3000/reports',
@@ -395,7 +380,7 @@ describe('Scenario 3: Self-Audit Result Parsing', () => {
     expect(formatted).toContain('FAIL');
   });
 
-  it('determines PASS when no errors exist', () => {
+  it('determines PASS when no errors exist', async () => {
     const pages: AuditPageResult[] = [
       {
         url: 'http://localhost:3000/home',
@@ -414,7 +399,7 @@ describe('Scenario 3: Self-Audit Result Parsing', () => {
     expect(formatted).toContain('PASS');
   });
 
-  it('counts pages that failed to scan', () => {
+  it('counts pages that failed to scan', async () => {
     const pages: AuditPageResult[] = [
       {
         url: 'http://localhost:3000/home',
@@ -433,7 +418,7 @@ describe('Scenario 3: Self-Audit Result Parsing', () => {
     expect(summary.pagesScanned).toBe(2);
   });
 
-  it('handles an empty page list', () => {
+  it('handles an empty page list', async () => {
     const summary = parseAuditResults([]);
     expect(summary.pagesScanned).toBe(0);
     expect(summary.totalErrors).toBe(0);
@@ -443,7 +428,7 @@ describe('Scenario 3: Self-Audit Result Parsing', () => {
     expect(summary.pagesWithErrors).toBe(0);
   });
 
-  it('buildPageUrls produces correct URLs', () => {
+  it('buildPageUrls produces correct URLs', async () => {
     const urls = buildPageUrls('http://localhost:3000/');
     expect(urls).toContain('http://localhost:3000/login');
     expect(urls).toContain('http://localhost:3000/home');
@@ -453,7 +438,7 @@ describe('Scenario 3: Self-Audit Result Parsing', () => {
     expect(urls.every((u) => u.startsWith('http://localhost:3000/'))).toBe(true);
   });
 
-  it('buildPageUrls strips trailing slashes from base', () => {
+  it('buildPageUrls strips trailing slashes from base', async () => {
     const urls1 = buildPageUrls('http://localhost:3000/');
     const urls2 = buildPageUrls('http://localhost:3000');
     expect(urls1).toEqual(urls2);
@@ -487,7 +472,7 @@ describe('Scenario 4: Monitor Data Flow', () => {
       detectedAt: new Date().toISOString(),
     }));
 
-  it('builds monitor view data from various source configurations', () => {
+  it('builds monitor view data from various source configurations', async () => {
     const sources = makeSources([
       { lastChecked: new Date(now.getTime() - 1000).toISOString() },
       { lastChecked: undefined },
@@ -503,21 +488,17 @@ describe('Scenario 4: Monitor Data Flow', () => {
     expect(view.proposals).toHaveLength(2);
   });
 
-  it('detects staleness at boundary conditions', () => {
+  it('detects staleness at boundary conditions', async () => {
     const exactly24hAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const justUnder24h = new Date(Date.now() - 24 * 60 * 60 * 1000 + 60000).toISOString();
     const justOver24h = new Date(Date.now() - 24 * 60 * 60 * 1000 - 60000).toISOString();
 
-    // Exactly 24h should be stale (threshold is >)
-    // Just under 24h should NOT be stale
     expect(isSourceStale(justUnder24h)).toBe(false);
-    // Just over 24h should be stale
     expect(isSourceStale(justOver24h)).toBe(true);
-    // Undefined should be stale
     expect(isSourceStale(undefined)).toBe(true);
   });
 
-  it('handles empty sources and proposals', () => {
+  it('handles empty sources and proposals', async () => {
     const view = buildMonitorViewData([], []);
     expect(view.sourcesCount).toBe(0);
     expect(view.pendingProposalsCount).toBe(0);
@@ -526,18 +507,17 @@ describe('Scenario 4: Monitor Data Flow', () => {
     expect(view.proposals).toEqual([]);
   });
 
-  it('formats lastChecked correctly', () => {
+  it('formats lastChecked correctly', async () => {
     expect(formatLastChecked(undefined)).toBe('Never');
     expect(formatLastChecked('invalid-date')).toBe('Never');
 
     const validDate = '2025-06-15T10:30:00Z';
     const formatted = formatLastChecked(validDate);
     expect(formatted).not.toBe('Never');
-    // Should contain some recognizable date parts
     expect(formatted).toMatch(/\d/);
   });
 
-  it('computes lastScanTime from most recent source check', () => {
+  it('computes lastScanTime from most recent source check', async () => {
     const older = new Date(Date.now() - 7200000).toISOString();
     const newer = new Date(Date.now() - 3600000).toISOString();
 
@@ -551,7 +531,7 @@ describe('Scenario 4: Monitor Data Flow', () => {
     expect(view.lastScanTime).not.toBe('Never');
   });
 
-  it('proposal formatting with various statuses', () => {
+  it('proposal formatting with various statuses', async () => {
     const proposals = makeProposals(3, ['pending', 'approved', 'rejected']);
     const view = buildMonitorViewData([], proposals);
 
@@ -560,7 +540,6 @@ describe('Scenario 4: Monitor Data Flow', () => {
     expect(view.proposals[1].status).toBe('approved');
     expect(view.proposals[2].status).toBe('rejected');
 
-    // Each proposal should have display fields
     for (const p of view.proposals) {
       expect(p.id).toBeTruthy();
       expect(p.summary).toBeTruthy();
@@ -568,7 +547,7 @@ describe('Scenario 4: Monitor Data Flow', () => {
     }
   });
 
-  it('marks source stale in view when never checked', () => {
+  it('marks source stale in view when never checked', async () => {
     const sources = makeSources([{ lastChecked: undefined }]);
     const view = buildMonitorViewData(sources, []);
 

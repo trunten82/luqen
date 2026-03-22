@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createTestServer, type TestContext } from '../helpers/server.js';
 import { randomUUID } from 'node:crypto';
 
-function makeScan(ctx: TestContext, overrides: { createdBy?: string; status?: 'queued' | 'running' | 'completed' | 'failed'; siteUrl?: string } = {}) {
+async function makeScan(ctx: TestContext, overrides: { createdBy?: string; status?: 'queued' | 'running' | 'completed' | 'failed'; siteUrl?: string } = {}) {
   const id = randomUUID();
-  ctx.db.createScan({
+  await ctx.storage.scans.createScan({
     id,
     siteUrl: overrides.siteUrl ?? 'https://example.com',
     standard: 'WCAG2AA',
@@ -14,7 +14,7 @@ function makeScan(ctx: TestContext, overrides: { createdBy?: string; status?: 'q
   });
 
   if (overrides.status !== undefined && overrides.status !== 'queued') {
-    ctx.db.updateScan(id, { status: overrides.status });
+    await ctx.storage.scans.updateScan(id, { status: overrides.status });
   }
 
   return id;
@@ -44,8 +44,8 @@ describe('Report routes', () => {
     });
 
     it('includes scan list in template data', async () => {
-      makeScan(ctx);
-      makeScan(ctx);
+      await makeScan(ctx);
+      await makeScan(ctx);
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -57,8 +57,8 @@ describe('Report routes', () => {
     });
 
     it('filters by query string q', async () => {
-      makeScan(ctx, { siteUrl: 'https://alpha.com' });
-      makeScan(ctx, { siteUrl: 'https://beta.com' });
+      await makeScan(ctx, { siteUrl: 'https://alpha.com' });
+      await makeScan(ctx, { siteUrl: 'https://beta.com' });
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -71,8 +71,8 @@ describe('Report routes', () => {
     });
 
     it('filters by status', async () => {
-      const id1 = makeScan(ctx, { status: 'completed' });
-      makeScan(ctx, { status: 'failed' });
+      const id1 = await makeScan(ctx, { status: 'completed' });
+      await makeScan(ctx, { status: 'failed' });
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -86,7 +86,7 @@ describe('Report routes', () => {
 
     it('paginates results', async () => {
       for (let i = 0; i < 5; i++) {
-        makeScan(ctx);
+        await makeScan(ctx);
       }
 
       const response = await ctx.server.inject({
@@ -102,7 +102,7 @@ describe('Report routes', () => {
 
   describe('GET /reports/:id', () => {
     it('returns 200 with report-detail template', async () => {
-      const id = makeScan(ctx);
+      const id = await makeScan(ctx);
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -124,7 +124,7 @@ describe('Report routes', () => {
     });
 
     it('includes scan data in template', async () => {
-      const id = makeScan(ctx, { siteUrl: 'https://mysite.com' });
+      const id = await makeScan(ctx, { siteUrl: 'https://mysite.com' });
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -139,7 +139,7 @@ describe('Report routes', () => {
     it('renders reportData from JSON file when scan is completed and JSON exists', async () => {
       const { writeFile } = await import('node:fs/promises');
       const { join } = await import('node:path');
-      const id = makeScan(ctx, { status: 'completed' });
+      const id = await makeScan(ctx, { status: 'completed' });
       const jsonPath = join(ctx.config.reportsDir, `report-${id}.json`);
       const reportJson = JSON.stringify({
         summary: {
@@ -158,7 +158,7 @@ describe('Report routes', () => {
         errors: [],
       });
       await writeFile(jsonPath, reportJson, 'utf-8');
-      ctx.db.updateScan(id, { jsonReportPath: jsonPath });
+      await ctx.storage.scans.updateScan(id, { jsonReportPath: jsonPath });
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -172,7 +172,7 @@ describe('Report routes', () => {
     });
 
     it('renders null reportData when scan is queued', async () => {
-      const id = makeScan(ctx, { status: 'queued' });
+      const id = await makeScan(ctx, { status: 'queued' });
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -186,7 +186,7 @@ describe('Report routes', () => {
 
   describe('DELETE /reports/:id', () => {
     it('returns 403 when request has no authenticated user', async () => {
-      const id = makeScan(ctx, { createdBy: 'testuser' });
+      const id = await makeScan(ctx, { createdBy: 'testuser' });
 
       // Without auth middleware in test server, request.user is undefined.
       // undefined?.role !== 'admin' && scan.createdBy !== undefined?.username → 403.
@@ -210,7 +210,7 @@ describe('Report routes', () => {
     it('returns 403 when user is not admin and not the owner', async () => {
       // Create a scan owned by 'owner'
       const id = randomUUID();
-      ctx.db.createScan({
+      await ctx.storage.scans.createScan({
         id,
         siteUrl: 'https://owner.com',
         standard: 'WCAG2AA',

@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import Database from 'better-sqlite3';
-import { MigrationRunner } from '../../src/db/migrations.js';
-import { DASHBOARD_MIGRATIONS } from '../../src/db/scans.js';
-import { UserDb } from '../../src/db/users.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { generateApiKey, storeApiKey } from '../../src/auth/api-key.js';
 import { AuthService } from '../../src/auth/auth-service.js';
 import type { AuthMode, LoginMethod } from '../../src/auth/auth-service.js';
@@ -14,12 +11,10 @@ import type { FastifyRequest } from 'fastify';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createDb(): Database.Database {
-  const db = new Database(':memory:');
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  new MigrationRunner(db).run(DASHBOARD_MIGRATIONS);
-  return db;
+function createStorage(): SqliteStorageAdapter {
+  const storage = new SqliteStorageAdapter(':memory:');
+  void storage.migrate();
+  return storage;
 }
 
 function mockPluginManager(authPlugins: PluginInstance[] = []): PluginManager {
@@ -69,14 +64,14 @@ function fakeRequest(headers: Record<string, string> = {}, session: Record<strin
 // ---------------------------------------------------------------------------
 
 describe('AuthService', () => {
-  let db: Database.Database;
+  let storage: SqliteStorageAdapter;
 
   beforeEach(() => {
-    db = createDb();
+    storage = createStorage();
   });
 
   afterEach(() => {
-    db.close();
+    void storage.disconnect();
   });
 
   // -------------------------------------------------------------------------
@@ -85,26 +80,28 @@ describe('AuthService', () => {
 
   describe('getAuthMode', () => {
     it('returns solo when no users and no auth plugins', () => {
+      const db = storage.getRawDatabase();
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       expect(service.getAuthMode()).toBe('solo');
     });
 
     it('returns team when users exist but no auth plugins', async () => {
-      const userDb = new UserDb(db);
-      await userDb.createUser('alice', 'password123', 'admin');
+      const db = storage.getRawDatabase();
+      await storage.users.createUser('alice', 'password123', 'admin');
 
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       expect(service.getAuthMode()).toBe('team');
     });
 
     it('returns enterprise when auth plugin is active', () => {
+      const db = storage.getRawDatabase();
       const plugin = fakeAuthPlugin();
       const pm = mockPluginManager([plugin]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       expect(service.getAuthMode()).toBe('enterprise');
     });
@@ -116,8 +113,9 @@ describe('AuthService', () => {
 
   describe('getLoginMethods', () => {
     it('returns api-key only in solo mode', () => {
+      const db = storage.getRawDatabase();
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const methods = service.getLoginMethods();
 
@@ -127,11 +125,11 @@ describe('AuthService', () => {
     });
 
     it('returns password + api-key in team mode', async () => {
-      const userDb = new UserDb(db);
-      await userDb.createUser('alice', 'password123', 'admin');
+      const db = storage.getRawDatabase();
+      await storage.users.createUser('alice', 'password123', 'admin');
 
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const methods = service.getLoginMethods();
 
@@ -142,9 +140,10 @@ describe('AuthService', () => {
     });
 
     it('returns sso + password + api-key in enterprise mode', () => {
+      const db = storage.getRawDatabase();
       const plugin = fakeAuthPlugin();
       const pm = mockPluginManager([plugin]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const methods = service.getLoginMethods();
 
@@ -165,11 +164,12 @@ describe('AuthService', () => {
 
   describe('authenticateRequest', () => {
     it('validates API key from Authorization header', async () => {
+      const db = storage.getRawDatabase();
       const key = generateApiKey();
       storeApiKey(db, key, 'test');
 
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
       const request = fakeRequest({ authorization: `Bearer ${key}` });
 
       const result = await service.authenticateRequest(request);
@@ -179,8 +179,9 @@ describe('AuthService', () => {
     });
 
     it('returns unauthenticated when no valid credentials', async () => {
+      const db = storage.getRawDatabase();
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
       const request = fakeRequest();
 
       const result = await service.authenticateRequest(request);
@@ -189,11 +190,11 @@ describe('AuthService', () => {
     });
 
     it('reads user from session in team mode', async () => {
-      const userDb = new UserDb(db);
-      const user = await userDb.createUser('alice', 'password123', 'admin');
+      const db = storage.getRawDatabase();
+      const user = await storage.users.createUser('alice', 'password123', 'admin');
 
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const sessionData: Record<string, unknown> = {
         userId: user.id,
@@ -213,8 +214,9 @@ describe('AuthService', () => {
     });
 
     it('returns unauthenticated for invalid API key', async () => {
+      const db = storage.getRawDatabase();
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
       const request = fakeRequest({ authorization: 'Bearer invalid-key' });
 
       const result = await service.authenticateRequest(request);
@@ -229,11 +231,11 @@ describe('AuthService', () => {
 
   describe('loginWithPassword', () => {
     it('returns authenticated for valid credentials', async () => {
-      const userDb = new UserDb(db);
-      await userDb.createUser('alice', 'password123', 'admin');
+      const db = storage.getRawDatabase();
+      await storage.users.createUser('alice', 'password123', 'admin');
 
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const result = await service.loginWithPassword('alice', 'password123');
 
@@ -243,11 +245,11 @@ describe('AuthService', () => {
     });
 
     it('returns unauthenticated for wrong password', async () => {
-      const userDb = new UserDb(db);
-      await userDb.createUser('alice', 'password123', 'admin');
+      const db = storage.getRawDatabase();
+      await storage.users.createUser('alice', 'password123', 'admin');
 
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const result = await service.loginWithPassword('alice', 'wrong-password');
 
@@ -255,12 +257,12 @@ describe('AuthService', () => {
     });
 
     it('returns unauthenticated for inactive user', async () => {
-      const userDb = new UserDb(db);
-      const user = await userDb.createUser('alice', 'password123', 'admin');
-      userDb.deactivateUser(user.id);
+      const db = storage.getRawDatabase();
+      const user = await storage.users.createUser('alice', 'password123', 'admin');
+      await storage.users.deactivateUser(user.id);
 
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const result = await service.loginWithPassword('alice', 'password123');
 
@@ -268,8 +270,9 @@ describe('AuthService', () => {
     });
 
     it('returns unauthenticated for nonexistent user', async () => {
+      const db = storage.getRawDatabase();
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const result = await service.loginWithPassword('nobody', 'password123');
 
@@ -283,16 +286,18 @@ describe('AuthService', () => {
 
   describe('getAuthPlugins', () => {
     it('returns empty array when no auth plugins are active', () => {
+      const db = storage.getRawDatabase();
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       expect(service.getAuthPlugins()).toEqual([]);
     });
 
     it('returns auth plugins that have authenticate method', () => {
+      const db = storage.getRawDatabase();
       const plugin = fakeAuthPlugin();
       const pm = mockPluginManager([plugin]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const plugins = service.getAuthPlugins();
 
@@ -301,6 +306,7 @@ describe('AuthService', () => {
     });
 
     it('filters out non-auth plugins missing authenticate method', () => {
+      const db = storage.getRawDatabase();
       const notAuthPlugin: PluginInstance = {
         manifest: {
           name: '@luqen/plugin-slack',
@@ -316,7 +322,7 @@ describe('AuthService', () => {
       };
 
       const pm = mockPluginManager([notAuthPlugin]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const plugins = service.getAuthPlugins();
 
@@ -330,6 +336,7 @@ describe('AuthService', () => {
 
   describe('handleSsoCallback', () => {
     it('delegates to auth plugin handleCallback', async () => {
+      const db = storage.getRawDatabase();
       const expectedResult = {
         authenticated: true,
         user: { id: 'sso-1', username: 'ssouser', email: 'sso@example.com', role: 'user' },
@@ -340,7 +347,7 @@ describe('AuthService', () => {
 
       // We need the plugin to be returned when looking up by pluginId
       const pm = mockPluginManager([plugin]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const request = fakeRequest();
       const result = await service.handleSsoCallback('some-plugin-id', request);
@@ -350,8 +357,9 @@ describe('AuthService', () => {
     });
 
     it('returns unauthenticated when plugin not found', async () => {
+      const db = storage.getRawDatabase();
       const pm = mockPluginManager([]);
-      const service = new AuthService(db, pm);
+      const service = new AuthService(db, pm, storage);
 
       const request = fakeRequest();
       const result = await service.handleSsoCallback('missing-plugin', request);

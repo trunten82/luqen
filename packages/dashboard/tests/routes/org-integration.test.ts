@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync, mkdirSync } from 'node:fs';
-import { ScanDb } from '../../src/db/scans.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
 import { homeRoutes } from '../../src/routes/home.js';
 import { scanRoutes } from '../../src/routes/scan.js';
@@ -15,7 +15,7 @@ const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
 interface OrgTestContext {
   server: FastifyInstance;
-  db: ScanDb;
+  storage: SqliteStorageAdapter;
   cleanup: () => void;
 }
 
@@ -38,10 +38,10 @@ async function createOrgTestServer(
     complianceClientSecret: '',
   };
 
-  const db = new ScanDb(dbPath);
-  db.initialize();
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
 
-  const orchestrator = new ScanOrchestrator(db, reportsDir, 2);
+  const orchestrator = new ScanOrchestrator(storage, reportsDir, 2);
   const server = Fastify({ logger: false });
 
   await server.register(import('@fastify/formbody'));
@@ -66,18 +66,18 @@ async function createOrgTestServer(
     };
   });
 
-  await homeRoutes(server, db);
-  await scanRoutes(server, db, orchestrator, config);
+  await homeRoutes(server, storage);
+  await scanRoutes(server, storage, orchestrator, config);
   await server.ready();
 
   const cleanup = (): void => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     if (existsSync(reportsDir)) rmSync(reportsDir, { recursive: true });
     void server.close();
   };
 
-  return { server, db, cleanup };
+  return { server, storage, cleanup };
 }
 
 describe('Org-scoped route integration', () => {
@@ -100,7 +100,7 @@ describe('Org-scoped route integration', () => {
 
       expect(response.statusCode).toBe(302);
 
-      const scans = ctx.db.listScans();
+      const scans = await ctx.storage.scans.listScans();
       expect(scans).toHaveLength(1);
       expect(scans[0].orgId).toBe('system');
     });
@@ -118,7 +118,7 @@ describe('Org-scoped route integration', () => {
 
       expect(response.statusCode).toBe(302);
 
-      const scans = ctx.db.listScans();
+      const scans = await ctx.storage.scans.listScans();
       expect(scans).toHaveLength(1);
       expect(scans[0].orgId).toBe(orgId);
     });
@@ -138,40 +138,22 @@ describe('Org-scoped route integration', () => {
       ctx = await createOrgTestServer(orgA);
 
       // Create scans for two different orgs
-      ctx.db.createScan({
-        id: randomUUID(),
-        siteUrl: 'https://org-a-site.com',
-        standard: 'WCAG2AA',
-        jurisdictions: [],
-        createdBy: 'testuser',
-        createdAt: new Date().toISOString(),
-        orgId: orgA,
+      await ctx.storage.scans.createScan({
+        id: randomUUID(), siteUrl: 'https://org-a-site.com', standard: 'WCAG2AA',
+        jurisdictions: [], createdBy: 'testuser', createdAt: new Date().toISOString(), orgId: orgA,
       });
 
-      ctx.db.createScan({
-        id: randomUUID(),
-        siteUrl: 'https://org-b-site.com',
-        standard: 'WCAG2AA',
-        jurisdictions: [],
-        createdBy: 'testuser',
-        createdAt: new Date().toISOString(),
-        orgId: orgB,
+      await ctx.storage.scans.createScan({
+        id: randomUUID(), siteUrl: 'https://org-b-site.com', standard: 'WCAG2AA',
+        jurisdictions: [], createdBy: 'testuser', createdAt: new Date().toISOString(), orgId: orgB,
       });
 
-      ctx.db.createScan({
-        id: randomUUID(),
-        siteUrl: 'https://org-a-site2.com',
-        standard: 'WCAG2AA',
-        jurisdictions: [],
-        createdBy: 'testuser',
-        createdAt: new Date().toISOString(),
-        orgId: orgA,
+      await ctx.storage.scans.createScan({
+        id: randomUUID(), siteUrl: 'https://org-a-site2.com', standard: 'WCAG2AA',
+        jurisdictions: [], createdBy: 'testuser', createdAt: new Date().toISOString(), orgId: orgA,
       });
 
-      const response = await ctx.server.inject({
-        method: 'GET',
-        url: '/home',
-      });
+      const response = await ctx.server.inject({ method: 'GET', url: '/home' });
 
       expect(response.statusCode).toBe(200);
       const body = response.json() as {
@@ -189,30 +171,17 @@ describe('Org-scoped route integration', () => {
     it('home page shows all scans when user has no orgId', async () => {
       ctx = await createOrgTestServer(undefined);
 
-      ctx.db.createScan({
-        id: randomUUID(),
-        siteUrl: 'https://site1.com',
-        standard: 'WCAG2AA',
-        jurisdictions: [],
-        createdBy: 'testuser',
-        createdAt: new Date().toISOString(),
-        orgId: 'org-x',
+      await ctx.storage.scans.createScan({
+        id: randomUUID(), siteUrl: 'https://site1.com', standard: 'WCAG2AA',
+        jurisdictions: [], createdBy: 'testuser', createdAt: new Date().toISOString(), orgId: 'org-x',
       });
 
-      ctx.db.createScan({
-        id: randomUUID(),
-        siteUrl: 'https://site2.com',
-        standard: 'WCAG2AA',
-        jurisdictions: [],
-        createdBy: 'testuser',
-        createdAt: new Date().toISOString(),
-        orgId: 'org-y',
+      await ctx.storage.scans.createScan({
+        id: randomUUID(), siteUrl: 'https://site2.com', standard: 'WCAG2AA',
+        jurisdictions: [], createdBy: 'testuser', createdAt: new Date().toISOString(), orgId: 'org-y',
       });
 
-      const response = await ctx.server.inject({
-        method: 'GET',
-        url: '/home',
-      });
+      const response = await ctx.server.inject({ method: 'GET', url: '/home' });
 
       expect(response.statusCode).toBe(200);
       const body = response.json() as {

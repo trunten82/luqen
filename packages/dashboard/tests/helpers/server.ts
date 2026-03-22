@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync, mkdirSync } from 'node:fs';
-import { ScanDb } from '../../src/db/scans.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
 import { authRoutes } from '../../src/routes/auth.js';
 import { homeRoutes } from '../../src/routes/home.js';
@@ -18,7 +18,7 @@ const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
 export interface TestContext {
   server: FastifyInstance;
-  db: ScanDb;
+  storage: SqliteStorageAdapter;
   orchestrator: ScanOrchestrator;
   config: DashboardConfig;
   cleanup: () => void;
@@ -41,10 +41,10 @@ export async function createTestServer(): Promise<TestContext> {
     complianceClientSecret: '',
   };
 
-  const db = new ScanDb(dbPath);
-  db.initialize();
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
 
-  const orchestrator = new ScanOrchestrator(db, reportsDir, 2);
+  const orchestrator = new ScanOrchestrator(storage, reportsDir, 2);
 
   const server = Fastify({ logger: false });
 
@@ -62,23 +62,23 @@ export async function createTestServer(): Promise<TestContext> {
   );
 
   await authRoutes(server, config);
-  await homeRoutes(server, db);
-  await scanRoutes(server, db, orchestrator, config);
-  await compareRoutes(server, db);
-  await reportRoutes(server, db);
+  await homeRoutes(server, storage);
+  await scanRoutes(server, storage, orchestrator, config);
+  await compareRoutes(server, storage);
+  await reportRoutes(server, storage);
 
   server.get('/health', async () => ({ status: 'ok' }));
 
   await server.ready();
 
   const cleanup = (): void => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     if (existsSync(reportsDir)) rmSync(reportsDir, { recursive: true });
     void server.close();
   };
 
-  return { server, db, orchestrator, config, cleanup };
+  return { server, storage, orchestrator, config, cleanup };
 }
 
 export function makeToken(role = 'admin'): string {

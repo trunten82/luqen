@@ -51,7 +51,7 @@ describe('Home routes', () => {
     it('counts total scans correctly', async () => {
       // Create 3 scans
       for (let i = 0; i < 3; i++) {
-        ctx.db.createScan({
+        await ctx.storage.scans.createScan({
           id: randomUUID(),
           siteUrl: `https://site${i}.com`,
           standard: 'WCAG2AA',
@@ -72,7 +72,7 @@ describe('Home routes', () => {
 
     it('includes recent scans in template data', async () => {
       const id = randomUUID();
-      ctx.db.createScan({
+      await ctx.storage.scans.createScan({
         id,
         siteUrl: 'https://example.com',
         standard: 'WCAG2AA',
@@ -93,7 +93,7 @@ describe('Home routes', () => {
 
     it('limits recent scans to 10', async () => {
       for (let i = 0; i < 15; i++) {
-        ctx.db.createScan({
+        await ctx.storage.scans.createScan({
           id: randomUUID(),
           siteUrl: `https://site${i}.com`,
           standard: 'WCAG2AA',

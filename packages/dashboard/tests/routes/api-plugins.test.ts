@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync } from 'node:fs';
-import { ScanDb } from '../../src/db/scans.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { PluginManager } from '../../src/plugins/manager.js';
 import { pluginApiRoutes } from '../../src/routes/api/plugins.js';
 import { registerSession } from '../../src/auth/session.js';
@@ -36,7 +36,7 @@ const MOCK_REGISTRY: readonly RegistryEntry[] = [
 
 interface TestContext {
   readonly server: FastifyInstance;
-  readonly db: ScanDb;
+  readonly storage: SqliteStorageAdapter;
   readonly pluginManager: PluginManager;
   readonly dbPath: string;
   readonly cleanup: () => void;
@@ -45,11 +45,11 @@ interface TestContext {
 async function createTestServer(role: string = 'admin'): Promise<TestContext> {
   const dbPath = join(tmpdir(), `test-api-plugins-${randomUUID()}.db`);
 
-  const db = new ScanDb(dbPath);
-  db.initialize();
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
 
   const pluginManager = new PluginManager({
-    db: db.getDatabase(),
+    db: storage.getRawDatabase(),
     pluginsDir: join(tmpdir(), `test-plugins-${randomUUID()}`),
     encryptionKey: TEST_SESSION_SECRET,
     registryEntries: MOCK_REGISTRY,
@@ -76,12 +76,12 @@ async function createTestServer(role: string = 'admin'): Promise<TestContext> {
   await server.ready();
 
   const cleanup = (): void => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     void server.close();
   };
 
-  return { server, db, pluginManager, dbPath, cleanup };
+  return { server, storage, pluginManager, dbPath, cleanup };
 }
 
 // ---------------------------------------------------------------------------
@@ -90,7 +90,7 @@ async function createTestServer(role: string = 'admin'): Promise<TestContext> {
 
 /** Insert a plugin row directly into DB for testing. */
 function insertPlugin(
-  db: ScanDb,
+  storage: SqliteStorageAdapter,
   overrides: Partial<{
     id: string;
     package_name: string;
@@ -102,7 +102,7 @@ function insertPlugin(
   }> = {},
 ): string {
   const id = overrides.id ?? randomUUID();
-  db.getDatabase()
+  storage.getRawDatabase()
     .prepare(
       `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
        VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
@@ -143,7 +143,7 @@ describe('Plugin API routes', () => {
     });
 
     it('returns installed plugins', async () => {
-      const id = insertPlugin(ctx.db);
+      const id = insertPlugin(ctx.storage);
       const res = await ctx.server.inject({ method: 'GET', url: '/api/v1/plugins' });
       expect(res.statusCode).toBe(200);
       const body = res.json();
@@ -156,7 +156,7 @@ describe('Plugin API routes', () => {
   // ── GET /api/v1/plugins/registry ────────────────────────────────────────
   describe('GET /api/v1/plugins/registry', () => {
     it('returns available plugins with installed flag', async () => {
-      insertPlugin(ctx.db, { package_name: '@luqen/plugin-slack' });
+      insertPlugin(ctx.storage, { package_name: '@luqen/plugin-slack' });
 
       const res = await ctx.server.inject({ method: 'GET', url: '/api/v1/plugins/registry' });
       expect(res.statusCode).toBe(200);
@@ -220,7 +220,7 @@ describe('Plugin API routes', () => {
     });
 
     it('returns 400 when config is missing', async () => {
-      const id = insertPlugin(ctx.db);
+      const id = insertPlugin(ctx.storage);
       const res = await ctx.server.inject({
         method: 'PATCH',
         url: `/api/v1/plugins/${id}/config`,
@@ -253,7 +253,7 @@ describe('Plugin API routes', () => {
     });
 
     it('deactivates an installed plugin', async () => {
-      const id = insertPlugin(ctx.db, { status: 'active' });
+      const id = insertPlugin(ctx.storage, { status: 'active' });
       const res = await ctx.server.inject({
         method: 'POST',
         url: `/api/v1/plugins/${id}/deactivate`,
@@ -274,7 +274,7 @@ describe('Plugin API routes', () => {
     });
 
     it('removes an installed plugin', async () => {
-      const id = insertPlugin(ctx.db);
+      const id = insertPlugin(ctx.storage);
       const res = await ctx.server.inject({
         method: 'DELETE',
         url: `/api/v1/plugins/${id}`,
@@ -298,7 +298,7 @@ describe('Plugin API routes', () => {
     });
 
     it('returns health status for installed plugin', async () => {
-      const id = insertPlugin(ctx.db, { status: 'inactive' });
+      const id = insertPlugin(ctx.storage, { status: 'inactive' });
       const res = await ctx.server.inject({
         method: 'GET',
         url: `/api/v1/plugins/${id}/health`,
@@ -308,7 +308,7 @@ describe('Plugin API routes', () => {
     });
 
     it('returns ok:true for active plugin with passing health check', async () => {
-      const id = insertPlugin(ctx.db, { status: 'active' });
+      const id = insertPlugin(ctx.storage, { status: 'active' });
 
       const mockInstance = {
         manifest: {
