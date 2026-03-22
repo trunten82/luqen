@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { ScanDb, ScanRecord } from '../db/scans.js';
+import type { StorageAdapter, ScanRecord } from '../db/index.js';
 
 interface TrendPoint {
   readonly date: string;
@@ -222,13 +222,13 @@ function buildSummaryTable(trends: readonly SiteTrend[]): readonly SiteSummaryRo
 
 export async function trendRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
   server.get(
     '/reports/trends',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId;
-      const scans = db.getTrendData(orgId);
+      const scans = await storage.scans.getTrendData(orgId);
       const trends = groupBySite(scans);
       const summaryTable = buildSummaryTable(trends);
       const siteUrls = trends.map((t) => t.siteUrl);

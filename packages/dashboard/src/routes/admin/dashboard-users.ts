@@ -1,15 +1,15 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { UserDb, DashboardUser } from '../../db/users.js';
+import type { StorageAdapter, DashboardUser } from '../../db/index.js';
+import type { UserRepository } from '../../db/interfaces/user-repository.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml } from './helpers.js';
 import { validateUsername, validatePassword } from '../../validation.js';
-import type { AuditLogger } from '../../audit/logger.js';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function isLastActiveAdmin(userDb: UserDb, userId: string): boolean {
-  const users = userDb.listUsers();
-  const activeAdmins = users.filter(u => u.active && u.role === 'admin' && u.id !== userId);
+async function isLastActiveAdmin(users: StorageAdapter, userId: string): Promise<boolean> {
+  const userList = await users.users.listUsers();
+  const activeAdmins = userList.filter(u => u.active && u.role === 'admin' && u.id !== userId);
   return activeAdmins.length === 0;
 }
 
@@ -83,8 +83,7 @@ const VALID_ROLES = new Set(['viewer', 'user', 'developer', 'admin', 'executive'
 
 export async function dashboardUserRoutes(
   server: FastifyInstance,
-  userDb: UserDb,
-  auditLogger?: AuditLogger,
+  storage: StorageAdapter,
 ): Promise<void> {
   const anyUserPerm = requirePermission('users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles');
 
@@ -93,7 +92,7 @@ export async function dashboardUserRoutes(
     '/admin/dashboard-users',
     { preHandler: anyUserPerm },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const users = userDb.listUsers();
+      const users = await storage.users.listUsers();
 
       return reply.view('admin/dashboard-users.hbs', {
         pageTitle: 'Dashboard Users',
@@ -163,7 +162,7 @@ export async function dashboardUserRoutes(
       }
 
       // Check for duplicate username
-      const existing = userDb.getUserByUsername(username);
+      const existing = await storage.users.getUserByUsername(username);
       if (existing !== null) {
         return reply
           .code(400)
@@ -172,10 +171,10 @@ export async function dashboardUserRoutes(
       }
 
       try {
-        const created = await userDb.createUser(username, password, role);
+        const created = await storage.users.createUser(username, password, role);
         const row = userRowHtml(created);
 
-        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.create', resourceType: 'user', resourceId: created.id, details: { username: created.username, role }, ipAddress: request.ip });
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.create', resourceType: 'user', resourceId: created.id, details: { username: created.username, role }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -205,8 +204,8 @@ export async function dashboardUserRoutes(
           .send(toastHtml('Invalid role. Must be executive, viewer, user, developer, or admin.', 'error'));
       }
 
-      const currentUser = userDb.getUserById(id);
-      if (currentUser !== null && currentUser.role === 'admin' && role !== 'admin' && isLastActiveAdmin(userDb, id)) {
+      const currentUser = await storage.users.getUserById(id);
+      if (currentUser !== null && currentUser.role === 'admin' && role !== 'admin' && await isLastActiveAdmin(storage, id)) {
         return reply
           .code(400)
           .header('content-type', 'text/html')
@@ -214,8 +213,8 @@ export async function dashboardUserRoutes(
       }
 
       try {
-        userDb.updateUserRole(id, role);
-        const updated = userDb.getUserById(id);
+        await storage.users.updateUserRole(id, role);
+        const updated = await storage.users.getUserById(id);
 
         if (updated === null) {
           return reply
@@ -225,7 +224,7 @@ export async function dashboardUserRoutes(
         }
 
         const row = userRowHtml(updated);
-        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.role_change', resourceType: 'user', resourceId: id, details: { username: updated.username, newRole: role }, ipAddress: request.ip });
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.role_change', resourceType: 'user', resourceId: id, details: { username: updated.username, newRole: role }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -244,8 +243,8 @@ export async function dashboardUserRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const targetUser = userDb.getUserById(id);
-      if (targetUser !== null && targetUser.role === 'admin' && isLastActiveAdmin(userDb, id)) {
+      const targetUser = await storage.users.getUserById(id);
+      if (targetUser !== null && targetUser.role === 'admin' && await isLastActiveAdmin(storage, id)) {
         return reply
           .code(400)
           .header('content-type', 'text/html')
@@ -253,8 +252,8 @@ export async function dashboardUserRoutes(
       }
 
       try {
-        userDb.deactivateUser(id);
-        const deactivated = userDb.getUserById(id);
+        await storage.users.deactivateUser(id);
+        const deactivated = await storage.users.getUserById(id);
 
         if (deactivated === null) {
           return reply
@@ -264,7 +263,7 @@ export async function dashboardUserRoutes(
         }
 
         const row = userRowHtml(deactivated);
-        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.deactivate', resourceType: 'user', resourceId: id, details: { username: deactivated.username }, ipAddress: request.ip });
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.deactivate', resourceType: 'user', resourceId: id, details: { username: deactivated.username }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -284,8 +283,8 @@ export async function dashboardUserRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        userDb.activateUser(id);
-        const activated = userDb.getUserById(id);
+        await storage.users.activateUser(id);
+        const activated = await storage.users.getUserById(id);
 
         if (activated === null) {
           return reply
@@ -295,7 +294,7 @@ export async function dashboardUserRoutes(
         }
 
         const row = userRowHtml(activated);
-        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.activate', resourceType: 'user', resourceId: id, details: { username: activated.username }, ipAddress: request.ip });
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.activate', resourceType: 'user', resourceId: id, details: { username: activated.username }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -313,7 +312,7 @@ export async function dashboardUserRoutes(
     { preHandler: requirePermission('users.reset_password') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const user = userDb.getUserById(id);
+      const user = await storage.users.getUserById(id);
 
       if (user === null) {
         return reply
@@ -365,7 +364,7 @@ export async function dashboardUserRoutes(
       const { id } = request.params as { id: string };
       const body = request.body as { newPassword?: string; confirmPassword?: string };
 
-      const user = userDb.getUserById(id);
+      const user = await storage.users.getUserById(id);
       if (user === null) {
         return reply
           .code(404)
@@ -396,7 +395,7 @@ export async function dashboardUserRoutes(
       }
 
       try {
-        await userDb.updatePassword(id, body.newPassword);
+        await storage.users.updatePassword(id, body.newPassword);
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -415,7 +414,7 @@ export async function dashboardUserRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const user = userDb.getUserById(id);
+      const user = await storage.users.getUserById(id);
       if (user === null) {
         return reply
           .code(404)
@@ -423,7 +422,7 @@ export async function dashboardUserRoutes(
           .send(toastHtml('User not found.', 'error'));
       }
 
-      if (user.role === 'admin' && isLastActiveAdmin(userDb, id)) {
+      if (user.role === 'admin' && await isLastActiveAdmin(storage, id)) {
         return reply
           .code(400)
           .header('content-type', 'text/html')
@@ -431,8 +430,8 @@ export async function dashboardUserRoutes(
       }
 
       try {
-        userDb.deleteUser(id);
-        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.delete', resourceType: 'user', resourceId: id, details: { username: user.username }, ipAddress: request.ip });
+        await storage.users.deleteUser(id);
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.delete', resourceType: 'user', resourceId: id, details: { username: user.username }, ipAddress: request.ip });
         return reply
           .code(200)
           .header('content-type', 'text/html')

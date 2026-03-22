@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ScanDb } from '../../db/scans.js';
+import type { StorageAdapter } from '../../db/index.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
 import { generateReportPdf, isPuppeteerAvailable } from '../../pdf/generator.js';
 import ExcelJS from 'exceljs';
@@ -85,7 +85,7 @@ interface JsonReportFile {
 
 export async function exportRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
 
   // ── GET /api/v1/export/scans.csv ──────────────────────────────────────────
@@ -93,7 +93,7 @@ export async function exportRoutes(
     '/api/v1/export/scans.csv',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
-      const scans = db.listScans({
+      const scans = await storage.scans.listScans({
         ...(orgId !== 'system' ? { orgId } : {}),
         limit: 10_000,
         offset: 0,
@@ -148,7 +148,7 @@ export async function exportRoutes(
     `/api/v1/export/scans/:id/issues.${ext}`,
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
 
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });
@@ -165,7 +165,7 @@ export async function exportRoutes(
 
       let raw: JsonReportFile;
       try {
-        const dbReport = db.getReport(id);
+        const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
           raw = dbReport as JsonReportFile;
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
@@ -322,7 +322,7 @@ export async function exportRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { siteUrl?: string };
       const orgId = request.user?.currentOrgId;
-      const scans = db.getTrendData(orgId);
+      const scans = await storage.scans.getTrendData(orgId);
 
       const filtered = query.siteUrl
         ? scans.filter((s) => s.siteUrl === query.siteUrl)
@@ -372,7 +372,7 @@ export async function exportRoutes(
       }
 
       const { id } = request.params as { id: string };
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
 
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });

@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import type { ScanDb } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
 import { listJurisdictions, listRegulations } from '../compliance-client.js';
@@ -27,7 +27,7 @@ function normalizeJurisdictions(value: string | string[] | undefined): string[] 
 
 export async function scanRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
   orchestrator: ScanOrchestrator,
   config: DashboardConfig,
 ): Promise<void> {
@@ -146,7 +146,7 @@ export async function scanRoutes(
 
       const scanId = randomUUID();
 
-      db.createScan({
+      await storage.scans.createScan({
         id: scanId,
         siteUrl: parsedUrl.toString(),
         standard,
@@ -190,7 +190,7 @@ export async function scanRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
       if (scan === null) {
         return reply.code(404).send({ error: 'Scan not found' });
       }
@@ -218,7 +218,7 @@ export async function scanRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
       if (scan === null) {
         return reply.code(404).send({ error: 'Scan not found' });
       }

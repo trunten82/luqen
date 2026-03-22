@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import type { ScanDb } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
 import { toastHtml, escapeHtml } from './admin/helpers.js';
 import { hasPermission } from '../permissions.js';
 
@@ -39,7 +39,7 @@ export { computeNextRunAt };
 
 export async function scheduleRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
   // GET /schedules — list all schedules (admin and user roles only)
   server.get(
@@ -50,7 +50,7 @@ export async function scheduleRoutes(
       }
 
       const orgId = request.user?.currentOrgId;
-      const schedules = db.listSchedules(orgId);
+      const schedules = await storage.schedules.listSchedules(orgId);
 
       const formatted = schedules.map((s) => ({
         ...s,
@@ -115,7 +115,7 @@ export async function scheduleRoutes(
       const runner = body.runner !== undefined && VALID_RUNNERS.includes(body.runner) ? body.runner : 'htmlcs';
       const incremental = body.incremental === 'true';
 
-      db.createSchedule({
+      await storage.schedules.createSchedule({
         id: randomUUID(),
         siteUrl: parsedUrl.toString(),
         standard,
@@ -144,7 +144,7 @@ export async function scheduleRoutes(
 
       const { id } = request.params as { id: string };
 
-      const schedule = db.getSchedule(id);
+      const schedule = await storage.schedules.getSchedule(id);
       if (schedule === null) {
         return reply.code(404).send(toastHtml('Schedule not found', 'error'));
       }
@@ -154,7 +154,7 @@ export async function scheduleRoutes(
         return reply.code(404).send(toastHtml('Schedule not found', 'error'));
       }
 
-      db.deleteSchedule(id);
+      await storage.schedules.deleteSchedule(id);
 
       reply.header('HX-Redirect', '/schedules');
       return reply.send(toastHtml('Schedule deleted', 'success'));
@@ -171,7 +171,7 @@ export async function scheduleRoutes(
 
       const { id } = request.params as { id: string };
 
-      const schedule = db.getSchedule(id);
+      const schedule = await storage.schedules.getSchedule(id);
       if (schedule === null) {
         return reply.code(404).send(toastHtml('Schedule not found', 'error'));
       }
@@ -181,7 +181,7 @@ export async function scheduleRoutes(
         return reply.code(404).send(toastHtml('Schedule not found', 'error'));
       }
 
-      db.updateSchedule(id, { enabled: !schedule.enabled });
+      await storage.schedules.updateSchedule(id, { enabled: !schedule.enabled });
 
       reply.header('HX-Redirect', '/schedules');
       const action = schedule.enabled ? 'paused' : 'resumed';

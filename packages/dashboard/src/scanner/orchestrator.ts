@@ -1,8 +1,8 @@
 import { EventEmitter } from 'node:events';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { ScanDb } from '../db/scans.js';
-import type { PageHashEntry } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
+import type { PageHashEntry } from '../db/types.js';
 import { checkCompliance } from '../compliance-client.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 
@@ -100,15 +100,15 @@ export interface OrchestratorOptions {
 export class ScanOrchestrator {
   private readonly emitter = new EventEmitter();
   private readonly queue: ScanQueue;
-  private readonly db: ScanDb;
+  private readonly storage: StorageAdapter;
   private readonly reportsDir: string;
   private readonly ssePublisher?: SsePublisher;
   private readonly redisQueue?: RedisScanQueue;
   /** Buffer recent events per scan so late-connecting SSE clients catch up. */
   private readonly eventBuffers = new Map<string, ScanProgressEvent[]>();
 
-  constructor(db: ScanDb, reportsDir: string, maxConcurrentOrOpts: number | OrchestratorOptions = 2) {
-    this.db = db;
+  constructor(storage: StorageAdapter, reportsDir: string, maxConcurrentOrOpts: number | OrchestratorOptions = 2) {
+    this.storage = storage;
     this.reportsDir = reportsDir;
 
     const opts: OrchestratorOptions = typeof maxConcurrentOrOpts === 'number'
@@ -203,7 +203,7 @@ export class ScanOrchestrator {
     };
 
     try {
-      this.db.updateScan(scanId, { status: 'running' });
+      await this.storage.scans.updateScan(scanId, { status: 'running' });
 
       emit({
         type: 'scan_start',
@@ -265,7 +265,7 @@ export class ScanOrchestrator {
           );
 
           // 3. Compare with stored hashes to find changed/new pages
-          const storedHashes = this.db.getPageHashes(config.siteUrl, orgId);
+          const storedHashes = await this.storage.pageHashes.getPageHashes(config.siteUrl, orgId);
           const changedUrls: Array<{ url: string; discoveryMethod: string }> = [];
           const skippedUrls: string[] = [];
 
@@ -370,7 +370,7 @@ export class ScanOrchestrator {
             hashEntries.push({ siteUrl: config.siteUrl, pageUrl, hash, orgId });
           }
           if (hashEntries.length > 0) {
-            this.db.upsertPageHashes(hashEntries);
+            await this.storage.pageHashes.upsertPageHashes(hashEntries);
           }
         } else {
           // --- Standard (non-incremental) scan ---
@@ -511,7 +511,7 @@ export class ScanOrchestrator {
       const reportJson = JSON.stringify(reportData, null, 2);
 
       // Store report in DB (primary) and optionally on filesystem (backup)
-      this.db.updateScan(scanId, {
+      await this.storage.scans.updateScan(scanId, {
         status: 'completed',
         completedAt: new Date().toISOString(),
         pagesScanned,
@@ -545,7 +545,7 @@ export class ScanOrchestrator {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      this.db.updateScan(scanId, {
+      await this.storage.scans.updateScan(scanId, {
         status: 'failed',
         error: message,
       });

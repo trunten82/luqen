@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import type { ScanDb, ScanRecord } from '../../db/scans.js';
+import type { StorageAdapter, ScanRecord } from '../../db/index.js';
+import { SqliteStorageAdapter } from '../../db/sqlite/index.js';
 import { getFixSuggestion } from '../../fix-suggestions.js';
 
 // ---------------------------------------------------------------------------
@@ -154,9 +155,9 @@ const rateLimitConfig = {
 
 export async function dataApiRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
-  const rawDb = db.getDatabase();
+  const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
 
   // ── GET /api/v1/scans ─────────────────────────────────────────────────
   server.get<{ Querystring: ScansQuery }>(
@@ -195,10 +196,11 @@ export async function dataApiRoutes(
         .all(params) as Array<Record<string, unknown>>;
 
       // Convert rows through ScanDb's listScans-compatible path
-      const scans = rows.map((row) => {
-        const record = db.getScan(row['id'] as string);
+      const scanResults = await Promise.all(rows.map(async (row) => {
+        const record = await storage.scans.getScan(row['id'] as string);
         return record !== null ? toPublicScan(record) : null;
-      }).filter(Boolean);
+      }));
+      const scans = scanResults.filter(Boolean);
 
       return reply.header('content-type', 'application/json').send({
         data: scans,
@@ -213,7 +215,7 @@ export async function dataApiRoutes(
     { config: rateLimitConfig },
     async (request: FastifyRequest<{ Params: ScanParams }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
-      const scan = db.getScan(request.params.id);
+      const scan = await storage.scans.getScan(request.params.id);
 
       if (scan === null || scan.orgId !== orgId) {
         return reply.code(404).send({ error: 'Scan not found' });
@@ -240,7 +242,7 @@ export async function dataApiRoutes(
       reply: FastifyReply,
     ) => {
       const orgId = getOrgId(request);
-      const scan = db.getScan(request.params.id);
+      const scan = await storage.scans.getScan(request.params.id);
 
       if (scan === null || scan.orgId !== orgId) {
         return reply.code(404).send({ error: 'Scan not found' });
@@ -360,7 +362,7 @@ export async function dataApiRoutes(
       let scans: ScanRecord[];
 
       if (siteUrl !== undefined && siteUrl.trim() !== '') {
-        scans = db.listScans({
+        scans = await storage.scans.listScans({
           status: 'completed',
           orgId,
           siteUrl,
@@ -382,9 +384,9 @@ export async function dataApiRoutes(
           `)
           .all({ orgId }) as Array<Record<string, unknown>>;
 
-        scans = rows
-          .map((row) => db.getScan(row['id'] as string))
-          .filter((s): s is ScanRecord => s !== null);
+        const scanPromises = rows.map((row) => storage.scans.getScan(row['id'] as string));
+        const scanResults2 = await Promise.all(scanPromises);
+        scans = scanResults2.filter((s): s is ScanRecord => s !== null);
       }
 
       const summaries: Array<Record<string, unknown>> = [];
@@ -435,7 +437,7 @@ export async function dataApiRoutes(
       reply: FastifyReply,
     ) => {
       const orgId = getOrgId(request);
-      const scan = db.getScan(request.params.id);
+      const scan = await storage.scans.getScan(request.params.id);
 
       if (scan === null || scan.orgId !== orgId) {
         return reply.code(404).send({ error: 'Scan not found' });
@@ -447,7 +449,7 @@ export async function dataApiRoutes(
       }
 
       // Find connected repo
-      const connectedRepo = db.findRepoForUrl(scan.siteUrl, orgId);
+      const connectedRepo = await storage.repos.findRepoForUrl(scan.siteUrl, orgId);
 
       // Collect all issues and generate fix proposals
       const fixes: Array<Record<string, unknown>> = [];

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { loadConfig, validateConfig } from './config.js';
-import { ScanDb } from './db/scans.js';
+import { resolveStorageAdapter } from './db/index.js';
+import { SqliteStorageAdapter } from './db/sqlite/index.js';
 import { VERSION } from './version.js';
 
 const program = new Command();
@@ -42,13 +43,12 @@ program
   .description('Create or update the SQLite database schema')
   .option('-d, --db-path <path>', 'Path to SQLite database file (overrides config)')
   .option('-c, --config <path>', 'Path to config file', 'dashboard.config.json')
-  .action((options: { dbPath?: string; config: string }) => {
+  .action(async (options: { dbPath?: string; config: string }) => {
     try {
       const config = loadConfig(options.config);
       const dbPath = options.dbPath ?? config.dbPath;
-      const db = new ScanDb(dbPath);
-      db.initialize();
-      db.close();
+      const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath } });
+      await storage.disconnect();
       console.log(`Migration complete. Database: ${dbPath}`);
     } catch (err) {
       console.error('Migration failed:', err instanceof Error ? err.message : String(err));
@@ -101,15 +101,15 @@ async function withPluginManager(
   fn: (manager: import('./plugins/manager.js').PluginManager, registryEntries: readonly import('./plugins/types.js').RegistryEntry[]) => Promise<void>,
 ): Promise<void> {
   const config = loadConfig(configPath);
-  const db = new ScanDb(config.dbPath);
-  db.initialize();
+  const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath: config.dbPath } });
+  const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
 
   const { PluginManager } = await import('./plugins/manager.js');
   const { loadRegistry } = await import('./plugins/registry.js');
 
   const registryEntries = loadRegistry();
   const manager = new PluginManager({
-    db: db.getDatabase(),
+    db: rawDb,
     pluginsDir: config.pluginsDir,
     encryptionKey: config.sessionSecret,
     registryEntries,
@@ -118,7 +118,7 @@ async function withPluginManager(
   try {
     await fn(manager, registryEntries);
   } finally {
-    db.close();
+    await storage.disconnect();
   }
 }
 
@@ -265,19 +265,16 @@ program
   .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
   .action(async (options: { config: string }) => {
     try {
-      const { revokeAllKeys, getOrCreateApiKey } = await import('./auth/api-key.js');
-
       const config = loadConfig(options.config);
-      const db = new ScanDb(config.dbPath);
-      db.initialize();
+      const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath: config.dbPath } });
 
-      revokeAllKeys(db.getDatabase());
-      const { key } = getOrCreateApiKey(db.getDatabase());
+      await storage.apiKeys.revokeAllKeys();
+      const { key } = await storage.apiKeys.getOrCreateKey();
 
       console.log('New API key generated (all previous keys revoked):');
       console.log(key);
 
-      db.close();
+      await storage.disconnect();
     } catch (err) {
       console.error('API key generation failed:', err instanceof Error ? err.message : String(err));
       process.exit(1);
