@@ -10,68 +10,64 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: #1a1a1a; background: #fff; margin: 0; padding: 2rem; font-size: 11pt; line-height: 1.5;
     }
-    h1 { font-size: 1.4rem; margin: 0 0 0.15rem; }
-    h2 { font-size: 1.1rem; margin: 1.5rem 0 0.6rem; border-bottom: 2px solid #0056b3; padding-bottom: 0.25rem; color: #0056b3; }
+    h1 { font-size: 1.5rem; margin: 0 0 0.25rem; color: #0056b3; }
+    h2 { font-size: 1.05rem; margin: 1.5rem 0 0.5rem; border-bottom: 2px solid #0056b3; padding-bottom: 0.2rem; color: #0056b3; }
     a { color: #0056b3; text-decoration: none; }
 
-    .print-bar { display: flex; justify-content: flex-end; gap: 0.75rem; margin-bottom: 1.25rem; padding: 0.5rem 0; border-bottom: 1px solid #d0d4de; }
+    .print-bar { display: flex; justify-content: flex-end; gap: 0.75rem; margin-bottom: 1rem; padding: 0.5rem 0; border-bottom: 1px solid #d0d4de; }
     .print-btn { display: inline-block; padding: 0.45rem 1.1rem; background: #0056b3; color: #fff; border: none; border-radius: 4px; font-size: 0.85rem; cursor: pointer; }
     .print-btn:hover { background: #003d82; }
     .print-btn--secondary { background: #6b6b6b; }
 
-    .header-meta { font-size: 0.85rem; color: #4a4a4a; margin-bottom: 1.25rem; }
-    .header-meta span { margin-right: 1.5rem; }
+    .subtitle { font-size: 0.85rem; color: #4a4a4a; margin-bottom: 1.25rem; }
+    .subtitle span { margin-right: 1.5rem; }
 
-    /* Summary cards */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
-    .kpi { border: 1px solid #d0d4de; border-radius: 6px; padding: 0.75rem; text-align: center; }
-    .kpi__value { font-size: 1.6rem; font-weight: 800; display: block; }
-    .kpi__label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #6b6b6b; }
+    /* Executive summary box */
+    .exec-box { background: #f5f6fa; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .exec-box p { margin: 0 0 0.5rem; font-size: 0.92rem; }
+    .exec-box p:last-child { margin-bottom: 0; }
+    .exec-verdict { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .exec-verdict--fail { color: #8b1a1a; }
+    .exec-verdict--pass { color: #0d6832; }
+    .exec-verdict--review { color: #7a4f00; }
+
+    /* KPI cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.6rem; margin-bottom: 1.5rem; }
+    .kpi { border: 1px solid #d0d4de; border-radius: 6px; padding: 0.6rem; text-align: center; }
+    .kpi__value { font-size: 1.8rem; font-weight: 800; display: block; }
+    .kpi__label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: #6b6b6b; }
     .kpi--error .kpi__value { color: #8b1a1a; }
     .kpi--warning .kpi__value { color: #7a4f00; }
     .kpi--notice .kpi__value { color: #00416a; }
-
-    /* Priority action table */
-    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 1rem; }
-    th, td { padding: 0.45rem 0.6rem; text-align: left; border-bottom: 1px solid #d0d4de; }
-    th { background: #f5f6fa; font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
-    tr:nth-child(even) { background: #fafbfc; }
-
-    .severity { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 3px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-    .severity--error { background: #f8d7da; color: #8b1a1a; }
-    .severity--warning { background: #fff3cd; color: #7a4f00; }
-    .severity--notice { background: #d1ecf1; color: #00416a; }
-
-    .reg-tag { display: inline-block; padding: 0.08rem 0.35rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600; margin-right: 0.15rem; }
-    .reg-tag--mandatory { background: #f8d7da; color: #8b1a1a; }
-    .reg-tag--recommended { background: #fff3cd; color: #7a4f00; }
-    .reg-tag--optional { background: #d1ecf1; color: #00416a; }
-
-    .component-tag { display: inline-block; padding: 0.08rem 0.35rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600; background: #eef0f7; color: #4a4a4a; }
+    .kpi--pass .kpi__value { color: #0d6832; }
 
     /* Compliance cards */
-    .juris-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+    .juris-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; margin-bottom: 1.25rem; }
     .juris-card { border: 1px solid #d0d4de; border-radius: 6px; overflow: hidden; }
-    .juris-card__head { padding: 0.45rem 0.65rem; display: flex; justify-content: space-between; align-items: center; }
+    .juris-card__head { padding: 0.4rem 0.6rem; display: flex; justify-content: space-between; align-items: center; }
     .juris-card__head--pass { background: #d4edda; }
     .juris-card__head--fail { background: #f8d7da; }
     .juris-card__head--review { background: #fff3cd; }
-    .juris-card__name { font-weight: 700; font-size: 0.85rem; }
-    .juris-card__status { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
-    .juris-card__body { padding: 0.4rem 0.65rem; font-size: 0.8rem; }
+    .juris-card__name { font-weight: 700; font-size: 0.82rem; }
+    .juris-card__status { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+    .juris-card__body { padding: 0.3rem 0.6rem; font-size: 0.78rem; }
+
+    /* Action table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 1rem; }
+    th, td { padding: 0.4rem 0.5rem; text-align: left; border-bottom: 1px solid #d0d4de; }
+    th { background: #f5f6fa; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .severity { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
+    .severity--error { background: #f8d7da; color: #8b1a1a; }
+    .severity--warning { background: #fff3cd; color: #7a4f00; }
+    .reg-tag { display: inline-block; padding: 0.06rem 0.3rem; border-radius: 3px; font-size: 0.62rem; font-weight: 600; margin-right: 0.1rem; background: #f8d7da; color: #8b1a1a; }
 
     .text-muted { color: #6b6b6b; }
-    .text-sm { font-size: 0.8rem; }
-    .mb-0 { margin-bottom: 0; }
-
-    .report-footer { margin-top: 2rem; padding-top: 0.5rem; border-top: 1px solid #d0d4de; font-size: 0.72rem; color: #6b6b6b; text-align: center; }
+    .text-sm { font-size: 0.78rem; }
+    .report-footer { margin-top: 1.5rem; padding-top: 0.4rem; border-top: 1px solid #d0d4de; font-size: 0.7rem; color: #6b6b6b; text-align: center; }
 
     @media print {
-      body { padding: 0; font-size: 9.5pt; }
+      body { padding: 0.5cm; font-size: 9pt; }
       .print-bar { display: none !important; }
-      .kpi-grid { gap: 0.5rem; }
-      table { page-break-inside: auto; }
-      tr { page-break-inside: avoid; }
       a { color: #1a1a1a; }
       a[href]::after { content: none !important; }
     }
@@ -85,7 +81,7 @@
 </div>
 
 <h1>{{t "reportPrint.heading"}}</h1>
-<div class="header-meta">
+<div class="subtitle">
   <span><strong>{{scan.siteUrl}}</strong></span>
   <span>{{formatStandard scan.standard}}</span>
   {{#if scan.jurisdictions}}<span>{{scan.jurisdictions}}</span>{{/if}}
@@ -95,9 +91,17 @@
 {{#if reportData}}
 
 {{! ── Executive Summary ───────────────────────────────── }}
-<h2>{{t "reportPrint.executiveSummary"}}</h2>
-<div style="background:#f5f6fa;border-radius:6px;padding:1rem;margin-bottom:1.5rem;font-size:0.9rem;">
-  <p style="margin:0 0 0.5rem;">
+<div class="exec-box">
+  {{#if reportData.complianceMatrix}}
+  <div class="exec-verdict {{#if reportData.summary.byLevel.error}}exec-verdict--fail{{else}}exec-verdict--pass{{/if}}">
+    {{#if reportData.summary.byLevel.error}}
+    {{t "reportPrint.verdictFail"}}
+    {{else}}
+    {{t "reportPrint.verdictPass"}}
+    {{/if}}
+  </div>
+  {{/if}}
+  <p>
     {{t "reportPrint.summaryIntro"}} <strong>{{scan.siteUrl}}</strong>
     {{t "reportPrint.summaryFound"}} <strong style="color:#8b1a1a;">{{reportData.summary.byLevel.error}} {{t "reportPrint.errors"}}</strong>,
     <strong style="color:#7a4f00;">{{reportData.summary.byLevel.warning}} {{t "reportPrint.warnings"}}</strong>,
@@ -105,7 +109,7 @@
     {{t "reportPrint.summaryAcross"}} <strong>{{reportData.summary.pagesScanned}}</strong> {{t "reportPrint.summaryPages"}}.
   </p>
   {{#if reportData.complianceMatrix}}
-  <p style="margin:0;">
+  <p>
     <strong>{{t "reportPrint.complianceRisk"}}:</strong>
     {{#each reportData.complianceMatrix}}
       {{jurisdictionName}}: <strong>{{#if (eq reviewStatus 'fail')}}⚠ {{t "reportPrint.failing"}}{{else if (eq reviewStatus 'review')}}⚡ {{t "reportPrint.needsReview"}}{{else}}✓ {{t "reportPrint.passing"}}{{/if}}</strong>{{#unless @last}}, {{/unless}}
@@ -121,9 +125,6 @@
   <div class="kpi kpi--error"><span class="kpi__value">{{reportData.summary.byLevel.error}}</span><span class="kpi__label">{{t "reportPrint.errors"}}</span></div>
   <div class="kpi kpi--warning"><span class="kpi__value">{{reportData.summary.byLevel.warning}}</span><span class="kpi__label">{{t "reportPrint.warnings"}}</span></div>
   <div class="kpi kpi--notice"><span class="kpi__value">{{reportData.summary.byLevel.notice}}</span><span class="kpi__label">{{t "reportPrint.notices"}}</span></div>
-  {{#if reportData.templateIssueCount}}
-  <div class="kpi"><span class="kpi__value">{{reportData.templateIssueCount}}</span><span class="kpi__label">{{t "reportPrint.templateIssues"}}</span></div>
-  {{/if}}
 </div>
 
 {{! ── Legal Compliance ─────────────────────────────────── }}
@@ -133,9 +134,7 @@
   {{#each reportData.complianceMatrix}}
   <div class="juris-card">
     <div class="juris-card__head juris-card__head--{{reviewStatusClass reviewStatus}}">
-      <div>
-        <div class="juris-card__name">{{jurisdictionName}}</div>
-      </div>
+      <div class="juris-card__name">{{jurisdictionName}}</div>
       <div class="juris-card__status">{{reviewStatusLabel reviewStatus}}</div>
     </div>
     <div class="juris-card__body">
@@ -147,103 +146,52 @@
 </div>
 {{/if}}
 
-{{! ── Priority Action Items (errors + warnings only) ────────── }}
-<h2>{{t "reportPrint.priorityActionItems"}}</h2>
-<p class="text-sm text-muted">{{t "reportPrint.priorityActionDesc"}}</p>
+{{! ── Top Critical Actions (max 15) ─────────────────────── }}
+<h2>{{t "reportPrint.topActions"}}</h2>
+<p class="text-sm text-muted">{{t "reportPrint.topActionsDesc"}}</p>
 
 <table>
   <thead>
     <tr>
-      <th style="width:70px;">{{t "reportPrint.severity"}}</th>
-      <th style="width:90px;">{{t "reportPrint.wcag"}}</th>
-      <th>{{t "reportPrint.issue"}}</th>
-      <th style="width:110px;">{{t "reportPrint.impact"}}</th>
-      <th style="width:80px;">{{t "reportPrint.pages"}}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each reportData.allIssueGroups}}
-    {{#if errorCount}}
-    <tr>
-      <td><span class="severity severity--error">{{errorCount}} {{t "reportPrint.errAbbr"}}</span></td>
-      <td><strong>{{criterion}}</strong></td>
-      <td>
-        {{title}}
-        {{#each regulations}}<span class="reg-tag reg-tag--{{obligationClass obligation}}">{{shortName}}</span>{{/each}}
-        {{#each components}}<span class="component-tag">{{this}}</span>{{/each}}
-      </td>
-      <td>{{#if templateItems.length}}{{t "reportPrint.template"}}{{else}}{{t "reportPrint.pageSpecific"}}{{/if}}</td>
-      <td>{{pageCount}}</td>
-    </tr>
-    {{/if}}
-    {{#if warningCount}}
-    {{#unless errorCount}}
-    <tr>
-      <td><span class="severity severity--warning">{{warningCount}} {{t "reportPrint.warnAbbr"}}</span></td>
-      <td><strong>{{criterion}}</strong></td>
-      <td>
-        {{title}}
-        {{#each regulations}}<span class="reg-tag reg-tag--{{obligationClass obligation}}">{{shortName}}</span>{{/each}}
-        {{#each components}}<span class="component-tag">{{this}}</span>{{/each}}
-      </td>
-      <td>{{#if templateItems.length}}{{t "reportPrint.template"}}{{else}}{{t "reportPrint.pageSpecific"}}{{/if}}</td>
-      <td>{{pageCount}}</td>
-    </tr>
-    {{/unless}}
-    {{#if errorCount}}
-    <tr>
-      <td><span class="severity severity--warning">+{{warningCount}} {{t "reportPrint.warnAbbr"}}</span></td>
-      <td colspan="4" class="text-sm text-muted" style="padding-left:1.5rem;">{{t "reportPrint.additionalWarnings"}}</td>
-    </tr>
-    {{/if}}
-    {{/if}}
-    {{/each}}
-  </tbody>
-</table>
-
-{{! ── Template / Shared Component Issues ───────────────────── }}
-{{#unless isExecutiveView}}
-{{#if reportData.templateComponents.length}}
-<h2>{{t "reportPrint.sharedComponentIssues"}}</h2>
-<p class="text-sm text-muted">{{t "reportPrint.sharedComponentDesc"}}</p>
-
-<table>
-  <thead>
-    <tr>
-      <th style="width:130px;">{{t "reportPrint.component"}}</th>
-      <th style="width:70px;">{{t "reportPrint.severity"}}</th>
+      <th style="width:65px;">{{t "reportPrint.severity"}}</th>
       <th style="width:80px;">{{t "reportPrint.wcag"}}</th>
       <th>{{t "reportPrint.issue"}}</th>
-      <th style="width:70px;">{{t "reportPrint.pages"}}</th>
+      <th style="width:60px;">{{t "reportPrint.pages"}}</th>
     </tr>
   </thead>
   <tbody>
-    {{#each reportData.templateComponents}}
-    {{#each issues}}
+    {{#each reportData.topActionItems}}
     <tr>
-      {{#if @first}}<td rowspan="{{../issueCount}}"><strong>{{../componentName}}</strong></td>{{/if}}
-      <td><span class="severity severity--{{type}}">{{type}}</span></td>
-      <td>{{#if wcagCriterion}}{{wcagCriterion}}{{else}}<span class="text-muted">—</span>{{/if}}</td>
-      <td>{{message}}</td>
-      <td>{{affectedCount}}</td>
+      <td><span class="severity severity--{{severity}}">{{count}} {{severity}}</span></td>
+      <td><strong>{{criterion}}</strong></td>
+      <td>
+        {{title}}
+        {{#each regulations}}<span class="reg-tag">{{shortName}}</span>{{/each}}
+      </td>
+      <td>{{pageCount}}</td>
     </tr>
-    {{/each}}
     {{/each}}
   </tbody>
 </table>
-{{/if}}
-{{/unless}}
+
+<p class="text-sm text-muted" style="margin-top:0.5rem;">
+  {{t "reportPrint.fullDetailNote"}}
+</p>
 
 {{! ── Scan Errors ──────────────────────────────────────────── }}
 {{#if reportData.errors.length}}
 <h2>{{t "reportPrint.scanErrors"}}</h2>
 {{#each reportData.errors}}
-<div style="padding:0.35rem 0.6rem;background:#f8d7da;border-radius:4px;margin-bottom:0.4rem;font-size:0.82rem;">
+<div style="padding:0.3rem 0.5rem;background:#f8d7da;border-radius:4px;margin-bottom:0.3rem;font-size:0.8rem;">
   <strong>{{url}}</strong> — {{code}}: {{message}}
 </div>
 {{/each}}
 {{/if}}
 
+{{else}}
+<div class="exec-box">
+  <p>{{t "reportPrint.noData"}}</p>
+</div>
 {{/if}}
 
 <div class="report-footer">

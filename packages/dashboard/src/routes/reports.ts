@@ -523,6 +523,18 @@ function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string; pages
     allIssueGroups,
     regulatoryIssueCount,
     templateIssueTotal,
+    // Top 15 critical action items for executive PDF — errors first, then regulatory warnings
+    topActionItems: allIssueGroups
+      .filter((g) => g.errorCount > 0 || (g.warningCount > 0 && g.isRegulatory))
+      .slice(0, 15)
+      .map((g) => ({
+        severity: g.errorCount > 0 ? 'error' : 'warning',
+        count: g.errorCount > 0 ? g.errorCount : g.warningCount,
+        criterion: g.criterion,
+        title: g.title,
+        pageCount: g.pageCount,
+        regulations: g.regulations,
+      })),
   };
 }
 
