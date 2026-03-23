@@ -5,19 +5,7 @@
   "workspaces": [
     "packages/core",
     "packages/compliance",
-    "packages/dashboard",
-    "packages/monitor",
-    "packages/plugins/auth-entra",
-    "packages/plugins/notify-email",
-    "packages/plugins/notify-slack",
-    "packages/plugins/notify-teams",
-    "packages/plugins/storage-s3",
-    "packages/plugins/storage-azure",
-    "packages/plugins/auth-okta",
-    "packages/plugins/auth-google",
-    "packages/plugins/storage-postgres",
-    "packages/plugins/storage-mongodb",
-    "packages/plugins/scanner-axe"
+    "packages/dashboard"
   ],
   "scripts": {
     "build": "npm run build --workspaces",

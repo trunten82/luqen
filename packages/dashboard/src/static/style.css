@@ -11,7 +11,7 @@
   --bg-secondary: #f5f6fa;
   --bg-tertiary: #eef0f7;
   --bg-sidebar: #1e2a3a;
-  --bg-sidebar-hover: #2d3e54;
+  --bg-sidebar-hover: #34495e;
   --bg-sidebar-active: #0056b3;
 
   /* Text */
@@ -95,7 +95,7 @@
     --bg-secondary: #16213e;
     --bg-tertiary: #0f3460;
     --bg-sidebar: #0d1117;
-    --bg-sidebar-hover: #161b22;
+    --bg-sidebar-hover: #21262d;
     --bg-sidebar-active: #1f6feb;
 
     --text-primary: #e6edf3;
@@ -281,13 +281,13 @@ body {
 
 .sidebar__item:hover {
   background-color: var(--bg-sidebar-hover);
-  color: var(--text-inverse);
+  color: #ffffff;
 }
 
 .sidebar__item.is-active {
   background-color: var(--bg-sidebar-active);
   color: var(--text-sidebar-active);
-  border-left-color: var(--text-inverse);
+  border-left-color: #ffffff;
   font-weight: 600;
 }
 
