@@ -205,12 +205,55 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 
 ---
 
-## New in v1.5.0
+## Update & Restart
 
-- **StorageAdapter architecture** — pluggable database layer with 14 repository interfaces; SQLite built-in, PostgreSQL/MongoDB coming as plugins
-- **Security hardening** — per-installation encryption salt, SSRF protection, global rate limiting, secure session cookies
-- **2,661 tests** across 156 files with 85%+ statement coverage
-- **Dead code removal** — unused modules and stale database classes removed
+Pull the latest code, rebuild, and restart services:
+
+```bash
+cd ~/luqen
+git pull
+npm install
+npm run build --workspaces
+systemctl restart luqen-compliance luqen-dashboard
+```
+
+Or as a one-liner:
+
+```bash
+cd ~/luqen && git pull && npm install && npm run build --workspaces && systemctl restart luqen-compliance luqen-dashboard
+```
+
+### Service management
+
+| Action | Command |
+|--------|---------|
+| **Status** | `systemctl status luqen-compliance luqen-dashboard` |
+| **Dashboard logs** | `journalctl -u luqen-dashboard -f` |
+| **Compliance logs** | `journalctl -u luqen-compliance -f` |
+| **Stop all** | `systemctl stop luqen-dashboard luqen-compliance` |
+| **Start all** | `systemctl start luqen-compliance luqen-dashboard` |
+| **Restart all** | `systemctl restart luqen-compliance luqen-dashboard` |
+| **Disable auto-start** | `systemctl disable luqen-dashboard luqen-compliance` |
+
+### Clean reinstall
+
+```bash
+systemctl stop luqen-dashboard luqen-compliance
+systemctl disable luqen-dashboard luqen-compliance
+rm -rf ~/luqen /etc/systemd/system/luqen-*.service
+systemctl daemon-reload
+curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh | bash
+```
+
+---
+
+## New in v1.7.0
+
+- **11 plugins** — auth (Entra, Okta, Google), notifications (Slack, Teams, Email), storage (S3, Azure, Postgres, MongoDB), scanner (axe-core)
+- **Remote plugin catalogue** — install plugins by name from GitHub releases
+- **Data migration CLI** — `luqen-dashboard migrate-data --from sqlite --to postgres`
+- **One-command install** — `curl ... | bash` with interactive wizard, systemd services, input validation
+- **Burger menu on all screens** — consistent mobile-style navigation on desktop
 
 See [CHANGELOG.md](../CHANGELOG.md) for the full history.
 

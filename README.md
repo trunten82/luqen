@@ -113,18 +113,67 @@ See [docs/paths/](docs/paths/) for detailed guides on each path.
 
 ## Quick Start
 
-See [docs/QUICKSTART.md](docs/QUICKSTART.md) for the full step-by-step guide.
+### One-line install (Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh | bash
+```
+
+The installer wizard handles everything: prerequisites, build, JWT keys, compliance seeding, OAuth client, systemd services, and shows your API key at the end.
+
+### Manual install
 
 ```bash
 git clone https://github.com/trunten82/luqen.git
 cd luqen && npm install && npm run build --workspaces
-cd packages/core && npm link
+./start.sh --pa11y-url http://your-pa11y:3000
+```
 
+### CLI-only (no dashboard)
+
+```bash
+cd packages/core && npm link
 export LUQEN_WEBSERVICE_URL=http://localhost:3000
 luqen scan https://example.com --format both
 ```
 
 Reports are written to `./luqen-reports/`.
+
+---
+
+## Update & Restart
+
+```bash
+cd ~/luqen
+git pull
+npm install
+npm run build --workspaces
+systemctl restart luqen-compliance luqen-dashboard
+```
+
+Or as a one-liner:
+
+```bash
+cd ~/luqen && git pull && npm install && npm run build --workspaces && systemctl restart luqen-compliance luqen-dashboard
+```
+
+### Service management
+
+```bash
+# Status
+systemctl status luqen-compliance luqen-dashboard
+
+# Logs
+journalctl -u luqen-dashboard -f
+journalctl -u luqen-compliance -f
+
+# Stop / Start
+systemctl stop luqen-dashboard luqen-compliance
+systemctl start luqen-compliance luqen-dashboard
+
+# Disable auto-start on boot
+systemctl disable luqen-dashboard luqen-compliance
+```
 
 ---
 
