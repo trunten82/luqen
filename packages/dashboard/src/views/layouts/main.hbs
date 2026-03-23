@@ -11,14 +11,15 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
+  {{#if user}}
   <!-- Sidebar backdrop -->
   <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
   {{> sidebar}}
 
-  <!-- Mobile top bar -->
-  <header class="mobile-header" role="banner">
-    <button class="mobile-menu-toggle"
+  <!-- Top bar with burger menu (all screen sizes) -->
+  <header class="app-header" role="banner">
+    <button class="menu-toggle"
             aria-label="Open navigation menu"
             aria-expanded="false"
             id="mobile-menu-btn"
@@ -29,7 +30,9 @@
       </svg>
     </button>
     <span style="font-size:1.125rem;font-weight:700;color:var(--accent)">{{t "common.appName"}}</span>
+    <span class="app-header__user">{{user.username}}</span>
   </header>
+  {{/if}}
 
   <main id="main-content" class="main-content" role="main" tabindex="-1">
     {{#if pageTitle}}
