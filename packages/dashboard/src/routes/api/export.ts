@@ -387,15 +387,57 @@ export async function exportRoutes(
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
-      // Render the report-print.hbs template with scan data
+      // Render the report using the same normalizeReportData + print template
+      // as the /reports/:id/print route (ensures issues are included)
       let html: string;
       try {
-        const { generateReportHtml } = await import('../../email/report-generator.js');
-        const result = await generateReportHtml(scan, scan.jsonReportPath);
-        if (result === null) {
-          return reply.code(500).send({ error: 'Failed to render report HTML' });
+        const { readFile: readFileAsync } = await import('node:fs/promises');
+        const { default: handlebars } = await import('handlebars');
+        const { resolve: resolvePath, join: joinPath } = await import('node:path');
+        const { fileURLToPath } = await import('node:url');
+
+        // Read report JSON
+        let reportJson: Record<string, unknown> | null = null;
+        const dbReport = await storage.scans.getReport(scan.id);
+        if (dbReport !== null) {
+          reportJson = dbReport;
+        } else if (scan.jsonReportPath && existsSync(scan.jsonReportPath)) {
+          reportJson = JSON.parse(await readFileAsync(scan.jsonReportPath, 'utf-8')) as Record<string, unknown>;
         }
-        html = result;
+
+        if (reportJson === null) {
+          return reply.code(404).send({ error: 'Report data not available' });
+        }
+
+        // Use normalizeReportData from reports route (dynamic import to avoid circular deps)
+        const reportsModule = await import('../../routes/reports.js');
+        const normalizeReportData = (reportsModule as unknown as { normalizeReportData: (raw: unknown, scan: unknown) => unknown }).normalizeReportData;
+
+        let reportData: Record<string, unknown>;
+        if (typeof normalizeReportData === 'function') {
+          reportData = normalizeReportData(reportJson, scan) as Record<string, unknown>;
+        } else {
+          // Fallback: pass raw data
+          reportData = { summary: reportJson.summary, pages: reportJson.pages ?? [], allIssueGroups: [] };
+        }
+
+        // Compile print template
+        const dirname = fileURLToPath(new URL('.', import.meta.url));
+        const viewsDir = resolvePath(joinPath(dirname, '..', '..', 'views'));
+        const templateSource = await readFileAsync(joinPath(viewsDir, 'report-print.hbs'), 'utf-8');
+        const template = handlebars.compile(templateSource);
+
+        html = template({
+          scan: {
+            ...scan,
+            jurisdictions: scan.jurisdictions.join(', '),
+            createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
+            completedAtDisplay: scan.completedAt ? new Date(scan.completedAt).toLocaleString() : '',
+          },
+          reportData,
+          userRole: 'admin',
+          isExecutiveView: false,
+        });
       } catch (err) {
         request.log.error(err, 'Failed to render report HTML');
         return reply.code(500).send({ error: 'Failed to render report HTML' });
