@@ -6,14 +6,6 @@ import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import type { MonitoredSource } from './compliance-client.js';
 
-/** Shape of the local config file. */
-interface LocalSourceEntry {
-  readonly name: string;
-  readonly url: string;
-  readonly type: 'html' | 'rss' | 'api';
-  readonly schedule?: 'daily' | 'weekly' | 'monthly';
-}
-
 const CONFIG_FILENAME = '.luqen-monitor.json';
 const VALID_TYPES = new Set(['html', 'rss', 'api']);
 

@@ -8,7 +8,7 @@ A plain-language guide to understanding and using luqen.
 
 ## What luqen does
 
-Luqen-agent visits every page on your website and checks each one for accessibility problems — things that make a site difficult or impossible to use for people with disabilities. It then tells you:
+Luqen visits every page on your website and checks each one for accessibility problems — things that make a site difficult or impossible to use for people with disabilities. It then tells you:
 
 1. **What problems exist** — each issue is described in plain language with the HTML it came from.
 2. **Where in your code the problem lives** — if you provide your source code, luqen points to the specific file and line.
@@ -19,7 +19,7 @@ Luqen-agent visits every page on your website and checks each one for accessibil
 
 ## How accessibility scanning works
 
-Luqen-agent uses a tool called **pa11y**, which controls a headless browser to load each page and run automated accessibility checks based on WCAG (Web Content Accessibility Guidelines).
+Luqen uses a tool called **pa11y**, which controls a headless browser to load each page and run automated accessibility checks based on WCAG (Web Content Accessibility Guidelines).
 
 **Discovery:** Before scanning, luqen reads your site's `sitemap.xml` to find all pages. If there is no sitemap, it crawls the site by following links. You can also combine both methods with `--also-crawl`.
 
@@ -77,7 +77,7 @@ Each issue in the report shows regulation badges (e.g. `EAA`, `ADA`) linking to 
 
 Many pages share the same header, footer, or navigation. If a shared component has an accessibility problem, it appears identically on every page — a single missing `alt` attribute on a logo could show up 50 times across a large site.
 
-Luqen-agent detects this: any issue appearing on 3 or more pages with the same selector and context is deduplicated and grouped by **inferred component**. The system analyses selectors, DOM context, and page positions to assign each template issue to a named component — Navigation, Footer, Cookie Banner, Form, Header, or a general Layout group. Each component group shows its affected page count and severity breakdown.
+Luqen detects this: any issue appearing on 3 or more pages with the same selector and context is deduplicated and grouped by **inferred component**. The system analyses selectors, DOM context, and page positions to assign each template issue to a named component — Navigation, Footer, Cookie Banner, Form, Header, or a general Layout group. Each component group shows its affected page count and severity breakdown.
 
 In the dashboard, template issues appear in a dedicated **Templates** tab (only visible on full-site scans). Fix an issue once in the shared component and all occurrences resolve across the site.
 

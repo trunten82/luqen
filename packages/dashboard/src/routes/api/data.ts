@@ -195,7 +195,7 @@ export async function dataApiRoutes(
         .prepare(`SELECT * FROM scan_records ${where} ORDER BY created_at DESC LIMIT @limit OFFSET @offset`)
         .all(params) as Array<Record<string, unknown>>;
 
-      // Convert rows through ScanDb's listScans-compatible path
+      // Convert rows through the ScanRepository interface
       const scanResults = await Promise.all(rows.map(async (row) => {
         const record = await storage.scans.getScan(row['id'] as string);
         return record !== null ? toPublicScan(record) : null;

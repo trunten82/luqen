@@ -23,7 +23,7 @@ Plugins are managed from **Admin > Plugins** in the dashboard UI, or via the CLI
 
 Each plugin is an npm package with a `manifest.json` that declares its type, configuration fields, and capabilities. The dashboard discovers available plugins from a built-in registry (`plugin-registry.json`), installs them into the configured `pluginsDir`, and manages their lifecycle through a database-backed state machine.
 
-Configuration values are stored in the dashboard database. Fields marked as `secret` in the manifest are encrypted with AES-256-GCM using the dashboard's `sessionSecret` as the encryption key. Secret values are masked in the UI and API responses.
+Configuration values are stored in the dashboard database. Fields marked as `secret` in the manifest are encrypted with AES-256-GCM using a key derived from the dashboard's `sessionSecret` combined with a per-installation encryption salt (generated automatically on first startup). Secret values are masked in the UI and API responses.
 
 ### Admin pages system
 

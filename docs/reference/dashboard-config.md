@@ -91,7 +91,11 @@ Any failure exits immediately with a descriptive error message.
 
 ## Storage adapter
 
-The dashboard uses a **StorageAdapter** architecture for all database operations. The storage adapter abstracts 14 domain repositories (scans, users, roles, teams, organizations, plugins, schedules, etc.) behind a unified interface, making the underlying database engine swappable.
+The dashboard uses a **StorageAdapter** architecture for all database operations. The storage adapter abstracts 14 domain repositories behind a unified interface, making the underlying database engine swappable:
+
+`scans`, `users`, `organizations`, `schedules`, `assignments`, `repos`, `roles`, `teams`, `email`, `audit`, `plugins`, `apiKeys`, `pageHashes`, `manualTests`
+
+Repository interfaces are defined in `packages/dashboard/src/db/interfaces/`. All routes and services consume these interfaces — never a concrete database implementation.
 
 ### Current adapters
 

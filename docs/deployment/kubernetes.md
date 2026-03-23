@@ -61,7 +61,7 @@ Create a `production-values.yaml`:
 
 ```yaml
 global:
-  imageTag: "1.1.0"
+  imageTag: "1.5.0"
   imagePullPolicy: Always
 
 compliance:

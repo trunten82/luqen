@@ -4,9 +4,10 @@
 
 Luqen scans your entire website for WCAG violations and tells you which laws in which countries require you to fix each one. One scan covers 58 jurisdictions (EU, US, UK, and more), so your legal and dev teams see the same picture. Run it from the command line, a browser dashboard, or your IDE — it works for a solo developer checking one page or an enterprise team monitoring hundreds of sites across multiple languages.
 
-![Version](https://img.shields.io/badge/version-v1.3.0-blue)
+![Version](https://img.shields.io/badge/version-v1.5.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-1025%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-2661%20passing-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
 
 ---
@@ -36,7 +37,8 @@ Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://gi
 - **Regulatory monitoring** — watches legal sources for changes and creates update proposals when regulations evolve
 - **WAF detection** — detects and reports when a Web Application Firewall blocks scanning
 - **Progressive authentication** — starts with API key (solo mode), add local users (team mode), or install an SSO plugin (enterprise mode) — no external auth service required
-- **Pluggable storage** — modular StorageAdapter architecture with 14 repositories; SQLite built-in, PostgreSQL and MongoDB adapters coming as plugins
+- **Pluggable storage** — modular StorageAdapter architecture with 14 repository interfaces backed by SQLite; PostgreSQL and MongoDB adapters coming as plugins
+- **Security hardening** — per-installation encryption salt, SSRF protection on scan URLs, global rate limiting, secure session cookies (httpOnly, SameSite=Strict, AES-256-GCM encrypted)
 - **Plugin system** — extensible via plugins for authentication (Entra ID, Okta, Google), notifications (Slack, Teams), storage (S3, Azure Blob), and custom scanners; managed via dashboard UI, CLI, or REST API
 - **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop
@@ -244,14 +246,16 @@ Luqen includes MCP (Model Context Protocol) servers for AI-assisted accessibilit
 npm test --workspaces
 ```
 
-Expected output:
+The project maintains 85%+ statement coverage across 2,661 tests in 156 test files:
+
 ```
-packages/core:              186 tests passing
-packages/compliance:        424 tests passing
-packages/dashboard:         315 tests passing
-packages/monitor:            71 tests passing
-packages/plugin-auth-entra:  29 tests passing
-✓ 1025 tests passed
+packages/core:              186 tests (21 files)
+packages/compliance:        424 tests (35 files)
+packages/dashboard:        1,930 tests (85 files)
+packages/monitor:            83 tests (8 files)
+packages/plugin-auth-entra:  38 tests (2 files)
+---
+Total:                     2,661 tests (156 files)
 ```
 
 Run with coverage:

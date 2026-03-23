@@ -160,7 +160,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 2. **Install** -- `npm install --save-exact --prefix <pluginsDir> <packageName>` downloads the package. The manifest is read and a database record is created with status `inactive`.
 
-3. **Configure** -- Key-value pairs are saved to the plugin's config. Secret fields are encrypted with AES-256-GCM using the dashboard's `sessionSecret` as the encryption key.
+3. **Configure** -- Key-value pairs are saved to the plugin's config. Secret fields are encrypted with AES-256-GCM using a key derived from the dashboard's `sessionSecret` combined with a per-installation encryption salt.
 
 4. **Activate** -- The plugin module is loaded via dynamic `import()`. The `activate(config)` method is called with decrypted configuration. On success, status becomes `active`. On failure, status becomes `error` with a message.
 
@@ -232,22 +232,23 @@ interface StorageAdapter {
   disconnect(): Promise<void>;
   migrate(): Promise<void>;
   healthCheck(): Promise<boolean>;
+  readonly name: string;
 
   // 14 domain repositories
   readonly scans: ScanRepository;
   readonly users: UserRepository;
+  readonly organizations: OrgRepository;
+  readonly schedules: ScheduleRepository;
+  readonly assignments: AssignmentRepository;
+  readonly repos: RepoRepository;
   readonly roles: RoleRepository;
   readonly teams: TeamRepository;
-  readonly organizations: OrganizationRepository;
+  readonly email: EmailRepository;
+  readonly audit: AuditRepository;
   readonly plugins: PluginRepository;
-  readonly schedules: ScheduleRepository;
-  readonly emailSchedules: EmailScheduleRepository;
   readonly apiKeys: ApiKeyRepository;
-  readonly auditLog: AuditLogRepository;
-  readonly smtp: SmtpConfigRepository;
-  readonly sessions: SessionRepository;
-  readonly settings: SettingsRepository;
-  readonly migrations: MigrationRepository;
+  readonly pageHashes: PageHashRepository;
+  readonly manualTests: ManualTestRepository;
 }
 ```
 
