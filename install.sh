@@ -1070,8 +1070,8 @@ show_summary() {
 # Entry point
 # ──────────────────────────────────────────────
 
-# Run wizard if interactive
-if [ "${INTERACTIVE}" = "true" ] && [ -t 0 ]; then
+# Run wizard if interactive (check tty OR re-exec flag)
+if [ "${INTERACTIVE}" = "true" ] && { [ -t 0 ] || [ -n "${LUQEN_INSTALL_REEXEC:-}" ]; }; then
   run_wizard
 fi
 
