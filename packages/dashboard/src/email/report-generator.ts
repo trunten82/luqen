@@ -4,55 +4,12 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ScanRecord } from '../db/types.js';
 import { extractCriterion, getWcagDescription } from '../routes/wcag-enrichment.js';
+import { normalizeReportData, inferComponent } from '../services/report-service.js';
+import type { JsonReportFile } from '../services/report-service.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
-// ---------------------------------------------------------------------------
-// Minimal JSON report shape (subset needed for email report generation)
-// ---------------------------------------------------------------------------
-
-interface JsonReportIssue {
-  readonly type: string;
-  readonly code: string;
-  readonly message: string;
-  readonly selector: string;
-  readonly context: string;
-  readonly wcagCriterion?: string;
-  readonly wcagTitle?: string;
-  readonly regulations?: ReadonlyArray<{
-    readonly shortName: string;
-    readonly url?: string;
-    readonly obligation?: string;
-  }>;
-}
-
-interface JsonReportPage {
-  readonly url: string;
-  readonly issues: readonly JsonReportIssue[];
-}
-
-interface JsonReportFile {
-  readonly summary?: {
-    readonly url?: string;
-    readonly pagesScanned?: number;
-    readonly totalIssues?: number;
-    readonly byLevel?: { readonly error: number; readonly warning: number; readonly notice: number };
-  };
-  readonly pages?: readonly JsonReportPage[];
-  readonly siteUrl?: string;
-  readonly pagesScanned?: number;
-  readonly issues?: readonly JsonReportIssue[];
-  readonly compliance?: {
-    readonly issueAnnotations?: Record<
-      string,
-      ReadonlyArray<{ readonly shortName: string; readonly url?: string; readonly obligation?: string }>
-    >;
-    readonly annotatedIssues?: ReadonlyArray<{
-      readonly code: string;
-      readonly regulations?: ReadonlyArray<{ readonly shortName: string; readonly obligation?: string }>;
-    }>;
-  };
-}
+// JsonReportFile type imported from services/report-service.ts
 
 // ---------------------------------------------------------------------------
 // Generate printable HTML report (reuse report-print.hbs template)
@@ -71,8 +28,6 @@ export async function generateReportHtml(
     return null;
   }
 
-  // We compile the print template directly with Handlebars (same approach as
-  // the /reports/:id/print route).
   const handlebars = (await import('handlebars')).default;
   const viewsDir = resolve(join(__dirname, '..', 'views'));
   const templatePath = join(viewsDir, 'report-print.hbs');
@@ -82,25 +37,7 @@ export async function generateReportHtml(
   const templateSource = await readFile(templatePath, 'utf-8');
   const template = handlebars.compile(templateSource);
 
-  // Import normalizeReportData dynamically to avoid circular deps — we
-  // reconstruct a lightweight version inline instead.
-  const summary = raw.summary ?? {
-    url: raw.siteUrl ?? scan.siteUrl,
-    pagesScanned: raw.pagesScanned ?? scan.pagesScanned ?? 0,
-    pagesFailed: 0,
-    totalIssues: (scan.errors ?? 0) + (scan.warnings ?? 0) + (scan.notices ?? 0),
-    byLevel: {
-      error: scan.errors ?? 0,
-      warning: scan.warnings ?? 0,
-      notice: scan.notices ?? 0,
-    },
-  };
-
-  const pages = raw.pages ?? (
-    raw.issues && raw.issues.length > 0
-      ? [{ url: raw.siteUrl ?? scan.siteUrl, issueCount: raw.issues.length, issues: raw.issues }]
-      : []
-  );
+  const reportData = normalizeReportData(raw, scan);
 
   const scanMeta = {
     ...scan,
@@ -109,21 +46,6 @@ export async function generateReportHtml(
     completedAtDisplay: scan.completedAt
       ? new Date(scan.completedAt).toLocaleString()
       : '',
-  };
-
-  const reportData = {
-    summary,
-    pages,
-    errors: [],
-    compliance: null,
-    complianceMatrix: null,
-    templateIssues: null,
-    templateIssueCount: 0,
-    templateOccurrenceCount: 0,
-    templateComponents: [],
-    allIssueGroups: [],
-    regulatoryIssueCount: 0,
-    templateIssueTotal: 0,
   };
 
   const html = template({
@@ -152,26 +74,6 @@ function toCsv(headers: readonly string[], rows: readonly (readonly string[])[])
     lines.push(row.map((v) => escape(String(v ?? ''))).join(','));
   }
   return lines.join('\r\n') + '\r\n';
-}
-
-function inferComponent(selector: string, context: string): string {
-  const s = (selector + ' ' + context).toLowerCase();
-
-  if (s.includes('cookie') || s.includes('consent') || s.includes('iubenda') || s.includes('gdpr') || s.includes('onetrust')) return 'Cookie Banner';
-  if (/\bnav(igation|bar)?\b/.test(s) || s.includes('offcanvas') || s.includes('menu') || s.includes('hamburger') || s.includes('sidebar')) return 'Navigation';
-  if (/\bheader\b/.test(s) || s.includes('site-header') || s.includes('masthead') || s.includes('topbar') || s.includes('top-bar')) return 'Header';
-  if (/\bfooter\b/.test(s) || s.includes('site-footer') || s.includes('colophon')) return 'Footer';
-  if (s.includes('html > head') || s.includes('<title') || s.includes('<meta') || s.includes('<link')) return 'Document Head';
-  if (s.includes('<form') || s.includes('<input') || s.includes('<select') || s.includes('<textarea') || s.includes('search-form') || s.includes('login-form')) return 'Form';
-  if (s.includes('modal') || s.includes('popup') || s.includes('dialog') || s.includes('lightbox') || s.includes('overlay')) return 'Modal / Popup';
-  if (s.includes('social') || s.includes('share') || s.includes('facebook') || s.includes('twitter')) return 'Social Links';
-  if (s.includes('<img') || s.includes('<video') || s.includes('<audio') || s.includes('carousel') || s.includes('slider')) return 'Media / Carousel';
-  if (/\bcard\b/.test(s) || s.includes('listing') || s.includes('grid-item')) return 'Card / Listing';
-  if (s.includes('breadcrumb')) return 'Breadcrumb';
-  if (s.includes('widget') || /\baside\b/.test(s)) return 'Widget / Sidebar';
-  if (s.includes('cta') || s.includes('call-to-action') || s.includes('banner') || s.includes('hero')) return 'CTA / Banner';
-
-  return 'Shared Layout';
 }
 
 export async function generateIssuesCsv(
@@ -206,7 +108,7 @@ export async function generateIssuesCsv(
     }
   }
 
-  const pages: readonly JsonReportPage[] = raw.pages ?? (
+  const pages = raw.pages ?? (
     raw.issues && raw.issues.length > 0
       ? [{ url: raw.siteUrl ?? scan.siteUrl, issues: raw.issues }]
       : []
