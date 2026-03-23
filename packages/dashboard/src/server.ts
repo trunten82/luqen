@@ -74,6 +74,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     logger: {
       level: process.env['NODE_ENV'] === 'production' ? 'warn' : 'info',
     },
+    trustProxy: true,
   });
 
   // ── Database ──────────────────────────────────────────────────────────────
