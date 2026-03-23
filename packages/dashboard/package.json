@@ -71,9 +71,7 @@
     "tar": "^7.5.12",
     "zod": "^4.3.6"
   },
-  "optionalDependencies": {
-    "puppeteer": "^23.0.0"
-  },
+  "optionalDependencies": {},
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.12",
