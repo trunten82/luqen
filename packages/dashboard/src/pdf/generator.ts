@@ -8,6 +8,7 @@
  */
 
 import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,19 +58,49 @@ export function isPuppeteerAvailable(): boolean {
     }
   }
 
-  // Package exists — verify the browser binary can actually launch.
-  // This catches missing system libraries (libglib, libnss, etc.)
+  // Verify a browser binary can actually launch.
+  // Prefer system Chromium (works in LXC/Docker), fall back to Puppeteer's bundled one.
   try {
     const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
-    const puppeteer = req('puppeteer') as { executablePath: () => string };
-    const chromePath = puppeteer.executablePath();
-    execFileSync(chromePath, ['--version'], { timeout: 5000, stdio: 'pipe' });
-    _puppeteerAvailable = true;
+    const chromePath = findChromiumPath(req);
+    if (chromePath) {
+      execFileSync(chromePath, ['--version'], { timeout: 5000, stdio: 'pipe' });
+      _puppeteerAvailable = true;
+    } else {
+      _puppeteerAvailable = false;
+    }
   } catch {
     _puppeteerAvailable = false;
   }
 
   return _puppeteerAvailable;
+}
+
+// ---------------------------------------------------------------------------
+// Chromium path resolution
+// ---------------------------------------------------------------------------
+
+/** Find a working Chromium binary — system first, Puppeteer's bundled copy second. */
+function findChromiumPath(req?: NodeRequire): string | undefined {
+  // Environment override
+  if (process.env['PUPPETEER_EXECUTABLE_PATH'] && existsSync(process.env['PUPPETEER_EXECUTABLE_PATH'])) {
+    return process.env['PUPPETEER_EXECUTABLE_PATH'];
+  }
+  // System Chromium
+  const systemPaths = ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'];
+  for (const p of systemPaths) {
+    if (existsSync(p)) return p;
+  }
+  // Puppeteer's bundled Chromium
+  try {
+    const r = req ?? createRequire(import.meta.url);
+    const puppeteer = r('puppeteer') as { executablePath: () => string };
+    const bundled = puppeteer.executablePath();
+    if (bundled && existsSync(bundled)) return bundled;
+  } catch {
+    // Puppeteer not installed or no bundled binary
+  }
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,8 +152,10 @@ async function getBrowser(): Promise<PuppeteerBrowser> {
 
   _browserPromise = (async () => {
     const puppeteer = await loadPuppeteer();
+    const executablePath = findChromiumPath();
     const browser = await puppeteer.launch({
       headless: true,
+      ...(executablePath ? { executablePath } : {}),
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
