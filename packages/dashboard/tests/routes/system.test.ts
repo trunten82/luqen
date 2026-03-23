@@ -102,9 +102,9 @@ describe('GET /admin/system', () => {
 
   it('includes db info in template data', async () => {
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/system' });
-    const body = response.json() as { data: { db: { sizeKb: string; path: string } } };
-    expect(body.data.db.path).toBe(ctx.dbPath);
-    expect(typeof body.data.db.sizeKb).toBe('string');
+    const body = response.json() as { data: { db: { sizeKb: string } } };
+    // db.path removed for security (HIGH-7)
+    expect(body.data.db.sizeKb).toBeDefined();
   });
 
   it('includes version and nodeVersion in template data', async () => {

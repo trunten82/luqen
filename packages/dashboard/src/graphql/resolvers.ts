@@ -10,6 +10,7 @@ import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import type { StorageAdapter, ScanRecord } from '../db/index.js';
 import { VERSION } from '../version.js';
+import { validatePassword, validateUsername } from '../validation.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -489,6 +490,14 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'users.create');
+      const usernameCheck = validateUsername(args.username);
+      if (!usernameCheck.valid) {
+        throw new Error(usernameCheck.error ?? 'Invalid username');
+      }
+      const passwordCheck = validatePassword(args.password);
+      if (!passwordCheck.valid) {
+        throw new Error(passwordCheck.error ?? 'Invalid password');
+      }
       return await ctx.storage.users.createUser(args.username, args.password, args.role ?? 'user');
     },
 
@@ -561,7 +570,11 @@ export const resolvers = {
         throw new Error(`User not found: ${args.id}`);
       }
 
-      await await ctx.storage.users.updatePassword(args.id, args.newPassword);
+      const passwordCheck = validatePassword(args.newPassword);
+      if (!passwordCheck.valid) {
+        throw new Error(passwordCheck.error ?? 'Invalid password');
+      }
+      await ctx.storage.users.updatePassword(args.id, args.newPassword);
       return true;
     },
   },

@@ -32,7 +32,6 @@ import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { repoRoutes } from './routes/repos.js';
 import { resolveStorageAdapter } from './db/index.js';
-import type { StorageAdapter } from './db/index.js';
 import { SqliteStorageAdapter } from './db/sqlite/index.js';
 import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
@@ -43,7 +42,7 @@ import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { getFixSuggestion } from './fix-suggestions.js';
-import { ALL_PERMISSIONS, ALL_PERMISSION_IDS } from './permissions.js';
+import { ALL_PERMISSION_IDS } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
@@ -137,7 +136,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Rate Limiting ────────────────────────────────────────────────────────
   await server.register(import('@fastify/rate-limit'), {
-    global: false,   // Only apply to routes that opt in
+    global: true,
+    max: 100,
+    timeWindow: '1 minute',
   });
 
   // ── Plugins ──────────────────────────────────────────────────────────────

@@ -1,14 +1,10 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { StorageAdapter } from '../../db/index.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
 import { generateReportPdf, isPuppeteerAvailable } from '../../pdf/generator.js';
 import ExcelJS from 'exceljs';
-
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 // ---------------------------------------------------------------------------
 // CSV helper
@@ -401,10 +397,8 @@ export async function exportRoutes(
         }
         html = result;
       } catch (err) {
-        return reply.code(500).send({
-          error: 'Failed to render report HTML',
-          detail: err instanceof Error ? err.message : String(err),
-        });
+        request.log.error(err, 'Failed to render report HTML');
+        return reply.code(500).send({ error: 'Failed to render report HTML' });
       }
 
       // Generate PDF from rendered HTML
@@ -427,10 +421,8 @@ export async function exportRoutes(
           .header('Content-Disposition', `attachment; filename="${filename}"`)
           .send(pdfBuffer);
       } catch (err) {
-        return reply.code(500).send({
-          error: 'PDF generation failed',
-          detail: err instanceof Error ? err.message : String(err),
-        });
+        request.log.error(err, 'PDF generation failed');
+        return reply.code(500).send({ error: 'PDF generation failed' });
       }
     },
   );

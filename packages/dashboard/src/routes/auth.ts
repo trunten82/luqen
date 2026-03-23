@@ -309,8 +309,8 @@ export async function authRoutes(
       await storage.users.updatePassword(userId, body.newPassword);
       return reply.view('account/profile.hbs', { ...viewData, pwSuccess: 'Password changed successfully.' });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to change password';
-      return reply.view('account/profile.hbs', { ...viewData, pwError: message });
+      request.log.error(err, 'Password change failed');
+      return reply.view('account/profile.hbs', { ...viewData, pwError: 'Failed to change password. Please try again.' });
     }
   });
 

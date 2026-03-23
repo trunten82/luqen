@@ -1,9 +1,10 @@
 import type Database from 'better-sqlite3';
 import type { FastifyRequest } from 'fastify';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import type { PluginManager } from '../plugins/manager.js';
 import type { AuthPlugin, AuthResult, PluginInstance } from '../plugins/types.js';
 import type { StorageAdapter } from '../db/index.js';
+import { setEncryptionSalt } from '../plugins/crypto.js';
 
 import { validateApiKey } from './api-key.js';
 
@@ -69,6 +70,16 @@ export class AuthService {
     } else {
       this.bootId = randomUUID();
       this.db.prepare('INSERT INTO dashboard_settings (key, value) VALUES (?, ?)').run('boot_id', this.bootId);
+    }
+
+    // Per-installation encryption salt for plugin config secrets (CRIT-1 fix)
+    const saltRow = this.db.prepare('SELECT value FROM dashboard_settings WHERE key = ?').get('encryption_salt') as { value: string } | undefined;
+    if (saltRow != null) {
+      setEncryptionSalt(saltRow.value);
+    } else {
+      const salt = randomBytes(32).toString('hex');
+      this.db.prepare('INSERT INTO dashboard_settings (key, value) VALUES (?, ?)').run('encryption_salt', salt);
+      setEncryptionSalt(salt);
     }
   }
 

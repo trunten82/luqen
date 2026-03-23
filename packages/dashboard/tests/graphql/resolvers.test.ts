@@ -815,20 +815,20 @@ describe('GraphQL resolvers', () => {
     it('creates a user with default role', async () => {
       const ctx = makeCtx();
       const result = await resolvers.Mutation.createUser({}, {
-        username: 'newuser', password: 'pass123',
+        username: 'newuser', password: 'Pass123!x',
       }, ctx);
 
-      expect(ctx.storage.users.createUser).toHaveBeenCalledWith('newuser', 'pass123', 'user');
+      expect(ctx.storage.users.createUser).toHaveBeenCalledWith('newuser', 'Pass123!x', 'user');
       expect(result.username).toBe('newuser');
     });
 
     it('creates a user with specified role', async () => {
       const ctx = makeCtx();
       await resolvers.Mutation.createUser({}, {
-        username: 'admin2', password: 'pass', role: 'admin',
+        username: 'admin2', password: 'Pass123!x', role: 'admin',
       }, ctx);
 
-      expect(ctx.storage.users.createUser).toHaveBeenCalledWith('admin2', 'pass', 'admin');
+      expect(ctx.storage.users.createUser).toHaveBeenCalledWith('admin2', 'Pass123!x', 'admin');
     });
 
     it('requires users.create permission', async () => {
@@ -925,9 +925,9 @@ describe('GraphQL resolvers', () => {
       const ctx = makeCtx();
       ctx.storage.users.getUserById.mockResolvedValue({ id: 'u1' });
 
-      const result = await resolvers.Mutation.resetPassword({}, { id: 'u1', newPassword: 'newpass' }, ctx);
+      const result = await resolvers.Mutation.resetPassword({}, { id: 'u1', newPassword: 'NewPass1!a' }, ctx);
       expect(result).toBe(true);
-      expect(ctx.storage.users.updatePassword).toHaveBeenCalledWith('u1', 'newpass');
+      expect(ctx.storage.users.updatePassword).toHaveBeenCalledWith('u1', 'NewPass1!a');
     });
 
     it('throws when user is not found', async () => {

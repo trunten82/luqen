@@ -96,6 +96,24 @@ export async function scanRoutes(
         return reply.code(400).send({ error: 'URL must use http or https' });
       }
 
+      // SSRF protection: block private/internal IP ranges
+      const hostname = parsedUrl.hostname.toLowerCase();
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '::1' ||
+        hostname === '0.0.0.0' ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('192.168.') ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
+        hostname === '169.254.169.254' ||
+        hostname.startsWith('169.254.') ||
+        hostname.endsWith('.internal') ||
+        hostname.endsWith('.local')
+      ) {
+        return reply.code(400).send({ error: 'Scanning internal or private addresses is not allowed.' });
+      }
+
       // Pre-validate URL is reachable before starting scan
       try {
         const probe = await fetch(parsedUrl.toString(), {

@@ -544,7 +544,7 @@ describe('Auth routes', () => {
       });
 
       const body = response.json() as { template: string; data: { pwError: string } };
-      expect(body.data.pwError).toBe('DB error');
+      expect(body.data.pwError).toBe('Failed to change password. Please try again.');
 
       ctx2.cleanup();
       vi.restoreAllMocks();
