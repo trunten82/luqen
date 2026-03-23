@@ -6,6 +6,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.6.0] - 2026-03-23
+
+### Added
+- **auth-okta plugin** — Single sign-on via Okta OIDC with IdP group-to-team sync. Supports `orgUrl`, `clientId`, `clientSecret`, `redirectUri`, group claim mapping, and `additive`/`mirror` sync modes.
+- **auth-google plugin** — Single sign-on via Google OAuth 2.0 / OpenID Connect with optional Google Workspace group sync via Admin SDK (requires domain-wide delegation). Supports `hostedDomain` restriction.
+- **8 plugins fully available** — all 8 catalogue plugins are now installable: auth-entra, auth-okta, auth-google, notify-slack, notify-teams, notify-email, storage-s3, storage-azure. No "coming soon" entries remain.
+- **Plugin build script** (`scripts/build-plugin-tarball.sh`) — builds a self-contained `.tgz` tarball for any plugin, including compiled TypeScript output and bundled production `node_modules`. Outputs the tarball path and SHA-256 checksum for publishing to the catalogue.
+
+---
+
 ## [1.5.0] - 2026-03-23
 
 ### Added
@@ -422,6 +432,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [1.6.0] | 2026-03-23 | auth-okta + auth-google plugins, all 8 plugins available, plugin build script |
 | [1.5.0] | 2026-03-23 | Remote plugin catalogue, tarball install, StorageAdapter (14 repositories), security hardening, 2661 tests (85%+ coverage), dead code removal |
 | [1.4.0] | 2026-03-22 | StorageAdapter architecture (14 pluggable repositories, SQLite default, Postgres/MongoDB coming) |
 | [1.3.0] | 2026-03-22 | GraphQL API (mercurius), multi-language UI (i18n — 6 languages) |

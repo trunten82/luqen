@@ -274,13 +274,42 @@ These are not yet available. The `resolveStorageAdapter()` factory in `packages/
 
 ---
 
+## Building Plugin Tarballs
+
+Plugins are distributed as self-contained `.tgz` tarballs that include compiled code and all production dependencies. Use the build script in the main Luqen repo:
+
+```bash
+./scripts/build-plugin-tarball.sh packages/plugins/auth-entra
+```
+
+The script performs these steps:
+
+1. **Compile TypeScript** -- runs `npx tsc` in the plugin directory to produce `dist/`.
+2. **Stage files** -- copies `dist/`, `manifest.json`, and `package.json` into a `package/` prefix directory.
+3. **Bundle dependencies** -- if the plugin's `package.json` has production `dependencies`, runs `npm install --omit=dev --ignore-scripts` inside the staging directory. The resulting `node_modules/` is included in the tarball so the dashboard does not need npm at install time.
+4. **Create tarball** -- produces `luqen-plugin-<name>-<version>.tgz` in the plugin directory.
+5. **Print checksum** -- outputs the SHA-256 checksum for use in `catalogue.json`.
+
+Example output:
+
+```
+Tarball: packages/plugins/auth-entra/luqen-plugin-auth-entra-1.1.0.tgz
+Size: 48K
+Checksum: sha256:f36ca227a416c59ce75f7072cdc34b569a39b59df5fc74cdcacd028a4fb73c87
+```
+
+The tarball is fully self-contained -- no npm install is needed on the dashboard server. The dashboard extracts it directly into `<pluginsDir>/<name>/`.
+
+---
+
 ## Publishing to the Plugin Catalogue
 
-Plugins are distributed via the remote plugin catalogue at [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins). To publish a plugin:
+Plugins are distributed via the remote plugin catalogue at [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins). To publish a new plugin version:
 
-1. Package your plugin as a tarball (`.tar.gz`) containing the `manifest.json`, compiled source, and any dependencies.
-2. Create a GitHub release on the `luqen-plugins` repository and attach the tarball as a release asset.
-3. Add an entry to `catalogue.json` in the repository:
+1. **Build the tarball** using `scripts/build-plugin-tarball.sh` (see above).
+2. **Create a GitHub release** on the `luqen-plugins` repository tagged `{name}-v{version}` (e.g., `auth-entra-v1.1.0`).
+3. **Attach the `.tgz` tarball** as a release asset.
+4. **Update `catalogue.json`** in the repository with the new entry or updated version:
 
 ```json
 {
@@ -289,12 +318,14 @@ Plugins are distributed via the remote plugin catalogue at [github.com/trunten82
   "type": "notification",
   "version": "1.0.0",
   "description": "Does something useful",
+  "packageName": "@luqen/plugin-my-plugin",
   "icon": "custom",
-  "status": "available"
+  "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/my-plugin-v1.0.0/luqen-plugin-my-plugin-1.0.0.tgz",
+  "checksum": "sha256:<checksum-from-build-script>"
 }
 ```
 
-The `status` field can be `"available"` or `"coming-soon"`. Plugins marked as `"coming-soon"` appear in the catalogue UI but cannot be installed.
+5. **Commit and push** the updated `catalogue.json`.
 
 The dashboard fetches `catalogue.json` from GitHub releases, caches it locally for 1 hour (configurable via `catalogueCacheTtl`), and falls back to a local copy when GitHub is unreachable.
 

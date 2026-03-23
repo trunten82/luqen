@@ -39,7 +39,7 @@ Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://gi
 - **Progressive authentication** — starts with API key (solo mode), add local users (team mode), or install an SSO plugin (enterprise mode) — no external auth service required
 - **Pluggable storage** — modular StorageAdapter architecture with 14 repository interfaces backed by SQLite; PostgreSQL and MongoDB adapters coming as plugins
 - **Security hardening** — per-installation encryption salt, SSRF protection on scan URLs, global rate limiting, secure session cookies (httpOnly, SameSite=Strict, AES-256-GCM encrypted)
-- **Plugin system** — 8 plugins in the [remote catalogue](https://github.com/trunten82/luqen-plugins) (6 available, 2 coming soon) for authentication (Entra ID; Okta and Google coming soon), notifications (Slack, Teams, Email), and storage (S3, Azure Blob); installed via tarball download from GitHub releases, managed via dashboard UI, CLI, or REST API
+- **Plugin system** — 8 plugins in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), and storage (S3, Azure Blob); installed by name via tarball download from GitHub releases, managed via dashboard UI, CLI, or REST API
 - **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop
 - **IdP group → team sync** — Entra ID plugin reads group memberships from tokens and auto-syncs to dashboard teams on SSO login

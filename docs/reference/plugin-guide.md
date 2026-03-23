@@ -83,7 +83,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 ## Available plugins
 
-Eight plugins are listed in the catalogue. Six are available now; two are coming soon.
+Eight plugins are available in the catalogue.
 
 ### Azure Entra ID (`auth-entra`)
 
@@ -293,12 +293,75 @@ This plugin registers an admin page:
 
 ---
 
-### Auth plugins (coming soon)
+### Okta SSO (`auth-okta`)
 
-| Plugin | Name | Description | Status |
-|--------|------|-------------|--------|
-| Okta SSO | `auth-okta` | Single sign-on via Okta | Coming soon |
-| Google SSO | `auth-google` | Single sign-on via Google Workspace | Coming soon |
+**Package:** `@luqen/plugin-auth-okta`
+**Type:** Auth
+**Description:** Single sign-on via Okta OIDC with IdP group-to-team sync
+
+**When to use:** You want your team to log in to the dashboard with their Okta credentials via OIDC. Enables enterprise SSO with group-based team assignment.
+
+#### Configuration fields
+
+| Field | Key | Type | Required | Default | Description |
+|-------|-----|------|----------|---------|-------------|
+| Okta Org URL | `orgUrl` | string | Yes | -- | Your Okta organization URL (e.g., `https://dev-123456.okta.com`) |
+| Client ID | `clientId` | string | Yes | -- | The client ID from your Okta app integration |
+| Client Secret | `clientSecret` | secret | Yes | -- | The client secret from your Okta app integration |
+| Redirect URI | `redirectUri` | string | No | `/auth/callback/auth-okta` | The OAuth callback URL -- must match the redirect URI registered in Okta |
+| Group Claim Name | `groupClaimName` | string | No | `groups` | The JWT claim containing Okta group names |
+| Group Mapping (JSON) | `groupMapping` | string | No | `{}` | Maps Okta group names to dashboard team names, e.g. `{"Developers": "Frontend Team"}` |
+| Auto-Create Teams | `autoCreateTeams` | boolean | No | `true` | Automatically create teams that do not yet exist in the dashboard |
+| Sync Mode | `syncMode` | select | No | `additive` | `additive`: only add memberships; `mirror`: also remove memberships not present in IdP groups |
+
+#### Setup steps
+
+1. Create an OIDC Web Application in your Okta admin console
+2. Go to **Admin > Plugins** and install **Okta**
+3. Enter your Org URL, Client ID, and Client Secret
+4. Click **Save**, then **Activate**
+5. A **Sign in with Okta** button appears on the login page
+
+#### Usage notes
+
+- Users authenticated via SSO are matched by email address. If no dashboard user exists, one is auto-created with the `user` role.
+- Group claims require adding a `groups` claim to your Okta authorization server.
+- Use HTTPS for the redirect URI in production.
+
+---
+
+### Google OAuth (`auth-google`)
+
+**Package:** `@luqen/plugin-auth-google`
+**Type:** Auth
+**Description:** Single sign-on via Google OAuth 2.0 / OpenID Connect with optional Google Workspace group sync
+
+**When to use:** You want your team to log in with their Google accounts. Optionally restrict login to a specific Google Workspace domain and sync group memberships via the Admin SDK.
+
+#### Configuration fields
+
+| Field | Key | Type | Required | Default | Description |
+|-------|-----|------|----------|---------|-------------|
+| Client ID | `clientId` | string | Yes | -- | The OAuth 2.0 client ID from Google Cloud Console |
+| Client Secret | `clientSecret` | secret | Yes | -- | The OAuth 2.0 client secret from Google Cloud Console |
+| Redirect URI | `redirectUri` | string | No | `/auth/callback/auth-google` | The OAuth callback URL -- must match the redirect URI registered in Google Cloud Console |
+| Hosted Domain | `hostedDomain` | string | No | -- | Restrict login to a Google Workspace domain (e.g., `example.com`) |
+| Enable Groups | `groupsEnabled` | boolean | No | `false` | Fetch Google Workspace group memberships via Admin SDK (requires domain-wide delegation) |
+
+#### Setup steps
+
+1. Create an OAuth 2.0 client in Google Cloud Console (APIs & Services > Credentials)
+2. Go to **Admin > Plugins** and install **Google OAuth**
+3. Enter the Client ID and Client Secret
+4. Optionally set the Hosted Domain to restrict logins to your organization
+5. Click **Save**, then **Activate**
+6. A **Sign in with Google** button appears on the login page
+
+#### Usage notes
+
+- Users authenticated via SSO are matched by email address. If no dashboard user exists, one is auto-created with the `user` role.
+- To enable group sync, you must configure domain-wide delegation in the Google Workspace admin console and grant the Admin SDK Directory API scope.
+- Use HTTPS for the redirect URI in production.
 
 ---
 
