@@ -401,6 +401,15 @@ export async function exportRoutes(
         }
 
         const reportData = normalizeReportData(reportJson, scan);
+        request.log.info({
+          topActionItems: reportData.topActionItems?.length ?? 0,
+          allIssueGroups: reportData.allIssueGroups?.length ?? 0,
+          pages: reportData.pages?.length ?? 0,
+          totalIssues: reportData.summary?.totalIssues ?? 0,
+          reportSource: dbReport !== null ? 'db' : 'file',
+          rawPages: (reportJson as Record<string, unknown>).pages ? (reportJson.pages?.length ?? 0) : 0,
+          rawIssues: (reportJson as Record<string, unknown>).issues ? ((reportJson as Record<string, unknown>).issues as unknown[])?.length ?? 0 : 0,
+        }, 'PDF export: normalizeReportData result');
 
         // Use the same Handlebars singleton as server.ts (helpers already registered)
         const { default: handlebars } = await import('handlebars');
@@ -450,6 +459,48 @@ export async function exportRoutes(
         request.log.error(err, 'PDF generation failed');
         return reply.code(500).send({ error: 'PDF generation failed' });
       }
+    },
+  );
+
+  // ── GET /api/v1/export/scans/:id/report-debug — diagnostic for PDF data ──
+  server.get(
+    '/api/v1/export/scans/:id/report-debug',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+      if (scan === null || scan.status !== 'completed') {
+        return reply.code(404).send({ error: 'Scan not found or not completed' });
+      }
+
+      let reportJson: JsonReportFile | null = null;
+      const dbReport = await storage.scans.getReport(scan.id);
+      if (dbReport !== null) {
+        reportJson = dbReport as JsonReportFile;
+      } else if (scan.jsonReportPath && existsSync(scan.jsonReportPath)) {
+        reportJson = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
+      }
+
+      if (reportJson === null) {
+        return reply.send({ error: 'No report data', scan: { id: scan.id, jsonReportPath: scan.jsonReportPath } });
+      }
+
+      const reportData = normalizeReportData(reportJson, scan);
+
+      return reply.send({
+        source: dbReport !== null ? 'db' : 'file',
+        rawKeys: Object.keys(reportJson),
+        rawPagesCount: reportJson.pages?.length ?? 0,
+        rawIssuesCount: (reportJson as Record<string, unknown>).issues
+          ? ((reportJson as Record<string, unknown>).issues as unknown[])?.length ?? 0
+          : 0,
+        rawFirstPageIssues: reportJson.pages?.[0]?.issues?.length ?? 0,
+        summary: reportData.summary,
+        pagesCount: reportData.pages?.length ?? 0,
+        allIssueGroupsCount: reportData.allIssueGroups?.length ?? 0,
+        topActionItemsCount: reportData.topActionItems?.length ?? 0,
+        topActionItems: reportData.topActionItems,
+        templateComponentsCount: reportData.templateComponents?.length ?? 0,
+      });
     },
   );
 }
