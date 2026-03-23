@@ -381,18 +381,13 @@ export async function exportRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
-      if (
-        scan.status !== 'completed' ||
-        scan.jsonReportPath === undefined ||
-        !existsSync(scan.jsonReportPath)
-      ) {
+      if (scan.status !== 'completed') {
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
-      // Render the report using normalizeReportData + print template
+      // Read report JSON — try DB first, then file (same as print route)
       let html: string;
       try {
-        // Read report JSON
         let reportJson: JsonReportFile | null = null;
         const dbReport = await storage.scans.getReport(scan.id);
         if (dbReport !== null) {
@@ -407,7 +402,7 @@ export async function exportRoutes(
 
         const reportData = normalizeReportData(reportJson, scan);
 
-        // Compile print template
+        // Use the same Handlebars singleton as server.ts (helpers already registered)
         const { default: handlebars } = await import('handlebars');
         const { resolve: resolvePath, join: joinPath } = await import('node:path');
         const { fileURLToPath } = await import('node:url');
