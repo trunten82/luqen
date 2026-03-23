@@ -26,11 +26,31 @@ export interface DirectScanResult {
   }>;
 }
 
+/** Find system Chromium binary if available. */
+function findSystemChromium(): string | undefined {
+  const paths = [
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    process.env['PUPPETEER_EXECUTABLE_PATH'],
+  ];
+  for (const p of paths) {
+    if (p && existsSync(p)) return p;
+  }
+  return undefined;
+}
+
+import { existsSync } from 'node:fs';
+
 export class DirectScanner {
   async scan(url: string, options: DirectScanOptions): Promise<DirectScanResult> {
     // pa11y is a CommonJS package — use dynamic import for ESM compatibility
     const pa11yModule = await import('pa11y');
     const pa11y = pa11yModule.default ?? pa11yModule;
+
+    // Prefer system Chromium (avoids missing shared library issues in LXC/Docker)
+    const executablePath = findSystemChromium();
 
     const result = await pa11y(url, {
       standard: options.standard || 'WCAG2AA',
@@ -40,6 +60,7 @@ export class DirectScanner {
       headers: options.headers || {},
       runners: options.runner === 'axe' ? ['axe'] : ['htmlcs'],
       chromeLaunchConfig: {
+        ...(executablePath ? { executablePath } : {}),
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       },
     });
