@@ -61,10 +61,10 @@ export function isPuppeteerAvailable(): boolean {
   // Verify a browser binary can actually launch.
   // Prefer system Chromium (works in LXC/Docker), fall back to Puppeteer's bundled one.
   try {
-    const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
+    const childProcess = req('node:child_process') as typeof import('node:child_process');
     const chromePath = findChromiumPath(req);
     if (chromePath) {
-      execFileSync(chromePath, ['--version'], { timeout: 5000, stdio: 'pipe' });
+      childProcess.execFileSync(chromePath, ['--version'], { timeout: 5000, stdio: 'pipe' });
       _puppeteerAvailable = true;
     } else {
       _puppeteerAvailable = false;
