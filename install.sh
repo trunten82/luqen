@@ -106,6 +106,7 @@ MOD_MONITOR=false
 # Admin user
 ADMIN_USERNAME=""
 ADMIN_PASSWORD=""
+API_KEY=""
 
 # ──────────────────────────────────────────────
 # Argument parsing
@@ -879,7 +880,7 @@ start_services() {
     systemctl start luqen-compliance.service >/dev/null 2>&1
     info "Waiting for compliance service..."
     local attempts=0
-    until curl -sf "http://localhost:${COMPLIANCE_PORT}/health" >/dev/null 2>&1; do
+    until curl -sf "http://localhost:${COMPLIANCE_PORT}/api/v1/health" >/dev/null 2>&1; do
       attempts=$(( attempts + 1 ))
       if [ "${attempts}" -ge 15 ]; then
         error "Compliance service did not start. Check: journalctl -u luqen-compliance"
