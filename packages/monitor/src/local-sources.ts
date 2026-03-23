@@ -14,10 +14,6 @@ interface LocalSourceEntry {
   readonly schedule?: 'daily' | 'weekly' | 'monthly';
 }
 
-interface LocalConfig {
-  readonly sources: readonly LocalSourceEntry[];
-}
-
 const CONFIG_FILENAME = '.luqen-monitor.json';
 const VALID_TYPES = new Set(['html', 'rss', 'api']);
 

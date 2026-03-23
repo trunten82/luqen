@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../db/index.js';
 import { requirePermission } from '../auth/middleware.js';
-import { toastHtml, escapeHtml } from './admin/helpers.js';
-import { getFixSuggestion, FIX_SUGGESTIONS } from '../fix-suggestions.js';
+import { toastHtml } from './admin/helpers.js';
+import { getFixSuggestion } from '../fix-suggestions.js';
 import { hasPermission } from '../permissions.js';
 
 // ---------------------------------------------------------------------------
@@ -197,7 +197,7 @@ export async function repoRoutes(
       const repoPath = sanitizePath(body.repoPath);
       const branch = sanitizeBranch(body.branch);
 
-      const repo = await storage.repos.createRepo({
+      await storage.repos.createRepo({
         id: randomUUID(),
         siteUrlPattern,
         repoUrl,

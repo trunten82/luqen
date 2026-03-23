@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter, DashboardUser } from '../../db/index.js';
-import type { UserRepository } from '../../db/interfaces/user-repository.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml } from './helpers.js';
 import { validateUsername, validatePassword } from '../../validation.js';
