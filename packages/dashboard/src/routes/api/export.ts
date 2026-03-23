@@ -4,6 +4,8 @@ import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../../db/index.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
 import { generateReportPdf, isPuppeteerAvailable } from '../../pdf/generator.js';
+import { normalizeReportData } from '../../services/report-service.js';
+import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
 
 // ---------------------------------------------------------------------------
@@ -35,10 +37,10 @@ function siteSlug(siteUrl: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// JSON report shape (minimal subset needed for issue export)
+// JSON report shape (minimal subset needed for Excel/CSV issue export)
 // ---------------------------------------------------------------------------
 
-interface JsonReportIssue {
+interface ExportIssue {
   readonly type: string;
   readonly code: string;
   readonly message: string;
@@ -54,15 +56,15 @@ interface JsonReportIssue {
   }>;
 }
 
-interface JsonReportPage {
+interface ExportPage {
   readonly url: string;
-  readonly issues: readonly JsonReportIssue[];
+  readonly issues: readonly ExportIssue[];
 }
 
-interface JsonReportFile {
-  readonly pages?: readonly JsonReportPage[];
+interface ExportReportFile {
+  readonly pages?: readonly ExportPage[];
   readonly siteUrl?: string;
-  readonly issues?: readonly JsonReportIssue[];
+  readonly issues?: readonly ExportIssue[];
   readonly compliance?: {
     readonly issueAnnotations?: Record<
       string,
@@ -159,13 +161,13 @@ export async function exportRoutes(
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
-      let raw: JsonReportFile;
+      let raw: ExportReportFile;
       try {
         const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
-          raw = dbReport as JsonReportFile;
+          raw = dbReport as ExportReportFile;
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
-          raw = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
+          raw = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as ExportReportFile;
         } else {
           return reply.code(404).send({ error: 'Report data not available' });
         }
@@ -193,7 +195,7 @@ export async function exportRoutes(
       }
 
       // Flatten all pages into rows
-      const pages: readonly JsonReportPage[] = raw.pages ?? (
+      const pages: readonly ExportPage[] = raw.pages ?? (
         raw.issues && raw.issues.length > 0
           ? [{ url: raw.siteUrl ?? scan.siteUrl, issues: raw.issues }]
           : []
@@ -387,44 +389,31 @@ export async function exportRoutes(
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
-      // Render the report using the same normalizeReportData + print template
-      // as the /reports/:id/print route (ensures issues are included)
+      // Render the report using normalizeReportData + print template
       let html: string;
       try {
-        const { readFile: readFileAsync } = await import('node:fs/promises');
-        const { default: handlebars } = await import('handlebars');
-        const { resolve: resolvePath, join: joinPath } = await import('node:path');
-        const { fileURLToPath } = await import('node:url');
-
         // Read report JSON
-        let reportJson: Record<string, unknown> | null = null;
+        let reportJson: JsonReportFile | null = null;
         const dbReport = await storage.scans.getReport(scan.id);
         if (dbReport !== null) {
-          reportJson = dbReport;
+          reportJson = dbReport as JsonReportFile;
         } else if (scan.jsonReportPath && existsSync(scan.jsonReportPath)) {
-          reportJson = JSON.parse(await readFileAsync(scan.jsonReportPath, 'utf-8')) as Record<string, unknown>;
+          reportJson = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
         }
 
         if (reportJson === null) {
           return reply.code(404).send({ error: 'Report data not available' });
         }
 
-        // Use normalizeReportData from reports route (dynamic import to avoid circular deps)
-        const reportsModule = await import('../../routes/reports.js');
-        const normalizeReportData = (reportsModule as unknown as { normalizeReportData: (raw: unknown, scan: unknown) => unknown }).normalizeReportData;
-
-        let reportData: Record<string, unknown>;
-        if (typeof normalizeReportData === 'function') {
-          reportData = normalizeReportData(reportJson, scan) as Record<string, unknown>;
-        } else {
-          // Fallback: pass raw data
-          reportData = { summary: reportJson.summary, pages: reportJson.pages ?? [], allIssueGroups: [] };
-        }
+        const reportData = normalizeReportData(reportJson, scan);
 
         // Compile print template
+        const { default: handlebars } = await import('handlebars');
+        const { resolve: resolvePath, join: joinPath } = await import('node:path');
+        const { fileURLToPath } = await import('node:url');
         const dirname = fileURLToPath(new URL('.', import.meta.url));
         const viewsDir = resolvePath(joinPath(dirname, '..', '..', 'views'));
-        const templateSource = await readFileAsync(joinPath(viewsDir, 'report-print.hbs'), 'utf-8');
+        const templateSource = await readFile(joinPath(viewsDir, 'report-print.hbs'), 'utf-8');
         const template = handlebars.compile(templateSource);
 
         html = template({
