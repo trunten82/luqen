@@ -1,275 +1,443 @@
 /**
- * Server-side PDF generation using Puppeteer.
+ * Server-side PDF generation using PDFKit (direct PDF creation, no browser).
  *
- * Puppeteer is an optional dependency — if it is not installed, the exported
- * functions throw a descriptive error instead of crashing the process.  The
- * browser instance is lazily initialised as a singleton and reused across
- * requests.  A graceful-shutdown handler closes it when the process exits.
+ * Generates a styled report PDF directly from normalizeReportData output,
+ * matching the report-print.hbs layout.
  */
 
-import { createRequire } from 'node:module';
-import { existsSync } from 'node:fs';
+import PDFDocument from 'pdfkit';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface PdfOptions {
-  /** Paper format — default "A4". */
   readonly format?: 'A4' | 'A3' | 'Letter' | 'Legal' | 'Tabloid';
-  /** Landscape orientation — default false. */
   readonly landscape?: boolean;
-  /** Page margins. */
   readonly margin?: {
     readonly top?: string;
     readonly right?: string;
     readonly bottom?: string;
     readonly left?: string;
   };
-  /** HTML template rendered in the page header (Puppeteer header template). */
   readonly headerTemplate?: string;
-  /** HTML template rendered in the page footer (Puppeteer footer template). */
   readonly footerTemplate?: string;
 }
 
+interface ReportSummary {
+  readonly pagesScanned?: number;
+  readonly totalIssues?: number;
+  readonly byLevel?: { readonly error: number; readonly warning: number; readonly notice: number };
+}
+
+interface ActionItem {
+  readonly severity: string;
+  readonly count: number;
+  readonly criterion: string;
+  readonly title: string;
+  readonly pageCount: number;
+  readonly regulations: ReadonlyArray<{ readonly shortName: string }>;
+}
+
+interface ComplianceEntry {
+  readonly jurisdictionName: string;
+  readonly reviewStatus: string;
+  readonly confirmedViolations: number;
+  readonly needsReview?: number;
+}
+
+interface TemplateComponent {
+  readonly componentName: string;
+  readonly issueCount: number;
+  readonly maxAffectedPages: number;
+}
+
+export interface PdfReportData {
+  readonly summary: ReportSummary;
+  readonly topActionItems: readonly ActionItem[];
+  readonly complianceMatrix?: readonly ComplianceEntry[] | null;
+  readonly templateComponents: readonly TemplateComponent[];
+  readonly errors?: readonly { readonly url: string; readonly code: string; readonly message: string }[];
+}
+
+export interface PdfScanMeta {
+  readonly siteUrl: string;
+  readonly standard: string;
+  readonly jurisdictions: string;
+  readonly createdAtDisplay: string;
+}
+
 // ---------------------------------------------------------------------------
-// Puppeteer availability check
+// Colors
 // ---------------------------------------------------------------------------
 
-let _puppeteerAvailable: boolean | null = null;
+const BLUE = '#0056b3';
+const DARK = '#1a1a1a';
+const MUTED = '#6b6b6b';
+const BG_LIGHT = '#f5f6fa';
+const BORDER = '#d0d4de';
+const RED = '#8b1a1a';
+const RED_BG = '#f8d7da';
+const ORANGE = '#7a4f00';
+const ORANGE_BG = '#fff3cd';
+const GREEN = '#0d6832';
+const GREEN_BG = '#d4edda';
+const NAVY = '#00416a';
 
-/**
- * Returns `true` when `puppeteer` (or `puppeteer-core`) can be loaded in this
- * environment.  The check is performed once and cached.
- */
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function mm(val: number): number {
+  return val * 2.835; // mm to points
+}
+
+function formatStandard(code: string): string {
+  const map: Record<string, string> = {
+    'WCAG2A': 'WCAG 2.1 Level A',
+    'WCAG2AA': 'WCAG 2.1 Level AA',
+    'WCAG2AAA': 'WCAG 2.1 Level AAA',
+  };
+  return map[code] ?? code;
+}
+
+// ---------------------------------------------------------------------------
+// Backward-compat: keep isPuppeteerAvailable so existing code doesn't break
+// ---------------------------------------------------------------------------
+
 export function isPuppeteerAvailable(): boolean {
-  if (_puppeteerAvailable !== null) return _puppeteerAvailable;
+  return true; // PDFKit is always available
+}
 
-  const req = createRequire(import.meta.url);
-
-  try {
-    req.resolve('puppeteer');
-  } catch {
-    try {
-      req.resolve('puppeteer-core');
-    } catch {
-      _puppeteerAvailable = false;
-      return false;
-    }
-  }
-
-  // Verify a browser binary can actually launch.
-  // Prefer system Chromium (works in LXC/Docker), fall back to Puppeteer's bundled one.
-  try {
-    const childProcess = req('node:child_process') as typeof import('node:child_process');
-    const chromePath = findChromiumPath(req);
-    if (chromePath) {
-      childProcess.execFileSync(chromePath, ['--version'], { timeout: 5000, stdio: 'pipe' });
-      _puppeteerAvailable = true;
-    } else {
-      _puppeteerAvailable = false;
-    }
-  } catch {
-    _puppeteerAvailable = false;
-  }
-
-  return _puppeteerAvailable;
+export async function closeBrowser(): Promise<void> {
+  // No-op — no browser to close with PDFKit
 }
 
 // ---------------------------------------------------------------------------
-// Chromium path resolution
+// Legacy HTML-based generation (kept as fallback, unused)
 // ---------------------------------------------------------------------------
 
-/** Find a working Chromium binary — system first, Puppeteer's bundled copy second. */
-function findChromiumPath(req?: NodeRequire): string | undefined {
-  // Environment override
-  if (process.env['PUPPETEER_EXECUTABLE_PATH'] && existsSync(process.env['PUPPETEER_EXECUTABLE_PATH'])) {
-    return process.env['PUPPETEER_EXECUTABLE_PATH'];
-  }
-  // System Chromium
-  const systemPaths = ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'];
-  for (const p of systemPaths) {
-    if (existsSync(p)) return p;
-  }
-  // Puppeteer's bundled Chromium
-  try {
-    const r = req ?? createRequire(import.meta.url);
-    const puppeteer = r('puppeteer') as { executablePath: () => string };
-    const bundled = puppeteer.executablePath();
-    if (bundled && existsSync(bundled)) return bundled;
-  } catch {
-    // Puppeteer not installed or no bundled binary
-  }
-  return undefined;
-}
-
-// ---------------------------------------------------------------------------
-// Browser singleton
-// ---------------------------------------------------------------------------
-
-type PuppeteerBrowser = {
-  newPage(): Promise<PuppeteerPage>;
-  close(): Promise<void>;
-};
-
-type PuppeteerPage = {
-  setContent(html: string, options?: { waitUntil?: string | string[] }): Promise<void>;
-  goto(url: string, options?: { waitUntil?: string | string[] }): Promise<void>;
-  pdf(options?: Record<string, unknown>): Promise<Buffer>;
-  close(): Promise<void>;
-};
-
-type PuppeteerModule = {
-  launch(options?: Record<string, unknown>): Promise<PuppeteerBrowser>;
-};
-
-let _browser: PuppeteerBrowser | null = null;
-let _browserPromise: Promise<PuppeteerBrowser> | null = null;
-let _shutdownRegistered = false;
-
-async function loadPuppeteer(): Promise<PuppeteerModule> {
-  try {
-    // @ts-ignore — puppeteer is an optional dependency; types may not be installed
-    return (await import('puppeteer')) as unknown as PuppeteerModule;
-  } catch {
-    try {
-      // @ts-ignore — puppeteer-core is an optional fallback
-      return (await import('puppeteer-core')) as unknown as PuppeteerModule;
-    } catch {
-      throw new Error(
-        'Puppeteer is not installed. Install it with: npm install puppeteer' +
-        '\nPDF generation requires puppeteer as an optional dependency.',
-      );
-    }
-  }
-}
-
-async function getBrowser(): Promise<PuppeteerBrowser> {
-  if (_browser !== null) return _browser;
-
-  // Prevent concurrent launches — multiple requests arriving before the
-  // first launch completes should all await the same promise.
-  if (_browserPromise !== null) return _browserPromise;
-
-  _browserPromise = (async () => {
-    const puppeteer = await loadPuppeteer();
-    const executablePath = findChromiumPath();
-    const browser = await puppeteer.launch({
-      headless: true,
-      ...(executablePath ? { executablePath } : {}),
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-      ],
-    });
-    _browser = browser;
-
-    // Register graceful-shutdown handlers once
-    if (!_shutdownRegistered) {
-      _shutdownRegistered = true;
-
-      const shutdown = () => {
-        if (_browser !== null) {
-          _browser.close().catch(() => undefined);
-          _browser = null;
-          _browserPromise = null;
-        }
-      };
-
-      process.on('exit', shutdown);
-      process.on('SIGINT', shutdown);
-      process.on('SIGTERM', shutdown);
-    }
-
-    return browser;
-  })();
-
-  try {
-    return await _browserPromise;
-  } catch (err) {
-    // Reset so a subsequent call can retry
-    _browserPromise = null;
-    throw err;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Render an HTML string to a PDF buffer using Puppeteer.
- *
- * The browser instance is lazily initialised and reused across calls.
- *
- * @throws If puppeteer is not installed or the browser cannot be launched.
- */
 export async function generateReportPdf(
   html: string,
-  options: PdfOptions = {},
+  _options: PdfOptions = {},
 ): Promise<Buffer> {
-  if (!isPuppeteerAvailable()) {
-    throw new Error(
-      'Puppeteer is not installed. Install it with: npm install puppeteer' +
-      '\nPDF generation requires puppeteer as an optional dependency.',
-    );
-  }
-
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-
-  try {
-    // Write HTML to a temp file and navigate to it — avoids setContent
-    // rendering issues with certain Chromium versions.
-    const { writeFile: writeTmp, unlink: unlinkTmp } = await import('node:fs/promises');
-    const { join: joinTmp } = await import('node:path');
-    const tmpPath = joinTmp('/tmp', `luqen-pdf-${Date.now()}.html`);
-    await writeTmp(tmpPath, html);
-    try {
-      await page.goto(`file://${tmpPath}`, { waitUntil: 'load' });
-    } finally {
-      await unlinkTmp(tmpPath).catch(() => undefined);
-    }
-
-    const pdfOptions: Record<string, unknown> = {
-      format: options.format ?? 'A4',
-      landscape: options.landscape ?? false,
-      printBackground: true,
-      margin: options.margin ?? {
-        top: '15mm',
-        right: '10mm',
-        bottom: '15mm',
-        left: '10mm',
-      },
-    };
-
-    if (options.headerTemplate !== undefined || options.footerTemplate !== undefined) {
-      pdfOptions['displayHeaderFooter'] = true;
-      if (options.headerTemplate !== undefined) {
-        pdfOptions['headerTemplate'] = options.headerTemplate;
-      }
-      if (options.footerTemplate !== undefined) {
-        pdfOptions['footerTemplate'] = options.footerTemplate;
-      }
-    }
-
-    const pdfBuffer = await page.pdf(pdfOptions);
-    return Buffer.from(pdfBuffer);
-  } finally {
-    await page.close().catch(() => undefined);
-  }
+  // This function is kept for backward compatibility but should not be called.
+  // Use generatePdfFromData instead.
+  throw new Error('Use generatePdfFromData() instead of generateReportPdf()');
 }
 
-/**
- * Close the shared browser instance, if one is running.
- * Useful for tests or explicit cleanup.
- */
-export async function closeBrowser(): Promise<void> {
-  if (_browser !== null) {
-    await _browser.close().catch(() => undefined);
-    _browser = null;
-    _browserPromise = null;
-  }
+// ---------------------------------------------------------------------------
+// Direct PDF generation from report data
+// ---------------------------------------------------------------------------
+
+export async function generatePdfFromData(
+  scan: PdfScanMeta,
+  reportData: PdfReportData,
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: mm(15), bottom: mm(15), left: mm(10), right: mm(10) },
+        info: {
+          Title: `Accessibility Report — ${scan.siteUrl}`,
+          Creator: 'Luqen',
+        },
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const summary = reportData.summary;
+      const errors = summary.byLevel?.error ?? 0;
+      const warnings = summary.byLevel?.warning ?? 0;
+      const notices = summary.byLevel?.notice ?? 0;
+
+      // ── Title ──
+      doc.fontSize(18).fillColor(BLUE).font('Helvetica-Bold')
+        .text('Accessibility Report', { lineGap: 2 });
+
+      // ── Subtitle ──
+      doc.fontSize(9).fillColor(MUTED).font('Helvetica')
+        .text(
+          `${scan.siteUrl}    ${formatStandard(scan.standard)}` +
+          (scan.jurisdictions ? `    ${scan.jurisdictions}` : '') +
+          `    ${scan.createdAtDisplay}`,
+          { lineGap: 6 },
+        );
+
+      doc.moveDown(0.5);
+
+      // ── Executive Box ──
+      const execY = doc.y;
+      const execBoxHeight = reportData.complianceMatrix ? 65 : 50;
+      doc.save()
+        .roundedRect(doc.page.margins.left, execY, pageWidth, execBoxHeight, 4)
+        .fill(BG_LIGHT)
+        .restore();
+
+      doc.y = execY + 8;
+      doc.x = doc.page.margins.left + 10;
+
+      if (reportData.complianceMatrix && reportData.complianceMatrix.length > 0) {
+        const hasErrors = errors > 0;
+        doc.fontSize(10).fillColor(hasErrors ? RED : GREEN).font('Helvetica-Bold')
+          .text(
+            hasErrors
+              ? 'Action Required — accessibility violations detected that may breach legal requirements.'
+              : 'No confirmed violations detected. Review notices for potential improvements.',
+            doc.page.margins.left + 10, doc.y,
+            { width: pageWidth - 20 },
+          );
+      }
+
+      doc.fontSize(9).fillColor(DARK).font('Helvetica')
+        .text(
+          `An accessibility scan of ${scan.siteUrl} found `,
+          doc.page.margins.left + 10, doc.y + 2,
+          { continued: true, width: pageWidth - 20 },
+        )
+        .fillColor(RED).font('Helvetica-Bold').text(`${errors} Errors`, { continued: true })
+        .fillColor(DARK).font('Helvetica').text(', ', { continued: true })
+        .fillColor(ORANGE).font('Helvetica-Bold').text(`${warnings} Warnings`, { continued: true })
+        .fillColor(DARK).font('Helvetica').text(', and ', { continued: true })
+        .font('Helvetica-Bold').text(`${notices} Notices`, { continued: true })
+        .font('Helvetica').text(` across ${summary.pagesScanned ?? 0} pages.`);
+
+      if (reportData.complianceMatrix && reportData.complianceMatrix.length > 0) {
+        doc.fontSize(8).fillColor(DARK).font('Helvetica-Bold')
+          .text(
+            'Compliance Risk: ' +
+            reportData.complianceMatrix.map((c) => {
+              const icon = c.reviewStatus === 'fail' ? '!' : c.reviewStatus === 'review' ? '?' : 'OK';
+              const label = c.reviewStatus === 'fail' ? 'Failing' : c.reviewStatus === 'review' ? 'Needs Review' : 'Passing';
+              return `${c.jurisdictionName}: ${icon} ${label}`;
+            }).join(', '),
+            doc.page.margins.left + 10, doc.y + 2,
+            { width: pageWidth - 20 },
+          );
+      }
+
+      doc.y = execY + execBoxHeight + 10;
+      doc.x = doc.page.margins.left;
+
+      // ── KPI Cards ──
+      const kpiData = [
+        { value: String(summary.pagesScanned ?? 0), label: 'PAGES SCANNED', color: DARK },
+        { value: String(summary.totalIssues ?? 0), label: 'TOTAL ISSUES', color: DARK },
+        { value: String(errors), label: 'ERRORS', color: RED },
+        { value: String(warnings), label: 'WARNINGS', color: ORANGE },
+        { value: String(notices), label: 'NOTICES', color: NAVY },
+      ];
+
+      const kpiWidth = (pageWidth - 4 * 6) / 5;
+      const kpiY = doc.y;
+      const kpiHeight = 45;
+
+      for (let i = 0; i < kpiData.length; i++) {
+        const x = doc.page.margins.left + i * (kpiWidth + 6);
+        doc.save()
+          .roundedRect(x, kpiY, kpiWidth, kpiHeight, 4)
+          .lineWidth(0.5).strokeColor(BORDER).stroke()
+          .restore();
+
+        doc.fontSize(20).fillColor(kpiData[i].color).font('Helvetica-Bold')
+          .text(kpiData[i].value, x, kpiY + 5, { width: kpiWidth, align: 'center' });
+
+        doc.fontSize(6).fillColor(MUTED).font('Helvetica')
+          .text(kpiData[i].label, x, kpiY + 30, { width: kpiWidth, align: 'center' });
+      }
+
+      doc.y = kpiY + kpiHeight + 15;
+
+      // ── Compliance Matrix ──
+      if (reportData.complianceMatrix && reportData.complianceMatrix.length > 0) {
+        doc.fontSize(12).fillColor(BLUE).font('Helvetica-Bold')
+          .text('Legal Compliance');
+        doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
+          .lineWidth(1.5).strokeColor(BLUE).stroke();
+        doc.moveDown(0.4);
+
+        for (const entry of reportData.complianceMatrix) {
+          const cardY = doc.y;
+          const bgColor = entry.reviewStatus === 'fail' ? RED_BG : entry.reviewStatus === 'review' ? ORANGE_BG : GREEN_BG;
+
+          doc.save()
+            .roundedRect(doc.page.margins.left, cardY, 200, 36, 4)
+            .lineWidth(0.5).strokeColor(BORDER).stroke()
+            .restore();
+
+          doc.save()
+            .rect(doc.page.margins.left, cardY, 200, 18)
+            .fill(bgColor)
+            .restore();
+
+          doc.fontSize(8).fillColor(DARK).font('Helvetica-Bold')
+            .text(entry.jurisdictionName, doc.page.margins.left + 6, cardY + 4);
+
+          const statusLabel = entry.reviewStatus === 'fail' ? 'FAIL' : entry.reviewStatus === 'review' ? 'REVIEW' : 'PASS';
+          doc.text(statusLabel, doc.page.margins.left + 140, cardY + 4, { width: 54, align: 'right' });
+
+          doc.fontSize(7).fillColor(DARK).font('Helvetica')
+            .text(
+              `WCAG criteria violated: ${entry.confirmedViolations}` +
+              (entry.needsReview ? ` · Needs review: ${entry.needsReview}` : ''),
+              doc.page.margins.left + 6, cardY + 22,
+            );
+
+          doc.y = cardY + 42;
+        }
+
+        doc.moveDown(0.3);
+      }
+
+      // ── Top Critical Actions ──
+      doc.fontSize(12).fillColor(BLUE).font('Helvetica-Bold')
+        .text('Top Critical Actions');
+      doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
+        .lineWidth(1.5).strokeColor(BLUE).stroke();
+      doc.moveDown(0.2);
+
+      doc.fontSize(8).fillColor(MUTED).font('Helvetica')
+        .text('The most impactful issues to address first — errors and regulatory warnings, sorted by severity and reach.');
+      doc.moveDown(0.4);
+
+      // Table header
+      const colX = {
+        severity: doc.page.margins.left,
+        wcag: doc.page.margins.left + 80,
+        issue: doc.page.margins.left + 140,
+        pages: doc.page.margins.left + pageWidth - 40,
+      };
+
+      const headerY = doc.y;
+      doc.save()
+        .rect(doc.page.margins.left, headerY, pageWidth, 16)
+        .fill(BG_LIGHT)
+        .restore();
+
+      doc.fontSize(7).fillColor(DARK).font('Helvetica-Bold');
+      doc.text('SEVERITY', colX.severity + 4, headerY + 4);
+      doc.text('WCAG', colX.wcag, headerY + 4);
+      doc.text('ISSUE', colX.issue, headerY + 4);
+      doc.text('PAGES', colX.pages, headerY + 4, { width: 36, align: 'right' });
+
+      doc.y = headerY + 18;
+
+      // Table rows
+      for (const item of reportData.topActionItems) {
+        const rowY = doc.y;
+
+        // Check if we need a new page
+        if (rowY > doc.page.height - doc.page.margins.bottom - 25) {
+          doc.addPage();
+        }
+
+        const currentY = doc.y;
+
+        // Severity badge
+        const badgeColor = item.severity === 'error' ? RED_BG : ORANGE_BG;
+        const textColor = item.severity === 'error' ? RED : ORANGE;
+        const badgeText = `${item.count} ${item.severity.toUpperCase()}`;
+        const badgeWidth = 65;
+
+        doc.save()
+          .roundedRect(colX.severity + 4, currentY + 1, badgeWidth, 13, 2)
+          .fill(badgeColor)
+          .restore();
+
+        doc.fontSize(7).fillColor(textColor).font('Helvetica-Bold')
+          .text(badgeText, colX.severity + 4, currentY + 3, { width: badgeWidth, align: 'center' });
+
+        // WCAG criterion
+        doc.fontSize(8).fillColor(DARK).font('Helvetica-Bold')
+          .text(item.criterion, colX.wcag, currentY + 3);
+
+        // Issue title + regulation tags
+        doc.fontSize(8).fillColor(DARK).font('Helvetica')
+          .text(item.title, colX.issue, currentY + 3, { width: colX.pages - colX.issue - 5 });
+
+        if (item.regulations.length > 0) {
+          const regText = item.regulations.map((r) => r.shortName).join('  ');
+          doc.fontSize(6).fillColor(RED).font('Helvetica-Bold')
+            .text(regText, colX.issue, doc.y);
+        }
+
+        // Pages
+        doc.fontSize(8).fillColor(DARK).font('Helvetica')
+          .text(String(item.pageCount), colX.pages, currentY + 3, { width: 36, align: 'right' });
+
+        // Row separator
+        const nextY = Math.max(doc.y + 2, currentY + 18);
+        doc.moveTo(doc.page.margins.left, nextY)
+          .lineTo(doc.page.margins.left + pageWidth, nextY)
+          .lineWidth(0.3).strokeColor(BORDER).stroke();
+
+        doc.y = nextY + 3;
+      }
+
+      doc.moveDown(0.5);
+
+      // ── Quick Wins ──
+      if (reportData.templateComponents.length > 0) {
+        doc.fontSize(12).fillColor(BLUE).font('Helvetica-Bold')
+          .text('Quick Wins — Template Fixes');
+        doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
+          .lineWidth(1.5).strokeColor(BLUE).stroke();
+        doc.moveDown(0.2);
+
+        doc.fontSize(8).fillColor(MUTED).font('Helvetica')
+          .text('These issues appear in shared components used across multiple pages. Fixing the component once resolves the issue everywhere.');
+        doc.moveDown(0.4);
+
+        for (const comp of reportData.templateComponents) {
+          doc.fontSize(8).fillColor(DARK).font('Helvetica-Bold')
+            .text(`${comp.componentName}`, { continued: true })
+            .font('Helvetica')
+            .text(`  —  ${comp.issueCount} issues  ·  ${comp.maxAffectedPages} pages  ·  Fix once → resolves on all pages`);
+        }
+
+        doc.moveDown(0.5);
+      }
+
+      // ── Scan Errors ──
+      if (reportData.errors && reportData.errors.length > 0) {
+        doc.fontSize(12).fillColor(BLUE).font('Helvetica-Bold')
+          .text('Scan Errors');
+        doc.moveDown(0.3);
+
+        for (const err of reportData.errors) {
+          doc.fontSize(8).fillColor(RED).font('Helvetica-Bold')
+            .text(`${err.url}`, { continued: true })
+            .font('Helvetica').fillColor(DARK)
+            .text(` — ${err.code}: ${err.message}`);
+        }
+
+        doc.moveDown(0.5);
+      }
+
+      // ── Note ──
+      doc.fontSize(8).fillColor(MUTED).font('Helvetica')
+        .text(
+          'For the complete issue list with selectors and code context, use the Excel export from the dashboard.',
+          doc.page.margins.left, doc.y,
+          { width: pageWidth },
+        );
+
+      // ── Footer ──
+      doc.moveDown(1);
+      doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
+        .lineWidth(0.3).strokeColor(BORDER).stroke();
+      doc.moveDown(0.3);
+      doc.fontSize(7).fillColor(MUTED).font('Helvetica')
+        .text(`Generated by Luqen  ·  ${scan.createdAtDisplay}`, doc.page.margins.left, doc.y, { width: pageWidth, align: 'center' });
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
 }

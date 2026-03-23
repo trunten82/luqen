@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../../db/index.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
-import { generateReportPdf, isPuppeteerAvailable } from '../../pdf/generator.js';
+import { generatePdfFromData } from '../../pdf/generator.js';
+import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
 import { normalizeReportData } from '../../services/report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
@@ -362,13 +363,6 @@ export async function exportRoutes(
   server.get(
     '/api/v1/export/scans/:id/report.pdf',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      // Check puppeteer availability before doing any work
-      if (!isPuppeteerAvailable()) {
-        return reply.code(501).send({
-          error: 'PDF generation is not available. Puppeteer is not installed on this server.',
-        });
-      }
-
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
 
@@ -385,8 +379,6 @@ export async function exportRoutes(
         return reply.code(404).send({ error: 'Report data not available' });
       }
 
-      // Read report JSON — try DB first, then file (same as print route)
-      let html: string;
       try {
         let reportJson: JsonReportFile | null = null;
         const dbReport = await storage.scans.getReport(scan.id);
@@ -401,51 +393,15 @@ export async function exportRoutes(
         }
 
         const reportData = normalizeReportData(reportJson, scan);
-        request.log.info({
-          topActionItems: reportData.topActionItems?.length ?? 0,
-          allIssueGroups: reportData.allIssueGroups?.length ?? 0,
-          pages: reportData.pages?.length ?? 0,
-          totalIssues: reportData.summary?.totalIssues ?? 0,
-          reportSource: dbReport !== null ? 'db' : 'file',
-          rawPages: (reportJson as Record<string, unknown>).pages ? (reportJson.pages?.length ?? 0) : 0,
-          rawIssues: (reportJson as Record<string, unknown>).issues ? ((reportJson as Record<string, unknown>).issues as unknown[])?.length ?? 0 : 0,
-        }, 'PDF export: normalizeReportData result');
 
-        // Use the same Handlebars singleton as server.ts (helpers already registered)
-        const { default: handlebars } = await import('handlebars');
-        const { resolve: resolvePath, join: joinPath } = await import('node:path');
-        const { fileURLToPath } = await import('node:url');
-        const dirname = fileURLToPath(new URL('.', import.meta.url));
-        const viewsDir = resolvePath(joinPath(dirname, '..', '..', 'views'));
-        const templateSource = await readFile(joinPath(viewsDir, 'report-print.hbs'), 'utf-8');
-        const template = handlebars.compile(templateSource);
+        const scanMeta: PdfScanMeta = {
+          siteUrl: scan.siteUrl,
+          standard: scan.standard,
+          jurisdictions: scan.jurisdictions.join(', '),
+          createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
+        };
 
-        html = template({
-          scan: {
-            ...scan,
-            jurisdictions: scan.jurisdictions.join(', '),
-            createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
-            completedAtDisplay: scan.completedAt ? new Date(scan.completedAt).toLocaleString() : '',
-          },
-          reportData,
-          userRole: 'admin',
-          isExecutiveView: false,
-        });
-        // Debug: save HTML to temp file for inspection
-        const { writeFile: writeFileAsync } = await import('node:fs/promises');
-        await writeFileAsync('/tmp/pdf-export-html.html', html).catch(() => undefined);
-
-      } catch (err) {
-        request.log.error(err, 'Failed to render report HTML');
-        return reply.code(500).send({ error: 'Failed to render report HTML' });
-      }
-
-      // Generate PDF from rendered HTML
-      try {
-        const pdfBuffer = await generateReportPdf(html, {
-          format: 'A4',
-          margin: { top: '15mm', right: '10mm', bottom: '15mm', left: '10mm' },
-        });
+        const pdfBuffer = await generatePdfFromData(scanMeta, reportData as PdfReportData);
 
         let hostname: string;
         try {
@@ -466,71 +422,6 @@ export async function exportRoutes(
     },
   );
 
-  // ── GET /api/v1/export/scans/:id/report-debug — diagnostic for PDF data ──
-  server.get(
-    '/api/v1/export/scans/:id/report-debug',
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const { id } = request.params as { id: string };
-      const scan = await storage.scans.getScan(id);
-      if (scan === null || scan.status !== 'completed') {
-        return reply.code(404).send({ error: 'Scan not found or not completed' });
-      }
-
-      let reportJson: JsonReportFile | null = null;
-      const dbReport = await storage.scans.getReport(scan.id);
-      if (dbReport !== null) {
-        reportJson = dbReport as JsonReportFile;
-      } else if (scan.jsonReportPath && existsSync(scan.jsonReportPath)) {
-        reportJson = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
-      }
-
-      if (reportJson === null) {
-        return reply.send({ error: 'No report data', scan: { id: scan.id, jsonReportPath: scan.jsonReportPath } });
-      }
-
-      const reportData = normalizeReportData(reportJson, scan);
-
-      // If ?html=1, return the rendered HTML instead of JSON
-      const query = request.query as { html?: string };
-      if (query.html === '1') {
-        const { default: handlebars } = await import('handlebars');
-        const { resolve: resolvePath, join: joinPath } = await import('node:path');
-        const { fileURLToPath } = await import('node:url');
-        const dirname = fileURLToPath(new URL('.', import.meta.url));
-        const viewsDir = resolvePath(joinPath(dirname, '..', '..', 'views'));
-        const templateSource = await readFile(joinPath(viewsDir, 'report-print.hbs'), 'utf-8');
-        const template = handlebars.compile(templateSource);
-        const html = template({
-          scan: {
-            ...scan,
-            jurisdictions: scan.jurisdictions.join(', '),
-            createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
-            completedAtDisplay: scan.completedAt ? new Date(scan.completedAt).toLocaleString() : '',
-          },
-          reportData,
-          userRole: 'admin',
-          isExecutiveView: false,
-        });
-        return reply.type('text/html').send(html);
-      }
-
-      return reply.send({
-        source: dbReport !== null ? 'db' : 'file',
-        rawKeys: Object.keys(reportJson),
-        rawPagesCount: reportJson.pages?.length ?? 0,
-        rawIssuesCount: (reportJson as Record<string, unknown>).issues
-          ? ((reportJson as Record<string, unknown>).issues as unknown[])?.length ?? 0
-          : 0,
-        rawFirstPageIssues: reportJson.pages?.[0]?.issues?.length ?? 0,
-        summary: reportData.summary,
-        pagesCount: reportData.pages?.length ?? 0,
-        allIssueGroupsCount: reportData.allIssueGroups?.length ?? 0,
-        topActionItemsCount: reportData.topActionItems?.length ?? 0,
-        topActionItems: reportData.topActionItems,
-        templateComponentsCount: reportData.templateComponents?.length ?? 0,
-      });
-    },
-  );
 }
 
 // ---------------------------------------------------------------------------
