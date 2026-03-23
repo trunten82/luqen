@@ -5,16 +5,16 @@ import type { SmtpOptions } from '../../src/email/sender.js';
 import type { ScanRecord } from '../../src/db/types.js';
 
 const SMTP_OPTIONS: SmtpOptions = {
-  host: 'mail.alessandrolanna.it',
-  port: 587,
+  host: process.env['TEST_SMTP_HOST'] ?? 'localhost',
+  port: parseInt(process.env['TEST_SMTP_PORT'] ?? '587'),
   secure: false,
-  username: 'support',
-  password: 'RFec0dll94fm!!',
-  fromAddress: 'support@alessandrolanna.it',
+  username: process.env['TEST_SMTP_USER'] ?? 'test',
+  password: process.env['TEST_SMTP_PASS'] ?? 'test',
+  fromAddress: process.env['TEST_SMTP_FROM'] ?? 'test@example.com',
   fromName: 'Luqen Test',
 };
 
-const TEST_RECIPIENT = 'alessandro@alessandrolanna.it';
+const TEST_RECIPIENT = process.env['TEST_EMAIL_RECIPIENT'] ?? 'test@example.com';
 
 const makeScanRecord = (overrides: Partial<ScanRecord> = {}): ScanRecord => ({
   id: 'test-scan-001',

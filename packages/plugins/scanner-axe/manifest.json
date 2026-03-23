@@ -1,0 +1,37 @@
+{
+  "name": "scanner-axe",
+  "displayName": "axe-core Scanner",
+  "type": "scanner",
+  "version": "1.0.0",
+  "description": "Accessibility scanner powered by axe-core, providing WCAG conformance testing via Puppeteer",
+  "configSchema": [
+    {
+      "key": "browserPath",
+      "label": "Browser Path",
+      "type": "string",
+      "description": "Path to Chrome/Chromium binary (uses Puppeteer default if not set)"
+    },
+    {
+      "key": "headless",
+      "label": "Headless Mode",
+      "type": "boolean",
+      "default": true,
+      "description": "Run the browser in headless mode"
+    },
+    {
+      "key": "timeout",
+      "label": "Page Timeout (ms)",
+      "type": "number",
+      "default": 30000,
+      "description": "Maximum time in milliseconds to wait per page"
+    },
+    {
+      "key": "standard",
+      "label": "WCAG Standard",
+      "type": "select",
+      "default": "wcag2aa",
+      "options": ["wcag2a", "wcag2aa", "wcag2aaa"],
+      "description": "WCAG conformance level to test against"
+    }
+  ]
+}

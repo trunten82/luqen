@@ -18,7 +18,7 @@ import { storeApiKey } from '../../src/auth/api-key.js';
 // Constants
 // ---------------------------------------------------------------------------
 
-const API_KEY = 'beaed61bd8b8f225dce99fd9fff397de8a2a9d6154e77d86ff1e12eaf7b613c8';
+const API_KEY = process.env['TEST_API_KEY'] ?? 'test-key-' + '0'.repeat(48);
 const SESSION_SECRET = 'test-session-secret-at-least-32b';
 
 // ---------------------------------------------------------------------------

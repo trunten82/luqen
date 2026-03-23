@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { Redis } from 'ioredis';
 import { createRedisClient, RedisScanQueue, SsePublisher } from '../../src/cache/redis.js';
 
-const REDIS_URL = 'redis://:RFec0dll94fm!!@192.168.3.115:6379';
+const REDIS_URL = process.env['TEST_REDIS_URL'] ?? 'redis://localhost:6379';
 const QUEUE_KEY = 'luqen:scan:queue';
 
 describe('Redis integration', () => {
@@ -52,8 +52,9 @@ describe('Redis integration', () => {
 
     it('fails to connect with wrong password', async ({ skip }) => {
       if (skipTests) skip();
+      const redisUrl = new URL(REDIS_URL);
       const badClient = createRedisClient(
-        'redis://:wrongpassword@192.168.3.115:6379',
+        `redis://:wrongpassword@${redisUrl.hostname}:${redisUrl.port || '6379'}`,
       ) as InstanceType<typeof Redis>;
 
       await expect(badClient.connect()).rejects.toThrow();
