@@ -9,38 +9,43 @@ System design, data flow, and technology stack for the luqen monorepo.
 ## System overview
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                      luqen monorepo                    │
-│                                                              │
-│  ┌───────────────────────────┐                               │
-│  │   @luqen/dashboard  │  Web UI (browser)             │
-│  │                           │  ─ start scans, view reports  │
-│  │  luqen-dashboard serve    │  ─ HTMX, no JS build step     │
-│  │  luqen-dashboard migrate  │  ─ admin: jurisdictions,      │
-│  └──────────┬────────────────┘    users, webhooks, health    │
-│             │ HTTP (REST)                                     │
-│             ▼                                                │
-│  ┌───────────────────────────┐                               │
-│  │  @luqen/compliance  │  REST API + MCP server        │
-│  │                           │  ─ 58 jurisdictions           │
-│  │  luqen-compliance serve   │  ─ 62 regulations             │
-│  │  luqen-compliance mcp     │  ─ OAuth2 / JWT auth          │
-│  └──────────┬────────────────┘  ─ SQLite + OpenAPI           │
-│             │ uses as library                                 │
-│             ▼                                                │
-│  ┌───────────────────────────┐                               │
-│  │   @luqen/core       │  CLI + MCP server             │
-│  │                           │  ─ site scan & crawl          │
-│  │  luqen scan ...     │  ─ source mapping             │
-│  │  luqen fix  ...     │  ─ fix proposals              │
-│  └──────────┬────────────────┘  ─ HTML/JSON reports          │
-│             │ HTTP                                            │
-│             ▼                                                │
-│  ┌───────────────────────────┐                               │
-│  │   pa11y webservice        │  External service             │
-│  │   (Docker / remote)       │  (not in this repo)           │
-│  └───────────────────────────┘                               │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                         luqen monorepo                           │
+│                                                                  │
+│  ┌───────────────────────────┐  ┌──────────────────────────────┐ │
+│  │   @luqen/dashboard        │  │   Plugin Catalogue           │ │
+│  │                           │  │   (GitHub: luqen-plugins)    │ │
+│  │  Web UI + REST API        │◄─┤                              │ │
+│  │  ─ start scans            │  │  catalogue.json              │ │
+│  │  ─ view reports           │  │  8 plugin tarballs (.tgz)    │ │
+│  │  ─ manage plugins         │  └──────────────────────────────┘ │
+│  │  ─ team & role admin      │                                   │
+│  │  ─ HTMX, no JS build step│  ┌──────────────────────────────┐ │
+│  │                           │  │   Plugins (installed)        │ │
+│  │  StorageAdapter (14 repos)│◄─┤  auth: entra, okta, google   │ │
+│  │  SQLite (built-in)        │  │  notify: slack, teams, email │ │
+│  └──────────┬────────────────┘  │  storage: s3, azure          │ │
+│             │ HTTP (REST)       └──────────────────────────────┘ │
+│             ▼                                                    │
+│  ┌───────────────────────────┐  ┌───────────────────────────┐   │
+│  │  @luqen/compliance        │  │   @luqen/monitor          │   │
+│  │  ─ 58 jurisdictions       │◄─┤  ─ watches legal sources  │   │
+│  │  ─ 62 regulations         │  │  ─ creates proposals      │   │
+│  │  ─ OAuth2 / JWT auth      │  │  ─ SHA-256 change detect  │   │
+│  └──────────┬────────────────┘  └───────────────────────────┘   │
+│             │ uses as library                                    │
+│             ▼                                                    │
+│  ┌───────────────────────────┐                                   │
+│  │   @luqen/core             │  CLI + MCP server                 │
+│  │  ─ site scan & crawl      │  ─ source mapping                 │
+│  │  ─ fix proposals          │  ─ HTML/JSON reports              │
+│  └──────────┬────────────────┘                                   │
+│             │ HTTP                                                │
+│             ▼                                                    │
+│  ┌───────────────────────────┐                                   │
+│  │   pa11y webservice        │  External (Docker / remote)       │
+│  └───────────────────────────┘                                   │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -160,6 +165,52 @@ All dashboard routes and services depend on the `StorageAdapter` interface — n
 
 ---
 
+## Plugin system architecture
+
+Plugins extend the dashboard with authentication providers, notification channels, and storage backends. They are distributed via a remote catalogue hosted on GitHub and installed as tarballs — no npm required.
+
+```
+Discovery:   GitHub repo (trunten82/luqen-plugins)
+               │
+               ▼
+             catalogue.json ──→ Dashboard fetches (1hr cache, local fallback)
+               │
+Install:     Download .tgz from GitHub release
+               │
+               ▼
+             Verify SHA-256 checksum
+               │
+               ▼
+             Extract to pluginsDir/packages/{name}/
+               │
+Activate:    dynamic import(pluginPath) → instance.activate(config)
+               │
+Runtime:     PluginManager holds activeInstances map
+             Background health checks every 30s
+             Auto-deactivate on repeated failures
+```
+
+**Plugin types:**
+
+| Type | Interface | Methods |
+|------|-----------|---------|
+| Auth | `AuthPlugin` | authenticate, getLoginUrl, handleCallback, getUserInfo, getLogoutUrl, refreshToken |
+| Notification | `NotificationPlugin` | send(event) |
+| Storage | `StoragePlugin` | save, load, delete |
+| Scanner | `ScannerPlugin` | evaluate, rules |
+
+**Key files:**
+- `src/plugins/manager.ts` — lifecycle: install, configure, activate, deactivate, remove, health
+- `src/plugins/registry.ts` — async remote catalogue fetch with cache + fallback
+- `src/plugins/crypto.ts` — AES-256-GCM encryption for plugin config secrets
+- `src/plugins/types.ts` — all plugin interfaces
+- `plugin-registry.json` — local fallback catalogue
+- `scripts/build-plugin-tarball.sh` — build distributable plugin tarballs
+
+See [docs/plugins/README.md](../plugins/README.md) for the full plugin development guide.
+
+---
+
 ## Compliance service internals
 
 ```
@@ -191,7 +242,8 @@ All dashboard routes and services depend on the `StorageAdapter` interface — n
 | HTTP server (dashboard) | Fastify + Handlebars + HTMX |
 | Database (compliance) | SQLite (better-sqlite3) |
 | Database (dashboard) | SQLite via StorageAdapter (14 repositories); PostgreSQL/MongoDB plugins planned |
-| Authentication | OAuth2 (client credentials + PKCE), RS256 JWT |
+| Authentication | OAuth2 (client credentials + PKCE), RS256 JWT; pluggable SSO via auth plugins |
+| Plugin distribution | Remote catalogue (GitHub), tarball download, SHA-256 verified |
 | Accessibility scanner | pa11y via pa11y-webservice REST API |
 | HTML parsing (crawl) | cheerio |
 | Testing | Vitest |

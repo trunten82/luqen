@@ -4,9 +4,9 @@
 
 Luqen scans your entire website for WCAG violations and tells you which laws in which countries require you to fix each one. One scan covers 58 jurisdictions (EU, US, UK, and more), so your legal and dev teams see the same picture. Run it from the command line, a browser dashboard, or your IDE — it works for a solo developer checking one page or an enterprise team monitoring hundreds of sites across multiple languages.
 
-![Version](https://img.shields.io/badge/version-v1.5.0-blue)
+![Version](https://img.shields.io/badge/version-v1.6.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-2661%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-2789%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
 
@@ -42,7 +42,7 @@ Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://gi
 - **Plugin system** — 8 plugins in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), and storage (S3, Azure Blob); installed by name via tarball download from GitHub releases, managed via dashboard UI, CLI, or REST API
 - **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop
-- **IdP group → team sync** — Entra ID plugin reads group memberships from tokens and auto-syncs to dashboard teams on SSO login
+- **IdP group → team sync** — auth plugins (Entra ID, Okta, Google) read group memberships from tokens and auto-sync to dashboard teams on SSO login
 - **Server-side PDF export** — Puppeteer-based PDF generation at `GET /api/v1/export/scans/:id/report.pdf` with email attachment integration and graceful fallback
 
 ---
@@ -50,41 +50,44 @@ Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://gi
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                      luqen monorepo                    │
-│                                                              │
-│  ┌───────────────────────────┐                               │
-│  │   @luqen/dashboard  │  Web UI (browser)             │
-│  │                           │  ─ start scans, view reports  │
-│  │  luqen-dashboard serve    │  ─ HTMX, no JS build step     │
-│  │  luqen-dashboard migrate  │  ─ admin: jurisdictions,      │
-│  └──────────┬────────────────┘    users, webhooks, health    │
-│             │ HTTP (REST)                                     │
-│             ▼                                                │
-│  ┌───────────────────────────┐  ┌───────────────────────────┐│
-│  │  @luqen/compliance  │  │   @luqen/monitor    ││
-│  │                           │  │                           ││
-│  │  luqen-compliance serve   │  │  luqen-monitor scan       ││
-│  │  luqen-compliance mcp     │  │  luqen-monitor mcp        ││
-│  │  ─ 58 jurisdictions       │◄─┤  ─ watches legal sources  ││
-│  │  ─ 62 regulations         │  │  ─ creates proposals      ││
-│  │  ─ OAuth2 / JWT auth      │  │  ─ SHA-256 change detect  ││
-│  └──────────┬────────────────┘  └───────────────────────────┘│
-│             │ uses as library                                 │
-│             ▼                                                │
-│  ┌───────────────────────────┐                               │
-│  │   @luqen/core       │  CLI + MCP server             │
-│  │                           │  ─ site scan & crawl          │
-│  │  luqen scan ...     │  ─ source mapping             │
-│  │  luqen fix  ...     │  ─ fix proposals              │
-│  └──────────┬────────────────┘  ─ HTML/JSON reports          │
-│             │ HTTP                                            │
-│             ▼                                                │
-│  ┌───────────────────────────┐                               │
-│  │   pa11y webservice        │  External service             │
-│  │   (Docker / remote)       │  (not in this repo)           │
-│  └───────────────────────────┘                               │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                         luqen monorepo                           │
+│                                                                  │
+│  ┌───────────────────────────┐  ┌──────────────────────────────┐ │
+│  │   @luqen/dashboard        │  │   Plugin Catalogue           │ │
+│  │                           │  │   (GitHub: luqen-plugins)    │ │
+│  │  Web UI + REST API        │◄─┤                              │ │
+│  │  ─ start scans            │  │  catalogue.json              │ │
+│  │  ─ view reports           │  │  8 plugin tarballs (.tgz)    │ │
+│  │  ─ manage plugins         │  └──────────────────────────────┘ │
+│  │  ─ team & role admin      │                                   │
+│  │  ─ HTMX, no JS build step│  ┌──────────────────────────────┐ │
+│  │                           │  │   Plugins (installed)        │ │
+│  │  StorageAdapter (14 repos)│◄─┤  auth: entra, okta, google   │ │
+│  │  SQLite (built-in)        │  │  notify: slack, teams, email │ │
+│  └──────────┬────────────────┘  │  storage: s3, azure          │ │
+│             │ HTTP (REST)       └──────────────────────────────┘ │
+│             ▼                                                    │
+│  ┌───────────────────────────┐  ┌───────────────────────────┐   │
+│  │  @luqen/compliance        │  │   @luqen/monitor          │   │
+│  │                           │  │                           │   │
+│  │  ─ 58 jurisdictions       │◄─┤  ─ watches legal sources  │   │
+│  │  ─ 62 regulations         │  │  ─ creates proposals      │   │
+│  │  ─ OAuth2 / JWT auth      │  │  ─ SHA-256 change detect  │   │
+│  └──────────┬────────────────┘  └───────────────────────────┘   │
+│             │ uses as library                                    │
+│             ▼                                                    │
+│  ┌───────────────────────────┐                                   │
+│  │   @luqen/core             │  CLI + MCP server                 │
+│  │  ─ site scan & crawl      │  ─ source mapping                 │
+│  │  ─ fix proposals          │  ─ HTML/JSON reports              │
+│  └──────────┬────────────────┘                                   │
+│             │ HTTP                                                │
+│             ▼                                                    │
+│  ┌───────────────────────────┐                                   │
+│  │   pa11y webservice        │  External (Docker / remote)       │
+│  └───────────────────────────┘                                   │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -133,7 +136,23 @@ Reports are written to `./luqen-reports/`.
 | [`@luqen/compliance`](packages/compliance) | Compliance rule engine, REST API, MCP server | [docs/reference/compliance-config.md](docs/reference/compliance-config.md) |
 | [`@luqen/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, admin UI | [docs/reference/dashboard-config.md](docs/reference/dashboard-config.md) |
 | [`@luqen/monitor`](packages/monitor) | Regulatory monitor agent — watches legal sources, creates update proposals | [docs/reference/monitor-config.md](docs/reference/monitor-config.md) |
-| [`@luqen/plugin-auth-entra`](packages/plugin-auth-entra) | Azure Entra ID SSO plugin for dashboard enterprise auth | [docs/paths/enterprise-sso.md](docs/paths/enterprise-sso.md) |
+
+### Plugins (8 available)
+
+Plugins are distributed via the [plugin catalogue](https://github.com/trunten82/luqen-plugins) and installed from the dashboard UI, CLI (`luqen-dashboard plugin install <name>`), or REST API.
+
+| Plugin | Type | Description |
+|--------|------|-------------|
+| [auth-entra](packages/plugins/auth-entra) | Auth | Azure Entra ID SSO (MSAL) |
+| [auth-okta](packages/plugins/auth-okta) | Auth | Okta OIDC |
+| [auth-google](packages/plugins/auth-google) | Auth | Google Workspace OAuth 2.0 |
+| [notify-slack](packages/plugins/notify-slack) | Notification | Slack webhook alerts |
+| [notify-teams](packages/plugins/notify-teams) | Notification | Microsoft Teams webhook alerts |
+| [notify-email](packages/plugins/notify-email) | Notification | SMTP email reports |
+| [storage-s3](packages/plugins/storage-s3) | Storage | AWS S3 report storage |
+| [storage-azure](packages/plugins/storage-azure) | Storage | Azure Blob report storage |
+
+See [docs/plugins/README.md](docs/plugins/README.md) for configuration details and plugin development guide.
 
 ---
 
@@ -246,16 +265,16 @@ Luqen includes MCP (Model Context Protocol) servers for AI-assisted accessibilit
 npm test --workspaces
 ```
 
-The project maintains 85%+ statement coverage across 2,661 tests in 156 test files:
+The project maintains 85%+ statement coverage across 2,789 tests in 164 test files:
 
 ```
 packages/core:              186 tests (21 files)
 packages/compliance:        424 tests (35 files)
-packages/dashboard:        1,930 tests (85 files)
+packages/dashboard:        2,008 tests (91 files)
 packages/monitor:            83 tests (8 files)
-packages/plugin-auth-entra:  38 tests (2 files)
+packages/plugins:           147 tests (9 files)
 ---
-Total:                     2,661 tests (156 files)
+Total:                     2,789 tests (164 files)
 ```
 
 Run with coverage:
