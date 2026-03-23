@@ -6,6 +6,17 @@
 set -euo pipefail
 
 # ──────────────────────────────────────────────
+# Re-exec from temp file when piped (curl | bash)
+# so that stdin is the terminal for interactive prompts
+# ──────────────────────────────────────────────
+if [ ! -t 0 ] && [ -z "${LUQEN_INSTALL_REEXEC:-}" ]; then
+  TMPSCRIPT="$(mktemp /tmp/luqen-install.XXXXXX.sh)"
+  cat > "${TMPSCRIPT}"
+  export LUQEN_INSTALL_REEXEC=1
+  exec bash "${TMPSCRIPT}" "$@" < /dev/tty
+fi
+
+# ──────────────────────────────────────────────
 # Color helpers
 # ──────────────────────────────────────────────
 if [ -t 1 ] && command -v tput &>/dev/null; then
