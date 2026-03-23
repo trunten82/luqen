@@ -18,6 +18,7 @@ set -euo pipefail
 #   - dist/          (compiled TypeScript output)
 #   - manifest.json  (plugin manifest)
 #   - package.json   (npm package metadata)
+#   - node_modules/  (production dependencies, if any)
 
 usage() {
   echo "Usage: $0 <plugin-directory>"
@@ -46,8 +47,8 @@ if [[ ! -f "$PLUGIN_DIR/package.json" ]]; then
 fi
 
 # Extract plugin name and version from package.json
-PACKAGE_NAME=$(node -e "const p = require('./${PLUGIN_DIR}/package.json'); console.log(p.name.replace('@luqen/plugin-', ''))")
-PACKAGE_VERSION=$(node -e "const p = require('./${PLUGIN_DIR}/package.json'); console.log(p.version)")
+PACKAGE_NAME=$(node -e "import('fs').then(fs => { const p = JSON.parse(fs.readFileSync('${PLUGIN_DIR}/package.json','utf-8')); console.log(p.name.replace('@luqen/plugin-', '')); })")
+PACKAGE_VERSION=$(node -e "import('fs').then(fs => { const p = JSON.parse(fs.readFileSync('${PLUGIN_DIR}/package.json','utf-8')); console.log(p.version); })")
 
 echo "Building plugin: ${PACKAGE_NAME} v${PACKAGE_VERSION}"
 echo "Directory: ${PLUGIN_DIR}"
@@ -81,7 +82,16 @@ else
   echo "Warning: No manifest.json found in '$PLUGIN_DIR'. Skipping." >&2
 fi
 
-# Step 3: Create tarball
+# Step 3: Install production dependencies (if any)
+HAS_DEPS=$(node -e "import('fs').then(fs => { const p = JSON.parse(fs.readFileSync('${PLUGIN_DIR}/package.json','utf-8')); console.log(Object.keys(p.dependencies || {}).length > 0 ? 'yes' : 'no'); })")
+if [[ "$HAS_DEPS" == "yes" ]]; then
+  echo "--- Installing production dependencies ---"
+  (cd "$PACKAGE_DIR" && npm install --omit=dev --ignore-scripts 2>/dev/null)
+  echo "Dependencies installed."
+  echo ""
+fi
+
+# Step 4: Create tarball
 TARBALL_NAME="luqen-plugin-${PACKAGE_NAME}-${PACKAGE_VERSION}.tgz"
 TARBALL_PATH="${PLUGIN_DIR}/${TARBALL_NAME}"
 
@@ -90,9 +100,10 @@ tar -czf "$TARBALL_PATH" -C "$STAGING_DIR" package
 # Clean up staging directory
 rm -rf "$STAGING_DIR"
 
-# Step 4: Compute SHA-256 checksum
+# Step 5: Compute SHA-256 checksum
 CHECKSUM=$(sha256sum "$TARBALL_PATH" | awk '{ print $1 }')
 
 echo "--- Build Complete ---"
 echo "Tarball: ${TARBALL_PATH}"
+echo "Size: $(du -h "$TARBALL_PATH" | awk '{print $1}')"
 echo "Checksum: sha256:${CHECKSUM}"

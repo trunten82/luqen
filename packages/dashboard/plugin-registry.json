@@ -11,7 +11,7 @@
       "packageName": "@luqen/plugin-auth-entra",
       "icon": "entra",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/auth-entra-v1.1.0/luqen-plugin-auth-entra-1.1.0.tgz",
-      "checksum": "sha256:9796fd6395c860d3a7c5b4046f6c7c7875518f011e0533975e670d18c0e5a868"
+      "checksum": "sha256:f36ca227a416c59ce75f7072cdc34b569a39b59df5fc74cdcacd028a4fb73c87"
     },
     {
       "name": "auth-okta",
@@ -69,7 +69,7 @@
         { "path": "/admin/email-reports", "title": "Email Reports", "icon": "envelope", "permission": "admin.system" }
       ],
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/notify-email-v1.0.0/luqen-plugin-notify-email-1.0.0.tgz",
-      "checksum": "sha256:ed86e457dab6bbdf51e5e57ad13f00bc6662006fb81300d3304e4e4b715f7887"
+      "checksum": "sha256:1ef953d040856996f7d8456ce78b56531c21c45d66a71db7450d64b83a1d92a8"
     },
     {
       "name": "storage-s3",
