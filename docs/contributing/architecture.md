@@ -39,11 +39,7 @@ System design, data flow, and technology stack for the luqen monorepo.
 │  │   @luqen/core             │  CLI + MCP server                 │
 │  │  ─ site scan & crawl      │  ─ source mapping                 │
 │  │  ─ fix proposals          │  ─ HTML/JSON reports              │
-│  └──────────┬────────────────┘                                   │
-│             │ HTTP                                                │
-│             ▼                                                    │
-│  ┌───────────────────────────┐                                   │
-│  │   pa11y webservice        │  External (Docker / remote)       │
+│  │  ─ pa11y (built-in)       │                                   │
 │  └───────────────────────────┘                                   │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -65,7 +61,7 @@ System design, data flow, and technology stack for the luqen monorepo.
 
 | From | To | Protocol | Purpose |
 |------|----|----------|---------|
-| `core` | `pa11y webservice` | HTTP REST | Submit scan tasks, poll results |
+| `core` | `pa11y` (built-in) | Library call | Run accessibility tests directly (no external service needed) |
 | `core` | `compliance` | HTTP REST | Send issues for annotation after scan |
 | `core` | `compliance` | A2A (HTTP + SSE) | Agent-to-agent task streaming |
 | `dashboard` | `compliance` | HTTP REST | Auth delegation, admin CRUD |
@@ -90,8 +86,7 @@ System design, data flow, and technology stack for the luqen monorepo.
 
 3. Scan
    ├── For each URL (up to concurrency limit):
-   │   ├── POST /tasks → pa11y webservice (submit scan)
-   │   ├── GET /tasks/:id → poll with exponential backoff
+   │   ├── Run pa11y directly (built-in library call)
    │   └── Collect results (issues, errors)
    └── Aggregate results
 
@@ -126,7 +121,7 @@ System design, data flow, and technology stack for the luqen monorepo.
 │
 └── Core library
     ├── Discovery              — robots.txt, sitemap, BFS crawl
-    ├── Scanner                — pa11y webservice client, concurrency, retry
+    ├── Scanner                — pa11y library (built-in), concurrency, retry
     ├── Reporter               — JSON schema, HTML template, template dedup
     ├── Source Mapper          — framework detection, URL→file mapping
     ├── Fix Engine             — diff generation, interactive / MCP application
@@ -244,7 +239,7 @@ See [docs/plugins/README.md](../plugins/README.md) for the full plugin developme
 | Database (dashboard) | SQLite via StorageAdapter (14 repositories); PostgreSQL/MongoDB plugins planned |
 | Authentication | OAuth2 (client credentials + PKCE), RS256 JWT; pluggable SSO via auth plugins |
 | Plugin distribution | Remote catalogue (GitHub), tarball download, SHA-256 verified |
-| Accessibility scanner | pa11y via pa11y-webservice REST API |
+| Accessibility scanner | pa11y library (direct, built-in); optional pa11y-webservice fallback |
 | HTML parsing (crawl) | cheerio |
 | Testing | Vitest |
 | Build | tsc |

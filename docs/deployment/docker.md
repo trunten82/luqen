@@ -19,22 +19,22 @@ The monorepo `docker-compose.yml` starts the compliance service and dashboard to
 
 ```bash
 # Set the required session secret
-export DASHBOARD_SESSION_SECRET="$(openssl rand -base64 32)"
+export SESSION_SECRET="$(openssl rand -base64 32)"
 
 # Start all services
 docker compose up -d
 ```
 
 Services:
-- `luqen-compliance` on port **4000** (REST API + MCP)
-- `luqen-dashboard` on port **5000** (Web UI)
+- `compliance` on port **4000** (REST API + MCP)
+- `dashboard` on port **5000** (Web UI)
 
-The dashboard container runs `luqen-dashboard migrate` automatically on first start.
+The compliance container automatically generates JWT keys and seeds baseline data on first start. The scanner uses the pa11y library directly inside the container — no external pa11y-webservice is needed.
 
-For pa11y webservice, run it separately and point `LUQEN_WEBSERVICE_URL` at it:
+If you have an existing pa11y-webservice you want to use instead, set `PA11Y_URL` in your environment or `.env` file for backward compatibility:
 
 ```bash
-docker run -d --name pa11y-webservice -p 3000:3000 luqen/webservice:latest
+PA11Y_URL=http://your-pa11y:3000 docker compose up -d
 ```
 
 ---
@@ -44,25 +44,17 @@ docker run -d --name pa11y-webservice -p 3000:3000 luqen/webservice:latest
 Create a `.env` file in the monorepo root:
 
 ```bash
-# Pa11y webservice
-LUQEN_WEBSERVICE_URL=http://host.docker.internal:3000
+# Required
+SESSION_SECRET=<min 32 random bytes>
 
-# Compliance service
-COMPLIANCE_DB_PATH=/data/compliance.db
-COMPLIANCE_PORT=4000
+# Compliance service (optional overrides)
+# COMPLIANCE_PORT=4000
 
-# Dashboard
-DASHBOARD_PORT=5000
-DASHBOARD_COMPLIANCE_URL=http://compliance:4000
-DASHBOARD_WEBSERVICE_URL=http://host.docker.internal:3000
-DASHBOARD_REPORTS_DIR=/app/reports
-DASHBOARD_DB_PATH=/app/data/dashboard.db
-DASHBOARD_SESSION_SECRET=<min 32 random bytes>
-DASHBOARD_COMPLIANCE_CLIENT_ID=dashboard
-DASHBOARD_COMPLIANCE_CLIENT_SECRET=<client secret>
+# Dashboard (optional overrides)
+# DASHBOARD_PORT=5000
 
-# Optional: multi-worker scaling (comma-separated additional webservice URLs)
-# DASHBOARD_WEBSERVICE_URLS=http://pa11y-2:3000,http://pa11y-3:3000
+# Optional: external pa11y-webservice (only if you have an existing one)
+# PA11Y_URL=http://host.docker.internal:3000
 
 # Optional: test runner (htmlcs or axe)
 # DASHBOARD_SCANNER_RUNNER=htmlcs
@@ -71,7 +63,7 @@ DASHBOARD_COMPLIANCE_CLIENT_SECRET=<client secret>
 # DASHBOARD_MAX_PAGES=50
 ```
 
-Note: use the Docker Compose service name (`compliance`) instead of `localhost` for inter-service communication.
+The `docker-compose.yml` handles inter-service wiring automatically (the dashboard connects to the compliance service at `http://compliance:4000`). No `LUQEN_WEBSERVICE_URL` or `DASHBOARD_WEBSERVICE_URL` is needed unless you are using an external pa11y-webservice.
 
 ---
 
