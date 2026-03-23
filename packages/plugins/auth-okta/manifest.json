@@ -1,0 +1,17 @@
+{
+  "name": "auth-okta",
+  "displayName": "Okta",
+  "type": "auth",
+  "version": "1.0.0",
+  "description": "Single sign-on via Okta OIDC with IdP group-to-team sync",
+  "configSchema": [
+    { "key": "orgUrl", "label": "Okta Org URL", "type": "string", "required": true, "description": "e.g. https://dev-123456.okta.com" },
+    { "key": "clientId", "label": "Client ID", "type": "string", "required": true },
+    { "key": "clientSecret", "label": "Client Secret", "type": "secret", "required": true },
+    { "key": "redirectUri", "label": "Redirect URI", "type": "string", "default": "/auth/callback/auth-okta" },
+    { "key": "groupClaimName", "label": "Group Claim Name", "type": "string", "default": "groups", "description": "The JWT claim containing Okta group names" },
+    { "key": "groupMapping", "label": "Group Mapping (JSON)", "type": "string", "default": "{}", "description": "Maps Okta group names to dashboard team names, e.g. {\"Developers\": \"Frontend Team\"}" },
+    { "key": "autoCreateTeams", "label": "Auto-Create Teams", "type": "boolean", "default": true, "description": "Automatically create teams that do not yet exist in the dashboard" },
+    { "key": "syncMode", "label": "Sync Mode", "type": "select", "default": "additive", "options": ["additive", "mirror"], "description": "additive: only add memberships; mirror: also remove memberships not present in IdP groups" }
+  ]
+}

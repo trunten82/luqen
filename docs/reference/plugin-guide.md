@@ -17,11 +17,11 @@ The luqen dashboard supports a plugin system that extends its capabilities in fo
 | **Storage** | External report storage backends | AWS S3, Azure Blob Storage |
 | **Scanner** | Custom WCAG rule evaluation | (custom implementations) |
 
-Plugins are managed from **Admin > Plugins** in the dashboard UI, or via the CLI (`luqen-dashboard plugin install|configure|activate|deactivate|remove`).
+Plugins are managed from **Admin > Plugins** in the dashboard UI, or via the CLI (`luqen-dashboard plugin install|configure|activate|deactivate|remove`). Plugins are installed by name (e.g., `luqen-dashboard plugin install auth-entra`), not by npm package name.
 
 ### How plugins work
 
-Each plugin is an npm package with a `manifest.json` that declares its type, configuration fields, and capabilities. The dashboard discovers available plugins from a built-in registry (`plugin-registry.json`), installs them into the configured `pluginsDir`, and manages their lifecycle through a database-backed state machine.
+Each plugin is a package with a `manifest.json` that declares its type, configuration fields, and capabilities. The dashboard discovers available plugins from a remote plugin catalogue hosted at [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins). The catalogue is fetched as `catalogue.json` from GitHub releases, cached locally for 1 hour (configurable via `catalogueCacheTtl`), with a local fallback when GitHub is unreachable. Plugins are installed as tarballs downloaded from GitHub releases into the configured `pluginsDir`, and managed through a database-backed state machine.
 
 Configuration values are stored in the dashboard database. Fields marked as `secret` in the manifest are encrypted with AES-256-GCM using a key derived from the dashboard's `sessionSecret` combined with a per-installation encryption salt (generated automatically on first startup). Secret values are masked in the UI and API responses.
 
@@ -61,8 +61,8 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
                                              remove
 ```
 
-1. **Discover** — browse available plugins in the Plugin Registry tab at **Admin > Plugins**.
-2. **Install** — click **Install** to download the plugin package. Status becomes `inactive`.
+1. **Discover** — browse available plugins in the Plugin Catalogue tab at **Admin > Plugins**. The catalogue is fetched from [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins).
+2. **Install** — click **Install** to download the plugin tarball from GitHub releases. Status becomes `inactive`.
 3. **Configure** — open the plugin settings and fill in the required configuration fields. Click **Save**.
 4. **Activate** — click **Activate**. The dashboard runs a health check to verify connectivity. On success, status becomes `active`.
 5. **Health check** — active plugins are checked every 30 seconds. After 3 consecutive failures, the plugin is either auto-deactivated (if `autoDeactivateOnFailure` is set) or marked `unhealthy`.
@@ -82,6 +82,8 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 ---
 
 ## Available plugins
+
+Eight plugins are listed in the catalogue. Six are available now; two are coming soon.
 
 ### Azure Entra ID (`auth-entra`)
 
@@ -291,6 +293,15 @@ This plugin registers an admin page:
 
 ---
 
+### Auth plugins (coming soon)
+
+| Plugin | Name | Description | Status |
+|--------|------|-------------|--------|
+| Okta SSO | `auth-okta` | Single sign-on via Okta | Coming soon |
+| Google SSO | `auth-google` | Single sign-on via Google Workspace | Coming soon |
+
+---
+
 ## Storage plugins (coming soon)
 
 The dashboard's internal data layer uses a **StorageAdapter** architecture — a pluggable interface backed by 14 domain repositories (scans, users, roles, teams, organizations, plugins, etc.). Currently, only the built-in SQLite adapter is available.
@@ -310,13 +321,13 @@ For multi-replica Kubernetes deployments or environments requiring a shared data
 
 ## Developing custom plugins
 
-Plugins are standard npm packages with a `manifest.json` and a default export implementing the `PluginInstance` interface. The development guide covers:
+Plugins are packages with a `manifest.json` and a default export implementing the `PluginInstance` interface. They are distributed as tarballs via the [luqen-plugins](https://github.com/trunten82/luqen-plugins) catalogue on GitHub. The development guide covers:
 
 - Manifest schema and config field types
 - Plugin instance interfaces (`AuthPlugin`, `NotificationPlugin`, `StoragePlugin`, `ScannerPlugin`)
 - Lifecycle hooks (`activate`, `deactivate`, `healthCheck`)
 - The `adminPages` system for registering custom admin pages
-- Registry entry format for adding plugins to the built-in registry
+- Publishing to the plugin catalogue
 
 See [Plugin Development Guide](plugin-development.md) for the full reference.
 

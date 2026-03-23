@@ -156,9 +156,9 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
                                              remove
 ```
 
-1. **Discover** -- The plugin registry (`plugin-registry.json`) lists available plugins with their package names and metadata.
+1. **Discover** -- The remote plugin catalogue (`catalogue.json`) is fetched from [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins) GitHub releases. The catalogue is cached locally for 1 hour (configurable via `catalogueCacheTtl`) with a local fallback when GitHub is unreachable.
 
-2. **Install** -- `npm install --save-exact --prefix <pluginsDir> <packageName>` downloads the package. The manifest is read and a database record is created with status `inactive`.
+2. **Install** -- The plugin tarball is downloaded from GitHub releases and extracted into `<pluginsDir>/<name>/`. The manifest is read and a database record is created with status `inactive`. No npm is involved.
 
 3. **Configure** -- Key-value pairs are saved to the plugin's config. Secret fields are encrypted with AES-256-GCM using a key derived from the dashboard's `sessionSecret` combined with a per-installation encryption salt.
 
@@ -170,7 +170,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 6. **Deactivate** -- The `deactivate()` method is called and the instance is removed from memory. Status returns to `inactive`.
 
-7. **Remove** -- Deactivates the plugin if active, deletes the database record, and removes the package files from `pluginsDir/node_modules/`.
+7. **Remove** -- Deactivates the plugin if active, deletes the database record, and removes the package files from `pluginsDir/<name>/`.
 
 ---
 
@@ -274,9 +274,13 @@ These are not yet available. The `resolveStorageAdapter()` factory in `packages/
 
 ---
 
-## Registry Entry Format
+## Publishing to the Plugin Catalogue
 
-To add a plugin to the built-in registry, add an entry to `packages/dashboard/plugin-registry.json`:
+Plugins are distributed via the remote plugin catalogue at [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins). To publish a plugin:
+
+1. Package your plugin as a tarball (`.tar.gz`) containing the `manifest.json`, compiled source, and any dependencies.
+2. Create a GitHub release on the `luqen-plugins` repository and attach the tarball as a release asset.
+3. Add an entry to `catalogue.json` in the repository:
 
 ```json
 {
@@ -285,10 +289,14 @@ To add a plugin to the built-in registry, add an entry to `packages/dashboard/pl
   "type": "notification",
   "version": "1.0.0",
   "description": "Does something useful",
-  "packageName": "@luqen/plugin-my-plugin",
-  "icon": "custom"
+  "icon": "custom",
+  "status": "available"
 }
 ```
+
+The `status` field can be `"available"` or `"coming-soon"`. Plugins marked as `"coming-soon"` appear in the catalogue UI but cannot be installed.
+
+The dashboard fetches `catalogue.json` from GitHub releases, caches it locally for 1 hour (configurable via `catalogueCacheTtl`), and falls back to a local copy when GitHub is unreachable.
 
 ---
 

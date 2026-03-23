@@ -8,6 +8,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [1.5.0] - 2026-03-23
 
+### Added
+- **Remote plugin catalogue** — plugins are now discovered from a remote catalogue hosted at [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins) instead of a built-in registry file. The dashboard fetches `catalogue.json` from GitHub releases, caches it locally for 1 hour (configurable via `catalogueCacheTtl`), and falls back to a local copy when GitHub is unreachable.
+- **Tarball-based plugin installation** — plugins are installed by downloading tarballs from GitHub releases instead of using npm. Install by name: `luqen-dashboard plugin install auth-entra`.
+- **Plugin catalogue configuration** — new `catalogueUrl` and `catalogueCacheTtl` config options (and corresponding `DASHBOARD_CATALOGUE_URL` / `DASHBOARD_CATALOGUE_CACHE_TTL` environment variables) for customizing the plugin catalogue source and cache behaviour.
+- **8 plugins in catalogue** — 6 available (auth-entra, notify-slack, notify-teams, notify-email, storage-s3, storage-azure) and 2 coming soon (auth-okta, auth-google).
+
 ### Changed
 - **StorageAdapter architecture** — replaced the monolithic `ScanDb`, `UserDb`, and `OrgDb` classes with a modular `StorageAdapter` interface backed by 14 pluggable repository interfaces. The built-in `SqliteStorageAdapter` is the default and requires no configuration changes. All dashboard routes and services now consume repository interfaces instead of direct database classes. This refactoring prepares the dashboard for PostgreSQL and MongoDB storage plugins in a future release.
 - `resolveStorageAdapter()` factory selects the appropriate storage backend based on configuration
@@ -416,7 +422,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 | Version | Date | Highlights |
 |---------|------|-----------|
-| [1.5.0] | 2026-03-23 | StorageAdapter (14 repositories), security hardening, 2661 tests (85%+ coverage), dead code removal |
+| [1.5.0] | 2026-03-23 | Remote plugin catalogue, tarball install, StorageAdapter (14 repositories), security hardening, 2661 tests (85%+ coverage), dead code removal |
 | [1.4.0] | 2026-03-22 | StorageAdapter architecture (14 pluggable repositories, SQLite default, Postgres/MongoDB coming) |
 | [1.3.0] | 2026-03-22 | GraphQL API (mercurius), multi-language UI (i18n — 6 languages) |
 | [1.1.0] | 2026-03-21 | Granular permissions, user lifecycle, Power BI connector, IdP group sync, PDF export, setup API |

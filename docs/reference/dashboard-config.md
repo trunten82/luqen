@@ -21,7 +21,9 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
   "maxConcurrentScans": 2,
   "runner": "htmlcs",
   "complianceClientId": "",
-  "complianceClientSecret": ""
+  "complianceClientSecret": "",
+  "catalogueUrl": "https://github.com/trunten82/luqen-plugins",
+  "catalogueCacheTtl": 3600
 }
 ```
 
@@ -43,6 +45,8 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `webserviceUrls` | `string[]` | — | Additional pa11y webservice URLs for horizontal scaling. Scans are distributed round-robin across all URLs (including `webserviceUrl`). |
 | `complianceClientId` | `string` | — | OAuth2 client ID for auto-refreshing compliance service tokens via `client_credentials` grant. When set together with `complianceClientSecret`, manual token management is not required. |
 | `complianceClientSecret` | `string` | — | OAuth2 client secret paired with `complianceClientId`. Store securely; use `DASHBOARD_COMPLIANCE_CLIENT_SECRET` env var in production. |
+| `catalogueUrl` | `string` | `https://github.com/trunten82/luqen-plugins` | Base URL of the remote plugin catalogue GitHub repository. The dashboard fetches `catalogue.json` from GitHub releases at this URL. |
+| `catalogueCacheTtl` | `number` | `3600` | Time-to-live in seconds for the cached plugin catalogue. The dashboard re-fetches `catalogue.json` from GitHub after this interval. Set to `0` to disable caching. |
 
 ---
 
@@ -62,6 +66,8 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `DASHBOARD_PLUGINS_CONFIG` | `pluginsConfigFile` | Path to plugins configuration file |
 | `DASHBOARD_SCANNER_RUNNER` | `runner` | Pa11y test runner: `htmlcs` or `axe` (default: `htmlcs`) |
 | `DASHBOARD_WEBSERVICE_URLS` | `webserviceUrls` | Comma-separated list of additional pa11y webservice URLs for horizontal scaling (round-robin distribution). |
+| `DASHBOARD_CATALOGUE_URL` | `catalogueUrl` | Base URL of the remote plugin catalogue GitHub repository (default: `https://github.com/trunten82/luqen-plugins`). |
+| `DASHBOARD_CATALOGUE_CACHE_TTL` | `catalogueCacheTtl` | Plugin catalogue cache TTL in seconds (default: `3600`). |
 | `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |
 | `COMPLIANCE_API_KEY` | — | API key for service-to-service calls to the compliance service. Set this on the compliance service side; the dashboard sends it in the `X-API-Key` header when making compliance API requests. |
 | `DASHBOARD_API_KEY` | — | API key for the dashboard data API endpoints (`/api/v1/scans`, `/api/v1/trends`, etc.) and Excel/CSV export. Clients authenticate by sending `X-API-Key: <key>` in the request header. Generate keys from the admin UI at `/admin/api-keys`. |
