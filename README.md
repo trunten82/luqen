@@ -43,7 +43,7 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 - **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop
 - **IdP group → team sync** — auth plugins (Entra ID, Okta, Google) read group memberships from tokens and auto-sync to dashboard teams on SSO login
-- **Server-side PDF export** — Puppeteer-based PDF generation at `GET /api/v1/export/scans/:id/report.pdf` with email attachment integration and graceful fallback
+- **Server-side PDF export** — PDFKit-based PDF generation at `GET /api/v1/export/scans/:id/report.pdf` with email attachment integration (no Chromium dependency)
 
 ---
 
@@ -204,16 +204,16 @@ Plugins are distributed via the [plugin catalogue](https://github.com/trunten82/
 
 | Plugin | Type | Description |
 |--------|------|-------------|
-| [auth-entra](packages/plugins/auth-entra) | Auth | Azure Entra ID SSO (MSAL) |
-| [auth-okta](packages/plugins/auth-okta) | Auth | Okta OIDC |
-| [auth-google](packages/plugins/auth-google) | Auth | Google Workspace OAuth 2.0 |
-| [notify-slack](packages/plugins/notify-slack) | Notification | Slack webhook alerts |
-| [notify-teams](packages/plugins/notify-teams) | Notification | Microsoft Teams webhook alerts |
-| [notify-email](packages/plugins/notify-email) | Notification | SMTP email reports |
-| [storage-s3](packages/plugins/storage-s3) | Storage | AWS S3 report storage |
-| [storage-azure](packages/plugins/storage-azure) | Storage | Azure Blob report storage |
+| auth-entra | Auth | Azure Entra ID SSO (MSAL) |
+| auth-okta | Auth | Okta OIDC |
+| auth-google | Auth | Google Workspace OAuth 2.0 |
+| notify-slack | Notification | Slack webhook alerts |
+| notify-teams | Notification | Microsoft Teams webhook alerts |
+| notify-email | Notification | SMTP email reports |
+| storage-s3 | Storage | AWS S3 report storage |
+| storage-azure | Storage | Azure Blob report storage |
 
-See [docs/plugins/README.md](docs/plugins/README.md) for configuration details and plugin development guide.
+Plugins live in the [luqen-plugins](https://github.com/trunten82/luqen-plugins) repository. See [docs/plugins/README.md](docs/plugins/README.md) for configuration details and plugin development guide.
 
 ---
 
@@ -327,16 +327,15 @@ Luqen includes MCP (Model Context Protocol) servers for AI-assisted accessibilit
 npm test --workspaces
 ```
 
-The project maintains 85%+ statement coverage across 2,789 tests in 164 test files:
+The project maintains 85%+ statement coverage across 2,700+ tests in 155+ test files:
 
 ```
 packages/core:              186 tests (21 files)
 packages/compliance:        424 tests (35 files)
 packages/dashboard:        2,008 tests (91 files)
 packages/monitor:            83 tests (8 files)
-packages/plugins:           147 tests (9 files)
 ---
-Total:                     2,789 tests (164 files)
+Total:                     2,701 tests (155 files)
 ```
 
 Run with coverage:

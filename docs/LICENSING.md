@@ -48,8 +48,7 @@ All of them are MIT-licensed and fully compatible with MIT distribution.
 | `pg` | MIT | Optional PostgreSQL adapter |
 | `pa11y` | LGPL-3.0 | Accessibility scanner (used as a library — LGPL permits this without copyleft obligations) |
 | `axe-core` | MPL-2.0 | Accessibility test runner (used as a library — MPL file-level copyleft does not propagate) |
-| `puppeteer` | Apache-2.0 | Browser automation for headless scanning |
-| Chromium | BSD-3-Clause | Headless browser launched by puppeteer (system dependency, not an npm package) |
+| `pdfkit` | MIT | PDF document generation |
 
 All of the above are compatible with MIT when used as libraries (linked/imported, not
 modified and redistributed). All other transitive runtime dependencies resolve to MIT,

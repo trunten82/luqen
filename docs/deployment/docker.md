@@ -29,7 +29,7 @@ Services:
 - `compliance` on port **4000** (REST API + MCP)
 - `dashboard` on port **5000** (Web UI)
 
-The compliance container automatically generates JWT keys and seeds baseline data on first start. The scanner uses the pa11y library directly inside the container — no external pa11y-webservice is needed. Chromium is included in the Docker image so pa11y can launch a headless browser for scanning without any extra setup.
+The compliance container automatically generates JWT keys and seeds baseline data on first start. The scanner uses the pa11y library directly inside the container — no external pa11y-webservice is needed.
 
 If you have an existing pa11y-webservice you want to use instead, set `PA11Y_URL` in your environment or `.env` file for backward compatibility:
 

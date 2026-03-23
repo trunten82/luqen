@@ -6,11 +6,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.9.0] - 2026-03-23
+
+### Changed
+- **PDF export rewritten with PDFKit** — server-side PDF generation no longer depends on Puppeteer or Chromium. Reports are generated using PDFKit, eliminating the ~400 MB Chromium dependency. The `GET /api/v1/export/scans/:id/report.pdf` endpoint is now always available.
+- **normalizeReportData extracted to shared service** — report data normalization logic is now a reusable service function consumed by both the HTML report viewer and PDF exporter, eliminating code duplication.
+- **Mercurius upgraded to v16.8.0** — fixes a CSRF vulnerability in the GraphQL endpoint. Previously at v15.
+- **Plugins removed from main repo** — all 8 plugins now live exclusively in the [luqen-plugins](https://github.com/trunten82/luqen-plugins) repository. The `packages/plugins` directory has been removed.
+
+### Added
+- **Favicon** — the dashboard now serves a favicon, eliminating 404 errors on browser requests for `/favicon.ico`.
+- **Sidebar hover visibility fix** — sidebar menu items are now visible on hover in all color themes.
+
+---
+
 ## [1.8.0] - 2026-03-23
 
 ### Added
 - **Direct pa11y scanner** — the core scanner now uses the pa11y library directly instead of requiring an external pa11y-webservice. No separate webservice process needed for scanning. The `webserviceUrl` config field is now optional and retained for backward compatibility with existing pa11y-webservice deployments.
-- **Docker deployment** — root `Dockerfile` (multi-stage, Node 20 + Chromium) and `docker-compose.yml` for one-command deployment of compliance + dashboard services. Includes health checks, named volumes, and automatic first-run setup (key generation, data seeding).
+- **Docker deployment** — root `Dockerfile` (multi-stage, Node 20) and `docker-compose.yml` for one-command deployment of compliance + dashboard services. Includes health checks, named volumes, and automatic first-run setup (key generation, data seeding).
 - **Installer rewrite** — the `install.sh` wizard now offers 3 modes: Developer tools (CLI only), Full platform (bare metal with systemd), and Docker (docker compose). Input validation and `curl | bash` compatibility via re-exec.
 
 ### Changed
@@ -120,7 +134,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **API key login in all modes** — API key authentication is now available as a fallback on the login page in team and enterprise modes (previously solo-mode only).
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for use in Power BI Desktop. Supports scans, trends, compliance summary, and issues data sources.
 - **IdP group → team sync** — auth-entra plugin now reads group memberships from Entra ID tokens and auto-syncs to dashboard teams on SSO login. Configurable via `groupMapping`, `syncMode`, and `autoCreateTeams` settings.
-- **Server-side PDF generation** — Puppeteer-based PDF export at `GET /api/v1/export/scans/:id/report.pdf`. Integrates with email report attachments. Graceful fallback when Puppeteer is not installed.
+- **Server-side PDF generation** — PDF export at `GET /api/v1/export/scans/:id/report.pdf`. Integrates with email report attachments. (Originally Puppeteer-based; rewritten with PDFKit in v1.9.0.)
 - **Sidebar reorganization** — admin navigation split into sections: Compliance, Plugins, Integrations, Users & Access, System.
 
 ### Security
@@ -452,6 +466,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [1.9.0] | 2026-03-23 | PDF export rewritten with PDFKit (no Chromium), normalizeReportData shared service, Mercurius v16.8.0 (CSRF fix), plugins removed from main repo, favicon, sidebar hover fix |
 | [1.8.0] | 2026-03-23 | Direct pa11y scanner (no webservice needed), Docker deployment, installer rewrite (3 modes) |
 | [1.6.0] | 2026-03-23 | auth-okta + auth-google plugins, all 8 plugins available, plugin build script |
 | [1.5.0] | 2026-03-23 | Remote plugin catalogue, tarball install, StorageAdapter (14 repositories), security hardening, 2661 tests (85%+ coverage), dead code removal |
