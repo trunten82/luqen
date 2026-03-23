@@ -577,10 +577,21 @@ function Install-Local {
     # Prerequisites
     Write-Info "Checking prerequisites..."
 
+    # Auto-install missing prerequisites via winget (if available)
+    $hasWinget = Get-Command winget -ErrorAction SilentlyContinue
+
     $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
     if (-not $nodeCmd) {
-        Write-Err "Node.js is not installed. Please install Node.js 20+ from https://nodejs.org"
-        exit 1
+        if ($hasWinget) {
+            Write-Info "Node.js not found. Installing via winget..."
+            winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements 2>$null
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+            $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+        }
+        if (-not $nodeCmd) {
+            Write-Err "Node.js is not installed. Please install Node.js 20+ from https://nodejs.org"
+            exit 1
+        }
     }
     $nodeVersion = (node -e "process.stdout.write(process.versions.node)") 2>$null
     $nodeMajor = [int]($nodeVersion -split '\.')[0]
@@ -591,12 +602,23 @@ function Install-Local {
     Write-Ok "Node.js v$nodeVersion detected."
 
     $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
-    if (-not $npmCmd) { Write-Err "npm is not installed."; exit 1 }
+    if (-not $npmCmd) { Write-Err "npm is not installed (should come with Node.js)."; exit 1 }
     $npmVersion = (npm --version) 2>$null
     Write-Ok "npm $npmVersion detected."
 
     $gitCmd = Get-Command git -ErrorAction SilentlyContinue
-    if (-not $gitCmd) { Write-Err "git is not installed."; exit 1 }
+    if (-not $gitCmd) {
+        if ($hasWinget) {
+            Write-Info "Git not found. Installing via winget..."
+            winget install Git.Git --accept-source-agreements --accept-package-agreements 2>$null
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+            $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+        }
+        if (-not $gitCmd) {
+            Write-Err "git is not installed. Install from https://git-scm.com"
+            exit 1
+        }
+    }
     $gitVersion = (git --version) -replace "git version ", ""
     Write-Ok "git $gitVersion detected."
 
