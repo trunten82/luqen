@@ -617,8 +617,9 @@ function Write-Config {
         sessionSecret          = $script:SessionSecret
         complianceClientId     = $script:ClientId
         complianceClientSecret = $script:ClientSecret
-        reportsDir             = "./reports"
-        pluginsDir             = "./plugins"
+        dbPath                 = (Join-Path $script:InstallDirVal "dashboard.db")
+        reportsDir             = (Join-Path $script:InstallDirVal "reports")
+        pluginsDir             = (Join-Path $script:InstallDirVal "plugins")
     }
 
     if ($script:DbAdapter -eq "postgres") {
@@ -772,9 +773,9 @@ function New-WindowsServices {
         Register-ScheduledTask -TaskName "LuqenCompliance" -Action $compAction -Trigger $compTrigger `
             -Settings $compSettings -Description "Luqen Compliance Service" -User "SYSTEM" -Force 2>$null | Out-Null
 
-        $dashArgs = "dist/cli.js serve --config $($script:ConfigFile)"
+        $dashArgs = "packages\dashboard\dist\cli.js serve --config $($script:ConfigFile)"
         $dashAction = New-ScheduledTaskAction -Execute $nodePath -Argument $dashArgs `
-            -WorkingDirectory (Join-Path $script:InstallDirVal "packages\dashboard")
+            -WorkingDirectory $script:InstallDirVal
         $dashTrigger = New-ScheduledTaskTrigger -AtStartup
         $dashSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
         Register-ScheduledTask -TaskName "LuqenDashboard" -Action $dashAction -Trigger $dashTrigger `
@@ -871,8 +872,8 @@ function Start-LuqenServices {
     $env:DASHBOARD_COMPLIANCE_CLIENT_SECRET = $script:ClientSecret
 
     $dashProcess = Start-Process -FilePath (Get-Command node).Source `
-        -ArgumentList "dist/cli.js", "serve", "--port", $script:DashboardPort `
-        -WorkingDirectory (Join-Path $script:InstallDirVal "packages\dashboard") `
+        -ArgumentList "packages\dashboard\dist\cli.js", "serve", "--config", $script:ConfigFile, "--port", $script:DashboardPort `
+        -WorkingDirectory $script:InstallDirVal `
         -RedirectStandardOutput $dashLogFile `
         -RedirectStandardError (Join-Path $env:TEMP "luqen-dash-err.log") `
         -PassThru -WindowStyle Hidden
