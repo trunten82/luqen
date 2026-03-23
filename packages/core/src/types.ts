@@ -1,5 +1,6 @@
 export interface LuqenConfig {
-  readonly webserviceUrl: string;
+  /** When set, uses the pa11y webservice HTTP API (legacy). When omitted, uses direct pa11y library. */
+  readonly webserviceUrl?: string;
   readonly webserviceHeaders: Readonly<Record<string, string>>;
   readonly standard: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';
   readonly concurrency: number;

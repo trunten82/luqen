@@ -1,6 +1,7 @@
 import type { DiscoveredUrl, ScanError, PageResult, AccessibilityIssue, ProgressListener } from '../types.js';
 import type { WebserviceClient, Pa11yIssue, Pa11yResult } from './webservice-client.js';
 import type { WebservicePool } from './webservice-client.js';
+import type { DirectScanner } from './direct-scanner.js';
 
 export interface ScanOptions {
   readonly standard: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';
@@ -196,21 +197,107 @@ async function scanUrl(
   }
 }
 
+/**
+ * Scan a single URL using the DirectScanner (pa11y npm library).
+ * No create/run/poll/delete cycle — pa11y runs the scan inline.
+ */
+async function scanUrlDirect(
+  discoveredUrl: DiscoveredUrl,
+  scanner: DirectScanner,
+  options: ScanOptions,
+  index: number,
+  total: number,
+): Promise<{ page?: PageResult; error?: ScanError }> {
+  const { url, discoveryMethod } = discoveredUrl;
+
+  options.onProgress?.({
+    type: 'scan:start',
+    url,
+    current: index + 1,
+    total,
+    timestamp: new Date().toISOString(),
+  });
+
+  try {
+    const result = await scanner.scan(url, {
+      standard: options.standard,
+      timeout: options.timeout,
+      wait: options.wait,
+      hideElements: options.hideElements || undefined,
+      headers: options.headers,
+      runner: options.runner,
+    });
+
+    const issues: AccessibilityIssue[] = result.issues.map((issue) => ({
+      code: issue.code,
+      type: issue.type as 'error' | 'warning' | 'notice',
+      message: issue.message,
+      selector: issue.selector,
+      context: issue.context,
+      fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
+    }));
+
+    const page: PageResult = {
+      url: result.url,
+      discoveryMethod,
+      issueCount: issues.length,
+      issues,
+    };
+
+    options.onProgress?.({
+      type: 'scan:complete',
+      url,
+      current: index + 1,
+      total,
+      timestamp: new Date().toISOString(),
+    });
+
+    return { page };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const scanError: ScanError = {
+      url,
+      code: 'WEBSERVICE_ERROR',
+      message,
+      retried: false,
+    };
+
+    options.onProgress?.({
+      type: 'scan:error',
+      url,
+      current: index + 1,
+      total,
+      timestamp: new Date().toISOString(),
+      error: message,
+    });
+
+    return { error: scanError };
+  }
+}
+
 /** Checks whether a value is a WebservicePool (has a `next` method). */
 function isPool(clientOrPool: WebserviceClient | WebservicePool): clientOrPool is WebservicePool {
   return typeof (clientOrPool as WebservicePool).next === 'function'
     && typeof (clientOrPool as WebservicePool).size === 'number';
 }
 
+/** Checks whether a value is a DirectScanner (has a `scan` method but no `next`). */
+function isDirectScanner(value: unknown): value is DirectScanner {
+  return typeof (value as DirectScanner).scan === 'function'
+    && typeof (value as WebservicePool).next !== 'function';
+}
+
 export async function scanUrls(
   urls: DiscoveredUrl[],
-  clientOrPool: WebserviceClient | WebservicePool,
+  clientOrPool: WebserviceClient | WebservicePool | DirectScanner,
   options: ScanOptions,
 ): Promise<ScanResults> {
   const concurrency = options.concurrency ?? 5;
   const total = urls.length;
   const pages: PageResult[] = [];
   const errors: ScanError[] = [];
+
+  const useDirectScanner = isDirectScanner(clientOrPool);
 
   // Worker pool pattern: shared queue with N concurrent workers
   const queue = urls.map((url, index) => ({ url, index }));
@@ -224,9 +311,17 @@ export async function scanUrls(
       queueIndex++;
 
       const { url, index } = queue[current];
-      // Pick the next client from the pool (round-robin) or use the single client
-      const client = isPool(clientOrPool) ? clientOrPool.next() : clientOrPool;
-      const result = await scanUrl(url, client, options, index, total);
+
+      let result: { page?: PageResult; error?: ScanError };
+
+      if (useDirectScanner) {
+        result = await scanUrlDirect(url, clientOrPool as DirectScanner, options, index, total);
+      } else {
+        // Pick the next client from the pool (round-robin) or use the single client
+        const wsClientOrPool = clientOrPool as WebserviceClient | WebservicePool;
+        const client = isPool(wsClientOrPool) ? wsClientOrPool.next() : wsClientOrPool;
+        result = await scanUrl(url, client, options, index, total);
+      }
 
       if (result.page !== undefined) {
         pages.push(result.page);

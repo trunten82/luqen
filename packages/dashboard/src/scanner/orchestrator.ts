@@ -29,7 +29,8 @@ export interface ScanConfig {
   readonly concurrency: number;
   readonly jurisdictions: string[];
   readonly scanMode?: 'single' | 'site';
-  readonly webserviceUrl: string;
+  /** When set, uses pa11y webservice HTTP API. When omitted, uses direct pa11y library. */
+  readonly webserviceUrl?: string;
   readonly webserviceUrls?: readonly string[];
   readonly complianceUrl?: string;
   readonly complianceToken?: string;
@@ -220,6 +221,7 @@ export class ScanOrchestrator {
         scanUrls: (urls: unknown[], client: unknown, opts: unknown) => Promise<{ pages: Array<{ url: string; discoveryMethod: string; issueCount: number; issues: Array<{ type: string; code: string; message: string; selector: string; context: string }> }>; errors: unknown[] }>;
         WebserviceClient: new (url: string, headers: Record<string, string>) => unknown;
         WebservicePool: new (urls: readonly string[], headers: Record<string, string>) => unknown;
+        DirectScanner: new () => { scan: (url: string, opts: unknown) => Promise<unknown> };
         computeContentHashes: (urls: readonly string[], concurrency?: number, headers?: Readonly<Record<string, string>>) => Promise<Map<string, string>>;
       };
 
@@ -232,7 +234,7 @@ export class ScanOrchestrator {
       let scanPages: Array<{ url: string; issueCount: number; issues: Array<{ code: string; type: string; message: string; selector: string; context: string }> }> = [];
 
       if (coreModule !== null) {
-        const { createScanner, discoverUrls, scanUrls, WebserviceClient, WebservicePool, computeContentHashes } = coreModule;
+        const { createScanner, discoverUrls, scanUrls, WebserviceClient, WebservicePool, DirectScanner, computeContentHashes } = coreModule;
 
         if (config.incremental === true && config.scanMode === 'site') {
           // --- Incremental scan: discover, hash, filter, scan changed pages only ---
@@ -303,12 +305,17 @@ export class ScanOrchestrator {
 
           // 4. Scan only changed URLs
           if (changedUrls.length > 0) {
-            const allUrls = config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
-              ? [...new Set([...config.webserviceUrls, config.webserviceUrl])]
-              : [config.webserviceUrl];
-            const client = allUrls.length > 1
-              ? new WebservicePool(allUrls, {})
-              : new WebserviceClient(config.webserviceUrl, {});
+            let client: unknown;
+            if (config.webserviceUrl !== undefined) {
+              const allUrls = config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
+                ? [...new Set([...config.webserviceUrls, config.webserviceUrl])]
+                : [config.webserviceUrl];
+              client = allUrls.length > 1
+                ? new WebservicePool(allUrls, {})
+                : new WebserviceClient(config.webserviceUrl, {});
+            } else {
+              client = new DirectScanner();
+            }
             const scanOptions = {
               standard: config.standard as 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA',
               concurrency: config.concurrency,
@@ -375,7 +382,7 @@ export class ScanOrchestrator {
         } else {
           // --- Standard (non-incremental) scan ---
           const scanner = createScanner({
-            webserviceUrl: config.webserviceUrl,
+            ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
             ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
               ? { webserviceUrls: config.webserviceUrls }
               : {}),

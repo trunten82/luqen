@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { loadConfig } from './config.js';
 import { discoverUrls } from './discovery/discover.js';
 import { WebserviceClient } from './scanner/webservice-client.js';
+import { DirectScanner } from './scanner/direct-scanner.js';
 import { scanUrls } from './scanner/scanner.js';
 import { generateJsonReport } from './reporter/json-reporter.js';
 import { proposeFixesFromReport } from './fixer/fix-proposer.js';
@@ -63,9 +64,11 @@ export function createServer(): LuqenMcpServer {
           alsoCrawl: mergedConfig.alsoCrawl,
         });
 
-        const client = new WebserviceClient(mergedConfig.webserviceUrl, mergedConfig.webserviceHeaders);
+        const clientOrScanner = mergedConfig.webserviceUrl !== undefined
+          ? new WebserviceClient(mergedConfig.webserviceUrl, mergedConfig.webserviceHeaders)
+          : new DirectScanner();
 
-        const scanResults = await scanUrls(urls, client, {
+        const scanResults = await scanUrls(urls, clientOrScanner, {
           standard: mergedConfig.standard,
           concurrency: mergedConfig.concurrency,
           timeout: mergedConfig.timeout,
@@ -280,6 +283,24 @@ export function createServer(): LuqenMcpServer {
     async (args) => {
       try {
         const config = await loadConfig();
+
+        if (config.webserviceUrl === undefined) {
+          // Direct mode — use pa11y npm library
+          const scanner = new DirectScanner();
+          const scanResult = await scanner.scan(args.url, {
+            standard: args.standard ?? 'WCAG2AA',
+            timeout: args.timeout,
+            wait: args.wait,
+            hideElements: args.hideElements,
+            headers: args.headers,
+            runner: args.runner,
+          });
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify(scanResult, null, 2) }],
+          };
+        }
+
+        // Legacy webservice mode
         const client = new WebserviceClient(config.webserviceUrl, config.webserviceHeaders);
 
         // Create task
@@ -357,15 +378,30 @@ export function createServer(): LuqenMcpServer {
     async (args) => {
       try {
         const config = await loadConfig();
-        const client = new WebserviceClient(config.webserviceUrl, config.webserviceHeaders);
         const concurrency = args.concurrency ?? 5;
-        const pollTimeout = config.pollTimeout;
 
         const results: Array<{ url: string; result: unknown; error?: string }> = [];
         const queue = [...args.urls];
         let queueIndex = 0;
 
-        async function processUrl(url: string): Promise<{ url: string; result: unknown; error?: string }> {
+        async function processUrlDirect(url: string): Promise<{ url: string; result: unknown; error?: string }> {
+          try {
+            const scanner = new DirectScanner();
+            const scanResult = await scanner.scan(url, {
+              standard: args.standard ?? 'WCAG2AA',
+              timeout: args.timeout,
+              wait: args.wait,
+              hideElements: args.hideElements,
+              headers: args.headers,
+              runner: args.runner,
+            });
+            return { url, result: scanResult };
+          } catch (err) {
+            return { url, result: null, error: err instanceof Error ? err.message : String(err) };
+          }
+        }
+
+        async function processUrlWebservice(url: string, client: WebserviceClient): Promise<{ url: string; result: unknown; error?: string }> {
           try {
             const task = await client.createTask({
               name: `luqen_raw_batch: ${url}`,
@@ -381,6 +417,7 @@ export function createServer(): LuqenMcpServer {
 
             await client.runTask(task.id);
 
+            const pollTimeout = config.pollTimeout;
             const start = Date.now();
             let delay = 1000;
             let scanResult = null;
@@ -407,12 +444,19 @@ export function createServer(): LuqenMcpServer {
           }
         }
 
+        const useWebservice = config.webserviceUrl !== undefined;
+        const client = useWebservice
+          ? new WebserviceClient(config.webserviceUrl!, config.webserviceHeaders)
+          : undefined;
+
         // Worker pool
         async function worker(): Promise<void> {
           while (queueIndex < queue.length) {
             const idx = queueIndex++;
             if (idx >= queue.length) break;
-            const r = await processUrl(queue[idx]);
+            const r = useWebservice
+              ? await processUrlWebservice(queue[idx], client!)
+              : await processUrlDirect(queue[idx]);
             results.push(r);
           }
         }

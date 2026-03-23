@@ -8,6 +8,7 @@
 #
 # This wrapper ensures install.sh runs correctly on macOS regardless of
 # how it is launched (double-click, terminal, curl pipe).
+# Supports both deployment modes: bare metal and Docker Compose.
 
 set -euo pipefail
 
@@ -78,7 +79,8 @@ fi
 
 # ──────────────────────────────────────────────
 # macOS note: systemd is not available.
-# Services will be created as launchd agents instead.
+# Bare metal mode will create launchd agents.
+# Docker mode requires Docker Desktop for Mac.
 # The install.sh script detects this automatically.
 # ──────────────────────────────────────────────
 
@@ -103,7 +105,7 @@ if [ -z "${INSTALL_SH}" ]; then
     echo "  Luqen Installer"
     echo "  ==============="
     echo ""
-    echo "  install.sh not found locally — downloading from GitHub..."
+    echo "  install.sh not found locally -- downloading from GitHub..."
     echo ""
 
     if ! command -v curl &>/dev/null; then

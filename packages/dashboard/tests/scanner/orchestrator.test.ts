@@ -7,6 +7,7 @@ const {
   mockScanUrls,
   mockWebserviceClient,
   mockWebservicePool,
+  mockDirectScanner,
   mockComputeContentHashes,
   mockCheckCompliance,
   mockWriteFile,
@@ -17,6 +18,7 @@ const {
   mockScanUrls: vi.fn(),
   mockWebserviceClient: vi.fn(),
   mockWebservicePool: vi.fn(),
+  mockDirectScanner: vi.fn(),
   mockComputeContentHashes: vi.fn(),
   mockCheckCompliance: vi.fn(),
   mockWriteFile: vi.fn().mockResolvedValue(undefined),
@@ -29,6 +31,7 @@ vi.mock('@luqen/core', () => ({
   scanUrls: mockScanUrls,
   WebserviceClient: mockWebserviceClient,
   WebservicePool: mockWebservicePool,
+  DirectScanner: mockDirectScanner,
   computeContentHashes: mockComputeContentHashes,
 }));
 
@@ -1089,6 +1092,7 @@ describe('ScanOrchestrator', () => {
         scanUrls: mockScanUrls,
         WebserviceClient: mockWebserviceClient,
         WebservicePool: mockWebservicePool,
+        DirectScanner: mockDirectScanner,
         computeContentHashes: mockComputeContentHashes,
       }));
     });
@@ -1270,6 +1274,7 @@ describe('ScanOrchestrator', () => {
         scanUrls: mockScanUrls,
         WebserviceClient: mockWebserviceClient,
         WebservicePool: mockWebservicePool,
+        DirectScanner: mockDirectScanner,
         computeContentHashes: mockComputeContentHashes,
       }));
     });

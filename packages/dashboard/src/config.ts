@@ -5,7 +5,7 @@ import { z } from 'zod';
 const ConfigSchema = z.object({
   port: z.number().int().min(1).max(65535).default(5000),
   complianceUrl: z.string().url().default('http://localhost:4000'),
-  webserviceUrl: z.string().url().default('http://localhost:3000'),
+  webserviceUrl: z.string().url().optional(),
   reportsDir: z.string().default('./reports'),
   dbPath: z.string().default('./dashboard.db'),
   sessionSecret: z.string().min(32),
@@ -25,7 +25,8 @@ const ConfigSchema = z.object({
 export interface DashboardConfig {
   readonly port: number;
   readonly complianceUrl: string;
-  readonly webserviceUrl: string;
+  /** When set, uses pa11y webservice HTTP API. When omitted, uses direct pa11y library. */
+  readonly webserviceUrl?: string;
   readonly reportsDir: string;
   readonly dbPath: string;
   readonly sessionSecret: string;
@@ -51,7 +52,6 @@ export interface DashboardConfig {
 const DEFAULTS: DashboardConfig = {
   port: 5000,
   complianceUrl: 'http://localhost:4000',
-  webserviceUrl: 'http://localhost:3000',
   reportsDir: './reports',
   dbPath: './dashboard.db',
   sessionSecret: '',

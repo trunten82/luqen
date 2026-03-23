@@ -7,7 +7,7 @@ const CONFIG_FILENAME = '.luqen.json';
 const VALID_STANDARDS = new Set(['WCAG2A', 'WCAG2AA', 'WCAG2AAA']);
 
 export const DEFAULT_CONFIG: LuqenConfig = {
-  webserviceUrl: 'http://localhost:3000',
+  webserviceUrl: undefined,
   webserviceUrls: [],
   webserviceHeaders: {},
   standard: 'WCAG2AA',

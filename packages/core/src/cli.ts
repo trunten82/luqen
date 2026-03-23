@@ -7,6 +7,7 @@ import { Command } from 'commander';
 import { loadConfig } from './config.js';
 import { discoverUrls, type DiscoverResult } from './discovery/discover.js';
 import { WebserviceClient } from './scanner/webservice-client.js';
+import { DirectScanner } from './scanner/direct-scanner.js';
 import { scanUrls } from './scanner/scanner.js';
 import { generateJsonReport } from './reporter/json-reporter.js';
 import { generateHtmlReport } from './reporter/html-reporter.js';
@@ -98,12 +99,11 @@ program
 
       console.log(`Found ${discoveredUrls.length} URLs to scan`);
 
-      const client = new WebserviceClient(
-        effectiveConfig.webserviceUrl,
-        effectiveConfig.webserviceHeaders,
-      );
+      const clientOrScanner = effectiveConfig.webserviceUrl !== undefined
+        ? new WebserviceClient(effectiveConfig.webserviceUrl, effectiveConfig.webserviceHeaders)
+        : new DirectScanner();
 
-      const { pages, errors } = await scanUrls(discoveredUrls, client, {
+      const { pages, errors } = await scanUrls(discoveredUrls, clientOrScanner, {
         standard: effectiveConfig.standard,
         concurrency: effectiveConfig.concurrency,
         timeout: effectiveConfig.timeout,
@@ -288,12 +288,11 @@ program
 
         console.log(`Found ${discoveredUrls.length} URLs to scan`);
 
-        const client = new WebserviceClient(
-          effectiveConfig.webserviceUrl,
-          effectiveConfig.webserviceHeaders,
-        );
+        const clientOrScanner = effectiveConfig.webserviceUrl !== undefined
+          ? new WebserviceClient(effectiveConfig.webserviceUrl, effectiveConfig.webserviceHeaders)
+          : new DirectScanner();
 
-        const { pages, errors } = await scanUrls(discoveredUrls, client, {
+        const { pages, errors } = await scanUrls(discoveredUrls, clientOrScanner, {
           standard: effectiveConfig.standard,
           concurrency: effectiveConfig.concurrency,
           timeout: effectiveConfig.timeout,
