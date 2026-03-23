@@ -2,7 +2,7 @@
  * Layer 2 Integration Test — Scan Lifecycle
  *
  * Tests the complete scan lifecycle against REAL services:
- *   - Pa11y webservice (http://192.168.3.90:4002)
+ *   - Pa11y webservice (configurable via TEST_PA11Y_URL env var)
  *   - Compliance service (http://localhost:4000)
  *   - Dashboard server started on a random port
  *
@@ -19,11 +19,11 @@ import { mkdirSync } from 'node:fs';
 // Service configuration
 // ---------------------------------------------------------------------------
 
-const PA11Y_URL = 'http://192.168.3.90:4002';
+const PA11Y_URL = process.env['TEST_PA11Y_URL'] ?? 'http://localhost:3000';
 const COMPLIANCE_URL = 'http://localhost:4000';
-const COMPLIANCE_CLIENT_ID = 'f27a81f1-5bea-46fc-9fc4-7117a688d941';
-const COMPLIANCE_CLIENT_SECRET = 'ca686baf-a23e-45a9-8f63-303741cdf04f';
-const API_KEY = 'beaed61bd8b8f225dce99fd9fff397de8a2a9d6154e77d86ff1e12eaf7b613c8';
+const COMPLIANCE_CLIENT_ID = process.env['TEST_COMPLIANCE_CLIENT_ID'] ?? 'test-client-id';
+const COMPLIANCE_CLIENT_SECRET = process.env['TEST_COMPLIANCE_CLIENT_SECRET'] ?? 'test-client-secret';
+const API_KEY = process.env['TEST_API_KEY'] ?? 'test-key-' + '0'.repeat(48);
 
 const TEST_SITE_URL = 'https://example.com';
 // URL() normalizes to add trailing slash — server stores the normalized form

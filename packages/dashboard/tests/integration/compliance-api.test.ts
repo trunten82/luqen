@@ -23,10 +23,10 @@ import {
 } from '../../src/compliance-client.js';
 
 const BASE_URL = 'http://localhost:4000';
-const CLIENT_ID = 'f27a81f1-5bea-46fc-9fc4-7117a688d941';
-const CLIENT_SECRET = 'ca686baf-a23e-45a9-8f63-303741cdf04f';
+const CLIENT_ID = process.env['TEST_COMPLIANCE_CLIENT_ID'] ?? 'test-client-id';
+const CLIENT_SECRET = process.env['TEST_COMPLIANCE_CLIENT_SECRET'] ?? 'test-client-secret';
 const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'Luqen2026!';
+const ADMIN_PASS = process.env['TEST_COMPLIANCE_ADMIN_PASS'] ?? 'TestPass123!';
 
 /** Check if compliance service is reachable before running the suite. */
 async function isServiceAvailable(): Promise<boolean> {

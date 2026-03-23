@@ -1,0 +1,26 @@
+{
+  "name": "@luqen/plugin-storage-postgres",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.0",
+    "drizzle-orm": "^0.30.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.0",
+    "@types/node": "^25.5.0",
+    "@types/pg": "^8.11.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

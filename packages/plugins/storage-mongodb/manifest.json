@@ -1,0 +1,14 @@
+{
+  "name": "storage-mongodb",
+  "displayName": "MongoDB Storage",
+  "type": "storage",
+  "version": "1.0.0",
+  "description": "MongoDB storage adapter for the Luqen dashboard using the native MongoDB driver",
+  "configSchema": [
+    { "key": "connectionUri", "label": "Connection URI", "type": "secret", "required": true, "description": "MongoDB connection string (e.g. mongodb://host:27017)" },
+    { "key": "database", "label": "Database Name", "type": "string", "required": true, "default": "luqen" },
+    { "key": "authSource", "label": "Auth Source", "type": "string", "default": "admin", "description": "Authentication database name" },
+    { "key": "replicaSet", "label": "Replica Set", "type": "string", "description": "Replica set name (optional)" },
+    { "key": "tls", "label": "Enable TLS", "type": "boolean", "default": false, "description": "Use TLS for the connection" }
+  ]
+}

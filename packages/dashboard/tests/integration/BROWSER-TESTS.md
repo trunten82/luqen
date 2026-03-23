@@ -5,16 +5,16 @@ Everything else is covered by automated integration tests.
 
 ## Prerequisites
 
-- Dashboard running at http://192.168.3.98:5000
+- Dashboard running at http://localhost:5000
 - Compliance service running at http://localhost:4000
-- Pa11y webservice at http://192.168.3.90:4002
+- Pa11y webservice at http://localhost:3000
 
 ---
 
 ## Tests Requiring User Input (7 tests)
 
 ### 1. First-Time Setup
-- [ ] Open http://192.168.3.98:5000 in a fresh browser
+- [ ] Open http://localhost:5000 in a fresh browser
 - [ ] Verify the API key is shown on first visit (solo mode)
 - [ ] Copy the API key — confirm it works in subsequent requests
 
