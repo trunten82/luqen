@@ -1,14 +1,14 @@
 /**
- * Self-audit runner: scans dashboard pages via the pa11y webservice API.
+ * Self-audit runner: scans dashboard pages for accessibility issues.
  *
- * Uses the same pa11y webservice HTTP API that the core scanner uses,
- * but implemented inline to avoid a dependency on @luqen/core.
+ * Default mode: uses pa11y npm library directly via @luqen/core DirectScanner.
+ * Legacy mode: when webserviceUrl is provided, uses the pa11y webservice HTTP API.
  */
 
 import type { AuditIssue, AuditPageResult } from './self-audit.js';
 
 // -------------------------------------------------------------------------
-// Pa11y webservice HTTP helpers
+// Pa11y webservice HTTP helpers (legacy fallback)
 // -------------------------------------------------------------------------
 
 interface Pa11yTask {
@@ -98,54 +98,102 @@ async function pollResults(wsUrl: string, taskId: string, timeoutMs: number): Pr
 }
 
 // -------------------------------------------------------------------------
+// Direct scan (default) — uses pa11y npm library via DirectScanner
+// -------------------------------------------------------------------------
+
+async function scanPageDirect(pageUrl: string): Promise<AuditPageResult> {
+  try {
+    const { DirectScanner } = await import(
+      /* webpackIgnore: true */ '@luqen/core'
+    );
+    const scanner = new DirectScanner();
+    const result = await scanner.scan(pageUrl, {
+      standard: 'WCAG2AA',
+      timeout: 30000,
+      wait: 0,
+    });
+
+    const issues: AuditIssue[] = result.issues.map((i: { code: string; type: string; message: string; selector: string; context: string }) => ({
+      code: i.code,
+      type: i.type as 'error' | 'warning' | 'notice',
+      message: i.message,
+      selector: i.selector,
+      context: i.context,
+    }));
+
+    return { url: pageUrl, issues, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { url: pageUrl, issues: [], error: message };
+  }
+}
+
+// -------------------------------------------------------------------------
+// Webservice scan (legacy fallback)
+// -------------------------------------------------------------------------
+
+async function scanPageViaWebservice(pageUrl: string, webserviceUrl: string): Promise<AuditPageResult> {
+  let taskId: string | undefined;
+
+  try {
+    taskId = await createTask(webserviceUrl, pageUrl);
+    await runTask(webserviceUrl, taskId);
+
+    const pollTimeout = 60_000;
+    const pa11yResults = await pollResults(webserviceUrl, taskId, pollTimeout);
+
+    if (pa11yResults === null) {
+      await deleteTask(webserviceUrl, taskId);
+      return { url: pageUrl, issues: [], error: 'Scan timed out' };
+    }
+
+    const raw = pa11yResults[0].results ?? pa11yResults[0].issues ?? [];
+    const issues: AuditIssue[] = raw.map((i) => ({
+      code: i.code,
+      type: i.type as 'error' | 'warning' | 'notice',
+      message: i.message,
+      selector: i.selector,
+      context: i.context,
+    }));
+
+    await deleteTask(webserviceUrl, taskId);
+    return { url: pageUrl, issues, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+
+    if (taskId !== undefined) {
+      try {
+        await deleteTask(webserviceUrl, taskId);
+      } catch {
+        // best-effort cleanup
+      }
+    }
+
+    return { url: pageUrl, issues: [], error: message };
+  }
+}
+
+// -------------------------------------------------------------------------
 // Public API
 // -------------------------------------------------------------------------
 
 /**
- * Scans a list of page URLs via the pa11y webservice and returns per-page results.
+ * Scans a list of page URLs and returns per-page results.
+ *
+ * When webserviceUrl is provided, uses the legacy pa11y webservice HTTP API.
+ * When omitted (or undefined), uses the direct pa11y npm library.
  */
 export async function runSelfAudit(
   pageUrls: readonly string[],
-  webserviceUrl: string,
+  webserviceUrl?: string,
 ): Promise<AuditPageResult[]> {
   const results: AuditPageResult[] = [];
 
   for (const pageUrl of pageUrls) {
-    let taskId: string | undefined;
-
-    try {
-      taskId = await createTask(webserviceUrl, pageUrl);
-      await runTask(webserviceUrl, taskId);
-
-      const pollTimeout = 60_000;
-      const pa11yResults = await pollResults(webserviceUrl, taskId, pollTimeout);
-
-      if (pa11yResults === null) {
-        results.push({ url: pageUrl, issues: [], error: 'Scan timed out' });
-      } else {
-        const raw = pa11yResults[0].results ?? pa11yResults[0].issues ?? [];
-        const issues: AuditIssue[] = raw.map((i) => ({
-          code: i.code,
-          type: i.type as 'error' | 'warning' | 'notice',
-          message: i.message,
-          selector: i.selector,
-          context: i.context,
-        }));
-        results.push({ url: pageUrl, issues, error: null });
-      }
-
-      await deleteTask(webserviceUrl, taskId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      results.push({ url: pageUrl, issues: [], error: message });
-
-      if (taskId !== undefined) {
-        try {
-          await deleteTask(webserviceUrl, taskId);
-        } catch {
-          // best-effort cleanup
-        }
-      }
+    if (webserviceUrl !== undefined) {
+      results.push(await scanPageViaWebservice(pageUrl, webserviceUrl));
+    } else {
+      results.push(await scanPageDirect(pageUrl));
     }
   }
 

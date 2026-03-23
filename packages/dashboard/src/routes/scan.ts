@@ -187,7 +187,7 @@ export async function scanRoutes(
         concurrency,
         jurisdictions,
         scanMode,
-        webserviceUrl: config.webserviceUrl,
+        ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
         ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
           ? { webserviceUrls: config.webserviceUrls }
           : {}),

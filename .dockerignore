@@ -1,0 +1,16 @@
+.git
+node_modules
+*.db
+reports/
+plugins/
+.claude/
+.planning/
+coverage/
+*.tgz
+.env
+dashboard.config.json
+.session-secret
+.oauth-client
+packages/plugins/*/node_modules
+packages/plugins/*/dist
+packages/plugins/*/coverage

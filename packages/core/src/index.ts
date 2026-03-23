@@ -6,6 +6,7 @@
 
 export { scanUrls, type ScanOptions, type ScanResults } from './scanner/scanner.js';
 export { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
+export { DirectScanner } from './scanner/direct-scanner.js';
 export { discoverUrls } from './discovery/discover.js';
 export { buildAnnotatedPages } from './reporter/html-reporter.js';
 export { computeContentHash, computeContentHashes } from './scanner/content-hash.js';
@@ -14,11 +15,13 @@ export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanE
 import { discoverUrls } from './discovery/discover.js';
 import { scanUrls, type ScanOptions } from './scanner/scanner.js';
 import { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
+import { DirectScanner } from './scanner/direct-scanner.js';
 import type { DiscoveredUrl, PageResult, ProgressListener } from './types.js';
 
 export interface CreateScannerOptions {
-  readonly webserviceUrl: string;
-  /** Additional webservice URLs for horizontal scaling (round-robin distribution). */
+  /** When set, uses the pa11y webservice HTTP API (legacy mode). When omitted, uses direct pa11y npm library. */
+  readonly webserviceUrl?: string;
+  /** Additional webservice URLs for horizontal scaling (round-robin distribution). Only used when webserviceUrl is set. */
   readonly webserviceUrls?: readonly string[];
   readonly standard?: 'WCAG2A' | 'WCAG2AA' | 'WCAG2AAA';
   readonly concurrency?: number;
@@ -52,21 +55,28 @@ export interface Scanner {
  * Used by the dashboard's ScanOrchestrator for programmatic scanning.
  */
 export function createScanner(opts: CreateScannerOptions): Scanner {
-  // Build all unique webservice URLs: primary + any additional pool URLs
-  const allUrls: string[] = [];
-  if (opts.webserviceUrls !== undefined && opts.webserviceUrls.length > 0) {
-    // Use the explicit list; include the primary URL if not already present
-    const urlSet = new Set(opts.webserviceUrls);
-    urlSet.add(opts.webserviceUrl);
-    allUrls.push(...urlSet);
-  } else {
-    allUrls.push(opts.webserviceUrl);
-  }
+  // Determine scan backend: webservice (legacy) or direct pa11y library (default)
+  let clientOrPool: WebserviceClient | WebservicePool | DirectScanner;
 
-  const headers = opts.headers ?? {};
-  const clientOrPool: WebserviceClient | WebservicePool = allUrls.length > 1
-    ? new WebservicePool(allUrls, headers)
-    : new WebserviceClient(allUrls[0], headers);
+  if (opts.webserviceUrl !== undefined) {
+    // Legacy: use pa11y-webservice HTTP API
+    const allUrls: string[] = [];
+    if (opts.webserviceUrls !== undefined && opts.webserviceUrls.length > 0) {
+      const urlSet = new Set(opts.webserviceUrls);
+      urlSet.add(opts.webserviceUrl);
+      allUrls.push(...urlSet);
+    } else {
+      allUrls.push(opts.webserviceUrl);
+    }
+
+    const headers = opts.headers ?? {};
+    clientOrPool = allUrls.length > 1
+      ? new WebservicePool(allUrls, headers)
+      : new WebserviceClient(allUrls[0], headers);
+  } else {
+    // Default: direct pa11y npm library
+    clientOrPool = new DirectScanner();
+  }
 
   const scanOptions: ScanOptions = {
     standard: opts.standard ?? 'WCAG2AA',
