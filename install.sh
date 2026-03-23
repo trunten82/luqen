@@ -941,14 +941,12 @@ start_services_and_post_install() {
     success "Services started (PIDs: ${COMP_PID}, ${DASH_PID})"
   fi
 
-  # Grab API key from dashboard log
+  # Generate a fresh API key via CLI (reliable, not log-dependent)
   API_KEY=""
-  if command -v systemctl &>/dev/null; then
-    API_KEY=$(journalctl -u luqen-dashboard --no-pager -n 50 2>/dev/null | grep -oP 'API Key: \K[a-f0-9]{64}' | head -1 || echo "")
-  fi
-  if [ -z "${API_KEY}" ] && [ -f /tmp/luqen-dash-install.log ]; then
-    API_KEY=$(grep -oP 'API Key: \K[a-f0-9]{64}' /tmp/luqen-dash-install.log 2>/dev/null || echo "")
-  fi
+  local key_output
+  key_output=$(node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" api-key \
+    --config "${INSTALL_DIR}/dashboard.config.json" 2>&1) || true
+  API_KEY=$(echo "${key_output}" | grep -oP '[a-f0-9]{64}' | head -1 || echo "")
 
   # Create admin user
   if [ -n "${API_KEY}" ] && [ -n "${ADMIN_USERNAME}" ]; then
