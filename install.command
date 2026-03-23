@@ -93,14 +93,32 @@ fi
 # ──────────────────────────────────────────────
 if ! command -v git &>/dev/null; then
     echo ""
-    echo "  git is not installed. On macOS, install Xcode Command Line Tools:"
+    echo "  git is not installed. Installing Xcode Command Line Tools..."
+    xcode-select --install 2>/dev/null || true
     echo ""
-    echo "    xcode-select --install"
-    echo ""
-    echo "  After installing, re-run this installer."
+    echo "  If a dialog appeared, complete the installation, then re-run this installer."
     echo ""
     read -rp "  Press Enter to exit..."
     exit 1
+fi
+
+# Ensure Homebrew is available for Node.js auto-install
+if ! command -v node &>/dev/null; then
+    if command -v brew &>/dev/null; then
+        echo "  Node.js not found. Installing via Homebrew..."
+        brew install node 2>/dev/null
+    else
+        echo ""
+        echo "  Node.js 20+ is required. Install via Homebrew:"
+        echo ""
+        echo "    /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        echo "    brew install node"
+        echo ""
+        echo "  Or download from https://nodejs.org"
+        echo ""
+        read -rp "  Press Enter to exit..."
+        exit 1
+    fi
 fi
 
 # ──────────────────────────────────────────────

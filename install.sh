@@ -495,8 +495,46 @@ local_install() {
   # ── Prerequisites ──────────────────────────
   info "Checking prerequisites..."
 
+  # Auto-install missing prerequisites
+  install_prerequisites() {
+    local missing=()
+    command -v git &>/dev/null || missing+=(git)
+    command -v node &>/dev/null || missing+=(nodejs)
+    command -v npm &>/dev/null || missing+=(npm)
+    command -v curl &>/dev/null || missing+=(curl)
+
+    if [ ${#missing[@]} -eq 0 ]; then return 0; fi
+
+    info "Missing prerequisites: ${missing[*]}"
+
+    if command -v apt-get &>/dev/null; then
+      info "Installing via apt-get..."
+      # Add NodeSource repo for Node.js 20
+      if ! command -v node &>/dev/null; then
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>/dev/null
+      fi
+      apt-get update -qq && apt-get install -y -qq "${missing[@]}" 2>/dev/null
+    elif command -v yum &>/dev/null; then
+      info "Installing via yum..."
+      if ! command -v node &>/dev/null; then
+        curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - 2>/dev/null
+      fi
+      yum install -y "${missing[@]}" 2>/dev/null
+    elif command -v brew &>/dev/null; then
+      info "Installing via Homebrew..."
+      brew install "${missing[@]}" 2>/dev/null
+    else
+      error "Cannot auto-install prerequisites. Please install manually: ${missing[*]}"
+      error "Node.js 20+: https://nodejs.org  |  Git: https://git-scm.com"
+      exit 1
+    fi
+    success "Prerequisites installed."
+  }
+
+  install_prerequisites
+
   if ! command -v node &>/dev/null; then
-    error "Node.js is not installed. Please install Node.js 20+ from https://nodejs.org"
+    error "Node.js is not installed and could not be auto-installed. Please install Node.js 20+ from https://nodejs.org"
     exit 1
   fi
 

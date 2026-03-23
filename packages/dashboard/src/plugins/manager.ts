@@ -3,7 +3,7 @@ import { readFileSync, rmSync, existsSync, mkdirSync, createWriteStream } from '
 import { join, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
-import tar from 'tar';
+import * as tar from 'tar';
 import type Database from 'better-sqlite3';
 import type {
   PluginRecord,
@@ -87,7 +87,8 @@ async function defaultDownloadFn(url: string, destPath: string): Promise<void> {
   }
 
   const fileStream = createWriteStream(destPath);
-  await pipeline(Readable.fromWeb(response.body as ReadableStream), fileStream);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await pipeline(Readable.fromWeb(response.body as any), fileStream);
 }
 
 // ---------------------------------------------------------------------------
