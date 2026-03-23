@@ -431,6 +431,10 @@ export async function exportRoutes(
           userRole: 'admin',
           isExecutiveView: false,
         });
+        // Debug: save HTML to temp file for inspection
+        const { writeFile: writeFileAsync } = await import('node:fs/promises');
+        await writeFileAsync('/tmp/pdf-export-html.html', html).catch(() => undefined);
+
       } catch (err) {
         request.log.error(err, 'Failed to render report HTML');
         return reply.code(500).send({ error: 'Failed to render report HTML' });
