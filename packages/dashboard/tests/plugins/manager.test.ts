@@ -7,6 +7,14 @@ import { PluginManager } from '../../src/plugins/manager.js';
 import type { RegistryEntry, PluginManifest, PluginInstance } from '../../src/plugins/types.js';
 import { decryptConfig } from '../../src/plugins/crypto.js';
 
+// Mock tar to avoid needing real tarballs in tests
+vi.mock('tar', () => ({
+  default: {
+    extract: vi.fn().mockResolvedValue(undefined),
+  },
+  extract: vi.fn().mockResolvedValue(undefined),
+}));
+
 const TEST_KEY = 'test-encryption-key-for-plugin-manager';
 
 const CREATE_PLUGINS_TABLE = `
@@ -44,6 +52,7 @@ const testRegistryEntries: readonly RegistryEntry[] = [
     version: '1.0.0',
     description: 'A test auth plugin',
     packageName: '@luqen/plugin-test-auth',
+    downloadUrl: 'https://example.com/plugin-test-auth-1.0.0.tgz',
   },
   {
     name: 'test-notify',
@@ -52,6 +61,7 @@ const testRegistryEntries: readonly RegistryEntry[] = [
     version: '1.0.0',
     description: 'A test notification plugin',
     packageName: '@luqen/plugin-test-notify',
+    downloadUrl: 'https://example.com/plugin-test-notify-1.0.0.tgz',
   },
 ];
 
@@ -96,17 +106,17 @@ describe('PluginManager', () => {
 
   describe('install', () => {
     it('creates DB entry with status inactive', async () => {
-      // Create a fake installed package with manifest
-      const pkgDir = join(tmpDir, 'node_modules', '@luqen', 'plugin-test-auth');
-      mkdirSync(pkgDir, { recursive: true });
-      writeFileSync(join(pkgDir, 'manifest.json'), JSON.stringify(testManifest));
-      writeFileSync(join(pkgDir, 'package.json'), JSON.stringify({ name: '@luqen/plugin-test-auth', main: 'index.js' }));
+      // Mock download: write a dummy tarball file and create the package directory
+      // (tar.extract is mocked, so we create the extracted files ourselves)
+      manager._setDownloadFn(vi.fn().mockImplementation(async (_url: string, destPath: string) => {
+        writeFileSync(destPath, 'dummy-tarball');
+        const pkgDir = join(tmpDir, 'packages', 'test-auth');
+        mkdirSync(pkgDir, { recursive: true });
+        writeFileSync(join(pkgDir, 'manifest.json'), JSON.stringify(testManifest));
+        writeFileSync(join(pkgDir, 'package.json'), JSON.stringify({ name: '@luqen/plugin-test-auth', main: 'index.js' }));
+      }));
 
-      // Mock execFileAsync to skip real npm install
-      const execFileMock = vi.fn().mockResolvedValue({ stdout: '', stderr: '' });
-      manager._setExecFile(execFileMock);
-
-      const record = await manager.install('@luqen/plugin-test-auth');
+      const record = await manager.install('test-auth');
 
       expect(record.packageName).toBe('@luqen/plugin-test-auth');
       expect(record.status).toBe('inactive');
@@ -123,7 +133,7 @@ describe('PluginManager', () => {
 
     it('rejects package not in registry', async () => {
       await expect(manager.install('@unknown/package')).rejects.toThrow(
-        'not found in registry',
+        'not found in catalogue',
       );
     });
   });

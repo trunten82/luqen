@@ -22,6 +22,7 @@ const MOCK_REGISTRY: readonly RegistryEntry[] = [
     description: 'Send notifications to Slack',
     packageName: '@luqen/plugin-slack',
     icon: 'slack',
+    downloadUrl: 'https://example.com/plugin-slack-1.0.0.tgz',
   },
   {
     name: 'azure-ad',
@@ -31,6 +32,7 @@ const MOCK_REGISTRY: readonly RegistryEntry[] = [
     description: 'Azure AD authentication',
     packageName: '@luqen/plugin-azure-ad',
     icon: 'azure',
+    downloadUrl: 'https://example.com/plugin-azure-ad-1.0.0.tgz',
   },
 ];
 
@@ -55,8 +57,8 @@ async function createTestServer(role: string = 'admin'): Promise<TestContext> {
     registryEntries: MOCK_REGISTRY,
   });
 
-  // Stub exec so npm install doesn't actually run
-  pluginManager._setExecFile(vi.fn().mockResolvedValue({ stdout: '', stderr: '' }));
+  // Stub download so install doesn't actually fetch tarballs
+  pluginManager._setDownloadFn(vi.fn().mockResolvedValue(undefined));
 
   const server = Fastify({ logger: false });
 
@@ -173,35 +175,35 @@ describe('Plugin API routes', () => {
 
   // ── POST /api/v1/plugins/install ────────────────────────────────────────
   describe('POST /api/v1/plugins/install', () => {
-    it('returns 400 when packageName is missing', async () => {
+    it('returns 400 when name is missing', async () => {
       const res = await ctx.server.inject({
         method: 'POST',
         url: '/api/v1/plugins/install',
         payload: {},
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toContain('packageName is required');
+      expect(res.json().error).toContain('name is required');
     });
 
-    it('returns 400 for unknown package', async () => {
+    it('returns 400 for unknown plugin name', async () => {
       const res = await ctx.server.inject({
         method: 'POST',
         url: '/api/v1/plugins/install',
-        payload: { packageName: '@unknown/pkg' },
+        payload: { name: 'unknown-plugin' },
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toContain('not found in registry');
+      expect(res.json().error).toContain('not found in catalogue');
     });
 
-    it('returns 500 when npm install fails', async () => {
-      ctx.pluginManager._setExecFile(
-        vi.fn().mockRejectedValue(new Error('npm install failed')),
+    it('returns 500 when download fails', async () => {
+      ctx.pluginManager._setDownloadFn(
+        vi.fn().mockRejectedValue(new Error('download failed')),
       );
 
       const res = await ctx.server.inject({
         method: 'POST',
         url: '/api/v1/plugins/install',
-        payload: { packageName: '@luqen/plugin-slack' },
+        payload: { name: 'slack-notifier' },
       });
       expect(res.statusCode).toBe(500);
       expect(res.json().error).toContain('Install failed');

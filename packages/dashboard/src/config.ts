@@ -14,6 +14,8 @@ const ConfigSchema = z.object({
   complianceClientSecret: z.string().default(''),
   pluginsDir: z.string().default('./plugins'),
   pluginsConfigFile: z.string().optional(),
+  catalogueUrl: z.string().url().optional(),
+  catalogueCacheTtl: z.number().int().min(0).default(3600),
   redisUrl: z.string().url().optional(),
   maxPages: z.number().int().min(1).max(1000).default(50),
   runner: z.enum(['htmlcs', 'axe']).optional(),
@@ -32,6 +34,10 @@ export interface DashboardConfig {
   readonly complianceClientSecret: string;
   readonly pluginsDir: string;
   readonly pluginsConfigFile?: string;
+  /** URL to fetch the remote plugin catalogue. Defaults to GitHub raw URL. */
+  readonly catalogueUrl?: string;
+  /** Cache TTL for the remote catalogue in seconds. Default: 3600 (1 hour). */
+  readonly catalogueCacheTtl: number;
   /** Optional Redis URL — enables scan queue and SSE pub/sub when set. */
   readonly redisUrl?: string;
   /** Maximum pages to scan in full-site mode. Default: 50. */
@@ -53,6 +59,7 @@ const DEFAULTS: DashboardConfig = {
   complianceClientId: '',
   complianceClientSecret: '',
   pluginsDir: './plugins',
+  catalogueCacheTtl: 3600,
   maxPages: 50,
 };
 
@@ -93,6 +100,10 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
     complianceClientSecret: process.env['DASHBOARD_COMPLIANCE_CLIENT_SECRET'] ?? config.complianceClientSecret,
     pluginsDir: process.env['DASHBOARD_PLUGINS_DIR'] ?? config.pluginsDir,
     pluginsConfigFile: process.env['DASHBOARD_PLUGINS_CONFIG'] ?? config.pluginsConfigFile,
+    catalogueUrl: process.env['DASHBOARD_CATALOGUE_URL'] ?? config.catalogueUrl,
+    catalogueCacheTtl: process.env['DASHBOARD_CATALOGUE_CACHE_TTL'] !== undefined
+      ? parseInt(process.env['DASHBOARD_CATALOGUE_CACHE_TTL'], 10)
+      : config.catalogueCacheTtl,
     redisUrl: process.env['DASHBOARD_REDIS_URL'] ?? config.redisUrl,
     maxPages: process.env['DASHBOARD_MAX_PAGES'] !== undefined
       ? parseInt(process.env['DASHBOARD_MAX_PAGES'], 10)

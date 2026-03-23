@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../../auth/middleware.js';
 import type { PluginManager } from '../../plugins/manager.js';
-import type { RegistryEntry, ConfigField } from '../../plugins/types.js';
+import type { RegistryEntry, ConfigField, PluginManifest } from '../../plugins/types.js';
 import { escapeHtml } from './helpers.js';
 
 // ---------------------------------------------------------------------------
@@ -105,7 +105,6 @@ export async function pluginAdminRoutes(
   server: FastifyInstance,
   pluginManager: PluginManager,
   registryEntries: readonly RegistryEntry[],
-  pluginsDir?: string,
 ): Promise<void> {
   // GET /admin/plugins — render plugins page
   server.get(
@@ -258,24 +257,9 @@ export async function pluginAdminRoutes(
 
         // Try to read the manifest config schema
         let configSchema: readonly ConfigField[] = [];
-        try {
-          const entry = registryEntries.find((e) => e.packageName === plugin.packageName);
-          if (entry) {
-            // Read manifest from installed plugin dir
-            const { readFileSync } = await import('node:fs');
-            const { join } = await import('node:path');
-            const manifestPath = join(
-              pluginsDir ?? '',
-              'node_modules',
-              ...plugin.packageName.split('/'),
-              'manifest.json',
-            );
-            const raw = readFileSync(manifestPath, 'utf-8');
-            const manifest = JSON.parse(raw) as { configSchema?: readonly ConfigField[] };
-            configSchema = manifest.configSchema ?? [];
-          }
-        } catch {
-          // No manifest available — show empty form
+        const manifest: PluginManifest | null = pluginManager.getManifest(request.params.id);
+        if (manifest) {
+          configSchema = manifest.configSchema ?? [];
         }
 
         const fieldsHtml = configSchema.length > 0
