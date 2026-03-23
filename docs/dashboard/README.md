@@ -52,7 +52,7 @@ The Luqen dashboard is a server-rendered web application built with Fastify, Han
 │  │  └──────────┘  └──────────────┘  │  service)      │  │   │
 │  │                                   └────────────────┘  │   │
 │  │  ┌──────────────────────────────────────────────────┐ │   │
-│  │  │ SQLite DB (scan records, local state)            │ │   │
+│  │  │ StorageAdapter (14 repositories, SQLite default) │ │   │
 │  │  └──────────────────────────────────────────────────┘ │   │
 │  └───────────────────────────────────────────────────────┘   │
 │                                                             │
@@ -69,7 +69,7 @@ The Luqen dashboard is a server-rendered web application built with Fastify, Han
 
 - **Fastify + Handlebars + HTMX** — server-rendered HTML with HTMX for interactivity. No JavaScript build pipeline.
 - **No SPA** — progressive enhancement via HTMX. Pages degrade gracefully without JavaScript; HTMX adds live updates and partial page swaps.
-- **Local SQLite** — scan records and history are stored locally in a single SQLite file.
+- **StorageAdapter pattern** — all data access goes through a pluggable `StorageAdapter` interface with 14 domain repositories. The built-in SQLite adapter stores everything in a single file; PostgreSQL and MongoDB adapters are planned as plugins.
 - **Auth via compliance service** — the dashboard delegates authentication to the compliance service via an OAuth2 password grant. JWTs are verified locally using the compliance service's public key.
 - **Self-auditing** — the dashboard is required to pass its own WCAG 2.1 AA accessibility audit using luqen against the EU jurisdiction. Zero confirmed violations is the acceptance criterion.
 
@@ -634,7 +634,7 @@ Options:
 Startup sequence:
 1. Load config (file + env overrides)
 2. Validate config (fails fast with clear message on error)
-3. Run SQLite migration (idempotent — safe to run on every start)
+3. Initialize StorageAdapter and run migrations (idempotent — safe to run on every start)
 4. Fetch compliance service JWKS for JWT verification
 5. Register Fastify plugins (views, static files, form body, secure session)
 6. Register all routes

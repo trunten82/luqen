@@ -2,10 +2,10 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import type { ScanDb, ConnectedRepo } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
 import { requirePermission } from '../auth/middleware.js';
-import { toastHtml, escapeHtml } from './admin/helpers.js';
-import { getFixSuggestion, FIX_SUGGESTIONS } from '../fix-suggestions.js';
+import { toastHtml } from './admin/helpers.js';
+import { getFixSuggestion } from '../fix-suggestions.js';
 import { hasPermission } from '../permissions.js';
 
 // ---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ function collectIssuesFromReport(raw: JsonReportForFixes, siteUrl: string): Arra
 
 export async function repoRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
 
   // ── GET /admin/repos — list connected repos (admin only) ──────────────
@@ -156,7 +156,7 @@ export async function repoRoutes(
     { preHandler: requirePermission('repos.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
-      const repos = db.listRepos(orgId);
+      const repos = await storage.repos.listRepos(orgId);
 
       return reply.view('repos.hbs', {
         pageTitle: 'Connected Repositories',
@@ -197,7 +197,7 @@ export async function repoRoutes(
       const repoPath = sanitizePath(body.repoPath);
       const branch = sanitizeBranch(body.branch);
 
-      const repo = db.createRepo({
+      await storage.repos.createRepo({
         id: randomUUID(),
         siteUrlPattern,
         repoUrl,
@@ -209,7 +209,7 @@ export async function repoRoutes(
 
       if (request.headers['hx-request'] === 'true') {
         // Return the new row + a toast for HTMX
-        const repos = db.listRepos(orgId);
+        const repos = await storage.repos.listRepos(orgId);
         return reply.view('repos.hbs', {
           pageTitle: 'Connected Repositories',
           currentPath: '/admin/repos',
@@ -229,13 +229,13 @@ export async function repoRoutes(
     { preHandler: requirePermission('repos.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const repo = db.getRepo(id);
+      const repo = await storage.repos.getRepo(id);
 
       if (repo === null) {
         return reply.code(404).send({ error: 'Repository connection not found' });
       }
 
-      db.deleteRepo(id);
+      await storage.repos.deleteRepo(id);
 
       if (request.headers['hx-request'] === 'true') {
         return reply.code(200).send(
@@ -258,7 +258,7 @@ export async function repoRoutes(
       }
 
       const { id } = request.params as ReportFixParams;
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
 
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });
@@ -270,7 +270,7 @@ export async function repoRoutes(
       }
 
       // Find connected repo for this site
-      const connectedRepo = db.findRepoForUrl(scan.siteUrl, orgId);
+      const connectedRepo = await storage.repos.findRepoForUrl(scan.siteUrl, orgId);
 
       // If no report data, show empty state
       if (

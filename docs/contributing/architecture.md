@@ -130,6 +130,36 @@ System design, data flow, and technology stack for the luqen monorepo.
 
 ---
 
+## Dashboard storage architecture
+
+The dashboard uses a **StorageAdapter** pattern for all database operations. The `StorageAdapter` interface defines 14 domain repositories, each encapsulating a specific data domain:
+
+```
+StorageAdapter
+├── connect() / disconnect() / migrate() / healthCheck()
+│
+├── scans: ScanRepository
+├── users: UserRepository
+├── organizations: OrgRepository
+├── schedules: ScheduleRepository
+├── assignments: AssignmentRepository
+├── repos: RepoRepository
+├── roles: RoleRepository
+├── teams: TeamRepository
+├── email: EmailRepository
+├── audit: AuditRepository
+├── plugins: PluginRepository
+├── apiKeys: ApiKeyRepository
+├── pageHashes: PageHashRepository
+└── manualTests: ManualTestRepository
+```
+
+The built-in `SqliteStorageAdapter` implements all 14 repositories using better-sqlite3. The `resolveStorageAdapter()` factory in `packages/dashboard/src/db/factory.ts` selects the adapter based on a `StorageConfig` object. PostgreSQL and MongoDB adapters are planned as plugins.
+
+All dashboard routes and services depend on the `StorageAdapter` interface — never on a concrete database implementation. This makes the storage backend fully swappable without changing business logic.
+
+---
+
 ## Compliance service internals
 
 ```
@@ -145,7 +175,7 @@ System design, data flow, and technology stack for the luqen monorepo.
     ├── Compliance checker     — matrix builder, obligation scoring
     ├── Update proposals       — propose/approve/reject workflow
     ├── Source monitor         — SHA-256 hash comparison, change detection
-    └── Database adapters      — SQLite (default), MongoDB, PostgreSQL
+    └── Database               — SQLite (better-sqlite3)
 ```
 
 ---
@@ -159,8 +189,8 @@ System design, data flow, and technology stack for the luqen monorepo.
 | MCP | `@modelcontextprotocol/sdk` |
 | HTTP server (compliance, A2A) | Fastify |
 | HTTP server (dashboard) | Fastify + Handlebars + HTMX |
-| Database (compliance) | SQLite (better-sqlite3), MongoDB, PostgreSQL |
-| Database (dashboard) | SQLite |
+| Database (compliance) | SQLite (better-sqlite3) |
+| Database (dashboard) | SQLite via StorageAdapter (14 repositories); PostgreSQL/MongoDB plugins planned |
 | Authentication | OAuth2 (client credentials + PKCE), RS256 JWT |
 | Accessibility scanner | pa11y via pa11y-webservice REST API |
 | HTML parsing (crawl) | cheerio |

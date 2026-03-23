@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { ScanDb } from '../../db/scans.js';
-import type { UserDb } from '../../db/users.js';
+import type { StorageAdapter } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { escapeHtml } from './helpers.js';
 
@@ -52,8 +51,7 @@ function memberRowHtml(teamId: string, member: { userId: string; username: strin
 
 export async function teamRoutes(
   server: FastifyInstance,
-  db: ScanDb,
-  userDb: UserDb,
+  storage: StorageAdapter,
 ): Promise<void> {
   // GET /admin/teams — list teams
   server.get(
@@ -61,7 +59,7 @@ export async function teamRoutes(
     { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
-      const teams = db.listTeams(orgId);
+      const teams = await storage.teams.listTeams(orgId);
 
       return reply.view('admin/teams.hbs', {
         pageTitle: 'Teams',
@@ -87,7 +85,7 @@ export async function teamRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      const team = db.createTeam({
+      const team = await storage.teams.createTeam({
         name,
         description: (body.description ?? '').trim(),
         orgId,
@@ -108,13 +106,13 @@ export async function teamRoutes(
     { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const team = db.getTeam(id);
+      const team = await storage.teams.getTeam(id);
 
       if (team === null) {
         return reply.code(404).send({ error: 'Team not found' });
       }
 
-      db.deleteTeam(id);
+      await storage.teams.deleteTeam(id);
       return reply.type('text/html').send('');
     },
   );
@@ -125,13 +123,13 @@ export async function teamRoutes(
     { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const team = db.getTeam(id);
+      const team = await storage.teams.getTeam(id);
 
       if (team === null) {
         return reply.code(404).send({ error: 'Team not found' });
       }
 
-      const allUsers = userDb.listUsers().filter((u) => u.active);
+      const allUsers = (await storage.users.listUsers()).filter((u) => u.active);
       const memberIds = new Set((team.members ?? []).map((m) => m.userId));
       const availableUsers = allUsers.filter((u) => !memberIds.has(u.id));
 
@@ -160,15 +158,15 @@ export async function teamRoutes(
         );
       }
 
-      const team = db.getTeam(id);
+      const team = await storage.teams.getTeam(id);
       if (team === null) {
         return reply.code(404).send({ error: 'Team not found' });
       }
 
-      db.addTeamMember(id, userId);
+      await storage.teams.addTeamMember(id, userId);
 
       // Return the new member row
-      const user = userDb.getUserById(userId);
+      const user = await storage.users.getUserById(userId);
       const member = { userId, username: user?.username ?? userId, role: 'member' };
 
       if (request.headers['hx-request'] === 'true') {
@@ -186,7 +184,7 @@ export async function teamRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
 
-      db.removeTeamMember(id, userId);
+      await storage.teams.removeTeamMember(id, userId);
       return reply.type('text/html').send('');
     },
   );

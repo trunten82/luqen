@@ -41,9 +41,7 @@ export async function jurisdictionRoutes(
 
       const total = jurisdictions.length;
       const page = jurisdictions.slice(offset, offset + limit);
-      const hasPrev = offset > 0;
       const hasNext = offset + limit < total;
-      const currentPage = Math.floor(offset / limit) + 1;
 
       const isPartialRows = (request.query as { partial?: string }).partial === 'rows';
       const isHtmx = request.headers['hx-request'] === 'true';

@@ -5,10 +5,19 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 const KEY_LENGTH = 32;
-const FIXED_SALT = 'luqen-plugin-config-salt';
+const DEFAULT_SALT = 'luqen-plugin-config-salt';
+let _installationSalt: string = DEFAULT_SALT;
+
+/**
+ * Set a per-installation salt for key derivation.
+ * Call this at startup with a value persisted in the bootstrap DB.
+ */
+export function setEncryptionSalt(salt: string): void {
+  _installationSalt = salt;
+}
 
 function deriveKey(key: string): Buffer {
-  return scryptSync(key, FIXED_SALT, KEY_LENGTH);
+  return scryptSync(key, _installationSalt, KEY_LENGTH);
 }
 
 /**

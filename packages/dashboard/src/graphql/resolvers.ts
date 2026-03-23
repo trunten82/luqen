@@ -8,21 +8,16 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import type { ScanDb, ScanRecord } from '../db/scans.js';
-import type { UserDb } from '../db/users.js';
-import type { OrgDb } from '../db/orgs.js';
-import type { AuditLogger } from '../audit/logger.js';
+import type { StorageAdapter, ScanRecord } from '../db/index.js';
 import { VERSION } from '../version.js';
+import { validatePassword, validateUsername } from '../validation.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
 // ---------------------------------------------------------------------------
 
 export interface GraphQLContext {
-  readonly db: ScanDb;
-  readonly userDb: UserDb;
-  readonly orgDb: OrgDb;
-  readonly auditLogger: AuditLogger;
+  readonly storage: StorageAdapter;
   readonly user: { id: string; username: string; role: string } | undefined;
   readonly permissions: Set<string>;
   readonly orgId: string;
@@ -109,7 +104,7 @@ export const resolvers = {
   Query: {
     // ── Scans ──────────────────────────────────────────────────────────
 
-    scans: (
+    scans: async (
       _root: unknown,
       args: { siteUrl?: string; from?: string; to?: string; limit?: number; offset?: number },
       ctx: GraphQLContext,
@@ -119,7 +114,7 @@ export const resolvers = {
       const limit = clamp(args.limit, 1, 1000, 100);
       const offset = clamp(args.offset, 0, Number.MAX_SAFE_INTEGER, 0);
 
-      const allScans = ctx.db.listScans({
+      const allScans = await ctx.storage.scans.listScans({
         siteUrl: args.siteUrl ?? undefined,
         orgId: ctx.orgId,
       });
@@ -143,13 +138,13 @@ export const resolvers = {
       };
     },
 
-    scan: (
+    scan: async (
       _root: unknown,
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return ctx.db.getScan(args.id) ?? null;
+      return await ctx.storage.scans.getScan(args.id) ?? null;
     },
 
     // ── Issues ─────────────────────────────────────────────────────────
@@ -161,7 +156,7 @@ export const resolvers = {
     ) => {
       requireAuth(ctx);
 
-      const scan = ctx.db.getScan(args.scanId);
+      const scan = await ctx.storage.scans.getScan(args.scanId);
       if (scan === null) {
         return { nodes: [], totalCount: 0, pageInfo: buildPageInfo(0, 0, 0) };
       }
@@ -203,14 +198,14 @@ export const resolvers = {
 
     // ── Assignments ────────────────────────────────────────────────────
 
-    assignments: (
+    assignments: async (
       _root: unknown,
       args: { scanId?: string; status?: string; assignedTo?: string },
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
 
-      return ctx.db.listAssignments({
+      return await ctx.storage.assignments.listAssignments({
         scanId: args.scanId ?? undefined,
         status: args.status as 'open' | 'assigned' | 'in-progress' | 'fixed' | 'verified' | undefined,
         assignedTo: args.assignedTo ?? undefined,
@@ -220,14 +215,14 @@ export const resolvers = {
 
     // ── Trends ─────────────────────────────────────────────────────────
 
-    trends: (
+    trends: async (
       _root: unknown,
       args: { siteUrl: string },
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'trends.view');
 
-      const allCompleted = ctx.db.getTrendData(ctx.orgId);
+      const allCompleted = await ctx.storage.scans.getTrendData(ctx.orgId);
       const matching = allCompleted.filter((s) => s.siteUrl === args.siteUrl);
 
       return matching.map((s) => ({
@@ -243,14 +238,14 @@ export const resolvers = {
 
     // ── Compliance summary ─────────────────────────────────────────────
 
-    complianceSummary: (
+    complianceSummary: async (
       _root: unknown,
       _args: unknown,
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
 
-      const allCompleted = ctx.db.getTrendData(ctx.orgId);
+      const allCompleted = await ctx.storage.scans.getTrendData(ctx.orgId);
 
       // Group by site URL and take the latest scan for each
       const bySite = new Map<string, ScanRecord>();
@@ -274,60 +269,60 @@ export const resolvers = {
 
     // ── Users ──────────────────────────────────────────────────────────
 
-    dashboardUsers: (
+    dashboardUsers: async (
       _root: unknown,
       _args: unknown,
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles');
-      return ctx.userDb.listUsers();
+      return await ctx.storage.users.listUsers();
     },
 
     // ── Teams ──────────────────────────────────────────────────────────
 
-    teams: (
+    teams: async (
       _root: unknown,
       _args: unknown,
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return ctx.db.listTeams(ctx.orgId);
+      return await ctx.storage.teams.listTeams(ctx.orgId);
     },
 
-    team: (
+    team: async (
       _root: unknown,
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return ctx.db.getTeam(args.id) ?? null;
+      return await ctx.storage.teams.getTeam(args.id) ?? null;
     },
 
     // ── Organizations ──────────────────────────────────────────────────
 
-    organizations: (
+    organizations: async (
       _root: unknown,
       _args: unknown,
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return ctx.orgDb.listOrgs();
+      return await ctx.storage.organizations.listOrgs();
     },
 
     // ── Roles ──────────────────────────────────────────────────────────
 
-    roles: (
+    roles: async (
       _root: unknown,
       _args: unknown,
       ctx: GraphQLContext,
     ) => {
       requireAuth(ctx);
-      return ctx.db.listRoles(ctx.orgId);
+      return await ctx.storage.roles.listRoles(ctx.orgId);
     },
 
     // ── Audit log ──────────────────────────────────────────────────────
 
-    auditLog: (
+    auditLog: async (
       _root: unknown,
       args: { actor?: string; action?: string; resourceType?: string; from?: string; to?: string; limit?: number; offset?: number },
       ctx: GraphQLContext,
@@ -337,7 +332,7 @@ export const resolvers = {
       const limit = clamp(args.limit, 1, 200, 50);
       const offset = clamp(args.offset, 0, Number.MAX_SAFE_INTEGER, 0);
 
-      const result = ctx.auditLogger.query({
+      const result = await ctx.storage.audit.query({
         actor: args.actor,
         action: args.action,
         resourceType: args.resourceType,
@@ -366,7 +361,7 @@ export const resolvers = {
   Mutation: {
     // ── Scans ──────────────────────────────────────────────────────────
 
-    createScan: (
+    createScan: async (
       _root: unknown,
       args: { input: { siteUrl: string; standard?: string; jurisdictions?: string[] } },
       ctx: GraphQLContext,
@@ -376,7 +371,7 @@ export const resolvers = {
       const id = randomUUID();
       const now = new Date().toISOString();
 
-      return ctx.db.createScan({
+      return await ctx.storage.scans.createScan({
         id,
         siteUrl: args.input.siteUrl,
         standard: args.input.standard ?? 'WCAG2AA',
@@ -387,25 +382,25 @@ export const resolvers = {
       });
     },
 
-    deleteScan: (
+    deleteScan: async (
       _root: unknown,
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'reports.delete');
 
-      const scan = ctx.db.getScan(args.id);
+      const scan = await ctx.storage.scans.getScan(args.id);
       if (scan === null) {
         throw new Error(`Scan not found: ${args.id}`);
       }
 
-      ctx.db.deleteScan(args.id);
+      await ctx.storage.scans.deleteScan(args.id);
       return true;
     },
 
     // ── Assignments ────────────────────────────────────────────────────
 
-    assignIssue: (
+    assignIssue: async (
       _root: unknown,
       args: {
         input: {
@@ -426,7 +421,8 @@ export const resolvers = {
       requirePerm(ctx, 'issues.assign');
 
       const id = randomUUID();
-      return ctx.db.createAssignment({
+      const now = new Date().toISOString();
+      return await ctx.storage.assignments.createAssignment({
         id,
         scanId: args.input.scanId,
         issueFingerprint: args.input.issueFingerprint,
@@ -439,48 +435,50 @@ export const resolvers = {
         assignedTo: args.input.assignedTo,
         notes: args.input.notes,
         createdBy: ctx.user!.username,
+        createdAt: now,
+        updatedAt: now,
         orgId: ctx.orgId,
       });
     },
 
-    updateAssignment: (
+    updateAssignment: async (
       _root: unknown,
       args: { id: string; status?: string; assignedTo?: string; notes?: string },
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'issues.assign');
 
-      const existing = ctx.db.getAssignment(args.id);
+      const existing = await ctx.storage.assignments.getAssignment(args.id);
       if (existing === null) {
         throw new Error(`Assignment not found: ${args.id}`);
       }
 
-      ctx.db.updateAssignment(args.id, {
+      await ctx.storage.assignments.updateAssignment(args.id, {
         status: args.status as 'open' | 'assigned' | 'in-progress' | 'fixed' | 'verified' | undefined,
         assignedTo: args.assignedTo,
         notes: args.notes,
       });
 
-      const updated = ctx.db.getAssignment(args.id);
+      const updated = await ctx.storage.assignments.getAssignment(args.id);
       if (updated === null) {
         throw new Error(`Assignment not found after update: ${args.id}`);
       }
       return updated;
     },
 
-    deleteAssignment: (
+    deleteAssignment: async (
       _root: unknown,
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'issues.assign');
 
-      const existing = ctx.db.getAssignment(args.id);
+      const existing = await ctx.storage.assignments.getAssignment(args.id);
       if (existing === null) {
         throw new Error(`Assignment not found: ${args.id}`);
       }
 
-      ctx.db.deleteAssignment(args.id);
+      await ctx.storage.assignments.deleteAssignment(args.id);
       return true;
     },
 
@@ -492,60 +490,68 @@ export const resolvers = {
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'users.create');
-      return ctx.userDb.createUser(args.username, args.password, args.role ?? 'user');
+      const usernameCheck = validateUsername(args.username);
+      if (!usernameCheck.valid) {
+        throw new Error(usernameCheck.error ?? 'Invalid username');
+      }
+      const passwordCheck = validatePassword(args.password);
+      if (!passwordCheck.valid) {
+        throw new Error(passwordCheck.error ?? 'Invalid password');
+      }
+      return await ctx.storage.users.createUser(args.username, args.password, args.role ?? 'user');
     },
 
-    deleteUser: (
+    deleteUser: async (
       _root: unknown,
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'users.delete');
 
-      const user = ctx.userDb.getUserById(args.id);
+      const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
       }
 
-      return ctx.userDb.deleteUser(args.id);
+      return await ctx.storage.users.deleteUser(args.id);
     },
 
-    activateUser: (
+    activateUser: async (
       _root: unknown,
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'users.activate');
 
-      const user = ctx.userDb.getUserById(args.id);
+      const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
       }
 
-      ctx.userDb.activateUser(args.id);
+      await ctx.storage.users.activateUser(args.id);
 
-      const updated = ctx.userDb.getUserById(args.id);
+      const updated = await ctx.storage.users.getUserById(args.id);
       if (updated === null) {
         throw new Error(`User not found after activation: ${args.id}`);
       }
       return updated;
     },
 
-    deactivateUser: (
+    deactivateUser: async (
       _root: unknown,
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
       requirePerm(ctx, 'users.activate');
 
-      const user = ctx.userDb.getUserById(args.id);
+      const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
       }
 
-      ctx.userDb.deactivateUser(args.id);
+      await ctx.storage.users.deactivateUser(args.id);
 
-      const updated = ctx.userDb.getUserById(args.id);
+      const updated = await ctx.storage.users.getUserById(args.id);
       if (updated === null) {
         throw new Error(`User not found after deactivation: ${args.id}`);
       }
@@ -559,12 +565,16 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'users.reset_password');
 
-      const user = ctx.userDb.getUserById(args.id);
+      const user = await ctx.storage.users.getUserById(args.id);
       if (user === null) {
         throw new Error(`User not found: ${args.id}`);
       }
 
-      await ctx.userDb.updatePassword(args.id, args.newPassword);
+      const passwordCheck = validatePassword(args.newPassword);
+      if (!passwordCheck.valid) {
+        throw new Error(passwordCheck.error ?? 'Invalid password');
+      }
+      await ctx.storage.users.updatePassword(args.id, args.newPassword);
       return true;
     },
   },

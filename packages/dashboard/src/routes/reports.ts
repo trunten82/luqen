@@ -3,8 +3,7 @@ import { readFile, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ScanDb } from '../db/scans.js';
-import { UserDb } from '../db/users.js';
+import type { StorageAdapter } from '../db/index.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 import { MANUAL_CRITERIA } from '../manual-criteria.js';
 import { isPuppeteerAvailable } from '../pdf/generator.js';
@@ -540,7 +539,7 @@ function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string; pages
 
 export async function reportRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
   // GET /reports — list with pagination and search
   server.get(
@@ -552,7 +551,7 @@ export async function reportRoutes(
       const q = query.q?.trim();
       const status = query.status;
 
-      const scans = db.listScans({
+      const scans = await storage.scans.listScans({
         ...(q !== undefined && q !== '' ? { siteUrl: q } : {}),
         ...(status !== undefined && status !== '' && status !== 'all'
           ? { status: status as 'queued' | 'running' | 'completed' | 'failed' }
@@ -568,10 +567,10 @@ export async function reportRoutes(
 
       // For each completed scan, find the previous completed scan of the same URL
       // to enable "Compare with previous" links
-      const formatted = page.map((s) => {
+      const formatted = await Promise.all(page.map(async (s) => {
         let previousScanId: string | undefined;
         if (s.status === 'completed') {
-          const previousScans = db.listScans({
+          const previousScans = await storage.scans.listScans({
             siteUrl: s.siteUrl,
             status: 'completed',
             limit: 10,
@@ -593,7 +592,7 @@ export async function reportRoutes(
             : '',
           previousScanId,
         };
-      });
+      }));
 
       // HTMX partial request — return table fragment only
       const isHtmx = request.headers['hx-request'] === 'true';
@@ -634,7 +633,7 @@ export async function reportRoutes(
     '/reports/:id',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
 
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });
@@ -669,7 +668,7 @@ export async function reportRoutes(
       // Load report data — try DB first, then filesystem fallback
       let reportData: ReturnType<typeof normalizeReportData> | null = null;
       try {
-        const dbReport = db.getReport(id);
+        const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
           reportData = normalizeReportData(dbReport as JsonReportFile, scan);
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
@@ -694,7 +693,7 @@ export async function reportRoutes(
       }
 
       // Compute manual testing completion stats
-      const manualResults = db.getManualTests(id);
+      const manualResults = await storage.manualTests.getManualTests(id);
       const manualTested = manualResults.filter(
         (r) => r.status === 'pass' || r.status === 'fail' || r.status === 'na',
       ).length;
@@ -702,9 +701,9 @@ export async function reportRoutes(
       const manualPct = manualTotal > 0 ? Math.round((manualTested / manualTotal) * 100) : 0;
 
       // Compute issue assignment stats + build assigned fingerprint lookup
-      const assignmentStats = db.getAssignmentStats(id);
+      const assignmentStats = await storage.assignments.getAssignmentStats(id);
       const assignmentActiveCount = assignmentStats.open + assignmentStats.assigned + assignmentStats.inProgress;
-      const allAssignments = db.listAssignments({ scanId: id });
+      const allAssignments = await storage.assignments.listAssignments({ scanId: id });
       const assignedMap: Record<string, { id: string; status: string; assignedTo: string | null }> = {};
       for (const a of allAssignments) {
         // Store by exact fingerprint
@@ -716,9 +715,8 @@ export async function reportRoutes(
       }
 
       // Build assignees list (users + teams) for the assignment picker
-      const userDb = new UserDb(db.getDatabase());
-      const dashboardUsers = userDb.listUsers();
-      const teams = db.listTeams(orgId);
+      const dashboardUsers = await storage.users.listUsers();
+      const teams = await storage.teams.listTeams(orgId);
       const assignees = [
         ...dashboardUsers.filter((u) => u.active).map((u) => ({ type: 'user', id: u.username, label: u.username })),
         ...teams.map((t) => ({ type: 'team', id: `team:${t.id}`, label: `Team: ${t.name}` })),
@@ -749,7 +747,7 @@ export async function reportRoutes(
     '/reports/:id/print',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
 
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });
@@ -766,7 +764,7 @@ export async function reportRoutes(
 
       let reportData: ReturnType<typeof normalizeReportData> | null = null;
       try {
-        const dbReport = db.getReport(id);
+        const dbReport = await storage.scans.getReport(id);
         if (dbReport !== null) {
           reportData = normalizeReportData(dbReport as JsonReportFile, scan);
         } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
@@ -818,7 +816,7 @@ export async function reportRoutes(
     '/reports/:id',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
 
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });
@@ -842,7 +840,7 @@ export async function reportRoutes(
         await unlink(scan.jsonReportPath).catch(() => undefined);
       }
 
-      db.deleteScan(id);
+      await storage.scans.deleteScan(id);
 
       // HTMX request — return empty fragment for swap
       if (request.headers['hx-request'] === 'true') {

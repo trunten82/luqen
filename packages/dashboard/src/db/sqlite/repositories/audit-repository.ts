@@ -1,43 +1,16 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
+import type { AuditRepository } from '../../interfaces/audit-repository.js';
+import type { AuditEntry, AuditQuery, CreateAuditInput } from '../../types.js';
 
-export interface AuditEntry {
-  readonly id: string;
-  readonly timestamp: string;
-  readonly actor: string;
-  readonly actorId: string | null;
-  readonly action: string;
-  readonly resourceType: string;
-  readonly resourceId: string | null;
-  readonly details: string | null;
-  readonly ipAddress: string | null;
-  readonly orgId: string;
-}
+// ---------------------------------------------------------------------------
+// SqliteAuditRepository
+// ---------------------------------------------------------------------------
 
-export interface AuditQuery {
-  readonly actor?: string;
-  readonly action?: string;
-  readonly resourceType?: string;
-  readonly from?: string;
-  readonly to?: string;
-  readonly orgId?: string;
-  readonly limit?: number;
-  readonly offset?: number;
-}
-
-export class AuditLogger {
+export class SqliteAuditRepository implements AuditRepository {
   constructor(private readonly db: Database.Database) {}
 
-  log(entry: {
-    actor: string;
-    actorId?: string;
-    action: string;
-    resourceType: string;
-    resourceId?: string;
-    details?: string | Record<string, unknown>;
-    ipAddress?: string;
-    orgId?: string;
-  }): void {
+  async log(entry: CreateAuditInput): Promise<void> {
     const stmt = this.db.prepare(`
       INSERT INTO audit_log (id, timestamp, actor, actor_id, action, resource_type, resource_id, details, ip_address, org_id)
       VALUES (@id, @timestamp, @actor, @actorId, @action, @resourceType, @resourceId, @details, @ipAddress, @orgId)
@@ -56,7 +29,7 @@ export class AuditLogger {
     });
   }
 
-  query(q: AuditQuery): { entries: AuditEntry[]; total: number } {
+  async query(q: AuditQuery): Promise<{ entries: AuditEntry[]; total: number }> {
     const conditions: string[] = [];
     const params: Record<string, unknown> = {};
 
@@ -75,7 +48,7 @@ export class AuditLogger {
     const rows = this.db.prepare(`SELECT * FROM audit_log ${where} ORDER BY timestamp DESC LIMIT @limit OFFSET @offset`).all({ ...params, limit, offset });
 
     return {
-      entries: (rows as Array<Record<string, unknown>>).map(r => ({
+      entries: (rows as Array<Record<string, unknown>>).map((r) => ({
         id: r.id as string,
         timestamp: r.timestamp as string,
         actor: r.actor as string,

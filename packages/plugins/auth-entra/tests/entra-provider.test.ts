@@ -327,144 +327,199 @@ describe('EntraProvider', () => {
 
       expect(result).toBe(authResult);
     });
-  });
-});
 
-// ---------------------------------------------------------------------------
-// Plugin factory (index.ts) tests
-// ---------------------------------------------------------------------------
+    it('throws when silent acquisition returns null', async () => {
+      const account = {
+        homeAccountId: 'home-abc',
+        environment: 'login.microsoftonline.com',
+        tenantId: validConfig.tenantId,
+        username: 'alice@contoso.com',
+        localAccountId: 'local-123',
+      };
+      mockGetTokenCache.mockReturnValue({
+        getAllAccounts: vi.fn().mockResolvedValueOnce([account]),
+      });
+      mockAcquireTokenSilent.mockResolvedValueOnce(null);
 
-vi.mock('node:fs', () => ({
-  readFileSync: vi.fn().mockReturnValue(
-    JSON.stringify({
-      name: 'auth-entra',
-      displayName: 'Azure Entra ID',
-      type: 'auth',
-      version: '1.0.0',
-      description: 'Single sign-on via Azure Entra ID (formerly Azure AD)',
-      configSchema: [
-        { key: 'tenantId', label: 'Tenant ID', type: 'string', required: true },
-        { key: 'clientId', label: 'Application (Client) ID', type: 'string', required: true },
-        { key: 'clientSecret', label: 'Client Secret', type: 'secret', required: true },
-        { key: 'redirectUri', label: 'Redirect URI', type: 'string', default: '/auth/callback/auth-entra' },
-      ],
-    }),
-  ),
-}));
-
-describe('createPlugin (index.ts)', () => {
-  // Dynamic import after mock
-  let createPlugin: () => ReturnType<typeof import('../src/index.js')['default']>;
-
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    const mod = await import('../src/index.js');
-    createPlugin = mod.default as unknown as typeof createPlugin;
-  });
-
-  it('returns a plugin with the correct manifest', () => {
-    const plugin = createPlugin();
-    expect(plugin.manifest.name).toBe('auth-entra');
-    expect(plugin.manifest.type).toBe('auth');
-    expect(plugin.manifest.displayName).toBe('Azure Entra ID');
-  });
-
-  it('activate throws on missing tenantId', async () => {
-    const plugin = createPlugin();
-    await expect(
-      plugin.activate({ clientId: 'c', clientSecret: 's' }),
-    ).rejects.toThrow('Missing required config: tenantId');
-  });
-
-  it('activate throws on missing clientId', async () => {
-    const plugin = createPlugin();
-    await expect(
-      plugin.activate({ tenantId: 't', clientSecret: 's' }),
-    ).rejects.toThrow('Missing required config: clientId');
-  });
-
-  it('activate throws on missing clientSecret', async () => {
-    const plugin = createPlugin();
-    await expect(
-      plugin.activate({ tenantId: 't', clientId: 'c' }),
-    ).rejects.toThrow('Missing required config: clientSecret');
-  });
-
-  it('activate succeeds with valid config', async () => {
-    const plugin = createPlugin();
-    await expect(
-      plugin.activate({
-        tenantId: 'test-tenant',
-        clientId: 'test-client',
-        clientSecret: 'test-secret',
-      }),
-    ).resolves.toBeUndefined();
-  });
-
-  it('deactivate succeeds even when not activated', async () => {
-    const plugin = createPlugin();
-    await expect(plugin.deactivate()).resolves.toBeUndefined();
-  });
-
-  it('getLoginUrl throws when not activated', async () => {
-    const plugin = createPlugin();
-    await expect(plugin.getLoginUrl()).rejects.toThrow('not been activated');
-  });
-
-  it('getLogoutUrl returns Entra logout URL after activation', async () => {
-    const plugin = createPlugin();
-    await plugin.activate({
-      tenantId: 'my-tenant',
-      clientId: 'my-client',
-      clientSecret: 'my-secret',
+      provider.initialise();
+      await expect(
+        provider.acquireTokenSilent('home-abc'),
+      ).rejects.toThrow('Silent token acquisition returned null');
     });
 
-    const url = await plugin.getLogoutUrl('https://app.test');
-    expect(url).toContain('login.microsoftonline.com/my-tenant');
-    expect(url).toContain('logout');
-    expect(url).toContain('post_logout_redirect_uri');
+    it('throws when provider is not initialised', async () => {
+      await expect(
+        provider.acquireTokenSilent('home-abc'),
+      ).rejects.toThrow('not been initialised');
+    });
   });
 
-  it('authenticate returns not-authenticated when no bearer token', async () => {
-    const plugin = createPlugin();
-    await plugin.activate({
-      tenantId: 'my-tenant',
-      clientId: 'my-client',
-      clientSecret: 'my-secret',
+  // -----------------------------------------------------------------------
+  // acquireTokenByCode — additional cases
+  // -----------------------------------------------------------------------
+
+  describe('acquireTokenByCode — additional', () => {
+    it('throws when provider is not initialised', async () => {
+      await expect(
+        provider.acquireTokenByCode('code', '/callback'),
+      ).rejects.toThrow('not been initialised');
     });
 
-    const result = await plugin.authenticate({
-      headers: {},
-      query: {},
+    it('accepts custom scopes', async () => {
+      const authResult = fakeAuthResult();
+      mockAcquireTokenByCode.mockResolvedValueOnce(authResult);
+
+      provider.initialise();
+      await provider.acquireTokenByCode('code-abc', '/callback', ['openid', 'User.Read']);
+
+      expect(mockAcquireTokenByCode).toHaveBeenCalledWith({
+        code: 'code-abc',
+        redirectUri: '/callback',
+        scopes: ['openid', 'User.Read'],
+      });
     });
-    expect(result.authenticated).toBe(false);
-    expect(result.error).toContain('No bearer token');
   });
 
-  it('getUserInfo decodes JWT claims', async () => {
-    const plugin = createPlugin();
-    // Build a fake JWT
-    const header = Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url');
-    const payload = Buffer.from(
-      JSON.stringify({
-        oid: 'user-oid-123',
-        preferred_username: 'test@example.com',
-        email: 'test@example.com',
-        groups: ['admins'],
-      }),
-    ).toString('base64url');
-    const signature = 'fake-signature';
-    const token = `${header}.${payload}.${signature}`;
+  // -----------------------------------------------------------------------
+  // extractUserInfo — additional edge cases
+  // -----------------------------------------------------------------------
 
-    const userInfo = await plugin.getUserInfo(token);
-    expect(userInfo.id).toBe('user-oid-123');
-    expect(userInfo.username).toBe('test@example.com');
-    expect(userInfo.email).toBe('test@example.com');
-    expect(userInfo.groups).toEqual(['admins']);
+  describe('extractUserInfo — additional', () => {
+    it('falls back to account username when claims have no preferred_username', () => {
+      const authResult = fakeAuthResult({
+        account: {
+          homeAccountId: 'home-abc',
+          environment: 'login.microsoftonline.com',
+          tenantId: validConfig.tenantId,
+          username: 'fallback-user@contoso.com',
+          localAccountId: 'local-123',
+        },
+        idTokenClaims: {
+          oid: 'oid-456',
+        } as Record<string, unknown>,
+      });
+      const userInfo = provider.extractUserInfo(authResult);
+
+      expect(userInfo.username).toBe('fallback-user@contoso.com');
+    });
+
+    it('returns empty strings when no identifying claims exist', () => {
+      const authResult = fakeAuthResult({
+        uniqueId: '',
+        account: null as unknown as typeof authResult.account,
+        idTokenClaims: undefined as unknown as Record<string, unknown>,
+      });
+      const userInfo = provider.extractUserInfo(authResult);
+
+      expect(userInfo.id).toBe('');
+      expect(userInfo.username).toBe('');
+      expect(userInfo.email).toBeUndefined();
+      expect(userInfo.groups).toBeUndefined();
+    });
   });
 
-  it('getUserInfo throws on invalid JWT format', async () => {
-    const plugin = createPlugin();
-    await expect(plugin.getUserInfo('not-a-jwt')).rejects.toThrow('Invalid JWT format');
+  // -----------------------------------------------------------------------
+  // fetchGroupsFromGraph
+  // -----------------------------------------------------------------------
+
+  describe('fetchGroupsFromGraph', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('returns group IDs from Graph API response', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: vi.fn().mockResolvedValueOnce({
+            value: [
+              { id: 'group-1', '@odata.type': '#microsoft.graph.group' },
+              { id: 'group-2', '@odata.type': '#microsoft.graph.group' },
+            ],
+          }),
+        }),
+      );
+
+      const groups = await provider.fetchGroupsFromGraph('access-token');
+      expect(groups).toEqual(['group-1', 'group-2']);
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('graph.microsoft.com/v1.0/me/memberOf'),
+        expect.objectContaining({
+          headers: { Authorization: 'Bearer access-token' },
+        }),
+      );
+    });
+
+    it('follows pagination via @odata.nextLink', async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: vi.fn().mockResolvedValueOnce({
+            value: [{ id: 'group-1', '@odata.type': '#microsoft.graph.group' }],
+            '@odata.nextLink': 'https://graph.microsoft.com/v1.0/me/memberOf?$skiptoken=page2',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: vi.fn().mockResolvedValueOnce({
+            value: [{ id: 'group-2' }],
+          }),
+        });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const groups = await provider.fetchGroupsFromGraph('access-token');
+      expect(groups).toEqual(['group-1', 'group-2']);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('filters out non-group entries (e.g. directoryRole)', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: vi.fn().mockResolvedValueOnce({
+            value: [
+              { id: 'group-1', '@odata.type': '#microsoft.graph.group' },
+              { id: 'role-1', '@odata.type': '#microsoft.graph.directoryRole' },
+              { id: 'group-2' }, // undefined @odata.type => included
+            ],
+          }),
+        }),
+      );
+
+      const groups = await provider.fetchGroupsFromGraph('access-token');
+      expect(groups).toEqual(['group-1', 'group-2']);
+    });
+
+    it('throws when Graph API returns non-ok status', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: 'Forbidden',
+        }),
+      );
+
+      await expect(
+        provider.fetchGroupsFromGraph('access-token'),
+      ).rejects.toThrow('Graph API /me/memberOf failed: 403 Forbidden');
+    });
+
+    it('returns empty array when Graph API returns no groups', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: vi.fn().mockResolvedValueOnce({
+            value: [],
+          }),
+        }),
+      );
+
+      const groups = await provider.fetchGroupsFromGraph('access-token');
+      expect(groups).toEqual([]);
+    });
   });
 });

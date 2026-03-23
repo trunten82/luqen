@@ -1,5 +1,5 @@
-import type { ScanDb } from '../db/scans.js';
-import type { EmailReport } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
+import type { EmailReport } from '../db/types.js';
 import type { PluginManager } from '../plugins/manager.js';
 import { generateReportHtml, generateIssuesCsv, buildEmailBody } from './report-generator.js';
 import { generateReportPdf, isPuppeteerAvailable } from '../pdf/generator.js';
@@ -29,12 +29,12 @@ function computeNextSendAt(frequency: string, fromDate: Date = new Date()): stri
 export { computeNextSendAt };
 
 export async function processEmailReport(
-  db: ScanDb,
+  storage: StorageAdapter,
   report: EmailReport,
   pluginManager?: PluginManager,
 ): Promise<void> {
   // Find the latest completed scan for this site URL
-  const scans = db.listScans({
+  const scans = await storage.scans.listScans({
     siteUrl: report.siteUrl,
     status: 'completed',
     limit: 1,
@@ -156,7 +156,7 @@ export async function processEmailReport(
     }
   } else {
     // Fallback: use legacy smtp_config from dashboard DB
-    const smtpConfig = db.getSmtpConfig(report.orgId) ?? db.getSmtpConfig('system');
+    const smtpConfig = await storage.email.getSmtpConfig(report.orgId) ?? await storage.email.getSmtpConfig('system');
     if (smtpConfig === null) {
       console.error(`[email-scheduler] No email plugin active and no SMTP config found for report ${report.id}`);
       return;
@@ -182,25 +182,25 @@ export async function processEmailReport(
   // Update next_send_at and last_sent_at
   const now = new Date();
   const nextSendAt = computeNextSendAt(report.frequency, now);
-  db.updateEmailReport(report.id, {
+  await storage.email.updateEmailReport(report.id, {
     lastSentAt: now.toISOString(),
     nextSendAt,
   });
 }
 
 export function startEmailScheduler(
-  db: ScanDb,
+  storage: StorageAdapter,
   pluginManager?: PluginManager,
   intervalMs = 60_000,
 ): NodeJS.Timeout {
   return setInterval(async () => {
     try {
-      const due = db.getDueEmailReports();
+      const due = await storage.email.getDueEmailReports();
       if (due.length === 0) return;
 
       for (const report of due) {
         try {
-          await processEmailReport(db, report, pluginManager);
+          await processEmailReport(storage, report, pluginManager);
         } catch (err) {
           console.error(
             `[email-scheduler] Failed to send email report ${report.id}:`,

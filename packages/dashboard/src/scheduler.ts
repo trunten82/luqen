@@ -1,25 +1,25 @@
 import { randomUUID } from 'node:crypto';
-import type { ScanDb } from './db/scans.js';
+import type { StorageAdapter } from './db/index.js';
 import type { ScanOrchestrator } from './scanner/orchestrator.js';
 import type { DashboardConfig } from './config.js';
 import { computeNextRunAt } from './routes/schedules.js';
 
 export function startScheduler(
-  db: ScanDb,
+  storage: StorageAdapter,
   orchestrator: ScanOrchestrator,
   config: DashboardConfig,
   intervalMs = 60_000,
 ): NodeJS.Timeout {
-  return setInterval(() => {
+  return setInterval(async () => {
     try {
-      const due = db.getDueSchedules();
+      const due = await storage.schedules.getDueSchedules();
 
       for (const schedule of due) {
         const scanId = randomUUID();
         const now = new Date();
 
         // Create a scan record
-        db.createScan({
+        await storage.scans.createScan({
           id: scanId,
           siteUrl: schedule.siteUrl,
           standard: schedule.standard,
@@ -48,7 +48,7 @@ export function startScheduler(
 
         // Update schedule: set last_run_at and compute next_run_at
         const nextRunAt = computeNextRunAt(schedule.frequency, now);
-        db.updateSchedule(schedule.id, {
+        await storage.schedules.updateSchedule(schedule.id, {
           lastRunAt: now.toISOString(),
           nextRunAt,
         });

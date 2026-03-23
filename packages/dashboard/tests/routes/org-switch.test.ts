@@ -4,8 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync } from 'node:fs';
-import { ScanDb } from '../../src/db/scans.js';
-import { OrgDb } from '../../src/db/orgs.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { registerSession } from '../../src/auth/session.js';
 import { orgRoutes } from '../../src/routes/orgs.js';
 
@@ -13,17 +12,15 @@ const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
 interface TestContext {
   server: FastifyInstance;
-  db: ScanDb;
-  orgDb: OrgDb;
+  storage: SqliteStorageAdapter;
   cleanup: () => void;
 }
 
 async function createTestServer(userId = 'test-user-id'): Promise<TestContext> {
   const dbPath = join(tmpdir(), `test-org-switch-${randomUUID()}.db`);
 
-  const db = new ScanDb(dbPath);
-  db.initialize();
-  const orgDb = new OrgDb(db.getDatabase());
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
 
   const server = Fastify({ logger: false });
 
@@ -45,16 +42,16 @@ async function createTestServer(userId = 'test-user-id'): Promise<TestContext> {
     request.user = { id: userId, username: 'testuser', role: 'user' };
   });
 
-  await orgRoutes(server, orgDb);
+  await orgRoutes(server, storage);
   await server.ready();
 
   const cleanup = (): void => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     void server.close();
   };
 
-  return { server, db, orgDb, cleanup };
+  return { server, storage, cleanup };
 }
 
 describe('POST /orgs/switch', () => {
@@ -69,8 +66,8 @@ describe('POST /orgs/switch', () => {
   });
 
   it('sets session org context when user belongs to org', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
-    ctx.orgDb.addMember(org.id, 'test-user-id', 'member');
+    const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
+    await ctx.storage.organizations.addMember(org.id, 'test-user-id', 'member');
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -112,7 +109,7 @@ describe('POST /orgs/switch', () => {
   });
 
   it('rejects switch to org user does not belong to', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'OtherOrg', slug: 'other-org' });
+    const org = await ctx.storage.organizations.createOrg({ name: 'OtherOrg', slug: 'other-org' });
     // Do NOT add user as member
 
     const response = await ctx.server.inject({
@@ -137,8 +134,8 @@ describe('POST /orgs/switch', () => {
   });
 
   it('redirects to referer when available', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
-    ctx.orgDb.addMember(org.id, 'test-user-id', 'member');
+    const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
+    await ctx.storage.organizations.addMember(org.id, 'test-user-id', 'member');
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -155,8 +152,8 @@ describe('POST /orgs/switch', () => {
   });
 
   it('persists org context across requests via session', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
-    ctx.orgDb.addMember(org.id, 'test-user-id', 'member');
+    const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
+    await ctx.storage.organizations.addMember(org.id, 'test-user-id', 'member');
 
     // Switch to org
     const switchResponse = await ctx.server.inject({

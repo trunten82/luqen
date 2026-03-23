@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { ScanDb } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
 import {
   MANUAL_CRITERIA,
   getGroupedCriteria,
@@ -53,14 +53,14 @@ function computeStats(
 
 export async function manualTestRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
   // GET /reports/:id/manual — render manual testing checklist
   server.get(
     '/reports/:id/manual',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
 
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });
@@ -72,7 +72,7 @@ export async function manualTestRoutes(
       }
 
       // Load saved results for this scan
-      const savedResults = db.getManualTests(id);
+      const savedResults = await storage.manualTests.getManualTests(id);
       const resultMap = new Map(
         savedResults.map((r) => [r.criterionId, r]),
       );
@@ -127,7 +127,7 @@ export async function manualTestRoutes(
       const { id } = request.params as { id: string };
       const body = request.body as ManualTestBody;
 
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });
       }
@@ -158,7 +158,7 @@ export async function manualTestRoutes(
 
       const testedBy = request.user?.username ?? 'unknown';
 
-      const result = db.upsertManualTest({
+      const result = await storage.manualTests.upsertManualTest({
         scanId: id,
         criterionId,
         status,
@@ -168,7 +168,7 @@ export async function manualTestRoutes(
       });
 
       // Compute updated stats
-      const allResults = db.getManualTests(id);
+      const allResults = await storage.manualTests.getManualTests(id);
       const stats = computeStats(allResults, MANUAL_CRITERIA.length);
 
       // Return updated row HTML for HTMX swap

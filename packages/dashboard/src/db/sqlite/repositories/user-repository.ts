@@ -1,14 +1,12 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
+import type { UserRepository } from '../../interfaces/user-repository.js';
+import type { DashboardUser } from '../../types.js';
 
-export interface DashboardUser {
-  readonly id: string;
-  readonly username: string;
-  readonly role: 'admin' | 'developer' | 'editor' | 'user' | 'viewer' | 'executive';
-  readonly active: boolean;
-  readonly createdAt: string;
-}
+// ---------------------------------------------------------------------------
+// Private row type and conversion
+// ---------------------------------------------------------------------------
 
 interface UserRow {
   id: string;
@@ -31,7 +29,11 @@ function rowToUser(row: UserRow): DashboardUser {
   };
 }
 
-export class UserDb {
+// ---------------------------------------------------------------------------
+// SqliteUserRepository
+// ---------------------------------------------------------------------------
+
+export class SqliteUserRepository implements UserRepository {
   constructor(private readonly db: Database.Database) {}
 
   async createUser(username: string, password: string, role: string): Promise<DashboardUser> {
@@ -46,14 +48,14 @@ export class UserDb {
 
     stmt.run({ id, username, passwordHash, role, createdAt });
 
-    const created = this.getUserById(id);
+    const created = await this.getUserById(id);
     if (created === null) {
       throw new Error(`Failed to retrieve user after creation: ${id}`);
     }
     return created;
   }
 
-  getUserByUsername(username: string): DashboardUser | null {
+  async getUserByUsername(username: string): Promise<DashboardUser | null> {
     const stmt = this.db.prepare(
       'SELECT id, username, role, active, created_at FROM dashboard_users WHERE username = ?',
     );
@@ -61,7 +63,7 @@ export class UserDb {
     return row !== undefined ? rowToUser(row) : null;
   }
 
-  getUserById(id: string): DashboardUser | null {
+  async getUserById(id: string): Promise<DashboardUser | null> {
     const stmt = this.db.prepare(
       'SELECT id, username, role, active, created_at FROM dashboard_users WHERE id = ?',
     );
@@ -82,7 +84,7 @@ export class UserDb {
     return bcrypt.compare(password, row.password_hash);
   }
 
-  listUsers(): DashboardUser[] {
+  async listUsers(): Promise<DashboardUser[]> {
     const stmt = this.db.prepare(
       'SELECT id, username, role, active, created_at FROM dashboard_users ORDER BY created_at ASC',
     );
@@ -90,33 +92,29 @@ export class UserDb {
     return rows.map(rowToUser);
   }
 
-  updateUserRole(id: string, role: string): void {
-    const stmt = this.db.prepare('UPDATE dashboard_users SET role = ? WHERE id = ?');
-    stmt.run(role, id);
+  async updateUserRole(id: string, role: string): Promise<void> {
+    this.db.prepare('UPDATE dashboard_users SET role = ? WHERE id = ?').run(role, id);
   }
 
-  deactivateUser(id: string): void {
-    const stmt = this.db.prepare('UPDATE dashboard_users SET active = 0 WHERE id = ?');
-    stmt.run(id);
+  async deactivateUser(id: string): Promise<void> {
+    this.db.prepare('UPDATE dashboard_users SET active = 0 WHERE id = ?').run(id);
   }
 
-  activateUser(id: string): void {
-    const stmt = this.db.prepare('UPDATE dashboard_users SET active = 1 WHERE id = ?');
-    stmt.run(id);
+  async activateUser(id: string): Promise<void> {
+    this.db.prepare('UPDATE dashboard_users SET active = 1 WHERE id = ?').run(id);
   }
 
   async updatePassword(id: string, newPassword: string): Promise<void> {
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-    const stmt = this.db.prepare('UPDATE dashboard_users SET password_hash = ? WHERE id = ?');
-    stmt.run(passwordHash, id);
+    this.db.prepare('UPDATE dashboard_users SET password_hash = ? WHERE id = ?').run(passwordHash, id);
   }
 
-  deleteUser(id: string): boolean {
+  async deleteUser(id: string): Promise<boolean> {
     const result = this.db.prepare('DELETE FROM dashboard_users WHERE id = ?').run(id);
     return result.changes > 0;
   }
 
-  countUsers(): number {
+  async countUsers(): Promise<number> {
     const stmt = this.db.prepare('SELECT COUNT(*) as count FROM dashboard_users');
     const row = stmt.get() as { count: number };
     return row.count;

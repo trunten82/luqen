@@ -33,7 +33,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `complianceUrl` | `string` | `http://localhost:4000` | Base URL of the compliance service REST API |
 | `webserviceUrl` | `string` | `http://localhost:3000` | Base URL of the pa11y webservice (used in health check only) |
 | `reportsDir` | `string` | `./reports` | Directory where JSON and HTML scan reports are written |
-| `dbPath` | `string` | `./dashboard.db` | Path to the SQLite database file |
+| `dbPath` | `string` | `./dashboard.db` | Path to the SQLite database file (used by the SQLite storage adapter) |
 | `sessionSecret` | `string` | — | Secret used to sign session cookies. **Required. Minimum 32 bytes.** |
 | `maxConcurrentScans` | `number` | `2` | Maximum number of scans that may run simultaneously |
 | `maxPages` | `number` | `50` | Maximum pages to discover and scan in full-site mode (1–1000) |
@@ -89,6 +89,34 @@ Any failure exits immediately with a descriptive error message.
 
 ---
 
+## Storage adapter
+
+The dashboard uses a **StorageAdapter** architecture for all database operations. The storage adapter abstracts 14 domain repositories behind a unified interface, making the underlying database engine swappable:
+
+`scans`, `users`, `organizations`, `schedules`, `assignments`, `repos`, `roles`, `teams`, `email`, `audit`, `plugins`, `apiKeys`, `pageHashes`, `manualTests`
+
+Repository interfaces are defined in `packages/dashboard/src/db/interfaces/`. All routes and services consume these interfaces — never a concrete database implementation.
+
+### Current adapters
+
+| Adapter | Package | Status |
+|---------|---------|--------|
+| **SQLite** | Built-in | Default — no configuration needed |
+| **PostgreSQL** | `@luqen/plugin-storage-postgres` | Coming soon |
+| **MongoDB** | `@luqen/plugin-storage-mongodb` | Coming soon |
+
+### SQLite (default)
+
+SQLite is the built-in default storage adapter. It requires no external database server and stores all data in a single file specified by `dbPath`. This is ideal for single-server deployments, development, and small teams.
+
+No additional configuration is needed — the dashboard uses SQLite automatically when no storage plugin is installed.
+
+### Future storage plugins
+
+When Postgres or MongoDB storage plugins become available, they will be installable via **Admin > Plugins** like any other plugin. The dashboard will use `resolveStorageAdapter()` to select the appropriate backend based on the active storage plugin configuration. The `dbPath` setting is specific to the SQLite adapter and will not apply when using an external database.
+
+---
+
 ## CLI reference
 
 ### `luqen-dashboard serve`
@@ -105,7 +133,7 @@ Options:
 
 ### `luqen-dashboard migrate`
 
-Create or update the SQLite schema. Safe to run multiple times.
+Run database migrations for the active storage adapter. Currently applies SQLite schema migrations. Safe to run multiple times.
 
 ```bash
 luqen-dashboard migrate [options]

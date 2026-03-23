@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { ScanDb } from '../../db/scans.js';
+import type { StorageAdapter } from '../../db/index.js';
 import { hasPermission, getPermissionGroups, ALL_PERMISSION_IDS } from '../../permissions.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 
@@ -39,7 +39,7 @@ function requireAdminRoles(request: FastifyRequest, reply: FastifyReply): boolea
 
 export async function roleRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
   const permissionGroups = getPermissionGroups();
 
@@ -51,7 +51,7 @@ export async function roleRoutes(
       if (!requireAdminRoles(request, reply)) return;
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      const roles = db.listRoles(orgId);
+      const roles = await storage.roles.listRoles(orgId);
 
       const rolesView = roles.map((r) => ({
         ...r,
@@ -118,7 +118,7 @@ export async function roleRoutes(
       }
 
       // Check for duplicates
-      const existing = db.getRoleByName(name);
+      const existing = await storage.roles.getRoleByName(name);
       if (existing !== null) {
         if (request.headers['hx-request'] === 'true') {
           return reply.code(422).send(toastHtml(`Role "${escapeHtml(name)}" already exists`, 'error'));
@@ -136,7 +136,7 @@ export async function roleRoutes(
 
       const orgId = request.user?.currentOrgId ?? 'system';
 
-      db.createRole({
+      await storage.roles.createRole({
         name,
         description,
         permissions,
@@ -160,7 +160,7 @@ export async function roleRoutes(
       if (!requireAdminRoles(request, reply)) return;
 
       const { id } = request.params as { id: string };
-      const role = db.getRole(id);
+      const role = await storage.roles.getRole(id);
 
       if (role === null) {
         return reply.code(404).send({ error: 'Role not found' });
@@ -193,7 +193,7 @@ export async function roleRoutes(
       if (!requireAdminRoles(request, reply)) return;
 
       const { id } = request.params as { id: string };
-      const role = db.getRole(id);
+      const role = await storage.roles.getRole(id);
 
       if (role === null) {
         return reply.code(404).send(toastHtml('Role not found', 'error'));
@@ -225,7 +225,7 @@ export async function roleRoutes(
         const name = body.name.trim();
         if (name !== '' && /^[a-zA-Z0-9_-]+$/.test(name)) {
           // Check for duplicates (excluding current)
-          const existing = db.getRoleByName(name);
+          const existing = await storage.roles.getRoleByName(name);
           if (existing !== null && existing.id !== id) {
             return reply.code(422).send(toastHtml(`Role "${escapeHtml(name)}" already exists`, 'error'));
           }
@@ -233,7 +233,7 @@ export async function roleRoutes(
         }
       }
 
-      db.updateRole(id, updateData);
+      await storage.roles.updateRole(id, updateData);
 
       if (request.headers['hx-request'] === 'true') {
         reply.header('HX-Redirect', '/admin/roles');
@@ -253,7 +253,7 @@ export async function roleRoutes(
       if (!requireAdminRoles(request, reply)) return;
 
       const { id } = request.params as { id: string };
-      const role = db.getRole(id);
+      const role = await storage.roles.getRole(id);
 
       if (role === null) {
         return reply.code(404).send(toastHtml('Role not found', 'error'));
@@ -286,7 +286,7 @@ export async function roleRoutes(
       if (!role.isSystem && body.name !== undefined) {
         const name = body.name.trim();
         if (name !== '' && /^[a-zA-Z0-9_-]+$/.test(name)) {
-          const existing = db.getRoleByName(name);
+          const existing = await storage.roles.getRoleByName(name);
           if (existing !== null && existing.id !== id) {
             return reply.code(422).send(toastHtml(`Role "${escapeHtml(name)}" already exists`, 'error'));
           }
@@ -294,7 +294,7 @@ export async function roleRoutes(
         }
       }
 
-      db.updateRole(id, updateData);
+      await storage.roles.updateRole(id, updateData);
 
       if (request.headers['hx-request'] === 'true') {
         reply.header('HX-Redirect', '/admin/roles');
@@ -313,7 +313,7 @@ export async function roleRoutes(
       if (!requireAdminRoles(request, reply)) return;
 
       const { id } = request.params as { id: string };
-      const role = db.getRole(id);
+      const role = await storage.roles.getRole(id);
 
       if (role === null) {
         return reply.code(404).send(toastHtml('Role not found', 'error'));
@@ -323,7 +323,7 @@ export async function roleRoutes(
         return reply.code(422).send(toastHtml('Cannot delete system roles', 'error'));
       }
 
-      db.deleteRole(id);
+      await storage.roles.deleteRole(id);
 
       if (request.headers['hx-request'] === 'true') {
         reply.header('HX-Redirect', '/admin/roles');

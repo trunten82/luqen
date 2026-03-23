@@ -87,7 +87,7 @@ export function revokeAllKeys(db: Database.Database): void {
 /**
  * Update the last_used_at timestamp for a key hash.
  */
-export function updateLastUsed(
+function updateLastUsed(
   db: Database.Database,
   keyHash: string,
 ): void {

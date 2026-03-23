@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { OrgDb } from '../db/orgs.js';
+import type { StorageAdapter } from '../db/index.js';
 
 function safeRedirect(referer: string | undefined): string {
   if (referer == null || referer === '') return '/';
@@ -10,7 +10,7 @@ function safeRedirect(referer: string | undefined): string {
 
 export async function orgRoutes(
   server: FastifyInstance,
-  orgDb: OrgDb,
+  storage: StorageAdapter,
 ): Promise<void> {
   // ── POST /orgs/switch — switch org context ──────────────────────────────
   server.post('/orgs/switch', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -36,7 +36,7 @@ export async function orgRoutes(
     }
 
     // Validate user belongs to the requested org
-    const userOrgs = orgDb.getUserOrgs(user.id);
+    const userOrgs = await storage.organizations.getUserOrgs(user.id);
     const belongsToOrg = userOrgs.some((org) => org.id === orgId);
 
     if (!belongsToOrg) {
@@ -62,8 +62,8 @@ export async function orgRoutes(
     };
 
     const currentOrgId = (session.get('currentOrgId') as string | undefined) ?? '';
-    const currentOrg = currentOrgId !== '' ? orgDb.getOrg(currentOrgId) : null;
-    const userOrgs = orgDb.getUserOrgs(user.id);
+    const currentOrg = currentOrgId !== '' ? await storage.organizations.getOrg(currentOrgId) : null;
+    const userOrgs = await storage.organizations.getUserOrgs(user.id);
 
     return {
       currentOrgId: currentOrgId !== '' ? currentOrgId : null,

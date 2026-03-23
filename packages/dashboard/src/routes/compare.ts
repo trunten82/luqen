@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import type { ScanDb } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
 import { diffReports, type NormalizedReport, type DiffIssue } from '../compare/diff.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 
@@ -110,7 +110,7 @@ function formatScanMeta(scan: {
 
 export async function compareRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
   server.get(
     '/reports/compare',
@@ -123,8 +123,8 @@ export async function compareRoutes(
         return reply.code(400).send({ error: 'Both query parameters "a" and "b" are required.' });
       }
 
-      const scanA = db.getScan(idA);
-      const scanB = db.getScan(idB);
+      const scanA = await storage.scans.getScan(idA);
+      const scanB = await storage.scans.getScan(idB);
 
       if (scanA === null) {
         return reply.code(404).send({ error: `Scan A not found: ${idA}` });

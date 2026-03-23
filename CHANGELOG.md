@@ -6,6 +6,48 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.0] - 2026-03-23
+
+### Changed
+- **StorageAdapter architecture** — replaced the monolithic `ScanDb`, `UserDb`, and `OrgDb` classes with a modular `StorageAdapter` interface backed by 14 pluggable repository interfaces. The built-in `SqliteStorageAdapter` is the default and requires no configuration changes. All dashboard routes and services now consume repository interfaces instead of direct database classes. This refactoring prepares the dashboard for PostgreSQL and MongoDB storage plugins in a future release.
+- `resolveStorageAdapter()` factory selects the appropriate storage backend based on configuration
+- New `StorageConfig` type: `{ type: 'sqlite', sqlite?: { dbPath: string } }`
+- Dead code removal — unused modules, stale database classes, and orphaned helpers removed across all packages
+
+### Security
+- **Per-installation encryption salt** — each dashboard instance generates a unique random salt on first start, stored in `dashboard_settings`. Plugin config secrets are now encrypted with this installation-specific salt rather than a shared key, preventing cross-installation secret reuse.
+- **SSRF protection** — scan URL validation now blocks private/internal IP ranges (RFC 1918, link-local, loopback) to prevent server-side request forgery attacks.
+- **Global rate limiting** — rate limiting extended to all state-changing endpoints (scan creation, schedule management, role updates, API setup) in addition to existing login rate limits.
+- **Secure session cookies** — session cookies use `httpOnly`, `SameSite=Strict`, and AES-256-GCM encryption via `@fastify/secure-session`.
+
+### Testing
+- **85%+ statement coverage** — test suite expanded from ~1,025 tests to 2,661 tests across 156 test files
+- New test coverage: auth service, email, i18n, PDF export, GraphQL resolvers, scanner, admin routes (jurisdictions, regulations, proposals, sources, webhooks, clients, monitor, roles, teams, schedules, assignments, repos, audit, data API, system, org admin), API routes (setup, api-keys), auth routes, tool routes
+- Dashboard test file count: 15 → 85 files
+- Monitor tests expanded: agent, compliance client, MCP server
+- Entra plugin: added index tests alongside existing provider tests
+
+### Documentation
+- All documentation updated to reflect StorageAdapter architecture, security improvements, test coverage, and dead code removal
+
+---
+
+## [1.4.0] - 2026-03-22
+
+### Changed
+- **StorageAdapter architecture** — replaced the monolithic `ScanDb` class (1,886 lines) with a modular `StorageAdapter` interface backed by 14 pluggable repositories. The built-in SQLite adapter is the default and requires no configuration changes. This refactoring prepares the dashboard for PostgreSQL and MongoDB storage plugins (`@luqen/plugin-storage-postgres`, `@luqen/plugin-storage-mongodb`) in a future release.
+- `resolveStorageAdapter()` factory selects the appropriate storage backend based on configuration
+- New `StorageConfig` type: `{ type: 'sqlite', sqlite?: { dbPath: string } }`
+- All dashboard routes and services now consume the `StorageAdapter` interface instead of direct database calls
+
+### Documentation
+- Configuration reference updated with Storage Adapter section
+- Plugin guide and plugin development guide updated with storage adapter plugin information
+- Deployment guides (Docker, Kubernetes) updated with storage adapter notes
+- Install scripts annotated with future `--db-adapter` flag placeholder
+
+---
+
 ## [1.3.0] - 2026-03-22
 
 ### Added
@@ -374,6 +416,8 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [1.5.0] | 2026-03-23 | StorageAdapter (14 repositories), security hardening, 2661 tests (85%+ coverage), dead code removal |
+| [1.4.0] | 2026-03-22 | StorageAdapter architecture (14 pluggable repositories, SQLite default, Postgres/MongoDB coming) |
 | [1.3.0] | 2026-03-22 | GraphQL API (mercurius), multi-language UI (i18n — 6 languages) |
 | [1.1.0] | 2026-03-21 | Granular permissions, user lifecycle, Power BI connector, IdP group sync, PDF export, setup API |
 | [1.0.0] | 2026-03-21 | Rebrand pally-agent → Luqen |

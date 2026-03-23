@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { OrgDb, Organization } from '../../db/orgs.js';
-import type { UserDb, DashboardUser } from '../../db/users.js';
+import type { StorageAdapter, Organization } from '../../db/index.js';
 import { deleteOrgData } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, toastHtml } from './helpers.js';
@@ -48,8 +47,7 @@ const VALID_MEMBER_ROLES = new Set(['owner', 'admin', 'member', 'viewer']);
 
 export async function organizationRoutes(
   server: FastifyInstance,
-  orgDb: OrgDb,
-  userDb: UserDb,
+  storage: StorageAdapter,
   complianceUrl?: string,
 ): Promise<void> {
   // GET /admin/organizations — list all organizations
@@ -57,7 +55,7 @@ export async function organizationRoutes(
     '/admin/organizations',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const orgs = orgDb.listOrgs();
+      const orgs = await storage.organizations.listOrgs();
 
       return reply.view('admin/organizations.hbs', {
         pageTitle: 'Organizations',
@@ -102,7 +100,7 @@ export async function organizationRoutes(
       }
 
       // Check for duplicate slug
-      const existing = orgDb.getOrgBySlug(slug);
+      const existing = await storage.organizations.getOrgBySlug(slug);
       if (existing !== null) {
         return reply
           .code(400)
@@ -111,7 +109,7 @@ export async function organizationRoutes(
       }
 
       try {
-        const created = orgDb.createOrg({ name, slug });
+        const created = await storage.organizations.createOrg({ name, slug });
         const row = orgRowHtml(created);
 
         return reply
@@ -134,7 +132,7 @@ export async function organizationRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const org = orgDb.getOrg(id);
+      const org = await storage.organizations.getOrg(id);
       if (org === null) {
         return reply
           .code(404)
@@ -143,7 +141,7 @@ export async function organizationRoutes(
       }
 
       try {
-        orgDb.deleteOrg(id);
+        await storage.organizations.deleteOrg(id);
 
         // Best effort — compliance cleanup failure shouldn't block org deletion
         if (complianceUrl !== undefined) {
@@ -173,21 +171,21 @@ export async function organizationRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const org = orgDb.getOrg(id);
+      const org = await storage.organizations.getOrg(id);
       if (org === null) {
         return reply.code(404).send({ error: 'Organization not found' });
       }
 
-      const rawMembers = orgDb.listMembers(id);
-      const members = rawMembers.map((m) => {
-        const user = userDb.getUserById(m.userId);
+      const rawMembers = await storage.organizations.listMembers(id);
+      const members = await Promise.all(rawMembers.map(async (m) => {
+        const user = await storage.users.getUserById(m.userId);
         return {
           ...m,
           username: user?.username ?? m.userId,
         };
-      });
+      }));
 
-      const allUsers = userDb.listUsers();
+      const allUsers = await storage.users.listUsers();
       const memberUserIds = new Set(rawMembers.map((m) => m.userId));
       const availableUsers = allUsers.filter((u) => !memberUserIds.has(u.id) && u.active);
 
@@ -211,7 +209,7 @@ export async function organizationRoutes(
       const { id } = request.params as { id: string };
       const body = request.body as { userId?: string; role?: string };
 
-      const org = orgDb.getOrg(id);
+      const org = await storage.organizations.getOrg(id);
       if (org === null) {
         return reply
           .code(404)
@@ -237,8 +235,8 @@ export async function organizationRoutes(
       }
 
       try {
-        const member = orgDb.addMember(id, userId, role);
-        const user = userDb.getUserById(userId);
+        const member = await storage.organizations.addMember(id, userId, role);
+        const user = await storage.users.getUserById(userId);
         const username = user?.username ?? userId;
         const row = memberRowHtml(id, member, username);
 
@@ -261,9 +259,9 @@ export async function organizationRoutes(
       const { id, userId } = request.params as { id: string; userId: string };
 
       try {
-        const user = userDb.getUserById(userId);
+        const user = await storage.users.getUserById(userId);
         const username = user?.username ?? userId;
-        orgDb.removeMember(id, userId);
+        await storage.organizations.removeMember(id, userId);
 
         return reply
           .code(200)

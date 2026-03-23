@@ -1,10 +1,11 @@
 import type Database from 'better-sqlite3';
 import type { FastifyRequest } from 'fastify';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import type { PluginManager } from '../plugins/manager.js';
 import type { AuthPlugin, AuthResult, PluginInstance } from '../plugins/types.js';
-import { UserDb } from '../db/users.js';
-import { ScanDb } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
+import { setEncryptionSalt } from '../plugins/crypto.js';
+
 import { validateApiKey } from './api-key.js';
 
 // ---------------------------------------------------------------------------
@@ -41,15 +42,15 @@ interface GroupSyncConfig {
 
 export class AuthService {
   private readonly db: Database.Database;
-  private readonly userDb: UserDb;
+  private readonly storage: StorageAdapter;
   private readonly pluginManager: PluginManager;
-  private scanDb: ScanDb | null = null;
+
 
   private bootId: string;
 
-  constructor(db: Database.Database, pluginManager: PluginManager) {
+  constructor(db: Database.Database, pluginManager: PluginManager, storage: StorageAdapter) {
     this.db = db;
-    this.userDb = new UserDb(db);
+    this.storage = storage;
     this.pluginManager = pluginManager;
 
     // Boot ID: unique per DB instance — invalidates sessions from previous DBs.
@@ -70,18 +71,20 @@ export class AuthService {
       this.bootId = randomUUID();
       this.db.prepare('INSERT INTO dashboard_settings (key, value) VALUES (?, ?)').run('boot_id', this.bootId);
     }
+
+    // Per-installation encryption salt for plugin config secrets (CRIT-1 fix)
+    const saltRow = this.db.prepare('SELECT value FROM dashboard_settings WHERE key = ?').get('encryption_salt') as { value: string } | undefined;
+    if (saltRow != null) {
+      setEncryptionSalt(saltRow.value);
+    } else {
+      const salt = randomBytes(32).toString('hex');
+      this.db.prepare('INSERT INTO dashboard_settings (key, value) VALUES (?, ?)').run('encryption_salt', salt);
+      setEncryptionSalt(salt);
+    }
   }
 
   getBootId(): string {
     return this.bootId;
-  }
-
-  /**
-   * Provide the ScanDb instance used for team operations.
-   * Must be called before team sync can work (typically during server setup).
-   */
-  setScanDb(scanDb: ScanDb): void {
-    this.scanDb = scanDb;
   }
 
   // -----------------------------------------------------------------------
@@ -94,7 +97,10 @@ export class AuthService {
       return 'enterprise';
     }
 
-    const userCount = this.userDb.countUsers();
+    // NOTE: countUsers is async in StorageAdapter but AuthMode detection
+    // is called synchronously in several places. We use the raw DB here.
+    const row = this.db.prepare('SELECT COUNT(*) as cnt FROM dashboard_users').get() as { cnt: number } | undefined;
+    const userCount = row?.cnt ?? 0;
     if (userCount > 0) {
       return 'team';
     }
@@ -203,12 +209,12 @@ export class AuthService {
   // -----------------------------------------------------------------------
 
   async loginWithPassword(username: string, password: string): Promise<AuthResult> {
-    const valid = await this.userDb.verifyPassword(username, password);
+    const valid = await await this.storage.users.verifyPassword(username, password);
     if (!valid) {
       return { authenticated: false, error: 'Invalid username or password' };
     }
 
-    const user = this.userDb.getUserByUsername(username);
+    const user = await this.storage.users.getUserByUsername(username);
     if (user === null || !user.active) {
       return { authenticated: false, error: 'User not found or inactive' };
     }
@@ -311,7 +317,7 @@ export class AuthService {
     idpGroups: readonly string[],
     syncConfig: GroupSyncConfig,
   ): Promise<string[]> {
-    if (this.scanDb === null) return [];
+    
 
     const { groupMapping, autoCreateTeams, syncMode } = syncConfig;
 
@@ -329,10 +335,10 @@ export class AuthService {
 
     // Ensure each target team exists and add the user
     for (const teamName of targetTeamNames) {
-      let team = this.scanDb.getTeamByName(teamName, defaultOrgId);
+      let team = await this.storage.teams.getTeamByName(teamName, defaultOrgId);
 
       if (team === null && autoCreateTeams) {
-        team = this.scanDb.createTeam({
+        team = await this.storage.teams.createTeam({
           name: teamName,
           description: `Auto-created from Entra ID group sync`,
           orgId: defaultOrgId,
@@ -340,7 +346,7 @@ export class AuthService {
       }
 
       if (team !== null) {
-        this.scanDb.addTeamMember(team.id, userId);
+        await this.storage.teams.addTeamMember(team.id, userId);
         resolvedTeamIds.add(team.id);
       }
     }
@@ -352,9 +358,9 @@ export class AuthService {
       for (const mappedTeamName of allMappedTeamNames) {
         if (targetTeamNames.has(mappedTeamName)) continue;
 
-        const team = this.scanDb.getTeamByName(mappedTeamName, defaultOrgId);
+        const team = await this.storage.teams.getTeamByName(mappedTeamName, defaultOrgId);
         if (team !== null) {
-          this.scanDb.removeTeamMember(team.id, userId);
+          await this.storage.teams.removeTeamMember(team.id, userId);
         }
       }
     }

@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import type { ScanDb } from '../../db/scans.js';
+import type { StorageAdapter } from '../../db/index.js';
 import type { PluginManager } from '../../plugins/manager.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
@@ -43,7 +43,7 @@ function isEmailPluginActive(pluginManager?: PluginManager): boolean {
 
 export async function emailReportRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
   pluginManager?: PluginManager,
 ): Promise<void> {
 
@@ -56,16 +56,16 @@ export async function emailReportRoutes(
       if (!pluginActive) {
         // No legacy smtp_config either — redirect to plugins page
         const orgId = request.user?.currentOrgId ?? 'system';
-        const legacySmtp = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');
+        const legacySmtp = await storage.email.getSmtpConfig(orgId) ?? await storage.email.getSmtpConfig('system');
         if (legacySmtp === null) {
           return reply.redirect('/admin/plugins');
         }
       }
       const orgId = request.user?.currentOrgId ?? 'system';
-      const reports = db.listEmailReports(orgId);
+      const reports = await storage.email.listEmailReports(orgId);
 
       // Legacy: check if smtp_config exists for backward compat
-      const smtpConfig = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');
+      const smtpConfig = await storage.email.getSmtpConfig(orgId) ?? await storage.email.getSmtpConfig('system');
       const smtpConfigured = pluginActive || smtpConfig !== null;
 
       const formatted = reports.map((r) => ({
@@ -136,7 +136,7 @@ export async function emailReportRoutes(
 
       const orgId = request.user?.currentOrgId ?? 'system';
 
-      db.upsertSmtpConfig({
+      await storage.email.upsertSmtpConfig({
         host,
         port,
         secure: body.secure === 'on',
@@ -177,7 +177,7 @@ export async function emailReportRoutes(
 
       // Legacy: use smtp_config from DB
       const orgId = request.user?.currentOrgId ?? 'system';
-      const smtpConfig = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');
+      const smtpConfig = await storage.email.getSmtpConfig(orgId) ?? await storage.email.getSmtpConfig('system');
 
       if (smtpConfig === null) {
         return reply.code(400).header('content-type', 'text/html').send(toastHtml('No SMTP configuration found. Install and activate the Email Notifications plugin, or save SMTP settings below.', 'error'));
@@ -246,7 +246,7 @@ export async function emailReportRoutes(
       const orgId = request.user?.currentOrgId ?? 'system';
       const nextSendAt = computeNextSendAt(frequency);
 
-      const report = db.createEmailReport({
+      const report = await storage.email.createEmailReport({
         id,
         name,
         siteUrl,
@@ -274,13 +274,13 @@ export async function emailReportRoutes(
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const report = db.getEmailReport(id);
+      const report = await storage.email.getEmailReport(id);
 
       if (report === null) {
         return reply.code(404).header('content-type', 'text/html').send(toastHtml('Email report not found.', 'error'));
       }
 
-      db.deleteEmailReport(id);
+      await storage.email.deleteEmailReport(id);
       return reply.code(200).header('content-type', 'text/html').send(toastHtml('Email report deleted.'));
     },
   );
@@ -291,16 +291,16 @@ export async function emailReportRoutes(
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const report = db.getEmailReport(id);
+      const report = await storage.email.getEmailReport(id);
 
       if (report === null) {
         return reply.code(404).header('content-type', 'text/html').send(toastHtml('Email report not found.', 'error'));
       }
 
       const newEnabled = !report.enabled;
-      db.updateEmailReport(id, { enabled: newEnabled });
+      await storage.email.updateEmailReport(id, { enabled: newEnabled });
 
-      const updated = db.getEmailReport(id);
+      const updated = await storage.email.getEmailReport(id);
       if (updated === null) {
         return reply.code(500).header('content-type', 'text/html').send(toastHtml('Failed to update report.', 'error'));
       }
@@ -330,7 +330,7 @@ export async function emailReportRoutes(
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const report = db.getEmailReport(id);
+      const report = await storage.email.getEmailReport(id);
 
       if (report === null) {
         return reply.code(404).header('content-type', 'text/html').send(toastHtml('Email report not found.', 'error'));
@@ -339,7 +339,7 @@ export async function emailReportRoutes(
       // Check if email sending is configured (plugin or legacy)
       const pluginActive = isEmailPluginActive(pluginManager);
       const orgId = request.user?.currentOrgId ?? 'system';
-      const smtpConfig = db.getSmtpConfig(orgId) ?? db.getSmtpConfig('system');
+      const smtpConfig = await storage.email.getSmtpConfig(orgId) ?? await storage.email.getSmtpConfig('system');
 
       if (!pluginActive && smtpConfig === null) {
         return reply.code(400).header('content-type', 'text/html').send(
@@ -348,7 +348,7 @@ export async function emailReportRoutes(
       }
 
       try {
-        await processEmailReport(db, report, pluginManager);
+        await processEmailReport(storage, report, pluginManager);
         return reply.code(200).header('content-type', 'text/html').send(toastHtml('Email report sent successfully.'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to send email report';

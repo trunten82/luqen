@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { ScanDb } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
 import type { DashboardConfig } from '../config.js';
 import { listJurisdictions, listRegulations } from '../compliance-client.js';
 import { getToken, getOrgId } from './admin/helpers.js';
 
 export async function homeRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
   config?: DashboardConfig,
 ): Promise<void> {
   server.get('/', async (_request: FastifyRequest, reply: FastifyReply) => {
@@ -15,9 +15,9 @@ export async function homeRoutes(
 
   server.get('/home', async (request: FastifyRequest, reply: FastifyReply) => {
     const orgId = request.user?.currentOrgId;
-    const recentScans = db.listScans({ limit: 10, orgId });
+    const recentScans = await storage.scans.listScans({ limit: 10, orgId });
 
-    const allScans = db.listScans({ orgId });
+    const allScans = await storage.scans.listScans({ orgId });
     const totalScans = allScans.length;
 
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();

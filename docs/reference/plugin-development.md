@@ -160,7 +160,7 @@ discover  -->  install  -->  configure  -->  activate  -->  health check
 
 2. **Install** -- `npm install --save-exact --prefix <pluginsDir> <packageName>` downloads the package. The manifest is read and a database record is created with status `inactive`.
 
-3. **Configure** -- Key-value pairs are saved to the plugin's config. Secret fields are encrypted with AES-256-GCM using the dashboard's `sessionSecret` as the encryption key.
+3. **Configure** -- Key-value pairs are saved to the plugin's config. Secret fields are encrypted with AES-256-GCM using a key derived from the dashboard's `sessionSecret` combined with a per-installation encryption salt.
 
 4. **Activate** -- The plugin module is loaded via dynamic `import()`. The `activate(config)` method is called with decrypted configuration. On success, status becomes `active`. On failure, status becomes `error` with a message.
 
@@ -217,6 +217,60 @@ The plugin is responsible for providing the route handler and view templates. Re
 | `error` | Activation failed (check `error` field for details) |
 | `unhealthy` | Health check failed 3+ times |
 | `install-failed` | Package installation failed |
+
+---
+
+## Developing Storage Adapter Plugins
+
+Storage adapter plugins replace the dashboard's internal database engine. Unlike regular plugins (auth, notification, storage), a storage adapter plugin implements the `StorageAdapter` interface which provides the full data access layer for the dashboard.
+
+### StorageAdapter interface shape
+
+```typescript
+interface StorageAdapter {
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  migrate(): Promise<void>;
+  healthCheck(): Promise<boolean>;
+  readonly name: string;
+
+  // 14 domain repositories
+  readonly scans: ScanRepository;
+  readonly users: UserRepository;
+  readonly organizations: OrgRepository;
+  readonly schedules: ScheduleRepository;
+  readonly assignments: AssignmentRepository;
+  readonly repos: RepoRepository;
+  readonly roles: RoleRepository;
+  readonly teams: TeamRepository;
+  readonly email: EmailRepository;
+  readonly audit: AuditRepository;
+  readonly plugins: PluginRepository;
+  readonly apiKeys: ApiKeyRepository;
+  readonly pageHashes: PageHashRepository;
+  readonly manualTests: ManualTestRepository;
+}
+```
+
+Each repository defines standard CRUD operations for its domain (e.g., `ScanRepository` has `create`, `findById`, `findAll`, `delete`, `updateStatus`, etc.). Repository interfaces are defined in `packages/dashboard/src/db/interfaces/`.
+
+### Implementation guidelines
+
+1. **Implement all 14 repositories** — the dashboard requires every repository to function.
+2. **`connect()`** — establish a connection pool or client session to your database.
+3. **`disconnect()`** — clean up connections gracefully on shutdown.
+4. **`migrate()`** — apply schema migrations for your database engine. The dashboard calls this on startup.
+5. **`healthCheck()`** — return `true` if the database is reachable and responsive.
+6. **Match SQLite semantics** — the SQLite implementation in `packages/dashboard/src/db/sqlite/` is the reference. Ensure your adapter returns the same data shapes and handles the same edge cases.
+
+### Planned packages
+
+| Package | Backend |
+|---------|---------|
+| `@luqen/plugin-storage-postgres` | PostgreSQL |
+| `@luqen/plugin-storage-mongodb` | MongoDB |
+
+These are not yet available. The `resolveStorageAdapter()` factory in `packages/dashboard/src/db/factory.ts` will select the appropriate adapter based on configuration.
 
 ---
 

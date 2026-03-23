@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import type { ScanDb } from '../db/scans.js';
+import type { StorageAdapter } from '../db/index.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
 import { listJurisdictions, listRegulations } from '../compliance-client.js';
@@ -27,7 +27,7 @@ function normalizeJurisdictions(value: string | string[] | undefined): string[] 
 
 export async function scanRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
   orchestrator: ScanOrchestrator,
   config: DashboardConfig,
 ): Promise<void> {
@@ -96,6 +96,24 @@ export async function scanRoutes(
         return reply.code(400).send({ error: 'URL must use http or https' });
       }
 
+      // SSRF protection: block private/internal IP ranges
+      const hostname = parsedUrl.hostname.toLowerCase();
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '::1' ||
+        hostname === '0.0.0.0' ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('192.168.') ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
+        hostname === '169.254.169.254' ||
+        hostname.startsWith('169.254.') ||
+        hostname.endsWith('.internal') ||
+        hostname.endsWith('.local')
+      ) {
+        return reply.code(400).send({ error: 'Scanning internal or private addresses is not allowed.' });
+      }
+
       // Pre-validate URL is reachable before starting scan
       try {
         const probe = await fetch(parsedUrl.toString(), {
@@ -146,7 +164,7 @@ export async function scanRoutes(
 
       const scanId = randomUUID();
 
-      db.createScan({
+      await storage.scans.createScan({
         id: scanId,
         siteUrl: parsedUrl.toString(),
         standard,
@@ -190,7 +208,7 @@ export async function scanRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
       if (scan === null) {
         return reply.code(404).send({ error: 'Scan not found' });
       }
@@ -218,7 +236,7 @@ export async function scanRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
       if (scan === null) {
         return reply.code(404).send({ error: 'Scan not found' });
       }

@@ -1,9 +1,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type Database from 'better-sqlite3';
 import { requirePermission } from '../../auth/middleware.js';
-import { generateApiKey, hashApiKey, storeApiKey } from '../../auth/api-key.js';
+import { generateApiKey } from '../../auth/api-key.js';
 import { toastHtml, escapeHtml } from './helpers.js';
-import type { AuditLogger } from '../../audit/logger.js';
+import type { StorageAdapter } from '../../db/index.js';
 
 interface ApiKeyRow {
   readonly id: string;
@@ -47,19 +46,14 @@ function keyRowHtml(row: ApiKeyRow): string {
 
 export async function apiKeyRoutes(
   server: FastifyInstance,
-  db: Database.Database,
-  auditLogger?: AuditLogger,
+  storage: StorageAdapter,
 ): Promise<void> {
   // GET /admin/api-keys — list all keys
   server.get(
     '/admin/api-keys',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const keys = db
-        .prepare(
-          'SELECT id, label, active, created_at, last_used_at FROM api_keys ORDER BY created_at DESC',
-        )
-        .all() as readonly ApiKeyRow[];
+      const keys = await storage.apiKeys.listKeys() as unknown as readonly ApiKeyRow[];
 
       return reply.view('admin/api-keys.hbs', {
         pageTitle: 'API Keys',
@@ -76,9 +70,8 @@ export async function apiKeyRoutes(
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const row = db.prepare(
-        'SELECT id, label, active, created_at, last_used_at FROM api_keys WHERE id = ?',
-      ).get(id) as ApiKeyRow | undefined;
+      const rawKey = await storage.apiKeys.listKeys();
+      const row = (rawKey as unknown as ApiKeyRow[]).find(k => k.id === id);
 
       if (row === undefined) {
         return reply.code(404).header('content-type', 'text/html').send(toastHtml('API key not found.', 'error'));
@@ -120,7 +113,7 @@ export async function apiKeyRoutes(
 
       try {
         const plaintextKey = generateApiKey();
-        const id = storeApiKey(db, plaintextKey, label);
+        const id = await storage.apiKeys.storeKey(plaintextKey, label);
 
         const row: ApiKeyRow = {
           id,
@@ -130,7 +123,7 @@ export async function apiKeyRoutes(
           last_used_at: null,
         };
 
-        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.create', resourceType: 'api_key', resourceId: id, details: { label }, ipAddress: request.ip });
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.create', resourceType: 'api_key', resourceId: id, details: { label }, ipAddress: request.ip });
 
         const newKeyAlert = `<div id="new-key-alert" hx-swap-oob="true" class="alert alert--warning" role="alert" style="margin-bottom:var(--space-md)">
   <div class="alert__body">
@@ -165,13 +158,10 @@ export async function apiKeyRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        db.prepare('UPDATE api_keys SET active = 0 WHERE id = @id').run({ id });
+        await storage.apiKeys.revokeKey(id);
 
-        const row = db
-          .prepare(
-            'SELECT id, label, active, created_at, last_used_at FROM api_keys WHERE id = @id',
-          )
-          .get({ id }) as ApiKeyRow | undefined;
+        const allKeys = await storage.apiKeys.listKeys();
+        const row = (allKeys as unknown as ApiKeyRow[]).find(k => k.id === id);
 
         if (row === undefined) {
           return reply
@@ -180,7 +170,7 @@ export async function apiKeyRoutes(
             .send(toastHtml('API key not found.', 'error'));
         }
 
-        auditLogger?.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.delete', resourceType: 'api_key', resourceId: id, details: { label: row.label }, ipAddress: request.ip });
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.delete', resourceType: 'api_key', resourceId: id, details: { label: row.label }, ipAddress: request.ip });
 
         return reply
           .code(200)
