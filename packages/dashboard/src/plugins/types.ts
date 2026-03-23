@@ -181,4 +181,20 @@ export interface RegistryEntry {
   readonly packageName: string;
   readonly icon?: string;
   readonly adminPages?: readonly AdminPage[];
+  /** URL to download the plugin tarball (GitHub release asset). */
+  readonly downloadUrl?: string;
+  /** SHA-256 checksum for integrity verification (format: "sha256:hex"). */
+  readonly checksum?: string;
+  /** Minimum dashboard version required to run this plugin. */
+  readonly minDashboardVersion?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Remote catalogue response
+// ---------------------------------------------------------------------------
+
+export interface CatalogueResponse {
+  readonly version: number;
+  readonly updatedAt: string;
+  readonly plugins: readonly RegistryEntry[];
 }

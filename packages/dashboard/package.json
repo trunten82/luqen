@@ -67,6 +67,7 @@
     "jose": "^6.0.0",
     "mercurius": "^15.0.0",
     "nodemailer": "^8.0.3",
+    "tar": "^7.5.12",
     "zod": "^4.3.6"
   },
   "optionalDependencies": {

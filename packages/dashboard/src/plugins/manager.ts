@@ -1,8 +1,9 @@
-import { randomUUID } from 'node:crypto';
-import { readFileSync, rmSync, existsSync } from 'node:fs';
+import { randomUUID, createHash } from 'node:crypto';
+import { readFileSync, rmSync, existsSync, mkdirSync, createWriteStream } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { pipeline } from 'node:stream/promises';
+import { Readable } from 'node:stream';
+import tar from 'tar';
 import type Database from 'better-sqlite3';
 import type {
   PluginRecord,
@@ -13,8 +14,7 @@ import type {
   RegistryEntry,
 } from './types.js';
 import { encryptConfig, decryptConfig, maskSecrets } from './crypto.js';
-
-const execFileAsync = promisify(execFile);
+import { getByName, getByPackageName } from './registry.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,10 +39,7 @@ interface PluginRow {
   readonly error: string | null;
 }
 
-type ExecFileFn = (
-  file: string,
-  args: readonly string[],
-) => Promise<{ stdout: string; stderr: string }>;
+type DownloadFn = (url: string, destPath: string) => Promise<void>;
 
 type PluginLoaderFn = (pluginPath: string) => Promise<PluginInstance>;
 
@@ -67,6 +64,32 @@ function rowToRecord(row: PluginRow, config: Record<string, unknown>): PluginRec
   return record;
 }
 
+/** Convert @luqen/plugin-auth-entra → auth-entra */
+function packageNameToPluginName(packageName: string): string {
+  const parts = packageName.split('/');
+  const last = parts[parts.length - 1];
+  return last.replace(/^plugin-/, '');
+}
+
+/** Default download function: fetch URL → write to file. */
+async function defaultDownloadFn(url: string, destPath: string): Promise<void> {
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(60_000),
+    redirect: 'follow',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Download failed: HTTP ${response.status} from ${url}`);
+  }
+
+  if (!response.body) {
+    throw new Error('Download failed: empty response body');
+  }
+
+  const fileStream = createWriteStream(destPath);
+  await pipeline(Readable.fromWeb(response.body as ReadableStream), fileStream);
+}
+
 // ---------------------------------------------------------------------------
 // PluginManager
 // ---------------------------------------------------------------------------
@@ -80,7 +103,7 @@ export class PluginManager {
   private readonly healthFailures: Map<string, number> = new Map();
   private healthInterval: ReturnType<typeof setInterval> | null = null;
 
-  private execFileFn: ExecFileFn = execFileAsync;
+  private downloadFn: DownloadFn = defaultDownloadFn;
   private loaderFn: PluginLoaderFn = async (pluginPath: string) => {
     const mod = await import(pluginPath) as { default?: PluginInstance };
     return mod.default ?? (mod as unknown as PluginInstance);
@@ -97,9 +120,9 @@ export class PluginManager {
   // Test helpers (prefixed with _ to signal internal use)
   // -----------------------------------------------------------------------
 
-  /** @internal Replace the exec function (for testing without real npm). */
-  _setExecFile(fn: ExecFileFn): void {
-    this.execFileFn = fn;
+  /** @internal Replace the download function (for testing without real HTTP). */
+  _setDownloadFn(fn: DownloadFn): void {
+    this.downloadFn = fn;
   }
 
   /** @internal Replace the dynamic import loader (for testing). */
@@ -113,24 +136,67 @@ export class PluginManager {
   }
 
   // -----------------------------------------------------------------------
-  // Install
+  // Install (tarball download + extract)
   // -----------------------------------------------------------------------
 
-  async install(packageName: string): Promise<PluginRecord> {
-    const registryEntry = this.registryEntries.find((e) => e.packageName === packageName);
+  /**
+   * Install a plugin by name (e.g., "auth-entra") or packageName (e.g., "@luqen/plugin-auth-entra").
+   * Downloads the tarball from the registry entry's downloadUrl and extracts it.
+   */
+  async install(nameOrPackage: string): Promise<PluginRecord> {
+    // Resolve registry entry by name or packageName
+    let registryEntry = getByName(this.registryEntries, nameOrPackage);
     if (!registryEntry) {
-      throw new Error(`Package "${packageName}" not found in registry`);
+      registryEntry = getByPackageName(this.registryEntries, nameOrPackage);
+    }
+    if (!registryEntry) {
+      throw new Error(`Plugin "${nameOrPackage}" not found in catalogue`);
     }
 
-    await this.execFileFn('npm', [
-      'install',
-      '--save-exact',
-      '--prefix',
-      this.pluginsDir,
-      packageName,
-    ]);
+    if (!registryEntry.downloadUrl) {
+      throw new Error(`Plugin "${registryEntry.name}" has no download URL in the catalogue`);
+    }
 
-    const manifest = this.readManifest(packageName);
+    const pluginName = registryEntry.name;
+    const destDir = join(this.pluginsDir, 'packages', pluginName);
+
+    // Clean up any previous installation in this directory
+    if (existsSync(destDir)) {
+      rmSync(destDir, { recursive: true, force: true });
+    }
+    mkdirSync(destDir, { recursive: true });
+
+    // Download tarball to temp file
+    const tarballPath = join(this.pluginsDir, `${pluginName}.tgz`);
+    try {
+      await this.downloadFn(registryEntry.downloadUrl, tarballPath);
+
+      // Verify checksum if provided
+      if (registryEntry.checksum) {
+        const [algo, expected] = registryEntry.checksum.split(':');
+        if (algo === 'sha256' && expected) {
+          const fileData = readFileSync(tarballPath);
+          const actual = createHash('sha256').update(fileData).digest('hex');
+          if (actual !== expected) {
+            throw new Error(`Checksum mismatch: expected ${expected}, got ${actual}`);
+          }
+        }
+      }
+
+      // Extract tarball (strip 'package/' prefix)
+      await tar.extract({
+        file: tarballPath,
+        cwd: destDir,
+        strip: 1,
+      });
+    } finally {
+      // Clean up tarball
+      if (existsSync(tarballPath)) {
+        rmSync(tarballPath, { force: true });
+      }
+    }
+
+    const manifest = this.readManifest(registryEntry.packageName);
 
     const id = randomUUID();
     const now = new Date().toISOString();
@@ -142,7 +208,7 @@ export class PluginManager {
       )
       .run({
         id,
-        package_name: packageName,
+        package_name: registryEntry.packageName,
         type: manifest.type,
         version: manifest.version,
         config: '{}',
@@ -299,6 +365,13 @@ export class PluginManager {
     return rowToRecord(row, config);
   }
 
+  /** Public manifest reader — used by admin routes. */
+  getManifest(id: string): PluginManifest | null {
+    const row = this.getRow(id);
+    if (!row) return null;
+    return this.tryReadManifest(row.package_name);
+  }
+
   // -----------------------------------------------------------------------
   // Health
   // -----------------------------------------------------------------------
@@ -402,10 +475,6 @@ export class PluginManager {
     return instances;
   }
 
-  /**
-   * Return decrypted configuration for all active plugins of the given type.
-   * Each entry pairs the plugin id with its full (decrypted) config object.
-   */
   getActivePluginConfigs(
     type: string,
   ): Array<{ readonly id: string; readonly config: Readonly<Record<string, unknown>> }> {
@@ -480,12 +549,22 @@ export class PluginManager {
     return plugin;
   }
 
+  /**
+   * Resolve the package directory — checks new layout first, falls back to legacy.
+   * New: pluginsDir/packages/{name}/
+   * Legacy: pluginsDir/node_modules/@scope/plugin-name/
+   */
   private resolvePackageDir(packageName: string): string {
+    const name = packageNameToPluginName(packageName);
+    const newPath = join(this.pluginsDir, 'packages', name);
+    if (existsSync(newPath)) return newPath;
+
+    // Legacy layout (npm-installed plugins)
     return join(this.pluginsDir, 'node_modules', ...packageName.split('/'));
   }
 
   private resolvePluginPath(packageName: string): string {
-    return resolve(this.pluginsDir, 'node_modules', ...packageName.split('/'));
+    return resolve(this.resolvePackageDir(packageName));
   }
 
   private readManifest(packageName: string): PluginManifest {

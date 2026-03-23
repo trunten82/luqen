@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { join } from 'node:path';
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { loadRegistry, filterByType, getByName } from '../../src/plugins/registry.js';
+import { loadRegistrySync, filterByType, getByName } from '../../src/plugins/registry.js';
 
 const REGISTRY_PATH = join(__dirname, '..', '..', 'plugin-registry.json');
 
 describe('Plugin Registry', () => {
   describe('loadRegistry', () => {
     it('returns an array of RegistryEntry objects', () => {
-      const entries = loadRegistry(REGISTRY_PATH);
+      const entries = loadRegistrySync(REGISTRY_PATH);
 
       expect(Array.isArray(entries)).toBe(true);
       expect(entries.length).toBeGreaterThan(0);
@@ -45,7 +45,7 @@ describe('Plugin Registry', () => {
 
       writeFileSync(customPath, JSON.stringify(customData));
 
-      const entries = loadRegistry(customPath);
+      const entries = loadRegistrySync(customPath);
       expect(entries).toHaveLength(1);
       expect(entries[0].name).toBe('test-plugin');
 
@@ -59,7 +59,7 @@ describe('Plugin Registry', () => {
 
       writeFileSync(emptyPath, JSON.stringify({ plugins: [] }));
 
-      const entries = loadRegistry(emptyPath);
+      const entries = loadRegistrySync(emptyPath);
       expect(entries).toEqual([]);
 
       rmSync(tmpDir, { recursive: true, force: true });
@@ -68,7 +68,7 @@ describe('Plugin Registry', () => {
 
   describe('filterByType', () => {
     it('returns only auth entries when filtering by auth', () => {
-      const entries = loadRegistry(REGISTRY_PATH);
+      const entries = loadRegistrySync(REGISTRY_PATH);
       const authEntries = filterByType(entries, 'auth');
 
       expect(authEntries.length).toBeGreaterThan(0);
@@ -78,7 +78,7 @@ describe('Plugin Registry', () => {
     });
 
     it('returns only notification entries when filtering by notification', () => {
-      const entries = loadRegistry(REGISTRY_PATH);
+      const entries = loadRegistrySync(REGISTRY_PATH);
       const notifyEntries = filterByType(entries, 'notification');
 
       expect(notifyEntries.length).toBeGreaterThan(0);
@@ -88,7 +88,7 @@ describe('Plugin Registry', () => {
     });
 
     it('returns empty array for type with no matches', () => {
-      const entries = loadRegistry(REGISTRY_PATH);
+      const entries = loadRegistrySync(REGISTRY_PATH);
       const result = filterByType(entries, 'nonexistent' as any);
 
       expect(result).toEqual([]);
@@ -97,7 +97,7 @@ describe('Plugin Registry', () => {
 
   describe('getByName', () => {
     it('returns the Entra entry for auth-entra', () => {
-      const entries = loadRegistry(REGISTRY_PATH);
+      const entries = loadRegistrySync(REGISTRY_PATH);
       const entry = getByName(entries, 'auth-entra');
 
       expect(entry).not.toBeNull();
@@ -107,7 +107,7 @@ describe('Plugin Registry', () => {
     });
 
     it('returns null for nonexistent name', () => {
-      const entries = loadRegistry(REGISTRY_PATH);
+      const entries = loadRegistrySync(REGISTRY_PATH);
       const entry = getByName(entries, 'nonexistent');
 
       expect(entry).toBeNull();

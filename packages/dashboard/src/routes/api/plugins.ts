@@ -7,7 +7,7 @@ import type { PluginManager } from '../../plugins/manager.js';
 // ---------------------------------------------------------------------------
 
 interface InstallBody {
-  readonly packageName: string;
+  readonly name: string;
 }
 
 interface ConfigBody {
@@ -54,24 +54,24 @@ export async function pluginApiRoutes(
     },
   );
 
-  // POST /api/v1/plugins/install — { packageName: string }
+  // POST /api/v1/plugins/install — { name: string }
   server.post<{ Body: InstallBody }>(
     '/api/v1/plugins/install',
     { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
-      const { packageName } = request.body ?? {};
+      const { name } = request.body ?? {};
 
-      if (typeof packageName !== 'string' || packageName.trim() === '') {
-        return reply.code(400).send({ error: 'packageName is required' });
+      if (typeof name !== 'string' || name.trim() === '') {
+        return reply.code(400).send({ error: 'name is required' });
       }
 
       try {
-        const plugin = await pluginManager.install(packageName);
+        const plugin = await pluginManager.install(name);
         return reply.code(201).send(plugin);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
 
-        if (message.includes('not found in registry')) {
+        if (message.includes('not found in catalogue') || message.includes('not found in registry')) {
           return reply.code(400).send({ error: message });
         }
 

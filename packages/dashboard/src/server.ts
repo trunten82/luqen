@@ -82,7 +82,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
 
   // ── Plugin Manager ──────────────────────────────────────────────────────
-  const registryEntries = loadRegistry();
+  const registryEntries = await loadRegistry({
+    catalogueUrl: config.catalogueUrl,
+    cacheTtlSeconds: config.catalogueCacheTtl,
+  });
   const pluginManager = new PluginManager({
     db: rawDb,
     pluginsDir: resolve(config.reportsDir, '..', 'plugins'),
@@ -439,7 +442,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await emailReportRoutes(server, storage, pluginManager);
 
   await auditRoutes(server, storage);
-  await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
+  await pluginAdminRoutes(server, pluginManager, registryEntries);
 
   // ── Export API routes ────────────────────────────────────────────────────
   await exportRoutes(server, storage);

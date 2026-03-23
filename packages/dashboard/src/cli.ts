@@ -107,7 +107,7 @@ async function withPluginManager(
   const { PluginManager } = await import('./plugins/manager.js');
   const { loadRegistry } = await import('./plugins/registry.js');
 
-  const registryEntries = loadRegistry();
+  const registryEntries = await loadRegistry();
   const manager = new PluginManager({
     db: rawDb,
     pluginsDir: config.pluginsDir,
@@ -162,13 +162,13 @@ pluginCmd
   });
 
 pluginCmd
-  .command('install <package>')
-  .description('Install a plugin from the registry')
+  .command('install <name>')
+  .description('Install a plugin by name from the registry')
   .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
-  .action(async (pkg: string, options: { config: string }) => {
+  .action(async (name: string, options: { config: string }) => {
     try {
       await withPluginManager(options.config, async (manager) => {
-        const plugin = await manager.install(pkg);
+        const plugin = await manager.install(name);
         console.log(`Installed ${plugin.packageName} (${plugin.type}, v${plugin.version})`);
         console.log(`Plugin ID: ${plugin.id}`);
       });
