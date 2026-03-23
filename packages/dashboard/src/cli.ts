@@ -92,6 +92,105 @@ program
     }
   });
 
+// ── Data migration between adapters ───────────────────────────────────────
+
+program
+  .command('migrate-data')
+  .description('Copy all data from one storage adapter to another')
+  .requiredOption('--from <type>', 'Source adapter type (sqlite)')
+  .requiredOption('--to <type>', 'Target adapter type (sqlite, postgres, mongodb)')
+  .option('--postgres-url <url>', 'PostgreSQL connection URL for source or target')
+  .option('--mongodb-url <url>', 'MongoDB connection URL for source or target')
+  .option('--dry-run', 'Count records without writing to target')
+  .option('-c, --config <path>', 'Path to config file', 'dashboard.config.json')
+  .action(async (options: {
+    from: string;
+    to: string;
+    postgresUrl?: string;
+    mongodbUrl?: string;
+    dryRun?: boolean;
+    config: string;
+  }) => {
+    try {
+      const { migrateData } = await import('./db/migrate-data.js');
+      const config = loadConfig(options.config);
+
+      function buildAdapterConfig(type: string): import('./db/index.js').StorageConfig {
+        switch (type) {
+          case 'sqlite':
+            return { type: 'sqlite', sqlite: { dbPath: config.dbPath } } as import('./db/index.js').StorageConfig;
+          case 'postgres':
+            if (!options.postgresUrl) {
+              throw new Error('--postgres-url is required when using postgres adapter');
+            }
+            // StorageConfig will be extended when postgres adapter is added
+            return { type: type as 'sqlite', postgres: { url: options.postgresUrl } } as unknown as import('./db/index.js').StorageConfig;
+          case 'mongodb':
+            if (!options.mongodbUrl) {
+              throw new Error('--mongodb-url is required when using mongodb adapter');
+            }
+            return { type: type as 'sqlite', mongodb: { url: options.mongodbUrl } } as unknown as import('./db/index.js').StorageConfig;
+          default:
+            throw new Error(`Unknown adapter type: ${type}`);
+        }
+      }
+
+      console.log(`Migrating data: ${options.from} -> ${options.to}${options.dryRun ? ' (dry run)' : ''}`);
+
+      const sourceConfig = buildAdapterConfig(options.from);
+      const targetConfig = buildAdapterConfig(options.to);
+
+      const source = await resolveStorageAdapter(sourceConfig);
+      const target = await resolveStorageAdapter(targetConfig);
+
+      const result = await migrateData({
+        source,
+        target,
+        dryRun: options.dryRun,
+        onProgress: (table, count) => {
+          console.log(`  ${table}: ${count} records${options.dryRun ? ' (counted)' : ''}`);
+        },
+      });
+
+      console.log('');
+      console.log('Migration summary:');
+      console.log('-'.repeat(40));
+      for (const t of result.tables) {
+        console.log(`  ${t.name.padEnd(25)} ${String(t.count).padStart(6)}`);
+      }
+      console.log('-'.repeat(40));
+      console.log(`  ${'Total'.padEnd(25)} ${String(result.totalRecords).padStart(6)}`);
+      console.log(`  Duration: ${result.durationMs}ms`);
+
+      // Verify counts match between source and target (skip for dry run)
+      if (!options.dryRun) {
+        console.log('');
+        console.log('Verifying record counts...');
+        const sourceUsers = await source.users.countUsers();
+        const targetUsers = await target.users.countUsers();
+        const sourceScans = await source.scans.countScans();
+        const targetScans = await target.scans.countScans();
+
+        const mismatches: string[] = [];
+        if (sourceUsers !== targetUsers) mismatches.push(`users: source=${sourceUsers} target=${targetUsers}`);
+        if (sourceScans !== targetScans) mismatches.push(`scans: source=${sourceScans} target=${targetScans}`);
+
+        if (mismatches.length > 0) {
+          console.error('Count mismatches detected:');
+          for (const m of mismatches) console.error(`  ${m}`);
+          process.exit(1);
+        }
+        console.log('Verification passed.');
+      }
+
+      await source.disconnect();
+      await target.disconnect();
+    } catch (err) {
+      console.error('Data migration failed:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
 // ── Plugin management ─────────────────────────────────────────────────────
 
 const pluginCmd = program.command('plugin').description('Manage plugins');
