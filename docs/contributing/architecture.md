@@ -241,7 +241,7 @@ See [docs/plugins/README.md](../plugins/README.md) for the full plugin developme
 | Plugin distribution | Remote catalogue (GitHub), tarball download, SHA-256 verified |
 | Accessibility scanner | pa11y library (direct, built-in); optional pa11y-webservice fallback |
 | Accessibility test runners | axe-core (MPL-2.0), HTML_CodeSniffer |
-| Browser automation | puppeteer (Apache-2.0) + Chromium (BSD-3-Clause) |
+| PDF generation | PDFKit |
 | HTML parsing (crawl) | cheerio |
 | Testing | Vitest |
 | Build | tsc |

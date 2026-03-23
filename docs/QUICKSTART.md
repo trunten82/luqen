@@ -5,7 +5,7 @@
 ## What you need
 
 - Node.js 20 or later
-- Chromium (installed automatically by the installer and bundled in the Docker image; also installed as a dependency of `puppeteer` during `npm install`)
+- npm (bundled with Node.js)
 
 No external pa11y-webservice is needed — the scanner uses the pa11y library directly.
 

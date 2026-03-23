@@ -69,6 +69,19 @@ function isPublicPath(path: string): boolean {
   return false;
 }
 
+// HTTP methods that mutate state and require CSRF verification
+const CSRF_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+// Paths exempt from CSRF verification (API-key auth, OAuth callbacks, GraphQL)
+function isCsrfExempt(path: string): boolean {
+  if (path.startsWith('/api/')) return true;
+  if (path.startsWith('/auth/callback/')) return true;
+  if (path.startsWith('/auth/sso/')) return true;
+  if (path === '/graphql') return true;
+  if (path === '/health') return true;
+  return false;
+}
+
 export async function createServer(config: DashboardConfig): Promise<FastifyInstance> {
   const server = Fastify({
     logger: {
@@ -377,6 +390,21 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         emailPluginActive: pluginManager.getActiveInstanceByPackageName?.('@luqen/plugin-notify-email') != null,
       });
     };
+  });
+
+  // ── CSRF verification for state-changing requests ──────────────────────
+  // Uses preHandler (not onRequest) so the body has been parsed by @fastify/formbody
+  // and req.body._csrf is available for token extraction.
+  server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!CSRF_METHODS.has(request.method)) return;
+    const path = request.url.split('?')[0];
+    if (isCsrfExempt(path)) return;
+    await new Promise<void>((resolve, reject) => {
+      server.csrfProtection(request, reply, (err?: Error) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
   });
 
   // ── Org context injection ────────────────────────────────────────────────

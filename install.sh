@@ -991,7 +991,17 @@ start_services_and_post_install() {
     nohup node "${INSTALL_DIR}/packages/compliance/dist/cli.js" serve --port "${COMPLIANCE_PORT}" \
       > /tmp/luqen-comp-install.log 2>&1 &
     COMP_PID=$!
-    sleep 3
+    info "Waiting for compliance service..."
+    attempts=0
+    until curl -sf "http://localhost:${COMPLIANCE_PORT}/api/v1/health" >/dev/null 2>&1; do
+      attempts=$(( attempts + 1 ))
+      if [ "${attempts}" -ge 15 ]; then
+        error "Compliance service did not start. Check: /tmp/luqen-comp-install.log"
+        return
+      fi
+      sleep 2
+    done
+    success "Compliance service running"
 
     DASHBOARD_SESSION_SECRET="${SESSION_SECRET}" \
       DASHBOARD_COMPLIANCE_URL="http://localhost:${COMPLIANCE_PORT}" \
@@ -1000,7 +1010,16 @@ start_services_and_post_install() {
       nohup node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" serve --config "${CONFIG_FILE}" \
       > /tmp/luqen-dash-install.log 2>&1 &
     DASH_PID=$!
-    sleep 4
+    info "Waiting for dashboard..."
+    attempts=0
+    until curl -sf "http://localhost:${DASHBOARD_PORT}/health" >/dev/null 2>&1; do
+      attempts=$(( attempts + 1 ))
+      if [ "${attempts}" -ge 15 ]; then
+        error "Dashboard did not start. Check: /tmp/luqen-dash-install.log"
+        return
+      fi
+      sleep 2
+    done
     success "Services started (PIDs: ${COMP_PID}, ${DASH_PID})"
   fi
 

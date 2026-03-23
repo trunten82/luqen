@@ -1,10 +1,14 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
-import { listJurisdictions, listRegulations } from '../compliance-client.js';
 import { getToken, getOrgId } from './admin/helpers.js';
+import {
+  ScanService,
+  VALID_STANDARDS,
+  type InitiateScanInput,
+} from '../services/scan-service.js';
+import { ComplianceService } from '../services/compliance-service.js';
 
 interface NewScanBody {
   siteUrl: string;
@@ -17,20 +21,15 @@ interface NewScanBody {
   incremental?: string;
 }
 
-const VALID_STANDARDS = ['WCAG2A', 'WCAG2AA', 'WCAG2AAA'];
-
-function normalizeJurisdictions(value: string | string[] | undefined): string[] {
-  if (value === undefined) return [];
-  if (Array.isArray(value)) return value;
-  return [value];
-}
-
 export async function scanRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
   orchestrator: ScanOrchestrator,
   config: DashboardConfig,
 ): Promise<void> {
+  const scanService = new ScanService(storage, orchestrator, config);
+  const complianceService = new ComplianceService(config);
+
   // GET /scan/new — render new scan form
   server.get(
     '/scan/new',
@@ -40,28 +39,17 @@ export async function scanRoutes(
         ? query.prefill.trim()
         : undefined;
 
-      let jurisdictions: Array<{ id: string; name: string }> = [];
-      let regulations: Array<{ id: string; name: string; shortName: string; jurisdictionId: string }> = [];
-      let complianceWarning = '';
-
-      try {
-        const token = getToken(request);
-        const orgId = getOrgId(request);
-        const rawJ = await listJurisdictions(config.complianceUrl, token, orgId);
-        jurisdictions = rawJ.map((j) => ({ id: j.id, name: j.name }));
-        const rawR = await listRegulations(config.complianceUrl, token, undefined, orgId);
-        regulations = rawR.map((r) => ({ id: r.id, name: r.name, shortName: r.shortName, jurisdictionId: r.jurisdictionId }));
-      } catch {
-        complianceWarning = 'Compliance service is unreachable. Jurisdiction and regulation selection is unavailable. Scans will still work without compliance checking.';
-      }
+      const token = getToken(request);
+      const orgId = getOrgId(request);
+      const lookupData = await complianceService.getComplianceLookupData(token, orgId);
 
       return reply.view('scan-new.hbs', {
         pageTitle: 'New Scan',
         currentPath: '/scan/new',
         user: request.user,
-        jurisdictions,
-        regulations,
-        complianceWarning,
+        jurisdictions: lookupData.jurisdictions,
+        regulations: lookupData.regulations,
+        complianceWarning: lookupData.warning,
         standards: VALID_STANDARDS,
         defaultStandard: 'WCAG2AA',
         maxConcurrency: 10,
@@ -80,133 +68,36 @@ export async function scanRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as NewScanBody;
 
-      // Validate siteUrl
-      if (typeof body.siteUrl !== 'string' || body.siteUrl.trim() === '') {
-        const isHtmx = request.headers['hx-request'] === 'true';
-        if (isHtmx || request.headers['accept']?.includes('text/html')) {
-          return reply.code(400).view('scan-new.hbs', { pageTitle: 'New Scan', currentPath: '/scan/new', scanError: 'Please enter a URL to scan.' });
-        }
-        return reply.code(400).send({ error: 'siteUrl is required' });
-      }
+      const input: InitiateScanInput = {
+        siteUrl: body.siteUrl,
+        standard: body.standard,
+        scanMode: body.scanMode,
+        jurisdictions: body.jurisdictions,
+        concurrency: body.concurrency,
+        maxPages: body.maxPages,
+        runner: body.runner,
+        incremental: body.incremental,
+      };
 
-      let parsedUrl: URL;
-      try {
-        parsedUrl = new URL(body.siteUrl.trim());
-      } catch {
-        const isHtmx = request.headers['hx-request'] === 'true';
-        if (isHtmx || request.headers['accept']?.includes('text/html')) {
-          return reply.code(400).view('scan-new.hbs', { pageTitle: 'New Scan', currentPath: '/scan/new', scanError: 'Please enter a valid URL (e.g., https://example.com).' });
-        }
-        return reply.code(400).send({ error: 'siteUrl must be a valid URL' });
-      }
-
-      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
-        return reply.code(400).send({ error: 'URL must use http or https' });
-      }
-
-      // SSRF protection: block private/internal IP ranges
-      const hostname = parsedUrl.hostname.toLowerCase();
-      if (
-        hostname === 'localhost' ||
-        hostname === '127.0.0.1' ||
-        hostname === '::1' ||
-        hostname === '0.0.0.0' ||
-        hostname.startsWith('10.') ||
-        hostname.startsWith('192.168.') ||
-        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
-        hostname === '169.254.169.254' ||
-        hostname.startsWith('169.254.') ||
-        hostname.endsWith('.internal') ||
-        hostname.endsWith('.local')
-      ) {
-        return reply.code(400).send({ error: 'Scanning internal or private addresses is not allowed.' });
-      }
-
-      // Pre-validate URL is reachable before starting scan
-      try {
-        const probe = await fetch(parsedUrl.toString(), {
-          method: 'HEAD',
-          signal: AbortSignal.timeout(10_000),
-          redirect: 'follow',
-        });
-        if (!probe.ok && probe.status >= 500) {
-          return reply.code(400).send({ error: `Site returned ${probe.status} — check the URL and try again.` });
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes('ENOTFOUND') || msg.includes('getaddrinfo')) {
-          return reply.code(400).send({ error: 'Domain not found — check the URL for typos.' });
-        }
-        if (msg.includes('ECONNREFUSED')) {
-          return reply.code(400).send({ error: 'Connection refused — the server is not responding.' });
-        }
-        if (msg.includes('TimeoutError') || msg.includes('timed out')) {
-          return reply.code(400).send({ error: 'Connection timed out — the site took too long to respond.' });
-        }
-        // Other network errors — let the scan proceed (WAFs may block HEAD)
-      }
-
-      const standard = body.standard ?? 'WCAG2AA';
-      if (!VALID_STANDARDS.includes(standard)) {
-        return reply.code(400).send({ error: `standard must be one of: ${VALID_STANDARDS.join(', ')}` });
-      }
-
-      const concurrency = body.concurrency !== undefined
-        ? parseInt(body.concurrency, 10)
-        : config.maxConcurrentScans;
-
-      if (isNaN(concurrency) || concurrency < 1 || concurrency > 10) {
-        return reply.code(400).send({ error: 'concurrency must be between 1 and 10' });
-      }
-
-      const jurisdictions = normalizeJurisdictions(body.jurisdictions);
-      if (jurisdictions.length > 50) {
-        return reply.code(400).send({ error: 'Maximum 50 jurisdictions per scan' });
-      }
-      const scanMode = body.scanMode === 'single' ? 'single' : 'site';
-
-      const VALID_RUNNERS = ['htmlcs', 'axe'];
-      const runner = body.runner !== undefined && VALID_RUNNERS.includes(body.runner)
-        ? (body.runner as 'htmlcs' | 'axe')
-        : config.runner;
-
-      const scanId = randomUUID();
-
-      await storage.scans.createScan({
-        id: scanId,
-        siteUrl: parsedUrl.toString(),
-        standard,
-        jurisdictions,
-        createdBy: request.user?.username ?? 'unknown',
-        createdAt: new Date().toISOString(),
+      const result = await scanService.initiateScan(input, {
+        username: request.user?.username ?? 'unknown',
         orgId: request.user?.currentOrgId ?? 'system',
-      });
-
-      const incremental = body.incremental === 'true';
-
-      const userMaxPages = body.maxPages !== undefined ? parseInt(body.maxPages, 10) : undefined;
-      const maxPages = (userMaxPages !== undefined && !isNaN(userMaxPages) && userMaxPages >= 1 && userMaxPages <= 1000)
-        ? userMaxPages
-        : config.maxPages;
-
-      orchestrator.startScan(scanId, {
-        siteUrl: parsedUrl.toString(),
-        standard,
-        concurrency,
-        jurisdictions,
-        scanMode,
-        ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
-        ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
-          ? { webserviceUrls: config.webserviceUrls }
-          : {}),
-        complianceUrl: config.complianceUrl,
         complianceToken: getToken(request),
-        maxPages,
-        ...(runner !== undefined ? { runner } : {}),
-        ...(incremental ? { incremental, orgId: request.user?.currentOrgId ?? 'system' } : {}),
       });
 
-      await reply.redirect(`/scan/${scanId}/progress`);
+      if (!result.ok) {
+        const isHtmx = request.headers['hx-request'] === 'true';
+        if (isHtmx || request.headers['accept']?.includes('text/html')) {
+          return reply.code(400).view('scan-new.hbs', {
+            pageTitle: 'New Scan',
+            currentPath: '/scan/new',
+            scanError: result.error,
+          });
+        }
+        return reply.code(400).send({ error: result.error });
+      }
+
+      await reply.redirect(`/scan/${result.scanId}/progress`);
     },
   );
 
@@ -215,15 +106,11 @@ export async function scanRoutes(
     '/scan/:id/progress',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-
-      const scan = await storage.scans.getScan(id);
-      if (scan === null) {
-        return reply.code(404).send({ error: 'Scan not found' });
-      }
-
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
-        return reply.code(404).send({ error: 'Scan not found' });
+
+      const result = await scanService.getScanForOrg(id, orgId);
+      if (!result.ok) {
+        return reply.code(404).send({ error: result.error });
       }
 
       return reply.view('scan-progress.hbs', {
@@ -231,8 +118,8 @@ export async function scanRoutes(
         currentPath: `/scan/${id}/progress`,
         user: request.user,
         scan: {
-          ...scan,
-          jurisdictions: scan.jurisdictions.join(', '),
+          ...result.scan,
+          jurisdictions: result.scan.jurisdictions.join(', '),
         },
       });
     },
@@ -243,16 +130,14 @@ export async function scanRoutes(
     '/scan/:id/events',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-
-      const scan = await storage.scans.getScan(id);
-      if (scan === null) {
-        return reply.code(404).send({ error: 'Scan not found' });
-      }
-
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
-        return reply.code(404).send({ error: 'Scan not found' });
+
+      const lookupResult = await scanService.getScanForOrg(id, orgId);
+      if (!lookupResult.ok) {
+        return reply.code(404).send({ error: lookupResult.error });
       }
+
+      const scan = lookupResult.scan;
 
       // If already completed or failed, send final event immediately
       if (scan.status === 'completed' || scan.status === 'failed') {

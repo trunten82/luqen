@@ -612,8 +612,7 @@ paths:
       tags: [export]
       summary: Download scan report as PDF
       description: >-
-        Generates a PDF of the scan report using server-side rendering.
-        Returns 501 if Puppeteer is not installed on the server.
+        Generates a PDF of the scan report using PDFKit server-side rendering.
       parameters:
         - name: scanId
           in: path
@@ -636,7 +635,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "501":
-          description: PDF generation not available (Puppeteer not installed)
+          description: PDF generation not available
           content:
             application/json:
               schema:

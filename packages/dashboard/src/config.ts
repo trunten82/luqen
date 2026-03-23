@@ -169,7 +169,20 @@ export function validateConfig(config: DashboardConfig): void {
 }
 
 export function loadConfig(configPath = 'dashboard.config.json'): DashboardConfig {
-  const fileConfig = loadConfigFile(resolve(configPath));
+  const resolvedConfigPath = resolve(configPath);
+  const configDir = dirname(resolvedConfigPath);
+  const fileConfig = loadConfigFile(resolvedConfigPath);
   const merged: DashboardConfig = { ...DEFAULTS, ...fileConfig };
-  return applyEnvOverrides(merged);
+  const withEnv = applyEnvOverrides(merged);
+
+  // Resolve dbPath, reportsDir, and pluginsDir to absolute paths relative to
+  // the config file's directory.  This guarantees every process (systemd
+  // service, CLI invocation, nohup background) opens the same DB file even
+  // when their working directories differ.
+  return {
+    ...withEnv,
+    dbPath: resolve(configDir, withEnv.dbPath),
+    reportsDir: resolve(configDir, withEnv.reportsDir),
+    pluginsDir: resolve(configDir, withEnv.pluginsDir),
+  };
 }

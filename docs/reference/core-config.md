@@ -78,7 +78,6 @@ Place this file in your project root (or any ancestor directory). All fields are
 | `LUQEN_CONFIG` | Config file path | Absolute path to a `.luqen.json` file |
 | `LUQEN_MAX_PAGES` | `maxPages` | Maximum pages to discover and scan (dashboard uses this via `DASHBOARD_MAX_PAGES`) |
 | `LUQEN_RUNNER` | `runner` | Pa11y test runner: `htmlcs` or `axe` |
-| `PUPPETEER_EXECUTABLE_PATH` | — | Absolute path to a custom Chromium/Chrome binary. Set this when the system Chromium is installed in a non-standard location (e.g. `/usr/bin/chromium-browser`). When unset, puppeteer uses its bundled Chromium. |
 
 ---
 
