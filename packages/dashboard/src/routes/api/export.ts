@@ -486,6 +486,30 @@ export async function exportRoutes(
 
       const reportData = normalizeReportData(reportJson, scan);
 
+      // If ?html=1, return the rendered HTML instead of JSON
+      const query = request.query as { html?: string };
+      if (query.html === '1') {
+        const { default: handlebars } = await import('handlebars');
+        const { resolve: resolvePath, join: joinPath } = await import('node:path');
+        const { fileURLToPath } = await import('node:url');
+        const dirname = fileURLToPath(new URL('.', import.meta.url));
+        const viewsDir = resolvePath(joinPath(dirname, '..', '..', 'views'));
+        const templateSource = await readFile(joinPath(viewsDir, 'report-print.hbs'), 'utf-8');
+        const template = handlebars.compile(templateSource);
+        const html = template({
+          scan: {
+            ...scan,
+            jurisdictions: scan.jurisdictions.join(', '),
+            createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
+            completedAtDisplay: scan.completedAt ? new Date(scan.completedAt).toLocaleString() : '',
+          },
+          reportData,
+          userRole: 'admin',
+          isExecutiveView: false,
+        });
+        return reply.type('text/html').send(html);
+      }
+
       return reply.send({
         source: dbReport !== null ? 'db' : 'file',
         rawKeys: Object.keys(reportJson),
