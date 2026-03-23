@@ -92,6 +92,39 @@
       "icon": "azure",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/storage-azure-v1.0.0/luqen-plugin-storage-azure-1.0.0.tgz",
       "checksum": "sha256:3fdde7c3ea3b1cceb7ce74a0e676ebfb4d9e87ccce62a9bf3823358be155a769"
+    },
+    {
+      "name": "storage-postgres",
+      "displayName": "PostgreSQL Storage",
+      "type": "storage",
+      "version": "1.0.0",
+      "description": "PostgreSQL database backend for the Luqen dashboard",
+      "packageName": "@luqen/plugin-storage-postgres",
+      "icon": "postgres",
+      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/storage-postgres-v1.0.0/luqen-plugin-storage-postgres-1.0.0.tgz",
+      "checksum": "sha256:873657ba81c8e1a87627384908d7542900925ca545c71513badc797ccd4f7045"
+    },
+    {
+      "name": "storage-mongodb",
+      "displayName": "MongoDB Storage",
+      "type": "storage",
+      "version": "1.0.0",
+      "description": "MongoDB database backend for the Luqen dashboard",
+      "packageName": "@luqen/plugin-storage-mongodb",
+      "icon": "mongodb",
+      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/storage-mongodb-v1.0.0/luqen-plugin-storage-mongodb-1.0.0.tgz",
+      "checksum": "sha256:043b41c9882a27a312f49c09efb1a3ab2e342d7828ff49b7c6618b72e964d372"
+    },
+    {
+      "name": "scanner-axe",
+      "displayName": "axe-core Scanner",
+      "type": "scanner",
+      "version": "1.0.0",
+      "description": "Alternative accessibility scanner using axe-core via Puppeteer",
+      "packageName": "@luqen/plugin-scanner-axe",
+      "icon": "axe",
+      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/scanner-axe-v1.0.0/luqen-plugin-scanner-axe-1.0.0.tgz",
+      "checksum": "sha256:f83c3eccc47e6de2add9ad63e4f79402a9cf7065464eb2f817aedaa60ab5f1d6"
     }
   ]
 }

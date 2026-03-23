@@ -12,7 +12,12 @@
     "packages/plugins/notify-slack",
     "packages/plugins/notify-teams",
     "packages/plugins/storage-s3",
-    "packages/plugins/storage-azure"
+    "packages/plugins/storage-azure",
+    "packages/plugins/auth-okta",
+    "packages/plugins/auth-google",
+    "packages/plugins/storage-postgres",
+    "packages/plugins/storage-mongodb",
+    "packages/plugins/scanner-axe"
   ],
   "scripts": {
     "build": "npm run build --workspaces",

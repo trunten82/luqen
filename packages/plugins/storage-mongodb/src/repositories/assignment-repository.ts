@@ -206,7 +206,7 @@ export class MongoAssignmentRepository {
     };
 
     let total = 0;
-    const mutable = stats as Record<string, number>;
+    const mutable = stats as unknown as Record<string, number>;
 
     for (const row of results) {
       total += row.count;
