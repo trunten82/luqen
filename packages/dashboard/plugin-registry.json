@@ -1,17 +1,17 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-23T12:00:00Z",
+  "updatedAt": "2026-03-23T15:00:00Z",
   "plugins": [
     {
       "name": "auth-entra",
       "displayName": "Azure Entra ID",
       "type": "auth",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Single sign-on via Azure Entra ID (formerly Azure AD)",
       "packageName": "@luqen/plugin-auth-entra",
       "icon": "entra",
-      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/auth-entra-v1.0.0/luqen-plugin-auth-entra-1.0.0.tgz",
-      "checksum": "sha256:placeholder"
+      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/auth-entra-v1.1.0/luqen-plugin-auth-entra-1.1.0.tgz",
+      "checksum": "sha256:9796fd6395c860d3a7c5b4046f6c7c7875518f011e0533975e670d18c0e5a868"
     },
     {
       "name": "auth-okta",
@@ -22,7 +22,7 @@
       "packageName": "@luqen/plugin-auth-okta",
       "icon": "okta",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/auth-okta-v1.0.0/luqen-plugin-auth-okta-1.0.0.tgz",
-      "checksum": "sha256:placeholder"
+      "checksum": "sha256:3c1179f839a7fb978c353e459183437414a7fe6cde72ce9e796ef2f0639a9ad8"
     },
     {
       "name": "auth-google",
@@ -33,7 +33,7 @@
       "packageName": "@luqen/plugin-auth-google",
       "icon": "google",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/auth-google-v1.0.0/luqen-plugin-auth-google-1.0.0.tgz",
-      "checksum": "sha256:placeholder"
+      "checksum": "sha256:488846ea44312f1fec8077706f9abf2ab4beca08ee8fd1c5777555d7a5d558fc"
     },
     {
       "name": "notify-slack",
@@ -44,7 +44,7 @@
       "packageName": "@luqen/plugin-notify-slack",
       "icon": "slack",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/notify-slack-v1.0.0/luqen-plugin-notify-slack-1.0.0.tgz",
-      "checksum": "sha256:placeholder"
+      "checksum": "sha256:99f22db09f4984fa23bb823abb4b8a2b9461289a53937d0bae849996b39f6f7a"
     },
     {
       "name": "notify-teams",
@@ -55,7 +55,7 @@
       "packageName": "@luqen/plugin-notify-teams",
       "icon": "teams",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/notify-teams-v1.0.0/luqen-plugin-notify-teams-1.0.0.tgz",
-      "checksum": "sha256:placeholder"
+      "checksum": "sha256:bb22a46ada7b720f44da9f0b5234dc5ec7a1c31a089f64c173c737e44121bc94"
     },
     {
       "name": "notify-email",
@@ -69,7 +69,7 @@
         { "path": "/admin/email-reports", "title": "Email Reports", "icon": "envelope", "permission": "admin.system" }
       ],
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/notify-email-v1.0.0/luqen-plugin-notify-email-1.0.0.tgz",
-      "checksum": "sha256:placeholder"
+      "checksum": "sha256:ed86e457dab6bbdf51e5e57ad13f00bc6662006fb81300d3304e4e4b715f7887"
     },
     {
       "name": "storage-s3",
@@ -80,7 +80,7 @@
       "packageName": "@luqen/plugin-storage-s3",
       "icon": "aws",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/storage-s3-v1.0.0/luqen-plugin-storage-s3-1.0.0.tgz",
-      "checksum": "sha256:placeholder"
+      "checksum": "sha256:372c53f786e238cff08b787c7afa4c1e5cef6e1e5238cdae68babd2f9f928f1e"
     },
     {
       "name": "storage-azure",
@@ -91,7 +91,7 @@
       "packageName": "@luqen/plugin-storage-azure",
       "icon": "azure",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/storage-azure-v1.0.0/luqen-plugin-storage-azure-1.0.0.tgz",
-      "checksum": "sha256:placeholder"
+      "checksum": "sha256:3fdde7c3ea3b1cceb7ce74a0e676ebfb4d9e87ccce62a9bf3823358be155a769"
     }
   ]
 }

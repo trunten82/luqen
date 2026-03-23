@@ -231,6 +231,8 @@ The dashboard looks for `dashboard.config.json` in the current working directory
 | `maxConcurrentScans` | `number` | `2` | Maximum number of scans that may run simultaneously |
 | `complianceClientId` | `string` | — | OAuth2 client ID registered in the compliance service |
 | `complianceClientSecret` | `string` | — | OAuth2 client secret |
+| `catalogueUrl` | `string` | `https://github.com/trunten82/luqen-plugins` | Base URL of the remote plugin catalogue GitHub repository |
+| `catalogueCacheTtl` | `number` | `3600` | Plugin catalogue cache TTL in seconds |
 
 ### Environment variables
 
@@ -247,6 +249,8 @@ Environment variables override the config file. They take the highest precedence
 | `DASHBOARD_MAX_CONCURRENT_SCANS` | `maxConcurrentScans` | Max parallel scan limit |
 | `DASHBOARD_COMPLIANCE_CLIENT_ID` | `complianceClientId` | OAuth2 client ID |
 | `DASHBOARD_COMPLIANCE_CLIENT_SECRET` | `complianceClientSecret` | OAuth2 client secret |
+| `DASHBOARD_CATALOGUE_URL` | `catalogueUrl` | Remote plugin catalogue GitHub repository URL |
+| `DASHBOARD_CATALOGUE_CACHE_TTL` | `catalogueCacheTtl` | Plugin catalogue cache TTL in seconds |
 | `DASHBOARD_COMPLIANCE_API_KEY` | — | OAuth token used for dashboard→compliance API calls (jurisdictions, regulations, etc.). Required in solo mode where there is no user OAuth session. |
 
 **Precedence:** Environment variables > config file > built-in defaults.

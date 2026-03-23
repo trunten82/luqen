@@ -1,0 +1,14 @@
+{
+  "name": "auth-google",
+  "displayName": "Google OAuth",
+  "type": "auth",
+  "version": "1.0.0",
+  "description": "Single sign-on via Google OAuth 2.0 / OpenID Connect with optional Google Workspace group sync",
+  "configSchema": [
+    { "key": "clientId", "label": "Client ID", "type": "string", "required": true },
+    { "key": "clientSecret", "label": "Client Secret", "type": "secret", "required": true },
+    { "key": "redirectUri", "label": "Redirect URI", "type": "string", "default": "/auth/callback/auth-google" },
+    { "key": "hostedDomain", "label": "Hosted Domain", "type": "string", "description": "Restrict login to a Google Workspace domain (e.g. example.com)" },
+    { "key": "groupsEnabled", "label": "Enable Groups", "type": "boolean", "default": false, "description": "Fetch Google Workspace group memberships via Admin SDK (requires domain-wide delegation)" }
+  ]
+}
