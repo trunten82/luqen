@@ -107,18 +107,16 @@ export async function getToken(
   clientId = 'dashboard',
   clientSecret = '',
 ): Promise<TokenResponse> {
-  const params = new URLSearchParams({
-    grant_type: 'password',
-    username,
-    password,
-    client_id: clientId,
-    client_secret: clientSecret,
-  });
-
   const response = await fetch(`${baseUrl}/api/v1/oauth/token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString(),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'password',
+      username,
+      password,
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
   });
 
   if (!response.ok) {

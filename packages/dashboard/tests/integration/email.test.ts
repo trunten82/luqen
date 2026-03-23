@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { sendEmail, testSmtpConnection } from '../../src/email/sender.js';
 import { buildEmailBody } from '../../src/email/report-generator.js';
 import type { SmtpOptions } from '../../src/email/sender.js';
@@ -34,29 +34,24 @@ const makeScanRecord = (overrides: Partial<ScanRecord> = {}): ScanRecord => ({
   ...overrides,
 });
 
-describe('Email integration', () => {
-  let skipTests = false;
+// Check SMTP availability at module level (top-level await)
+let smtpAvailable = false;
+try {
+  smtpAvailable = await testSmtpConnection(SMTP_OPTIONS);
+} catch {
+  smtpAvailable = false;
+}
 
-  beforeAll(async () => {
-    try {
-      const result = await testSmtpConnection(SMTP_OPTIONS);
-      skipTests = !result;
-    } catch {
-      skipTests = true;
-    }
-  }, 30_000);
+// ── SMTP tests: skip when server unreachable ──────────────────────────────
 
-  // ── testSmtpConnection ──────────────────────────────────────────────────
-
+describe.skipIf(!smtpAvailable)('SMTP integration', () => {
   describe('testSmtpConnection', () => {
-    it('returns true with valid credentials', async ({ skip }) => {
-      if (skipTests) skip();
+    it('returns true with valid credentials', async () => {
       const result = await testSmtpConnection(SMTP_OPTIONS);
       expect(result).toBe(true);
     }, 30_000);
 
-    it('returns false with wrong credentials', async ({ skip }) => {
-      if (skipTests) skip();
+    it('returns false with wrong credentials', async () => {
       const badOptions: SmtpOptions = {
         ...SMTP_OPTIONS,
         password: 'wrong-password',
@@ -66,11 +61,8 @@ describe('Email integration', () => {
     }, 30_000);
   });
 
-  // ── sendEmail ───────────────────────────────────────────────────────────
-
   describe('sendEmail', () => {
-    it('sends a real test email', async ({ skip }) => {
-      if (skipTests) skip();
+    it('sends a real test email', async () => {
       const timestamp = new Date().toISOString();
       const scan = makeScanRecord();
       const html = buildEmailBody(scan);
@@ -85,8 +77,7 @@ describe('Email integration', () => {
       ).resolves.toBeUndefined();
     }, 30_000);
 
-    it('sends an email with HTML attachment', async ({ skip }) => {
-      if (skipTests) skip();
+    it('sends an email with HTML attachment', async () => {
       const timestamp = new Date().toISOString();
       const scan = makeScanRecord();
       const html = buildEmailBody(scan);
@@ -111,55 +102,51 @@ describe('Email integration', () => {
       ).resolves.toBeUndefined();
     }, 30_000);
   });
+});
 
-  // ── buildEmailBody ─────────────────────────────────────────────────────
+// ── buildEmailBody tests: always run (no external service needed) ─────────
 
-  describe('buildEmailBody', () => {
-    it('generates valid HTML from scan data', ({ skip }) => {
-      if (skipTests) skip();
-      const scan = makeScanRecord();
-      const html = buildEmailBody(scan);
+describe('buildEmailBody', () => {
+  it('generates valid HTML from scan data', () => {
+    const scan = makeScanRecord();
+    const html = buildEmailBody(scan);
 
-      expect(html).toContain('<!DOCTYPE html>');
-      expect(html).toContain('Luqen Accessibility Report');
-      expect(html).toContain('example.com');
-      expect(html).toContain('WCAG2AA');
-      expect(html).toContain('>5</div>'); // pagesScanned
-      expect(html).toContain('>4</div>'); // errors
-      expect(html).toContain('>3</div>'); // notices
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('Luqen Accessibility Report');
+    expect(html).toContain('example.com');
+    expect(html).toContain('WCAG2AA');
+    expect(html).toContain('>5</div>'); // pagesScanned
+    expect(html).toContain('>4</div>'); // errors
+    expect(html).toContain('>3</div>'); // notices
+  });
+
+  it('handles scan with no completedAt (uses createdAt)', () => {
+    const scan = makeScanRecord({ completedAt: undefined });
+    const html = buildEmailBody(scan);
+
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('Luqen Accessibility Report');
+  });
+
+  it('handles scan with zero counts', () => {
+    const scan = makeScanRecord({
+      errors: 0,
+      warnings: 0,
+      notices: 0,
+      pagesScanned: 0,
     });
+    const html = buildEmailBody(scan);
 
-    it('handles scan with no completedAt (uses createdAt)', ({ skip }) => {
-      if (skipTests) skip();
-      const scan = makeScanRecord({ completedAt: undefined });
-      const html = buildEmailBody(scan);
+    expect(html).toContain('>0</div>');
+  });
 
-      expect(html).toContain('<!DOCTYPE html>');
-      expect(html).toContain('Luqen Accessibility Report');
+  it('escapes HTML in site URL', () => {
+    const scan = makeScanRecord({
+      siteUrl: 'https://example.com/<script>alert("xss")</script>',
     });
+    const html = buildEmailBody(scan);
 
-    it('handles scan with zero counts', ({ skip }) => {
-      if (skipTests) skip();
-      const scan = makeScanRecord({
-        errors: 0,
-        warnings: 0,
-        notices: 0,
-        pagesScanned: 0,
-      });
-      const html = buildEmailBody(scan);
-
-      expect(html).toContain('>0</div>');
-    });
-
-    it('escapes HTML in site URL', ({ skip }) => {
-      if (skipTests) skip();
-      const scan = makeScanRecord({
-        siteUrl: 'https://example.com/<script>alert("xss")</script>',
-      });
-      const html = buildEmailBody(scan);
-
-      expect(html).not.toContain('<script>');
-      expect(html).toContain('&lt;script&gt;');
-    });
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
   });
 });

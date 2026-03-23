@@ -4,7 +4,7 @@
  * These tests call the REAL compliance service at http://localhost:4000.
  * They are skipped automatically when the service is unreachable.
  */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   getToken,
   listJurisdictions,
@@ -41,28 +41,22 @@ async function isServiceAvailable(): Promise<boolean> {
   }
 }
 
-let available = false;
+const available = await isServiceAvailable();
 
-beforeAll(async () => {
-  available = await isServiceAvailable();
-});
-
-describe.skipIf(() => !available)('Compliance API Integration', () => {
+describe.skipIf(!available)('Compliance API Integration', () => {
   let token: string;
 
   // ─── 1. OAuth token acquisition (client_credentials) ───────────────────────
   describe('OAuth token acquisition', () => {
     it('should acquire a token via client_credentials grant', async () => {
-      const params = new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-      });
-
       const res = await fetch(`${BASE_URL}/api/v1/oauth/token`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'client_credentials',
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+        }),
       });
 
       expect(res.ok).toBe(true);
@@ -292,16 +286,14 @@ describe.skipIf(() => !available)('Compliance API Integration', () => {
     });
 
     it('should reject invalid OAuth grant type', async () => {
-      const params = new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-      });
-
       const res = await fetch(`${BASE_URL}/api/v1/oauth/token`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'authorization_code',
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+        }),
       });
 
       expect(res.status).toBe(400);
@@ -310,16 +302,14 @@ describe.skipIf(() => !available)('Compliance API Integration', () => {
     });
 
     it('should reject wrong client credentials', async () => {
-      const params = new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: CLIENT_ID,
-        client_secret: 'wrong-secret',
-      });
-
       const res = await fetch(`${BASE_URL}/api/v1/oauth/token`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'client_credentials',
+          client_id: CLIENT_ID,
+          client_secret: 'wrong-secret',
+        }),
       });
 
       expect(res.status).toBe(401);
