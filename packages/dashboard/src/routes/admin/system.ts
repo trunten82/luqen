@@ -44,10 +44,19 @@ export async function systemRoutes(
           ? complianceHealth.value.compliance.status
           : 'error';
 
-      const pa11yStatus =
-        complianceHealth.status === 'fulfilled' && complianceHealth.value.pa11y !== undefined
-          ? complianceHealth.value.pa11y.status
-          : 'unknown';
+      // Pa11y scanner: if no webserviceUrl, scanner is built-in and always available
+      let pa11yStatus: string;
+      let pa11yLabel: string;
+      if (!config.webserviceUrl) {
+        pa11yStatus = 'ok';
+        pa11yLabel = 'Scanner (built-in pa11y)';
+      } else if (complianceHealth.status === 'fulfilled' && complianceHealth.value.pa11y !== undefined) {
+        pa11yStatus = complianceHealth.value.pa11y.status;
+        pa11yLabel = 'Pa11y Webservice';
+      } else {
+        pa11yStatus = 'unknown';
+        pa11yLabel = 'Pa11y Webservice';
+      }
 
       // Database stats
       let dbSizeBytes = 0;
@@ -77,7 +86,7 @@ export async function systemRoutes(
         services: {
           dashboard: { status: 'ok', label: 'Dashboard' },
           compliance: { status: complianceStatus, label: 'Compliance Service' },
-          pa11y: { status: pa11yStatus, label: 'Pa11y Webservice' },
+          pa11y: { status: pa11yStatus, label: pa11yLabel },
         },
         db: {
           sizeKb: dbSizeKb,

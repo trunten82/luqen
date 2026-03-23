@@ -3,6 +3,16 @@
     {{{t "scans.configureHint"}}}
   </p>
 
+  {{#if scanError}}
+  <div class="alert alert--error" role="alert">
+    <svg class="alert__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M10 6v5M10 13v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div class="alert__body">{{scanError}}</div>
+  </div>
+  {{/if}}
+
   {{#if complianceWarning}}
   <div class="alert alert--warning" role="alert">
     <svg class="alert__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">

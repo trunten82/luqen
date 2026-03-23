@@ -82,6 +82,10 @@ export async function scanRoutes(
 
       // Validate siteUrl
       if (typeof body.siteUrl !== 'string' || body.siteUrl.trim() === '') {
+        const isHtmx = request.headers['hx-request'] === 'true';
+        if (isHtmx || request.headers['accept']?.includes('text/html')) {
+          return reply.code(400).view('scan-new.hbs', { pageTitle: 'New Scan', currentPath: '/scan/new', scanError: 'Please enter a URL to scan.' });
+        }
         return reply.code(400).send({ error: 'siteUrl is required' });
       }
 
@@ -89,6 +93,10 @@ export async function scanRoutes(
       try {
         parsedUrl = new URL(body.siteUrl.trim());
       } catch {
+        const isHtmx = request.headers['hx-request'] === 'true';
+        if (isHtmx || request.headers['accept']?.includes('text/html')) {
+          return reply.code(400).view('scan-new.hbs', { pageTitle: 'New Scan', currentPath: '/scan/new', scanError: 'Please enter a valid URL (e.g., https://example.com).' });
+        }
         return reply.code(400).send({ error: 'siteUrl must be a valid URL' });
       }
 
