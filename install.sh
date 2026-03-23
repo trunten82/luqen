@@ -26,12 +26,12 @@ else
   BOLD="" GREEN="" YELLOW="" RED="" CYAN="" DIM="" RESET=""
 fi
 
-info()    { printf "%s  %s%s\n"   "${CYAN}*${RESET}"  "$*"          "${RESET}"; }
-success() { printf "%s  %s%s\n"   "${GREEN}+${RESET}" "${GREEN}$*"  "${RESET}"; }
-warn()    { printf "%s  %s%s\n"   "${YELLOW}!${RESET}" "${YELLOW}$*" "${RESET}"; }
-error()   { printf "%s  %s%s\n"   "${RED}x${RESET}"   "${RED}$*"    "${RESET}" >&2; }
-header()  { printf "\n%s%s%s\n\n" "${BOLD}${CYAN}"     "$*"          "${RESET}"; }
-step()    { printf "\n%s[%s/%s]%s %s%s%s\n" "${DIM}" "$1" "$2" "${RESET}" "${BOLD}" "$3" "${RESET}"; }
+info()    { printf "%s  %s%s\n"   "${CYAN}*${RESET}"  "$*"          "${RESET}" >/dev/tty; }
+success() { printf "%s  %s%s\n"   "${GREEN}+${RESET}" "${GREEN}$*"  "${RESET}" >/dev/tty; }
+warn()    { printf "%s  %s%s\n"   "${YELLOW}!${RESET}" "${YELLOW}$*" "${RESET}" >/dev/tty; }
+error()   { printf "%s  %s%s\n"   "${RED}x${RESET}"   "${RED}$*"    "${RESET}" >/dev/tty; }
+header()  { printf "\n%s%s%s\n\n" "${BOLD}${CYAN}"     "$*"          "${RESET}" >/dev/tty; }
+step()    { printf "\n%s[%s/%s]%s %s%s%s\n" "${DIM}" "$1" "$2" "${RESET}" "${BOLD}" "$3" "${RESET}" >/dev/tty; }
 
 run_quiet() {
   local label="$1"; shift
@@ -235,16 +235,16 @@ validate_smtp() {
 # ──────────────────────────────────────────────
 ask() {
   local prompt="$1" default="$2" var="$3"
-  printf "  %s%s%s %s[%s]%s: " "${BOLD}" "${prompt}" "${RESET}" "${DIM}" "${default}" "${RESET}"
-  read -r input
+  printf "  %s%s%s %s[%s]%s: " "${BOLD}" "${prompt}" "${RESET}" "${DIM}" "${default}" "${RESET}" >/dev/tty
+  read -r input </dev/tty
   eval "${var}=\"${input:-${default}}\""
 }
 
 ask_secret() {
   local prompt="$1" var="$2"
-  printf "  %s%s%s: " "${BOLD}" "${prompt}" "${RESET}"
-  read -rs input
-  printf "\n"
+  printf "  %s%s%s: " "${BOLD}" "${prompt}" "${RESET}" >/dev/tty
+  read -rs input </dev/tty
+  printf "\n" >/dev/tty
   eval "${var}=\"${input}\""
 }
 
@@ -252,8 +252,8 @@ ask_yn() {
   local prompt="$1" default="$2"
   local yn_hint="[Y/n]"
   [ "${default}" = "n" ] && yn_hint="[y/N]"
-  printf "  %s%s%s %s%s%s: " "${BOLD}" "${prompt}" "${RESET}" "${DIM}" "${yn_hint}" "${RESET}"
-  read -r input
+  printf "  %s%s%s %s%s%s: " "${BOLD}" "${prompt}" "${RESET}" "${DIM}" "${yn_hint}" "${RESET}" >/dev/tty
+  read -r input </dev/tty
   input="${input:-${default}}"
   case "${input}" in
     [yY]*) return 0 ;;
@@ -264,15 +264,15 @@ ask_yn() {
 ask_choice() {
   local prompt="$1"; shift
   local options=("$@")
-  printf "\n  %s%s%s\n" "${BOLD}" "${prompt}" "${RESET}"
+  printf "\n  %s%s%s\n" "${BOLD}" "${prompt}" "${RESET}" >/dev/tty
   local i=1
   for opt in "${options[@]}"; do
-    printf "    %s%d)%s %s\n" "${CYAN}" "${i}" "${RESET}" "${opt}"
+    printf "    %s%d)%s %s\n" "${CYAN}" "${i}" "${RESET}" "${opt}" >/dev/tty
     i=$(( i + 1 ))
   done
-  printf "\n    %sChoice%s: " "${BOLD}" "${RESET}"
-  read -r choice
-  echo "${choice}"
+  printf "\n    %sChoice [1]%s: " "${BOLD}" "${RESET}" >/dev/tty
+  read -r choice </dev/tty
+  echo "${choice:-1}"
 }
 
 # ──────────────────────────────────────────────
@@ -516,52 +516,96 @@ run_wizard_bare_metal() {
       ;;
   esac
 
-  # ── 5: Notifications (multi-select) ─────────
-  header "5. Notifications"
-  printf "  Get notified when scans complete (select all that apply).\n\n"
+  # ── 5: Plugins ─────────────────────────────
+  header "5. Plugins"
+  printf "  Plugins extend Luqen with notifications, cloud storage, and more.\n"
+  printf "  You can also install plugins later from the dashboard.\n\n"
 
-  if ask_yn "Slack notifications?" "n"; then
-    NOTIFY_SLACK=true
-    ask "Slack webhook URL" "" SLACK_WEBHOOK_URL
-  fi
-  if ask_yn "Microsoft Teams notifications?" "n"; then
-    NOTIFY_TEAMS=true
-    ask "Teams webhook URL" "" TEAMS_WEBHOOK_URL
-  fi
-  if ask_yn "Email reports (SMTP)?" "n"; then
-    NOTIFY_EMAIL=true
-    ask "SMTP host" "" SMTP_HOST
-    ask "SMTP port" "587" SMTP_PORT
-    ask "SMTP username" "" SMTP_USER
-    ask_secret "SMTP password" SMTP_PASS
-    ask "From address" "" SMTP_FROM
-    printf "  %sValidating SMTP connection...%s " "${DIM}" "${RESET}"
-    if validate_smtp "${SMTP_HOST}" "${SMTP_PORT}"; then
-      success "SMTP reachable"
-    else
-      warn "Could not reach SMTP server -- you can fix this later in plugin settings"
-    fi
+  # ── Notification plugins ──────────────────
+  if ask_yn "Install notification plugins?" "n"; then
+    printf "\n"
+    local notify_choice
+    notify_choice=$(ask_choice "Which notification plugin?" \
+      "Slack (webhook alerts)" \
+      "Microsoft Teams (webhook alerts)" \
+      "Email Reports (SMTP delivery)" \
+      "All notification plugins")
+
+    case "${notify_choice}" in
+      1) NOTIFY_SLACK=true; ask "Slack webhook URL" "" SLACK_WEBHOOK_URL ;;
+      2) NOTIFY_TEAMS=true; ask "Teams webhook URL" "" TEAMS_WEBHOOK_URL ;;
+      3)
+        NOTIFY_EMAIL=true
+        ask "SMTP host" "" SMTP_HOST
+        ask "SMTP port" "587" SMTP_PORT
+        ask "SMTP username" "" SMTP_USER
+        ask_secret "SMTP password" SMTP_PASS
+        ask "From address" "" SMTP_FROM
+        printf "  %sValidating SMTP...%s " "${DIM}" "${RESET}" >/dev/tty
+        if validate_smtp "${SMTP_HOST}" "${SMTP_PORT}"; then
+          success "SMTP reachable"
+        else
+          warn "Could not reach SMTP -- configure later in plugin settings"
+        fi
+        ;;
+      4)
+        NOTIFY_SLACK=true; NOTIFY_TEAMS=true; NOTIFY_EMAIL=true
+        ask "Slack webhook URL (or leave empty)" "" SLACK_WEBHOOK_URL
+        ask "Teams webhook URL (or leave empty)" "" TEAMS_WEBHOOK_URL
+        ask "SMTP host (or leave empty)" "" SMTP_HOST
+        if [ -n "${SMTP_HOST}" ]; then
+          ask "SMTP port" "587" SMTP_PORT
+          ask "SMTP username" "" SMTP_USER
+          ask_secret "SMTP password" SMTP_PASS
+          ask "From address" "" SMTP_FROM
+        fi
+        success "Notification plugins selected"
+        ;;
+    esac
   fi
 
-  # ── 6: Storage Plugins ──────────────────────
-  header "6. Report Storage"
-  printf "  Reports are stored locally by default. Optional cloud storage:\n\n"
+  # ── Storage plugins ──────────────────────
+  printf "\n"
+  if ask_yn "Install cloud storage plugins?" "n"; then
+    printf "\n"
+    local storage_choice
+    storage_choice=$(ask_choice "Which storage plugin?" \
+      "AWS S3" \
+      "Azure Blob Storage" \
+      "Both")
 
-  if ask_yn "AWS S3 storage?" "n"; then
-    STORAGE_S3=true
-    ask "S3 bucket name" "" S3_BUCKET
-    ask "AWS region" "us-east-1" S3_REGION
-    ask_secret "AWS access key ID" S3_ACCESS_KEY
-    ask_secret "AWS secret access key" S3_SECRET_KEY
-  fi
-  if ask_yn "Azure Blob storage?" "n"; then
-    STORAGE_AZURE=true
-    ask "Azure container name" "" AZURE_CONTAINER
-    ask_secret "Azure connection string" AZURE_CONNECTION_STRING
+    case "${storage_choice}" in
+      1)
+        STORAGE_S3=true
+        ask "S3 bucket name" "" S3_BUCKET
+        ask "AWS region" "us-east-1" S3_REGION
+        ask_secret "AWS access key ID" S3_ACCESS_KEY
+        ask_secret "AWS secret access key" S3_SECRET_KEY
+        ;;
+      2)
+        STORAGE_AZURE=true
+        ask "Azure container name" "" AZURE_CONTAINER
+        ask_secret "Azure connection string" AZURE_CONNECTION_STRING
+        ;;
+      3)
+        STORAGE_S3=true; STORAGE_AZURE=true
+        ask "S3 bucket name (or leave empty)" "" S3_BUCKET
+        if [ -n "${S3_BUCKET}" ]; then
+          ask "AWS region" "us-east-1" S3_REGION
+          ask_secret "AWS access key ID" S3_ACCESS_KEY
+          ask_secret "AWS secret access key" S3_SECRET_KEY
+        fi
+        ask "Azure container name (or leave empty)" "" AZURE_CONTAINER
+        if [ -n "${AZURE_CONTAINER}" ]; then
+          ask_secret "Azure connection string" AZURE_CONNECTION_STRING
+        fi
+        success "Storage plugins selected"
+        ;;
+    esac
   fi
 
-  # ── 7: Ports ─────────────────────────────────
-  header "7. Ports"
+  # ── 6: Ports ─────────────────────────────────
+  header "6. Ports"
   ask "Compliance port" "${COMPLIANCE_PORT}" COMPLIANCE_PORT
   DASHBOARD_PORT=$(( COMPLIANCE_PORT + 1000 ))
   ask "Dashboard port" "${DASHBOARD_PORT}" DASHBOARD_PORT
@@ -569,8 +613,8 @@ run_wizard_bare_metal() {
   # ── Install dir ──────────────────────────────
   ask "Installation directory" "${INSTALL_DIR}" INSTALL_DIR
 
-  # ── 8: Admin user ────────────────────────────
-  header "8. Admin Account"
+  # ── 7: Admin user ────────────────────────────
+  header "7. Admin Account"
   printf "  Create an admin user, or log in with the API key later.\n\n"
 
   if ask_yn "Create an admin user now?" "y"; then
