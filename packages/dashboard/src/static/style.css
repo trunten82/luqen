@@ -205,7 +205,7 @@ body {
 .sidebar {
   width: var(--sidebar-width);
   height: 100vh;
-  height: 100dvh; /* dynamic viewport height — respects mobile browser chrome */
+  height: 100dvh;
   background-color: var(--bg-sidebar);
   color: var(--text-sidebar);
   display: flex;
@@ -217,6 +217,11 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   transition: transform var(--transition-base);
+  transform: translateX(-100%); /* hidden by default on all screen sizes */
+}
+
+.sidebar.is-open {
+  transform: translateX(0); /* shown when toggled */
 }
 
 .sidebar__logo {
@@ -225,7 +230,7 @@ body {
   gap: var(--space-sm);
   padding: var(--space-lg) var(--space-md);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-inverse);
+  color: #ffffff; /* always white on dark sidebar, regardless of theme */
   text-decoration: none;
   font-size: var(--font-size-xl);
   font-weight: 700;
@@ -342,7 +347,8 @@ body {
 
 /* ---- Main Content ---- */
 .main-content {
-  margin-left: var(--sidebar-width);
+  margin-left: 0;
+  padding-top: 56px; /* space for fixed app header */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1373,7 +1379,7 @@ select {
   margin-bottom: var(--space-xl);
 }
 
-/* ---- Sidebar Backdrop (mobile overlay) ---- */
+/* ---- Sidebar Backdrop (overlay when menu is open) ---- */
 .sidebar-backdrop {
   display: none;
   position: fixed;
@@ -1382,13 +1388,45 @@ select {
   z-index: 99;
 }
 
-/* ---- Mobile Header (hidden on desktop) ---- */
-.mobile-header {
-  display: none;
+.sidebar-backdrop.is-visible {
+  display: block;
 }
 
-.mobile-menu-toggle {
-  display: none;
+/* ---- App Header (always visible — burger menu + branding) ---- */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  z-index: 50;
+}
+
+.app-header__user {
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  color: var(--text-primary);
+  flex-shrink: 0;
 }
 
 /* ---- Detail List (view mode) ---- */
@@ -1557,51 +1595,7 @@ select {
 
 /* ---- Responsive (Tablet & Mobile < 1024px) ---- */
 @media (max-width: 1024px) {
-  .sidebar-backdrop.is-visible {
-    display: block;
-  }
-
-  .sidebar {
-    transform: translateX(-100%);
-  }
-
-  .sidebar.is-open {
-    transform: translateX(0);
-  }
-
-  .main-content {
-    margin-left: 0;
-    padding-top: 56px; /* space for fixed mobile header */
-  }
-
-  .mobile-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-sm) var(--space-md);
-    background-color: var(--bg-primary);
-    border-bottom: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 56px;
-    z-index: 50;
-  }
-
-  .mobile-menu-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    color: var(--text-primary);
-    flex-shrink: 0;
+  /* Sidebar backdrop and toggle already handled globally */
   }
 
   .stats-grid {
@@ -1845,7 +1839,7 @@ select {
 /* ---- Print Styles ---- */
 @media print {
   .sidebar,
-  .mobile-header,
+  .app-header,
   .page-header .btn,
   nav,
   #toast-container,
