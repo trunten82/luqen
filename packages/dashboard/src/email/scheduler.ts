@@ -1,8 +1,13 @@
 import type { StorageAdapter } from '../db/index.js';
 import type { EmailReport } from '../db/types.js';
 import type { PluginManager } from '../plugins/manager.js';
-import { generateReportHtml, generateIssuesCsv, buildEmailBody } from './report-generator.js';
-import { generateReportPdf, isPuppeteerAvailable } from '../pdf/generator.js';
+import { generateIssuesCsv, buildEmailBody } from './report-generator.js';
+import { generatePdfFromData } from '../pdf/generator.js';
+import type { PdfReportData, PdfScanMeta } from '../pdf/generator.js';
+import { normalizeReportData } from '../services/report-service.js';
+import type { JsonReportFile } from '../services/report-service.js';
+import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 
 // Legacy import kept for backward compatibility with smtp_config table
 import { sendEmail } from './sender.js';
@@ -60,46 +65,43 @@ export async function processEmailReport(
   const wantsCsv = report.format === 'csv' || report.format === 'both' || report.includeCsv;
 
   if (wantsPdf) {
-    const html = await generateReportHtml(scan, reportPath);
-    if (html !== null) {
-      let hostname: string;
-      try {
-        hostname = new URL(scan.siteUrl).hostname;
-      } catch {
-        hostname = scan.siteUrl.replace(/[^a-zA-Z0-9.-]/g, '_');
+    let hostname: string;
+    try {
+      hostname = new URL(scan.siteUrl).hostname;
+    } catch {
+      hostname = scan.siteUrl.replace(/[^a-zA-Z0-9.-]/g, '_');
+    }
+
+    try {
+      // Read report JSON from DB or file
+      let reportJson: JsonReportFile | null = null;
+      const dbReport = await storage.scans.getReport(scan.id);
+      if (dbReport !== null) {
+        reportJson = dbReport as JsonReportFile;
+      } else if (reportPath && existsSync(reportPath)) {
+        reportJson = JSON.parse(await readFile(reportPath, 'utf-8')) as JsonReportFile;
       }
 
-      // Generate a real PDF when Puppeteer is available; fall back to HTML attachment
-      if (isPuppeteerAvailable()) {
-        try {
-          const pdfBuffer = await generateReportPdf(html, {
-            format: 'A4',
-            margin: { top: '15mm', right: '10mm', bottom: '15mm', left: '10mm' },
-          });
-          attachments.push({
-            filename: `luqen-report-${hostname}.pdf`,
-            content: pdfBuffer.toString('base64'),
-            contentType: 'application/pdf',
-          });
-        } catch (err) {
-          console.warn(
-            `[email-scheduler] PDF generation failed for report ${report.id}, falling back to HTML attachment:`,
-            err instanceof Error ? err.message : String(err),
-          );
-          attachments.push({
-            filename: `luqen-report-${hostname}.html`,
-            content: html,
-            contentType: 'text/html',
-          });
-        }
-      } else {
-        // Puppeteer not installed — attach the HTML report instead
+      if (reportJson !== null) {
+        const reportData = normalizeReportData(reportJson, scan);
+        const scanMeta: PdfScanMeta = {
+          siteUrl: scan.siteUrl,
+          standard: scan.standard,
+          jurisdictions: scan.jurisdictions.join(', '),
+          createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
+        };
+        const pdfBuffer = await generatePdfFromData(scanMeta, reportData as PdfReportData);
         attachments.push({
-          filename: `luqen-report-${hostname}.html`,
-          content: html,
-          contentType: 'text/html',
+          filename: `luqen-report-${hostname}.pdf`,
+          content: pdfBuffer.toString('base64'),
+          contentType: 'application/pdf',
         });
       }
+    } catch (err) {
+      console.warn(
+        `[email-scheduler] PDF generation failed for report ${report.id}:`,
+        err instanceof Error ? err.message : String(err),
+      );
     }
   }
 

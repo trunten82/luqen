@@ -11,19 +11,6 @@ import PDFDocument from 'pdfkit';
 // Types
 // ---------------------------------------------------------------------------
 
-export interface PdfOptions {
-  readonly format?: 'A4' | 'A3' | 'Letter' | 'Legal' | 'Tabloid';
-  readonly landscape?: boolean;
-  readonly margin?: {
-    readonly top?: string;
-    readonly right?: string;
-    readonly bottom?: string;
-    readonly left?: string;
-  };
-  readonly headerTemplate?: string;
-  readonly footerTemplate?: string;
-}
-
 interface ReportSummary {
   readonly pagesScanned?: number;
   readonly totalIssues?: number;
@@ -99,31 +86,6 @@ function formatStandard(code: string): string {
     'WCAG2AAA': 'WCAG 2.1 Level AAA',
   };
   return map[code] ?? code;
-}
-
-// ---------------------------------------------------------------------------
-// Backward-compat: keep isPuppeteerAvailable so existing code doesn't break
-// ---------------------------------------------------------------------------
-
-export function isPuppeteerAvailable(): boolean {
-  return true; // PDFKit is always available
-}
-
-export async function closeBrowser(): Promise<void> {
-  // No-op — no browser to close with PDFKit
-}
-
-// ---------------------------------------------------------------------------
-// Legacy HTML-based generation (kept as fallback, unused)
-// ---------------------------------------------------------------------------
-
-export async function generateReportPdf(
-  html: string,
-  _options: PdfOptions = {},
-): Promise<Buffer> {
-  // This function is kept for backward compatibility but should not be called.
-  // Use generatePdfFromData instead.
-  throw new Error('Use generatePdfFromData() instead of generateReportPdf()');
 }
 
 // ---------------------------------------------------------------------------

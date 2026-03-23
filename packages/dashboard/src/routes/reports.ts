@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 import type { StorageAdapter } from '../db/index.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 import { MANUAL_CRITERIA } from '../manual-criteria.js';
-import { isPuppeteerAvailable } from '../pdf/generator.js';
 import { normalizeReportData, inferComponent } from '../services/report-service.js';
 import type { JsonReportFile } from '../services/report-service.js';
 export { normalizeReportData, inferComponent };
@@ -148,7 +147,7 @@ export async function reportRoutes(
           user: request.user,
           scan: scanMeta,
           reportData: null,
-          pdfAvailable: isPuppeteerAvailable(),
+          pdfAvailable: true,
         });
       }
 
@@ -175,7 +174,7 @@ export async function reportRoutes(
           user: request.user,
           scan: scanMeta,
           reportData: null,
-          pdfAvailable: isPuppeteerAvailable(),
+          pdfAvailable: true,
         });
       }
 
@@ -215,7 +214,7 @@ export async function reportRoutes(
         user: request.user,
         scan: scanMeta,
         reportData,
-        pdfAvailable: isPuppeteerAvailable(),
+        pdfAvailable: true,
         manualTestStats: {
           tested: manualTested,
           total: manualTotal,
