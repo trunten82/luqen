@@ -220,7 +220,17 @@ export async function generateReportPdf(
   const page = await browser.newPage();
 
   try {
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    // Write HTML to a temp file and navigate to it — avoids setContent
+    // rendering issues with certain Chromium versions.
+    const { writeFile: writeTmp, unlink: unlinkTmp } = await import('node:fs/promises');
+    const { join: joinTmp } = await import('node:path');
+    const tmpPath = joinTmp('/tmp', `luqen-pdf-${Date.now()}.html`);
+    await writeTmp(tmpPath, html);
+    try {
+      await page.goto(`file://${tmpPath}`, { waitUntil: 'load' });
+    } finally {
+      await unlinkTmp(tmpPath).catch(() => undefined);
+    }
 
     const pdfOptions: Record<string, unknown> = {
       format: options.format ?? 'A4',
