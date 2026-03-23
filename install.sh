@@ -741,6 +741,25 @@ check_prerequisites() {
   fi
 
   success "Node.js $(node --version), npm $(npm --version), git $(git --version | awk '{print $3}')"
+
+  # Install Chromium for pa11y scanner (built-in mode)
+  if ! command -v chromium &>/dev/null && ! command -v chromium-browser &>/dev/null && ! command -v google-chrome &>/dev/null; then
+    info "Installing Chromium (required for accessibility scanning)..."
+    if command -v apt-get &>/dev/null; then
+      apt-get install -y -qq chromium fonts-liberation libnss3 libatk1.0-0 \
+        libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 \
+        libxdamage1 libxrandr2 libpango-1.0-0 libcairo2 libasound2 libgbm1 \
+        >/dev/null 2>&1 && success "Chromium installed" || warn "Could not install Chromium -- scanning may not work"
+    elif command -v yum &>/dev/null; then
+      yum install -y chromium >/dev/null 2>&1 && success "Chromium installed" || warn "Could not install Chromium"
+    elif command -v brew &>/dev/null; then
+      brew install --cask chromium >/dev/null 2>&1 && success "Chromium installed" || warn "Could not install Chromium"
+    else
+      warn "Please install Chromium manually for accessibility scanning"
+    fi
+  else
+    success "Chromium found"
+  fi
 }
 
 # ──────────────────────────────────────────────
