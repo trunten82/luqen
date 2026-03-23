@@ -170,7 +170,7 @@ interface JsonReportFile {
   issues?: Array<{ code: string; type: string; message: string; selector: string; context: string; wcagCriterion?: string; wcagTitle?: string; wcagDescription?: string; wcagImpact?: string; wcagUrl?: string; regulations?: Array<{ shortName: string; url?: string; obligation?: string }> }>;
 }
 
-function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string; pagesScanned?: number; errors?: number; warnings?: number; notices?: number }) {
+export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string; pagesScanned?: number; errors?: number; warnings?: number; notices?: number }) {
   // Support both the core JSON report format (has summary/pages) and the
   // dashboard orchestrator's simpler format (flat fields + issues array).
   const summary = raw.summary ?? {
