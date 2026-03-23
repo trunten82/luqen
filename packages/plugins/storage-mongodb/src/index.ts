@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { PluginManifest } from '../../../dashboard/src/plugins/types.js';
+import type { PluginManifest } from './types.js';
 import { createMongoConnection, type MongoConnection, type MongoConnectionOptions } from './connection.js';
 import { createIndexes } from './indexes.js';
 import {

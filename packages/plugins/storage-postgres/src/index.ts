@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { PluginManifest } from '../../../dashboard/src/plugins/types.js';
+import type { PluginManifest } from './types.js';
 import { createPool, type PostgresConnectionOptions } from './connection.js';
 import { MigrationRunner, DASHBOARD_MIGRATIONS } from './migrations.js';
 import {
