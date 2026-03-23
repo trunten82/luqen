@@ -114,6 +114,7 @@ type PuppeteerBrowser = {
 
 type PuppeteerPage = {
   setContent(html: string, options?: { waitUntil?: string | string[] }): Promise<void>;
+  goto(url: string, options?: { waitUntil?: string | string[] }): Promise<void>;
   pdf(options?: Record<string, unknown>): Promise<Buffer>;
   close(): Promise<void>;
 };
