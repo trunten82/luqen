@@ -259,9 +259,8 @@ Place this file in the working directory where you run `luqen-compliance serve`.
 |-------|------|---------|-------------|
 | `port` | number | `4000` | TCP port the HTTP server listens on |
 | `host` | string | `"0.0.0.0"` | Network interface to bind. Use `"127.0.0.1"` for loopback-only |
-| `dbAdapter` | `"sqlite" \| "mongodb" \| "postgres"` | `"sqlite"` | Database backend |
-| `dbPath` | string | `"./compliance.db"` | SQLite file path (ignored for MongoDB/PostgreSQL) |
-| `dbUrl` | string | `null` | Connection string for MongoDB (`mongodb://...`) or PostgreSQL (`postgres://...`) |
+| `dbAdapter` | `"sqlite"` | `"sqlite"` | Database backend (only SQLite is currently supported) |
+| `dbPath` | string | `"./compliance.db"` | SQLite file path |
 | `jwtKeyPair.publicKeyPath` | string | `"./keys/public.pem"` | Path to RS256 public key PEM file |
 | `jwtKeyPair.privateKeyPath` | string | `"./keys/private.pem"` | Path to RS256 private key PEM file |
 | `tokenExpiry` | string | `"1h"` | Access token lifetime. Accepts `"1h"`, `"30m"`, `"3600"` (seconds) |
@@ -282,9 +281,8 @@ Environment variables take precedence over the config file, which takes preceden
 |----------|-----------|---------|
 | `COMPLIANCE_PORT` | `port` | `4000` |
 | `COMPLIANCE_HOST` | `host` | `0.0.0.0` |
-| `COMPLIANCE_DB_ADAPTER` | `dbAdapter` | `sqlite`, `mongodb`, `postgres` |
+| `COMPLIANCE_DB_ADAPTER` | `dbAdapter` | `sqlite` |
 | `COMPLIANCE_DB_PATH` | `dbPath` | `./compliance.db` |
-| `COMPLIANCE_DB_URL` | `dbUrl` | `mongodb://localhost:27017/compliance` |
 | `COMPLIANCE_JWT_PRIVATE_KEY` | `jwtKeyPair.privateKeyPath` | `./keys/private.pem` |
 | `COMPLIANCE_JWT_PUBLIC_KEY` | `jwtKeyPair.publicKeyPath` | `./keys/public.pem` |
 | `COMPLIANCE_CORS_ORIGIN` | `cors.origin` | `https://app.example.com,https://admin.example.com` |
@@ -1559,36 +1557,6 @@ COMPLIANCE_DB_PATH=/var/lib/compliance/compliance.db
 
 SQLite is suitable for single-instance deployments, development, and small-scale production use.
 
-### MongoDB
-
-```json
-{
-  "dbAdapter": "mongodb",
-  "dbUrl": "mongodb://localhost:27017/compliance"
-}
-```
-
-```bash
-COMPLIANCE_DB_ADAPTER=mongodb
-COMPLIANCE_DB_URL=mongodb+srv://user:pass@cluster.mongodb.net/compliance
-```
-
-### PostgreSQL
-
-```json
-{
-  "dbAdapter": "postgres",
-  "dbUrl": "postgres://user:password@localhost:5432/compliance"
-}
-```
-
-```bash
-COMPLIANCE_DB_ADAPTER=postgres
-COMPLIANCE_DB_URL=postgres://user:password@db-host:5432/compliance
-```
-
-Full MongoDB and PostgreSQL adapter implementations are planned for a future release. The adapter interface is stable and the SQLite adapter serves as the reference implementation.
-
 ### Adapter contract tests
 
 The adapter interface is verified by a shared contract test suite:
@@ -1596,13 +1564,9 @@ The adapter interface is verified by a shared contract test suite:
 ```bash
 # Run against SQLite (default)
 vitest run tests/db/adapter-contract.test.ts
-
-# Run against MongoDB
-DB_ADAPTER=mongodb vitest run tests/db/adapter-contract.test.ts
-
-# Run against PostgreSQL
-DB_ADAPTER=postgres vitest run tests/db/adapter-contract.test.ts
 ```
+
+> **Note:** MongoDB and PostgreSQL adapter files were removed in v0.7.0. Only SQLite is supported for the compliance service. The dashboard package has its own StorageAdapter architecture with PostgreSQL and MongoDB plugins planned for a future release.
 
 ---
 
@@ -2084,7 +2048,7 @@ The matcher extracts `1.1.1` from the `1_1_1` segment after `Guideline`. Verify 
 
 **Cause:** Multiple processes accessing the same SQLite file simultaneously.
 
-**Fix:** Run only one instance of the server per SQLite file. For multi-process deployments, switch to MongoDB or PostgreSQL.
+**Fix:** Run only one instance of the server per SQLite file. For multi-process deployments, use a reverse proxy with session affinity or wait for external database adapter plugins.
 
 ---
 

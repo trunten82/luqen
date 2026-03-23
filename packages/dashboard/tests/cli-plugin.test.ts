@@ -3,9 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import Database from 'better-sqlite3';
-import { MigrationRunner } from '../src/db/migrations.js';
-import { DASHBOARD_MIGRATIONS } from '../src/db/scans.js';
+import { SqliteStorageAdapter } from '../src/db/sqlite/index.js';
 import { PluginManager } from '../src/plugins/manager.js';
 import type { RegistryEntry } from '../src/plugins/types.js';
 
@@ -24,7 +22,7 @@ const SAMPLE_REGISTRY: readonly RegistryEntry[] = [
 ];
 
 interface TestContext {
-  db: Database.Database;
+  storage: SqliteStorageAdapter;
   manager: PluginManager;
   cleanup: () => void;
   dbPath: string;
@@ -36,10 +34,9 @@ function createTestContext(): TestContext {
   const pluginsDir = join(tmpdir(), `test-cli-pluginsdir-${randomUUID()}`);
   mkdirSync(pluginsDir, { recursive: true });
 
-  const db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  new MigrationRunner(db).run([...DASHBOARD_MIGRATIONS]);
+  const storage = new SqliteStorageAdapter(dbPath);
+  void storage.migrate();
+  const db = storage.getRawDatabase();
 
   const manager = new PluginManager({
     db,
@@ -49,12 +46,12 @@ function createTestContext(): TestContext {
   });
 
   const cleanup = (): void => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     if (existsSync(pluginsDir)) rmSync(pluginsDir, { recursive: true });
   };
 
-  return { db, manager, cleanup, dbPath, pluginsDir };
+  return { storage, manager, cleanup, dbPath, pluginsDir };
 }
 
 describe('plugin list', () => {
@@ -74,7 +71,8 @@ describe('plugin list', () => {
   });
 
   it('with plugins returns formatted records', () => {
-    ctx.db
+    const db = ctx.storage.getRawDatabase();
+    db
       .prepare(
         `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
@@ -99,7 +97,8 @@ describe('plugin list', () => {
   });
 
   it('formats table output correctly', () => {
-    ctx.db
+    const db = ctx.storage.getRawDatabase();
+    db
       .prepare(
         `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
          VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,

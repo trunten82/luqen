@@ -205,12 +205,12 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 
 ---
 
-## New in v1.3.0
+## New in v1.5.0
 
-- **Multi-language UI** — 6 languages (English, Italian, Spanish, French, German, Portuguese) with sidebar language switcher
-- **GraphQL API** — Full GraphQL endpoint at `/graphql` with GraphiQL playground
-- **User-selectable page limit** — Choose how many pages to scan (1–1000) on the scan form
-- **Auto-refreshing service token** — No more manual token management for compliance API calls
+- **StorageAdapter architecture** — pluggable database layer with 14 repository interfaces; SQLite built-in, PostgreSQL/MongoDB coming as plugins
+- **Security hardening** — per-installation encryption salt, SSRF protection, global rate limiting, secure session cookies
+- **2,661 tests** across 156 files with 85%+ statement coverage
+- **Dead code removal** — unused modules and stale database classes removed
 
 See [CHANGELOG.md](../CHANGELOG.md) for the full history.
 

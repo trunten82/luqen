@@ -75,12 +75,20 @@ Note: use the Docker Compose service name (`compliance`) instead of `localhost` 
 
 ---
 
+## Storage
+
+The dashboard uses **SQLite** as its default storage adapter. All dashboard data (scans, users, roles, plugins, etc.) is stored in a single file at `DASHBOARD_DB_PATH` (default: `/app/data/dashboard.db` inside the container). No external database is required.
+
+For production Docker deployments, ensure the SQLite database file is on a persistent volume (see below). PostgreSQL and MongoDB storage adapters are planned as plugins (`@luqen/plugin-storage-postgres`, `@luqen/plugin-storage-mongodb`) for deployments that need a shared database across multiple containers.
+
+---
+
 ## Volumes
 
 | Volume | Mount path | Purpose |
 |--------|------------|---------|
 | `compliance-data` | `/data` | Compliance SQLite database and JWT keys |
-| `dashboard-data` | `/app/data` | Dashboard SQLite database |
+| `dashboard-data` | `/app/data` | Dashboard SQLite database (`dashboard.db`) — persistent mount recommended |
 | `dashboard-reports` | `/app/reports` | Generated scan reports |
 
 Ensure volumes are persisted across restarts. For production, use named volumes or bind mounts to a backed-up directory.

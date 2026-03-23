@@ -31,7 +31,7 @@ export async function systemRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
 
-      const [complianceHealth, pa11yHealth, seedStatus, packageVersion] =
+      const [complianceHealth, , seedStatus, packageVersion] =
         await Promise.allSettled([
           safeGetSystemHealth(config.complianceUrl, config.webserviceUrl),
           Promise.resolve(undefined), // pa11y health is part of getSystemHealth
@@ -81,14 +81,11 @@ export async function systemRoutes(
         },
         db: {
           sizeKb: dbSizeKb,
-          path: config.dbPath,
         },
         seed,
         version,
         nodeVersion: process.version,
         uptime: uptimeDisplay,
-        complianceUrl: config.complianceUrl,
-        webserviceUrl: config.webserviceUrl ?? '',
       });
     },
   );

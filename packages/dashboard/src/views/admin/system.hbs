@@ -20,10 +20,6 @@
     <h2 class="section-title">{{t "admin.system.database"}}</h2>
     <dl class="stats-list">
       <div class="stats-list__item">
-        <dt>{{t "admin.system.filePath"}}</dt>
-        <dd><code>{{db.path}}</code></dd>
-      </div>
-      <div class="stats-list__item">
         <dt>{{t "admin.system.fileSize"}}</dt>
         <dd>{{db.sizeKb}} KB</dd>
       </div>
@@ -71,16 +67,6 @@
         <dt>{{t "admin.system.uptime"}}</dt>
         <dd>{{uptime}}</dd>
       </div>
-      <div class="stats-list__item">
-        <dt>{{t "admin.system.complianceUrl"}}</dt>
-        <dd><code>{{complianceUrl}}</code></dd>
-      </div>
-      {{#if webserviceUrl}}
-      <div class="stats-list__item">
-        <dt>{{t "admin.system.webserviceUrl"}}</dt>
-        <dd><code>{{webserviceUrl}}</code></dd>
-      </div>
-      {{/if}}
     </dl>
   </section>
 </section>

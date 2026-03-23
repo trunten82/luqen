@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../../auth/middleware.js';
-import type { AuditLogger } from '../../audit/logger.js';
+import type { StorageAdapter } from '../../db/index.js';
 
 interface AuditQueryParams {
   actor?: string;
@@ -14,7 +14,7 @@ interface AuditQueryParams {
 
 export async function auditRoutes(
   server: FastifyInstance,
-  auditLogger: AuditLogger,
+  storage: StorageAdapter,
 ): Promise<void> {
   server.get(
     '/admin/audit-log',
@@ -25,7 +25,7 @@ export async function auditRoutes(
       const limit = Math.min(Math.max(parseInt(q.limit ?? '50', 10) || 50, 1), 200);
       const offset = Math.max(parseInt(q.offset ?? '0', 10) || 0, 0);
 
-      const result = auditLogger.query({
+      const result = await storage.audit.query({
         actor: q.actor || undefined,
         action: q.action || undefined,
         resourceType: q.resourceType || undefined,

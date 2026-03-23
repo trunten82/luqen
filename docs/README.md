@@ -39,7 +39,7 @@ Luqen is a site-wide WCAG accessibility scanner with legal compliance mapping. I
 | [reference/compliance-config.md](reference/compliance-config.md) | `@luqen/compliance` — `compliance.config.json`, env vars, CLI |
 | [reference/dashboard-config.md](reference/dashboard-config.md) | `@luqen/dashboard` — `dashboard.config.json`, env vars, CLI |
 | [reference/monitor-config.md](reference/monitor-config.md) | `@luqen/monitor` — env vars, CLI |
-| [reference/plugin-guide.md](reference/plugin-guide.md) | Plugin configuration — all 6 plugins (auth, notification, storage) with setup guides |
+| [reference/plugin-guide.md](reference/plugin-guide.md) | Plugin configuration — all 7 plugins (auth, notification, storage) with setup guides |
 
 ---
 

@@ -4,9 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync } from 'node:fs';
-import { ScanDb } from '../../src/db/scans.js';
-import { OrgDb } from '../../src/db/orgs.js';
-import { UserDb } from '../../src/db/users.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { registerSession } from '../../src/auth/session.js';
 import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 import { organizationRoutes } from '../../src/routes/admin/organizations.js';
@@ -15,19 +13,15 @@ const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
 interface TestContext {
   server: FastifyInstance;
-  db: ScanDb;
-  orgDb: OrgDb;
-  userDb: UserDb;
+  storage: SqliteStorageAdapter;
   cleanup: () => void;
 }
 
 async function createTestServer(role: string = 'admin'): Promise<TestContext> {
   const dbPath = join(tmpdir(), `test-orgs-admin-${randomUUID()}.db`);
 
-  const db = new ScanDb(dbPath);
-  db.initialize();
-  const orgDb = new OrgDb(db.getDatabase());
-  const userDb = new UserDb(db.getDatabase());
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
 
   const server = Fastify({ logger: false });
 
@@ -53,16 +47,16 @@ async function createTestServer(role: string = 'admin'): Promise<TestContext> {
     (request as unknown as Record<string, unknown>)['permissions'] = permissions;
   });
 
-  await organizationRoutes(server, orgDb, userDb);
+  await organizationRoutes(server, storage);
   await server.ready();
 
   const cleanup = (): void => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     void server.close();
   };
 
-  return { server, db, orgDb, userDb, cleanup };
+  return { server, storage, cleanup };
 }
 
 // ── GET /admin/organizations ────────────────────────────────────────────────
@@ -94,7 +88,7 @@ describe('GET /admin/organizations', () => {
   });
 
   it('includes orgs after creation', async () => {
-    ctx.orgDb.createOrg({ name: 'Acme Corp', slug: 'acme' });
+    ctx.storage.organizations.createOrg({ name: 'Acme Corp', slug: 'acme' });
 
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/organizations' });
 
@@ -176,7 +170,7 @@ describe('POST /admin/organizations', () => {
   });
 
   it('returns 400 for duplicate slug', async () => {
-    ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
+    ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -197,7 +191,7 @@ describe('POST /admin/organizations', () => {
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
-    const orgs = ctx.orgDb.listOrgs();
+    const orgs = await ctx.storage.organizations.listOrgs();
     expect(orgs).toHaveLength(1);
     expect(orgs[0].slug).toBe('test-org');
   });
@@ -217,7 +211,7 @@ describe('POST /admin/organizations/:id/delete', () => {
   });
 
   it('deletes org and returns toast', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'ToDelete', slug: 'to-delete' });
+    const org = await ctx.storage.organizations.createOrg({ name: 'ToDelete', slug: 'to-delete' });
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -227,7 +221,7 @@ describe('POST /admin/organizations/:id/delete', () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('deleted');
 
-    const deleted = ctx.orgDb.getOrg(org.id);
+    const deleted = await ctx.storage.organizations.getOrg(org.id);
     expect(deleted).toBeNull();
   });
 
@@ -255,7 +249,7 @@ describe('GET /admin/organizations/:id/members', () => {
   });
 
   it('returns 200 with members template', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
+    const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
 
     const response = await ctx.server.inject({
       method: 'GET',
@@ -277,9 +271,9 @@ describe('GET /admin/organizations/:id/members', () => {
   });
 
   it('includes org name and members list', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
-    const user = await ctx.userDb.createUser('alice', 'password123', 'user');
-    ctx.orgDb.addMember(org.id, user.id, 'member');
+    const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
+    const user = await ctx.storage.users.createUser('alice', 'password123', 'user');
+    await ctx.storage.organizations.addMember(org.id, user.id, 'member');
 
     const response = await ctx.server.inject({
       method: 'GET',
@@ -312,8 +306,8 @@ describe('POST /admin/organizations/:id/members', () => {
   });
 
   it('adds member and returns HTMX row', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
-    const user = await ctx.userDb.createUser('bob', 'password123', 'user');
+    const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
+    const user = await ctx.storage.users.createUser('bob', 'password123', 'user');
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -327,13 +321,13 @@ describe('POST /admin/organizations/:id/members', () => {
     expect(response.body).toContain('bob');
     expect(response.body).toContain('added');
 
-    const members = ctx.orgDb.listMembers(org.id);
+    const members = await ctx.storage.organizations.listMembers(org.id);
     expect(members).toHaveLength(1);
     expect(members[0].userId).toBe(user.id);
   });
 
   it('returns 400 when userId is missing', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
+    const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -371,9 +365,9 @@ describe('POST /admin/organizations/:id/members/:userId/remove', () => {
   });
 
   it('removes member and returns toast', async () => {
-    const org = ctx.orgDb.createOrg({ name: 'Acme', slug: 'acme' });
-    const user = await ctx.userDb.createUser('charlie', 'password123', 'user');
-    ctx.orgDb.addMember(org.id, user.id, 'member');
+    const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
+    const user = await ctx.storage.users.createUser('charlie', 'password123', 'user');
+    await ctx.storage.organizations.addMember(org.id, user.id, 'member');
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -383,7 +377,7 @@ describe('POST /admin/organizations/:id/members/:userId/remove', () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('removed');
 
-    const members = ctx.orgDb.listMembers(org.id);
+    const members = await ctx.storage.organizations.listMembers(org.id);
     expect(members).toHaveLength(0);
   });
 });

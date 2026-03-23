@@ -1,4 +1,4 @@
-import type { DiscoveredUrl, ScanProgress, ScanError, PageResult, AccessibilityIssue, ProgressListener } from '../types.js';
+import type { DiscoveredUrl, ScanError, PageResult, AccessibilityIssue, ProgressListener } from '../types.js';
 import type { WebserviceClient, Pa11yIssue, Pa11yResult } from './webservice-client.js';
 import type { WebservicePool } from './webservice-client.js';
 

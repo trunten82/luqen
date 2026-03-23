@@ -37,6 +37,10 @@ Invoke-WebRequest -Uri https://raw.githubusercontent.com/trunten82/luqen/master/
 .\install.ps1
 ```
 
+### Storage
+
+The dashboard uses **SQLite** as its default storage backend. No external database server is needed for single-server deployments — all data is stored in a local `dashboard.db` file. For multi-replica or enterprise deployments, PostgreSQL and MongoDB storage adapters are coming soon as plugins.
+
 ### What the wizard asks
 
 | Step | Question | Options |

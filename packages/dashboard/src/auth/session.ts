@@ -15,14 +15,16 @@ export interface SessionData {
 export async function registerSession(
   server: FastifyInstance,
   sessionSecret: string,
+  salt?: string,
 ): Promise<void> {
   await server.register(secureSession, {
     secret: sessionSecret,
-    salt: 'luqen-dash-salt!',
+    salt: salt ?? 'luqen-dash-salt!',
     cookie: {
       path: '/',
       httpOnly: true,
       sameSite: 'strict',
+      secure: process.env['NODE_ENV'] === 'production',
     },
     sessionName: 'session',
   });

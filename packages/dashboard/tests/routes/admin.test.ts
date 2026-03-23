@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync, mkdirSync } from 'node:fs';
-import { ScanDb } from '../../src/db/scans.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
 import { registerSession } from '../../src/auth/session.js';
 import { homeRoutes } from '../../src/routes/home.js';
@@ -62,7 +62,7 @@ const COMPLIANCE_URL = 'http://localhost:4000';
 
 interface AdminTestContext {
   server: FastifyInstance;
-  db: ScanDb;
+  storage: SqliteStorageAdapter;
   cleanup: () => void;
   dbPath: string;
 }
@@ -84,10 +84,10 @@ async function createAdminTestServer(): Promise<AdminTestContext> {
     complianceClientSecret: '',
   };
 
-  const db = new ScanDb(dbPath);
-  db.initialize();
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
 
-  const orchestrator = new ScanOrchestrator(db, reportsDir, 2);
+  const orchestrator = new ScanOrchestrator(storage, reportsDir, 2);
 
   const server = Fastify({ logger: false });
 
@@ -111,7 +111,7 @@ async function createAdminTestServer(): Promise<AdminTestContext> {
     (request as unknown as Record<string, unknown>)['permissions'] = new Set(ALL_PERMISSION_IDS);
   });
 
-  await homeRoutes(server, db);
+  await homeRoutes(server, storage);
   await jurisdictionRoutes(server, COMPLIANCE_URL);
   await regulationRoutes(server, COMPLIANCE_URL);
   await proposalRoutes(server, COMPLIANCE_URL);
@@ -126,13 +126,13 @@ async function createAdminTestServer(): Promise<AdminTestContext> {
   await server.ready();
 
   const cleanup = (): void => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     if (existsSync(reportsDir)) rmSync(reportsDir, { recursive: true });
     void server.close();
   };
 
-  return { server, db, cleanup, dbPath };
+  return { server, storage, cleanup, dbPath };
 }
 
 // ── Non-admin 403 tests ──────────────────────────────────────────────────────
@@ -143,8 +143,8 @@ describe('Admin route access control', () => {
     const reportsDir = join(tmpdir(), `test-na-reports-${randomUUID()}`);
     mkdirSync(reportsDir, { recursive: true });
 
-    const db = new ScanDb(dbPath);
-    db.initialize();
+    const storage = new SqliteStorageAdapter(dbPath);
+    await storage.migrate();
 
     const server = Fastify({ logger: false });
     await server.register(import('@fastify/formbody'));
@@ -166,7 +166,7 @@ describe('Admin route access control', () => {
     const response = await server.inject({ method: 'GET', url: '/admin/jurisdictions' });
     expect(response.statusCode).toBe(403);
 
-    db.close();
+    void storage.disconnect();
     rmSync(dbPath, { force: true });
     rmSync(reportsDir, { recursive: true, force: true });
     await server.close();
@@ -177,8 +177,8 @@ describe('Admin route access control', () => {
     const reportsDir = join(tmpdir(), `test-na2-reports-${randomUUID()}`);
     mkdirSync(reportsDir, { recursive: true });
 
-    const db = new ScanDb(dbPath);
-    db.initialize();
+    const storage = new SqliteStorageAdapter(dbPath);
+    await storage.migrate();
 
     const server = Fastify({ logger: false });
     await server.register(import('@fastify/formbody'));
@@ -205,7 +205,7 @@ describe('Admin route access control', () => {
     });
     expect(response.statusCode).toBe(403);
 
-    db.close();
+    void storage.disconnect();
     rmSync(dbPath, { force: true });
     rmSync(reportsDir, { recursive: true, force: true });
     await server.close();
@@ -407,21 +407,13 @@ describe('DELETE /admin/jurisdictions/:id', () => {
 describe('GET /admin/regulations', () => {
   let ctx: AdminTestContext;
 
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 200 with regulations template', async () => {
     vi.mocked(complianceClient.listJurisdictions).mockResolvedValueOnce([]);
     vi.mocked(complianceClient.listRegulations).mockResolvedValueOnce([]);
-
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/regulations' });
-
     expect(response.statusCode).toBe(200);
     const body = response.json() as { template: string };
     expect(body.template).toBe('admin/regulations.hbs');
@@ -432,14 +424,9 @@ describe('GET /admin/regulations', () => {
       { id: 'EU', name: 'European Union', type: 'supranational' },
     ]);
     vi.mocked(complianceClient.listRegulations).mockResolvedValueOnce([]);
-
     await ctx.server.inject({ method: 'GET', url: '/admin/regulations?jurisdictionId=EU' });
-
     expect(vi.mocked(complianceClient.listRegulations)).toHaveBeenCalledWith(
-      COMPLIANCE_URL,
-      expect.any(String),
-      { jurisdictionId: 'EU' },
-      undefined,
+      COMPLIANCE_URL, expect.any(String), { jurisdictionId: 'EU' }, undefined,
     );
   });
 });
@@ -448,21 +435,12 @@ describe('GET /admin/regulations', () => {
 
 describe('GET /admin/proposals', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 200 with proposals template', async () => {
     vi.mocked(complianceClient.listUpdateProposals).mockResolvedValueOnce([]);
-
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/proposals' });
-
     expect(response.statusCode).toBe(200);
     const body = response.json() as { template: string };
     expect(body.template).toBe('admin/proposals.hbs');
@@ -471,31 +449,16 @@ describe('GET /admin/proposals', () => {
 
 describe('POST /admin/proposals/:id/approve', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('approves proposal and returns HTMX row', async () => {
     vi.mocked(complianceClient.approveProposal).mockResolvedValueOnce({
-      id: 'prop-1',
-      status: 'approved',
-      source: 'EU Official Journal',
-      type: 'regulation_update',
-      summary: 'New EAA requirement',
+      id: 'prop-1', status: 'approved', source: 'EU Official Journal',
+      type: 'regulation_update', summary: 'New EAA requirement',
       detectedAt: new Date().toISOString(),
     });
-
-    const response = await ctx.server.inject({
-      method: 'POST',
-      url: '/admin/proposals/prop-1/approve',
-    });
-
+    const response = await ctx.server.inject({ method: 'POST', url: '/admin/proposals/prop-1/approve' });
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('approved');
     expect(response.body).toContain('Proposal approved successfully');
@@ -504,31 +467,16 @@ describe('POST /admin/proposals/:id/approve', () => {
 
 describe('POST /admin/proposals/:id/reject', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('rejects proposal and returns HTMX row', async () => {
     vi.mocked(complianceClient.rejectProposal).mockResolvedValueOnce({
-      id: 'prop-1',
-      status: 'rejected',
-      source: 'EU Official Journal',
-      type: 'regulation_update',
-      summary: 'New EAA requirement',
+      id: 'prop-1', status: 'rejected', source: 'EU Official Journal',
+      type: 'regulation_update', summary: 'New EAA requirement',
       detectedAt: new Date().toISOString(),
     });
-
-    const response = await ctx.server.inject({
-      method: 'POST',
-      url: '/admin/proposals/prop-1/reject',
-    });
-
+    const response = await ctx.server.inject({ method: 'POST', url: '/admin/proposals/prop-1/reject' });
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('rejected');
   });
@@ -538,21 +486,12 @@ describe('POST /admin/proposals/:id/reject', () => {
 
 describe('GET /admin/sources', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 200 with sources template', async () => {
     vi.mocked(complianceClient.listSources).mockResolvedValueOnce([]);
-
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/sources' });
-
     expect(response.statusCode).toBe(200);
     const body = response.json() as { template: string };
     expect(body.template).toBe('admin/sources.hbs');
@@ -561,43 +500,28 @@ describe('GET /admin/sources', () => {
 
 describe('POST /admin/sources', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 400 when name is missing', async () => {
     const response = await ctx.server.inject({
-      method: 'POST',
-      url: '/admin/sources',
+      method: 'POST', url: '/admin/sources',
       payload: 'url=https://example.com/feed.rss',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
-
     expect(response.statusCode).toBe(400);
   });
 
   it('creates source and returns HTMX row', async () => {
     vi.mocked(complianceClient.createSource).mockResolvedValueOnce({
-      id: 'src-1',
-      name: 'EU Monitor',
-      url: 'https://eur-lex.europa.eu/feed.rss',
-      type: 'rss',
-      schedule: 'daily',
+      id: 'src-1', name: 'EU Monitor', url: 'https://eur-lex.europa.eu/feed.rss',
+      type: 'rss', schedule: 'daily',
     });
-
     const response = await ctx.server.inject({
-      method: 'POST',
-      url: '/admin/sources',
+      method: 'POST', url: '/admin/sources',
       payload: 'name=EU+Monitor&url=https%3A%2F%2Feur-lex.europa.eu%2Ffeed.rss',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
-
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('EU Monitor');
     expect(response.body).toContain('added successfully');
@@ -606,21 +530,12 @@ describe('POST /admin/sources', () => {
 
 describe('DELETE /admin/sources/:id', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('deletes source and returns HTMX fragment', async () => {
     vi.mocked(complianceClient.deleteSource).mockResolvedValueOnce(undefined);
-
     const response = await ctx.server.inject({ method: 'DELETE', url: '/admin/sources/src-1' });
-
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('removed successfully');
   });
@@ -628,21 +543,12 @@ describe('DELETE /admin/sources/:id', () => {
 
 describe('POST /admin/sources/scan', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('triggers scan and returns results fragment', async () => {
     vi.mocked(complianceClient.scanSources).mockResolvedValueOnce({ scanned: 3, proposalsCreated: 1 });
-
     const response = await ctx.server.inject({ method: 'POST', url: '/admin/sources/scan' });
-
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('3 source');
     expect(response.body).toContain('1 proposal');
@@ -653,21 +559,12 @@ describe('POST /admin/sources/scan', () => {
 
 describe('GET /admin/webhooks', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 200 with webhooks template', async () => {
     vi.mocked(complianceClient.listWebhooks).mockResolvedValueOnce([]);
-
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/webhooks' });
-
     expect(response.statusCode).toBe(200);
     const body = response.json() as { template: string };
     expect(body.template).toBe('admin/webhooks.hbs');
@@ -678,21 +575,12 @@ describe('GET /admin/webhooks', () => {
 
 describe('GET /admin/users', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 200 with users template', async () => {
     vi.mocked(complianceClient.listUsers).mockResolvedValueOnce([]);
-
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/users' });
-
     expect(response.statusCode).toBe(200);
     const body = response.json() as { template: string };
     expect(body.template).toBe('admin/users.hbs');
@@ -701,54 +589,36 @@ describe('GET /admin/users', () => {
 
 describe('POST /admin/users', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 400 when password is missing', async () => {
     const response = await ctx.server.inject({
-      method: 'POST',
-      url: '/admin/users',
-      payload: 'username=alice',
+      method: 'POST', url: '/admin/users', payload: 'username=alice',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
-
     expect(response.statusCode).toBe(400);
   });
 
   it('returns 400 for invalid role', async () => {
     const response = await ctx.server.inject({
-      method: 'POST',
-      url: '/admin/users',
+      method: 'POST', url: '/admin/users',
       payload: 'username=alice&password=secret123&role=superuser',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
-
     expect(response.statusCode).toBe(400);
   });
 
   it('creates user and returns HTMX row', async () => {
     vi.mocked(complianceClient.createUser).mockResolvedValueOnce({
-      id: 'user-1',
-      username: 'alice',
-      role: 'viewer',
-      active: true,
+      id: 'user-1', username: 'alice', role: 'viewer', active: true,
       createdAt: new Date().toISOString(),
     });
-
     const response = await ctx.server.inject({
-      method: 'POST',
-      url: '/admin/users',
+      method: 'POST', url: '/admin/users',
       payload: 'username=alice&password=s3cr3tpass&role=viewer',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
-
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('alice');
     expect(response.body).toContain('created successfully');
@@ -759,21 +629,12 @@ describe('POST /admin/users', () => {
 
 describe('GET /admin/clients', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 200 with clients template', async () => {
     vi.mocked(complianceClient.listClients).mockResolvedValueOnce([]);
-
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/clients' });
-
     expect(response.statusCode).toBe(200);
     const body = response.json() as { template: string };
     expect(body.template).toBe('admin/clients.hbs');
@@ -782,47 +643,30 @@ describe('GET /admin/clients', () => {
 
 describe('POST /admin/clients', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 400 when name is missing', async () => {
     const response = await ctx.server.inject({
-      method: 'POST',
-      url: '/admin/clients',
-      payload: 'scopes=read',
+      method: 'POST', url: '/admin/clients', payload: 'scopes=read',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
-
     expect(response.statusCode).toBe(400);
   });
 
   it('creates client and shows secret once in modal', async () => {
     vi.mocked(complianceClient.createClient).mockResolvedValueOnce({
-      clientId: 'my-app-client',
-      name: 'My App',
-      scopes: ['read'],
-      grantTypes: ['client_credentials'],
-      createdAt: new Date().toISOString(),
+      clientId: 'my-app-client', name: 'My App', scopes: ['read'],
+      grantTypes: ['client_credentials'], createdAt: new Date().toISOString(),
       secret: 'super-secret-value',
     });
-
     const response = await ctx.server.inject({
-      method: 'POST',
-      url: '/admin/clients',
+      method: 'POST', url: '/admin/clients',
       payload: 'name=My+App&scopes=read&grantTypes=client_credentials',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
-
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('client-my-app-client');
-    // Secret is shown in modal one time
     expect(response.body).toContain('super-secret-value');
     expect(response.body).toContain('Client Secret');
   });
@@ -832,30 +676,17 @@ describe('POST /admin/clients', () => {
 
 describe('GET /admin/system', () => {
   let ctx: AdminTestContext;
-
-  beforeEach(async () => {
-    ctx = await createAdminTestServer();
-  });
-
-  afterEach(() => {
-    ctx.cleanup();
-    vi.clearAllMocks();
-  });
+  beforeEach(async () => { ctx = await createAdminTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('returns 200 with system template', async () => {
     vi.mocked(complianceClient.safeGetSystemHealth).mockResolvedValueOnce({
-      compliance: { status: 'ok' },
-      pa11y: { status: 'ok' },
+      compliance: { status: 'ok' }, pa11y: { status: 'ok' },
     });
     vi.mocked(complianceClient.getSeedStatus).mockResolvedValueOnce({
-      seeded: true,
-      jurisdictions: 2,
-      regulations: 5,
-      requirements: 20,
+      seeded: true, jurisdictions: 2, regulations: 5, requirements: 20,
     });
-
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/system' });
-
     expect(response.statusCode).toBe(200);
     const body = response.json() as { template: string };
     expect(body.template).toBe('admin/system.hbs');
@@ -866,14 +697,9 @@ describe('GET /admin/system', () => {
       compliance: { status: 'ok' },
     });
     vi.mocked(complianceClient.getSeedStatus).mockResolvedValueOnce({
-      seeded: false,
-      jurisdictions: 0,
-      regulations: 0,
-      requirements: 0,
+      seeded: false, jurisdictions: 0, regulations: 0, requirements: 0,
     });
-
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/system' });
-
     const body = response.json() as { data: { services: { compliance: { status: string } } } };
     expect(body.data.services.compliance.status).toBe('ok');
   });
@@ -883,9 +709,7 @@ describe('GET /admin/system', () => {
       compliance: { status: 'degraded' },
     });
     vi.mocked(complianceClient.getSeedStatus).mockRejectedValueOnce(new Error('Connection refused'));
-
     const response = await ctx.server.inject({ method: 'GET', url: '/admin/system' });
-
     expect(response.statusCode).toBe(200);
     const body = response.json() as { data: { services: { compliance: { status: string } } } };
     expect(body.data.services.compliance.status).toBe('degraded');

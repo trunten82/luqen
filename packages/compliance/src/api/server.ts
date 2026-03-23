@@ -121,7 +121,7 @@ export async function createServer(options: ServerOptions) {
   await db.initialize();
 
   // OpenAPI JSON alias
-  app.get('/api/v1/openapi.json', async (request, reply) => {
+  app.get('/api/v1/openapi.json', async (_request, reply) => {
     await reply.redirect('/api/v1/docs/json');
   });
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
-import { MigrationRunner } from '../../src/db/migrations.js';
-import type { Migration } from '../../src/db/migrations.js';
+import { MigrationRunner } from '../../src/db/sqlite/migrations.js';
+import type { Migration } from '../../src/db/sqlite/migrations.js';
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

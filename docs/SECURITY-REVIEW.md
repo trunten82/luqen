@@ -186,3 +186,49 @@ The compliance enrichment endpoint needed a larger body limit to handle reports 
 When multiple jurisdictions mapped to the same WCAG criterion, the regulation merge logic could overwrite regulation tags from a previously processed jurisdiction instead of merging them. This was a data integrity issue rather than a direct security vulnerability, but it could cause compliance reports to understate regulatory coverage.
 
 **Fix:** The regulation merge now correctly accumulates regulation tags across all matching jurisdictions using a Set-based deduplication approach, ensuring no regulation data is lost during enrichment.
+
+---
+
+## v1.5.0 Security Review
+
+**Date:** 2026-03-23
+**Scope:** packages/dashboard (StorageAdapter migration, security hardening)
+**Reviewer:** automated (claude-opus-4-6)
+
+### Summary
+
+Four security improvements were implemented as part of the v1.5.0 release. No new vulnerabilities were found during review.
+
+### Security Improvements
+
+#### IMPLEMENTED — HIGH: Per-installation encryption salt
+
+**Package:** `packages/dashboard`
+**File:** `packages/dashboard/src/auth/auth-service.ts`
+
+Previously, plugin configuration secrets encrypted with AES-256-GCM used a key derived solely from the `sessionSecret`. If the same session secret were reused across installations (e.g., copied from documentation), encrypted secrets could be decrypted by any installation sharing that secret.
+
+**Fix:** On first startup, the dashboard generates a cryptographically random 32-byte salt and stores it in the `dashboard_settings` table. This salt is combined with the session secret for plugin config encryption, ensuring each installation produces unique ciphertext even if session secrets are accidentally shared.
+
+#### IMPLEMENTED — HIGH: SSRF protection on scan URLs
+
+**Package:** `packages/dashboard`
+**File:** `packages/dashboard/src/routes/scan.ts`
+
+The scan form now validates target URLs against private and internal IP ranges before submitting them to the pa11y webservice. This prevents authenticated users from using the scanner as a proxy to reach internal services (SSRF).
+
+Blocked ranges: RFC 1918 private addresses (10.x, 172.16-31.x, 192.168.x), loopback (127.x), link-local (169.254.x), and other reserved ranges.
+
+#### IMPLEMENTED — MEDIUM: Global rate limiting
+
+**Package:** `packages/dashboard`
+**Files:** Multiple route files
+
+Rate limiting was previously applied only to the login endpoint. It has been extended to all state-changing endpoints including scan creation, schedule management, role updates, API key operations, and the setup API. Each endpoint has limits appropriate to its use case.
+
+#### IMPLEMENTED — LOW: Secure session cookie configuration
+
+**Package:** `packages/dashboard`
+**File:** `packages/dashboard/src/server.ts`
+
+Session cookies are configured with `httpOnly`, `SameSite=Strict`, and use `@fastify/secure-session` for AES-256-GCM encryption. This was already partially in place but is now consistently applied across all session management code paths.

@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import type { ScanDb, IssueAssignmentStatus } from '../db/scans.js';
-import { UserDb } from '../db/users.js';
+import type { StorageAdapter, IssueAssignmentStatus } from '../db/index.js';
 import { hasPermission } from '../permissions.js';
 
 const VALID_STATUSES = new Set<IssueAssignmentStatus>([
@@ -45,7 +44,7 @@ function truncate(str: string, len: number): string {
 
 export async function assignmentRoutes(
   server: FastifyInstance,
-  db: ScanDb,
+  storage: StorageAdapter,
 ): Promise<void> {
   // GET /reports/:id/assignments — render assignments page
   server.get(
@@ -56,7 +55,7 @@ export async function assignmentRoutes(
       }
 
       const { id } = request.params as { id: string };
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
 
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });
@@ -72,16 +71,15 @@ export async function assignmentRoutes(
         ? query.status as IssueAssignmentStatus
         : undefined;
 
-      const assignments = db.listAssignments({
+      const assignments = await storage.assignments.listAssignments({
         scanId: id,
         ...(filterStatus !== undefined ? { status: filterStatus } : {}),
       });
-      const stats = db.getAssignmentStats(id);
+      const stats = await storage.assignments.getAssignmentStats(id);
 
       // Build assignees list (users + teams) for the assignment picker
-      const userDb = new UserDb(db.getDatabase());
-      const dashboardUsers = userDb.listUsers();
-      const teams = db.listTeams(orgId);
+      const dashboardUsers = await storage.users.listUsers();
+      const teams = await storage.teams.listTeams(orgId);
       const assignees = [
         ...dashboardUsers.filter((u) => u.active).map((u) => ({ type: 'user', id: u.username, label: u.username })),
         ...teams.map((t) => ({ type: 'team', id: `team:${t.id}`, label: `Team: ${t.name}` })),
@@ -115,7 +113,7 @@ export async function assignmentRoutes(
       const { id } = request.params as { id: string };
       const body = request.body as CreateAssignmentBody;
 
-      const scan = db.getScan(id);
+      const scan = await storage.scans.getScan(id);
       if (scan === null) {
         return reply.code(404).send({ error: 'Report not found' });
       }
@@ -141,7 +139,7 @@ export async function assignmentRoutes(
       }
 
       // Check if assignment already exists for this fingerprint
-      const existing = db.getAssignmentByFingerprint(id, issueFingerprint);
+      const existing = await storage.assignments.getAssignmentByFingerprint(id, issueFingerprint);
       if (existing !== null) {
         // Return the existing assignment as confirmation
         return reply.type('text/html').send(
@@ -151,7 +149,8 @@ export async function assignmentRoutes(
 
       const createdBy = request.user?.username ?? 'unknown';
 
-      const assignment = db.createAssignment({
+      const now = new Date().toISOString();
+      const assignment = await storage.assignments.createAssignment({
         id: `asgn-${randomUUID()}`,
         scanId: id,
         issueFingerprint,
@@ -164,10 +163,12 @@ export async function assignmentRoutes(
         assignedTo: body.assignedTo?.trim() || undefined,
         notes: body.notes?.trim() || undefined,
         createdBy,
+        createdAt: now,
+        updatedAt: now,
         orgId,
       });
 
-      const stats = db.getAssignmentStats(id);
+      const stats = await storage.assignments.getAssignmentStats(id);
 
       // JSON response for programmatic callers (Issues tab JS)
       const accept = request.headers['accept'] ?? '';
@@ -195,7 +196,7 @@ export async function assignmentRoutes(
       const { id } = request.params as { id: string };
       const body = request.body as UpdateAssignmentBody;
 
-      const assignment = db.getAssignment(id);
+      const assignment = await storage.assignments.getAssignment(id);
       if (assignment === null) {
         return reply.code(404).send({ error: 'Assignment not found' });
       }
@@ -211,18 +212,18 @@ export async function assignmentRoutes(
         return reply.code(400).send({ error: 'Invalid status value' });
       }
 
-      db.updateAssignment(id, {
+      await storage.assignments.updateAssignment(id, {
         ...(status !== undefined ? { status } : {}),
         ...(body.assignedTo !== undefined ? { assignedTo: body.assignedTo } : {}),
         ...(body.notes !== undefined ? { notes: body.notes } : {}),
       });
 
-      const updated = db.getAssignment(id);
+      const updated = await storage.assignments.getAssignment(id);
       if (updated === null) {
         return reply.code(500).send({ error: 'Failed to retrieve updated assignment' });
       }
 
-      const stats = db.getAssignmentStats(assignment.scanId);
+      const stats = await storage.assignments.getAssignmentStats(assignment.scanId);
 
       // Return updated card HTML
       const html = renderAssignmentCard(updated) +
@@ -241,7 +242,7 @@ export async function assignmentRoutes(
       }
 
       const { id } = request.params as { id: string };
-      const assignment = db.getAssignment(id);
+      const assignment = await storage.assignments.getAssignment(id);
       if (assignment === null) {
         return reply.code(404).send({ error: 'Assignment not found' });
       }
@@ -252,9 +253,9 @@ export async function assignmentRoutes(
       }
 
       const scanId = assignment.scanId;
-      db.deleteAssignment(id);
+      await storage.assignments.deleteAssignment(id);
 
-      const stats = db.getAssignmentStats(scanId);
+      const stats = await storage.assignments.getAssignmentStats(scanId);
 
       // Return empty content + updated stats for HTMX swap
       return reply.type('text/html').send(

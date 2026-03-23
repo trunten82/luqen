@@ -28,7 +28,7 @@ function makeReport(
 
 describe('diffReports', () => {
   describe('basic diff detection', () => {
-    it('detects added issues (new in B, not in A)', () => {
+    it('detects added issues (new in B, not in A)', async () => {
       const reportA = makeReport([]);
       const reportB = makeReport([
         {
@@ -48,7 +48,7 @@ describe('diffReports', () => {
       expect(result.unchanged).toHaveLength(0);
     });
 
-    it('detects removed issues (in A, not in B)', () => {
+    it('detects removed issues (in A, not in B)', async () => {
       const reportA = makeReport([
         {
           url: 'https://example.com',
@@ -67,7 +67,7 @@ describe('diffReports', () => {
       expect(result.unchanged).toHaveLength(0);
     });
 
-    it('detects unchanged issues (present in both)', () => {
+    it('detects unchanged issues (present in both)', async () => {
       const issue = { type: 'error', code: 'WCAG2AA.1_1_1', message: 'Missing alt text', selector: 'img' };
       const reportA = makeReport([{ url: 'https://example.com', issues: [issue] }]);
       const reportB = makeReport([{ url: 'https://example.com', issues: [issue] }]);
@@ -79,7 +79,7 @@ describe('diffReports', () => {
       expect(result.removed).toHaveLength(0);
     });
 
-    it('detects mixed changes correctly', () => {
+    it('detects mixed changes correctly', async () => {
       const shared = { type: 'error', code: 'WCAG2AA.1_1_1', message: 'Missing alt text', selector: 'img' };
       const onlyA = { type: 'warning', code: 'WCAG2AA.1_3_1', message: 'Heading order', selector: 'h3' };
       const onlyB = { type: 'notice', code: 'WCAG2AA.2_4_1', message: 'Skip link', selector: 'a' };
@@ -99,7 +99,7 @@ describe('diffReports', () => {
   });
 
   describe('summary delta computation', () => {
-    it('computes positive delta when B has more issues', () => {
+    it('computes positive delta when B has more issues', async () => {
       const reportA = makeReport([], { error: 2, warning: 1, notice: 0 });
       const reportB = makeReport([], { error: 5, warning: 3, notice: 2 });
 
@@ -108,7 +108,7 @@ describe('diffReports', () => {
       expect(result.summaryDelta).toEqual({ errors: 3, warnings: 2, notices: 2 });
     });
 
-    it('computes negative delta when B has fewer issues', () => {
+    it('computes negative delta when B has fewer issues', async () => {
       const reportA = makeReport([], { error: 10, warning: 5, notice: 3 });
       const reportB = makeReport([], { error: 2, warning: 1, notice: 1 });
 
@@ -117,7 +117,7 @@ describe('diffReports', () => {
       expect(result.summaryDelta).toEqual({ errors: -8, warnings: -4, notices: -2 });
     });
 
-    it('computes zero delta for identical summaries', () => {
+    it('computes zero delta for identical summaries', async () => {
       const reportA = makeReport([], { error: 3, warning: 2, notice: 1 });
       const reportB = makeReport([], { error: 3, warning: 2, notice: 1 });
 
@@ -128,7 +128,7 @@ describe('diffReports', () => {
   });
 
   describe('edge cases', () => {
-    it('handles two empty reports', () => {
+    it('handles two empty reports', async () => {
       const reportA = makeReport([]);
       const reportB = makeReport([]);
 
@@ -140,7 +140,7 @@ describe('diffReports', () => {
       expect(result.summaryDelta).toEqual({ errors: 0, warnings: 0, notices: 0 });
     });
 
-    it('handles identical reports (all unchanged)', () => {
+    it('handles identical reports (all unchanged)', async () => {
       const issues = [
         { type: 'error', code: 'WCAG2AA.1_1_1', message: 'Missing alt', selector: 'img' },
         { type: 'warning', code: 'WCAG2AA.1_3_1', message: 'Heading order', selector: 'h3' },
@@ -155,7 +155,7 @@ describe('diffReports', () => {
       expect(result.removed).toHaveLength(0);
     });
 
-    it('handles report A empty, B has issues (all added)', () => {
+    it('handles report A empty, B has issues (all added)', async () => {
       const reportA = makeReport([]);
       const reportB = makeReport([
         {
@@ -174,7 +174,7 @@ describe('diffReports', () => {
       expect(result.unchanged).toHaveLength(0);
     });
 
-    it('handles report B empty, A has issues (all removed)', () => {
+    it('handles report B empty, A has issues (all removed)', async () => {
       const reportA = makeReport([
         {
           url: 'https://example.com',
@@ -193,7 +193,7 @@ describe('diffReports', () => {
       expect(result.unchanged).toHaveLength(0);
     });
 
-    it('handles duplicate issues on the same page', () => {
+    it('handles duplicate issues on the same page', async () => {
       const dup = { type: 'error', code: 'E1', message: 'msg', selector: 's' };
       const reportA = makeReport([{ url: 'https://example.com', issues: [dup, dup] }]);
       const reportB = makeReport([{ url: 'https://example.com', issues: [dup] }]);
@@ -206,7 +206,7 @@ describe('diffReports', () => {
       expect(result.added).toHaveLength(0);
     });
 
-    it('handles issues across multiple pages', () => {
+    it('handles issues across multiple pages', async () => {
       const reportA = makeReport([
         {
           url: 'https://example.com/page1',
@@ -232,7 +232,7 @@ describe('diffReports', () => {
       expect(result.removed).toHaveLength(0);
     });
 
-    it('handles reports with missing byLevel (defaults to zero)', () => {
+    it('handles reports with missing byLevel (defaults to zero)', async () => {
       const reportA: NormalizedReport = {
         summary: {},
         pages: [],
@@ -247,7 +247,7 @@ describe('diffReports', () => {
       expect(result.summaryDelta).toEqual({ errors: 0, warnings: 0, notices: 0 });
     });
 
-    it('matches issues by code+selector+message key, ignoring page URL', () => {
+    it('matches issues by code+selector+message key, ignoring page URL', async () => {
       // Same issue appears on different pages - should still match
       const issue = { type: 'error', code: 'E1', message: 'msg', selector: 's' };
       const reportA = makeReport([{ url: 'https://example.com/old', issues: [issue] }]);
@@ -269,7 +269,7 @@ async function createCompletedScan(
   overrides: { siteUrl?: string; errors?: number; warnings?: number; notices?: number } = {},
 ): Promise<string> {
   const id = randomUUID();
-  ctx.db.createScan({
+  await ctx.storage.scans.createScan({
     id,
     siteUrl: overrides.siteUrl ?? 'https://example.com',
     standard: 'WCAG2AA',
@@ -277,7 +277,7 @@ async function createCompletedScan(
     createdBy: 'testuser',
     createdAt: new Date().toISOString(),
   });
-  ctx.db.updateScan(id, { status: 'completed' });
+  await ctx.storage.scans.updateScan(id, { status: 'completed' });
 
   const jsonPath = join(ctx.config.reportsDir, `report-${id}.json`);
   const reportJson = JSON.stringify({
@@ -304,7 +304,7 @@ async function createCompletedScan(
     errors: [],
   });
   await writeFile(jsonPath, reportJson, 'utf-8');
-  ctx.db.updateScan(id, { jsonReportPath: jsonPath });
+  await ctx.storage.scans.updateScan(id, { jsonReportPath: jsonPath });
 
   return id;
 }
@@ -356,7 +356,7 @@ describe('Compare route (GET /reports/compare)', () => {
 
   it('returns 400 when scan A is not completed', async () => {
     const idA = randomUUID();
-    ctx.db.createScan({
+    await ctx.storage.scans.createScan({
       id: idA,
       siteUrl: 'https://example.com',
       standard: 'WCAG2AA',

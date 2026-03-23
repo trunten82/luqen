@@ -119,14 +119,34 @@ On first startup with a fresh database, Luqen generates a master API key and pri
 
 ---
 
+## Encryption and secrets
+
+### Per-installation encryption salt
+
+Each dashboard installation generates a unique 32-byte random salt on first startup, stored in the `dashboard_settings` database table. This salt is combined with the `sessionSecret` when encrypting plugin configuration secrets (AES-256-GCM). Even if two installations share the same session secret, their encrypted data cannot be decrypted by the other installation.
+
+### SSRF protection
+
+Scan target URLs are validated before being submitted to the pa11y webservice. Private and internal IP ranges are blocked to prevent the scanner from being used as a proxy to reach internal services:
+
+- RFC 1918 private addresses (10.x, 172.16-31.x, 192.168.x)
+- Loopback (127.x)
+- Link-local (169.254.x)
+- Other reserved ranges
+
+---
+
 ## Session security
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| `DASHBOARD_SESSION_SECRET` | Min 32 bytes | Encrypts session cookies (AES-256) |
-| Session storage | Server-side (encrypted cookie) | No client-readable session data |
+| `DASHBOARD_SESSION_SECRET` | Min 32 bytes | Encrypts session cookies (AES-256-GCM) |
+| Session storage | Encrypted cookie (`@fastify/secure-session`) | No client-readable session data |
+| Cookie flags | `httpOnly`, `SameSite=Strict` | Prevents XSS and CSRF via cookie theft |
+| Encryption salt | Per-installation random 32 bytes | Unique encryption per deployment |
 | Boot ID | UUID per database instance | Invalidates sessions when the DB is reset |
 | Login rate limit | 5 attempts / 15 minutes | Prevents brute-force attacks |
+| Global rate limiting | Per-endpoint limits on all state-changing routes | Prevents abuse of scan, schedule, and admin endpoints |
 | CSRF protection | `@fastify/csrf-protection` | Prevents cross-site request forgery |
 
 ### Session secret best practices
@@ -218,33 +238,33 @@ Internet → Reverse Proxy (nginx/Caddy) → Luqen Dashboard (:5000)
 
 ---
 
-## Audit recommendations
+## Audit log
 
-Luqen does not currently include a built-in audit log. For environments that require audit trails:
+Luqen includes a built-in audit log that records security-relevant actions in the dashboard database via the `AuditRepository` (part of the StorageAdapter). Audit entries are queryable from the admin UI at **Admin > Audit Log** and via the GraphQL API (`auditLog` query, requires `audit.view` permission).
 
-### Recommended approach
+### Logged events
+
+| Category | Events |
+|----------|--------|
+| **Authentication** | Login success, login failure, logout |
+| **User management** | User created, deleted, activated, deactivated, role changed, password reset |
+| **API keys** | Key created, deactivated, deleted |
+| **Plugins** | Installed, configured, activated, deactivated, removed |
+| **Scans** | Scan created, completed, failed, deleted |
+| **Roles** | Role created, updated, deleted |
+| **System** | Organisation created/deleted, settings changed |
+
+### Additional recommendations
+
+For environments requiring extended audit trails:
 
 1. **Enable structured logging** — set `NODE_ENV=production` for JSON log output
 2. **Forward logs to a SIEM** — ship Fastify request logs to Splunk, ELK, or similar
-3. **Key events to monitor:**
-   - Login attempts (success and failure) — `POST /login`
-   - User management actions — `POST/DELETE /admin/dashboard-users/*`
-   - API key creation/deletion — `POST/DELETE /admin/api-keys/*`
-   - Role changes — `PATCH /admin/dashboard-users/*/role`
-   - Plugin installation/activation — `POST /api/v1/plugins/*`
-   - Scan creation — `POST /scan`
-4. **Set up alerts for:**
+3. **Set up alerts for:**
    - Multiple failed login attempts from the same IP
    - API key creation outside business hours
    - Role escalation (user → admin)
    - Plugin installation events
-
-### Future roadmap
-
-A built-in audit log feature is planned for a future release, including:
-- Immutable event store in the database
-- User action timeline on the profile page
-- Admin audit dashboard with filtering and export
 
 ---
 
@@ -264,6 +284,9 @@ Before going live, verify:
 - [ ] Unused API keys are deactivated
 - [ ] Webhook secrets are configured for HMAC signature verification
 - [ ] Backup strategy is in place for the SQLite database
+- [ ] SSRF protection is active (built-in, blocks private/internal IPs on scan URLs)
+- [ ] Per-installation encryption salt has been generated (automatic on first start)
+- [ ] Audit log is monitored for suspicious activity
 
 ---
 

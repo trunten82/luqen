@@ -31,26 +31,23 @@ import { dataApiRoutes } from './routes/api/data.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { repoRoutes } from './routes/repos.js';
-import { ScanDb } from './db/scans.js';
+import { resolveStorageAdapter } from './db/index.js';
+import { SqliteStorageAdapter } from './db/sqlite/index.js';
 import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
-import { getOrCreateApiKey } from './auth/api-key.js';
-import { UserDb } from './db/users.js';
-import { OrgDb } from './db/orgs.js';
 import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { getFixSuggestion } from './fix-suggestions.js';
-import { ALL_PERMISSIONS, ALL_PERMISSION_IDS } from './permissions.js';
+import { ALL_PERMISSION_IDS } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
-import { AuditLogger } from './audit/logger.js';
 import { ServiceTokenManager } from './auth/service-token.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
@@ -80,13 +77,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Database ──────────────────────────────────────────────────────────────
-  const db = new ScanDb(config.dbPath);
-  db.initialize();
+  const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath: config.dbPath } });
+  // For consumers that still need raw DB (PluginManager, AuthService):
+  const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
 
   // ── Plugin Manager ──────────────────────────────────────────────────────
   const registryEntries = loadRegistry();
   const pluginManager = new PluginManager({
-    db: db.getDatabase(),
+    db: rawDb,
     pluginsDir: resolve(config.reportsDir, '..', 'plugins'),
     encryptionKey: config.sessionSecret,
     registryEntries,
@@ -95,15 +93,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   pluginManager.startHealthChecks(60_000);
 
   // ── Auth Service ────────────────────────────────────────────────────────
-  const authService = new AuthService(db.getDatabase(), pluginManager);
-  authService.setScanDb(db);
-  const userDb = new UserDb(db.getDatabase());
-  const orgDb = new OrgDb(db.getDatabase());
-  const auditLogger = new AuditLogger(db.getDatabase());
+  const authService = new AuthService(rawDb, pluginManager, storage);
 
   // ── Solo mode: first-start API key ──────────────────────────────────────
   if (authService.getAuthMode() === 'solo') {
-    const { key, isNew } = getOrCreateApiKey(db.getDatabase());
+    const { key, isNew } = await storage.apiKeys.getOrCreateKey();
     if (isNew) {
       server.log.info('');
       server.log.info('========================================');
@@ -134,7 +128,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   }
 
   // ── Orchestrator ──────────────────────────────────────────────────────────
-  const orchestrator = new ScanOrchestrator(db, config.reportsDir, {
+  const orchestrator = new ScanOrchestrator(storage, config.reportsDir, {
     maxConcurrent: config.maxConcurrentScans,
     ssePublisher,
     redisQueue: redisScanQueue,
@@ -142,7 +136,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Rate Limiting ────────────────────────────────────────────────────────
   await server.register(import('@fastify/rate-limit'), {
-    global: false,   // Only apply to routes that opt in
+    global: true,
+    max: 100,
+    timeWindow: '1 minute',
   });
 
   // ── Plugins ──────────────────────────────────────────────────────────────
@@ -306,7 +302,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Permission loading ─────────────────────────────────────────────────
   server.addHook('preHandler', async (request: FastifyRequest) => {
     if (request.user === undefined) return;
-    const role = db.getRoleByName(request.user.role);
+    const role = await storage.roles.getRoleByName(request.user.role);
     const permissions = role ? new Set(role.permissions) : new Set<string>();
     // For admin role, always grant all permissions
     if (request.user.role === 'admin') {
@@ -314,7 +310,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     }
     // Fall back to 'user' permissions if role not found in DB
     if (role === null) {
-      const fallback = db.getRoleByName('user');
+      const fallback = await storage.roles.getRoleByName('user');
       if (fallback !== null) {
         for (const p of fallback.permissions) permissions.add(p);
       }
@@ -395,9 +391,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     }
 
     // Populate org context for sidebar org switcher
-    const userOrgs = orgDb.getUserOrgs(request.user.id);
+    const userOrgs = await storage.organizations.getUserOrgs(request.user.id);
     const currentOrg = currentOrgId !== undefined && currentOrgId !== ''
-      ? orgDb.getOrg(currentOrgId)
+      ? await storage.organizations.getOrg(currentOrgId)
       : null;
 
     (request as FastifyRequest & { orgContext?: unknown }).orgContext = {
@@ -407,18 +403,18 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Routes ────────────────────────────────────────────────────────────────
-  await authRoutes(server, config, authService, userDb, auditLogger);
-  await homeRoutes(server, db, config);
-  await scanRoutes(server, db, orchestrator, config);
-  await compareRoutes(server, db);
-  await trendRoutes(server, db);
-  await scheduleRoutes(server, db);
-  await reportRoutes(server, db);
-  await manualTestRoutes(server, db);
-  await assignmentRoutes(server, db);
-  await orgRoutes(server, orgDb);
+  await authRoutes(server, config, authService, storage);
+  await homeRoutes(server, storage, config);
+  await scanRoutes(server, storage, orchestrator, config);
+  await compareRoutes(server, storage);
+  await trendRoutes(server, storage);
+  await scheduleRoutes(server, storage);
+  await reportRoutes(server, storage);
+  await manualTestRoutes(server, storage);
+  await assignmentRoutes(server, storage);
+  await orgRoutes(server, storage);
   await toolRoutes(server);
-  await repoRoutes(server, db);
+  await repoRoutes(server, storage);
 
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);
@@ -435,24 +431,24 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     dbPath: config.dbPath,
   });
 
-  await dashboardUserRoutes(server, userDb, auditLogger);
-  await apiKeyRoutes(server, db.getDatabase(), auditLogger);
-  await organizationRoutes(server, orgDb, userDb, config.complianceUrl);
-  await roleRoutes(server, db);
-  await teamRoutes(server, db, userDb);
-  await emailReportRoutes(server, db, pluginManager);
+  await dashboardUserRoutes(server, storage);
+  await apiKeyRoutes(server, storage);
+  await organizationRoutes(server, storage, config.complianceUrl);
+  await roleRoutes(server, storage);
+  await teamRoutes(server, storage);
+  await emailReportRoutes(server, storage, pluginManager);
 
-  await auditRoutes(server, auditLogger);
-  await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir, auditLogger);
+  await auditRoutes(server, storage);
+  await pluginAdminRoutes(server, pluginManager, registryEntries, config.pluginsDir);
 
   // ── Export API routes ────────────────────────────────────────────────────
-  await exportRoutes(server, db);
+  await exportRoutes(server, storage);
 
   // ── Data API routes (Power BI / external integrations) ──────────────────
-  await dataApiRoutes(server, db);
+  await dataApiRoutes(server, storage);
 
   // ── Setup API (create admin user via API key) ──────────────────────────
-  await setupRoutes(server, userDb, authService);
+  await setupRoutes(server, storage, authService);
 
   // ── Plugin API routes ────────────────────────────────────────────────────
   await pluginApiRoutes(server, pluginManager);
@@ -463,10 +459,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     resolvers: graphqlResolvers as Parameters<typeof mercurius>[1]['resolvers'],
     graphiql: process.env['NODE_ENV'] !== 'production',
     context: (request): GraphQLContext => ({
-      db,
-      userDb,
-      orgDb,
-      auditLogger,
+      storage,
       user: request.user,
       permissions:
         ((request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined) ??
@@ -482,8 +475,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Scheduler — start after server is ready ────────────────────────────
   server.addHook('onReady', () => {
-    const timer = startScheduler(db, orchestrator, config);
-    const emailTimer = startEmailScheduler(db, pluginManager);
+    const timer = startScheduler(storage, orchestrator, config);
+    const emailTimer = startEmailScheduler(storage, pluginManager);
     server.addHook('onClose', () => {
       clearInterval(timer);
       clearInterval(emailTimer);

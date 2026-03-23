@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ScanRecord } from '../db/scans.js';
+import type { ScanRecord } from '../db/types.js';
 import { extractCriterion, getWcagDescription } from '../routes/wcag-enrichment.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));

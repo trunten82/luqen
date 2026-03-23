@@ -138,7 +138,7 @@ export async function fetchSource(
  * Check whether the given URL is allowed by the site's robots.txt.
  * Returns true if allowed or if robots.txt cannot be fetched.
  */
-export async function isAllowedByRobots(
+async function isAllowedByRobots(
   url: string,
   userAgent: string,
   timeoutMs = 10_000,

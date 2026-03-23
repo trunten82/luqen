@@ -289,7 +289,7 @@ For a comprehensive guide to all available plugins with their configuration fiel
 
 View system health information:
 - Service connectivity (compliance service, pa11y webservice)
-- Database status
+- Storage adapter status (currently SQLite; PostgreSQL and MongoDB adapters coming as plugins)
 - Active scan count
 - Plugin status
 

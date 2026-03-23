@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Database from 'better-sqlite3';
-import { MigrationRunner } from '../../src/db/migrations.js';
-import { DASHBOARD_MIGRATIONS } from '../../src/db/scans.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import {
   generateApiKey,
   hashApiKey,
@@ -12,17 +10,15 @@ import {
 } from '../../src/auth/api-key.js';
 
 describe('API Key Auth', () => {
-  let db: Database.Database;
+  let storage: SqliteStorageAdapter;
 
-  beforeEach(() => {
-    db = new Database(':memory:');
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
-    new MigrationRunner(db).run(DASHBOARD_MIGRATIONS);
+  beforeEach(async () => {
+    storage = new SqliteStorageAdapter(':memory:');
+    await storage.migrate();
   });
 
-  afterEach(() => {
-    db.close();
+  afterEach(async () => {
+    await storage.disconnect();
   });
 
   describe('generateApiKey', () => {
@@ -44,6 +40,7 @@ describe('API Key Auth', () => {
 
   describe('storeApiKey', () => {
     it('inserts into database', () => {
+      const db = storage.getRawDatabase();
       const key = generateApiKey();
       const id = storeApiKey(db, key, 'test-label');
 
@@ -62,6 +59,7 @@ describe('API Key Auth', () => {
 
   describe('validateApiKey', () => {
     it('returns true for valid active key', () => {
+      const db = storage.getRawDatabase();
       const key = generateApiKey();
       storeApiKey(db, key, 'active-key');
 
@@ -69,10 +67,12 @@ describe('API Key Auth', () => {
     });
 
     it('returns false for invalid key', () => {
+      const db = storage.getRawDatabase();
       expect(validateApiKey(db, 'nonexistent-key')).toBe(false);
     });
 
     it('returns false for revoked key', () => {
+      const db = storage.getRawDatabase();
       const key = generateApiKey();
       storeApiKey(db, key, 'revoked-key');
       revokeAllKeys(db);
@@ -83,6 +83,7 @@ describe('API Key Auth', () => {
 
   describe('getOrCreateApiKey', () => {
     it('creates new key when none exist, returns { key, isNew: true }', () => {
+      const db = storage.getRawDatabase();
       const result = getOrCreateApiKey(db);
 
       expect(result.isNew).toBe(true);
@@ -95,6 +96,7 @@ describe('API Key Auth', () => {
     });
 
     it('returns { key: null, isNew: false } when active key exists', () => {
+      const db = storage.getRawDatabase();
       const key = generateApiKey();
       storeApiKey(db, key, 'existing-key');
 
@@ -106,6 +108,7 @@ describe('API Key Auth', () => {
 
   describe('revokeAllKeys', () => {
     it('deactivates all keys', () => {
+      const db = storage.getRawDatabase();
       const key1 = generateApiKey();
       const key2 = generateApiKey();
       storeApiKey(db, key1, 'key-1');

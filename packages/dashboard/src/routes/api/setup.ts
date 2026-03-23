@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { UserDb } from '../../db/users.js';
+import type { StorageAdapter } from '../../db/index.js';
 import type { AuthService } from '../../auth/auth-service.js';
 import { validateUsername, validatePassword } from '../../validation.js';
 
@@ -20,7 +20,7 @@ interface SetupBody {
  */
 export async function setupRoutes(
   server: FastifyInstance,
-  userDb: UserDb,
+  storage: StorageAdapter,
   authService: AuthService,
 ): Promise<void> {
   server.post(
@@ -74,7 +74,7 @@ export async function setupRoutes(
       }
 
       // Check for duplicate username
-      const existing = userDb.getUserByUsername(username);
+      const existing = await storage.users.getUserByUsername(username);
       if (existing !== null) {
         return reply.code(409).send({
           error: `User "${username}" already exists.`,
@@ -82,7 +82,7 @@ export async function setupRoutes(
       }
 
       try {
-        const created = await userDb.createUser(username, password, role);
+        const created = await storage.users.createUser(username, password, role);
         return reply.code(201).send({
           message: `User "${created.username}" created with role "${created.role}".`,
           user: {

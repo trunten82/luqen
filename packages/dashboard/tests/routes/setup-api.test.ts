@@ -4,8 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync } from 'node:fs';
-import { ScanDb } from '../../src/db/scans.js';
-import { UserDb } from '../../src/db/users.js';
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { setupRoutes } from '../../src/routes/api/setup.js';
 import type { AuthService } from '../../src/auth/auth-service.js';
 
@@ -13,8 +12,7 @@ const VALID_API_KEY = 'test-valid-api-key-1234567890';
 
 interface TestContext {
   server: FastifyInstance;
-  db: ScanDb;
-  userDb: UserDb;
+  storage: SqliteStorageAdapter;
   cleanup: () => void;
 }
 
@@ -27,25 +25,24 @@ function mockAuthService(validKey: string): AuthService {
 async function createTestServer(): Promise<TestContext> {
   const dbPath = join(tmpdir(), `test-setup-${randomUUID()}.db`);
 
-  const db = new ScanDb(dbPath);
-  db.initialize();
-  const userDb = new UserDb(db.getDatabase());
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
 
   const server = Fastify({ logger: false });
 
   await server.register(import('@fastify/formbody'));
 
   const authService = mockAuthService(VALID_API_KEY);
-  await setupRoutes(server, userDb, authService);
+  await setupRoutes(server, storage, authService);
   await server.ready();
 
   const cleanup = (): void => {
-    db.close();
+    void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     void server.close();
   };
 
-  return { server, db, userDb, cleanup };
+  return { server, storage, cleanup };
 }
 
 // ── POST /api/v1/setup ──────────────────────────────────────────────────────
@@ -77,7 +74,7 @@ describe('POST /api/v1/setup', () => {
     expect(body.user.username).toBe('alice');
     expect(body.user.role).toBe('admin');
 
-    const created = ctx.userDb.getUserByUsername('alice');
+    const created = await ctx.storage.users.getUserByUsername('alice');
     expect(created).not.toBeNull();
     expect(created!.role).toBe('admin');
   });
@@ -160,7 +157,7 @@ describe('POST /api/v1/setup', () => {
   });
 
   it('returns 409 for duplicate username', async () => {
-    await ctx.userDb.createUser('alice', 'Password123!', 'admin');
+    await ctx.storage.users.createUser('alice', 'Password123!', 'admin');
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -192,7 +189,7 @@ describe('POST /api/v1/setup', () => {
     const body = response.json() as { user: { role: string } };
     expect(body.user.role).toBe('admin');
 
-    const created = ctx.userDb.getUserByUsername('bob');
+    const created = await ctx.storage.users.getUserByUsername('bob');
     expect(created!.role).toBe('admin');
   });
 
