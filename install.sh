@@ -705,8 +705,9 @@ write_config() {
   "sessionSecret": "${SESSION_SECRET}",
   "complianceClientId": "${CLIENT_ID}",
   "complianceClientSecret": "${CLIENT_SECRET}",
-  "reportsDir": "./reports",
-  "pluginsDir": "./plugins"${db_config}
+  "dbPath": "${INSTALL_DIR}/dashboard.db",
+  "reportsDir": "${INSTALL_DIR}/reports",
+  "pluginsDir": "${INSTALL_DIR}/plugins"${db_config}
 }
 CONF
   chmod 600 "${CONFIG_FILE}"
@@ -849,14 +850,14 @@ Wants=luqen-compliance.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=${INSTALL_DIR}/packages/dashboard
+WorkingDirectory=${INSTALL_DIR}
 Environment=NODE_ENV=production
 Environment=DASHBOARD_SESSION_SECRET=${SESSION_SECRET}
 Environment=DASHBOARD_COMPLIANCE_URL=http://localhost:${COMPLIANCE_PORT}
 Environment=DASHBOARD_WEBSERVICE_URL=${PA11Y_URL}
 Environment=DASHBOARD_COMPLIANCE_CLIENT_ID=${CLIENT_ID}
 Environment=DASHBOARD_COMPLIANCE_CLIENT_SECRET=${CLIENT_SECRET}
-ExecStart=$(command -v node) dist/cli.js serve --config ${CONFIG_FILE}
+ExecStart=$(command -v node) packages/dashboard/dist/cli.js serve --config ${CONFIG_FILE}
 Restart=always
 RestartSec=5
 

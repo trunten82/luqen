@@ -141,4 +141,4 @@ exec npx concurrently \
   -n compliance,dashboard \
   -c blue,green \
   "cd packages/compliance && node dist/cli.js serve --port ${COMPLIANCE_PORT}" \
-  "cd packages/dashboard && DASHBOARD_PORT=${DASHBOARD_PORT} node dist/cli.js serve --port ${DASHBOARD_PORT}"
+  "node packages/dashboard/dist/cli.js serve --config ${ROOT_DIR}/dashboard.config.json --port ${DASHBOARD_PORT}"
