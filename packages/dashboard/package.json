@@ -65,7 +65,7 @@
     "handlebars": "^4.7.8",
     "ioredis": "^5.10.1",
     "jose": "^6.0.0",
-    "mercurius": "^15.0.0",
+    "mercurius": "^16.8.0",
     "nodemailer": "^8.0.3",
     "pdfkit": "^0.18.0",
     "tar": "^7.5.12",
