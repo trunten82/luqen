@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.8.0] - 2026-03-23
+
+### Added
+- **Direct pa11y scanner** — the core scanner now uses the pa11y library directly instead of requiring an external pa11y-webservice. No separate webservice process needed for scanning. The `webserviceUrl` config field is now optional and retained for backward compatibility with existing pa11y-webservice deployments.
+- **Docker deployment** — root `Dockerfile` (multi-stage, Node 20 + Chromium) and `docker-compose.yml` for one-command deployment of compliance + dashboard services. Includes health checks, named volumes, and automatic first-run setup (key generation, data seeding).
+- **Installer rewrite** — the `install.sh` wizard now offers 3 modes: Developer tools (CLI only), Full platform (bare metal with systemd), and Docker (docker compose). Input validation and `curl | bash` compatibility via re-exec.
+
+### Changed
+- `webserviceUrl` is now **optional** in both `.luqen.json` (core) and `dashboard.config.json` (dashboard). When omitted, the scanner uses the built-in pa11y library. When set, the scanner falls back to the external pa11y-webservice for backward compatibility.
+- Architecture simplified: pa11y-webservice is no longer a required external dependency.
+
+### Documentation
+- Architecture diagrams updated to show pa11y as built-in (no external webservice box)
+- Quick Start updated with 3 install modes (Developer tools, Full platform, Docker)
+- CLI-only instructions no longer require `LUQEN_WEBSERVICE_URL`
+- Docker deployment guide updated with new `docker-compose.yml` instructions
+- `webserviceUrl` marked as optional in dashboard and core config references
+
+---
+
 ## [1.6.0] - 2026-03-23
 
 ### Added
@@ -432,6 +452,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [1.8.0] | 2026-03-23 | Direct pa11y scanner (no webservice needed), Docker deployment, installer rewrite (3 modes) |
 | [1.6.0] | 2026-03-23 | auth-okta + auth-google plugins, all 8 plugins available, plugin build script |
 | [1.5.0] | 2026-03-23 | Remote plugin catalogue, tarball install, StorageAdapter (14 repositories), security hardening, 2661 tests (85%+ coverage), dead code removal |
 | [1.4.0] | 2026-03-22 | StorageAdapter architecture (14 pluggable repositories, SQLite default, Postgres/MongoDB coming) |

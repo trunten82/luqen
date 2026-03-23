@@ -14,7 +14,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 {
   "port": 5000,
   "complianceUrl": "http://localhost:4000",
-  "webserviceUrl": "http://localhost:3000",
+  "webserviceUrl": "",
   "reportsDir": "./reports",
   "dbPath": "./dashboard.db",
   "sessionSecret": "",
@@ -33,7 +33,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 |-------|------|---------|-------------|
 | `port` | `number` | `5000` | TCP port the server listens on |
 | `complianceUrl` | `string` | `http://localhost:4000` | Base URL of the compliance service REST API |
-| `webserviceUrl` | `string` | `http://localhost:3000` | Base URL of the pa11y webservice (used in health check only) |
+| `webserviceUrl` | `string` | — | **Optional.** Base URL of an external pa11y webservice. When omitted, the dashboard uses the built-in pa11y scanner directly. Set this only if you have an existing pa11y-webservice deployment you want to reuse. |
 | `reportsDir` | `string` | `./reports` | Directory where JSON and HTML scan reports are written |
 | `dbPath` | `string` | `./dashboard.db` | Path to the SQLite database file (used by the SQLite storage adapter) |
 | `sessionSecret` | `string` | — | Secret used to sign session cookies. **Required. Minimum 32 bytes.** |
@@ -41,8 +41,8 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `maxPages` | `number` | `50` | Maximum pages to discover and scan in full-site mode (1–1000) |
 | `pluginsDir` | `string` | `./plugins` | Directory where plugin packages are installed |
 | `pluginsConfigFile` | `string` | — | Optional path to a plugins configuration JSON file |
-| `runner` | `"htmlcs" \| "axe"` | `"htmlcs"` | Pa11y test runner. `axe` requires `pa11y-runner-axe` installed on the webservice. |
-| `webserviceUrls` | `string[]` | — | Additional pa11y webservice URLs for horizontal scaling. Scans are distributed round-robin across all URLs (including `webserviceUrl`). |
+| `runner` | `"htmlcs" \| "axe"` | `"htmlcs"` | Pa11y test runner. `axe` requires `pa11y-runner-axe` installed locally (or on the external webservice if `webserviceUrl` is set). |
+| `webserviceUrls` | `string[]` | — | **Optional.** Additional pa11y webservice URLs for horizontal scaling. Only relevant when `webserviceUrl` is set. Scans are distributed round-robin across all URLs (including `webserviceUrl`). |
 | `complianceClientId` | `string` | — | OAuth2 client ID for auto-refreshing compliance service tokens via `client_credentials` grant. When set together with `complianceClientSecret`, manual token management is not required. |
 | `complianceClientSecret` | `string` | — | OAuth2 client secret paired with `complianceClientId`. Store securely; use `DASHBOARD_COMPLIANCE_CLIENT_SECRET` env var in production. |
 | `catalogueUrl` | `string` | `https://github.com/trunten82/luqen-plugins` | Base URL of the remote plugin catalogue GitHub repository. The dashboard fetches `catalogue.json` from GitHub releases at this URL. |
@@ -56,7 +56,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 |----------|-----------|-------------|
 | `DASHBOARD_PORT` | `port` | Server port |
 | `DASHBOARD_COMPLIANCE_URL` | `complianceUrl` | Compliance service base URL |
-| `DASHBOARD_WEBSERVICE_URL` | `webserviceUrl` | Pa11y webservice URL |
+| `DASHBOARD_WEBSERVICE_URL` | `webserviceUrl` | **Optional.** External pa11y webservice URL. Omit to use the built-in scanner. |
 | `DASHBOARD_REPORTS_DIR` | `reportsDir` | Report storage directory |
 | `DASHBOARD_DB_PATH` | `dbPath` | SQLite database path |
 | `DASHBOARD_SESSION_SECRET` | `sessionSecret` | Cookie signing secret (min 32 bytes) |
@@ -65,7 +65,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `DASHBOARD_PLUGINS_DIR` | `pluginsDir` | Directory for plugin packages (default: `./plugins`) |
 | `DASHBOARD_PLUGINS_CONFIG` | `pluginsConfigFile` | Path to plugins configuration file |
 | `DASHBOARD_SCANNER_RUNNER` | `runner` | Pa11y test runner: `htmlcs` or `axe` (default: `htmlcs`) |
-| `DASHBOARD_WEBSERVICE_URLS` | `webserviceUrls` | Comma-separated list of additional pa11y webservice URLs for horizontal scaling (round-robin distribution). |
+| `DASHBOARD_WEBSERVICE_URLS` | `webserviceUrls` | **Optional.** Comma-separated list of additional pa11y webservice URLs for horizontal scaling. Only relevant when `DASHBOARD_WEBSERVICE_URL` is set. |
 | `DASHBOARD_CATALOGUE_URL` | `catalogueUrl` | Base URL of the remote plugin catalogue GitHub repository (default: `https://github.com/trunten82/luqen-plugins`). |
 | `DASHBOARD_CATALOGUE_CACHE_TTL` | `catalogueCacheTtl` | Plugin catalogue cache TTL in seconds (default: `3600`). |
 | `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |

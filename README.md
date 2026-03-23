@@ -4,7 +4,7 @@
 
 Luqen scans your entire website for WCAG violations and tells you which laws in which countries require you to fix each one. One scan covers 58 jurisdictions (EU, US, UK, and more), so your legal and dev teams see the same picture. Run it from the command line, a browser dashboard, or your IDE — it works for a solo developer checking one page or an enterprise team monitoring hundreds of sites across multiple languages.
 
-![Version](https://img.shields.io/badge/version-v1.6.0-blue)
+![Version](https://img.shields.io/badge/version-v1.8.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Tests](https://img.shields.io/badge/tests-2789%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)
@@ -16,7 +16,7 @@ Luqen scans your entire website for WCAG violations and tells you which laws in 
 
 Luqen is an enterprise accessibility platform that gives teams visibility into digital accessibility and guides them toward being more accessible and inclusive. It orchestrates site-wide WCAG scanning, maps violations to legal obligations across 58 jurisdictions, tracks issues through assignment and remediation workflows, and monitors regulatory changes — all through a unified dashboard, CLI, MCP server, and REST API.
 
-Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://github.com/dequelabs/axe-core) for scanning, but wraps them in a complete platform: team management, role-based access, issue assignment lifecycles, scheduled scans, email reports, plugin ecosystem, and more. The goal is not just to find accessibility problems, but to help organizations systematically fix them.
+Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and [axe-core](https://github.com/dequelabs/axe-core) for scanning, but wraps them in a complete platform: team management, role-based access, issue assignment lifecycles, scheduled scans, email reports, plugin ecosystem, and more. The goal is not just to find accessibility problems, but to help organizations systematically fix them.
 
 > **Why "Luqen"?** A coined name, unique to this project. Pronounced "LOO-ken".
 
@@ -24,7 +24,7 @@ Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://gi
 
 ## Key Features
 
-- **Site-wide scanning** via pa11y webservice — sitemap + crawl discovery, concurrency control, robots.txt respect
+- **Site-wide scanning** via built-in pa11y scanner — sitemap + crawl discovery, concurrency control, robots.txt respect (no external pa11y-webservice required)
 - **Legal compliance checking** against 58 jurisdictions and 62 regulations (EU EAA, Section 508, ADA, UK Equality Act, RGAA, BITV, JIS X 8341-3, and more)
 - **Confirmed violations vs needs-review** — errors are confirmed violations; notices are flagged separately, never inflating the violation count
 - **Source code mapping** — maps WCAG issues to source files in Next.js, Nuxt, SvelteKit, Angular, and plain HTML projects
@@ -81,11 +81,7 @@ Under the hood, Luqen uses [pa11y](https://pa11y.org/) and [axe-core](https://gi
 │  │   @luqen/core             │  CLI + MCP server                 │
 │  │  ─ site scan & crawl      │  ─ source mapping                 │
 │  │  ─ fix proposals          │  ─ HTML/JSON reports              │
-│  └──────────┬────────────────┘                                   │
-│             │ HTTP                                                │
-│             ▼                                                    │
-│  ┌───────────────────────────┐                                   │
-│  │   pa11y webservice        │  External (Docker / remote)       │
+│  │  ─ pa11y (built-in)       │                                   │
 │  └───────────────────────────┘                                   │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -119,25 +115,41 @@ See [docs/paths/](docs/paths/) for detailed guides on each path.
 curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh | bash
 ```
 
-The installer wizard handles everything: prerequisites, build, JWT keys, compliance seeding, OAuth client, systemd services, and shows your API key at the end.
+The installer wizard offers three modes:
+
+| Mode | What it installs | Best for |
+|------|-----------------|----------|
+| **Developer tools** | CLI only (`luqen` command) | Quick scans from the terminal |
+| **Full platform** | All services on bare metal (systemd) | Production servers without Docker |
+| **Docker** | All services via Docker Compose | Fastest full deployment |
+
+### Docker install
+
+```bash
+git clone https://github.com/trunten82/luqen.git
+cd luqen
+export SESSION_SECRET="$(openssl rand -base64 32)"
+docker compose up -d
+```
+
+Services start on ports 4000 (compliance) and 5000 (dashboard). No external pa11y-webservice needed — scanning is built in.
 
 ### Manual install
 
 ```bash
 git clone https://github.com/trunten82/luqen.git
 cd luqen && npm install && npm run build --workspaces
-./start.sh --pa11y-url http://your-pa11y:3000
+./start.sh
 ```
 
 ### CLI-only (no dashboard)
 
 ```bash
 cd packages/core && npm link
-export LUQEN_WEBSERVICE_URL=http://localhost:3000
 luqen scan https://example.com --format both
 ```
 
-Reports are written to `./luqen-reports/`.
+No `LUQEN_WEBSERVICE_URL` needed — the scanner uses the pa11y library directly. Reports are written to `./luqen-reports/`.
 
 ---
 
@@ -281,10 +293,11 @@ export MONITOR_COMPLIANCE_CLIENT_SECRET=<client-secret>
 ## Docker
 
 ```bash
-docker compose up
+export SESSION_SECRET="$(openssl rand -base64 32)"
+docker compose up -d
 ```
 
-This starts the compliance service (port 4000) and the dashboard (port 5000). For pa11y webservice, run it separately and set `LUQEN_WEBSERVICE_URL` in a `.env` file.
+This starts the compliance service (port 4000) and the dashboard (port 5000). The scanner uses the pa11y library directly inside the container — no external pa11y-webservice is needed. If you have an existing pa11y-webservice you want to use instead, set `PA11Y_URL` in a `.env` file for backward compatibility.
 
 ---
 

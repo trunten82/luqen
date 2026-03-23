@@ -5,11 +5,33 @@
 ## What you need
 
 - Node.js 20 or later
-- A running pa11y webservice (see below if you don't have one)
+
+No external pa11y-webservice is needed — the scanner uses the pa11y library directly.
 
 ---
 
 ## Step 1 — Install
+
+**Option A: One-line installer (Linux)**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh | bash
+```
+
+The wizard offers three modes: Developer tools (CLI only), Full platform (bare metal), or Docker.
+
+**Option B: Docker**
+
+```bash
+git clone https://github.com/trunten82/luqen.git
+cd luqen
+export SESSION_SECRET="$(openssl rand -base64 32)"
+docker compose up -d
+```
+
+Open `http://localhost:5000` for the dashboard. Skip to [Step 3](#step-3--view-results).
+
+**Option C: Manual**
 
 ```bash
 git clone https://github.com/trunten82/luqen.git
@@ -21,19 +43,11 @@ cd packages/core && npm link
 
 After linking, `luqen` is a global command.
 
-**Don't have a pa11y webservice?** The fastest way is Docker:
-
-```bash
-docker run -d -p 3000:3000 luqen/webservice:latest
-```
-
 ---
 
 ## Step 2 — Run your first scan
 
 ```bash
-export DASHBOARD_WEBSERVICE_URL=http://localhost:3000   # dashboard uses DASHBOARD_WEBSERVICE_URL
-export LUQEN_WEBSERVICE_URL=http://localhost:3000       # CLI uses LUQEN_WEBSERVICE_URL
 luqen scan https://example.com
 ```
 
@@ -98,7 +112,7 @@ The HTML report now shows a per-jurisdiction pass/fail table and regulation badg
 
 | You are... | Recommended setup | Why |
 |------------|-------------------|-----|
-| **Solo developer** scanning your own site | **Local install + CLI** | Simplest. `npm install`, scan, done. No servers needed. Reports saved as JSON/HTML files. |
+| **Solo developer** scanning your own site | **Local install + CLI** | Simplest. `npm install`, scan, done. No external services needed. Reports saved as JSON/HTML files. |
 | **Solo developer** wanting AI integration | **Local install + MCP in your IDE** | Same as above, but your AI assistant (Claude/Cursor) can scan and fix for you. |
 | **Small team** (2-5 developers) | **Docker Compose** (compliance + dashboard) | One `docker compose up`. Everyone accesses the dashboard at `http://your-server:5000`. Shared compliance data. |
 | **Large team / enterprise** | **Kubernetes + Redis** | Full HA deployment. Shared Redis for caching/queues. Multiple dashboard replicas. SSO via OAuth2. |
@@ -247,13 +261,12 @@ curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh |
 
 ---
 
-## New in v1.7.0
+## New in v1.8.0
 
-- **11 plugins** — auth (Entra, Okta, Google), notifications (Slack, Teams, Email), storage (S3, Azure, Postgres, MongoDB), scanner (axe-core)
-- **Remote plugin catalogue** — install plugins by name from GitHub releases
-- **Data migration CLI** — `luqen-dashboard migrate-data --from sqlite --to postgres`
-- **One-command install** — `curl ... | bash` with interactive wizard, systemd services, input validation
-- **Burger menu on all screens** — consistent mobile-style navigation on desktop
+- **Direct pa11y scanner** — no external pa11y-webservice needed; scanning uses the pa11y library directly
+- **Docker deployment** — `Dockerfile` + `docker-compose.yml` for one-command deployment
+- **Installer rewrite** — 3 modes: Developer tools (CLI only), Full platform (bare metal), Docker
+- **`webserviceUrl` is now optional** — set it only if you have an existing pa11y-webservice to reuse
 
 See [CHANGELOG.md](../CHANGELOG.md) for the full history.
 
