@@ -240,10 +240,14 @@ export async function organizationRoutes(
         const username = user?.username ?? userId;
         const row = memberRowHtml(id, member, username);
 
+        // Show the members table (hidden when empty) and hide the empty-state message
+        const showTable = '<table id="org-members-wrapper" hx-swap-oob="true" style="display:table"></table>';
+        const hideEmpty = '<div id="org-no-members" hx-swap-oob="true" style="display:none"></div>';
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(`${row}\n${toastHtml(`${username} added to organization.`)}`);
+          .send(`${row}\n${showTable}\n${hideEmpty}\n${toastHtml(`${username} added to organization.`)}`);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to add member';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));

@@ -6,8 +6,7 @@
     </a>
   </div>
 
-  {{#if members.length}}
-  <table class="table" aria-label="Organization members list">
+  <table class="table" aria-label="Organization members list"{{#unless members.length}} style="display:none"{{/unless}} id="org-members-wrapper">
     <thead>
       <tr>
         <th scope="col">{{t "admin.organizations.username"}}</th>
@@ -36,11 +35,11 @@
       {{/each}}
     </tbody>
   </table>
-  {{else}}
-  <div class="empty-state" role="status">
+  {{#unless members.length}}
+  <div class="empty-state" role="status" id="org-no-members">
     <p>{{t "admin.organizations.noMembers"}}</p>
   </div>
-  {{/if}}
+  {{/unless}}
 
   {{#if availableUsers.length}}
   <div class="card" style="margin-top: 1.5rem;">
