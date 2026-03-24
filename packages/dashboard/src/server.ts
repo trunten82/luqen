@@ -153,11 +153,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Security Headers (helmet) ────────────────────────────────────────────
   await server.register(import('@fastify/helmet'), {
+    enableCSPNonces: true,
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
-        scriptSrcAttr: ["'unsafe-inline'"],
+        scriptSrc: ["'self'", 'cdn.jsdelivr.net'],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:'],
         connectSrc: ["'self'"],
@@ -380,6 +380,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       return originalView(page, {
         ...data,
         csrfToken,
+        cspNonce: (reply as unknown as Record<string, { script: string }>).cspNonce?.script ?? '',
         locale,
         locales: SUPPORTED_LOCALES,
         localeLabels: LOCALE_LABELS,

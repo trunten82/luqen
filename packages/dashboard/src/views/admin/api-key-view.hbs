@@ -37,7 +37,7 @@
               hx-target="#api-key-{{key.id}}"
               hx-swap="outerHTML"
               class="btn btn--danger"
-              onclick="setTimeout(function(){closeModal()},600)">
+              data-action="closeModalDelayed">
         {{t "admin.apiKeys.revokeKey"}}
       </button>
       {{else}}

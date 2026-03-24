@@ -102,7 +102,7 @@
 
       <div style="margin-top:0.75rem;">
         <p style="margin:0 0 0.25rem;font-size:0.8rem;font-weight:600;color:var(--text-muted);">{{t "fixes.suggestedFix"}}</p>
-        <pre class="rpt-fix-hint__code" style="position:relative;"><code id="fix-code-{{this.index}}">{{this.codeExample}}</code><button type="button" class="btn btn--ghost btn--sm" style="position:absolute;top:0.25rem;right:0.25rem;font-size:0.7rem;" onclick="copyFixCode({{this.index}})" aria-label="Copy fix code to clipboard">{{t "fixes.copy"}}</button></pre>
+        <pre class="rpt-fix-hint__code" style="position:relative;"><code id="fix-code-{{this.index}}">{{this.codeExample}}</code><button type="button" class="btn btn--ghost btn--sm" style="position:absolute;top:0.25rem;right:0.25rem;font-size:0.7rem;" data-action="copyFixCode" data-index="{{this.index}}" aria-label="Copy fix code to clipboard">{{t "fixes.copy"}}</button></pre>
       </div>
     </div>
     {{/each}}
@@ -128,7 +128,7 @@
   {{/if}}
 </section>
 
-<script>
+<script nonce="{{cspNonce}}">
 function copyFixCode(index) {
   var codeEl = document.getElementById('fix-code-' + index);
   if (!codeEl) return;

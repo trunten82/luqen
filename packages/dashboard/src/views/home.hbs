@@ -84,10 +84,10 @@
 
         <div class="picker" id="compliance-picker">
           <div class="picker__tabs">
-            <button type="button" class="picker__tab picker__tab--active" onclick="pickerTab('jurisdictions',this)">{{t "home.jurisdictions"}}</button>
-            <button type="button" class="picker__tab" onclick="pickerTab('regulations',this)">{{t "home.regulations"}}</button>
+            <button type="button" class="picker__tab picker__tab--active" data-action="pickerTab" data-tab="jurisdictions">{{t "home.jurisdictions"}}</button>
+            <button type="button" class="picker__tab" data-action="pickerTab" data-tab="regulations">{{t "home.regulations"}}</button>
           </div>
-          <input type="search" class="picker__search" placeholder="{{t "common.search"}}" oninput="pickerSearch(this.value)" aria-label="Search jurisdictions or regulations">
+          <input type="search" class="picker__search" placeholder="{{t "common.search"}}" data-action-input="pickerSearch" aria-label="Search jurisdictions or regulations">
           <div class="picker__list" id="picker-list">
             {{#each jurisdictions}}
             <label class="picker__item" data-tab="jurisdictions" data-name="{{name}}">

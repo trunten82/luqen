@@ -10,7 +10,7 @@
     <div style="text-align:center; margin: 1.5rem 0;">
       <a class="btn btn--primary"
          href="javascript:void(function(){var d='{{dashboardUrl}}';var u=encodeURIComponent(window.location.href);window.open(d+'/scan/new?prefill='+u,'_blank');})()"
-         onclick="event.preventDefault(); alert('{{t "bookmarklet.dragAlertMsg"}}');"
+         data-action="bookmarkletAlert" data-alert-msg="{{t "bookmarklet.dragAlertMsg"}}"
          draggable="true"
          aria-label="Drag this link to your bookmark bar to install the Luqen bookmarklet">
         {{t "bookmarklet.scanButtonLabel"}}

@@ -78,10 +78,10 @@
 
 {{! ── Tab bar ─────────────────────────────────────────────────────────────── }}
 <div class="rpt-tabs" role="tablist">
-  <button role="tab" class="rpt-tab rpt-tab--active" id="tab-compliance" aria-controls="panel-compliance" aria-selected="true" onclick="rptSwitchTab('compliance')">{{t "reportDetail.tabCompliance"}}</button>
-  <button role="tab" class="rpt-tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" onclick="rptSwitchTab('issues')">{{t "reportDetail.tabIssues"}}</button>
-  {{#if reportData.templateComponents.length}}<button role="tab" class="rpt-tab" id="tab-templates" aria-controls="panel-templates" aria-selected="false" onclick="rptSwitchTab('templates')">{{t "reportDetail.tabTemplates"}}</button>{{/if}}
-  <button role="tab" class="rpt-tab" id="tab-pages" aria-controls="panel-pages" aria-selected="false" onclick="rptSwitchTab('pages')">{{t "reportDetail.tabPages"}}</button>
+  <button role="tab" class="rpt-tab rpt-tab--active" id="tab-compliance" aria-controls="panel-compliance" aria-selected="true" data-action="rptSwitchTab" data-tab="compliance">{{t "reportDetail.tabCompliance"}}</button>
+  <button role="tab" class="rpt-tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" data-action="rptSwitchTab" data-tab="issues">{{t "reportDetail.tabIssues"}}</button>
+  {{#if reportData.templateComponents.length}}<button role="tab" class="rpt-tab" id="tab-templates" aria-controls="panel-templates" aria-selected="false" data-action="rptSwitchTab" data-tab="templates">{{t "reportDetail.tabTemplates"}}</button>{{/if}}
+  <button role="tab" class="rpt-tab" id="tab-pages" aria-controls="panel-pages" aria-selected="false" data-action="rptSwitchTab" data-tab="pages">{{t "reportDetail.tabPages"}}</button>
 </div>
 
 {{! ── Tab 1: Compliance Overview ──────────────────────────────────────────── }}
@@ -146,9 +146,9 @@
     </div>
     <div class="rpt-controls" role="toolbar" aria-label="Filter controls">
       <div class="rpt-filter-bar" id="rpt-filter-bar"></div>
-      <input type="text" class="rpt-search" placeholder="Search&hellip;" aria-label="Search issues" oninput="rptSearchIssues(this.value)">
+      <input type="text" class="rpt-search" placeholder="Search&hellip;" aria-label="Search issues" data-action-input="rptSearchIssues">
       {{#if perm.issuesAssign}}
-      <button type="button" class="btn btn--ghost btn--sm" id="rpt-bulk-mode-btn" onclick="rptToggleBulkMode()">{{t "reportDetail.bulkAssign"}}</button>
+      <button type="button" class="btn btn--ghost btn--sm" id="rpt-bulk-mode-btn" data-action="rptToggleBulkMode">{{t "reportDetail.bulkAssign"}}</button>
       {{/if}}
     </div>
   </div>
@@ -156,13 +156,13 @@
   {{! Bulk assign toolbar — shown when bulk mode active }}
   {{#if perm.issuesAssign}}
   <div class="rpt-bulk-bar" id="rpt-bulk-bar" style="display:none;">
-    <label class="rpt-bulk-bar__select-all"><input type="checkbox" id="rpt-bulk-select-all" onchange="rptBulkToggleAll(this.checked)"> {{t "reportDetail.selectAllVisible"}}</label>
+    <label class="rpt-bulk-bar__select-all"><input type="checkbox" id="rpt-bulk-select-all" data-action-change="rptBulkToggleAll"> {{t "reportDetail.selectAllVisible"}}</label>
     <span id="rpt-bulk-count">0 {{t "reportDetail.selected"}}</span>
     <select id="rpt-bulk-assignee" class="rpt-bulk-bar__select">
       <option value="">{{t "reportDetail.selectAssignee"}}</option>
     </select>
-    <button type="button" class="btn btn--primary btn--sm" onclick="rptBulkAssign()">{{t "reportDetail.assignSelected"}}</button>
-    <button type="button" class="btn btn--ghost btn--sm" onclick="rptToggleBulkMode()">{{t "common.cancel"}}</button>
+    <button type="button" class="btn btn--primary btn--sm" data-action="rptBulkAssign">{{t "reportDetail.assignSelected"}}</button>
+    <button type="button" class="btn btn--ghost btn--sm" data-action="rptToggleBulkMode">{{t "common.cancel"}}</button>
   </div>
   {{/if}}
 
@@ -170,11 +170,11 @@
   <div class="rpt-issue-list" id="rpt-issue-list">
     {{#each reportData.allIssueGroups}}
     <div class="rpt-group rpt-group--collapsed" data-issue-group data-criterion="{{criterion}}" data-criterion-title="{{title}}" data-severity="{{#if errorCount}}error{{else}}{{#if warningCount}}warning{{else}}notice{{/if}}{{/if}}" data-regulatory="{{isRegulatory}}" data-template="{{hasTemplate}}" data-total-count="{{totalCount}}" data-error-count="{{errorCount}}" data-warning-count="{{warningCount}}" data-notice-count="{{noticeCount}}" data-page-count="{{pageCount}}">
-      <div class="rpt-group__header" onclick="rptToggleGroup(this)" role="button" tabindex="0" aria-expanded="false">
-        {{#if ../perm.issuesAssign}}{{#unless (issueAssignStatus ../assignedMap "" "" "" criterion)}}<input type="checkbox" class="rpt-bulk-cb" onclick="event.stopPropagation();rptBulkUpdate()" aria-label="Select {{criterion}}">{{/unless}}{{/if}}
+      <div class="rpt-group__header" data-action="rptToggleGroup" role="button" tabindex="0" aria-expanded="false">
+        {{#if ../perm.issuesAssign}}{{#unless (issueAssignStatus ../assignedMap "" "" "" criterion)}}<input type="checkbox" class="rpt-bulk-cb" data-action="rptBulkUpdate" aria-label="Select {{criterion}}">{{/unless}}{{/if}}
         <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
         {{#if wcagUrl}}
-          <a class="rpt-code rpt-wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{criterion}}</a>
+          <a class="rpt-code rpt-wcag-link" href="{{wcagUrl}}" target="_blank" rel="noopener" data-stop-propagation="true">{{criterion}}</a>
         {{else}}
           <span class="rpt-code">{{criterion}}</span>
         {{/if}}
@@ -187,7 +187,7 @@
         </div>
         {{#each regulations}}
           {{#if url}}
-            <a class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener" onclick="event.stopPropagation()">{{shortName}}</a>
+            <a class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}" href="{{url}}" target="_blank" rel="noopener" data-stop-propagation="true">{{shortName}}</a>
           {{else}}
             <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{shortName}}</span>
           {{/if}}
@@ -210,7 +210,7 @@
               {{#if ../../perm.issuesAssign}}
               {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
               {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
-              <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">{{t "reportDetail.assign"}}</button>
+              <button type="button" class="rpt-assign-btn" data-action="rptAssignIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-severity="{{type}}" data-wcag-criterion="{{wcagCriterion}}" data-wcag-title="{{wcagTitle}}" title="Assign this issue">{{t "reportDetail.assign"}}</button>
               {{/unless}}
               {{/if}}
             </div>
@@ -241,7 +241,7 @@
             {{#if ../../perm.issuesAssign}}
             {{{issueAssignStatus ../../assignedMap code selector message wcagCriterion}}}
             {{#unless (issueAssignStatus ../../assignedMap code selector message wcagCriterion)}}
-            <button type="button" class="rpt-assign-btn" onclick="rptAssignIssue(this, '{{code}}', '{{selector}}', '{{message}}', '{{type}}', '{{wcagCriterion}}', '{{wcagTitle}}')" title="Assign this issue">{{t "reportDetail.assign"}}</button>
+            <button type="button" class="rpt-assign-btn" data-action="rptAssignIssue" data-code="{{code}}" data-selector="{{selector}}" data-message="{{message}}" data-severity="{{type}}" data-wcag-criterion="{{wcagCriterion}}" data-wcag-title="{{wcagTitle}}" title="Assign this issue">{{t "reportDetail.assign"}}</button>
             {{/unless}}
             {{/if}}
           </div>
@@ -273,7 +273,7 @@
   <div class="rpt-issue-list">
     {{#each reportData.templateComponents}}
     <div class="rpt-group rpt-group--collapsed rpt-group--template">
-      <div class="rpt-group__header" onclick="rptToggleGroup(this)" role="button" tabindex="0" aria-expanded="false">
+      <div class="rpt-group__header" data-action="rptToggleGroup" role="button" tabindex="0" aria-expanded="false">
         <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
         <span class="rpt-component-tag">{{componentName}}</span>
         <span class="rpt-badge rpt-badge--neutral">{{issueCount}} {{t "reportDetail.issuesLabel"}}</span>
@@ -339,14 +339,14 @@
       class="rpt-search"
       placeholder="Search by URL&hellip;"
       aria-label="Search pages by URL"
-      oninput="rptSearchPages(this.value)"
+      data-action-input="rptSearchPages"
     />
   </div>
 
   <div id="rpt-page-list">
     {{#each reportData.pages}}
     <div class="rpt-page" data-url="{{url}}" data-issue-count="{{issueCount}}">
-      <div class="rpt-page__header" onclick="rptTogglePage(this)" role="button" tabindex="0" aria-expanded="false">
+      <div class="rpt-page__header" data-action="rptTogglePage" role="button" tabindex="0" aria-expanded="false">
         <span class="rpt-page__url">{{url}}</span>
         <div class="rpt-page__meta">
           {{#if issueCount}}
@@ -472,9 +472,9 @@
 
 {{/if}}
 
-<script>window.__luqenAssignees = {{{json assignees}}};</script>
+<script nonce="{{cspNonce}}">window.__luqenAssignees = {{{json assignees}}};</script>
 
-<script>
+<script nonce="{{cspNonce}}">
   /* ── Tab switching ──────────────────────────────────────────────────────── */
   function rptSwitchTab(tab) {
     if (!document.getElementById('panel-' + tab)) return;

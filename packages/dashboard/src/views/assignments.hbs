@@ -1,6 +1,6 @@
 {{! Issue Assignments — lifecycle tracking for WCAG issues }}
 
-<script>window.__luqenAssignees = {{{json assignees}}};</script>
+<script nonce="{{cspNonce}}">window.__luqenAssignees = {{{json assignees}}};</script>
 
 <section aria-labelledby="asgn-heading" class="report-meta" style="margin-bottom:1.5rem;">
   <div class="detail-list detail-list--horizontal">
@@ -50,31 +50,31 @@
 
 {{! Filter buttons }}
 <div class="asgn-filters" role="group" aria-label="Filter assignments by status">
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'all')}} asgn-filter--active{{/if}}" onclick="asgnFilter('all',this)">{{t "assignments.filterAll"}} ({{stats.total}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'open')}} asgn-filter--active{{/if}}" onclick="asgnFilter('open',this)">{{t "assignments.open"}} ({{stats.open}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'assigned')}} asgn-filter--active{{/if}}" onclick="asgnFilter('assigned',this)">{{t "assignments.assigned"}} ({{stats.assigned}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'in-progress')}} asgn-filter--active{{/if}}" onclick="asgnFilter('in-progress',this)">{{t "assignments.inProgress"}} ({{stats.inProgress}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'fixed')}} asgn-filter--active{{/if}}" onclick="asgnFilter('fixed',this)">{{t "assignments.fixed"}} ({{stats.fixed}})</button>
-  <button type="button" class="asgn-filter{{#if (eq activeFilter 'verified')}} asgn-filter--active{{/if}}" onclick="asgnFilter('verified',this)">{{t "assignments.verified"}} ({{stats.verified}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'all')}} asgn-filter--active{{/if}}" data-action="asgnFilter" data-status="all">{{t "assignments.filterAll"}} ({{stats.total}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'open')}} asgn-filter--active{{/if}}" data-action="asgnFilter" data-status="open">{{t "assignments.open"}} ({{stats.open}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'assigned')}} asgn-filter--active{{/if}}" data-action="asgnFilter" data-status="assigned">{{t "assignments.assigned"}} ({{stats.assigned}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'in-progress')}} asgn-filter--active{{/if}}" data-action="asgnFilter" data-status="in-progress">{{t "assignments.inProgress"}} ({{stats.inProgress}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'fixed')}} asgn-filter--active{{/if}}" data-action="asgnFilter" data-status="fixed">{{t "assignments.fixed"}} ({{stats.fixed}})</button>
+  <button type="button" class="asgn-filter{{#if (eq activeFilter 'verified')}} asgn-filter--active{{/if}}" data-action="asgnFilter" data-status="verified">{{t "assignments.verified"}} ({{stats.verified}})</button>
 </div>
 
 {{! Bulk actions bar }}
 <div class="asgn-bulk-bar" id="asgn-bulk-bar" style="display:none;">
-  <label><input type="checkbox" id="asgn-bulk-select-all" onchange="asgnBulkToggleAll(this.checked)"> {{t "assignments.selectAllVisible"}}</label>
+  <label><input type="checkbox" id="asgn-bulk-select-all" data-action-change="asgnBulkToggleAll"> {{t "assignments.selectAllVisible"}}</label>
   <span id="asgn-bulk-count">0 {{t "assignments.selected"}}</span>
   <select id="asgn-bulk-assignee" class="asgn-select"></select>
-  <button type="button" class="btn btn--primary btn--sm" onclick="asgnBulkReassign()">{{t "assignments.reassign"}}</button>
-  <button type="button" class="btn btn--ghost btn--sm" style="color:var(--status-error)" onclick="asgnBulkRemove()">{{t "assignments.remove"}}</button>
-  <button type="button" class="btn btn--ghost btn--sm" onclick="asgnToggleBulkMode()">{{t "common.cancel"}}</button>
+  <button type="button" class="btn btn--primary btn--sm" data-action="asgnBulkReassign">{{t "assignments.reassign"}}</button>
+  <button type="button" class="btn btn--ghost btn--sm" style="color:var(--status-error)" data-action="asgnBulkRemove">{{t "assignments.remove"}}</button>
+  <button type="button" class="btn btn--ghost btn--sm" data-action="asgnToggleBulkMode">{{t "common.cancel"}}</button>
 </div>
-<button type="button" class="btn btn--ghost btn--sm" id="asgn-bulk-mode-btn" onclick="asgnToggleBulkMode()" style="margin-bottom:0.75rem;">{{t "assignments.bulkActions"}}</button>
+<button type="button" class="btn btn--ghost btn--sm" id="asgn-bulk-mode-btn" data-action="asgnToggleBulkMode" style="margin-bottom:0.75rem;">{{t "assignments.bulkActions"}}</button>
 
 {{! Assignment cards }}
 <div class="asgn-list" id="asgn-list">
   {{#each assignments}}
   <div class="asgn-card" id="asgn-card-{{id}}" data-status="{{status}}">
     <div class="asgn-card__header">
-      <input type="checkbox" class="asgn-bulk-cb" data-id="{{id}}" onclick="asgnBulkUpdate()" style="display:none;">
+      <input type="checkbox" class="asgn-bulk-cb" data-id="{{id}}" data-action="asgnBulkUpdate" style="display:none;">
       <span class="asgn-sev asgn-sev--{{severity}}">{{severity}}</span>
       {{#if wcagCriterion}}
       <span class="asgn-card__criterion">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
@@ -105,8 +105,8 @@
       <label class="asgn-label asgn-label--wide">{{t "assignments.notes"}}
         <textarea class="asgn-textarea" data-field="notes" rows="2" placeholder="{{t "assignments.notesPlaceholder"}}">{{notes}}</textarea>
       </label>
-      <button type="button" class="btn btn--sm btn--primary asgn-save-btn" onclick="asgnSave('{{id}}', this)">{{t "common.save"}}</button>
-      <button type="button" class="btn btn--sm btn--ghost asgn-delete-btn" onclick="asgnDelete('{{id}}', this)" title="Remove assignment">{{t "assignments.remove"}}</button>
+      <button type="button" class="btn btn--sm btn--primary asgn-save-btn" data-action="asgnSave" data-id="{{id}}">{{t "common.save"}}</button>
+      <button type="button" class="btn btn--sm btn--ghost asgn-delete-btn" data-action="asgnDelete" data-id="{{id}}" title="Remove assignment">{{t "assignments.remove"}}</button>
     </div>
     <div class="asgn-card__meta">
       {{t "assignments.createdBy"}} {{createdBy}} &middot; {{t "assignments.updated"}} {{updatedAt}}
@@ -119,7 +119,7 @@
   {{/unless}}
 </div>
 
-<script>
+<script nonce="{{cspNonce}}">
   /* Filter assignments client-side by status */
   function asgnFilter(status, btn) {
     var cards = document.querySelectorAll('.asgn-card');

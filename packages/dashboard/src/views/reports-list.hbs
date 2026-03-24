@@ -50,7 +50,7 @@
         id="compare-btn"
         class="btn btn--sm btn--ghost"
         disabled
-        onclick="cmpNavigate()"
+        data-action="cmpNavigate"
         aria-label="Compare two selected reports"
       >{{t "common.compare"}}</button>
 
@@ -98,7 +98,7 @@
               type="checkbox"
               class="cmp-check"
               value="{{id}}"
-              onchange="cmpUpdateBtn()"
+              data-action-change="cmpUpdateBtn"
               aria-label="Select report for {{siteUrl}} for comparison"
             >
             {{/if}}
@@ -195,7 +195,7 @@
   {{/if}}
 </div>
 
-<script>
+<script nonce="{{cspNonce}}">
   function cmpUpdateBtn() {
     var checked = document.querySelectorAll('.cmp-check:checked');
     var btn = document.getElementById('compare-btn');

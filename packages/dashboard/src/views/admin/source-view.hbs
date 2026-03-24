@@ -37,7 +37,7 @@
               hx-target="#source-{{source.id}}"
               hx-swap="outerHTML swap:500ms"
               class="btn btn--danger"
-              onclick="setTimeout(function(){closeModal()},600)">
+              data-action="closeModalDelayed">
         {{t "admin.sources.removeSource"}}
       </button>
       {{else}}

@@ -44,11 +44,11 @@
 
 {{! ── Filter buttons ─────────────────────────────────────────────────── }}
 <div class="mt-filters" role="group" aria-label="Filter criteria by status">
-  <button type="button" class="mt-filter mt-filter--active" onclick="mtFilter('all',this)">{{t "manualTests.filterAll"}}</button>
-  <button type="button" class="mt-filter" onclick="mtFilter('untested',this)">{{t "manualTests.filterUntested"}}</button>
-  <button type="button" class="mt-filter" onclick="mtFilter('pass',this)">{{t "manualTests.filterPass"}}</button>
-  <button type="button" class="mt-filter" onclick="mtFilter('fail',this)">{{t "manualTests.filterFail"}}</button>
-  <button type="button" class="mt-filter" onclick="mtFilter('na',this)">{{t "manualTests.filterNa"}}</button>
+  <button type="button" class="mt-filter mt-filter--active" data-action="mtFilter" data-status="all">{{t "manualTests.filterAll"}}</button>
+  <button type="button" class="mt-filter" data-action="mtFilter" data-status="untested">{{t "manualTests.filterUntested"}}</button>
+  <button type="button" class="mt-filter" data-action="mtFilter" data-status="pass">{{t "manualTests.filterPass"}}</button>
+  <button type="button" class="mt-filter" data-action="mtFilter" data-status="fail">{{t "manualTests.filterFail"}}</button>
+  <button type="button" class="mt-filter" data-action="mtFilter" data-status="na">{{t "manualTests.filterNa"}}</button>
 </div>
 
 {{! ── Manual-only criteria ──────────────────────────────────────────── }}
@@ -68,7 +68,7 @@
         </span>
         <strong>{{id}}</strong> &mdash; {{title}}
         <span class="mt-level mt-level--{{level}}">{{level}}</span>
-        <button type="button" class="mt-toggle" onclick="mtToggle(this)" aria-label="Toggle details" aria-expanded="false">&#9660;</button>
+        <button type="button" class="mt-toggle" data-action="mtToggle" aria-label="Toggle details" aria-expanded="false">&#9660;</button>
       </div>
       <div class="mt-criterion__body mt-criterion__body--collapsed">
         <p class="mt-instructions">{{testInstructions}}</p>
@@ -103,9 +103,9 @@
         </details>
         {{/if}}
         <div class="mt-actions">
-          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">{{t "manualTests.pass"}}</button>
-          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">{{t "manualTests.fail"}}</button>
-          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','na',this)">{{t "manualTests.na"}}</button>
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
         </div>
         <div class="mt-notes-wrap">
           <label for="mt-notes-{{id}}">{{t "manualTests.notes"}}</label>
@@ -137,7 +137,7 @@
         </span>
         <strong>{{id}}</strong> &mdash; {{title}}
         <span class="mt-level mt-level--{{level}}">{{level}}</span>
-        <button type="button" class="mt-toggle" onclick="mtToggle(this)" aria-label="Toggle details" aria-expanded="false">&#9660;</button>
+        <button type="button" class="mt-toggle" data-action="mtToggle" aria-label="Toggle details" aria-expanded="false">&#9660;</button>
       </div>
       <div class="mt-criterion__body mt-criterion__body--collapsed">
         <p class="mt-instructions">{{testInstructions}}</p>
@@ -172,9 +172,9 @@
         </details>
         {{/if}}
         <div class="mt-actions">
-          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','pass',this)">{{t "manualTests.pass"}}</button>
-          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','fail',this)">{{t "manualTests.fail"}}</button>
-          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" onclick="mtSave('{{../scan.id}}','{{id}}','na',this)">{{t "manualTests.na"}}</button>
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
         </div>
         <div class="mt-notes-wrap">
           <label for="mt-notes-{{id}}">{{t "manualTests.notes"}}</label>
@@ -189,7 +189,7 @@
   </div>
 </section>
 
-<script>
+<script nonce="{{cspNonce}}">
   /* ── Toggle expand/collapse ──────────────────────────────────────────── */
   function mtToggle(btn) {
     var body = btn.closest('.mt-criterion__header').nextElementSibling;

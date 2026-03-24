@@ -76,8 +76,8 @@
 <body>
 
 <div class="print-bar">
-  <button class="print-btn" onclick="window.print()">{{t "reportPrint.printSaveAsPdf"}}</button>
-  <button class="print-btn print-btn--secondary" onclick="window.close()">{{t "reportPrint.close"}}</button>
+  <button class="print-btn" data-action="printPage">{{t "reportPrint.printSaveAsPdf"}}</button>
+  <button class="print-btn print-btn--secondary" data-action="closeWindow">{{t "reportPrint.close"}}</button>
 </div>
 
 <h1>{{t "reportPrint.heading"}}</h1>
@@ -224,5 +224,6 @@
   {{t "reportPrint.generatedBy"}} &middot; {{scan.createdAtDisplay}}
 </div>
 
+<script src="/static/app.js"></script>
 </body>
 </html>
