@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter, Organization } from '../../db/index.js';
 import { deleteOrgData } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
-import { getToken, toastHtml } from './helpers.js';
+import { getToken, toastHtml, escapeHtml } from './helpers.js';
 
 function orgRowHtml(org: Organization): string {
   return `<tr id="org-${org.id}">
