@@ -321,19 +321,21 @@ export async function dashboardUserRoutes(
       }
 
       const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const csrfToken = reply.generateCsrf();
 
       return reply
         .code(200)
         .header('content-type', 'text/html')
-        .send(`<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+        .send(`<div class="modal-overlay">
   <div class="modal" role="dialog" aria-labelledby="reset-pw-title" aria-modal="true">
     <div class="modal__header">
       <h2 id="reset-pw-title" class="modal__title">Reset Password — ${esc(user.username)}</h2>
-      <button class="modal__close close-modal-btn" aria-label="Close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
     </div>
     <form hx-post="/admin/dashboard-users/${encodeURIComponent(id)}/reset-password"
           hx-target="#modal-container"
           hx-swap="innerHTML">
+      <input type="hidden" name="_csrf" value="${esc(csrfToken)}">
       <div class="modal__body">
         <div class="form-group">
           <label for="newPassword">New Password <span class="required" aria-hidden="true">*</span></label>
@@ -346,7 +348,7 @@ export async function dashboardUserRoutes(
         </div>
       </div>
       <div class="modal__footer">
-        <button type="button" class="btn btn--ghost close-modal-btn" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button type="button" class="btn btn--ghost close-modal-btn">Cancel</button>
         <button type="submit" class="btn btn--primary">Reset Password</button>
       </div>
     </form>
@@ -395,10 +397,11 @@ export async function dashboardUserRoutes(
 
       try {
         await storage.users.updatePassword(id, body.newPassword);
+        // Close modal via script + show toast
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(`${toastHtml(`Password reset successfully for "${user.username}".`)}`);
+          .send(`<script>document.getElementById('modal-container').replaceChildren();</script>${toastHtml(`Password reset successfully for "${user.username}".`)}`);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to reset password';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
