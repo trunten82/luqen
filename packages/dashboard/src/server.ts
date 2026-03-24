@@ -156,6 +156,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await server.register(import('@fastify/helmet'), {
     enableCSPNonces: true,
     contentSecurityPolicy: {
+      useDefaults: false,
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", 'cdn.jsdelivr.net'],
@@ -164,7 +165,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         connectSrc: ["'self'"],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
         frameAncestors: ["'none'"],
+        upgradeInsecureRequests: [],
       },
     },
     frameguard: { action: 'deny' },

@@ -37,11 +37,13 @@ export async function reportRoutes(
       const q = query.q?.trim();
       const status = query.status;
 
+      const orgId = request.user?.currentOrgId ?? 'system';
       const scans = await storage.scans.listScans({
         ...(q !== undefined && q !== '' ? { siteUrl: q } : {}),
         ...(status !== undefined && status !== '' && status !== 'all'
           ? { status: status as 'queued' | 'running' | 'completed' | 'failed' }
           : {}),
+        orgId,
         offset,
         limit: limit + 1, // fetch one extra to detect if there's a next page
       });
