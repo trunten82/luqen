@@ -263,10 +263,13 @@ export async function organizationRoutes(
         const username = user?.username ?? userId;
         await storage.organizations.removeMember(id, userId);
 
+        // Add user back to the "available users" dropdown via OOB swap
+        const optionHtml = `<option value="${escapeHtml(userId)}" hx-swap-oob="beforeend:#add-member-user">${escapeHtml(username)}</option>`;
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(toastHtml(`${username} removed from organization.`));
+          .send(`${optionHtml}\n${toastHtml(`${username} removed from organization.`)}`);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to remove member';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
