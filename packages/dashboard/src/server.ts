@@ -1,6 +1,7 @@
 import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { join, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { DashboardConfig } from './config.js';
 import { registerSession } from './auth/session.js';
@@ -153,13 +154,19 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Security Headers (helmet) ────────────────────────────────────────────
+  // Generate a per-request script nonce manually instead of using
+  // enableCSPNonces (which also adds a style nonce that breaks
+  // unsafe-inline per CSP spec).
+  server.addHook('onRequest', async (_request, reply) => {
+    const nonce = randomBytes(16).toString('hex');
+    (reply as unknown as Record<string, unknown>)['cspNonce'] = { script: nonce };
+  });
   await server.register(import('@fastify/helmet'), {
-    enableCSPNonces: true,
     contentSecurityPolicy: {
       useDefaults: false,
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", 'cdn.jsdelivr.net'],
+        scriptSrc: ["'self'", 'cdn.jsdelivr.net', (_, res) => `'nonce-${((res as unknown as Record<string, { script: string }>).cspNonce?.script ?? '')}'`],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:'],
         connectSrc: ["'self'"],
