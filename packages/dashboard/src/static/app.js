@@ -34,24 +34,30 @@
   /* ── Modal ─────────────────────────────────────────────────────────── */
   function closeModal() {
     var c = document.getElementById('modal-container');
-    if (c) { while (c.firstChild) c.removeChild(c.firstChild); }
+    if (c) { c.replaceChildren(); }
+    /* Ensure body scroll is restored (sidebar may have locked it) */
+    var sidebar = document.getElementById('sidebar');
+    if (!sidebar || !sidebar.classList.contains('is-open')) {
+      document.body.style.overflow = '';
+    }
   }
 
-  /* Close modal on overlay/cancel/close click — use MutationObserver to
-     bind handlers on dynamically loaded modal elements (from HTMX). */
-  var modalContainer = document.getElementById('modal-container');
-  if (modalContainer) {
-    new MutationObserver(function () {
-      var c = document.getElementById('modal-container');
-      if (!c) return;
-      c.querySelectorAll('.modal-overlay').forEach(function (el) {
-        if (!el._bound) { el._bound = true; el.addEventListener('click', function (e) { if (e.target === el) closeModal(); }); }
-      });
-      c.querySelectorAll('.close-modal-btn, .modal__close').forEach(function (el) {
-        if (!el._bound) { el._bound = true; el.addEventListener('click', function () { closeModal(); }); }
-      });
-    }).observe(modalContainer, { childList: true, subtree: true });
-  }
+  /* Close modal on overlay/cancel/close click — use event delegation
+     on the modal container so dynamically loaded HTMX content is covered. */
+  document.addEventListener('click', function (e) {
+    var mc = document.getElementById('modal-container');
+    if (!mc || !mc.hasChildNodes()) return;
+    /* Click on overlay background (not the modal box itself) */
+    if (e.target.classList && e.target.classList.contains('modal-overlay')) {
+      closeModal();
+      return;
+    }
+    /* Click on cancel / close buttons */
+    if (e.target.closest && e.target.closest('.close-modal-btn, .modal__close')) {
+      closeModal();
+      return;
+    }
+  });
 
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
 
