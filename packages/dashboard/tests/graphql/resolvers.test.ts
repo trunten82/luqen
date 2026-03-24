@@ -662,7 +662,7 @@ describe('GraphQL resolvers', () => {
 
       expect(ctx.storage.scans.createScan).toHaveBeenCalledWith(expect.objectContaining({
         id: 'test-uuid-1234',
-        siteUrl: 'http://test.com',
+        siteUrl: 'http://test.com/',
         standard: 'WCAG2AA',
         jurisdictions: [],
         createdBy: 'testuser',

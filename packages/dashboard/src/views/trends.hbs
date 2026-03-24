@@ -7,19 +7,40 @@
   </div>
 
   {{#if hasTrends}}
+  {{! ── KPI Summary Cards ─────────────────────────────────────────── }}
+  <section aria-labelledby="kpi-heading" class="mb-lg">
+    <div class="trends-kpi-grid" role="region" aria-label="{{t "trends.kpiLabel"}}">
+      <div class="card trends-kpi-card">
+        <div class="trends-kpi-card__value">{{kpi.totalSites}}</div>
+        <div class="trends-kpi-card__label">{{t "trends.sitesMonitored"}}</div>
+      </div>
+      <div class="card trends-kpi-card">
+        <div class="trends-kpi-card__value">{{kpi.totalScans}}</div>
+        <div class="trends-kpi-card__label">{{t "trends.totalScans"}}</div>
+      </div>
+      <div class="card trends-kpi-card">
+        <div class="trends-kpi-card__value {{orgScoreClass}}">{{orgScore}}</div>
+        <div class="trends-kpi-card__label">{{t "trends.accessibilityScore"}}</div>
+      </div>
+      <div class="card trends-kpi-card">
+        {{#if kpi.overallChangePct}}
+        <div class="trends-kpi-card__value {{kpiDirectionClass}}">{{kpi.overallChangePct}}%</div>
+        {{else}}
+        <div class="trends-kpi-card__value text--muted">&mdash;</div>
+        {{/if}}
+        <div class="trends-kpi-card__label">{{t "trends.overallChange"}}</div>
+        <div class="trends-kpi-card__sub {{kpiDirectionClass}}">{{kpiDirectionLabel}}</div>
+      </div>
+    </div>
+  </section>
+
   {{! ── Organization Overview ─────────────────────────────────────── }}
   <section aria-labelledby="org-overview-heading" class="mb-lg">
     <h3 id="org-overview-heading" class="section-title">{{t "trends.orgOverview"}}</h3>
 
-    <div class="card mb-lg" style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap;padding:1.5rem;">
-      <div style="text-align:center;min-width:120px;">
-        <div class="{{orgScoreClass}}" style="font-size:3rem;font-weight:700;line-height:1;">{{orgScore}}</div>
-        <div class="text--muted" style="font-size:0.875rem;margin-top:0.25rem;">{{t "trends.accessibilityScore"}}</div>
-      </div>
-      <div style="flex:1;min-width:300px;">
-        <div class="trends-chart-container" style="height:200px;">
-          <canvas id="org-trends-chart" aria-label="Organization-wide issue trends chart" role="img"></canvas>
-        </div>
+    <div class="card mb-lg">
+      <div class="trends-chart-container" style="height:280px;">
+        <canvas id="org-trends-chart" aria-label="Organization-wide issue trends chart" role="img"></canvas>
       </div>
     </div>
 
@@ -153,46 +174,117 @@
   var orgTotals = {{{json orgTotals}}};
 
   (function () {
+    // ── Helpers ────────────────────────────────────────────────────
+    function formatDate(dateStr) {
+      return new Date(dateStr).toLocaleDateString(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric'
+      });
+    }
+
+    function pctChange(prev, cur) {
+      if (prev === 0) return cur > 0 ? '+100%' : '0%';
+      var pct = Math.round(((cur - prev) / prev) * 100);
+      return (pct > 0 ? '+' : '') + pct + '%';
+    }
+
+    // Generate per-point colors: green for decrease, red for increase, default otherwise
+    function trendPointColors(data, defaultColor) {
+      return data.map(function (val, i) {
+        if (i === 0) return defaultColor;
+        if (val < data[i - 1]) return '#1a7a3a';
+        if (val > data[i - 1]) return '#b91c1c';
+        return defaultColor;
+      });
+    }
+
+    function trendPointRadii(data) {
+      return data.map(function (val, i) {
+        if (i === 0) return 3;
+        return val !== data[i - 1] ? 5 : 3;
+      });
+    }
+
+    // Shared tooltip with percentage change from previous point
+    var tooltipWithChange = {
+      callbacks: {
+        afterLabel: function (context) {
+          var idx = context.dataIndex;
+          if (idx === 0) return '';
+          var prev = context.dataset.data[idx - 1];
+          var cur = context.dataset.data[idx];
+          return pctChange(prev, cur) + ' vs previous';
+        }
+      }
+    };
+
     // ── Org-wide trend chart ──────────────────────────────────────
     var orgCtx = document.getElementById('org-trends-chart');
     if (orgCtx && orgTotals.length > 0) {
+      var orgTotalIssues = orgTotals.map(function (p) { return p.totalIssues; });
+      var orgErrors = orgTotals.map(function (p) { return p.errors; });
+      var orgWarnings = orgTotals.map(function (p) { return p.warnings; });
+      var orgNotices = orgTotals.map(function (p) { return p.notices; });
+
       new Chart(orgCtx.getContext('2d'), {
         type: 'line',
         data: {
-          labels: orgTotals.map(function (p) { return p.date; }),
+          labels: orgTotals.map(function (p) { return formatDate(p.date); }),
           datasets: [
             {
+              label: '{{t "trends.total"}}',
+              data: orgTotalIssues,
+              borderColor: '#374151',
+              backgroundColor: 'rgba(55, 65, 81, 0.08)',
+              borderWidth: 2,
+              tension: 0.3,
+              fill: true,
+              pointBackgroundColor: trendPointColors(orgTotalIssues, '#374151'),
+              pointRadius: trendPointRadii(orgTotalIssues),
+              order: 1
+            },
+            {
               label: '{{t "trends.errors"}}',
-              data: orgTotals.map(function (p) { return p.errors; }),
+              data: orgErrors,
               borderColor: '#8b1a1a',
               backgroundColor: 'rgba(139, 26, 26, 0.1)',
               tension: 0.3,
-              fill: false
+              fill: false,
+              pointBackgroundColor: trendPointColors(orgErrors, '#8b1a1a'),
+              pointRadius: trendPointRadii(orgErrors),
+              order: 2
             },
             {
               label: '{{t "trends.warnings"}}',
-              data: orgTotals.map(function (p) { return p.warnings; }),
+              data: orgWarnings,
               borderColor: '#7a4f00',
               backgroundColor: 'rgba(122, 79, 0, 0.1)',
               tension: 0.3,
-              fill: false
+              fill: false,
+              pointBackgroundColor: trendPointColors(orgWarnings, '#7a4f00'),
+              pointRadius: trendPointRadii(orgWarnings),
+              order: 3
             },
             {
               label: '{{t "trends.notices"}}',
-              data: orgTotals.map(function (p) { return p.notices; }),
+              data: orgNotices,
               borderColor: '#00416a',
               backgroundColor: 'rgba(0, 65, 106, 0.1)',
               tension: 0.3,
-              fill: false
+              fill: false,
+              pointBackgroundColor: trendPointColors(orgNotices, '#00416a'),
+              pointRadius: trendPointRadii(orgNotices),
+              order: 4
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { position: 'top' },
-            title: { display: true, text: '{{t "trends.orgChartTitle"}}' }
+            title: { display: true, text: '{{t "trends.orgChartTitle"}}' },
+            tooltip: tooltipWithChange
           },
           scales: {
             y: { beginAtZero: true, title: { display: true, text: '{{t "trends.issueCount"}}' } },
@@ -211,12 +303,11 @@
       var site = trendData.find(function (t) { return t.siteUrl === siteUrl; });
       if (!site) return;
 
-      var labels = site.points.map(function (p) {
-        return new Date(p.date).toLocaleDateString();
-      });
+      var labels = site.points.map(function (p) { return formatDate(p.date); });
       var errors = site.points.map(function (p) { return p.errors; });
       var warnings = site.points.map(function (p) { return p.warnings; });
       var notices = site.points.map(function (p) { return p.notices; });
+      var totals = site.points.map(function (p) { return p.totalIssues; });
 
       if (chart) {
         chart.destroy();
@@ -228,12 +319,27 @@
           labels: labels,
           datasets: [
             {
+              label: '{{t "trends.total"}}',
+              data: totals,
+              borderColor: '#374151',
+              backgroundColor: 'rgba(55, 65, 81, 0.08)',
+              borderWidth: 2,
+              tension: 0.3,
+              fill: true,
+              pointBackgroundColor: trendPointColors(totals, '#374151'),
+              pointRadius: trendPointRadii(totals),
+              order: 1
+            },
+            {
               label: '{{t "trends.errors"}}',
               data: errors,
               borderColor: '#8b1a1a',
               backgroundColor: 'rgba(139, 26, 26, 0.1)',
               tension: 0.3,
-              fill: false
+              fill: false,
+              pointBackgroundColor: trendPointColors(errors, '#8b1a1a'),
+              pointRadius: trendPointRadii(errors),
+              order: 2
             },
             {
               label: '{{t "trends.warnings"}}',
@@ -241,7 +347,10 @@
               borderColor: '#7a4f00',
               backgroundColor: 'rgba(122, 79, 0, 0.1)',
               tension: 0.3,
-              fill: false
+              fill: false,
+              pointBackgroundColor: trendPointColors(warnings, '#7a4f00'),
+              pointRadius: trendPointRadii(warnings),
+              order: 3
             },
             {
               label: '{{t "trends.notices"}}',
@@ -249,35 +358,32 @@
               borderColor: '#00416a',
               backgroundColor: 'rgba(0, 65, 106, 0.1)',
               tension: 0.3,
-              fill: false
+              fill: false,
+              pointBackgroundColor: trendPointColors(notices, '#00416a'),
+              pointRadius: trendPointRadii(notices),
+              order: 4
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: {
-              position: 'top'
-            },
+            legend: { position: 'top' },
             title: {
               display: true,
-              text: '{{t "trends.siteChartTitle"}} — ' + siteUrl
-            }
+              text: '{{t "trends.siteChartTitle"}} \u2014 ' + siteUrl
+            },
+            tooltip: tooltipWithChange
           },
           scales: {
             y: {
               beginAtZero: true,
-              title: {
-                display: true,
-                text: '{{t "trends.issueCount"}}'
-              }
+              title: { display: true, text: '{{t "trends.issueCount"}}' }
             },
             x: {
-              title: {
-                display: true,
-                text: '{{t "trends.scanDate"}}'
-              }
+              title: { display: true, text: '{{t "trends.scanDate"}}' }
             }
           }
         }

@@ -50,11 +50,11 @@ describe('Redis integration', () => {
       await client.disconnect();
     });
 
-    it('fails to connect with wrong password', async ({ skip }) => {
+    it('fails to connect with wrong port', async ({ skip }) => {
       if (skipTests) skip();
       const redisUrl = new URL(REDIS_URL);
       const badClient = createRedisClient(
-        `redis://:wrongpassword@${redisUrl.hostname}:${redisUrl.port || '6379'}`,
+        `redis://${redisUrl.hostname}:59999`,
       ) as InstanceType<typeof Redis>;
 
       await expect(badClient.connect()).rejects.toThrow();

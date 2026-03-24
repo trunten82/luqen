@@ -6,24 +6,41 @@ import type { ScanRecord, EmailReport } from '../../src/db/types.js';
 // ---------------------------------------------------------------------------
 
 vi.mock('../../src/email/report-generator.js', () => ({
-  generateReportHtml: vi.fn(),
   generateIssuesCsv: vi.fn(),
   buildEmailBody: vi.fn().mockReturnValue('<html>email body</html>'),
 }));
 
 vi.mock('../../src/pdf/generator.js', () => ({
-  generateReportPdf: vi.fn(),
-  isPuppeteerAvailable: vi.fn().mockReturnValue(false),
+  generatePdfFromData: vi.fn().mockResolvedValue(Buffer.from('%PDF-fake')),
+}));
+
+vi.mock('../../src/services/report-service.js', () => ({
+  normalizeReportData: vi.fn().mockReturnValue({
+    summary: { pagesScanned: 10, totalIssues: 10, byLevel: { error: 5, warning: 3, notice: 2 } },
+    topActionItems: [],
+    complianceMatrix: null,
+    templateComponents: [],
+  }),
 }));
 
 vi.mock('../../src/email/sender.js', () => ({
   sendEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('node:fs/promises', () => ({
+  readFile: vi.fn().mockResolvedValue('{}'),
+}));
+
+vi.mock('node:fs', () => ({
+  existsSync: vi.fn().mockReturnValue(false),
+}));
+
 import { computeNextSendAt, processEmailReport, startEmailScheduler } from '../../src/email/scheduler.js';
-import { generateReportHtml, generateIssuesCsv, buildEmailBody } from '../../src/email/report-generator.js';
-import { generateReportPdf, isPuppeteerAvailable } from '../../src/pdf/generator.js';
+import { generateIssuesCsv, buildEmailBody } from '../../src/email/report-generator.js';
+import { generatePdfFromData } from '../../src/pdf/generator.js';
+import { normalizeReportData } from '../../src/services/report-service.js';
 import { sendEmail } from '../../src/email/sender.js';
+import { existsSync } from 'node:fs';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -71,6 +88,7 @@ function makeStorage(overrides: Record<string, unknown> = {}) {
   return {
     scans: {
       listScans: vi.fn().mockResolvedValue([makeScan()]),
+      getReport: vi.fn().mockResolvedValue({ summary: { pagesScanned: 10, totalIssues: 10 } }),
     },
     email: {
       getSmtpConfig: vi.fn().mockResolvedValue({
@@ -134,10 +152,15 @@ describe('computeNextSendAt', () => {
 describe('processEmailReport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(generateReportHtml).mockResolvedValue(null);
     vi.mocked(generateIssuesCsv).mockResolvedValue(null);
     vi.mocked(buildEmailBody).mockReturnValue('<html>email body</html>');
-    vi.mocked(isPuppeteerAvailable).mockReturnValue(false);
+    vi.mocked(generatePdfFromData).mockResolvedValue(Buffer.from('%PDF-fake'));
+    vi.mocked(normalizeReportData).mockReturnValue({
+      summary: { pagesScanned: 10, totalIssues: 10, byLevel: { error: 5, warning: 3, notice: 2 } },
+      topActionItems: [],
+      complianceMatrix: null,
+      templateComponents: [],
+    } as any);
   });
 
   it('skips when no completed scans exist', async () => {
@@ -203,51 +226,58 @@ describe('processEmailReport', () => {
     expect(nextMs).toBeLessThan(nowMs + 25 * 60 * 60 * 1000);
   });
 
-  it('attaches PDF when format is pdf and puppeteer is available', async () => {
-    vi.mocked(isPuppeteerAvailable).mockReturnValue(true);
-    vi.mocked(generateReportHtml).mockResolvedValue('<html>report</html>');
-    vi.mocked(generateReportPdf).mockResolvedValue(Buffer.from('fake-pdf'));
-
+  it('attaches PDF when format is pdf and report data is available', async () => {
     const storage = makeStorage();
     const report = makeReport({ format: 'pdf' });
 
     await processEmailReport(storage, report);
 
-    expect(generateReportPdf).toHaveBeenCalledTimes(1);
+    expect(normalizeReportData).toHaveBeenCalledTimes(1);
+    expect(generatePdfFromData).toHaveBeenCalledTimes(1);
     const call = vi.mocked(sendEmail).mock.calls[0][0];
     expect(call.attachments).toHaveLength(1);
     expect(call.attachments[0].filename).toContain('.pdf');
     expect(call.attachments[0].contentType).toBe('application/pdf');
   });
 
-  it('falls back to HTML attachment when puppeteer PDF generation fails', async () => {
-    vi.mocked(isPuppeteerAvailable).mockReturnValue(true);
-    vi.mocked(generateReportHtml).mockResolvedValue('<html>report</html>');
-    vi.mocked(generateReportPdf).mockRejectedValue(new Error('chromium crash'));
-
+  it('skips PDF when report data is not available (getReport returns null, file missing)', async () => {
     const storage = makeStorage();
+    storage.scans.getReport.mockResolvedValue(null);
+    vi.mocked(existsSync).mockReturnValue(false);
     const report = makeReport({ format: 'pdf' });
 
     await processEmailReport(storage, report);
 
+    expect(generatePdfFromData).not.toHaveBeenCalled();
     const call = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(call.attachments).toHaveLength(1);
-    expect(call.attachments[0].filename).toContain('.html');
-    expect(call.attachments[0].contentType).toBe('text/html');
+    expect(call.attachments).toHaveLength(0);
   });
 
-  it('attaches HTML when format is pdf but puppeteer is not available', async () => {
-    vi.mocked(isPuppeteerAvailable).mockReturnValue(false);
-    vi.mocked(generateReportHtml).mockResolvedValue('<html>report</html>');
+  it('falls back to file when getReport returns null but file exists', async () => {
+    const storage = makeStorage();
+    storage.scans.getReport.mockResolvedValue(null);
+    vi.mocked(existsSync).mockReturnValue(true);
+    const report = makeReport({ format: 'pdf' });
+
+    await processEmailReport(storage, report);
+
+    expect(normalizeReportData).toHaveBeenCalledTimes(1);
+    expect(generatePdfFromData).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns and skips PDF when generatePdfFromData throws', async () => {
+    vi.mocked(generatePdfFromData).mockRejectedValue(new Error('PDFKit error'));
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const storage = makeStorage();
     const report = makeReport({ format: 'pdf' });
 
     await processEmailReport(storage, report);
 
+    expect(consoleSpy).toHaveBeenCalled();
     const call = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(call.attachments).toHaveLength(1);
-    expect(call.attachments[0].filename).toContain('.html');
+    expect(call.attachments).toHaveLength(0);
+    consoleSpy.mockRestore();
   });
 
   it('attaches CSV when format is csv', async () => {
@@ -265,7 +295,6 @@ describe('processEmailReport', () => {
   });
 
   it('attaches both PDF and CSV when format is both', async () => {
-    vi.mocked(generateReportHtml).mockResolvedValue('<html>report</html>');
     vi.mocked(generateIssuesCsv).mockResolvedValue('csv-data');
 
     const storage = makeStorage();
@@ -286,14 +315,10 @@ describe('processEmailReport', () => {
     await processEmailReport(storage, report);
 
     const call = vi.mocked(sendEmail).mock.calls[0][0];
-    // HTML attachment (from pdf without puppeteer) won't appear since generateReportHtml returns null
-    // But CSV should be there
     expect(call.attachments.some((a: any) => a.contentType === 'text/csv')).toBe(true);
   });
 
   it('handles invalid site URL gracefully for hostname extraction', async () => {
-    vi.mocked(generateReportHtml).mockResolvedValue('<html>report</html>');
-
     const storage = makeStorage();
     storage.scans.listScans.mockResolvedValue([makeScan({ siteUrl: 'not-a-url' })]);
     const report = makeReport({ format: 'pdf' });
@@ -413,18 +438,6 @@ describe('processEmailReport', () => {
     expect(call.subject).toContain('0 issues (0 errors)');
   });
 
-  it('does not attach PDF when generateReportHtml returns null', async () => {
-    vi.mocked(generateReportHtml).mockResolvedValue(null);
-
-    const storage = makeStorage();
-    const report = makeReport({ format: 'pdf' });
-
-    await processEmailReport(storage, report);
-
-    const call = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(call.attachments).toHaveLength(0);
-  });
-
   it('does not attach CSV when generateIssuesCsv returns null', async () => {
     vi.mocked(generateIssuesCsv).mockResolvedValue(null);
 
@@ -435,6 +448,19 @@ describe('processEmailReport', () => {
 
     const call = vi.mocked(sendEmail).mock.calls[0][0];
     expect(call.attachments).toHaveLength(0);
+  });
+
+  it('passes scanMeta with correct fields to generatePdfFromData', async () => {
+    const storage = makeStorage();
+    const report = makeReport({ format: 'pdf' });
+
+    await processEmailReport(storage, report);
+
+    const [scanMeta] = vi.mocked(generatePdfFromData).mock.calls[0];
+    expect(scanMeta.siteUrl).toBe('https://example.com');
+    expect(scanMeta.standard).toBe('WCAG2AA');
+    expect(scanMeta.jurisdictions).toBe('EU');
+    expect(scanMeta.createdAtDisplay).toBeDefined();
   });
 });
 

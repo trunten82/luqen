@@ -595,7 +595,11 @@
     "siteChartTitle": "Issues Over Time",
     "issueCount": "Issue Count",
     "date": "Date",
-    "scanDate": "Scan Date"
+    "scanDate": "Scan Date",
+    "kpiLabel": "Trend key performance indicators",
+    "sitesMonitored": "Sites Monitored",
+    "totalScans": "Total Scans",
+    "overallChange": "Overall Change"
   },
   "bookmarklet": {
     "title": "Browser Bookmarklet",

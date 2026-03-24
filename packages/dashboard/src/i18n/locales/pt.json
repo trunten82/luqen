@@ -595,7 +595,11 @@
     "siteChartTitle": "Problemas ao Longo do Tempo",
     "issueCount": "Contagem de Problemas",
     "date": "Data",
-    "scanDate": "Data da Varredura"
+    "scanDate": "Data da Varredura",
+    "kpiLabel": "Indicadores de desempenho de tendências",
+    "sitesMonitored": "Sites Monitorados",
+    "totalScans": "Total de Varreduras",
+    "overallChange": "Mudança Geral"
   },
   "bookmarklet": {
     "title": "Bookmarklet do Navegador",

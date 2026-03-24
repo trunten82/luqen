@@ -595,7 +595,11 @@
     "siteChartTitle": "Problemas a lo Largo del Tiempo",
     "issueCount": "Número de Problemas",
     "date": "Fecha",
-    "scanDate": "Fecha de Escaneo"
+    "scanDate": "Fecha de Escaneo",
+    "kpiLabel": "Indicadores clave de tendencias",
+    "sitesMonitored": "Sitios Monitoreados",
+    "totalScans": "Escaneos Totales",
+    "overallChange": "Cambio General"
   },
   "bookmarklet": {
     "title": "Bookmarklet del Navegador",

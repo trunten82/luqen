@@ -1,4 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
+import { rmSync, existsSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { generateApiKey, storeApiKey } from '../../src/auth/api-key.js';
 import { AuthService } from '../../src/auth/auth-service.js';
@@ -11,10 +15,11 @@ import type { FastifyRequest } from 'fastify';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createStorage(): SqliteStorageAdapter {
-  const storage = new SqliteStorageAdapter(':memory:');
+function createStorage(): { storage: SqliteStorageAdapter; dbPath: string } {
+  const dbPath = join(tmpdir(), `test-auth-${randomUUID()}.db`);
+  const storage = new SqliteStorageAdapter(dbPath);
   void storage.migrate();
-  return storage;
+  return { storage, dbPath };
 }
 
 function mockPluginManager(
@@ -71,13 +76,20 @@ function fakeRequest(headers: Record<string, string> = {}, session: Record<strin
 
 describe('AuthService', () => {
   let storage: SqliteStorageAdapter;
+  let dbPath: string;
 
   beforeEach(() => {
-    storage = createStorage();
+    const created = createStorage();
+    storage = created.storage;
+    dbPath = created.dbPath;
   });
 
   afterEach(() => {
     void storage.disconnect();
+    if (existsSync(dbPath)) rmSync(dbPath);
+    // Also remove WAL/SHM files
+    if (existsSync(dbPath + '-wal')) rmSync(dbPath + '-wal');
+    if (existsSync(dbPath + '-shm')) rmSync(dbPath + '-shm');
   });
 
   // -------------------------------------------------------------------------

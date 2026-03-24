@@ -50,6 +50,17 @@ interface SiteScoreEntry {
   readonly scoreClass: string;
 }
 
+interface TrendKpi {
+  readonly totalSites: number;
+  readonly totalScans: number;
+  readonly overallChangePct: number | null;
+  readonly overallChangeDirection: 'improving' | 'regressing' | 'stable' | 'insufficient';
+  readonly bestSite: string | null;
+  readonly bestSiteChangePct: number | null;
+  readonly worstSite: string | null;
+  readonly worstSiteChangePct: number | null;
+}
+
 function groupBySite(scans: readonly ScanRecord[]): readonly SiteTrend[] {
   const siteMap = new Map<string, TrendPoint[]>();
 
@@ -172,6 +183,73 @@ function buildSiteScores(trends: readonly SiteTrend[]): readonly SiteScoreEntry[
   return entries;
 }
 
+function buildKpi(
+  scans: readonly ScanRecord[],
+  trends: readonly SiteTrend[],
+): TrendKpi {
+  const totalSites = trends.length;
+  const totalScans = scans.length;
+
+  // Compute per-site percentage change in total issues (latest vs previous)
+  const siteChanges: Array<{ siteUrl: string; changePct: number }> = [];
+
+  for (const site of trends) {
+    const pts = site.points;
+    if (pts.length < 2) continue;
+
+    const latest = pts[pts.length - 1];
+    const previous = pts[pts.length - 2];
+    const prevTotal = previous.totalIssues;
+
+    if (prevTotal === 0) {
+      // Avoid division by zero; treat as 100% increase if latest > 0
+      if (latest.totalIssues > 0) {
+        siteChanges.push({ siteUrl: site.siteUrl, changePct: 100 });
+      } else {
+        siteChanges.push({ siteUrl: site.siteUrl, changePct: 0 });
+      }
+    } else {
+      const pct = Math.round(((latest.totalIssues - prevTotal) / prevTotal) * 100);
+      siteChanges.push({ siteUrl: site.siteUrl, changePct: pct });
+    }
+  }
+
+  if (siteChanges.length === 0) {
+    return {
+      totalSites,
+      totalScans,
+      overallChangePct: null,
+      overallChangeDirection: 'insufficient',
+      bestSite: null,
+      bestSiteChangePct: null,
+      worstSite: null,
+      worstSiteChangePct: null,
+    };
+  }
+
+  const avgChange = Math.round(
+    siteChanges.reduce((sum, s) => sum + s.changePct, 0) / siteChanges.length,
+  );
+
+  const sorted = [...siteChanges].sort((a, b) => a.changePct - b.changePct);
+  const best = sorted[0]; // Most negative = most improved
+  const worst = sorted[sorted.length - 1]; // Most positive = most regressed
+
+  const direction: TrendKpi['overallChangeDirection'] =
+    avgChange < 0 ? 'improving' : avgChange > 0 ? 'regressing' : 'stable';
+
+  return {
+    totalSites,
+    totalScans,
+    overallChangePct: avgChange,
+    overallChangeDirection: direction,
+    bestSite: best.siteUrl,
+    bestSiteChangePct: best.changePct,
+    worstSite: worst.siteUrl,
+    worstSiteChangePct: worst.changePct,
+  };
+}
+
 function buildSummaryTable(trends: readonly SiteTrend[]): readonly SiteSummaryRow[] {
   const rows: SiteSummaryRow[] = [];
 
@@ -236,6 +314,7 @@ export async function trendRoutes(
       const orgTotals = buildOrgTotals(scans);
       const orgScore = computeOrgScore(scans);
       const siteScores = buildSiteScores(trends);
+      const kpi = buildKpi(scans, trends);
 
       const orgScoreClass = orgScore > 80 ? 'text--success' : orgScore >= 50 ? 'text--warning' : 'text--error';
 
@@ -286,6 +365,19 @@ export async function trendRoutes(
         })),
         siteUrls,
         hasTrends: trends.length > 0,
+        kpi,
+        kpiDirectionClass: kpi.overallChangeDirection === 'improving'
+          ? 'text--success'
+          : kpi.overallChangeDirection === 'regressing'
+            ? 'text--error'
+            : 'text--muted',
+        kpiDirectionLabel: kpi.overallChangeDirection === 'improving'
+          ? 'Improving'
+          : kpi.overallChangeDirection === 'regressing'
+            ? 'Regressing'
+            : kpi.overallChangeDirection === 'stable'
+              ? 'Stable'
+              : 'N/A',
       });
     },
   );

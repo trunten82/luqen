@@ -5,7 +5,7 @@ import type { StorageAdapter } from '../../db/index.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
 import { generatePdfFromData } from '../../pdf/generator.js';
 import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
-import { normalizeReportData } from '../../services/report-service.js';
+import { normalizeReportData, inferComponent } from '../../services/report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
 
@@ -176,31 +176,12 @@ export async function exportRoutes(
         return reply.code(500).send({ error: 'Failed to read report data' });
       }
 
-      // Build issue annotation lookup
-      const issueAnnotations: Record<string, Array<{ shortName: string }>> = {};
-      if (raw.compliance?.issueAnnotations) {
-        for (const [code, regs] of Object.entries(raw.compliance.issueAnnotations)) {
-          issueAnnotations[code] = [...regs];
-        }
-      } else if (raw.compliance?.annotatedIssues) {
-        for (const ai of raw.compliance.annotatedIssues) {
-          if (ai.regulations && ai.regulations.length > 0) {
-            const existing = issueAnnotations[ai.code] ?? [];
-            const existingNames = new Set(existing.map((r) => r.shortName));
-            const newRegs = ai.regulations
-              .filter((r) => !existingNames.has(r.shortName))
-              .map((r) => ({ shortName: r.shortName }));
-            issueAnnotations[ai.code] = [...existing, ...newRegs];
-          }
-        }
-      }
+      // Use normalizeReportData as single source of truth for enriched
+      // issues (includes WCAG metadata, regulation annotations, etc.)
+      const normalized = normalizeReportData(raw as JsonReportFile, scan);
 
-      // Flatten all pages into rows
-      const pages: readonly ExportPage[] = raw.pages ?? (
-        raw.issues && raw.issues.length > 0
-          ? [{ url: raw.siteUrl ?? scan.siteUrl, issues: raw.issues }]
-          : []
-      );
+      // Flatten all pages into rows (enriched pages have regulations attached)
+      const pages = normalized.pages;
 
       // Build page occurrence counts per issue code for "Affected Pages" column
       const issuePageCounts = new Map<string, number>();
@@ -239,8 +220,8 @@ export async function exportRoutes(
           const wcag = criterion ? getWcagDescription(criterion) : null;
           const title = issue.wcagTitle ?? wcag?.title ?? '';
 
-          // Regulations from issue itself or from annotations
-          const regs = issue.regulations ?? issueAnnotations[issue.code] ?? [];
+          // Regulations from enriched issue (normalizeReportData merges annotations)
+          const regs = issue.regulations ?? [];
           const regNames = regs.map((r) => r.shortName).join('; ');
 
           // Infer component from selector + context
@@ -257,7 +238,7 @@ export async function exportRoutes(
           const priority = priorityNum >= 5 ? 'Critical' : priorityNum >= 4 ? 'High' : priorityNum >= 3 ? 'Medium' : 'Low';
 
           // Suggested fix from fix engine or generate from WCAG reference
-          const fixSuggestion = issue.fixSuggestion
+          const fixSuggestion = (issue as Record<string, unknown>).fixSuggestion as string | undefined
             ?? (wcag ? `Refer to WCAG ${criterion}: ${wcag.title} — ${wcag.url ?? ''}` : '');
 
           rows.push([

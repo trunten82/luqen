@@ -211,7 +211,7 @@ describe('Scan Routes', () => {
 
       expect(response.statusCode).toBe(400);
       const body = response.json() as { error: string };
-      expect(body.error).toContain('siteUrl');
+      expect(body.error).toContain('Please enter a URL to scan');
     });
 
     it('returns 400 when siteUrl is empty string', async () => {

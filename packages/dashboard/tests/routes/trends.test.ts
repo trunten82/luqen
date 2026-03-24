@@ -213,5 +213,96 @@ describe('Trend Routes', () => {
       // Route itself does not return 403 — it renders the page regardless
       expect(response.statusCode).toBe(200);
     });
+
+    it('includes kpi data with site and scan counts', async () => {
+      await makeScan(ctx, { siteUrl: 'https://a.com', status: 'completed', errors: 5, warnings: 3, notices: 1, totalIssues: 9 });
+      await makeScan(ctx, { siteUrl: 'https://b.com', status: 'completed', errors: 2, warnings: 1, notices: 0, totalIssues: 3 });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: '/reports/trends',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as {
+        data: {
+          kpi: {
+            totalSites: number;
+            totalScans: number;
+            overallChangeDirection: string;
+          };
+          kpiDirectionClass: string;
+          kpiDirectionLabel: string;
+        };
+      };
+      expect(body.data.kpi.totalSites).toBe(2);
+      expect(body.data.kpi.totalScans).toBe(2);
+      // Only one scan per site, so insufficient data for change
+      expect(body.data.kpi.overallChangeDirection).toBe('insufficient');
+    });
+
+    it('computes kpi improvement when issues decrease', async () => {
+      // First scan for site — baseline
+      await makeScan(ctx, { siteUrl: 'https://improving.com', status: 'completed', errors: 10, warnings: 5, notices: 2, totalIssues: 17 });
+      // Second scan for same site — issues decreased
+      await makeScan(ctx, { siteUrl: 'https://improving.com', status: 'completed', errors: 4, warnings: 2, notices: 1, totalIssues: 7 });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: '/reports/trends',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as {
+        data: {
+          kpi: {
+            totalSites: number;
+            totalScans: number;
+            overallChangePct: number;
+            overallChangeDirection: string;
+            bestSite: string;
+            bestSiteChangePct: number;
+          };
+          kpiDirectionClass: string;
+          kpiDirectionLabel: string;
+        };
+      };
+      expect(body.data.kpi.totalSites).toBe(1);
+      expect(body.data.kpi.totalScans).toBe(2);
+      expect(body.data.kpi.overallChangePct).toBeLessThan(0);
+      expect(body.data.kpi.overallChangeDirection).toBe('improving');
+      expect(body.data.kpiDirectionClass).toBe('text--success');
+      expect(body.data.kpiDirectionLabel).toBe('Improving');
+      expect(body.data.kpi.bestSite).toBe('https://improving.com');
+    });
+
+    it('computes kpi regression when issues increase', async () => {
+      await makeScan(ctx, { siteUrl: 'https://regressing.com', status: 'completed', errors: 2, warnings: 1, notices: 0, totalIssues: 3 });
+      await makeScan(ctx, { siteUrl: 'https://regressing.com', status: 'completed', errors: 8, warnings: 5, notices: 2, totalIssues: 15 });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: '/reports/trends',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as {
+        data: {
+          kpi: {
+            overallChangePct: number;
+            overallChangeDirection: string;
+            worstSite: string;
+            worstSiteChangePct: number;
+          };
+          kpiDirectionClass: string;
+          kpiDirectionLabel: string;
+        };
+      };
+      expect(body.data.kpi.overallChangePct).toBeGreaterThan(0);
+      expect(body.data.kpi.overallChangeDirection).toBe('regressing');
+      expect(body.data.kpiDirectionClass).toBe('text--error');
+      expect(body.data.kpiDirectionLabel).toBe('Regressing');
+      expect(body.data.kpi.worstSite).toBe('https://regressing.com');
+    });
   });
 });

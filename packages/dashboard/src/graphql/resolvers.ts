@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto';
 import type { StorageAdapter, ScanRecord } from '../db/index.js';
 import { VERSION } from '../version.js';
 import { validatePassword, validateUsername } from '../validation.js';
+import { validateScanUrl, VALID_STANDARDS } from '../services/scan-service.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -368,13 +369,25 @@ export const resolvers = {
     ) => {
       requirePerm(ctx, 'scans.create');
 
+      // SSRF protection: validate URL before creating scan
+      const urlResult = validateScanUrl(args.input.siteUrl);
+      if ('error' in urlResult) {
+        throw new Error(urlResult.error);
+      }
+
+      // Validate standard
+      const standard = args.input.standard ?? 'WCAG2AA';
+      if (!(VALID_STANDARDS as readonly string[]).includes(standard)) {
+        throw new Error(`standard must be one of: ${VALID_STANDARDS.join(', ')}`);
+      }
+
       const id = randomUUID();
       const now = new Date().toISOString();
 
       return await ctx.storage.scans.createScan({
         id,
-        siteUrl: args.input.siteUrl,
-        standard: args.input.standard ?? 'WCAG2AA',
+        siteUrl: urlResult.url.toString(),
+        standard,
         jurisdictions: args.input.jurisdictions ?? [],
         createdBy: ctx.user!.username,
         createdAt: now,
