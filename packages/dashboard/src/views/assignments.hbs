@@ -1,6 +1,6 @@
 {{! Issue Assignments — lifecycle tracking for WCAG issues }}
 
-<script nonce="{{cspNonce}}">window.__luqenAssignees = {{{json assignees}}};</script>
+<script>window.__luqenAssignees = {{{json assignees}}};</script>
 
 <section aria-labelledby="asgn-heading" class="report-meta" style="margin-bottom:1.5rem;">
   <div class="detail-list detail-list--horizontal">
@@ -95,7 +95,7 @@
   {{/unless}}
 </div>
 
-<script nonce="{{cspNonce}}">
+<script>
   /* Filter assignments client-side by status */
   function asgnFilter(status, btn) {
     var cards = document.querySelectorAll('.asgn-card');
