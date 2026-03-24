@@ -376,6 +376,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         : undefined
     ) ?? 'en';
     const originalView = reply.view.bind(reply) as typeof reply.view;
+    const isHtmxRequest = request.headers['hx-request'] === 'true';
     reply.view = (page: string, data?: Record<string, unknown>) => {
       return originalView(page, {
         ...data,
@@ -411,7 +412,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
         emailPluginActive: pluginManager.getActiveInstanceByPackageName?.('@luqen/plugin-notify-email') != null,
-      });
+      }, isHtmxRequest ? { layout: '' } : undefined);
     };
   });
 
