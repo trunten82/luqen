@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
-import { escapeHtml } from './helpers.js';
+import { escapeHtml, toastHtml } from './helpers.js';
 
 interface CreateTeamBody {
   name?: string;
