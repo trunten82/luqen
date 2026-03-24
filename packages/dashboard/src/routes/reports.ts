@@ -37,13 +37,16 @@ export async function reportRoutes(
       const q = query.q?.trim();
       const status = query.status;
 
+      // Admin sees all scans (global view for troubleshooting);
+      // other users see their org scans + system scans (no org assigned).
+      const isAdmin = request.user?.role === 'admin';
       const orgId = request.user?.currentOrgId ?? 'system';
       const scans = await storage.scans.listScans({
         ...(q !== undefined && q !== '' ? { siteUrl: q } : {}),
         ...(status !== undefined && status !== '' && status !== 'all'
           ? { status: status as 'queued' | 'running' | 'completed' | 'failed' }
           : {}),
-        orgId,
+        ...(!isAdmin ? { orgId } : {}),
         offset,
         limit: limit + 1, // fetch one extra to detect if there's a next page
       });
@@ -128,7 +131,7 @@ export async function reportRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -242,7 +245,7 @@ export async function reportRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -312,7 +315,7 @@ export async function reportRoutes(
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
