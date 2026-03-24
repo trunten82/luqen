@@ -6,7 +6,10 @@
     </a>
   </div>
 
-  <table class="table" aria-label="Organization members list"{{#unless members.length}} style="display:none"{{/unless}} id="org-members-wrapper">
+  {{! ---- Direct Members ---- }}
+  <h2 style="margin-top:1.5rem;">Direct Members</h2>
+
+  <table class="table" aria-label="Direct organization members"{{#unless members.length}} style="display:none"{{/unless}} id="org-members-wrapper">
     <thead>
       <tr>
         <th scope="col">{{t "admin.organizations.username"}}</th>
@@ -71,6 +74,63 @@
 
       <button type="submit" class="btn btn--primary">{{t "admin.organizations.addMember"}}</button>
     </form>
+  </div>
+  {{/if}}
+
+  {{! ---- Team Members (inherited) ---- }}
+  <h2 style="margin-top:2rem;">Team Members (inherited)</h2>
+  <p class="text-muted" style="margin-bottom:0.75rem;">These users are members of this organization through their team membership. Direct member roles take priority.</p>
+
+  {{#if inheritedMembers.length}}
+  <table class="table" aria-label="Team-inherited organization members">
+    <thead>
+      <tr>
+        <th scope="col">{{t "admin.organizations.username"}}</th>
+        <th scope="col">{{t "admin.organizations.role"}}</th>
+        <th scope="col">Via Team</th>
+        <th scope="col">Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each inheritedMembers}}
+      <tr>
+        <td data-label="Username">{{this.username}}</td>
+        <td data-label="Role"><span class="badge badge--neutral">{{this.role}}</span></td>
+        <td data-label="Via Team">{{this.teamName}}</td>
+        <td data-label="Source"><span class="badge badge--info">team</span></td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+  <div class="empty-state" role="status">
+    <p>No team-inherited members. Link teams to this organization to see inherited members here.</p>
+  </div>
+  {{/if}}
+
+  {{! ---- Linked Teams ---- }}
+  <h2 style="margin-top:2rem;">Linked Teams</h2>
+
+  {{#if linkedTeams.length}}
+  <table class="table" aria-label="Teams linked to this organization">
+    <thead>
+      <tr>
+        <th scope="col">Team</th>
+        <th scope="col">{{t "admin.teams.members"}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each linkedTeams}}
+      <tr>
+        <td data-label="Team"><a href="/admin/teams/{{this.id}}">{{this.name}}</a></td>
+        <td data-label="Members"><span class="badge badge--neutral">{{this.memberCount}}</span></td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+  <div class="empty-state" role="status">
+    <p>No teams linked to this organization. Assign teams from the <a href="/admin/teams">Teams</a> page.</p>
   </div>
   {{/if}}
 

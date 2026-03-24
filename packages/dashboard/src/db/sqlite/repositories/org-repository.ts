@@ -83,13 +83,83 @@ export class SqliteOrgRepository implements OrgRepository {
     return rows.map(rowToMember);
   }
 
+  async listAllMembers(orgId: string): Promise<OrgMember[]> {
+    // Direct members
+    const directRows = this.db.prepare(
+      'SELECT * FROM org_members WHERE org_id = ? ORDER BY joined_at',
+    ).all(orgId) as OrgMemberRow[];
+
+    const directMembers: OrgMember[] = directRows.map((row) => ({
+      ...rowToMember(row),
+      source: 'direct' as const,
+    }));
+
+    // Team-inherited members: users in teams linked to this org
+    const teamRows = this.db.prepare(`
+      SELECT tm.user_id, tm.role AS team_role, t.name AS team_name
+      FROM team_members tm
+      JOIN teams t ON t.id = tm.team_id
+      WHERE t.org_id = ?
+    `).all(orgId) as Array<{ user_id: string; team_role: string; team_name: string }>;
+
+    // Role hierarchy for precedence: owner > admin > member > viewer
+    const ROLE_RANK: Record<string, number> = { owner: 4, admin: 3, member: 2, viewer: 1 };
+    const directUserIds = new Set(directMembers.map((m) => m.userId));
+
+    // Collect best team role per user (highest across all teams in this org)
+    const teamMemberMap = new Map<string, { role: string; rank: number; teamName: string }>();
+    for (const row of teamRows) {
+      if (directUserIds.has(row.user_id)) continue; // skip users already direct members
+      const rank = ROLE_RANK[row.team_role] ?? 0;
+      const existing = teamMemberMap.get(row.user_id);
+      if (existing === undefined || rank > existing.rank) {
+        teamMemberMap.set(row.user_id, { role: row.team_role, rank, teamName: row.team_name });
+      }
+    }
+
+    const inheritedMembers: OrgMember[] = Array.from(teamMemberMap.entries()).map(
+      ([userId, info]) => ({
+        orgId,
+        userId,
+        role: info.role,
+        joinedAt: '',
+        source: 'team' as const,
+        teamName: info.teamName,
+      }),
+    );
+
+    return [...directMembers, ...inheritedMembers];
+  }
+
   async getUserOrgs(userId: string): Promise<Organization[]> {
-    const rows = this.db.prepare(`
+    // Direct membership
+    const directRows = this.db.prepare(`
       SELECT o.* FROM organizations o
       JOIN org_members m ON o.id = m.org_id
       WHERE m.user_id = ?
       ORDER BY o.created_at
     `).all(userId) as OrgRow[];
-    return rows.map(rowToOrg);
+
+    // Team-inherited membership: orgs where user is in a linked team
+    const teamRows = this.db.prepare(`
+      SELECT DISTINCT o.* FROM organizations o
+      JOIN teams t ON t.org_id = o.id
+      JOIN team_members tm ON tm.team_id = t.id
+      WHERE tm.user_id = ?
+      ORDER BY o.created_at
+    `).all(userId) as OrgRow[];
+
+    // Merge, deduplicating by org id
+    const seen = new Set<string>();
+    const result: Organization[] = [];
+
+    for (const row of [...directRows, ...teamRows]) {
+      if (!seen.has(row.id)) {
+        seen.add(row.id);
+        result.push(rowToOrg(row));
+      }
+    }
+
+    return result;
   }
 }

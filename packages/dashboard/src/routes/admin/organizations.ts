@@ -176,18 +176,24 @@ export async function organizationRoutes(
         return reply.code(404).send({ error: 'Organization not found' });
       }
 
-      const rawMembers = await storage.organizations.listMembers(id);
-      const members = await Promise.all(rawMembers.map(async (m) => {
+      const allMembers = await storage.organizations.listAllMembers(id);
+      const directMembers = allMembers.filter((m) => m.source !== 'team');
+      const teamMembers = allMembers.filter((m) => m.source === 'team');
+
+      const enrichMember = async (m: typeof allMembers[number]) => {
         const user = await storage.users.getUserById(m.userId);
-        return {
-          ...m,
-          username: user?.username ?? m.userId,
-        };
-      }));
+        return { ...m, username: user?.username ?? m.userId };
+      };
+
+      const members = await Promise.all(directMembers.map(enrichMember));
+      const inheritedMembers = await Promise.all(teamMembers.map(enrichMember));
 
       const allUsers = await storage.users.listUsers();
-      const memberUserIds = new Set(rawMembers.map((m) => m.userId));
-      const availableUsers = allUsers.filter((u) => !memberUserIds.has(u.id) && u.active);
+      const allMemberUserIds = new Set(allMembers.map((m) => m.userId));
+      const availableUsers = allUsers.filter((u) => !allMemberUserIds.has(u.id) && u.active);
+
+      // Linked teams for this org
+      const linkedTeams = await storage.teams.listTeamsByOrgId(id);
 
       return reply.view('admin/organization-members.hbs', {
         pageTitle: `Members — ${org.name}`,
@@ -195,6 +201,8 @@ export async function organizationRoutes(
         user: request.user,
         org,
         members,
+        inheritedMembers,
+        linkedTeams,
         availableUsers,
         roles: ['owner', 'admin', 'member', 'viewer'],
       });

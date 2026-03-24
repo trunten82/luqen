@@ -22,6 +22,15 @@
       <span class="form-label">{{t "admin.teams.teamDescription"}}</span>
       <input type="text" name="description" class="input" placeholder="{{t "admin.teams.teamDescriptionPlaceholder"}}">
     </label>
+    <label class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+      <span class="form-label">Organization</span>
+      <select name="organizationId" class="input">
+        <option value="">None (global)</option>
+        {{#each organizations}}
+        <option value="{{id}}">{{name}}</option>
+        {{/each}}
+      </select>
+    </label>
     <button type="submit" class="btn btn--primary">{{t "admin.teams.createTeam"}}</button>
   </div>
 </form>
@@ -33,6 +42,7 @@
       <tr>
         <th>{{t "common.name"}}</th>
         <th>{{t "admin.teams.teamDescription"}}</th>
+        <th>Organization</th>
         <th>{{t "admin.teams.members"}}</th>
         <th>{{t "admin.teams.created"}}</th>
         <th>{{t "common.actions"}}</th>
@@ -43,6 +53,7 @@
       <tr id="team-row-{{id}}">
         <td data-label="Name"><a href="/admin/teams/{{id}}">{{name}}</a></td>
         <td data-label="Description">{{description}}</td>
+        <td data-label="Organization">{{#if organizationName}}<span class="badge badge--neutral">{{organizationName}}</span>{{else}}<span class="text-muted">--</span>{{/if}}</td>
         <td data-label="Members"><span class="badge badge--neutral">{{memberCount}}</span></td>
         <td data-label="Created">{{createdAt}}</td>
         <td>
@@ -58,7 +69,7 @@
 
       {{#unless teams.length}}
       <tr id="teams-empty-row">
-        <td colspan="5" style="text-align:center; padding:2rem;">
+        <td colspan="6" style="text-align:center; padding:2rem;">
           {{t "admin.teams.noTeams"}}
         </td>
       </tr>

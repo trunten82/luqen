@@ -6,6 +6,11 @@ import { escapeHtml } from './helpers.js';
 interface CreateTeamBody {
   name?: string;
   description?: string;
+  organizationId?: string;
+}
+
+interface UpdateTeamBody {
+  organizationId?: string;
 }
 
 interface AddMemberBody {
@@ -60,12 +65,21 @@ export async function teamRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const teams = await storage.teams.listTeams(orgId);
+      const organizations = await storage.organizations.listOrgs();
+
+      // Enrich teams with org name for display
+      const orgMap = new Map(organizations.map((o) => [o.id, o.name]));
+      const enrichedTeams = teams.map((t) => ({
+        ...t,
+        organizationName: orgMap.get(t.orgId) ?? null,
+      }));
 
       return reply.view('admin/teams.hbs', {
         pageTitle: 'Teams',
         currentPath: '/admin/teams',
         user: request.user,
-        teams,
+        teams: enrichedTeams,
+        organizations,
       });
     },
   );
@@ -84,7 +98,9 @@ export async function teamRoutes(
         );
       }
 
-      const orgId = request.user?.currentOrgId ?? 'system';
+      // If an organization is selected, link the team to it; otherwise use current org scope
+      const organizationId = (body.organizationId ?? '').trim();
+      const orgId = organizationId !== '' ? organizationId : (request.user?.currentOrgId ?? 'system');
       const team = await storage.teams.createTeam({
         name,
         description: (body.description ?? '').trim(),
@@ -133,13 +149,60 @@ export async function teamRoutes(
       const memberIds = new Set((team.members ?? []).map((m) => m.userId));
       const availableUsers = allUsers.filter((u) => !memberIds.has(u.id));
 
+      const organizations = await storage.organizations.listOrgs();
+      const linkedOrg = team.orgId !== 'system'
+        ? await storage.organizations.getOrg(team.orgId)
+        : null;
+
       return reply.view('admin/team-detail.hbs', {
         pageTitle: `Team — ${team.name}`,
         currentPath: '/admin/teams',
         user: request.user,
         team,
         availableUsers,
+        organizations,
+        linkedOrgName: linkedOrg?.name ?? null,
       });
+    },
+  );
+
+  // POST /admin/teams/:id/org — update team organization link
+  server.post(
+    '/admin/teams/:id/org',
+    { preHandler: requirePermission('users.activate') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as UpdateTeamBody;
+
+      const team = await storage.teams.getTeam(id);
+      if (team === null) {
+        return reply.code(404).send({ error: 'Team not found' });
+      }
+
+      const newOrgId = (body.organizationId ?? '').trim();
+      const orgId = newOrgId !== '' ? newOrgId : 'system';
+
+      // Validate org exists if not 'system'
+      if (orgId !== 'system') {
+        const org = await storage.organizations.getOrg(orgId);
+        if (org === null) {
+          return reply.code(400).type('text/html').send(
+            '<div class="toast toast--error" role="alert">Organization not found</div>',
+          );
+        }
+      }
+
+      await storage.teams.updateTeam(id, { orgId });
+
+      if (request.headers['hx-request'] === 'true') {
+        const org = orgId !== 'system' ? await storage.organizations.getOrg(orgId) : null;
+        const orgLabel = org !== null ? escapeHtml(org.name) : 'None (global)';
+        return reply.type('text/html').send(
+          `<span id="team-org-label">${orgLabel}</span>\n<div class="toast toast--success" role="alert">Organization updated</div>`,
+        );
+      }
+
+      return reply.redirect(`/admin/teams/${id}`);
     },
   );
 
