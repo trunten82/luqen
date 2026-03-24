@@ -296,7 +296,6 @@ export async function reportRoutes(
         reportData,
         userRole,
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
-        cspNonce: (reply as unknown as Record<string, { script: string }>).cspNonce?.script ?? '',
       });
 
       return reply.type('text/html').send(html);

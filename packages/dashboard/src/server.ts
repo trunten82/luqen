@@ -154,19 +154,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Security Headers (helmet) ────────────────────────────────────────────
-  // Generate a per-request script nonce manually instead of using
-  // enableCSPNonces (which also adds a style nonce that breaks
-  // unsafe-inline per CSP spec).
-  server.addHook('onRequest', async (_request, reply) => {
-    const nonce = randomBytes(16).toString('hex');
-    (reply as unknown as Record<string, unknown>)['cspNonce'] = { script: nonce };
-  });
   await server.register(import('@fastify/helmet'), {
     contentSecurityPolicy: {
       useDefaults: false,
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", 'cdn.jsdelivr.net', (_, res) => `'nonce-${((res as unknown as Record<string, { script: string }>).cspNonce?.script ?? '')}'`],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net', 'static.cloudflareinsights.com'],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:'],
         connectSrc: ["'self'"],
@@ -393,7 +386,6 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       const merged = {
         ...data,
         csrfToken,
-        cspNonce: (reply as unknown as Record<string, { script: string }>).cspNonce?.script ?? '',
         locale,
         locales: SUPPORTED_LOCALES,
         localeLabels: LOCALE_LABELS,

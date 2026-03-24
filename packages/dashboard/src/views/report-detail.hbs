@@ -472,9 +472,9 @@
 
 {{/if}}
 
-<script nonce="{{cspNonce}}">window.__luqenAssignees = {{{json assignees}}};</script>
+<script>window.__luqenAssignees = {{{json assignees}}};</script>
 
-<script nonce="{{cspNonce}}">
+<script>
   /* ── Tab switching ──────────────────────────────────────────────────────── */
   function rptSwitchTab(tab) {
     if (!document.getElementById('panel-' + tab)) return;
