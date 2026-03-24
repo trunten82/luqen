@@ -6,28 +6,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [1.9.0] - 2026-03-23
+## [1.9.0] - 2026-03-24
 
 ### Changed
-- **PDF export rewritten with PDFKit** — server-side PDF generation no longer depends on Puppeteer or Chromium. Reports are generated using PDFKit, eliminating the ~400 MB Chromium dependency. The `GET /api/v1/export/scans/:id/report.pdf` endpoint is now always available.
-- **normalizeReportData extracted to shared service** — report data normalization logic is now a reusable service function consumed by both the HTML report viewer and PDF exporter, eliminating code duplication.
-- **Mercurius upgraded to v16.8.0** — fixes a CSRF vulnerability in the GraphQL endpoint. Previously at v15.
-- **Plugins removed from main repo** — all 8 plugins now live exclusively in the [luqen-plugins](https://github.com/trunten82/luqen-plugins) repository. The `packages/plugins` directory has been removed.
+- **PDF export rewritten with PDFKit** — server-side PDF generation no longer depends on Puppeteer or Chromium. Reports are generated using PDFKit, eliminating the ~400 MB Chromium dependency.
+- **normalizeReportData extracted to shared service** — report data normalization is now a reusable service consumed by the report viewer, PDF exporter, email scheduler, and Excel export.
+- **Microservices refactor** — extracted `scan-service.ts` (URL validation, SSRF protection, orchestration), `compliance-service.ts` (token management, caching, jurisdiction lookups), and `report-service.ts` (normalization, enrichment). Routes are now thin wrappers.
+- **Mercurius upgraded to v16.8.0** — fixes CSRF and queryDepth bypass vulnerabilities.
+- **Plugins removed from main repo** — all plugins now live in [luqen-plugins](https://github.com/trunten82/luqen-plugins). The `packages/plugins` directory has been removed.
+- **HTMX partials render without layout** — HTMX requests (modals, table fragments) now return only the template fragment, not a full HTML page. Prevents DOM corruption when injecting content.
+- **Inline event handlers migrated to app.js** — all `onclick`, `oninput`, `onchange`, and `hx-on::` attributes replaced with `data-action` event delegation in a single external JS file.
+- **Build script cleans dist/** — `rm -rf dist` runs before `tsc` to prevent stale compiled files.
 
 ### Added
-- **Favicon** — the dashboard now serves a favicon, eliminating 404 errors on browser requests for `/favicon.ico`.
-- **Sidebar hover visibility fix** — sidebar menu items are now visible on hover in all color themes.
-- **Trend KPI cards** — the trends page now displays key performance indicator cards showing score changes, issue counts, and pass/fail rates alongside the trend charts.
-- **Power BI connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop.
+- **Favicon** — SVG shield with checkmark in brand blue (#0056b3).
+- **Trend KPI cards** — sites monitored, total scans, accessibility score, and improvement/regression direction indicators with color-coded chart data points.
+- **Power BI connector** — Power Query M script with DAX measures for accessibility KPIs.
+- **Webhook notifications** — scan.completed and scan.failed events dispatched to registered webhook URLs with HMAC signing.
+- **GitHub Actions CI** — build and test pipeline runs on push to master and PRs.
+- **Sidebar hover fix** — white text on hover, brighter backgrounds for better visibility.
 
 ### Security
-- **@fastify/helmet integration** — all dashboard responses now include security headers (Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security, etc.) via @fastify/helmet.
-- **CSRF token verification** — all state-changing requests (POST, PUT, PATCH, DELETE) are verified against a per-session CSRF token via @fastify/csrf-protection. API-key-authenticated and OAuth callback routes are exempt.
-- **XSS prevention** — user-supplied values in templates are escaped via Handlebars auto-escaping and a shared `escapeHtml` utility to prevent cross-site scripting.
-- **Per-installation session salt** — each dashboard instance generates a unique random salt on first start, used for session encryption. Prevents cross-installation session reuse.
+- **@fastify/helmet** — CSP, X-Frame-Options, HSTS, X-Content-Type-Options, Referrer-Policy headers on all responses.
+- **CSP nonces** — inline scripts use per-request nonces instead of `unsafe-inline`.
+- **CSRF verification** — global preHandler validates CSRF tokens on all state-changing requests.
+- **GraphQL SSRF protection** — createScan mutation now validates URLs against the same blocklist as the REST endpoint.
+- **XSS prevention** — `json` Handlebars helper escapes `</script>` sequences in inline JSON.
+- **Per-installation session salt** — random salt persisted to DB, replaces hardcoded default.
+- **Session sameSite: lax** — changed from `strict` for reverse proxy compatibility.
+
+### Fixed
+- **Installer** — OAuth client created with `admin` scope (was `read write`). Removed env var overrides from systemd service. Added getcwd guard. Explicit build order (core → compliance → dashboard).
+- **Compliance CLI DB path** — documented that CLI must run from `packages/compliance` directory to use the correct database.
 
 ### Testing
-- **1764 tests passing, 0 failures** — full test suite runs green across all packages with 85%+ statement coverage.
+- **1764 tests passing, 0 failures** across 90 test files.
 
 ---
 
