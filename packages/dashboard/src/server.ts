@@ -156,7 +156,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", 'cdn.jsdelivr.net'],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:'],
         connectSrc: ["'self'"],
