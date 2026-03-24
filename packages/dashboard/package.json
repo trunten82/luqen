@@ -9,7 +9,7 @@
     "luqen-dashboard": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && rm -rf dist/views dist/static dist/i18n/locales && cp -r src/views dist/views && cp -r src/static dist/static && cp -r src/i18n/locales dist/i18n/locales && cp plugin-registry.json dist/",
+    "build": "rm -rf dist && tsc && cp -r src/views dist/views && cp -r src/static dist/static && cp -r src/i18n/locales dist/i18n/locales && cp plugin-registry.json dist/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
