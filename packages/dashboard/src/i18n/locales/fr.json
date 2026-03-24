@@ -196,7 +196,9 @@
     "standard": "Standard",
     "startScan": "Lancer l'Analyse",
     "maxPages": "Pages Maximum",
-    "maxPagesHint": "Nombre maximum de pages à découvrir et analyser en mode site complet (1–1000)."
+    "maxPagesHint": "Nombre maximum de pages à découvrir et analyser en mode site complet (1–1000).",
+    "includeWarnings": "Inclure les avertissements",
+    "includeNotices": "Inclure les avis"
   },
   "reports": {
     "title": "Rapports",

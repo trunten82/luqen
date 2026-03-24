@@ -196,7 +196,9 @@
     "standard": "Standard",
     "startScan": "Scan Starten",
     "maxPages": "Max. Seiten",
-    "maxPagesHint": "Maximale Anzahl der zu entdeckenden und zu scannenden Seiten im Vollständige-Website-Modus (1–1000)."
+    "maxPagesHint": "Maximale Anzahl der zu entdeckenden und zu scannenden Seiten im Vollständige-Website-Modus (1–1000).",
+    "includeWarnings": "Warnungen einschließen",
+    "includeNotices": "Hinweise einschließen"
   },
   "reports": {
     "title": "Berichte",
@@ -497,7 +499,7 @@
       "noMembers": "Noch keine Mitglieder in dieser Organisation.",
       "addMember": "Mitglied Hinzufügen",
       "user": "Benutzer",
-      "selectUser": "Benutzer auswählen\u2026"
+      "selectUser": "Benutzer auswählen…"
     },
     "system": {
       "database": "Datenbank",
@@ -625,8 +627,8 @@
     "jurisdictions": "Jurisdiktionen",
     "started": "Gestartet",
     "liveProgress": "Live-Fortschritt",
-    "statusQueued": "In der Warteschlange — wartet auf einen Scan-Slot\u2026",
-    "statusRunning": "Scan läuft\u2026",
+    "statusQueued": "In der Warteschlange — wartet auf einen Scan-Slot…",
+    "statusRunning": "Scan läuft…",
     "statusCompleted": "Scan abgeschlossen.",
     "statusFailed": "Scan fehlgeschlagen.",
     "pagesDiscovered": "Entdeckte Seiten",
@@ -635,7 +637,7 @@
     "issuesFound": "Gefundene Probleme",
     "errorLabel": "Fehler:",
     "tryAgain": "Erneut Versuchen",
-    "msgDiscovering": "Seiten werden entdeckt\u2026",
+    "msgDiscovering": "Seiten werden entdeckt…",
     "logScanStarted": "Scan gestartet — Seiten werden entdeckt.",
     "msgScanning": "Wird gescannt",
     "pages": "Seiten",
@@ -647,15 +649,15 @@
     "issueWarnings": "Warnungen",
     "issueNotices": "Hinweise",
     "logPage": "Seite",
-    "msgCompliance": "Compliance-Prüfung läuft\u2026",
+    "msgCompliance": "Compliance-Prüfung läuft…",
     "logCompliance": "Compliance-Prüfung läuft.",
-    "msgComplete": "Scan abgeschlossen! Weiterleitung zum Bericht\u2026",
+    "msgComplete": "Scan abgeschlossen! Weiterleitung zum Bericht…",
     "logComplete": "Scan abgeschlossen.",
     "logPagesSkipped": "Seiten übersprungen — unverändert)",
     "unknownError": "Unbekannter Fehler",
     "msgFailed": "Scan fehlgeschlagen:",
     "logFailed": "Scan fehlgeschlagen:",
-    "logReconnecting": "Verbindung unterbrochen. Verbindung wird wiederhergestellt\u2026"
+    "logReconnecting": "Verbindung unterbrochen. Verbindung wird wiederhergestellt…"
   },
   "reportDetail": {
     "siteUrl": "Website-URL",
@@ -907,8 +909,8 @@
     "noRepos": "Noch keine Repositories verbunden. Verwenden Sie das obige Formular, um Ihr erstes Repository zu verbinden.",
     "integrationOptionsTitle": "Integrationsoptionen",
     "integrationOptionsDesc": "Korrekturvorschläge sind auch verfügbar über:",
-    "integrationMcp": "<strong>MCP-Tools:</strong> <code>luqen_propose_fixes</code>, <code>luqen_apply_fix</code> \u2014 aus Ihrer IDE verwenden",
-    "integrationRest": "<strong>REST API:</strong> <code>GET /api/v1/scans/:id/fixes</code> \u2014 für externe Integrationen",
+    "integrationMcp": "<strong>MCP-Tools:</strong> <code>luqen_propose_fixes</code>, <code>luqen_apply_fix</code> — aus Ihrer IDE verwenden",
+    "integrationRest": "<strong>REST API:</strong> <code>GET /api/v1/scans/:id/fixes</code> — für externe Integrationen",
     "integrationA2a": "A2A-Protokoll: Agenten können die REST API aufrufen, um Korrekturen programmatisch vorzuschlagen und anzuwenden"
   },
   "fixes": {
@@ -941,6 +943,6 @@
     "integrationRest": "<strong>REST API:</strong> Gibt Korrekturvorschläge als JSON zurück.",
     "integrationA2a": "A2A-Protokoll: Für automatisierte Pipelines verwenden Sie das Agent-zu-Agent-Protokoll, um Korrekturen programmatisch anzufordern. Agenten können die REST API aufrufen, um Korrekturen vorzuschlagen und anzuwenden.",
     "copiedToClipboard": "Korrekturcode in die Zwischenablage kopiert",
-    "copyFailed": "Kopieren nicht möglich \u2014 bitte manuell auswählen und kopieren"
+    "copyFailed": "Kopieren nicht möglich — bitte manuell auswählen und kopieren"
   }
 }

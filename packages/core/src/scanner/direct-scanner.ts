@@ -12,6 +12,8 @@ export interface DirectScanOptions {
   readonly hideElements?: string;
   readonly headers?: Readonly<Record<string, string>>;
   readonly runner?: 'htmlcs' | 'axe';
+  readonly includeWarnings?: boolean;
+  readonly includeNotices?: boolean;
 }
 
 export interface DirectScanResult {
@@ -59,8 +61,8 @@ export class DirectScanner {
       hideElements: options.hideElements || undefined,
       headers: options.headers || {},
       runners: options.runner === 'axe' ? ['axe'] : ['htmlcs'],
-      includeWarnings: true,
-      includeNotices: true,
+      includeWarnings: options.includeWarnings !== false,
+      includeNotices: options.includeNotices !== false,
       chromeLaunchConfig: {
         ...(executablePath ? { executablePath } : {}),
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],

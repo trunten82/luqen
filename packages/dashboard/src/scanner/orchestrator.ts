@@ -39,6 +39,10 @@ export interface ScanConfig {
   readonly orgId?: string;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. */
   readonly runner?: 'htmlcs' | 'axe';
+  /** Include warnings in results (default: true). */
+  readonly includeWarnings?: boolean;
+  /** Include notices in results (default: true). */
+  readonly includeNotices?: boolean;
 }
 
 class ScanQueue {
@@ -390,6 +394,8 @@ export class ScanOrchestrator {
             concurrency: config.concurrency,
             singlePage: config.scanMode !== 'site',
             maxPages: config.maxPages,
+            includeWarnings: config.includeWarnings !== false,
+            includeNotices: config.includeNotices !== false,
             ...(config.runner !== undefined ? { runner: config.runner } : {}),
             onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
               if (progress.type === 'scan:start') {
