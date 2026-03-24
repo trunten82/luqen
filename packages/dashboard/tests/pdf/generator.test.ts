@@ -1,442 +1,405 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { generatePdfFromData } from '../../src/pdf/generator.js';
+import type { PdfScanMeta, PdfReportData } from '../../src/pdf/generator.js';
 
 // ---------------------------------------------------------------------------
-// Shared mock objects used across tests
+// Helpers
 // ---------------------------------------------------------------------------
 
-const mockPage = {
-  setContent: vi.fn().mockResolvedValue(undefined),
-  pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-fake')),
-  close: vi.fn().mockResolvedValue(undefined),
-};
-
-const mockBrowser = {
-  newPage: vi.fn().mockResolvedValue(mockPage),
-  close: vi.fn().mockResolvedValue(undefined),
-};
-
-const mockLaunch = vi.fn().mockResolvedValue(mockBrowser);
-
-// ---------------------------------------------------------------------------
-// Mock puppeteer — vitest intercepts both require.resolve and dynamic import
-// so isPuppeteerAvailable() will see puppeteer as resolvable.
-// ---------------------------------------------------------------------------
-
-vi.mock('puppeteer', () => ({
-  default: { launch: mockLaunch, executablePath: () => '/usr/bin/chromium' },
-  launch: mockLaunch,
-  executablePath: () => '/usr/bin/chromium',
-}));
-
-vi.mock('puppeteer-core', () => ({
-  default: { launch: mockLaunch, executablePath: () => '/usr/bin/chromium' },
-  launch: mockLaunch,
-  executablePath: () => '/usr/bin/chromium',
-}));
-
-// ---------------------------------------------------------------------------
-// Helper: reset all mock state and get a fresh module instance
-// ---------------------------------------------------------------------------
-
-function resetMocks(): void {
-  mockPage.setContent.mockClear().mockResolvedValue(undefined);
-  mockPage.pdf.mockClear().mockResolvedValue(Buffer.from('%PDF-fake'));
-  mockPage.close.mockClear().mockResolvedValue(undefined);
-  mockBrowser.newPage.mockClear().mockResolvedValue(mockPage);
-  mockBrowser.close.mockClear().mockResolvedValue(undefined);
-  mockLaunch.mockClear().mockResolvedValue(mockBrowser);
+function makeScanMeta(overrides: Partial<PdfScanMeta> = {}): PdfScanMeta {
+  return {
+    siteUrl: 'https://example.com',
+    standard: 'WCAG2AA',
+    jurisdictions: 'EU, US',
+    createdAtDisplay: '2025-06-15 12:00',
+    ...overrides,
+  };
 }
 
-async function freshModule() {
-  vi.resetModules();
-  resetMocks();
-  return import('../../src/pdf/generator.js');
+function makeReportData(overrides: Partial<PdfReportData> = {}): PdfReportData {
+  return {
+    summary: {
+      pagesScanned: 10,
+      totalIssues: 15,
+      byLevel: { error: 5, warning: 7, notice: 3 },
+    },
+    topActionItems: [
+      {
+        severity: 'error',
+        count: 3,
+        criterion: '1.1.1',
+        title: 'Images must have alt text',
+        pageCount: 5,
+        regulations: [{ shortName: 'EAA' }],
+      },
+      {
+        severity: 'warning',
+        count: 2,
+        criterion: '2.4.6',
+        title: 'Headings must be descriptive',
+        pageCount: 3,
+        regulations: [],
+      },
+    ],
+    complianceMatrix: [
+      {
+        jurisdictionName: 'European Union',
+        reviewStatus: 'fail',
+        confirmedViolations: 3,
+        needsReview: 1,
+      },
+    ],
+    templateComponents: [
+      {
+        componentName: 'Header',
+        issueCount: 4,
+        maxAffectedPages: 8,
+      },
+    ],
+    ...overrides,
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('PDF Generator', () => {
-
+describe('PDF Generator (PDFKit)', () => {
   // -----------------------------------------------------------------------
-  // isPuppeteerAvailable
+  // Basic generation
   // -----------------------------------------------------------------------
 
-  describe('isPuppeteerAvailable', () => {
-    it('returns true when puppeteer is resolvable (mocked)', async () => {
-      const { isPuppeteerAvailable } = await freshModule();
-      // Our vi.mock('puppeteer') makes it resolvable, and the mock provides
-      // executablePath, so the binary check passes.
-      expect(isPuppeteerAvailable()).toBe(true);
+  describe('generatePdfFromData', () => {
+    it('returns a Buffer', async () => {
+      const result = await generatePdfFromData(makeScanMeta(), makeReportData());
+      expect(result).toBeInstanceOf(Buffer);
     });
 
-    it('caches result after first call', async () => {
-      const { isPuppeteerAvailable } = await freshModule();
-      const first = isPuppeteerAvailable();
-      const second = isPuppeteerAvailable();
-      expect(first).toBe(second);
+    it('returns a valid PDF starting with %PDF header', async () => {
+      const result = await generatePdfFromData(makeScanMeta(), makeReportData());
+      const header = result.subarray(0, 5).toString('ascii');
+      expect(header).toBe('%PDF-');
     });
 
-    it('returns boolean type', async () => {
-      const { isPuppeteerAvailable } = await freshModule();
-      expect(typeof isPuppeteerAvailable()).toBe('boolean');
+    it('produces a non-trivial buffer size', async () => {
+      const result = await generatePdfFromData(makeScanMeta(), makeReportData());
+      // A real PDF with content should be at least a few KB
+      expect(result.length).toBeGreaterThan(1000);
     });
   });
 
   // -----------------------------------------------------------------------
-  // generateReportPdf — puppeteer available (the common path)
+  // Various report data shapes
   // -----------------------------------------------------------------------
 
-  describe('generateReportPdf', () => {
-    it('generates a PDF buffer from HTML with default options', async () => {
-      const { generateReportPdf } = await freshModule();
-      const result = await generateReportPdf('<h1>Hello</h1>');
-
+  describe('report data variations', () => {
+    it('works without compliance matrix (null)', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ complianceMatrix: null }),
+      );
       expect(result).toBeInstanceOf(Buffer);
-      expect(mockPage.setContent).toHaveBeenCalledWith('<h1>Hello</h1>', {
-        waitUntil: 'networkidle0',
-      });
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({
-          format: 'A4',
-          landscape: false,
-          printBackground: true,
-          margin: { top: '15mm', right: '10mm', bottom: '15mm', left: '10mm' },
-        }),
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    });
+
+    it('works without compliance matrix (undefined)', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ complianceMatrix: undefined }),
       );
-      expect(mockPage.close).toHaveBeenCalled();
-    });
-
-    it('applies custom format — Letter', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Content</p>', { format: 'Letter' });
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({ format: 'Letter' }),
-      );
-    });
-
-    it('applies custom format — A3', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>A3</p>', { format: 'A3' });
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({ format: 'A3' }),
-      );
-    });
-
-    it('applies custom format — Legal', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Legal</p>', { format: 'Legal' });
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({ format: 'Legal' }),
-      );
-    });
-
-    it('applies custom format — Tabloid', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Tabloid</p>', { format: 'Tabloid' });
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({ format: 'Tabloid' }),
-      );
-    });
-
-    it('applies landscape orientation', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Landscape</p>', { landscape: true });
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({ landscape: true }),
-      );
-    });
-
-    it('applies custom margin options', async () => {
-      const { generateReportPdf } = await freshModule();
-      const margin = { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' };
-      await generateReportPdf('<p>Content</p>', { margin });
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({ margin }),
-      );
-    });
-
-    it('sets displayHeaderFooter when headerTemplate is provided', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Content</p>', {
-        headerTemplate: '<div>Header</div>',
-      });
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({
-          displayHeaderFooter: true,
-          headerTemplate: '<div>Header</div>',
-        }),
-      );
-    });
-
-    it('sets displayHeaderFooter when footerTemplate is provided', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Content</p>', {
-        footerTemplate: '<div>Footer</div>',
-      });
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({
-          displayHeaderFooter: true,
-          footerTemplate: '<div>Footer</div>',
-        }),
-      );
-    });
-
-    it('sets both header and footer templates together', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Content</p>', {
-        headerTemplate: '<div>Header</div>',
-        footerTemplate: '<div>Footer</div>',
-      });
-      const callArgs = mockPage.pdf.mock.calls[0][0];
-      expect(callArgs.displayHeaderFooter).toBe(true);
-      expect(callArgs.headerTemplate).toBe('<div>Header</div>');
-      expect(callArgs.footerTemplate).toBe('<div>Footer</div>');
-    });
-
-    it('does not set displayHeaderFooter when no templates provided', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Content</p>');
-      const callArgs = mockPage.pdf.mock.calls[0][0];
-      expect(callArgs).not.toHaveProperty('displayHeaderFooter');
-      expect(callArgs).not.toHaveProperty('headerTemplate');
-      expect(callArgs).not.toHaveProperty('footerTemplate');
-    });
-
-    it('closes the page even when pdf() throws', async () => {
-      const { generateReportPdf } = await freshModule();
-      mockPage.pdf.mockRejectedValueOnce(new Error('PDF render failed'));
-
-      await expect(generateReportPdf('<h1>Fail</h1>')).rejects.toThrow('PDF render failed');
-      expect(mockPage.close).toHaveBeenCalled();
-    });
-
-    it('closes the page even when setContent throws', async () => {
-      const { generateReportPdf } = await freshModule();
-      mockPage.setContent.mockRejectedValueOnce(new Error('content error'));
-
-      await expect(generateReportPdf('<bad>')).rejects.toThrow('content error');
-      expect(mockPage.close).toHaveBeenCalled();
-    });
-
-    it('handles page.close() throwing without propagating', async () => {
-      const { generateReportPdf } = await freshModule();
-      mockPage.close.mockRejectedValueOnce(new Error('close failed'));
-
-      const result = await generateReportPdf('<h1>OK</h1>');
       expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
     });
 
-    it('reuses the same browser across multiple calls', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<h1>First</h1>');
-      await generateReportPdf('<h1>Second</h1>');
-
-      // newPage called twice but launch only once (singleton)
-      expect(mockBrowser.newPage).toHaveBeenCalledTimes(2);
-      expect(mockLaunch).toHaveBeenCalledTimes(1);
-    });
-
-    it('uses A4 format by default', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Default</p>', {});
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({ format: 'A4' }),
+    it('works with empty compliance matrix', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ complianceMatrix: [] }),
       );
-    });
-
-    it('uses portrait orientation by default', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Default</p>', {});
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({ landscape: false }),
-      );
-    });
-
-    it('uses default margins when none provided', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Default</p>');
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({
-          margin: { top: '15mm', right: '10mm', bottom: '15mm', left: '10mm' },
-        }),
-      );
-    });
-
-    it('always enables printBackground', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Default</p>');
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({ printBackground: true }),
-      );
-    });
-
-    it('returns a proper Buffer instance', async () => {
-      const { generateReportPdf } = await freshModule();
-      const result = await generateReportPdf('<h1>Buffer test</h1>');
-      expect(Buffer.isBuffer(result)).toBe(true);
-    });
-
-    it('accepts no options argument at all', async () => {
-      const { generateReportPdf } = await freshModule();
-      const result = await generateReportPdf('<p>No opts</p>');
       expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
     });
 
-    it('passes correct args to puppeteer.launch', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<h1>Launch</h1>');
-
-      expect(mockLaunch).toHaveBeenCalledWith({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-        ],
-      });
+    it('works without template components', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ templateComponents: [] }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
     });
 
-    it('sets waitUntil to networkidle0 for page content', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<h1>Wait</h1>');
-      expect(mockPage.setContent).toHaveBeenCalledWith('<h1>Wait</h1>', {
-        waitUntil: 'networkidle0',
-      });
+    it('works with empty topActionItems', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ topActionItems: [] }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
     });
 
-    it('combines format, landscape, margin, and templates', async () => {
-      const { generateReportPdf } = await freshModule();
-      await generateReportPdf('<p>Full</p>', {
-        format: 'A3',
-        landscape: true,
-        margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' },
-        headerTemplate: '<h>H</h>',
-        footerTemplate: '<f>F</f>',
-      });
+    it('works with many action items (page overflow)', async () => {
+      const items = Array.from({ length: 50 }, (_, i) => ({
+        severity: i % 2 === 0 ? 'error' : 'warning',
+        count: i + 1,
+        criterion: `${(i % 4) + 1}.${(i % 5) + 1}.${(i % 3) + 1}`,
+        title: `Issue number ${i + 1} that needs to be fixed`,
+        pageCount: Math.floor(Math.random() * 20) + 1,
+        regulations: i % 3 === 0 ? [{ shortName: 'EAA' }] : [],
+      }));
 
-      expect(mockPage.pdf).toHaveBeenCalledWith(
-        expect.objectContaining({
-          format: 'A3',
-          landscape: true,
-          printBackground: true,
-          margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' },
-          displayHeaderFooter: true,
-          headerTemplate: '<h>H</h>',
-          footerTemplate: '<f>F</f>',
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ topActionItems: items }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+      // With 50 items it should produce a larger PDF
+      expect(result.length).toBeGreaterThan(3000);
+    });
+
+    it('works with scan errors section', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          errors: [
+            { url: 'https://example.com/broken', code: 'TIMEOUT', message: 'Page timed out' },
+            { url: 'https://example.com/404', code: 'HTTP_ERROR', message: '404 Not Found' },
+          ],
         }),
       );
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    });
+
+    it('works without scan errors', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ errors: undefined }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    });
+
+    it('works with empty errors array', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ errors: [] }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
     });
   });
 
   // -----------------------------------------------------------------------
-  // closeBrowser
+  // Summary variations
   // -----------------------------------------------------------------------
 
-  describe('closeBrowser', () => {
-    it('closes the browser when one is active', async () => {
-      const { generateReportPdf, closeBrowser } = await freshModule();
-      await generateReportPdf('<h1>Init</h1>');
-      mockBrowser.close.mockClear();
-
-      await closeBrowser();
-      expect(mockBrowser.close).toHaveBeenCalled();
-    });
-
-    it('does nothing when no browser is active', async () => {
-      const { closeBrowser } = await freshModule();
-      mockBrowser.close.mockClear();
-
-      await closeBrowser();
-      expect(mockBrowser.close).not.toHaveBeenCalled();
-    });
-
-    it('handles browser.close() throwing without propagating', async () => {
-      const { generateReportPdf, closeBrowser } = await freshModule();
-      await generateReportPdf('<h1>Init</h1>');
-      mockBrowser.close.mockRejectedValueOnce(new Error('close error'));
-
-      await expect(closeBrowser()).resolves.toBeUndefined();
-    });
-
-    it('allows a new browser to launch after close', async () => {
-      const { generateReportPdf, closeBrowser } = await freshModule();
-      await generateReportPdf('<h1>First</h1>');
-      await closeBrowser();
-
-      const result = await generateReportPdf('<h1>Second</h1>');
+  describe('summary variations', () => {
+    it('handles missing byLevel', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          summary: { pagesScanned: 5, totalIssues: 0 },
+        }),
+      );
       expect(result).toBeInstanceOf(Buffer);
-      // Launch should have been called twice now (once before close, once after)
-      expect(mockLaunch).toHaveBeenCalledTimes(2);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
     });
 
-    it('resets browser state so closeBrowser is idempotent', async () => {
-      const { generateReportPdf, closeBrowser } = await freshModule();
-      await generateReportPdf('<h1>Init</h1>');
+    it('handles missing pagesScanned', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          summary: { totalIssues: 10, byLevel: { error: 3, warning: 4, notice: 3 } },
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+    });
 
-      await closeBrowser();
-      mockBrowser.close.mockClear();
+    it('handles zero issues', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          summary: { pagesScanned: 5, totalIssues: 0, byLevel: { error: 0, warning: 0, notice: 0 } },
+          topActionItems: [],
+          complianceMatrix: null,
+          templateComponents: [],
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    });
 
-      // Second close should be a no-op
-      await closeBrowser();
-      expect(mockBrowser.close).not.toHaveBeenCalled();
+    it('handles empty summary object', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({ summary: {} }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
     });
   });
 
   // -----------------------------------------------------------------------
-  // getBrowser error recovery (tested indirectly)
+  // Scan meta variations
   // -----------------------------------------------------------------------
 
-  describe('getBrowser error recovery', () => {
-    it('resets browser promise on launch failure so retry works', async () => {
-      const { generateReportPdf } = await freshModule();
-      mockLaunch.mockRejectedValueOnce(new Error('launch failed'));
+  describe('scan meta variations', () => {
+    it('works with empty jurisdictions', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta({ jurisdictions: '' }),
+        makeReportData(),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    });
 
-      await expect(generateReportPdf('<h1>Fail</h1>')).rejects.toThrow('launch failed');
-
-      // Second call should succeed because _browserPromise was reset
-      mockLaunch.mockResolvedValueOnce(mockBrowser);
-      const result = await generateReportPdf('<h1>Retry</h1>');
+    it('works with WCAG2A standard', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta({ standard: 'WCAG2A' }),
+        makeReportData(),
+      );
       expect(result).toBeInstanceOf(Buffer);
     });
 
-    it('propagates launch error to caller', async () => {
-      const { generateReportPdf } = await freshModule();
-      mockLaunch.mockRejectedValueOnce(new Error('Chrome not found'));
+    it('works with WCAG2AAA standard', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta({ standard: 'WCAG2AAA' }),
+        makeReportData(),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+    });
 
-      await expect(generateReportPdf('<h1>X</h1>')).rejects.toThrow('Chrome not found');
+    it('works with unknown standard code', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta({ standard: 'Section508' }),
+        makeReportData(),
+      );
+      expect(result).toBeInstanceOf(Buffer);
     });
   });
 
   // -----------------------------------------------------------------------
-  // Concurrent browser access
+  // Compliance matrix statuses
   // -----------------------------------------------------------------------
 
-  describe('concurrent access', () => {
-    it('shares the same browser promise for concurrent calls', async () => {
-      const { generateReportPdf } = await freshModule();
-
-      const [r1, r2] = await Promise.all([
-        generateReportPdf('<h1>A</h1>'),
-        generateReportPdf('<h1>B</h1>'),
-      ]);
-
-      expect(r1).toBeInstanceOf(Buffer);
-      expect(r2).toBeInstanceOf(Buffer);
-      expect(mockBrowser.newPage).toHaveBeenCalledTimes(2);
-      // Only one launch despite concurrent calls
-      expect(mockLaunch).toHaveBeenCalledTimes(1);
+  describe('compliance matrix statuses', () => {
+    it('renders fail status', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          complianceMatrix: [
+            { jurisdictionName: 'EU', reviewStatus: 'fail', confirmedViolations: 5 },
+          ],
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
     });
 
-    it('each call creates and closes its own page', async () => {
-      const { generateReportPdf } = await freshModule();
+    it('renders review status', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          complianceMatrix: [
+            { jurisdictionName: 'US', reviewStatus: 'review', confirmedViolations: 0, needsReview: 3 },
+          ],
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+    });
 
-      await generateReportPdf('<h1>A</h1>');
-      await generateReportPdf('<h1>B</h1>');
+    it('renders pass status', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          complianceMatrix: [
+            { jurisdictionName: 'UK', reviewStatus: 'pass', confirmedViolations: 0 },
+          ],
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+    });
 
-      expect(mockPage.close).toHaveBeenCalledTimes(2);
+    it('renders multiple jurisdictions', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          complianceMatrix: [
+            { jurisdictionName: 'EU', reviewStatus: 'fail', confirmedViolations: 5 },
+            { jurisdictionName: 'US', reviewStatus: 'review', confirmedViolations: 1, needsReview: 2 },
+            { jurisdictionName: 'UK', reviewStatus: 'pass', confirmedViolations: 0 },
+          ],
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Template components
+  // -----------------------------------------------------------------------
+
+  describe('template components', () => {
+    it('renders multiple template components', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          templateComponents: [
+            { componentName: 'Header', issueCount: 4, maxAffectedPages: 8 },
+            { componentName: 'Footer', issueCount: 2, maxAffectedPages: 10 },
+            { componentName: 'Sidebar', issueCount: 1, maxAffectedPages: 5 },
+          ],
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Action item severity types
+  // -----------------------------------------------------------------------
+
+  describe('action item severities', () => {
+    it('renders error severity items', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          topActionItems: [
+            { severity: 'error', count: 5, criterion: '1.1.1', title: 'Missing alt text', pageCount: 3, regulations: [] },
+          ],
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+    });
+
+    it('renders warning severity items', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          topActionItems: [
+            { severity: 'warning', count: 2, criterion: '2.4.6', title: 'Empty heading', pageCount: 1, regulations: [] },
+          ],
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+    });
+
+    it('renders items with multiple regulations', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta(),
+        makeReportData({
+          topActionItems: [
+            {
+              severity: 'error',
+              count: 4,
+              criterion: '1.3.1',
+              title: 'Info and relationships',
+              pageCount: 7,
+              regulations: [{ shortName: 'EAA' }, { shortName: 'ADA' }, { shortName: 'AODA' }],
+            },
+          ],
+        }),
+      );
+      expect(result).toBeInstanceOf(Buffer);
     });
   });
 
@@ -445,39 +408,80 @@ describe('PDF Generator', () => {
   // -----------------------------------------------------------------------
 
   describe('module exports', () => {
-    it('exports generateReportPdf function', async () => {
-      const mod = await freshModule();
-      expect(typeof mod.generateReportPdf).toBe('function');
+    it('exports generatePdfFromData function', async () => {
+      const mod = await import('../../src/pdf/generator.js');
+      expect(typeof mod.generatePdfFromData).toBe('function');
     });
 
-    it('exports closeBrowser function', async () => {
-      const mod = await freshModule();
-      expect(typeof mod.closeBrowser).toBe('function');
-    });
-
-    it('exports isPuppeteerAvailable function', async () => {
-      const mod = await freshModule();
-      expect(typeof mod.isPuppeteerAvailable).toBe('function');
+    it('does not export legacy Puppeteer functions', async () => {
+      const mod = await import('../../src/pdf/generator.js');
+      expect((mod as any).generateReportPdf).toBeUndefined();
+      expect((mod as any).isPuppeteerAvailable).toBeUndefined();
+      expect((mod as any).closeBrowser).toBeUndefined();
     });
   });
 
   // -----------------------------------------------------------------------
-  // Graceful shutdown handlers (registered once)
+  // Concurrent generation
   // -----------------------------------------------------------------------
 
-  describe('shutdown handlers', () => {
-    it('registers process exit handlers on first browser launch', async () => {
-      const onSpy = vi.spyOn(process, 'on');
-      const { generateReportPdf } = await freshModule();
+  describe('concurrent generation', () => {
+    it('handles concurrent PDF generation', async () => {
+      const results = await Promise.all([
+        generatePdfFromData(makeScanMeta({ siteUrl: 'https://a.com' }), makeReportData()),
+        generatePdfFromData(makeScanMeta({ siteUrl: 'https://b.com' }), makeReportData()),
+        generatePdfFromData(makeScanMeta({ siteUrl: 'https://c.com' }), makeReportData()),
+      ]);
 
-      await generateReportPdf('<h1>Shutdown</h1>');
+      for (const result of results) {
+        expect(result).toBeInstanceOf(Buffer);
+        expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+      }
+    });
+  });
 
-      const registeredEvents = onSpy.mock.calls.map(c => c[0]);
-      expect(registeredEvents).toContain('exit');
-      expect(registeredEvents).toContain('SIGINT');
-      expect(registeredEvents).toContain('SIGTERM');
+  // -----------------------------------------------------------------------
+  // Full report with all sections
+  // -----------------------------------------------------------------------
 
-      onSpy.mockRestore();
+  describe('full report', () => {
+    it('generates a complete report with all sections populated', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta({
+          siteUrl: 'https://full-test.example.com',
+          standard: 'WCAG2AA',
+          jurisdictions: 'EU, US, UK',
+          createdAtDisplay: '2025-06-15 14:30',
+        }),
+        makeReportData({
+          summary: {
+            pagesScanned: 25,
+            totalIssues: 42,
+            byLevel: { error: 12, warning: 18, notice: 12 },
+          },
+          topActionItems: [
+            { severity: 'error', count: 8, criterion: '1.1.1', title: 'Images missing alt text', pageCount: 15, regulations: [{ shortName: 'EAA' }] },
+            { severity: 'error', count: 4, criterion: '1.3.1', title: 'Info and relationships', pageCount: 10, regulations: [{ shortName: 'ADA' }] },
+            { severity: 'warning', count: 6, criterion: '2.4.6', title: 'Headings and labels', pageCount: 8, regulations: [] },
+          ],
+          complianceMatrix: [
+            { jurisdictionName: 'European Union', reviewStatus: 'fail', confirmedViolations: 5, needsReview: 2 },
+            { jurisdictionName: 'United States', reviewStatus: 'review', confirmedViolations: 1, needsReview: 4 },
+            { jurisdictionName: 'United Kingdom', reviewStatus: 'pass', confirmedViolations: 0 },
+          ],
+          templateComponents: [
+            { componentName: 'Navigation', issueCount: 6, maxAffectedPages: 25 },
+            { componentName: 'Footer', issueCount: 3, maxAffectedPages: 25 },
+          ],
+          errors: [
+            { url: 'https://full-test.example.com/timeout', code: 'TIMEOUT', message: 'Request timed out after 30s' },
+          ],
+        }),
+      );
+
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+      expect(result.length).toBeGreaterThan(2000);
     });
   });
 });

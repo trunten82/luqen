@@ -595,7 +595,11 @@
     "siteChartTitle": "Problèmes dans le Temps",
     "issueCount": "Nombre de Problèmes",
     "date": "Date",
-    "scanDate": "Date d'Analyse"
+    "scanDate": "Date d'Analyse",
+    "kpiLabel": "Indicateurs de performance des tendances",
+    "sitesMonitored": "Sites Surveillés",
+    "totalScans": "Analyses Totales",
+    "overallChange": "Changement Global"
   },
   "bookmarklet": {
     "title": "Bookmarklet Navigateur",

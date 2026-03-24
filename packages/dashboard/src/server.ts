@@ -151,6 +151,25 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     redisQueue: redisScanQueue,
   });
 
+  // ── Security Headers (helmet) ────────────────────────────────────────────
+  await server.register(import('@fastify/helmet'), {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'cdn.jsdelivr.net'],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    frameguard: { action: 'deny' },
+    noSniff: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  });
+
   // ── Rate Limiting ────────────────────────────────────────────────────────
   await server.register(import('@fastify/rate-limit'), {
     global: true,
@@ -242,7 +261,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (n < 0) return `${n}`;
     return '0';
   });
-  handlebars.registerHelper('json', (context: unknown) => JSON.stringify(context));
+  handlebars.registerHelper('json', (context: unknown) => {
+    return new handlebars.SafeString(JSON.stringify(context).replace(/</g, '\\u003c'));
+  });
 
   // ── i18n ──────────────────────────────────────────────────────────────────
   loadTranslations();

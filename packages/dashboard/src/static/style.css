@@ -2176,6 +2176,37 @@ select {
   letter-spacing: 0.03em;
 }
 
+/* ── Trends KPI cards ─────────────────────────────────────── */
+.trends-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.trends-kpi-card {
+  text-align: center;
+  padding: 1.25rem 1rem;
+}
+
+.trends-kpi-card__value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.trends-kpi-card__label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.trends-kpi-card__sub {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.15rem;
+}
+
 /* ── Trends chart ─────────────────────────────────────────── */
 .trends-chart-container {
   position: relative;
@@ -2197,6 +2228,7 @@ select {
 /* ── Mobile responsive ────────────────────────────────────── */
 @media (max-width: 640px) {
   .exec-summary { grid-template-columns: repeat(2, 1fr); }
+  .trends-kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .trends-chart-container { height: 280px; }
   .rpt-tabs { overflow-x: auto; }
   .rpt-tab { padding: 0.5rem 0.85rem; font-size: 0.8rem; white-space: nowrap; }
