@@ -37,6 +37,7 @@ vi.mock('@luqen/core', () => ({
 
 vi.mock('../../src/compliance-client.js', () => ({
   checkCompliance: mockCheckCompliance,
+  dispatchWebhookEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('node:fs/promises', () => ({

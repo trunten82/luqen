@@ -127,11 +127,13 @@ describe('Redis integration', () => {
     let pubSubRedis: InstanceType<typeof Redis>;
 
     beforeAll(async () => {
+      if (skipTests) return;
       pubSubRedis = new Redis(REDIS_URL);
       await pubSubRedis.ping();
     });
 
     afterAll(async () => {
+      if (skipTests || !pubSubRedis) return;
       await pubSubRedis.disconnect();
     });
 
