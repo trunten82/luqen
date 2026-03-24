@@ -1007,11 +1007,7 @@ start_services_and_post_install() {
     done
     success "Compliance service running"
 
-    DASHBOARD_SESSION_SECRET="${SESSION_SECRET}" \
-      DASHBOARD_COMPLIANCE_URL="http://localhost:${COMPLIANCE_PORT}" \
-      DASHBOARD_COMPLIANCE_CLIENT_ID="${CLIENT_ID}" \
-      DASHBOARD_COMPLIANCE_CLIENT_SECRET="${CLIENT_SECRET}" \
-      nohup node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" serve --config "${CONFIG_FILE}" \
+    nohup node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" serve --config "${CONFIG_FILE}" \
       > /tmp/luqen-dash-install.log 2>&1 &
     DASH_PID=$!
     info "Waiting for dashboard..."
