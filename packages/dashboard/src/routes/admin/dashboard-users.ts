@@ -321,7 +321,7 @@ export async function dashboardUserRoutes(
       }
 
       const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      const csrfToken = reply.generateCsrf();
+      const csrfToken = typeof reply.generateCsrf === 'function' ? reply.generateCsrf() : '';
 
       return reply
         .code(200)
