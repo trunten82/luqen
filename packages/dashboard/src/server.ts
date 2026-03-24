@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { join, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DashboardConfig } from './config.js';
 import { registerSession } from './auth/session.js';
@@ -378,7 +379,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     const originalView = reply.view.bind(reply) as typeof reply.view;
     const isHtmxRequest = request.headers['hx-request'] === 'true';
     reply.view = (page: string, data?: Record<string, unknown>) => {
-      return originalView(page, {
+      const merged = {
         ...data,
         csrfToken,
         cspNonce: (reply as unknown as Record<string, { script: string }>).cspNonce?.script ?? '',
@@ -412,7 +413,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
         emailPluginActive: pluginManager.getActiveInstanceByPackageName?.('@luqen/plugin-notify-email') != null,
-      }, isHtmxRequest ? { layout: '' } : undefined);
+      };
+      // HTMX partial requests: render template without layout
+      if (isHtmxRequest) {
+        const templatePath = join(viewsDir, page);
+        const source = readFileSync(templatePath, 'utf-8');
+        const compiled = handlebars.compile(source);
+        return reply.type('text/html').send(compiled(merged));
+      }
+      return originalView(page, merged);
     };
   });
 
