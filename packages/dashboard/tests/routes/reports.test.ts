@@ -416,7 +416,20 @@ describe('Report routes', () => {
       expect(response.statusCode).toBe(404);
     });
 
-    it('returns 404 when scan belongs to different org', async () => {
+    it('returns 404 when non-admin user accesses scan from different org', async () => {
+      const userCtx = await createTestServer(['reports.view'], { username: 'org-user', role: 'user' });
+      const id = await makeScan(userCtx, { orgId: 'other-org' });
+
+      const response = await userCtx.server.inject({
+        method: 'GET',
+        url: `/reports/${id}`,
+      });
+
+      expect(response.statusCode).toBe(404);
+      userCtx.cleanup();
+    });
+
+    it('allows admin to access scan from different org', async () => {
       const id = await makeScan(ctx, { orgId: 'other-org' });
 
       const response = await ctx.server.inject({
@@ -424,7 +437,7 @@ describe('Report routes', () => {
         url: `/reports/${id}`,
       });
 
-      expect(response.statusCode).toBe(404);
+      expect(response.statusCode).toBe(200);
     });
 
     it('allows access when scan orgId is "system"', async () => {
@@ -1026,15 +1039,17 @@ describe('Report routes', () => {
       expect(response.statusCode).toBe(404);
     });
 
-    it('returns 404 when scan belongs to different org', async () => {
-      const id = await makeScan(ctx, { orgId: 'other-org' });
+    it('returns 404 when non-admin user deletes scan from different org', async () => {
+      const userCtx = await createTestServer(['reports.delete'], { username: 'org-user', role: 'user' });
+      const id = await makeScan(userCtx, { orgId: 'other-org' });
 
-      const response = await ctx.server.inject({
+      const response = await userCtx.server.inject({
         method: 'DELETE',
         url: `/reports/${id}`,
       });
 
       expect(response.statusCode).toBe(404);
+      userCtx.cleanup();
     });
 
     it('returns 403 when user lacks reports.delete permission and is not the owner', async () => {
