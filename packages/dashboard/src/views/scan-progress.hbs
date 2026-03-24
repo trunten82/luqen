@@ -125,7 +125,7 @@
 
 </div>
 
-<script>
+<script nonce="{{cspNonce}}">
 (function () {
   var source = new EventSource('/scan/{{scan.id}}/events');
   var log = document.getElementById('scan-log');

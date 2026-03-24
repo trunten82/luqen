@@ -165,13 +165,13 @@
 
 {{! ── Tabs ────────────────────────────────────────────────────────────────── }}
 <div class="cmp-tabs" role="tablist" aria-label="Comparison sections">
-  <button class="cmp-tab cmp-tab--active" role="tab" aria-selected="true" aria-controls="cmp-panel-added" id="cmp-tab-added" onclick="cmpSwitchTab('added', this)">
+  <button class="cmp-tab cmp-tab--active" role="tab" aria-selected="true" aria-controls="cmp-panel-added" id="cmp-tab-added" data-action="cmpSwitchTab" data-tab="added">
     {{t "reportCompare.tabNewIssues"}} ({{diff.addedCount}})
   </button>
-  <button class="cmp-tab" role="tab" aria-selected="false" aria-controls="cmp-panel-removed" id="cmp-tab-removed" onclick="cmpSwitchTab('removed', this)">
+  <button class="cmp-tab" role="tab" aria-selected="false" aria-controls="cmp-panel-removed" id="cmp-tab-removed" data-action="cmpSwitchTab" data-tab="removed">
     {{t "reportCompare.tabResolvedIssues"}} ({{diff.removedCount}})
   </button>
-  <button class="cmp-tab" role="tab" aria-selected="false" aria-controls="cmp-panel-unchanged" id="cmp-tab-unchanged" onclick="cmpSwitchTab('unchanged', this)">
+  <button class="cmp-tab" role="tab" aria-selected="false" aria-controls="cmp-panel-unchanged" id="cmp-tab-unchanged" data-action="cmpSwitchTab" data-tab="unchanged">
     {{t "reportCompare.tabUnchanged"}} ({{diff.unchangedCount}})
   </button>
 </div>
@@ -552,7 +552,7 @@
   }
 </style>
 
-<script>
+<script nonce="{{cspNonce}}">
   function cmpSwitchTab(name, btn) {
     // Hide all panels and deactivate all tabs
     document.querySelectorAll('.cmp-panel').forEach(function(p) {

@@ -83,10 +83,10 @@
 
       <div class="picker" id="scan-picker">
         <div class="picker__tabs">
-          <button type="button" class="picker__tab picker__tab--active" onclick="pickerTab('jurisdictions',this)">{{t "scans.jurisdictions"}}</button>
-          <button type="button" class="picker__tab" onclick="pickerTab('regulations',this)">{{t "scans.regulations"}}</button>
+          <button type="button" class="picker__tab picker__tab--active" data-action="pickerTab" data-tab="jurisdictions">{{t "scans.jurisdictions"}}</button>
+          <button type="button" class="picker__tab" data-action="pickerTab" data-tab="regulations">{{t "scans.regulations"}}</button>
         </div>
-        <input type="search" class="picker__search" placeholder="{{t "common.search"}}" oninput="pickerSearch(this.value)" aria-label="Search">
+        <input type="search" class="picker__search" placeholder="{{t "common.search"}}" data-action-input="pickerSearch" aria-label="Search">
         <div class="picker__list">
           {{#each jurisdictions}}
           <label class="picker__item" data-tab="jurisdictions" data-name="{{name}}">
@@ -125,7 +125,7 @@
         <input type="range" id="concurrency" name="concurrency"
                min="1" max="{{maxConcurrency}}" value="{{defaultConcurrency}}"
                aria-describedby="concurrency-hint"
-               oninput="document.getElementById('concurrency-value').textContent = this.value">
+               data-action-input="concurrencySlider">
         <output id="concurrency-value" for="concurrency" aria-live="polite" class="text-sm text-muted">{{defaultConcurrency}}</output>
         <p id="concurrency-hint" class="form-hint">
           Number of pages scanned simultaneously (1–{{maxConcurrency}}).
@@ -159,7 +159,7 @@
   </form>
 </section>
 
-<script>
+<script nonce="{{cspNonce}}">
   (function() {
     var incrementalCb = document.getElementById('incremental-cb');
     var modeRadios = document.querySelectorAll('input[name="scanMode"]');
