@@ -53,12 +53,14 @@
                     hx-swap="outerHTML"
                     class="btn btn--sm btn--success"
                     aria-label="Approve proposal: {{summary}}">{{t "admin.proposals.approve"}}</button>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
             <button hx-post="/admin/proposals/{{id}}/reject"
                     hx-confirm="{{t "admin.proposals.confirmReject"}}"
                     hx-target="#proposal-{{id}}"
                     hx-swap="outerHTML"
                     class="btn btn--sm btn--danger"
                     aria-label="Reject proposal: {{summary}}">{{t "admin.proposals.reject"}}</button>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
             {{/if}}
           </td>
         </tr>

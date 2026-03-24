@@ -46,6 +46,7 @@
                     hx-post="/admin/plugins/{{id}}/deactivate"
                     hx-target="#plugin-messages"
                     hx-swap="innerHTML">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
               {{t "admin.plugins.deactivate"}}
             </button>
             {{else}}
@@ -53,6 +54,7 @@
                     hx-post="/admin/plugins/{{id}}/activate"
                     hx-target="#plugin-messages"
                     hx-swap="innerHTML">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
               {{t "admin.plugins.activate"}}
             </button>
             {{/if}}
@@ -112,6 +114,7 @@
                   hx-vals='{"packageName": "{{packageName}}"}'
                   hx-target="#plugin-messages"
                   hx-swap="innerHTML">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
             {{t "admin.plugins.install"}}
           </button>
         </div>

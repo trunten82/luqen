@@ -6,6 +6,7 @@
           hx-target="#organizations-table"
           hx-swap="beforeend"
           novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
         <label for="org-name" class="form-label">{{t "common.name"}} <span aria-hidden="true">*</span></label>

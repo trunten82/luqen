@@ -41,6 +41,7 @@
                     hx-swap="outerHTML"
                     class="btn btn--sm btn--danger"
                     aria-label="Delete {{this.name}}">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
               {{t "common.delete"}}
             </button>
           </td>

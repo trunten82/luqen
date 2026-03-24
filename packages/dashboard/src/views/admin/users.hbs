@@ -45,6 +45,7 @@
                     hx-swap="outerHTML"
                     class="btn btn--sm btn--warning"
                     aria-label="Deactivate {{username}}">{{t "admin.users.deactivate"}}</button>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
             {{/if}}
           </td>
         </tr>

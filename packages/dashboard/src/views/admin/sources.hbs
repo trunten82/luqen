@@ -13,6 +13,7 @@
             hx-indicator="#scan-spinner"
             class="btn btn--secondary"
             aria-label="Trigger scan of all monitored sources now">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
       {{t "admin.sources.scanNow"}}
     </button>
     <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">{{t "admin.sources.scanning"}}</span>

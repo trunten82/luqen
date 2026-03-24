@@ -43,6 +43,7 @@
               hx-swap="innerHTML"
               hx-indicator="#scan-spinner"
               aria-label="Trigger source scan">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
         {{t "admin.monitor.triggerScan"}}
       </button>
       <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">{{t "admin.sources.scanning"}}</span>

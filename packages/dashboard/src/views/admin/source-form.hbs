@@ -6,6 +6,7 @@
           hx-target="#sources-table-body"
           hx-swap="beforeend"
           novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
         <label for="src-name" class="form-label">{{t "admin.sources.fieldName"}} <span aria-hidden="true">*</span></label>
