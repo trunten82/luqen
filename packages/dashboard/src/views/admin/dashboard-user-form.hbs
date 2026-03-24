@@ -6,6 +6,7 @@
           hx-target="#dashboard-users-table"
           hx-swap="beforeend"
           novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
         <label for="du-username" class="form-label">{{t "admin.dashboardUsers.username"}} <span aria-hidden="true">*</span></label>

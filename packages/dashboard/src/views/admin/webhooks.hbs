@@ -43,6 +43,7 @@
                     hx-swap="innerHTML"
                     class="btn btn--sm btn--secondary"
                     aria-label="Send test delivery to {{url}}">{{t "admin.webhooks.test"}}</button>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
             <button hx-delete="/admin/webhooks/{{id}}"
                     hx-confirm="Delete this webhook?"
                     hx-target="closest tr"

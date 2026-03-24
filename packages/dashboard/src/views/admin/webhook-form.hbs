@@ -6,6 +6,7 @@
           hx-target="#webhooks-table-body"
           hx-swap="beforeend"
           novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
         <label for="wh-url" class="form-label">{{t "admin.webhooks.endpointUrl"}} <span aria-hidden="true">*</span></label>

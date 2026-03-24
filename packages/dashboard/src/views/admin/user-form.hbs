@@ -6,6 +6,7 @@
           hx-target="#users-table-body"
           hx-swap="beforeend"
           novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
         <label for="usr-username" class="form-label">{{t "admin.users.username"}} <span aria-hidden="true">*</span></label>

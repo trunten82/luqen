@@ -12,6 +12,7 @@
           hx-swap="outerHTML"
           {{/if}}
           novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
         <label for="jur-id" class="form-label">{{t "admin.jurisdictions.fieldId"}} <span aria-hidden="true">*</span></label>

@@ -38,6 +38,7 @@
               hx-swap="outerHTML"
               class="btn btn--danger"
               data-action="closeModalDelayed">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
         {{t "admin.apiKeys.revokeKey"}}
       </button>
       {{else}}

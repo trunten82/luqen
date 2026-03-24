@@ -42,6 +42,7 @@
                     hx-swap="outerHTML swap:500ms"
                     class="btn btn--sm btn--danger"
                     aria-label="Revoke {{name}}">{{t "admin.clients.revoke"}}</button>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
           </td>
         </tr>
         {{else}}

@@ -49,6 +49,7 @@
           hx-target="#org-members-table"
           hx-swap="beforeend"
           class="form-inline">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
         <label for="add-member-user" class="form-label">{{t "admin.organizations.user"}}</label>

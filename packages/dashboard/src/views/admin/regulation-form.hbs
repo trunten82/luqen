@@ -12,6 +12,7 @@
           hx-swap="outerHTML"
           {{/if}}
           novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       {{#if isNew}}
       <div class="form-group">

@@ -6,6 +6,7 @@
           hx-target="#api-keys-table"
           hx-swap="beforeend"
           novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
         <label for="ak-label" class="form-label">{{t "admin.apiKeys.label"}} <span aria-hidden="true">*</span></label>
