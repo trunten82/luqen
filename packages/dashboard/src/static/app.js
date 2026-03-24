@@ -2,7 +2,7 @@
   'use strict';
 
   /* ── CSRF: send token on every HTMX request ─────────────────────── */
-  document.body.addEventListener('htmx:configRequest', function (e) {
+  document.addEventListener('htmx:configRequest', function (e) {
     var meta = document.querySelector('meta[name="csrf-token"]');
     if (meta) e.detail.headers['x-csrf-token'] = meta.getAttribute('content');
   });
