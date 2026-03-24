@@ -62,8 +62,6 @@
       </div>
 
       <input type="hidden" name="standard" value="WCAG2AA">
-      <input type="hidden" name="includeWarnings" value="true">
-      <input type="hidden" name="includeNotices" value="true">
 
       <div class="form-group">
         <label>{{t "home.scanMode"}}</label>
@@ -110,6 +108,17 @@
         </div>
       </div>
       {{/if}}
+
+      <div class="form-group" style="display:flex;gap:1.5rem;">
+        <label class="checkbox-label">
+          <input type="checkbox" name="includeWarnings" value="true" checked>
+          <span>{{t "scans.includeWarnings"}}</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="includeNotices" value="true" checked>
+          <span>{{t "scans.includeNotices"}}</span>
+        </label>
+      </div>
 
       <div class="page-actions">
         <button type="submit" class="btn btn--primary">{{t "home.startScan"}}</button>
