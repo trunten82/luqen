@@ -4,9 +4,9 @@
 
 Luqen scans your entire website for WCAG violations and tells you which laws in which countries require you to fix each one. One scan covers 58 jurisdictions (EU, US, UK, and more), so your legal and dev teams see the same picture. Run it from the command line, a browser dashboard, or your IDE — it works for a solo developer checking one page or an enterprise team monitoring hundreds of sites across multiple languages.
 
-![Version](https://img.shields.io/badge/version-v1.8.0-blue)
+![Version](https://img.shields.io/badge/version-v1.9.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-2789%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1764%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
 
@@ -33,12 +33,13 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 - **WCAG hyperlinks** — every criterion links to the official W3C Understanding WCAG 2.1 page
 - **Regulation hyperlinks** — regulation badges link to official legal texts (EUR-Lex, govinfo.gov, legislation.gov.uk, etc.)
 - **Professional HTML reports** — dark mode, print-friendly, filterable by severity and jurisdiction
+- **Trend charts with KPI cards** — track accessibility scores over time with key performance indicator cards showing score changes, issue counts, and pass/fail rates
 - **Four interfaces** — CLI for humans, MCP server for AI agents (Claude Code), OAuth2 REST API with OpenAPI/Swagger, web dashboard
 - **Regulatory monitoring** — watches legal sources for changes and creates update proposals when regulations evolve
 - **WAF detection** — detects and reports when a Web Application Firewall blocks scanning
 - **Progressive authentication** — starts with API key (solo mode), add local users (team mode), or install an SSO plugin (enterprise mode) — no external auth service required
 - **Pluggable storage** — modular StorageAdapter architecture with 14 repository interfaces backed by SQLite; PostgreSQL and MongoDB adapters coming as plugins
-- **Security hardening** — per-installation encryption salt, SSRF protection on scan URLs, global rate limiting, secure session cookies (httpOnly, SameSite=Strict, AES-256-GCM encrypted)
+- **Security hardening** — @fastify/helmet security headers (CSP, HSTS, X-Frame-Options), CSRF token verification on state-changing requests, XSS prevention, per-installation encryption salt, SSRF protection on scan URLs, global rate limiting, secure session cookies (httpOnly, SameSite=Strict, AES-256-GCM encrypted)
 - **Plugin system** — 8 plugins in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), and storage (S3, Azure Blob); installed by name via tarball download from GitHub releases, managed via dashboard UI, CLI, or REST API
 - **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop
@@ -327,15 +328,10 @@ Luqen includes MCP (Model Context Protocol) servers for AI-assisted accessibilit
 npm test --workspaces
 ```
 
-The project maintains 85%+ statement coverage across 2,700+ tests in 155+ test files:
+The project maintains 85%+ statement coverage across 1,764 tests with 0 failures:
 
 ```
-packages/core:              186 tests (21 files)
-packages/compliance:        424 tests (35 files)
-packages/dashboard:        2,008 tests (91 files)
-packages/monitor:            83 tests (8 files)
----
-Total:                     2,701 tests (155 files)
+npm test --workspaces
 ```
 
 Run with coverage:

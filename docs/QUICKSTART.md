@@ -262,12 +262,15 @@ curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh |
 
 ---
 
-## New in v1.8.0
+## New in v1.9.0
 
-- **Direct pa11y scanner** — no external pa11y-webservice needed; scanning uses the pa11y library directly
-- **Docker deployment** — `Dockerfile` + `docker-compose.yml` for one-command deployment
-- **Installer rewrite** — 3 modes: Developer tools (CLI only), Full platform (bare metal), Docker
-- **`webserviceUrl` is now optional** — set it only if you have an existing pa11y-webservice to reuse
+- **PDF export rewritten with PDFKit** — no Puppeteer or Chromium dependency; PDF generation uses PDFKit directly
+- **Security hardening** — @fastify/helmet security headers, CSRF token verification, XSS prevention, per-installation session salt
+- **Trend KPI cards** — key performance indicator cards on the trends page showing score changes and issue counts
+- **Power BI connector** — Power Query M connector for importing scan data into Power BI Desktop
+- **Mercurius v16.8.0** — fixes a CSRF vulnerability in the GraphQL endpoint
+
+> **Note:** Chromium is only required for the pa11y scanner (installed automatically by pa11y). The dashboard itself does not require Chromium.
 
 See [CHANGELOG.md](../CHANGELOG.md) for the full history.
 

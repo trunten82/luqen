@@ -3,7 +3,7 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { StorageAdapter } from '../db/index.js';
 import type { PageHashEntry } from '../db/types.js';
-import { checkCompliance } from '../compliance-client.js';
+import { checkCompliance, dispatchWebhookEvent } from '../compliance-client.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 
 export interface ScanProgressEvent {
@@ -550,6 +550,18 @@ export class ScanOrchestrator {
           reportUrl: `/reports/${scanId}`,
         },
       });
+
+      // Fire webhook for scan.completed
+      if (config.complianceUrl && config.complianceToken) {
+        void dispatchWebhookEvent(config.complianceUrl, config.complianceToken, 'scan.completed', {
+          scanId,
+          siteUrl: config.siteUrl,
+          status: 'completed',
+          pagesScanned,
+          issues: { errors, warnings, notices },
+          confirmedViolations,
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await this.storage.scans.updateScan(scanId, {
@@ -562,6 +574,16 @@ export class ScanOrchestrator {
         timestamp: new Date().toISOString(),
         data: { error: message },
       });
+
+      // Fire webhook for scan.failed
+      if (config.complianceUrl && config.complianceToken) {
+        void dispatchWebhookEvent(config.complianceUrl, config.complianceToken, 'scan.failed', {
+          scanId,
+          siteUrl: config.siteUrl,
+          status: 'failed',
+          error: message,
+        });
+      }
     }
   }
 }

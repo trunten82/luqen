@@ -6,6 +6,11 @@
 set -euo pipefail
 
 # ──────────────────────────────────────────────
+# Guard against deleted CWD (getcwd error)
+# ──────────────────────────────────────────────
+cd "$HOME" 2>/dev/null || cd /root 2>/dev/null || cd /tmp
+
+# ──────────────────────────────────────────────
 # Re-exec from temp file when piped (curl | bash)
 # so that stdin is the terminal for interactive prompts
 # ──────────────────────────────────────────────
@@ -742,9 +747,10 @@ check_prerequisites() {
 
   success "Node.js $(node --version), npm $(npm --version), git $(git --version | awk '{print $3}')"
 
-  # Install Chromium for pa11y scanner (built-in mode)
+  # Install Chromium for pa11y scanner (pa11y uses headless Chromium for page rendering)
+  # Note: PDF generation uses PDFKit (no browser needed), but pa11y still requires Chromium
   if ! command -v chromium &>/dev/null && ! command -v chromium-browser &>/dev/null && ! command -v google-chrome &>/dev/null; then
-    info "Installing Chromium (required for accessibility scanning)..."
+    info "Installing Chromium (required by pa11y for accessibility scanning)..."
     if command -v apt-get &>/dev/null; then
       apt-get install -y -qq chromium fonts-liberation libnss3 libatk1.0-0 \
         libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 \
@@ -783,7 +789,10 @@ install_and_build() {
 
   cd "${INSTALL_DIR}"
   run_quiet "Installing npm dependencies" npm install --prefer-offline
-  run_quiet "Building packages" npm run build --workspaces
+  # Build order matters: core → compliance → dashboard
+  run_quiet "Building @luqen/core" npm run build -w packages/core
+  run_quiet "Building @luqen/compliance" npm run build -w packages/compliance
+  run_quiet "Building @luqen/dashboard" npm run build -w packages/dashboard
 }
 
 # ──────────────────────────────────────────────
@@ -1352,7 +1361,7 @@ case "${DEPLOY_MODE}" in
     check_prerequisites
     clone_or_pull
 
-    local total_steps=3
+    total_steps=3
     [ "${INCLUDE_COMPLIANCE}" = "true" ] && total_steps=5
 
     step 1 ${total_steps} "Installing dependencies"

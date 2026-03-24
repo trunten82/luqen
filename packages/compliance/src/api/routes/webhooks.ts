@@ -75,6 +75,24 @@ export async function registerWebhookRoutes(
     }
   });
 
+  // POST /api/v1/webhooks/dispatch — trigger webhook dispatch for an event
+  app.post('/api/v1/webhooks/dispatch', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    try {
+      const body = request.body as { event?: string; data?: Record<string, unknown> };
+      if (!body.event || typeof body.event !== 'string') {
+        await reply.status(400).send({ error: 'event is required', statusCode: 400 });
+        return;
+      }
+      const { dispatchWebhook } = await import('../../engine/webhooks.js');
+      dispatchWebhook(db, body.event, body.data ?? {});
+      await reply.send({ ok: true });
+    } catch (err) {
+      await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+
   // DELETE /api/v1/webhooks/:id
   app.delete('/api/v1/webhooks/:id', {
     preHandler: [requireScope('admin')],
