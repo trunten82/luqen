@@ -516,6 +516,30 @@ export async function testWebhook(
   }
 }
 
+/**
+ * Dispatch a webhook event via the compliance API.
+ * Fire-and-forget: errors are silently swallowed.
+ */
+export async function dispatchWebhookEvent(
+  baseUrl: string,
+  token: string,
+  event: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await fetch(`${baseUrl}/api/v1/webhooks/dispatch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ event, data }),
+    });
+  } catch {
+    // Fire-and-forget — webhook dispatch failure should not block scans
+  }
+}
+
 // ── Users ─────────────────────────────────────────────────────────────────────
 
 export interface User {

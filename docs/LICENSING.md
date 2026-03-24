@@ -26,34 +26,115 @@ All of them are MIT-licensed and fully compatible with MIT distribution.
 |---|---|---|
 | `fastify` | MIT | HTTP framework (compliance, dashboard) |
 | `@fastify/cors` | MIT | CORS plugin |
-| `@fastify/rate-limit` | MIT | Rate-limiting plugin |
-| `@fastify/swagger` | MIT | OpenAPI plugin |
-| `@fastify/swagger-ui` | MIT | Swagger UI plugin |
+| `@fastify/csrf-protection` | MIT | CSRF token verification (dashboard) |
 | `@fastify/formbody` | MIT | Form-body parser |
+| `@fastify/helmet` | MIT | Security HTTP headers (dashboard) |
+| `@fastify/rate-limit` | MIT | Rate-limiting plugin |
 | `@fastify/secure-session` | MIT | Session management |
 | `@fastify/static` | MIT | Static file serving |
+| `@fastify/swagger` | MIT | OpenAPI plugin |
+| `@fastify/swagger-ui` | MIT | Swagger UI plugin |
 | `@fastify/view` | MIT | Template rendering |
-| `handlebars` | MIT | HTML template engine |
-| `better-sqlite3` | MIT | Embedded SQLite driver |
-| `jose` | MIT | JWT / JWK cryptography |
 | `bcrypt` | MIT | Password hashing |
-| `ioredis` | MIT | Redis client |
-| `commander` | MIT | CLI argument parsing |
-| `zod` | MIT | Schema validation |
+| `better-sqlite3` | MIT | Embedded SQLite driver |
 | `cheerio` | MIT | HTML parsing / scraping |
+| `commander` | MIT | CLI argument parsing |
+| `exceljs` | MIT | Excel/CSV export |
+| `graphql` | MIT | GraphQL language runtime |
+| `handlebars` | MIT | HTML template engine |
+| `ioredis` | MIT | Redis client |
+| `jose` | MIT | JWT / JWK cryptography |
+| `mercurius` | MIT | GraphQL adapter for Fastify |
+| `nodemailer` | MIT-0 | Email sending (SMTP) |
+| `pdfkit` | MIT | PDF document generation |
+| `tar` | ISC | Tarball handling for plugin installation |
 | `xml2js` | MIT | XML parsing |
 | `robots-parser` | MIT | robots.txt parsing |
+| `zod` | MIT | Schema validation |
 | `@modelcontextprotocol/sdk` | MIT | MCP server/client SDK |
-| `mongodb` | Apache-2.0 | Optional MongoDB adapter |
-| `pg` | MIT | Optional PostgreSQL adapter |
 | `pa11y` | LGPL-3.0 | Accessibility scanner (used as a library — LGPL permits this without copyleft obligations) |
 | `axe-core` | MPL-2.0 | Accessibility test runner (used as a library — MPL file-level copyleft does not propagate) |
-| `pdfkit` | MIT | PDF document generation |
 
 All of the above are compatible with MIT when used as libraries (linked/imported, not
 modified and redistributed). All other transitive runtime dependencies resolve to MIT,
 ISC, Apache-2.0, or BSD variants — all of which are permissive and compatible with MIT
 distribution.
+
+---
+
+## Runtime Dependencies
+
+The following table lists all key runtime dependencies with their pinned versions
+(from `package.json`), licenses, and official source URLs.
+
+### @luqen/core
+
+| Package | Version | License | Source |
+|---|---|---|---|
+| `@modelcontextprotocol/sdk` | ^1.27.1 | MIT | [npm](https://www.npmjs.com/package/@modelcontextprotocol/sdk) |
+| `cheerio` | ^1.2.0 | MIT | [npm](https://www.npmjs.com/package/cheerio) |
+| `commander` | ^14.0.3 | MIT | [npm](https://www.npmjs.com/package/commander) |
+| `handlebars` | ^4.7.8 | MIT | [npm](https://www.npmjs.com/package/handlebars) |
+| `pa11y` | ^9.1.1 | LGPL-3.0 | [npm](https://www.npmjs.com/package/pa11y) / [GitHub](https://github.com/pa11y/pa11y) |
+| `robots-parser` | ^3.0.1 | MIT | [npm](https://www.npmjs.com/package/robots-parser) |
+| `xml2js` | ^0.6.2 | MIT | [npm](https://www.npmjs.com/package/xml2js) |
+| `zod` | ^4.3.6 | MIT | [npm](https://www.npmjs.com/package/zod) |
+
+### @luqen/compliance
+
+| Package | Version | License | Source |
+|---|---|---|---|
+| `@fastify/cors` | ^10.0.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/cors) |
+| `@fastify/rate-limit` | ^10.0.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/rate-limit) |
+| `@fastify/swagger` | ^9.0.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/swagger) |
+| `@fastify/swagger-ui` | ^5.0.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/swagger-ui) |
+| `@modelcontextprotocol/sdk` | ^1.27.1 | MIT | [npm](https://www.npmjs.com/package/@modelcontextprotocol/sdk) |
+| `bcrypt` | ^6.0.0 | MIT | [npm](https://www.npmjs.com/package/bcrypt) |
+| `better-sqlite3` | ^11.0.0 | MIT | [npm](https://www.npmjs.com/package/better-sqlite3) |
+| `commander` | ^14.0.3 | MIT | [npm](https://www.npmjs.com/package/commander) |
+| `fastify` | ^5.0.0 | MIT | [npm](https://www.npmjs.com/package/fastify) / [GitHub](https://github.com/fastify/fastify) |
+| `ioredis` | ^5.10.1 | MIT | [npm](https://www.npmjs.com/package/ioredis) |
+| `jose` | ^6.0.0 | MIT | [npm](https://www.npmjs.com/package/jose) |
+| `zod` | ^4.3.6 | MIT | [npm](https://www.npmjs.com/package/zod) |
+
+### @luqen/dashboard
+
+| Package | Version | License | Source |
+|---|---|---|---|
+| `@fastify/csrf-protection` | ^7.1.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/csrf-protection) |
+| `@fastify/formbody` | ^8.0.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/formbody) |
+| `@fastify/helmet` | ^13.0.2 | MIT | [npm](https://www.npmjs.com/package/@fastify/helmet) |
+| `@fastify/rate-limit` | ^10.3.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/rate-limit) |
+| `@fastify/secure-session` | ^8.0.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/secure-session) |
+| `@fastify/static` | ^8.0.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/static) |
+| `@fastify/view` | ^10.0.0 | MIT | [npm](https://www.npmjs.com/package/@fastify/view) |
+| `bcrypt` | ^6.0.0 | MIT | [npm](https://www.npmjs.com/package/bcrypt) |
+| `better-sqlite3` | ^11.0.0 | MIT | [npm](https://www.npmjs.com/package/better-sqlite3) |
+| `commander` | ^14.0.3 | MIT | [npm](https://www.npmjs.com/package/commander) |
+| `exceljs` | ^4.4.0 | MIT | [npm](https://www.npmjs.com/package/exceljs) |
+| `fastify` | ^5.0.0 | MIT | [npm](https://www.npmjs.com/package/fastify) / [GitHub](https://github.com/fastify/fastify) |
+| `graphql` | ^16.9.0 | MIT | [npm](https://www.npmjs.com/package/graphql) |
+| `handlebars` | ^4.7.8 | MIT | [npm](https://www.npmjs.com/package/handlebars) |
+| `ioredis` | ^5.10.1 | MIT | [npm](https://www.npmjs.com/package/ioredis) |
+| `jose` | ^6.0.0 | MIT | [npm](https://www.npmjs.com/package/jose) |
+| `mercurius` | ^16.8.0 | MIT | [npm](https://www.npmjs.com/package/mercurius) / [GitHub](https://github.com/mercurius-js/mercurius) |
+| `nodemailer` | ^8.0.3 | MIT-0 | [npm](https://www.npmjs.com/package/nodemailer) / [GitHub](https://github.com/nodemailer/nodemailer) |
+| `pdfkit` | ^0.18.0 | MIT | [npm](https://www.npmjs.com/package/pdfkit) / [GitHub](https://github.com/foliojs/pdfkit) |
+| `tar` | ^7.5.12 | ISC | [npm](https://www.npmjs.com/package/tar) |
+| `zod` | ^4.3.6 | MIT | [npm](https://www.npmjs.com/package/zod) |
+
+### @luqen/monitor
+
+| Package | Version | License | Source |
+|---|---|---|---|
+| `@modelcontextprotocol/sdk` | ^1.27.1 | MIT | [npm](https://www.npmjs.com/package/@modelcontextprotocol/sdk) |
+| `commander` | ^14.0.3 | MIT | [npm](https://www.npmjs.com/package/commander) |
+
+### CDN Dependencies (loaded client-side)
+
+| Package | Version | License | Source |
+|---|---|---|---|
+| `chart.js` | 4.x (CDN) | MIT | [npm](https://www.npmjs.com/package/chart.js) / [GitHub](https://github.com/chartjs/Chart.js) |
 
 ---
 

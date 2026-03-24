@@ -1,5 +1,5 @@
 # Luqen — Full deployment
-# All services + monitor agent + Puppeteer for PDF generation
+# All services + monitor agent + PDFKit for PDF generation
 # Production-ready with health checks, restart policies, and named volumes
 
 services:

@@ -17,6 +17,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - **Favicon** — the dashboard now serves a favicon, eliminating 404 errors on browser requests for `/favicon.ico`.
 - **Sidebar hover visibility fix** — sidebar menu items are now visible on hover in all color themes.
+- **Trend KPI cards** — the trends page now displays key performance indicator cards showing score changes, issue counts, and pass/fail rates alongside the trend charts.
+- **Power BI connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop.
+
+### Security
+- **@fastify/helmet integration** — all dashboard responses now include security headers (Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security, etc.) via @fastify/helmet.
+- **CSRF token verification** — all state-changing requests (POST, PUT, PATCH, DELETE) are verified against a per-session CSRF token via @fastify/csrf-protection. API-key-authenticated and OAuth callback routes are exempt.
+- **XSS prevention** — user-supplied values in templates are escaped via Handlebars auto-escaping and a shared `escapeHtml` utility to prevent cross-site scripting.
+- **Per-installation session salt** — each dashboard instance generates a unique random salt on first start, used for session encryption. Prevents cross-installation session reuse.
+
+### Testing
+- **1764 tests passing, 0 failures** — full test suite runs green across all packages with 85%+ statement coverage.
 
 ---
 
@@ -466,7 +477,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 | Version | Date | Highlights |
 |---------|------|-----------|
-| [1.9.0] | 2026-03-23 | PDF export rewritten with PDFKit (no Chromium), normalizeReportData shared service, Mercurius v16.8.0 (CSRF fix), plugins removed from main repo, favicon, sidebar hover fix |
+| [1.9.0] | 2026-03-23 | PDF export rewritten with PDFKit (no Chromium), security hardening (@fastify/helmet, CSRF verification, XSS fix, session salt), Mercurius v16.8.0 (CSRF fix), trend KPI cards, Power BI connector, 1764 tests passing, plugins removed from main repo |
 | [1.8.0] | 2026-03-23 | Direct pa11y scanner (no webservice needed), Docker deployment, installer rewrite (3 modes) |
 | [1.6.0] | 2026-03-23 | auth-okta + auth-google plugins, all 8 plugins available, plugin build script |
 | [1.5.0] | 2026-03-23 | Remote plugin catalogue, tarball install, StorageAdapter (14 repositories), security hardening, 2661 tests (85%+ coverage), dead code removal |
