@@ -240,17 +240,23 @@ export async function organizationRoutes(
         const username = user?.username ?? userId;
         const row = memberRowHtml(id, member, username);
 
-        // Show the members table (hidden when empty) and hide the empty-state message
-        const showTable = '<table id="org-members-wrapper" hx-swap-oob="true" style="display:table"></table>';
-        const hideEmpty = '<div id="org-no-members" hx-swap-oob="true" style="display:none"></div>';
+        // Show table + hide empty state via inline script (OOB can't change attributes)
+        const reveal = `<script>
+          var t=document.getElementById('org-members-wrapper');if(t)t.style.display='';
+          var e=document.getElementById('org-no-members');if(e)e.style.display='none';
+        </script>`;
 
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(`${row}\n${showTable}\n${hideEmpty}\n${toastHtml(`${username} added to organization.`)}`);
+          .send(`${row}\n${reveal}\n${toastHtml(`${username} added to organization.`)}`);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to add member';
-        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+        const isDuplicate = message.includes('UNIQUE constraint');
+        return reply
+          .code(isDuplicate ? 409 : 500)
+          .header('content-type', 'text/html')
+          .send(toastHtml(isDuplicate ? 'User is already a member of this organization.' : message, 'error'));
       }
     },
   );
