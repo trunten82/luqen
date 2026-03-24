@@ -11,8 +11,9 @@
 {{! Add member form }}
 <form hx-post="/admin/teams/{{team.id}}/members"
       hx-target="#members-table-body"
+      data-reset-on-success
       hx-swap="beforeend"
-      hx-on::after-request="if(event.detail.successful) this.reset()"
+
       class="card" style="margin-bottom:1.5rem; padding:1rem;">
   <input type="hidden" name="_csrf" value="{{csrfToken}}">
   <div style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;">
