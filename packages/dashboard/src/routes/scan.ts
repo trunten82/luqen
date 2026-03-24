@@ -92,10 +92,22 @@ export async function scanRoutes(
       if (!result.ok) {
         const isHtmx = request.headers['hx-request'] === 'true';
         if (isHtmx || request.headers['accept']?.includes('text/html')) {
+          const token = getToken(request);
+          const orgId = getOrgId(request);
+          const lookupData = await complianceService.getComplianceLookupData(token, orgId);
           return reply.code(400).view('scan-new.hbs', {
             pageTitle: 'New Scan',
             currentPath: '/scan/new',
             scanError: result.error,
+            prefillUrl: body.siteUrl,
+            jurisdictions: lookupData.jurisdictions,
+            regulations: lookupData.regulations,
+            complianceWarning: lookupData.warning,
+            standards: VALID_STANDARDS,
+            defaultStandard: body.standard || 'WCAG2AA',
+            maxConcurrency: 10,
+            defaultConcurrency: config.maxConcurrentScans,
+            maxPages: config.maxPages,
           });
         }
         return reply.code(400).send({ error: result.error });
