@@ -59,6 +59,8 @@ export class DirectScanner {
       hideElements: options.hideElements || undefined,
       headers: options.headers || {},
       runners: options.runner === 'axe' ? ['axe'] : ['htmlcs'],
+      includeWarnings: true,
+      includeNotices: true,
       chromeLaunchConfig: {
         ...(executablePath ? { executablePath } : {}),
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
