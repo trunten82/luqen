@@ -19,6 +19,8 @@ interface NewScanBody {
   maxPages?: string;
   runner?: string;
   incremental?: string;
+  includeWarnings?: string | boolean;
+  includeNotices?: string | boolean;
 }
 
 export async function scanRoutes(
@@ -77,6 +79,8 @@ export async function scanRoutes(
         maxPages: body.maxPages,
         runner: body.runner,
         incremental: body.incremental,
+        includeWarnings: body.includeWarnings === 'true' || body.includeWarnings === true,
+        includeNotices: body.includeNotices === 'true' || body.includeNotices === true,
       };
 
       const result = await scanService.initiateScan(input, {

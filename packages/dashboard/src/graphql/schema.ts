@@ -45,6 +45,8 @@ export const schema = `
     siteUrl: String!
     standard: String
     jurisdictions: [String!]
+    includeWarnings: Boolean
+    includeNotices: Boolean
   }
 
   # ── Issues (from JSON report) ──────────────────────────────────────

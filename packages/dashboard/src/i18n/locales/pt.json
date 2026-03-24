@@ -196,7 +196,9 @@
     "standard": "Padrão",
     "startScan": "Iniciar Varredura",
     "maxPages": "Páginas Máximas",
-    "maxPagesHint": "Número máximo de páginas a descobrir e verificar no modo site completo (1–1000)."
+    "maxPagesHint": "Número máximo de páginas a descobrir e verificar no modo site completo (1–1000).",
+    "includeWarnings": "Incluir avisos",
+    "includeNotices": "Incluir notificações"
   },
   "reports": {
     "title": "Relatórios",

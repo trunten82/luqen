@@ -38,6 +38,10 @@ export interface CreateScannerOptions {
   readonly maxPages?: number;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Requires the runner installed alongside the webservice. */
   readonly runner?: 'htmlcs' | 'axe';
+  /** Include warnings in results (default: true). */
+  readonly includeWarnings?: boolean;
+  /** Include notices in results (default: true). */
+  readonly includeNotices?: boolean;
 }
 
 export interface Scanner {
@@ -89,6 +93,8 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
     wait: opts.wait ?? 0,
     onProgress: opts.onProgress,
     ...(opts.runner !== undefined ? { runner: opts.runner } : {}),
+    includeWarnings: opts.includeWarnings !== false,
+    includeNotices: opts.includeNotices !== false,
   };
 
   return {

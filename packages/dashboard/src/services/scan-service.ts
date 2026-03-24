@@ -31,6 +31,8 @@ export interface InitiateScanInput {
   readonly maxPages?: string | number;
   readonly runner?: string;
   readonly incremental?: string | boolean;
+  readonly includeWarnings?: boolean;
+  readonly includeNotices?: boolean;
 }
 
 export interface ScanContext {
@@ -239,6 +241,8 @@ export class ScanService {
       maxPages,
       ...(runner !== undefined ? { runner } : {}),
       ...(incremental ? { incremental, orgId: context.orgId } : {}),
+      includeWarnings: input.includeWarnings !== false,
+      includeNotices: input.includeNotices !== false,
     });
 
     return { ok: true, scanId };

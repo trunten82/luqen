@@ -15,6 +15,8 @@ export interface ScanOptions {
   readonly onProgress?: ProgressListener;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Passed through to the webservice task. */
   readonly runner?: 'htmlcs' | 'axe';
+  readonly includeWarnings?: boolean;
+  readonly includeNotices?: boolean;
 }
 
 export interface ScanResults {
@@ -226,6 +228,8 @@ async function scanUrlDirect(
       hideElements: options.hideElements || undefined,
       headers: options.headers,
       runner: options.runner,
+      includeWarnings: options.includeWarnings,
+      includeNotices: options.includeNotices,
     });
 
     const issues: AccessibilityIssue[] = result.issues.map((issue) => ({

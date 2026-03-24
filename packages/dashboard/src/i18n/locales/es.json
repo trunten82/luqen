@@ -196,7 +196,9 @@
     "standard": "Estándar",
     "startScan": "Iniciar Escaneo",
     "maxPages": "Páginas Máximas",
-    "maxPagesHint": "Número máximo de páginas a descubrir y escanear en modo sitio completo (1–1000)."
+    "maxPagesHint": "Número máximo de páginas a descubrir y escanear en modo sitio completo (1–1000).",
+    "includeWarnings": "Incluir advertencias",
+    "includeNotices": "Incluir avisos"
   },
   "reports": {
     "title": "Informes",

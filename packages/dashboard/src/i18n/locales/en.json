@@ -196,7 +196,9 @@
     "incrementalHint": "Only re-scan pages that changed since the last scan of this URL. Automatically selects Full Site mode.",
     "siteUrl": "Site URL",
     "standard": "Standard",
-    "startScan": "Start Scan"
+    "startScan": "Start Scan",
+    "includeWarnings": "Include warnings",
+    "includeNotices": "Include notices"
   },
   "reports": {
     "title": "Reports",
@@ -497,7 +499,7 @@
       "noMembers": "No members in this organization yet.",
       "addMember": "Add Member",
       "user": "User",
-      "selectUser": "Select a user\u2026"
+      "selectUser": "Select a user…"
     },
     "system": {
       "database": "Database",
@@ -625,8 +627,8 @@
     "jurisdictions": "Jurisdictions",
     "started": "Started",
     "liveProgress": "Live Progress",
-    "statusQueued": "Queued \u2014 waiting for a scan slot\u2026",
-    "statusRunning": "Scanning in progress\u2026",
+    "statusQueued": "Queued — waiting for a scan slot…",
+    "statusRunning": "Scanning in progress…",
     "statusCompleted": "Scan completed.",
     "statusFailed": "Scan failed.",
     "pagesDiscovered": "Pages Discovered",
@@ -635,27 +637,27 @@
     "issuesFound": "Issues Found",
     "errorLabel": "Error:",
     "tryAgain": "Try Again",
-    "msgDiscovering": "Discovering pages\u2026",
-    "logScanStarted": "Scan started \u2014 discovering pages.",
+    "msgDiscovering": "Discovering pages…",
+    "logScanStarted": "Scan started — discovering pages.",
     "msgScanning": "Scanning",
     "pages": "pages",
     "logDiscovered": "Discovered",
-    "logPagesStarted": "pages \u2014 scanning started.",
+    "logPagesStarted": "pages — scanning started.",
     "logSkipped": "Skipped (unchanged):",
     "scanningLabel": "Scanning:",
     "issueErrors": "errors",
     "issueWarnings": "warnings",
     "issueNotices": "notices",
     "logPage": "Page",
-    "msgCompliance": "Running compliance check\u2026",
+    "msgCompliance": "Running compliance check…",
     "logCompliance": "Running compliance check.",
-    "msgComplete": "Scan completed! Redirecting to report\u2026",
+    "msgComplete": "Scan completed! Redirecting to report…",
     "logComplete": "Scan complete.",
-    "logPagesSkipped": "pages skipped \u2014 unchanged)",
+    "logPagesSkipped": "pages skipped — unchanged)",
     "unknownError": "Unknown error",
     "msgFailed": "Scan failed:",
     "logFailed": "Scan failed:",
-    "logReconnecting": "Connection interrupted. Reconnecting\u2026"
+    "logReconnecting": "Connection interrupted. Reconnecting…"
   },
   "reportDetail": {
     "siteUrl": "Site URL",
@@ -696,7 +698,7 @@
     "selected": "selected",
     "selectAssignee": "Select assignee...",
     "assignSelected": "Assign Selected",
-    "sharedComponentsLabel": "Shared components \u2014 fix once, fix everywhere",
+    "sharedComponentsLabel": "Shared components — fix once, fix everywhere",
     "assign": "Assign",
     "noIssues": "No issues found in this report.",
     "templateIntro": "These issues appear on multiple pages and likely come from shared components. Fixing the component fixes all affected pages.",
@@ -790,7 +792,7 @@
     "wcagCriteriaViolated": "WCAG criteria violated:",
     "needsReview": "Needs review:",
     "priorityActionItems": "Priority Action Items",
-    "priorityActionDesc": "Errors and warnings grouped by WCAG criterion \u2014 address these first. Notices omitted for clarity.",
+    "priorityActionDesc": "Errors and warnings grouped by WCAG criterion — address these first. Notices omitted for clarity.",
     "severity": "Severity",
     "wcag": "WCAG",
     "issue": "Issue",
@@ -802,7 +804,7 @@
     "pageSpecific": "Page-specific",
     "additionalWarnings": "Additional warnings for same criterion",
     "sharedComponentIssues": "Shared Component Issues",
-    "sharedComponentDesc": "These issues appear in shared components \u2014 fixing the component resolves all affected pages.",
+    "sharedComponentDesc": "These issues appear in shared components — fixing the component resolves all affected pages.",
     "component": "Component",
     "topActions": "Top Critical Actions",
     "topActionsDesc": "The most impactful issues to address first — errors and regulatory warnings, sorted by severity and reach.",
@@ -811,7 +813,6 @@
     "quickWinImpact": "Impact",
     "quickWinFixOne": "Fix once → resolves on all pages",
     "issues": "Issues",
-    "component": "Component",
     "fullDetailNote": "For the complete issue list with selectors and code context, use the Excel export from the dashboard.",
     "verdictFail": "Action Required — accessibility violations detected that may breach legal requirements.",
     "verdictPass": "No confirmed violations detected. Review notices for potential improvements.",
@@ -848,7 +849,7 @@
     "optionalNotes": "Optional notes...",
     "testedBy": "Tested by",
     "on": "on",
-    "partiallyAutomatedTitle": "Partially Automated \u2014 Verify Manually",
+    "partiallyAutomatedTitle": "Partially Automated — Verify Manually",
     "partiallyAutomatedDesc": "Automation catches some issues but human verification is needed to confirm full compliance."
   },
   "assignments": {
@@ -908,8 +909,8 @@
     "noRepos": "No repositories connected yet. Use the form above to connect your first repository.",
     "integrationOptionsTitle": "Integration Options",
     "integrationOptionsDesc": "Fix proposals are also available via:",
-    "integrationMcp": "<strong>MCP tools:</strong> <code>luqen_propose_fixes</code>, <code>luqen_apply_fix</code> \u2014 use from your IDE",
-    "integrationRest": "<strong>REST API:</strong> <code>GET /api/v1/scans/:id/fixes</code> \u2014 for external integrations",
+    "integrationMcp": "<strong>MCP tools:</strong> <code>luqen_propose_fixes</code>, <code>luqen_apply_fix</code> — use from your IDE",
+    "integrationRest": "<strong>REST API:</strong> <code>GET /api/v1/scans/:id/fixes</code> — for external integrations",
     "integrationA2a": "A2A protocol: agents can call the REST API to propose and apply fixes programmatically"
   },
   "fixes": {
@@ -942,6 +943,6 @@
     "integrationRest": "<strong>REST API:</strong> Returns fix proposals as JSON.",
     "integrationA2a": "A2A protocol: For automated pipelines, use the Agent-to-Agent protocol to request fixes programmatically. Agents can call the REST API to propose and apply fixes.",
     "copiedToClipboard": "Fix code copied to clipboard",
-    "copyFailed": "Could not copy \u2014 please select and copy manually"
+    "copyFailed": "Could not copy — please select and copy manually"
   }
 }
