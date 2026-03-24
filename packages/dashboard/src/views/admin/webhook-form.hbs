@@ -5,7 +5,6 @@
     <form hx-post="/admin/webhooks"
           hx-target="#webhooks-table-body"
           hx-swap="beforeend"
-          hx-on::after-request="if(event.detail.successful) document.getElementById('modal-container').replaceChildren()"
           novalidate>
 
       <div class="form-group">

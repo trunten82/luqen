@@ -5,7 +5,6 @@
     <form hx-post="/admin/organizations"
           hx-target="#organizations-table"
           hx-swap="beforeend"
-          hx-on::after-request="if(event.detail.successful) document.getElementById('modal-container').replaceChildren()"
           novalidate>
 
       <div class="form-group">

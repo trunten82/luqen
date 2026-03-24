@@ -55,6 +55,26 @@
 
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
 
+  /* ── HTMX after-request: close modal / reset form / remove load-more ── */
+  /* Replaces all hx-on::after-request inline attributes (blocked by CSP) */
+  document.addEventListener('htmx:afterRequest', function (e) {
+    if (!e.detail.successful) return;
+    var el = e.detail.elt;
+    if (!el) return;
+    /* Modal forms: close modal on successful submit */
+    if (el.closest && el.closest('.modal')) {
+      closeModal();
+    }
+    /* Inline forms with data-reset-on-success: reset after submit */
+    if (el.hasAttribute && el.hasAttribute('data-reset-on-success')) {
+      el.reset();
+    }
+    /* Load-more buttons: remove after loading */
+    if (el.closest && el.closest('.load-more')) {
+      el.closest('.load-more').remove();
+    }
+  });
+
   /* ── Toast auto-dismiss ───────────────────────────────────────────── */
   document.addEventListener('htmx:afterSwap', function () {
     var tc = document.getElementById('toast-container');

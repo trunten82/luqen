@@ -24,30 +24,6 @@
   </div>
 </section>
 
-{{! Pipeline summary bar }}
-<div class="asgn-pipeline" role="region" aria-label="Assignment pipeline">
-  <div class="asgn-pipeline__stage asgn-pipeline__stage--open" id="asgn-stat-open">
-    <div class="asgn-pipeline__count">{{stats.open}}</div>
-    <div class="asgn-pipeline__label">{{t "assignments.open"}}</div>
-  </div>
-  <div class="asgn-pipeline__stage asgn-pipeline__stage--assigned" id="asgn-stat-assigned">
-    <div class="asgn-pipeline__count">{{stats.assigned}}</div>
-    <div class="asgn-pipeline__label">{{t "assignments.assigned"}}</div>
-  </div>
-  <div class="asgn-pipeline__stage asgn-pipeline__stage--in-progress" id="asgn-stat-in-progress">
-    <div class="asgn-pipeline__count">{{stats.inProgress}}</div>
-    <div class="asgn-pipeline__label">{{t "assignments.inProgress"}}</div>
-  </div>
-  <div class="asgn-pipeline__stage asgn-pipeline__stage--fixed" id="asgn-stat-fixed">
-    <div class="asgn-pipeline__count">{{stats.fixed}}</div>
-    <div class="asgn-pipeline__label">{{t "assignments.fixed"}}</div>
-  </div>
-  <div class="asgn-pipeline__stage asgn-pipeline__stage--verified" id="asgn-stat-verified">
-    <div class="asgn-pipeline__count">{{stats.verified}}</div>
-    <div class="asgn-pipeline__label">{{t "assignments.verified"}}</div>
-  </div>
-</div>
-
 {{! Filter buttons }}
 <div class="asgn-filters" role="group" aria-label="Filter assignments by status">
   <button type="button" class="asgn-filter{{#if (eq activeFilter 'all')}} asgn-filter--active{{/if}}" data-action="asgnFilter" data-status="all">{{t "assignments.filterAll"}} ({{stats.total}})</button>
