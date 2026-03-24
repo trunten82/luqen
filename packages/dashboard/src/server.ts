@@ -450,7 +450,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     const session = request.session as { get(key: string): unknown } | undefined;
     if (session === undefined || typeof session.get !== 'function') return;
 
-    const currentOrgId = session.get('currentOrgId') as string | undefined;
+    const userOrgs = await storage.organizations.getUserOrgs(request.user.id);
+
+    // Use session org if set, otherwise auto-select the user's first org
+    let currentOrgId = session.get('currentOrgId') as string | undefined;
+    if ((currentOrgId === undefined || currentOrgId === '') && userOrgs.length > 0) {
+      currentOrgId = userOrgs[0].id;
+    }
+
     if (currentOrgId !== undefined && currentOrgId !== '') {
       request.user = {
         ...request.user,
@@ -459,7 +466,6 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     }
 
     // Populate org context for sidebar org switcher
-    const userOrgs = await storage.organizations.getUserOrgs(request.user.id);
     const currentOrg = currentOrgId !== undefined && currentOrgId !== ''
       ? await storage.organizations.getOrg(currentOrgId)
       : null;
