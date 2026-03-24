@@ -9,5 +9,7 @@ export interface OrgRepository {
   addMember(orgId: string, userId: string, role: string): Promise<OrgMember>;
   removeMember(orgId: string, userId: string): Promise<void>;
   listMembers(orgId: string): Promise<OrgMember[]>;
+  /** List direct members + members inherited from teams linked to this org */
+  listAllMembers(orgId: string): Promise<OrgMember[]>;
   getUserOrgs(userId: string): Promise<Organization[]>;
 }

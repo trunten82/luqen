@@ -109,7 +109,7 @@ export class SqliteTeamRepository implements TeamRepository {
     return created;
   }
 
-  async updateTeam(id: string, data: { readonly name?: string; readonly description?: string }): Promise<void> {
+  async updateTeam(id: string, data: { readonly name?: string; readonly description?: string; readonly orgId?: string }): Promise<void> {
     const setClauses: string[] = [];
     const params: Record<string, unknown> = { id };
 
@@ -121,6 +121,10 @@ export class SqliteTeamRepository implements TeamRepository {
       setClauses.push('description = @description');
       params['description'] = data.description;
     }
+    if (data.orgId !== undefined) {
+      setClauses.push('org_id = @orgId');
+      params['orgId'] = data.orgId;
+    }
 
     if (setClauses.length === 0) return;
 
@@ -128,6 +132,19 @@ export class SqliteTeamRepository implements TeamRepository {
       `UPDATE teams SET ${setClauses.join(', ')} WHERE id = @id`,
     );
     stmt.run(params);
+  }
+
+  async listTeamsByOrgId(orgId: string): Promise<Team[]> {
+    const sql = `
+      SELECT t.*, COUNT(tm.user_id) as member_count
+      FROM teams t
+      LEFT JOIN team_members tm ON tm.team_id = t.id
+      WHERE t.org_id = @orgId
+      GROUP BY t.id
+      ORDER BY t.name ASC
+    `;
+    const rows = this.db.prepare(sql).all({ orgId }) as TeamRow[];
+    return rows.map(teamRowToRecord);
   }
 
   async deleteTeam(id: string): Promise<void> {

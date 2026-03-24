@@ -305,6 +305,10 @@ export interface OrgMember {
   readonly userId: string;
   readonly role: string;
   readonly joinedAt: string;
+  /** 'direct' = from org_members table, 'team' = inherited via team membership */
+  readonly source?: 'direct' | 'team';
+  /** When source is 'team', the team name that grants membership */
+  readonly teamName?: string;
 }
 
 // ---------------------------------------------------------------------------
