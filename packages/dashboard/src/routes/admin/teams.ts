@@ -63,8 +63,11 @@ export async function teamRoutes(
     '/admin/teams',
     { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const orgId = request.user?.currentOrgId ?? 'system';
-      const teams = await storage.teams.listTeams(orgId);
+      // Admin sees all teams; other users see teams in their org
+      const isAdmin = request.user?.role === 'admin';
+      const teams = isAdmin
+        ? await storage.teams.listTeams()
+        : await storage.teams.listTeams(request.user?.currentOrgId ?? 'system');
       const organizations = await storage.organizations.listOrgs();
 
       // Enrich teams with org name for display
@@ -198,7 +201,7 @@ export async function teamRoutes(
         const org = orgId !== 'system' ? await storage.organizations.getOrg(orgId) : null;
         const orgLabel = org !== null ? escapeHtml(org.name) : 'None (global)';
         return reply.type('text/html').send(
-          `<span id="team-org-label">${orgLabel}</span>\n<div class="toast toast--success" role="alert">Organization updated</div>`,
+          `<span id="team-org-label" hx-swap-oob="true">${orgLabel}</span>\n${toastHtml('Organization updated')}`,
         );
       }
 

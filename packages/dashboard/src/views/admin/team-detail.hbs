@@ -16,7 +16,8 @@
     Current: <strong><span id="team-org-label">{{#if linkedOrgName}}{{linkedOrgName}}{{else}}None (global){{/if}}</span></strong>
   </p>
   <form hx-post="/admin/teams/{{team.id}}/org"
-        hx-swap="none"
+        hx-target="#team-org-label"
+        hx-swap="outerHTML"
         style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;">
     <input type="hidden" name="_csrf" value="{{csrfToken}}">
     <label class="form-group" style="flex:1; min-width:200px; margin-bottom:0;">
