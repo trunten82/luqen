@@ -840,7 +840,7 @@ create_oauth_client() {
     CLIENT_SECRET=$(grep "^client_secret=" "${CLIENT_CACHE}" | cut -d= -f2-)
     info "OAuth client already exists -- reusing"
   else
-    CLIENT_OUT=$(cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js clients create --name "luqen-dashboard" --scope "read write" 2>&1)
+    CLIENT_OUT=$(cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js clients create --name "luqen-dashboard" --scope "admin" --grant client_credentials 2>&1)
     CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "client_id:" | awk '{print $2}')
     CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "client_secret:" | awk '{print $2}')
     printf "client_id=%s\nclient_secret=%s\n" "${CLIENT_ID}" "${CLIENT_SECRET}" > "${CLIENT_CACHE}"
@@ -942,11 +942,6 @@ Type=simple
 User=root
 WorkingDirectory=${INSTALL_DIR}
 Environment=NODE_ENV=production
-Environment=DASHBOARD_SESSION_SECRET=${SESSION_SECRET}
-Environment=DASHBOARD_COMPLIANCE_URL=http://localhost:${COMPLIANCE_PORT}
-Environment=DASHBOARD_COMPLIANCE_CLIENT_ID=${CLIENT_ID}
-Environment=DASHBOARD_COMPLIANCE_CLIENT_SECRET=${CLIENT_SECRET}
-${env_webservice}
 ExecStart=${node_path} ${INSTALL_DIR}/packages/dashboard/dist/cli.js serve --config ${CONFIG_FILE}
 Restart=always
 RestartSec=5
