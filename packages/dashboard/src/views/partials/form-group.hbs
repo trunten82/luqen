@@ -1,0 +1,9 @@
+{{! form-group partial }}
+<div class="form-group">
+  <label for="{{inputId}}">
+    {{label}}
+    {{#if required}}<span class="required" aria-hidden="true">*</span>{{/if}}
+  </label>
+  {{{inputHtml}}}
+  {{#if hint}}<p id="{{inputId}}-hint" class="form-hint">{{hint}}</p>{{/if}}
+</div>

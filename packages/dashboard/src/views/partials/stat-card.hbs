@@ -1,0 +1,5 @@
+{{! stat-card partial }}
+<article class="stat-card" role="listitem" {{#if accentColor}}style="border-left: 3px solid {{accentColor}}"{{/if}}>
+  <span class="stat-card__value" aria-label="{{value}} {{label}}">{{value}}</span>
+  <span class="stat-card__label">{{label}}</span>
+</article>

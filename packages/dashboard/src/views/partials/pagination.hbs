@@ -1,0 +1,9 @@
+{{! pagination partial }}
+{{#if hasMore}}
+<div class="pagination">
+  <button class="btn btn--ghost btn--sm load-more"
+    hx-get="{{nextUrl}}" hx-target="{{target}}" hx-swap="beforeend">
+    Load more
+  </button>
+</div>
+{{/if}}
