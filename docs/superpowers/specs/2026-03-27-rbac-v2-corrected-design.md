@@ -134,10 +134,15 @@ Current issue: plugin page shows empty for org owners.
 
 The query `WHERE org_id = @orgId OR org_id = 'system'` should return system plugins for any org context. Migration 021 added `org_id TEXT NOT NULL DEFAULT 'system'` to the plugins table, so existing plugins should have `org_id = 'system'`.
 
+Root causes identified:
+1. **Available plugins section gated by `isAdmin`** — plugins.hbs line 106: `{{#if isAdmin}}` hides the catalogue from org owners. They can see installed plugins but not install new ones. Fix: show available plugins to anyone with `admin.plugins` permission.
+2. **Tab switching uses `hx-on::after-request`** — inline JS blocked by CSP. Tabs don't switch. Fix: replace with global event delegation (same pattern used elsewhere in the codebase).
+3. **No plugins installed** — if no plugins are in the DB, both Global and Org panels are empty. The Available section (catalogue) is the only useful content, but it's hidden from org owners (see #1).
+
 Fix approach:
-1. Verify on live DB that existing plugin rows have `org_id = 'system'` (SQLite DEFAULT applies to existing rows on ALTER TABLE)
-2. If not, add migration to backfill: `UPDATE plugins SET org_id = 'system' WHERE org_id IS NULL OR org_id = ''`
-3. Verify the template correctly iterates over `globalPlugins` — check `{{#if globalPlugins.length}}` works (Handlebars `.length` on arrays)
+1. Change `{{#if isAdmin}}` to a permission check (pass `canInstallPlugins` flag from route)
+2. Replace `hx-on::after-request` with data-action event delegation for tab switching
+3. Verify on live DB that schema is correct (confirmed: `org_id TEXT DEFAULT 'system'` exists)
 
 ## Compliance Multi-Tenancy
 
