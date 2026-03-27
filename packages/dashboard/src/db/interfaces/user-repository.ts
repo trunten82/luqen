@@ -6,6 +6,7 @@ export interface UserRepository {
   getUserById(id: string): Promise<DashboardUser | null>;
   verifyPassword(username: string, password: string): Promise<boolean>;
   listUsers(): Promise<DashboardUser[]>;
+  listUsersForOrg(orgId: string): Promise<DashboardUser[]>;
   updateUserRole(id: string, role: string): Promise<void>;
   deactivateUser(id: string): Promise<void>;
   activateUser(id: string): Promise<void>;

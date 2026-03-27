@@ -92,6 +92,22 @@ export class SqliteUserRepository implements UserRepository {
     return rows.map(rowToUser);
   }
 
+  async listUsersForOrg(orgId: string): Promise<DashboardUser[]> {
+    const rows = this.db.prepare(`
+      SELECT DISTINCT du.* FROM dashboard_users du
+      WHERE du.id IN (
+        SELECT tm.user_id FROM team_members tm
+        JOIN teams t ON t.id = tm.team_id
+        WHERE t.org_id = ?
+      )
+      OR du.id NOT IN (
+        SELECT DISTINCT tm2.user_id FROM team_members tm2
+      )
+      ORDER BY du.username
+    `).all(orgId) as UserRow[];
+    return rows.map(rowToUser);
+  }
+
   async updateUserRole(id: string, role: string): Promise<void> {
     this.db.prepare('UPDATE dashboard_users SET role = ? WHERE id = ?').run(role, id);
   }
