@@ -77,7 +77,17 @@ export async function teamRoutes(
       const teams = isAdmin
         ? await storage.teams.listTeams()
         : await storage.teams.listTeams(request.user?.currentOrgId ?? 'system');
-      const organizations = await storage.organizations.listOrgs();
+
+      // Org owners only see their own org in the filter
+      let organizations: Awaited<ReturnType<typeof storage.organizations.listOrgs>>;
+      if (isAdmin) {
+        organizations = await storage.organizations.listOrgs();
+      } else if (request.user?.currentOrgId) {
+        const org = await storage.organizations.getOrg(request.user.currentOrgId);
+        organizations = org ? [org] : [];
+      } else {
+        organizations = [];
+      }
 
       // Enrich teams with org name for display
       const orgMap = new Map(organizations.map((o) => [o.id, o.name]));
@@ -187,11 +197,27 @@ export async function teamRoutes(
         return reply.code(404).send({ error: 'Team not found' });
       }
 
-      const allUsers = (await storage.users.listUsers()).filter((u) => u.active);
+      const isAdmin = request.user?.role === 'admin';
       const memberIds = new Set((team.members ?? []).map((m) => m.userId));
+
+      // Org owners see unbound + own org users; admins see all
+      const allUsers = isAdmin
+        ? (await storage.users.listUsers()).filter((u) => u.active)
+        : team.orgId !== 'system'
+          ? (await storage.users.listUsersForOrg(team.orgId)).filter((u) => u.active)
+          : (await storage.users.listUsers()).filter((u) => u.active);
       const availableUsers = allUsers.filter((u) => !memberIds.has(u.id));
 
-      const organizations = await storage.organizations.listOrgs();
+      // Org owners only see their own org
+      let organizations: Awaited<ReturnType<typeof storage.organizations.listOrgs>>;
+      if (isAdmin) {
+        organizations = await storage.organizations.listOrgs();
+      } else if (request.user?.currentOrgId) {
+        const org = await storage.organizations.getOrg(request.user.currentOrgId);
+        organizations = org ? [org] : [];
+      } else {
+        organizations = [];
+      }
       const linkedOrg = team.orgId !== 'system'
         ? await storage.organizations.getOrg(team.orgId)
         : null;
