@@ -4,16 +4,19 @@ import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml } from './helpers.js';
 import { validateUsername, validatePassword } from '../../validation.js';
 
-/** Check if a non-admin user can manage the target user (target must be in their org or unbound). */
+/** Check if a non-admin user can manage the target user.
+ * Org owners can only manage users who are in their org's teams (not unbound/global users). */
 async function canManageUser(storage: StorageAdapter, request: FastifyRequest, targetUserId: string): Promise<boolean> {
   if (request.user?.role === 'admin') return true;
   const orgId = request.user?.currentOrgId;
-  if (!orgId || orgId === 'system') {
-    // No org context — allow if the user has the permission (trust the permission gate)
-    return true;
+  if (!orgId || orgId === 'system') return false;
+  // Check if target user is in any team belonging to this org
+  const orgTeams = await storage.teams.listTeamsByOrgId(orgId);
+  for (const team of orgTeams) {
+    const detail = await storage.teams.getTeam(team.id);
+    if (detail?.members?.some((m) => m.userId === targetUserId)) return true;
   }
-  const orgUsers = await storage.users.listUsersForOrg(orgId);
-  return orgUsers.some((u) => u.id === targetUserId);
+  return false;
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
