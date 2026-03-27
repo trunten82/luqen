@@ -54,7 +54,14 @@ export function requirePermission(...permissions: string[]) {
     const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
     const hasAny = perms !== undefined && permissions.some((p) => perms.has(p));
     if (!hasAny) {
-      await reply.code(403).send({ error: `Forbidden: requires ${permissions.join(' or ')}` });
+      const isHtmx = request.headers['hx-request'] === 'true';
+      if (isHtmx) {
+        await reply.code(403).send({ error: `Forbidden: requires ${permissions.join(' or ')}` });
+      } else {
+        const err = new Error('Forbidden') as Error & { statusCode: number };
+        err.statusCode = 403;
+        throw err;
+      }
       return;
     }
   };
@@ -72,7 +79,14 @@ export function requireRole(role: 'viewer' | 'user' | 'admin') {
     const userLevel = roleOrder[userRole] ?? 0;
 
     if (userLevel < requiredLevel) {
-      await reply.code(403).send({ error: `Forbidden: ${role} role required` });
+      const isHtmx = request.headers['hx-request'] === 'true';
+      if (isHtmx) {
+        await reply.code(403).send({ error: `Forbidden: ${role} role required` });
+      } else {
+        const err = new Error('Forbidden') as Error & { statusCode: number };
+        err.statusCode = 403;
+        throw err;
+      }
       return;
     }
   };

@@ -142,9 +142,14 @@ export async function dashboardUserRoutes(
       const existing = await storage.users.getUserByUsername(username);
       if (existing !== null) {
         return reply.code(200).header('content-type', 'text/html')
-          .send('<span style="color:var(--status-error)">This username is not available.</span>');
+          .send(
+            '<span style="color:var(--status-error)">This username is not available.</span>' +
+            '\n<button type="submit" class="btn btn--primary" id="du-submit-btn" disabled hx-swap-oob="true">Create User</button>',
+          );
       }
-      return reply.code(200).header('content-type', 'text/html').send('');
+      // Username available — clear error and re-enable button
+      return reply.code(200).header('content-type', 'text/html')
+        .send('\n<button type="submit" class="btn btn--primary" id="du-submit-btn" hx-swap-oob="true">Create User</button>');
     },
   );
 
@@ -219,10 +224,11 @@ export async function dashboardUserRoutes(
       // whether a user exists in another org
       const existing = await storage.users.getUserByUsername(username);
       if (existing !== null) {
+        // Shouldn't reach here if blur validation works, but guard anyway
         return reply
           .code(409)
           .header('content-type', 'text/html')
-          .send(toastHtml('This username is not available. Please choose a different one.', 'error'));
+          .send('');
       }
 
       try {
