@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Luqen — Accessibility Scanner">
   <title>{{#if pageTitle}}{{pageTitle}} — {{/if}}{{t "common.appName"}}</title>
-  <link rel="stylesheet" href="/static/style.css?v=1.1.0">
+  <link rel="stylesheet" href="/static/style.css?v=1.1.1">
   <script>
 (function(){
   var s=localStorage.getItem('luqen-theme');
@@ -76,8 +76,8 @@
       var xhr = event.detail.xhr;
       if (xhr.status >= 400 && xhr.responseText.indexOf('hx-swap-oob') !== -1) {
         event.detail.shouldSwap = true;
-        event.detail.isError = false;
-        // Only process OOB swaps, don't swap non-OOB content into the target
+        // Keep isError true so afterRequest knows not to close modal
+        // Redirect main swap to throwaway div — only OOB swaps processed
         event.detail.target = document.createElement('div');
       }
     });
@@ -102,6 +102,6 @@
       }
     });
   </script>
-  <script src="/static/app.js?v=1.1.0"></script>
+  <script src="/static/app.js?v=1.1.1"></script>
 </body>
 </html>
