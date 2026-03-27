@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Not Found — Luqen</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+  (function(){
+    var s=localStorage.getItem('luqen-theme');
+    if(s==='dark'||(s!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)){
+      document.documentElement.setAttribute('data-theme','dark');
+    }
+  })();
+  </script>
+  <style>
+    .error-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-secondary);padding:var(--space-lg)}
+    .error-card{background:var(--bg-primary);border-radius:var(--border-radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-2xl);max-width:480px;width:100%;text-align:center}
+    .error-card__logo{font-size:var(--font-size-xl);font-weight:700;color:var(--accent);margin-bottom:var(--space-xl);display:flex;align-items:center;justify-content:center;gap:var(--space-sm)}
+    .error-card__illustration{margin:var(--space-lg) auto;color:var(--status-info)}
+    .error-card__title{font-size:var(--font-size-2xl);font-weight:700;color:var(--text-primary);margin-bottom:var(--space-sm)}
+    .error-card__code{font-size:var(--font-size-3xl);font-weight:800;color:var(--text-muted);margin-bottom:var(--space-sm)}
+    .error-card__desc{color:var(--text-secondary);line-height:var(--leading-relaxed);margin-bottom:var(--space-xl)}
+    .error-card__actions{display:flex;gap:var(--space-md);justify-content:center;flex-wrap:wrap}
+  </style>
+</head>
+<body>
+  <main class="error-page" role="main">
+    <div class="error-card">
+
+      <div class="error-card__logo" aria-label="Luqen">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Luqen
+      </div>
+
+      <div class="error-card__illustration" aria-hidden="true">
+        <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Magnifying glass handle -->
+          <line x1="62" y1="62" x2="82" y2="82" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+          <!-- Magnifying glass circle -->
+          <circle cx="40" cy="40" r="26" stroke="currentColor" stroke-width="3" fill="none"/>
+          <!-- Question mark stem -->
+          <path d="M40 51v2" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <!-- Question mark top curve -->
+          <path d="M33 34a7 7 0 0 1 14 0c0 4-4 6-7 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+
+      <div class="error-card__code" aria-hidden="true">404</div>
+      <h1 class="error-card__title">Page Not Found</h1>
+      <p class="error-card__desc">The page you're looking for doesn't exist or has been moved.</p>
+
+      <div class="error-card__actions">
+        <a href="/" class="btn btn--primary">Go Home</a>
+        <button type="button" class="btn btn--secondary" onclick="history.back()">Go Back</button>
+      </div>
+
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Too Many Requests — Luqen</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+  (function(){
+    var s=localStorage.getItem('luqen-theme');
+    if(s==='dark'||(s!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)){
+      document.documentElement.setAttribute('data-theme','dark');
+    }
+  })();
+  </script>
+  <style>
+    .error-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-secondary);padding:var(--space-lg)}
+    .error-card{background:var(--bg-primary);border-radius:var(--border-radius-lg);box-shadow:var(--shadow-lg);padding:var(--space-2xl);max-width:480px;width:100%;text-align:center}
+    .error-card__logo{font-size:var(--font-size-xl);font-weight:700;color:var(--accent);margin-bottom:var(--space-xl);display:flex;align-items:center;justify-content:center;gap:var(--space-sm)}
+    .error-card__illustration{margin:var(--space-lg) auto;color:var(--status-warning)}
+    .error-card__title{font-size:var(--font-size-2xl);font-weight:700;color:var(--text-primary);margin-bottom:var(--space-sm)}
+    .error-card__code{font-size:var(--font-size-3xl);font-weight:800;color:var(--text-muted);margin-bottom:var(--space-sm)}
+    .error-card__desc{color:var(--text-secondary);line-height:var(--leading-relaxed);margin-bottom:var(--space-xl)}
+    .error-card__actions{display:flex;gap:var(--space-md);justify-content:center;flex-wrap:wrap}
+    .error-card__countdown{font-size:var(--font-size-xl);font-weight:600;color:var(--accent);margin-bottom:var(--space-xl)}
+  </style>
+</head>
+<body>
+  <main class="error-page" role="main">
+    <div class="error-card">
+
+      <div class="error-card__logo" aria-label="Luqen">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Luqen
+      </div>
+
+      <div class="error-card__illustration" aria-hidden="true">
+        <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Hourglass outer frame -->
+          <path d="M28 12h40M28 84h40" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <!-- Hourglass shape -->
+          <path d="M32 12c0 20 32 20 32 36S32 64 32 84" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M64 12c0 20-32 20-32 36s32 16 32 36" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <!-- Sand top (partial) -->
+          <path d="M36 18c0 10 24 14 24 30" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4" fill="none"/>
+          <!-- Sand bottom (accumulated) -->
+          <ellipse cx="48" cy="76" rx="14" ry="5" fill="currentColor" opacity="0.35"/>
+          <!-- Center hourglass neck dot -->
+          <circle cx="48" cy="48" r="2.5" fill="currentColor"/>
+        </svg>
+      </div>
+
+      <div class="error-card__code" aria-hidden="true">429</div>
+      <h1 class="error-card__title">Too Many Requests</h1>
+      <p class="error-card__desc">You've made too many requests. Please wait and try again.</p>
+
+      <div class="error-card__countdown" role="status" aria-live="polite" aria-label="Time remaining">
+        Retry in <span id="countdown-value">{{retryAfter}}</span>s
+      </div>
+
+      <div class="error-card__actions">
+        <button type="button" id="retry-btn" class="btn btn--primary" onclick="location.reload()" disabled aria-disabled="true">Retry</button>
+        <a href="/" class="btn btn--secondary">Go Home</a>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+  (function () {
+    var seconds = parseInt('{{retryAfter}}', 10);
+    if (isNaN(seconds) || seconds <= 0) {
+      document.getElementById('countdown-value').textContent = '0';
+      var btn = document.getElementById('retry-btn');
+      btn.disabled = false;
+      btn.removeAttribute('aria-disabled');
+      return;
+    }
+
+    var countdownEl = document.getElementById('countdown-value');
+    var retryBtn = document.getElementById('retry-btn');
+
+    var interval = setInterval(function () {
+      seconds -= 1;
+      countdownEl.textContent = seconds;
+      if (seconds <= 0) {
+        clearInterval(interval);
+        retryBtn.disabled = false;
+        retryBtn.removeAttribute('aria-disabled');
+        document.querySelector('.error-card__countdown').textContent = 'Ready to retry';
+      }
+    }, 1000);
+  })();
+  </script>
+</body>
+</html>
