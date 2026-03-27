@@ -80,7 +80,8 @@ describe('getEffectivePermissions', () => {
 
     // Should NOT have permissions not in either role
     expect(perms.has('admin.system')).toBe(false);
-    expect(perms.has('users.create')).toBe(false);
+    // users.create is now part of org Admin permissions
+    expect(perms.has('users.create')).toBe(true);
   });
 
   it('takes the union of multiple team roles in the same org', async () => {
