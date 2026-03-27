@@ -45,7 +45,9 @@
               <option value="viewer" {{#if (eq this.role 'viewer')}}selected{{/if}}>viewer</option>
               <option value="user" {{#if (eq this.role 'user')}}selected{{/if}}>user</option>
               <option value="developer" {{#if (eq this.role 'developer')}}selected{{/if}}>developer</option>
+              {{#if ../perm.adminSystem}}
               <option value="admin" {{#if (eq this.role 'admin')}}selected{{/if}}>admin</option>
+              {{/if}}
             </select>
             {{else}}
             <span class="badge badge--neutral">{{this.role}}</span>
