@@ -387,7 +387,7 @@
       var label = pref === 'auto' ? 'Auto' : pref === 'dark' ? 'Dark' : 'Light';
       btn.setAttribute('aria-label', 'Theme: ' + label + '. Click to change.');
       btn.setAttribute('title', 'Theme: ' + label);
-      btn.textContent = isDark ? '\u263E' : '\u2600';
+      btn.textContent = pref === 'auto' ? '\u25D0' : isDark ? '\u263E' : '\u2600';
     }
   }
 
@@ -412,9 +412,12 @@
     localStorage.setItem('luqen-sidebar', 'collapsed');
   }
 
+  var _sidebarExpandedViaBurger = false;
+
   function expandDesktopSidebar() {
     document.body.classList.remove('sidebar-collapsed');
     localStorage.setItem('luqen-sidebar', 'expanded');
+    _sidebarExpandedViaBurger = true;
   }
 
   function toggleCollapse() {
@@ -432,20 +435,18 @@
     }
   });
 
-  // Close desktop sidebar when clicking on main content area
+  // Close desktop sidebar when clicking on main content area (after burger expand)
   document.addEventListener('click', function(e) {
     if (window.innerWidth <= 768) return;
+    if (!_sidebarExpandedViaBurger) return;
     if (document.body.classList.contains('sidebar-collapsed')) return;
     var sidebar = document.getElementById('sidebar');
     if (!sidebar) return;
-    // Only act if the click is outside the sidebar and outside the burger button
     if (sidebar.contains(e.target)) return;
     var btn = document.getElementById('mobile-menu-btn');
     if (btn && btn.contains(e.target)) return;
-    // If sidebar was manually expanded from collapsed state, collapse on outside click
-    if (localStorage.getItem('luqen-sidebar') === 'collapsed') {
-      collapseDesktopSidebar();
-    }
+    collapseDesktopSidebar();
+    _sidebarExpandedViaBurger = false;
   });
 
   /* ── Expose layout functions globally ─────────────────────────────── */
