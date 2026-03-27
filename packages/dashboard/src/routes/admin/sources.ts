@@ -15,7 +15,7 @@ export async function sourceRoutes(
   // GET /admin/sources — list monitored sources
   server.get(
     '/admin/sources',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       let sources: Awaited<ReturnType<typeof listSources>> = [];
       let error: string | undefined;
@@ -39,7 +39,7 @@ export async function sourceRoutes(
   // GET /admin/sources/new — modal form fragment
   server.get(
     '/admin/sources/new',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/source-form.hbs', {
         isNew: true,
@@ -51,7 +51,7 @@ export async function sourceRoutes(
   // GET /admin/sources/:id/view — view source detail modal
   server.get(
     '/admin/sources/:id/view',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
@@ -72,7 +72,7 @@ export async function sourceRoutes(
   // POST /admin/sources — add new source
   server.post(
     '/admin/sources',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         name?: string;
@@ -121,7 +121,7 @@ export async function sourceRoutes(
   // DELETE /admin/sources/:id — remove source
   server.delete(
     '/admin/sources/:id',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -138,7 +138,7 @@ export async function sourceRoutes(
   // POST /admin/sources/scan — trigger scan
   server.post(
     '/admin/sources/scan',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await scanSources(baseUrl, getToken(request));

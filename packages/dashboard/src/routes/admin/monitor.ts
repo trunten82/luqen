@@ -118,7 +118,7 @@ export async function monitorRoutes(
   // GET /admin/monitor — main monitor dashboard
   server.get(
     '/admin/monitor',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
       let error: string | undefined;
@@ -154,7 +154,7 @@ export async function monitorRoutes(
   // POST /admin/monitor/trigger — manually trigger a scan
   server.post(
     '/admin/monitor/trigger',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await scanSources(complianceUrl, getToken(request));

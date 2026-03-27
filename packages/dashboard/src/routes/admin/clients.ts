@@ -14,7 +14,7 @@ export async function clientRoutes(
   // GET /admin/clients — list OAuth clients
   server.get(
     '/admin/clients',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       let clients: Awaited<ReturnType<typeof listClients>> = [];
       let error: string | undefined;
@@ -45,7 +45,7 @@ export async function clientRoutes(
   // GET /admin/clients/new — modal form fragment
   server.get(
     '/admin/clients/new',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/client-form.hbs', {
         isNew: true,
@@ -58,7 +58,7 @@ export async function clientRoutes(
   // POST /admin/clients — create OAuth client
   server.post(
     '/admin/clients',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         name?: string;
@@ -136,7 +136,7 @@ export async function clientRoutes(
   // POST /admin/clients/:id/revoke — revoke OAuth client
   server.post(
     '/admin/clients/:id/revoke',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
