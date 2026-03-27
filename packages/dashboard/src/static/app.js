@@ -9,11 +9,6 @@
 
   /* ── Sidebar (mobile) ─────────────────────────────────────────────── */
   function toggleSidebar() {
-    // On desktop with collapsed sidebar, expand it instead of showing mobile overlay
-    if (window.innerWidth > 768 && document.body.classList.contains('sidebar-collapsed')) {
-      expandDesktopSidebar();
-      return;
-    }
     var s = document.getElementById('sidebar');
     if (s && s.classList.contains('is-open')) { closeSidebar(); } else { openSidebar(); }
   }
@@ -407,45 +402,7 @@
   });
 
   /* ── Sidebar collapse (desktop) — persists to localStorage ────────── */
-  function collapseDesktopSidebar() {
-    document.body.classList.add('sidebar-collapsed');
-    localStorage.setItem('luqen-sidebar', 'collapsed');
-  }
-
-  function expandDesktopSidebar() {
-    document.body.classList.remove('sidebar-collapsed');
-    // Don't persist — sidebar re-collapses on outside click or page reload
-  }
-
-  function toggleCollapse() {
-    if (document.body.classList.contains('sidebar-collapsed')) {
-      expandDesktopSidebar();
-    } else {
-      collapseDesktopSidebar();
-    }
-  }
-
-  // Restore sidebar state on load (desktop only)
-  document.addEventListener('DOMContentLoaded', function() {
-    if (window.innerWidth > 768 && localStorage.getItem('luqen-sidebar') === 'collapsed') {
-      document.body.classList.add('sidebar-collapsed');
-    }
-  });
-
-  // Close desktop sidebar when clicking on main content area
-  // Only applies when sidebar was collapsed by user preference (burger-toggled open temporarily)
-  document.addEventListener('click', function(e) {
-    if (window.innerWidth <= 768) return;
-    if (document.body.classList.contains('sidebar-collapsed')) return;
-    // Only auto-close if user previously chose to collapse (localStorage)
-    if (localStorage.getItem('luqen-sidebar') !== 'collapsed') return;
-    var sidebar = document.getElementById('sidebar');
-    if (!sidebar) return;
-    if (sidebar.contains(e.target)) return;
-    var btn = document.getElementById('mobile-menu-btn');
-    if (btn && btn.contains(e.target)) return;
-    collapseDesktopSidebar();
-  });
+  // Sidebar is always an overlay — no desktop collapse state needed
 
   /* ── Expose layout functions globally ─────────────────────────────── */
   window.toggleSidebar = toggleSidebar;
@@ -455,5 +412,5 @@
   window.pickerTab = pickerTab;
   window.pickerSearch = pickerSearch;
   window.toggleTheme = toggleTheme;
-  window.toggleCollapse = toggleCollapse;
+  // toggleCollapse removed — sidebar is always overlay
 })();

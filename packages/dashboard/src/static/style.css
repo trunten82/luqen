@@ -355,72 +355,30 @@ body {
   flex-shrink: 0;
 }
 
-/* Sidebar visible on desktop by default */
-@media (min-width: 768px) {
-  .sidebar {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: var(--sidebar-width);
-    height: 100vh;
-    z-index: 100;
-    transform: translateX(0);
-    transition: transform var(--transition-base);
-  }
-  .menu-toggle {
-    display: none;
-  }
-  .main-content {
-    margin-left: var(--sidebar-width);
-    transition: margin-left var(--transition-base);
-  }
-  .app-header {
-    left: var(--sidebar-width);
-    transition: left var(--transition-base);
-  }
+/* Sidebar is always an overlay on all screen sizes — slides in from left */
+.main-content {
+  margin-left: 0;
+}
+.app-header {
+  left: 0;
 }
 
-/* Sidebar collapse (desktop) — slide out with animation */
-@media (min-width: 768px) {
-  .sidebar-collapsed .sidebar {
-    transform: translateX(calc(-1 * var(--sidebar-width)));
-  }
-  .sidebar-collapsed .main-content {
-    margin-left: 0;
-  }
-  .sidebar-collapsed .app-header {
-    left: 0;
-  }
-  .sidebar-collapsed .menu-toggle {
-    display: flex;
-  }
+/* Close button in sidebar header */
+.sidebar__collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-sidebar);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  transition: background var(--transition-fast);
 }
-
-/* Collapse toggle button in sidebar */
-@media (min-width: 768px) {
-  .sidebar__collapse-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: transparent;
-    color: var(--text-sidebar);
-    cursor: pointer;
-    border-radius: var(--border-radius-sm);
-    transition: background var(--transition-fast);
-  }
-  .sidebar__collapse-btn:hover {
-    background: var(--bg-sidebar-hover);
-  }
-}
-@media (max-width: 767px) {
-  .sidebar__collapse-btn {
-    display: none;
-  }
+.sidebar__collapse-btn:hover {
+  background: var(--bg-sidebar-hover);
 }
 
 /* ---- Main Content ---- */
