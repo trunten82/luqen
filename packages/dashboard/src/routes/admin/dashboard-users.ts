@@ -201,9 +201,9 @@ export async function dashboardUserRoutes(
       const existing = await storage.users.getUserByUsername(username);
       if (existing !== null) {
         return reply
-          .code(400)
+          .code(422)
           .header('content-type', 'text/html')
-          .send(toastHtml('This username is not available. Please choose a different one.', 'error'));
+          .send(`<div id="du-username-error" class="form-error" hx-swap-oob="true">This username is not available.</div>\n${toastHtml('This username is not available. Please choose a different one.', 'error')}`);
       }
 
       try {
