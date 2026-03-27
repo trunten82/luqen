@@ -39,6 +39,7 @@ interface PluginRow {
   readonly activated_at: string | null;
   readonly error: string | null;
   readonly checksum: string | null;
+  readonly org_id: string;
 }
 
 type DownloadFn = (url: string, destPath: string) => Promise<void>;
