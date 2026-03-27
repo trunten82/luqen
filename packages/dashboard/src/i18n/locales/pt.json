@@ -551,6 +551,8 @@
       "csvOnly": "Somente CSV",
       "htmlAndCsv": "HTML + CSV",
       "includeCsv": "Incluir também anexo CSV",
+      "includeWarnings": "Incluir avisos no relatório",
+      "includeNotices": "Incluir notificações no relatório",
       "createScheduleBtn": "Criar Agendamento",
       "scheduledReports": "Relatórios Agendados",
       "format": "Formato",

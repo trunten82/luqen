@@ -190,13 +190,29 @@
 </section>
 
 <script>
-  /* ── Toggle expand/collapse ──────────────────────────────────────────── */
-  function mtToggle(btn) {
-    var body = btn.closest('.mt-criterion__header').nextElementSibling;
-    var collapsed = body.classList.toggle('mt-criterion__body--collapsed');
-    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    btn.textContent = collapsed ? '\u25BC' : '\u25B2';
-  }
+  /* ── Event delegation for manual test actions ────────────────────────── */
+  (function() {
+    document.addEventListener('click', function(e) {
+      var target = e.target.closest('[data-action]');
+      if (!target) return;
+
+      var action = target.getAttribute('data-action');
+
+      if (action === 'mtToggle') {
+        var body = target.closest('.mt-criterion__header').nextElementSibling;
+        var collapsed = body.classList.toggle('mt-criterion__body--collapsed');
+        target.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        target.textContent = collapsed ? '\u25BC' : '\u25B2';
+      }
+
+      if (action === 'mtSave') {
+        var scanId = target.getAttribute('data-scan-id');
+        var criterionId = target.getAttribute('data-criterion-id');
+        var status = target.getAttribute('data-status');
+        mtSave(scanId, criterionId, status, target);
+      }
+    });
+  })();
 
   /* ── Save result via fetch POST ─────────────────────────────────────── */
   function mtSave(scanId, criterionId, status, btn) {
