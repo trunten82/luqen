@@ -59,6 +59,7 @@ export interface DbAdapter {
   findRequirementsByCriteria(
     jurisdictionIds: readonly string[],
     wcagCriteria: readonly string[],
+    orgId?: string,
   ): Promise<RequirementWithRegulation[]>;
 
   // Update proposals
@@ -101,6 +102,11 @@ export interface DbAdapter {
   listWebhooks(filters?: { orgId?: string }): Promise<Webhook[]>;
   createWebhook(data: CreateWebhookInput): Promise<Webhook>;
   deleteWebhook(id: string): Promise<void>;
+
+  // Org ownership lookups (returns org_id string or null if record not found)
+  getJurisdictionOrgId(id: string): Promise<string | null>;
+  getRegulationOrgId(id: string): Promise<string | null>;
+  getSourceOrgId(id: string): Promise<string | null>;
 
   // Org data
   deleteOrgData(orgId: string): Promise<void>;

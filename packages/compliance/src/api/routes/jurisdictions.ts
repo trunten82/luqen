@@ -70,6 +70,16 @@ export async function registerJurisdictionRoutes(
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getJurisdictionOrgId(id);
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot modify system data', statusCode: 403 });
+        return;
+      }
+      if (recordOrgId !== null && requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot modify data belonging to another organisation', statusCode: 403 });
+        return;
+      }
       const body = request.body as Partial<Parameters<typeof crud.createJurisdiction>[1]>;
       const jurisdiction = await crud.updateJurisdiction(db, id, body);
       await reply.send(jurisdiction);
@@ -86,9 +96,18 @@ export async function registerJurisdictionRoutes(
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
-      const existing = await db.getJurisdiction(id);
-      if (existing == null) {
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getJurisdictionOrgId(id);
+      if (recordOrgId == null) {
         await reply.status(404).send({ error: `Jurisdiction '${id}' not found`, statusCode: 404 });
+        return;
+      }
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot delete system data', statusCode: 403 });
+        return;
+      }
+      if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot delete data belonging to another organisation', statusCode: 403 });
         return;
       }
       await db.deleteJurisdiction(id);
