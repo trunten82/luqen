@@ -17,7 +17,7 @@ export async function regulationRoutes(
   // GET /admin/regulations — list table
   server.get(
     '/admin/regulations',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { jurisdictionId?: string; q?: string; offset?: string; limit?: string };
       const jurisdictionId = query.jurisdictionId;
@@ -97,7 +97,7 @@ export async function regulationRoutes(
   // GET /admin/regulations/new — modal form fragment
   server.get(
     '/admin/regulations/new',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { jurisdictionId?: string };
       let jurisdictions: Awaited<ReturnType<typeof listJurisdictions>> = [];
@@ -127,7 +127,7 @@ export async function regulationRoutes(
   // POST /admin/regulations — create
   server.post(
     '/admin/regulations',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         id?: string;
@@ -185,7 +185,7 @@ export async function regulationRoutes(
   // GET /admin/regulations/:id/view — read-only detail modal
   server.get(
     '/admin/regulations/:id/view',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
@@ -212,7 +212,7 @@ export async function regulationRoutes(
   // GET /admin/regulations/:id/edit — edit form fragment
   server.get(
     '/admin/regulations/:id/edit',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -242,7 +242,7 @@ export async function regulationRoutes(
   // PATCH /admin/regulations/:id — update
   server.patch(
     '/admin/regulations/:id',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as {
@@ -299,7 +299,7 @@ export async function regulationRoutes(
   // DELETE /admin/regulations/:id — delete
   server.delete(
     '/admin/regulations/:id',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 

@@ -218,6 +218,7 @@
     {{/if}}
 
     {{#if perm.adminOrg}}
+    {{#if orgContext.currentOrg}}
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/organizations')}}is-active{{/if}}"
        href="/admin/organizations/{{orgContext.currentOrg.id}}/members"
        aria-current="{{#if (startsWith currentPath '/admin/organizations')}}page{{/if}}">
@@ -227,6 +228,7 @@
       </svg>
       {{t "nav.myOrganization"}}
     </a>
+    {{/if}}
     {{/if}}
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/api-keys')}}is-active{{/if}}"
