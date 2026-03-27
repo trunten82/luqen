@@ -171,9 +171,20 @@ export async function organizationRoutes(
       const members = await Promise.all(allMembers.map(enrichMember));
 
       // Available users not yet in any team for this org
-      const allUsers = await storage.users.listUsers();
-      const allMemberUserIds = new Set(allMembers.map((m) => m.userId));
-      const availableUsers = allUsers.filter((u) => !allMemberUserIds.has(u.id) && u.active);
+      const memberIds = new Set(allMembers.map((m: { userId: string }) => m.userId));
+
+      let availableUsers;
+      if (isAdmin) {
+        const allUsers = (await storage.users.listUsers()).filter((u: { active: boolean }) => u.active);
+        availableUsers = allUsers.filter((u: { id: string }) => !memberIds.has(u.id));
+      } else {
+        // For org owners: show only unbound users + users already in this org,
+        // excluding those already members of this org's teams
+        const orgVisibleUsers = (await storage.users.listUsersForOrg(id)).filter(
+          (u: { active: boolean }) => u.active,
+        );
+        availableUsers = orgVisibleUsers.filter((u: { id: string }) => !memberIds.has(u.id));
+      }
 
       // Linked teams for this org (with role info)
       const linkedTeams = await storage.teams.listTeamsByOrgId(id);
