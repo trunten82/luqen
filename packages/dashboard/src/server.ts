@@ -152,6 +152,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     maxConcurrent: config.maxConcurrentScans,
     ssePublisher,
     redisQueue: redisScanQueue,
+    pluginManager,
   });
 
   // ── Security Headers (helmet) ────────────────────────────────────────────

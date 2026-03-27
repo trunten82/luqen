@@ -239,8 +239,9 @@ export class ScanService {
       complianceUrl: this.config.complianceUrl,
       complianceToken: context.complianceToken,
       maxPages,
+      orgId: context.orgId,
       ...(runner !== undefined ? { runner } : {}),
-      ...(incremental ? { incremental, orgId: context.orgId } : {}),
+      ...(incremental ? { incremental } : {}),
       includeWarnings: input.includeWarnings !== false,
       includeNotices: input.includeNotices !== false,
     });
