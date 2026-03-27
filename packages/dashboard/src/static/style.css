@@ -857,14 +857,14 @@ th[aria-sort="none"]::after { content: " ↕"; opacity: 0.4; }
 }
 
 .btn--primary {
-  background-color: var(--accent);
+  background-color: var(--accent-hover);
   color: var(--text-inverse);
-  border-color: var(--accent);
+  border-color: var(--accent-hover);
 }
 
 .btn--primary:hover:not(:disabled) {
-  background-color: var(--accent-hover);
-  border-color: var(--accent-hover);
+  background-color: #166534;
+  border-color: #166534;
 }
 
 .btn--secondary {
@@ -1485,7 +1485,7 @@ select {
 
 .login-card__subtitle {
   font-size: var(--font-size-sm);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-align: center;
   margin-bottom: var(--space-xl);
   line-height: var(--leading-normal);
