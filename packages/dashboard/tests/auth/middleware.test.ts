@@ -187,26 +187,20 @@ describe('requireRole', () => {
     expect(codeFn).not.toHaveBeenCalled();
   });
 
-  it('returns 403 when viewer tries to access user-required route', () => {
+  it('throws 403 when viewer tries to access user-required route', async () => {
     const guard = requireRole('user');
-    const request = { user: { id: '1', username: 'viewer', role: 'viewer' } } as unknown as FastifyRequest;
-    const codeFn = vi.fn(() => ({ send: vi.fn() }));
-    const reply = { code: codeFn } as unknown as FastifyReply;
+    const request = { user: { id: '1', username: 'viewer', role: 'viewer' }, headers: {} } as unknown as FastifyRequest;
+    const reply = {} as unknown as FastifyReply;
 
-    guard(request, reply);
-
-    expect(codeFn).toHaveBeenCalledWith(403);
+    await expect(guard(request, reply)).rejects.toThrow('Forbidden');
   });
 
-  it('returns 403 when user tries to access admin-required route', () => {
+  it('throws 403 when user tries to access admin-required route', async () => {
     const guard = requireRole('admin');
-    const request = { user: { id: '1', username: 'alice', role: 'user' } } as unknown as FastifyRequest;
-    const codeFn = vi.fn(() => ({ send: vi.fn() }));
-    const reply = { code: codeFn } as unknown as FastifyReply;
+    const request = { user: { id: '1', username: 'alice', role: 'user' }, headers: {} } as unknown as FastifyRequest;
+    const reply = {} as unknown as FastifyReply;
 
-    guard(request, reply);
-
-    expect(codeFn).toHaveBeenCalledWith(403);
+    await expect(guard(request, reply)).rejects.toThrow('Forbidden');
   });
 });
 
@@ -215,15 +209,12 @@ describe('requireRole', () => {
 // ---------------------------------------------------------------------------
 
 describe('requirePermission', () => {
-  it('returns 403 when user has no matching permissions', async () => {
+  it('throws 403 when user has no matching permissions', async () => {
     const guard = requirePermission('users.create');
-    const request = { permissions: new Set(['reports.view', 'scans.create']) } as unknown as FastifyRequest;
-    const codeFn = vi.fn(() => ({ send: vi.fn() }));
-    const reply = { code: codeFn } as unknown as FastifyReply;
+    const request = { permissions: new Set(['reports.view', 'scans.create']), headers: {} } as unknown as FastifyRequest;
+    const reply = {} as unknown as FastifyReply;
 
-    await guard(request, reply);
-
-    expect(codeFn).toHaveBeenCalledWith(403);
+    await expect(guard(request, reply)).rejects.toThrow('Forbidden');
   });
 
   it('passes when user has at least one matching permission (OR logic)', async () => {
@@ -237,14 +228,11 @@ describe('requirePermission', () => {
     expect(codeFn).not.toHaveBeenCalled();
   });
 
-  it('handles undefined permissions set gracefully', async () => {
+  it('throws 403 when permissions set is undefined', async () => {
     const guard = requirePermission('users.create');
-    const request = {} as unknown as FastifyRequest;
-    const codeFn = vi.fn(() => ({ send: vi.fn() }));
-    const reply = { code: codeFn } as unknown as FastifyReply;
+    const request = { headers: {} } as unknown as FastifyRequest;
+    const reply = {} as unknown as FastifyReply;
 
-    await guard(request, reply);
-
-    expect(codeFn).toHaveBeenCalledWith(403);
+    await expect(guard(request, reply)).rejects.toThrow('Forbidden');
   });
 });
