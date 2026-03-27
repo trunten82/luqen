@@ -551,6 +551,8 @@
       "csvOnly": "Nur CSV",
       "htmlAndCsv": "HTML + CSV",
       "includeCsv": "Auch CSV-Anhang hinzufügen",
+      "includeWarnings": "Warnungen in Bericht einschließen",
+      "includeNotices": "Hinweise in Bericht einschließen",
       "createScheduleBtn": "Zeitplan Erstellen",
       "scheduledReports": "Geplante Berichte",
       "format": "Format",

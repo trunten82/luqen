@@ -551,6 +551,8 @@
       "csvOnly": "CSV Only",
       "htmlAndCsv": "HTML + CSV",
       "includeCsv": "Also include CSV attachment",
+      "includeWarnings": "Include warnings in report",
+      "includeNotices": "Include notices in report",
       "createScheduleBtn": "Create Schedule",
       "scheduledReports": "Scheduled Reports",
       "format": "Format",

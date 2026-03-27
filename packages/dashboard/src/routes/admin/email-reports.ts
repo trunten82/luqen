@@ -212,6 +212,8 @@ export async function emailReportRoutes(
         frequency?: string;
         format?: string;
         includeCsv?: string;
+        includeWarnings?: string;
+        includeNotices?: string;
       };
 
       const name = body.name?.trim();
@@ -254,6 +256,8 @@ export async function emailReportRoutes(
         frequency,
         format,
         includeCsv: body.includeCsv === 'on',
+        includeWarnings: body.includeWarnings === 'on',
+        includeNotices: body.includeNotices === 'on',
         nextSendAt,
         createdBy: request.user?.username ?? 'unknown',
         orgId,
