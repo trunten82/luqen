@@ -474,4 +474,11 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'a
 ALTER TABLE scan_records ADD COLUMN json_report TEXT;
     `,
   },
+  {
+    id: '019',
+    name: 'add-api-key-role',
+    sql: `
+ALTER TABLE api_keys ADD COLUMN role TEXT NOT NULL DEFAULT 'admin';
+    `,
+  },
 ];

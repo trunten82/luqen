@@ -63,12 +63,12 @@ describe('API Key Auth', () => {
       const key = generateApiKey();
       storeApiKey(db, key, 'active-key');
 
-      expect(validateApiKey(db, key)).toBe(true);
+      expect(validateApiKey(db, key).valid).toBe(true);
     });
 
     it('returns false for invalid key', () => {
       const db = storage.getRawDatabase();
-      expect(validateApiKey(db, 'nonexistent-key')).toBe(false);
+      expect(validateApiKey(db, 'nonexistent-key').valid).toBe(false);
     });
 
     it('returns false for revoked key', () => {
@@ -77,7 +77,7 @@ describe('API Key Auth', () => {
       storeApiKey(db, key, 'revoked-key');
       revokeAllKeys(db);
 
-      expect(validateApiKey(db, key)).toBe(false);
+      expect(validateApiKey(db, key).valid).toBe(false);
     });
   });
 
@@ -92,7 +92,7 @@ describe('API Key Auth', () => {
       expect(result.key!).toHaveLength(64);
 
       // The newly created key should be valid
-      expect(validateApiKey(db, result.key!)).toBe(true);
+      expect(validateApiKey(db, result.key!).valid).toBe(true);
     });
 
     it('returns { key: null, isNew: false } when active key exists', () => {
@@ -116,8 +116,8 @@ describe('API Key Auth', () => {
 
       revokeAllKeys(db);
 
-      expect(validateApiKey(db, key1)).toBe(false);
-      expect(validateApiKey(db, key2)).toBe(false);
+      expect(validateApiKey(db, key1).valid).toBe(false);
+      expect(validateApiKey(db, key2).valid).toBe(false);
 
       const activeCount = db
         .prepare('SELECT COUNT(*) as cnt FROM api_keys WHERE active = 1')

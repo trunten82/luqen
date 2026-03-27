@@ -51,6 +51,7 @@ import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
 import { ServiceTokenManager } from './auth/service-token.js';
+import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
@@ -342,6 +343,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     }
     await authGuard(request, reply);
   });
+
+  // ── API key role enforcement ────────────────────────────────────────────
+  server.addHook('preHandler', enforceApiKeyRole);
 
   // ── Permission loading ─────────────────────────────────────────────────
   server.addHook('preHandler', async (request: FastifyRequest) => {
