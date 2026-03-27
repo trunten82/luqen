@@ -826,4 +826,26 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission)
   WHERE r.name = 'Admin' AND r.org_id != 'system';
     `,
   },
+  {
+    id: '026',
+    name: 'remove-global-permissions-from-org-roles',
+    sql: `
+-- Org Owner/Admin roles should NOT have global-admin permissions.
+-- admin.system, users.* are for the global admin role only.
+
+DELETE FROM role_permissions
+  WHERE permission IN (
+    'admin.system',
+    'users.create',
+    'users.delete',
+    'users.activate',
+    'users.reset_password',
+    'users.roles',
+    'admin.users'
+  )
+  AND role_id IN (
+    SELECT r.id FROM roles r WHERE r.org_id != 'system'
+  );
+    `,
+  },
 ];

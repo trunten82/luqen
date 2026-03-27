@@ -17,7 +17,7 @@
     <button role="tab" class="rpt-tab" id="tab-org-plugins"
             aria-controls="panel-org-plugins" aria-selected="false"
             hx-on::after-request="this.classList.add('rpt-tab--active');document.getElementById('tab-global-plugins').classList.remove('rpt-tab--active');document.getElementById('tab-global-plugins').setAttribute('aria-selected','false');this.setAttribute('aria-selected','true');document.getElementById('panel-global-plugins').classList.add('rpt-tab-panel--hidden');document.getElementById('panel-org-plugins').classList.remove('rpt-tab-panel--hidden');">
-      Org Plugins{{#if orgId}} ({{orgId}}){{/if}}
+      Org Plugins{{#if orgName}} ({{orgName}}){{/if}}
     </button>
   </div>
 
