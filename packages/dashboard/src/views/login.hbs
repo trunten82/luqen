@@ -6,9 +6,16 @@
   <meta name="description" content="Sign in to Luqen">
   <title>{{t "auth.signInTitle"}} — {{t "common.appName"}}</title>
   <link rel="stylesheet" href="/static/style.css">
+  <script>
+  (function(){
+    var s=localStorage.getItem('luqen-theme');
+    if(s==='dark'||(s!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)){
+      document.documentElement.setAttribute('data-theme','dark');
+    }
+  })();
+  </script>
 </head>
 <body>
-  <!-- Skip to main content -->
   <a class="skip-link" href="#main-content">Skip to main content</a>
 
   <main id="main-content" class="login-page" role="main">
@@ -30,47 +37,15 @@
       </p>
 
       {{#if error}}
-      <div class="alert alert--error" role="alert" aria-live="assertive" id="login-error">
-        <svg class="alert__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M10 6v4M10 13v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        <div class="alert__body">
-          <div class="alert__title">{{t "auth.signInFailed"}}</div>
-          {{error}}
-        </div>
-      </div>
+      {{> alert type="error" title=(t "auth.signInFailed") message=error alertId="login-error"}}
       {{/if}}
 
-      {{!-- Solo mode: API key form --}}
+      {{!-- Solo mode: API key only --}}
       {{#if (eq mode "solo")}}
-      <form method="POST" action="/login" novalidate>
-        <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        <div class="form-group">
-          <label for="apiKey">
-            {{t "auth.apiKeyLabel"}}
-            <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            type="password"
-            id="apiKey"
-            name="apiKey"
-            autocomplete="off"
-            required
-            aria-required="true"
-            {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
-          >
-        </div>
-
-        <div class="form-group" style="margin-top: var(--space-lg)">
-          <button type="submit" class="btn btn--primary btn--full btn--lg">
-            {{t "auth.signInButton"}}
-          </button>
-        </div>
-      </form>
+      {{> login-form showApiKey=true apiKeyId="apiKey" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error}}
       {{/if}}
 
-      {{!-- Enterprise mode: SSO buttons --}}
+      {{!-- Enterprise mode: SSO + password fallback + API key fallback --}}
       {{#if (eq mode "enterprise")}}
       <div class="login-sso" style="margin-bottom: var(--space-lg, 1.5rem)">
         {{#each loginMethods}}
@@ -84,197 +59,32 @@
 
       <details class="login-password-fallback">
         <summary style="cursor: pointer; margin-bottom: var(--space-md, 1rem); color: var(--text-secondary, #666);">{{t "auth.signInWithPassword"}}</summary>
-        <form method="POST" action="/login" novalidate>
-          <div class="form-group">
-            <label for="username">
-              {{t "auth.usernameLabel"}}
-              <span class="required" aria-hidden="true">*</span>
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              autocomplete="username"
-              autocapitalize="none"
-              autocorrect="off"
-              spellcheck="false"
-              required
-              aria-required="true"
-              {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
-              value="{{username}}"
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="password">
-              {{t "auth.passwordLabel"}}
-              <span class="required" aria-hidden="true">*</span>
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              autocomplete="current-password"
-              required
-              aria-required="true"
-              {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
-            >
-          </div>
-
-          <div class="form-group" style="margin-top: var(--space-lg)">
-            <button type="submit" class="btn btn--primary btn--full btn--lg">
-              {{t "auth.signInButton"}}
-            </button>
-          </div>
-        </form>
+        {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
       </details>
 
       <details class="login-apikey-fallback" style="margin-top: var(--space-md, 1rem)">
         <summary style="cursor: pointer; color: var(--text-secondary, #666);">{{t "auth.signInWithApiKey"}}</summary>
-        <form method="POST" action="/login" novalidate style="margin-top: var(--space-md, 1rem)">
-          <div class="form-group">
-            <label for="apiKeyEnterprise">
-              {{t "auth.apiKeyLabel"}}
-              <span class="required" aria-hidden="true">*</span>
-            </label>
-            <input
-              type="password"
-              id="apiKeyEnterprise"
-              name="apiKey"
-              autocomplete="off"
-              required
-              aria-required="true"
-            >
-          </div>
-          <div class="form-group" style="margin-top: var(--space-lg)">
-            <button type="submit" class="btn btn--primary btn--full btn--lg">
-              {{t "auth.signInWithApiKey"}}
-            </button>
-          </div>
-        </form>
+        <div style="margin-top: var(--space-md, 1rem)">
+          {{> login-form showApiKey=true apiKeyId="apiKeyEnterprise" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken error=error}}
+        </div>
       </details>
       {{/if}}
 
-      {{!-- Team mode (or fallback when mode is not set): username/password form --}}
+      {{!-- Team mode: username/password + API key fallback --}}
       {{#if (eq mode "team")}}
-      <form method="POST" action="/login" novalidate>
-        <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        <div class="form-group">
-          <label for="username">
-            {{t "auth.usernameLabel"}}
-            <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            autocomplete="username"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-            required
-            aria-required="true"
-            {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
-            value="{{username}}"
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="password">
-            {{t "auth.passwordLabel"}}
-            <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            autocomplete="current-password"
-            required
-            aria-required="true"
-            {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
-          >
-        </div>
-
-        <div class="form-group" style="margin-top: var(--space-lg)">
-          <button type="submit" class="btn btn--primary btn--full btn--lg">
-            {{t "auth.signInButton"}}
-          </button>
-        </div>
-      </form>
+      {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
 
       <details class="login-apikey-fallback" style="margin-top: var(--space-lg, 1.5rem)">
         <summary style="cursor: pointer; color: var(--text-secondary, #666);">{{t "auth.signInWithApiKey"}}</summary>
-        <form method="POST" action="/login" novalidate style="margin-top: var(--space-md, 1rem)">
-          <input type="hidden" name="_csrf" value="{{csrfToken}}">
-          <div class="form-group">
-            <label for="apiKeyTeam">
-              {{t "auth.apiKeyLabel"}}
-              <span class="required" aria-hidden="true">*</span>
-            </label>
-            <input
-              type="password"
-              id="apiKeyTeam"
-              name="apiKey"
-              autocomplete="off"
-              required
-              aria-required="true"
-            >
-          </div>
-          <div class="form-group" style="margin-top: var(--space-lg)">
-            <button type="submit" class="btn btn--primary btn--full btn--lg">
-              {{t "auth.signInWithApiKey"}}
-            </button>
-          </div>
-        </form>
+        <div style="margin-top: var(--space-md, 1rem)">
+          {{> login-form showApiKey=true apiKeyId="apiKeyTeam" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken error=error}}
+        </div>
       </details>
       {{/if}}
 
       {{!-- Fallback when mode is not set (backward compat) --}}
       {{#unless mode}}
-      <form method="POST" action="/login" novalidate>
-        <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        <div class="form-group">
-          <label for="username">
-            {{t "auth.usernameLabel"}}
-            <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            autocomplete="username"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-            required
-            aria-required="true"
-            {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
-            value="{{username}}"
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="password">
-            {{t "auth.passwordLabel"}}
-            <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            autocomplete="current-password"
-            required
-            aria-required="true"
-            {{#if error}}aria-invalid="true" aria-describedby="login-error"{{/if}}
-          >
-        </div>
-
-        <div class="form-group" style="margin-top: var(--space-lg)">
-          <button type="submit" class="btn btn--primary btn--full btn--lg">
-            {{t "auth.signInButton"}}
-          </button>
-        </div>
-      </form>
+      {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
       {{/unless}}
     </div>
   </main>
