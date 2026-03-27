@@ -7,16 +7,32 @@
 
   <div id="plugin-messages"></div>
 
-  <section class="admin-section" aria-label="Installed plugins">
-    <h2 class="section-title">{{t "admin.plugins.installedPlugins"}}</h2>
+  {{! ── Tab bar (HTMX-powered, same pattern as roles.hbs) ──────────────── }}
+  <div class="rpt-tabs" role="tablist" id="plugins-tabs">
+    <button role="tab" class="rpt-tab rpt-tab--active" id="tab-global-plugins"
+            aria-controls="panel-global-plugins" aria-selected="true"
+            hx-on::after-request="this.classList.add('rpt-tab--active');document.getElementById('tab-org-plugins').classList.remove('rpt-tab--active');document.getElementById('tab-org-plugins').setAttribute('aria-selected','false');this.setAttribute('aria-selected','true');document.getElementById('panel-org-plugins').classList.add('rpt-tab-panel--hidden');document.getElementById('panel-global-plugins').classList.remove('rpt-tab-panel--hidden');">
+      Global Plugins
+    </button>
+    <button role="tab" class="rpt-tab" id="tab-org-plugins"
+            aria-controls="panel-org-plugins" aria-selected="false"
+            hx-on::after-request="this.classList.add('rpt-tab--active');document.getElementById('tab-global-plugins').classList.remove('rpt-tab--active');document.getElementById('tab-global-plugins').setAttribute('aria-selected','false');this.setAttribute('aria-selected','true');document.getElementById('panel-global-plugins').classList.add('rpt-tab-panel--hidden');document.getElementById('panel-org-plugins').classList.remove('rpt-tab-panel--hidden');">
+      Org Plugins{{#if orgId}} ({{orgId}}){{/if}}
+    </button>
+  </div>
 
-    {{#if installed.length}}
+  {{! ── Global Plugins Panel ─────────────────────────────────────────── }}
+  <div class="rpt-tab-panel" id="panel-global-plugins" role="tabpanel" aria-labelledby="tab-global-plugins">
+    <p class="text-muted mb-md">System-wide plugins managed by administrators. These apply to all organizations.</p>
+
+    {{#if globalPlugins.length}}
     <div class="plugin-grid">
-      {{#each installed}}
+      {{#each globalPlugins}}
       <div class="card" id="plugin-{{id}}" aria-label="Plugin {{packageName}}">
         <div class="card__header">
           <h3 class="card__title">{{packageName}}</h3>
           <span class="badge badge--info">{{type}}</span>
+          <span class="badge badge--neutral">global</span>
         </div>
         <div class="card__body">
           <dl class="stats-list">
@@ -40,13 +56,14 @@
             {{/if}}
           </dl>
 
+          {{#if ../isAdmin}}
           <div class="btn-group" role="group" aria-label="Plugin actions">
             {{#if (eq status 'active')}}
             <button class="btn btn--sm btn--ghost"
                     hx-post="/admin/plugins/{{id}}/deactivate"
                     hx-target="#plugin-messages"
                     hx-swap="innerHTML">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+              <input type="hidden" name="_csrf" value="{{../csrfToken}}">
               {{t "admin.plugins.deactivate"}}
             </button>
             {{else}}
@@ -54,7 +71,7 @@
                     hx-post="/admin/plugins/{{id}}/activate"
                     hx-target="#plugin-messages"
                     hx-swap="innerHTML">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+              <input type="hidden" name="_csrf" value="{{../csrfToken}}">
               {{t "admin.plugins.activate"}}
             </button>
             {{/if}}
@@ -74,6 +91,7 @@
               {{t "admin.plugins.remove"}}
             </button>
           </div>
+          {{/if}}
         </div>
       </div>
       {{/each}}
@@ -81,48 +99,125 @@
     {{else}}
     <p>{{t "admin.plugins.noInstalled"}}</p>
     {{/if}}
-  </section>
 
-  <div id="plugin-config-area"></div>
+    <div id="plugin-config-area"></div>
 
-  <section class="admin-section" aria-label="Available plugins from registry">
-    <h2 class="section-title">{{t "admin.plugins.availablePlugins"}}</h2>
+    {{! ── Available Plugins (install is global only) ──────────────────── }}
+    {{#if isAdmin}}
+    <section class="admin-section" aria-label="Available plugins from registry">
+      <h2 class="section-title">{{t "admin.plugins.availablePlugins"}}</h2>
 
-    {{#if available.length}}
+      {{#if available.length}}
+      <div class="plugin-grid">
+        {{#each available}}
+        <div class="card" aria-label="Available plugin {{displayName}}">
+          <div class="card__header">
+            <h3 class="card__title">{{displayName}}</h3>
+            <span class="badge badge--info">{{type}}</span>
+          </div>
+          <div class="card__body">
+            <p>{{description}}</p>
+            <dl class="stats-list">
+              <div class="stats-list__item">
+                <dt>{{t "admin.plugins.package"}}</dt>
+                <dd><code>{{packageName}}</code></dd>
+              </div>
+              <div class="stats-list__item">
+                <dt>{{t "admin.plugins.version"}}</dt>
+                <dd>{{version}}</dd>
+              </div>
+            </dl>
+
+            <button class="btn btn--sm btn--primary"
+                    hx-post="/admin/plugins/install"
+                    hx-vals='{"packageName": "{{packageName}}"}'
+                    hx-target="#plugin-messages"
+                    hx-swap="innerHTML">
+              <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+              {{t "admin.plugins.install"}}
+            </button>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      {{else}}
+      <p>{{t "admin.plugins.allInstalled"}}</p>
+      {{/if}}
+    </section>
+    {{/if}}
+  </div>
+
+  {{! ── Org Plugins Panel ──────────────────────────────────────────── }}
+  <div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-org-plugins" role="tabpanel" aria-labelledby="tab-org-plugins">
+    <p class="text-muted mb-md">Plugins configured for your organization. Organization owners can enable, disable, and configure these independently of other organizations.</p>
+
+    {{#if hasOrgPlugins}}
     <div class="plugin-grid">
-      {{#each available}}
-      <div class="card" aria-label="Available plugin {{displayName}}">
+      {{#each orgPlugins}}
+      <div class="card" id="org-plugin-{{id}}" aria-label="Org plugin {{packageName}}">
         <div class="card__header">
-          <h3 class="card__title">{{displayName}}</h3>
+          <h3 class="card__title">{{packageName}}</h3>
           <span class="badge badge--info">{{type}}</span>
+          <span class="badge badge--success">org</span>
         </div>
         <div class="card__body">
-          <p>{{description}}</p>
           <dl class="stats-list">
-            <div class="stats-list__item">
-              <dt>{{t "admin.plugins.package"}}</dt>
-              <dd><code>{{packageName}}</code></dd>
-            </div>
             <div class="stats-list__item">
               <dt>{{t "admin.plugins.version"}}</dt>
               <dd>{{version}}</dd>
             </div>
+            <div class="stats-list__item">
+              <dt>{{t "common.status"}}</dt>
+              <dd>
+                <span class="badge {{#if (eq status 'active')}}badge--success{{else if (eq status 'inactive')}}badge--neutral{{else if (eq status 'error')}}badge--error{{else if (eq status 'unhealthy')}}badge--warning{{else}}badge--neutral{{/if}}">
+                  {{status}}
+                </span>
+              </dd>
+            </div>
+            {{#if error}}
+            <div class="stats-list__item">
+              <dt>{{t "admin.plugins.error"}}</dt>
+              <dd class="text--error">{{error}}</dd>
+            </div>
+            {{/if}}
           </dl>
 
-          <button class="btn btn--sm btn--primary"
-                  hx-post="/admin/plugins/install"
-                  hx-vals='{"packageName": "{{packageName}}"}'
-                  hx-target="#plugin-messages"
-                  hx-swap="innerHTML">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
-            {{t "admin.plugins.install"}}
-          </button>
+          <div class="btn-group" role="group" aria-label="Org plugin actions">
+            {{#if (eq status 'active')}}
+            <button class="btn btn--sm btn--ghost"
+                    hx-post="/admin/plugins/{{id}}/org/deactivate"
+                    hx-target="#plugin-messages"
+                    hx-swap="innerHTML">
+              <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+              {{t "admin.plugins.deactivate"}}
+            </button>
+            {{else}}
+            <button class="btn btn--sm btn--primary"
+                    hx-post="/admin/plugins/{{id}}/org/activate"
+                    hx-target="#plugin-messages"
+                    hx-swap="innerHTML">
+              <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+              {{t "admin.plugins.activate"}}
+            </button>
+            {{/if}}
+
+            <button class="btn btn--sm btn--ghost"
+                    hx-get="/admin/plugins/{{id}}/configure"
+                    hx-target="#plugin-config-area-org"
+                    hx-swap="innerHTML">
+              {{t "admin.plugins.configure"}}
+            </button>
+          </div>
         </div>
       </div>
       {{/each}}
     </div>
     {{else}}
-    <p>{{t "admin.plugins.allInstalled"}}</p>
+    <div class="empty-state" role="status">
+      <p>No org-specific plugins configured. Plugins are inherited from global configuration. To customize a plugin for this organization, enable it from the global tab or contact an administrator.</p>
+    </div>
     {{/if}}
-  </section>
+
+    <div id="plugin-config-area-org"></div>
+  </div>
 </section>
