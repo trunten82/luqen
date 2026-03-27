@@ -4,6 +4,18 @@ import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml } from './helpers.js';
 import { validateUsername, validatePassword } from '../../validation.js';
 
+/** Check if a non-admin user can manage the target user (target must be in their org or unbound). */
+async function canManageUser(storage: StorageAdapter, request: FastifyRequest, targetUserId: string): Promise<boolean> {
+  if (request.user?.role === 'admin') return true;
+  const orgId = request.user?.currentOrgId;
+  if (!orgId || orgId === 'system') {
+    // No org context — allow if the user has the permission (trust the permission gate)
+    return true;
+  }
+  const orgUsers = await storage.users.listUsersForOrg(orgId);
+  return orgUsers.some((u) => u.id === targetUserId);
+}
+
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 async function isLastActiveAdmin(users: StorageAdapter, userId: string): Promise<boolean> {
@@ -212,6 +224,9 @@ export async function dashboardUserRoutes(
     { preHandler: requirePermission('users.roles') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
+      if (!await canManageUser(storage, request, id)) {
+        return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
+      }
       const body = request.body as { role?: string };
       const role = body.role?.trim();
 
@@ -260,6 +275,9 @@ export async function dashboardUserRoutes(
     { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
+      if (!await canManageUser(storage, request, id)) {
+        return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
+      }
 
       const targetUser = await storage.users.getUserById(id);
       if (targetUser !== null && targetUser.role === 'admin' && await isLastActiveAdmin(storage, id)) {
@@ -299,6 +317,9 @@ export async function dashboardUserRoutes(
     { preHandler: requirePermission('users.activate') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
+      if (!await canManageUser(storage, request, id)) {
+        return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
+      }
 
       try {
         await storage.users.activateUser(id);
@@ -330,6 +351,9 @@ export async function dashboardUserRoutes(
     { preHandler: requirePermission('users.reset_password') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
+      if (!await canManageUser(storage, request, id)) {
+        return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
+      }
       const user = await storage.users.getUserById(id);
 
       if (user === null) {
@@ -382,6 +406,9 @@ export async function dashboardUserRoutes(
     { preHandler: requirePermission('users.reset_password') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
+      if (!await canManageUser(storage, request, id)) {
+        return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
+      }
       const body = request.body as { newPassword?: string; confirmPassword?: string };
 
       const user = await storage.users.getUserById(id);
@@ -434,6 +461,9 @@ export async function dashboardUserRoutes(
     { preHandler: requirePermission('users.delete') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
+      if (!await canManageUser(storage, request, id)) {
+        return reply.code(403).header('content-type', 'text/html').send(toastHtml('You can only manage users in your organization.', 'error'));
+      }
 
       const user = await storage.users.getUserById(id);
       if (user === null) {
