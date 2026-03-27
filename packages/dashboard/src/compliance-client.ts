@@ -655,6 +655,34 @@ export async function createClient(
   }, orgId);
 }
 
+export async function createComplianceClient(
+  baseUrl: string,
+  adminToken: string,
+  orgId: string,
+  orgName: string,
+): Promise<{ clientId: string; clientSecret: string }> {
+  const response = await fetch(`${baseUrl}/api/v1/clients`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${adminToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: `dashboard-${orgName}`,
+      scopes: 'read write',
+      grantTypes: 'client_credentials',
+      orgId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create compliance client: ${response.status}`);
+  }
+
+  const data = await response.json() as { data: { id: string; secret: string } };
+  return { clientId: data.data.id, clientSecret: data.data.secret };
+}
+
 export async function revokeClient(
   baseUrl: string,
   token: string,
