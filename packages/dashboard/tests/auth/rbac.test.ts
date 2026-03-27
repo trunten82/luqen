@@ -121,7 +121,7 @@ describe('RBAC Permission Matrix', () => {
       'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
       'manual_testing', 'repos.manage', 'trends.view', 'users.create', 'users.delete',
       'users.activate', 'users.reset_password', 'users.roles', 'admin.users', 'admin.roles',
-      'admin.system', 'audit.view',
+      'admin.teams', 'admin.system', 'audit.view',
     ]);
 
     const developerPermissions = new Set([

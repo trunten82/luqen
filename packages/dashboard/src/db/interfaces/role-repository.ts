@@ -2,6 +2,12 @@ import type { Role } from '../types.js';
 
 export interface RoleRepository {
   listRoles(orgId?: string): Promise<Role[]>;
+  /** List only global/system roles (org_id = 'system'). */
+  listGlobalRoles(): Promise<Role[]>;
+  /** List only org-scoped roles for a specific org. */
+  listOrgRoles(orgId: string): Promise<Role[]>;
+  /** Check if a role name exists within an org (or globally). */
+  getRoleByNameAndOrg(name: string, orgId: string): Promise<Role | null>;
   getRole(id: string): Promise<Role | null>;
   getRoleByName(name: string): Promise<Role | null>;
   getRolePermissions(roleId: string): Promise<string[]>;
