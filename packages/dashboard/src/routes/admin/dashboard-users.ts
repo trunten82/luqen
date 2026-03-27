@@ -129,6 +129,25 @@ export async function dashboardUserRoutes(
     },
   );
 
+  // GET /admin/dashboard-users/check-username — inline username availability check
+  server.get(
+    '/admin/dashboard-users/check-username',
+    { preHandler: requirePermission('users.create') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const query = request.query as { username?: string };
+      const username = query.username?.trim();
+      if (!username) {
+        return reply.code(200).header('content-type', 'text/html').send('');
+      }
+      const existing = await storage.users.getUserByUsername(username);
+      if (existing !== null) {
+        return reply.code(200).header('content-type', 'text/html')
+          .send('<span style="color:var(--status-error)">This username is not available.</span>');
+      }
+      return reply.code(200).header('content-type', 'text/html').send('');
+    },
+  );
+
   // GET /admin/dashboard-users/new — create user form fragment
   server.get(
     '/admin/dashboard-users/new',
@@ -201,9 +220,9 @@ export async function dashboardUserRoutes(
       const existing = await storage.users.getUserByUsername(username);
       if (existing !== null) {
         return reply
-          .code(422)
+          .code(409)
           .header('content-type', 'text/html')
-          .send(`<div id="du-username-error" class="form-error" style="display:block;color:var(--status-error)" hx-swap-oob="true">This username is not available. Please choose a different one.</div>`);
+          .send(toastHtml('This username is not available. Please choose a different one.', 'error'));
       }
 
       try {

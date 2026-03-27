@@ -162,7 +162,7 @@ describe('POST /admin/dashboard-users', () => {
       payload: 'username=alice&password=NewPass123!&role=user',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
-    expect(response.statusCode).toBe(422);
+    expect(response.statusCode).toBe(409);
     expect(response.body).toContain('not available');
   });
 });
