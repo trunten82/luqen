@@ -62,3 +62,76 @@ export function hasPermission(request: unknown, permission: string): boolean {
   const perms = (request as { permissions?: Set<string> }).permissions;
   return perms?.has(permission) === true;
 }
+
+// ---------------------------------------------------------------------------
+// Org-scoped role definitions (default roles created when an org is created)
+// ---------------------------------------------------------------------------
+
+/** Permissions for the org-level "Owner" role (all org permissions). */
+export const ORG_OWNER_PERMISSIONS: readonly string[] = [
+  'scans.create',
+  'scans.schedule',
+  'reports.view',
+  'reports.view_technical',
+  'reports.export',
+  'reports.delete',
+  'reports.compare',
+  'issues.assign',
+  'issues.fix',
+  'manual_testing',
+  'repos.manage',
+  'trends.view',
+  'admin.roles',
+  'admin.system',
+  'users.create',
+  'users.delete',
+  'users.activate',
+  'users.reset_password',
+  'users.roles',
+  'audit.view',
+];
+
+/** Permissions for the org-level "Admin" role. */
+export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
+  'scans.create',
+  'scans.schedule',
+  'reports.view',
+  'reports.view_technical',
+  'reports.export',
+  'reports.delete',
+  'reports.compare',
+  'issues.assign',
+  'issues.fix',
+  'manual_testing',
+  'repos.manage',
+  'trends.view',
+];
+
+/** Permissions for the org-level "Member" role. */
+export const ORG_MEMBER_PERMISSIONS: readonly string[] = [
+  'scans.create',
+  'reports.view',
+  'reports.export',
+  'reports.compare',
+  'trends.view',
+];
+
+/** Permissions for the org-level "Viewer" role. */
+export const ORG_VIEWER_PERMISSIONS: readonly string[] = [
+  'reports.view',
+];
+
+/**
+ * Default org role definitions, created automatically when an org is created.
+ * Each entry defines a role name, description, and set of permissions.
+ */
+export const DEFAULT_ORG_ROLES: ReadonlyArray<{
+  readonly name: string;
+  readonly description: string;
+  readonly permissions: readonly string[];
+}> = [
+  { name: 'Owner', description: 'Full organization owner with all permissions', permissions: ORG_OWNER_PERMISSIONS },
+  { name: 'Admin', description: 'Manage teams, run scans, view reports, configure plugins', permissions: ORG_ADMIN_PERMISSIONS },
+  { name: 'Member', description: 'Run scans and view reports', permissions: ORG_MEMBER_PERMISSIONS },
+  { name: 'Viewer', description: 'View reports only', permissions: ORG_VIEWER_PERMISSIONS },
+];

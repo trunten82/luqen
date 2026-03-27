@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import type { OrgRepository } from '../../interfaces/org-repository.js';
 import type { Organization, OrgMember } from '../../types.js';
+import { DEFAULT_ORG_ROLES } from '../../../permissions.js';
 
 // ---------------------------------------------------------------------------
 // Private row types
@@ -39,9 +40,31 @@ export class SqliteOrgRepository implements OrgRepository {
   async createOrg(data: { name: string; slug: string }): Promise<Organization> {
     const id = randomUUID();
     const createdAt = new Date().toISOString();
-    this.db.prepare(
+
+    const insertOrg = this.db.prepare(
       'INSERT INTO organizations (id, name, slug, created_at) VALUES (?, ?, ?, ?)',
-    ).run(id, data.name, data.slug, createdAt);
+    );
+
+    const insertRole = this.db.prepare(
+      'INSERT INTO roles (id, name, description, is_system, org_id, created_at) VALUES (?, ?, ?, 0, ?, ?)',
+    );
+
+    const insertPerm = this.db.prepare(
+      'INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES (?, ?)',
+    );
+
+    this.db.transaction(() => {
+      insertOrg.run(id, data.name, data.slug, createdAt);
+
+      for (const roleDef of DEFAULT_ORG_ROLES) {
+        const roleId = randomUUID();
+        insertRole.run(roleId, roleDef.name, roleDef.description, id, createdAt);
+        for (const perm of roleDef.permissions) {
+          insertPerm.run(roleId, perm);
+        }
+      }
+    })();
+
     return { id, name: data.name, slug: data.slug, createdAt };
   }
 
