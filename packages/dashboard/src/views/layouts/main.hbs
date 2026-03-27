@@ -54,6 +54,15 @@
 
   <script src="/static/htmx.min.js"></script>
   <script src="/static/htmx-sse.js"></script>
+  <script>
+    /* Automatically include CSRF token on every HTMX request */
+    document.body.addEventListener('htmx:configRequest', function(event) {
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      if (csrfMeta) {
+        event.detail.headers['x-csrf-token'] = csrfMeta.getAttribute('content');
+      }
+    });
+  </script>
   <script src="/static/app.js"></script>
 </body>
 </html>
