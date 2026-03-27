@@ -7,6 +7,21 @@
 
   <div id="plugin-messages"></div>
 
+  <div class="rpt-tabs" role="tablist" id="plugins-tabs">
+    <button role="tab" class="rpt-tab rpt-tab--active" id="tab-global-plugins"
+            aria-controls="panel-global-plugins" aria-selected="true"
+            data-action="switch-tab" data-target-show="panel-global-plugins" data-target-hide="panel-org-plugins"
+            data-peer="tab-org-plugins">
+      Global Plugins
+    </button>
+    <button role="tab" class="rpt-tab" id="tab-org-plugins"
+            aria-controls="panel-org-plugins" aria-selected="false"
+            data-action="switch-tab" data-target-show="panel-org-plugins" data-target-hide="panel-global-plugins"
+            data-peer="tab-global-plugins">
+      Org Plugins{{#if orgName}} ({{orgName}}){{/if}}
+    </button>
+  </div>
+
   <section class="admin-section" aria-label="Installed plugins">
     <h2 class="section-title">{{t "admin.plugins.installedPlugins"}}</h2>
 
@@ -85,6 +100,7 @@
 
   <div id="plugin-config-area"></div>
 
+  {{#if canInstallPlugins}}
   <section class="admin-section" aria-label="Available plugins from registry">
     <h2 class="section-title">{{t "admin.plugins.availablePlugins"}}</h2>
 
@@ -125,4 +141,5 @@
     <p>{{t "admin.plugins.allInstalled"}}</p>
     {{/if}}
   </section>
+  {{/if}}
 </section>
