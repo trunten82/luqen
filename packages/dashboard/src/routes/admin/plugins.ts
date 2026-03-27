@@ -109,7 +109,7 @@ export async function pluginAdminRoutes(
   // GET /admin/plugins — render plugins page (scoped by org)
   server.get(
     '/admin/plugins',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const isAdmin = request.user?.role === 'admin';
@@ -156,7 +156,7 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/install — HTMX install (returns updated HTML fragment)
   server.post<{ Body: { packageName?: string } }>(
     '/admin/plugins/install',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
     async (request, reply) => {
       const { packageName } = request.body ?? {};
       if (!packageName || typeof packageName !== 'string') {
@@ -189,7 +189,7 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/:id/activate — HTMX activate
   server.post<{ Params: { id: string } }>(
     '/admin/plugins/:id/activate',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
     async (request, reply) => {
       try {
         const plugin = await pluginManager.activate(request.params.id);
@@ -214,7 +214,7 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/:id/deactivate — HTMX deactivate
   server.post<{ Params: { id: string } }>(
     '/admin/plugins/:id/deactivate',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
     async (request, reply) => {
       try {
         const plugin = await pluginManager.deactivate(request.params.id);
@@ -239,7 +239,7 @@ export async function pluginAdminRoutes(
   // DELETE /admin/plugins/:id — HTMX remove
   server.delete<{ Params: { id: string } }>(
     '/admin/plugins/:id',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
     async (request, reply) => {
       try {
         await pluginManager.remove(request.params.id);
@@ -260,7 +260,7 @@ export async function pluginAdminRoutes(
   // GET /admin/plugins/:id/configure — render config form
   server.get<{ Params: { id: string } }>(
     '/admin/plugins/:id/configure',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
     async (request, reply) => {
       try {
         const plugin = pluginManager.getPlugin(request.params.id);
@@ -308,7 +308,7 @@ export async function pluginAdminRoutes(
   // PATCH /admin/plugins/:id/config — HTMX save config
   server.patch<{ Params: { id: string }; Body: Record<string, unknown> }>(
     '/admin/plugins/:id/config',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
     async (request, reply) => {
       try {
         const config = (request.body ?? {}) as Record<string, unknown>;
@@ -337,10 +337,72 @@ export async function pluginAdminRoutes(
     },
   );
 
+  // POST /admin/plugins/:id/org/activate — org-scoped activate
+  server.post<{ Params: { id: string } }>(
+    '/admin/plugins/:id/org/activate',
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    async (request, reply) => {
+      try {
+        const orgId = request.user?.currentOrgId;
+        if (!orgId || orgId === 'system') {
+          return reply
+            .code(400)
+            .header('content-type', 'text/html')
+            .send('<div class="alert alert--error">No organization context</div>');
+        }
+
+        const plugin = await pluginManager.activateForOrg(request.params.id, orgId);
+        return reply
+          .header('content-type', 'text/html')
+          .header('hx-trigger', 'pluginChanged')
+          .send(
+            `<div class="alert alert--success">Plugin "${escapeHtml(plugin.packageName)}" activated for organization</div>`,
+          );
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(`<div class="alert alert--error">Activate failed: ${escapeHtml(message)}</div>`);
+      }
+    },
+  );
+
+  // POST /admin/plugins/:id/org/deactivate — org-scoped deactivate
+  server.post<{ Params: { id: string } }>(
+    '/admin/plugins/:id/org/deactivate',
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    async (request, reply) => {
+      try {
+        const orgId = request.user?.currentOrgId;
+        if (!orgId || orgId === 'system') {
+          return reply
+            .code(400)
+            .header('content-type', 'text/html')
+            .send('<div class="alert alert--error">No organization context</div>');
+        }
+
+        const plugin = await pluginManager.deactivateForOrg(request.params.id, orgId);
+        return reply
+          .header('content-type', 'text/html')
+          .header('hx-trigger', 'pluginChanged')
+          .send(
+            `<div class="alert alert--success">Plugin "${escapeHtml(plugin.packageName)}" deactivated for organization</div>`,
+          );
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(`<div class="alert alert--error">Deactivate failed: ${escapeHtml(message)}</div>`);
+      }
+    },
+  );
+
   // PATCH /admin/plugins/:packageName/org-config — save org-specific plugin config
   server.patch<{ Params: { packageName: string }; Body: Record<string, unknown> }>(
     '/admin/plugins/:packageName/org-config',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
     async (request, reply) => {
       try {
         const orgId = request.user?.currentOrgId;

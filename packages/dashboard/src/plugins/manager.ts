@@ -471,6 +471,91 @@ export class PluginManager {
     return this.getPluginOrThrow(id);
   }
 
+  /**
+   * Activate a plugin for a specific organization.
+   * If an org-specific row exists, updates its status.
+   * If not, clones the global row for this org and sets it to active.
+   */
+  async activateForOrg(pluginId: string, orgId: string): Promise<PluginRecord> {
+    const row = this.getRow(pluginId);
+    if (!row) {
+      throw new Error(`Plugin "${pluginId}" not found`);
+    }
+
+    // If this row already belongs to the org, just activate it
+    if (row.org_id === orgId) {
+      const now = new Date().toISOString();
+      this.db
+        .prepare('UPDATE plugins SET status = @status, activated_at = @activated_at, error = NULL WHERE id = @id')
+        .run({ id: pluginId, status: 'active', activated_at: now });
+      return this.getPluginOrThrow(pluginId);
+    }
+
+    // Otherwise, create an org-specific entry (clone from this row)
+    const existing = this.db
+      .prepare('SELECT * FROM plugins WHERE package_name = @pkg AND org_id = @orgId')
+      .get({ pkg: row.package_name, orgId }) as PluginRow | undefined;
+
+    if (existing) {
+      const now = new Date().toISOString();
+      this.db
+        .prepare('UPDATE plugins SET status = @status, activated_at = @activated_at, error = NULL WHERE id = @id')
+        .run({ id: existing.id, status: 'active', activated_at: now });
+      return this.getPluginOrThrow(existing.id);
+    }
+
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    this.db
+      .prepare(`INSERT INTO plugins (id, package_name, type, version, config, status, installed_at, checksum, org_id, activated_at)
+               VALUES (@id, @pkg, @type, @version, @config, @status, @installed_at, @checksum, @orgId, @activated_at)`)
+      .run({
+        id,
+        pkg: row.package_name,
+        type: row.type,
+        version: row.version,
+        config: row.config,
+        status: 'active',
+        installed_at: now,
+        checksum: row.checksum,
+        orgId,
+        activated_at: now,
+      });
+    return this.getPluginOrThrow(id);
+  }
+
+  /**
+   * Deactivate a plugin for a specific organization.
+   * Only affects the org-specific row; the global plugin remains unchanged.
+   */
+  async deactivateForOrg(pluginId: string, orgId: string): Promise<PluginRecord> {
+    const row = this.getRow(pluginId);
+    if (!row) {
+      throw new Error(`Plugin "${pluginId}" not found`);
+    }
+
+    if (row.org_id !== orgId) {
+      // Find org-specific row by package name
+      const orgRow = this.db
+        .prepare('SELECT * FROM plugins WHERE package_name = @pkg AND org_id = @orgId')
+        .get({ pkg: row.package_name, orgId }) as PluginRow | undefined;
+
+      if (!orgRow) {
+        throw new Error(`Plugin "${row.package_name}" is not configured for this organization`);
+      }
+
+      this.db
+        .prepare('UPDATE plugins SET status = @status, activated_at = NULL, error = NULL WHERE id = @id')
+        .run({ id: orgRow.id, status: 'inactive' });
+      return this.getPluginOrThrow(orgRow.id);
+    }
+
+    this.db
+      .prepare('UPDATE plugins SET status = @status, activated_at = NULL, error = NULL WHERE id = @id')
+      .run({ id: pluginId, status: 'inactive' });
+    return this.getPluginOrThrow(pluginId);
+  }
+
   getPlugin(id: string): PluginRecord | null {
     const row = this.getRow(id);
     if (!row) {

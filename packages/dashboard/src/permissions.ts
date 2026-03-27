@@ -27,6 +27,7 @@ export const ALL_PERMISSIONS = [
   { id: 'admin.roles', label: 'Manage roles', group: 'Administration' },
   { id: 'admin.teams', label: 'Manage teams', group: 'Administration' },
   { id: 'admin.system', label: 'System settings', group: 'Administration' },
+  { id: 'admin.plugins', label: 'Manage plugins', group: 'Administration' },
   { id: 'audit.view', label: 'View audit log', group: 'Administration' },
 ] as const;
 
@@ -105,6 +106,7 @@ export const ORG_OWNER_PERMISSIONS: readonly string[] = [
   'admin.roles',
   'admin.teams',
   'admin.system',
+  'admin.plugins',
   'users.create',
   'users.delete',
   'users.activate',
@@ -128,6 +130,7 @@ export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
   'repos.manage',
   'trends.view',
   'admin.teams',
+  'admin.plugins',
 ];
 
 /** Permissions for the org-level "Member" role. */
