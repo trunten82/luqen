@@ -13,7 +13,7 @@
 
   {{#if keys.length}}
   <div class="table-wrapper">
-    <table aria-label="API keys">
+    <table class="table" aria-label="API keys">
       <thead>
         <tr>
           <th scope="col">{{t "admin.apiKeys.label"}}</th>
@@ -31,9 +31,9 @@
           <td data-label="Role">{{this.role}}</td>
           <td data-label="Status">
             {{#if this.active}}
-            <span class="badge badge--completed">{{t "common.active"}}</span>
+            <span class="badge badge--success">{{t "common.active"}}</span>
             {{else}}
-            <span class="badge badge--failed">{{t "admin.apiKeys.revoked"}}</span>
+            <span class="badge badge--error">{{t "admin.apiKeys.revoked"}}</span>
             {{/if}}
           </td>
           <td data-label="Created">{{this.created_at}}</td>
