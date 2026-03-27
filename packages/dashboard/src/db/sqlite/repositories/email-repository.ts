@@ -40,6 +40,8 @@ interface EmailReportRow {
   frequency: string;
   format: string;
   include_csv: number;
+  include_warnings: number | undefined;
+  include_notices: number | undefined;
   next_send_at: string;
   last_sent_at: string | null;
   enabled: number;
@@ -48,7 +50,7 @@ interface EmailReportRow {
   created_at_ts: string;
 }
 
-function emailReportRowToRecord(row: EmailReportRow): EmailReport {
+function emailReportRowToRecord(row: EmailReportRow): EmailReport & { includeWarnings: boolean; includeNotices: boolean } {
   return {
     id: row.id,
     name: row.name,
@@ -57,6 +59,8 @@ function emailReportRowToRecord(row: EmailReportRow): EmailReport {
     frequency: row.frequency,
     format: row.format,
     includeCsv: row.include_csv === 1,
+    includeWarnings: row.include_warnings !== 0,
+    includeNotices: row.include_notices !== 0,
     nextSendAt: row.next_send_at,
     lastSentAt: row.last_sent_at,
     enabled: row.enabled === 1,
@@ -70,7 +74,25 @@ function emailReportRowToRecord(row: EmailReportRow): EmailReport {
 // ---------------------------------------------------------------------------
 
 export class SqliteEmailRepository implements EmailRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly db: Database.Database) {
+    // Add include_warnings and include_notices columns if they don't exist yet
+    this.ensureReportFlagColumns();
+  }
+
+  /** Idempotently add include_warnings / include_notices columns (defaults to 1 = true). */
+  private ensureReportFlagColumns(): void {
+    const columns = this.db
+      .prepare("PRAGMA table_info('email_reports')")
+      .all() as Array<{ name: string }>;
+    const columnNames = new Set(columns.map((c) => c.name));
+
+    if (!columnNames.has('include_warnings')) {
+      this.db.prepare('ALTER TABLE email_reports ADD COLUMN include_warnings INTEGER NOT NULL DEFAULT 1').run();
+    }
+    if (!columnNames.has('include_notices')) {
+      this.db.prepare('ALTER TABLE email_reports ADD COLUMN include_notices INTEGER NOT NULL DEFAULT 1').run();
+    }
+  }
 
   async getSmtpConfig(orgId = 'system'): Promise<SmtpConfig | null> {
     const stmt = this.db.prepare(
@@ -124,10 +146,10 @@ export class SqliteEmailRepository implements EmailRepository {
     return row !== undefined ? emailReportRowToRecord(row) : null;
   }
 
-  async createEmailReport(data: CreateEmailReportInput): Promise<EmailReport> {
+  async createEmailReport(data: CreateEmailReportInput & { includeWarnings?: boolean; includeNotices?: boolean }): Promise<EmailReport> {
     const stmt = this.db.prepare(`
-      INSERT INTO email_reports (id, name, site_url, recipients, frequency, format, include_csv, next_send_at, enabled, created_by, org_id, created_at_ts)
-      VALUES (@id, @name, @siteUrl, @recipients, @frequency, @format, @includeCsv, @nextSendAt, 1, @createdBy, @orgId, @createdAtTs)
+      INSERT INTO email_reports (id, name, site_url, recipients, frequency, format, include_csv, include_warnings, include_notices, next_send_at, enabled, created_by, org_id, created_at_ts)
+      VALUES (@id, @name, @siteUrl, @recipients, @frequency, @format, @includeCsv, @includeWarnings, @includeNotices, @nextSendAt, 1, @createdBy, @orgId, @createdAtTs)
     `);
 
     stmt.run({
@@ -138,6 +160,8 @@ export class SqliteEmailRepository implements EmailRepository {
       frequency: data.frequency,
       format: data.format ?? 'pdf',
       includeCsv: data.includeCsv ? 1 : 0,
+      includeWarnings: data.includeWarnings !== false ? 1 : 0,
+      includeNotices: data.includeNotices !== false ? 1 : 0,
       nextSendAt: data.nextSendAt,
       createdBy: data.createdBy,
       orgId: data.orgId ?? 'system',
@@ -158,6 +182,8 @@ export class SqliteEmailRepository implements EmailRepository {
     frequency: string;
     format: string;
     includeCsv: boolean;
+    includeWarnings: boolean;
+    includeNotices: boolean;
     nextSendAt: string;
     lastSentAt: string;
     enabled: boolean;
@@ -172,16 +198,21 @@ export class SqliteEmailRepository implements EmailRepository {
       lastSentAt: 'last_sent_at',
     };
 
+    const booleanFields: Record<string, string> = {
+      includeCsv: 'include_csv',
+      includeWarnings: 'include_warnings',
+      includeNotices: 'include_notices',
+      enabled: 'enabled',
+    };
+
     const setClauses: string[] = [];
     const params: Record<string, unknown> = { id };
 
     for (const [key, value] of Object.entries(data)) {
-      if (key === 'includeCsv') {
-        setClauses.push('include_csv = @includeCsv');
-        params['includeCsv'] = value ? 1 : 0;
-      } else if (key === 'enabled') {
-        setClauses.push('enabled = @enabled');
-        params['enabled'] = value ? 1 : 0;
+      const boolCol = booleanFields[key];
+      if (boolCol !== undefined) {
+        setClauses.push(`${boolCol} = @${key}`);
+        params[key] = value ? 1 : 0;
       } else {
         const col = fieldMap[key];
         if (col === undefined) continue;
