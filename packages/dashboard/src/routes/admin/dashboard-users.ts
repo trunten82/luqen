@@ -137,19 +137,21 @@ export async function dashboardUserRoutes(
       const query = request.query as { username?: string };
       const username = query.username?.trim();
       if (!username) {
-        return reply.code(200).header('content-type', 'text/html').send('');
+        // Re-enable button when field is cleared
+        return reply.code(200).header('content-type', 'text/html')
+          .send('<button type="submit" class="btn btn--primary" id="du-submit-btn" hx-swap-oob="true">Create User</button>');
       }
       const existing = await storage.users.getUserByUsername(username);
       if (existing !== null) {
         return reply.code(200).header('content-type', 'text/html')
           .send(
             '<span style="color:var(--status-error)">This username is not available.</span>' +
-            '\n<button type="submit" class="btn btn--primary" id="du-submit-btn" disabled hx-swap-oob="true">Create User</button>',
+            '<button type="submit" class="btn btn--primary" id="du-submit-btn" disabled hx-swap-oob="true">Create User</button>',
           );
       }
       // Username available — clear error and re-enable button
       return reply.code(200).header('content-type', 'text/html')
-        .send('\n<button type="submit" class="btn btn--primary" id="du-submit-btn" hx-swap-oob="true">Create User</button>');
+        .send('<button type="submit" class="btn btn--primary" id="du-submit-btn" hx-swap-oob="true">Create User</button>');
     },
   );
 
