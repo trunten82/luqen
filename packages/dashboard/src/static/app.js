@@ -9,6 +9,11 @@
 
   /* ── Sidebar (mobile) ─────────────────────────────────────────────── */
   function toggleSidebar() {
+    // On desktop with collapsed sidebar, expand it instead of showing mobile overlay
+    if (window.innerWidth > 768 && document.body.classList.contains('sidebar-collapsed')) {
+      expandDesktopSidebar();
+      return;
+    }
     var s = document.getElementById('sidebar');
     if (s && s.classList.contains('is-open')) { closeSidebar(); } else { openSidebar(); }
   }
