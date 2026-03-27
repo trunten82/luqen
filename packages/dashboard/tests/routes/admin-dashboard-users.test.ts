@@ -260,7 +260,7 @@ async function createServerWithPerms(permissions: string[]): Promise<TestContext
   );
 
   server.addHook('preHandler', async (request) => {
-    request.user = { id: 'test-user-id', username: 'testadmin', role: 'user' };
+    request.user = { id: 'test-user-id', username: 'testadmin', role: 'admin' };
     (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
   });
 
