@@ -1,0 +1,11 @@
+{{! alert partial }}
+<div class="alert alert--{{type}}" role="alert" aria-live="assertive" id="{{alertId}}">
+  <svg class="alert__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M10 6v4M10 13v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+  <div class="alert__body">
+    {{#if title}}<div class="alert__title">{{title}}</div>{{/if}}
+    {{message}}
+  </div>
+</div>

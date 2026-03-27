@@ -322,6 +322,16 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       partials: {
         sidebar: 'partials/sidebar.hbs',
         'reports-table': 'partials/reports-table.hbs',
+        'page-header': 'partials/page-header.hbs',
+        'data-table': 'partials/data-table.hbs',
+        'form-group': 'partials/form-group.hbs',
+        'stat-card': 'partials/stat-card.hbs',
+        'empty-state': 'partials/empty-state.hbs',
+        'modal-confirm': 'partials/modal.hbs',
+        'badge': 'partials/badge.hbs',
+        'login-form': 'partials/login-form.hbs',
+        'pagination': 'partials/pagination.hbs',
+        'alert': 'partials/alert.hbs',
       },
     },
   });
