@@ -314,8 +314,8 @@ function renderAssignmentCard(a: {
     <label class="asgn-label asgn-label--wide">Notes
       <textarea class="asgn-textarea" data-field="notes" rows="2" placeholder="Notes...">${escapedNotes}</textarea>
     </label>
-    <button type="button" class="btn btn--sm btn--primary asgn-save-btn" onclick="asgnSave('${a.id}', this)">Save</button>
-    <button type="button" class="btn btn--sm btn--ghost asgn-delete-btn" onclick="asgnDelete('${a.id}', this)" title="Remove assignment">Remove</button>
+    <button type="button" class="btn btn--sm btn--primary asgn-save-btn" data-action="asgnSave" data-assignment-id="${a.id}">Save</button>
+    <button type="button" class="btn btn--sm btn--ghost asgn-delete-btn" data-action="asgnDelete" data-assignment-id="${a.id}" title="Remove assignment">Remove</button>
   </div>
   <div class="asgn-card__meta">
     Created by ${escapeHtml(a.createdBy)} &middot; Updated ${new Date(a.updatedAt).toLocaleString()}
