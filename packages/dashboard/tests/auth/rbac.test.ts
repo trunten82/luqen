@@ -22,7 +22,7 @@ afterEach(async () => {
 
 describe('RBAC Permission Matrix', () => {
   describe('system role permissions', () => {
-    it('admin has all 21 permissions', async () => {
+    it('admin has all permissions', async () => {
       const user = await storage.users.createUser(`admin-${randomUUID()}`, 'pass', 'admin');
       const perms = await storage.roles.getUserPermissions(user.id);
 
@@ -121,7 +121,8 @@ describe('RBAC Permission Matrix', () => {
       'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
       'manual_testing', 'repos.manage', 'trends.view', 'users.create', 'users.delete',
       'users.activate', 'users.reset_password', 'users.roles', 'admin.users', 'admin.roles',
-      'admin.teams', 'admin.system', 'audit.view',
+      'admin.teams', 'admin.plugins', 'admin.org', 'admin.system', 'audit.view',
+      'compliance.view', 'compliance.manage',
     ]);
 
     const developerPermissions = new Set([

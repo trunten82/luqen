@@ -26,8 +26,12 @@ export const ALL_PERMISSIONS = [
   { id: 'admin.users', label: 'Manage compliance API users', group: 'Administration' },
   { id: 'admin.roles', label: 'Manage roles', group: 'Administration' },
   { id: 'admin.teams', label: 'Manage teams', group: 'Administration' },
+  { id: 'admin.plugins', label: 'Manage plugins', group: 'Administration' },
+  { id: 'admin.org', label: 'Manage organization settings', group: 'Administration' },
   { id: 'admin.system', label: 'System settings', group: 'Administration' },
   { id: 'audit.view', label: 'View audit log', group: 'Administration' },
+  { id: 'compliance.view', label: 'View compliance data', group: 'Compliance' },
+  { id: 'compliance.manage', label: 'Manage compliance items', group: 'Compliance' },
 ] as const;
 
 export type PermissionId = typeof ALL_PERMISSIONS[number]['id'];
@@ -90,58 +94,30 @@ export async function resolveEffectivePermissions(
 
 /** Permissions for the org-level "Owner" role (all org permissions). */
 export const ORG_OWNER_PERMISSIONS: readonly string[] = [
-  'scans.create',
-  'scans.schedule',
-  'reports.view',
-  'reports.view_technical',
-  'reports.export',
-  'reports.delete',
-  'reports.compare',
-  'issues.assign',
-  'issues.fix',
-  'manual_testing',
-  'repos.manage',
-  'trends.view',
-  'admin.roles',
-  'admin.teams',
-  'admin.system',
-  'users.create',
-  'users.delete',
-  'users.activate',
-  'users.reset_password',
-  'users.roles',
-  'audit.view',
+  'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
+  'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
+  'manual_testing', 'repos.manage', 'trends.view',
+  'admin.roles', 'admin.teams', 'admin.org', 'admin.plugins',
+  'users.create', 'compliance.view', 'compliance.manage', 'audit.view',
 ];
 
 /** Permissions for the org-level "Admin" role. */
 export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
-  'scans.create',
-  'scans.schedule',
-  'reports.view',
-  'reports.view_technical',
-  'reports.export',
-  'reports.delete',
-  'reports.compare',
-  'issues.assign',
-  'issues.fix',
-  'manual_testing',
-  'repos.manage',
-  'trends.view',
-  'admin.teams',
+  'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
+  'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
+  'manual_testing', 'repos.manage', 'trends.view',
+  'admin.plugins', 'users.create', 'compliance.view', 'compliance.manage',
 ];
 
 /** Permissions for the org-level "Member" role. */
 export const ORG_MEMBER_PERMISSIONS: readonly string[] = [
-  'scans.create',
-  'reports.view',
-  'reports.export',
-  'reports.compare',
-  'trends.view',
+  'scans.create', 'reports.view', 'reports.view_technical', 'reports.export',
+  'reports.compare', 'manual_testing', 'trends.view', 'compliance.view',
 ];
 
 /** Permissions for the org-level "Viewer" role. */
 export const ORG_VIEWER_PERMISSIONS: readonly string[] = [
-  'reports.view',
+  'reports.view', 'trends.view', 'compliance.view',
 ];
 
 /**
