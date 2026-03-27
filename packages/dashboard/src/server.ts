@@ -422,6 +422,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           usersManageAny: perms.has('users.create') || perms.has('users.delete') || perms.has('users.activate') || perms.has('users.reset_password') || perms.has('users.roles'),
           adminUsers: perms.has('admin.users'),
           adminRoles: perms.has('admin.roles'),
+          adminTeams: perms.has('admin.teams') || perms.has('admin.system'),
+          adminPlugins: perms.has('admin.plugins') || perms.has('admin.system'),
           adminSystem: perms.has('admin.system'),
           auditView: perms.has('audit.view'),
         },

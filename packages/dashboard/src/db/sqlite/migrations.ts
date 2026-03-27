@@ -735,4 +735,95 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission)
   WHERE r.name IN ('Owner', 'Admin') AND r.org_id != 'system';
     `,
   },
+  {
+    id: '025',
+    name: 'fix-migrated-members-role-preservation',
+    sql: `
+-- Migration 022 put ALL direct members into a single "Direct Members" team
+-- with the "Member" role, regardless of their original role (owner/admin/viewer).
+-- This fix creates per-role teams and moves users to the correct one.
+
+-- 1. For each org, create Owner/Admin/Viewer teams for members who had those roles.
+--    (Member team already exists as "Direct Members".)
+
+-- Owner teams
+INSERT OR IGNORE INTO teams (id, name, description, org_id, role_id, created_at)
+  SELECT DISTINCT
+    'team-owners-' || t.org_id,
+    'Owners',
+    'Organization owners (migrated from direct membership)',
+    t.org_id,
+    (SELECT r.id FROM roles r WHERE r.name = 'Owner' AND r.org_id = t.org_id LIMIT 1),
+    datetime('now')
+  FROM teams t
+  JOIN team_members tm ON tm.team_id = t.id
+  WHERE t.name = 'Direct Members' AND tm.role = 'owner' AND t.org_id != 'system';
+
+-- Admin teams
+INSERT OR IGNORE INTO teams (id, name, description, org_id, role_id, created_at)
+  SELECT DISTINCT
+    'team-admins-' || t.org_id,
+    'Admins',
+    'Organization admins (migrated from direct membership)',
+    t.org_id,
+    (SELECT r.id FROM roles r WHERE r.name = 'Admin' AND r.org_id = t.org_id LIMIT 1),
+    datetime('now')
+  FROM teams t
+  JOIN team_members tm ON tm.team_id = t.id
+  WHERE t.name = 'Direct Members' AND tm.role = 'admin' AND t.org_id != 'system';
+
+-- Viewer teams
+INSERT OR IGNORE INTO teams (id, name, description, org_id, role_id, created_at)
+  SELECT DISTINCT
+    'team-viewers-' || t.org_id,
+    'Viewers',
+    'Organization viewers (migrated from direct membership)',
+    t.org_id,
+    (SELECT r.id FROM roles r WHERE r.name = 'Viewer' AND r.org_id = t.org_id LIMIT 1),
+    datetime('now')
+  FROM teams t
+  JOIN team_members tm ON tm.team_id = t.id
+  WHERE t.name = 'Direct Members' AND tm.role = 'viewer' AND t.org_id != 'system';
+
+-- 2. Move users from "Direct Members" to their correct role-based team.
+
+-- Move owners
+INSERT OR IGNORE INTO team_members (team_id, user_id, role)
+  SELECT 'team-owners-' || t.org_id, tm.user_id, 'owner'
+  FROM team_members tm
+  JOIN teams t ON t.id = tm.team_id
+  WHERE t.name = 'Direct Members' AND tm.role = 'owner' AND t.org_id != 'system';
+
+-- Move admins
+INSERT OR IGNORE INTO team_members (team_id, user_id, role)
+  SELECT 'team-admins-' || t.org_id, tm.user_id, 'admin'
+  FROM team_members tm
+  JOIN teams t ON t.id = tm.team_id
+  WHERE t.name = 'Direct Members' AND tm.role = 'admin' AND t.org_id != 'system';
+
+-- Move viewers
+INSERT OR IGNORE INTO team_members (team_id, user_id, role)
+  SELECT 'team-viewers-' || t.org_id, tm.user_id, 'viewer'
+  FROM team_members tm
+  JOIN teams t ON t.id = tm.team_id
+  WHERE t.name = 'Direct Members' AND tm.role = 'viewer' AND t.org_id != 'system';
+
+-- 3. Remove non-member users from "Direct Members" team (they've been moved).
+DELETE FROM team_members
+  WHERE team_id IN (SELECT id FROM teams WHERE name = 'Direct Members')
+    AND role != 'member';
+
+-- 4. Add admin.plugins to Owner role permissions (was missing from migration 024 step 2)
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'admin.plugins'
+  FROM roles r
+  WHERE r.name = 'Owner' AND r.org_id != 'system';
+
+-- 5. Add admin.plugins to Admin role permissions
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'admin.plugins'
+  FROM roles r
+  WHERE r.name = 'Admin' AND r.org_id != 'system';
+    `,
+  },
 ];
