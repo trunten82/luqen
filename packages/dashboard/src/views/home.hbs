@@ -3,21 +3,12 @@
 <section aria-labelledby="exec-summary-heading">
   <h2 id="exec-summary-heading" class="section-title">{{t "home.executiveSummary"}}</h2>
   <div class="exec-summary" role="list" aria-label="Executive summary statistics">
-    <article class="exec-summary__card" role="listitem">
-      <span class="exec-summary__value" aria-label="{{stats.totalScans}} total scans completed">{{stats.totalScans}}</span>
-      <span class="exec-summary__label">{{t "home.totalScans"}}</span>
-    </article>
-    <article class="exec-summary__card" role="listitem">
-      <span class="exec-summary__value" aria-label="{{stats.sitesMonitored}} sites monitored">{{stats.sitesMonitored}}</span>
-      <span class="exec-summary__label">{{t "home.sitesMonitored"}}</span>
-    </article>
-    <article class="exec-summary__card" role="listitem">
-      <span class="exec-summary__value exec-summary__value--trend" aria-label="Overall trend: {{stats.trendDirection}}">{{stats.trendDirection}}</span>
-      <span class="exec-summary__label">{{t "home.overallTrend"}}</span>
-    </article>
-    <article class="exec-summary__card" role="listitem">
-      <span class="exec-summary__value" aria-label="{{stats.complianceRate}} percent compliance rate">{{stats.complianceRate}}%</span>
-      <span class="exec-summary__label">{{t "home.complianceRate"}}</span>
+    {{> stat-card value=stats.totalScans label=(t "home.totalScans") accentColor="var(--accent)"}}
+    {{> stat-card value=stats.sitesMonitored label=(t "home.sitesMonitored") accentColor="var(--status-info)"}}
+    {{> stat-card value=stats.trendDirection label=(t "home.overallTrend") accentColor="var(--accent)"}}
+    <article class="stat-card" role="listitem" style="border-left: 3px solid var(--status-success)">
+      <span class="stat-card__value" aria-label="{{stats.complianceRate}} percent {{t "home.complianceRate"}}">{{stats.complianceRate}}%</span>
+      <span class="stat-card__label">{{t "home.complianceRate"}}</span>
     </article>
   </div>
 </section>
@@ -26,22 +17,10 @@
 <section aria-labelledby="stats-heading">
   <h2 id="stats-heading" class="section-title">{{t "home.overview"}}</h2>
   <div class="stats-grid" role="list" aria-label="Summary statistics">
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value" aria-label="{{stats.totalScans}} total scans">{{stats.totalScans}}</span>
-      <span class="stat-card__label">{{t "home.totalScans"}}</span>
-    </article>
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value" aria-label="{{stats.scansThisWeek}} scans this week">{{stats.scansThisWeek}}</span>
-      <span class="stat-card__label">{{t "home.scansThisWeek"}}</span>
-    </article>
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value" aria-label="{{stats.pagesScanned}} pages scanned">{{stats.pagesScanned}}</span>
-      <span class="stat-card__label">{{t "home.pagesScanned"}}</span>
-    </article>
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value" aria-label="{{stats.issuesFound}} issues found">{{stats.issuesFound}}</span>
-      <span class="stat-card__label">{{t "home.issuesFound"}}</span>
-    </article>
+    {{> stat-card value=stats.totalScans label=(t "home.totalScans")}}
+    {{> stat-card value=stats.scansThisWeek label=(t "home.scansThisWeek")}}
+    {{> stat-card value=stats.pagesScanned label=(t "home.pagesScanned")}}
+    {{> stat-card value=stats.issuesFound label=(t "home.issuesFound")}}
   </div>
 </section>
 {{/unless}}
