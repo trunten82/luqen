@@ -95,6 +95,7 @@ export interface OAuthClient {
   readonly scopes: readonly string[];
   readonly grantTypes: readonly ('client_credentials' | 'authorization_code')[];
   readonly redirectUris?: readonly string[];
+  readonly orgId: string;
   readonly createdAt: string;
 }
 
@@ -269,6 +270,7 @@ export interface CreateClientInput {
   readonly scopes: readonly string[];
   readonly grantTypes: readonly ('client_credentials' | 'authorization_code')[];
   readonly redirectUris?: readonly string[];
+  readonly orgId?: string;
 }
 
 export interface CreateUserInput {

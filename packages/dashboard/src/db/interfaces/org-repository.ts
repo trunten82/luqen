@@ -12,4 +12,5 @@ export interface OrgRepository {
   /** List direct members + members inherited from teams linked to this org */
   listAllMembers(orgId: string): Promise<OrgMember[]>;
   getUserOrgs(userId: string): Promise<Organization[]>;
+  updateOrgComplianceClient(orgId: string, clientId: string, clientSecret: string): Promise<void>;
 }

@@ -157,6 +157,7 @@ export async function registerOAuthRoutes(
         sub: clientId,
         scopes: grantedScopes,
         expiresIn: tokenExpiry,
+        ...(client.orgId !== 'system' ? { orgId: client.orgId } : {}),
       });
 
       // Parse expiry to seconds

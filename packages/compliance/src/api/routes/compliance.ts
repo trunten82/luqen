@@ -7,11 +7,13 @@ import type { ComplianceCache } from '../../cache/redis.js';
 import { createHash } from 'node:crypto';
 
 /**
- * Stable cache key derived from the compliance check request payload.
+ * Stable cache key derived from the compliance check request payload and org context.
  * Uses SHA-256 so the key is fixed-length regardless of payload size.
+ * orgId is included to prevent cross-org cache hits.
  */
-function cacheKey(body: ComplianceCheckRequest): string {
+function cacheKey(body: ComplianceCheckRequest, orgId: string | undefined): string {
   const stable = JSON.stringify({
+    orgId: orgId ?? null,
     jurisdictions: [...body.jurisdictions].sort(),
     issues: [...body.issues].map((i) => ({
       code: i.code,
@@ -35,6 +37,7 @@ export async function registerComplianceRoutes(
   }, async (request, reply) => {
     try {
       const body = request.body as ComplianceCheckRequest;
+      const orgId = (request as any).orgId as string | undefined;
 
       if (!Array.isArray(body.jurisdictions) || body.jurisdictions.length === 0) {
         await reply.status(400).send({ error: 'jurisdictions array is required', statusCode: 400 });
@@ -47,7 +50,7 @@ export async function registerComplianceRoutes(
 
       // ── Cache read ────────────────────────────────────────────────────────
       if (cache !== undefined) {
-        const key = cacheKey(body);
+        const key = cacheKey(body, orgId);
         const cached = await cache.getCachedCheck(key);
         if (cached !== null) {
           await reply.header('X-Cache', 'HIT').send(JSON.parse(cached));
@@ -55,7 +58,7 @@ export async function registerComplianceRoutes(
         }
 
         // ── Compute result ────────────────────────────────────────────────
-        const result = await checkCompliance(body, db);
+        const result = await checkCompliance(body, db, orgId);
 
         // ── Cache write (non-blocking) ─────────────────────────────────────
         void cache.setCachedCheck(key, JSON.stringify(result), 300);
@@ -65,7 +68,7 @@ export async function registerComplianceRoutes(
       }
 
       // No cache — compute directly
-      const result = await checkCompliance(body, db);
+      const result = await checkCompliance(body, db, orgId);
       await reply.send(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Internal server error';

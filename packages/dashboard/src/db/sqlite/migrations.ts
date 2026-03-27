@@ -900,4 +900,12 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission)
   SELECT r.id, 'trends.view' FROM roles r WHERE r.name = 'Viewer' AND r.org_id != 'system';
     `,
   },
+  {
+    id: '028',
+    name: 'add-compliance-client-to-orgs',
+    sql: `
+ALTER TABLE organizations ADD COLUMN compliance_client_id TEXT;
+ALTER TABLE organizations ADD COLUMN compliance_client_secret TEXT;
+    `,
+  },
 ];

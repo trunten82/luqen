@@ -32,11 +32,16 @@ export function createAuthMiddleware(verifier: TokenVerifier) {
       const expected = Buffer.from(`Bearer ${apiKey}`);
       const received = Buffer.from(authHeader);
       if (expected.length === received.length && timingSafeEqual(expected, received)) {
+        // API key auth: org context comes from X-Org-Id header (fallback to 'system')
+        const headerOrgId = request.headers['x-org-id'];
+        const orgId = (Array.isArray(headerOrgId) ? headerOrgId[0] : headerOrgId) ?? 'system';
         (request as FastifyRequest & { tokenPayload: TokenPayload }).tokenPayload = {
           sub: 'api-key',
           scopes: ['read', 'write', 'admin'],
+          orgId,
         };
         (request as FastifyRequest & { authType: string }).authType = 'apikey';
+        (request as FastifyRequest & { orgId: string }).orgId = orgId;
         return;
       }
     }
@@ -47,6 +52,8 @@ export function createAuthMiddleware(verifier: TokenVerifier) {
       const payload = await verifier(token);
       (request as FastifyRequest & { tokenPayload: TokenPayload }).tokenPayload = payload;
       (request as FastifyRequest & { authType: string }).authType = 'jwt';
+      // JWT orgId takes priority; X-Org-Id header is ignored for JWT auth
+      (request as FastifyRequest & { orgId: string }).orgId = payload.orgId ?? 'system';
     } catch {
       await reply.status(401).send({ error: 'Invalid or expired token', statusCode: 401 });
     }

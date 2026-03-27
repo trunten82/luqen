@@ -70,6 +70,16 @@ export async function registerRegulationRoutes(
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getRegulationOrgId(id);
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot modify system data', statusCode: 403 });
+        return;
+      }
+      if (recordOrgId !== null && requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot modify data belonging to another organisation', statusCode: 403 });
+        return;
+      }
       const body = request.body as Partial<Parameters<typeof crud.createRegulation>[1]>;
       const regulation = await crud.updateRegulation(db, id, body);
       await reply.send(regulation);
@@ -86,9 +96,18 @@ export async function registerRegulationRoutes(
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
-      const existing = await db.getRegulation(id);
-      if (existing == null) {
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getRegulationOrgId(id);
+      if (recordOrgId == null) {
         await reply.status(404).send({ error: `Regulation '${id}' not found`, statusCode: 404 });
+        return;
+      }
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot delete system data', statusCode: 403 });
+        return;
+      }
+      if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot delete data belonging to another organisation', statusCode: 403 });
         return;
       }
       await db.deleteRegulation(id);

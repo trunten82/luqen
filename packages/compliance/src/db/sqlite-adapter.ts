@@ -106,6 +106,7 @@ interface OAuthClientRow {
   grantTypes: string;
   redirectUris: string | null;
   createdAt: string;
+  org_id: string;
 }
 
 interface UserRow {
@@ -218,6 +219,7 @@ function toOAuthClient(row: OAuthClientRow): OAuthClient {
     scopes: JSON.parse(row.scopes) as string[],
     grantTypes: JSON.parse(row.grantTypes) as OAuthClient['grantTypes'],
     ...(row.redirectUris != null ? { redirectUris: JSON.parse(row.redirectUris) as string[] } : {}),
+    orgId: row.org_id,
     createdAt: row.createdAt,
   };
 }
@@ -444,6 +446,11 @@ export class SqliteAdapter implements DbAdapter {
     this.db.prepare('DELETE FROM jurisdictions WHERE id = ?').run(id);
   }
 
+  async getJurisdictionOrgId(id: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT org_id FROM jurisdictions WHERE id = ?').get(id) as { org_id: string } | undefined;
+    return row != null ? row.org_id : null;
+  }
+
   // --- Regulations ---
 
   async listRegulations(filters?: RegulationFilters): Promise<Regulation[]> {
@@ -533,6 +540,11 @@ export class SqliteAdapter implements DbAdapter {
 
   async deleteRegulation(id: string): Promise<void> {
     this.db.prepare('DELETE FROM regulations WHERE id = ?').run(id);
+  }
+
+  async getRegulationOrgId(id: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT org_id FROM regulations WHERE id = ?').get(id) as { org_id: string } | undefined;
+    return row != null ? row.org_id : null;
   }
 
   // --- Requirements ---
@@ -628,6 +640,7 @@ export class SqliteAdapter implements DbAdapter {
   async findRequirementsByCriteria(
     jurisdictionIds: readonly string[],
     wcagCriteria: readonly string[],
+    orgId?: string,
   ): Promise<RequirementWithRegulation[]> {
     if (jurisdictionIds.length === 0 || wcagCriteria.length === 0) {
       return [];
@@ -637,7 +650,7 @@ export class SqliteAdapter implements DbAdapter {
     const cPlaceholders = wcagCriteria.map(() => '?').join(', ');
 
     // Match exact criteria OR wildcard '*'
-    const sql = `
+    let sql = `
       SELECT
         req.id, req.regulationId, req.wcagVersion, req.wcagLevel,
         req.wcagCriterion, req.obligation, req.notes, req.createdAt, req.updatedAt,
@@ -650,6 +663,17 @@ export class SqliteAdapter implements DbAdapter {
     `;
 
     const params: unknown[] = [...jurisdictionIds, ...wcagCriteria];
+
+    if (orgId != null) {
+      if (orgId === 'system') {
+        sql += ' AND req.org_id = ?';
+        params.push('system');
+      } else {
+        sql += ' AND req.org_id IN (?, ?)';
+        params.push('system', orgId);
+      }
+    }
+
     const rows = this.db.prepare(sql).all(...params) as RequirementWithRegulationRow[];
     return rows.map(toRequirementWithRegulation);
   }
@@ -759,6 +783,11 @@ export class SqliteAdapter implements DbAdapter {
     this.db.prepare('DELETE FROM monitored_sources WHERE id = ?').run(id);
   }
 
+  async getSourceOrgId(id: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT org_id FROM monitored_sources WHERE id = ?').get(id) as { org_id: string } | undefined;
+    return row != null ? row.org_id : null;
+  }
+
   async updateSourceLastChecked(id: string, contentHash: string): Promise<void> {
     const now = new Date().toISOString();
     this.db.prepare(
@@ -781,8 +810,8 @@ export class SqliteAdapter implements DbAdapter {
     const secretHash = hashSync(secret, salt);
 
     this.db.prepare(`
-      INSERT INTO oauth_clients (id, name, secretHash, scopes, grantTypes, redirectUris, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO oauth_clients (id, name, secretHash, scopes, grantTypes, redirectUris, createdAt, org_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       data.name,
@@ -791,6 +820,7 @@ export class SqliteAdapter implements DbAdapter {
       JSON.stringify(data.grantTypes),
       data.redirectUris != null ? JSON.stringify(data.redirectUris) : null,
       now,
+      data.orgId ?? 'system',
     );
     const row = this.db.prepare('SELECT * FROM oauth_clients WHERE id = ?').get(id) as OAuthClientRow;
     return { ...toOAuthClient(row), secret };

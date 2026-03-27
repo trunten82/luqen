@@ -64,6 +64,7 @@ interface ParsedIssue {
 export async function checkCompliance(
   request: ComplianceCheckRequest,
   db: DbAdapter,
+  orgId?: string,
 ): Promise<ComplianceCheckResponse> {
   const { jurisdictions, issues, includeOptional = false, sectors: sectorFilter = [] } = request;
 
@@ -89,7 +90,7 @@ export async function checkCompliance(
   // Step 4: Query requirements (handles wildcard '*' matching in DB)
   const requirements: RequirementWithRegulation[] =
     uniqueCriteria.length > 0 && allJurisdictionIds.length > 0
-      ? await db.findRequirementsByCriteria(allJurisdictionIds, uniqueCriteria)
+      ? await db.findRequirementsByCriteria(allJurisdictionIds, uniqueCriteria, orgId)
       : [];
 
   // Step 5: Cache regulation sectors
