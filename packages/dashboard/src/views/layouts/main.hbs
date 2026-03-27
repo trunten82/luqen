@@ -77,6 +77,8 @@
       if (xhr.status >= 400 && xhr.responseText.indexOf('hx-swap-oob') !== -1) {
         event.detail.shouldSwap = true;
         event.detail.isError = false;
+        // Only process OOB swaps, don't swap non-OOB content into the target
+        event.detail.target = document.createElement('div');
       }
     });
 
@@ -100,6 +102,6 @@
       }
     });
   </script>
-  <script src="/static/app.js?v=1.0.0"></script>
+  <script src="/static/app.js?v=1.0.1"></script>
 </body>
 </html>
