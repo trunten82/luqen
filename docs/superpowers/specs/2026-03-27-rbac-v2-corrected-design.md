@@ -101,17 +101,20 @@ When an org owner/admin adds users to a team, they see:
 ### Org Admin+ (has `admin.plugins`, `users.create`)
 - Plugin Config
 - Dashboard Users (scoped: unbound + own org users)
+- OAuth Clients (scoped: own org's compliance clients)
 
 ### Org Owner (has `admin.teams`, `admin.roles`, `admin.org`)
 - Teams
 - Roles
 - Organizations (own org detail only, NOT org list)
+- OAuth Clients (scoped: own org's compliance clients)
 - Audit Log
 
 ### Global Admin only (`admin.system`)
 - Organizations (full list + create)
 - System Health
-- OAuth Clients, API Users, API Keys
+- API Users, API Keys
+- OAuth Clients (all clients, all orgs)
 
 ## Org Member Management
 
@@ -129,22 +132,87 @@ When an org owner/admin adds users to a team, they see:
 
 Current issue: plugin page shows empty for org owners.
 
-Root cause investigation needed on live DB:
-- Verify `plugins` table has `org_id` column with default 'system'
-- Verify existing plugin rows have `org_id = 'system'`
-- The query `WHERE org_id = @orgId OR org_id = 'system'` should return system plugins for any org context
+The query `WHERE org_id = @orgId OR org_id = 'system'` should return system plugins for any org context. Migration 021 added `org_id TEXT NOT NULL DEFAULT 'system'` to the plugins table, so existing plugins should have `org_id = 'system'`.
 
-## Compliance Org-Scoping
+Fix approach:
+1. Verify on live DB that existing plugin rows have `org_id = 'system'` (SQLite DEFAULT applies to existing rows on ALTER TABLE)
+2. If not, add migration to backfill: `UPDATE plugins SET org_id = 'system' WHERE org_id IS NULL OR org_id = ''`
+3. Verify the template correctly iterates over `globalPlugins` — check `{{#if globalPlugins.length}}` works (Handlebars `.length` on arrays)
+
+## Compliance Multi-Tenancy
+
+### Architecture
+
+The compliance service gets lightweight multi-tenancy independent of dashboard orgs.
+
+```
+Compliance Service
+  ├── System data (tenant_id = NULL)
+  │   ├── Jurisdictions (EU, US, UK, ...)
+  │   ├── Regulations (WCAG 2.1, EN 301 549, ...)
+  │   └── Synced to all tenants, read-only for tenants
+  │
+  └── Tenant data (tenant_id = specific)
+      ├── Custom jurisdictions (org-specific regulatory contexts)
+      ├── Custom regulations (internal standards)
+      └── Visible only to that tenant
+```
+
+### OAuth Client Model
+
+| Client type | Scope | View system data | Create system data | View tenant data | Create tenant data |
+|-------------|-------|-----------------|-------------------|-----------------|-------------------|
+| System admin | `admin` | Yes | Yes | All tenants | No (must specify tenant) |
+| Tenant client | `tenant:<id>` | Yes | No | Own tenant only | Yes |
+| Read-only | `read` | Yes | No | No | No |
+
+### Compliance Service Changes (packages/compliance)
+
+1. **OAuth clients table**: add `tenant_id` column (nullable)
+2. **Data tables**: add `tenant_id` column to jurisdictions, regulations, proposals, sources
+   - `tenant_id = NULL` → system-level (shared, read-only for tenants)
+   - `tenant_id = <value>` → tenant-specific (writable by that tenant)
+3. **Token validation**: extract tenant context from OAuth scope
+   - `scope: admin` → no tenant filter, full write access
+   - `scope: tenant:xxx` → filter by tenant_id, write only to own tenant
+   - `scope: read` → no tenant filter, read-only
+4. **Query behavior**: `WHERE tenant_id IS NULL OR tenant_id = @tenantId`
+   - Tenant clients see system data + their own tenant data
+   - System data is always read-only for tenant clients
+5. **Write behavior**: tenant clients can only INSERT/UPDATE/DELETE rows where `tenant_id = @tenantId`
+
+### Dashboard ↔ Compliance Integration
+
+1. **Org → Tenant mapping**: when a dashboard org is created, auto-create a compliance tenant and OAuth client
+   - Store the compliance `client_id`/`client_secret` and `tenant_id` in the org record or a linking table
+2. **API calls**: dashboard uses the org's compliance client for org-scoped calls
+   - System-level calls (sync, global admin) use the system admin client
+3. **OAuth Clients page**: org owners/admins can view and manage their org's compliance clients
+   - Create additional clients (for external tools like n8n)
+   - View credentials (show client_id, mask secret)
+   - Regenerate secrets
+   - Delete clients
+
+### External Tool Access
+
+External tools (n8n, scripts, third-party integrations):
+- Get their own tenant-scoped OAuth client from the org owner
+- Can view all system data (jurisdictions, regulations)
+- Can create/modify custom compliance items for their tenant only
+- Cannot modify system-level data
+- Cannot see other tenants' data
+
+### Dashboard UI Changes
 
 - Compliance sidebar section: gate with `perm.complianceView` (not `perm.adminSystem`)
-- Compliance API calls from dashboard: pass org context (orgId) to scope data
-- Compliance data (jurisdictions, regulations) scoped per org
-- Org owners/admins can create org-specific compliance items
-- Global admin can create system-wide compliance items
+- All compliance pages show system data (read-only) + tenant data (editable if `compliance.manage`)
+- Create/edit forms: new items are always scoped to the user's org/tenant
+- System items show a "system" badge and are not editable by org users
+- OAuth Clients page: org owners see their org's clients, global admin sees all
 
 ## Data Migrations Required
 
-### Migration 027: Add new permissions and update role definitions
+### Dashboard — Migration 027: Add new permissions and update role definitions
 1. Add `admin.org`, `compliance.view`, `compliance.manage` to `ALL_PERMISSIONS`
 2. Add `users.create` to org Owner and Admin role permissions
 3. Add `compliance.view` to all org roles (Owner/Admin/Member/Viewer)
@@ -153,12 +221,45 @@ Root cause investigation needed on live DB:
 6. Update Admin permissions: add `repos.manage`, `issues.assign`, `issues.fix`, `scans.schedule`, `reports.delete`
 7. Add these permissions to system admin role too
 
-### Code changes required
+### Compliance — Migration: Add tenant support
+1. Add `tenant_id` column to OAuth clients table (nullable)
+2. Add `tenant_id` column to jurisdictions, regulations, proposals, sources tables (nullable, default NULL = system)
+3. Add index on `tenant_id` for all affected tables
+4. Existing data remains system-level (tenant_id = NULL)
+
+## Code Changes Required
+
+### Dashboard (packages/dashboard)
 1. Update `ORG_OWNER_PERMISSIONS` and `ORG_ADMIN_PERMISSIONS` in permissions.ts
-2. Update sidebar template: compliance section uses `perm.complianceView`
+2. Update sidebar template: compliance section uses `perm.complianceView`, OAuth clients visible to org owners
 3. Update org member routes: accept `admin.org` permission
 4. Update dashboard-users route: scope user list by org
-5. Add org owner link to their org detail page
-6. Add user creation flow for org owners/admins
+5. Add org owner link to their org detail page in sidebar
+6. Add user creation flow for org owners/admins (bound to org)
 7. Fix plugin list rendering
-8. Pass org context to compliance API calls
+8. Auto-create compliance tenant + OAuth client on org creation
+9. Use org's compliance client for org-scoped API calls
+10. OAuth Clients page: scope by org for non-admin users
+
+### Compliance (packages/compliance)
+1. Add `tenant_id` to data tables and OAuth clients
+2. Update token validation to extract tenant from scope
+3. Update all query endpoints to filter by tenant
+4. Update all write endpoints to enforce tenant isolation
+5. Add `tenant:<id>` scope type to OAuth client creation
+6. System data (tenant_id=NULL) is read-only for tenant-scoped clients
+
+### Documentation
+1. Update README with RBAC model (org → team → role hierarchy)
+2. Update API documentation with tenant-scoped endpoints
+3. Document OAuth client types (admin, tenant, read-only) and their access levels
+4. Update compliance module documentation with multi-tenancy model
+5. Add org owner/admin guide (creating users, managing teams, plugin config)
+
+### Installation Scripts
+1. Update installer wizard to create initial org + system OAuth client
+2. Installer creates default admin user + first org with Owner team
+3. Update `dashboard.config.json` schema — remove single `complianceClientId`/`complianceClientSecret`, replace with per-org client management
+4. Update systemd service templates if env vars change
+5. Update Docker Compose / Dockerfile if compliance config changes
+6. Migration guide for existing installations (pre-v2.0 → v2.0)
