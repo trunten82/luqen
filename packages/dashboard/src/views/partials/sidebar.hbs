@@ -76,8 +76,8 @@
     </a>
     {{/if}}
 
-    {{!-- Admin section — full admin permissions required --}}
-    {{#if perm.adminSystem}}
+    {{!-- Compliance section — visible to compliance.view or admin.system --}}
+    {{#if perm.complianceView}}
     <span class="sidebar__section-label">{{t "nav.compliance"}}</span>
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/jurisdictions')}}is-active{{/if}}"
@@ -127,7 +127,10 @@
       </svg>
       {{t "nav.monitor"}}
     </a>
+    {{/if}}
 
+    {{!-- Integrations section — full admin permissions required --}}
+    {{#if perm.adminSystem}}
     {{#if pluginAdminPages.length}}
     <span class="sidebar__section-label">{{t "nav.plugins"}}</span>
     {{#each pluginAdminPages}}
@@ -214,6 +217,18 @@
     </a>
     {{/if}}
 
+    {{#if perm.adminOrg}}
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/organizations')}}is-active{{/if}}"
+       href="/admin/organizations/{{orgContext.currentOrg.id}}/members"
+       aria-current="{{#if (startsWith currentPath '/admin/organizations')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M3 3h14a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7 10a2 2 0 100-4 2 2 0 000 4zM13 8h3M13 11h3M4 14c0-1.5 1.5-3 3-3s3 1.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      {{t "nav.myOrganization"}}
+    </a>
+    {{/if}}
+
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/api-keys')}}is-active{{/if}}"
        href="/admin/api-keys"
        aria-current="{{#if (startsWith currentPath '/admin/api-keys')}}page{{/if}}">
@@ -223,6 +238,7 @@
       {{t "nav.apiKeys"}}
     </a>
 
+    {{#if perm.complianceManage}}
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/clients')}}is-active{{/if}}"
        href="/admin/clients">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -231,6 +247,7 @@
       </svg>
       {{t "nav.oauthClients"}}
     </a>
+    {{/if}}
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/users')}}is-active{{/if}}"
        href="/admin/users">

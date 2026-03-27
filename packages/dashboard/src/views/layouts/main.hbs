@@ -62,6 +62,26 @@
         event.detail.headers['x-csrf-token'] = csrfMeta.getAttribute('content');
       }
     });
+
+    /* Tab switching via data-action="switch-tab" (CSP-safe event delegation) */
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-action="switch-tab"]');
+      if (!btn) return;
+      var showId = btn.getAttribute('data-target-show');
+      var hideId = btn.getAttribute('data-target-hide');
+      var peerId = btn.getAttribute('data-peer');
+      var showEl = document.getElementById(showId);
+      var hideEl = document.getElementById(hideId);
+      var peerEl = document.getElementById(peerId);
+      if (showEl) showEl.classList.remove('rpt-tab-panel--hidden');
+      if (hideEl) hideEl.classList.add('rpt-tab-panel--hidden');
+      btn.classList.add('rpt-tab--active');
+      btn.setAttribute('aria-selected', 'true');
+      if (peerEl) {
+        peerEl.classList.remove('rpt-tab--active');
+        peerEl.setAttribute('aria-selected', 'false');
+      }
+    });
   </script>
   <script src="/static/app.js"></script>
 </body>

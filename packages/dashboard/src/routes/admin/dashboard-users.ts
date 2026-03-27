@@ -91,7 +91,14 @@ export async function dashboardUserRoutes(
     '/admin/dashboard-users',
     { preHandler: anyUserPerm },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const users = await storage.users.listUsers();
+      const isAdmin = request.user?.role === 'admin';
+      const orgId = request.user?.currentOrgId;
+
+      const users = isAdmin
+        ? await storage.users.listUsers()
+        : orgId
+          ? await storage.users.listUsersForOrg(orgId)
+          : await storage.users.listUsers();
 
       return reply.view('admin/dashboard-users.hbs', {
         pageTitle: 'Dashboard Users',
@@ -174,6 +181,18 @@ export async function dashboardUserRoutes(
         const row = userRowHtml(created);
 
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.create', resourceType: 'user', resourceId: created.id, details: { username: created.username, role }, ipAddress: request.ip });
+
+        // If creator is org owner/admin (not global admin), bind user to their org
+        const isAdmin = request.user?.role === 'admin';
+        const orgId = request.user?.currentOrgId;
+        if (!isAdmin && orgId && orgId !== 'system') {
+          const orgTeams = await storage.teams.listTeamsByOrgId(orgId);
+          const memberTeam = orgTeams.find((t: { name: string }) => t.name === 'Direct Members' || t.name === 'Members');
+          if (memberTeam) {
+            await storage.teams.addTeamMember(memberTeam.id, created.id);
+          }
+        }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
