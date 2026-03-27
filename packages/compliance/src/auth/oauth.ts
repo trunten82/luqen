@@ -11,6 +11,7 @@ import { randomBytes } from 'node:crypto';
 export interface TokenPayload {
   readonly sub: string;
   readonly scopes: readonly string[];
+  readonly orgId?: string;
   readonly iat?: number;
   readonly exp?: number;
 }
@@ -21,6 +22,7 @@ export interface SignTokenInput {
   readonly expiresIn: string;
   readonly role?: string;
   readonly username?: string;
+  readonly orgId?: string;
 }
 
 export type TokenSigner = (input: SignTokenInput) => Promise<string>;
@@ -37,6 +39,7 @@ export async function createTokenSigner(
     const claims: Record<string, unknown> = { scopes: input.scopes };
     if (input.role != null) claims.role = input.role;
     if (input.username != null) claims.username = input.username;
+    if (input.orgId != null) claims.orgId = input.orgId;
 
     const jwt = new SignJWT(claims as unknown as JWTPayload)
       .setProtectedHeader({ alg: 'RS256' })
@@ -57,9 +60,11 @@ export async function createTokenVerifier(
     const { payload } = await jwtVerify(token, publicKey, {
       algorithms: ['RS256'],
     });
+    const raw = payload as Record<string, unknown>;
     return {
       sub: payload.sub!,
-      scopes: (payload as Record<string, unknown>).scopes as string[],
+      scopes: raw.scopes as string[],
+      ...(raw.orgId != null ? { orgId: raw.orgId as string } : {}),
       iat: payload.iat,
       exp: payload.exp,
     };
