@@ -6,6 +6,14 @@
   <meta name="description" content="Luqen — Accessibility Scanner">
   <title>{{#if pageTitle}}{{pageTitle}} — {{/if}}{{t "common.appName"}}</title>
   <link rel="stylesheet" href="/static/style.css?v=0.22.0">
+  <script>
+(function(){
+  var s=localStorage.getItem('luqen-theme');
+  if(s==='dark'||(s!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)){
+    document.documentElement.setAttribute('data-theme','dark');
+  }
+})();
+</script>
   <meta name="csrf-token" content="{{csrfToken}}">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 </head>
