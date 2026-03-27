@@ -2226,8 +2226,16 @@ select {
 .mt-sm { margin-top: var(--space-sm); }
 .mt-md { margin-top: var(--space-md); }
 .mt-lg { margin-top: var(--space-lg); }
+.mb-sm { margin-bottom: var(--space-sm); }
 .mb-md { margin-bottom: var(--space-md); }
 .mb-lg { margin-bottom: var(--space-lg); }
+.my-lg { margin-top: var(--space-lg); margin-bottom: var(--space-lg); }
+.ml-sm { margin-left: var(--space-sm); }
+.fw-bold { font-weight: 700; }
+.text--center { text-align: center; }
+.text--capitalize { text-transform: capitalize; }
+.word-break { word-break: break-all; }
+.is-hidden { display: none !important; }
 .text-muted { color: var(--text-muted); }
 .text-sm { font-size: var(--font-size-sm); }
 .text-xs { font-size: var(--font-size-xs); }
@@ -2967,3 +2975,143 @@ details[open] > .mt-examples-toggle::before {
 .sidebar__item { transition: all var(--transition-fast); }
 .stat-card { transition: transform var(--transition-fast), box-shadow var(--transition-fast); }
 .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   UTILITY & COMPONENT ADDITIONS (Task 13 — Core Pages Redesign)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Layout helpers */
+.page-header-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+.page-header-row .section-title { margin: 0; }
+
+.page-intro {
+  max-width: 60ch;
+}
+
+/* Form grid for narrower constrained forms */
+.form-grid {
+  display: grid;
+  gap: var(--space-sm);
+}
+.form-grid--narrow {
+  max-width: 600px;
+}
+
+/* Narrow number input */
+.input--narrow {
+  max-width: 120px;
+}
+
+/* Card variants */
+.card--alt {
+  background: var(--surface-alt, var(--bg-secondary));
+}
+.card__subtitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm);
+}
+.card__header-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+.card__header-row .card__title { margin: 0; }
+
+/* Btn ghost danger */
+.btn--danger-ghost {
+  color: var(--status-error);
+}
+.btn--danger-ghost:hover {
+  background: var(--status-error-bg, #fee2e2);
+  border-color: var(--status-error);
+}
+
+/* List utilities */
+.list--padded {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+.list--steps {
+  padding-left: 1.5rem;
+  line-height: 1.8;
+}
+
+/* Code block */
+.code-block {
+  background: var(--bg-muted, #f4f5f7);
+  padding: var(--space-md);
+  border-radius: var(--border-radius);
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.code-block--sm {
+  font-size: 0.8rem;
+  padding: var(--space-sm);
+}
+
+/* Trends chart tall variant */
+.trends-chart-container--tall {
+  height: 280px;
+}
+
+/* Fix proposals */
+.rpt-fix-proposal {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+.fix-meta-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-sm);
+}
+.fix-description {
+  margin: 0 0 var(--space-sm);
+  font-weight: 500;
+}
+.fix-details {
+  margin-bottom: var(--space-sm);
+}
+.fix-details__summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+.fix-details__body {
+  padding: var(--space-sm) 0;
+}
+.fix-details__item {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+}
+.fix-code-block {
+  margin-top: var(--space-sm);
+}
+.fix-code-block__label {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.fix-code-block__pre {
+  position: relative;
+}
+.fix-code-block__copy {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  font-size: 0.7rem;
+}

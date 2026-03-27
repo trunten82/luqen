@@ -1,6 +1,6 @@
 {{! Report detail — 3-tab layout: Compliance | Issues | Pages }}
 
-<section aria-labelledby="report-meta-heading" class="report-meta" style="margin-bottom:1.5rem;">
+<section aria-labelledby="report-meta-heading" class="report-meta mb-lg">
   <div class="detail-list detail-list--horizontal">
     <div class="detail-list__item">
       <dt>{{t "reportDetail.siteUrl"}}</dt>
@@ -34,7 +34,7 @@
     {{/if}}
   </div>
 
-  <div class="report-actions" role="group" aria-label="Report actions" style="margin-top:1rem;">
+  <div class="report-actions mt-md" role="group" aria-label="Report actions">
     <a href="/reports" class="btn btn--ghost btn--sm" aria-label="Back to reports list">
       &larr; {{t "reportDetail.backToReports"}}
     </a>
@@ -155,7 +155,7 @@
 
   {{! Bulk assign toolbar — shown when bulk mode active }}
   {{#if perm.issuesAssign}}
-  <div class="rpt-bulk-bar" id="rpt-bulk-bar" style="display:none;">
+  <div class="rpt-bulk-bar is-hidden" id="rpt-bulk-bar">
     <label class="rpt-bulk-bar__select-all"><input type="checkbox" id="rpt-bulk-select-all" data-action-change="rptBulkToggleAll"> {{t "reportDetail.selectAllVisible"}}</label>
     <span id="rpt-bulk-count">0 {{t "reportDetail.selected"}}</span>
     <select id="rpt-bulk-assignee" class="rpt-bulk-bar__select">
@@ -756,7 +756,7 @@
     var bar = document.getElementById('rpt-bulk-bar');
     var modeBtn = document.getElementById('rpt-bulk-mode-btn');
     if (issueList) issueList.classList.toggle('rpt-bulk-active', _bulkMode);
-    if (bar) bar.style.display = _bulkMode ? 'flex' : 'none';
+    if (bar) bar.classList.toggle('is-hidden', !_bulkMode);
     if (modeBtn) {
       modeBtn.textContent = _bulkMode ? '{{t "reportDetail.cancelBulk"}}' : '{{t "reportDetail.bulkAssign"}}';
       modeBtn.classList.toggle('btn--primary', _bulkMode);
