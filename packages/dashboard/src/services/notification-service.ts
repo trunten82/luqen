@@ -157,6 +157,12 @@ export async function sendNotification(
   attachments: readonly EmailAttachment[],
   pluginManager?: PluginManager,
 ): Promise<void> {
+  // Use org-scoped plugin config if available, fall back to global
+  const orgId = report.orgId;
+  const orgConfig = orgId !== 'system' && pluginManager
+    ? pluginManager.getPluginConfigForOrg(EMAIL_PLUGIN_PACKAGE, orgId)
+    : null;
+
   const emailPlugin = pluginManager?.getActiveInstanceByPackageName(EMAIL_PLUGIN_PACKAGE);
 
   if (emailPlugin !== undefined && emailPlugin !== null) {
@@ -171,7 +177,14 @@ export async function sendNotification(
     }).sendReport;
 
     if (typeof pluginSendReport === 'function') {
-      await pluginSendReport({ to: recipients, subject, html: emailBody, attachments });
+      // If org-specific config exists, pass it to override global config
+      await pluginSendReport({
+        to: recipients,
+        subject,
+        html: emailBody,
+        attachments,
+        ...(orgConfig !== null ? { config: orgConfig } : {}),
+      });
     } else {
       throw new Error('Email plugin does not expose sendReport method');
     }
