@@ -15,7 +15,7 @@ export async function webhookRoutes(
   // GET /admin/webhooks — list webhooks
   server.get(
     '/admin/webhooks',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       let webhooks: Awaited<ReturnType<typeof listWebhooks>> = [];
       let error: string | undefined;
@@ -45,7 +45,7 @@ export async function webhookRoutes(
   // GET /admin/webhooks/new — modal form fragment
   server.get(
     '/admin/webhooks/new',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/webhook-form.hbs', {
         isNew: true,
@@ -58,7 +58,7 @@ export async function webhookRoutes(
   // POST /admin/webhooks — add webhook
   server.post(
     '/admin/webhooks',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         url?: string;
@@ -117,7 +117,7 @@ export async function webhookRoutes(
   // POST /admin/webhooks/:id/test — test delivery
   server.post(
     '/admin/webhooks/:id/test',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -134,7 +134,7 @@ export async function webhookRoutes(
   // DELETE /admin/webhooks/:id — delete webhook
   server.delete(
     '/admin/webhooks/:id',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
