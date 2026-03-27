@@ -354,6 +354,47 @@ body {
   flex-shrink: 0;
 }
 
+/* Sidebar collapse (desktop) */
+@media (min-width: 768px) {
+  .sidebar-collapsed .sidebar {
+    display: none;
+  }
+  .sidebar-collapsed .main-content {
+    margin-left: 0;
+  }
+  .sidebar-collapsed .app-header {
+    left: 0;
+  }
+  .sidebar-collapsed .menu-toggle {
+    display: flex;
+  }
+}
+
+/* Collapse toggle button in sidebar */
+@media (min-width: 768px) {
+  .sidebar__collapse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-sidebar);
+    cursor: pointer;
+    border-radius: var(--border-radius-sm);
+    transition: background var(--transition-fast);
+  }
+  .sidebar__collapse-btn:hover {
+    background: var(--bg-sidebar-hover);
+  }
+}
+@media (max-width: 767px) {
+  .sidebar__collapse-btn {
+    display: none;
+  }
+}
+
 /* ---- Main Content ---- */
 .main-content {
   margin-left: 0;

@@ -401,6 +401,32 @@
     applyTheme(getThemePreference());
   });
 
+  /* ── Sidebar collapse (desktop) — persists to localStorage ────────── */
+  function collapseDesktopSidebar() {
+    document.body.classList.add('sidebar-collapsed');
+    localStorage.setItem('luqen-sidebar', 'collapsed');
+  }
+
+  function expandDesktopSidebar() {
+    document.body.classList.remove('sidebar-collapsed');
+    localStorage.setItem('luqen-sidebar', 'expanded');
+  }
+
+  function toggleCollapse() {
+    if (document.body.classList.contains('sidebar-collapsed')) {
+      expandDesktopSidebar();
+    } else {
+      collapseDesktopSidebar();
+    }
+  }
+
+  // Restore sidebar state on load (desktop only)
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.innerWidth > 768 && localStorage.getItem('luqen-sidebar') === 'collapsed') {
+      document.body.classList.add('sidebar-collapsed');
+    }
+  });
+
   /* ── Expose layout functions globally ─────────────────────────────── */
   window.toggleSidebar = toggleSidebar;
   window.closeSidebar = closeSidebar;
@@ -409,4 +435,5 @@
   window.pickerTab = pickerTab;
   window.pickerSearch = pickerSearch;
   window.toggleTheme = toggleTheme;
+  window.toggleCollapse = toggleCollapse;
 })();
