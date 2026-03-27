@@ -16,7 +16,7 @@ interface TestContext {
   cleanup: () => void;
 }
 
-async function createTestServer(permissions: string[] = ['users.activate']): Promise<TestContext> {
+async function createTestServer(permissions: string[] = ['admin.teams']): Promise<TestContext> {
   const dbPath = join(tmpdir(), `test-teams-${randomUUID()}.db`);
   const storage = new SqliteStorageAdapter(dbPath);
   await storage.migrate();
@@ -53,7 +53,7 @@ async function createTestServer(permissions: string[] = ['users.activate']): Pro
 
 describe('Team routes', () => {
   describe('GET /admin/teams', () => {
-    it('returns 403 without users.activate permission', async () => {
+    it('returns 403 without admin.teams permission', async () => {
       const ctx = await createTestServer([]);
       const response = await ctx.server.inject({ method: 'GET', url: '/admin/teams' });
       ctx.cleanup();
@@ -85,7 +85,7 @@ describe('Team routes', () => {
     beforeEach(async () => { ctx = await createTestServer(); });
     afterEach(() => { ctx.cleanup(); });
 
-    it('returns 403 without users.activate permission', async () => {
+    it('returns 403 without admin.teams permission', async () => {
       const noPerm = await createTestServer([]);
       const response = await noPerm.server.inject({
         method: 'POST',
@@ -138,7 +138,7 @@ describe('Team routes', () => {
   });
 
   describe('GET /admin/teams/:id', () => {
-    it('returns 403 without users.activate permission', async () => {
+    it('returns 403 without admin.teams permission', async () => {
       const ctx = await createTestServer([]);
       const response = await ctx.server.inject({ method: 'GET', url: '/admin/teams/some-id' });
       ctx.cleanup();
@@ -168,7 +168,7 @@ describe('Team routes', () => {
     beforeEach(async () => { ctx = await createTestServer(); });
     afterEach(() => { ctx.cleanup(); });
 
-    it('returns 403 without users.activate permission', async () => {
+    it('returns 403 without admin.teams permission', async () => {
       const noPerm = await createTestServer([]);
       const response = await noPerm.server.inject({
         method: 'POST',
@@ -205,7 +205,7 @@ describe('Team routes', () => {
   });
 
   describe('DELETE /admin/teams/:id/members/:userId', () => {
-    it('returns 403 without users.activate permission', async () => {
+    it('returns 403 without admin.teams permission', async () => {
       const ctx = await createTestServer([]);
       const response = await ctx.server.inject({ method: 'DELETE', url: '/admin/teams/some-id/members/user-2' });
       ctx.cleanup();
@@ -223,7 +223,7 @@ describe('Team routes', () => {
   });
 
   describe('DELETE /admin/teams/:id', () => {
-    it('returns 403 without users.activate permission', async () => {
+    it('returns 403 without admin.teams permission', async () => {
       const ctx = await createTestServer([]);
       const response = await ctx.server.inject({ method: 'DELETE', url: '/admin/teams/some-id' });
       ctx.cleanup();

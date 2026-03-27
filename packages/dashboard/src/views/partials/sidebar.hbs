@@ -303,9 +303,9 @@
   </div>
 
   <div class="sidebar__footer">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-xs,0.25rem)">
+    <div class="sidebar__footer-row">
       <a href="/account" class="sidebar__footer-user" title="{{t "nav.myProfile"}}">{{user.username}}</a>
-      <form method="POST" action="/logout" style="display:inline">
+      <form method="POST" action="/logout" class="sidebar__footer-logout">
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <button type="submit" class="btn btn--ghost btn--sm">{{t "common.signOut"}}</button>
       </form>

@@ -76,6 +76,7 @@ export interface Team {
   readonly name: string;
   readonly description: string;
   readonly orgId: string;
+  readonly roleId: string | null;
   readonly createdAt: string;
   readonly memberCount?: number;
   readonly members?: ReadonlyArray<TeamMember>;
@@ -122,6 +123,8 @@ export interface EmailReport {
   readonly frequency: string;
   readonly format: string;
   readonly includeCsv: boolean;
+  readonly includeWarnings?: boolean;
+  readonly includeNotices?: boolean;
   readonly nextSendAt: string;
   readonly lastSentAt: string | null;
   readonly enabled: boolean;
@@ -137,6 +140,8 @@ export interface CreateEmailReportInput {
   readonly frequency: string;
   readonly format?: string;
   readonly includeCsv?: boolean;
+  readonly includeWarnings?: boolean;
+  readonly includeNotices?: boolean;
   readonly nextSendAt: string;
   readonly createdBy: string;
   readonly orgId?: string;
@@ -368,6 +373,10 @@ export interface UpsertManualTestInput {
 // API key types
 // ---------------------------------------------------------------------------
 
+export type ApiKeyRole = 'admin' | 'read-only' | 'scan-only';
+
+export const API_KEY_ROLES: readonly ApiKeyRole[] = ['admin', 'read-only', 'scan-only'] as const;
+
 export interface ApiKeyRecord {
   readonly id: string;
   readonly label: string;
@@ -375,4 +384,5 @@ export interface ApiKeyRecord {
   readonly createdAt: string;
   readonly lastUsedAt: string | null;
   readonly orgId: string;
+  readonly role: ApiKeyRole;
 }

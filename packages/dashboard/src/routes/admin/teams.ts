@@ -3,14 +3,23 @@ import type { StorageAdapter } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { escapeHtml, toastHtml } from './helpers.js';
 
+/** Tenant isolation: non-admin users can only mutate teams in their own org. */
+function canMutateTeam(request: FastifyRequest, teamOrgId: string): boolean {
+  if (request.user?.role === 'admin') return true;
+  const userOrgId = request.user?.currentOrgId ?? 'system';
+  return teamOrgId === userOrgId;
+}
+
 interface CreateTeamBody {
   name?: string;
   description?: string;
   organizationId?: string;
+  roleId?: string;
 }
 
 interface UpdateTeamBody {
   organizationId?: string;
+  roleId?: string;
 }
 
 interface AddMemberBody {
@@ -61,7 +70,7 @@ export async function teamRoutes(
   // GET /admin/teams — list teams
   server.get(
     '/admin/teams',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Admin sees all teams; other users see teams in their org
       const isAdmin = request.user?.role === 'admin';
@@ -77,12 +86,21 @@ export async function teamRoutes(
         organizationName: orgMap.get(t.orgId) ?? null,
       }));
 
+      // Fetch available roles for team creation (org-scoped + global custom)
+      const userOrgId = request.user?.currentOrgId ?? 'system';
+      const orgRoles = userOrgId !== 'system'
+        ? await storage.roles.listOrgRoles(userOrgId)
+        : [];
+      const globalCustomRoles = (await storage.roles.listGlobalRoles()).filter((r) => !r.isSystem);
+      const availableRoles = [...orgRoles, ...globalCustomRoles];
+
       return reply.view('admin/teams.hbs', {
         pageTitle: 'Teams',
         currentPath: '/admin/teams',
         user: request.user,
         teams: enrichedTeams,
         organizations,
+        availableRoles,
       });
     },
   );
@@ -90,7 +108,7 @@ export async function teamRoutes(
   // POST /admin/teams — create team
   server.post(
     '/admin/teams',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateTeamBody;
       const name = (body.name ?? '').trim();
@@ -104,10 +122,28 @@ export async function teamRoutes(
       // If an organization is selected, link the team to it; otherwise use current org scope
       const organizationId = (body.organizationId ?? '').trim();
       const orgId = organizationId !== '' ? organizationId : (request.user?.currentOrgId ?? 'system');
+      const roleId = (body.roleId ?? '').trim();
+
+      // Validate role_id if provided — must exist and belong to the same org
+      if (roleId !== '') {
+        const role = await storage.roles.getRole(roleId);
+        if (role === null) {
+          return reply.code(400).type('text/html').send(
+            '<div class="toast toast--error" role="alert">Selected role does not exist</div>',
+          );
+        }
+        if (role.orgId !== orgId && role.orgId !== 'system') {
+          return reply.code(400).type('text/html').send(
+            '<div class="toast toast--error" role="alert">Selected role does not belong to this organization</div>',
+          );
+        }
+      }
+
       const team = await storage.teams.createTeam({
         name,
         description: (body.description ?? '').trim(),
         orgId,
+        ...(roleId !== '' ? { roleId } : {}),
       });
 
       // HTMX — return new table row
@@ -122,13 +158,16 @@ export async function teamRoutes(
   // DELETE /admin/teams/:id — delete team
   server.delete(
     '/admin/teams/:id',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const team = await storage.teams.getTeam(id);
 
       if (team === null) {
         return reply.code(404).send({ error: 'Team not found' });
+      }
+      if (!canMutateTeam(request, team.orgId)) {
+        return reply.code(403).send({ error: 'Forbidden: team belongs to a different organization' });
       }
 
       await storage.teams.deleteTeam(id);
@@ -139,7 +178,7 @@ export async function teamRoutes(
   // GET /admin/teams/:id — team detail with members
   server.get(
     '/admin/teams/:id',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const team = await storage.teams.getTeam(id);
@@ -157,6 +196,19 @@ export async function teamRoutes(
         ? await storage.organizations.getOrg(team.orgId)
         : null;
 
+      // Fetch org-scoped roles for the team's org (for role dropdown)
+      const orgRoles = team.orgId !== 'system'
+        ? await storage.roles.listOrgRoles(team.orgId)
+        : [];
+      // Also include non-system global custom roles
+      const globalRoles = await storage.roles.listGlobalRoles();
+      const availableRoles = [...orgRoles, ...globalRoles.filter((r) => !r.isSystem)];
+
+      // Get current role name if assigned
+      const currentRole = team.roleId !== null
+        ? await storage.roles.getRole(team.roleId)
+        : null;
+
       return reply.view('admin/team-detail.hbs', {
         pageTitle: `Team — ${team.name}`,
         currentPath: '/admin/teams',
@@ -164,6 +216,8 @@ export async function teamRoutes(
         team,
         availableUsers,
         organizations,
+        availableRoles,
+        currentRoleName: currentRole?.name ?? null,
         linkedOrgName: linkedOrg?.name ?? null,
       });
     },
@@ -172,7 +226,7 @@ export async function teamRoutes(
   // POST /admin/teams/:id/org — update team organization link
   server.post(
     '/admin/teams/:id/org',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as UpdateTeamBody;
@@ -180,6 +234,9 @@ export async function teamRoutes(
       const team = await storage.teams.getTeam(id);
       if (team === null) {
         return reply.code(404).send({ error: 'Team not found' });
+      }
+      if (!canMutateTeam(request, team.orgId)) {
+        return reply.code(403).send({ error: 'Forbidden: team belongs to a different organization' });
       }
 
       const newOrgId = (body.organizationId ?? '').trim();
@@ -209,10 +266,63 @@ export async function teamRoutes(
     },
   );
 
+  // POST /admin/teams/:id/role — update team role assignment
+  server.post(
+    '/admin/teams/:id/role',
+    { preHandler: requirePermission('admin.teams') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { roleId?: string };
+
+      const team = await storage.teams.getTeam(id);
+      if (team === null) {
+        return reply.code(404).send({ error: 'Team not found' });
+      }
+      if (!canMutateTeam(request, team.orgId)) {
+        return reply.code(403).send({ error: 'Forbidden: team belongs to a different organization' });
+      }
+
+      const roleId = (body.roleId ?? '').trim();
+
+      if (roleId === '') {
+        // Clear role assignment
+        await storage.teams.updateTeam(id, { roleId: null });
+        if (request.headers['hx-request'] === 'true') {
+          return reply.type('text/html').send(
+            `<span id="team-role-label" hx-swap-oob="true">None</span>\n${toastHtml('Role assignment cleared')}`,
+          );
+        }
+        return reply.redirect(`/admin/teams/${id}`);
+      }
+
+      // Validate role exists and belongs to the same org (or system)
+      const role = await storage.roles.getRole(roleId);
+      if (role === null) {
+        return reply.code(400).type('text/html').send(
+          '<div class="toast toast--error" role="alert">Role not found</div>',
+        );
+      }
+      if (role.orgId !== team.orgId && role.orgId !== 'system') {
+        return reply.code(400).type('text/html').send(
+          '<div class="toast toast--error" role="alert">Role does not belong to this team\'s organization</div>',
+        );
+      }
+
+      await storage.teams.updateTeam(id, { roleId });
+
+      if (request.headers['hx-request'] === 'true') {
+        return reply.type('text/html').send(
+          `<span id="team-role-label" hx-swap-oob="true">${escapeHtml(role.name)}</span>\n${toastHtml('Role updated')}`,
+        );
+      }
+      return reply.redirect(`/admin/teams/${id}`);
+    },
+  );
+
   // POST /admin/teams/:id/members — add member
   server.post(
     '/admin/teams/:id/members',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as AddMemberBody;
@@ -227,6 +337,9 @@ export async function teamRoutes(
       const team = await storage.teams.getTeam(id);
       if (team === null) {
         return reply.code(404).send({ error: 'Team not found' });
+      }
+      if (!canMutateTeam(request, team.orgId)) {
+        return reply.code(403).send({ error: 'Forbidden: team belongs to a different organization' });
       }
 
       await storage.teams.addTeamMember(id, userId);
@@ -246,9 +359,17 @@ export async function teamRoutes(
   // DELETE /admin/teams/:id/members/:userId — remove member
   server.delete(
     '/admin/teams/:id/members/:userId',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
+
+      const team = await storage.teams.getTeam(id);
+      if (team === null) {
+        return reply.code(404).send({ error: 'Team not found' });
+      }
+      if (!canMutateTeam(request, team.orgId)) {
+        return reply.code(403).send({ error: 'Forbidden: team belongs to a different organization' });
+      }
 
       await storage.teams.removeTeamMember(id, userId);
       return reply.type('text/html').send('');

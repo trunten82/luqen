@@ -216,10 +216,10 @@ export async function manualTestRoutes(
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 
-      // Build buttons — mark active one
+      // Build buttons — mark active one (using data attributes for event delegation)
       const makeBtn = (s: ManualTestStatus, label: string, cls: string) => {
         const active = s === status ? ' mt-btn--active' : '';
-        return `<button type="button" class="mt-btn ${cls}${active}" onclick="mtSave('${id}','${criterionId}','${s}',this)">${label}</button>`;
+        return `<button type="button" class="mt-btn ${cls}${active}" data-action="mtSave" data-scan-id="${id}" data-criterion-id="${criterionId}" data-status="${s}">${label}</button>`;
       };
 
       const html = `<div class="mt-criterion" id="mt-row-${criterionId}" data-status="${status}">
@@ -227,7 +227,7 @@ export async function manualTestRoutes(
     <span class="mt-badge ${statusClass}">${statusLabel}</span>
     <strong>${criterionId}</strong> &mdash; ${escapedTitle}
     <span class="mt-level mt-level--${criterion.level}">${criterion.level}</span>
-    <button type="button" class="mt-toggle" onclick="mtToggle(this)" aria-label="Toggle details" aria-expanded="false">&#9660;</button>
+    <button type="button" class="mt-toggle" data-action="mtToggle" aria-label="Toggle details" aria-expanded="false">&#9660;</button>
   </div>
   <div class="mt-criterion__body mt-criterion__body--collapsed">
     <p class="mt-instructions">${escapedInstructions}</p>

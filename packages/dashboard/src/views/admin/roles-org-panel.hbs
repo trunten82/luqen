@@ -1,0 +1,52 @@
+{{#if canCreateOrg}}
+<div class="page-actions">
+  <a href="/admin/roles/new?scope=org" class="btn btn--primary">{{t "admin.roles.createRole"}}</a>
+</div>
+{{/if}}
+
+<p class="text-muted" style="margin-bottom:1rem;">{{t "admin.roles.orgRolesDescription"}}</p>
+
+{{#if hasOrgRoles}}
+<div class="table-wrapper" aria-live="polite" aria-atomic="false">
+  <table class="table" aria-label="Organization Roles">
+    <thead>
+      <tr>
+        <th scope="col">{{t "common.name"}}</th>
+        <th scope="col">{{t "admin.roles.description"}}</th>
+        <th scope="col">{{t "admin.roles.type"}}</th>
+        <th scope="col">{{t "admin.roles.permissions"}}</th>
+        <th scope="col">{{t "common.actions"}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each orgRoles}}
+      <tr id="role-{{this.id}}">
+        <td data-label="Name"><strong>{{this.name}}</strong></td>
+        <td data-label="Description">{{this.description}}</td>
+        <td data-label="Type">
+          <span class="badge badge--info">{{t "admin.roles.orgScoped"}}</span>
+        </td>
+        <td data-label="Permissions">{{this.permissionCount}}</td>
+        <td>
+          {{#if this.canEdit}}
+          <a href="/admin/roles/{{this.id}}/edit" class="btn btn--sm btn--secondary" aria-label="Edit role {{this.name}}">{{t "common.edit"}}</a>
+          {{/if}}
+          {{#if this.canDelete}}
+          <button
+            hx-delete="/admin/roles/{{this.id}}"
+            hx-confirm="Delete role {{this.name}}?"
+            class="btn btn--sm btn--danger"
+            aria-label="Delete role {{this.name}}"
+          >{{t "common.delete"}}</button>
+          {{/if}}
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{else}}
+<div class="empty-state" role="status">
+  <p>{{t "admin.roles.noOrgRoles"}}</p>
+</div>
+{{/if}}

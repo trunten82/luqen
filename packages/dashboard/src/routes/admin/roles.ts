@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter } from '../../db/index.js';
-import { hasPermission, getPermissionGroups, ALL_PERMISSION_IDS } from '../../permissions.js';
+import { hasPermission, getPermissionGroups, ALL_PERMISSION_IDS, DEFAULT_ORG_ROLES } from '../../permissions.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 
 // ---------------------------------------------------------------------------
@@ -22,15 +22,47 @@ interface UpdateRoleBody {
 }
 
 // ---------------------------------------------------------------------------
-// Guard helper
+// Default org role names (cannot be deleted)
 // ---------------------------------------------------------------------------
 
-function requireAdminRoles(request: FastifyRequest, reply: FastifyReply): boolean {
+const DEFAULT_ORG_ROLE_NAMES = new Set(DEFAULT_ORG_ROLES.map((r) => r.name));
+
+// ---------------------------------------------------------------------------
+// Guard helpers
+// ---------------------------------------------------------------------------
+
+function requireRolesRead(request: FastifyRequest, reply: FastifyReply): boolean {
   if (!hasPermission(request, 'admin.roles')) {
     reply.code(403).send({ error: 'Forbidden: admin.roles permission required' });
     return false;
   }
   return true;
+}
+
+/** Check if user can manage roles for a given scope. */
+function canManageRoles(request: FastifyRequest, roleOrgId: string): boolean {
+  const isAdmin = request.user?.role === 'admin';
+  if (isAdmin) return true;
+
+  // Org owner/admin can manage their org's roles
+  const userOrgId = request.user?.currentOrgId;
+  if (roleOrgId !== 'system' && userOrgId === roleOrgId && hasPermission(request, 'admin.roles')) {
+    return true;
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Parse permissions helper
+// ---------------------------------------------------------------------------
+
+function parsePermissions(rawPerms: string | string[] | undefined): string[] {
+  return Array.isArray(rawPerms)
+    ? rawPerms.filter((p) => ALL_PERMISSION_IDS.includes(p))
+    : typeof rawPerms === 'string'
+      ? [rawPerms].filter((p) => ALL_PERMISSION_IDS.includes(p))
+      : [];
 }
 
 // ---------------------------------------------------------------------------
@@ -43,29 +75,170 @@ export async function roleRoutes(
 ): Promise<void> {
   const permissionGroups = getPermissionGroups();
 
-  // ── GET /admin/roles — list all roles ───────────────────────────────
+  // ── GET /admin/roles — tabbed view: Global Roles + Org Roles ──────
 
   server.get(
     '/admin/roles',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      if (!requireAdminRoles(request, reply)) return;
+      if (!requireRolesRead(request, reply)) return;
 
+      const isAdmin = request.user?.role === 'admin';
       const orgId = request.user?.currentOrgId ?? 'system';
-      const roles = await storage.roles.listRoles(orgId);
+      const hasOrgContext = orgId !== 'system';
 
-      const rolesView = roles.map((r) => ({
+      // Fetch global (system) roles
+      const globalRoles = await storage.roles.listGlobalRoles();
+      const globalView = globalRoles.map((r) => ({
         ...r,
         permissionCount: r.permissions.length,
         systemBadge: r.isSystem,
-        canDelete: !r.isSystem,
+        canDelete: !r.isSystem && isAdmin,
+        canEdit: isAdmin,
       }));
+
+      // Fetch org-scoped roles (if user has an org context)
+      let orgRoles: typeof globalView = [];
+      let orgName: string | null = null;
+      if (hasOrgContext) {
+        const rawOrgRoles = await storage.roles.listOrgRoles(orgId);
+        const canManageOrg = canManageRoles(request, orgId);
+        orgRoles = rawOrgRoles.map((r) => ({
+          ...r,
+          permissionCount: r.permissions.length,
+          systemBadge: r.isSystem,
+          canDelete: canManageOrg && !DEFAULT_ORG_ROLE_NAMES.has(r.name),
+          canEdit: canManageOrg,
+        }));
+        const org = await storage.organizations.getOrg(orgId);
+        orgName = org?.name ?? orgId;
+      }
+
+      // Admin sees all orgs' roles if no specific org context
+      if (isAdmin && !hasOrgContext) {
+        const allOrgs = await storage.organizations.listOrgs();
+        for (const org of allOrgs) {
+          const rawOrgRoles = await storage.roles.listOrgRoles(org.id);
+          const mapped = rawOrgRoles.map((r) => ({
+            ...r,
+            permissionCount: r.permissions.length,
+            systemBadge: r.isSystem,
+            canDelete: !DEFAULT_ORG_ROLE_NAMES.has(r.name),
+            canEdit: true,
+          }));
+          orgRoles = orgRoles.concat(mapped);
+        }
+      }
+
+      const canCreateGlobal = isAdmin;
+      const canCreateOrg = hasOrgContext && canManageRoles(request, orgId);
 
       return reply.view('admin/roles.hbs', {
         pageTitle: 'Roles Management',
         currentPath: '/admin/roles',
         user: request.user,
-        roles: rolesView,
-        hasRoles: roles.length > 0,
+        globalRoles: globalView,
+        orgRoles,
+        hasGlobalRoles: globalRoles.length > 0,
+        hasOrgRoles: orgRoles.length > 0,
+        hasOrgContext,
+        orgName,
+        canCreateGlobal,
+        canCreateOrg,
+        isAdmin,
+      });
+    },
+  );
+
+  // ── GET /admin/roles/global — HTMX partial for global roles tab ───
+
+  server.get(
+    '/admin/roles/global',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!requireRolesRead(request, reply)) return;
+
+      const isAdmin = request.user?.role === 'admin';
+      const globalRoles = await storage.roles.listGlobalRoles();
+      const globalView = globalRoles.map((r) => ({
+        ...r,
+        permissionCount: r.permissions.length,
+        systemBadge: r.isSystem,
+        canDelete: !r.isSystem && isAdmin,
+        canEdit: isAdmin,
+      }));
+
+      return reply.view('admin/roles-global-panel.hbs', {
+        globalRoles: globalView,
+        hasGlobalRoles: globalRoles.length > 0,
+        canCreateGlobal: isAdmin,
+        isAdmin,
+        user: request.user,
+      });
+    },
+  );
+
+  // ── GET /admin/roles/org — HTMX partial for org roles tab ─────────
+
+  server.get(
+    '/admin/roles/org',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!requireRolesRead(request, reply)) return;
+
+      const isAdmin = request.user?.role === 'admin';
+      const orgId = request.user?.currentOrgId ?? 'system';
+      const hasOrgContext = orgId !== 'system';
+
+      let orgRoles: Array<{
+        id: string;
+        name: string;
+        description: string;
+        isSystem: boolean;
+        orgId: string;
+        createdAt: string;
+        permissions: readonly string[];
+        permissionCount: number;
+        systemBadge: boolean;
+        canDelete: boolean;
+        canEdit: boolean;
+      }> = [];
+      let orgName: string | null = null;
+
+      if (hasOrgContext) {
+        const rawOrgRoles = await storage.roles.listOrgRoles(orgId);
+        const canManageOrg = canManageRoles(request, orgId);
+        orgRoles = rawOrgRoles.map((r) => ({
+          ...r,
+          permissionCount: r.permissions.length,
+          systemBadge: r.isSystem,
+          canDelete: canManageOrg && !DEFAULT_ORG_ROLE_NAMES.has(r.name),
+          canEdit: canManageOrg,
+        }));
+        const org = await storage.organizations.getOrg(orgId);
+        orgName = org?.name ?? orgId;
+      } else if (isAdmin) {
+        const allOrgs = await storage.organizations.listOrgs();
+        for (const org of allOrgs) {
+          const rawOrgRoles = await storage.roles.listOrgRoles(org.id);
+          const mapped = rawOrgRoles.map((r) => ({
+            ...r,
+            permissionCount: r.permissions.length,
+            systemBadge: r.isSystem,
+            canDelete: !DEFAULT_ORG_ROLE_NAMES.has(r.name),
+            canEdit: true,
+          }));
+          orgRoles = orgRoles.concat(mapped);
+        }
+      }
+
+      const canCreateOrg = hasOrgContext && canManageRoles(request, orgId);
+
+      return reply.view('admin/roles-org-panel.hbs', {
+        orgRoles,
+        hasOrgRoles: orgRoles.length > 0,
+        hasOrgContext,
+        orgName,
+        canCreateOrg,
+        isAdmin,
+        user: request.user,
       });
     },
   );
@@ -75,7 +248,22 @@ export async function roleRoutes(
   server.get(
     '/admin/roles/new',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      if (!requireAdminRoles(request, reply)) return;
+      if (!requireRolesRead(request, reply)) return;
+
+      const query = request.query as { scope?: string };
+      const scope = query.scope ?? 'org';
+      const orgId = request.user?.currentOrgId ?? 'system';
+      const isAdmin = request.user?.role === 'admin';
+
+      // Only admin can create global roles
+      if (scope === 'global' && !isAdmin) {
+        return reply.code(403).send({ error: 'Forbidden: only admins can create global roles' });
+      }
+
+      // Must have org context or be admin to create org roles
+      if (scope === 'org' && orgId === 'system' && !isAdmin) {
+        return reply.code(403).send({ error: 'Forbidden: no organization context' });
+      }
 
       return reply.view('admin/role-form.hbs', {
         pageTitle: 'Create Role',
@@ -84,6 +272,7 @@ export async function roleRoutes(
         role: null,
         isNew: true,
         isSystem: false,
+        scope,
         permissionGroups,
         selectedPermissions: {},
       });
@@ -96,11 +285,12 @@ export async function roleRoutes(
     '/admin/roles',
     { config: { rateLimit: { max: 30, timeWindow: '10 minutes' } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      if (!requireAdminRoles(request, reply)) return;
+      if (!requireRolesRead(request, reply)) return;
 
-      const body = request.body as CreateRoleBody;
+      const body = request.body as CreateRoleBody & { scope?: string };
       const name = (body.name ?? '').trim();
       const description = (body.description ?? '').trim();
+      const scope = body.scope ?? 'org';
 
       if (name === '') {
         if (request.headers['hx-request'] === 'true') {
@@ -117,8 +307,24 @@ export async function roleRoutes(
         return reply.code(422).send({ error: 'Invalid role name format' });
       }
 
-      // Check for duplicates
-      const existing = await storage.roles.getRoleByName(name);
+      const isAdmin = request.user?.role === 'admin';
+      const userOrgId = request.user?.currentOrgId ?? 'system';
+      let targetOrgId: string;
+
+      if (scope === 'global') {
+        if (!isAdmin) {
+          return reply.code(403).send(toastHtml('Only admins can create global roles', 'error'));
+        }
+        targetOrgId = 'system';
+      } else {
+        targetOrgId = userOrgId;
+        if (!canManageRoles(request, targetOrgId)) {
+          return reply.code(403).send(toastHtml('You cannot manage roles for this organization', 'error'));
+        }
+      }
+
+      // Check for duplicates within the same org scope
+      const existing = await storage.roles.getRoleByNameAndOrg(name, targetOrgId);
       if (existing !== null) {
         if (request.headers['hx-request'] === 'true') {
           return reply.code(422).send(toastHtml(`Role "${escapeHtml(name)}" already exists`, 'error'));
@@ -127,20 +333,13 @@ export async function roleRoutes(
       }
 
       // Parse permissions
-      const rawPerms = body.permissions;
-      const permissions: string[] = Array.isArray(rawPerms)
-        ? rawPerms.filter((p) => ALL_PERMISSION_IDS.includes(p))
-        : typeof rawPerms === 'string'
-          ? [rawPerms].filter((p) => ALL_PERMISSION_IDS.includes(p))
-          : [];
-
-      const orgId = request.user?.currentOrgId ?? 'system';
+      const permissions = parsePermissions(body.permissions);
 
       await storage.roles.createRole({
         name,
         description,
         permissions,
-        orgId,
+        orgId: targetOrgId,
       });
 
       if (request.headers['hx-request'] === 'true') {
@@ -157,7 +356,7 @@ export async function roleRoutes(
   server.get(
     '/admin/roles/:id/edit',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      if (!requireAdminRoles(request, reply)) return;
+      if (!requireRolesRead(request, reply)) return;
 
       const { id } = request.params as { id: string };
       const role = await storage.roles.getRole(id);
@@ -166,11 +365,18 @@ export async function roleRoutes(
         return reply.code(404).send({ error: 'Role not found' });
       }
 
+      // Check write access
+      if (!canManageRoles(request, role.orgId)) {
+        return reply.code(403).send({ error: 'You do not have permission to edit this role' });
+      }
+
       const permissionSet = new Set(role.permissions);
       const selectedPermissions: Record<string, boolean> = {};
       for (const pid of ALL_PERMISSION_IDS) {
         selectedPermissions[pid] = permissionSet.has(pid);
       }
+
+      const scope = role.orgId === 'system' ? 'global' : 'org';
 
       return reply.view('admin/role-form.hbs', {
         pageTitle: `Edit Role — ${role.name}`,
@@ -179,6 +385,7 @@ export async function roleRoutes(
         role,
         isNew: false,
         isSystem: role.isSystem,
+        scope,
         permissionGroups,
         selectedPermissions,
       });
@@ -190,7 +397,7 @@ export async function roleRoutes(
   server.patch(
     '/admin/roles/:id',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      if (!requireAdminRoles(request, reply)) return;
+      if (!requireRolesRead(request, reply)) return;
 
       const { id } = request.params as { id: string };
       const role = await storage.roles.getRole(id);
@@ -199,16 +406,13 @@ export async function roleRoutes(
         return reply.code(404).send(toastHtml('Role not found', 'error'));
       }
 
+      if (!canManageRoles(request, role.orgId)) {
+        return reply.code(403).send(toastHtml('You do not have permission to edit this role', 'error'));
+      }
+
       const body = request.body as UpdateRoleBody;
       const description = body.description?.trim();
-
-      // Parse permissions
-      const rawPerms = body.permissions;
-      const permissions: string[] = Array.isArray(rawPerms)
-        ? rawPerms.filter((p) => ALL_PERMISSION_IDS.includes(p))
-        : typeof rawPerms === 'string'
-          ? [rawPerms].filter((p) => ALL_PERMISSION_IDS.includes(p))
-          : [];
+      const permissions = parsePermissions(body.permissions);
 
       const updateData: {
         name?: string;
@@ -220,12 +424,11 @@ export async function roleRoutes(
         updateData.description = description;
       }
 
-      // Only allow name change for non-system roles
-      if (!role.isSystem && body.name !== undefined) {
+      // Only allow name change for non-system, non-default roles
+      if (!role.isSystem && !DEFAULT_ORG_ROLE_NAMES.has(role.name) && body.name !== undefined) {
         const name = body.name.trim();
         if (name !== '' && /^[a-zA-Z0-9_-]+$/.test(name)) {
-          // Check for duplicates (excluding current)
-          const existing = await storage.roles.getRoleByName(name);
+          const existing = await storage.roles.getRoleByNameAndOrg(name, role.orgId);
           if (existing !== null && existing.id !== id) {
             return reply.code(422).send(toastHtml(`Role "${escapeHtml(name)}" already exists`, 'error'));
           }
@@ -250,7 +453,7 @@ export async function roleRoutes(
   server.post(
     '/admin/roles/:id',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      if (!requireAdminRoles(request, reply)) return;
+      if (!requireRolesRead(request, reply)) return;
 
       const { id } = request.params as { id: string };
       const role = await storage.roles.getRole(id);
@@ -259,18 +462,13 @@ export async function roleRoutes(
         return reply.code(404).send(toastHtml('Role not found', 'error'));
       }
 
+      if (!canManageRoles(request, role.orgId)) {
+        return reply.code(403).send(toastHtml('You do not have permission to edit this role', 'error'));
+      }
+
       const body = request.body as UpdateRoleBody & { _method?: string };
-
-      // Handle method override for PATCH
       const description = body.description?.trim();
-
-      // Parse permissions
-      const rawPerms = body.permissions;
-      const permissions: string[] = Array.isArray(rawPerms)
-        ? rawPerms.filter((p) => ALL_PERMISSION_IDS.includes(p))
-        : typeof rawPerms === 'string'
-          ? [rawPerms].filter((p) => ALL_PERMISSION_IDS.includes(p))
-          : [];
+      const permissions = parsePermissions(body.permissions);
 
       const updateData: {
         name?: string;
@@ -282,11 +480,11 @@ export async function roleRoutes(
         updateData.description = description;
       }
 
-      // Only allow name change for non-system roles
-      if (!role.isSystem && body.name !== undefined) {
+      // Only allow name change for non-system, non-default roles
+      if (!role.isSystem && !DEFAULT_ORG_ROLE_NAMES.has(role.name) && body.name !== undefined) {
         const name = body.name.trim();
         if (name !== '' && /^[a-zA-Z0-9_-]+$/.test(name)) {
-          const existing = await storage.roles.getRoleByName(name);
+          const existing = await storage.roles.getRoleByNameAndOrg(name, role.orgId);
           if (existing !== null && existing.id !== id) {
             return reply.code(422).send(toastHtml(`Role "${escapeHtml(name)}" already exists`, 'error'));
           }
@@ -310,7 +508,7 @@ export async function roleRoutes(
   server.delete(
     '/admin/roles/:id',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      if (!requireAdminRoles(request, reply)) return;
+      if (!requireRolesRead(request, reply)) return;
 
       const { id } = request.params as { id: string };
       const role = await storage.roles.getRole(id);
@@ -321,6 +519,15 @@ export async function roleRoutes(
 
       if (role.isSystem) {
         return reply.code(422).send(toastHtml('Cannot delete system roles', 'error'));
+      }
+
+      // Cannot delete default org roles (Owner, Admin, Member, Viewer)
+      if (DEFAULT_ORG_ROLE_NAMES.has(role.name) && role.orgId !== 'system') {
+        return reply.code(422).send(toastHtml('Cannot delete default organization roles', 'error'));
+      }
+
+      if (!canManageRoles(request, role.orgId)) {
+        return reply.code(403).send(toastHtml('You do not have permission to delete this role', 'error'));
       }
 
       await storage.roles.deleteRole(id);

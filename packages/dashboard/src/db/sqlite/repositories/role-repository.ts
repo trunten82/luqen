@@ -39,6 +39,24 @@ export class SqliteRoleRepository implements RoleRepository {
     return rows.map((row) => this.roleRowToRecord(row));
   }
 
+  async listGlobalRoles(): Promise<Role[]> {
+    const sql = "SELECT * FROM roles WHERE org_id = 'system' ORDER BY is_system DESC, name ASC";
+    const rows = this.db.prepare(sql).all() as RoleRow[];
+    return rows.map((row) => this.roleRowToRecord(row));
+  }
+
+  async listOrgRoles(orgId: string): Promise<Role[]> {
+    const sql = "SELECT * FROM roles WHERE org_id = @orgId AND org_id != 'system' ORDER BY is_system DESC, name ASC";
+    const rows = this.db.prepare(sql).all({ orgId }) as RoleRow[];
+    return rows.map((row) => this.roleRowToRecord(row));
+  }
+
+  async getRoleByNameAndOrg(name: string, orgId: string): Promise<Role | null> {
+    const stmt = this.db.prepare('SELECT * FROM roles WHERE name = ? AND org_id = ?');
+    const row = stmt.get(name, orgId) as RoleRow | undefined;
+    return row !== undefined ? this.roleRowToRecord(row) : null;
+  }
+
   async getRole(id: string): Promise<Role | null> {
     const stmt = this.db.prepare('SELECT * FROM roles WHERE id = ?');
     const row = stmt.get(id) as RoleRow | undefined;
@@ -127,7 +145,7 @@ export class SqliteRoleRepository implements RoleRepository {
         ).run(params);
       }
 
-      if (data.permissions !== undefined) {
+      if (data.permissions !== undefined && !role.isSystem) {
         this.db.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(id);
         const insertPerm = this.db.prepare(
           'INSERT INTO role_permissions (role_id, permission) VALUES (@roleId, @permission)',
@@ -171,6 +189,52 @@ export class SqliteRoleRepository implements RoleRepository {
     }
 
     return new Set(role.permissions);
+  }
+
+  async getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>> {
+    // 1. Start with global (system) role permissions
+    const globalPerms = await this.getUserPermissions(userId);
+
+    // Admin users get all permissions — check by role name, not count
+    const userRow = this.db.prepare(
+      'SELECT role FROM dashboard_users WHERE id = ?',
+    ).get(userId) as { role: string } | undefined;
+    if (userRow?.role === 'admin') {
+      return new Set(ALL_PERMISSION_IDS);
+    }
+
+    // 2. If no org context, return global permissions only
+    if (orgId === undefined || orgId === '' || orgId === 'system') {
+      return globalPerms;
+    }
+
+    // 3. Find all teams the user belongs to in this org, and their role_ids
+    const teamRoles = this.db.prepare(`
+      SELECT DISTINCT t.role_id
+      FROM team_members tm
+      JOIN teams t ON t.id = tm.team_id
+      WHERE tm.user_id = ? AND t.org_id = ? AND t.role_id IS NOT NULL
+    `).all(userId, orgId) as Array<{ role_id: string }>;
+
+    if (teamRoles.length === 0) {
+      return globalPerms;
+    }
+
+    // 4. For each team role, collect permissions. "Highest" = union of all
+    //    team roles (since we want max permissions across all teams).
+    const result = new Set(globalPerms);
+
+    for (const { role_id } of teamRoles) {
+      const perms = this.db.prepare(
+        'SELECT permission FROM role_permissions WHERE role_id = ?',
+      ).all(role_id) as Array<{ permission: string }>;
+
+      for (const { permission } of perms) {
+        result.add(permission);
+      }
+    }
+
+    return result;
   }
 
   // ── Private helpers ──────────────────────────────────────────────────

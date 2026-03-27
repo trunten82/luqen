@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { existsSync, rmSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
+import { DEFAULT_ORG_ROLES } from '../../src/permissions.js';
 
 function makeTempDb() {
   const path = join(tmpdir(), `test-orgs-${randomUUID()}.db`);
@@ -39,6 +40,47 @@ describe('OrgDb', () => {
     it('rejects duplicate slugs', async () => {
       await storage.organizations.createOrg({ name: 'Acme Corp', slug: 'acme' });
       await expect(storage.organizations.createOrg({ name: 'Acme 2', slug: 'acme' })).rejects.toThrow();
+    });
+
+    it('auto-creates 4 default org roles', async () => {
+      const org = await storage.organizations.createOrg({ name: 'RoleOrg', slug: 'role-org' });
+      const roles = await storage.roles.listRoles(org.id);
+      const orgRoles = roles.filter((r) => r.orgId === org.id);
+      expect(orgRoles).toHaveLength(4);
+      const names = orgRoles.map((r) => r.name).sort();
+      expect(names).toEqual(['Admin', 'Member', 'Owner', 'Viewer']);
+    });
+
+    it('default org roles have correct permissions', async () => {
+      const org = await storage.organizations.createOrg({ name: 'PermOrg', slug: 'perm-org' });
+      const roles = await storage.roles.listRoles(org.id);
+      const orgRoles = roles.filter((r) => r.orgId === org.id);
+
+      for (const orgRole of orgRoles) {
+        const expectedDef = DEFAULT_ORG_ROLES.find((d) => d.name === orgRole.name);
+        expect(expectedDef).toBeDefined();
+        expect(orgRole.permissions.sort()).toEqual([...expectedDef!.permissions].sort());
+      }
+    });
+
+    it('default org roles are not system roles', async () => {
+      const org = await storage.organizations.createOrg({ name: 'SysOrg', slug: 'sys-org' });
+      const roles = await storage.roles.listRoles(org.id);
+      const orgRoles = roles.filter((r) => r.orgId === org.id);
+      for (const role of orgRoles) {
+        expect(role.isSystem).toBe(false);
+      }
+    });
+
+    it('different orgs can have roles with the same name', async () => {
+      const org1 = await storage.organizations.createOrg({ name: 'Org1', slug: 'org1' });
+      const org2 = await storage.organizations.createOrg({ name: 'Org2', slug: 'org2' });
+      const roles1 = (await storage.roles.listRoles(org1.id)).filter((r) => r.orgId === org1.id);
+      const roles2 = (await storage.roles.listRoles(org2.id)).filter((r) => r.orgId === org2.id);
+      // Both orgs should have 'Owner', 'Admin', etc.
+      const names1 = roles1.map((r) => r.name).sort();
+      const names2 = roles2.map((r) => r.name).sort();
+      expect(names1).toEqual(names2);
     });
   });
 

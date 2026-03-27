@@ -17,6 +17,7 @@
       <thead>
         <tr>
           <th scope="col">{{t "admin.apiKeys.label"}}</th>
+          <th scope="col">Role</th>
           <th scope="col">{{t "common.status"}}</th>
           <th scope="col">{{t "admin.apiKeys.created"}}</th>
           <th scope="col">{{t "admin.apiKeys.lastUsed"}}</th>
@@ -27,6 +28,7 @@
         {{#each keys}}
         <tr id="api-key-{{this.id}}">
           <td data-label="Label">{{this.label}}</td>
+          <td data-label="Role">{{this.role}}</td>
           <td data-label="Status">
             {{#if this.active}}
             <span class="badge badge--completed">{{t "common.active"}}</span>

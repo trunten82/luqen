@@ -113,7 +113,7 @@
       <div class="form-group">
         <label for="runner">{{t "scans.testRunner"}}</label>
         <select id="runner" name="runner" aria-describedby="runner-hint">
-          <option value="htmlcs" {{#if (eq defaultRunner "htmlcs")}}selected{{/if}}>HTML_CodeSniffer (htmlcs)</option>
+          <option value="htmlcs" {{#if (eq defaultRunner "htmlcs")}}selected{{/if}}>pa11y (htmlcs)</option>
           <option value="axe" {{#if (eq defaultRunner "axe")}}selected{{/if}}>axe-core (axe)</option>
         </select>
         <p id="runner-hint" class="form-hint">

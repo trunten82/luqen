@@ -438,7 +438,17 @@
       "roleNameHint": "Apenas letras, números, hífens e sublinhados.",
       "descriptionPlaceholder": "Descreva para que serve esta função...",
       "permissionsHint": "Selecione as permissões que esta função deve ter.",
-      "saveChanges": "Salvar Alterações"
+      "saveChanges": "Salvar Alterações",
+      "globalRolesTab": "Funções Globais",
+      "orgRolesTab": "Funções da Organização",
+      "globalRolesDescription": "Funções em nível de sistema gerenciadas por administradores.",
+      "orgRolesDescription": "Funções específicas da sua organização.",
+      "noGlobalRoles": "Nenhuma função global encontrada.",
+      "noOrgRoles": "Nenhuma função da organização encontrada.",
+      "cannotDeleteDefault": "Funções padrão da organização não podem ser excluídas.",
+      "readOnly": "Você tem acesso somente leitura às funções.",
+      "orgScoped": "Org",
+      "orgName": "Organização"
     },
     "apiKeys": {
       "createApiKey": "Criar Chave API",
@@ -551,6 +561,8 @@
       "csvOnly": "Somente CSV",
       "htmlAndCsv": "HTML + CSV",
       "includeCsv": "Incluir também anexo CSV",
+      "includeWarnings": "Incluir avisos no relatório",
+      "includeNotices": "Incluir notificações no relatório",
       "createScheduleBtn": "Criar Agendamento",
       "scheduledReports": "Relatórios Agendados",
       "format": "Formato",

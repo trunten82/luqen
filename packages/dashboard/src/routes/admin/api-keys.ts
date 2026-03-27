@@ -3,6 +3,7 @@ import { requirePermission } from '../../auth/middleware.js';
 import { generateApiKey } from '../../auth/api-key.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import type { StorageAdapter } from '../../db/index.js';
+import { API_KEY_ROLES, type ApiKeyRole } from '../../db/types.js';
 
 interface ApiKeyRow {
   readonly id: string;
@@ -10,6 +11,7 @@ interface ApiKeyRow {
   readonly active: number;
   readonly created_at: string;
   readonly last_used_at: string | null;
+  readonly role: string;
 }
 
 function statusBadge(active: number): string {
@@ -28,9 +30,17 @@ function formatDate(iso: string | null): string {
   });
 }
 
+function roleBadge(role: string): string {
+  if (role === 'admin') return '<span class="badge badge--warning">Admin</span>';
+  if (role === 'read-only') return '<span class="badge badge--info">Read Only</span>';
+  if (role === 'scan-only') return '<span class="badge badge--info">Scan Only</span>';
+  return `<span class="badge">${escapeHtml(role)}</span>`;
+}
+
 function keyRowHtml(row: ApiKeyRow): string {
   return `<tr id="api-key-${row.id}">
   <td data-label="Label">${escapeHtml(row.label)}</td>
+  <td data-label="Role">${roleBadge(row.role ?? 'admin')}</td>
   <td data-label="Status">${statusBadge(row.active)}</td>
   <td data-label="Created">${formatDate(row.created_at)}</td>
   <td data-label="Last Used">${formatDate(row.last_used_at)}</td>
@@ -101,8 +111,11 @@ export async function apiKeyRoutes(
     '/admin/api-keys',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const body = request.body as { label?: string };
+      const body = request.body as { label?: string; role?: string };
       const label = body.label?.trim() || 'default';
+      const role: ApiKeyRole = API_KEY_ROLES.includes(body.role as ApiKeyRole)
+        ? (body.role as ApiKeyRole)
+        : 'admin';
 
       if (label.length > 100) {
         return reply
@@ -113,7 +126,7 @@ export async function apiKeyRoutes(
 
       try {
         const plaintextKey = generateApiKey();
-        const id = await storage.apiKeys.storeKey(plaintextKey, label);
+        const id = await storage.apiKeys.storeKey(plaintextKey, label, undefined, role);
 
         const row: ApiKeyRow = {
           id,
@@ -121,9 +134,10 @@ export async function apiKeyRoutes(
           active: 1,
           created_at: new Date().toISOString(),
           last_used_at: null,
+          role,
         };
 
-        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.create', resourceType: 'api_key', resourceId: id, details: { label }, ipAddress: request.ip });
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.create', resourceType: 'api_key', resourceId: id, details: { label, role }, ipAddress: request.ip });
 
         const newKeyAlert = `<div id="new-key-alert" hx-swap-oob="true" class="alert alert--warning" role="alert" style="margin-bottom:var(--space-md)">
   <div class="alert__body">
