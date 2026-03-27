@@ -18,7 +18,7 @@
       <span class="form-label">{{t "admin.teams.teamName"}}</span>
       <input type="text" name="name" class="input" placeholder="{{t "admin.teams.teamNamePlaceholder"}}" required>
     </label>
-    <label class="form-group form-group--inline" style="flex:2">
+    <label class="form-group form-group--inline form-group--wide">
       <span class="form-label">{{t "admin.teams.teamDescription"}}</span>
       <input type="text" name="description" class="input" placeholder="{{t "admin.teams.teamDescriptionPlaceholder"}}">
     </label>
@@ -45,16 +45,16 @@
 </form>
 
 {{! Teams table }}
-<div class="table-container">
-  <table class="table">
+<div class="table-wrapper">
+  <table class="table" aria-label="Teams">
     <thead>
       <tr>
-        <th>{{t "common.name"}}</th>
-        <th>{{t "admin.teams.teamDescription"}}</th>
-        <th>Organization</th>
-        <th>{{t "admin.teams.members"}}</th>
-        <th>{{t "admin.teams.created"}}</th>
-        <th>{{t "common.actions"}}</th>
+        <th scope="col">{{t "common.name"}}</th>
+        <th scope="col">{{t "admin.teams.teamDescription"}}</th>
+        <th scope="col">Organization</th>
+        <th scope="col">{{t "admin.teams.members"}}</th>
+        <th scope="col">{{t "admin.teams.created"}}</th>
+        <th scope="col">{{t "common.actions"}}</th>
       </tr>
     </thead>
     <tbody id="teams-table-body">

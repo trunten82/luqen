@@ -35,8 +35,8 @@
   </div>
 
   <section class="admin-section" aria-label="Trigger scan">
-    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
-      <h2 class="section-title" style="margin:0">{{t "admin.monitor.scan"}}</h2>
+    <div class="flex items-center gap-md mb-md">
+      <h2 class="section-title">{{t "admin.monitor.scan"}}</h2>
       <button class="btn btn--primary btn--sm"
               hx-post="/admin/monitor/trigger"
               hx-target="#scan-results"
