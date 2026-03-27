@@ -67,10 +67,7 @@
     if (!e.detail.successful) return;
     var el = e.detail.elt;
     if (!el) return;
-    /* Modal forms: close modal on successful form submit (not input blur checks) */
-    if (el.tagName === 'FORM' && el.closest && el.closest('.modal')) {
-      closeModal();
-    }
+    /* Modal close is handled by OOB swap from server (modal-container cleared) */
     /* Inline forms with data-reset-on-success: reset after submit */
     if (el.hasAttribute && el.hasAttribute('data-reset-on-success')) {
       el.reset();
