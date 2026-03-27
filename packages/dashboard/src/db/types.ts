@@ -138,6 +138,8 @@ export interface CreateEmailReportInput {
   readonly frequency: string;
   readonly format?: string;
   readonly includeCsv?: boolean;
+  readonly includeWarnings?: boolean;
+  readonly includeNotices?: boolean;
   readonly nextSendAt: string;
   readonly createdBy: string;
   readonly orgId?: string;
