@@ -23,28 +23,6 @@ function orgRowHtml(org: Organization): string {
 </tr>`;
 }
 
-function memberRowHtml(
-  orgId: string,
-  member: { userId: string; role: string; joinedAt: string },
-  username: string,
-): string {
-  return `<tr id="member-${member.userId}">
-  <td data-label="Username">${username}</td>
-  <td data-label="Role"><span class="badge badge--neutral">${member.role}</span></td>
-  <td data-label="Joined">${member.joinedAt}</td>
-  <td>
-    <button hx-post="/admin/organizations/${encodeURIComponent(orgId)}/members/${encodeURIComponent(member.userId)}/remove"
-            hx-confirm="Remove ${username} from this organization?"
-            hx-target="closest tr"
-            hx-swap="outerHTML"
-            class="btn btn--sm btn--warning"
-            aria-label="Remove ${username}">Remove</button>
-  </td>
-</tr>`;
-}
-
-const VALID_MEMBER_ROLES = new Set(['owner', 'admin', 'member', 'viewer']);
-
 export async function organizationRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
@@ -164,7 +142,7 @@ export async function organizationRoutes(
     },
   );
 
-  // GET /admin/organizations/:id/members — show members page
+  // GET /admin/organizations/:id/members — show members page (team-based)
   server.get(
     '/admin/organizations/:id/members',
     { preHandler: requirePermission('admin.system') },
@@ -176,24 +154,32 @@ export async function organizationRoutes(
         return reply.code(404).send({ error: 'Organization not found' });
       }
 
+      // Get all members (now primarily via teams)
       const allMembers = await storage.organizations.listAllMembers(id);
-      const directMembers = allMembers.filter((m) => m.source !== 'team');
-      const teamMembers = allMembers.filter((m) => m.source === 'team');
 
       const enrichMember = async (m: typeof allMembers[number]) => {
         const user = await storage.users.getUserById(m.userId);
         return { ...m, username: user?.username ?? m.userId };
       };
 
-      const members = await Promise.all(directMembers.map(enrichMember));
-      const inheritedMembers = await Promise.all(teamMembers.map(enrichMember));
+      const members = await Promise.all(allMembers.map(enrichMember));
 
+      // Available users not yet in any team for this org
       const allUsers = await storage.users.listUsers();
       const allMemberUserIds = new Set(allMembers.map((m) => m.userId));
       const availableUsers = allUsers.filter((u) => !allMemberUserIds.has(u.id) && u.active);
 
-      // Linked teams for this org
+      // Linked teams for this org (with role info)
       const linkedTeams = await storage.teams.listTeamsByOrgId(id);
+
+      // Org-scoped roles from DB
+      const orgRoles = await storage.roles.listOrgRoles(id);
+
+      // Enrich teams with role name
+      const enrichedTeams = linkedTeams.map((team) => {
+        const role = orgRoles.find((r) => r.id === team.roleId);
+        return { ...team, roleName: role?.name ?? 'No role' };
+      });
 
       return reply.view('admin/organization-members.hbs', {
         pageTitle: `Members — ${org.name}`,
@@ -201,21 +187,20 @@ export async function organizationRoutes(
         user: request.user,
         org,
         members,
-        inheritedMembers,
-        linkedTeams,
+        linkedTeams: enrichedTeams,
         availableUsers,
-        roles: ['owner', 'admin', 'member', 'viewer'],
+        orgRoles,
       });
     },
   );
 
-  // POST /admin/organizations/:id/members — add member
+  // POST /admin/organizations/:id/members/add-to-team — add user to a team
   server.post(
-    '/admin/organizations/:id/members',
+    '/admin/organizations/:id/members/add-to-team',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const body = request.body as { userId?: string; role?: string };
+      const body = request.body as { userId?: string; teamId?: string };
 
       const org = await storage.organizations.getOrg(id);
       if (org === null) {
@@ -226,7 +211,7 @@ export async function organizationRoutes(
       }
 
       const userId = body.userId?.trim();
-      const role = body.role?.trim() ?? 'member';
+      const teamId = body.teamId?.trim();
 
       if (!userId) {
         return reply
@@ -235,41 +220,83 @@ export async function organizationRoutes(
           .send(toastHtml('User is required.', 'error'));
       }
 
-      if (!VALID_MEMBER_ROLES.has(role)) {
+      if (!teamId) {
         return reply
           .code(400)
           .header('content-type', 'text/html')
-          .send(toastHtml('Invalid role. Must be owner, admin, member, or viewer.', 'error'));
+          .send(toastHtml('Team is required.', 'error'));
+      }
+
+      // Verify team belongs to this org
+      const team = await storage.teams.getTeam(teamId);
+      if (team === null || team.orgId !== id) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Invalid team for this organization.', 'error'));
       }
 
       try {
-        const member = await storage.organizations.addMember(id, userId, role);
+        await storage.teams.addTeamMember(teamId, userId);
         const user = await storage.users.getUserById(userId);
         const username = user?.username ?? userId;
-        const row = memberRowHtml(id, member, username);
-
-        // Show table + hide empty state via inline script (OOB can't change attributes)
-        const reveal = `<script>
-          var t=document.getElementById('org-members-wrapper');if(t)t.style.display='';
-          var e=document.getElementById('org-no-members');if(e)e.style.display='none';
-        </script>`;
 
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(`${row}\n${reveal}\n${toastHtml(`${username} added to organization.`)}`);
+          .header('hx-trigger', 'memberChanged')
+          .send(toastHtml(`${escapeHtml(username)} added to team "${escapeHtml(team.name)}".`));
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to add member';
-        const isDuplicate = message.includes('UNIQUE constraint');
-        return reply
-          .code(isDuplicate ? 409 : 500)
-          .header('content-type', 'text/html')
-          .send(toastHtml(isDuplicate ? 'User is already a member of this organization.' : message, 'error'));
+        const message = err instanceof Error ? err.message : 'Failed to add member to team';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
     },
   );
 
-  // POST /admin/organizations/:id/members/:userId/remove — remove member
+  // POST /admin/organizations/:id/members/:userId/move-team — change a member's team (role)
+  server.post(
+    '/admin/organizations/:id/members/:userId/move-team',
+    { preHandler: requirePermission('admin.system') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id, userId } = request.params as { id: string; userId: string };
+      const body = request.body as { teamId?: string };
+
+      const newTeamId = body.teamId?.trim();
+      if (!newTeamId) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Team is required.', 'error'));
+      }
+
+      // Verify target team belongs to this org
+      const newTeam = await storage.teams.getTeam(newTeamId);
+      if (newTeam === null || newTeam.orgId !== id) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Invalid team for this organization.', 'error'));
+      }
+
+      // Remove user from all teams in this org, then add to the new team
+      const orgTeams = await storage.teams.listTeamsByOrgId(id);
+      for (const team of orgTeams) {
+        await storage.teams.removeTeamMember(team.id, userId);
+      }
+      await storage.teams.addTeamMember(newTeamId, userId);
+
+      const user = await storage.users.getUserById(userId);
+      const username = user?.username ?? userId;
+
+      return reply
+        .code(200)
+        .header('content-type', 'text/html')
+        .header('hx-trigger', 'memberChanged')
+        .send(toastHtml(`${escapeHtml(username)} moved to team "${escapeHtml(newTeam.name)}".`));
+    },
+  );
+
+  // POST /admin/organizations/:id/members/:userId/remove — remove member from all org teams
   server.post(
     '/admin/organizations/:id/members/:userId/remove',
     { preHandler: requirePermission('admin.system') },
@@ -279,15 +306,20 @@ export async function organizationRoutes(
       try {
         const user = await storage.users.getUserById(userId);
         const username = user?.username ?? userId;
-        await storage.organizations.removeMember(id, userId);
 
-        // Add user back to the "available users" dropdown via OOB swap
-        const optionHtml = `<option value="${escapeHtml(userId)}" hx-swap-oob="beforeend:#add-member-user">${escapeHtml(username)}</option>`;
+        // Remove from all teams in this org
+        const orgTeams = await storage.teams.listTeamsByOrgId(id);
+        for (const team of orgTeams) {
+          await storage.teams.removeTeamMember(team.id, userId);
+        }
+
+        // Also remove from direct members (legacy) if present
+        await storage.organizations.removeMember(id, userId);
 
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(`${optionHtml}\n${toastHtml(`${username} removed from organization.`)}`);
+          .send(toastHtml(`${escapeHtml(username)} removed from organization.`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to remove member';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
