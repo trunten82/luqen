@@ -128,11 +128,15 @@ export async function dashboardUserRoutes(
   server.get(
     '/admin/dashboard-users/new',
     { preHandler: requirePermission('users.create') },
-    async (_request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const isAdmin = request.user?.role === 'admin';
+      const roles = isAdmin
+        ? ['executive', 'viewer', 'user', 'developer', 'admin']
+        : ['executive', 'viewer', 'user', 'developer'];
       return reply.view('admin/dashboard-user-form.hbs', {
         isNew: true,
         formUser: { username: '', role: 'user', password: '' },
-        roles: ['executive', 'viewer', 'user', 'developer', 'admin'],
+        roles,
       });
     },
   );
@@ -150,7 +154,12 @@ export async function dashboardUserRoutes(
 
       const username = body.username?.trim();
       const password = body.password;
-      const role = body.role?.trim() ?? 'user';
+      let role = body.role?.trim() ?? 'user';
+
+      // Non-admins cannot create admin users
+      if (role === 'admin' && request.user?.role !== 'admin') {
+        role = 'user';
+      }
 
       if (!username || !password) {
         return reply
