@@ -15,6 +15,15 @@
                placeholder="{{t "admin.apiKeys.labelPlaceholder"}}">
       </div>
 
+      <div class="form-group">
+        <label for="ak-role" class="form-label">Role</label>
+        <select id="ak-role" name="role" class="input">
+          <option value="admin">Admin (full access)</option>
+          <option value="read-only">Read Only (GET requests only)</option>
+          <option value="scan-only">Scan Only (read + scan endpoints)</option>
+        </select>
+      </div>
+
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">{{t "admin.apiKeys.generateKey"}}</button>
         <button type="button" class="btn btn--ghost close-modal-btn"

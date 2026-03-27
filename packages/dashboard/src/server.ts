@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { DashboardConfig } from './config.js';
-import { registerSession } from './auth/session.js';
+import { registerSession, getSessionExpiryMs, createSessionExpiryHook } from './auth/session.js';
 import { createAuthGuard } from './auth/middleware.js';
 import { AuthService } from './auth/auth-service.js';
 import { authRoutes } from './routes/auth.js';
@@ -51,6 +51,7 @@ import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
 import { ServiceTokenManager } from './auth/service-token.js';
+import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
@@ -334,6 +335,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     return payload;
   });
 
+  // ── Session expiry ──────────────────────────────────────────────────────
+  const sessionExpiryMs = getSessionExpiryMs();
+  server.addHook('preHandler', createSessionExpiryHook(sessionExpiryMs));
+
   // ── Global auth guard ─────────────────────────────────────────────────────
   const authGuard = createAuthGuard(authService);
   server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -342,6 +347,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     }
     await authGuard(request, reply);
   });
+
+  // ── API key role enforcement ────────────────────────────────────────────
+  server.addHook('preHandler', enforceApiKeyRole);
 
   // ── Permission loading ─────────────────────────────────────────────────
   server.addHook('preHandler', async (request: FastifyRequest) => {

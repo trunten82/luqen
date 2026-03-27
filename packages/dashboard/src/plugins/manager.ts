@@ -15,6 +15,7 @@ import type {
 } from './types.js';
 import { encryptConfig, decryptConfig, maskSecrets } from './crypto.js';
 import { getByName, getByPackageName } from './registry.js';
+import { computeDirectoryChecksum } from './checksum.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,6 +38,7 @@ interface PluginRow {
   readonly installed_at: string;
   readonly activated_at: string | null;
   readonly error: string | null;
+  readonly checksum: string | null;
 }
 
 type DownloadFn = (url: string, destPath: string) => Promise<void>;
@@ -199,13 +201,16 @@ export class PluginManager {
 
     const manifest = this.readManifest(registryEntry.packageName);
 
+    // Compute checksum of installed plugin files for integrity verification
+    const checksum = computeDirectoryChecksum(destDir);
+
     const id = randomUUID();
     const now = new Date().toISOString();
 
     this.db
       .prepare(
-        `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
-         VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
+        `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at, checksum)
+         VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at, @checksum)`,
       )
       .run({
         id,
@@ -215,6 +220,7 @@ export class PluginManager {
         config: '{}',
         status: 'inactive',
         installed_at: now,
+        checksum,
       });
 
     return this.getPluginOrThrow(id);
@@ -251,6 +257,21 @@ export class PluginManager {
     const row = this.getRow(id);
     if (!row) {
       throw new Error(`Plugin "${id}" not found`);
+    }
+
+    // Verify plugin file integrity before loading
+    if (row.checksum !== null) {
+      const pkgDir = this.resolvePackageDir(row.package_name);
+      if (existsSync(pkgDir)) {
+        const currentChecksum = computeDirectoryChecksum(pkgDir);
+        if (currentChecksum !== row.checksum) {
+          const message = `Plugin "${row.package_name}" checksum mismatch — files may have been tampered with (expected ${row.checksum.slice(0, 12)}..., got ${currentChecksum.slice(0, 12)}...)`;
+          this.db
+            .prepare('UPDATE plugins SET status = @status, error = @error WHERE id = @id')
+            .run({ id, status: 'error', error: message });
+          return this.getPluginOrThrow(id);
+        }
+      }
     }
 
     const manifest = this.readManifest(row.package_name);
