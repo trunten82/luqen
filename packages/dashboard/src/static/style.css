@@ -1329,10 +1329,6 @@ select {
   padding: var(--space-md) 0;
 }
 
-.btn--full {
-  width: 100%;
-}
-
 /* ---- HTMX indicators ---- */
 .htmx-indicator { display: none; }
 .htmx-request .htmx-indicator { display: inline; }
@@ -1877,7 +1873,6 @@ select {
 /* ---- Responsive (Tablet & Mobile < 1024px) ---- */
 @media (max-width: 1024px) {
   /* Sidebar backdrop and toggle already handled globally */
-  }
 
   .stats-grid {
     grid-template-columns: 1fr 1fr;
@@ -2636,7 +2631,7 @@ select {
   font-size: 0.78rem;
   font-weight: 400;
   color: var(--text-secondary);
-  background: var(--bg-surface);
+  background: var(--bg-tertiary);
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
 }
@@ -2651,7 +2646,7 @@ select {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   margin-bottom: 0.5rem;
-  background: var(--bg-card);
+  background: var(--bg-primary);
 }
 .mt-criterion__header {
   display: flex;
@@ -2691,7 +2686,7 @@ select {
   font-weight: 600;
   padding: 0.1rem 0.4rem;
   border-radius: 3px;
-  background: var(--bg-surface);
+  background: var(--bg-tertiary);
   color: var(--text-secondary);
 }
 .mt-level--A { border-left: 2px solid var(--status-success); }
@@ -2772,7 +2767,7 @@ select {
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
-  background: var(--bg-surface);
+  background: var(--bg-secondary);
   color: var(--text-primary);
   font-size: 0.82rem;
   font-family: inherit;
@@ -3010,7 +3005,7 @@ details[open] > .mt-examples-toggle::before {
 
 /* Card variants */
 .card--alt {
-  background: var(--surface-alt, var(--bg-secondary));
+  background: var(--bg-secondary);
 }
 .card__subtitle {
   font-size: var(--font-size-base);
@@ -3031,7 +3026,7 @@ details[open] > .mt-examples-toggle::before {
   color: var(--status-error);
 }
 .btn--danger-ghost:hover {
-  background: var(--status-error-bg, #fee2e2);
+  background: var(--status-error-bg);
   border-color: var(--status-error);
 }
 
@@ -3047,7 +3042,7 @@ details[open] > .mt-examples-toggle::before {
 
 /* Code block */
 .code-block {
-  background: var(--bg-muted, #f4f5f7);
+  background: var(--bg-tertiary);
   padding: var(--space-md);
   border-radius: var(--border-radius);
   overflow-x: auto;
