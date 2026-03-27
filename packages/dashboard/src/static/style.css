@@ -986,6 +986,9 @@ input[readonly] {
   margin-top: var(--space-xs);
   display: flex;
   align-items: flex-start;
+}
+.form-error:empty {
+  display: none;
   gap: var(--space-xs);
 }
 
