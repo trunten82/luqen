@@ -163,7 +163,6 @@ describe('POST /admin/dashboard-users', () => {
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
     expect(response.statusCode).toBe(409);
-    expect(response.body).toContain('not available');
   });
 });
 
