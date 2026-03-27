@@ -158,10 +158,13 @@ export async function generateIssuesCsv(
 // Build inline-styled HTML email body with summary KPIs
 // ---------------------------------------------------------------------------
 
-export function buildEmailBody(scan: ScanRecord): string {
+export function buildEmailBody(
+  scan: ScanRecord,
+  options?: { includeWarnings?: boolean; includeNotices?: boolean },
+): string {
   const errors = scan.errors ?? 0;
-  const warnings = scan.warnings ?? 0;
-  const notices = scan.notices ?? 0;
+  const warnings = (options?.includeWarnings !== false) ? (scan.warnings ?? 0) : 0;
+  const notices = (options?.includeNotices !== false) ? (scan.notices ?? 0) : 0;
   const pagesScanned = scan.pagesScanned ?? 0;
   const scanDate = scan.completedAt
     ? new Date(scan.completedAt).toLocaleString()

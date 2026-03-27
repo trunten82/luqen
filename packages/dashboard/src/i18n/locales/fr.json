@@ -551,6 +551,8 @@
       "csvOnly": "CSV Uniquement",
       "htmlAndCsv": "HTML + CSV",
       "includeCsv": "Inclure également une pièce jointe CSV",
+      "includeWarnings": "Inclure les avertissements dans le rapport",
+      "includeNotices": "Inclure les avis dans le rapport",
       "createScheduleBtn": "Créer une Planification",
       "scheduledReports": "Rapports Planifiés",
       "format": "Format",
