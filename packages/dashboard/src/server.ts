@@ -352,8 +352,48 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── API key role enforcement ────────────────────────────────────────────
   server.addHook('preHandler', enforceApiKeyRole);
 
-  // NOTE: Permission loading moved into the org context hook below so that
-  // org-scoped permissions are resolved AFTER the current org is determined.
+  // ── Org context + permission loading ──────────────────────────────────────
+  // Must run BEFORE the CSRF/perm/i18n hook so perm flags are available.
+  server.addHook('preHandler', async (request: FastifyRequest) => {
+    if (request.user === undefined) return;
+
+    const session = request.session as { get(key: string): unknown } | undefined;
+
+    // 1. Determine org context
+    if (session !== undefined && typeof session.get === 'function') {
+      const userOrgs = await storage.organizations.getUserOrgs(request.user.id);
+
+      let currentOrgId = session.get('currentOrgId') as string | undefined;
+      if ((currentOrgId === undefined || currentOrgId === '') && userOrgs.length > 0) {
+        currentOrgId = userOrgs[0].id;
+      }
+
+      if (currentOrgId !== undefined && currentOrgId !== '') {
+        request.user = {
+          ...request.user,
+          currentOrgId,
+        };
+      }
+
+      const currentOrg = currentOrgId !== undefined && currentOrgId !== ''
+        ? await storage.organizations.getOrg(currentOrgId)
+        : null;
+
+      (request as FastifyRequest & { orgContext?: unknown }).orgContext = {
+        userOrgs,
+        currentOrg,
+      };
+    }
+
+    // 2. Resolve permissions WITH org context
+    const permissions = await resolveEffectivePermissions(
+      storage.roles,
+      request.user.id,
+      request.user.role,
+      request.user.currentOrgId,
+    );
+    (request as unknown as Record<string, unknown>)['permissions'] = permissions;
+  });
 
   // ── Service token injection (auto-refresh for compliance API calls) ────
   server.addHook('preHandler', async (request: FastifyRequest) => {
@@ -438,47 +478,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     });
   });
 
-  // ── Org context injection ────────────────────────────────────────────────
-  server.addHook('preHandler', async (request: FastifyRequest) => {
-    if (request.user === undefined) return;
-
-    const session = request.session as { get(key: string): unknown } | undefined;
-    if (session === undefined || typeof session.get !== 'function') return;
-
-    const userOrgs = await storage.organizations.getUserOrgs(request.user.id);
-
-    // Use session org if set, otherwise auto-select the user's first org
-    let currentOrgId = session.get('currentOrgId') as string | undefined;
-    if ((currentOrgId === undefined || currentOrgId === '') && userOrgs.length > 0) {
-      currentOrgId = userOrgs[0].id;
-    }
-
-    if (currentOrgId !== undefined && currentOrgId !== '') {
-      request.user = {
-        ...request.user,
-        currentOrgId,
-      };
-    }
-
-    // Populate org context for sidebar org switcher
-    const currentOrg = currentOrgId !== undefined && currentOrgId !== ''
-      ? await storage.organizations.getOrg(currentOrgId)
-      : null;
-
-    (request as FastifyRequest & { orgContext?: unknown }).orgContext = {
-      userOrgs,
-      currentOrg,
-    };
-
-    // Resolve permissions WITH org context (must happen after org is determined)
-    const permissions = await resolveEffectivePermissions(
-      storage.roles,
-      request.user.id,
-      request.user.role,
-      request.user.currentOrgId,
-    );
-    (request as unknown as Record<string, unknown>)['permissions'] = permissions;
-  });
+  // (Org context + permissions already loaded in earlier preHandler hook)
 
   // ── Routes ────────────────────────────────────────────────────────────────
   await authRoutes(server, config, authService, storage);
