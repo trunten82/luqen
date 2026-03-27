@@ -54,7 +54,7 @@ export function requirePermission(...permissions: string[]) {
     const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
     const hasAny = perms !== undefined && permissions.some((p) => perms.has(p));
     if (!hasAny) {
-      const isHtmx = request.headers['hx-request'] === 'true';
+      const isHtmx = request.headers?.['hx-request'] === 'true';
       if (isHtmx) {
         await reply.code(403).send({ error: `Forbidden: requires ${permissions.join(' or ')}` });
       } else {
@@ -79,7 +79,7 @@ export function requireRole(role: 'viewer' | 'user' | 'admin') {
     const userLevel = roleOrder[userRole] ?? 0;
 
     if (userLevel < requiredLevel) {
-      const isHtmx = request.headers['hx-request'] === 'true';
+      const isHtmx = request.headers?.['hx-request'] === 'true';
       if (isHtmx) {
         await reply.code(403).send({ error: `Forbidden: ${role} role required` });
       } else {
