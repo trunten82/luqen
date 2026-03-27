@@ -438,7 +438,17 @@
       "roleNameHint": "Lettres, chiffres, tirets et underscores uniquement.",
       "descriptionPlaceholder": "Décrivez l'utilité de ce rôle...",
       "permissionsHint": "Sélectionnez les permissions que ce rôle doit avoir.",
-      "saveChanges": "Enregistrer les Modifications"
+      "saveChanges": "Enregistrer les Modifications",
+      "globalRolesTab": "Rôles Globaux",
+      "orgRolesTab": "Rôles d'Organisation",
+      "globalRolesDescription": "Rôles à l'échelle du système gérés par les administrateurs.",
+      "orgRolesDescription": "Rôles spécifiques à votre organisation.",
+      "noGlobalRoles": "Aucun rôle global trouvé.",
+      "noOrgRoles": "Aucun rôle d'organisation trouvé.",
+      "cannotDeleteDefault": "Les rôles par défaut de l'organisation ne peuvent pas être supprimés.",
+      "readOnly": "Vous avez un accès en lecture seule aux rôles.",
+      "orgScoped": "Org",
+      "orgName": "Organisation"
     },
     "apiKeys": {
       "createApiKey": "Créer une Clé API",

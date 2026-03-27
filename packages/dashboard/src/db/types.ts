@@ -123,6 +123,8 @@ export interface EmailReport {
   readonly frequency: string;
   readonly format: string;
   readonly includeCsv: boolean;
+  readonly includeWarnings?: boolean;
+  readonly includeNotices?: boolean;
   readonly nextSendAt: string;
   readonly lastSentAt: string | null;
   readonly enabled: boolean;
