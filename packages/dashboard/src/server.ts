@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { DashboardConfig } from './config.js';
-import { registerSession } from './auth/session.js';
+import { registerSession, getSessionExpiryMs, createSessionExpiryHook } from './auth/session.js';
 import { createAuthGuard } from './auth/middleware.js';
 import { AuthService } from './auth/auth-service.js';
 import { authRoutes } from './routes/auth.js';
@@ -334,6 +334,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     }
     return payload;
   });
+
+  // ── Session expiry ──────────────────────────────────────────────────────
+  const sessionExpiryMs = getSessionExpiryMs();
+  server.addHook('preHandler', createSessionExpiryHook(sessionExpiryMs));
 
   // ── Global auth guard ─────────────────────────────────────────────────────
   const authGuard = createAuthGuard(authService);
