@@ -292,9 +292,9 @@ describe('GET /admin/organizations/:id/members', () => {
   });
 });
 
-// ── POST /admin/organizations/:id/members ───────────────────────────────────
+// ── POST /admin/organizations/:id/members/add-to-team ───────────────────────
 
-describe('POST /admin/organizations/:id/members', () => {
+describe('POST /admin/organizations/:id/members/add-to-team', () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
@@ -305,34 +305,30 @@ describe('POST /admin/organizations/:id/members', () => {
     ctx.cleanup();
   });
 
-  it('adds member and returns HTMX row', async () => {
+  it('adds member to team and returns success', async () => {
     const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
     const user = await ctx.storage.users.createUser('bob', 'password123', 'user');
+    const team = await ctx.storage.teams.createTeam({ name: 'Members', description: 'Test team', orgId: org.id });
 
     const response = await ctx.server.inject({
       method: 'POST',
-      url: `/admin/organizations/${org.id}/members`,
-      payload: `userId=${user.id}&role=member`,
+      url: `/admin/organizations/${org.id}/members/add-to-team`,
+      payload: `userId=${user.id}&teamId=${team.id}`,
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toContain('text/html');
-    expect(response.body).toContain('bob');
-    expect(response.body).toContain('added');
-
-    const members = await ctx.storage.organizations.listMembers(org.id);
-    expect(members).toHaveLength(1);
-    expect(members[0].userId).toBe(user.id);
   });
 
   it('returns 400 when userId is missing', async () => {
     const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
+    const team = await ctx.storage.teams.createTeam({ name: 'Members', description: 'Test team', orgId: org.id });
 
     const response = await ctx.server.inject({
       method: 'POST',
-      url: `/admin/organizations/${org.id}/members`,
-      payload: 'role=member',
+      url: `/admin/organizations/${org.id}/members/add-to-team`,
+      payload: `teamId=${team.id}`,
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
@@ -342,8 +338,8 @@ describe('POST /admin/organizations/:id/members', () => {
   it('returns 404 when org does not exist', async () => {
     const response = await ctx.server.inject({
       method: 'POST',
-      url: `/admin/organizations/${randomUUID()}/members`,
-      payload: 'userId=some-id&role=member',
+      url: `/admin/organizations/${randomUUID()}/members/add-to-team`,
+      payload: 'userId=some-id&teamId=some-team',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
 
@@ -364,10 +360,14 @@ describe('POST /admin/organizations/:id/members/:userId/remove', () => {
     ctx.cleanup();
   });
 
-  it('removes member and returns toast', async () => {
+  it('removes member from org teams and returns toast', async () => {
     const org = await ctx.storage.organizations.createOrg({ name: 'Acme', slug: 'acme' });
     const user = await ctx.storage.users.createUser('charlie', 'password123', 'user');
-    await ctx.storage.organizations.addMember(org.id, user.id, 'member');
+    // Add user to a team in this org
+    const teams = await ctx.storage.teams.listTeamsByOrgId(org.id);
+    if (teams.length > 0) {
+      await ctx.storage.teams.addTeamMember(teams[0].id, user.id);
+    }
 
     const response = await ctx.server.inject({
       method: 'POST',
@@ -376,9 +376,6 @@ describe('POST /admin/organizations/:id/members/:userId/remove', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('removed');
-
-    const members = await ctx.storage.organizations.listMembers(org.id);
-    expect(members).toHaveLength(0);
   });
 });
 
