@@ -240,6 +240,14 @@ export async function dashboardUserRoutes(
           .send(toastHtml('Invalid role. Must be executive, viewer, user, developer, or admin.', 'error'));
       }
 
+      // Only global admins can assign the 'admin' dashboard role
+      if (role === 'admin' && request.user?.role !== 'admin') {
+        return reply
+          .code(403)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Only global administrators can assign the admin role.', 'error'));
+      }
+
       const currentUser = await storage.users.getUserById(id);
       if (currentUser !== null && currentUser.role === 'admin' && role !== 'admin' && await isLastActiveAdmin(storage, id)) {
         return reply

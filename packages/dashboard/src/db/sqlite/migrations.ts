@@ -933,4 +933,15 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission)
   WHERE r.name = 'Admin' AND r.org_id != 'system';
     `,
   },
+  {
+    id: '030',
+    name: 'remove-users-roles-from-org-owner',
+    sql: `
+-- users.roles allows changing dashboard-level roles (admin/user/etc.)
+-- This is a global admin action, not org-scoped. Remove from org roles.
+DELETE FROM role_permissions
+  WHERE permission = 'users.roles'
+  AND role_id IN (SELECT r.id FROM roles r WHERE r.org_id != 'system');
+    `,
+  },
 ];
