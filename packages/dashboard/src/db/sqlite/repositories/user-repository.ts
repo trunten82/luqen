@@ -100,9 +100,6 @@ export class SqliteUserRepository implements UserRepository {
         JOIN teams t ON t.id = tm.team_id
         WHERE t.org_id = ?
       )
-      OR du.id NOT IN (
-        SELECT DISTINCT tm2.user_id FROM team_members tm2
-      )
       ORDER BY du.username
     `).all(orgId) as UserRow[];
     return rows.map(rowToUser);
