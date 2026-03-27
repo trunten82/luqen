@@ -195,9 +195,12 @@ export class SqliteRoleRepository implements RoleRepository {
     // 1. Start with global (system) role permissions
     const globalPerms = await this.getUserPermissions(userId);
 
-    // Admin users already get all permissions from getUserPermissions
-    if (globalPerms.size === ALL_PERMISSION_IDS.length) {
-      return globalPerms;
+    // Admin users get all permissions — check by role name, not count
+    const userRow = this.db.prepare(
+      'SELECT role FROM dashboard_users WHERE id = ?',
+    ).get(userId) as { role: string } | undefined;
+    if (userRow?.role === 'admin') {
+      return new Set(ALL_PERMISSION_IDS);
     }
 
     // 2. If no org context, return global permissions only

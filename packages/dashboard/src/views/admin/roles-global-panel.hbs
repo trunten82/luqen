@@ -1,0 +1,62 @@
+{{#if canCreateGlobal}}
+<div class="page-actions">
+  <a href="/admin/roles/new?scope=global" class="btn btn--primary">{{t "admin.roles.createRole"}}</a>
+</div>
+{{/if}}
+
+<p class="text-muted" style="margin-bottom:1rem;">{{t "admin.roles.globalRolesDescription"}}</p>
+
+{{#if hasGlobalRoles}}
+<div class="table-wrapper" aria-live="polite" aria-atomic="false">
+  <table class="table" aria-label="Global Roles">
+    <thead>
+      <tr>
+        <th scope="col">{{t "common.name"}}</th>
+        <th scope="col">{{t "admin.roles.description"}}</th>
+        <th scope="col">{{t "admin.roles.type"}}</th>
+        <th scope="col">{{t "admin.roles.permissions"}}</th>
+        <th scope="col">{{t "common.actions"}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each globalRoles}}
+      <tr id="role-{{this.id}}">
+        <td data-label="Name"><strong>{{this.name}}</strong></td>
+        <td data-label="Description">{{this.description}}</td>
+        <td data-label="Type">
+          {{#if this.systemBadge}}
+          <span class="badge badge--neutral" title="System role">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" style="vertical-align:middle;margin-right:0.25rem;" aria-hidden="true">
+              <rect x="5" y="9" width="10" height="9" rx="2" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M7 9V6a3 3 0 016 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            {{t "admin.roles.system"}}
+          </span>
+          {{else}}
+          <span class="badge badge--success">{{t "admin.roles.custom"}}</span>
+          {{/if}}
+        </td>
+        <td data-label="Permissions">{{this.permissionCount}}</td>
+        <td>
+          {{#if this.canEdit}}
+          <a href="/admin/roles/{{this.id}}/edit" class="btn btn--sm btn--secondary" aria-label="Edit role {{this.name}}">{{t "common.edit"}}</a>
+          {{/if}}
+          {{#if this.canDelete}}
+          <button
+            hx-delete="/admin/roles/{{this.id}}"
+            hx-confirm="Delete role {{this.name}}?"
+            class="btn btn--sm btn--danger"
+            aria-label="Delete role {{this.name}}"
+          >{{t "common.delete"}}</button>
+          {{/if}}
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+{{else}}
+<div class="empty-state" role="status">
+  <p>{{t "admin.roles.noGlobalRoles"}}</p>
+</div>
+{{/if}}
