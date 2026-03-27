@@ -71,6 +71,15 @@
       }
     });
 
+    /* Process OOB swaps (toasts) from error responses — HTMX ignores 4xx/5xx by default */
+    document.body.addEventListener('htmx:beforeOnLoad', function(event) {
+      var xhr = event.detail.xhr;
+      if (xhr.status >= 400 && xhr.responseText.indexOf('hx-swap-oob') !== -1) {
+        event.detail.shouldSwap = true;
+        event.detail.isError = false;
+      }
+    });
+
     /* Tab switching via data-action="switch-tab" (CSP-safe event delegation) */
     document.addEventListener('click', function(e) {
       var btn = e.target.closest('[data-action="switch-tab"]');
