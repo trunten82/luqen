@@ -5,6 +5,8 @@ import type { StorageAdapter } from '../db/index.js';
 import type { PageHashEntry } from '../db/types.js';
 import { checkCompliance, dispatchWebhookEvent } from '../compliance-client.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
+import type { PluginManager } from '../plugins/manager.js';
+import type { NotificationPlugin, LuqenEvent } from '../plugins/types.js';
 
 export interface ScanProgressEvent {
   readonly type: 'discovery' | 'scan_start' | 'scan_complete' | 'scan_error' | 'compliance' | 'complete' | 'failed';
@@ -100,6 +102,8 @@ export interface OrchestratorOptions {
   readonly ssePublisher?: SsePublisher;
   /** Optional Redis queue for cross-instance scan distribution. */
   readonly redisQueue?: RedisScanQueue;
+  /** Optional plugin manager for org-scoped plugin hooks on scan events. */
+  readonly pluginManager?: PluginManager;
 }
 
 export class ScanOrchestrator {
@@ -109,6 +113,7 @@ export class ScanOrchestrator {
   private readonly reportsDir: string;
   private readonly ssePublisher?: SsePublisher;
   private readonly redisQueue?: RedisScanQueue;
+  private readonly pluginManager?: PluginManager;
   /** Buffer recent events per scan so late-connecting SSE clients catch up. */
   private readonly eventBuffers = new Map<string, ScanProgressEvent[]>();
 
@@ -124,6 +129,7 @@ export class ScanOrchestrator {
     this.emitter.setMaxListeners(100);
     this.ssePublisher = opts.ssePublisher;
     this.redisQueue = opts.redisQueue;
+    this.pluginManager = opts.pluginManager;
   }
 
   emit(scanId: string, event: ScanProgressEvent): void {
@@ -568,6 +574,15 @@ export class ScanOrchestrator {
           confirmedViolations,
         });
       }
+
+      // Notify active notification plugins using org-scoped config
+      void this.notifyPlugins('scan.complete', config.orgId ?? 'system', {
+        scanId,
+        siteUrl: config.siteUrl,
+        pagesScanned,
+        issues: { errors, warnings, notices },
+        confirmedViolations,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await this.storage.scans.updateScan(scanId, {
@@ -590,7 +605,44 @@ export class ScanOrchestrator {
           error: message,
         });
       }
+
+      // Notify active notification plugins using org-scoped config
+      void this.notifyPlugins('scan.failed', config.orgId ?? 'system', {
+        scanId,
+        siteUrl: config.siteUrl,
+        error: message,
+      });
+    }
+  }
+
+  /**
+   * Dispatch a scan event to all active notification plugins,
+   * using org-scoped plugin config when available.
+   */
+  private async notifyPlugins(
+    eventType: LuqenEvent['type'],
+    orgId: string,
+    data: Readonly<Record<string, unknown>>,
+  ): Promise<void> {
+    if (this.pluginManager === undefined) return;
+
+    const notificationPlugins = this.pluginManager.getActivePluginsByType('notification');
+    if (notificationPlugins.length === 0) return;
+
+    const event: LuqenEvent = {
+      type: eventType,
+      timestamp: new Date().toISOString(),
+      data: { ...data, orgId },
+    };
+
+    for (const plugin of notificationPlugins) {
+      try {
+        await (plugin as NotificationPlugin).send(event);
+      } catch (err) {
+        // Non-fatal: notification failure should not affect scan status
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[orchestrator] Notification plugin failed for ${eventType}: ${msg}`);
+      }
     }
   }
 }
-
