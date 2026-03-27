@@ -42,6 +42,20 @@ export async function registerSourceRoutes(
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getSourceOrgId(id);
+      if (recordOrgId == null) {
+        await reply.status(404).send({ error: `Source '${id}' not found`, statusCode: 404 });
+        return;
+      }
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot delete system data', statusCode: 403 });
+        return;
+      }
+      if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot delete data belonging to another organisation', statusCode: 403 });
+        return;
+      }
       await db.deleteSource(id);
       await reply.status(204).send();
     } catch (err) {

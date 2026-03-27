@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter, Organization } from '../../db/index.js';
-import { deleteOrgData } from '../../compliance-client.js';
+import { deleteOrgData, createComplianceClient } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, toastHtml, escapeHtml } from './helpers.js';
 
@@ -88,6 +88,20 @@ export async function organizationRoutes(
 
       try {
         const created = await storage.organizations.createOrg({ name, slug });
+
+        // Best effort — compliance client creation failure must not block org creation
+        if (complianceUrl !== undefined) {
+          try {
+            const token = getToken(request);
+            const { clientId, clientSecret } = await createComplianceClient(
+              complianceUrl, token, created.id, created.slug,
+            );
+            await storage.organizations.updateOrgComplianceClient(created.id, clientId, clientSecret);
+          } catch (err) {
+            server.log.warn({ err }, 'Failed to create compliance client for org');
+          }
+        }
+
         const row = orgRowHtml(created);
 
         return reply

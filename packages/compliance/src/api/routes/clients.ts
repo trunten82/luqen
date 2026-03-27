@@ -38,6 +38,7 @@ export async function registerClientRoutes(
         scopes: body.scopes as string[],
         grantTypes: body.grantTypes as ('client_credentials' | 'authorization_code')[],
         ...(Array.isArray(body.redirectUris) ? { redirectUris: body.redirectUris as string[] } : {}),
+        orgId: typeof body.orgId === 'string' ? body.orgId : 'system',
       });
       // Strip secretHash, keep secret (returned on creation only)
       const { secretHash: _sh, ...safeClient } = client;
