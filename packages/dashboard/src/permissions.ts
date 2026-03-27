@@ -98,7 +98,8 @@ export const ORG_OWNER_PERMISSIONS: readonly string[] = [
   'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
   'manual_testing', 'repos.manage', 'trends.view',
   'admin.roles', 'admin.teams', 'admin.org', 'admin.plugins',
-  'users.create', 'compliance.view', 'compliance.manage', 'audit.view',
+  'users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles',
+  'compliance.view', 'compliance.manage', 'audit.view',
 ];
 
 /** Permissions for the org-level "Admin" role. */
@@ -106,7 +107,8 @@ export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
   'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
   'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
   'manual_testing', 'repos.manage', 'trends.view',
-  'admin.plugins', 'users.create', 'compliance.view', 'compliance.manage',
+  'admin.plugins', 'users.create', 'users.delete', 'users.activate', 'users.reset_password',
+  'compliance.view', 'compliance.manage',
 ];
 
 /** Permissions for the org-level "Member" role. */

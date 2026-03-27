@@ -908,4 +908,29 @@ ALTER TABLE organizations ADD COLUMN compliance_client_id TEXT;
 ALTER TABLE organizations ADD COLUMN compliance_client_secret TEXT;
     `,
   },
+  {
+    id: '029',
+    name: 'add-user-management-to-org-owner-admin',
+    sql: `
+-- Add user management permissions to org Owner and Admin roles
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, p.perm FROM roles r
+  CROSS JOIN (
+    SELECT 'users.delete' AS perm UNION ALL
+    SELECT 'users.activate' UNION ALL
+    SELECT 'users.reset_password' UNION ALL
+    SELECT 'users.roles'
+  ) p
+  WHERE r.name = 'Owner' AND r.org_id != 'system';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, p.perm FROM roles r
+  CROSS JOIN (
+    SELECT 'users.delete' AS perm UNION ALL
+    SELECT 'users.activate' UNION ALL
+    SELECT 'users.reset_password'
+  ) p
+  WHERE r.name = 'Admin' AND r.org_id != 'system';
+    `,
+  },
 ];
