@@ -1,9 +1,15 @@
 import { randomBytes, createHash } from 'node:crypto';
 import type Database from 'better-sqlite3';
+import type { ApiKeyRole } from '../db/types.js';
 
 export interface ApiKeyResult {
   readonly key: string | null;
   readonly isNew: boolean;
+}
+
+export interface ApiKeyValidationResult {
+  readonly valid: boolean;
+  readonly role?: ApiKeyRole;
 }
 
 /**
@@ -27,36 +33,39 @@ export function storeApiKey(
   db: Database.Database,
   key: string,
   label: string,
+  role: ApiKeyRole = 'admin',
 ): string {
   const id = randomBytes(16).toString('hex');
   const keyHash = hashApiKey(key);
   const createdAt = new Date().toISOString();
 
   db.prepare(
-    `INSERT INTO api_keys (id, key_hash, label, active, created_at)
-     VALUES (@id, @keyHash, @label, 1, @createdAt)`,
-  ).run({ id, keyHash, label, createdAt });
+    `INSERT INTO api_keys (id, key_hash, label, active, created_at, role)
+     VALUES (@id, @keyHash, @label, 1, @createdAt, @role)`,
+  ).run({ id, keyHash, label, createdAt, role });
 
   return id;
 }
 
 /**
  * Validate an API key against active keys in the database.
+ * Returns the validation result including the key's role.
  */
 export function validateApiKey(
   db: Database.Database,
   key: string,
-): boolean {
+): ApiKeyValidationResult {
   const keyHash = hashApiKey(key);
   const row = db
-    .prepare('SELECT id FROM api_keys WHERE key_hash = @keyHash AND active = 1')
-    .get({ keyHash }) as { id: string } | undefined;
+    .prepare('SELECT id, role FROM api_keys WHERE key_hash = @keyHash AND active = 1')
+    .get({ keyHash }) as { id: string; role: string } | undefined;
 
   if (row !== undefined) {
     updateLastUsed(db, keyHash);
+    return { valid: true, role: (row.role ?? 'admin') as ApiKeyRole };
   }
 
-  return row !== undefined;
+  return { valid: false };
 }
 
 /**
