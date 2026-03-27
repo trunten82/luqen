@@ -105,13 +105,7 @@ export const ORG_OWNER_PERMISSIONS: readonly string[] = [
   'trends.view',
   'admin.roles',
   'admin.teams',
-  'admin.system',
   'admin.plugins',
-  'users.create',
-  'users.delete',
-  'users.activate',
-  'users.reset_password',
-  'users.roles',
   'audit.view',
 ];
 

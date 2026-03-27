@@ -147,6 +147,9 @@ export async function pluginAdminRoutes(
         },
         isAdmin,
         orgId,
+        orgName: (request as unknown as Record<string, unknown>).orgContext
+          ? ((request as unknown as Record<string, { currentOrg?: { name?: string } }>).orgContext?.currentOrg?.name ?? orgId)
+          : orgId,
         statusBadgeClass,
         typeBadgeClass,
       });
