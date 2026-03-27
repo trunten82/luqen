@@ -352,27 +352,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── API key role enforcement ────────────────────────────────────────────
   server.addHook('preHandler', enforceApiKeyRole);
 
-  // ── Permission loading (org-aware) ──────────────────────────────────────
-  server.addHook('preHandler', async (request: FastifyRequest) => {
-    if (request.user === undefined) return;
-
-    // Determine current org context from session (org context hook runs later,
-    // but we need the org id now for effective permission resolution).
-    const session = request.session as { get?(key: string): unknown } | undefined;
-    const currentOrgId = typeof session?.get === 'function'
-      ? (session.get('currentOrgId') as string | undefined) ?? ''
-      : '';
-
-    const orgId = currentOrgId !== '' ? currentOrgId : undefined;
-    const permissions = await resolveEffectivePermissions(
-      storage.roles,
-      request.user.id,
-      request.user.role,
-      orgId,
-    );
-
-    (request as unknown as Record<string, unknown>)['permissions'] = permissions;
-  });
+  // NOTE: Permission loading moved into the org context hook below so that
+  // org-scoped permissions are resolved AFTER the current org is determined.
 
   // ── Service token injection (auto-refresh for compliance API calls) ────
   server.addHook('preHandler', async (request: FastifyRequest) => {
@@ -488,6 +469,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       userOrgs,
       currentOrg,
     };
+
+    // Resolve permissions WITH org context (must happen after org is determined)
+    const permissions = await resolveEffectivePermissions(
+      storage.roles,
+      request.user.id,
+      request.user.role,
+      request.user.currentOrgId,
+    );
+    (request as unknown as Record<string, unknown>)['permissions'] = permissions;
   });
 
   // ── Routes ────────────────────────────────────────────────────────────────
