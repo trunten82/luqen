@@ -35,7 +35,7 @@ function roleBadgeClass(role: string): string {
   return 'badge--neutral';
 }
 
-function userRowHtml(user: DashboardUser): string {
+function userRowHtml(user: DashboardUser, requesterIsAdmin = false): string {
   const statusBadge = user.active
     ? '<span class="badge badge--success">Active</span>'
     : '<span class="badge badge--error">Inactive</span>';
@@ -81,7 +81,7 @@ function userRowHtml(user: DashboardUser): string {
         <option value="viewer" ${user.role === 'viewer' ? 'selected' : ''}>viewer</option>
         <option value="user" ${user.role === 'user' ? 'selected' : ''}>user</option>
         <option value="developer" ${user.role === 'developer' ? 'selected' : ''}>developer</option>
-        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>admin</option>
+        ${requesterIsAdmin ? `<option value="admin" ${user.role === 'admin' ? 'selected' : ''}>admin</option>` : ''}
       </select>`
     : roleBadge;
 
@@ -202,7 +202,7 @@ export async function dashboardUserRoutes(
 
       try {
         const created = await storage.users.createUser(username, password, role);
-        const row = userRowHtml(created);
+        const row = userRowHtml(created, request.user?.role === 'admin');
 
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.create', resourceType: 'user', resourceId: created.id, details: { username: created.username, role }, ipAddress: request.ip });
 
@@ -276,7 +276,7 @@ export async function dashboardUserRoutes(
             .send(toastHtml('User not found.', 'error'));
         }
 
-        const row = userRowHtml(updated);
+        const row = userRowHtml(updated, request.user?.role === 'admin');
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.role_change', resourceType: 'user', resourceId: id, details: { username: updated.username, newRole: role }, ipAddress: request.ip });
         return reply
           .code(200)
@@ -318,7 +318,7 @@ export async function dashboardUserRoutes(
             .send(toastHtml('User not found.', 'error'));
         }
 
-        const row = userRowHtml(deactivated);
+        const row = userRowHtml(deactivated, request.user?.role === 'admin');
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.deactivate', resourceType: 'user', resourceId: id, details: { username: deactivated.username }, ipAddress: request.ip });
         return reply
           .code(200)
@@ -352,7 +352,7 @@ export async function dashboardUserRoutes(
             .send(toastHtml('User not found.', 'error'));
         }
 
-        const row = userRowHtml(activated);
+        const row = userRowHtml(activated, request.user?.role === 'admin');
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.activate', resourceType: 'user', resourceId: id, details: { username: activated.username }, ipAddress: request.ip });
         return reply
           .code(200)
