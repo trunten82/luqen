@@ -30,6 +30,7 @@ export interface PluginRecord {
     readonly installedAt: string;
     readonly activatedAt?: string;
     readonly error?: string;
+    readonly orgId?: string;
 }
 export interface PluginInstance {
     readonly manifest: PluginManifest;
