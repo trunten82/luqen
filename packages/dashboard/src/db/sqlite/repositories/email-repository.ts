@@ -128,7 +128,7 @@ export class SqliteEmailRepository implements EmailRepository {
     return row !== undefined ? emailReportRowToRecord(row) : null;
   }
 
-  async createEmailReport(data: CreateEmailReportInput & { includeWarnings?: boolean; includeNotices?: boolean }): Promise<EmailReport> {
+  async createEmailReport(data: CreateEmailReportInput): Promise<EmailReport> {
     const stmt = this.db.prepare(`
       INSERT INTO email_reports (id, name, site_url, recipients, frequency, format, include_csv, include_warnings, include_notices, next_send_at, enabled, created_by, org_id, created_at_ts)
       VALUES (@id, @name, @siteUrl, @recipients, @frequency, @format, @includeCsv, @includeWarnings, @includeNotices, @nextSendAt, 1, @createdBy, @orgId, @createdAtTs)
