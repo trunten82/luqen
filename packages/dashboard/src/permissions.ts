@@ -98,7 +98,7 @@ export const ORG_OWNER_PERMISSIONS: readonly string[] = [
   'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
   'manual_testing', 'repos.manage', 'trends.view',
   'admin.roles', 'admin.teams', 'admin.org', 'admin.plugins',
-  'users.create', 'users.delete', 'users.activate', 'users.reset_password', 'users.roles',
+  'users.create', 'users.delete', 'users.activate', 'users.reset_password',
   'compliance.view', 'compliance.manage', 'audit.view',
 ];
 
