@@ -154,6 +154,12 @@ export class SqliteOrgRepository implements OrgRepository {
     return [...directMembers, ...inheritedMembers];
   }
 
+  async updateOrgComplianceClient(orgId: string, clientId: string, clientSecret: string): Promise<void> {
+    this.db.prepare(
+      'UPDATE organizations SET compliance_client_id = ?, compliance_client_secret = ? WHERE id = ?',
+    ).run(clientId, clientSecret, orgId);
+  }
+
   async getUserOrgs(userId: string): Promise<Organization[]> {
     // Direct membership
     const directRows = this.db.prepare(`
