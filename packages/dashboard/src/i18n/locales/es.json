@@ -63,6 +63,7 @@
     "dashboardUsers": "Usuarios del Panel",
     "teams": "Equipos",
     "roles": "Roles",
+    "myOrganization": "Mi Organizacion",
     "apiKeys": "Claves API",
     "oauthClients": "Clientes OAuth",
     "apiUsers": "Usuarios API",
