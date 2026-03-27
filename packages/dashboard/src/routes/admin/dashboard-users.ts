@@ -212,9 +212,13 @@ export async function dashboardUserRoutes(
         const orgId = request.user?.currentOrgId;
         if (!isAdmin && orgId && orgId !== 'system') {
           const orgTeams = await storage.teams.listTeamsByOrgId(orgId);
-          const memberTeam = orgTeams.find((t: { name: string }) => t.name === 'Direct Members' || t.name === 'Members');
+          // Prefer a "Members" team, fall back to any team in the org
+          const memberTeam = orgTeams.find((t: { name: string }) => t.name === 'Direct Members' || t.name === 'Members')
+            ?? orgTeams[0];
           if (memberTeam) {
             await storage.teams.addTeamMember(memberTeam.id, created.id);
+          } else {
+            request.log.warn({ orgId, teamsFound: orgTeams.length }, 'No team found to bind new user to org');
           }
         }
 
