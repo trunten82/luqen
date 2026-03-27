@@ -44,7 +44,7 @@ import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { getFixSuggestion } from './fix-suggestions.js';
-import { ALL_PERMISSION_IDS } from './permissions.js';
+import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
@@ -351,22 +351,25 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── API key role enforcement ────────────────────────────────────────────
   server.addHook('preHandler', enforceApiKeyRole);
 
-  // ── Permission loading ─────────────────────────────────────────────────
+  // ── Permission loading (org-aware) ──────────────────────────────────────
   server.addHook('preHandler', async (request: FastifyRequest) => {
     if (request.user === undefined) return;
-    const role = await storage.roles.getRoleByName(request.user.role);
-    const permissions = role ? new Set(role.permissions) : new Set<string>();
-    // For admin role, always grant all permissions
-    if (request.user.role === 'admin') {
-      for (const p of ALL_PERMISSION_IDS) permissions.add(p);
-    }
-    // Fall back to 'user' permissions if role not found in DB
-    if (role === null) {
-      const fallback = await storage.roles.getRoleByName('user');
-      if (fallback !== null) {
-        for (const p of fallback.permissions) permissions.add(p);
-      }
-    }
+
+    // Determine current org context from session (org context hook runs later,
+    // but we need the org id now for effective permission resolution).
+    const session = request.session as { get?(key: string): unknown } | undefined;
+    const currentOrgId = typeof session?.get === 'function'
+      ? (session.get('currentOrgId') as string | undefined) ?? ''
+      : '';
+
+    const orgId = currentOrgId !== '' ? currentOrgId : undefined;
+    const permissions = await resolveEffectivePermissions(
+      storage.roles,
+      request.user.id,
+      request.user.role,
+      orgId,
+    );
+
     (request as unknown as Record<string, unknown>)['permissions'] = permissions;
   });
 

@@ -18,4 +18,13 @@ export interface RoleRepository {
   }): Promise<void>;
   deleteRole(id: string): Promise<void>;
   getUserPermissions(userId: string): Promise<Set<string>>;
+  /**
+   * Resolve effective permissions for a user within an org context.
+   *
+   * effective = global_role.permissions UNION highest_org_role(user, org).permissions
+   *
+   * The highest org role is the role with the most permissions across all
+   * teams the user belongs to in the given org.
+   */
+  getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>>;
 }
