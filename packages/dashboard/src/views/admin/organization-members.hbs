@@ -6,15 +6,18 @@
     </a>
   </div>
 
-  {{! ---- Direct Members ---- }}
-  <h2 style="margin-top:1.5rem;">Direct Members</h2>
+  {{! ---- Organization Members (via teams) ---- }}
+  <h2 style="margin-top:1.5rem;">{{t "admin.organizations.orgMembers"}}</h2>
+  <p class="text-muted" style="margin-bottom:0.75rem;">{{t "admin.organizations.orgMembersDescription"}}</p>
 
-  <table class="table" aria-label="Direct organization members"{{#unless members.length}} style="display:none"{{/unless}} id="org-members-wrapper">
+  {{#if members.length}}
+  <table class="table" aria-label="Organization members" id="org-members-wrapper"
+         hx-get="/admin/organizations/{{org.id}}/members" hx-trigger="memberChanged from:body" hx-select="#org-members-wrapper" hx-swap="outerHTML">
     <thead>
       <tr>
         <th scope="col">{{t "admin.organizations.username"}}</th>
         <th scope="col">{{t "admin.organizations.role"}}</th>
-        <th scope="col">{{t "admin.organizations.joined"}}</th>
+        <th scope="col">{{t "admin.organizations.team"}}</th>
         <th scope="col">{{t "common.actions"}}</th>
       </tr>
     </thead>
@@ -23,10 +26,12 @@
       <tr id="member-{{this.userId}}">
         <td data-label="Username">{{this.username}}</td>
         <td data-label="Role"><span class="badge badge--neutral">{{this.role}}</span></td>
-        <td data-label="Joined">{{this.joinedAt}}</td>
+        <td data-label="Team">
+          {{#if this.teamName}}<span class="badge badge--info">{{this.teamName}}</span>{{else}}<span class="badge badge--neutral">{{t "admin.organizations.directMember"}}</span>{{/if}}
+        </td>
         <td>
           <button hx-post="/admin/organizations/{{../org.id}}/members/{{this.userId}}/remove"
-                  hx-confirm="Remove {{this.username}} from this organization?"
+                  hx-confirm="{{t 'admin.organizations.confirmRemove'}} {{this.username}}?"
                   hx-target="closest tr"
                   hx-swap="outerHTML"
                   class="btn btn--sm btn--warning"
@@ -38,18 +43,20 @@
       {{/each}}
     </tbody>
   </table>
-  {{#unless members.length}}
+  {{else}}
   <div class="empty-state" role="status" id="org-no-members">
     <p>{{t "admin.organizations.noMembers"}}</p>
   </div>
-  {{/unless}}
+  {{/if}}
 
+  {{! ---- Add Member to Team ---- }}
+  {{#if linkedTeams.length}}
   {{#if availableUsers.length}}
   <div class="card" style="margin-top: 1.5rem;">
-    <h2 class="card__title">{{t "admin.organizations.addMember"}}</h2>
-    <form hx-post="/admin/organizations/{{org.id}}/members"
-          hx-target="#org-members-table"
-          hx-swap="beforeend"
+    <h2 class="card__title">{{t "admin.organizations.addMemberToTeam"}}</h2>
+    <form hx-post="/admin/organizations/{{org.id}}/members/add-to-team"
+          hx-target="#toast"
+          hx-swap="innerHTML"
           class="form-inline">
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
@@ -64,58 +71,30 @@
       </div>
 
       <div class="form-group">
-        <label for="add-member-role" class="form-label">{{t "admin.organizations.role"}}</label>
-        <select id="add-member-role" name="role" class="select" required aria-required="true">
-          {{#each roles}}
-          <option value="{{this}}">{{this}}</option>
+        <label for="add-member-team" class="form-label">{{t "admin.organizations.team"}}</label>
+        <select id="add-member-team" name="teamId" class="select" required aria-required="true">
+          <option value="">{{t "admin.organizations.selectTeam"}}</option>
+          {{#each linkedTeams}}
+          <option value="{{this.id}}">{{this.name}} ({{this.roleName}})</option>
           {{/each}}
         </select>
       </div>
 
-      <button type="submit" class="btn btn--primary">{{t "admin.organizations.addMember"}}</button>
+      <button type="submit" class="btn btn--primary">{{t "admin.organizations.addMemberToTeam"}}</button>
     </form>
   </div>
   {{/if}}
-
-  {{! ---- Team Members (inherited) ---- }}
-  <h2 style="margin-top:2rem;">Team Members (inherited)</h2>
-  <p class="text-muted" style="margin-bottom:0.75rem;">These users are members of this organization through their team membership. Direct member roles take priority.</p>
-
-  {{#if inheritedMembers.length}}
-  <table class="table" aria-label="Team-inherited organization members">
-    <thead>
-      <tr>
-        <th scope="col">{{t "admin.organizations.username"}}</th>
-        <th scope="col">{{t "admin.organizations.role"}}</th>
-        <th scope="col">Via Team</th>
-        <th scope="col">Source</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{#each inheritedMembers}}
-      <tr>
-        <td data-label="Username">{{this.username}}</td>
-        <td data-label="Role"><span class="badge badge--neutral">{{this.role}}</span></td>
-        <td data-label="Via Team">{{this.teamName}}</td>
-        <td data-label="Source"><span class="badge badge--info">team</span></td>
-      </tr>
-      {{/each}}
-    </tbody>
-  </table>
-  {{else}}
-  <div class="empty-state" role="status">
-    <p>No team-inherited members. Link teams to this organization to see inherited members here.</p>
-  </div>
   {{/if}}
 
-  {{! ---- Linked Teams ---- }}
-  <h2 style="margin-top:2rem;">Linked Teams</h2>
+  {{! ---- Linked Teams with Roles ---- }}
+  <h2 style="margin-top:2rem;">{{t "admin.organizations.linkedTeams"}}</h2>
 
   {{#if linkedTeams.length}}
   <table class="table" aria-label="Teams linked to this organization">
     <thead>
       <tr>
-        <th scope="col">Team</th>
+        <th scope="col">{{t "admin.organizations.team"}}</th>
+        <th scope="col">{{t "admin.organizations.orgRole"}}</th>
         <th scope="col">{{t "admin.teams.members"}}</th>
       </tr>
     </thead>
@@ -123,6 +102,7 @@
       {{#each linkedTeams}}
       <tr>
         <td data-label="Team"><a href="/admin/teams/{{this.id}}">{{this.name}}</a></td>
+        <td data-label="Role"><span class="badge badge--neutral">{{this.roleName}}</span></td>
         <td data-label="Members"><span class="badge badge--neutral">{{this.memberCount}}</span></td>
       </tr>
       {{/each}}
@@ -130,7 +110,40 @@
   </table>
   {{else}}
   <div class="empty-state" role="status">
-    <p>No teams linked to this organization. Assign teams from the <a href="/admin/teams">Teams</a> page.</p>
+    <p>{{t "admin.organizations.noLinkedTeams"}}</p>
+  </div>
+  {{/if}}
+
+  <div style="margin-top:1rem;">
+    <a href="/admin/teams" class="btn btn--ghost">{{t "admin.organizations.manageTeams"}}</a>
+  </div>
+
+  {{! ---- Org-Scoped Roles ---- }}
+  <h2 style="margin-top:2rem;">{{t "admin.organizations.orgRoles"}}</h2>
+  <p class="text-muted" style="margin-bottom:0.75rem;">{{t "admin.organizations.orgRolesDescription"}}</p>
+
+  {{#if orgRoles.length}}
+  <table class="table" aria-label="Organization roles">
+    <thead>
+      <tr>
+        <th scope="col">{{t "admin.organizations.roleName"}}</th>
+        <th scope="col">{{t "admin.organizations.roleDescription"}}</th>
+        <th scope="col">{{t "admin.organizations.rolePermissions"}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each orgRoles}}
+      <tr>
+        <td data-label="Name"><strong>{{this.name}}</strong></td>
+        <td data-label="Description">{{this.description}}</td>
+        <td data-label="Permissions"><span class="badge badge--neutral">{{this.permissions.length}}</span></td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+  <div class="empty-state" role="status">
+    <p>{{t "admin.organizations.noOrgRoles"}}</p>
   </div>
   {{/if}}
 

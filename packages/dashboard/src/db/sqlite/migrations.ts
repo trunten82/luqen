@@ -578,4 +578,161 @@ ALTER TABLE email_reports ADD COLUMN include_warnings INTEGER NOT NULL DEFAULT 1
 ALTER TABLE email_reports ADD COLUMN include_notices INTEGER NOT NULL DEFAULT 1;
     `,
   },
+  {
+    id: '024',
+    name: 'backfill-default-org-roles',
+    sql: `
+-- Backfill default org-scoped roles for existing orgs that don't have them.
+-- New orgs already get these via createOrg(), but orgs created before RBAC
+-- (migration 021) have no org-scoped roles, so migration 022's "Direct
+-- Members" teams have NULL role_id.
+
+-- 1. Create the 4 default roles for each org missing an "Owner" role.
+--    Use deterministic IDs: 'role-<level>-<org_id>' so this is idempotent.
+
+INSERT OR IGNORE INTO roles (id, name, description, is_system, org_id, created_at)
+  SELECT
+    'role-owner-' || o.id,
+    'Owner',
+    'Full organization owner with all permissions',
+    0,
+    o.id,
+    datetime('now')
+  FROM organizations o
+  WHERE NOT EXISTS (
+    SELECT 1 FROM roles r WHERE r.name = 'Owner' AND r.org_id = o.id
+  );
+
+INSERT OR IGNORE INTO roles (id, name, description, is_system, org_id, created_at)
+  SELECT
+    'role-admin-' || o.id,
+    'Admin',
+    'Manage teams, run scans, view reports, configure plugins',
+    0,
+    o.id,
+    datetime('now')
+  FROM organizations o
+  WHERE NOT EXISTS (
+    SELECT 1 FROM roles r WHERE r.name = 'Admin' AND r.org_id = o.id
+  );
+
+INSERT OR IGNORE INTO roles (id, name, description, is_system, org_id, created_at)
+  SELECT
+    'role-member-' || o.id,
+    'Member',
+    'Run scans and view reports',
+    0,
+    o.id,
+    datetime('now')
+  FROM organizations o
+  WHERE NOT EXISTS (
+    SELECT 1 FROM roles r WHERE r.name = 'Member' AND r.org_id = o.id
+  );
+
+INSERT OR IGNORE INTO roles (id, name, description, is_system, org_id, created_at)
+  SELECT
+    'role-viewer-' || o.id,
+    'Viewer',
+    'View reports only',
+    0,
+    o.id,
+    datetime('now')
+  FROM organizations o
+  WHERE NOT EXISTS (
+    SELECT 1 FROM roles r WHERE r.name = 'Viewer' AND r.org_id = o.id
+  );
+
+-- 2. Insert permissions for Owner role (per org)
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT 'role-owner-' || o.id, p.permission
+  FROM organizations o
+  CROSS JOIN (
+    SELECT 'scans.create' AS permission UNION ALL
+    SELECT 'scans.schedule' UNION ALL
+    SELECT 'reports.view' UNION ALL
+    SELECT 'reports.view_technical' UNION ALL
+    SELECT 'reports.export' UNION ALL
+    SELECT 'reports.delete' UNION ALL
+    SELECT 'reports.compare' UNION ALL
+    SELECT 'issues.assign' UNION ALL
+    SELECT 'issues.fix' UNION ALL
+    SELECT 'manual_testing' UNION ALL
+    SELECT 'repos.manage' UNION ALL
+    SELECT 'trends.view' UNION ALL
+    SELECT 'admin.roles' UNION ALL
+    SELECT 'admin.teams' UNION ALL
+    SELECT 'admin.system' UNION ALL
+    SELECT 'users.create' UNION ALL
+    SELECT 'users.delete' UNION ALL
+    SELECT 'users.activate' UNION ALL
+    SELECT 'users.reset_password' UNION ALL
+    SELECT 'users.roles' UNION ALL
+    SELECT 'audit.view'
+  ) p
+  WHERE EXISTS (SELECT 1 FROM roles r WHERE r.id = 'role-owner-' || o.id);
+
+-- 3. Insert permissions for Admin role (per org)
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT 'role-admin-' || o.id, p.permission
+  FROM organizations o
+  CROSS JOIN (
+    SELECT 'scans.create' AS permission UNION ALL
+    SELECT 'scans.schedule' UNION ALL
+    SELECT 'reports.view' UNION ALL
+    SELECT 'reports.view_technical' UNION ALL
+    SELECT 'reports.export' UNION ALL
+    SELECT 'reports.delete' UNION ALL
+    SELECT 'reports.compare' UNION ALL
+    SELECT 'issues.assign' UNION ALL
+    SELECT 'issues.fix' UNION ALL
+    SELECT 'manual_testing' UNION ALL
+    SELECT 'repos.manage' UNION ALL
+    SELECT 'trends.view' UNION ALL
+    SELECT 'admin.teams'
+  ) p
+  WHERE EXISTS (SELECT 1 FROM roles r WHERE r.id = 'role-admin-' || o.id);
+
+-- 4. Insert permissions for Member role (per org)
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT 'role-member-' || o.id, p.permission
+  FROM organizations o
+  CROSS JOIN (
+    SELECT 'scans.create' AS permission UNION ALL
+    SELECT 'reports.view' UNION ALL
+    SELECT 'reports.export' UNION ALL
+    SELECT 'reports.compare' UNION ALL
+    SELECT 'trends.view'
+  ) p
+  WHERE EXISTS (SELECT 1 FROM roles r WHERE r.id = 'role-member-' || o.id);
+
+-- 5. Insert permissions for Viewer role (per org)
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT 'role-viewer-' || o.id, p.permission
+  FROM organizations o
+  CROSS JOIN (
+    SELECT 'reports.view' AS permission
+  ) p
+  WHERE EXISTS (SELECT 1 FROM roles r WHERE r.id = 'role-viewer-' || o.id);
+
+-- 6. Fix "Direct Members" teams from migration 022 that have NULL role_id.
+--    Point them at the org-scoped "Member" role.
+UPDATE teams
+  SET role_id = (
+    SELECT r.id FROM roles r
+    WHERE r.name = 'Member' AND r.org_id = teams.org_id
+    LIMIT 1
+  )
+  WHERE name = 'Direct Members'
+    AND role_id IS NULL
+    AND org_id != 'system';
+
+-- 7. Add admin.plugins permission to system admin role and org Owner/Admin roles
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'admin.plugins');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'admin.plugins'
+  FROM roles r
+  WHERE r.name IN ('Owner', 'Admin') AND r.org_id != 'system';
+    `,
+  },
 ];
