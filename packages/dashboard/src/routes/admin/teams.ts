@@ -63,7 +63,7 @@ export async function teamRoutes(
   // GET /admin/teams — list teams
   server.get(
     '/admin/teams',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Admin sees all teams; other users see teams in their org
       const isAdmin = request.user?.role === 'admin';
@@ -92,7 +92,7 @@ export async function teamRoutes(
   // POST /admin/teams — create team
   server.post(
     '/admin/teams',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateTeamBody;
       const name = (body.name ?? '').trim();
@@ -142,7 +142,7 @@ export async function teamRoutes(
   // DELETE /admin/teams/:id — delete team
   server.delete(
     '/admin/teams/:id',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const team = await storage.teams.getTeam(id);
@@ -159,7 +159,7 @@ export async function teamRoutes(
   // GET /admin/teams/:id — team detail with members
   server.get(
     '/admin/teams/:id',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const team = await storage.teams.getTeam(id);
@@ -192,7 +192,7 @@ export async function teamRoutes(
   // POST /admin/teams/:id/org — update team organization link
   server.post(
     '/admin/teams/:id/org',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as UpdateTeamBody;
@@ -232,7 +232,7 @@ export async function teamRoutes(
   // POST /admin/teams/:id/role — update team role assignment
   server.post(
     '/admin/teams/:id/role',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { roleId?: string };
@@ -282,7 +282,7 @@ export async function teamRoutes(
   // POST /admin/teams/:id/members — add member
   server.post(
     '/admin/teams/:id/members',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as AddMemberBody;
@@ -316,7 +316,7 @@ export async function teamRoutes(
   // DELETE /admin/teams/:id/members/:userId — remove member
   server.delete(
     '/admin/teams/:id/members/:userId',
-    { preHandler: requirePermission('users.activate') },
+    { preHandler: requirePermission('admin.teams') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
 

@@ -39,6 +39,24 @@ export class SqliteRoleRepository implements RoleRepository {
     return rows.map((row) => this.roleRowToRecord(row));
   }
 
+  async listGlobalRoles(): Promise<Role[]> {
+    const sql = "SELECT * FROM roles WHERE org_id = 'system' ORDER BY is_system DESC, name ASC";
+    const rows = this.db.prepare(sql).all() as RoleRow[];
+    return rows.map((row) => this.roleRowToRecord(row));
+  }
+
+  async listOrgRoles(orgId: string): Promise<Role[]> {
+    const sql = "SELECT * FROM roles WHERE org_id = @orgId AND org_id != 'system' ORDER BY is_system DESC, name ASC";
+    const rows = this.db.prepare(sql).all({ orgId }) as RoleRow[];
+    return rows.map((row) => this.roleRowToRecord(row));
+  }
+
+  async getRoleByNameAndOrg(name: string, orgId: string): Promise<Role | null> {
+    const stmt = this.db.prepare('SELECT * FROM roles WHERE name = ? AND org_id = ?');
+    const row = stmt.get(name, orgId) as RoleRow | undefined;
+    return row !== undefined ? this.roleRowToRecord(row) : null;
+  }
+
   async getRole(id: string): Promise<Role | null> {
     const stmt = this.db.prepare('SELECT * FROM roles WHERE id = ?');
     const row = stmt.get(id) as RoleRow | undefined;
@@ -127,7 +145,7 @@ export class SqliteRoleRepository implements RoleRepository {
         ).run(params);
       }
 
-      if (data.permissions !== undefined) {
+      if (data.permissions !== undefined && !role.isSystem) {
         this.db.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(id);
         const insertPerm = this.db.prepare(
           'INSERT INTO role_permissions (role_id, permission) VALUES (@roleId, @permission)',

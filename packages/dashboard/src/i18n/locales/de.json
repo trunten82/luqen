@@ -438,7 +438,17 @@
       "roleNameHint": "Nur Buchstaben, Zahlen, Bindestriche und Unterstriche.",
       "descriptionPlaceholder": "Beschreiben Sie, wofür diese Rolle gedacht ist...",
       "permissionsHint": "Wählen Sie die Berechtigungen, die diese Rolle haben soll.",
-      "saveChanges": "Änderungen Speichern"
+      "saveChanges": "Änderungen Speichern",
+      "globalRolesTab": "Globale Rollen",
+      "orgRolesTab": "Organisationsrollen",
+      "globalRolesDescription": "Systemweite Rollen, die von Administratoren verwaltet werden.",
+      "orgRolesDescription": "Auf Ihre Organisation beschränkte Rollen.",
+      "noGlobalRoles": "Keine globalen Rollen gefunden.",
+      "noOrgRoles": "Keine Organisationsrollen gefunden.",
+      "cannotDeleteDefault": "Standard-Organisationsrollen können nicht gelöscht werden.",
+      "readOnly": "Sie haben nur Lesezugriff auf Rollen.",
+      "orgScoped": "Org",
+      "orgName": "Organisation"
     },
     "apiKeys": {
       "createApiKey": "API-Schlüssel Erstellen",
