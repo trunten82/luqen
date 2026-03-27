@@ -113,6 +113,7 @@ export async function pluginAdminRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const isAdmin = request.user?.role === 'admin';
+      const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined ?? new Set<string>();
 
       // Admin without org context sees all; others see org-scoped + global
       const installed = isAdmin && orgId === 'system'
@@ -146,6 +147,7 @@ export async function pluginAdminRoutes(
           available: available.length,
         },
         isAdmin,
+        canInstallPlugins: isAdmin || perms.has('admin.plugins'),
         orgId,
         statusBadgeClass,
         typeBadgeClass,
