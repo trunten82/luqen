@@ -25,6 +25,7 @@ export const ALL_PERMISSIONS = [
   { id: 'users.roles', label: 'Change user roles', group: 'User Management' },
   { id: 'admin.users', label: 'Manage compliance API users', group: 'Administration' },
   { id: 'admin.roles', label: 'Manage roles', group: 'Administration' },
+  { id: 'admin.teams', label: 'Manage teams', group: 'Administration' },
   { id: 'admin.system', label: 'System settings', group: 'Administration' },
   { id: 'audit.view', label: 'View audit log', group: 'Administration' },
 ] as const;
@@ -62,3 +63,98 @@ export function hasPermission(request: unknown, permission: string): boolean {
   const perms = (request as { permissions?: Set<string> }).permissions;
   return perms?.has(permission) === true;
 }
+
+/**
+ * Resolve effective permissions for a user:
+ *   effective = global_role.permissions UNION highest_org_role(user, org).permissions
+ *
+ * Admin users bypass org-level checks and always get all permissions.
+ */
+export async function resolveEffectivePermissions(
+  roleRepository: { getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>> },
+  userId: string,
+  userRole: string,
+  orgId?: string,
+): Promise<Set<string>> {
+  // Admin users get all permissions regardless of org context
+  if (userRole === 'admin') {
+    return new Set(ALL_PERMISSION_IDS);
+  }
+
+  return roleRepository.getEffectivePermissions(userId, orgId);
+}
+
+// ---------------------------------------------------------------------------
+// Org-scoped role definitions (default roles created when an org is created)
+// ---------------------------------------------------------------------------
+
+/** Permissions for the org-level "Owner" role (all org permissions). */
+export const ORG_OWNER_PERMISSIONS: readonly string[] = [
+  'scans.create',
+  'scans.schedule',
+  'reports.view',
+  'reports.view_technical',
+  'reports.export',
+  'reports.delete',
+  'reports.compare',
+  'issues.assign',
+  'issues.fix',
+  'manual_testing',
+  'repos.manage',
+  'trends.view',
+  'admin.roles',
+  'admin.teams',
+  'admin.system',
+  'users.create',
+  'users.delete',
+  'users.activate',
+  'users.reset_password',
+  'users.roles',
+  'audit.view',
+];
+
+/** Permissions for the org-level "Admin" role. */
+export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
+  'scans.create',
+  'scans.schedule',
+  'reports.view',
+  'reports.view_technical',
+  'reports.export',
+  'reports.delete',
+  'reports.compare',
+  'issues.assign',
+  'issues.fix',
+  'manual_testing',
+  'repos.manage',
+  'trends.view',
+  'admin.teams',
+];
+
+/** Permissions for the org-level "Member" role. */
+export const ORG_MEMBER_PERMISSIONS: readonly string[] = [
+  'scans.create',
+  'reports.view',
+  'reports.export',
+  'reports.compare',
+  'trends.view',
+];
+
+/** Permissions for the org-level "Viewer" role. */
+export const ORG_VIEWER_PERMISSIONS: readonly string[] = [
+  'reports.view',
+];
+
+/**
+ * Default org role definitions, created automatically when an org is created.
+ * Each entry defines a role name, description, and set of permissions.
+ */
+export const DEFAULT_ORG_ROLES: ReadonlyArray<{
+  readonly name: string;
+  readonly description: string;
+  readonly permissions: readonly string[];
+}> = [
+  { name: 'Owner', description: 'Full organization owner with all permissions', permissions: ORG_OWNER_PERMISSIONS },
+  { name: 'Admin', description: 'Manage teams, run scans, view reports, configure plugins', permissions: ORG_ADMIN_PERMISSIONS },
+  { name: 'Member', description: 'Run scans and view reports', permissions: ORG_MEMBER_PERMISSIONS },
+  { name: 'Viewer', description: 'View reports only', permissions: ORG_VIEWER_PERMISSIONS },
+];

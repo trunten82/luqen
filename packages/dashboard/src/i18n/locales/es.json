@@ -438,7 +438,17 @@
       "roleNameHint": "Solo letras, números, guiones y guiones bajos.",
       "descriptionPlaceholder": "Describe para qué sirve este rol...",
       "permissionsHint": "Selecciona los permisos que debe tener este rol.",
-      "saveChanges": "Guardar Cambios"
+      "saveChanges": "Guardar Cambios",
+      "globalRolesTab": "Roles Globales",
+      "orgRolesTab": "Roles de Organización",
+      "globalRolesDescription": "Roles a nivel de sistema gestionados por administradores.",
+      "orgRolesDescription": "Roles específicos de tu organización.",
+      "noGlobalRoles": "No se encontraron roles globales.",
+      "noOrgRoles": "No se encontraron roles de organización.",
+      "cannotDeleteDefault": "Los roles predeterminados de la organización no se pueden eliminar.",
+      "readOnly": "Tienes acceso de solo lectura a los roles.",
+      "orgScoped": "Org",
+      "orgName": "Organización"
     },
     "apiKeys": {
       "createApiKey": "Crear Clave API",
@@ -551,6 +561,8 @@
       "csvOnly": "Solo CSV",
       "htmlAndCsv": "HTML + CSV",
       "includeCsv": "Incluir también adjunto CSV",
+      "includeWarnings": "Incluir advertencias en el informe",
+      "includeNotices": "Incluir avisos en el informe",
       "createScheduleBtn": "Crear Programación",
       "scheduledReports": "Informes Programados",
       "format": "Formato",

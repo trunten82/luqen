@@ -349,6 +349,7 @@ describe('processEmailReport', () => {
       getActiveInstanceByPackageName: vi.fn().mockReturnValue({
         sendReport: mockSendReport,
       }),
+      getPluginConfigForOrg: vi.fn().mockReturnValue(null),
     } as any;
 
     const storage = makeStorage();
@@ -361,19 +362,23 @@ describe('processEmailReport', () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it('throws when email plugin lacks sendReport method', async () => {
+  it('logs error and skips update when email plugin lacks sendReport method', async () => {
     const pluginManager = {
       getActiveInstanceByPackageName: vi.fn().mockReturnValue({
         // no sendReport method
       }),
+      getPluginConfigForOrg: vi.fn().mockReturnValue(null),
     } as any;
 
     const storage = makeStorage();
     const report = makeReport();
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await expect(processEmailReport(storage, report, pluginManager)).rejects.toThrow(
-      'Email plugin does not expose sendReport method',
-    );
+    await processEmailReport(storage, report, pluginManager);
+
+    expect(consoleSpy).toHaveBeenCalled();
+    expect(storage.email.updateEmailReport).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 
   it('falls back to system SMTP config when org config is null', async () => {
@@ -565,6 +570,7 @@ describe('startEmailScheduler', () => {
       getActiveInstanceByPackageName: vi.fn().mockReturnValue({
         sendReport: mockSendReport,
       }),
+      getPluginConfigForOrg: vi.fn().mockReturnValue(null),
     } as any;
 
     const report = makeReport();

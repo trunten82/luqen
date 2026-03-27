@@ -106,12 +106,19 @@ export async function pluginAdminRoutes(
   pluginManager: PluginManager,
   registryEntries: readonly RegistryEntry[],
 ): Promise<void> {
-  // GET /admin/plugins — render plugins page
+  // GET /admin/plugins — render plugins page (scoped by org)
   server.get(
     '/admin/plugins',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const installed = pluginManager.list();
+      const orgId = request.user?.currentOrgId ?? 'system';
+      const isAdmin = request.user?.role === 'admin';
+
+      // Admin without org context sees all; others see org-scoped + global
+      const installed = isAdmin && orgId === 'system'
+        ? pluginManager.list()
+        : pluginManager.list(orgId);
+
       const installedPackages = new Set(installed.map((p) => p.packageName));
 
       const available = registryEntries.filter(
@@ -120,17 +127,26 @@ export async function pluginAdminRoutes(
 
       const activeCount = installed.filter((p) => p.status === 'active').length;
 
+      // Separate global vs org plugins for display
+      const globalPlugins = installed.filter((p) => p.orgId === 'system' || p.orgId === undefined);
+      const orgPlugins = installed.filter((p) => p.orgId !== 'system' && p.orgId !== undefined);
+
       return reply.view('admin/plugins.hbs', {
         pageTitle: 'Plugins',
         currentPath: '/admin/plugins',
         user: request.user,
         installed,
+        globalPlugins,
+        orgPlugins,
+        hasOrgPlugins: orgPlugins.length > 0,
         available,
         counts: {
           installed: installed.length,
           active: activeCount,
           available: available.length,
         },
+        isAdmin,
+        orgId,
         statusBadgeClass,
         typeBadgeClass,
       });
@@ -311,6 +327,50 @@ export async function pluginAdminRoutes(
           .header('content-type', 'text/html')
           .header('hx-trigger', 'pluginChanged')
           .send('<div class="alert alert--success">Configuration saved</div>');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(`<div class="alert alert--error">Save failed: ${escapeHtml(message)}</div>`);
+      }
+    },
+  );
+
+  // PATCH /admin/plugins/:packageName/org-config — save org-specific plugin config
+  server.patch<{ Params: { packageName: string }; Body: Record<string, unknown> }>(
+    '/admin/plugins/:packageName/org-config',
+    { preHandler: requirePermission('admin.system') },
+    async (request, reply) => {
+      try {
+        const orgId = request.user?.currentOrgId;
+        if (!orgId || orgId === 'system') {
+          return reply
+            .code(400)
+            .header('content-type', 'text/html')
+            .send('<div class="alert alert--error">No organization context</div>');
+        }
+
+        const config = (request.body ?? {}) as Record<string, unknown>;
+
+        // Remove empty strings for secret fields (means "no change")
+        const cleanedConfig: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(config)) {
+          if (typeof v === 'string' && v === '') {
+            continue;
+          }
+          cleanedConfig[k] = v;
+        }
+
+        await pluginManager.configureForOrg(
+          decodeURIComponent(request.params.packageName),
+          orgId,
+          cleanedConfig,
+        );
+        return reply
+          .header('content-type', 'text/html')
+          .header('hx-trigger', 'pluginChanged')
+          .send('<div class="alert alert--success">Organization plugin configuration saved</div>');
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         return reply

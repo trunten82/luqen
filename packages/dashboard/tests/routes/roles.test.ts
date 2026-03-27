@@ -73,9 +73,9 @@ describe('Role routes', () => {
       const ctx = await createTestServer();
       const response = await ctx.server.inject({ method: 'GET', url: '/admin/roles' });
       ctx.cleanup();
-      const body = response.json() as { data: { roles: Array<{ name: string; systemBadge: boolean; canDelete: boolean }> } };
-      expect(body.data.roles.length).toBeGreaterThan(0);
-      const adminRole = body.data.roles.find((r) => r.name === 'admin');
+      const body = response.json() as { data: { globalRoles: Array<{ name: string; systemBadge: boolean; canDelete: boolean }> } };
+      expect(body.data.globalRoles.length).toBeGreaterThan(0);
+      const adminRole = body.data.globalRoles.find((r) => r.name === 'admin');
       expect(adminRole).toBeDefined();
       expect(adminRole?.systemBadge).toBe(true);
       expect(adminRole?.canDelete).toBe(false);

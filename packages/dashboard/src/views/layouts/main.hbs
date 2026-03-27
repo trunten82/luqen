@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Luqen — Accessibility Scanner">
   <title>{{#if pageTitle}}{{pageTitle}} — {{/if}}{{t "common.appName"}}</title>
-  <link rel="stylesheet" href="/static/style.css?v=0.21.0">
+  <link rel="stylesheet" href="/static/style.css?v=0.22.0">
   <meta name="csrf-token" content="{{csrfToken}}">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 </head>
@@ -30,7 +30,7 @@
         <path d="M2 5h16M2 10h16M2 15h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
     </button>
-    <span style="font-size:1.125rem;font-weight:700;color:var(--accent)">{{t "common.appName"}}</span>
+    <span class="app-header__brand">{{t "common.appName"}}</span>
     <span class="app-header__user">{{user.username}}</span>
   </header>
   {{/if}}
@@ -54,6 +54,15 @@
 
   <script src="/static/htmx.min.js"></script>
   <script src="/static/htmx-sse.js"></script>
+  <script>
+    /* Automatically include CSRF token on every HTMX request */
+    document.body.addEventListener('htmx:configRequest', function(event) {
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      if (csrfMeta) {
+        event.detail.headers['x-csrf-token'] = csrfMeta.getAttribute('content');
+      }
+    });
+  </script>
   <script src="/static/app.js"></script>
 </body>
 </html>

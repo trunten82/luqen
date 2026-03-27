@@ -474,4 +474,108 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'a
 ALTER TABLE scan_records ADD COLUMN json_report TEXT;
     `,
   },
+  {
+    id: '019',
+    name: 'add-api-key-role',
+    sql: `
+ALTER TABLE api_keys ADD COLUMN role TEXT NOT NULL DEFAULT 'admin';
+    `,
+  },
+  {
+    id: '020',
+    name: 'add-plugin-checksum',
+    sql: `
+ALTER TABLE plugins ADD COLUMN checksum TEXT;
+    `,
+  },
+  {
+    id: '021',
+    name: 'rbac-org-scoped-roles',
+    sql: `
+-- Recreate roles table without the UNIQUE constraint on name alone.
+-- SQLite cannot drop a column-level UNIQUE, so we use copy-rename.
+-- We must preserve role_permissions data because the FK CASCADE on the
+-- old roles table would delete them when we drop it.
+
+-- 1. Back up role_permissions
+CREATE TABLE _rp_backup AS SELECT * FROM role_permissions;
+
+-- 2. Drop role_permissions (removes FK dependency on old roles table)
+DROP TABLE role_permissions;
+
+-- 3. Recreate roles without the name-only UNIQUE constraint
+CREATE TABLE roles_new (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  is_system INTEGER NOT NULL DEFAULT 0,
+  org_id TEXT NOT NULL DEFAULT 'system',
+  created_at TEXT NOT NULL
+);
+INSERT INTO roles_new SELECT id, name, description, is_system, org_id, created_at FROM roles;
+DROP TABLE roles;
+ALTER TABLE roles_new RENAME TO roles;
+
+-- 4. Restore indexes on roles
+CREATE INDEX IF NOT EXISTS idx_roles_org ON roles(org_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_roles_name_org ON roles(name, org_id);
+
+-- 5. Recreate role_permissions with FK to the new roles table
+CREATE TABLE role_permissions (
+  role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  permission TEXT NOT NULL,
+  PRIMARY KEY (role_id, permission)
+);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+INSERT INTO role_permissions SELECT role_id, permission FROM _rp_backup;
+DROP TABLE _rp_backup;
+
+-- 6. Add role_id column to teams (nullable FK to roles)
+ALTER TABLE teams ADD COLUMN role_id TEXT REFERENCES roles(id) ON DELETE SET NULL;
+
+-- 7. Add org_id column to plugins table (for future org-scoped plugin config)
+ALTER TABLE plugins ADD COLUMN org_id TEXT NOT NULL DEFAULT 'system';
+    `,
+  },
+  {
+    id: '022',
+    name: 'migrate-direct-members-to-teams',
+    sql: `
+-- For each org that has direct members, create a "Direct Members" team,
+-- assign the org-scoped "Member" role to it, and move all direct members
+-- into that team. This ensures all org access flows through teams.
+
+-- 1. Create "Direct Members" teams for every org that has direct members.
+--    Use org_id as a deterministic team id suffix to avoid collisions.
+INSERT INTO teams (id, name, description, org_id, role_id, created_at)
+  SELECT
+    'team-dm-' || om.org_id,
+    'Direct Members',
+    'Auto-created team for migrated direct organization members',
+    om.org_id,
+    (SELECT r.id FROM roles r WHERE r.name = 'Member' AND r.org_id = om.org_id LIMIT 1),
+    datetime('now')
+  FROM org_members om
+  GROUP BY om.org_id;
+
+-- 2. Move direct members into their corresponding "Direct Members" team.
+INSERT OR IGNORE INTO team_members (team_id, user_id, role)
+  SELECT
+    'team-dm-' || om.org_id,
+    om.user_id,
+    om.role
+  FROM org_members om;
+
+-- 3. Clear the org_members table (all access now goes through teams).
+DELETE FROM org_members;
+    `,
+  },
+  {
+    id: '023',
+    name: 'add-email-report-warning-notice-flags',
+    sql: `
+ALTER TABLE email_reports ADD COLUMN include_warnings INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE email_reports ADD COLUMN include_notices INTEGER NOT NULL DEFAULT 1;
+    `,
+  },
 ];

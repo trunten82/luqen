@@ -15,6 +15,7 @@ import type {
 } from './types.js';
 import { encryptConfig, decryptConfig, maskSecrets } from './crypto.js';
 import { getByName, getByPackageName } from './registry.js';
+import { computeDirectoryChecksum } from './checksum.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,6 +38,8 @@ interface PluginRow {
   readonly installed_at: string;
   readonly activated_at: string | null;
   readonly error: string | null;
+  readonly checksum: string | null;
+  readonly org_id: string;
 }
 
 type DownloadFn = (url: string, destPath: string) => Promise<void>;
@@ -58,6 +61,7 @@ function rowToRecord(row: PluginRow, config: Record<string, unknown>): PluginRec
     config,
     status: row.status as PluginStatus,
     installedAt: row.installed_at,
+    orgId: row.org_id,
     ...(row.activated_at ? { activatedAt: row.activated_at } : {}),
     ...(row.error ? { error: row.error } : {}),
   };
@@ -199,13 +203,16 @@ export class PluginManager {
 
     const manifest = this.readManifest(registryEntry.packageName);
 
+    // Compute checksum of installed plugin files for integrity verification
+    const checksum = computeDirectoryChecksum(destDir);
+
     const id = randomUUID();
     const now = new Date().toISOString();
 
     this.db
       .prepare(
-        `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
-         VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
+        `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at, checksum)
+         VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at, @checksum)`,
       )
       .run({
         id,
@@ -215,6 +222,7 @@ export class PluginManager {
         config: '{}',
         status: 'inactive',
         installed_at: now,
+        checksum,
       });
 
     return this.getPluginOrThrow(id);
@@ -251,6 +259,21 @@ export class PluginManager {
     const row = this.getRow(id);
     if (!row) {
       throw new Error(`Plugin "${id}" not found`);
+    }
+
+    // Verify plugin file integrity before loading
+    if (row.checksum !== null) {
+      const pkgDir = this.resolvePackageDir(row.package_name);
+      if (existsSync(pkgDir)) {
+        const currentChecksum = computeDirectoryChecksum(pkgDir);
+        if (currentChecksum !== row.checksum) {
+          const message = `Plugin "${row.package_name}" checksum mismatch — files may have been tampered with (expected ${row.checksum.slice(0, 12)}..., got ${currentChecksum.slice(0, 12)}...)`;
+          this.db
+            .prepare('UPDATE plugins SET status = @status, error = @error WHERE id = @id')
+            .run({ id, status: 'error', error: message });
+          return this.getPluginOrThrow(id);
+        }
+      }
     }
 
     const manifest = this.readManifest(row.package_name);
@@ -342,10 +365,13 @@ export class PluginManager {
   // List / Get
   // -----------------------------------------------------------------------
 
-  list(): PluginRecord[] {
-    const rows = this.db
-      .prepare('SELECT * FROM plugins ORDER BY installed_at DESC')
-      .all() as PluginRow[];
+  list(orgId?: string): PluginRecord[] {
+    const sql = orgId !== undefined
+      ? "SELECT * FROM plugins WHERE org_id = @orgId OR org_id = 'system' ORDER BY installed_at DESC"
+      : 'SELECT * FROM plugins ORDER BY installed_at DESC';
+    const rows = orgId !== undefined
+      ? this.db.prepare(sql).all({ orgId }) as PluginRow[]
+      : this.db.prepare(sql).all() as PluginRow[];
 
     return rows.map((row) => {
       const config = JSON.parse(row.config) as Record<string, unknown>;
@@ -355,6 +381,94 @@ export class PluginManager {
         : config;
       return rowToRecord(row, masked);
     });
+  }
+
+  /**
+   * Get the effective plugin config for an org context.
+   * Returns org-specific config if it exists, otherwise falls back to global (system) config.
+   */
+  getPluginConfigForOrg(packageName: string, orgId: string): Record<string, unknown> | null {
+    // First try org-specific config
+    const orgRow = this.db
+      .prepare("SELECT * FROM plugins WHERE package_name = @pkg AND org_id = @orgId AND status = 'active'")
+      .get({ pkg: packageName, orgId }) as PluginRow | undefined;
+
+    if (orgRow) {
+      const manifest = this.tryReadManifest(orgRow.package_name);
+      const raw = JSON.parse(orgRow.config) as Record<string, unknown>;
+      return manifest
+        ? decryptConfig(raw, manifest.configSchema, this.encryptionKey)
+        : raw;
+    }
+
+    // Fall back to global (system) config
+    const globalRow = this.db
+      .prepare("SELECT * FROM plugins WHERE package_name = @pkg AND org_id = 'system' AND status = 'active'")
+      .get({ pkg: packageName }) as PluginRow | undefined;
+
+    if (globalRow) {
+      const manifest = this.tryReadManifest(globalRow.package_name);
+      const raw = JSON.parse(globalRow.config) as Record<string, unknown>;
+      return manifest
+        ? decryptConfig(raw, manifest.configSchema, this.encryptionKey)
+        : raw;
+    }
+
+    return null;
+  }
+
+  /**
+   * Create or update an org-specific plugin configuration.
+   * This clones a global plugin entry for a specific org with custom config.
+   */
+  async configureForOrg(
+    packageName: string,
+    orgId: string,
+    config: Record<string, unknown>,
+  ): Promise<PluginRecord> {
+    // Check if org-specific entry already exists
+    const existing = this.db
+      .prepare('SELECT * FROM plugins WHERE package_name = @pkg AND org_id = @orgId')
+      .get({ pkg: packageName, orgId }) as PluginRow | undefined;
+
+    const manifest = this.readManifest(packageName);
+    const encrypted = encryptConfig(config, manifest.configSchema, this.encryptionKey);
+
+    if (existing) {
+      this.db
+        .prepare('UPDATE plugins SET config = @config WHERE id = @id')
+        .run({ id: existing.id, config: JSON.stringify(encrypted) });
+      return this.getPluginOrThrow(existing.id);
+    }
+
+    // Create new org-specific entry (clone from global)
+    const globalRow = this.db
+      .prepare("SELECT * FROM plugins WHERE package_name = @pkg AND org_id = 'system'")
+      .get({ pkg: packageName }) as PluginRow | undefined;
+
+    if (!globalRow) {
+      throw new Error(`Plugin "${packageName}" not found globally`);
+    }
+
+    const id = randomUUID();
+    const now = new Date().toISOString();
+
+    this.db
+      .prepare(`INSERT INTO plugins (id, package_name, type, version, config, status, installed_at, checksum, org_id)
+               VALUES (@id, @pkg, @type, @version, @config, @status, @installed_at, @checksum, @orgId)`)
+      .run({
+        id,
+        pkg: packageName,
+        type: globalRow.type,
+        version: globalRow.version,
+        config: JSON.stringify(encrypted),
+        status: globalRow.status,
+        installed_at: now,
+        checksum: globalRow.checksum,
+        orgId,
+      });
+
+    return this.getPluginOrThrow(id);
   }
 
   getPlugin(id: string): PluginRecord | null {

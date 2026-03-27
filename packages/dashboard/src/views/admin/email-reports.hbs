@@ -147,6 +147,16 @@
         <label for="report-include-csv" style="margin: 0;">{{t "admin.emailReports.includeCsv"}}</label>
       </div>
 
+      <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
+        <input type="checkbox" id="report-include-warnings" name="includeWarnings" checked>
+        <label for="report-include-warnings" style="margin: 0;">{{t "admin.emailReports.includeWarnings"}}</label>
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
+        <input type="checkbox" id="report-include-notices" name="includeNotices" checked>
+        <label for="report-include-notices" style="margin: 0;">{{t "admin.emailReports.includeNotices"}}</label>
+      </div>
+
       <div class="form-group" style="display: flex; align-items: end;">
         <button type="submit" class="btn btn--primary">{{t "admin.emailReports.createScheduleBtn"}}</button>
       </div>

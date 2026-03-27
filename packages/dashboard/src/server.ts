@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { DashboardConfig } from './config.js';
-import { registerSession } from './auth/session.js';
+import { registerSession, getSessionExpiryMs, createSessionExpiryHook } from './auth/session.js';
 import { createAuthGuard } from './auth/middleware.js';
 import { AuthService } from './auth/auth-service.js';
 import { authRoutes } from './routes/auth.js';
@@ -44,13 +44,14 @@ import { apiKeyRoutes } from './routes/admin/api-keys.js';
 import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { getFixSuggestion } from './fix-suggestions.js';
-import { ALL_PERMISSION_IDS } from './permissions.js';
+import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
 import { ServiceTokenManager } from './auth/service-token.js';
+import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
@@ -334,6 +335,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     return payload;
   });
 
+  // ── Session expiry ──────────────────────────────────────────────────────
+  const sessionExpiryMs = getSessionExpiryMs();
+  server.addHook('preHandler', createSessionExpiryHook(sessionExpiryMs));
+
   // ── Global auth guard ─────────────────────────────────────────────────────
   const authGuard = createAuthGuard(authService);
   server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -343,22 +348,28 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     await authGuard(request, reply);
   });
 
-  // ── Permission loading ─────────────────────────────────────────────────
+  // ── API key role enforcement ────────────────────────────────────────────
+  server.addHook('preHandler', enforceApiKeyRole);
+
+  // ── Permission loading (org-aware) ──────────────────────────────────────
   server.addHook('preHandler', async (request: FastifyRequest) => {
     if (request.user === undefined) return;
-    const role = await storage.roles.getRoleByName(request.user.role);
-    const permissions = role ? new Set(role.permissions) : new Set<string>();
-    // For admin role, always grant all permissions
-    if (request.user.role === 'admin') {
-      for (const p of ALL_PERMISSION_IDS) permissions.add(p);
-    }
-    // Fall back to 'user' permissions if role not found in DB
-    if (role === null) {
-      const fallback = await storage.roles.getRoleByName('user');
-      if (fallback !== null) {
-        for (const p of fallback.permissions) permissions.add(p);
-      }
-    }
+
+    // Determine current org context from session (org context hook runs later,
+    // but we need the org id now for effective permission resolution).
+    const session = request.session as { get?(key: string): unknown } | undefined;
+    const currentOrgId = typeof session?.get === 'function'
+      ? (session.get('currentOrgId') as string | undefined) ?? ''
+      : '';
+
+    const orgId = currentOrgId !== '' ? currentOrgId : undefined;
+    const permissions = await resolveEffectivePermissions(
+      storage.roles,
+      request.user.id,
+      request.user.role,
+      orgId,
+    );
+
     (request as unknown as Record<string, unknown>)['permissions'] = permissions;
   });
 
