@@ -3,15 +3,15 @@
 <section aria-labelledby="repos-heading">
   <h2 id="repos-heading" class="section-title">{{t "repos.title"}}</h2>
 
-  <p style="margin-bottom:1.5rem;color:var(--text-muted);max-width:60ch;">
+  <p class="text--muted mb-lg page-intro">
     {{t "repos.intro"}}
   </p>
 
   {{! ── Create New Connection ──────────────────────────────────────── }}
   <div class="card mb-lg">
-    <h3 style="margin:0 0 1rem;">{{t "repos.connectTitle"}}</h3>
+    <h3 class="card__title">{{t "repos.connectTitle"}}</h3>
     <form method="POST" action="/admin/repos"
-          style="display:grid;gap:0.75rem;max-width:600px;">
+          class="form-grid form-grid--narrow">
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
@@ -19,7 +19,7 @@
         <input type="text" id="siteUrlPattern" name="siteUrlPattern" class="input" required
                placeholder="https://example.com%" aria-required="true"
                title="URL pattern using SQL LIKE syntax. Use % as wildcard.">
-        <small style="color:var(--text-muted);">{{{t "repos.siteUrlPatternHint"}}}</small>
+        <small class="text--muted">{{{t "repos.siteUrlPatternHint"}}}</small>
       </div>
 
       <div class="form-group">
@@ -29,10 +29,10 @@
       </div>
 
       <div class="form-group">
-        <label for="repoPath">{{t "repos.localPath"}} <span style="color:var(--text-muted);">({{t "common.optional"}})</span></label>
+        <label for="repoPath">{{t "repos.localPath"}} <span class="text--muted">({{t "common.optional"}})</span></label>
         <input type="text" id="repoPath" name="repoPath" class="input"
                placeholder="/home/user/projects/my-site">
-        <small style="color:var(--text-muted);">{{t "repos.localPathHint"}}</small>
+        <small class="text--muted">{{t "repos.localPathHint"}}</small>
       </div>
 
       <div class="form-group">
@@ -50,8 +50,8 @@
   {{! ── Connected Repos Table ──────────────────────────────────────── }}
   {{#if repos.length}}
   <div class="card">
-    <h3 style="margin:0 0 1rem;">{{t "repos.activeConnections"}}</h3>
-    <div class="table-wrap">
+    <h3 class="card__title">{{t "repos.activeConnections"}}</h3>
+    <div class="table-responsive" role="region" aria-label="Connected repositories table" tabindex="0">
       <table class="data-table" aria-label="Connected repositories">
         <thead>
           <tr>
@@ -68,7 +68,7 @@
           <tr id="repo-row-{{this.id}}">
             <td><code>{{this.siteUrlPattern}}</code></td>
             <td>
-              <a href="{{this.repoUrl}}" target="_blank" rel="noopener noreferrer" style="word-break:break-all;">
+              <a href="{{this.repoUrl}}" target="_blank" rel="noopener noreferrer" class="word-break">
                 {{this.repoUrl}}
               </a>
             </td>
@@ -77,7 +77,7 @@
               {{#if this.repoPath}}
               <code>{{this.repoPath}}</code>
               {{else}}
-              <span style="color:var(--text-muted);">{{t "repos.notSet"}}</span>
+              <span class="text--muted">{{t "repos.notSet"}}</span>
               {{/if}}
             </td>
             <td>{{this.createdAt}}</td>
@@ -102,18 +102,18 @@
     </div>
   </div>
   {{else}}
-  <div class="card" style="text-align:center;padding:2rem;">
-    <p style="color:var(--text-muted);">{{t "repos.noRepos"}}</p>
+  <div class="empty-state" role="status">
+    <p class="empty-state__desc">{{t "repos.noRepos"}}</p>
   </div>
   {{/if}}
 
   {{! ── Integration Notes ──────────────────────────────────────────── }}
-  <div class="card mt-lg" style="background:var(--surface-alt, var(--bg-secondary));">
-    <h3 style="margin:0 0 0.75rem;">{{t "repos.integrationOptionsTitle"}}</h3>
-    <p style="color:var(--text-muted);margin-bottom:0.5rem;">
+  <div class="card card--alt mt-lg">
+    <h3 class="card__title">{{t "repos.integrationOptionsTitle"}}</h3>
+    <p class="text--muted mb-sm">
       {{t "repos.integrationOptionsDesc"}}
     </p>
-    <ul style="color:var(--text-muted);margin:0;padding-left:1.5rem;">
+    <ul class="text--muted list--padded">
       <li>{{{t "repos.integrationMcp"}}}</li>
       <li>{{{t "repos.integrationRest"}}}</li>
       <li>{{t "repos.integrationA2a"}}</li>

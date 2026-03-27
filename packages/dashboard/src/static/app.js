@@ -369,6 +369,64 @@
     }
   };
 
+  /* ── Dark mode toggle — cycles: auto → light → dark → auto ────────── */
+  function getThemePreference() {
+    return localStorage.getItem('luqen-theme') || 'auto';
+  }
+
+  function applyTheme(pref) {
+    var isDark = pref === 'dark' || (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    var btn = document.getElementById('theme-toggle');
+    if (btn) {
+      var label = pref === 'auto' ? 'Auto' : pref === 'dark' ? 'Dark' : 'Light';
+      btn.setAttribute('aria-label', 'Theme: ' + label + '. Click to change.');
+      btn.setAttribute('title', 'Theme: ' + label);
+      btn.textContent = isDark ? '\u263E' : '\u2600';
+    }
+  }
+
+  function toggleTheme() {
+    var current = getThemePreference();
+    var next = current === 'auto' ? 'light' : current === 'light' ? 'dark' : 'auto';
+    localStorage.setItem('luqen-theme', next);
+    applyTheme(next);
+  }
+
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+    if (getThemePreference() === 'auto') applyTheme('auto');
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    applyTheme(getThemePreference());
+  });
+
+  /* ── Sidebar collapse (desktop) — persists to localStorage ────────── */
+  function collapseDesktopSidebar() {
+    document.body.classList.add('sidebar-collapsed');
+    localStorage.setItem('luqen-sidebar', 'collapsed');
+  }
+
+  function expandDesktopSidebar() {
+    document.body.classList.remove('sidebar-collapsed');
+    localStorage.setItem('luqen-sidebar', 'expanded');
+  }
+
+  function toggleCollapse() {
+    if (document.body.classList.contains('sidebar-collapsed')) {
+      expandDesktopSidebar();
+    } else {
+      collapseDesktopSidebar();
+    }
+  }
+
+  // Restore sidebar state on load (desktop only)
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.innerWidth > 768 && localStorage.getItem('luqen-sidebar') === 'collapsed') {
+      document.body.classList.add('sidebar-collapsed');
+    }
+  });
+
   /* ── Expose layout functions globally ─────────────────────────────── */
   window.toggleSidebar = toggleSidebar;
   window.closeSidebar = closeSidebar;
@@ -376,4 +434,6 @@
   window.closeModal = closeModal;
   window.pickerTab = pickerTab;
   window.pickerSearch = pickerSearch;
+  window.toggleTheme = toggleTheme;
+  window.toggleCollapse = toggleCollapse;
 })();

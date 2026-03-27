@@ -61,6 +61,8 @@
     .severity--warning { background: #fff3cd; color: #7a4f00; }
     .reg-tag { display: inline-block; padding: 0.06rem 0.3rem; border-radius: 3px; font-size: 0.62rem; font-weight: 600; margin-right: 0.1rem; background: #f8d7da; color: #8b1a1a; }
 
+    .scan-error-item { padding: 0.3rem 0.5rem; background: #f8d7da; border-radius: 4px; margin-bottom: 0.3rem; font-size: 0.8rem; }
+    .print-note { margin-top: 0.5rem; }
     .text-muted { color: #6b6b6b; }
     .text-sm { font-size: 0.78rem; }
     .report-footer { margin-top: 1.5rem; padding-top: 0.4rem; border-top: 1px solid #d0d4de; font-size: 0.7rem; color: #6b6b6b; text-align: center; }
@@ -103,8 +105,8 @@
   {{/if}}
   <p>
     {{t "reportPrint.summaryIntro"}} <strong>{{scan.siteUrl}}</strong>
-    {{t "reportPrint.summaryFound"}} <strong style="color:#8b1a1a;">{{reportData.summary.byLevel.error}} {{t "reportPrint.errors"}}</strong>,
-    <strong style="color:#7a4f00;">{{reportData.summary.byLevel.warning}} {{t "reportPrint.warnings"}}</strong>,
+    {{t "reportPrint.summaryFound"}} <strong class="exec-verdict--fail">{{reportData.summary.byLevel.error}} {{t "reportPrint.errors"}}</strong>,
+    <strong class="exec-verdict--review">{{reportData.summary.byLevel.warning}} {{t "reportPrint.warnings"}}</strong>,
     {{t "reportPrint.summaryAnd"}} <strong>{{reportData.summary.byLevel.notice}} {{t "reportPrint.notices"}}</strong>
     {{t "reportPrint.summaryAcross"}} <strong>{{reportData.summary.pagesScanned}}</strong> {{t "reportPrint.summaryPages"}}.
   </p>
@@ -200,7 +202,7 @@
 </table>
 {{/if}}
 
-<p class="text-sm text-muted" style="margin-top:0.5rem;">
+<p class="text-sm text-muted print-note">
   {{t "reportPrint.fullDetailNote"}}
 </p>
 
@@ -208,7 +210,7 @@
 {{#if reportData.errors.length}}
 <h2>{{t "reportPrint.scanErrors"}}</h2>
 {{#each reportData.errors}}
-<div style="padding:0.3rem 0.5rem;background:#f8d7da;border-radius:4px;margin-bottom:0.3rem;font-size:0.8rem;">
+<div class="scan-error-item">
   <strong>{{url}}</strong> — {{code}}: {{message}}
 </div>
 {{/each}}

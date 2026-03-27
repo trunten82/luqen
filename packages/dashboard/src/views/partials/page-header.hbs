@@ -1,0 +1,12 @@
+{{! page-header partial }}
+<header class="page-header">
+  <div class="page-header__row">
+    <div>
+      <h1 class="page-header__title">{{title}}</h1>
+      {{#if subtitle}}<p class="page-header__subtitle">{{subtitle}}</p>{{/if}}
+    </div>
+    {{#if actionUrl}}
+    <a href="{{actionUrl}}" class="btn btn--primary">{{actionLabel}}</a>
+    {{/if}}
+  </div>
+</header>

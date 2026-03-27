@@ -32,3 +32,4 @@ luqen-reports/
 .claude/
 docs/design/
 :memory:
+.superpowers/

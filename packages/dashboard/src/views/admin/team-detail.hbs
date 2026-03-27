@@ -81,13 +81,13 @@
 </form>
 
 {{! Members table }}
-<div class="table-container">
-  <table class="table">
+<div class="table-wrapper">
+  <table class="table" aria-label="Team members">
     <thead>
       <tr>
-        <th>{{t "admin.teams.username"}}</th>
-        <th>{{t "admin.teams.teamRole"}}</th>
-        <th>{{t "common.actions"}}</th>
+        <th scope="col">{{t "admin.teams.username"}}</th>
+        <th scope="col">{{t "admin.teams.teamRole"}}</th>
+        <th scope="col">{{t "common.actions"}}</th>
       </tr>
     </thead>
     <tbody id="members-table-body">

@@ -2,7 +2,7 @@
 
 <script>window.__luqenAssignees = {{{json assignees}}};</script>
 
-<section aria-labelledby="asgn-heading" class="report-meta" style="margin-bottom:1.5rem;">
+<section aria-labelledby="asgn-heading" class="report-meta mb-lg">
   <div class="detail-list detail-list--horizontal">
     <div class="detail-list__item">
       <dt>{{t "assignments.siteUrl"}}</dt>
@@ -18,7 +18,7 @@
     </div>
   </div>
 
-  <div class="report-actions" role="group" aria-label="Navigation" style="margin-top:1rem;">
+  <div class="report-actions mt-md" role="group" aria-label="Navigation">
     <a href="/reports/{{scan.id}}" class="btn btn--ghost btn--sm">&larr; {{t "assignments.backToReport"}}</a>
     <a href="/reports" class="btn btn--ghost btn--sm">{{t "assignments.allReports"}}</a>
   </div>
@@ -35,22 +35,22 @@
 </div>
 
 {{! Bulk actions bar }}
-<div class="asgn-bulk-bar" id="asgn-bulk-bar" style="display:none;">
+<div class="asgn-bulk-bar is-hidden" id="asgn-bulk-bar">
   <label><input type="checkbox" id="asgn-bulk-select-all" data-action-change="asgnBulkToggleAll"> {{t "assignments.selectAllVisible"}}</label>
   <span id="asgn-bulk-count">0 {{t "assignments.selected"}}</span>
   <select id="asgn-bulk-assignee" class="asgn-select"></select>
   <button type="button" class="btn btn--primary btn--sm" data-action="asgnBulkReassign">{{t "assignments.reassign"}}</button>
-  <button type="button" class="btn btn--ghost btn--sm" style="color:var(--status-error)" data-action="asgnBulkRemove">{{t "assignments.remove"}}</button>
+  <button type="button" class="btn btn--ghost btn--sm btn--danger-ghost" data-action="asgnBulkRemove">{{t "assignments.remove"}}</button>
   <button type="button" class="btn btn--ghost btn--sm" data-action="asgnToggleBulkMode">{{t "common.cancel"}}</button>
 </div>
-<button type="button" class="btn btn--ghost btn--sm" id="asgn-bulk-mode-btn" data-action="asgnToggleBulkMode" style="margin-bottom:0.75rem;">{{t "assignments.bulkActions"}}</button>
+<button type="button" class="btn btn--ghost btn--sm mb-sm" id="asgn-bulk-mode-btn" data-action="asgnToggleBulkMode">{{t "assignments.bulkActions"}}</button>
 
 {{! Assignment cards }}
 <div class="asgn-list" id="asgn-list">
   {{#each assignments}}
   <div class="asgn-card" id="asgn-card-{{id}}" data-status="{{status}}">
     <div class="asgn-card__header">
-      <input type="checkbox" class="asgn-bulk-cb" data-id="{{id}}" data-action="asgnBulkUpdate" style="display:none;">
+      <input type="checkbox" class="asgn-bulk-cb is-hidden" data-id="{{id}}" data-action="asgnBulkUpdate">
       <span class="asgn-sev asgn-sev--{{severity}}">{{severity}}</span>
       {{#if wcagCriterion}}
       <span class="asgn-card__criterion">{{wcagCriterion}}{{#if wcagTitle}} &mdash; {{wcagTitle}}{{/if}}</span>
@@ -271,9 +271,9 @@
     var bar = document.getElementById('asgn-bulk-bar');
     var btn = document.getElementById('asgn-bulk-mode-btn');
     var cbs = document.querySelectorAll('.asgn-bulk-cb');
-    if (bar) bar.style.display = _asgnBulkMode ? 'flex' : 'none';
+    if (bar) bar.classList.toggle('is-hidden', !_asgnBulkMode);
     if (btn) { btn.textContent = _asgnBulkMode ? '{{t "assignments.cancelBulk"}}' : '{{t "assignments.bulkActions"}}'; btn.classList.toggle('btn--primary', _asgnBulkMode); btn.classList.toggle('btn--ghost', !_asgnBulkMode); }
-    cbs.forEach(function(cb) { cb.style.display = _asgnBulkMode ? 'inline-block' : 'none'; cb.checked = false; });
+    cbs.forEach(function(cb) { cb.classList.toggle('is-hidden', !_asgnBulkMode); cb.checked = false; });
     if (_asgnBulkMode) {
       var sel = document.getElementById('asgn-bulk-assignee');
       if (sel && sel.options.length <= 1) {
