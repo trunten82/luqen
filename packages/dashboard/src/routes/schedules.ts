@@ -77,7 +77,7 @@ export async function scheduleRoutes(
   // POST /schedules — create new schedule (admin and user roles only)
   server.post(
     '/schedules',
-    { config: { rateLimit: { max: 20, timeWindow: '10 minutes' } } },
+    { config: { rateLimit: { max: 10, timeWindow: '10 minutes' } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!hasPermission(request, 'scans.schedule')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });

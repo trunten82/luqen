@@ -66,7 +66,7 @@ export async function scanRoutes(
   // POST /scan/new — validate, create record, queue scan
   server.post(
     '/scan/new',
-    { config: { rateLimit: { max: 10, timeWindow: '10 minutes' } } },
+    { config: { rateLimit: { max: 30, timeWindow: '10 minutes' } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as NewScanBody;
 

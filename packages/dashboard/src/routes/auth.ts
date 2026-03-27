@@ -52,7 +52,7 @@ export async function authRoutes(
   // POST /login — authenticate based on auth mode
   server.post(
     '/login',
-    { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
+    { config: { rateLimit: { max: 10, timeWindow: '15 minutes' } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as LoginBody;
       const mode = authService.getAuthMode();
