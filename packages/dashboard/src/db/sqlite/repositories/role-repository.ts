@@ -173,6 +173,49 @@ export class SqliteRoleRepository implements RoleRepository {
     return new Set(role.permissions);
   }
 
+  async getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>> {
+    // 1. Start with global (system) role permissions
+    const globalPerms = await this.getUserPermissions(userId);
+
+    // Admin users already get all permissions from getUserPermissions
+    if (globalPerms.size === ALL_PERMISSION_IDS.length) {
+      return globalPerms;
+    }
+
+    // 2. If no org context, return global permissions only
+    if (orgId === undefined || orgId === '' || orgId === 'system') {
+      return globalPerms;
+    }
+
+    // 3. Find all teams the user belongs to in this org, and their role_ids
+    const teamRoles = this.db.prepare(`
+      SELECT DISTINCT t.role_id
+      FROM team_members tm
+      JOIN teams t ON t.id = tm.team_id
+      WHERE tm.user_id = ? AND t.org_id = ? AND t.role_id IS NOT NULL
+    `).all(userId, orgId) as Array<{ role_id: string }>;
+
+    if (teamRoles.length === 0) {
+      return globalPerms;
+    }
+
+    // 4. For each team role, collect permissions. "Highest" = union of all
+    //    team roles (since we want max permissions across all teams).
+    const result = new Set(globalPerms);
+
+    for (const { role_id } of teamRoles) {
+      const perms = this.db.prepare(
+        'SELECT permission FROM role_permissions WHERE role_id = ?',
+      ).all(role_id) as Array<{ permission: string }>;
+
+      for (const { permission } of perms) {
+        result.add(permission);
+      }
+    }
+
+    return result;
+  }
+
   // ── Private helpers ──────────────────────────────────────────────────
 
   private roleRowToRecord(row: RoleRow): Role {
