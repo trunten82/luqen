@@ -63,6 +63,26 @@ export function hasPermission(request: unknown, permission: string): boolean {
   return perms?.has(permission) === true;
 }
 
+/**
+ * Resolve effective permissions for a user:
+ *   effective = global_role.permissions UNION highest_org_role(user, org).permissions
+ *
+ * Admin users bypass org-level checks and always get all permissions.
+ */
+export async function resolveEffectivePermissions(
+  roleRepository: { getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>> },
+  userId: string,
+  userRole: string,
+  orgId?: string,
+): Promise<Set<string>> {
+  // Admin users get all permissions regardless of org context
+  if (userRole === 'admin') {
+    return new Set(ALL_PERMISSION_IDS);
+  }
+
+  return roleRepository.getEffectivePermissions(userId, orgId);
+}
+
 // ---------------------------------------------------------------------------
 // Org-scoped role definitions (default roles created when an org is created)
 // ---------------------------------------------------------------------------
