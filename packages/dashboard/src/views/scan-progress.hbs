@@ -66,7 +66,7 @@
           aria-live="polite"
         >{{scan.pagesScanned}}</span>
       </div>
-      <div class="progress-stat" id="pages-skipped-stat" style="display:none">
+      <div class="progress-stat is-hidden" id="pages-skipped-stat">
         <span class="progress-stat__label">{{t "scanProgress.pagesSkipped"}}</span>
         <span
           id="pages-skipped"
@@ -93,7 +93,7 @@
       aria-valuemax="100"
       aria-valuenow="0"
     >
-      <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+      <div id="progress-bar" class="progress-bar" aria-hidden="true"></div>
     </div>
 
     <div
@@ -176,7 +176,7 @@
       if (d.skipped === true) {
         skippedCount++;
         if (pagesSkippedEl) pagesSkippedEl.textContent = skippedCount;
-        if (pagesSkippedStat) pagesSkippedStat.style.display = '';
+        if (pagesSkippedStat) pagesSkippedStat.classList.remove('is-hidden');
         addLog('{{t "scanProgress.logSkipped"}} ' + (d.currentUrl || ''));
         return;
       }

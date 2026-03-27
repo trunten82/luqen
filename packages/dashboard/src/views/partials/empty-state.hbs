@@ -1,0 +1,6 @@
+{{! empty-state partial }}
+<div class="empty-state" role="status">
+  {{#if icon}}<div class="empty-state__icon" aria-hidden="true">{{{icon}}}</div>{{/if}}
+  <p class="empty-state__message">{{message}}</p>
+  {{#if actionUrl}}<a href="{{actionUrl}}" class="btn btn--primary">{{actionLabel}}</a>{{/if}}
+</div>

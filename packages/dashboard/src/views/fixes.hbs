@@ -1,7 +1,7 @@
 {{! Fix Proposals — proposed accessibility fixes for a scan report }}
 
 <section aria-labelledby="fixes-heading">
-  <div class="report-actions" role="group" aria-label="Navigation" style="margin-bottom:1rem;">
+  <div class="report-actions mb-md" role="group" aria-label="Navigation">
     <a href="/reports/{{scan.id}}" class="btn btn--ghost btn--sm" aria-label="Back to report">
       &larr; {{t "fixes.backToReport"}}
     </a>
@@ -9,7 +9,7 @@
 
   <h2 id="fixes-heading" class="section-title">{{t "fixes.title"}}</h2>
 
-  <div class="detail-list detail-list--horizontal" style="margin-bottom:1.5rem;">
+  <div class="detail-list detail-list--horizontal mb-lg">
     <div class="detail-list__item">
       <dt>{{t "fixes.site"}}</dt>
       <dd><a href="{{scan.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scan.siteUrl}}</a></dd>
@@ -21,7 +21,7 @@
         <a href="{{connectedRepo.repoUrl}}" target="_blank" rel="noopener noreferrer">
           {{connectedRepo.repoUrl}}
         </a>
-        <span class="badge badge--success" style="margin-left:0.5rem;">{{t "fixes.connected"}}</span>
+        <span class="badge badge--success ml-sm">{{t "fixes.connected"}}</span>
       </dd>
     </div>
     <div class="detail-list__item">
@@ -38,9 +38,9 @@
     <div class="detail-list__item">
       <dt>{{t "fixes.repository"}}</dt>
       <dd>
-        <span style="color:var(--text-muted);">{{t "fixes.notConnected"}}</span>
+        <span class="text--muted">{{t "fixes.notConnected"}}</span>
         {{#if perm.adminUsers}}
-        <a href="/admin/repos" class="btn btn--ghost btn--sm" style="margin-left:0.5rem;">{{t "fixes.connectRepo"}}</a>
+        <a href="/admin/repos" class="btn btn--ghost btn--sm ml-sm">{{t "fixes.connectRepo"}}</a>
         {{/if}}
       </dd>
     </div>
@@ -48,13 +48,13 @@
   </div>
 
   {{#if noReport}}
-  <div class="card" style="text-align:center;padding:2rem;">
-    <p style="color:var(--text-muted);">{{t "fixes.noReportData"}}</p>
+  <div class="empty-state" role="status">
+    <p class="empty-state__desc">{{t "fixes.noReportData"}}</p>
   </div>
   {{else}}
 
   {{! ── Summary Bar ──────────────────────────────────────────────────── }}
-  <div class="rpt-summary-bar" role="region" aria-label="Fix proposal summary" style="margin-bottom:1.5rem;">
+  <div class="rpt-summary-bar mb-lg" role="region" aria-label="Fix proposal summary">
     <span class="rpt-badge rpt-badge--neutral">{{fixCount}} {{t "fixes.fixProposals"}}</span>
     {{#if fixGroups.length}}
     <span class="rpt-badge rpt-badge--neutral">{{fixGroups.length}} {{t "fixes.wcagCriteria"}}</span>
@@ -62,47 +62,45 @@
   </div>
 
   {{#unless fixes.length}}
-  <div class="card" style="text-align:center;padding:2rem;">
-    <p style="color:var(--text-muted);">{{t "fixes.noProposals"}}</p>
-    <p style="color:var(--text-muted);margin-top:0.5rem;">
-      {{t "fixes.noProposalsHint"}}
-    </p>
+  <div class="empty-state" role="status">
+    <p class="empty-state__desc">{{t "fixes.noProposals"}}</p>
+    <p class="empty-state__desc mt-sm">{{t "fixes.noProposalsHint"}}</p>
   </div>
   {{/unless}}
 
   {{! ── Fix Groups by WCAG Criterion ───────────────────────────────── }}
   {{#each fixGroups}}
   <div class="card mb-lg">
-    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-      <h3 style="margin:0;">{{t "fixes.wcagLabel"}} {{this.criterion}}: {{this.title}}</h3>
+    <div class="card__header-row">
+      <h3 class="card__title">{{t "fixes.wcagLabel"}} {{this.criterion}}: {{this.title}}</h3>
       <span class="badge badge--neutral">{{this.fixes.length}} {{t "fixes.fixLabel"}}{{#unless (eq this.fixes.length 1)}}{{t "fixes.fixLabelPlural"}}{{/unless}}</span>
     </div>
 
     {{#each this.fixes}}
-    <div class="rpt-fix-proposal" style="border:1px solid var(--border);border-radius:var(--radius, 6px);padding:1rem;margin-bottom:0.75rem;">
-      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+    <div class="rpt-fix-proposal">
+      <div class="fix-meta-row">
         <span class="badge badge--{{this.severity}}">{{this.severity}}</span>
         <span class="rpt-fix-effort rpt-fix-effort--{{this.effort}}">{{this.effort}} {{t "fixes.effort"}}</span>
         <span class="badge badge--neutral" style="font-size:0.75rem;">{{this.confidence}}</span>
       </div>
 
-      <p style="margin:0 0 0.5rem;font-weight:500;">{{this.description}}</p>
+      <p class="fix-description">{{this.description}}</p>
 
-      <details style="margin-bottom:0.5rem;">
-        <summary style="cursor:pointer;color:var(--text-muted);font-size:0.875rem;">{{t "fixes.issueDetails"}}</summary>
-        <div style="padding:0.5rem 0;">
-          <p style="margin:0 0 0.25rem;font-size:0.875rem;"><strong>{{t "fixes.message"}}</strong> {{this.message}}</p>
-          <p style="margin:0 0 0.25rem;font-size:0.875rem;"><strong>{{t "fixes.selector"}}</strong> <code>{{this.selector}}</code></p>
-          <p style="margin:0 0 0.25rem;font-size:0.875rem;"><strong>{{t "fixes.page"}}</strong> <a href="{{this.pageUrl}}" target="_blank" rel="noopener noreferrer">{{this.pageUrl}}</a></p>
+      <details class="fix-details">
+        <summary class="fix-details__summary">{{t "fixes.issueDetails"}}</summary>
+        <div class="fix-details__body">
+          <p class="fix-details__item"><strong>{{t "fixes.message"}}</strong> {{this.message}}</p>
+          <p class="fix-details__item"><strong>{{t "fixes.selector"}}</strong> <code>{{this.selector}}</code></p>
+          <p class="fix-details__item"><strong>{{t "fixes.page"}}</strong> <a href="{{this.pageUrl}}" target="_blank" rel="noopener noreferrer">{{this.pageUrl}}</a></p>
           {{#if this.context}}
-          <pre style="margin:0.5rem 0 0;font-size:0.8rem;overflow-x:auto;background:var(--bg-secondary);padding:0.5rem;border-radius:4px;"><code>{{this.context}}</code></pre>
+          <pre class="code-block code-block--sm mt-sm"><code>{{this.context}}</code></pre>
           {{/if}}
         </div>
       </details>
 
-      <div style="margin-top:0.75rem;">
-        <p style="margin:0 0 0.25rem;font-size:0.8rem;font-weight:600;color:var(--text-muted);">{{t "fixes.suggestedFix"}}</p>
-        <pre class="rpt-fix-hint__code" style="position:relative;"><code id="fix-code-{{this.index}}">{{this.codeExample}}</code><button type="button" class="btn btn--ghost btn--sm" style="position:absolute;top:0.25rem;right:0.25rem;font-size:0.7rem;" data-action="copyFixCode" data-index="{{this.index}}" aria-label="Copy fix code to clipboard">{{t "fixes.copy"}}</button></pre>
+      <div class="fix-code-block">
+        <p class="fix-code-block__label">{{t "fixes.suggestedFix"}}</p>
+        <pre class="rpt-fix-hint__code fix-code-block__pre"><code id="fix-code-{{this.index}}">{{this.codeExample}}</code><button type="button" class="btn btn--ghost btn--sm fix-code-block__copy" data-action="copyFixCode" data-index="{{this.index}}" aria-label="Copy fix code to clipboard">{{t "fixes.copy"}}</button></pre>
       </div>
     </div>
     {{/each}}
@@ -110,18 +108,12 @@
   {{/each}}
 
   {{! ── Integration Notes ──────────────────────────────────────────── }}
-  <div class="card mt-lg" style="background:var(--surface-alt, var(--bg-secondary));">
-    <h3 style="margin:0 0 0.75rem;">{{t "fixes.automatedFixOptionsTitle"}}</h3>
-    <ul style="color:var(--text-muted);margin:0;padding-left:1.5rem;">
-      <li style="margin-bottom:0.5rem;">
-        {{{t "fixes.integrationMcp"}}}
-      </li>
-      <li style="margin-bottom:0.5rem;">
-        {{{t "fixes.integrationRest"}}}
-      </li>
-      <li>
-        {{t "fixes.integrationA2a"}}
-      </li>
+  <div class="card card--alt mt-lg">
+    <h3 class="card__title">{{t "fixes.automatedFixOptionsTitle"}}</h3>
+    <ul class="text--muted list--padded">
+      <li class="mb-sm">{{{t "fixes.integrationMcp"}}}</li>
+      <li class="mb-sm">{{{t "fixes.integrationRest"}}}</li>
+      <li>{{t "fixes.integrationA2a"}}</li>
     </ul>
   </div>
 

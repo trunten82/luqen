@@ -7,15 +7,15 @@
   </div>
 
   {{! ---- Manage via Teams notice ---- }}
-  <div class="alert alert--info" style="margin-top:1rem;" role="alert">
+  <div class="alert alert--info mt-md" role="alert">
     <strong>Manage via Teams:</strong> Organization membership is managed through teams.
     Add users to a team linked to this organization to grant access.
-    <a href="/admin/teams" class="btn btn--sm btn--ghost" style="margin-left:0.5rem;">Go to Teams</a>
+    <a href="/admin/teams" class="btn btn--sm btn--ghost ml-sm">Go to Teams</a>
   </div>
 
   {{! ---- Organization Members (via teams) ---- }}
-  <h2 style="margin-top:1.5rem;">{{t "admin.organizations.orgMembers"}}</h2>
-  <p class="text-muted" style="margin-bottom:0.75rem;">{{t "admin.organizations.orgMembersDescription"}}</p>
+  <h2 class="mt-lg">{{t "admin.organizations.orgMembers"}}</h2>
+  <p class="text-muted mb-md">{{t "admin.organizations.orgMembersDescription"}}</p>
 
   {{#if members.length}}
   <table class="table" aria-label="Organization members" id="org-members-wrapper"
@@ -59,12 +59,11 @@
   {{! ---- Add Member to Team ---- }}
   {{#if linkedTeams.length}}
   {{#if availableUsers.length}}
-  <div class="card" style="margin-top: 1.5rem;">
+  <div class="card mt-lg">
     <h2 class="card__title">{{t "admin.organizations.addMemberToTeam"}}</h2>
     <form hx-post="/admin/organizations/{{org.id}}/members/add-to-team"
           hx-target="#toast"
-          hx-swap="innerHTML"
-          class="form-inline">
+          hx-swap="innerHTML">
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
@@ -94,7 +93,7 @@
   {{/if}}
 
   {{! ---- Linked Teams with Roles ---- }}
-  <h2 style="margin-top:2rem;">{{t "admin.organizations.linkedTeams"}}</h2>
+  <h2 class="mt-xl">{{t "admin.organizations.linkedTeams"}}</h2>
 
   {{#if linkedTeams.length}}
   <table class="table" aria-label="Teams linked to this organization">
@@ -121,13 +120,13 @@
   </div>
   {{/if}}
 
-  <div style="margin-top:1rem;">
+  <div class="mt-md">
     <a href="/admin/teams" class="btn btn--ghost">{{t "admin.organizations.manageTeams"}}</a>
   </div>
 
   {{! ---- Org-Scoped Roles ---- }}
-  <h2 style="margin-top:2rem;">{{t "admin.organizations.orgRoles"}}</h2>
-  <p class="text-muted" style="margin-bottom:0.75rem;">{{t "admin.organizations.orgRolesDescription"}}</p>
+  <h2 class="mt-xl">{{t "admin.organizations.orgRoles"}}</h2>
+  <p class="text-muted mb-md">{{t "admin.organizations.orgRolesDescription"}}</p>
 
   {{#if orgRoles.length}}
   <table class="table" aria-label="Organization roles">

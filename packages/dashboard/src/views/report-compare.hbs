@@ -1,7 +1,7 @@
 {{! Report comparison — side-by-side diff between two scan reports }}
 
-<section aria-labelledby="compare-heading" class="report-meta" style="margin-bottom:1.5rem;">
-  <h1 id="compare-heading" class="section-title" style="margin-bottom:1rem;">{{t "reportCompare.title"}}</h1>
+<section aria-labelledby="compare-heading" class="report-meta mb-lg">
+  <h1 id="compare-heading" class="section-title mb-md">{{t "reportCompare.title"}}</h1>
 
   {{! ── Regression / Improvement Banner ───────────────────────────────────── }}
   {{#if (cmpPositive diff.summaryDelta.errors)}}
@@ -101,7 +101,7 @@
           <dd><time datetime="{{scanA.createdAt}}">{{scanA.createdAtDisplay}}</time></dd>
         </div>
       </div>
-      <a href="/reports/{{scanA.id}}" class="btn btn--ghost btn--sm" style="margin-top:0.5rem;">{{t "reportCompare.viewFullReport"}}</a>
+      <a href="/reports/{{scanA.id}}" class="btn btn--ghost btn--sm mt-sm">{{t "reportCompare.viewFullReport"}}</a>
     </div>
 
     <div class="cmp-scan-card">
@@ -120,11 +120,11 @@
           <dd><time datetime="{{scanB.createdAt}}">{{scanB.createdAtDisplay}}</time></dd>
         </div>
       </div>
-      <a href="/reports/{{scanB.id}}" class="btn btn--ghost btn--sm" style="margin-top:0.5rem;">{{t "reportCompare.viewFullReport"}}</a>
+      <a href="/reports/{{scanB.id}}" class="btn btn--ghost btn--sm mt-sm">{{t "reportCompare.viewFullReport"}}</a>
     </div>
   </div>
 
-  <div class="report-actions" role="group" aria-label="Navigation" style="margin-top:1rem;">
+  <div class="report-actions mt-md" role="group" aria-label="Navigation">
     <a href="/reports" class="btn btn--ghost btn--sm">&larr; {{t "reportCompare.backToReports"}}</a>
   </div>
 </section>
@@ -151,11 +151,11 @@
   </div>
   <div class="rpt-card rpt-card--neutral">
     <div class="rpt-card__label">{{t "reportCompare.newIssues"}}</div>
-    <div class="rpt-card__value" style="color:#dc2626;">{{diff.addedCount}}</div>
+    <div class="rpt-card__value text--error">{{diff.addedCount}}</div>
   </div>
   <div class="rpt-card rpt-card--neutral">
     <div class="rpt-card__label">{{t "reportCompare.resolved"}}</div>
-    <div class="rpt-card__value" style="color:#16a34a;">{{diff.removedCount}}</div>
+    <div class="rpt-card__value text--success">{{diff.removedCount}}</div>
   </div>
   <div class="rpt-card rpt-card--neutral">
     <div class="rpt-card__label">{{t "reportCompare.unchanged"}}</div>

@@ -2,15 +2,15 @@
   <h2>{{t "admin.emailReports.title"}}</h2>
 
   {{!-- Email Plugin Status --}}
-  <div class="card" style="margin-bottom: 24px;">
+  <div class="card mb-lg">
     <h3>{{t "admin.emailReports.emailSendingConfig"}}</h3>
     {{#if emailPluginActive}}
-    <div style="padding: 12px 16px; background: var(--success-bg, #d4edda); border-radius: 6px; margin-bottom: 12px;">
+    <div class="alert alert--success mb-md">
       <strong>{{t "admin.emailReports.pluginActive"}}</strong>
       {{{t "admin.emailReports.pluginActiveNote"}}}
     </div>
     {{else}}
-    <div style="padding: 12px 16px; background: var(--warning-bg, #fff3cd); border-radius: 6px; margin-bottom: 12px;">
+    <div class="alert alert--warning mb-md">
       {{{t "admin.emailReports.pluginInactiveNote"}}}
     </div>
     {{/if}}
@@ -18,9 +18,9 @@
 
   {{!-- Legacy SMTP Configuration (shown only when plugin is NOT active) --}}
   {{#unless emailPluginActive}}
-  <div class="card" style="margin-bottom: 24px;">
+  <div class="card mb-lg">
     <h3>{{t "admin.emailReports.smtpLegacy"}}</h3>
-    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+    <p class="text-muted text-sm mb-md">
       {{t "admin.emailReports.smtpDescription"}}
       {{#unless smtpConfigured}}<strong>{{t "admin.emailReports.smtpNotConfigured"}}</strong>{{/unless}}
     </p>
@@ -28,8 +28,7 @@
     <form hx-post="/admin/email-reports/smtp"
           hx-target="#toast-container"
           hx-swap="innerHTML"
-          class="form-grid"
-          style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 600px;">
+          class="form-grid">
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
@@ -73,13 +72,15 @@
                value="{{smtpConfig.fromName}}" placeholder="{{t "admin.emailReports.smtpFromNamePlaceholder"}}">
       </div>
 
-      <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
-        <input type="checkbox" id="smtp-secure" name="secure"
-               {{#if smtpConfig.secure}}checked{{/if}}>
-        <label for="smtp-secure" style="margin: 0;">{{t "admin.emailReports.smtpUseTls"}}</label>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="smtp-secure" name="secure"
+                 {{#if smtpConfig.secure}}checked{{/if}}>
+          {{t "admin.emailReports.smtpUseTls"}}
+        </label>
       </div>
 
-      <div class="form-group" style="display: flex; align-items: end; gap: 8px;">
+      <div class="form-actions">
         <button type="submit" class="btn btn--primary">{{t "admin.emailReports.saveSmtp"}}</button>
         <button type="button"
                 hx-post="/admin/email-reports/smtp/test"
@@ -93,14 +94,13 @@
   {{/unless}}
 
   {{!-- Create Email Report --}}
-  <div class="card" style="margin-bottom: 24px;">
+  <div class="card mb-lg">
     <h3>{{t "admin.emailReports.createSchedule"}}</h3>
 
     <form hx-post="/admin/email-reports"
           hx-target="#email-reports-table-body"
           hx-swap="beforeend"
-          class="form-grid"
-          style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 600px;">
+          class="form-grid">
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
@@ -117,8 +117,8 @@
                aria-required="true">
       </div>
 
-      <div class="form-group" style="grid-column: 1 / -1;">
-        <label for="report-recipients">{{t "admin.emailReports.recipients"}}</label>
+      <div class="form-group form-group--full">
+        <label for="report-recipients" class="form-label">{{t "admin.emailReports.recipients"}}</label>
         <input type="text" id="report-recipients" name="recipients" class="input"
                placeholder="{{t "admin.emailReports.recipientsPlaceholder"}}" required
                aria-required="true">
@@ -142,22 +142,28 @@
         </select>
       </div>
 
-      <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
-        <input type="checkbox" id="report-include-csv" name="includeCsv">
-        <label for="report-include-csv" style="margin: 0;">{{t "admin.emailReports.includeCsv"}}</label>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="report-include-csv" name="includeCsv">
+          {{t "admin.emailReports.includeCsv"}}
+        </label>
       </div>
 
-      <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
-        <input type="checkbox" id="report-include-warnings" name="includeWarnings" checked>
-        <label for="report-include-warnings" style="margin: 0;">{{t "admin.emailReports.includeWarnings"}}</label>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="report-include-warnings" name="includeWarnings" checked>
+          {{t "admin.emailReports.includeWarnings"}}
+        </label>
       </div>
 
-      <div class="form-group" style="display: flex; align-items: center; gap: 8px; padding-top: 8px;">
-        <input type="checkbox" id="report-include-notices" name="includeNotices" checked>
-        <label for="report-include-notices" style="margin: 0;">{{t "admin.emailReports.includeNotices"}}</label>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="report-include-notices" name="includeNotices" checked>
+          {{t "admin.emailReports.includeNotices"}}
+        </label>
       </div>
 
-      <div class="form-group" style="display: flex; align-items: end;">
+      <div class="form-actions">
         <button type="submit" class="btn btn--primary">{{t "admin.emailReports.createScheduleBtn"}}</button>
       </div>
     </form>

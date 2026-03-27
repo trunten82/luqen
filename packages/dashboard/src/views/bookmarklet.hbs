@@ -7,7 +7,7 @@
       {{t "bookmarklet.dragHint"}}
     </p>
 
-    <div style="text-align:center; margin: 1.5rem 0;">
+    <div class="text--center my-lg">
       <a class="btn btn--primary"
          href="javascript:void(function(){var d='{{dashboardUrl}}';var u=encodeURIComponent(window.location.href);window.open(d+'/scan/new?prefill='+u,'_blank');})()"
          data-action="bookmarkletAlert" data-alert-msg="{{t "bookmarklet.dragAlertMsg"}}"
@@ -20,7 +20,7 @@
 
   <div class="card mb-md">
     <h3 class="card__title mb-md">{{t "bookmarklet.howToUseTitle"}}</h3>
-    <ol style="padding-left: 1.5rem; line-height: 1.8;">
+    <ol class="list--steps">
       <li>{{{t "bookmarklet.step1"}}}</li>
       <li>{{{t "bookmarklet.step2"}}}</li>
       <li>{{{t "bookmarklet.step3"}}}</li>
@@ -32,12 +32,12 @@
     <p class="form-hint mb-sm">
       {{t "bookmarklet.manualInstallDesc"}}
     </p>
-    <pre style="background: var(--bg-muted, #f4f5f7); padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5;"><code>javascript:void(function(){var d='{{dashboardUrl}}';var u=encodeURIComponent(window.location.href);window.open(d+'/scan/new?prefill='+u,'_blank');})()</code></pre>
+    <pre class="code-block"><code>javascript:void(function(){var d='{{dashboardUrl}}';var u=encodeURIComponent(window.location.href);window.open(d+'/scan/new?prefill='+u,'_blank');})()</code></pre>
   </div>
 
   <div class="card mb-md">
     <h3 class="card__title mb-md">{{t "bookmarklet.requirementsTitle"}}</h3>
-    <ul style="padding-left: 1.5rem; line-height: 1.8;">
+    <ul class="list--steps">
       <li>{{{t "bookmarklet.req1"}}}</li>
       <li>{{t "bookmarklet.req2"}}</li>
       <li>{{t "bookmarklet.req3"}}</li>
