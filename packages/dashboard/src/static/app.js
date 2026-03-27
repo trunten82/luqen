@@ -412,12 +412,9 @@
     localStorage.setItem('luqen-sidebar', 'collapsed');
   }
 
-  var _sidebarExpandedViaBurger = false;
-
   function expandDesktopSidebar() {
     document.body.classList.remove('sidebar-collapsed');
-    localStorage.setItem('luqen-sidebar', 'expanded');
-    _sidebarExpandedViaBurger = true;
+    // Don't persist — sidebar re-collapses on outside click or page reload
   }
 
   function toggleCollapse() {
@@ -435,18 +432,19 @@
     }
   });
 
-  // Close desktop sidebar when clicking on main content area (after burger expand)
+  // Close desktop sidebar when clicking on main content area
+  // Only applies when sidebar was collapsed by user preference (burger-toggled open temporarily)
   document.addEventListener('click', function(e) {
     if (window.innerWidth <= 768) return;
-    if (!_sidebarExpandedViaBurger) return;
     if (document.body.classList.contains('sidebar-collapsed')) return;
+    // Only auto-close if user previously chose to collapse (localStorage)
+    if (localStorage.getItem('luqen-sidebar') !== 'collapsed') return;
     var sidebar = document.getElementById('sidebar');
     if (!sidebar) return;
     if (sidebar.contains(e.target)) return;
     var btn = document.getElementById('mobile-menu-btn');
     if (btn && btn.contains(e.target)) return;
     collapseDesktopSidebar();
-    _sidebarExpandedViaBurger = false;
   });
 
   /* ── Expose layout functions globally ─────────────────────────────── */
