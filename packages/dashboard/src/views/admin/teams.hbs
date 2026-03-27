@@ -11,18 +11,18 @@
       data-reset-on-success
       hx-swap="beforeend"
 
-      class="card" style="margin-bottom:1.5rem; padding:1rem;">
+      class="card mb-lg">
   <input type="hidden" name="_csrf" value="{{csrfToken}}">
-  <div style="display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap;">
-    <label class="form-group" style="flex:1; min-width:200px; margin-bottom:0;">
+  <div class="flex flex-wrap items-center gap-sm">
+    <label class="form-group form-group--inline">
       <span class="form-label">{{t "admin.teams.teamName"}}</span>
       <input type="text" name="name" class="input" placeholder="{{t "admin.teams.teamNamePlaceholder"}}" required>
     </label>
-    <label class="form-group" style="flex:2; min-width:200px; margin-bottom:0;">
+    <label class="form-group form-group--inline" style="flex:2">
       <span class="form-label">{{t "admin.teams.teamDescription"}}</span>
       <input type="text" name="description" class="input" placeholder="{{t "admin.teams.teamDescriptionPlaceholder"}}">
     </label>
-    <label class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+    <label class="form-group form-group--inline">
       <span class="form-label">Organization</span>
       <select name="organizationId" class="input">
         <option value="">None (global)</option>
@@ -31,7 +31,7 @@
         {{/each}}
       </select>
     </label>
-    <label class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+    <label class="form-group form-group--inline">
       <span class="form-label">{{t "admin.teams.teamRole"}}</span>
       <select name="roleId" class="input">
         <option value="">None</option>
@@ -78,7 +78,7 @@
 
       {{#unless teams.length}}
       <tr id="teams-empty-row">
-        <td colspan="6" style="text-align:center; padding:2rem;">
+        <td colspan="6" class="empty-state">
           {{t "admin.teams.noTeams"}}
         </td>
       </tr>
