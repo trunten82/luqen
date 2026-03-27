@@ -1,61 +1,199 @@
 <section aria-label="Roles management">
-  <div class="page-actions">
-    <a href="/admin/roles/new" class="btn btn--primary">{{t "admin.roles.createRole"}}</a>
+
+  {{! ── Tab bar (HTMX-powered) ──────────────────────────────────────── }}
+  <div class="rpt-tabs" role="tablist" id="roles-tabs">
+    <button role="tab" class="rpt-tab rpt-tab--active" id="tab-global"
+            aria-controls="panel-global" aria-selected="true"
+            hx-get="/admin/roles/global" hx-target="#panel-global" hx-swap="innerHTML"
+            hx-on::after-request="this.classList.add('rpt-tab--active');document.getElementById('tab-org').classList.remove('rpt-tab--active');document.getElementById('tab-org').setAttribute('aria-selected','false');this.setAttribute('aria-selected','true');document.getElementById('panel-org').classList.add('rpt-tab-panel--hidden');document.getElementById('panel-global').classList.remove('rpt-tab-panel--hidden');">
+      {{t "admin.roles.globalRolesTab"}}
+    </button>
+    {{#if hasOrgContext}}
+    <button role="tab" class="rpt-tab" id="tab-org"
+            aria-controls="panel-org" aria-selected="false"
+            hx-get="/admin/roles/org" hx-target="#panel-org" hx-swap="innerHTML"
+            hx-on::after-request="this.classList.add('rpt-tab--active');document.getElementById('tab-global').classList.remove('rpt-tab--active');document.getElementById('tab-global').setAttribute('aria-selected','false');this.setAttribute('aria-selected','true');document.getElementById('panel-global').classList.add('rpt-tab-panel--hidden');document.getElementById('panel-org').classList.remove('rpt-tab-panel--hidden');">
+      {{t "admin.roles.orgRolesTab"}}{{#if orgName}} ({{orgName}}){{/if}}
+    </button>
+    {{else if isAdmin}}
+    <button role="tab" class="rpt-tab" id="tab-org"
+            aria-controls="panel-org" aria-selected="false"
+            hx-get="/admin/roles/org" hx-target="#panel-org" hx-swap="innerHTML"
+            hx-on::after-request="this.classList.add('rpt-tab--active');document.getElementById('tab-global').classList.remove('rpt-tab--active');document.getElementById('tab-global').setAttribute('aria-selected','false');this.setAttribute('aria-selected','true');document.getElementById('panel-global').classList.add('rpt-tab-panel--hidden');document.getElementById('panel-org').classList.remove('rpt-tab-panel--hidden');">
+      {{t "admin.roles.orgRolesTab"}}
+    </button>
+    {{/if}}
   </div>
 
-  {{#if hasRoles}}
-  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
-    <table class="table" aria-label="Roles">
-      <thead>
-        <tr>
-          <th scope="col">{{t "common.name"}}</th>
-          <th scope="col">{{t "admin.roles.description"}}</th>
-          <th scope="col">{{t "admin.roles.type"}}</th>
-          <th scope="col">{{t "admin.roles.permissions"}}</th>
-          <th scope="col">{{t "common.actions"}}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each roles}}
-        <tr id="role-{{this.id}}">
-          <td data-label="Name">
-            <strong>{{this.name}}</strong>
-          </td>
-          <td data-label="Description">{{this.description}}</td>
-          <td data-label="Type">
-            {{#if this.systemBadge}}
-            <span class="badge badge--neutral" title="System role — cannot be deleted or renamed">
-              <svg width="12" height="12" viewBox="0 0 20 20" fill="none" style="vertical-align:middle;margin-right:0.25rem;" aria-hidden="true">
-                <rect x="5" y="9" width="10" height="9" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M7 9V6a3 3 0 016 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              {{t "admin.roles.system"}}
-            </span>
-            {{else}}
-            <span class="badge badge--success">{{t "admin.roles.custom"}}</span>
-            {{/if}}
-          </td>
-          <td data-label="Permissions">{{this.permissionCount}}</td>
-          <td>
-            <a href="/admin/roles/{{this.id}}/edit" class="btn btn--sm btn--secondary" aria-label="Edit role {{this.name}}">{{t "common.edit"}}</a>
-            {{#if this.canDelete}}
-            <button
-              hx-delete="/admin/roles/{{this.id}}"
-              hx-confirm="Delete role {{this.name}}? Users assigned this role will lose its permissions."
-              hx-headers='{"X-CSRF-Token": "{{../../csrfToken}}"}'
-              class="btn btn--sm btn--danger"
-              aria-label="Delete role {{this.name}}"
-            >{{t "common.delete"}}</button>
-            {{/if}}
-          </td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
+  {{! ── Global Roles Panel ──────────────────────────────────────────── }}
+  <div class="rpt-tab-panel" id="panel-global" role="tabpanel" aria-labelledby="tab-global">
+    {{#if canCreateGlobal}}
+    <div class="page-actions">
+      <a href="/admin/roles/new?scope=global" class="btn btn--primary">{{t "admin.roles.createRole"}}</a>
+    </div>
+    {{/if}}
+
+    <p class="text-muted" style="margin-bottom:1rem;">{{t "admin.roles.globalRolesDescription"}}</p>
+
+    {{#if hasGlobalRoles}}
+    <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+      <table class="table" aria-label="Global Roles">
+        <thead>
+          <tr>
+            <th scope="col">{{t "common.name"}}</th>
+            <th scope="col">{{t "admin.roles.description"}}</th>
+            <th scope="col">{{t "admin.roles.type"}}</th>
+            <th scope="col">{{t "admin.roles.permissions"}}</th>
+            <th scope="col">{{t "common.actions"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each globalRoles}}
+          <tr id="role-{{this.id}}">
+            <td data-label="Name"><strong>{{this.name}}</strong></td>
+            <td data-label="Description">{{this.description}}</td>
+            <td data-label="Type">
+              {{#if this.systemBadge}}
+              <span class="badge badge--neutral" title="System role">
+                <svg width="12" height="12" viewBox="0 0 20 20" fill="none" style="vertical-align:middle;margin-right:0.25rem;" aria-hidden="true">
+                  <rect x="5" y="9" width="10" height="9" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M7 9V6a3 3 0 016 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                {{t "admin.roles.system"}}
+              </span>
+              {{else}}
+              <span class="badge badge--success">{{t "admin.roles.custom"}}</span>
+              {{/if}}
+            </td>
+            <td data-label="Permissions">{{this.permissionCount}}</td>
+            <td>
+              {{#if this.canEdit}}
+              <a href="/admin/roles/{{this.id}}/edit" class="btn btn--sm btn--secondary" aria-label="Edit role {{this.name}}">{{t "common.edit"}}</a>
+              {{/if}}
+              {{#if this.canDelete}}
+              <button
+                hx-delete="/admin/roles/{{this.id}}"
+                hx-confirm="Delete role {{this.name}}? Users assigned this role will lose its permissions."
+                hx-headers='{"X-CSRF-Token": "{{../../csrfToken}}"}'
+                class="btn btn--sm btn--danger"
+                aria-label="Delete role {{this.name}}"
+              >{{t "common.delete"}}</button>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <div class="empty-state" role="status">
+      <p>{{t "admin.roles.noGlobalRoles"}}</p>
+    </div>
+    {{/if}}
   </div>
-  {{else}}
-  <div class="empty-state" role="status">
-    <p>{{t "admin.roles.noRoles"}}</p>
+
+  {{! ── Org Roles Panel ─────────────────────────────────────────────── }}
+  {{#if hasOrgContext}}
+  <div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-org" role="tabpanel" aria-labelledby="tab-org">
+    {{#if canCreateOrg}}
+    <div class="page-actions">
+      <a href="/admin/roles/new?scope=org" class="btn btn--primary">{{t "admin.roles.createRole"}}</a>
+    </div>
+    {{/if}}
+
+    <p class="text-muted" style="margin-bottom:1rem;">{{t "admin.roles.orgRolesDescription"}}</p>
+
+    {{#if hasOrgRoles}}
+    <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+      <table class="table" aria-label="Organization Roles">
+        <thead>
+          <tr>
+            <th scope="col">{{t "common.name"}}</th>
+            <th scope="col">{{t "admin.roles.description"}}</th>
+            <th scope="col">{{t "admin.roles.type"}}</th>
+            <th scope="col">{{t "admin.roles.permissions"}}</th>
+            <th scope="col">{{t "common.actions"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each orgRoles}}
+          <tr id="role-{{this.id}}">
+            <td data-label="Name"><strong>{{this.name}}</strong></td>
+            <td data-label="Description">{{this.description}}</td>
+            <td data-label="Type">
+              <span class="badge badge--info">{{t "admin.roles.orgScoped"}}</span>
+            </td>
+            <td data-label="Permissions">{{this.permissionCount}}</td>
+            <td>
+              {{#if this.canEdit}}
+              <a href="/admin/roles/{{this.id}}/edit" class="btn btn--sm btn--secondary" aria-label="Edit role {{this.name}}">{{t "common.edit"}}</a>
+              {{/if}}
+              {{#if this.canDelete}}
+              <button
+                hx-delete="/admin/roles/{{this.id}}"
+                hx-confirm="Delete role {{this.name}}? Teams assigned this role will lose its permissions."
+                hx-headers='{"X-CSRF-Token": "{{../../csrfToken}}"}'
+                class="btn btn--sm btn--danger"
+                aria-label="Delete role {{this.name}}"
+              >{{t "common.delete"}}</button>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <div class="empty-state" role="status">
+      <p>{{t "admin.roles.noOrgRoles"}}</p>
+    </div>
+    {{/if}}
+  </div>
+  {{else if isAdmin}}
+  <div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-org" role="tabpanel" aria-labelledby="tab-org">
+    {{#if hasOrgRoles}}
+    <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+      <table class="table" aria-label="Organization Roles">
+        <thead>
+          <tr>
+            <th scope="col">{{t "common.name"}}</th>
+            <th scope="col">{{t "admin.roles.description"}}</th>
+            <th scope="col">{{t "admin.roles.orgName"}}</th>
+            <th scope="col">{{t "admin.roles.permissions"}}</th>
+            <th scope="col">{{t "common.actions"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each orgRoles}}
+          <tr id="role-{{this.id}}">
+            <td data-label="Name"><strong>{{this.name}}</strong></td>
+            <td data-label="Description">{{this.description}}</td>
+            <td data-label="Organization"><span class="badge badge--info">{{this.orgId}}</span></td>
+            <td data-label="Permissions">{{this.permissionCount}}</td>
+            <td>
+              {{#if this.canEdit}}
+              <a href="/admin/roles/{{this.id}}/edit" class="btn btn--sm btn--secondary" aria-label="Edit role {{this.name}}">{{t "common.edit"}}</a>
+              {{/if}}
+              {{#if this.canDelete}}
+              <button
+                hx-delete="/admin/roles/{{this.id}}"
+                hx-confirm="Delete role {{this.name}}?"
+                hx-headers='{"X-CSRF-Token": "{{../../csrfToken}}"}'
+                class="btn btn--sm btn--danger"
+                aria-label="Delete role {{this.name}}"
+              >{{t "common.delete"}}</button>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <div class="empty-state" role="status">
+      <p>{{t "admin.roles.noOrgRoles"}}</p>
+    </div>
+    {{/if}}
   </div>
   {{/if}}
 </section>

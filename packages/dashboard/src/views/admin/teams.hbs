@@ -31,6 +31,15 @@
         {{/each}}
       </select>
     </label>
+    <label class="form-group" style="flex:1; min-width:160px; margin-bottom:0;">
+      <span class="form-label">{{t "admin.teams.teamRole"}}</span>
+      <select name="roleId" class="input">
+        <option value="">None</option>
+        {{#each availableRoles}}
+        <option value="{{id}}">{{name}}{{#if (eq orgId "system")}} (global){{/if}}</option>
+        {{/each}}
+      </select>
+    </label>
     <button type="submit" class="btn btn--primary">{{t "admin.teams.createTeam"}}</button>
   </div>
 </form>

@@ -430,6 +430,7 @@
       "permissions": "Permissions",
       "system": "System",
       "custom": "Custom",
+      "orgScoped": "Org",
       "noRoles": "No roles found. Create your first custom role.",
       "backToRoles": "Back to Roles",
       "roleName": "Role Name",
@@ -438,7 +439,16 @@
       "roleNameHint": "Letters, numbers, hyphens and underscores only.",
       "descriptionPlaceholder": "Describe what this role is for...",
       "permissionsHint": "Select the permissions this role should have.",
-      "saveChanges": "Save Changes"
+      "saveChanges": "Save Changes",
+      "globalRolesTab": "Global Roles",
+      "orgRolesTab": "Organization Roles",
+      "globalRolesDescription": "System-wide roles managed by administrators. These apply across all organizations.",
+      "orgRolesDescription": "Roles scoped to your organization. Org owners and admins can manage these.",
+      "noGlobalRoles": "No global roles found.",
+      "noOrgRoles": "No organization roles found. Create one to define custom permissions for your org.",
+      "cannotDeleteDefault": "Default organization roles cannot be deleted.",
+      "readOnly": "You have read-only access to roles.",
+      "orgName": "Organization"
     },
     "apiKeys": {
       "createApiKey": "Create API Key",
