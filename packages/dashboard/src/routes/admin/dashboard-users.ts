@@ -203,7 +203,7 @@ export async function dashboardUserRoutes(
         return reply
           .code(422)
           .header('content-type', 'text/html')
-          .send(`<div id="du-username-error" class="form-error" hx-swap-oob="true">This username is not available.</div>\n${toastHtml('This username is not available. Please choose a different one.', 'error')}`);
+          .send(`<div id="du-username-error" class="form-error" style="display:block;color:var(--status-error)" hx-swap-oob="true">This username is not available. Please choose a different one.</div>`);
       }
 
       try {
