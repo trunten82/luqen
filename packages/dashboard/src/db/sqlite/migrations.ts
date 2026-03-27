@@ -481,4 +481,11 @@ ALTER TABLE scan_records ADD COLUMN json_report TEXT;
 ALTER TABLE api_keys ADD COLUMN role TEXT NOT NULL DEFAULT 'admin';
     `,
   },
+  {
+    id: '020',
+    name: 'add-plugin-checksum',
+    sql: `
+ALTER TABLE plugins ADD COLUMN checksum TEXT;
+    `,
+  },
 ];
