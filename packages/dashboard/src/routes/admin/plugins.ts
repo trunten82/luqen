@@ -337,6 +337,68 @@ export async function pluginAdminRoutes(
     },
   );
 
+  // POST /admin/plugins/:id/org/activate — org-scoped activate
+  server.post<{ Params: { id: string } }>(
+    '/admin/plugins/:id/org/activate',
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    async (request, reply) => {
+      try {
+        const orgId = request.user?.currentOrgId;
+        if (!orgId || orgId === 'system') {
+          return reply
+            .code(400)
+            .header('content-type', 'text/html')
+            .send('<div class="alert alert--error">No organization context</div>');
+        }
+
+        const plugin = await pluginManager.activateForOrg(request.params.id, orgId);
+        return reply
+          .header('content-type', 'text/html')
+          .header('hx-trigger', 'pluginChanged')
+          .send(
+            `<div class="alert alert--success">Plugin "${escapeHtml(plugin.packageName)}" activated for organization</div>`,
+          );
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(`<div class="alert alert--error">Activate failed: ${escapeHtml(message)}</div>`);
+      }
+    },
+  );
+
+  // POST /admin/plugins/:id/org/deactivate — org-scoped deactivate
+  server.post<{ Params: { id: string } }>(
+    '/admin/plugins/:id/org/deactivate',
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    async (request, reply) => {
+      try {
+        const orgId = request.user?.currentOrgId;
+        if (!orgId || orgId === 'system') {
+          return reply
+            .code(400)
+            .header('content-type', 'text/html')
+            .send('<div class="alert alert--error">No organization context</div>');
+        }
+
+        const plugin = await pluginManager.deactivateForOrg(request.params.id, orgId);
+        return reply
+          .header('content-type', 'text/html')
+          .header('hx-trigger', 'pluginChanged')
+          .send(
+            `<div class="alert alert--success">Plugin "${escapeHtml(plugin.packageName)}" deactivated for organization</div>`,
+          );
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(`<div class="alert alert--error">Deactivate failed: ${escapeHtml(message)}</div>`);
+      }
+    },
+  );
+
   // PATCH /admin/plugins/:packageName/org-config — save org-specific plugin config
   server.patch<{ Params: { packageName: string }; Body: Record<string, unknown> }>(
     '/admin/plugins/:packageName/org-config',
