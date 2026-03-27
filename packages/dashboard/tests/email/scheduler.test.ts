@@ -349,6 +349,7 @@ describe('processEmailReport', () => {
       getActiveInstanceByPackageName: vi.fn().mockReturnValue({
         sendReport: mockSendReport,
       }),
+      getPluginConfigForOrg: vi.fn().mockReturnValue(null),
     } as any;
 
     const storage = makeStorage();
@@ -366,6 +367,7 @@ describe('processEmailReport', () => {
       getActiveInstanceByPackageName: vi.fn().mockReturnValue({
         // no sendReport method
       }),
+      getPluginConfigForOrg: vi.fn().mockReturnValue(null),
     } as any;
 
     const storage = makeStorage();
@@ -568,6 +570,7 @@ describe('startEmailScheduler', () => {
       getActiveInstanceByPackageName: vi.fn().mockReturnValue({
         sendReport: mockSendReport,
       }),
+      getPluginConfigForOrg: vi.fn().mockReturnValue(null),
     } as any;
 
     const report = makeReport();

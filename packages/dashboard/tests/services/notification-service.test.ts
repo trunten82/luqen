@@ -326,6 +326,7 @@ describe('sendNotification', () => {
       getActiveInstanceByPackageName: vi.fn().mockReturnValue({
         sendReport: mockSendReport,
       }),
+      getPluginConfigForOrg: vi.fn().mockReturnValue(null),
     } as any;
 
     const storage = makeStorage();
@@ -347,6 +348,7 @@ describe('sendNotification', () => {
   it('throws when plugin lacks sendReport method', async () => {
     const pluginManager = {
       getActiveInstanceByPackageName: vi.fn().mockReturnValue({}),
+      getPluginConfigForOrg: vi.fn().mockReturnValue(null),
     } as any;
 
     const storage = makeStorage();
