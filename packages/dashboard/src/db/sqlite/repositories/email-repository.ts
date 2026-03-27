@@ -74,25 +74,7 @@ function emailReportRowToRecord(row: EmailReportRow): EmailReport & { includeWar
 // ---------------------------------------------------------------------------
 
 export class SqliteEmailRepository implements EmailRepository {
-  constructor(private readonly db: Database.Database) {
-    // Add include_warnings and include_notices columns if they don't exist yet
-    this.ensureReportFlagColumns();
-  }
-
-  /** Idempotently add include_warnings / include_notices columns (defaults to 1 = true). */
-  private ensureReportFlagColumns(): void {
-    const columns = this.db
-      .prepare("PRAGMA table_info('email_reports')")
-      .all() as Array<{ name: string }>;
-    const columnNames = new Set(columns.map((c) => c.name));
-
-    if (!columnNames.has('include_warnings')) {
-      this.db.prepare('ALTER TABLE email_reports ADD COLUMN include_warnings INTEGER NOT NULL DEFAULT 1').run();
-    }
-    if (!columnNames.has('include_notices')) {
-      this.db.prepare('ALTER TABLE email_reports ADD COLUMN include_notices INTEGER NOT NULL DEFAULT 1').run();
-    }
-  }
+  constructor(private readonly db: Database.Database) {}
 
   async getSmtpConfig(orgId = 'system'): Promise<SmtpConfig | null> {
     const stmt = this.db.prepare(

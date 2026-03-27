@@ -43,7 +43,9 @@ CREATE TABLE IF NOT EXISTS plugins (
   status TEXT NOT NULL DEFAULT 'inactive',
   installed_at TEXT NOT NULL,
   activated_at TEXT,
-  error TEXT
+  error TEXT,
+  checksum TEXT,
+  org_id TEXT NOT NULL DEFAULT 'system'
 );
 `;
 

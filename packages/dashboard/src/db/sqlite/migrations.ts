@@ -570,4 +570,12 @@ INSERT OR IGNORE INTO team_members (team_id, user_id, role)
 DELETE FROM org_members;
     `,
   },
+  {
+    id: '023',
+    name: 'add-email-report-warning-notice-flags',
+    sql: `
+ALTER TABLE email_reports ADD COLUMN include_warnings INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE email_reports ADD COLUMN include_notices INTEGER NOT NULL DEFAULT 1;
+    `,
+  },
 ];
