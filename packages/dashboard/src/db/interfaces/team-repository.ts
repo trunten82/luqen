@@ -4,8 +4,8 @@ export interface TeamRepository {
   listTeams(orgId?: string): Promise<Team[]>;
   getTeam(id: string): Promise<Team | null>;
   getTeamByName(name: string, orgId?: string): Promise<Team | null>;
-  createTeam(data: { readonly name: string; readonly description: string; readonly orgId: string }): Promise<Team>;
-  updateTeam(id: string, data: { readonly name?: string; readonly description?: string; readonly orgId?: string }): Promise<void>;
+  createTeam(data: { readonly name: string; readonly description: string; readonly orgId: string; readonly roleId?: string }): Promise<Team>;
+  updateTeam(id: string, data: { readonly name?: string; readonly description?: string; readonly orgId?: string; readonly roleId?: string | null }): Promise<void>;
   /** List all teams linked to a specific organization */
   listTeamsByOrgId(orgId: string): Promise<Team[]>;
   deleteTeam(id: string): Promise<void>;

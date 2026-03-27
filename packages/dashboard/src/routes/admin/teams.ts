@@ -7,10 +7,12 @@ interface CreateTeamBody {
   name?: string;
   description?: string;
   organizationId?: string;
+  roleId?: string;
 }
 
 interface UpdateTeamBody {
   organizationId?: string;
+  roleId?: string;
 }
 
 interface AddMemberBody {
@@ -104,10 +106,28 @@ export async function teamRoutes(
       // If an organization is selected, link the team to it; otherwise use current org scope
       const organizationId = (body.organizationId ?? '').trim();
       const orgId = organizationId !== '' ? organizationId : (request.user?.currentOrgId ?? 'system');
+      const roleId = (body.roleId ?? '').trim();
+
+      // Validate role_id if provided — must exist and belong to the same org
+      if (roleId !== '') {
+        const role = await storage.roles.getRole(roleId);
+        if (role === null) {
+          return reply.code(400).type('text/html').send(
+            '<div class="toast toast--error" role="alert">Selected role does not exist</div>',
+          );
+        }
+        if (role.orgId !== orgId && role.orgId !== 'system') {
+          return reply.code(400).type('text/html').send(
+            '<div class="toast toast--error" role="alert">Selected role does not belong to this organization</div>',
+          );
+        }
+      }
+
       const team = await storage.teams.createTeam({
         name,
         description: (body.description ?? '').trim(),
         orgId,
+        ...(roleId !== '' ? { roleId } : {}),
       });
 
       // HTMX — return new table row
@@ -205,6 +225,56 @@ export async function teamRoutes(
         );
       }
 
+      return reply.redirect(`/admin/teams/${id}`);
+    },
+  );
+
+  // POST /admin/teams/:id/role — update team role assignment
+  server.post(
+    '/admin/teams/:id/role',
+    { preHandler: requirePermission('users.activate') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { roleId?: string };
+
+      const team = await storage.teams.getTeam(id);
+      if (team === null) {
+        return reply.code(404).send({ error: 'Team not found' });
+      }
+
+      const roleId = (body.roleId ?? '').trim();
+
+      if (roleId === '') {
+        // Clear role assignment
+        await storage.teams.updateTeam(id, { roleId: null });
+        if (request.headers['hx-request'] === 'true') {
+          return reply.type('text/html').send(
+            `<span id="team-role-label" hx-swap-oob="true">None</span>\n${toastHtml('Role assignment cleared')}`,
+          );
+        }
+        return reply.redirect(`/admin/teams/${id}`);
+      }
+
+      // Validate role exists and belongs to the same org (or system)
+      const role = await storage.roles.getRole(roleId);
+      if (role === null) {
+        return reply.code(400).type('text/html').send(
+          '<div class="toast toast--error" role="alert">Role not found</div>',
+        );
+      }
+      if (role.orgId !== team.orgId && role.orgId !== 'system') {
+        return reply.code(400).type('text/html').send(
+          '<div class="toast toast--error" role="alert">Role does not belong to this team\'s organization</div>',
+        );
+      }
+
+      await storage.teams.updateTeam(id, { roleId });
+
+      if (request.headers['hx-request'] === 'true') {
+        return reply.type('text/html').send(
+          `<span id="team-role-label" hx-swap-oob="true">${escapeHtml(role.name)}</span>\n${toastHtml('Role updated')}`,
+        );
+      }
       return reply.redirect(`/admin/teams/${id}`);
     },
   );

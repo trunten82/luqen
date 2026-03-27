@@ -124,6 +124,28 @@ describe('TeamRepository', () => {
     });
   });
 
+  describe('createTeam with roleId', () => {
+    it('creates team with role_id when provided', async () => {
+      const org = await storage.organizations.createOrg({ name: 'TestOrg', slug: 'test-org' });
+      const roles = await storage.roles.listRoles(org.id);
+      const memberRole = roles.find((r) => r.name === 'Member' && r.orgId === org.id);
+      expect(memberRole).toBeDefined();
+
+      const team = await storage.teams.createTeam({
+        name: 'Dev Team',
+        description: 'Developers',
+        orgId: org.id,
+        roleId: memberRole!.id,
+      });
+      expect(team.roleId).toBe(memberRole!.id);
+    });
+
+    it('creates team with null roleId by default', async () => {
+      const team = await storage.teams.createTeam(makeTeamInput());
+      expect(team.roleId).toBeNull();
+    });
+  });
+
   describe('updateTeam', () => {
     it('updates name', async () => {
       const team = await storage.teams.createTeam(makeTeamInput({ name: 'OldName' }));
@@ -144,6 +166,32 @@ describe('TeamRepository', () => {
       await expect(storage.teams.updateTeam(team.id, {})).resolves.not.toThrow();
       const unchanged = await storage.teams.getTeam(team.id);
       expect(unchanged?.name).toBe('Stable');
+    });
+
+    it('updates roleId', async () => {
+      const org = await storage.organizations.createOrg({ name: 'UpdOrg', slug: 'upd-org' });
+      const roles = await storage.roles.listRoles(org.id);
+      const viewerRole = roles.find((r) => r.name === 'Viewer' && r.orgId === org.id);
+
+      const team = await storage.teams.createTeam({ name: 'T', description: '', orgId: org.id });
+      expect(team.roleId).toBeNull();
+
+      await storage.teams.updateTeam(team.id, { roleId: viewerRole!.id });
+      const updated = await storage.teams.getTeam(team.id);
+      expect(updated?.roleId).toBe(viewerRole!.id);
+    });
+
+    it('clears roleId when set to null', async () => {
+      const org = await storage.organizations.createOrg({ name: 'ClearOrg', slug: 'clr-org' });
+      const roles = await storage.roles.listRoles(org.id);
+      const ownerRole = roles.find((r) => r.name === 'Owner' && r.orgId === org.id);
+
+      const team = await storage.teams.createTeam({ name: 'T2', description: '', orgId: org.id, roleId: ownerRole!.id });
+      expect(team.roleId).toBe(ownerRole!.id);
+
+      await storage.teams.updateTeam(team.id, { roleId: null });
+      const updated = await storage.teams.getTeam(team.id);
+      expect(updated?.roleId).toBeNull();
     });
   });
 
