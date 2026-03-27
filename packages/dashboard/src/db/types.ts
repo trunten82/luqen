@@ -76,6 +76,7 @@ export interface Team {
   readonly name: string;
   readonly description: string;
   readonly orgId: string;
+  readonly roleId: string | null;
   readonly createdAt: string;
   readonly memberCount?: number;
   readonly members?: ReadonlyArray<TeamMember>;

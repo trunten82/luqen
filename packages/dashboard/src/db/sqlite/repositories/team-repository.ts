@@ -11,6 +11,7 @@ interface TeamRow {
   name: string;
   description: string;
   org_id: string;
+  role_id: string | null;
   created_at: string;
   member_count?: number;
 }
@@ -21,6 +22,7 @@ function teamRowToRecord(row: TeamRow): Team {
     name: row.name,
     description: row.description,
     orgId: row.org_id,
+    roleId: row.role_id ?? null,
     createdAt: row.created_at,
     ...(row.member_count !== undefined ? { memberCount: row.member_count } : {}),
   };
@@ -85,13 +87,13 @@ export class SqliteTeamRepository implements TeamRepository {
     };
   }
 
-  async createTeam(data: { readonly name: string; readonly description: string; readonly orgId: string }): Promise<Team> {
+  async createTeam(data: { readonly name: string; readonly description: string; readonly orgId: string; readonly roleId?: string }): Promise<Team> {
     const id = `team-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const now = new Date().toISOString();
 
     const stmt = this.db.prepare(`
-      INSERT INTO teams (id, name, description, org_id, created_at)
-      VALUES (@id, @name, @description, @orgId, @createdAt)
+      INSERT INTO teams (id, name, description, org_id, role_id, created_at)
+      VALUES (@id, @name, @description, @orgId, @roleId, @createdAt)
     `);
 
     stmt.run({
@@ -99,6 +101,7 @@ export class SqliteTeamRepository implements TeamRepository {
       name: data.name,
       description: data.description,
       orgId: data.orgId,
+      roleId: data.roleId ?? null,
       createdAt: now,
     });
 
@@ -109,7 +112,7 @@ export class SqliteTeamRepository implements TeamRepository {
     return created;
   }
 
-  async updateTeam(id: string, data: { readonly name?: string; readonly description?: string; readonly orgId?: string }): Promise<void> {
+  async updateTeam(id: string, data: { readonly name?: string; readonly description?: string; readonly orgId?: string; readonly roleId?: string | null }): Promise<void> {
     const setClauses: string[] = [];
     const params: Record<string, unknown> = { id };
 
@@ -124,6 +127,10 @@ export class SqliteTeamRepository implements TeamRepository {
     if (data.orgId !== undefined) {
       setClauses.push('org_id = @orgId');
       params['orgId'] = data.orgId;
+    }
+    if (data.roleId !== undefined) {
+      setClauses.push('role_id = @roleId');
+      params['roleId'] = data.roleId;
     }
 
     if (setClauses.length === 0) return;
