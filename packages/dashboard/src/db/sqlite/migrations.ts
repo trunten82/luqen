@@ -578,4 +578,56 @@ ALTER TABLE email_reports ADD COLUMN include_warnings INTEGER NOT NULL DEFAULT 1
 ALTER TABLE email_reports ADD COLUMN include_notices INTEGER NOT NULL DEFAULT 1;
     `,
   },
+  {
+    id: '027',
+    name: 'add-admin-org-and-compliance-permissions',
+    sql: `
+-- 1. Add new permissions to system admin role
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'admin.plugins');
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'admin.org');
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'compliance.view');
+INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES ('admin', 'compliance.manage');
+
+-- 2. Add admin.org to org Owner roles
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'admin.org' FROM roles r WHERE r.name = 'Owner' AND r.org_id != 'system';
+
+-- 3. Add users.create to org Owner and Admin roles
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'users.create' FROM roles r WHERE r.name IN ('Owner', 'Admin') AND r.org_id != 'system';
+
+-- 4. Add compliance.view to ALL org roles
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'compliance.view' FROM roles r WHERE r.org_id != 'system';
+
+-- 5. Add compliance.manage to org Owner and Admin roles
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'compliance.manage' FROM roles r WHERE r.name IN ('Owner', 'Admin') AND r.org_id != 'system';
+
+-- 6. Promote Admin role: add missing operational permissions
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, p.perm FROM roles r
+  CROSS JOIN (
+    SELECT 'repos.manage' AS perm UNION ALL
+    SELECT 'issues.assign' UNION ALL
+    SELECT 'issues.fix' UNION ALL
+    SELECT 'scans.schedule' UNION ALL
+    SELECT 'reports.delete'
+  ) p
+  WHERE r.name = 'Admin' AND r.org_id != 'system';
+
+-- 8. Add reports.view_technical + manual_testing to Member role
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, p.perm FROM roles r
+  CROSS JOIN (
+    SELECT 'reports.view_technical' AS perm UNION ALL
+    SELECT 'manual_testing'
+  ) p
+  WHERE r.name = 'Member' AND r.org_id != 'system';
+
+-- 9. Add trends.view to Viewer role
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'trends.view' FROM roles r WHERE r.name = 'Viewer' AND r.org_id != 'system';
+    `,
+  },
 ];
