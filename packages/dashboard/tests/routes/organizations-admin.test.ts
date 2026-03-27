@@ -238,57 +238,44 @@ describe('GET /admin/organizations/:id/members', () => {
   });
 });
 
-// ── POST /admin/organizations/:id/members ────────────────────────────────────
+// ── POST /admin/organizations/:id/members/add-to-team ────────────────────────
 
-describe('POST /admin/organizations/:id/members', () => {
+describe('POST /admin/organizations/:id/members/add-to-team', () => {
   let ctx: TestContext;
   beforeEach(async () => { ctx = await createTestServer(); });
   afterEach(() => { ctx.cleanup(); });
 
-  it('adds a member and returns HTMX row', async () => {
+  it('adds a member to a team and returns success', async () => {
     const org = await ctx.storage.organizations.createOrg({ name: 'Gamma', slug: 'gamma' });
     const user = await ctx.storage.users.createUser('bob', 'Password123!', 'viewer');
+    const team = await ctx.storage.teams.createTeam({ name: 'Members', description: 'Test team', orgId: org.id });
 
     const response = await ctx.server.inject({
       method: 'POST',
-      url: `/admin/organizations/${org.id}/members`,
-      payload: `userId=${user.id}&role=member`,
+      url: `/admin/organizations/${org.id}/members/add-to-team`,
+      payload: `userId=${user.id}&teamId=${team.id}`,
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
     expect(response.statusCode).toBe(200);
-    expect(response.body).toContain('added to organization');
   });
 
   it('returns 400 when userId is missing', async () => {
     const org = await ctx.storage.organizations.createOrg({ name: 'Delta', slug: 'delta' });
+    const team = await ctx.storage.teams.createTeam({ name: 'Members', description: 'Test team', orgId: org.id });
     const response = await ctx.server.inject({
       method: 'POST',
-      url: `/admin/organizations/${org.id}/members`,
-      payload: 'role=member',
+      url: `/admin/organizations/${org.id}/members/add-to-team`,
+      payload: `teamId=${team.id}`,
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
     expect(response.statusCode).toBe(400);
-    expect(response.body).toContain('required');
-  });
-
-  it('returns 400 for invalid role', async () => {
-    const org = await ctx.storage.organizations.createOrg({ name: 'Epsilon', slug: 'epsilon' });
-    const user = await ctx.storage.users.createUser('carol', 'Password123!', 'viewer');
-    const response = await ctx.server.inject({
-      method: 'POST',
-      url: `/admin/organizations/${org.id}/members`,
-      payload: `userId=${user.id}&role=superuser`,
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    });
-    expect(response.statusCode).toBe(400);
-    expect(response.body).toContain('Invalid role');
   });
 
   it('returns 404 when org does not exist', async () => {
     const response = await ctx.server.inject({
       method: 'POST',
-      url: '/admin/organizations/nonexistent-id/members',
-      payload: 'userId=some-user-id&role=member',
+      url: '/admin/organizations/nonexistent-id/members/add-to-team',
+      payload: 'userId=some-user-id&teamId=some-team',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
     });
     expect(response.statusCode).toBe(404);
