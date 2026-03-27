@@ -281,9 +281,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── i18n ──────────────────────────────────────────────────────────────────
   loadTranslations();
-  handlebars.registerHelper('t', function (key: string, options: { data?: { root?: { locale?: string } } }) {
+  handlebars.registerHelper('t', function (key: string, options: { hash?: Record<string, unknown>; data?: { root?: { locale?: string } } }) {
     const locale = (options?.data?.root?.locale as Locale) ?? 'en';
-    return t(key, locale);
+    const params = options?.hash != null
+      ? Object.fromEntries(Object.entries(options.hash).map(([k, v]) => [k, String(v ?? '')]))
+      : undefined;
+    return t(key, locale, params);
   });
 
   handlebars.registerHelper('issueAssignStatus', (assignedMap: Record<string, { id: string; status: string; assignedTo: string | null }> | undefined, code: string, selector: string, message: string, wcagCriterion?: string) => {
