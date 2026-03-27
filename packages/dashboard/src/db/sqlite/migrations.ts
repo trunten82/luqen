@@ -523,4 +523,37 @@ ALTER TABLE teams ADD COLUMN role_id TEXT REFERENCES roles(id) ON DELETE SET NUL
 ALTER TABLE plugins ADD COLUMN org_id TEXT NOT NULL DEFAULT 'system';
     `,
   },
+  {
+    id: '020',
+    name: 'migrate-direct-members-to-teams',
+    sql: `
+-- For each org that has direct members, create a "Direct Members" team,
+-- assign the org-scoped "Member" role to it, and move all direct members
+-- into that team. This ensures all org access flows through teams.
+
+-- 1. Create "Direct Members" teams for every org that has direct members.
+--    Use org_id as a deterministic team id suffix to avoid collisions.
+INSERT INTO teams (id, name, description, org_id, role_id, created_at)
+  SELECT
+    'team-dm-' || om.org_id,
+    'Direct Members',
+    'Auto-created team for migrated direct organization members',
+    om.org_id,
+    (SELECT r.id FROM roles r WHERE r.name = 'Member' AND r.org_id = om.org_id LIMIT 1),
+    datetime('now')
+  FROM org_members om
+  GROUP BY om.org_id;
+
+-- 2. Move direct members into their corresponding "Direct Members" team.
+INSERT OR IGNORE INTO team_members (team_id, user_id, role)
+  SELECT
+    'team-dm-' || om.org_id,
+    om.user_id,
+    om.role
+  FROM org_members om;
+
+-- 3. Clear the org_members table (all access now goes through teams).
+DELETE FROM org_members;
+    `,
+  },
 ];
