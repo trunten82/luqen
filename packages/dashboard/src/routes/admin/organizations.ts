@@ -145,13 +145,19 @@ export async function organizationRoutes(
   // GET /admin/organizations/:id/members — show members page (team-based)
   server.get(
     '/admin/organizations/:id/members',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.org') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
       const org = await storage.organizations.getOrg(id);
       if (org === null) {
         return reply.code(404).send({ error: 'Organization not found' });
+      }
+
+      // Tenant isolation: non-admin users can only manage their own org
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && request.user?.currentOrgId !== id) {
+        return reply.code(403).send({ error: 'Forbidden: you can only manage your own organization' });
       }
 
       // Get all members (now primarily via teams)
@@ -197,7 +203,7 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/members/add-to-team — add user to a team
   server.post(
     '/admin/organizations/:id/members/add-to-team',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.org') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { userId?: string; teamId?: string };
@@ -208,6 +214,12 @@ export async function organizationRoutes(
           .code(404)
           .header('content-type', 'text/html')
           .send(toastHtml('Organization not found.', 'error'));
+      }
+
+      // Tenant isolation: non-admin users can only manage their own org
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && request.user?.currentOrgId !== id) {
+        return reply.code(403).send({ error: 'Forbidden: you can only manage your own organization' });
       }
 
       const userId = body.userId?.trim();
@@ -256,7 +268,7 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/members/:userId/move-team — change a member's team (role)
   server.post(
     '/admin/organizations/:id/members/:userId/move-team',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.org') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
       const body = request.body as { teamId?: string };
@@ -267,6 +279,12 @@ export async function organizationRoutes(
           .code(400)
           .header('content-type', 'text/html')
           .send(toastHtml('Team is required.', 'error'));
+      }
+
+      // Tenant isolation: non-admin users can only manage their own org
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && request.user?.currentOrgId !== id) {
+        return reply.code(403).send({ error: 'Forbidden: you can only manage your own organization' });
       }
 
       // Verify target team belongs to this org
@@ -299,9 +317,15 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/members/:userId/remove — remove member from all org teams
   server.post(
     '/admin/organizations/:id/members/:userId/remove',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.org') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
+
+      // Tenant isolation: non-admin users can only manage their own org
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && request.user?.currentOrgId !== id) {
+        return reply.code(403).send({ error: 'Forbidden: you can only manage your own organization' });
+      }
 
       try {
         const user = await storage.users.getUserById(userId);
