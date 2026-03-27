@@ -368,6 +368,10 @@ export interface UpsertManualTestInput {
 // API key types
 // ---------------------------------------------------------------------------
 
+export type ApiKeyRole = 'admin' | 'read-only' | 'scan-only';
+
+export const API_KEY_ROLES: readonly ApiKeyRole[] = ['admin', 'read-only', 'scan-only'] as const;
+
 export interface ApiKeyRecord {
   readonly id: string;
   readonly label: string;
@@ -375,4 +379,5 @@ export interface ApiKeyRecord {
   readonly createdAt: string;
   readonly lastUsedAt: string | null;
   readonly orgId: string;
+  readonly role: ApiKeyRole;
 }

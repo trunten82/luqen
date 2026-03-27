@@ -150,14 +150,14 @@ export class AuthService {
       : xApiKey;
 
     if (apiKeyToken !== undefined && apiKeyToken !== '') {
-      const valid = validateApiKey(this.db, apiKeyToken);
-      if (valid) {
+      const result = validateApiKey(this.db, apiKeyToken);
+      if (result.valid) {
         return {
           authenticated: true,
           user: {
             id: 'api-key',
             username: 'api-key',
-            role: 'admin',
+            role: result.role ?? 'admin',
           },
         };
       }
@@ -201,7 +201,7 @@ export class AuthService {
   // -----------------------------------------------------------------------
 
   validateApiKey(key: string): boolean {
-    return validateApiKey(this.db, key);
+    return validateApiKey(this.db, key).valid;
   }
 
   // -----------------------------------------------------------------------

@@ -37,27 +37,28 @@ describe('ApiKeyRepository', () => {
   });
 
   describe('validateKey', () => {
-    it('returns true for a valid active key', async () => {
+    it('returns valid true for a valid active key', async () => {
       const rawKey = 'valid-active-key-long-enough-for-testing';
       await storage.apiKeys.storeKey(rawKey, 'active-key', 'org-1');
 
-      const valid = await storage.apiKeys.validateKey(rawKey);
-      expect(valid).toBe(true);
+      const result = await storage.apiKeys.validateKey(rawKey);
+      expect(result.valid).toBe(true);
+      expect(result.role).toBe('admin');
     });
 
-    it('returns false for a revoked key', async () => {
+    it('returns valid false for a revoked key', async () => {
       const rawKey = 'revoked-key-long-enough-for-testing-purposes';
       const id = await storage.apiKeys.storeKey(rawKey, 'to-revoke', 'org-1');
 
       await storage.apiKeys.revokeKey(id);
 
-      const valid = await storage.apiKeys.validateKey(rawKey);
-      expect(valid).toBe(false);
+      const result = await storage.apiKeys.validateKey(rawKey);
+      expect(result.valid).toBe(false);
     });
 
-    it('returns false for a non-existent key', async () => {
-      const valid = await storage.apiKeys.validateKey('non-existent-key-that-was-never-stored');
-      expect(valid).toBe(false);
+    it('returns valid false for a non-existent key', async () => {
+      const result = await storage.apiKeys.validateKey('non-existent-key-that-was-never-stored');
+      expect(result.valid).toBe(false);
     });
   });
 

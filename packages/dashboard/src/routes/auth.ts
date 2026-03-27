@@ -38,7 +38,15 @@ export async function authRoutes(
     const mode = authService.getAuthMode();
     const loginMethods = authService.getLoginMethods();
 
-    return reply.view('login.hbs', { mode, loginMethods });
+    // Show session expired message if redirected from expiry hook
+    const query = request.query as Record<string, string | undefined>;
+    const sessionExpired = query['expired'] === '1';
+
+    return reply.view('login.hbs', {
+      mode,
+      loginMethods,
+      ...(sessionExpired ? { error: 'Your session has expired. Please log in again.' } : {}),
+    });
   });
 
   // POST /login — authenticate based on auth mode

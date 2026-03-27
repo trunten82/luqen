@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { randomBytes, createHash } from 'node:crypto';
-import type { ApiKeyRepository } from '../../interfaces/api-key-repository.js';
-import type { ApiKeyRecord } from '../../types.js';
+import type { ApiKeyRepository, ApiKeyValidation } from '../../interfaces/api-key-repository.js';
+import type { ApiKeyRecord, ApiKeyRole } from '../../types.js';
 
 // ---------------------------------------------------------------------------
 // Private helpers
@@ -27,6 +27,7 @@ interface ApiKeyRow {
   created_at: string;
   last_used_at: string | null;
   org_id: string;
+  role: string;
 }
 
 function rowToRecord(row: ApiKeyRow): ApiKeyRecord {
@@ -37,6 +38,7 @@ function rowToRecord(row: ApiKeyRow): ApiKeyRecord {
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at,
     orgId: row.org_id,
+    role: (row.role ?? 'admin') as ApiKeyRole,
   };
 }
 
@@ -47,32 +49,34 @@ function rowToRecord(row: ApiKeyRow): ApiKeyRecord {
 export class SqliteApiKeyRepository implements ApiKeyRepository {
   constructor(private readonly db: Database.Database) {}
 
-  async storeKey(key: string, label: string, orgId?: string): Promise<string> {
+  async storeKey(key: string, label: string, orgId?: string, role?: ApiKeyRole): Promise<string> {
     const id = randomBytes(16).toString('hex');
     const keyHash = hashApiKey(key);
     const createdAt = new Date().toISOString();
 
     this.db.prepare(
-      `INSERT INTO api_keys (id, key_hash, label, active, created_at, org_id)
-       VALUES (@id, @keyHash, @label, 1, @createdAt, @orgId)`,
-    ).run({ id, keyHash, label, createdAt, orgId: orgId ?? 'system' });
+      `INSERT INTO api_keys (id, key_hash, label, active, created_at, org_id, role)
+       VALUES (@id, @keyHash, @label, 1, @createdAt, @orgId, @role)`,
+    ).run({ id, keyHash, label, createdAt, orgId: orgId ?? 'system', role: role ?? 'admin' });
 
     return id;
   }
 
-  async validateKey(key: string): Promise<boolean> {
+  async validateKey(key: string): Promise<ApiKeyValidation> {
     const keyHash = hashApiKey(key);
     const row = this.db
-      .prepare('SELECT id FROM api_keys WHERE key_hash = @keyHash AND active = 1')
-      .get({ keyHash }) as { id: string } | undefined;
+      .prepare('SELECT id, role FROM api_keys WHERE key_hash = @keyHash AND active = 1')
+      .get({ keyHash }) as { id: string; role: string } | undefined;
 
     if (row !== undefined) {
       this.db.prepare(
         'UPDATE api_keys SET last_used_at = @now WHERE key_hash = @keyHash',
       ).run({ now: new Date().toISOString(), keyHash });
+
+      return { valid: true, role: (row.role ?? 'admin') as ApiKeyRole };
     }
 
-    return row !== undefined;
+    return { valid: false };
   }
 
   async getOrCreateKey(): Promise<{ key: string | null; isNew: boolean }> {
