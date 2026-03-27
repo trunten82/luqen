@@ -166,6 +166,10 @@
       {{t "nav.webhooks"}}
     </a>
 
+    {{/if}}
+
+    {{!-- Plugins — visible to admin.system OR admin.plugins (org owners) --}}
+    {{#if perm.adminPlugins}}
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/plugins')}}is-active{{/if}}"
        href="/admin/plugins"
        aria-current="{{#if (startsWith currentPath '/admin/plugins')}}page{{/if}}">
@@ -174,7 +178,6 @@
       </svg>
       {{t "nav.pluginConfig"}}
     </a>
-
     {{/if}}
 
     {{!-- User Management — visible to anyone with users.* permissions --}}
@@ -189,6 +192,7 @@
       {{t "nav.dashboardUsers"}}
     </a>
 
+    {{#if perm.adminTeams}}
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/teams')}}is-active{{/if}}"
        href="/admin/teams"
        aria-current="{{#if (startsWith currentPath '/admin/teams')}}page{{/if}}">
@@ -197,6 +201,7 @@
       </svg>
       {{t "nav.teams"}}
     </a>
+    {{/if}}
 
     {{#if perm.adminRoles}}
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/roles')}}is-active{{/if}}"
