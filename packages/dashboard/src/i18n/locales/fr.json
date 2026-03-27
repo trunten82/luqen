@@ -63,6 +63,7 @@
     "dashboardUsers": "Utilisateurs du Tableau de Bord",
     "teams": "Équipes",
     "roles": "Rôles",
+    "myOrganization": "Mon Organisation",
     "apiKeys": "Clés API",
     "oauthClients": "Clients OAuth",
     "apiUsers": "Utilisateurs API",

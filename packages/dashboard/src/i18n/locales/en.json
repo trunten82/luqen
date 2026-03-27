@@ -63,6 +63,7 @@
     "dashboardUsers": "Dashboard Users",
     "teams": "Teams",
     "roles": "Roles",
+    "myOrganization": "My Organization",
     "apiKeys": "API Keys",
     "oauthClients": "OAuth Clients",
     "apiUsers": "API Users",
