@@ -191,13 +191,14 @@ export async function dashboardUserRoutes(
           .send(toastHtml('Invalid role. Must be executive, viewer, user, developer, or admin.', 'error'));
       }
 
-      // Check for duplicate username
+      // Check for duplicate username — message intentionally vague to avoid leaking
+      // whether a user exists in another org
       const existing = await storage.users.getUserByUsername(username);
       if (existing !== null) {
         return reply
           .code(400)
           .header('content-type', 'text/html')
-          .send(toastHtml(`User "${username}" already exists.`, 'error'));
+          .send(toastHtml('This username is not available. Please choose a different one.', 'error'));
       }
 
       try {
