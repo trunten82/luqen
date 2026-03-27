@@ -35,7 +35,7 @@ function roleBadgeClass(role: string): string {
   return 'badge--neutral';
 }
 
-function userRowHtml(user: DashboardUser, requesterIsAdmin = false): string {
+function userRowHtml(user: DashboardUser, requesterIsAdmin = false, canChangeRoles = false): string {
   const statusBadge = user.active
     ? '<span class="badge badge--success">Active</span>'
     : '<span class="badge badge--error">Inactive</span>';
@@ -69,7 +69,7 @@ function userRowHtml(user: DashboardUser, requesterIsAdmin = false): string {
               class="btn btn--sm btn--danger"
               aria-label="Delete ${esc(user.username)}">Delete</button>`;
 
-  const roleSelect = user.active
+  const roleSelect = user.active && canChangeRoles
     ? `<select hx-patch="/admin/dashboard-users/${encodeURIComponent(user.id)}/role"
               hx-target="closest tr"
               hx-swap="outerHTML"
@@ -94,6 +94,11 @@ function userRowHtml(user: DashboardUser, requesterIsAdmin = false): string {
 }
 
 const VALID_ROLES = new Set(['viewer', 'user', 'developer', 'admin', 'executive']);
+
+function hasPermission(request: FastifyRequest, perm: string): boolean {
+  const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
+  return perms?.has(perm) ?? false;
+}
 
 export async function dashboardUserRoutes(
   server: FastifyInstance,
@@ -203,7 +208,7 @@ export async function dashboardUserRoutes(
 
       try {
         const created = await storage.users.createUser(username, password, role);
-        const row = userRowHtml(created, request.user?.role === 'admin');
+        const row = userRowHtml(created, request.user?.role === 'admin', hasPermission(request, 'users.roles'));
 
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.create', resourceType: 'user', resourceId: created.id, details: { username: created.username, role }, ipAddress: request.ip });
 
@@ -281,7 +286,7 @@ export async function dashboardUserRoutes(
             .send(toastHtml('User not found.', 'error'));
         }
 
-        const row = userRowHtml(updated, request.user?.role === 'admin');
+        const row = userRowHtml(updated, request.user?.role === 'admin', hasPermission(request, 'users.roles'));
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.role_change', resourceType: 'user', resourceId: id, details: { username: updated.username, newRole: role }, ipAddress: request.ip });
         return reply
           .code(200)
@@ -323,7 +328,7 @@ export async function dashboardUserRoutes(
             .send(toastHtml('User not found.', 'error'));
         }
 
-        const row = userRowHtml(deactivated, request.user?.role === 'admin');
+        const row = userRowHtml(deactivated, request.user?.role === 'admin', hasPermission(request, 'users.roles'));
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.deactivate', resourceType: 'user', resourceId: id, details: { username: deactivated.username }, ipAddress: request.ip });
         return reply
           .code(200)
@@ -357,7 +362,7 @@ export async function dashboardUserRoutes(
             .send(toastHtml('User not found.', 'error'));
         }
 
-        const row = userRowHtml(activated, request.user?.role === 'admin');
+        const row = userRowHtml(activated, request.user?.role === 'admin', hasPermission(request, 'users.roles'));
         void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'user.activate', resourceType: 'user', resourceId: id, details: { username: activated.username }, ipAddress: request.ip });
         return reply
           .code(200)

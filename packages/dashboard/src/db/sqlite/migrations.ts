@@ -944,4 +944,19 @@ DELETE FROM role_permissions
   AND role_id IN (SELECT r.id FROM roles r WHERE r.org_id != 'system');
     `,
   },
+  {
+    id: '031',
+    name: 'restore-users-roles-for-org-owners',
+    sql: `
+-- Org owners and admins should be able to change non-admin dashboard roles
+-- within their organization. The server-side handler prevents assigning 'admin'.
+-- Re-add users.roles to org-scoped owner and admin roles that have users.create.
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT rp.role_id, 'users.roles'
+  FROM role_permissions rp
+  JOIN roles r ON r.id = rp.role_id
+  WHERE rp.permission = 'users.create'
+  AND r.org_id != 'system';
+    `,
+  },
 ];
