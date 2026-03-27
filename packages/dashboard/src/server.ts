@@ -61,6 +61,12 @@ import type { GraphQLContext } from './graphql/resolvers.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
+function wantsHtml(request: FastifyRequest): boolean {
+  const accept = request.headers.accept || '';
+  const isHtmx = request.headers['hx-request'] === 'true';
+  return !isHtmx && accept.includes('text/html');
+}
+
 // Routes that bypass auth guard
 const PUBLIC_PATHS = new Set(['/login', '/health', '/api/v1/setup']);
 
@@ -572,6 +578,47 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     server.addHook('onClose', () => {
       clearInterval(timer);
       clearInterval(emailTimer);
+    });
+  });
+
+  // ── Error page renderer (no layout) ──────────────────────────────────────
+  // @fastify/view always wraps with the global layout; for standalone error
+  // pages we read and compile the template directly, same as the HTMX path.
+  function renderErrorPage(templateName: string, data: Record<string, unknown> = {}): string {
+    const templatePath = join(viewsDir, 'errors', templateName);
+    const source = readFileSync(templatePath, 'utf-8');
+    const compiled = handlebars.compile(source);
+    return compiled(data);
+  }
+
+  // ── 404 handler ──────────────────────────────────────────────────────────
+  server.setNotFoundHandler((request, reply) => {
+    if (wantsHtml(request)) {
+      return reply.status(404).type('text/html').send(renderErrorPage('404.hbs'));
+    }
+    return reply.status(404).send({ error: 'Not Found' });
+  });
+
+  // ── Global error handler ──────────────────────────────────────────────────
+  server.setErrorHandler((error: Error & { statusCode?: number }, request, reply) => {
+    const status = error.statusCode ?? 500;
+
+    if (status === 403 && wantsHtml(request)) {
+      return reply.status(403).type('text/html').send(renderErrorPage('403.hbs'));
+    }
+
+    if (status === 429 && wantsHtml(request)) {
+      const retryAfter = reply.getHeader('retry-after') ?? '60';
+      return reply.status(429).type('text/html').send(renderErrorPage('429.hbs', { retryAfter }));
+    }
+
+    if (status >= 500 && wantsHtml(request)) {
+      request.log.error(error);
+      return reply.status(500).type('text/html').send(renderErrorPage('500.hbs'));
+    }
+
+    return reply.status(status).send({
+      error: (error as Error).message || 'Internal Server Error',
     });
   });
 
