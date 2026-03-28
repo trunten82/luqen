@@ -5,6 +5,7 @@
     <caption class="sr-only">Accessibility scan reports</caption>
     <thead>
       <tr>
+        <th scope="col" class="cell--checkbox"><span class="sr-only">Select</span></th>
         <th scope="col">Site URL</th>
         <th scope="col">Status</th>
         <th scope="col">Standard</th>
@@ -21,6 +22,17 @@
     <tbody>
       {{#each scans}}
       <tr id="report-{{id}}">
+        <td class="cell--checkbox">
+          {{#if (eq status 'completed')}}
+          <input
+            type="checkbox"
+            class="cmp-check"
+            value="{{id}}"
+            data-action-change="cmpUpdateBtn"
+            aria-label="Select report for {{siteUrl}} for comparison"
+          >
+          {{/if}}
+        </td>
         <td class="cell--url">
           <a href="/reports/{{id}}" aria-label="View report for {{siteUrl}}">{{siteUrl}}</a>
         </td>
@@ -43,7 +55,7 @@
             class="btn btn--sm btn--ghost"
             aria-label="Compare with previous scan for {{siteUrl}}"
             title="Compare with previous scan"
-          >Compare</a>
+          >{{t "reports.vsPrevious"}}</a>
           {{/if}}
           <button
             class="btn btn--sm btn--danger"

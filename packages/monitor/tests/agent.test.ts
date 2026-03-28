@@ -4,6 +4,12 @@ import type { MonitorConfig } from '../src/config.js';
 
 // ---- Mocks ----
 
+vi.mock('node:fs/promises', () => ({
+  readFile: vi.fn(async () => ''),
+  writeFile: vi.fn(async () => undefined),
+  mkdir: vi.fn(async () => undefined),
+}));
+
 vi.mock('../src/config.js', () => ({
   loadConfig: vi.fn(() => ({
     complianceUrl: 'https://compliance.test',
@@ -27,6 +33,7 @@ vi.mock('../src/analyzer.js', () => ({
 vi.mock('../src/compliance-client.js', () => ({
   getToken: vi.fn(),
   listSources: vi.fn(),
+  listProposals: vi.fn(),
   proposeUpdate: vi.fn(),
   updateSourceLastChecked: vi.fn(),
 }));
@@ -41,6 +48,7 @@ import { analyzeChanges } from '../src/analyzer.js';
 import {
   getToken,
   listSources,
+  listProposals,
   proposeUpdate,
   updateSourceLastChecked,
 } from '../src/compliance-client.js';
@@ -92,6 +100,7 @@ beforeEach(() => {
     status: 'pending',
     createdAt: '2025-06-01T00:00:00Z',
   });
+  vi.mocked(listProposals).mockResolvedValue([]);
   vi.mocked(updateSourceLastChecked).mockResolvedValue(undefined);
   vi.mocked(loadLocalSources).mockResolvedValue([mockSource]);
 });
@@ -304,6 +313,26 @@ describe('getStatus', () => {
 
     expect(status.sourcesCount).toBe(1);
     expect(status.complianceUrl).toBe('https://compliance.test');
+    expect(status.pendingProposals).toBe(0);
+    expect(listProposals).toHaveBeenCalledWith('https://compliance.test', 'test-token', 'pending', undefined);
+  });
+
+  it('returns pending proposals count from listProposals', async () => {
+    vi.mocked(listProposals).mockResolvedValueOnce([
+      { id: 'p1', source: 'x', detectedAt: '', type: 'amendment', summary: '', proposedChanges: { action: 'update', entityType: 'regulation' }, status: 'pending', createdAt: '' },
+      { id: 'p2', source: 'y', detectedAt: '', type: 'amendment', summary: '', proposedChanges: { action: 'update', entityType: 'regulation' }, status: 'pending', createdAt: '' },
+    ]);
+
+    const status = await getStatus();
+
+    expect(status.pendingProposals).toBe(2);
+  });
+
+  it('returns 0 pending proposals when listProposals fails', async () => {
+    vi.mocked(listProposals).mockRejectedValueOnce(new Error('not found'));
+
+    const status = await getStatus();
+
     expect(status.pendingProposals).toBe(0);
   });
 

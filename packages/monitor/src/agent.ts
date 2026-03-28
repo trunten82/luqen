@@ -1,3 +1,7 @@
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { loadConfig, type MonitorConfig } from './config.js';
 import {
   fetchSource,
@@ -9,12 +13,49 @@ import { analyzeChanges } from './analyzer.js';
 import {
   getToken,
   listSources,
+  listProposals,
   proposeUpdate,
   updateSourceLastChecked,
   type MonitoredSource,
   type UpdateProposal,
 } from './compliance-client.js';
 import { loadLocalSources } from './local-sources.js';
+
+// ---- Content cache ----
+
+const CACHE_DIR = join(homedir(), '.luqen-monitor', 'cache');
+
+function contentCacheKey(url: string): string {
+  return createHash('sha256').update(url).digest('hex');
+}
+
+function contentCachePath(url: string): string {
+  return join(CACHE_DIR, `${contentCacheKey(url)}.txt`);
+}
+
+/**
+ * Load previously cached content for a source URL.
+ * Returns empty string if no cache entry exists.
+ */
+async function loadCachedContent(url: string): Promise<string> {
+  try {
+    return await readFile(contentCachePath(url), 'utf-8');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Save fetched content to the file-based cache for future diff comparison.
+ */
+async function saveCachedContent(url: string, content: string): Promise<void> {
+  try {
+    await mkdir(CACHE_DIR, { recursive: true });
+    await writeFile(contentCachePath(url), content, 'utf-8');
+  } catch {
+    // Best-effort — don't break the scan loop
+  }
+}
 
 // ---- Types ----
 
@@ -103,6 +144,9 @@ export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
       const previousHash = source.lastContentHash ?? '';
       const diff = diffContent(previousHash, fetched.contentHash);
 
+      // Always update the content cache with latest fetched content
+      await saveCachedContent(source.url, fetched.content);
+
       if (!diff.changed) {
         unchanged++;
         // Still update lastCheckedAt even when unchanged (only when connected)
@@ -112,10 +156,12 @@ export async function runScan(options: AgentOptions = {}): Promise<ScanResult> {
         continue;
       }
 
-      // Content changed — analyse the diff
+      // Content changed — load previous content from cache for a meaningful diff
+      const oldContent = await loadCachedContent(source.url);
+
       const analysis = analyzeChanges(
         source.type as SourceType,
-        '', // We don't cache old text; use hash-only path for changed detection
+        oldContent,
         fetched.content,
       );
 
@@ -199,7 +245,10 @@ export async function getStatus(options: AgentOptions = {}): Promise<MonitorStat
     config.complianceClientSecret,
   );
 
-  const sources = await listSources(baseUrl, token, orgId);
+  const [sources, pendingProposalsList] = await Promise.all([
+    listSources(baseUrl, token, orgId),
+    listProposals(baseUrl, token, 'pending', orgId).catch(() => [] as const),
+  ]);
 
   // Find the most recent lastCheckedAt across all sources
   const lastScanAt =
@@ -211,7 +260,7 @@ export async function getStatus(options: AgentOptions = {}): Promise<MonitorStat
 
   return {
     sourcesCount: sources.length,
-    pendingProposals: 0, // Would need a dedicated endpoint; placeholder for now
+    pendingProposals: pendingProposalsList.length,
     lastScanAt,
     complianceUrl: baseUrl,
   };

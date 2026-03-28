@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getToken,
+  clearTokenCache,
   listSources,
+  listProposals,
   getSeedStatus,
   proposeUpdate,
   updateSourceLastChecked,
@@ -16,6 +18,7 @@ const TOKEN = 'test-access-token';
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
+  clearTokenCache();
 });
 
 afterEach(() => {
@@ -96,6 +99,70 @@ describe('getToken', () => {
     await expect(getToken(BASE_URL, 'id', 'secret')).rejects.toThrow(
       'Token request failed (500):',
     );
+  });
+
+  it('returns cached token on second call', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ access_token: 'cached-tok', token_type: 'Bearer', expires_in: 3600, scope: 'read write' }),
+        { status: 200 },
+      ),
+    );
+
+    const first = await getToken(BASE_URL, 'id', 'secret');
+    const second = await getToken(BASE_URL, 'id', 'secret');
+
+    expect(first).toBe('cached-tok');
+    expect(second).toBe('cached-tok');
+    // fetch should only have been called once
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches a new token when cached one has expired', async () => {
+    // First call: return token with 0 seconds expiry (already expired after margin)
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ access_token: 'old-tok', token_type: 'Bearer', expires_in: 0, scope: 'read write' }),
+        { status: 200 },
+      ),
+    );
+    // Second call: new token
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ access_token: 'new-tok', token_type: 'Bearer', expires_in: 3600, scope: 'read write' }),
+        { status: 200 },
+      ),
+    );
+
+    const first = await getToken(BASE_URL, 'id', 'secret');
+    const second = await getToken(BASE_URL, 'id', 'secret');
+
+    expect(first).toBe('old-tok');
+    expect(second).toBe('new-tok');
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses different cache entries for different scopes', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ access_token: 'tok-scope-a', token_type: 'Bearer', expires_in: 3600, scope: 'a' }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ access_token: 'tok-scope-b', token_type: 'Bearer', expires_in: 3600, scope: 'b' }),
+          { status: 200 },
+        ),
+      );
+
+    const tokA = await getToken(BASE_URL, 'id', 'secret', 'a');
+    const tokB = await getToken(BASE_URL, 'id', 'secret', 'b');
+
+    expect(tokA).toBe('tok-scope-a');
+    expect(tokB).toBe('tok-scope-b');
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -290,6 +357,74 @@ describe('updateSourceLastChecked', () => {
 
     const headers = vi.mocked(fetch).mock.calls[0][1]?.headers as Record<string, string>;
     expect(headers['X-Org-Id']).toBe('org-7');
+  });
+});
+
+// ---- listProposals ----
+
+describe('listProposals', () => {
+  const mockProposals: UpdateProposal[] = [
+    {
+      id: 'prop-1',
+      source: 'https://example.com/law',
+      detectedAt: '2025-01-01T00:00:00Z',
+      type: 'amendment',
+      summary: 'Change detected',
+      proposedChanges: { action: 'update', entityType: 'regulation' },
+      status: 'pending',
+      createdAt: '2025-01-01T00:00:00Z',
+    },
+  ];
+
+  it('returns proposals from paginated envelope', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: mockProposals }), { status: 200 }),
+    );
+
+    const result = await listProposals(BASE_URL, TOKEN, 'pending');
+    expect(result).toEqual(mockProposals);
+  });
+
+  it('returns proposals from plain array response', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify(mockProposals), { status: 200 }),
+    );
+
+    const result = await listProposals(BASE_URL, TOKEN);
+    expect(result).toEqual(mockProposals);
+  });
+
+  it('appends status query parameter when provided', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify([]), { status: 200 }),
+    );
+
+    await listProposals(BASE_URL, TOKEN, 'pending');
+
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe(`${BASE_URL}/api/v1/updates/proposals?status=pending`);
+  });
+
+  it('omits query parameter when status is not provided', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify([]), { status: 200 }),
+    );
+
+    await listProposals(BASE_URL, TOKEN);
+
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe(`${BASE_URL}/api/v1/updates/proposals`);
+  });
+
+  it('sends X-Org-Id header when orgId is provided', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify([]), { status: 200 }),
+    );
+
+    await listProposals(BASE_URL, TOKEN, 'pending', 'org-99');
+
+    const headers = vi.mocked(fetch).mock.calls[0][1]?.headers as Record<string, string>;
+    expect(headers['X-Org-Id']).toBe('org-99');
   });
 });
 

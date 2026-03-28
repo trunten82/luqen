@@ -168,7 +168,8 @@
     "viewReport": "View Report",
     "viewProgress": "View Progress",
     "viewQueue": "View Queue",
-    "noScans": "No scans yet. Start your first scan using the quick scan form above."
+    "noScans": "No scans yet. Start your first scan using the quick scan form above.",
+    "scanDescription": "Run a new accessibility scan with full configuration options — WCAG standard, compliance checking, authentication, and more."
   },
   "scans": {
     "newScan": "New Scan",
@@ -231,7 +232,8 @@
     "noReportsTitle": "No reports yet",
     "noReportsDesc": "Run your first accessibility scan to see results here.",
     "downloadPdf": "Download PDF",
-    "print": "Print"
+    "print": "Print",
+    "vsPrevious": "vs Previous"
   },
   "schedules": {
     "title": "Scan Schedules",
@@ -794,11 +796,38 @@
     "page": "Page",
     "regulations": "Regulations",
     "noNewIssuesTitle": "No new issues",
-    "noNewIssuesDesc": "The latest scan did not introduce any regressions.",
+    "noNewIssuesDesc": "No new accessibility issues were introduced in the latest scan.",
     "noResolvedTitle": "No resolved issues",
-    "noResolvedDesc": "No issues were resolved between the two scans.",
+    "noResolvedDesc": "No issues from the baseline were resolved in the latest scan.",
     "noSharedTitle": "No shared issues",
-    "noSharedDesc": "No issues are shared between the two scans."
+    "noSharedDesc": "The two scans have no issues in common.",
+    "scanComparison": "Scan Comparison",
+    "comparingScans": "Comparing accessibility scans for",
+    "changedBetween": "what changed between",
+    "and": "and",
+    "regressionMsg": "new error(s) introduced.",
+    "newIssuesTotal": "new issue(s) total,",
+    "resolvedCount": "resolved.",
+    "improvementMsg": "error(s).",
+    "issuesResolved": "issue(s) resolved,",
+    "newWord": "new.",
+    "noChangeErrors": "No change in errors.",
+    "vsBaseline": "vs baseline",
+    "notInBaseline": "Not in baseline scan",
+    "fixedSinceBaseline": "Fixed since baseline",
+    "presentInBoth": "Present in both scans",
+    "showScanDetails": "Show scan details",
+    "baselineScan": "Baseline Scan",
+    "latestScan": "Latest Scan",
+    "newIssuesTab": "New Issues",
+    "resolvedTab": "Resolved",
+    "unchangedTab": "Unchanged",
+    "newIssuesExplain": "These issues appeared in the latest scan but were not present in the baseline. They represent new accessibility regressions.",
+    "resolvedExplain": "These issues were present in the baseline scan but are no longer detected. They have been fixed or the affected elements were removed.",
+    "unchangedExplain": "These issues exist in both scans and have not been addressed yet.",
+    "wcag": "WCAG",
+    "description": "Description",
+    "element": "Element"
   },
   "reportPrint": {
     "pageTitle": "Accessibility Report",

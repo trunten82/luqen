@@ -166,7 +166,8 @@
     "viewReport": "Ver Relatório",
     "viewProgress": "Ver Progresso",
     "viewQueue": "Ver Fila",
-    "noScans": "Nenhuma varredura ainda. Inicie sua primeira varredura usando o formulário de varredura rápida acima."
+    "noScans": "Nenhuma varredura ainda. Inicie sua primeira varredura usando o formulário de varredura rápida acima.",
+    "scanDescription": "Execute uma nova varredura de acessibilidade com todas as opções de configuração — padrão WCAG, verificação de conformidade, autenticação e mais."
   },
   "scans": {
     "newScan": "Nova Varredura",
@@ -229,7 +230,8 @@
     "noReportsTitle": "Ainda sem relatórios",
     "noReportsDesc": "Execute sua primeira varredura de acessibilidade para ver os resultados aqui.",
     "downloadPdf": "Baixar PDF",
-    "print": "Imprimir"
+    "print": "Imprimir",
+    "vsPrevious": "vs Anterior"
   },
   "schedules": {
     "title": "Agendamentos de Varredura",
@@ -792,11 +794,38 @@
     "page": "Página",
     "regulations": "Regulamentações",
     "noNewIssuesTitle": "Nenhum novo problema",
-    "noNewIssuesDesc": "A varredura mais recente não introduziu nenhuma regressão.",
+    "noNewIssuesDesc": "Nenhum novo problema de acessibilidade foi introduzido na última varredura.",
     "noResolvedTitle": "Nenhum problema resolvido",
-    "noResolvedDesc": "Nenhum problema foi resolvido entre as duas varreduras.",
+    "noResolvedDesc": "Nenhum problema da linha de base foi resolvido na última varredura.",
     "noSharedTitle": "Nenhum problema compartilhado",
-    "noSharedDesc": "Nenhum problema é compartilhado entre as duas varreduras."
+    "noSharedDesc": "As duas varreduras não têm problemas em comum.",
+    "scanComparison": "Comparação de Varreduras",
+    "comparingScans": "Comparando varreduras de acessibilidade para",
+    "changedBetween": "o que mudou entre",
+    "and": "e",
+    "regressionMsg": "novo(s) erro(s) introduzido(s).",
+    "newIssuesTotal": "novo(s) problema(s) no total,",
+    "resolvedCount": "resolvido(s).",
+    "improvementMsg": "erro(s).",
+    "issuesResolved": "problema(s) resolvido(s),",
+    "newWord": "novo(s).",
+    "noChangeErrors": "Nenhuma alteração nos erros.",
+    "vsBaseline": "vs linha de base",
+    "notInBaseline": "Não presente na varredura de linha de base",
+    "fixedSinceBaseline": "Corrigido desde a linha de base",
+    "presentInBoth": "Presente em ambas as varreduras",
+    "showScanDetails": "Mostrar detalhes da varredura",
+    "baselineScan": "Varredura de Linha de Base",
+    "latestScan": "Varredura Mais Recente",
+    "newIssuesTab": "Novos Problemas",
+    "resolvedTab": "Resolvidos",
+    "unchangedTab": "Sem Alterações",
+    "newIssuesExplain": "Estes problemas apareceram na última varredura mas não estavam presentes na linha de base. Representam novas regressões de acessibilidade.",
+    "resolvedExplain": "Estes problemas estavam presentes na varredura de linha de base mas não são mais detectados. Foram corrigidos ou os elementos afetados foram removidos.",
+    "unchangedExplain": "Estes problemas existem em ambas as varreduras e ainda não foram resolvidos.",
+    "wcag": "WCAG",
+    "description": "Descrição",
+    "element": "Elemento"
   },
   "reportPrint": {
     "pageTitle": "Relatório de Acessibilidade",

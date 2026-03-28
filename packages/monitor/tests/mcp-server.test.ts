@@ -33,6 +33,7 @@ vi.mock('../src/agent.js', () => ({
 
 vi.mock('../src/compliance-client.js', () => ({
   getToken: vi.fn(),
+  listProposals: vi.fn(),
   addSource: vi.fn(),
 }));
 

@@ -166,7 +166,8 @@
     "viewReport": "Bericht Anzeigen",
     "viewProgress": "Fortschritt Anzeigen",
     "viewQueue": "Warteschlange Anzeigen",
-    "noScans": "Noch keine Scans. Starten Sie Ihren ersten Scan mit dem Schnellscan-Formular oben."
+    "noScans": "Noch keine Scans. Starten Sie Ihren ersten Scan mit dem Schnellscan-Formular oben.",
+    "scanDescription": "Starten Sie einen neuen Barrierefreiheitsscan mit allen Konfigurationsoptionen — WCAG-Standard, Compliance-Prüfung, Authentifizierung und mehr."
   },
   "scans": {
     "newScan": "Neuer Scan",
@@ -229,7 +230,8 @@
     "noReportsTitle": "Noch keine Berichte",
     "noReportsDesc": "Führen Sie Ihren ersten Barrierefreiheitsscan durch, um Ergebnisse hier zu sehen.",
     "downloadPdf": "PDF Herunterladen",
-    "print": "Drucken"
+    "print": "Drucken",
+    "vsPrevious": "vs Vorherige"
   },
   "schedules": {
     "title": "Scan-Zeitpläne",
@@ -792,11 +794,38 @@
     "page": "Seite",
     "regulations": "Vorschriften",
     "noNewIssuesTitle": "Keine neuen Probleme",
-    "noNewIssuesDesc": "Der neueste Scan hat keine Regressionen eingeführt.",
+    "noNewIssuesDesc": "Im neuesten Scan wurden keine neuen Barrierefreiheitsprobleme eingeführt.",
     "noResolvedTitle": "Keine behobenen Probleme",
-    "noResolvedDesc": "Zwischen den beiden Scans wurden keine Probleme behoben.",
+    "noResolvedDesc": "Keine Probleme aus dem Referenz-Scan wurden im neuesten Scan behoben.",
     "noSharedTitle": "Keine gemeinsamen Probleme",
-    "noSharedDesc": "Keine Probleme sind zwischen den beiden Scans geteilt."
+    "noSharedDesc": "Die beiden Scans haben keine gemeinsamen Probleme.",
+    "scanComparison": "Scan-Vergleich",
+    "comparingScans": "Vergleich der Barrierefreiheitsscans für",
+    "changedBetween": "was sich geändert hat zwischen",
+    "and": "und",
+    "regressionMsg": "neue(r) Fehler eingeführt.",
+    "newIssuesTotal": "neue(s) Problem(e) insgesamt,",
+    "resolvedCount": "behoben.",
+    "improvementMsg": "Fehler.",
+    "issuesResolved": "Problem(e) behoben,",
+    "newWord": "neu.",
+    "noChangeErrors": "Keine Änderung bei den Fehlern.",
+    "vsBaseline": "vs Referenz",
+    "notInBaseline": "Nicht im Referenz-Scan",
+    "fixedSinceBaseline": "Seit Referenz behoben",
+    "presentInBoth": "In beiden Scans vorhanden",
+    "showScanDetails": "Scan-Details anzeigen",
+    "baselineScan": "Referenz-Scan",
+    "latestScan": "Neuester Scan",
+    "newIssuesTab": "Neue Probleme",
+    "resolvedTab": "Behoben",
+    "unchangedTab": "Unverändert",
+    "newIssuesExplain": "Diese Probleme traten im neuesten Scan auf, waren aber im Referenz-Scan nicht vorhanden. Sie stellen neue Barrierefreiheitsregressionen dar.",
+    "resolvedExplain": "Diese Probleme waren im Referenz-Scan vorhanden, werden aber nicht mehr erkannt. Sie wurden behoben oder die betroffenen Elemente wurden entfernt.",
+    "unchangedExplain": "Diese Probleme bestehen in beiden Scans und wurden noch nicht behoben.",
+    "wcag": "WCAG",
+    "description": "Beschreibung",
+    "element": "Element"
   },
   "reportPrint": {
     "pageTitle": "Barrierefreiheitsbericht",

@@ -69,10 +69,36 @@ export interface ComplianceClientOptions {
   readonly timeoutMs?: number;
 }
 
+// ---- Token cache ----
+
+interface CachedToken {
+  readonly token: string;
+  readonly expiresAt: number; // Unix ms
+}
+
+/**
+ * In-memory token cache keyed by `baseUrl|clientId|scope`.
+ * Tokens are considered expired 60 seconds before the real expiry to
+ * avoid using a token that is about to expire mid-request.
+ */
+const tokenCache = new Map<string, CachedToken>();
+
+const TOKEN_EXPIRY_MARGIN_MS = 60_000;
+
+function tokenCacheKey(baseUrl: string, clientId: string, scope: string): string {
+  return `${baseUrl}|${clientId}|${scope}`;
+}
+
+/** Clear the in-memory token cache (useful for testing). */
+export function clearTokenCache(): void {
+  tokenCache.clear();
+}
+
 // ---- Token fetch ----
 
 /**
  * Obtain an OAuth2 access token using the client_credentials flow.
+ * Returns a cached token when one exists and has not yet expired.
  */
 export async function getToken(
   baseUrl: string,
@@ -81,6 +107,12 @@ export async function getToken(
   scope = 'read write',
   timeoutMs = 10_000,
 ): Promise<string> {
+  const cacheKey = tokenCacheKey(baseUrl, clientId, scope);
+  const cached = tokenCache.get(cacheKey);
+  if (cached !== undefined && cached.expiresAt > Date.now()) {
+    return cached.token;
+  }
+
   const url = `${baseUrl}/api/v1/oauth/token`;
   const body = new URLSearchParams({
     grant_type: 'client_credentials',
@@ -110,6 +142,11 @@ export async function getToken(
   }
 
   const data = (await response.json()) as TokenResponse;
+
+  // Cache the token with a safety margin
+  const expiresAt = Date.now() + data.expires_in * 1000 - TOKEN_EXPIRY_MARGIN_MS;
+  tokenCache.set(cacheKey, { token: data.access_token, expiresAt });
+
   return data.access_token;
 }
 
@@ -226,6 +263,29 @@ export async function updateSourceLastChecked(
     // Best-effort — don't break the scan loop
     console.warn(`[monitor] Could not update source ${sourceId}: ${String(err)}`);
   }
+}
+
+/**
+ * List update proposals filtered by status.
+ * Returns the proposals array; use `.length` for a count.
+ */
+export async function listProposals(
+  baseUrl: string,
+  token: string,
+  status?: 'pending' | 'approved' | 'rejected',
+  orgId?: string,
+): Promise<readonly UpdateProposal[]> {
+  const qs = status !== undefined ? `?status=${encodeURIComponent(status)}` : '';
+  const result = await apiRequest<{ data: UpdateProposal[] } | UpdateProposal[]>(
+    'GET',
+    `${baseUrl}/api/v1/updates/proposals${qs}`,
+    token,
+    undefined,
+    undefined,
+    orgId,
+  );
+  if (Array.isArray(result)) return result;
+  return (result as { data: UpdateProposal[] }).data;
 }
 
 /**
