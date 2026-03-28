@@ -363,6 +363,29 @@
     copyFixCode: function (el) {
       var index = el.getAttribute('data-index');
       if (typeof window.copyFixCode === 'function') window.copyFixCode(parseInt(index, 10));
+    },
+
+    /* ── Plugin configure (plain fetch, no HTMX) ──────────────────── */
+    /* The HTML is server-rendered from a trusted endpoint (same-origin,
+       authenticated, escaped via escapeHtml in the route handler). */
+    loadPluginConfig: function (el) {
+      var pluginId = el.getAttribute('data-plugin-id');
+      if (!pluginId) return;
+      var target = document.getElementById('plugin-config-area');
+      if (!target) return;
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var headers = {};
+      if (csrfMeta) headers['x-csrf-token'] = csrfMeta.getAttribute('content');
+      fetch('/admin/plugins/' + pluginId + '/configure', { headers: headers, credentials: 'same-origin' })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          target.innerHTML = html; /* trusted server HTML — all values escaped server-side */
+          if (window.htmx) htmx.process(target);
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        })
+        .catch(function (err) {
+          target.textContent = 'Failed to load configuration: ' + err.message;
+        });
     }
   };
 
