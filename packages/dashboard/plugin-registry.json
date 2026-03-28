@@ -125,6 +125,42 @@
       "icon": "axe",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/scanner-axe-v1.0.0/luqen-plugin-scanner-axe-1.0.0.tgz",
       "checksum": "sha256:f83c3eccc47e6de2add9ad63e4f79402a9cf7065464eb2f817aedaa60ab5f1d6"
+    },
+    {
+      "name": "git-host-github",
+      "displayName": "GitHub",
+      "type": "git-host",
+      "version": "1.0.0",
+      "description": "Git integration with GitHub and GitHub Enterprise for PR creation from accessibility fixes",
+      "packageName": "@luqen/plugin-git-host-github",
+      "icon": "git",
+      "configSchema": [
+        { "key": "hostUrl", "label": "API Host URL", "type": "string", "required": true, "default": "https://api.github.com", "description": "Use https://api.github.com for GitHub.com or your GitHub Enterprise API URL" }
+      ]
+    },
+    {
+      "name": "git-host-gitlab",
+      "displayName": "GitLab",
+      "type": "git-host",
+      "version": "1.0.0",
+      "description": "Git integration with GitLab for merge request creation from accessibility fixes",
+      "packageName": "@luqen/plugin-git-host-gitlab",
+      "icon": "git",
+      "configSchema": [
+        { "key": "hostUrl", "label": "API Host URL", "type": "string", "required": true, "default": "https://gitlab.com/api/v4", "description": "Use https://gitlab.com/api/v4 for GitLab.com or your self-hosted GitLab API URL" }
+      ]
+    },
+    {
+      "name": "git-host-azure-devops",
+      "displayName": "Azure DevOps",
+      "type": "git-host",
+      "version": "1.0.0",
+      "description": "Git integration with Azure DevOps for pull request creation from accessibility fixes",
+      "packageName": "@luqen/plugin-git-host-azure-devops",
+      "icon": "git",
+      "configSchema": [
+        { "key": "hostUrl", "label": "API Host URL", "type": "string", "required": true, "default": "https://dev.azure.com", "description": "Use https://dev.azure.com for Azure DevOps Services or your on-prem TFS URL" }
+      ]
     }
   ]
 }

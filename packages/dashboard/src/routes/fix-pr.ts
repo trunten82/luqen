@@ -9,6 +9,7 @@ import { decryptSecret } from '../plugins/crypto.js';
 import { getFixSuggestion } from '../fix-suggestions.js';
 import { toastHtml } from './admin/helpers.js';
 import type { GitHostFile } from '../git-hosts/types.js';
+import { RemoteFileReader } from '../git-hosts/remote-file-reader.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -321,37 +322,76 @@ export async function fixPrRoutes(
       const changedFiles = new Map<string, string>();
       const repoPath = repo.repoPath ?? '';
       const baseBranch = repo.branch;
+      // Build source map override: strip scanned URL prefix to get repo-relative paths
+      const siteUrlBase = repo.siteUrlPattern.replace(/%$/, '');
+      const sourceMapOverrides: Record<string, string> = {};
+      try {
+        const basePathname = new URL(siteUrlBase).pathname;
+        sourceMapOverrides[`${basePathname}/*`] = '';
+      } catch { /* use empty overrides */ }
 
-      for (const fix of selectedFixes) {
-        // If we have an HTML context with actual code, attempt to find and patch
-        // the source file. The context from pa11y is HTML from the rendered page,
-        // so we look for it within index-like files in the repo path.
-        if (fix.oldText === '' || fix.newText === '' || fix.oldText === fix.newText) {
-          continue;
-        }
+      // Create remote file reader for the git host
+      const remoteReader = new RemoteFileReader(plugin, {
+        hostUrl: gitHostConfig.hostUrl,
+        repo: repoSlug,
+        branch: baseBranch,
+        token,
+      });
 
-        // Determine the file path to read. For now, try common patterns.
-        // If repoPath is set, use it as a prefix.
-        const filePaths = repoPath !== ''
-          ? [repoPath]
-          : ['index.html', 'src/index.html', 'public/index.html'];
+      // Try the core's proposeFixesFromReport with remote reader (may not accept
+      // the 4th parameter yet — the core FileReader change is a parallel task).
+      let usedCoreProposer = false;
+      try {
+        const { proposeFixesFromReport } = await import('@luqen/core');
+        // Check if proposeFixesFromReport accepts a 4th argument (FileReader)
+        if (proposeFixesFromReport.length >= 4) {
+          const proposals = await (proposeFixesFromReport as (
+            report: unknown, repoPath: string, overrides: Record<string, string>, reader: RemoteFileReader,
+          ) => Promise<{ fixes: ReadonlyArray<{ file: string; oldText: string; newText: string }> }>)(
+            rawReport, repoPath, sourceMapOverrides, remoteReader,
+          );
 
-        for (const filePath of filePaths) {
-          // Check if we already have this file content from a previous fix
-          let content = changedFiles.get(filePath);
-          if (content === undefined) {
-            content = await plugin.readFile({
-              hostUrl: gitHostConfig.hostUrl,
-              repo: repoSlug,
-              path: filePath,
-              branch: baseBranch,
-              token,
-            }) ?? undefined;
+          // Filter to selected fixes only
+          const selectedProposals = proposals.fixes.filter((_, i) => fixIndices.includes(i));
+
+          for (const proposal of selectedProposals) {
+            const filePath = proposal.file;
+            let content = changedFiles.get(filePath);
+            if (content === undefined) {
+              content = await remoteReader.read(filePath) ?? undefined;
+            }
+            if (content !== undefined && proposal.oldText && content.includes(proposal.oldText)) {
+              changedFiles.set(filePath, content.replace(proposal.oldText, proposal.newText));
+            }
           }
 
-          if (content !== undefined && content.includes(fix.oldText)) {
-            changedFiles.set(filePath, content.replace(fix.oldText, fix.newText));
-            break;
+          usedCoreProposer = true;
+        }
+      } catch {
+        // Core not built with FileReader support yet — fall back to naive approach
+      }
+
+      // Fallback: naive file-path guessing when core proposer is unavailable
+      if (!usedCoreProposer) {
+        for (const fix of selectedFixes) {
+          if (fix.oldText === '' || fix.newText === '' || fix.oldText === fix.newText) {
+            continue;
+          }
+
+          const filePaths = repoPath !== ''
+            ? [repoPath]
+            : ['index.html', 'src/index.html', 'public/index.html'];
+
+          for (const filePath of filePaths) {
+            let content = changedFiles.get(filePath);
+            if (content === undefined) {
+              content = await remoteReader.read(filePath) ?? undefined;
+            }
+
+            if (content !== undefined && content.includes(fix.oldText)) {
+              changedFiles.set(filePath, content.replace(fix.oldText, fix.newText));
+              break;
+            }
           }
         }
       }
@@ -400,9 +440,11 @@ export async function fixPrRoutes(
         });
 
         if (isHtmx) {
-          return reply.code(200).send(
-            toastHtml(`Pull request created: <a href="${pr.url}" target="_blank" rel="noopener noreferrer">#${pr.number}</a>`, 'success'),
-          );
+          const escapedUrl = pr.url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+          return reply
+            .code(200)
+            .header('content-type', 'text/html')
+            .send(`<div class="alert alert--success"><div class="alert__body">Pull request #${pr.number} created: <a href="${escapedUrl}" target="_blank" rel="noopener noreferrer">View PR</a></div></div>`);
         }
 
         return reply.send({ success: true, url: pr.url, number: pr.number });

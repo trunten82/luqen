@@ -6,6 +6,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.2] - 2026-03-27
+
+### Added
+- **Git host plugin architecture** — GitHub, GitLab, and Azure DevOps are now proper PluginManager plugins (type `git-host`), built-in and auto-activated. Admins install via the Plugins page; configuration is managed through the Git Hosts admin page.
+- **Per-developer PAT credentials** — developers store Personal Access Tokens per git host, encrypted at rest with AES-256-GCM and validated against the platform API on save.
+- **PR creation from fix proposals** — select accessibility fixes from a scan report and create a pull request on the connected repository under the developer's own identity.
+- **RemoteSourceMapper** — FileReader abstraction with URL prefix stripping enables source-mapping for remote repositories without local clones.
+- **Admin git host management** — configure git hosts per organization via **Admin > Git Hosts** (add host, set API URL, assign to org).
+- **Org-scoped repo connections** — admins assign repositories to organizations via an org dropdown on the Connected Repos page.
+- **Compliance system badges** — system-created compliance items are shown with a "System" badge on list views to distinguish them from user-created items.
+- **Sidebar reorganization** — new "Repositories" section in the sidebar containing Connected Repos, Git Hosts, and Git Credentials links.
+- **SSRF unit tests** — 15 tests covering all private IP ranges (IPv4 loopback, link-local, RFC 1918, IPv6) for git host URL validation.
+
+### Changed
+- **CI Node.js 22** — GitHub Actions CI upgraded from Node.js 20 to Node.js 22.
+
+### Security
+- **SSRF validation on git host URLs** — all git host API URLs are validated against private/reserved IP ranges before any outbound request.
+- **Strengthened scrypt parameters** — increased key derivation cost for password hashing.
+- **128-bit session salt** — session salt upgraded from 64-bit to 128-bit.
+- **HTML escaping hardening** — additional output escaping in templates to prevent XSS.
+- **npm audit clean** — resolved all npm audit findings (0 vulnerabilities).
+
+### Testing
+- **2232+ tests passing** across all packages.
+
+---
+
 ## [2.1.0] - 2026-03-27
 
 ### Added

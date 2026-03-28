@@ -34,7 +34,7 @@ export function getSessionExpiryMs(): number {
 
 /**
  * Retrieve or generate a persistent session salt from the dashboard_settings table.
- * The salt is 16 bytes hex-encoded, stored under key 'session_salt'.
+ * The salt is derived from 16 random bytes (base64-encoded, truncated to 16 chars for sodium).
  * Requires the dashboard_settings table to already exist (created by AuthService).
  */
 function getOrCreateSessionSalt(db: Database.Database): string {
@@ -42,7 +42,7 @@ function getOrCreateSessionSalt(db: Database.Database): string {
   if (row != null) {
     return row.value;
   }
-  const salt = randomBytes(8).toString('hex'); // 8 bytes → 16 hex chars (required by @fastify/secure-session)
+  const salt = randomBytes(16).toString('base64').slice(0, 16); // 16 random bytes, truncated to 16 ASCII chars for sodium
   db.prepare('INSERT INTO dashboard_settings (key, value) VALUES (?, ?)').run('session_salt', salt);
   return salt;
 }
@@ -56,7 +56,7 @@ export async function registerSession(
   // to a randomly generated salt (e.g. in tests without a DB).
   const salt = db !== undefined
     ? getOrCreateSessionSalt(db)
-    : randomBytes(8).toString('hex');
+    : randomBytes(16).toString('base64').slice(0, 16);
 
   await server.register(secureSession, {
     secret: sessionSecret,

@@ -1,5 +1,4 @@
-import { readdir, readFile, access } from 'fs/promises';
-import { join } from 'path';
+import type { FileReader } from './file-reader.js';
 
 export type Framework =
   | 'nextjs-app'
@@ -10,37 +9,19 @@ export type Framework =
   | 'plain-html'
   | 'unknown';
 
-async function fileExists(filePath: string): Promise<boolean> {
+async function hasConfigFile(reader: FileReader, prefix: string): Promise<boolean> {
   try {
-    await access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function dirExists(dirPath: string): Promise<boolean> {
-  try {
-    const stat = await readdir(dirPath);
-    return Array.isArray(stat);
-  } catch {
-    return false;
-  }
-}
-
-async function hasConfigFile(repoPath: string, prefix: string): Promise<boolean> {
-  try {
-    const entries = await readdir(repoPath);
+    const entries = await reader.list('');
     return entries.some((entry) => entry.startsWith(prefix + '.'));
   } catch {
     return false;
   }
 }
 
-async function getPackageDeps(repoPath: string): Promise<Record<string, string>> {
-  const pkgPath = join(repoPath, 'package.json');
+async function getPackageDeps(reader: FileReader): Promise<Record<string, string>> {
   try {
-    const raw = await readFile(pkgPath, 'utf-8');
+    const raw = await reader.read('package.json');
+    if (raw === null) return {};
     const pkg = JSON.parse(raw) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
@@ -54,22 +35,22 @@ async function getPackageDeps(repoPath: string): Promise<Record<string, string>>
   }
 }
 
-export async function detectFramework(repoPath: string): Promise<Framework> {
+export async function detectFramework(reader: FileReader): Promise<Framework> {
   const [deps, hasNextConfig, hasNuxtConfig, hasSvelteConfig, hasAngularJson, hasIndexHtml] =
     await Promise.all([
-      getPackageDeps(repoPath),
-      hasConfigFile(repoPath, 'next.config'),
-      hasConfigFile(repoPath, 'nuxt.config'),
-      hasConfigFile(repoPath, 'svelte.config'),
-      fileExists(join(repoPath, 'angular.json')),
-      fileExists(join(repoPath, 'index.html')),
+      getPackageDeps(reader),
+      hasConfigFile(reader, 'next.config'),
+      hasConfigFile(reader, 'nuxt.config'),
+      hasConfigFile(reader, 'svelte.config'),
+      reader.exists('angular.json'),
+      reader.exists('index.html'),
     ]);
 
   const isNext = hasNextConfig || 'next' in deps;
   if (isNext) {
     const [hasAppPage, hasPagesDir] = await Promise.all([
-      fileExists(join(repoPath, 'app', 'page.tsx')),
-      dirExists(join(repoPath, 'pages')),
+      reader.exists('app/page.tsx'),
+      reader.list('pages').then((entries) => entries.length > 0),
     ]);
     if (hasAppPage) return 'nextjs-app';
     if (hasPagesDir) return 'nextjs-pages';

@@ -33,9 +33,8 @@ describe('mapIssuesToSource', () => {
   });
 
   it('uses sourceMap overrides', async () => {
-    const overridePath = join(repoDir, 'custom', 'template.tsx');
     mkdirSync(join(repoDir, 'custom'), { recursive: true });
-    writeFileSync(overridePath, '<div><img src="/x.jpg" /></div>');
+    writeFileSync(join(repoDir, 'custom', 'template.tsx'), '<div><img src="/x.jpg" /></div>');
     const pages: PageResult[] = [{
       url: 'https://example.com/about', discoveryMethod: 'sitemap', issueCount: 1,
       issues: [{ code: 'WCAG2AA.H37', type: 'error', message: 'Missing alt', selector: 'img', context: '<img>' }],
@@ -54,9 +53,8 @@ describe('mapIssuesToSource', () => {
   });
 
   it('uses wildcard override matching /*', async () => {
-    const overridePath = join(repoDir, 'custom', 'template.tsx');
     mkdirSync(join(repoDir, 'custom'), { recursive: true });
-    writeFileSync(overridePath, '<div><img src="/x.jpg" /></div>');
+    writeFileSync(join(repoDir, 'custom', 'template.tsx'), '<div><img src="/x.jpg" /></div>');
     const pages: PageResult[] = [{
       url: 'https://example.com/about/section', discoveryMethod: 'sitemap', issueCount: 1,
       issues: [{ code: 'WCAG2AA.H37', type: 'error', message: 'Missing alt', selector: 'img', context: '<img>' }],
@@ -81,7 +79,6 @@ describe('mapIssuesToSource', () => {
       issues: [],
     }];
     const result = await mapIssuesToSource(pages, repoDir, { '/about': 'nonexistent/file.tsx' });
-    // Should fall back to no sourceMap since override file doesn't exist
     expect(result[0].sourceMap).toBeUndefined();
   });
 });

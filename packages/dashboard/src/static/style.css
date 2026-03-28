@@ -289,6 +289,11 @@ body {
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
+.sidebar__item--child {
+  padding-left: calc(var(--space-md) + var(--space-md));
+  font-size: var(--font-size-xs);
+}
+
 .sidebar__item:hover {
   background-color: var(--bg-sidebar-hover);
   color: #ffffff;

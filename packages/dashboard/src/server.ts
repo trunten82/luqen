@@ -57,6 +57,10 @@ import { ComplianceService } from './services/compliance-service.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
+import { setGitHostPluginManager } from './git-hosts/registry.js';
+import githubPlugin from './git-hosts/github.js';
+import gitlabPlugin from './git-hosts/gitlab.js';
+import azureDevOpsPlugin from './git-hosts/azure-devops.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
 import { schema as graphqlSchema } from './graphql/schema.js';
@@ -120,6 +124,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     registryEntries,
   });
   await pluginManager.initializeOnStartup();
+
+  // Register built-in git host plugins
+  await pluginManager.registerBuiltIn(githubPlugin);
+  await pluginManager.registerBuiltIn(gitlabPlugin);
+  await pluginManager.registerBuiltIn(azureDevOpsPlugin);
+  setGitHostPluginManager(pluginManager);
+
   pluginManager.startHealthChecks(60_000);
 
   // ── Auth Service ────────────────────────────────────────────────────────
@@ -452,6 +463,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         ? session.get('locale') as Locale | undefined
         : undefined
     ) ?? 'en';
+    const gitHostConfigs = await storage.gitHosts.listConfigs(request.user?.currentOrgId ?? 'system');
+    const hasGitHostConfigs = gitHostConfigs.length > 0;
     const originalView = reply.view.bind(reply) as typeof reply.view;
     const isHtmxRequest = request.headers['hx-request'] === 'true';
     reply.view = (page: string, data?: Record<string, unknown>) => {
@@ -494,6 +507,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
         emailPluginActive: pluginManager.getActiveInstanceByPackageName?.('@luqen/plugin-notify-email') != null,
+        hasGitHostConfigs,
         orgContext: (request as unknown as Record<string, unknown>).orgContext,
         appVersion: `v${VERSION}`,
       };
@@ -537,7 +551,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await assignmentRoutes(server, storage);
   await orgRoutes(server, storage);
   await toolRoutes(server);
-  await repoRoutes(server, storage);
+  await repoRoutes(server, storage, config);
   await gitCredentialRoutes(server, storage, config);
   await fixPrRoutes(server, storage, config);
 
