@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { detectFramework } from '../../src/source-mapper/framework-detector.js';
+import { LocalFileReader } from '../../src/source-mapper/file-reader.js';
 
 async function makeTmpDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), 'luqen-fw-'));
@@ -24,7 +25,7 @@ describe('detectFramework', () => {
     await mkdir(join(tmpDir, 'app'), { recursive: true });
     await writeFile(join(tmpDir, 'app', 'page.tsx'), '<div/>');
 
-    const result = await detectFramework(tmpDir);
+    const result = await detectFramework(new LocalFileReader(tmpDir));
     expect(result).toBe('nextjs-app');
   });
 
@@ -36,33 +37,33 @@ describe('detectFramework', () => {
     await mkdir(join(tmpDir, 'pages'), { recursive: true });
     await writeFile(join(tmpDir, 'pages', 'index.tsx'), '<div/>');
 
-    const result = await detectFramework(tmpDir);
+    const result = await detectFramework(new LocalFileReader(tmpDir));
     expect(result).toBe('nextjs-pages');
   });
 
   it('detects nuxt via nuxt.config.ts', async () => {
     await writeFile(join(tmpDir, 'nuxt.config.ts'), 'export default defineNuxtConfig({})');
 
-    const result = await detectFramework(tmpDir);
+    const result = await detectFramework(new LocalFileReader(tmpDir));
     expect(result).toBe('nuxt');
   });
 
   it('detects sveltekit via svelte.config.js', async () => {
     await writeFile(join(tmpDir, 'svelte.config.js'), 'export default {}');
 
-    const result = await detectFramework(tmpDir);
+    const result = await detectFramework(new LocalFileReader(tmpDir));
     expect(result).toBe('sveltekit');
   });
 
   it('detects plain-html when index.html exists', async () => {
     await writeFile(join(tmpDir, 'index.html'), '<!DOCTYPE html>');
 
-    const result = await detectFramework(tmpDir);
+    const result = await detectFramework(new LocalFileReader(tmpDir));
     expect(result).toBe('plain-html');
   });
 
   it('returns unknown when nothing matches', async () => {
-    const result = await detectFramework(tmpDir);
+    const result = await detectFramework(new LocalFileReader(tmpDir));
     expect(result).toBe('unknown');
   });
 });
