@@ -1,5 +1,8 @@
-<section aria-label="Plugin management dashboard"
-        hx-get="/admin/plugins" hx-trigger="pluginChanged from:body" hx-select="section[aria-label='Plugin management dashboard']" hx-swap="outerHTML">
+{{!-- Config area OUTSIDE the auto-refreshing section so it persists across reloads --}}
+<div id="plugin-config-area" class="mb-md"></div>
+
+<section aria-label="Plugin management dashboard" id="plugin-dashboard"
+        hx-get="/admin/plugins" hx-trigger="pluginChanged from:body" hx-select="#plugin-dashboard" hx-swap="outerHTML">
   <p class="text-sm text-muted mb-md">
     <span class="badge badge--completed">{{counts.active}} {{t "admin.plugins.active"}}</span>
     <span class="badge badge--info">{{counts.installed}} {{t "admin.plugins.installed"}}</span>
@@ -9,7 +12,6 @@
   </p>
 
   <div id="plugin-messages"></div>
-  <div id="plugin-config-area" class="mb-md"></div>
 
   <section class="admin-section" aria-label="Installed plugins">
     <h2 class="section-title">{{t "admin.plugins.installedPlugins"}}</h2>
@@ -42,7 +44,6 @@
 
           <div class="card__actions mt-sm">
             {{#if ../isAdmin}}
-              {{!-- Org usage badges --}}
               {{#if orgUsageCount}}
               <div class="text-xs text-muted mb-sm">
                 <strong>Active in:</strong>
@@ -54,16 +55,15 @@
               </div>
               {{/if}}
 
-              {{!-- Primary actions --}}
               <div class="plugin-actions">
                 {{#if (eq status "active")}}
-                <button class="btn btn--sm btn--secondary"
+                <button type="button" class="btn btn--sm btn--secondary"
                         hx-post="/admin/plugins/{{id}}/deactivate"
                         hx-target="#plugin-messages" hx-swap="innerHTML">
                   {{t "admin.plugins.deactivate"}}
                 </button>
                 {{else}}
-                <button class="btn btn--sm btn--primary"
+                <button type="button" class="btn btn--sm btn--primary"
                         hx-post="/admin/plugins/{{id}}/activate"
                         hx-target="#plugin-messages" hx-swap="innerHTML">
                   {{t "admin.plugins.activate"}}
@@ -74,7 +74,7 @@
                         hx-target="#plugin-config-area" hx-swap="innerHTML">
                   {{t "admin.plugins.configure"}}
                 </button>
-                <button class="btn btn--sm btn--danger"
+                <button type="button" class="btn btn--sm btn--danger"
                         hx-delete="/admin/plugins/{{id}}"
                         hx-target="#plugin-messages" hx-swap="innerHTML"
                         hx-confirm="Remove this plugin globally? All org configurations will be lost.">
@@ -82,7 +82,6 @@
                 </button>
               </div>
 
-              {{!-- Org activation picker --}}
               {{#if (eq status "active")}}
               {{#if @root.allOrgs.length}}
               <div class="org-picker mt-md">
@@ -91,7 +90,7 @@
                   <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
                   <div class="org-picker__list">
                     <label class="org-picker__item org-picker__item--all">
-                      <input type="checkbox" data-action="selectAllOrgs" data-plugin="{{id}}">
+                      <input type="checkbox" data-action="selectAllOrgs">
                       <span>Select all</span>
                     </label>
                     {{#each @root.allOrgs}}
@@ -108,10 +107,9 @@
               {{/if}}
 
             {{else}}
-              {{!-- Org admin view --}}
               {{#if isOrgInstance}}
                 {{#if (eq status "active")}}
-                <button class="btn btn--sm btn--secondary"
+                <button type="button" class="btn btn--sm btn--secondary"
                         hx-post="/admin/plugins/{{id}}/org/deactivate"
                         hx-target="#plugin-messages" hx-swap="innerHTML">
                   Deactivate
@@ -122,14 +120,14 @@
                   Configure
                 </button>
                 {{else}}
-                <button class="btn btn--sm btn--primary"
+                <button type="button" class="btn btn--sm btn--primary"
                         hx-post="/admin/plugins/{{id}}/org/activate"
                         hx-target="#plugin-messages" hx-swap="innerHTML">
                   Activate
                 </button>
                 {{/if}}
               {{else}}
-                <button class="btn btn--sm btn--primary"
+                <button type="button" class="btn btn--sm btn--primary"
                         hx-post="/admin/plugins/{{id}}/org/activate"
                         hx-target="#plugin-messages" hx-swap="innerHTML">
                   Activate for my organization
@@ -172,7 +170,7 @@
             </div>
           </dl>
 
-          <button class="btn btn--sm btn--primary"
+          <button type="button" class="btn btn--sm btn--primary"
                   hx-post="/admin/plugins/install"
                   hx-vals='{"packageName": "{{packageName}}"}'
                   hx-target="#plugin-messages"
