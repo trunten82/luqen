@@ -434,6 +434,7 @@ export async function scanSources(
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({}),
     },
   );
 }
