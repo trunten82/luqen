@@ -6,6 +6,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.3.1] - 2026-03-28
+
+### Added
+- **E2E test suite** — 44 new tests: plugin admin lifecycle (16), scan flow (15), auth flow (13)
+- **Compare page redesign** — clear Baseline/Latest labels, outcome banners, KPI cards with deltas, collapsible scan details, explanation text per tab
+- **Monitor: token caching** — in-memory cache with 60s safety margin, reduces OAuth calls
+- **Monitor: content cache** — file-based cache for meaningful source diffs between scans
+- **Monitor: pending proposals** — `getStatus()` now returns real pending proposal count
+- **Monitor: README** — complete rewrite with env vars, CLI commands, MCP integration
+
+### Fixed
+- **Bulk compare** — HTMX partial now includes checkbox column (was missing, breaking compare after search/filter)
+- **Compare button label** — "vs Previous" instead of ambiguous "Compare"
+- **i18n completeness** — all new strings added to 6 locales (en, it, de, es, fr, pt)
+
+---
+
 ## [2.3.0] - 2026-03-28
 
 ### Added
