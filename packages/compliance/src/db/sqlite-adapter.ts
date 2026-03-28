@@ -29,6 +29,7 @@ import type {
 // Raw row types returned from SQLite (all fields are primitives)
 interface JurisdictionRow {
   id: string;
+  org_id: string;
   name: string;
   type: string;
   parentId: string | null;
@@ -39,6 +40,7 @@ interface JurisdictionRow {
 
 interface RegulationRow {
   id: string;
+  org_id: string;
   jurisdictionId: string;
   name: string;
   shortName: string;
@@ -55,6 +57,7 @@ interface RegulationRow {
 
 interface RequirementRow {
   id: string;
+  org_id: string;
   regulationId: string;
   wcagVersion: string;
   wcagLevel: string;
@@ -130,6 +133,7 @@ interface WebhookRow {
 function toJurisdiction(row: JurisdictionRow): Jurisdiction {
   return {
     id: row.id,
+    orgId: row.org_id,
     name: row.name,
     type: row.type as Jurisdiction['type'],
     ...(row.parentId != null ? { parentId: row.parentId } : {}),
@@ -142,6 +146,7 @@ function toJurisdiction(row: JurisdictionRow): Jurisdiction {
 function toRegulation(row: RegulationRow): Regulation {
   return {
     id: row.id,
+    orgId: row.org_id,
     jurisdictionId: row.jurisdictionId,
     name: row.name,
     shortName: row.shortName,
@@ -160,6 +165,7 @@ function toRegulation(row: RegulationRow): Regulation {
 function toRequirement(row: RequirementRow): Requirement {
   return {
     id: row.id,
+    orgId: row.org_id,
     regulationId: row.regulationId,
     wcagVersion: row.wcagVersion as Requirement['wcagVersion'],
     wcagLevel: row.wcagLevel as Requirement['wcagLevel'],

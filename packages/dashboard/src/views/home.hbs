@@ -26,86 +26,13 @@
 {{/unless}}
 
 {{#if perm.scansCreate}}
-<section aria-labelledby="quick-scan-heading">
-  <h2 id="quick-scan-heading" class="section-title">{{t "home.newScan"}}</h2>
-  <div class="card mb-lg">
-    <form method="POST" action="/scan/new" novalidate>
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
-      <div class="form-group">
-        <label for="quick-url">{{t "home.websiteUrl"}} <span class="required" aria-hidden="true">*</span></label>
-        <input type="url" id="quick-url" name="siteUrl"
-               placeholder="https://example.com"
-               autocomplete="off" required aria-required="true"
-               aria-describedby="quick-url-hint">
-        <p id="quick-url-hint" class="form-hint">{{{t "home.urlHint"}}}</p>
-      </div>
-
-      <input type="hidden" name="standard" value="WCAG2AA">
-
-      <div class="form-group">
-        <label>{{t "home.scanMode"}}</label>
-        <div class="radio-group radio-group--inline">
-          <label class="radio-label">
-            <input type="radio" name="scanMode" value="single" checked>
-            <span>{{t "home.singlePage"}}</span>
-          </label>
-          <label class="radio-label">
-            <input type="radio" name="scanMode" value="site">
-            <span>{{t "home.fullSite"}}</span>
-          </label>
-        </div>
-      </div>
-
-      {{#if jurisdictions.length}}
-      <div class="form-group">
-        <label>{{t "home.complianceCheck"}} <span class="text-xs text-muted">(optional)</span></label>
-        <p class="form-hint mb-sm">{{t "home.complianceHint"}}</p>
-
-        <div class="picker" id="compliance-picker">
-          <div class="picker__tabs">
-            <button type="button" class="picker__tab picker__tab--active" data-action="pickerTab" data-tab="jurisdictions">{{t "home.jurisdictions"}}</button>
-            <button type="button" class="picker__tab" data-action="pickerTab" data-tab="regulations">{{t "home.regulations"}}</button>
-          </div>
-          <input type="search" class="picker__search" placeholder="{{t "common.search"}}" data-action-input="pickerSearch" aria-label="Search jurisdictions or regulations">
-          <div class="picker__list" id="picker-list">
-            {{#each jurisdictions}}
-            <label class="picker__item" data-tab="jurisdictions" data-name="{{name}}">
-              <input type="checkbox" name="jurisdictions" value="{{id}}">
-              <span>{{name}}</span>
-              <span class="text-xs text-muted">{{id}}</span>
-            </label>
-            {{/each}}
-            {{#each regulations}}
-            <label class="picker__item" data-tab="regulations" data-name="{{name}} {{shortName}}" style="display:none">
-              <input type="checkbox" name="jurisdictions" value="{{jurisdictionId}}">
-              <span>{{shortName}}</span>
-              <span class="text-xs text-muted">{{name}}</span>
-            </label>
-            {{/each}}
-          </div>
-          <div class="picker__selected" id="picker-selected"></div>
-        </div>
-      </div>
-      {{/if}}
-
-      <div class="form-group" style="display:flex;gap:1.5rem;">
-        <label class="checkbox-label">
-          <input type="checkbox" name="includeWarnings" value="true" checked>
-          <span>{{t "scans.includeWarnings"}}</span>
-        </label>
-        <label class="checkbox-label">
-          <input type="checkbox" name="includeNotices" value="true" checked>
-          <span>{{t "scans.includeNotices"}}</span>
-        </label>
-      </div>
-
-      <div class="page-actions">
-        <button type="submit" class="btn btn--primary">{{t "home.startScan"}}</button>
-        <a href="/scan/new" class="btn btn--ghost">{{t "home.advancedOptions"}}</a>
-      </div>
-    </form>
+<div class="card mb-md">
+  <div class="card__body" style="text-align:center; padding: var(--space-lg);">
+    <h2 class="card__title mb-sm">{{t "home.startScan"}}</h2>
+    <p class="text-muted mb-md">Run a new accessibility scan with full configuration options — WCAG standard, compliance checking, authentication, and more.</p>
+    <a href="/scan/new" class="btn btn--primary">{{t "nav.newScan"}}</a>
   </div>
-</section>
+</div>
 {{/if}}
 
 <section aria-labelledby="recent-scans-heading">

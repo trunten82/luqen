@@ -98,8 +98,9 @@
                     </label>
                     {{#each @root.allOrgs}}
                     <label class="org-deploy__item">
-                      <input type="checkbox" name="orgId" value="{{this.id}}" class="org-cb-plugin">
-                      <span>{{this.name}}</span>
+                      <input type="checkbox" name="orgId" value="{{this.id}}" class="org-cb-plugin"
+                        {{#if (includes ../../activeOrgIds this.id)}}checked disabled{{/if}}>
+                      <span>{{this.name}}{{#if (includes ../../activeOrgIds this.id)}} (active){{/if}}</span>
                     </label>
                     {{/each}}
                   </div>

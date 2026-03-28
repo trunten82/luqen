@@ -43,7 +43,8 @@ export function startScheduler(
           complianceUrl: config.complianceUrl,
           maxPages: config.maxPages,
           ...(schedule.runner !== null ? { runner: schedule.runner as 'htmlcs' | 'axe' } : {}),
-          ...(schedule.incremental ? { incremental: true, orgId: schedule.orgId } : {}),
+          ...(schedule.incremental ? { incremental: true } : {}),
+          orgId: schedule.orgId,
         });
 
         // Update schedule: set last_run_at and compute next_run_at
