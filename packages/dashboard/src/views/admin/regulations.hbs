@@ -59,6 +59,7 @@
           <th scope="col">{{t "admin.regulations.colEnforcementDate"}}</th>
           <th scope="col">{{t "common.status"}}</th>
           <th scope="col">{{t "admin.regulations.colScope"}}</th>
+          <th scope="col">{{t "common.owner"}}</th>
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
@@ -72,6 +73,9 @@
           <td data-label="Enforcement Date">{{enforcementDate}}</td>
           <td data-label="Status">{{status}}</td>
           <td data-label="Scope">{{scope}}</td>
+          <td data-label="Owner">
+            {{#if (eq orgId "system")}}<span class="badge badge--neutral">System</span>{{else}}{{orgId}}{{/if}}
+          </td>
           <td>
             <button hx-get="/admin/regulations/{{id}}/view"
                     hx-target="#modal-container"
@@ -82,7 +86,7 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="8" class="table__empty">{{t "admin.regulations.noRegulations"}}</td>
+          <td colspan="9" class="table__empty">{{t "admin.regulations.noRegulations"}}</td>
         </tr>
         {{/each}}
       </tbody>

@@ -43,6 +43,7 @@
             <th scope="col">{{t "admin.jurisdictions.colName"}}</th>
             <th scope="col">{{t "admin.jurisdictions.colType"}}</th>
             <th scope="col">{{t "admin.jurisdictions.colParent"}}</th>
+            <th scope="col">{{t "common.scope"}}</th>
             <th scope="col">{{t "common.actions"}}</th>
           </tr>
         </thead>
@@ -53,6 +54,9 @@
             <td data-label="Name">{{name}}</td>
             <td data-label="Type">{{type}}</td>
             <td data-label="Parent">{{parentId}}</td>
+            <td data-label="Scope">
+              {{#if (eq orgId "system")}}<span class="badge badge--neutral">System</span>{{else}}{{orgId}}{{/if}}
+            </td>
             <td>
               <button hx-get="/admin/jurisdictions/{{id}}/view"
                       hx-target="#modal-container"
@@ -63,7 +67,7 @@
           </tr>
           {{else}}
           <tr>
-            <td colspan="5">{{t "admin.jurisdictions.noJurisdictions"}}</td>
+            <td colspan="6">{{t "admin.jurisdictions.noJurisdictions"}}</td>
           </tr>
           {{/each}}
         </tbody>

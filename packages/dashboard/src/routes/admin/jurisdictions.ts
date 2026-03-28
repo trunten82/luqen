@@ -55,6 +55,7 @@ export async function jurisdictionRoutes(
   <td data-label="Name">${j.name}</td>
   <td data-label="Type">${j.type}</td>
   <td data-label="Parent">${j.parentId ?? ''}</td>
+  <td data-label="Scope">${j.orgId === 'system' || j.orgId === undefined ? '<span class="badge badge--neutral">System</span>' : j.orgId}</td>
   <td><button hx-get="/admin/jurisdictions/${encodeURIComponent(j.id)}/view" hx-target="#modal-container" hx-swap="innerHTML" class="btn btn--sm btn--secondary" aria-label="View ${j.name}">View</button></td>
 </tr>`
         ).join('\n');
@@ -76,7 +77,7 @@ export async function jurisdictionRoutes(
         const escQ = encodeURIComponent(q);
         let rows = '';
         if (page.length === 0) {
-          rows = '<tr><td colspan="5">No jurisdictions found.</td></tr>';
+          rows = '<tr><td colspan="6">No jurisdictions found.</td></tr>';
         } else {
           rows = page.map((j) =>
             `<tr id="jurisdiction-${j.id}">
@@ -84,6 +85,7 @@ export async function jurisdictionRoutes(
   <td data-label="Name">${j.name}</td>
   <td data-label="Type">${j.type}</td>
   <td data-label="Parent">${j.parentId ?? ''}</td>
+  <td data-label="Scope">${j.orgId === 'system' || j.orgId === undefined ? '<span class="badge badge--neutral">System</span>' : j.orgId}</td>
   <td><button hx-get="/admin/jurisdictions/${encodeURIComponent(j.id)}/view" hx-target="#modal-container" hx-swap="innerHTML" class="btn btn--sm btn--secondary" aria-label="View ${j.name}">View</button></td>
 </tr>`
           ).join('\n');
@@ -94,7 +96,7 @@ export async function jurisdictionRoutes(
           loadMore = `<div class="load-more"><button hx-get="/admin/jurisdictions?offset=${offset + limit}&limit=${limit}&q=${escQ}&partial=rows" hx-target="#jurisdictions-table-body" hx-swap="beforeend" class="btn btn--ghost btn--full" hx-on::after-request="this.closest('.load-more').remove()">Load more (${offset + limit} of ${total})</button></div>`;
         }
 
-        const html = `<div class="table-wrapper"><table aria-label="Jurisdictions"><thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Parent</th><th scope="col">Actions</th></tr></thead><tbody id="jurisdictions-table-body">${rows}</tbody></table></div>${loadMore}`;
+        const html = `<div class="table-wrapper"><table aria-label="Jurisdictions"><thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Parent</th><th scope="col">Scope</th><th scope="col">Actions</th></tr></thead><tbody id="jurisdictions-table-body">${rows}</tbody></table></div>${loadMore}`;
         return reply.code(200).header('content-type', 'text/html').send(html);
       }
 
@@ -146,11 +148,15 @@ export async function jurisdictionRoutes(
           parentId: body.parentId?.trim() || undefined,
         }, getOrgId(request));
 
+        const scopeBadge = created.orgId === 'system' || created.orgId === undefined
+          ? '<span class="badge badge--neutral">System</span>'
+          : (created.orgId ?? '');
         const row = `<tr id="jurisdiction-${created.id}">
   <td data-label="ID">${created.id}</td>
   <td data-label="Name">${created.name}</td>
   <td data-label="Type">${created.type}</td>
   <td data-label="Parent">${created.parentId ?? ''}</td>
+  <td data-label="Scope">${scopeBadge}</td>
   <td>
     <button hx-get="/admin/jurisdictions/${encodeURIComponent(created.id)}/view"
             hx-target="#modal-container"
@@ -244,11 +250,15 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
           parentId: body.parentId?.trim() || undefined,
         }, getOrgId(request));
 
+        const scopeBadge = updated.orgId === 'system' || updated.orgId === undefined
+          ? '<span class="badge badge--neutral">System</span>'
+          : (updated.orgId ?? '');
         const row = `<tr id="jurisdiction-${updated.id}">
   <td data-label="ID">${updated.id}</td>
   <td data-label="Name">${updated.name}</td>
   <td data-label="Type">${updated.type}</td>
   <td data-label="Parent">${updated.parentId ?? ''}</td>
+  <td data-label="Scope">${scopeBadge}</td>
   <td>
     <button hx-get="/admin/jurisdictions/${encodeURIComponent(updated.id)}/view"
             hx-target="#modal-container"
