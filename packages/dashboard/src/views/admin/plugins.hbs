@@ -71,8 +71,7 @@
                 </button>
                 {{/if}}
                 <button type="button" class="btn btn--sm btn--ghost"
-                        hx-get="/admin/plugins/{{id}}/configure"
-                        hx-target="#plugin-config-area" hx-swap="innerHTML">
+                        data-action="loadPluginConfig" data-plugin-id="{{id}}">
                   {{t "admin.plugins.configure"}}
                 </button>
                 <button type="button" class="btn btn--sm btn--danger"
@@ -116,8 +115,7 @@
                   Deactivate
                 </button>
                 <button type="button" class="btn btn--sm btn--ghost"
-                        hx-get="/admin/plugins/{{id}}/configure"
-                        hx-target="#plugin-config-area" hx-swap="innerHTML">
+                        data-action="loadPluginConfig" data-plugin-id="{{id}}">
                   Configure
                 </button>
                 {{else}}
