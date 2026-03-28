@@ -1,37 +1,48 @@
 # Git Host Plugins
 
-Luqen integrates with git hosting platforms to read source files and create pull requests from accessibility fix proposals.
+Luqen integrates with git hosting platforms to read source files and create pull requests from accessibility fix proposals. Git host plugins are proper PluginManager plugins (type `git-host`), built-in to the dashboard and auto-activated on first run.
 
 ## Supported Platforms
 
-| Platform | Plugin Type | Default Host URL |
+| Platform | Plugin Name | Default Host URL |
 |----------|------------|-----------------|
-| GitHub | `github` | `https://api.github.com` |
-| GitLab | `gitlab` | `https://gitlab.com/api/v4` |
-| Azure DevOps | `azure-devops` | `https://dev.azure.com` |
+| GitHub | `git-host-github` | `https://api.github.com` |
+| GitLab | `git-host-gitlab` | `https://gitlab.com/api/v4` |
+| Azure DevOps | `git-host-azure-devops` | `https://dev.azure.com` |
 
 Self-hosted instances (GitHub Enterprise, GitLab CE/EE, Azure DevOps Server) are supported — configure the appropriate host URL.
 
+## Plugin Architecture
+
+Git host plugins are registered in `plugin-registry.json` alongside catalogue plugins but differ in two ways:
+
+1. **Built-in** — they ship with the dashboard (no tarball download required)
+2. **Auto-activated** — activated automatically when the dashboard starts
+
+They follow the standard PluginManager lifecycle (`activate`, `deactivate`, `configure`) and appear on the **Admin > Plugins** page like any other plugin.
+
 ## Setup
 
-### 1. Admin: Install a git host
+### 1. Admin: Configure a git host
 
-Navigate to **Admin → Git Hosts → Add Git Host**:
+Navigate to **Admin > Git Hosts > Add Git Host**:
 - Select the platform type
-- Enter the API host URL
+- Enter the API host URL (validated against private/reserved IP ranges for SSRF protection)
 - Give it a display name (e.g., "Company GitHub")
+- Select the organization scope from the dropdown
 
 ### 2. Admin: Connect websites to repos
 
-Navigate to **Admin → Repositories → Connect Repository**:
+Navigate to **Admin > Connected Repos > Connect Repository**:
 - Enter the site URL pattern (e.g., `https://example.com%`)
 - Enter the repo identifier (e.g., `owner/repo` for GitHub/GitLab, `org/project/repo` for Azure DevOps)
 - Select the git host from the dropdown
+- Select the organization from the org dropdown (org-scoped)
 - Set the branch (defaults to `main`)
 
 ### 3. Developer: Add credentials
 
-Navigate to **Profile → Git Credentials**:
+Navigate to **Profile > Git Credentials** (also accessible via the sidebar Repositories section):
 - For each configured git host, click "Validate & Save"
 - Enter your Personal Access Token (PAT)
 - The system validates it against the git host API and shows your username
@@ -60,10 +71,11 @@ Navigate to **Profile → Git Credentials**:
 - Admins cannot see or use developer tokens
 - Credentials are deleted when the git host config is removed (cascade)
 - Credentials are scoped to the user — one PAT per git host per developer
+- **SSRF protection** — all git host API URLs are validated against private/reserved IP ranges (IPv4 loopback, link-local, RFC 1918, IPv6 loopback and link-local) before any outbound request. 15 unit tests cover all private IP ranges.
 
 ## Extending
 
-To add a new git host platform, implement the `GitHostPlugin` interface:
+To add a new git host platform, implement the `GitHostPlugin` interface and register it as a PluginManager plugin (type `git-host`):
 
 ```typescript
 interface GitHostPlugin {
@@ -76,4 +88,4 @@ interface GitHostPlugin {
 }
 ```
 
-Register it in `packages/dashboard/src/git-hosts/registry.ts`.
+Add the plugin entry to `packages/dashboard/plugin-registry.json` with type `git-host` and a `configSchema` array defining the host URL field.

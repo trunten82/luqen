@@ -3,10 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../db/index.js';
+import type { DashboardConfig } from '../config.js';
 import { requirePermission } from '../auth/middleware.js';
 import { toastHtml } from './admin/helpers.js';
 import { getFixSuggestion } from '../fix-suggestions.js';
 import { hasPermission } from '../permissions.js';
+import { getGitHostPlugin } from '../git-hosts/registry.js';
+import { decryptSecret } from '../plugins/crypto.js';
+import { RemoteFileReader } from '../git-hosts/remote-file-reader.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -18,6 +22,7 @@ interface CreateRepoBody {
   readonly repoPath?: string;
   readonly branch?: string;
   readonly gitHostConfigId?: string;
+  readonly orgId?: string;
   readonly _csrf?: string;
 }
 
@@ -94,6 +99,7 @@ function sanitizeGitUrl(raw: string): string {
 function sanitizePath(raw: string | undefined): string | undefined {
   if (raw === undefined || raw.trim() === '') return undefined;
   const trimmed = raw.trim();
+  if (trimmed.length > 1024) return undefined;
   // Basic path traversal prevention
   if (trimmed.includes('..') || trimmed.includes('\0')) return undefined;
   return trimmed;
@@ -102,6 +108,7 @@ function sanitizePath(raw: string | undefined): string | undefined {
 function sanitizeBranch(raw: string | undefined): string {
   if (raw === undefined || raw.trim() === '') return 'main';
   const trimmed = raw.trim();
+  if (trimmed.length > 256) return 'main';
   // Allow alphanumeric, hyphens, underscores, slashes, dots
   if (/^[a-zA-Z0-9._\-/]+$/.test(trimmed)) return trimmed;
   return 'main';
@@ -148,6 +155,7 @@ function collectIssuesFromReport(raw: JsonReportForFixes, siteUrl: string): Arra
 export async function repoRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  config: DashboardConfig,
 ): Promise<void> {
 
   // ── GET /admin/repos — list connected repos (admin only) ──────────────
@@ -156,9 +164,23 @@ export async function repoRoutes(
     '/admin/repos',
     { preHandler: requirePermission('repos.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const orgId = request.user?.currentOrgId ?? 'system';
-      const repos = await storage.repos.listRepos(orgId);
-      const gitHosts = await storage.gitHosts.listConfigs(orgId);
+      const isAdmin = request.user?.role === 'admin';
+      const currentOrgId = request.user?.currentOrgId ?? 'system';
+
+      // Global admin sees repos for all orgs; org admin sees their own
+      const repos = isAdmin
+        ? await storage.repos.listRepos()
+        : await storage.repos.listRepos(currentOrgId);
+
+      // Git host configs: admin sees all, org user sees their org + system
+      const gitHosts = isAdmin
+        ? [...await storage.gitHosts.listConfigs('system'), ...await storage.gitHosts.listConfigs(currentOrgId)]
+        : await storage.gitHosts.listConfigs(currentOrgId);
+
+      // Org list for the dropdown (admin sees all, org user sees just theirs)
+      const orgs = isAdmin
+        ? await storage.organizations.listOrgs()
+        : (currentOrgId !== 'system' ? [await storage.organizations.getOrg(currentOrgId)].filter(Boolean) : []);
 
       return reply.view('repos.hbs', {
         pageTitle: 'Connected Repositories',
@@ -166,6 +188,9 @@ export async function repoRoutes(
         user: request.user,
         repos,
         gitHosts,
+        orgs,
+        currentOrgId,
+        isAdmin,
       });
     },
   );
@@ -177,7 +202,11 @@ export async function repoRoutes(
     { preHandler: requirePermission('repos.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateRepoBody;
-      const orgId = request.user?.currentOrgId ?? 'system';
+      const isAdmin = request.user?.role === 'admin';
+      // Global admin can assign to any org via form; org admin uses their own
+      const orgId = isAdmin && body.orgId?.trim()
+        ? body.orgId.trim()
+        : (request.user?.currentOrgId ?? 'system');
       const username = request.user?.username ?? 'unknown';
 
       const siteUrlPattern = sanitizeUrl(body.siteUrlPattern);
@@ -336,40 +365,115 @@ export async function repoRoutes(
         });
       }
 
-      // Collect all issues and generate fix proposals using fix-suggestions
+      // Collect all issues for both core proposer and local fallback
       const allIssues = collectIssuesFromReport(raw, scan.siteUrl);
+
+      // Try core's proposeFixesFromReport with RemoteFileReader when git host is available
+      let usedCoreProposer = false;
       const fixes: FixProposalView[] = [];
-      let fixIndex = 0;
 
-      // Track seen fingerprints for dedup
-      const seen = new Set<string>();
+      if (
+        connectedRepo !== null &&
+        connectedRepo.gitHostConfigId !== null &&
+        canCreatePr
+      ) {
+        try {
+          const gitHostConfig = await storage.gitHosts.getConfig(connectedRepo.gitHostConfigId);
+          const plugin = gitHostConfig !== null ? getGitHostPlugin(gitHostConfig.pluginType) : undefined;
+          const userId = request.user?.id ?? '';
+          const credential = connectedRepo.gitHostConfigId !== null
+            ? await storage.gitHosts.getCredentialForHost(userId, connectedRepo.gitHostConfigId)
+            : null;
 
-      for (const issue of allIssues) {
-        const criterion = issue.wcagCriterion ?? '';
-        const suggestion = getFixSuggestion(criterion, issue.message);
+          if (gitHostConfig !== null && plugin !== undefined && credential !== null) {
+            const token = decryptSecret(credential.encryptedToken, config.sessionSecret);
+            const remoteReader = new RemoteFileReader(plugin, {
+              hostUrl: gitHostConfig.hostUrl,
+              repo: connectedRepo.repoUrl,
+              branch: connectedRepo.branch,
+              token,
+            });
 
-        if (suggestion === null) continue;
+            const { proposeFixesFromReport } = await import('@luqen/core');
+            if (proposeFixesFromReport.length >= 4) {
+              // Build source map override: map the scanned URL path prefix to repo root
+              // e.g. raw.githubusercontent.com/owner/repo/main/index.html → index.html
+              const siteUrlBase = connectedRepo.siteUrlPattern.replace(/%$/, '');
+              const overrides: Record<string, string> = {};
+              try {
+                const basePathname = new URL(siteUrlBase).pathname;
+                overrides[`${basePathname}/*`] = '';
+              } catch { /* use empty overrides */ }
 
-        const fingerprint = `${suggestion.criterion}:${suggestion.issuePattern}:${issue.selector}`;
-        if (seen.has(fingerprint)) continue;
-        seen.add(fingerprint);
+              const proposals = await (proposeFixesFromReport as (
+                report: unknown, repoPath: string, overrides: Record<string, string>, reader: RemoteFileReader,
+              ) => Promise<{ fixes: ReadonlyArray<{ file: string; line: number; issue: string; description: string; oldText: string; newText: string; confidence: string }> }>)(
+                raw, connectedRepo.repoPath ?? '', overrides, remoteReader,
+              );
 
-        fixes.push({
-          index: fixIndex++,
-          file: connectedRepo?.repoPath ?? null,
-          line: 0,
-          criterion: suggestion.criterion,
-          title: suggestion.title,
-          description: suggestion.description,
-          codeExample: suggestion.codeExample,
-          effort: suggestion.effort,
-          severity: issue.type,
-          message: issue.message,
-          selector: issue.selector,
-          context: issue.context,
-          confidence: connectedRepo !== null ? 'medium' : 'suggestion',
-          pageUrl: issue.pageUrl,
-        });
+              let fixIndex = 0;
+              for (const proposal of proposals.fixes) {
+                // Find matching issue for additional metadata
+                const matchingIssue = allIssues.find((iss) => iss.selector && proposal.oldText.includes(iss.context));
+                fixes.push({
+                  index: fixIndex++,
+                  file: proposal.file,
+                  line: proposal.line,
+                  criterion: proposal.issue,
+                  title: proposal.description,
+                  description: proposal.description,
+                  codeExample: `<!-- Before -->\n${proposal.oldText}\n\n<!-- After -->\n${proposal.newText}`,
+                  effort: 'low',
+                  severity: matchingIssue?.type ?? 'error',
+                  message: proposal.description,
+                  selector: matchingIssue?.selector ?? '',
+                  context: proposal.oldText,
+                  confidence: proposal.confidence,
+                  pageUrl: matchingIssue?.pageUrl ?? scan.siteUrl,
+                });
+              }
+              usedCoreProposer = true;
+            }
+          }
+        } catch {
+          // Core not built with FileReader support yet — fall back to local suggestion engine
+        }
+      }
+
+      // Fallback: local fix-suggestions engine
+      if (!usedCoreProposer) {
+        let fixIndex = 0;
+
+        // Track seen fingerprints for dedup
+        const seen = new Set<string>();
+
+        for (const issue of allIssues) {
+          const criterion = issue.wcagCriterion ?? '';
+          const suggestion = getFixSuggestion(criterion, issue.message);
+
+          if (suggestion === null) continue;
+
+          const fingerprint = `${suggestion.criterion}:${suggestion.issuePattern}:${issue.selector}`;
+          if (seen.has(fingerprint)) continue;
+          seen.add(fingerprint);
+
+          fixes.push({
+            index: fixIndex++,
+            file: connectedRepo?.repoPath ?? null,
+            line: 0,
+            criterion: suggestion.criterion,
+            title: suggestion.title,
+            description: suggestion.description,
+            codeExample: suggestion.codeExample,
+            effort: suggestion.effort,
+            severity: issue.type,
+            message: issue.message,
+            selector: issue.selector,
+            context: issue.context,
+            confidence: connectedRepo !== null ? 'medium' : 'suggestion',
+            pageUrl: issue.pageUrl,
+          });
+        }
       }
 
       // Sort: errors first, then by criterion

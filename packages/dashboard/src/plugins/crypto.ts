@@ -17,7 +17,7 @@ export function setEncryptionSalt(salt: string): void {
 }
 
 function deriveKey(key: string): Buffer {
-  return scryptSync(key, _installationSalt, KEY_LENGTH);
+  return scryptSync(key, _installationSalt, KEY_LENGTH, { N: 65536, r: 8, p: 1, maxmem: 128 * 1024 * 1024 });
 }
 
 /**
@@ -25,6 +25,9 @@ function deriveKey(key: string): Buffer {
  * Returns a string in the format `iv:ciphertext:tag` (all base64-encoded).
  */
 export function encryptSecret(value: string, key: string): string {
+  if (_installationSalt === DEFAULT_SALT) {
+    console.warn('[security] encryptSecret called with default salt — call setEncryptionSalt() first');
+  }
   const derivedKey = deriveKey(key);
   const iv = randomBytes(IV_LENGTH);
   const cipher = createCipheriv(ALGORITHM, derivedKey, iv, { authTagLength: TAG_LENGTH });
