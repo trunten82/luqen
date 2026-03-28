@@ -303,6 +303,8 @@ export interface Organization {
   readonly name: string;
   readonly slug: string;
   readonly createdAt: string;
+  readonly complianceClientId?: string;
+  readonly complianceClientSecret?: string;
 }
 
 export interface OrgMember {

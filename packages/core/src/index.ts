@@ -30,6 +30,8 @@ export interface CreateScannerOptions {
   readonly ignore?: readonly string[];
   readonly hideElements?: string;
   readonly headers?: Readonly<Record<string, string>>;
+  /** Pa11y actions to run before testing (e.g. login form interactions). Only used in direct mode. */
+  readonly actions?: readonly string[];
   readonly wait?: number;
   readonly onProgress?: ProgressListener;
   /** When true, scan only the given URL without discovery/crawling. Default: false. */
@@ -90,6 +92,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
     ignore: opts.ignore ? [...opts.ignore] : [],
     hideElements: opts.hideElements ?? '',
     headers: opts.headers ?? {},
+    actions: opts.actions,
     wait: opts.wait ?? 0,
     onProgress: opts.onProgress,
     ...(opts.runner !== undefined ? { runner: opts.runner } : {}),

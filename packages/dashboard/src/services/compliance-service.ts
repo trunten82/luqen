@@ -9,6 +9,7 @@
 
 import { ServiceTokenManager } from '../auth/service-token.js';
 import type { DashboardConfig } from '../config.js';
+import type { OrgRepository } from '../db/interfaces/org-repository.js';
 import {
   listJurisdictions,
   listRegulations,
@@ -51,6 +52,10 @@ export interface ComplianceLookupResult {
 export class ComplianceService {
   private readonly tokenManager: ServiceTokenManager;
   private readonly complianceUrl: string;
+  private readonly orgRepository?: OrgRepository;
+
+  /** Per-org token managers keyed by orgId. */
+  private readonly orgTokenManagers = new Map<string, ServiceTokenManager>();
 
   /** Default cache TTL in milliseconds (5 minutes). */
   private readonly cacheTtlMs: number;
@@ -58,9 +63,14 @@ export class ComplianceService {
   private jurisdictionCache = new Map<string, CacheEntry<Jurisdiction[]>>();
   private regulationCache = new Map<string, CacheEntry<Regulation[]>>();
 
-  constructor(config: DashboardConfig, tokenManager?: ServiceTokenManager) {
+  constructor(
+    config: DashboardConfig,
+    tokenManager?: ServiceTokenManager,
+    orgRepository?: OrgRepository,
+  ) {
     this.complianceUrl = config.complianceUrl;
     this.cacheTtlMs = 5 * 60 * 1000;
+    this.orgRepository = orgRepository;
 
     this.tokenManager = tokenManager ?? new ServiceTokenManager(
       config.complianceUrl,
@@ -77,6 +87,41 @@ export class ComplianceService {
    */
   async getToken(): Promise<string> {
     return this.tokenManager.getToken();
+  }
+
+  /**
+   * Get a compliance API token scoped to a specific org.
+   *
+   * Looks up the org's stored compliance client credentials and uses a
+   * per-org ServiceTokenManager to get/cache tokens. Falls back to the
+   * global service token if the org has no stored credentials.
+   */
+  async getOrgToken(orgId: string): Promise<string> {
+    // Check if we already have a token manager for this org
+    const existing = this.orgTokenManagers.get(orgId);
+    if (existing !== undefined) {
+      return existing.getToken();
+    }
+
+    // Look up org credentials from the DB
+    if (this.orgRepository === undefined) {
+      return this.tokenManager.getToken();
+    }
+
+    const credentials = await this.orgRepository.getOrgComplianceCredentials(orgId);
+    if (credentials === null || credentials.clientId === '' || credentials.clientSecret === '') {
+      return this.tokenManager.getToken();
+    }
+
+    // Create and cache a new token manager for this org
+    const orgManager = new ServiceTokenManager(
+      this.complianceUrl,
+      credentials.clientId,
+      credentials.clientSecret,
+    );
+    this.orgTokenManagers.set(orgId, orgManager);
+
+    return orgManager.getToken();
   }
 
   // ── Jurisdiction lookups ─────────────────────────────────────────────────
@@ -217,5 +262,15 @@ export class ComplianceService {
   clearCache(): void {
     this.jurisdictionCache.clear();
     this.regulationCache.clear();
+  }
+
+  /**
+   * Destroy all per-org token managers (cleanup on shutdown).
+   */
+  destroyOrgTokenManagers(): void {
+    for (const manager of this.orgTokenManagers.values()) {
+      manager.destroy();
+    }
+    this.orgTokenManagers.clear();
   }
 }

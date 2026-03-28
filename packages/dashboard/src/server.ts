@@ -51,6 +51,7 @@ import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
 import { ServiceTokenManager } from './auth/service-token.js';
+import { ComplianceService } from './services/compliance-service.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
@@ -415,10 +416,26 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Service token injection (auto-refresh for compliance API calls) ────
+  const complianceService = new ComplianceService(config, serviceTokenManager, storage.organizations);
+  server.decorate('complianceService', complianceService);
+  server.addHook('onClose', () => { complianceService.destroyOrgTokenManagers(); });
+
   server.addHook('preHandler', async (request: FastifyRequest) => {
     const session = request.session as { token?: string };
     if (!session.token) {
-      (request as unknown as Record<string, unknown>)['_serviceToken'] = await serviceTokenManager.getToken();
+      const reqExt = request as unknown as Record<string, unknown>;
+      reqExt['_serviceToken'] = await serviceTokenManager.getToken();
+
+      // Inject per-org token when the user has a current org with stored credentials
+      const orgId = request.user?.currentOrgId;
+      if (orgId) {
+        try {
+          const orgToken = await complianceService.getOrgToken(orgId);
+          reqExt['_orgServiceToken'] = orgToken;
+        } catch {
+          // Fall through — global token will be used via _serviceToken
+        }
+      }
     }
   });
 
