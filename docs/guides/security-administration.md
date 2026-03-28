@@ -125,6 +125,14 @@ On first startup with a fresh database, Luqen generates a master API key and pri
 
 Each dashboard installation generates a unique 32-byte random salt on first startup, stored in the `dashboard_settings` database table. This salt is combined with the `sessionSecret` when encrypting plugin configuration secrets (AES-256-GCM). Even if two installations share the same session secret, their encrypted data cannot be decrypted by the other installation.
 
+### Plugin configuration security
+
+Plugin configuration secrets (API keys, OAuth client secrets, SMTP passwords) are encrypted with **AES-256-GCM** using a key derived from the dashboard's `sessionSecret` combined with the per-installation encryption salt. Secret values are masked in the UI and API responses.
+
+**Org isolation:** Plugin configurations are scoped per organisation. Org admins can only view and modify their own org's plugin settings — they cannot see configuration values belonging to other organisations. Global admins can see which organisations have activated each plugin and view activation status, but org-specific secret values remain encrypted and masked.
+
+**Config inheritance:** Org-specific configurations inherit from global defaults. Only values explicitly overridden by the org admin are stored separately. This means sensitive global defaults (e.g., a shared SMTP host) are inherited without being exposed to org admins as editable secret fields.
+
 ### SSRF protection
 
 Scan target URLs are validated before being submitted to the pa11y webservice. Private and internal IP ranges are blocked to prevent the scanner from being used as a proxy to reach internal services:

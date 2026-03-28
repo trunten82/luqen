@@ -276,10 +276,27 @@ Manage multi-tenant organizations:
 
 **Path:** `/admin/plugins`
 
-View and configure installed plugins:
-- Auth plugins (e.g., Entra ID SSO)
-- Notification plugins (Slack, Teams, Email)
-- Storage plugins (S3, Azure Blob)
+Plugin management is role-based — global admins and org admins have different capabilities.
+
+#### Global admin: installing and managing plugins
+
+1. Navigate to **Admin > Plugins** and open the **Plugin Catalogue** tab
+2. Browse available plugins and click **Install** to download from the catalogue
+3. Open the installed plugin and configure its **global default settings** (e.g., SMTP host, webhook URL)
+4. Click **Save**, then **Activate** to make the plugin available system-wide
+5. Optionally, enforce activation for specific organisations from the plugin's **Org Usage** panel
+
+Global admins can also view which organisations have activated each plugin and deactivate or remove plugins globally.
+
+#### Org admin: activating plugins for your organisation
+
+1. Navigate to **Admin > Plugins** — you see all globally installed plugins
+2. Click **Activate** on any plugin to enable it for your organisation
+3. The plugin inherits global default configuration automatically
+4. To customise settings for your org, open the plugin and override specific fields — non-overridden values fall back to the global defaults
+5. Click **Deactivate** to disable a plugin for your org without affecting other organisations
+
+Org admins cannot install, remove, or modify global plugin settings.
 
 For a comprehensive guide to all available plugins with their configuration fields and setup instructions, see [Plugin Configuration Guide](../reference/plugin-guide.md).
 
