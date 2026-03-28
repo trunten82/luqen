@@ -4,12 +4,14 @@ import {
   createClient,
   revokeClient,
 } from '../../compliance-client.js';
+import type { StorageAdapter } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml, escapeHtml } from './helpers.js';
 
 export async function clientRoutes(
   server: FastifyInstance,
   baseUrl: string,
+  storage?: StorageAdapter,
 ): Promise<void> {
   // GET /admin/clients — list OAuth clients
   server.get(
@@ -28,12 +30,17 @@ export async function clientRoutes(
       const currentOrgId = getOrgId(request) ?? 'system';
       const isGlobalAdmin = request.user?.role === 'admin' && (currentOrgId === 'system' || !currentOrgId);
 
+      // Resolve org names for display
+      const allOrgs = storage ? await storage.organizations.listOrgs() : [];
+      const orgNameMap = new Map(allOrgs.map((o: { id: string; name: string }) => [o.id, o.name]));
+
       const formatted = clients.map((c) => ({
         ...c,
         createdAtDisplay: new Date(c.createdAt).toLocaleString(),
         scopesDisplay: c.scopes.join(', '),
         grantTypesDisplay: c.grantTypes.join(', '),
         isSystem: c.orgId === 'system',
+        orgDisplayName: c.orgId === 'system' ? 'System' : (orgNameMap.get(c.orgId) ?? c.orgId),
         canRevoke: isGlobalAdmin || (c.orgId !== 'system' && c.orgId === currentOrgId),
       }));
 
