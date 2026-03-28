@@ -175,6 +175,7 @@ export async function resolveUrlToFile(
     case 'plain-html':
       return resolvePlainHtml(urlPath, reader);
     default:
-      return null;
+      // Fallback: try plain HTML resolution even for unknown frameworks
+      return resolvePlainHtml(urlPath, reader);
   }
 }
