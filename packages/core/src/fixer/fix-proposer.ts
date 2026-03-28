@@ -1,4 +1,5 @@
 import type { ScanReport, FixProposal } from '../types.js';
+import type { FileReader } from '../source-mapper/file-reader.js';
 import { mapIssuesToSource } from '../source-mapper/source-mapper.js';
 import { getFixForIssue } from './fix-rules.js';
 
@@ -12,8 +13,9 @@ export async function proposeFixesFromReport(
   report: ScanReport,
   repoPath: string,
   sourceMapOverrides: Readonly<Record<string, string>>,
+  reader?: FileReader,
 ): Promise<ProposeFixesResult> {
-  const mappedPages = await mapIssuesToSource(report.pages, repoPath, sourceMapOverrides);
+  const mappedPages = await mapIssuesToSource(report.pages, repoPath, sourceMapOverrides, reader);
 
   let fixable = 0;
   let unfixable = 0;
