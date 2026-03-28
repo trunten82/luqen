@@ -1,10 +1,11 @@
 import type { FastifyRequest } from 'fastify';
+import type { GitHostPlugin } from '../git-hosts/types.js';
 
 // ---------------------------------------------------------------------------
 // Core enums & primitives
 // ---------------------------------------------------------------------------
 
-export type PluginType = 'auth' | 'notification' | 'storage' | 'scanner';
+export type PluginType = 'auth' | 'notification' | 'storage' | 'scanner' | 'git-host';
 
 export type PluginStatus =
   | 'inactive'
@@ -156,6 +157,14 @@ export interface PageResult {
 export interface ScannerPlugin extends PluginInstance {
   readonly rules: readonly WcagRule[];
   evaluate(page: PageResult): Promise<readonly ScannerIssue[]>;
+}
+
+// ---------------------------------------------------------------------------
+// Git host plugin
+// ---------------------------------------------------------------------------
+
+export interface GitHostPluginInstance extends PluginInstance {
+  readonly gitHost: GitHostPlugin;
 }
 
 // ---------------------------------------------------------------------------
