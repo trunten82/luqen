@@ -7,6 +7,7 @@ import type {
   CreatePullRequestOptions,
   GitHostPullRequest,
 } from './types.js';
+import type { GitHostPluginInstance } from '../plugins/types.js';
 
 export class GitHubPlugin implements GitHostPlugin {
   readonly type = 'github' as const;
@@ -182,3 +183,22 @@ export class GitHubPlugin implements GitHostPlugin {
     return { url: prData.html_url, number: prData.number };
   }
 }
+
+const githubPlugin: GitHostPluginInstance = {
+  manifest: {
+    name: 'git-host-github',
+    displayName: 'GitHub',
+    type: 'git-host',
+    version: '1.0.0',
+    description: 'Git integration with GitHub and GitHub Enterprise',
+    configSchema: [
+      { key: 'hostUrl', label: 'API Host URL', type: 'string', required: true, default: 'https://api.github.com', description: 'GitHub API URL' },
+    ],
+  },
+  gitHost: new GitHubPlugin(),
+  async activate() {},
+  async deactivate() {},
+  async healthCheck() { return true; },
+};
+
+export default githubPlugin;

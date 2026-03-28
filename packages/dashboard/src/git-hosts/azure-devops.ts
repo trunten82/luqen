@@ -7,6 +7,7 @@ import type {
   CreatePullRequestOptions,
   GitHostPullRequest,
 } from './types.js';
+import type { GitHostPluginInstance } from '../plugins/types.js';
 
 export class AzureDevOpsPlugin implements GitHostPlugin {
   readonly type = 'azure-devops' as const;
@@ -174,3 +175,22 @@ export class AzureDevOpsPlugin implements GitHostPlugin {
     return { url: prData.url, number: prData.pullRequestId };
   }
 }
+
+const azureDevOpsPlugin: GitHostPluginInstance = {
+  manifest: {
+    name: 'git-host-azure-devops',
+    displayName: 'Azure DevOps',
+    type: 'git-host',
+    version: '1.0.0',
+    description: 'Git integration with Azure DevOps for pull request creation',
+    configSchema: [
+      { key: 'hostUrl', label: 'API Host URL', type: 'string', required: true, default: 'https://dev.azure.com', description: 'Azure DevOps API URL' },
+    ],
+  },
+  gitHost: new AzureDevOpsPlugin(),
+  async activate() {},
+  async deactivate() {},
+  async healthCheck() { return true; },
+};
+
+export default azureDevOpsPlugin;
