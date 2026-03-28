@@ -53,25 +53,12 @@ export async function proposalRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        const updated = await approveProposal(baseUrl, getToken(request), id, getOrgId(request));
-
-        const ownerBadge = updated.orgId === 'system' || updated.orgId === undefined
-          ? '<span class="badge badge--neutral">System</span>'
-          : (updated.orgId ?? '');
-        const rowHtml = `<tr id="proposal-${updated.id}">
-  <td>${updated.source}</td>
-  <td>${updated.type}</td>
-  <td>${updated.summary}</td>
-  <td>${new Date(updated.detectedAt).toLocaleString()}</td>
-  <td><span class="badge badge--success">${updated.status}</span></td>
-  <td>${ownerBadge}</td>
-  <td><!-- no actions for approved --></td>
-</tr>`;
+        await approveProposal(baseUrl, getToken(request), id, getOrgId(request));
 
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(`${rowHtml}\n${toastHtml('Proposal approved successfully.')}`);
+          .send(toastHtml('Proposal approved — regulatory data updated.'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to approve proposal';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
@@ -87,25 +74,12 @@ export async function proposalRoutes(
       const { id } = request.params as { id: string };
 
       try {
-        const updated = await rejectProposal(baseUrl, getToken(request), id, getOrgId(request));
-
-        const ownerBadge = updated.orgId === 'system' || updated.orgId === undefined
-          ? '<span class="badge badge--neutral">System</span>'
-          : (updated.orgId ?? '');
-        const rowHtml = `<tr id="proposal-${updated.id}">
-  <td>${updated.source}</td>
-  <td>${updated.type}</td>
-  <td>${updated.summary}</td>
-  <td>${new Date(updated.detectedAt).toLocaleString()}</td>
-  <td><span class="badge badge--error">${updated.status}</span></td>
-  <td>${ownerBadge}</td>
-  <td><!-- no actions for rejected --></td>
-</tr>`;
+        await rejectProposal(baseUrl, getToken(request), id, getOrgId(request));
 
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(`${rowHtml}\n${toastHtml('Proposal rejected.')}`);
+          .send(toastHtml('Proposal dismissed.'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to reject proposal';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));

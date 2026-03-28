@@ -136,14 +136,14 @@ describe('Proposal routes', () => {
   describe('POST /admin/proposals/:id/approve', () => {
     beforeEach(async () => { ctx = await createTestServer(); });
 
-    it('returns 200 and row HTML on successful approve', async () => {
+    it('returns 200 and toast on successful approve', async () => {
       const response = await ctx.server.inject({
         method: 'POST',
         url: '/admin/proposals/prop-1/approve',
       });
       expect(response.statusCode).toBe(200);
       expect(response.headers['content-type']).toContain('text/html');
-      expect(response.body).toContain('approved');
+      expect(response.body).toContain('Proposal approved');
     });
 
     it('calls approveProposal with the correct id', async () => {
@@ -174,14 +174,14 @@ describe('Proposal routes', () => {
   describe('POST /admin/proposals/:id/reject', () => {
     beforeEach(async () => { ctx = await createTestServer(); });
 
-    it('returns 200 and row HTML on successful reject', async () => {
+    it('returns 200 and toast on successful reject', async () => {
       const response = await ctx.server.inject({
         method: 'POST',
         url: '/admin/proposals/prop-1/reject',
       });
       expect(response.statusCode).toBe(200);
       expect(response.headers['content-type']).toContain('text/html');
-      expect(response.body).toContain('rejected');
+      expect(response.body).toContain('Proposal dismissed');
     });
 
     it('calls rejectProposal with the correct id', async () => {

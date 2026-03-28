@@ -380,8 +380,9 @@
     triggerMonitorScan: function (el) {
       var results = document.getElementById('scan-results');
       if (!results) return;
+      var originalText = el.textContent;
       el.disabled = true;
-      el.textContent = 'Scanning...';
+      el.textContent = '...';
       results.innerHTML = '<div class="alert alert--info"><strong>Scanning sources...</strong> This may take a moment.</div>';
 
       var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -392,16 +393,15 @@
         .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, text: t }; }); })
         .then(function (res) {
           results.innerHTML = res.text; /* trusted server HTML */
-          if (res.ok && window.htmx) {
-            htmx.trigger(document.body, 'monitorScanDone');
-          }
         })
         .catch(function (err) {
           results.innerHTML = '<div class="alert alert--error">Scan failed: ' + err.message + '</div>';
         })
         .finally(function () {
           el.disabled = false;
-          el.textContent = el.getAttribute('data-original-text') || 'Trigger Scan';
+          el.textContent = originalText;
+          /* Always refresh KPIs after scan attempt (success or failure) */
+          if (window.htmx) htmx.trigger(document.body, 'monitorScanDone');
         });
     },
 

@@ -7,7 +7,7 @@ import {
   type UpdateProposal,
 } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
-import { getToken, toastHtml } from './helpers.js';
+import { getToken, getOrgId, toastHtml } from './helpers.js';
 
 // ── Public types for testing ─────────────────────────────────────────────────
 
@@ -121,11 +121,12 @@ export async function monitorRoutes(
     { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
+      const orgId = getOrgId(request);
       let error: string | undefined;
 
       const [sourcesResult, proposalsResult] = await Promise.allSettled([
-        listSources(complianceUrl, token),
-        listUpdateProposals(complianceUrl, token),
+        listSources(complianceUrl, token, orgId),
+        listUpdateProposals(complianceUrl, token, undefined, orgId),
       ]);
 
       const sources =
@@ -154,7 +155,7 @@ export async function monitorRoutes(
   // POST /admin/monitor/trigger — manually trigger a scan
   server.post(
     '/admin/monitor/trigger',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await scanSources(complianceUrl, getToken(request));
