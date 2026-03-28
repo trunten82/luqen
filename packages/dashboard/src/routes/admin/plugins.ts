@@ -391,25 +391,34 @@ export async function pluginAdminRoutes(
   );
 
   // POST /admin/plugins/:id/activate-for-org — global admin activates for a specific org
-  server.post<{ Params: { id: string }; Body: { orgId?: string } }>(
+  server.post<{ Params: { id: string }; Body: { orgId?: string | string[] } }>(
     '/admin/plugins/:id/activate-for-org',
     { preHandler: requirePermission('admin.system') },
     async (request, reply) => {
       try {
-        const { orgId } = request.body ?? {};
-        if (!orgId || typeof orgId !== 'string') {
+        const raw = (request.body as Record<string, unknown>)?.orgId;
+        const orgIds: string[] = Array.isArray(raw) ? raw : (typeof raw === 'string' && raw.length > 0 ? [raw] : []);
+
+        if (orgIds.length === 0) {
           return reply
             .code(400)
             .header('content-type', 'text/html')
-            .send('<div class="alert alert--error">Missing orgId</div>');
+            .send('<div class="alert alert--error">Select at least one organization</div>');
         }
 
-        const plugin = await pluginManager.activateForOrg(request.params.id, orgId);
+        let count = 0;
+        for (const oid of orgIds) {
+          try {
+            await pluginManager.activateForOrg(request.params.id, oid);
+            count++;
+          } catch { /* skip orgs that already have it */ }
+        }
+
         return reply
           .header('content-type', 'text/html')
           .header('hx-trigger', 'pluginChanged')
           .send(
-            `<div class="alert alert--success">Plugin "${escapeHtml(plugin.packageName)}" activated for organization</div>`,
+            `<div class="alert alert--success">Plugin activated for ${count} organization(s)</div>`,
           );
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
