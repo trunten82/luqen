@@ -365,14 +365,21 @@
       if (typeof window.copyFixCode === 'function') window.copyFixCode(parseInt(index, 10));
     },
 
-    /* ── Plugin configure (plain fetch, no HTMX) ──────────────────── */
+    /* ── Plugin configure — inline in card (plain fetch, no HTMX) ─── */
     /* The HTML is server-rendered from a trusted endpoint (same-origin,
        authenticated, escaped via escapeHtml in the route handler). */
-    loadPluginConfig: function (el) {
+    togglePluginConfig: function (el) {
       var pluginId = el.getAttribute('data-plugin-id');
       if (!pluginId) return;
-      var target = document.getElementById('plugin-config-area');
+      var target = document.getElementById('plugin-config-' + pluginId);
       if (!target) return;
+
+      /* Toggle: if already visible, just hide it */
+      if (!target.hidden && target.innerHTML !== '') {
+        target.hidden = true;
+        return;
+      }
+
       var csrfMeta = document.querySelector('meta[name="csrf-token"]');
       var headers = {};
       if (csrfMeta) headers['x-csrf-token'] = csrfMeta.getAttribute('content');
@@ -380,11 +387,12 @@
         .then(function (r) { return r.text(); })
         .then(function (html) {
           target.innerHTML = html; /* trusted server HTML — all values escaped server-side */
+          target.hidden = false;
           if (window.htmx) htmx.process(target);
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         })
         .catch(function (err) {
           target.textContent = 'Failed to load configuration: ' + err.message;
+          target.hidden = false;
         });
     }
   };
