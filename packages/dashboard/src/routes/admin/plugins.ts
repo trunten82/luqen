@@ -132,8 +132,6 @@ export async function pluginAdminRoutes(
       const globalPlugins = installed.filter((p) => p.orgId === 'system' || p.orgId === undefined);
       const orgPlugins = installed.filter((p) => p.orgId !== 'system' && p.orgId !== undefined);
 
-      const orgs = isAdmin ? await storage.organizations.listOrgs() : [];
-
       return reply.view('admin/plugins.hbs', {
         pageTitle: 'Plugins',
         currentPath: '/admin/plugins',
@@ -147,7 +145,6 @@ export async function pluginAdminRoutes(
         },
         isAdmin,
         canInstallPlugins: isAdmin || perms.has('admin.plugins'),
-        orgs,
         orgId,
       });
     },
