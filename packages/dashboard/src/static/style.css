@@ -608,6 +608,11 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.cell--wrap {
+  max-width: 320px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
 
 .cell--url a {
   color: var(--accent);

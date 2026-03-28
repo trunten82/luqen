@@ -1,5 +1,5 @@
 <section aria-label="Update proposals management">
-  <div class="filter-bar">
+  <div class="filter-bar mb-md">
     <label for="proposal-status-filter" class="form-label">{{t "common.status"}}</label>
     <select id="proposal-status-filter"
             name="status"
@@ -16,13 +16,15 @@
   </div>
 
   {{#if error}}
-  <div class="alert alert--error" role="alert">
+  <div class="alert alert--error mb-md" role="alert">
     <p>{{error}}</p>
   </div>
   {{/if}}
 
+  <div id="proposal-messages"></div>
+
   <div class="table-wrapper" aria-live="polite" aria-atomic="false">
-    <table class="table" aria-label="Update proposals">
+    <table class="data-table" aria-label="Update proposals">
       <thead>
         <tr>
           <th scope="col">{{t "admin.proposals.colSource"}}</th>
@@ -30,7 +32,6 @@
           <th scope="col">{{t "admin.proposals.colSummary"}}</th>
           <th scope="col">{{t "admin.proposals.colDetected"}}</th>
           <th scope="col">{{t "common.status"}}</th>
-          <th scope="col">{{t "common.owner"}}</th>
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
@@ -38,39 +39,38 @@
         {{#each proposals}}
         <tr id="proposal-{{id}}">
           <td data-label="Source">{{source}}</td>
-          <td data-label="Type">{{type}}</td>
-          <td data-label="Summary">{{summary}}</td>
+          <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
+          <td data-label="Summary" class="cell--wrap">{{summary}}</td>
           <td data-label="Detected">{{detectedAtDisplay}}</td>
           <td data-label="Status">
             <span class="badge {{#if (eq status 'pending')}}badge--warning{{else if (eq status 'approved')}}badge--success{{else}}badge--error{{/if}}">
               {{status}}
             </span>
           </td>
-          <td data-label="Owner">
-            {{#if (eq orgId "system")}}<span class="badge badge--neutral">System</span>{{else}}{{orgId}}{{/if}}
-          </td>
           <td>
             {{#if isPending}}
-            <button hx-post="/admin/proposals/{{id}}/approve"
-                    hx-confirm="{{t "admin.proposals.confirmApprove"}}"
-                    hx-target="#proposal-{{id}}"
-                    hx-swap="outerHTML"
-                    class="btn btn--sm btn--success"
-                    aria-label="Approve proposal: {{summary}}">{{t "admin.proposals.approve"}}</button>
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
-            <button hx-post="/admin/proposals/{{id}}/reject"
-                    hx-confirm="{{t "admin.proposals.confirmReject"}}"
-                    hx-target="#proposal-{{id}}"
-                    hx-swap="outerHTML"
-                    class="btn btn--sm btn--danger"
-                    aria-label="Reject proposal: {{summary}}">{{t "admin.proposals.reject"}}</button>
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+            <div class="plugin-actions">
+              <button type="button" class="btn btn--sm btn--primary"
+                      hx-post="/admin/proposals/{{id}}/approve"
+                      hx-confirm="{{t "admin.proposals.confirmApprove"}}"
+                      hx-target="#proposal-{{id}}"
+                      hx-swap="delete swap:300ms"
+                      aria-label="Approve proposal: {{summary}}">{{t "admin.proposals.approve"}}</button>
+              <button type="button" class="btn btn--sm btn--danger"
+                      hx-post="/admin/proposals/{{id}}/reject"
+                      hx-confirm="{{t "admin.proposals.confirmReject"}}"
+                      hx-target="#proposal-{{id}}"
+                      hx-swap="delete swap:300ms"
+                      aria-label="Reject proposal: {{summary}}">{{t "admin.proposals.reject"}}</button>
+            </div>
+            {{else}}
+            <span class="text-sm text-muted">{{status}}</span>
             {{/if}}
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="7" class="table__empty">{{t "admin.proposals.noProposals"}}</td>
+          <td colspan="6" class="table__empty">{{t "admin.proposals.noProposals"}}</td>
         </tr>
         {{/each}}
       </tbody>

@@ -114,8 +114,8 @@
         </thead>
         <tbody>
           {{#each proposals}}
-          <tr>
-            <td data-label="Summary">{{summary}}</td>
+          <tr id="proposal-{{id}}">
+            <td data-label="Summary" class="cell--wrap">{{summary}}</td>
             <td data-label="Source">{{source}}</td>
             <td data-label="Created">{{detectedAtDisplay}}</td>
             <td data-label="Status">
@@ -124,7 +124,24 @@
               </span>
             </td>
             <td>
-              <a href="/admin/proposals/{{id}}" class="btn btn--sm btn--ghost">{{t "common.view"}}</a>
+              {{#if (eq status 'pending')}}
+              <div class="plugin-actions">
+                <button type="button" class="btn btn--sm btn--primary"
+                        hx-post="/admin/proposals/{{id}}/approve"
+                        hx-confirm="Apply this regulatory change?"
+                        hx-target="#proposal-{{id}}"
+                        hx-swap="delete swap:300ms"
+                        aria-label="Approve">{{t "admin.proposals.approve"}}</button>
+                <button type="button" class="btn btn--sm btn--danger"
+                        hx-post="/admin/proposals/{{id}}/reject"
+                        hx-confirm="Dismiss this change?"
+                        hx-target="#proposal-{{id}}"
+                        hx-swap="delete swap:300ms"
+                        aria-label="Reject">{{t "admin.proposals.reject"}}</button>
+              </div>
+              {{else}}
+              <span class="text-sm text-muted">{{status}}</span>
+              {{/if}}
             </td>
           </tr>
           {{/each}}

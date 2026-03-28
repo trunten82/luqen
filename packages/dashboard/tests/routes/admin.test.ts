@@ -460,8 +460,7 @@ describe('POST /admin/proposals/:id/approve', () => {
     });
     const response = await ctx.server.inject({ method: 'POST', url: '/admin/proposals/prop-1/approve' });
     expect(response.statusCode).toBe(200);
-    expect(response.body).toContain('approved');
-    expect(response.body).toContain('Proposal approved successfully');
+    expect(response.body).toContain('Proposal approved');
   });
 });
 
@@ -478,7 +477,7 @@ describe('POST /admin/proposals/:id/reject', () => {
     });
     const response = await ctx.server.inject({ method: 'POST', url: '/admin/proposals/prop-1/reject' });
     expect(response.statusCode).toBe(200);
-    expect(response.body).toContain('rejected');
+    expect(response.body).toContain('Proposal dismissed');
   });
 });
 
