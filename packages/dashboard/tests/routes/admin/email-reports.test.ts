@@ -130,6 +130,203 @@ async function makeEmailReport(
   return report;
 }
 
+// ── GET /admin/email-reports — base coverage ──────────────────────────────
+
+describe('GET /admin/email-reports', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns 403 without admin.system permission', async () => {
+    const ctx = await createTestServer([]);
+    const response = await ctx.server.inject({ method: 'GET', url: '/admin/email-reports' });
+    ctx.cleanup();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('redirects to /admin/plugins when no plugin or smtp config', async () => {
+    const ctx = await createTestServer();
+    const response = await ctx.server.inject({ method: 'GET', url: '/admin/email-reports' });
+    ctx.cleanup();
+    expect(response.statusCode).toBe(302);
+    expect(response.headers['location']).toBe('/admin/plugins');
+  });
+
+  it('returns 200 with email-reports template when SMTP is configured', async () => {
+    const ctx = await createTestServer();
+    await setupSmtp(ctx);
+    const response = await ctx.server.inject({ method: 'GET', url: '/admin/email-reports' });
+    ctx.cleanup();
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { template: string };
+    expect(body.template).toBe('admin/email-reports.hbs');
+  });
+
+  it('lists email reports in template data', async () => {
+    const ctx = await createTestServer();
+    await setupSmtp(ctx);
+    await makeEmailReport(ctx, { name: 'Report 1' });
+    await makeEmailReport(ctx, { name: 'Report 2' });
+    const response = await ctx.server.inject({ method: 'GET', url: '/admin/email-reports' });
+    ctx.cleanup();
+    const body = response.json() as { data: { reports: unknown[] } };
+    expect(body.data.reports).toHaveLength(2);
+  });
+});
+
+// ── POST /admin/email-reports/smtp — base coverage ────────────────────────
+
+describe('POST /admin/email-reports/smtp', () => {
+  let ctx: TestContext;
+  beforeEach(async () => { ctx = await createTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
+
+  it('returns 403 without admin.system permission', async () => {
+    const noPerm = await createTestServer([]);
+    const response = await noPerm.server.inject({
+      method: 'POST',
+      url: '/admin/email-reports/smtp',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'host=smtp.example.com&port=587&username=u&password=p&fromAddress=a@b.com',
+    });
+    noPerm.cleanup();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('returns 400 when host is missing', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/email-reports/smtp',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'port=587&username=user&password=pass&fromAddress=a@b.com',
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('saves SMTP config and returns success toast', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/email-reports/smtp',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'host=smtp.example.com&port=587&username=testuser&password=testpass&fromAddress=noreply@example.com',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/html');
+    const saved = await ctx.storage.email.getSmtpConfig('system');
+    expect(saved?.host).toBe('smtp.example.com');
+  });
+});
+
+// ── POST /admin/email-reports — base coverage ─────────────────────────────
+
+describe('POST /admin/email-reports', () => {
+  let ctx: TestContext;
+  beforeEach(async () => { ctx = await createTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
+
+  it('returns 403 without admin.system permission', async () => {
+    const noPerm = await createTestServer([]);
+    const response = await noPerm.server.inject({
+      method: 'POST',
+      url: '/admin/email-reports',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'name=Test&siteUrl=https://example.com&recipients=t@e.com&frequency=weekly&format=pdf',
+    });
+    noPerm.cleanup();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('returns 400 when name is missing', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/email-reports',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'siteUrl=https%3A%2F%2Fexample.com&recipients=t%40e.com&frequency=weekly&format=pdf',
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 400 for invalid email in recipients', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/email-reports',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'name=Test&siteUrl=https%3A%2F%2Fexample.com&recipients=not-an-email&frequency=weekly&format=pdf',
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('creates an email report schedule and returns HTML row', async () => {
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/email-reports',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: 'name=Weekly+Accessibility&siteUrl=https%3A%2F%2Fexample.com&recipients=admin%40example.com&frequency=weekly&format=pdf',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/html');
+    const reports = await ctx.storage.email.listEmailReports('system');
+    expect(reports).toHaveLength(1);
+    expect(reports[0].name).toBe('Weekly Accessibility');
+  });
+});
+
+// ── PATCH /admin/email-reports/:id/toggle — base coverage ─────────────────
+
+describe('PATCH /admin/email-reports/:id/toggle', () => {
+  let ctx: TestContext;
+  beforeEach(async () => { ctx = await createTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
+
+  it('returns 403 without admin.system permission', async () => {
+    const noPerm = await createTestServer([]);
+    const response = await noPerm.server.inject({ method: 'PATCH', url: '/admin/email-reports/some-id/toggle' });
+    noPerm.cleanup();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('returns 404 for non-existent report', async () => {
+    const response = await ctx.server.inject({ method: 'PATCH', url: '/admin/email-reports/non-existent-id/toggle' });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('toggles the enabled status', async () => {
+    await setupSmtp(ctx);
+    const report = await makeEmailReport(ctx);
+    const response = await ctx.server.inject({ method: 'PATCH', url: `/admin/email-reports/${report.id}/toggle` });
+    expect(response.statusCode).toBe(200);
+  });
+});
+
+// ── DELETE /admin/email-reports/:id — base coverage ───────────────────────
+
+describe('DELETE /admin/email-reports/:id', () => {
+  let ctx: TestContext;
+  beforeEach(async () => { ctx = await createTestServer(); });
+  afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
+
+  it('returns 403 without admin.system permission', async () => {
+    const noPerm = await createTestServer([]);
+    const response = await noPerm.server.inject({ method: 'DELETE', url: '/admin/email-reports/some-id' });
+    noPerm.cleanup();
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('returns 404 for non-existent report', async () => {
+    const response = await ctx.server.inject({ method: 'DELETE', url: '/admin/email-reports/non-existent-id' });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('deletes an email report', async () => {
+    await setupSmtp(ctx);
+    const report = await makeEmailReport(ctx);
+    const response = await ctx.server.inject({ method: 'DELETE', url: `/admin/email-reports/${report.id}` });
+    expect(response.statusCode).toBe(200);
+    const deleted = await ctx.storage.email.getEmailReport(report.id);
+    expect(deleted).toBeNull();
+  });
+});
+
 // ── POST /admin/email-reports/smtp — extended validation ──────────────────
 
 describe('POST /admin/email-reports/smtp (extended)', () => {

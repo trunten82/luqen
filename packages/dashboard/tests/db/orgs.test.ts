@@ -155,4 +155,38 @@ describe('OrgDb', () => {
       await expect(storage.organizations.addMember(org.id, 'user-1', 'member')).rejects.toThrow();
     });
   });
+
+  describe('compliance credentials', () => {
+    it('getOrgComplianceCredentials returns credentials when both fields are set', async () => {
+      const org = await storage.organizations.createOrg({ name: 'CompOrg', slug: 'comp-org' });
+      await storage.organizations.updateOrgComplianceClient(org.id, 'client-123', 'secret-456');
+      const creds = await storage.organizations.getOrgComplianceCredentials(org.id);
+      expect(creds).not.toBeNull();
+      expect(creds!.clientId).toBe('client-123');
+      expect(creds!.clientSecret).toBe('secret-456');
+    });
+
+    it('getOrgComplianceCredentials returns null when columns are null', async () => {
+      const org = await storage.organizations.createOrg({ name: 'NullOrg', slug: 'null-org' });
+      const creds = await storage.organizations.getOrgComplianceCredentials(org.id);
+      expect(creds).toBeNull();
+    });
+
+    it('updateOrgComplianceClient stores and retrieves credentials correctly', async () => {
+      const org = await storage.organizations.createOrg({ name: 'UpdOrg', slug: 'upd-org' });
+
+      // Initially null
+      expect(await storage.organizations.getOrgComplianceCredentials(org.id)).toBeNull();
+
+      // Store credentials
+      await storage.organizations.updateOrgComplianceClient(org.id, 'id-aaa', 'sec-bbb');
+      const creds1 = await storage.organizations.getOrgComplianceCredentials(org.id);
+      expect(creds1).toEqual({ clientId: 'id-aaa', clientSecret: 'sec-bbb' });
+
+      // Overwrite credentials
+      await storage.organizations.updateOrgComplianceClient(org.id, 'id-ccc', 'sec-ddd');
+      const creds2 = await storage.organizations.getOrgComplianceCredentials(org.id);
+      expect(creds2).toEqual({ clientId: 'id-ccc', clientSecret: 'sec-ddd' });
+    });
+  });
 });
