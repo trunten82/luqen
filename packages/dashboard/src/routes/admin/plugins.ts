@@ -136,7 +136,10 @@ export async function pluginAdminRoutes(
               status: oi.status,
               hasCustomConfig: oi.config !== p.config,
             }));
-          return { ...p, orgUsage, orgUsageCount: orgUsage.length };
+          const activeOrgIds = orgInstances
+            .filter((oi) => oi.packageName === p.packageName && oi.status === 'active')
+            .map((oi) => oi.orgId ?? '');
+          return { ...p, orgUsage, orgUsageCount: orgUsage.length, activeOrgIds };
         });
       } else {
         // Org admin sees: global plugins (to activate for org) + org-specific instances

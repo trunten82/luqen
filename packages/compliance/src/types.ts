@@ -2,6 +2,7 @@
 
 export interface Jurisdiction {
   readonly id: string;
+  readonly orgId: string;
   readonly name: string;
   readonly type: 'supranational' | 'country' | 'state';
   readonly parentId?: string;
@@ -12,6 +13,7 @@ export interface Jurisdiction {
 
 export interface Regulation {
   readonly id: string;
+  readonly orgId: string;
   readonly jurisdictionId: string;
   readonly name: string;
   readonly shortName: string;
@@ -28,6 +30,7 @@ export interface Regulation {
 
 export interface Requirement {
   readonly id: string;
+  readonly orgId: string;
   readonly regulationId: string;
   readonly wcagVersion: '2.0' | '2.1' | '2.2';
   readonly wcagLevel: 'A' | 'AA' | 'AAA';

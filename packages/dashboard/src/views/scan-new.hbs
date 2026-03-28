@@ -167,27 +167,58 @@
     <div class="card mb-md">
       <details>
         <summary class="card__title mb-md" style="cursor: pointer;">Authentication (optional)</summary>
-        <p class="form-hint mb-sm">Configure authentication to scan pages behind login. Headers are sent with every page request. Actions run once before testing begins (direct mode only).</p>
+        <p class="form-hint mb-sm">
+          Need to scan pages behind a login or session wall? Use <strong>Custom HTTP Headers</strong> to attach
+          tokens or cookies to every request, or <strong>Pre-scan Actions</strong> to automate a browser-based
+          login before testing begins.
+        </p>
 
         <div class="form-group">
           <label for="authHeaders">Custom HTTP Headers</label>
+          <p id="authHeaders-hint" class="form-hint">
+            One header per line in <code>Name: Value</code> format. These are sent with every page request during the scan.
+          </p>
+          <p class="form-hint" style="margin-top: 0.25rem;">
+            <strong>Bearer token</strong> &mdash; <code>Authorization: Bearer eyJhbGciOi...</code><br>
+            <strong>Session cookie</strong> &mdash; <code>Cookie: session=abc123; other=xyz</code><br>
+            <strong>Basic auth</strong> &mdash; <code>Authorization: Basic dXNlcjpwYXNz</code>
+            <span style="opacity: 0.7;">(base64-encoded <code>user:pass</code>)</span>
+          </p>
           <textarea id="authHeaders" name="authHeaders" class="input" rows="3"
                     placeholder="Authorization: Bearer eyJhbG...&#10;Cookie: session=abc123"
                     aria-describedby="authHeaders-hint"></textarea>
-          <p id="authHeaders-hint" class="form-hint">One header per line in <code>Name: Value</code> format.</p>
         </div>
 
         <div class="form-group">
           <label for="authActions">Pre-scan Actions</label>
+          <p id="authActions-hint" class="form-hint">
+            Actions use
+            <a href="https://github.com/pa11y/pa11y#actions" target="_blank" rel="noopener noreferrer">Pa11y's action system</a>
+            to drive a real browser before testing starts. One action per line.
+          </p>
+          <p class="form-hint" style="margin-top: 0.25rem;">
+            <strong>Form-based login</strong>
+          </p>
+          <pre class="form-hint" style="margin: 0.25rem 0 0.5rem; padding: 0.5rem; background: var(--bg-muted, #f5f5f5); border-radius: 4px; font-size: 0.85em; overflow-x: auto;">set field #username to myuser
+set field #password to mypass
+click element button[type=submit]
+wait for element .dashboard to be visible</pre>
+          <p class="form-hint" style="margin-top: 0.25rem;">
+            <strong>Dismiss a cookie banner</strong>
+          </p>
+          <pre class="form-hint" style="margin: 0.25rem 0 0.5rem; padding: 0.5rem; background: var(--bg-muted, #f5f5f5); border-radius: 4px; font-size: 0.85em; overflow-x: auto;">click element #cookie-accept
+wait for element #cookie-banner to be hidden</pre>
+          <p class="form-hint" style="margin-top: 0.25rem;">
+            <strong>Navigate to a specific state</strong>
+          </p>
+          <pre class="form-hint" style="margin: 0.25rem 0 0.5rem; padding: 0.5rem; background: var(--bg-muted, #f5f5f5); border-radius: 4px; font-size: 0.85em; overflow-x: auto;">navigate to https://example.com/app/settings
+wait for url to be https://example.com/app/settings</pre>
+          <p class="form-hint" style="margin-top: 0.25rem;">
+            <strong>Note:</strong> Actions require <strong>direct mode</strong> (single page scan). They run once in a headless browser before accessibility testing begins.
+          </p>
           <textarea id="authActions" name="authActions" class="input" rows="4"
                     placeholder="set field #username to myuser&#10;set field #password to mypass&#10;click element button[type=submit]&#10;wait for element .dashboard to be visible"
                     aria-describedby="authActions-hint"></textarea>
-          <p id="authActions-hint" class="form-hint">
-            Pa11y actions to run before testing. One per line. Common actions:
-            <code>set field &lt;selector&gt; to &lt;value&gt;</code>,
-            <code>click element &lt;selector&gt;</code>,
-            <code>wait for element &lt;selector&gt; to be visible</code>.
-          </p>
         </div>
       </details>
     </div>

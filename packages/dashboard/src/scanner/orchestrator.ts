@@ -586,6 +586,7 @@ export class ScanOrchestrator {
           pagesScanned,
           issues: { errors, warnings, notices },
           confirmedViolations,
+          orgId: config.orgId ?? 'system',
         });
       }
 
@@ -617,6 +618,7 @@ export class ScanOrchestrator {
           siteUrl: config.siteUrl,
           status: 'failed',
           error: message,
+          orgId: config.orgId ?? 'system',
         });
       }
 
