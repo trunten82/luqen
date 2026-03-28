@@ -105,6 +105,7 @@ export async function pluginAdminRoutes(
   server: FastifyInstance,
   pluginManager: PluginManager,
   registryEntries: readonly RegistryEntry[],
+  storage?: import('../../db/index.js').StorageAdapter,
 ): Promise<void> {
   // GET /admin/plugins — render plugins page (scoped by org)
   server.get(
@@ -115,22 +116,44 @@ export async function pluginAdminRoutes(
       const isAdmin = request.user?.role === 'admin';
       const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined ?? new Set<string>();
 
-      // Admin without org context sees all; others see org-scoped + global
-      const installed = isAdmin && orgId === 'system'
-        ? pluginManager.list()
-        : pluginManager.list(orgId);
+      // Global admin sees all; org admin sees global plugins (as available to activate for their org)
+      const allInstalled = pluginManager.list();
+      const globalPlugins = allInstalled.filter((p) => p.orgId === 'system' || p.orgId === undefined);
+      const orgInstances = allInstalled.filter((p) => p.orgId !== 'system' && p.orgId !== undefined);
 
-      const installedPackages = new Set(installed.map((p) => p.packageName));
+      let installed: Array<Record<string, unknown>>;
+      if (isAdmin) {
+        // For global admin: annotate each global plugin with org usage
+        const allOrgs = storage ? await storage.organizations.listOrgs() : [];
+        const orgMap = new Map(allOrgs.map((o: { id: string; name: string }) => [o.id, o.name]));
 
+        installed = globalPlugins.map((p) => {
+          const orgUsage = orgInstances
+            .filter((oi) => oi.packageName === p.packageName)
+            .map((oi) => ({
+              orgName: orgMap.get(oi.orgId ?? '') ?? oi.orgId ?? 'unknown',
+              status: oi.status,
+              hasCustomConfig: oi.config !== p.config,
+            }));
+          return { ...p, orgUsage, orgUsageCount: orgUsage.length };
+        });
+      } else {
+        // Org admin sees: global plugins (to activate for org) + org-specific instances
+        const orgPlugins = allInstalled.filter((p) => p.orgId === orgId);
+        const orgPackages = new Set(orgPlugins.map((p) => p.packageName));
+        // For global plugins not yet activated for this org, show them with a flag
+        const globalForOrg = globalPlugins
+          .filter((p) => !orgPackages.has(p.packageName))
+          .map((p) => ({ ...p, isGlobalOnly: true }));
+        installed = [...orgPlugins.map((p) => ({ ...p, isOrgInstance: true })), ...globalForOrg];
+      }
+
+      const installedPackages = new Set(allInstalled.map((p) => p.packageName));
       const available = registryEntries.filter(
         (entry) => !installedPackages.has(entry.packageName),
       );
 
       const activeCount = installed.filter((p) => p.status === 'active').length;
-
-      // Separate global vs org plugins for display
-      const globalPlugins = installed.filter((p) => p.orgId === 'system' || p.orgId === undefined);
-      const orgPlugins = installed.filter((p) => p.orgId !== 'system' && p.orgId !== undefined);
 
       return reply.view('admin/plugins.hbs', {
         pageTitle: 'Plugins',
