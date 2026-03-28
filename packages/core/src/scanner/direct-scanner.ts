@@ -11,6 +11,7 @@ export interface DirectScanOptions {
   readonly wait?: number;
   readonly hideElements?: string;
   readonly headers?: Readonly<Record<string, string>>;
+  readonly actions?: readonly string[];
   readonly runner?: 'htmlcs' | 'axe';
   readonly includeWarnings?: boolean;
   readonly includeNotices?: boolean;
@@ -60,6 +61,7 @@ export class DirectScanner {
       wait: options.wait || 0,
       hideElements: options.hideElements || undefined,
       headers: options.headers || {},
+      actions: options.actions && options.actions.length > 0 ? [...options.actions] : [],
       runners: options.runner === 'axe' ? ['axe'] : ['htmlcs'],
       includeWarnings: options.includeWarnings !== false,
       includeNotices: options.includeNotices !== false,

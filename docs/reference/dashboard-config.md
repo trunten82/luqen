@@ -167,7 +167,9 @@ The dashboard calls the compliance service API for jurisdictions, regulations, a
 
 2. **Manual token (fallback):** Set `DASHBOARD_COMPLIANCE_API_KEY` to a valid OAuth token. This token will expire and must be refreshed manually.
 
-3. **No compliance service:** If the compliance service is unreachable, the dashboard still works but jurisdiction/regulation features are unavailable.
+3. **Per-org tokens (v2.1.0):** Organizations can configure their own `complianceClientId` and `complianceClientSecret` via the organization admin UI. When a user with an org context makes a request, the dashboard uses the org-specific token. If no org-specific credentials are configured, the global token is used as a fallback. Per-org tokens are cached independently via per-org `ServiceTokenManager` instances.
+
+4. **No compliance service:** If the compliance service is unreachable, the dashboard still works but jurisdiction/regulation features are unavailable.
 
 ---
 
