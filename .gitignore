@@ -4,6 +4,7 @@ dist/
 luqen-reports/
 coverage/
 packages/*/dist/
+!packages/plugin-*/dist/
 packages/*/node_modules/
 
 # Secrets and key material — NEVER commit these

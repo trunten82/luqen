@@ -1,23 +1,14 @@
-// packages/dashboard/src/git-hosts/azure-devops.ts
+class AzureDevOpsPlugin {
+  get type() { return 'azure-devops'; }
+  get displayName() { return 'Azure DevOps'; }
 
-import type {
-  GitHostPlugin,
-  GitHostValidation,
-  ReadFileOptions,
-  CreatePullRequestOptions,
-  GitHostPullRequest,
-} from './types.js';
-export class AzureDevOpsPlugin implements GitHostPlugin {
-  readonly type = 'azure-devops' as const;
-  readonly displayName = 'Azure DevOps';
-
-  private headers(token: string): Record<string, string> {
+  headers(token) {
     return {
       Authorization: `Basic ${btoa(':' + token)}`,
     };
   }
 
-  private parseRepo(repo: string): { org: string; project: string; repoName: string } {
+  parseRepo(repo) {
     const parts = repo.split('/');
     if (parts.length !== 3) {
       throw new Error(`Invalid Azure DevOps repo format: expected "org/project/repo", got "${repo}"`);
@@ -25,12 +16,8 @@ export class AzureDevOpsPlugin implements GitHostPlugin {
     return { org: parts[0], project: parts[1], repoName: parts[2] };
   }
 
-  async validateToken(hostUrl: string, token: string): Promise<GitHostValidation> {
+  async validateToken(hostUrl, token) {
     try {
-      // For Azure DevOps, repo is not needed — we use the first segment or just the org from hostUrl
-      // The token param already contains the org info via the hostUrl
-      // We need the org from somewhere — extract from a separate call or use _apis/connectionData
-      // Since validateToken only gets hostUrl and token, we call connectionData at root
       const res = await fetch(
         `${hostUrl}/_apis/connectionData?api-version=7.1`,
         { headers: this.headers(token) },
@@ -40,9 +27,7 @@ export class AzureDevOpsPlugin implements GitHostPlugin {
         return { valid: false, error: `HTTP ${res.status}` };
       }
 
-      const data = await res.json() as {
-        authenticatedUser: { providerDisplayName: string };
-      };
+      const data = await res.json();
       return { valid: true, username: data.authenticatedUser.providerDisplayName };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -50,7 +35,7 @@ export class AzureDevOpsPlugin implements GitHostPlugin {
     }
   }
 
-  async readFile(options: ReadFileOptions): Promise<string | null> {
+  async readFile(options) {
     const { hostUrl, repo, path, branch, token } = options;
     try {
       const { org, project, repoName } = this.parseRepo(repo);
@@ -75,7 +60,7 @@ export class AzureDevOpsPlugin implements GitHostPlugin {
     }
   }
 
-  async listFiles(options: ReadFileOptions): Promise<readonly string[]> {
+  async listFiles(options) {
     const { hostUrl, repo, path, branch, token } = options;
     try {
       const { org, project, repoName } = this.parseRepo(repo);
@@ -91,9 +76,7 @@ export class AzureDevOpsPlugin implements GitHostPlugin {
         return [];
       }
 
-      const data = await res.json() as {
-        value: ReadonlyArray<{ path: string; isFolder: boolean }>;
-      };
+      const data = await res.json();
       return data.value.map((entry) => {
         const segments = entry.path.split('/');
         return segments[segments.length - 1];
@@ -103,7 +86,7 @@ export class AzureDevOpsPlugin implements GitHostPlugin {
     }
   }
 
-  async createPullRequest(options: CreatePullRequestOptions): Promise<GitHostPullRequest> {
+  async createPullRequest(options) {
     const { hostUrl, repo, baseBranch, headBranch, title, body, changes, token } = options;
     const { org, project, repoName } = this.parseRepo(repo);
     const hdrs = this.headers(token);
@@ -118,7 +101,7 @@ export class AzureDevOpsPlugin implements GitHostPlugin {
     if (!refRes.ok) {
       throw new Error(`Failed to get base branch ref: HTTP ${refRes.status}`);
     }
-    const refData = await refRes.json() as { value: Array<{ objectId: string }> };
+    const refData = await refRes.json();
     if (!refData.value || refData.value.length === 0) {
       throw new Error(`Base branch "${baseBranch}" not found`);
     }
@@ -169,7 +152,35 @@ export class AzureDevOpsPlugin implements GitHostPlugin {
       throw new Error(`Failed to create pull request: HTTP ${prRes.status}`);
     }
 
-    const prData = await prRes.json() as { url: string; pullRequestId: number };
+    const prData = await prRes.json();
     return { url: prData.url, number: prData.pullRequestId };
   }
 }
+
+const manifest = {
+  name: 'git-host-azure-devops',
+  displayName: 'Azure DevOps',
+  type: 'git-host',
+  version: '1.0.0',
+  description: 'Git integration with Azure DevOps for pull request creation from accessibility fixes',
+  configSchema: [
+    {
+      key: 'hostUrl',
+      label: 'API Host URL',
+      type: 'string',
+      required: true,
+      default: 'https://dev.azure.com',
+      description: 'Use https://dev.azure.com for Azure DevOps Services or your on-prem TFS URL',
+    },
+  ],
+};
+
+const instance = new AzureDevOpsPlugin();
+
+export default {
+  manifest,
+  gitHost: instance,
+  async activate() {},
+  async deactivate() {},
+  async healthCheck() { return true; },
+};

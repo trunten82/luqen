@@ -1,0 +1,6 @@
+{
+  "name": "@luqen/plugin-git-host-azure-devops",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js"
+}

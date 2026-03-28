@@ -1,17 +1,8 @@
-// packages/dashboard/src/git-hosts/github.ts
+class GitHubPlugin {
+  get type() { return 'github'; }
+  get displayName() { return 'GitHub'; }
 
-import type {
-  GitHostPlugin,
-  GitHostValidation,
-  ReadFileOptions,
-  CreatePullRequestOptions,
-  GitHostPullRequest,
-} from './types.js';
-export class GitHubPlugin implements GitHostPlugin {
-  readonly type = 'github' as const;
-  readonly displayName = 'GitHub';
-
-  private headers(token: string): Record<string, string> {
+  headers(token) {
     return {
       Authorization: `token ${token}`,
       Accept: 'application/vnd.github.v3+json',
@@ -19,7 +10,7 @@ export class GitHubPlugin implements GitHostPlugin {
     };
   }
 
-  async validateToken(hostUrl: string, token: string): Promise<GitHostValidation> {
+  async validateToken(hostUrl, token) {
     try {
       const res = await fetch(`${hostUrl}/user`, {
         headers: this.headers(token),
@@ -29,7 +20,7 @@ export class GitHubPlugin implements GitHostPlugin {
         return { valid: false, error: `HTTP ${res.status}` };
       }
 
-      const data = await res.json() as { login: string };
+      const data = await res.json();
       return { valid: true, username: data.login };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -37,7 +28,7 @@ export class GitHubPlugin implements GitHostPlugin {
     }
   }
 
-  async readFile(options: ReadFileOptions): Promise<string | null> {
+  async readFile(options) {
     const { hostUrl, repo, path, branch, token } = options;
     try {
       const url = `${hostUrl}/repos/${repo}/contents/${path}?ref=${branch}`;
@@ -51,14 +42,14 @@ export class GitHubPlugin implements GitHostPlugin {
         return null;
       }
 
-      const data = await res.json() as { content: string };
+      const data = await res.json();
       return Buffer.from(data.content, 'base64').toString('utf-8');
     } catch {
       return null;
     }
   }
 
-  async listFiles(options: ReadFileOptions): Promise<readonly string[]> {
+  async listFiles(options) {
     const { hostUrl, repo, path, branch, token } = options;
     try {
       const url = `${hostUrl}/repos/${repo}/contents/${path}?ref=${branch}`;
@@ -68,14 +59,14 @@ export class GitHubPlugin implements GitHostPlugin {
         return [];
       }
 
-      const data = await res.json() as ReadonlyArray<{ name: string }>;
+      const data = await res.json();
       return data.map((entry) => entry.name);
     } catch {
       return [];
     }
   }
 
-  async createPullRequest(options: CreatePullRequestOptions): Promise<GitHostPullRequest> {
+  async createPullRequest(options) {
     const { hostUrl, repo, baseBranch, headBranch, title, body, changes, token } = options;
     const hdrs = this.headers(token);
     const apiBase = `${hostUrl}/repos/${repo}`;
@@ -85,7 +76,7 @@ export class GitHubPlugin implements GitHostPlugin {
     if (!refRes.ok) {
       throw new Error(`Failed to get base branch ref: HTTP ${refRes.status}`);
     }
-    const refData = await refRes.json() as { object: { sha: string } };
+    const refData = await refRes.json();
     const baseSha = refData.object.sha;
 
     // 2. Create branch ref
@@ -103,11 +94,11 @@ export class GitHubPlugin implements GitHostPlugin {
     if (!commitRes.ok) {
       throw new Error(`Failed to get base commit: HTTP ${commitRes.status}`);
     }
-    const commitData = await commitRes.json() as { tree: { sha: string } };
+    const commitData = await commitRes.json();
     const baseTreeSha = commitData.tree.sha;
 
     // 4. Create blobs for each change
-    const treeEntries: Array<{ path: string; mode: string; type: string; sha: string }> = [];
+    const treeEntries = [];
     for (const change of changes) {
       const blobRes = await fetch(`${apiBase}/git/blobs`, {
         method: 'POST',
@@ -117,7 +108,7 @@ export class GitHubPlugin implements GitHostPlugin {
       if (!blobRes.ok) {
         throw new Error(`Failed to create blob for ${change.path}: HTTP ${blobRes.status}`);
       }
-      const blobData = await blobRes.json() as { sha: string };
+      const blobData = await blobRes.json();
       treeEntries.push({
         path: change.path,
         mode: '100644',
@@ -135,7 +126,7 @@ export class GitHubPlugin implements GitHostPlugin {
     if (!treeRes.ok) {
       throw new Error(`Failed to create tree: HTTP ${treeRes.status}`);
     }
-    const treeData = await treeRes.json() as { sha: string };
+    const treeData = await treeRes.json();
 
     // 6. Create commit
     const newCommitRes = await fetch(`${apiBase}/git/commits`, {
@@ -150,7 +141,7 @@ export class GitHubPlugin implements GitHostPlugin {
     if (!newCommitRes.ok) {
       throw new Error(`Failed to create commit: HTTP ${newCommitRes.status}`);
     }
-    const newCommitData = await newCommitRes.json() as { sha: string };
+    const newCommitData = await newCommitRes.json();
 
     // 7. Update branch ref to point to new commit
     const updateRefRes = await fetch(`${apiBase}/git/refs/heads/${headBranch}`, {
@@ -176,8 +167,36 @@ export class GitHubPlugin implements GitHostPlugin {
     if (!prRes.ok) {
       throw new Error(`Failed to create pull request: HTTP ${prRes.status}`);
     }
-    const prData = await prRes.json() as { html_url: string; number: number };
+    const prData = await prRes.json();
 
     return { url: prData.html_url, number: prData.number };
   }
 }
+
+const manifest = {
+  name: 'git-host-github',
+  displayName: 'GitHub',
+  type: 'git-host',
+  version: '1.0.0',
+  description: 'Git integration with GitHub and GitHub Enterprise for PR creation from accessibility fixes',
+  configSchema: [
+    {
+      key: 'hostUrl',
+      label: 'API Host URL',
+      type: 'string',
+      required: true,
+      default: 'https://api.github.com',
+      description: 'Use https://api.github.com for GitHub.com or your GitHub Enterprise API URL',
+    },
+  ],
+};
+
+const instance = new GitHubPlugin();
+
+export default {
+  manifest,
+  gitHost: instance,
+  async activate() {},
+  async deactivate() {},
+  async healthCheck() { return true; },
+};
