@@ -377,9 +377,13 @@
       "stale": "Stale",
       "ok": "OK",
       "noSources": "No monitored sources configured.",
+      "noSourcesDesc": "Add sources in the compliance service to monitor regulatory changes.",
+      "awaitingReview": "Awaiting review",
+      "scanDescription": "Check all monitored sources for regulatory changes and create proposals for any updates detected.",
       "recentProposals": "Recent Proposals",
       "colCreated": "Created",
-      "noProposals": "No recent proposals."
+      "noProposals": "No recent proposals.",
+      "noProposalsDesc": "Proposals appear here when monitored sources detect regulatory changes."
     },
     "webhooks": {
       "addWebhook": "Add Webhook",

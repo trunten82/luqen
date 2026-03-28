@@ -375,6 +375,9 @@
       "stale": "Périmé",
       "ok": "OK",
       "noSources": "Aucune source surveillée configurée.",
+      "noSourcesDesc": "Ajoutez des sources dans le service de conformité pour surveiller les changements réglementaires.",
+      "awaitingReview": "En attente de révision",
+      "scanDescription": "Vérifiez toutes les sources surveillées pour les changements réglementaires et créez des propositions pour les mises à jour détectées.",
       "recentProposals": "Propositions Récentes",
       "colCreated": "Créé",
       "noProposals": "Aucune proposition récente."
