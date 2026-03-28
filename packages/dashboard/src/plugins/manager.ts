@@ -345,7 +345,19 @@ export class PluginManager {
       await this.deactivate(id);
     }
 
-    this.db.prepare('DELETE FROM plugins WHERE id = @id').run({ id });
+    // Deactivate and remove all org-specific copies that share this package
+    const orgRows = this.db
+      .prepare('SELECT id, status FROM plugins WHERE package_name = @pkg AND id != @id')
+      .all({ pkg: row.package_name, id }) as Array<{ id: string; status: string }>;
+
+    for (const orgRow of orgRows) {
+      if (orgRow.status === 'active') {
+        await this.deactivate(orgRow.id);
+      }
+    }
+
+    // Delete all rows for this package (global + org-specific)
+    this.db.prepare('DELETE FROM plugins WHERE package_name = @pkg').run({ pkg: row.package_name });
 
     const pkgDir = this.resolvePackageDir(row.package_name);
     if (existsSync(pkgDir)) {
