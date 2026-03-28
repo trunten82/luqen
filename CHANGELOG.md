@@ -6,13 +6,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [2.2.4] - 2026-03-28
+## [2.3.0] - 2026-03-28
+
+### Added
+- **Pa11y auth guide** — comprehensive examples for Bearer tokens, cookies, basic auth, form login, cookie consent on the New Scan page with links to Pa11y docs
+- **Org deploy pre-check** — plugin org deploy picker shows which orgs already have the plugin active (checked + disabled)
+- **Audit log org scoping** — global admins see all entries, org admins see only their org; added Org column
+- **Compliance orgId in responses** — Jurisdiction, Regulation, Requirement API responses now include `orgId` field
+- **OAuth client org management** — org-scoped listing, ownership-protected revoke, Owner column with org name
+- **Webhook org context** — webhook dispatch events now include orgId for org-scoped delivery
+
+### Changed
+- **Home page** — removed quick scan form (too many hidden variables), replaced with link to full scan page
+- **Org deploy UI** — collapsible `<details>` with scrollable list
+- **Plugin config UX** — inline toggle in card instead of jumping to top of page
 
 ### Fixed
-- **Plugin configure button** — replaced HTMX with plain fetch to avoid attribute inheritance issues; config form now renders inline in the card
-- **Plugin cascade delete** — removing a global plugin now deletes all org-specific copies so it reappears in the catalogue
-- **Plugin activation lifecycle** — activate marks the plugin as enabled immediately; if code can't start (missing config), it stays active with a "needs config" hint instead of erroring out
-- **Factory plugin loading** — plugins using `export default function createPlugin()` pattern (auth, notification, storage) now loaded correctly
+- **Plugin configure button** — replaced HTMX with plain fetch to avoid attribute inheritance issues
+- **Plugin cascade delete** — removing a global plugin now deletes all org-specific copies
+- **Plugin activation lifecycle** — activate marks as enabled immediately; code loading is best-effort with "needs config" hint
+- **Factory plugin loading** — plugins using `export default function createPlugin()` pattern now loaded correctly
+- **Toast messages** — alerts persist after operations
+- **Scheduler orgId** — always passed to scan config, not just for incremental scans
+- **Admin JWT org context** — compliance service honors X-Org-Id header for admin JWTs without embedded orgId
 - **Toast messages** — moved message area outside auto-refreshing section so alerts persist
 
 ### Changed
