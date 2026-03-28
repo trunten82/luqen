@@ -136,7 +136,9 @@
       "icon": "git",
       "configSchema": [
         { "key": "hostUrl", "label": "API Host URL", "type": "string", "required": true, "default": "https://api.github.com", "description": "Use https://api.github.com for GitHub.com or your GitHub Enterprise API URL" }
-      ]
+      ],
+      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/git-host-github-v1.0.0/luqen-plugin-git-host-github-1.0.0.tgz",
+      "checksum": "sha256:1b6465034cdb065ae48f0271f6cf3dc046101bc74c6a0642c8f343d8419a00e8"
     },
     {
       "name": "git-host-gitlab",
@@ -148,7 +150,9 @@
       "icon": "git",
       "configSchema": [
         { "key": "hostUrl", "label": "API Host URL", "type": "string", "required": true, "default": "https://gitlab.com/api/v4", "description": "Use https://gitlab.com/api/v4 for GitLab.com or your self-hosted GitLab API URL" }
-      ]
+      ],
+      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/git-host-gitlab-v1.0.0/luqen-plugin-git-host-gitlab-1.0.0.tgz",
+      "checksum": "sha256:25838fdd30756ea54ed277cf5684739c061b7718393e439d662ed78013780967"
     },
     {
       "name": "git-host-azure-devops",
@@ -160,7 +164,9 @@
       "icon": "git",
       "configSchema": [
         { "key": "hostUrl", "label": "API Host URL", "type": "string", "required": true, "default": "https://dev.azure.com", "description": "Use https://dev.azure.com for Azure DevOps Services or your on-prem TFS URL" }
-      ]
+      ],
+      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/git-host-azure-devops-v1.0.0/luqen-plugin-git-host-azure-devops-1.0.0.tgz",
+      "checksum": "sha256:90b095329ca59570e36dcf275c857b1d5fced2886d484384fbf45f91b4dd6c70"
     }
   ]
 }

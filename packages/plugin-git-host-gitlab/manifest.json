@@ -1,0 +1,17 @@
+{
+  "name": "git-host-gitlab",
+  "displayName": "GitLab",
+  "type": "git-host",
+  "version": "1.0.0",
+  "description": "Git integration with GitLab for merge request creation from accessibility fixes",
+  "configSchema": [
+    {
+      "key": "hostUrl",
+      "label": "API Host URL",
+      "type": "string",
+      "required": true,
+      "default": "https://gitlab.com/api/v4",
+      "description": "Use https://gitlab.com/api/v4 for GitLab.com or your self-hosted GitLab API URL"
+    }
+  ]
+}
