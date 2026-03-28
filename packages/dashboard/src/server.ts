@@ -170,6 +170,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Security Headers (helmet) ────────────────────────────────────────────
+  const isProd = process.env['NODE_ENV'] === 'production';
   await server.register(import('@fastify/helmet'), {
     contentSecurityPolicy: {
       useDefaults: false,
@@ -184,9 +185,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         baseUri: ["'self'"],
         formAction: ["'self'"],
         frameAncestors: ["'none'"],
-        upgradeInsecureRequests: [],
+        ...(isProd ? { upgradeInsecureRequests: [] } : {}),
       },
     },
+    crossOriginOpenerPolicy: isProd ? { policy: 'same-origin' } : false,
+    originAgentCluster: isProd,
     frameguard: { action: 'deny' },
     noSniff: true,
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },

@@ -1709,6 +1709,63 @@ select {
   margin-top: var(--space-md);
 }
 
+/* ---- Plugin Org Picker ---- */
+.org-picker {
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-sm);
+}
+
+.org-picker__label {
+  margin-bottom: var(--space-xs);
+  color: var(--text-secondary);
+}
+
+.org-picker__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+.org-picker__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  user-select: none;
+}
+
+.org-picker__item:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color-strong);
+}
+
+.org-picker__item:has(input:checked) {
+  background-color: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.org-picker__item--all {
+  font-weight: 600;
+  border-style: dashed;
+}
+
+.org-picker__item input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+.plugin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
 /* ---- Plugin Grid ---- */
 .plugin-grid {
   display: grid;
