@@ -158,12 +158,12 @@ export async function monitorRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await scanSources(complianceUrl, getToken(request));
-        const html = `<div id="scan-results" aria-live="polite">
-  <p class="text--success">Scan complete: ${result.scanned} source(s) checked, ${result.proposalsCreated} proposal(s) created.</p>
-</div>
-${toastHtml(`Scan complete: ${result.scanned} sources scanned, ${result.proposalsCreated} proposals created.`)}`;
+        const html = `<div class="alert alert--success"><strong>Scan complete:</strong> ${result.scanned} source(s) checked, ${result.proposalsCreated} proposal(s) created.</div>`;
 
-        return reply.code(200).header('content-type', 'text/html').send(html);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(html);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to trigger scan';
         return reply

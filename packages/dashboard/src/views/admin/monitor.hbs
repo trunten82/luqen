@@ -1,4 +1,6 @@
-<section aria-label="Monitor dashboard">
+<section aria-label="Monitor dashboard" id="monitor-dashboard"
+        hx-get="/admin/monitor" hx-trigger="monitorScanDone from:body" hx-select="#monitor-dashboard" hx-swap="outerHTML"
+        hx-disinherit="hx-select">
   {{#if error}}
   <div class="alert alert--error mb-md" role="alert">
     <p>{{error}}</p>
@@ -22,7 +24,7 @@
         <h2 class="card__title">{{t "admin.monitor.lastScan"}}</h2>
       </div>
       <div class="card__body">
-        <div class="card__value" style="font-size: var(--font-size-lg)">{{lastScanTime}}</div>
+        <div class="card__value" style="font-size: var(--font-size-lg, 1.1rem)">{{lastScanTime}}</div>
       </div>
     </div>
 
@@ -42,19 +44,11 @@
     <h2 class="section-title">{{t "admin.monitor.scan"}}</h2>
     <div class="mb-md">
       <p class="text-sm text-muted mb-sm">{{t "admin.monitor.scanDescription"}}</p>
-      <form>
-        <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        <button type="button" class="btn btn--primary btn--sm"
-                hx-post="/admin/monitor/trigger"
-                hx-target="#scan-results"
-                hx-swap="innerHTML"
-                hx-include="[name=_csrf]"
-                hx-indicator="#scan-spinner"
-                aria-label="Trigger source scan">
-          {{t "admin.monitor.triggerScan"}}
-        </button>
-        <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">{{t "admin.sources.scanning"}}</span>
-      </form>
+      <button type="button" id="monitor-trigger-btn" class="btn btn--primary btn--sm"
+              data-action="triggerMonitorScan"
+              aria-label="Trigger source scan">
+        {{t "admin.monitor.triggerScan"}}
+      </button>
     </div>
     <div id="scan-results" aria-live="polite"></div>
   </section>
