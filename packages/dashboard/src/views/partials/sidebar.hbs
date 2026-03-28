@@ -242,7 +242,7 @@
       {{t "nav.connectedRepos"}}
     </a>
 
-    {{#if hasGitHostPlugins}}
+    {{#if hasGitHostConfigs}}
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/git-hosts')}}is-active{{/if}}"
        href="/admin/git-hosts"
        aria-current="{{#if (startsWith currentPath '/admin/git-hosts')}}page{{/if}}">
@@ -256,7 +256,7 @@
     {{/if}}
 
     {{#if perm.reposCredentials}}
-    {{#if hasGitHostPlugins}}
+    {{#if hasGitHostConfigs}}
     <a class="sidebar__item sidebar__item--child {{#if (startsWith currentPath '/account/git-credentials')}}is-active{{/if}}"
        href="/account/git-credentials"
        aria-current="{{#if (startsWith currentPath '/account/git-credentials')}}page{{/if}}">
