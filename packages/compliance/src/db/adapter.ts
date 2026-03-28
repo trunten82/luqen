@@ -89,7 +89,7 @@ export interface DbAdapter {
   createClient(
     data: CreateClientInput,
   ): Promise<OAuthClient & { secret: string }>;
-  listClients(): Promise<OAuthClient[]>;
+  listClients(orgId?: string): Promise<OAuthClient[]>;
   deleteClient(id: string): Promise<void>;
 
   // Users
@@ -106,6 +106,7 @@ export interface DbAdapter {
   // Org ownership lookups (returns org_id string or null if record not found)
   getJurisdictionOrgId(id: string): Promise<string | null>;
   getRegulationOrgId(id: string): Promise<string | null>;
+  getRequirementOrgId(id: string): Promise<string | null>;
   getSourceOrgId(id: string): Promise<string | null>;
 
   // Org data

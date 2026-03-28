@@ -547,6 +547,11 @@ export class SqliteAdapter implements DbAdapter {
     return row != null ? row.org_id : null;
   }
 
+  async getRequirementOrgId(id: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT org_id FROM requirements WHERE id = ?').get(id) as { org_id: string } | undefined;
+    return row != null ? row.org_id : null;
+  }
+
   // --- Requirements ---
 
   async listRequirements(filters?: RequirementFilters): Promise<Requirement[]> {
@@ -826,7 +831,11 @@ export class SqliteAdapter implements DbAdapter {
     return { ...toOAuthClient(row), secret };
   }
 
-  async listClients(): Promise<OAuthClient[]> {
+  async listClients(orgId?: string): Promise<OAuthClient[]> {
+    if (orgId != null && orgId !== 'system') {
+      const rows = this.db.prepare("SELECT * FROM oauth_clients WHERE org_id IN ('system', ?)").all(orgId) as OAuthClientRow[];
+      return rows.map(toOAuthClient);
+    }
     const rows = this.db.prepare('SELECT * FROM oauth_clients').all() as OAuthClientRow[];
     return rows.map(toOAuthClient);
   }
