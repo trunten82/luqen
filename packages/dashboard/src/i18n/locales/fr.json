@@ -166,7 +166,8 @@
     "viewReport": "Voir le Rapport",
     "viewProgress": "Voir la Progression",
     "viewQueue": "Voir la File d'attente",
-    "noScans": "Aucune analyse encore. Lancez votre première analyse en utilisant le formulaire d'analyse rapide ci-dessus."
+    "noScans": "Aucune analyse encore. Lancez votre première analyse en utilisant le formulaire d'analyse rapide ci-dessus.",
+    "scanDescription": "Lancez une nouvelle analyse d'accessibilité avec toutes les options de configuration — standard WCAG, vérification de conformité, authentification et plus."
   },
   "scans": {
     "newScan": "Nouvelle Analyse",
@@ -229,7 +230,8 @@
     "noReportsTitle": "Aucun rapport encore",
     "noReportsDesc": "Lancez votre première analyse d'accessibilité pour voir les résultats ici.",
     "downloadPdf": "Télécharger PDF",
-    "print": "Imprimer"
+    "print": "Imprimer",
+    "vsPrevious": "vs Précédent"
   },
   "schedules": {
     "title": "Planifications d'Analyse",
@@ -792,11 +794,38 @@
     "page": "Page",
     "regulations": "Réglementations",
     "noNewIssuesTitle": "Aucun nouveau problème",
-    "noNewIssuesDesc": "La dernière analyse n'a introduit aucune régression.",
+    "noNewIssuesDesc": "Aucun nouveau problème d'accessibilité n'a été introduit dans la dernière analyse.",
     "noResolvedTitle": "Aucun problème résolu",
-    "noResolvedDesc": "Aucun problème n'a été résolu entre les deux analyses.",
+    "noResolvedDesc": "Aucun problème de la référence n'a été résolu dans la dernière analyse.",
     "noSharedTitle": "Aucun problème partagé",
-    "noSharedDesc": "Aucun problème n'est partagé entre les deux analyses."
+    "noSharedDesc": "Les deux analyses n'ont aucun problème en commun.",
+    "scanComparison": "Comparaison d'Analyses",
+    "comparingScans": "Comparaison des analyses d'accessibilité pour",
+    "changedBetween": "ce qui a changé entre",
+    "and": "et",
+    "regressionMsg": "nouvelle(s) erreur(s) introduite(s).",
+    "newIssuesTotal": "nouveau(x) problème(s) au total,",
+    "resolvedCount": "résolu(s).",
+    "improvementMsg": "erreur(s).",
+    "issuesResolved": "problème(s) résolu(s),",
+    "newWord": "nouveau(x).",
+    "noChangeErrors": "Aucun changement dans les erreurs.",
+    "vsBaseline": "vs référence",
+    "notInBaseline": "Absent de l'analyse de référence",
+    "fixedSinceBaseline": "Corrigé depuis la référence",
+    "presentInBoth": "Présent dans les deux analyses",
+    "showScanDetails": "Afficher les détails de l'analyse",
+    "baselineScan": "Analyse de Référence",
+    "latestScan": "Dernière Analyse",
+    "newIssuesTab": "Nouveaux Problèmes",
+    "resolvedTab": "Résolus",
+    "unchangedTab": "Inchangés",
+    "newIssuesExplain": "Ces problèmes sont apparus dans la dernière analyse mais n'étaient pas présents dans la référence. Ils représentent de nouvelles régressions d'accessibilité.",
+    "resolvedExplain": "Ces problèmes étaient présents dans l'analyse de référence mais ne sont plus détectés. Ils ont été corrigés ou les éléments concernés ont été supprimés.",
+    "unchangedExplain": "Ces problèmes existent dans les deux analyses et n'ont pas encore été traités.",
+    "wcag": "WCAG",
+    "description": "Description",
+    "element": "Élément"
   },
   "reportPrint": {
     "pageTitle": "Rapport d'Accessibilité",

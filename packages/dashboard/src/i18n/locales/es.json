@@ -166,7 +166,8 @@
     "viewReport": "Ver Informe",
     "viewProgress": "Ver Progreso",
     "viewQueue": "Ver Cola",
-    "noScans": "Ningún escaneo aún. Inicia tu primer escaneo usando el formulario de escaneo rápido de arriba."
+    "noScans": "Ningún escaneo aún. Inicia tu primer escaneo usando el formulario de escaneo rápido de arriba.",
+    "scanDescription": "Ejecuta un nuevo escaneo de accesibilidad con todas las opciones de configuración — estándar WCAG, verificación de cumplimiento, autenticación y más."
   },
   "scans": {
     "newScan": "Nuevo Escaneo",
@@ -229,7 +230,8 @@
     "noReportsTitle": "Aún no hay informes",
     "noReportsDesc": "Ejecuta tu primer escaneo de accesibilidad para ver los resultados aquí.",
     "downloadPdf": "Descargar PDF",
-    "print": "Imprimir"
+    "print": "Imprimir",
+    "vsPrevious": "vs Anterior"
   },
   "schedules": {
     "title": "Programaciones de Escaneo",
@@ -792,11 +794,38 @@
     "page": "Página",
     "regulations": "Regulaciones",
     "noNewIssuesTitle": "Sin nuevos problemas",
-    "noNewIssuesDesc": "El último escaneo no introdujo ninguna regresión.",
+    "noNewIssuesDesc": "No se introdujeron nuevos problemas de accesibilidad en el último escaneo.",
     "noResolvedTitle": "Sin problemas resueltos",
-    "noResolvedDesc": "No se resolvieron problemas entre los dos escaneos.",
+    "noResolvedDesc": "No se resolvieron problemas de la línea base en el último escaneo.",
     "noSharedTitle": "Sin problemas compartidos",
-    "noSharedDesc": "No hay problemas compartidos entre los dos escaneos."
+    "noSharedDesc": "Los dos escaneos no tienen problemas en común.",
+    "scanComparison": "Comparación de Escaneos",
+    "comparingScans": "Comparando escaneos de accesibilidad para",
+    "changedBetween": "qué cambió entre",
+    "and": "y",
+    "regressionMsg": "nuevo(s) error(es) introducido(s).",
+    "newIssuesTotal": "nuevo(s) problema(s) en total,",
+    "resolvedCount": "resuelto(s).",
+    "improvementMsg": "error(es).",
+    "issuesResolved": "problema(s) resuelto(s),",
+    "newWord": "nuevo(s).",
+    "noChangeErrors": "Sin cambios en los errores.",
+    "vsBaseline": "vs línea base",
+    "notInBaseline": "No presente en el escaneo de línea base",
+    "fixedSinceBaseline": "Corregido desde la línea base",
+    "presentInBoth": "Presente en ambos escaneos",
+    "showScanDetails": "Mostrar detalles del escaneo",
+    "baselineScan": "Escaneo de Línea Base",
+    "latestScan": "Escaneo Más Reciente",
+    "newIssuesTab": "Nuevos Problemas",
+    "resolvedTab": "Resueltos",
+    "unchangedTab": "Sin Cambios",
+    "newIssuesExplain": "Estos problemas aparecieron en el último escaneo pero no estaban presentes en la línea base. Representan nuevas regresiones de accesibilidad.",
+    "resolvedExplain": "Estos problemas estaban presentes en el escaneo de línea base pero ya no se detectan. Han sido corregidos o los elementos afectados fueron eliminados.",
+    "unchangedExplain": "Estos problemas existen en ambos escaneos y aún no han sido abordados.",
+    "wcag": "WCAG",
+    "description": "Descripción",
+    "element": "Elemento"
   },
   "reportPrint": {
     "pageTitle": "Informe de Accesibilidad",

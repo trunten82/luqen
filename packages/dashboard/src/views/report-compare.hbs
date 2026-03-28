@@ -1,197 +1,140 @@
-{{! Report comparison — side-by-side diff between two scan reports }}
+{{! Report comparison — diff between two scan reports }}
 
 <section aria-labelledby="compare-heading" class="report-meta mb-lg">
-  <h1 id="compare-heading" class="section-title mb-md">{{t "reportCompare.title"}}</h1>
+  <h1 id="compare-heading" class="section-title mb-sm">{{t "reportCompare.scanComparison"}}</h1>
+  <p class="text-muted mb-md">
+    {{t "reportCompare.comparingScans"}} <strong>{{scanA.siteUrl}}</strong>
+    &mdash; {{t "reportCompare.changedBetween"}} <time datetime="{{scanA.createdAt}}">{{scanA.createdAtDisplay}}</time>
+    {{t "reportCompare.and"}} <time datetime="{{scanB.createdAt}}">{{scanB.createdAtDisplay}}</time>.
+  </p>
 
-  {{! ── Regression / Improvement Banner ───────────────────────────────────── }}
+  {{! ── Outcome Banner ─────────────────────────────────────────────────────── }}
   {{#if (cmpPositive diff.summaryDelta.errors)}}
-  <div class="compare-alert compare-alert--regression" role="alert">
-    <strong>{{t "reportCompare.regressionDetected"}}</strong> {{diff.summaryDelta.errors}} {{t "reportCompare.newErrorsSince"}}
+  <div class="alert alert--error mb-md" role="alert">
+    <strong>{{t "reportCompare.regressionDetected"}}</strong> {{diff.summaryDelta.errors}} {{t "reportCompare.regressionMsg"}} {{diff.addedCount}} {{t "reportCompare.newIssuesTotal"}} {{diff.removedCount}} {{t "reportCompare.resolvedCount"}}
   </div>
   {{else}}
     {{#if (cmpNegative diff.summaryDelta.errors)}}
-    <div class="compare-alert compare-alert--improvement" role="status">
-      <strong>{{t "reportCompare.improvement"}}</strong> {{cmpSign diff.summaryDelta.errors}} {{t "reportCompare.errorsSince"}}
+    <div class="alert alert--success mb-md" role="status">
+      <strong>{{t "reportCompare.improvement"}}</strong> {{cmpSign diff.summaryDelta.errors}} {{t "reportCompare.improvementMsg"}} {{diff.removedCount}} {{t "reportCompare.issuesResolved"}} {{diff.addedCount}} {{t "reportCompare.newWord"}}
+    </div>
+    {{else}}
+    <div class="alert alert--info mb-md" role="status">
+      <strong>{{t "reportCompare.noChangeErrors"}}</strong> {{diff.addedCount}} new issue(s), {{diff.removedCount}} resolved, {{diff.unchangedCount}} unchanged.
     </div>
     {{/if}}
   {{/if}}
 
-  {{! ── Side-by-side summary ──────────────────────────────────────────────── }}
-  <div class="cmp-summary-grid" role="region" aria-label="Side-by-side scan summary">
-    <div class="cmp-summary-col">
-      <div class="cmp-summary-col__heading">{{t "reportCompare.scanABaseline"}}</div>
-      <div class="cmp-summary-stats">
-        <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">{{t "reportCompare.totalIssues"}}</span>
-          <span class="cmp-summary-stat__value">{{scanA.totalIssues}}</span>
-        </div>
-        <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">{{t "reportCompare.errors"}}</span>
-          <span class="cmp-summary-stat__value text--error">{{scanA.errors}}</span>
-        </div>
-        <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">{{t "reportCompare.warnings"}}</span>
-          <span class="cmp-summary-stat__value text--warning">{{scanA.warnings}}</span>
-        </div>
-        <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">{{t "reportCompare.notices"}}</span>
-          <span class="cmp-summary-stat__value">{{scanA.notices}}</span>
-        </div>
+  {{! ── KPI Cards ──────────────────────────────────────────────────────────── }}
+  <div class="rpt-summary-grid mb-md" role="region" aria-label="Change summary">
+    <div class="rpt-card rpt-card--error">
+      <div class="rpt-card__label">{{t "reportCompare.errors"}}</div>
+      <div class="rpt-card__value">{{scanB.errors}}</div>
+      <div class="rpt-card__delta {{#if (cmpPositive diff.summaryDelta.errors)}}rpt-card__delta--worse{{else}}{{#if (cmpNegative diff.summaryDelta.errors)}}rpt-card__delta--better{{/if}}{{/if}}">
+        {{cmpSign diff.summaryDelta.errors}} {{t "reportCompare.vsBaseline"}}
       </div>
     </div>
-
-    <div class="cmp-summary-delta" aria-label="Delta between scans">
-      <div class="cmp-summary-delta__item">
-        <span class="cmp-summary-delta__label">{{t "reportCompare.errors"}}</span>
-        <span class="cmp-summary-delta__value {{#if (cmpPositive diff.summaryDelta.errors)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.errors)}}cmp-delta--down{{else}}cmp-delta--neutral{{/if}}{{/if}}">
-          {{#if (cmpPositive diff.summaryDelta.errors)}}+{{diff.summaryDelta.errors}}{{else}}{{#if (cmpNegative diff.summaryDelta.errors)}}{{cmpSign diff.summaryDelta.errors}}{{else}}={{/if}}{{/if}}
-        </span>
-      </div>
-      <div class="cmp-summary-delta__item">
-        <span class="cmp-summary-delta__label">{{t "reportCompare.warnings"}}</span>
-        <span class="cmp-summary-delta__value {{#if (cmpPositive diff.summaryDelta.warnings)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.warnings)}}cmp-delta--down{{else}}cmp-delta--neutral{{/if}}{{/if}}">
-          {{#if (cmpPositive diff.summaryDelta.warnings)}}+{{diff.summaryDelta.warnings}}{{else}}{{#if (cmpNegative diff.summaryDelta.warnings)}}{{cmpSign diff.summaryDelta.warnings}}{{else}}={{/if}}{{/if}}
-        </span>
-      </div>
-      <div class="cmp-summary-delta__item">
-        <span class="cmp-summary-delta__label">{{t "reportCompare.notices"}}</span>
-        <span class="cmp-summary-delta__value {{#if (cmpPositive diff.summaryDelta.notices)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.notices)}}cmp-delta--down{{else}}cmp-delta--neutral{{/if}}{{/if}}">
-          {{#if (cmpPositive diff.summaryDelta.notices)}}+{{diff.summaryDelta.notices}}{{else}}{{#if (cmpNegative diff.summaryDelta.notices)}}{{cmpSign diff.summaryDelta.notices}}{{else}}={{/if}}{{/if}}
-        </span>
+    <div class="rpt-card rpt-card--warning">
+      <div class="rpt-card__label">{{t "reportCompare.warnings"}}</div>
+      <div class="rpt-card__value">{{scanB.warnings}}</div>
+      <div class="rpt-card__delta {{#if (cmpPositive diff.summaryDelta.warnings)}}rpt-card__delta--worse{{else}}{{#if (cmpNegative diff.summaryDelta.warnings)}}rpt-card__delta--better{{/if}}{{/if}}">
+        {{cmpSign diff.summaryDelta.warnings}} {{t "reportCompare.vsBaseline"}}
       </div>
     </div>
-
-    <div class="cmp-summary-col">
-      <div class="cmp-summary-col__heading">{{t "reportCompare.scanBLatest"}}</div>
-      <div class="cmp-summary-stats">
-        <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">{{t "reportCompare.totalIssues"}}</span>
-          <span class="cmp-summary-stat__value">{{scanB.totalIssues}}</span>
-        </div>
-        <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">{{t "reportCompare.errors"}}</span>
-          <span class="cmp-summary-stat__value text--error">{{scanB.errors}}</span>
-        </div>
-        <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">{{t "reportCompare.warnings"}}</span>
-          <span class="cmp-summary-stat__value text--warning">{{scanB.warnings}}</span>
-        </div>
-        <div class="cmp-summary-stat">
-          <span class="cmp-summary-stat__label">{{t "reportCompare.notices"}}</span>
-          <span class="cmp-summary-stat__value">{{scanB.notices}}</span>
-        </div>
+    <div class="rpt-card rpt-card--notice">
+      <div class="rpt-card__label">{{t "reportCompare.notices"}}</div>
+      <div class="rpt-card__value">{{scanB.notices}}</div>
+      <div class="rpt-card__delta {{#if (cmpPositive diff.summaryDelta.notices)}}rpt-card__delta--worse{{else}}{{#if (cmpNegative diff.summaryDelta.notices)}}rpt-card__delta--better{{/if}}{{/if}}">
+        {{cmpSign diff.summaryDelta.notices}} {{t "reportCompare.vsBaseline"}}
       </div>
+    </div>
+    <div class="rpt-card rpt-card--neutral">
+      <div class="rpt-card__label">{{t "reportCompare.newIssuesTab"}}</div>
+      <div class="rpt-card__value text--error">{{diff.addedCount}}</div>
+      <div class="rpt-card__hint">{{t "reportCompare.notInBaseline"}}</div>
+    </div>
+    <div class="rpt-card rpt-card--neutral">
+      <div class="rpt-card__label">{{t "reportCompare.resolvedTab"}}</div>
+      <div class="rpt-card__value text--success">{{diff.removedCount}}</div>
+      <div class="rpt-card__hint">{{t "reportCompare.fixedSinceBaseline"}}</div>
+    </div>
+    <div class="rpt-card rpt-card--neutral">
+      <div class="rpt-card__label">{{t "reportCompare.unchangedTab"}}</div>
+      <div class="rpt-card__value">{{diff.unchangedCount}}</div>
+      <div class="rpt-card__hint">{{t "reportCompare.presentInBoth"}}</div>
     </div>
   </div>
 
-  <div class="cmp-scans-grid" role="region" aria-label="Compared scans metadata">
-    <div class="cmp-scan-card">
-      <div class="cmp-scan-card__label">{{t "reportCompare.scanABaseline"}}</div>
-      <div class="detail-list">
-        <div class="detail-list__item">
-          <dt>{{t "reportCompare.url"}}</dt>
-          <dd><a href="{{scanA.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scanA.siteUrl}}</a></dd>
+  {{! ── Scan Details (collapsible) ─────────────────────────────────────────── }}
+  <details class="mb-md">
+    <summary class="btn btn--ghost btn--sm">{{t "reportCompare.showScanDetails"}}</summary>
+    <div class="cmp-scans-grid mt-sm">
+      <div class="card">
+        <div class="card__header">
+          <h3 class="card__title">{{t "reportCompare.baselineScan"}}</h3>
+          <span class="badge badge--neutral">{{scanA.totalIssues}} issues</span>
         </div>
-        <div class="detail-list__item">
-          <dt>{{t "reportCompare.standard"}}</dt>
-          <dd>{{formatStandard scanA.standard}}</dd>
-        </div>
-        <div class="detail-list__item">
-          <dt>{{t "reportCompare.date"}}</dt>
-          <dd><time datetime="{{scanA.createdAt}}">{{scanA.createdAtDisplay}}</time></dd>
-        </div>
-      </div>
-      <a href="/reports/{{scanA.id}}" class="btn btn--ghost btn--sm mt-sm">{{t "reportCompare.viewFullReport"}}</a>
-    </div>
-
-    <div class="cmp-scan-card">
-      <div class="cmp-scan-card__label">{{t "reportCompare.scanBLatest"}}</div>
-      <div class="detail-list">
-        <div class="detail-list__item">
-          <dt>{{t "reportCompare.url"}}</dt>
-          <dd><a href="{{scanB.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scanB.siteUrl}}</a></dd>
-        </div>
-        <div class="detail-list__item">
-          <dt>{{t "reportCompare.standard"}}</dt>
-          <dd>{{formatStandard scanB.standard}}</dd>
-        </div>
-        <div class="detail-list__item">
-          <dt>{{t "reportCompare.date"}}</dt>
-          <dd><time datetime="{{scanB.createdAt}}">{{scanB.createdAtDisplay}}</time></dd>
+        <div class="card__body">
+          <dl class="stats-list">
+            <div class="stats-list__item"><dt>URL</dt><dd><a href="{{scanA.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scanA.siteUrl}}</a></dd></div>
+            <div class="stats-list__item"><dt>Standard</dt><dd>{{formatStandard scanA.standard}}</dd></div>
+            <div class="stats-list__item"><dt>Date</dt><dd><time datetime="{{scanA.createdAt}}">{{scanA.createdAtDisplay}}</time></dd></div>
+            <div class="stats-list__item"><dt>Errors / Warnings / Notices</dt><dd>{{scanA.errors}} / {{scanA.warnings}} / {{scanA.notices}}</dd></div>
+          </dl>
+          <a href="/reports/{{scanA.id}}" class="btn btn--ghost btn--sm mt-sm">{{t "reportCompare.viewFullReport"}}</a>
         </div>
       </div>
-      <a href="/reports/{{scanB.id}}" class="btn btn--ghost btn--sm mt-sm">{{t "reportCompare.viewFullReport"}}</a>
+      <div class="card">
+        <div class="card__header">
+          <h3 class="card__title">{{t "reportCompare.latestScan"}}</h3>
+          <span class="badge badge--info">{{scanB.totalIssues}} issues</span>
+        </div>
+        <div class="card__body">
+          <dl class="stats-list">
+            <div class="stats-list__item"><dt>URL</dt><dd><a href="{{scanB.siteUrl}}" target="_blank" rel="noopener noreferrer">{{scanB.siteUrl}}</a></dd></div>
+            <div class="stats-list__item"><dt>Standard</dt><dd>{{formatStandard scanB.standard}}</dd></div>
+            <div class="stats-list__item"><dt>Date</dt><dd><time datetime="{{scanB.createdAt}}">{{scanB.createdAtDisplay}}</time></dd></div>
+            <div class="stats-list__item"><dt>Errors / Warnings / Notices</dt><dd>{{scanB.errors}} / {{scanB.warnings}} / {{scanB.notices}}</dd></div>
+          </dl>
+          <a href="/reports/{{scanB.id}}" class="btn btn--ghost btn--sm mt-sm">{{t "reportCompare.viewFullReport"}}</a>
+        </div>
+      </div>
     </div>
-  </div>
+  </details>
 
-  <div class="report-actions mt-md" role="group" aria-label="Navigation">
+  <div class="report-actions mb-md" role="group" aria-label="Navigation">
     <a href="/reports" class="btn btn--ghost btn--sm">&larr; {{t "reportCompare.backToReports"}}</a>
   </div>
 </section>
 
-{{! ── Summary delta cards ────────────────────────────────────────────────── }}
-<div class="rpt-summary-grid" role="region" aria-label="Change summary">
-  <div class="rpt-card rpt-card--error">
-    <div class="rpt-card__label">{{t "reportCompare.errors"}}</div>
-    <div class="rpt-card__value cmp-delta {{#if (cmpPositive diff.summaryDelta.errors)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.errors)}}cmp-delta--down{{/if}}{{/if}}">
-      {{cmpSign diff.summaryDelta.errors}}
-    </div>
-  </div>
-  <div class="rpt-card rpt-card--warning">
-    <div class="rpt-card__label">{{t "reportCompare.warnings"}}</div>
-    <div class="rpt-card__value cmp-delta {{#if (cmpPositive diff.summaryDelta.warnings)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.warnings)}}cmp-delta--down{{/if}}{{/if}}">
-      {{cmpSign diff.summaryDelta.warnings}}
-    </div>
-  </div>
-  <div class="rpt-card rpt-card--notice">
-    <div class="rpt-card__label">{{t "reportCompare.notices"}}</div>
-    <div class="rpt-card__value cmp-delta {{#if (cmpPositive diff.summaryDelta.notices)}}cmp-delta--up{{else}}{{#if (cmpNegative diff.summaryDelta.notices)}}cmp-delta--down{{/if}}{{/if}}">
-      {{cmpSign diff.summaryDelta.notices}}
-    </div>
-  </div>
-  <div class="rpt-card rpt-card--neutral">
-    <div class="rpt-card__label">{{t "reportCompare.newIssues"}}</div>
-    <div class="rpt-card__value text--error">{{diff.addedCount}}</div>
-  </div>
-  <div class="rpt-card rpt-card--neutral">
-    <div class="rpt-card__label">{{t "reportCompare.resolved"}}</div>
-    <div class="rpt-card__value text--success">{{diff.removedCount}}</div>
-  </div>
-  <div class="rpt-card rpt-card--neutral">
-    <div class="rpt-card__label">{{t "reportCompare.unchanged"}}</div>
-    <div class="rpt-card__value">{{diff.unchangedCount}}</div>
-  </div>
-</div>
-
-{{! ── Tabs ────────────────────────────────────────────────────────────────── }}
+{{! ── Issue Tabs ───────────────────────────────────────────────────────────── }}
 <div class="cmp-tabs" role="tablist" aria-label="Comparison sections">
   <button class="cmp-tab cmp-tab--active" role="tab" aria-selected="true" aria-controls="cmp-panel-added" id="cmp-tab-added" data-action="cmpSwitchTab" data-tab="added">
-    {{t "reportCompare.tabNewIssues"}} ({{diff.addedCount}})
+    {{t "reportCompare.newIssuesTab"}} ({{diff.addedCount}})
   </button>
   <button class="cmp-tab" role="tab" aria-selected="false" aria-controls="cmp-panel-removed" id="cmp-tab-removed" data-action="cmpSwitchTab" data-tab="removed">
-    {{t "reportCompare.tabResolvedIssues"}} ({{diff.removedCount}})
+    {{t "reportCompare.resolvedTab"}} ({{diff.removedCount}})
   </button>
   <button class="cmp-tab" role="tab" aria-selected="false" aria-controls="cmp-panel-unchanged" id="cmp-tab-unchanged" data-action="cmpSwitchTab" data-tab="unchanged">
-    {{t "reportCompare.tabUnchanged"}} ({{diff.unchangedCount}})
+    {{t "reportCompare.unchangedTab"}} ({{diff.unchangedCount}})
   </button>
 </div>
 
-{{! ── New Issues panel ───────────────────────────────────────────────────── }}
+{{! ── New Issues panel ─────────────────────────────────────────────────────── }}
 <div class="cmp-panel" id="cmp-panel-added" role="tabpanel" aria-labelledby="cmp-tab-added">
   {{#if diff.addedCount}}
+  <p class="text-sm text-muted mb-sm">{{t "reportCompare.newIssuesExplain"}}</p>
   <div class="rpt-table-wrap">
-    <table class="rpt-table" aria-label="New issues in scan B">
+    <table class="rpt-table" aria-label="New issues">
       <thead>
         <tr>
           <th scope="col">{{t "reportCompare.severity"}}</th>
           <th scope="col">{{t "reportCompare.code"}}</th>
-          <th scope="col">{{t "reportCompare.wcagCriterion"}}</th>
-          <th scope="col">{{t "reportCompare.message"}}</th>
-          <th scope="col">{{t "reportCompare.selector"}}</th>
+          <th scope="col">{{t "reportCompare.wcag"}}</th>
+          <th scope="col">{{t "reportCompare.description"}}</th>
+          <th scope="col">{{t "reportCompare.element"}}</th>
           <th scope="col">{{t "reportCompare.page"}}</th>
-          {{#if diff.hasRegulations}}
-          <th scope="col">{{t "reportCompare.regulations"}}</th>
-          {{/if}}
+          {{#if diff.hasRegulations}}<th scope="col">{{t "reportCompare.regulations"}}</th>{{/if}}
         </tr>
       </thead>
       <tbody>
@@ -201,25 +144,15 @@
           <td><span class="rpt-code">{{code}}</span></td>
           <td>
             {{#if wcagCriterion}}
-            <a href="{{wcagUrl}}" target="_blank" rel="noopener noreferrer" class="rpt-wcag-link" title="{{wcagTitle}}">
-              {{wcagCriterion}}
-            </a>
+            <a href="{{wcagUrl}}" target="_blank" rel="noopener noreferrer" class="rpt-wcag-link" title="{{wcagTitle}}">{{wcagCriterion}}</a>
             <span class="rpt-wcag-title">{{wcagTitle}}</span>
-            {{else}}
-            <span class="text--muted">&mdash;</span>
-            {{/if}}
+            {{else}}<span class="text-muted">&mdash;</span>{{/if}}
           </td>
           <td>{{message}}</td>
-          <td><span class="rpt-code">{{selector}}</span></td>
+          <td><code class="rpt-code">{{selector}}</code></td>
           <td class="cell--url">{{pageUrl}}</td>
           {{#if ../diff.hasRegulations}}
-          <td>
-            {{#if regulationTags}}
-            {{#each regulationTags}}<span class="rpt-regulation-tag">{{this}}</span> {{/each}}
-            {{else}}
-            <span class="text--muted">&mdash;</span>
-            {{/if}}
-          </td>
+          <td>{{#each regulationTags}}<span class="rpt-regulation-tag">{{this}}</span> {{/each}}{{#unless regulationTags}}<span class="text-muted">&mdash;</span>{{/unless}}</td>
           {{/if}}
         </tr>
         {{/each}}
@@ -228,29 +161,27 @@
   </div>
   {{else}}
   <div class="empty-state" role="status">
-    <div class="empty-state__icon">&#9989;</div>
     <div class="empty-state__title">{{t "reportCompare.noNewIssuesTitle"}}</div>
     <div class="empty-state__desc">{{t "reportCompare.noNewIssuesDesc"}}</div>
   </div>
   {{/if}}
 </div>
 
-{{! ── Resolved Issues panel ──────────────────────────────────────────────── }}
+{{! ── Resolved Issues panel ────────────────────────────────────────────────── }}
 <div class="cmp-panel cmp-panel--hidden" id="cmp-panel-removed" role="tabpanel" aria-labelledby="cmp-tab-removed">
   {{#if diff.removedCount}}
+  <p class="text-sm text-muted mb-sm">{{t "reportCompare.resolvedExplain"}}</p>
   <div class="rpt-table-wrap">
-    <table class="rpt-table" aria-label="Resolved issues no longer in scan B">
+    <table class="rpt-table" aria-label="Resolved issues">
       <thead>
         <tr>
           <th scope="col">{{t "reportCompare.severity"}}</th>
           <th scope="col">{{t "reportCompare.code"}}</th>
-          <th scope="col">{{t "reportCompare.wcagCriterion"}}</th>
-          <th scope="col">{{t "reportCompare.message"}}</th>
-          <th scope="col">{{t "reportCompare.selector"}}</th>
+          <th scope="col">{{t "reportCompare.wcag"}}</th>
+          <th scope="col">{{t "reportCompare.description"}}</th>
+          <th scope="col">{{t "reportCompare.element"}}</th>
           <th scope="col">{{t "reportCompare.page"}}</th>
-          {{#if diff.hasRegulations}}
-          <th scope="col">{{t "reportCompare.regulations"}}</th>
-          {{/if}}
+          {{#if diff.hasRegulations}}<th scope="col">{{t "reportCompare.regulations"}}</th>{{/if}}
         </tr>
       </thead>
       <tbody>
@@ -260,25 +191,15 @@
           <td><span class="rpt-code">{{code}}</span></td>
           <td>
             {{#if wcagCriterion}}
-            <a href="{{wcagUrl}}" target="_blank" rel="noopener noreferrer" class="rpt-wcag-link" title="{{wcagTitle}}">
-              {{wcagCriterion}}
-            </a>
+            <a href="{{wcagUrl}}" target="_blank" rel="noopener noreferrer" class="rpt-wcag-link" title="{{wcagTitle}}">{{wcagCriterion}}</a>
             <span class="rpt-wcag-title">{{wcagTitle}}</span>
-            {{else}}
-            <span class="text--muted">&mdash;</span>
-            {{/if}}
+            {{else}}<span class="text-muted">&mdash;</span>{{/if}}
           </td>
           <td>{{message}}</td>
-          <td><span class="rpt-code">{{selector}}</span></td>
+          <td><code class="rpt-code">{{selector}}</code></td>
           <td class="cell--url">{{pageUrl}}</td>
           {{#if ../diff.hasRegulations}}
-          <td>
-            {{#if regulationTags}}
-            {{#each regulationTags}}<span class="rpt-regulation-tag">{{this}}</span> {{/each}}
-            {{else}}
-            <span class="text--muted">&mdash;</span>
-            {{/if}}
-          </td>
+          <td>{{#each regulationTags}}<span class="rpt-regulation-tag">{{this}}</span> {{/each}}{{#unless regulationTags}}<span class="text-muted">&mdash;</span>{{/unless}}</td>
           {{/if}}
         </tr>
         {{/each}}
@@ -287,29 +208,27 @@
   </div>
   {{else}}
   <div class="empty-state" role="status">
-    <div class="empty-state__icon">&#128269;</div>
-    <div class="empty-state__title">{{t "reportCompare.noResolvedTitle"}}</div>
-    <div class="empty-state__desc">{{t "reportCompare.noResolvedDesc"}}</div>
+    <div class="empty-state__title">{{t "reportCompare.noResolvedIssuesTitle"}}</div>
+    <div class="empty-state__desc">{{t "reportCompare.noResolvedIssuesDesc"}}</div>
   </div>
   {{/if}}
 </div>
 
-{{! ── Unchanged Issues panel ─────────────────────────────────────────────── }}
+{{! ── Unchanged Issues panel ───────────────────────────────────────────────── }}
 <div class="cmp-panel cmp-panel--hidden" id="cmp-panel-unchanged" role="tabpanel" aria-labelledby="cmp-tab-unchanged">
   {{#if diff.unchangedCount}}
+  <p class="text-sm text-muted mb-sm">{{t "reportCompare.unchangedExplain"}}</p>
   <div class="rpt-table-wrap">
-    <table class="rpt-table" aria-label="Issues unchanged between scans">
+    <table class="rpt-table" aria-label="Unchanged issues">
       <thead>
         <tr>
           <th scope="col">{{t "reportCompare.severity"}}</th>
           <th scope="col">{{t "reportCompare.code"}}</th>
-          <th scope="col">{{t "reportCompare.wcagCriterion"}}</th>
-          <th scope="col">{{t "reportCompare.message"}}</th>
-          <th scope="col">{{t "reportCompare.selector"}}</th>
+          <th scope="col">{{t "reportCompare.wcag"}}</th>
+          <th scope="col">{{t "reportCompare.description"}}</th>
+          <th scope="col">{{t "reportCompare.element"}}</th>
           <th scope="col">{{t "reportCompare.page"}}</th>
-          {{#if diff.hasRegulations}}
-          <th scope="col">{{t "reportCompare.regulations"}}</th>
-          {{/if}}
+          {{#if diff.hasRegulations}}<th scope="col">{{t "reportCompare.regulations"}}</th>{{/if}}
         </tr>
       </thead>
       <tbody>
@@ -319,25 +238,15 @@
           <td><span class="rpt-code">{{code}}</span></td>
           <td>
             {{#if wcagCriterion}}
-            <a href="{{wcagUrl}}" target="_blank" rel="noopener noreferrer" class="rpt-wcag-link" title="{{wcagTitle}}">
-              {{wcagCriterion}}
-            </a>
+            <a href="{{wcagUrl}}" target="_blank" rel="noopener noreferrer" class="rpt-wcag-link" title="{{wcagTitle}}">{{wcagCriterion}}</a>
             <span class="rpt-wcag-title">{{wcagTitle}}</span>
-            {{else}}
-            <span class="text--muted">&mdash;</span>
-            {{/if}}
+            {{else}}<span class="text-muted">&mdash;</span>{{/if}}
           </td>
           <td>{{message}}</td>
-          <td><span class="rpt-code">{{selector}}</span></td>
+          <td><code class="rpt-code">{{selector}}</code></td>
           <td class="cell--url">{{pageUrl}}</td>
           {{#if ../diff.hasRegulations}}
-          <td>
-            {{#if regulationTags}}
-            {{#each regulationTags}}<span class="rpt-regulation-tag">{{this}}</span> {{/each}}
-            {{else}}
-            <span class="text--muted">&mdash;</span>
-            {{/if}}
-          </td>
+          <td>{{#each regulationTags}}<span class="rpt-regulation-tag">{{this}}</span> {{/each}}{{#unless regulationTags}}<span class="text-muted">&mdash;</span>{{/unless}}</td>
           {{/if}}
         </tr>
         {{/each}}
@@ -346,149 +255,41 @@
   </div>
   {{else}}
   <div class="empty-state" role="status">
-    <div class="empty-state__icon">&#128196;</div>
-    <div class="empty-state__title">{{t "reportCompare.noSharedTitle"}}</div>
-    <div class="empty-state__desc">{{t "reportCompare.noSharedDesc"}}</div>
+    <div class="empty-state__title">{{t "reportCompare.noSharedIssuesTitle"}}</div>
+    <div class="empty-state__desc">{{t "reportCompare.noSharedIssuesDesc"}}</div>
   </div>
   {{/if}}
 </div>
 
 <style>
-  /* ── Compare scoped styles ─────────────────────────────────────────────── */
+  /* ── Compare-specific styles using design system tokens ───────────────── */
 
-  /* Alert banners */
-  .compare-alert {
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 0.88rem;
-    margin-bottom: 1rem;
-    border-left: 4px solid;
-  }
-  .compare-alert--regression {
-    background-color: var(--status-error-bg);
-    border-left-color: var(--status-error);
-    color: var(--status-error);
-  }
-  .compare-alert--improvement {
-    background-color: var(--status-success-bg);
-    border-left-color: var(--status-success);
-    color: var(--status-success);
-  }
-
-  /* Side-by-side summary grid */
-  .cmp-summary-grid {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    align-items: stretch;
-  }
-  .cmp-summary-col {
-    background: var(--surface, var(--bg-primary));
-    border-radius: 8px;
-    padding: 1rem 1.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    border: 1px solid var(--border-color);
-  }
-  .cmp-summary-col__heading {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
-  }
-  .cmp-summary-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-  }
-  .cmp-summary-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-  }
-  .cmp-summary-stat__label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    font-weight: 600;
-  }
-  .cmp-summary-stat__value {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.2;
-  }
-
-  /* Delta column in summary */
-  .cmp-summary-delta {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    min-width: 80px;
-  }
-  .cmp-summary-delta__item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.1rem;
-  }
-  .cmp-summary-delta__label {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    font-weight: 600;
-  }
-  .cmp-summary-delta__value {
-    font-size: 1rem;
-    font-weight: 700;
-  }
-  .cmp-delta--neutral { color: var(--text-muted) !important; }
-
-  /* Scan metadata cards */
   .cmp-scans-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: var(--space-md, 1rem);
   }
-  .cmp-scan-card {
-    background: var(--surface, var(--bg-primary));
-    border-radius: 8px;
-    padding: 1rem 1.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    border-top: 3px solid var(--border-color);
-  }
-  .cmp-scan-card__label {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+
+  .rpt-card__delta {
+    font-size: var(--font-size-sm, 0.82rem);
     color: var(--text-muted);
-    font-weight: 700;
-    margin-bottom: 0.5rem;
+    margin-top: var(--space-xs, 0.25rem);
+  }
+  .rpt-card__delta--worse { color: var(--status-error, #dc2626); font-weight: 600; }
+  .rpt-card__delta--better { color: var(--status-success, #16a34a); font-weight: 600; }
+  .rpt-card__hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: var(--space-xs, 0.25rem);
   }
 
-  /* Delta styling */
-  .cmp-delta--up { color: #dc2626 !important; }
-  .cmp-delta--down { color: #16a34a !important; }
-
-  /* WCAG criterion styling in tables */
   .rpt-wcag-link {
     color: var(--accent);
     text-decoration: none;
     font-weight: 600;
     font-size: 0.82rem;
   }
-  .rpt-wcag-link:hover {
-    text-decoration: underline;
-  }
+  .rpt-wcag-link:hover { text-decoration: underline; }
   .rpt-wcag-title {
     display: block;
     font-size: 0.72rem;
@@ -502,17 +303,14 @@
     color: var(--accent);
     font-size: 0.68rem;
     padding: 0.1rem 0.4rem;
-    border-radius: 3px;
+    border-radius: var(--border-radius-sm, 3px);
     font-weight: 600;
     margin-right: 0.2rem;
-    margin-bottom: 0.15rem;
   }
-  .text--muted { color: var(--text-muted); }
 
   /* Tabs */
   .cmp-tabs {
     display: flex;
-    gap: 0;
     border-bottom: 2px solid var(--border-color, #e5e7eb);
     margin-bottom: 0;
   }
@@ -531,51 +329,33 @@
   .cmp-tab:hover { color: var(--text-primary, #111827); }
   .cmp-tab--active {
     color: var(--text-primary, #111827);
-    border-bottom-color: #2563eb;
+    border-bottom-color: var(--accent, #2563eb);
   }
 
-  /* Panels */
   .cmp-panel {
     background: var(--surface, var(--bg-primary));
-    border-radius: 0 0 8px 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    padding: 1rem;
-    margin-bottom: 1.5rem;
+    border-radius: 0 0 var(--border-radius, 8px) var(--border-radius, 8px);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+    padding: var(--space-md, 1rem);
+    margin-bottom: var(--space-lg, 1.5rem);
   }
   .cmp-panel--hidden { display: none; }
 
   @media (max-width: 640px) {
     .cmp-scans-grid { grid-template-columns: 1fr; }
-    .cmp-summary-grid { grid-template-columns: 1fr; }
-    .cmp-summary-delta { flex-direction: row; justify-content: center; }
     .cmp-tab { padding: 0.5rem 0.7rem; font-size: 0.76rem; }
   }
 </style>
 
 <script>
   function cmpSwitchTab(name, btn) {
-    // Hide all panels and deactivate all tabs
-    document.querySelectorAll('.cmp-panel').forEach(function(p) {
-      p.classList.add('cmp-panel--hidden');
-    });
-    document.querySelectorAll('.cmp-tab').forEach(function(t) {
-      t.classList.remove('cmp-tab--active');
-      t.setAttribute('aria-selected', 'false');
-    });
-    // Show selected panel and activate tab
+    document.querySelectorAll('.cmp-panel').forEach(function(p) { p.classList.add('cmp-panel--hidden'); });
+    document.querySelectorAll('.cmp-tab').forEach(function(t) { t.classList.remove('cmp-tab--active'); t.setAttribute('aria-selected', 'false'); });
     var panel = document.getElementById('cmp-panel-' + name);
     if (panel) panel.classList.remove('cmp-panel--hidden');
-    btn.classList.add('cmp-tab--active');
-    btn.setAttribute('aria-selected', 'true');
+    if (btn) { btn.classList.add('cmp-tab--active'); btn.setAttribute('aria-selected', 'true'); }
   }
-
-  // Keyboard accessibility for tabs
   document.querySelectorAll('.cmp-tab').forEach(function(tab) {
-    tab.addEventListener('keydown', function(evt) {
-      if (evt.key === 'Enter' || evt.key === ' ') {
-        evt.preventDefault();
-        tab.click();
-      }
-    });
+    tab.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tab.click(); } });
   });
 </script>
