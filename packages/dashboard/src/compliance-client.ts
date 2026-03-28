@@ -671,8 +671,8 @@ export async function createComplianceClient(
     },
     body: JSON.stringify({
       name: `dashboard-${orgName}`,
-      scopes: 'read write',
-      grantTypes: 'client_credentials',
+      scopes: ['read', 'write'],
+      grantTypes: ['client_credentials'],
       orgId,
     }),
   });

@@ -840,6 +840,11 @@ export class SqliteAdapter implements DbAdapter {
     return rows.map(toOAuthClient);
   }
 
+  async getClientOrgId(id: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT org_id FROM oauth_clients WHERE id = ?').get(id) as { org_id: string } | undefined;
+    return row != null ? row.org_id : null;
+  }
+
   async deleteClient(id: string): Promise<void> {
     this.db.prepare('DELETE FROM oauth_clients WHERE id = ?').run(id);
   }
