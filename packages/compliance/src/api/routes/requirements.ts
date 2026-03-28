@@ -89,6 +89,16 @@ export async function registerRequirementRoutes(
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getRequirementOrgId(id);
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot modify system data', statusCode: 403 });
+        return;
+      }
+      if (recordOrgId !== null && requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot modify data belonging to another organisation', statusCode: 403 });
+        return;
+      }
       const body = request.body as Partial<Parameters<typeof crud.createRequirement>[1]>;
       const requirement = await crud.updateRequirement(db, id, body);
       await reply.send(requirement);
@@ -105,9 +115,18 @@ export async function registerRequirementRoutes(
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
-      const existing = await db.getRequirement(id);
-      if (existing == null) {
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getRequirementOrgId(id);
+      if (recordOrgId == null) {
         await reply.status(404).send({ error: `Requirement '${id}' not found`, statusCode: 404 });
+        return;
+      }
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot delete system data', statusCode: 403 });
+        return;
+      }
+      if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot delete data belonging to another organisation', statusCode: 403 });
         return;
       }
       await db.deleteRequirement(id);
