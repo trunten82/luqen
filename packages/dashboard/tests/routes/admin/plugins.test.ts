@@ -139,6 +139,74 @@ function insertPlugin(
   return id;
 }
 
+// ── GET /admin/plugins ─────────────────────────────────────────────────────
+
+describe('GET /admin/plugins', () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await createTestServer();
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('returns 200 with plugins template', async () => {
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/plugins',
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { template: string };
+    expect(body.template).toBe('admin/plugins.hbs');
+  });
+
+  it('includes counts in template data', async () => {
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/plugins',
+    });
+
+    const body = response.json() as {
+      data: {
+        counts: { installed: number; active: number; available: number };
+        installed: unknown[];
+        available: unknown[];
+      };
+    };
+    expect(body.data.counts.installed).toBe(0);
+    expect(body.data.counts.active).toBe(0);
+    expect(body.data.counts.available).toBe(4);
+    expect(body.data.available).toHaveLength(4);
+  });
+
+  it('shows installed plugins and reduces available count', async () => {
+    insertPlugin(ctx, {
+      id: 'test-plugin-1',
+      package_name: '@luqen/plugin-notify-slack',
+      status: 'inactive',
+    });
+
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/plugins',
+    });
+
+    const body = response.json() as {
+      data: {
+        counts: { installed: number; active: number; available: number };
+        installed: Array<{ packageName: string }>;
+        available: Array<{ packageName: string }>;
+      };
+    };
+    expect(body.data.counts.installed).toBe(1);
+    expect(body.data.counts.available).toBe(3);
+    expect(body.data.installed[0].packageName).toBe('@luqen/plugin-notify-slack');
+  });
+});
+
 // ── GET /admin/plugins — extended coverage ────────────────────────────────
 
 describe('GET /admin/plugins (extended)', () => {
@@ -767,5 +835,101 @@ describe('PATCH /admin/plugins/:id/config (extended)', () => {
 
     expect(response.statusCode).toBe(500);
     expect(response.body).toContain('Save failed');
+  });
+});
+
+// ── Access control ──────────────────────────────────────────────────────────
+
+describe('GET /admin/plugins requires admin role', () => {
+  it('non-admin (viewer role) gets 403', async () => {
+    const ctx = await createTestServer('viewer');
+
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/plugins',
+    });
+
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin (user role) gets 403', async () => {
+    const ctx = await createTestServer('user');
+
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/plugins',
+    });
+
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+});
+
+// ── Access control for write endpoints ───────────────────────────────────────
+
+describe('Plugin write endpoints require admin.system permission', () => {
+  it('non-admin gets 403 on POST /admin/plugins/install', async () => {
+    const ctx = await createTestServer('viewer');
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/plugins/install',
+      payload: 'packageName=%40luqen%2Fplugin-notify-slack',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on POST /admin/plugins/:id/activate', async () => {
+    const ctx = await createTestServer('user');
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/plugins/some-id/activate',
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on POST /admin/plugins/:id/deactivate', async () => {
+    const ctx = await createTestServer('user');
+    const response = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/plugins/some-id/deactivate',
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on DELETE /admin/plugins/:id', async () => {
+    const ctx = await createTestServer('developer');
+    const response = await ctx.server.inject({
+      method: 'DELETE',
+      url: '/admin/plugins/some-id',
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on GET /admin/plugins/:id/configure', async () => {
+    const ctx = await createTestServer('developer');
+    const response = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/plugins/some-id/configure',
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
+  });
+
+  it('non-admin gets 403 on PATCH /admin/plugins/:id/config', async () => {
+    const ctx = await createTestServer('developer');
+    const response = await ctx.server.inject({
+      method: 'PATCH',
+      url: '/admin/plugins/some-id/config',
+      payload: 'key=value',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    expect(response.statusCode).toBe(403);
+    ctx.cleanup();
   });
 });
