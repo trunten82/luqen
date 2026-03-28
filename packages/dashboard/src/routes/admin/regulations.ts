@@ -154,6 +154,9 @@ export async function regulationRoutes(
           scope: body.scope?.trim() ?? '',
         }, getOrgId(request));
 
+        const ownerBadge = created.orgId === 'system' || created.orgId === undefined
+          ? '<span class="badge badge--neutral">System</span>'
+          : (created.orgId ?? '');
         const row = `<tr id="regulation-${created.id}">
   <td data-label="ID">${created.id}</td>
   <td data-label="Name">${created.name}</td>
@@ -162,6 +165,7 @@ export async function regulationRoutes(
   <td data-label="Enforcement Date">${created.enforcementDate}</td>
   <td data-label="Status">${created.status}</td>
   <td data-label="Scope">${created.scope}</td>
+  <td data-label="Owner">${ownerBadge}</td>
   <td>
     <button hx-get="/admin/regulations/${encodeURIComponent(created.id)}/view"
             hx-target="#modal-container"
@@ -268,6 +272,9 @@ export async function regulationRoutes(
           scope: body.scope?.trim(),
         }, getOrgId(request));
 
+        const ownerBadge = updated.orgId === 'system' || updated.orgId === undefined
+          ? '<span class="badge badge--neutral">System</span>'
+          : (updated.orgId ?? '');
         const row = `<tr id="regulation-${updated.id}">
   <td data-label="ID">${updated.id}</td>
   <td data-label="Name">${updated.name}</td>
@@ -276,6 +283,7 @@ export async function regulationRoutes(
   <td data-label="Enforcement Date">${updated.enforcementDate}</td>
   <td data-label="Status">${updated.status}</td>
   <td data-label="Scope">${updated.scope}</td>
+  <td data-label="Owner">${ownerBadge}</td>
   <td>
     <button hx-get="/admin/regulations/${encodeURIComponent(updated.id)}/view"
             hx-target="#modal-container"

@@ -55,12 +55,16 @@ export async function proposalRoutes(
       try {
         const updated = await approveProposal(baseUrl, getToken(request), id, getOrgId(request));
 
+        const ownerBadge = updated.orgId === 'system' || updated.orgId === undefined
+          ? '<span class="badge badge--neutral">System</span>'
+          : (updated.orgId ?? '');
         const rowHtml = `<tr id="proposal-${updated.id}">
   <td>${updated.source}</td>
   <td>${updated.type}</td>
   <td>${updated.summary}</td>
   <td>${new Date(updated.detectedAt).toLocaleString()}</td>
   <td><span class="badge badge--success">${updated.status}</span></td>
+  <td>${ownerBadge}</td>
   <td><!-- no actions for approved --></td>
 </tr>`;
 
@@ -85,12 +89,16 @@ export async function proposalRoutes(
       try {
         const updated = await rejectProposal(baseUrl, getToken(request), id, getOrgId(request));
 
+        const ownerBadge = updated.orgId === 'system' || updated.orgId === undefined
+          ? '<span class="badge badge--neutral">System</span>'
+          : (updated.orgId ?? '');
         const rowHtml = `<tr id="proposal-${updated.id}">
   <td>${updated.source}</td>
   <td>${updated.type}</td>
   <td>${updated.summary}</td>
   <td>${new Date(updated.detectedAt).toLocaleString()}</td>
   <td><span class="badge badge--error">${updated.status}</span></td>
+  <td>${ownerBadge}</td>
   <td><!-- no actions for rejected --></td>
 </tr>`;
 
