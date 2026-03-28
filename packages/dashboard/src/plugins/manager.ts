@@ -110,8 +110,10 @@ export class PluginManager {
 
   private downloadFn: DownloadFn = defaultDownloadFn;
   private loaderFn: PluginLoaderFn = async (pluginPath: string) => {
-    const mod = await import(pluginPath) as { default?: PluginInstance };
-    return mod.default ?? (mod as unknown as PluginInstance);
+    const mod = await import(pluginPath) as { default?: PluginInstance | (() => PluginInstance) };
+    const exported = mod.default ?? (mod as unknown as PluginInstance);
+    // Support both direct instances and factory functions (e.g. createPlugin())
+    return typeof exported === 'function' ? (exported as () => PluginInstance)() : exported;
   };
 
   constructor(options: PluginManagerOptions) {
@@ -248,6 +250,17 @@ export class PluginManager {
       .prepare('UPDATE plugins SET config = @config WHERE id = @id')
       .run({ id, config: JSON.stringify(encrypted) });
 
+    // If plugin is active, try to (re)start with the new config
+    if (row.status === 'active') {
+      // Deactivate current instance if running
+      const instance = this.activeInstances.get(id);
+      if (instance) {
+        await instance.deactivate();
+        this.activeInstances.delete(id);
+      }
+      await this.tryStartPlugin(id, row.package_name, JSON.stringify(encrypted));
+    }
+
     return this.getPluginOrThrow(id);
   }
 
@@ -276,32 +289,49 @@ export class PluginManager {
       }
     }
 
-    const manifest = this.readManifest(row.package_name);
-    const config = JSON.parse(row.config) as Record<string, unknown>;
-    const decrypted = decryptConfig(config, manifest.configSchema, this.encryptionKey);
+    // Mark as active in DB first — plugin is "enabled" regardless of whether
+    // its code can start right now. Config may be added later.
+    const now = new Date().toISOString();
+    this.db
+      .prepare(
+        'UPDATE plugins SET status = @status, activated_at = @activated_at, error = NULL WHERE id = @id',
+      )
+      .run({ id, status: 'active', activated_at: now });
 
+    // Try to load and start the plugin code. If it fails (e.g. missing config),
+    // keep status=active but record the error so the admin knows config is needed.
+    await this.tryStartPlugin(id, row.package_name, row.config);
+
+    return this.getPluginOrThrow(id);
+  }
+
+  /**
+   * Attempt to load and start a plugin's code. On failure, records the error
+   * but does NOT change the plugin status — it stays active (enabled).
+   */
+  private async tryStartPlugin(id: string, packageName: string, configJson: string): Promise<void> {
     try {
-      const pluginPath = this.resolvePluginPath(row.package_name);
+      const manifest = this.readManifest(packageName);
+      const config = JSON.parse(configJson) as Record<string, unknown>;
+      const decrypted = decryptConfig(config, manifest.configSchema, this.encryptionKey);
+
+      const pluginPath = this.resolvePluginPath(packageName);
       const instance = await this.loaderFn(pluginPath);
       await instance.activate(decrypted);
 
       this.activeInstances.set(id, instance);
       this.healthFailures.set(id, 0);
 
-      const now = new Date().toISOString();
+      // Clear any previous error on successful start
       this.db
-        .prepare(
-          'UPDATE plugins SET status = @status, activated_at = @activated_at, error = NULL WHERE id = @id',
-        )
-        .run({ id, status: 'active', activated_at: now });
+        .prepare('UPDATE plugins SET error = NULL WHERE id = @id')
+        .run({ id });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.db
-        .prepare('UPDATE plugins SET status = @status, error = @error WHERE id = @id')
-        .run({ id, status: 'error', error: message });
+        .prepare('UPDATE plugins SET error = @error WHERE id = @id')
+        .run({ id, error: message });
     }
-
-    return this.getPluginOrThrow(id);
   }
 
   // -----------------------------------------------------------------------
@@ -642,13 +672,8 @@ export class PluginManager {
       .all() as PluginRow[];
 
     for (const row of rows) {
-      try {
-        await this.activate(row.id);
-      } catch {
-        this.db
-          .prepare('UPDATE plugins SET status = @status, error = @error WHERE id = @id')
-          .run({ id: row.id, status: 'error', error: 'Failed to activate on startup' });
-      }
+      // Status stays active — just try to start the plugin code
+      await this.tryStartPlugin(row.id, row.package_name, row.config);
     }
   }
 

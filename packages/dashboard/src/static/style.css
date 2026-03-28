@@ -1710,24 +1710,38 @@ select {
 }
 
 /* ---- Plugin Org Picker ---- */
-.org-picker {
+/* ---- Plugin inline config ---- */
+.plugin-inline-config {
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* ---- Org deploy (collapsible) ---- */
+.org-deploy {
   border-top: 1px solid var(--border-color);
   padding-top: var(--space-sm);
 }
 
-.org-picker__label {
-  margin-bottom: var(--space-xs);
-  color: var(--text-secondary);
+.org-deploy > summary {
+  cursor: pointer;
+  list-style: none;
 }
 
-.org-picker__list {
+.org-deploy > summary::-webkit-details-marker { display: none; }
+
+.org-deploy__list {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
-  margin-bottom: var(--space-sm);
+  max-height: 160px;
+  overflow-y: auto;
+  padding: var(--space-xs) 0;
 }
 
-.org-picker__item {
+.org-deploy__item {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
@@ -1740,22 +1754,17 @@ select {
   user-select: none;
 }
 
-.org-picker__item:hover {
+.org-deploy__item:hover {
   background-color: var(--bg-tertiary);
   border-color: var(--border-color-strong);
 }
 
-.org-picker__item:has(input:checked) {
+.org-deploy__item:has(input:checked) {
   background-color: var(--accent-light);
   border-color: var(--accent);
 }
 
-.org-picker__item--all {
-  font-weight: 600;
-  border-style: dashed;
-}
-
-.org-picker__item input[type="checkbox"] {
+.org-deploy__item input[type="checkbox"] {
   accent-color: var(--accent);
 }
 

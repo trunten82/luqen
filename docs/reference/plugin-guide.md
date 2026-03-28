@@ -91,11 +91,12 @@ discover  -->  install  -->  configure defaults  -->  activate globally
 
 1. **Discover** — browse available plugins in the Plugin Catalogue tab at **Admin > Plugins**. The catalogue is fetched from [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins).
 2. **Install** (global admin) — click **Install** to download the plugin tarball from GitHub releases. Status becomes `inactive`.
-3. **Configure defaults** (global admin) — open the plugin settings and fill in the required configuration fields. These become the global defaults. Click **Save**.
-4. **Activate globally** (global admin) — click **Activate**. The dashboard runs a health check to verify connectivity. On success, status becomes `active`. The global admin can optionally enforce activation for specific orgs.
-5. **Org activation** (org admin) — org admins see all globally installed plugins and can activate them for their organisation. Activation inherits the global default configuration.
+3. **Activate globally** (global admin) — click **Activate**. Status becomes `active` immediately. If the plugin requires configuration, a "Needs config" hint appears but the plugin stays active (enabled).
+4. **Configure** (global admin) — click **Configure** to expand the inline settings form. Fill in the required fields and click **Save**. Saving config on an active plugin automatically starts (or restarts) the plugin code. These become the global defaults.
+5. **Org deployment** (global admin) — expand "Deploy to organizations" to activate the plugin for specific orgs. Org copies inherit the global configuration.
 6. **Org config override** (org admin, optional) — org admins can override specific configuration values for their org. Non-overridden fields fall back to the global defaults.
 7. **Health check** — active plugins are checked every 30 seconds. After 3 consecutive failures, the plugin is either auto-deactivated (if `autoDeactivateOnFailure` is set) or marked `unhealthy`.
+8. **Remove** (global admin) — removes the plugin globally, including all org-specific copies. The plugin reappears in the catalogue for reinstallation.
 8. **Deactivate** — global admins can deactivate globally; org admins can deactivate for their org only. Configuration is preserved.
 9. **Remove** (global admin only) — click **Remove** to deactivate across all orgs, delete the database record, and remove the package files.
 

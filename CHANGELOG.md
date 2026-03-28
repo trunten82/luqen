@@ -6,6 +6,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.4] - 2026-03-28
+
+### Fixed
+- **Plugin configure button** — replaced HTMX with plain fetch to avoid attribute inheritance issues; config form now renders inline in the card
+- **Plugin cascade delete** — removing a global plugin now deletes all org-specific copies so it reappears in the catalogue
+- **Plugin activation lifecycle** — activate marks the plugin as enabled immediately; if code can't start (missing config), it stays active with a "needs config" hint instead of erroring out
+- **Factory plugin loading** — plugins using `export default function createPlugin()` pattern (auth, notification, storage) now loaded correctly
+- **Toast messages** — moved message area outside auto-refreshing section so alerts persist
+
+### Changed
+- **Org deploy UI** — collapsible `<details>` with scrollable list, replacing always-visible checkbox grid
+- **Plugin config UX** — inline toggle in card instead of jumping to top of page
+
+---
+
 ## [2.2.3] - 2026-03-28
 
 ### Added

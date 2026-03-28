@@ -1,5 +1,4 @@
-{{!-- Config area OUTSIDE the auto-refreshing section so it persists across reloads --}}
-<div id="plugin-config-area" class="mb-md"></div>
+<div id="plugin-messages"></div>
 
 <section aria-label="Plugin management dashboard" id="plugin-dashboard"
         hx-get="/admin/plugins" hx-trigger="pluginChanged from:body" hx-select="#plugin-dashboard" hx-swap="outerHTML"
@@ -11,8 +10,6 @@
     <span class="badge badge--queued">{{counts.available}} {{t "admin.plugins.available"}}</span>
     {{/if}}
   </p>
-
-  <div id="plugin-messages"></div>
 
   <section class="admin-section" aria-label="Installed plugins">
     <h2 class="section-title">{{t "admin.plugins.installedPlugins"}}</h2>
@@ -42,6 +39,9 @@
               </dd>
             </div>
           </dl>
+          {{#if error}}
+          <p class="text-xs text-muted mt-xs"><strong>Needs config:</strong> {{error}}</p>
+          {{/if}}
 
           <div class="card__actions mt-sm">
             {{#if ../isAdmin}}
@@ -71,7 +71,7 @@
                 </button>
                 {{/if}}
                 <button type="button" class="btn btn--sm btn--ghost"
-                        data-action="loadPluginConfig" data-plugin-id="{{id}}">
+                        data-action="togglePluginConfig" data-plugin-id="{{id}}">
                   {{t "admin.plugins.configure"}}
                 </button>
                 <button type="button" class="btn btn--sm btn--danger"
@@ -82,19 +82,22 @@
                 </button>
               </div>
 
+              {{!-- Inline config area — loads inside the card --}}
+              <div id="plugin-config-{{id}}" class="plugin-inline-config" hidden></div>
+
               {{#if (eq status "active")}}
               {{#if @root.allOrgs.length}}
-              <div class="org-picker mt-md">
-                <p class="org-picker__label text-sm"><strong>Deploy to organizations</strong></p>
-                <form hx-post="/admin/plugins/{{id}}/activate-for-org" hx-target="#plugin-messages" hx-swap="innerHTML">
+              <details class="org-deploy mt-md">
+                <summary class="btn btn--sm btn--ghost">Deploy to organizations ({{@root.allOrgs.length}})</summary>
+                <form class="org-deploy__form mt-sm" hx-post="/admin/plugins/{{id}}/activate-for-org" hx-target="#plugin-messages" hx-swap="innerHTML">
                   <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
-                  <div class="org-picker__list">
-                    <label class="org-picker__item org-picker__item--all">
+                  <div class="org-deploy__list">
+                    <label class="org-deploy__item">
                       <input type="checkbox" data-action="selectAllOrgs">
-                      <span>Select all</span>
+                      <span><strong>Select all</strong></span>
                     </label>
                     {{#each @root.allOrgs}}
-                    <label class="org-picker__item">
+                    <label class="org-deploy__item">
                       <input type="checkbox" name="orgId" value="{{this.id}}" class="org-cb-plugin">
                       <span>{{this.name}}</span>
                     </label>
@@ -102,7 +105,7 @@
                   </div>
                   <button type="submit" class="btn btn--sm btn--primary mt-sm">Activate selected</button>
                 </form>
-              </div>
+              </details>
               {{/if}}
               {{/if}}
 
@@ -115,9 +118,10 @@
                   Deactivate
                 </button>
                 <button type="button" class="btn btn--sm btn--ghost"
-                        data-action="loadPluginConfig" data-plugin-id="{{id}}">
+                        data-action="togglePluginConfig" data-plugin-id="{{id}}">
                   Configure
                 </button>
+                <div id="plugin-config-{{id}}" class="plugin-inline-config" hidden></div>
                 {{else}}
                 <button type="button" class="btn btn--sm btn--primary"
                         hx-post="/admin/plugins/{{id}}/org/activate"

@@ -320,7 +320,8 @@ describe('Plugin Lifecycle (install -> activate -> scan -> deactivate -> uninsta
 
       const result = await manager.activate(installed.id);
 
-      expect(result.status).toBe('error');
+      // Status stays active (enabled) but error records why the plugin code couldn't start
+      expect(result.status).toBe('active');
       expect(result.error).toContain('Activation failed');
     });
 
