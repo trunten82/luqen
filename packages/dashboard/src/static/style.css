@@ -1422,6 +1422,16 @@ select {
   justify-content: center;
   background-color: var(--accent-light);
   padding: var(--space-md);
+  position: relative;
+}
+
+.app-version {
+  position: fixed;
+  bottom: var(--space-sm);
+  right: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .login-card {
