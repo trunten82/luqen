@@ -374,10 +374,19 @@ export async function repoRoutes(
 
             const { proposeFixesFromReport } = await import('@luqen/core');
             if (proposeFixesFromReport.length >= 4) {
+              // Build source map override: map the scanned URL path prefix to repo root
+              // e.g. raw.githubusercontent.com/owner/repo/main/index.html → index.html
+              const siteUrlBase = connectedRepo.siteUrlPattern.replace(/%$/, '');
+              const overrides: Record<string, string> = {};
+              try {
+                const basePathname = new URL(siteUrlBase).pathname;
+                overrides[`${basePathname}/*`] = '';
+              } catch { /* use empty overrides */ }
+
               const proposals = await (proposeFixesFromReport as (
                 report: unknown, repoPath: string, overrides: Record<string, string>, reader: RemoteFileReader,
               ) => Promise<{ fixes: ReadonlyArray<{ file: string; line: number; issue: string; description: string; oldText: string; newText: string; confidence: string }> }>)(
-                raw, connectedRepo.repoPath ?? '', {}, remoteReader,
+                raw, connectedRepo.repoPath ?? '', overrides, remoteReader,
               );
 
               let fixIndex = 0;
