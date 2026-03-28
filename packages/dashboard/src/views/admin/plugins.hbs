@@ -60,6 +60,21 @@
               <p class="text-xs text-muted mb-sm">No organizations have activated this plugin yet.</p>
               {{/if}}
 
+              {{#if (eq status "active")}}
+              <details class="mt-xs">
+                <summary class="text-xs text-muted" style="cursor:pointer">Activate for org...</summary>
+                <form class="inline-form mt-xs" hx-post="/admin/plugins/{{id}}/activate-for-org" hx-target="#plugin-messages" hx-swap="innerHTML">
+                  <input type="hidden" name="_csrf" value="{{../../csrfToken}}">
+                  <select name="orgId" class="select select--sm" style="max-width:180px;display:inline-block">
+                    {{#each ../../allOrgs}}
+                    <option value="{{this.id}}">{{this.name}}</option>
+                    {{/each}}
+                  </select>
+                  <button type="submit" class="btn btn--sm btn--primary">Activate</button>
+                </form>
+              </details>
+              {{/if}}
+
               {{!-- Global admin: full control --}}
               {{#if (eq status "active")}}
               <button class="btn btn--sm btn--secondary"
