@@ -69,6 +69,11 @@
   {{/unless}}
 
   {{! ── Fix Groups by WCAG Criterion ───────────────────────────────── }}
+  {{#if canCreatePr}}
+  <form method="POST" action="/reports/{{scan.id}}/fixes/create-pr" id="create-pr-form">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+  {{/if}}
+
   {{#each fixGroups}}
   <div class="card mb-lg">
     <div class="card__header-row">
@@ -79,6 +84,11 @@
     {{#each this.fixes}}
     <div class="rpt-fix-proposal">
       <div class="fix-meta-row">
+        {{#if ../../canCreatePr}}
+        <label class="fix-checkbox-label">
+          <input type="checkbox" name="fixIndices" value="{{this.index}}" class="fix-checkbox">
+        </label>
+        {{/if}}
         <span class="badge badge--{{this.severity}}">{{this.severity}}</span>
         <span class="rpt-fix-effort rpt-fix-effort--{{this.effort}}">{{this.effort}} {{t "fixes.effort"}}</span>
         <span class="badge badge--neutral" style="font-size:0.75rem;">{{this.confidence}}</span>
@@ -106,6 +116,23 @@
     {{/each}}
   </div>
   {{/each}}
+
+  {{#if canCreatePr}}
+  <div class="card card--alt mt-lg mb-lg">
+    <div class="card__header-row">
+      <h3 class="card__title">{{t "fixes.createPrTitle"}}</h3>
+    </div>
+    <p class="text--muted mb-md">{{t "fixes.createPrDescription"}}</p>
+    <div class="btn-group">
+      <button type="button" class="btn btn--ghost btn--sm" id="select-all-fixes">{{t "fixes.selectAll"}}</button>
+      <button type="button" class="btn btn--ghost btn--sm" id="deselect-all-fixes">{{t "fixes.deselectAll"}}</button>
+    </div>
+    <button type="submit" class="btn btn--primary mt-md" id="create-pr-btn">
+      {{t "fixes.createPr"}}
+    </button>
+  </div>
+  </form>
+  {{/if}}
 
   {{! ── Integration Notes ──────────────────────────────────────────── }}
   <div class="card card--alt mt-lg">
@@ -146,6 +173,26 @@ function fallbackCopy(text) {
   try { document.execCommand('copy'); showCopyToast('{{t "fixes.copiedToClipboard"}}'); }
   catch(e) { showCopyToast('{{t "fixes.copyFailed"}}'); }
   document.body.removeChild(ta);
+}
+
+// Select/deselect all fix checkboxes
+var selectAllBtn = document.getElementById('select-all-fixes');
+var deselectAllBtn = document.getElementById('deselect-all-fixes');
+if (selectAllBtn) {
+  selectAllBtn.addEventListener('click', function() {
+    var checkboxes = document.querySelectorAll('.fix-checkbox');
+    for (var i = 0; i < checkboxes.length; i++) {
+      checkboxes[i].checked = true;
+    }
+  });
+}
+if (deselectAllBtn) {
+  deselectAllBtn.addEventListener('click', function() {
+    var checkboxes = document.querySelectorAll('.fix-checkbox');
+    for (var i = 0; i < checkboxes.length; i++) {
+      checkboxes[i].checked = false;
+    }
+  });
 }
 
 function showCopyToast(msg) {

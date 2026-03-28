@@ -11,6 +11,7 @@ export interface RepoRepository {
     readonly repoPath?: string;
     readonly branch?: string;
     readonly authToken?: string;
+    readonly gitHostConfigId?: string;
     readonly createdBy: string;
     readonly orgId?: string;
   }): Promise<ConnectedRepo>;

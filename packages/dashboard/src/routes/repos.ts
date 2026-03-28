@@ -17,6 +17,7 @@ interface CreateRepoBody {
   readonly repoUrl: string;
   readonly repoPath?: string;
   readonly branch?: string;
+  readonly gitHostConfigId?: string;
   readonly _csrf?: string;
 }
 
@@ -157,12 +158,14 @@ export async function repoRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const repos = await storage.repos.listRepos(orgId);
+      const gitHosts = await storage.gitHosts.listConfigs(orgId);
 
       return reply.view('repos.hbs', {
         pageTitle: 'Connected Repositories',
         currentPath: '/admin/repos',
         user: request.user,
         repos,
+        gitHosts,
       });
     },
   );
@@ -196,6 +199,7 @@ export async function repoRoutes(
 
       const repoPath = sanitizePath(body.repoPath);
       const branch = sanitizeBranch(body.branch);
+      const gitHostConfigId = body.gitHostConfigId?.trim() || undefined;
 
       await storage.repos.createRepo({
         id: randomUUID(),
@@ -203,6 +207,7 @@ export async function repoRoutes(
         repoUrl,
         repoPath,
         branch,
+        gitHostConfigId,
         createdBy: username,
         orgId,
       });
@@ -210,11 +215,13 @@ export async function repoRoutes(
       if (request.headers['hx-request'] === 'true') {
         // Return the new row + a toast for HTMX
         const repos = await storage.repos.listRepos(orgId);
+        const gitHosts = await storage.gitHosts.listConfigs(orgId);
         return reply.view('repos.hbs', {
           pageTitle: 'Connected Repositories',
           currentPath: '/admin/repos',
           user: request.user,
           repos,
+          gitHosts,
         });
       }
 
@@ -272,6 +279,18 @@ export async function repoRoutes(
       // Find connected repo for this site
       const connectedRepo = await storage.repos.findRepoForUrl(scan.siteUrl, orgId);
 
+      // Check if user can create PRs (has credentials for the repo's git host)
+      let canCreatePr = false;
+      if (
+        connectedRepo !== null &&
+        connectedRepo.gitHostConfigId !== null &&
+        hasPermission(request, 'repos.credentials')
+      ) {
+        const userId = request.user?.id ?? '';
+        const credential = await storage.gitHosts.getCredentialForHost(userId, connectedRepo.gitHostConfigId);
+        canCreatePr = credential !== null;
+      }
+
       // If no report data, show empty state
       if (
         scan.status !== 'completed' ||
@@ -289,6 +308,7 @@ export async function repoRoutes(
           fixes: [],
           fixCount: 0,
           connectedRepo,
+          canCreatePr,
           noReport: true,
         });
       }
@@ -311,6 +331,7 @@ export async function repoRoutes(
           fixes: [],
           fixCount: 0,
           connectedRepo,
+          canCreatePr,
           noReport: true,
         });
       }
@@ -395,6 +416,7 @@ export async function repoRoutes(
         fixCount: fixes.length,
         fixGroups,
         connectedRepo,
+        canCreatePr,
         noReport: false,
       });
     },
