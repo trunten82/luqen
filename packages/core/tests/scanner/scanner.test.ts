@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { scanUrls } from '../../src/scanner/scanner.js';
 import { WebserviceClient } from '../../src/scanner/webservice-client.js';
+import type { DirectScanner, DirectScanResult } from '../../src/scanner/direct-scanner.js';
 import type { DiscoveredUrl, ScanProgress } from '../../src/types.js';
 
 vi.mock('../../src/scanner/webservice-client.js');
@@ -58,5 +59,34 @@ describe('scanUrls', () => {
     expect(results.errors[0].code).toBe('TIMEOUT');
     expect(results.errors[0].retried).toBe(true);
     expect(mockClient.deleteTask).toHaveBeenCalled();
+  });
+});
+
+describe('scanUrls with DirectScanner', () => {
+  it('passes actions through to DirectScanner.scan()', async () => {
+    const mockDirectScanner: DirectScanner = {
+      scan: vi.fn().mockResolvedValue({
+        url: 'https://example.com/page-0',
+        issues: [],
+      } satisfies DirectScanResult),
+    };
+
+    const actions = ['wait for element #main to be visible', 'click element #accept'];
+
+    await scanUrls(makeUrls(1), mockDirectScanner, {
+      standard: 'WCAG2AA',
+      concurrency: 1,
+      timeout: 30000,
+      pollTimeout: 60000,
+      ignore: [],
+      hideElements: '',
+      headers: {},
+      wait: 0,
+      actions,
+    });
+
+    expect(mockDirectScanner.scan).toHaveBeenCalledTimes(1);
+    const scanCallOptions = (mockDirectScanner.scan as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(scanCallOptions.actions).toEqual(actions);
   });
 });

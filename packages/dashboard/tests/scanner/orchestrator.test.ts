@@ -202,6 +202,44 @@ describe('ScanOrchestrator', () => {
     });
   });
 
+  // ── activeCount / queuedCount ──────────────────────────────────────────
+
+  describe('activeCount / queuedCount', () => {
+    it('activeCount returns 0 when no scans running', () => {
+      expect(orchestrator.activeCount).toBe(0);
+    });
+
+    it('queuedCount returns 0 when queue is empty', () => {
+      expect(orchestrator.queuedCount).toBe(0);
+    });
+
+    it('activeCount increments when a scan starts', async () => {
+      // Use maxConcurrent=1 so only one scan runs at a time
+      const orch = new ScanOrchestrator(storage, '/tmp/reports', 1);
+
+      let resolveScan!: () => void;
+      const blockingScanPromise = new Promise<void>((resolve) => { resolveScan = resolve; });
+      const slowScanner = {
+        scan: vi.fn().mockImplementation(() =>
+          blockingScanPromise.then(() => makeScanResult([{ url: 'https://example.com', issues: [] }])),
+        ),
+      };
+      mockCreateScanner.mockReturnValue(slowScanner);
+
+      const eventsPromise = waitForScan(orch, 'scan-ac');
+      orch.startScan('scan-ac', baseScanConfig());
+
+      // Give a tick for the scan to start
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(orch.activeCount).toBe(1);
+
+      // Resolve and wait for completion
+      resolveScan();
+      await eventsPromise;
+    });
+  });
+
   // ── emit / on / off (event system) ─────────────────────────────────────
 
   describe('emit / on / off', () => {
