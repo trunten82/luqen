@@ -6,6 +6,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.0] - 2026-03-27
+
+### Added
+- **Authenticated WCAG scanning** — scan pages behind login using custom HTTP headers or pa11y pre-scan actions. New "Authentication" section on the scan form with Custom Headers and Pre-scan Actions textareas. Full `actions` and `headers` parameter support through the scanner chain (DirectScanOptions, ScanOptions, CreateScannerOptions, ScanConfig, InitiateScanInput).
+- **Per-org compliance tokens** — organizations can now configure their own `complianceClientId` and `complianceClientSecret` for compliance API access. Token management uses per-org `ServiceTokenManager` cache with automatic fallback to the global token. Server preHandler injects `_orgServiceToken` when the user has an org context.
+- **Plugin page auto-refresh** — plugin section now auto-reloads via `hx-trigger="pluginChanged from:body"` after install, remove, activate, or deactivate operations.
+
+### Fixed
+- **WCAG 2.1 AA color contrast** — darkened CSS custom properties across the entire dashboard for correct contrast ratios: `--text-muted` (#9ca3af to #64748b), `--text-secondary` (#6b7280 to #4b5563), `--accent` (#16a34a to #15803d), `--status-error` (#dc2626 to #b91c1c), `--status-warning` (#d97706 to #b45309), `--status-info` (#2563eb to #1d4ed8), `--status-queued` (#d97706 to #b45309).
+- **Sidebar contrast** — added explicit `background-color` on sidebar footer and locale sections for correct contrast computation; added sidebar-specific color overrides for ghost/secondary buttons.
+- **Sidebar locale form** — added `sr-only` submit button for screen reader accessibility.
+- **Scan URL autocomplete** — changed `autocomplete="url"` to `autocomplete="off"` on scan URL inputs.
+- **Login page inline styles** — moved inline styles from summary elements to CSS classes.
+- **All 21 dashboard pages now pass WCAG 2.1 AA** (pa11y verified).
+
+---
+
 ## [1.9.0] - 2026-03-24
 
 ### Changed
@@ -490,6 +507,7 @@ All features from v0.22.0 are unchanged. This is a naming-only change.
 
 | Version | Date | Highlights |
 |---------|------|-----------|
+| [2.1.0] | 2026-03-27 | WCAG 2.1 AA compliance (all 21 pages pass pa11y), authenticated scanning (headers + actions), per-org compliance tokens, plugin auto-refresh |
 | [1.9.0] | 2026-03-23 | PDF export rewritten with PDFKit (no Chromium), security hardening (@fastify/helmet, CSRF verification, XSS fix, session salt), Mercurius v16.8.0 (CSRF fix), trend KPI cards, Power BI connector, 1764 tests passing, plugins removed from main repo |
 | [1.8.0] | 2026-03-23 | Direct pa11y scanner (no webservice needed), Docker deployment, installer rewrite (3 modes) |
 | [1.6.0] | 2026-03-23 | auth-okta + auth-google plugins, all 8 plugins available, plugin build script |

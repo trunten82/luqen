@@ -58,12 +58,12 @@
       </div>
 
       <details class="login-password-fallback">
-        <summary style="cursor: pointer; margin-bottom: var(--space-md, 1rem); color: var(--text-secondary, #666);">{{t "auth.signInWithPassword"}}</summary>
+        <summary class="login-details-summary" style="margin-bottom: var(--space-md, 1rem);">{{t "auth.signInWithPassword"}}</summary>
         {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
       </details>
 
       <details class="login-apikey-fallback" style="margin-top: var(--space-md, 1rem)">
-        <summary style="cursor: pointer; color: var(--text-secondary, #666);">{{t "auth.signInWithApiKey"}}</summary>
+        <summary class="login-details-summary">{{t "auth.signInWithApiKey"}}</summary>
         <div style="margin-top: var(--space-md, 1rem)">
           {{> login-form showApiKey=true apiKeyId="apiKeyEnterprise" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken error=error}}
         </div>
@@ -75,7 +75,7 @@
       {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
 
       <details class="login-apikey-fallback" style="margin-top: var(--space-lg, 1.5rem)">
-        <summary style="cursor: pointer; color: var(--text-secondary, #666);">{{t "auth.signInWithApiKey"}}</summary>
+        <summary class="login-details-summary">{{t "auth.signInWithApiKey"}}</summary>
         <div style="margin-top: var(--space-md, 1rem)">
           {{> login-form showApiKey=true apiKeyId="apiKeyTeam" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken error=error}}
         </div>

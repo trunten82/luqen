@@ -21,6 +21,8 @@ interface NewScanBody {
   incremental?: string;
   includeWarnings?: string | boolean;
   includeNotices?: string | boolean;
+  authHeaders?: string;
+  authActions?: string;
 }
 
 export async function scanRoutes(
@@ -70,6 +72,32 @@ export async function scanRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as NewScanBody;
 
+      // Parse optional authentication headers (key: value, one per line)
+      const parsedHeaders: Record<string, string> = {};
+      if (typeof body.authHeaders === 'string' && body.authHeaders.trim() !== '') {
+        for (const line of body.authHeaders.split('\n')) {
+          const idx = line.indexOf(':');
+          if (idx > 0) {
+            const key = line.slice(0, idx).trim();
+            const value = line.slice(idx + 1).trim();
+            if (key.length > 0 && value.length > 0) {
+              parsedHeaders[key] = value;
+            }
+          }
+        }
+      }
+
+      // Parse optional pa11y actions (one per line)
+      const parsedActions: string[] = [];
+      if (typeof body.authActions === 'string' && body.authActions.trim() !== '') {
+        for (const line of body.authActions.split('\n')) {
+          const trimmed = line.trim();
+          if (trimmed.length > 0) {
+            parsedActions.push(trimmed);
+          }
+        }
+      }
+
       const input: InitiateScanInput = {
         siteUrl: body.siteUrl,
         standard: body.standard,
@@ -81,6 +109,8 @@ export async function scanRoutes(
         incremental: body.incremental,
         includeWarnings: body.includeWarnings === 'true' || body.includeWarnings === true,
         includeNotices: body.includeNotices === 'true' || body.includeNotices === true,
+        headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,
+        actions: parsedActions.length > 0 ? parsedActions : undefined,
       };
 
       const result = await scanService.initiateScan(input, {

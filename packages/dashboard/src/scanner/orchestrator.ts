@@ -41,6 +41,10 @@ export interface ScanConfig {
   readonly orgId?: string;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. */
   readonly runner?: 'htmlcs' | 'axe';
+  /** Custom HTTP headers to send with each page request (e.g. Authorization, Cookie). */
+  readonly headers?: Readonly<Record<string, string>>;
+  /** Pa11y actions to run before testing (e.g. login form interactions). Direct mode only. */
+  readonly actions?: readonly string[];
   /** Include warnings in results (default: true). */
   readonly includeWarnings?: boolean;
   /** Include notices in results (default: true). */
@@ -403,6 +407,8 @@ export class ScanOrchestrator {
             includeWarnings: config.includeWarnings !== false,
             includeNotices: config.includeNotices !== false,
             ...(config.runner !== undefined ? { runner: config.runner } : {}),
+            ...(config.headers !== undefined ? { headers: config.headers } : {}),
+            ...(config.actions !== undefined && config.actions.length > 0 ? { actions: config.actions } : {}),
             onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
               if (progress.type === 'scan:start') {
                 // First scan:start event tells us discovery is done

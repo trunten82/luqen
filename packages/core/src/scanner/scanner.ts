@@ -11,6 +11,7 @@ export interface ScanOptions {
   readonly ignore: readonly string[];
   readonly hideElements: string;
   readonly headers: Readonly<Record<string, string>>;
+  readonly actions?: readonly string[];
   readonly wait: number;
   readonly onProgress?: ProgressListener;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Passed through to the webservice task. */
@@ -227,6 +228,7 @@ async function scanUrlDirect(
       wait: options.wait,
       hideElements: options.hideElements || undefined,
       headers: options.headers,
+      actions: options.actions,
       runner: options.runner,
       includeWarnings: options.includeWarnings,
       includeNotices: options.includeNotices,

@@ -4,10 +4,11 @@
 
 Luqen scans your entire website for WCAG violations and tells you which laws in which countries require you to fix each one. One scan covers 58 jurisdictions (EU, US, UK, and more), so your legal and dev teams see the same picture. Run it from the command line, a browser dashboard, or your IDE — it works for a solo developer checking one page or an enterprise team monitoring hundreds of sites across multiple languages.
 
-![Version](https://img.shields.io/badge/version-v1.9.0-blue)
+![Version](https://img.shields.io/badge/version-v2.1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-1764%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1918%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)
+![WCAG](https://img.shields.io/badge/WCAG%202.1%20AA-verified-green)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
 
 ---
@@ -24,6 +25,8 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 
 ## Key Features
 
+- **WCAG 2.1 AA verified** — all 21 dashboard pages pass pa11y automated checks with correct color contrast, screen reader labels, and semantic markup
+- **Authenticated scanning** — scan pages behind login using custom HTTP headers or pa11y pre-scan actions (e.g., fill in a login form before testing)
 - **Site-wide scanning** via built-in pa11y scanner — sitemap + crawl discovery, concurrency control, robots.txt respect (no external pa11y-webservice required)
 - **Legal compliance checking** against 58 jurisdictions and 62 regulations (EU EAA, Section 508, ADA, UK Equality Act, RGAA, BITV, JIS X 8341-3, and more)
 - **Confirmed violations vs needs-review** — errors are confirmed violations; notices are flagged separately, never inflating the violation count
@@ -38,6 +41,7 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 - **Regulatory monitoring** — watches legal sources for changes and creates update proposals when regulations evolve
 - **WAF detection** — detects and reports when a Web Application Firewall blocks scanning
 - **Progressive authentication** — starts with API key (solo mode), add local users (team mode), or install an SSO plugin (enterprise mode) — no external auth service required
+- **Per-org compliance tokens** — each organization can configure its own compliance API credentials, with automatic fallback to the global token for single-tenant deployments
 - **Pluggable storage** — modular StorageAdapter architecture with 14 repository interfaces backed by SQLite; PostgreSQL and MongoDB adapters coming as plugins
 - **Security hardening** — @fastify/helmet security headers (CSP, HSTS, X-Frame-Options), CSRF token verification on state-changing requests, XSS prevention, per-installation encryption salt, SSRF protection on scan URLs, global rate limiting, secure session cookies (httpOnly, SameSite=Strict, AES-256-GCM encrypted)
 - **Plugin system** — 8 plugins in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), and storage (S3, Azure Blob); installed by name via tarball download from GitHub releases, managed via dashboard UI, CLI, or REST API
@@ -328,7 +332,7 @@ Luqen includes MCP (Model Context Protocol) servers for AI-assisted accessibilit
 npm test --workspaces
 ```
 
-The project maintains 85%+ statement coverage across 1,764 tests with 0 failures:
+The project maintains 85%+ statement coverage across 1,918 tests with 0 failures:
 
 ```
 npm test --workspaces
