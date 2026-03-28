@@ -8,16 +8,36 @@ A comprehensive reference for all available luqen plugins — what they do, how 
 
 ## Plugin architecture overview
 
-The luqen dashboard supports a plugin system that extends its capabilities in four areas:
+The luqen dashboard supports a plugin system that extends its capabilities in five areas:
 
 | Plugin type | Purpose | Example |
 |-------------|---------|---------|
-| **Auth** | SSO authentication providers | Azure Entra ID |
+| **Auth** | SSO authentication providers | Azure Entra ID, Okta, Google |
 | **Notification** | Send scan events to external channels | Slack, Microsoft Teams, Email |
 | **Storage** | External report storage backends | AWS S3, Azure Blob Storage |
 | **Scanner** | Custom WCAG rule evaluation | (custom implementations) |
+| **Git Host** | Git platform integration for fix PRs | GitHub, GitLab, Azure DevOps |
 
 Plugins are managed from **Admin > Plugins** in the dashboard UI, or via the CLI (`luqen-dashboard plugin install|configure|activate|deactivate|remove`). Plugins are installed by name (e.g., `luqen-dashboard plugin install auth-entra`), not by npm package name.
+
+### Role-based plugin management
+
+Plugin management is split between two roles:
+
+| Capability | Global Admin | Org Admin |
+|------------|:------------:|:---------:|
+| Browse and install from catalogue | Yes | No |
+| Remove installed plugins | Yes | No |
+| Configure global default settings | Yes | No |
+| Activate / deactivate globally | Yes | No |
+| Enforce activation per org | Yes | No |
+| View org usage / activation status | Yes | No |
+| See installed plugins | Yes | Yes |
+| Activate plugin for own org | — | Yes |
+| Configure org-specific overrides | — | Yes |
+| Deactivate plugin for own org | — | Yes |
+
+**Org-specific configuration** inherits from the global defaults. Only values explicitly overridden by the org admin differ — all other fields fall back to the global configuration. New organisations see all globally installed plugins and can activate them immediately.
 
 ### How plugins work
 
@@ -48,26 +68,36 @@ Admin pages are only visible when the plugin is active and the user has the requ
 
 ## Plugin lifecycle
 
-Every plugin follows the same lifecycle:
+Every plugin follows the same lifecycle, now with org-scoped activation:
 
 ```
-discover  -->  install  -->  configure  -->  activate  -->  health check
-                                                |                |
-                                                |          (periodic, every 30s)
-                                                |                |
-                                          deactivate  <--  3 failures
-                                                |          (if autoDeactivateOnFailure)
-                                                v
-                                             remove
+discover  -->  install  -->  configure defaults  -->  activate globally
+                                                          |
+                                                    org admin activates
+                                                    for their org
+                                                          |
+                                                    org admin overrides
+                                                    config (optional)
+                                                          |
+                                                    health check
+                                                          |
+                                                    (periodic, every 30s)
+                                                          |
+                                                    deactivate  <--  3 failures
+                                                          |     (if autoDeactivateOnFailure)
+                                                          v
+                                                       remove
 ```
 
 1. **Discover** — browse available plugins in the Plugin Catalogue tab at **Admin > Plugins**. The catalogue is fetched from [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins).
-2. **Install** — click **Install** to download the plugin tarball from GitHub releases. Status becomes `inactive`.
-3. **Configure** — open the plugin settings and fill in the required configuration fields. Click **Save**.
-4. **Activate** — click **Activate**. The dashboard runs a health check to verify connectivity. On success, status becomes `active`.
-5. **Health check** — active plugins are checked every 30 seconds. After 3 consecutive failures, the plugin is either auto-deactivated (if `autoDeactivateOnFailure` is set) or marked `unhealthy`.
-6. **Deactivate** — click **Deactivate** to stop the plugin without removing it. Configuration is preserved.
-7. **Remove** — click **Remove** to deactivate, delete the database record, and remove the package files.
+2. **Install** (global admin) — click **Install** to download the plugin tarball from GitHub releases. Status becomes `inactive`.
+3. **Configure defaults** (global admin) — open the plugin settings and fill in the required configuration fields. These become the global defaults. Click **Save**.
+4. **Activate globally** (global admin) — click **Activate**. The dashboard runs a health check to verify connectivity. On success, status becomes `active`. The global admin can optionally enforce activation for specific orgs.
+5. **Org activation** (org admin) — org admins see all globally installed plugins and can activate them for their organisation. Activation inherits the global default configuration.
+6. **Org config override** (org admin, optional) — org admins can override specific configuration values for their org. Non-overridden fields fall back to the global defaults.
+7. **Health check** — active plugins are checked every 30 seconds. After 3 consecutive failures, the plugin is either auto-deactivated (if `autoDeactivateOnFailure` is set) or marked `unhealthy`.
+8. **Deactivate** — global admins can deactivate globally; org admins can deactivate for their org only. Configuration is preserved.
+9. **Remove** (global admin only) — click **Remove** to deactivate across all orgs, delete the database record, and remove the package files.
 
 ### Plugin statuses
 
@@ -387,7 +417,7 @@ For multi-replica Kubernetes deployments or environments requiring a shared data
 Plugins are packages with a `manifest.json` and a default export implementing the `PluginInstance` interface. They are distributed as tarballs via the [luqen-plugins](https://github.com/trunten82/luqen-plugins) catalogue on GitHub. The development guide covers:
 
 - Manifest schema and config field types
-- Plugin instance interfaces (`AuthPlugin`, `NotificationPlugin`, `StoragePlugin`, `ScannerPlugin`)
+- Plugin instance interfaces (`AuthPlugin`, `NotificationPlugin`, `StoragePlugin`, `ScannerPlugin`, `GitHostPlugin`)
 - Lifecycle hooks (`activate`, `deactivate`, `healthCheck`)
 - The `adminPages` system for registering custom admin pages
 - Publishing to the plugin catalogue
