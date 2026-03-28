@@ -64,8 +64,9 @@ export class SqliteRepoRepository implements RepoRepository {
   }
 
   async findRepoForUrl(siteUrl: string, orgId: string): Promise<ConnectedRepo | null> {
+    // Search org-specific repos first, then fall back to system-scoped repos
     const stmt = this.db.prepare(
-      'SELECT * FROM connected_repos WHERE @siteUrl LIKE site_url_pattern AND org_id = @orgId ORDER BY created_at DESC LIMIT 1',
+      'SELECT * FROM connected_repos WHERE @siteUrl LIKE site_url_pattern AND org_id IN (@orgId, \'system\') ORDER BY CASE WHEN org_id = @orgId THEN 0 ELSE 1 END, created_at DESC LIMIT 1',
     );
     const row = stmt.get({ siteUrl, orgId }) as ConnectedRepoRow | undefined;
     return row !== undefined ? repoRowToRecord(row) : null;
