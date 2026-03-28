@@ -162,6 +162,14 @@ export class ScanOrchestrator {
     }
   }
 
+  get activeCount(): number {
+    return this.queue.activeCount;
+  }
+
+  get queuedCount(): number {
+    return this.queue.queuedCount;
+  }
+
   /**
    * Subscribe to scan events. Immediately replays any buffered events
    * so late-connecting SSE clients catch up on progress already emitted.
