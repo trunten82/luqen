@@ -47,7 +47,6 @@ import { organizationRoutes } from './routes/admin/organizations.js';
 import { VERSION } from './version.js';
 import { getFixSuggestion } from './fix-suggestions.js';
 import { ALL_PERMISSION_IDS, resolveEffectivePermissions } from './permissions.js';
-import { listGitHostPluginTypes } from './git-hosts/registry.js';
 import { roleRoutes } from './routes/admin/roles.js';
 import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
@@ -453,6 +452,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         ? session.get('locale') as Locale | undefined
         : undefined
     ) ?? 'en';
+    const gitHostConfigs = await storage.gitHosts.listConfigs(request.user?.currentOrgId ?? 'system');
+    const hasGitHostConfigs = gitHostConfigs.length > 0;
     const originalView = reply.view.bind(reply) as typeof reply.view;
     const isHtmxRequest = request.headers['hx-request'] === 'true';
     reply.view = (page: string, data?: Record<string, unknown>) => {
@@ -495,7 +496,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
         emailPluginActive: pluginManager.getActiveInstanceByPackageName?.('@luqen/plugin-notify-email') != null,
-        hasGitHostPlugins: listGitHostPluginTypes().length > 0,
+        hasGitHostConfigs,
         orgContext: (request as unknown as Record<string, unknown>).orgContext,
         appVersion: `v${VERSION}`,
       };
