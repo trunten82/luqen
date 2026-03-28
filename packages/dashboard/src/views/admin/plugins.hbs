@@ -78,7 +78,7 @@
 
   <div id="plugin-config-area"></div>
 
-  {{#if canInstallPlugins}}
+  {{#if isAdmin}}
   <section class="admin-section" aria-label="Available plugins from registry">
     <h2 class="section-title">{{t "admin.plugins.availablePlugins"}}</h2>
 
@@ -119,5 +119,9 @@
     <p>{{t "admin.plugins.allInstalled"}}</p>
     {{/if}}
   </section>
+  {{else}}
+  {{#unless isAdmin}}
+  <p class="text-muted mt-lg">Need a plugin that's not installed? Contact your system administrator to install it from the catalogue.</p>
+  {{/unless}}
   {{/if}}
 </section>
