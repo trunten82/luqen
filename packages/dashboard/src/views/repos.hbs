@@ -14,6 +14,19 @@
           class="form-grid form-grid--narrow">
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
+      {{#if isAdmin}}
+      <div class="form-group">
+        <label for="orgId">Organization</label>
+        <select id="orgId" name="orgId" class="select">
+          <option value="system">System (global)</option>
+          {{#each orgs}}
+          <option value="{{this.id}}">{{this.name}}</option>
+          {{/each}}
+        </select>
+        <p class="form-hint">Assign this repo connection to an organization.</p>
+      </div>
+      {{/if}}
+
       <div class="form-group">
         <label for="siteUrlPattern">{{t "repos.siteUrlPattern"}}</label>
         <input type="text" id="siteUrlPattern" name="siteUrlPattern" class="input" required
