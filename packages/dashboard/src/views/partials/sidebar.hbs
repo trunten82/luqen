@@ -279,6 +279,17 @@
       Git Hosts
     </a>
 
+    {{#if perm.reposCredentials}}
+    <a class="sidebar__item sidebar__item--child {{#if (startsWith currentPath '/account/git-credentials')}}is-active{{/if}}"
+       href="/account/git-credentials"
+       aria-current="{{#if (startsWith currentPath '/account/git-credentials')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M15 8H5a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2zm-5 5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM7 8V5a3 3 0 116 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Git Credentials
+    </a>
+    {{/if}}
+
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/webhooks')}}is-active{{/if}}"
        href="/admin/webhooks">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -341,14 +352,6 @@
       </form>
     </div>
 
-    {{#if perm.reposCredentials}}
-    <a href="/account/git-credentials" class="sidebar__link {{#if (eq currentPath '/account/git-credentials')}}sidebar__link--active{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M15 8H5a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2zm-5 5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM7 8V5a3 3 0 116 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>Git Credentials</span>
-    </a>
-    {{/if}}
 
     <div class="sidebar__footer-row">
       <a href="/account" class="sidebar__footer-user" title="{{t "nav.myProfile"}}">{{user.username}}</a>
