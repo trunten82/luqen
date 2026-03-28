@@ -572,7 +572,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   await auditRoutes(server, storage);
   await gitHostRoutes(server, storage);
-  await pluginAdminRoutes(server, pluginManager, registryEntries);
+  await pluginAdminRoutes(server, pluginManager, registryEntries, storage);
 
   // ── Export API routes ────────────────────────────────────────────────────
   await exportRoutes(server, storage);
