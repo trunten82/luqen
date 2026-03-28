@@ -6,12 +6,13 @@ export async function registerClientRoutes(
   app: FastifyInstance,
   db: DbAdapter,
 ): Promise<void> {
-  // GET /api/v1/clients
+  // GET /api/v1/clients — org-scoped: system sees all, org sees system + own
   app.get('/api/v1/clients', {
     preHandler: [requireScope('admin')],
-  }, async (_request, reply) => {
+  }, async (request, reply) => {
     try {
-      const clients = await db.listClients();
+      const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
+      const clients = await db.listClients(orgId);
       // Strip secretHash from response
       const safeClients = clients.map(({ secretHash: _sh, ...rest }) => rest);
       await reply.send(safeClients);
@@ -49,12 +50,32 @@ export async function registerClientRoutes(
     }
   });
 
-  // POST /api/v1/clients/:id/revoke
+  // POST /api/v1/clients/:id/revoke — org ownership check
   app.post('/api/v1/clients/:id/revoke', {
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getClientOrgId(id);
+
+      if (recordOrgId == null) {
+        await reply.status(404).send({ error: 'Client not found', statusCode: 404 });
+        return;
+      }
+
+      // Non-system callers cannot delete system clients
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot revoke system client', statusCode: 403 });
+        return;
+      }
+
+      // Non-system callers cannot delete other orgs' clients
+      if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot revoke client belonging to another organisation', statusCode: 403 });
+        return;
+      }
+
       await db.deleteClient(id);
       await reply.status(204).send();
     } catch (err) {

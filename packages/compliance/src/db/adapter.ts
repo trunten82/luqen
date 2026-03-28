@@ -107,6 +107,7 @@ export interface DbAdapter {
   getJurisdictionOrgId(id: string): Promise<string | null>;
   getRegulationOrgId(id: string): Promise<string | null>;
   getRequirementOrgId(id: string): Promise<string | null>;
+  getClientOrgId(id: string): Promise<string | null>;
   getSourceOrgId(id: string): Promise<string | null>;
 
   // Org data
