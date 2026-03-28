@@ -199,11 +199,16 @@ paths:
       operationId: activatePlugin
       tags: [plugins]
       summary: Activate a plugin
+      description: >-
+        Marks the plugin as active. If the plugin code cannot start (e.g.
+        missing required config), the plugin stays active with an `error`
+        field describing what is needed. Saving configuration on an active
+        plugin automatically retries starting the plugin code.
       parameters:
         - $ref: "#/components/parameters/PluginId"
       responses:
         "200":
-          description: Plugin activated
+          description: Plugin activated (may have error if config is incomplete)
           content:
             application/json:
               schema:
@@ -253,11 +258,14 @@ paths:
       operationId: removePlugin
       tags: [plugins]
       summary: Remove (uninstall) a plugin
+      description: >-
+        Removes the plugin globally, including all org-specific copies.
+        Deactivates running instances and deletes plugin files from disk.
       parameters:
         - $ref: "#/components/parameters/PluginId"
       responses:
         "204":
-          description: Plugin removed
+          description: Plugin removed (all org copies cascade-deleted)
         "404":
           description: Plugin not found
           content:
@@ -811,7 +819,7 @@ components:
           example: "@luqen/plugin-auth-entra"
         type:
           type: string
-          enum: [auth, notification, storage, scanner]
+          enum: [auth, notification, storage, scanner, git-host]
         version:
           type: string
         config:
@@ -821,6 +829,12 @@ components:
         status:
           type: string
           enum: [inactive, active, error, install-failed, unhealthy]
+        orgId:
+          type: string
+          description: >-
+            Organization ID this plugin belongs to, or `system` for the
+            global (default) installation.
+          example: system
         installedAt:
           type: string
           format: date-time
@@ -829,7 +843,10 @@ components:
           format: date-time
         error:
           type: string
-          description: Error message when status is `error` or `install-failed`.
+          description: >-
+            Error message. When status is `active` with an error, the plugin
+            is enabled but its code could not start (typically missing config).
+            When status is `error`, the plugin failed critically.
 
     RegistryEntryWithStatus:
       type: object
@@ -841,7 +858,7 @@ components:
           type: string
         type:
           type: string
-          enum: [auth, notification, storage, scanner]
+          enum: [auth, notification, storage, scanner, git-host]
         version:
           type: string
         description:
