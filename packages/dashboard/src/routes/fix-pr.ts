@@ -322,7 +322,13 @@ export async function fixPrRoutes(
       const changedFiles = new Map<string, string>();
       const repoPath = repo.repoPath ?? '';
       const baseBranch = repo.branch;
+      // Build source map override: strip scanned URL prefix to get repo-relative paths
+      const siteUrlBase = repo.siteUrlPattern.replace(/%$/, '');
       const sourceMapOverrides: Record<string, string> = {};
+      try {
+        const basePathname = new URL(siteUrlBase).pathname;
+        sourceMapOverrides[`${basePathname}/*`] = '';
+      } catch { /* use empty overrides */ }
 
       // Create remote file reader for the git host
       const remoteReader = new RemoteFileReader(plugin, {

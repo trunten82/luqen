@@ -29,7 +29,20 @@ export async function mapIssuesToSource(
   const effectiveReader = reader ?? new LocalFileReader(repoPath);
   const framework = await detectFramework(effectiveReader);
   return Promise.all(pages.map(async (page): Promise<PageResult> => {
-    const urlPath = extractUrlPath(page.url);
+    let urlPath = extractUrlPath(page.url);
+
+    // Strip URL prefix using source map overrides with wildcard patterns
+    // e.g. override "/trunten82/luqen-pr-test/main/*" → "" strips the prefix
+    for (const [pattern, target] of Object.entries(sourceMapOverrides)) {
+      if (pattern.endsWith('/*') && target === '') {
+        const prefix = pattern.slice(0, -1);
+        if (urlPath.startsWith(prefix)) {
+          urlPath = '/' + urlPath.slice(prefix.length);
+          break;
+        }
+      }
+    }
+
     const overrideFile = matchOverride(urlPath, sourceMapOverrides);
     let relativePath: string | null = null;
     if (overrideFile) {
