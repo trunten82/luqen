@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.3] - 2026-03-28
+
+### Added
+- **Plugin org-scoping UX**: Global admin sees per-org usage, org admin sees activate/configure for their org
+- **Activate for org**: Global admin can enforce plugin activation on any org
+- **Org-scoped actions**: Org admins see "Activate for org" / "Deactivate" / "Configure" (no global Remove)
+- **Org usage badges**: Global admin sees which orgs activated each plugin and if they use custom config
+
+### Changed
+- Plugin catalogue only shown to global admin (org admins see installed plugins only)
+- Git host plugins now proper catalogue tarballs (removed registerBuiltIn)
+- Repo connections support org assignment via dropdown
+
+### Fixed
+- Plugin test signature for storage parameter
+- Source mapper URL prefix stripping for remote repos
+- CI green on Node.js 22
+
+---
+
 ## [2.2.2] - 2026-03-27
 
 ### Added
