@@ -110,8 +110,10 @@ export class PluginManager {
 
   private downloadFn: DownloadFn = defaultDownloadFn;
   private loaderFn: PluginLoaderFn = async (pluginPath: string) => {
-    const mod = await import(pluginPath) as { default?: PluginInstance };
-    return mod.default ?? (mod as unknown as PluginInstance);
+    const mod = await import(pluginPath) as { default?: PluginInstance | (() => PluginInstance) };
+    const exported = mod.default ?? (mod as unknown as PluginInstance);
+    // Support both direct instances and factory functions (e.g. createPlugin())
+    return typeof exported === 'function' ? (exported as () => PluginInstance)() : exported;
   };
 
   constructor(options: PluginManagerOptions) {
