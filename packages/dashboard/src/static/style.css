@@ -454,6 +454,8 @@ body {
   font-weight: 700;
   color: var(--accent);
   line-height: 1.1;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .card__body {

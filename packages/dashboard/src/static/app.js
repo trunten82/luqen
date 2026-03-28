@@ -225,7 +225,14 @@
 
     /* Compare checkbox update */
     cmpUpdateBtn: function () {
-      if (typeof window.cmpUpdateBtn === 'function') window.cmpUpdateBtn();
+      var checked = document.querySelectorAll('.cmp-check:checked');
+      var btn = document.getElementById('compare-btn');
+      if (!btn) return;
+      btn.disabled = checked.length !== 2;
+      if (checked.length > 2) {
+        checked[0].checked = false;
+        handlers.cmpUpdateBtn();
+      }
     },
 
     /* Bookmarklet drag alert */
@@ -302,7 +309,11 @@
 
     /* ── Compare navigate ──────────────────────────────────────────── */
     cmpNavigate: function () {
-      if (typeof window.cmpNavigate === 'function') window.cmpNavigate();
+      var checked = document.querySelectorAll('.cmp-check:checked');
+      if (checked.length !== 2) return;
+      var a = checked[0].value;
+      var b = checked[1].value;
+      window.location.href = '/reports/compare?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b);
     },
 
     /* ── Manual test actions ───────────────────────────────────────── */
@@ -363,6 +374,35 @@
     copyFixCode: function (el) {
       var index = el.getAttribute('data-index');
       if (typeof window.copyFixCode === 'function') window.copyFixCode(parseInt(index, 10));
+    },
+
+    /* ── Monitor scan trigger (plain fetch with progress) ────────────── */
+    triggerMonitorScan: function (el) {
+      var results = document.getElementById('scan-results');
+      if (!results) return;
+      el.disabled = true;
+      el.textContent = 'Scanning...';
+      results.innerHTML = '<div class="alert alert--info"><strong>Scanning sources...</strong> This may take a moment.</div>';
+
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var headers = { 'Content-Type': 'application/json' };
+      if (csrfMeta) headers['x-csrf-token'] = csrfMeta.getAttribute('content');
+
+      fetch('/admin/monitor/trigger', { method: 'POST', headers: headers, body: '{}', credentials: 'same-origin' })
+        .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, text: t }; }); })
+        .then(function (res) {
+          results.innerHTML = res.text; /* trusted server HTML */
+          if (res.ok && window.htmx) {
+            htmx.trigger(document.body, 'monitorScanDone');
+          }
+        })
+        .catch(function (err) {
+          results.innerHTML = '<div class="alert alert--error">Scan failed: ' + err.message + '</div>';
+        })
+        .finally(function () {
+          el.disabled = false;
+          el.textContent = el.getAttribute('data-original-text') || 'Trigger Scan';
+        });
     },
 
     /* ── Plugin configure — inline in card (plain fetch, no HTMX) ─── */

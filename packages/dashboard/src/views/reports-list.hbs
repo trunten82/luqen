@@ -195,24 +195,4 @@
   {{/if}}
 </div>
 
-<script>
-  function cmpUpdateBtn() {
-    var checked = document.querySelectorAll('.cmp-check:checked');
-    var btn = document.getElementById('compare-btn');
-    if (!btn) return;
-    btn.disabled = checked.length !== 2;
-    // Uncheck extras beyond 2
-    if (checked.length > 2) {
-      checked[0].checked = false;
-      cmpUpdateBtn();
-    }
-  }
-
-  function cmpNavigate() {
-    var checked = document.querySelectorAll('.cmp-check:checked');
-    if (checked.length !== 2) return;
-    var a = checked[0].value;
-    var b = checked[1].value;
-    window.location.href = '/reports/compare?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b);
-  }
-</script>
+{{! Compare logic is in app.js handlers (cmpUpdateBtn, cmpNavigate) }}
