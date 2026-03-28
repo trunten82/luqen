@@ -121,10 +121,11 @@ export async function pluginAdminRoutes(
       const globalPlugins = allInstalled.filter((p) => p.orgId === 'system' || p.orgId === undefined);
       const orgInstances = allInstalled.filter((p) => p.orgId !== 'system' && p.orgId !== undefined);
 
+      const allOrgs = isAdmin && storage ? await storage.organizations.listOrgs() : [];
+
       let installed: Array<Record<string, unknown>>;
       if (isAdmin) {
         // For global admin: annotate each global plugin with org usage
-        const allOrgs = storage ? await storage.organizations.listOrgs() : [];
         const orgMap = new Map(allOrgs.map((o: { id: string; name: string }) => [o.id, o.name]));
 
         installed = globalPlugins.map((p) => {
@@ -169,6 +170,7 @@ export async function pluginAdminRoutes(
         isAdmin,
         canInstallPlugins: isAdmin || perms.has('admin.plugins'),
         orgId,
+        allOrgs,
       });
     },
   );
@@ -384,6 +386,37 @@ export async function pluginAdminRoutes(
           .code(500)
           .header('content-type', 'text/html')
           .send(`<div class="alert alert--error">Activate failed: ${escapeHtml(message)}</div>`);
+      }
+    },
+  );
+
+  // POST /admin/plugins/:id/activate-for-org — global admin activates for a specific org
+  server.post<{ Params: { id: string }; Body: { orgId?: string } }>(
+    '/admin/plugins/:id/activate-for-org',
+    { preHandler: requirePermission('admin.system') },
+    async (request, reply) => {
+      try {
+        const { orgId } = request.body ?? {};
+        if (!orgId || typeof orgId !== 'string') {
+          return reply
+            .code(400)
+            .header('content-type', 'text/html')
+            .send('<div class="alert alert--error">Missing orgId</div>');
+        }
+
+        const plugin = await pluginManager.activateForOrg(request.params.id, orgId);
+        return reply
+          .header('content-type', 'text/html')
+          .header('hx-trigger', 'pluginChanged')
+          .send(
+            `<div class="alert alert--success">Plugin "${escapeHtml(plugin.packageName)}" activated for organization</div>`,
+          );
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(`<div class="alert alert--error">Activate for org failed: ${escapeHtml(message)}</div>`);
       }
     },
   );
