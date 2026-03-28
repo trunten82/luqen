@@ -1,4 +1,5 @@
 <section aria-label="OAuth clients management">
+  {{#if isGlobalAdmin}}
   <div class="page-actions">
     <button hx-get="/admin/clients/new"
             hx-target="#modal-container"
@@ -8,6 +9,7 @@
       {{t "admin.clients.addClient"}}
     </button>
   </div>
+  {{/if}}
 
   {{#if error}}
   <div class="alert alert--error" role="alert">
@@ -21,8 +23,8 @@
         <tr>
           <th scope="col">{{t "common.name"}}</th>
           <th scope="col">{{t "admin.clients.clientId"}}</th>
-          <th scope="col">{{t "admin.clients.scopes"}}</th>
-          <th scope="col">{{t "admin.clients.grantTypes"}}</th>
+          <th scope="col">Scope</th>
+          <th scope="col">Owner</th>
           <th scope="col">{{t "admin.clients.created"}}</th>
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
@@ -32,17 +34,27 @@
         <tr id="client-{{clientId}}">
           <td data-label="Name">{{name}}</td>
           <td data-label="Client ID"><code>{{clientId}}</code></td>
-          <td data-label="Scopes">{{scopesDisplay}}</td>
-          <td data-label="Grant Types">{{grantTypesDisplay}}</td>
+          <td data-label="Scope">{{scopesDisplay}}</td>
+          <td data-label="Owner">
+            {{#if isSystem}}
+            <span class="badge badge--neutral">System</span>
+            {{else}}
+            <span class="badge badge--info">{{orgId}}</span>
+            {{/if}}
+          </td>
           <td data-label="Created">{{createdAtDisplay}}</td>
           <td>
+            {{#if canRevoke}}
             <button hx-post="/admin/clients/{{clientId}}/revoke"
                     hx-confirm="Revoke client {{name}}? This cannot be undone."
                     hx-target="closest tr"
                     hx-swap="outerHTML swap:500ms"
                     class="btn btn--sm btn--danger"
                     aria-label="Revoke {{name}}">{{t "admin.clients.revoke"}}</button>
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+            <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+            {{else}}
+            <span class="text-xs text-muted">Protected</span>
+            {{/if}}
           </td>
         </tr>
         {{else}}

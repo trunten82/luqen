@@ -25,11 +25,16 @@ export async function clientRoutes(
         error = err instanceof Error ? err.message : 'Failed to load OAuth clients';
       }
 
+      const currentOrgId = getOrgId(request) ?? 'system';
+      const isGlobalAdmin = request.user?.role === 'admin' && (currentOrgId === 'system' || !currentOrgId);
+
       const formatted = clients.map((c) => ({
         ...c,
         createdAtDisplay: new Date(c.createdAt).toLocaleString(),
         scopesDisplay: c.scopes.join(', '),
         grantTypesDisplay: c.grantTypes.join(', '),
+        isSystem: c.orgId === 'system',
+        canRevoke: isGlobalAdmin || (c.orgId !== 'system' && c.orgId === currentOrgId),
       }));
 
       return reply.view('admin/clients.hbs', {
@@ -37,6 +42,7 @@ export async function clientRoutes(
         currentPath: '/admin/clients',
         user: request.user,
         clients: formatted,
+        isGlobalAdmin,
         error,
       });
     },
