@@ -98,7 +98,7 @@ async function createTestServer(role = 'admin'): Promise<TestContext> {
     (request as unknown as Record<string, unknown>)['permissions'] = permissions;
   });
 
-  await pluginAdminRoutes(server, pluginManager, SAMPLE_REGISTRY, pluginsDir);
+  await pluginAdminRoutes(server, pluginManager, SAMPLE_REGISTRY, storage);
   await server.ready();
 
   const cleanup = (): void => {
