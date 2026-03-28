@@ -36,6 +36,17 @@
       </div>
 
       <div class="form-group">
+        <label for="gitHostConfigId">Git Host</label>
+        <select id="gitHostConfigId" name="gitHostConfigId" class="select">
+          <option value="">None (local path only)</option>
+          {{#each gitHosts}}
+          <option value="{{id}}">{{displayName}} ({{pluginType}})</option>
+          {{/each}}
+        </select>
+        <p class="form-hint">Select the git host where this repo is hosted. Required for PR creation.</p>
+      </div>
+
+      <div class="form-group">
         <label for="branch">{{t "repos.branch"}}</label>
         <input type="text" id="branch" name="branch" class="input"
                placeholder="main" value="main">
@@ -57,6 +68,7 @@
           <tr>
             <th scope="col">{{t "repos.siteUrlPattern"}}</th>
             <th scope="col">{{t "repos.repository"}}</th>
+            <th scope="col">Git Host</th>
             <th scope="col">{{t "repos.branch"}}</th>
             <th scope="col">{{t "repos.localPath"}}</th>
             <th scope="col">{{t "repos.created"}}</th>
@@ -71,6 +83,13 @@
               <a href="{{this.repoUrl}}" target="_blank" rel="noopener noreferrer" class="word-break">
                 {{this.repoUrl}}
               </a>
+            </td>
+            <td>
+              {{#if this.gitHostConfigId}}
+              <span class="badge badge--info">{{this.gitHostConfigId}}</span>
+              {{else}}
+              <span class="text--muted">Local</span>
+              {{/if}}
             </td>
             <td><code>{{this.branch}}</code></td>
             <td>

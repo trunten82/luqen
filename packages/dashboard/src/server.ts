@@ -33,6 +33,8 @@ import { dataApiRoutes } from './routes/api/data.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { repoRoutes } from './routes/repos.js';
+import { gitCredentialRoutes } from './routes/git-credentials.js';
+import { fixPrRoutes } from './routes/fix-pr.js';
 import { resolveStorageAdapter } from './db/index.js';
 import { SqliteStorageAdapter } from './db/sqlite/index.js';
 import { PluginManager } from './plugins/manager.js';
@@ -54,6 +56,7 @@ import { ServiceTokenManager } from './auth/service-token.js';
 import { ComplianceService } from './services/compliance-service.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
+import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
 import { schema as graphqlSchema } from './graphql/schema.js';
@@ -485,6 +488,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           adminOrg: perms.has('admin.org') || perms.has('admin.system'),
           complianceView: perms.has('compliance.view') || perms.has('admin.system'),
           complianceManage: perms.has('compliance.manage') || perms.has('admin.system'),
+          reposCredentials: perms.has('repos.credentials'),
           auditView: perms.has('audit.view'),
         },
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
@@ -534,6 +538,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await orgRoutes(server, storage);
   await toolRoutes(server);
   await repoRoutes(server, storage);
+  await gitCredentialRoutes(server, storage, config);
+  await fixPrRoutes(server, storage, config);
 
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);
@@ -558,6 +564,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await emailReportRoutes(server, storage, pluginManager);
 
   await auditRoutes(server, storage);
+  await gitHostRoutes(server, storage);
   await pluginAdminRoutes(server, pluginManager, registryEntries);
 
   // ── Export API routes ────────────────────────────────────────────────────

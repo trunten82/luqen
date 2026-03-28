@@ -204,4 +204,12 @@ All templates use `perm.*` flags for authorization checks rather than hardcoded 
 
 ---
 
+---
+
+### Git Host Token Encryption
+
+Developer PATs are encrypted using the `sessionSecret` as the encryption key (same key used for plugin config encryption). For additional security, you can set a dedicated encryption key via the `GIT_TOKEN_ENCRYPTION_KEY` environment variable.
+
+---
+
 *See also: [guides/dashboard-admin.md](../guides/dashboard-admin.md) | [deployment/docker.md](../deployment/docker.md) | [compliance-config.md](compliance-config.md)*
