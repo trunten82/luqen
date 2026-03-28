@@ -7,8 +7,6 @@ import type {
   CreatePullRequestOptions,
   GitHostPullRequest,
 } from './types.js';
-import type { GitHostPluginInstance } from '../plugins/types.js';
-
 export class GitLabPlugin implements GitHostPlugin {
   readonly type = 'gitlab' as const;
   readonly displayName = 'GitLab';
@@ -132,22 +130,3 @@ export class GitLabPlugin implements GitHostPlugin {
     return { url: mrData.web_url, number: mrData.iid };
   }
 }
-
-const gitlabPlugin: GitHostPluginInstance = {
-  manifest: {
-    name: 'git-host-gitlab',
-    displayName: 'GitLab',
-    type: 'git-host',
-    version: '1.0.0',
-    description: 'Git integration with GitLab for merge request creation',
-    configSchema: [
-      { key: 'hostUrl', label: 'API Host URL', type: 'string', required: true, default: 'https://gitlab.com/api/v4', description: 'GitLab API URL' },
-    ],
-  },
-  gitHost: new GitLabPlugin(),
-  async activate() {},
-  async deactivate() {},
-  async healthCheck() { return true; },
-};
-
-export default gitlabPlugin;

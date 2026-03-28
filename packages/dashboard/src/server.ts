@@ -58,9 +58,6 @@ import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { setGitHostPluginManager } from './git-hosts/registry.js';
-import githubPlugin from './git-hosts/github.js';
-import gitlabPlugin from './git-hosts/gitlab.js';
-import azureDevOpsPlugin from './git-hosts/azure-devops.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
 import { schema as graphqlSchema } from './graphql/schema.js';
@@ -125,10 +122,6 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
   await pluginManager.initializeOnStartup();
 
-  // Register built-in git host plugins
-  await pluginManager.registerBuiltIn(githubPlugin);
-  await pluginManager.registerBuiltIn(gitlabPlugin);
-  await pluginManager.registerBuiltIn(azureDevOpsPlugin);
   setGitHostPluginManager(pluginManager);
 
   pluginManager.startHealthChecks(60_000);

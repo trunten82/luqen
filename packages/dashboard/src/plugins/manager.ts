@@ -229,70 +229,6 @@ export class PluginManager {
   }
 
   // -----------------------------------------------------------------------
-  // Built-in plugins (no tarball download needed)
-  // -----------------------------------------------------------------------
-
-  /**
-   * Register a built-in plugin instance.
-   * Creates a DB row if one doesn't already exist and auto-activates it.
-   */
-  async registerBuiltIn(instance: PluginInstance): Promise<void> {
-    const manifest = instance.manifest;
-    const packageName = `@luqen/plugin-${manifest.name}`;
-
-    // Check if already registered
-    const existing = this.db
-      .prepare('SELECT id, status FROM plugins WHERE package_name = @pkg')
-      .get({ pkg: packageName }) as { id: string; status: string } | undefined;
-
-    let id: string;
-
-    if (existing) {
-      id = existing.id;
-      // Update version if changed
-      this.db
-        .prepare('UPDATE plugins SET version = @version WHERE id = @id')
-        .run({ id, version: manifest.version });
-    } else {
-      id = randomUUID();
-      const now = new Date().toISOString();
-      this.db
-        .prepare(
-          `INSERT INTO plugins (id, package_name, type, version, config, status, installed_at)
-           VALUES (@id, @package_name, @type, @version, @config, @status, @installed_at)`,
-        )
-        .run({
-          id,
-          package_name: packageName,
-          type: manifest.type,
-          version: manifest.version,
-          config: '{}',
-          status: 'inactive',
-          installed_at: now,
-        });
-    }
-
-    // Auto-activate built-in plugins
-    try {
-      await instance.activate({});
-      this.activeInstances.set(id, instance);
-      this.healthFailures.set(id, 0);
-
-      const now = new Date().toISOString();
-      this.db
-        .prepare(
-          'UPDATE plugins SET status = @status, activated_at = @activated_at, error = NULL WHERE id = @id',
-        )
-        .run({ id, status: 'active', activated_at: now });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.db
-        .prepare('UPDATE plugins SET status = @status, error = @error WHERE id = @id')
-        .run({ id, status: 'error', error: message });
-    }
-  }
-
-  // -----------------------------------------------------------------------
   // Configure
   // -----------------------------------------------------------------------
 
@@ -836,10 +772,6 @@ export class PluginManager {
   }
 
   private readManifest(packageName: string): PluginManifest {
-    // Check active instances first (built-in plugins have no manifest.json on disk)
-    const builtInManifest = this.getBuiltInManifest(packageName);
-    if (builtInManifest) return builtInManifest;
-
     const manifestPath = join(this.resolvePackageDir(packageName), 'manifest.json');
     const raw = readFileSync(manifestPath, 'utf-8');
     return JSON.parse(raw) as PluginManifest;
@@ -853,14 +785,4 @@ export class PluginManager {
     }
   }
 
-  /** Look up a manifest from an active built-in instance by package name. */
-  private getBuiltInManifest(packageName: string): PluginManifest | null {
-    for (const instance of this.activeInstances.values()) {
-      const expected = `@luqen/plugin-${instance.manifest.name}`;
-      if (expected === packageName) {
-        return instance.manifest;
-      }
-    }
-    return null;
-  }
 }

@@ -1,0 +1,17 @@
+{
+  "name": "git-host-azure-devops",
+  "displayName": "Azure DevOps",
+  "type": "git-host",
+  "version": "1.0.0",
+  "description": "Git integration with Azure DevOps for pull request creation from accessibility fixes",
+  "configSchema": [
+    {
+      "key": "hostUrl",
+      "label": "API Host URL",
+      "type": "string",
+      "required": true,
+      "default": "https://dev.azure.com",
+      "description": "Use https://dev.azure.com for Azure DevOps Services or your on-prem TFS URL"
+    }
+  ]
+}
