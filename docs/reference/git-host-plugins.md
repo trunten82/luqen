@@ -23,7 +23,15 @@ They follow the standard PluginManager lifecycle (`activate`, `deactivate`, `con
 
 ## Setup
 
-### 1. Admin: Configure a git host
+### 1. Global admin: Install the git-host plugin
+
+Navigate to **Admin > Plugins** and install the git-host plugin for your platform (e.g., `git-host-github`). Click **Activate** and optionally configure the default host URL (defaults are listed in the table above). Self-hosted instances (GitHub Enterprise, GitLab CE/EE, Azure DevOps Server) should set the host URL here.
+
+### 2. Org admin: Activate for your organisation
+
+Navigate to **Admin > Plugins**, find the git-host plugin, and click **Activate** for your org. The plugin inherits the global default host URL — override it if your org uses a different instance.
+
+### 3. Org admin: Configure a git host
 
 Navigate to **Admin > Git Hosts > Add Git Host**:
 - Select the platform type
@@ -31,7 +39,7 @@ Navigate to **Admin > Git Hosts > Add Git Host**:
 - Give it a display name (e.g., "Company GitHub")
 - Select the organization scope from the dropdown
 
-### 2. Admin: Connect websites to repos
+### 4. Org admin: Connect websites to repos
 
 Navigate to **Admin > Connected Repos > Connect Repository**:
 - Enter the site URL pattern (e.g., `https://example.com%`)
@@ -40,7 +48,7 @@ Navigate to **Admin > Connected Repos > Connect Repository**:
 - Select the organization from the org dropdown (org-scoped)
 - Set the branch (defaults to `main`)
 
-### 3. Developer: Add credentials
+### 5. Developer: Add credentials
 
 Navigate to **Profile > Git Credentials** (also accessible via the sidebar Repositories section):
 - For each configured git host, click "Validate & Save"
@@ -56,7 +64,7 @@ Navigate to **Profile > Git Credentials** (also accessible via the sidebar Repos
 | GitLab | `api` (Full API access) |
 | Azure DevOps | Code (Read & Write), Pull Request Contribute |
 
-### 4. Developer: Create PRs from fixes
+### 6. Developer: Create PRs from fixes
 
 1. Run a scan on a connected website
 2. View the scan report → Fixes tab
