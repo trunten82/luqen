@@ -50,6 +50,7 @@ export interface UpdateProposal {
   readonly type: string;
   readonly summary: string;
   readonly detectedAt: string;
+  readonly orgId?: string;
 }
 
 export interface SeedStatus {
@@ -368,6 +369,7 @@ export interface MonitoredSource {
   readonly type: string;
   readonly schedule: string;
   readonly lastChecked?: string;
+  readonly orgId?: string;
 }
 
 export interface CreateSourceInput {

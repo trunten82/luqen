@@ -30,6 +30,7 @@
           <th scope="col">{{t "admin.proposals.colSummary"}}</th>
           <th scope="col">{{t "admin.proposals.colDetected"}}</th>
           <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "common.owner"}}</th>
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
@@ -44,6 +45,9 @@
             <span class="badge {{#if (eq status 'pending')}}badge--warning{{else if (eq status 'approved')}}badge--success{{else}}badge--error{{/if}}">
               {{status}}
             </span>
+          </td>
+          <td data-label="Owner">
+            {{#if (eq orgId "system")}}<span class="badge badge--neutral">System</span>{{else}}{{orgId}}{{/if}}
           </td>
           <td>
             {{#if isPending}}
@@ -66,7 +70,7 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="6" class="table__empty">{{t "admin.proposals.noProposals"}}</td>
+          <td colspan="7" class="table__empty">{{t "admin.proposals.noProposals"}}</td>
         </tr>
         {{/each}}
       </tbody>

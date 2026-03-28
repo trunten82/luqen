@@ -37,7 +37,9 @@
     "switchOrganization": "Switch organization",
     "edit": "Edit",
     "close": "Close",
-    "create": "Create"
+    "create": "Create",
+    "scope": "Scope",
+    "owner": "Owner"
   },
   "nav": {
     "overview": "Overview",
