@@ -13,6 +13,8 @@ interface OrgRow {
   name: string;
   slug: string;
   created_at: string;
+  compliance_client_id: string | null;
+  compliance_client_secret: string | null;
 }
 
 interface OrgMemberRow {
@@ -23,7 +25,14 @@ interface OrgMemberRow {
 }
 
 function rowToOrg(row: OrgRow): Organization {
-  return { id: row.id, name: row.name, slug: row.slug, createdAt: row.created_at };
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    createdAt: row.created_at,
+    ...(row.compliance_client_id ? { complianceClientId: row.compliance_client_id } : {}),
+    ...(row.compliance_client_secret ? { complianceClientSecret: row.compliance_client_secret } : {}),
+  };
 }
 
 function rowToMember(row: OrgMemberRow): OrgMember {
@@ -152,6 +161,18 @@ export class SqliteOrgRepository implements OrgRepository {
     );
 
     return [...directMembers, ...inheritedMembers];
+  }
+
+  async getOrgComplianceCredentials(orgId: string): Promise<{ clientId: string; clientSecret: string } | null> {
+    const row = this.db.prepare(
+      'SELECT compliance_client_id, compliance_client_secret FROM organizations WHERE id = ?',
+    ).get(orgId) as { compliance_client_id: string | null; compliance_client_secret: string | null } | undefined;
+
+    if (row === undefined || !row.compliance_client_id || !row.compliance_client_secret) {
+      return null;
+    }
+
+    return { clientId: row.compliance_client_id, clientSecret: row.compliance_client_secret };
   }
 
   async updateOrgComplianceClient(orgId: string, clientId: string, clientSecret: string): Promise<void> {

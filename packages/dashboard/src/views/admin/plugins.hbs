@@ -1,4 +1,5 @@
-<section aria-label="Plugin management dashboard">
+<section aria-label="Plugin management dashboard"
+        hx-get="/admin/plugins" hx-trigger="pluginChanged from:body" hx-select="section[aria-label='Plugin management dashboard']" hx-swap="outerHTML">
   <p class="text-sm text-muted mb-md">
     <span class="badge badge--completed">{{counts.active}} {{t "admin.plugins.active"}}</span>
     <span class="badge badge--info">{{counts.installed}} {{t "admin.plugins.installed"}}</span>
