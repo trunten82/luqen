@@ -765,6 +765,86 @@ describe('Scan Routes', () => {
     });
   });
 
+  describe('POST /scan/new — authHeaders and authActions parsing', () => {
+    it('parses valid authHeaders and passes headers to orchestrator startScan', async () => {
+      stubFetchOk();
+
+      await ctx.server.inject({
+        method: 'POST',
+        url: '/scan/new',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        payload: 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA&authHeaders=Authorization%3A%20Bearer%20tok123%0AX-Custom%3A%20value1',
+      });
+
+      const callArgs = (ctx.orchestrator.startScan as ReturnType<typeof vi.fn>).mock.calls[0][1];
+      expect(callArgs.headers).toEqual({
+        Authorization: 'Bearer tok123',
+        'X-Custom': 'value1',
+      });
+    });
+
+    it('parses valid authActions and passes actions to orchestrator startScan', async () => {
+      stubFetchOk();
+
+      await ctx.server.inject({
+        method: 'POST',
+        url: '/scan/new',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        payload: 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA&authActions=set%20field%20%23username%20to%20admin%0Aclick%20element%20%23login',
+      });
+
+      const callArgs = (ctx.orchestrator.startScan as ReturnType<typeof vi.fn>).mock.calls[0][1];
+      expect(callArgs.actions).toEqual([
+        'set field #username to admin',
+        'click element #login',
+      ]);
+    });
+
+    it('ignores empty authHeaders field (no headers passed)', async () => {
+      stubFetchOk();
+
+      await ctx.server.inject({
+        method: 'POST',
+        url: '/scan/new',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        payload: 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA&authHeaders=',
+      });
+
+      const callArgs = (ctx.orchestrator.startScan as ReturnType<typeof vi.fn>).mock.calls[0][1];
+      expect(callArgs.headers).toBeUndefined();
+    });
+
+    it('ignores malformed header lines (no colon separator)', async () => {
+      stubFetchOk();
+
+      await ctx.server.inject({
+        method: 'POST',
+        url: '/scan/new',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        payload: 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA&authHeaders=no-colon-here%0AAlso-Bad',
+      });
+
+      const callArgs = (ctx.orchestrator.startScan as ReturnType<typeof vi.fn>).mock.calls[0][1];
+      expect(callArgs.headers).toBeUndefined();
+    });
+
+    it('handles authHeaders with extra whitespace around key/value', async () => {
+      stubFetchOk();
+
+      await ctx.server.inject({
+        method: 'POST',
+        url: '/scan/new',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        payload: 'siteUrl=https%3A%2F%2Fexample.com&standard=WCAG2AA&authHeaders=%20%20Authorization%20%20%3A%20%20Bearer%20tok%20%20',
+      });
+
+      const callArgs = (ctx.orchestrator.startScan as ReturnType<typeof vi.fn>).mock.calls[0][1];
+      expect(callArgs.headers).toEqual({
+        Authorization: 'Bearer tok',
+      });
+    });
+  });
+
   describe('GET /scan/:id/events', () => {
     it('returns 404 when scan does not exist', async () => {
       const response = await ctx.server.inject({
