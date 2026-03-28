@@ -8,31 +8,17 @@
 
   <div id="plugin-messages"></div>
 
-  <div class="rpt-tabs" role="tablist" id="plugins-tabs">
-    <button role="tab" class="rpt-tab rpt-tab--active" id="tab-global-plugins"
-            aria-controls="panel-global-plugins" aria-selected="true"
-            data-action="switch-tab" data-target-show="panel-global-plugins" data-target-hide="panel-org-plugins"
-            data-peer="tab-org-plugins">
-      Global Plugins
-    </button>
-    <button role="tab" class="rpt-tab" id="tab-org-plugins"
-            aria-controls="panel-org-plugins" aria-selected="false"
-            data-action="switch-tab" data-target-show="panel-org-plugins" data-target-hide="panel-global-plugins"
-            data-peer="tab-global-plugins">
-      Org Plugins{{#if orgName}} ({{orgName}}){{/if}}
-    </button>
-  </div>
-
   <section class="admin-section" aria-label="Installed plugins">
     <h2 class="section-title">{{t "admin.plugins.installedPlugins"}}</h2>
 
     {{#if installed.length}}
     <div class="plugin-grid">
       {{#each installed}}
-      <div class="card" id="plugin-{{id}}" aria-label="Plugin {{packageName}}">
+      <div class="card" aria-label="Plugin {{packageName}}">
         <div class="card__header">
           <h3 class="card__title">{{packageName}}</h3>
           <span class="badge badge--info">{{type}}</span>
+          {{#if (eq orgId "system")}}<span class="badge badge--neutral">System</span>{{/if}}
         </div>
         <div class="card__body">
           <dl class="stats-list">
@@ -48,21 +34,13 @@
                 </span>
               </dd>
             </div>
-            {{#if error}}
-            <div class="stats-list__item">
-              <dt>{{t "admin.plugins.error"}}</dt>
-              <dd class="text--error">{{error}}</dd>
-            </div>
-            {{/if}}
           </dl>
-
-          <div class="btn-group" role="group" aria-label="Plugin actions">
-            {{#if (eq status 'active')}}
-            <button class="btn btn--sm btn--ghost"
+          <div class="card__actions mt-sm">
+            {{#if (eq status "active")}}
+            <button class="btn btn--sm btn--secondary"
                     hx-post="/admin/plugins/{{id}}/deactivate"
                     hx-target="#plugin-messages"
                     hx-swap="innerHTML">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
               {{t "admin.plugins.deactivate"}}
             </button>
             {{else}}
@@ -70,7 +48,6 @@
                     hx-post="/admin/plugins/{{id}}/activate"
                     hx-target="#plugin-messages"
                     hx-swap="innerHTML">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
               {{t "admin.plugins.activate"}}
             </button>
             {{/if}}
@@ -131,7 +108,7 @@
                   hx-vals='{"packageName": "{{packageName}}"}'
                   hx-target="#plugin-messages"
                   hx-swap="innerHTML">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+            <input type="hidden" name="_csrf" value="{{csrfToken}}">
             {{t "admin.plugins.install"}}
           </button>
         </div>
