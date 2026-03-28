@@ -1,0 +1,17 @@
+{
+  "name": "git-host-github",
+  "displayName": "GitHub",
+  "type": "git-host",
+  "version": "1.0.0",
+  "description": "Git integration with GitHub and GitHub Enterprise for PR creation from accessibility fixes",
+  "configSchema": [
+    {
+      "key": "hostUrl",
+      "label": "API Host URL",
+      "type": "string",
+      "required": true,
+      "default": "https://api.github.com",
+      "description": "Use https://api.github.com for GitHub.com or your GitHub Enterprise API URL"
+    }
+  ]
+}
