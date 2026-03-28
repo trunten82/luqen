@@ -12,3 +12,4 @@ export type { PluginRepository } from './plugin-repository.js';
 export type { ApiKeyRepository } from './api-key-repository.js';
 export type { PageHashRepository } from './page-hash-repository.js';
 export type { ManualTestRepository } from './manual-test-repository.js';
+export type { GitHostRepository } from './git-host-repository.js';

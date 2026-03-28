@@ -17,6 +17,7 @@ export const ALL_PERMISSIONS = [
   { id: 'issues.fix', label: 'Propose and view fixes', group: 'Issues' },
   { id: 'manual_testing', label: 'Manual testing checklists', group: 'Testing' },
   { id: 'repos.manage', label: 'Connect repositories', group: 'Repositories' },
+  { id: 'repos.credentials', label: 'Manage git credentials', group: 'Repositories' },
   { id: 'trends.view', label: 'View trends and analytics', group: 'Analytics' },
   { id: 'users.create', label: 'Create dashboard users', group: 'User Management' },
   { id: 'users.delete', label: 'Delete dashboard users', group: 'User Management' },
@@ -96,7 +97,7 @@ export async function resolveEffectivePermissions(
 export const ORG_OWNER_PERMISSIONS: readonly string[] = [
   'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
   'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
-  'manual_testing', 'repos.manage', 'trends.view',
+  'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
   'admin.roles', 'admin.teams', 'admin.org', 'admin.plugins',
   'users.create', 'users.delete', 'users.activate', 'users.reset_password',
   'compliance.view', 'compliance.manage', 'audit.view',
@@ -106,7 +107,7 @@ export const ORG_OWNER_PERMISSIONS: readonly string[] = [
 export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
   'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
   'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
-  'manual_testing', 'repos.manage', 'trends.view',
+  'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
   'admin.plugins', 'users.create', 'users.delete', 'users.activate', 'users.reset_password',
   'compliance.view', 'compliance.manage',
 ];
@@ -114,7 +115,7 @@ export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
 /** Permissions for the org-level "Member" role. */
 export const ORG_MEMBER_PERMISSIONS: readonly string[] = [
   'scans.create', 'reports.view', 'reports.view_technical', 'reports.export',
-  'reports.compare', 'manual_testing', 'trends.view', 'compliance.view',
+  'reports.compare', 'manual_testing', 'repos.credentials', 'trends.view', 'compliance.view',
 ];
 
 /** Permissions for the org-level "Viewer" role. */

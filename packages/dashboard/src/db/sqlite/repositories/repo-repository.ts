@@ -16,6 +16,7 @@ interface ConnectedRepoRow {
   created_by: string;
   created_at: string;
   org_id: string;
+  git_host_config_id: string | null;
 }
 
 function repoRowToRecord(row: ConnectedRepoRow): ConnectedRepo {
@@ -29,6 +30,7 @@ function repoRowToRecord(row: ConnectedRepoRow): ConnectedRepo {
     createdBy: row.created_by,
     createdAt: row.created_at,
     orgId: row.org_id,
+    gitHostConfigId: row.git_host_config_id ?? null,
   };
 }
 
@@ -76,14 +78,15 @@ export class SqliteRepoRepository implements RepoRepository {
     readonly repoPath?: string;
     readonly branch?: string;
     readonly authToken?: string;
+    readonly gitHostConfigId?: string;
     readonly createdBy: string;
     readonly orgId?: string;
   }): Promise<ConnectedRepo> {
     const now = new Date().toISOString();
 
     const stmt = this.db.prepare(`
-      INSERT INTO connected_repos (id, site_url_pattern, repo_url, repo_path, branch, auth_token, created_by, created_at, org_id)
-      VALUES (@id, @siteUrlPattern, @repoUrl, @repoPath, @branch, @authToken, @createdBy, @createdAt, @orgId)
+      INSERT INTO connected_repos (id, site_url_pattern, repo_url, repo_path, branch, auth_token, created_by, created_at, org_id, git_host_config_id)
+      VALUES (@id, @siteUrlPattern, @repoUrl, @repoPath, @branch, @authToken, @createdBy, @createdAt, @orgId, @gitHostConfigId)
     `);
 
     stmt.run({
@@ -96,6 +99,7 @@ export class SqliteRepoRepository implements RepoRepository {
       createdBy: data.createdBy,
       createdAt: now,
       orgId: data.orgId ?? 'system',
+      gitHostConfigId: data.gitHostConfigId ?? null,
     });
 
     const created = await this.getRepo(data.id);
