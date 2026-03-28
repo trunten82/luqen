@@ -537,7 +537,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await assignmentRoutes(server, storage);
   await orgRoutes(server, storage);
   await toolRoutes(server);
-  await repoRoutes(server, storage);
+  await repoRoutes(server, storage, config);
   await gitCredentialRoutes(server, storage, config);
   await fixPrRoutes(server, storage, config);
 

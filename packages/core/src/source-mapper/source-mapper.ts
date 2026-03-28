@@ -1,7 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import type { PageResult, SourceMapping } from '../types.js';
+import type { FileReader } from './file-reader.js';
+import { LocalFileReader } from './file-reader.js';
 import { detectFramework } from './framework-detector.js';
 import { resolveUrlToFile } from './routing-strategies.js';
 import { matchSelectorToSource } from './element-matcher.js';
@@ -22,30 +21,36 @@ function matchOverride(urlPath: string, sourceMap: Readonly<Record<string, strin
 }
 
 export async function mapIssuesToSource(
-  pages: readonly PageResult[], repoPath: string, sourceMapOverrides: Readonly<Record<string, string>>
+  pages: readonly PageResult[],
+  repoPath: string,
+  sourceMapOverrides: Readonly<Record<string, string>>,
+  reader?: FileReader,
 ): Promise<PageResult[]> {
-  const framework = await detectFramework(repoPath);
+  const effectiveReader = reader ?? new LocalFileReader(repoPath);
+  const framework = await detectFramework(effectiveReader);
   return Promise.all(pages.map(async (page): Promise<PageResult> => {
     const urlPath = extractUrlPath(page.url);
     const overrideFile = matchOverride(urlPath, sourceMapOverrides);
-    let filePath: string | null = null;
+    let relativePath: string | null = null;
     if (overrideFile) {
-      const fullPath = join(repoPath, overrideFile);
-      filePath = existsSync(fullPath) ? fullPath : null;
+      const exists = await effectiveReader.exists(overrideFile);
+      relativePath = exists ? overrideFile : null;
     } else {
-      filePath = await resolveUrlToFile(urlPath, framework, repoPath);
+      relativePath = await resolveUrlToFile(urlPath, framework, effectiveReader);
     }
-    if (!filePath) return page;
+    if (!relativePath) return page;
 
-    let sourceMapping: SourceMapping = { file: filePath, confidence: 'none' };
+    let sourceMapping: SourceMapping = { file: relativePath, confidence: 'none' };
     if (page.issues.length > 0) {
       try {
-        const source = await readFile(filePath, 'utf-8');
-        const match = matchSelectorToSource(page.issues[0].selector, source);
-        sourceMapping = { file: filePath, line: match.line, confidence: match.confidence };
+        const source = await effectiveReader.read(relativePath);
+        if (source !== null) {
+          const match = matchSelectorToSource(page.issues[0].selector, source);
+          sourceMapping = { file: relativePath, line: match.line, confidence: match.confidence };
+        }
       } catch { /* use default */ }
     } else {
-      sourceMapping = { file: filePath, confidence: 'high' };
+      sourceMapping = { file: relativePath, confidence: 'high' };
     }
     return { ...page, sourceMap: sourceMapping };
   }));
