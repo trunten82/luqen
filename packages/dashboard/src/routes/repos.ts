@@ -22,6 +22,7 @@ interface CreateRepoBody {
   readonly repoPath?: string;
   readonly branch?: string;
   readonly gitHostConfigId?: string;
+  readonly orgId?: string;
   readonly _csrf?: string;
 }
 
@@ -163,9 +164,23 @@ export async function repoRoutes(
     '/admin/repos',
     { preHandler: requirePermission('repos.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const orgId = request.user?.currentOrgId ?? 'system';
-      const repos = await storage.repos.listRepos(orgId);
-      const gitHosts = await storage.gitHosts.listConfigs(orgId);
+      const isAdmin = request.user?.role === 'admin';
+      const currentOrgId = request.user?.currentOrgId ?? 'system';
+
+      // Global admin sees repos for all orgs; org admin sees their own
+      const repos = isAdmin
+        ? await storage.repos.listRepos()
+        : await storage.repos.listRepos(currentOrgId);
+
+      // Git host configs: admin sees all, org user sees their org + system
+      const gitHosts = isAdmin
+        ? [...await storage.gitHosts.listConfigs('system'), ...await storage.gitHosts.listConfigs(currentOrgId)]
+        : await storage.gitHosts.listConfigs(currentOrgId);
+
+      // Org list for the dropdown (admin sees all, org user sees just theirs)
+      const orgs = isAdmin
+        ? await storage.organizations.listOrgs()
+        : (currentOrgId !== 'system' ? [await storage.organizations.getOrg(currentOrgId)].filter(Boolean) : []);
 
       return reply.view('repos.hbs', {
         pageTitle: 'Connected Repositories',
@@ -173,6 +188,9 @@ export async function repoRoutes(
         user: request.user,
         repos,
         gitHosts,
+        orgs,
+        currentOrgId,
+        isAdmin,
       });
     },
   );
@@ -184,7 +202,11 @@ export async function repoRoutes(
     { preHandler: requirePermission('repos.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateRepoBody;
-      const orgId = request.user?.currentOrgId ?? 'system';
+      const isAdmin = request.user?.role === 'admin';
+      // Global admin can assign to any org via form; org admin uses their own
+      const orgId = isAdmin && body.orgId?.trim()
+        ? body.orgId.trim()
+        : (request.user?.currentOrgId ?? 'system');
       const username = request.user?.username ?? 'unknown';
 
       const siteUrlPattern = sanitizeUrl(body.siteUrlPattern);
