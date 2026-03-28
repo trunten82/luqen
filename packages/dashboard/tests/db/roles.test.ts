@@ -116,7 +116,7 @@ describe('RoleRepository', () => {
 
       const perms = await storage.roles.getRolePermissions(devRole!.id);
       expect(Array.isArray(perms)).toBe(true);
-      expect(perms.length).toBe(11);
+      expect(perms.length).toBe(12);
       // Verify sorted
       expect(perms).toEqual([...perms].sort());
     });
@@ -254,12 +254,12 @@ describe('RoleRepository', () => {
       }
     });
 
-    it('developer gets 11 permissions', async () => {
+    it('developer gets 12 permissions', async () => {
       const devUser = await storage.users.createUser('dev-user', 'pass123', 'developer');
       const perms = await storage.roles.getUserPermissions(devUser.id);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(11);
+      expect(perms.size).toBe(12);
     });
 
     it('user gets 9 permissions', async () => {

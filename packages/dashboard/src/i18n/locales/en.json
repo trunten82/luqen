@@ -975,6 +975,11 @@
     "integrationRest": "<strong>REST API:</strong> Returns fix proposals as JSON.",
     "integrationA2a": "A2A protocol: For automated pipelines, use the Agent-to-Agent protocol to request fixes programmatically. Agents can call the REST API to propose and apply fixes.",
     "copiedToClipboard": "Fix code copied to clipboard",
-    "copyFailed": "Could not copy — please select and copy manually"
+    "copyFailed": "Could not copy — please select and copy manually",
+    "createPrTitle": "Create Pull Request",
+    "createPrDescription": "Select the fixes above and create a pull request with the changes applied to your repository.",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "createPr": "Create Pull Request"
   }
 }
