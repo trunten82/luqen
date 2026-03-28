@@ -132,14 +132,13 @@ export async function pluginAdminRoutes(
       const globalPlugins = installed.filter((p) => p.orgId === 'system' || p.orgId === undefined);
       const orgPlugins = installed.filter((p) => p.orgId !== 'system' && p.orgId !== undefined);
 
+      const orgs = isAdmin ? await storage.organizations.listOrgs() : [];
+
       return reply.view('admin/plugins.hbs', {
         pageTitle: 'Plugins',
         currentPath: '/admin/plugins',
         user: request.user,
         installed,
-        globalPlugins,
-        orgPlugins,
-        hasOrgPlugins: orgPlugins.length > 0,
         available,
         counts: {
           installed: installed.length,
@@ -148,12 +147,8 @@ export async function pluginAdminRoutes(
         },
         isAdmin,
         canInstallPlugins: isAdmin || perms.has('admin.plugins'),
+        orgs,
         orgId,
-        orgName: (request as unknown as Record<string, unknown>).orgContext
-          ? ((request as unknown as Record<string, { currentOrg?: { name?: string } }>).orgContext?.currentOrg?.name ?? orgId)
-          : orgId,
-        statusBadgeClass,
-        typeBadgeClass,
       });
     },
   );
