@@ -229,6 +229,45 @@
     {{/if}}
     {{/if}}
 
+    {{!-- Repositories section — visible when user can manage repos or has credentials --}}
+    {{#if perm.reposManage}}
+    <span class="sidebar__section-label">Repositories</span>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/repos')}}is-active{{/if}}"
+       href="/admin/repos"
+       aria-current="{{#if (startsWith currentPath '/admin/repos')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M7 3C5.34 3 4 4.34 4 6c0 1.3.84 2.4 2 2.82V15.18C4.84 15.6 4 16.7 4 18c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V8.82C9.16 8.4 10 7.3 10 6c0-.27-.04-.53-.1-.78L12.17 7.5l.03 3.68c-1.16.42-2 1.52-2 2.82 0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V7.5L10.83 4.12C10.15 3.44 9.12 3 8 3H7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      </svg>
+      {{t "nav.connectedRepos"}}
+    </a>
+
+    {{#if hasGitHostPlugins}}
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/git-hosts')}}is-active{{/if}}"
+       href="/admin/git-hosts"
+       aria-current="{{#if (startsWith currentPath '/admin/git-hosts')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 2a6 6 0 110 12A6 6 0 0110 4z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2 10h16M10 2c2 3 3 5 3 8s-1 5-3 8M10 2c-2 3-3 5-3 8s1 5 3 8" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Git Hosts
+    </a>
+    {{/if}}
+    {{/if}}
+
+    {{#if perm.reposCredentials}}
+    {{#if hasGitHostPlugins}}
+    <a class="sidebar__item sidebar__item--child {{#if (startsWith currentPath '/account/git-credentials')}}is-active{{/if}}"
+       href="/account/git-credentials"
+       aria-current="{{#if (startsWith currentPath '/account/git-credentials')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M15 8H5a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2zm-5 5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM7 8V5a3 3 0 116 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Git Credentials
+    </a>
+    {{/if}}
+    {{/if}}
+
     {{!-- System section — full admin permissions required --}}
     {{#if perm.adminSystem}}
     <span class="sidebar__section-label">{{t "nav.system"}}</span>
@@ -259,36 +298,6 @@
       </svg>
       {{t "nav.apiUsers"}}
     </a>
-
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/repos')}}is-active{{/if}}"
-       href="/admin/repos"
-       aria-current="{{#if (startsWith currentPath '/admin/repos')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M7 3C5.34 3 4 4.34 4 6c0 1.3.84 2.4 2 2.82V15.18C4.84 15.6 4 16.7 4 18c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V8.82C9.16 8.4 10 7.3 10 6c0-.27-.04-.53-.1-.78L12.17 7.5l.03 3.68c-1.16.42-2 1.52-2 2.82 0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V7.5L10.83 4.12C10.15 3.44 9.12 3 8 3H7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-      </svg>
-      {{t "nav.connectedRepos"}}
-    </a>
-
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/git-hosts')}}is-active{{/if}}"
-       href="/admin/git-hosts"
-       aria-current="{{#if (startsWith currentPath '/admin/git-hosts')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 2a6 6 0 110 12A6 6 0 0110 4z" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M2 10h16M10 2c2 3 3 5 3 8s-1 5-3 8M10 2c-2 3-3 5-3 8s1 5 3 8" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      Git Hosts
-    </a>
-
-    {{#if perm.reposCredentials}}
-    <a class="sidebar__item sidebar__item--child {{#if (startsWith currentPath '/account/git-credentials')}}is-active{{/if}}"
-       href="/account/git-credentials"
-       aria-current="{{#if (startsWith currentPath '/account/git-credentials')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M15 8H5a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2zm-5 5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM7 8V5a3 3 0 116 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      Git Credentials
-    </a>
-    {{/if}}
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/webhooks')}}is-active{{/if}}"
        href="/admin/webhooks">
