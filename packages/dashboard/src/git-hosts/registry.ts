@@ -1,25 +1,41 @@
 // packages/dashboard/src/git-hosts/registry.ts
 
 import type { GitHostPlugin } from './types.js';
-import { GitHubPlugin } from './github.js';
-import { GitLabPlugin } from './gitlab.js';
-import { AzureDevOpsPlugin } from './azure-devops.js';
+import type { PluginManager } from '../plugins/manager.js';
+import type { GitHostPluginInstance } from '../plugins/types.js';
 
-const plugins = new Map<string, GitHostPlugin>();
+let _pluginManager: PluginManager | undefined;
 
-export function registerGitHostPlugin(plugin: GitHostPlugin): void {
-  plugins.set(plugin.type, plugin);
+export function setGitHostPluginManager(pm: PluginManager): void {
+  _pluginManager = pm;
 }
 
 export function getGitHostPlugin(type: string): GitHostPlugin | undefined {
-  return plugins.get(type);
+  if (_pluginManager === undefined) return undefined;
+
+  // Find active git-host plugins and match by type suffix
+  const activePlugins = _pluginManager.list().filter(
+    (p) => p.type === 'git-host' && p.status === 'active',
+  );
+
+  for (const p of activePlugins) {
+    const instance = _pluginManager.getActiveInstance(p.id) as GitHostPluginInstance | undefined;
+    if (instance?.gitHost?.type === type) {
+      return instance.gitHost;
+    }
+  }
+  return undefined;
 }
 
 export function listGitHostPluginTypes(): readonly string[] {
-  return [...plugins.keys()];
-}
+  if (_pluginManager === undefined) return [];
 
-// Register built-in plugins
-registerGitHostPlugin(new GitHubPlugin());
-registerGitHostPlugin(new GitLabPlugin());
-registerGitHostPlugin(new AzureDevOpsPlugin());
+  const active = _pluginManager.list().filter(
+    (p) => p.type === 'git-host' && p.status === 'active',
+  );
+
+  return active.map((p) => {
+    const instance = _pluginManager!.getActiveInstance(p.id) as GitHostPluginInstance | undefined;
+    return instance?.gitHost?.type ?? p.packageName;
+  }).filter(Boolean);
+}
