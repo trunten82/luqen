@@ -39,6 +39,9 @@
               </dd>
             </div>
           </dl>
+          {{#if error}}
+          <p class="text-xs text-muted mt-xs"><strong>Needs config:</strong> {{error}}</p>
+          {{/if}}
 
           <div class="card__actions mt-sm">
             {{#if ../isAdmin}}
