@@ -2,6 +2,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { listGitHostPluginTypes } from '../../git-hosts/registry.js';
+import { isPrivateHostname } from '../../services/scan-service.js';
+import { escapeHtml } from './helpers.js';
 
 export async function gitHostRoutes(
   server: FastifyInstance,
@@ -40,6 +42,49 @@ export async function gitHostRoutes(
       const pluginType = body.pluginType?.trim() ?? '';
       const hostUrl = body.hostUrl?.trim() ?? '';
       const displayName = body.displayName?.trim() ?? '';
+
+      // Validate hostUrl: must be a valid http(s) URL and not a private address
+      try {
+        const parsed = new URL(hostUrl);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          const orgId = request.user?.currentOrgId ?? 'system';
+          const configs = await storage.gitHosts.listConfigs(orgId);
+          const pluginTypes = listGitHostPluginTypes();
+          return reply.code(400).view('admin/git-hosts.hbs', {
+            configs,
+            pluginTypes,
+            pageTitle: 'Git Hosts',
+            currentPath: '/admin/git-hosts',
+            user: request.user,
+            error: 'Host URL must use http or https protocol.',
+          });
+        }
+        if (isPrivateHostname(parsed.hostname)) {
+          const orgId = request.user?.currentOrgId ?? 'system';
+          const configs = await storage.gitHosts.listConfigs(orgId);
+          const pluginTypes = listGitHostPluginTypes();
+          return reply.code(400).view('admin/git-hosts.hbs', {
+            configs,
+            pluginTypes,
+            pageTitle: 'Git Hosts',
+            currentPath: '/admin/git-hosts',
+            user: request.user,
+            error: 'Private or internal host addresses are not allowed.',
+          });
+        }
+      } catch {
+        const orgId = request.user?.currentOrgId ?? 'system';
+        const configs = await storage.gitHosts.listConfigs(orgId);
+        const pluginTypes = listGitHostPluginTypes();
+        return reply.code(400).view('admin/git-hosts.hbs', {
+          configs,
+          pluginTypes,
+          pageTitle: 'Git Hosts',
+          currentPath: '/admin/git-hosts',
+          user: request.user,
+          error: 'Invalid host URL.',
+        });
+      }
 
       if (!pluginType || !hostUrl || !displayName) {
         const orgId = request.user?.currentOrgId ?? 'system';
@@ -81,7 +126,7 @@ export async function gitHostRoutes(
         return reply
           .code(500)
           .header('content-type', 'text/html')
-          .send(`<div class="alert alert--error">${message}</div>`);
+          .send(`<div class="alert alert--error">${escapeHtml(message)}</div>`);
       }
     },
   );

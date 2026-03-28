@@ -4,6 +4,9 @@
  * Exports the scanner factory for programmatic use by the dashboard and other consumers.
  */
 
+export { type FileReader, LocalFileReader } from './source-mapper/file-reader.js';
+export { mapIssuesToSource } from './source-mapper/source-mapper.js';
+export { proposeFixesFromReport, type ProposeFixesResult } from './fixer/fix-proposer.js';
 export { scanUrls, type ScanOptions, type ScanResults } from './scanner/scanner.js';
 export { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
 export { DirectScanner } from './scanner/direct-scanner.js';
