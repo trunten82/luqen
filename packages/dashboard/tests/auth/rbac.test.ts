@@ -33,7 +33,7 @@ describe('RBAC Permission Matrix', () => {
       }
     });
 
-    it('developer has exactly 11 permissions', async () => {
+    it('developer has exactly 12 permissions', async () => {
       const user = await storage.users.createUser(`dev-${randomUUID()}`, 'pass', 'developer');
       const perms = await storage.roles.getUserPermissions(user.id);
 
@@ -48,11 +48,12 @@ describe('RBAC Permission Matrix', () => {
         'issues.fix',
         'manual_testing',
         'repos.manage',
+        'repos.credentials',
         'trends.view',
       ]);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(11);
+      expect(perms.size).toBe(12);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
@@ -119,7 +120,7 @@ describe('RBAC Permission Matrix', () => {
     const adminPermissions = new Set([
       'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
       'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
-      'manual_testing', 'repos.manage', 'trends.view', 'users.create', 'users.delete',
+      'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view', 'users.create', 'users.delete',
       'users.activate', 'users.reset_password', 'users.roles', 'admin.users', 'admin.roles',
       'admin.teams', 'admin.plugins', 'admin.org', 'admin.system', 'audit.view',
       'compliance.view', 'compliance.manage',
@@ -128,7 +129,7 @@ describe('RBAC Permission Matrix', () => {
     const developerPermissions = new Set([
       'scans.create', 'reports.view', 'reports.view_technical', 'reports.export',
       'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
-      'manual_testing', 'repos.manage', 'trends.view',
+      'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
     ]);
 
     const userPermissions = new Set([

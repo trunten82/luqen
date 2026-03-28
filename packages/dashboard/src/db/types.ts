@@ -161,6 +161,7 @@ export interface ConnectedRepo {
   readonly createdBy: string;
   readonly createdAt: string;
   readonly orgId: string;
+  readonly gitHostConfigId: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -387,4 +388,26 @@ export interface ApiKeyRecord {
   readonly lastUsedAt: string | null;
   readonly orgId: string;
   readonly role: ApiKeyRole;
+}
+
+// ---------------------------------------------------------------------------
+// Git host types
+// ---------------------------------------------------------------------------
+
+export interface GitHostConfig {
+  readonly id: string;
+  readonly orgId: string;
+  readonly pluginType: string;
+  readonly hostUrl: string;
+  readonly displayName: string;
+  readonly createdAt: string;
+}
+
+export interface DeveloperCredential {
+  readonly id: string;
+  readonly userId: string;
+  readonly gitHostConfigId: string;
+  readonly tokenHint: string;
+  readonly validatedUsername: string | null;
+  readonly createdAt: string;
 }

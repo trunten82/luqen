@@ -959,4 +959,52 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission)
   AND r.org_id != 'system';
     `,
   },
+  {
+    id: '032',
+    name: 'git-host-configs-and-developer-credentials',
+    sql: `
+CREATE TABLE IF NOT EXISTS git_host_configs (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  plugin_type TEXT NOT NULL,
+  host_url TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(org_id, plugin_type, host_url)
+);
+CREATE INDEX IF NOT EXISTS idx_git_host_configs_org ON git_host_configs(org_id);
+
+CREATE TABLE IF NOT EXISTS developer_credentials (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  git_host_config_id TEXT NOT NULL REFERENCES git_host_configs(id) ON DELETE CASCADE,
+  encrypted_token TEXT NOT NULL,
+  token_hint TEXT NOT NULL,
+  validated_username TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE(user_id, git_host_config_id)
+);
+CREATE INDEX IF NOT EXISTS idx_developer_credentials_user ON developer_credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_developer_credentials_host ON developer_credentials(git_host_config_id);
+
+ALTER TABLE connected_repos ADD COLUMN git_host_config_id TEXT REFERENCES git_host_configs(id);
+    `,
+  },
+  {
+    id: '033',
+    name: 'add-repos-credentials-permission',
+    sql: `
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'repos.credentials'
+  FROM roles r
+  WHERE r.name IN ('Owner', 'Admin', 'Member')
+  AND r.org_id != 'system';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'repos.credentials'
+  FROM roles r
+  WHERE r.name IN ('admin', 'developer')
+  AND r.org_id = 'system';
+    `,
+  },
 ];
