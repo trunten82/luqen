@@ -5,12 +5,17 @@ import type { FastifyRequest } from 'fastify';
  *
  * Priority:
  * 1. User's OAuth session token (team/enterprise mode)
- * 2. Pre-fetched service token (set by preHandler hook via ServiceTokenManager)
- * 3. DASHBOARD_COMPLIANCE_API_KEY env var (manual fallback)
+ * 2. Per-org service token (set by preHandler hook when org has stored credentials)
+ * 3. Global service token (set by preHandler hook via ServiceTokenManager)
+ * 4. DASHBOARD_COMPLIANCE_API_KEY env var (manual fallback)
  */
 export function getToken(request: FastifyRequest): string {
   const session = request.session as { token?: string };
   if (session.token) return session.token;
+
+  // Per-org token takes priority over global token (set by preHandler hook)
+  const orgToken = (request as unknown as { _orgServiceToken?: string })._orgServiceToken;
+  if (orgToken) return orgToken;
 
   // The preHandler hook in server.ts sets this on every request
   const serviceToken = (request as unknown as { _serviceToken?: string })._serviceToken;

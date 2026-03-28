@@ -269,6 +269,16 @@
       {{t "nav.connectedRepos"}}
     </a>
 
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/git-hosts')}}is-active{{/if}}"
+       href="/admin/git-hosts"
+       aria-current="{{#if (startsWith currentPath '/admin/git-hosts')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 2a6 6 0 110 12A6 6 0 0110 4z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2 10h16M10 2c2 3 3 5 3 8s-1 5-3 8M10 2c-2 3-3 5-3 8s1 5 3 8" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Git Hosts
+    </a>
+
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/webhooks')}}is-active{{/if}}"
        href="/admin/webhooks">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -327,8 +337,18 @@
           <option value="{{this}}" {{#if (eq this ../locale)}}selected{{/if}}>{{lookup ../localeLabels this}}</option>
           {{/each}}
         </select>
+        <button type="submit" class="sr-only">Save language</button>
       </form>
     </div>
+
+    {{#if perm.reposCredentials}}
+    <a href="/account/git-credentials" class="sidebar__link {{#if (eq currentPath '/account/git-credentials')}}sidebar__link--active{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M15 8H5a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2zm-5 5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM7 8V5a3 3 0 116 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Git Credentials</span>
+    </a>
+    {{/if}}
 
     <div class="sidebar__footer-row">
       <a href="/account" class="sidebar__footer-user" title="{{t "nav.myProfile"}}">{{user.username}}</a>

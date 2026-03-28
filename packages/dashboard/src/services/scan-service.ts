@@ -33,6 +33,8 @@ export interface InitiateScanInput {
   readonly incremental?: string | boolean;
   readonly includeWarnings?: boolean;
   readonly includeNotices?: boolean;
+  readonly headers?: Readonly<Record<string, string>>;
+  readonly actions?: readonly string[];
 }
 
 export interface ScanContext {
@@ -73,7 +75,7 @@ function normalizeJurisdictions(value: string | string[] | undefined): string[] 
 /**
  * SSRF protection: block private/internal IP ranges and reserved hostnames.
  */
-function isPrivateHostname(hostname: string): boolean {
+export function isPrivateHostname(hostname: string): boolean {
   const h = hostname.toLowerCase();
   return (
     h === 'localhost' ||
@@ -244,6 +246,8 @@ export class ScanService {
       ...(incremental ? { incremental } : {}),
       includeWarnings: input.includeWarnings !== false,
       includeNotices: input.includeNotices !== false,
+      ...(input.headers !== undefined ? { headers: input.headers } : {}),
+      ...(input.actions !== undefined && input.actions.length > 0 ? { actions: input.actions } : {}),
     });
 
     return { ok: true, scanId };

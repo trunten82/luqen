@@ -16,29 +16,29 @@
 
   /* Text */
   --text-primary: #111827;
-  --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
+  --text-secondary: #4b5563;
+  --text-muted: #64748b;
   --text-inverse: #ffffff;
   --text-sidebar: #bbf7d0;
   --text-sidebar-active: #ffffff;
 
   /* Accent / Brand */
-  --accent: #16a34a;
-  --accent-hover: #15803d;
+  --accent: #15803d;
+  --accent-hover: #166534;
   --accent-light: #f0fdf4;
 
   /* Status colours — always paired with icons/text, never colour-only */
-  --status-success: #16a34a;
+  --status-success: #15803d;
   --status-success-bg: #dcfce7;
-  --status-warning: #d97706;
+  --status-warning: #b45309;
   --status-warning-bg: #fef3c7;
-  --status-error: #dc2626;
+  --status-error: #b91c1c;
   --status-error-bg: #fee2e2;
-  --status-info: #2563eb;
+  --status-info: #1d4ed8;
   --status-info-bg: #dbeafe;
-  --status-running: #2563eb;
+  --status-running: #1d4ed8;
   --status-running-bg: #dbeafe;
-  --status-queued: #d97706;
+  --status-queued: #b45309;
   --status-queued-bg: #fef3c7;
 
   /* Borders */
@@ -49,7 +49,7 @@
   --border-radius-lg: 10px;
 
   /* Focus */
-  --focus-outline: 3px solid #16a34a;
+  --focus-outline: 3px solid #15803d;
   --focus-outline-offset: 2px;
 
   /* Shadows */
@@ -89,7 +89,7 @@
   --transition-base: 250ms ease;
 
   /* Danger hover */
-  --status-error-hover: #b91c1c;
+  --status-error-hover: #991b1b;
 
   /* Line heights */
   --leading-tight: 1.2;
@@ -108,7 +108,7 @@
 
   --text-primary: #f3f4f6;
   --text-secondary: #d1d5db;
-  --text-muted: #9ca3af;
+  --text-muted: #94a3b8;
   --text-inverse: #111827;
   --text-sidebar: #86efac;
   --text-sidebar-active: #ffffff;
@@ -318,6 +318,7 @@ body {
   padding: var(--space-sm) var(--space-md);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
+  background-color: var(--bg-sidebar);
 }
 
 .sidebar__locale .select--sm,
@@ -350,6 +351,7 @@ body {
   padding: var(--space-md);
   padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--bg-sidebar);
   font-size: var(--font-size-xs);
   color: var(--text-muted);
   flex-shrink: 0;
@@ -1055,15 +1057,19 @@ select {
 
 /* ---- Toast Notifications ---- */
 #toast-container {
-  position: fixed;
-  bottom: var(--space-lg);
-  right: var(--space-lg);
   z-index: 9999;
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
   pointer-events: none;
-  max-width: 360px;
+  max-width: calc(100vw - 2 * var(--space-lg));
+  width: 360px;
+}
+
+#toast-container:not(:empty) {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
 }
 
 .toast {
@@ -1416,10 +1422,18 @@ select {
 .login-page {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background-color: var(--accent-light);
   padding: var(--space-md);
+}
+
+.app-version {
+  margin-top: auto;
+  align-self: flex-end;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 .login-card {
@@ -1811,7 +1825,7 @@ select {
 }
 
 .sidebar__footer-user {
-  color: inherit;
+  color: var(--text-sidebar);
   text-decoration: none;
   font-weight: 500;
 }
@@ -1819,6 +1833,17 @@ select {
 .sidebar__footer-user:hover {
   text-decoration: underline;
   color: var(--accent);
+}
+
+/* Override ghost/secondary buttons inside sidebar for WCAG contrast on dark bg */
+.sidebar .btn--ghost,
+.sidebar .btn--secondary {
+  color: var(--text-sidebar);
+}
+.sidebar .btn--ghost:hover:not(:disabled),
+.sidebar .btn--secondary:hover:not(:disabled) {
+  color: var(--text-sidebar-active);
+  background-color: var(--bg-sidebar-hover);
 }
 
 /* ---- Larger modal for detail views ---- */

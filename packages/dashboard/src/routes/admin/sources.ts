@@ -60,7 +60,7 @@ export async function sourceRoutes(
         if (source === undefined) {
           return reply.code(404).header('content-type', 'text/html').send(toastHtml('Source not found.', 'error'));
         }
-        const isSystem = (source as { orgId?: string }).orgId === 'system' || (source as { orgId?: string }).orgId === undefined;
+        const isSystem = source.orgId === 'system' || source.orgId === undefined;
         return reply.view('admin/source-view.hbs', { source, isSystem });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load source';
@@ -93,11 +93,15 @@ export async function sourceRoutes(
           schedule: body.schedule?.trim() ?? 'daily',
         }, getOrgId(request));
 
+        const ownerBadge = created.orgId === 'system' || created.orgId === undefined
+          ? '<span class="badge badge--neutral">System</span>'
+          : (created.orgId ?? '');
         const row = `<tr id="source-${created.id}">
   <td data-label="Name">${created.name}</td>
   <td data-label="Type"><span class="badge badge--info">${created.type}</span></td>
   <td data-label="Schedule">${created.schedule}</td>
   <td data-label="Last Checked">${created.lastChecked ?? 'Never'}</td>
+  <td data-label="Owner">${ownerBadge}</td>
   <td>
     <button hx-get="/admin/sources/${encodeURIComponent(created.id)}/view"
             hx-target="#modal-container"

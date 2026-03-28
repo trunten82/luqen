@@ -34,7 +34,7 @@
         <input type="url" id="siteUrl" name="siteUrl"
                placeholder="https://example.com"
                {{#if prefillUrl}}value="{{prefillUrl}}"{{/if}}
-               autocomplete="url" required aria-required="true"
+               autocomplete="off" required aria-required="true"
                aria-describedby="siteUrl-hint">
         <p id="siteUrl-hint" class="form-hint">
           {{{t "scans.urlHint"}}}
@@ -162,6 +162,34 @@
           {{t "scans.incrementalHint"}}
         </p>
       </div>
+    </div>
+
+    <div class="card mb-md">
+      <details>
+        <summary class="card__title mb-md" style="cursor: pointer;">Authentication (optional)</summary>
+        <p class="form-hint mb-sm">Configure authentication to scan pages behind login. Headers are sent with every page request. Actions run once before testing begins (direct mode only).</p>
+
+        <div class="form-group">
+          <label for="authHeaders">Custom HTTP Headers</label>
+          <textarea id="authHeaders" name="authHeaders" class="input" rows="3"
+                    placeholder="Authorization: Bearer eyJhbG...&#10;Cookie: session=abc123"
+                    aria-describedby="authHeaders-hint"></textarea>
+          <p id="authHeaders-hint" class="form-hint">One header per line in <code>Name: Value</code> format.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="authActions">Pre-scan Actions</label>
+          <textarea id="authActions" name="authActions" class="input" rows="4"
+                    placeholder="set field #username to myuser&#10;set field #password to mypass&#10;click element button[type=submit]&#10;wait for element .dashboard to be visible"
+                    aria-describedby="authActions-hint"></textarea>
+          <p id="authActions-hint" class="form-hint">
+            Pa11y actions to run before testing. One per line. Common actions:
+            <code>set field &lt;selector&gt; to &lt;value&gt;</code>,
+            <code>click element &lt;selector&gt;</code>,
+            <code>wait for element &lt;selector&gt; to be visible</code>.
+          </p>
+        </div>
+      </details>
     </div>
 
     <div class="page-actions">

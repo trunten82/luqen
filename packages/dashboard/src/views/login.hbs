@@ -1,24 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Sign in to Luqen">
-  <title>{{t "auth.signInTitle"}} — {{t "common.appName"}}</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <script>
-  (function(){
-    var s=localStorage.getItem('luqen-theme');
-    if(s==='dark'||(s!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)){
-      document.documentElement.setAttribute('data-theme','dark');
-    }
-  })();
-  </script>
-</head>
-<body>
-  <a class="skip-link" href="#main-content">Skip to main content</a>
-
-  <main id="main-content" class="login-page" role="main">
+<div class="login-page">
     <div class="login-card">
       <div class="login-card__logo" aria-label="Luqen">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="display:inline-block;vertical-align:middle;margin-right:8px">
@@ -58,12 +38,12 @@
       </div>
 
       <details class="login-password-fallback">
-        <summary style="cursor: pointer; margin-bottom: var(--space-md, 1rem); color: var(--text-secondary, #666);">{{t "auth.signInWithPassword"}}</summary>
+        <summary class="login-details-summary" style="margin-bottom: var(--space-md, 1rem);">{{t "auth.signInWithPassword"}}</summary>
         {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
       </details>
 
       <details class="login-apikey-fallback" style="margin-top: var(--space-md, 1rem)">
-        <summary style="cursor: pointer; color: var(--text-secondary, #666);">{{t "auth.signInWithApiKey"}}</summary>
+        <summary class="login-details-summary">{{t "auth.signInWithApiKey"}}</summary>
         <div style="margin-top: var(--space-md, 1rem)">
           {{> login-form showApiKey=true apiKeyId="apiKeyEnterprise" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken error=error}}
         </div>
@@ -75,7 +55,7 @@
       {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
 
       <details class="login-apikey-fallback" style="margin-top: var(--space-lg, 1.5rem)">
-        <summary style="cursor: pointer; color: var(--text-secondary, #666);">{{t "auth.signInWithApiKey"}}</summary>
+        <summary class="login-details-summary">{{t "auth.signInWithApiKey"}}</summary>
         <div style="margin-top: var(--space-md, 1rem)">
           {{> login-form showApiKey=true apiKeyId="apiKeyTeam" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken error=error}}
         </div>
@@ -87,6 +67,5 @@
       {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
       {{/unless}}
     </div>
-  </main>
-</body>
-</html>
+    <p class="app-version">{{appVersion}}</p>
+</div>

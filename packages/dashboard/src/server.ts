@@ -33,6 +33,8 @@ import { dataApiRoutes } from './routes/api/data.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { repoRoutes } from './routes/repos.js';
+import { gitCredentialRoutes } from './routes/git-credentials.js';
+import { fixPrRoutes } from './routes/fix-pr.js';
 import { resolveStorageAdapter } from './db/index.js';
 import { SqliteStorageAdapter } from './db/sqlite/index.js';
 import { PluginManager } from './plugins/manager.js';
@@ -51,8 +53,10 @@ import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
 import { ServiceTokenManager } from './auth/service-token.js';
+import { ComplianceService } from './services/compliance-service.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
+import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
 import { schema as graphqlSchema } from './graphql/schema.js';
@@ -415,10 +419,26 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Service token injection (auto-refresh for compliance API calls) ────
+  const complianceService = new ComplianceService(config, serviceTokenManager, storage.organizations);
+  server.decorate('complianceService', complianceService);
+  server.addHook('onClose', () => { complianceService.destroyOrgTokenManagers(); });
+
   server.addHook('preHandler', async (request: FastifyRequest) => {
     const session = request.session as { token?: string };
     if (!session.token) {
-      (request as unknown as Record<string, unknown>)['_serviceToken'] = await serviceTokenManager.getToken();
+      const reqExt = request as unknown as Record<string, unknown>;
+      reqExt['_serviceToken'] = await serviceTokenManager.getToken();
+
+      // Inject per-org token when the user has a current org with stored credentials
+      const orgId = request.user?.currentOrgId;
+      if (orgId) {
+        try {
+          const orgToken = await complianceService.getOrgToken(orgId);
+          reqExt['_orgServiceToken'] = orgToken;
+        } catch {
+          // Fall through — global token will be used via _serviceToken
+        }
+      }
     }
   });
 
@@ -468,12 +488,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           adminOrg: perms.has('admin.org') || perms.has('admin.system'),
           complianceView: perms.has('compliance.view') || perms.has('admin.system'),
           complianceManage: perms.has('compliance.manage') || perms.has('admin.system'),
+          reposCredentials: perms.has('repos.credentials'),
           auditView: perms.has('audit.view'),
         },
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
         emailPluginActive: pluginManager.getActiveInstanceByPackageName?.('@luqen/plugin-notify-email') != null,
         orgContext: (request as unknown as Record<string, unknown>).orgContext,
+        appVersion: `v${VERSION}`,
       };
       // HTMX partial requests: render template without layout
       if (isHtmxRequest) {
@@ -516,6 +538,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await orgRoutes(server, storage);
   await toolRoutes(server);
   await repoRoutes(server, storage);
+  await gitCredentialRoutes(server, storage, config);
+  await fixPrRoutes(server, storage, config);
 
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);
@@ -540,6 +564,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await emailReportRoutes(server, storage, pluginManager);
 
   await auditRoutes(server, storage);
+  await gitHostRoutes(server, storage);
   await pluginAdminRoutes(server, pluginManager, registryEntries);
 
   // ── Export API routes ────────────────────────────────────────────────────
