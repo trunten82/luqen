@@ -491,6 +491,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
         emailPluginActive: pluginManager.getActiveInstanceByPackageName?.('@luqen/plugin-notify-email') != null,
         orgContext: (request as unknown as Record<string, unknown>).orgContext,
+        appVersion: `v${VERSION}`,
       };
       // HTMX partial requests: render template without layout
       if (isHtmxRequest) {
