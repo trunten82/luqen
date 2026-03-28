@@ -2,7 +2,8 @@
 <div id="plugin-config-area" class="mb-md"></div>
 
 <section aria-label="Plugin management dashboard" id="plugin-dashboard"
-        hx-get="/admin/plugins" hx-trigger="pluginChanged from:body" hx-select="#plugin-dashboard" hx-swap="outerHTML">
+        hx-get="/admin/plugins" hx-trigger="pluginChanged from:body" hx-select="#plugin-dashboard" hx-swap="outerHTML"
+        hx-disinherit="hx-select">
   <p class="text-sm text-muted mb-md">
     <span class="badge badge--completed">{{counts.active}} {{t "admin.plugins.active"}}</span>
     <span class="badge badge--info">{{counts.installed}} {{t "admin.plugins.installed"}}</span>
