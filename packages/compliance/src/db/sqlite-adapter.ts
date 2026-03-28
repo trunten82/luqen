@@ -87,6 +87,9 @@ interface UpdateProposalRow {
   status: string;
   reviewedBy: string | null;
   reviewedAt: string | null;
+  acknowledgedBy: string | null;
+  acknowledgedAt: string | null;
+  notes: string | null;
   createdAt: string;
 }
 
@@ -200,6 +203,9 @@ function toUpdateProposal(row: UpdateProposalRow): UpdateProposal {
     status: row.status as UpdateProposal['status'],
     ...(row.reviewedBy != null ? { reviewedBy: row.reviewedBy } : {}),
     ...(row.reviewedAt != null ? { reviewedAt: row.reviewedAt } : {}),
+    ...(row.acknowledgedBy != null ? { acknowledgedBy: row.acknowledgedBy } : {}),
+    ...(row.acknowledgedAt != null ? { acknowledgedAt: row.acknowledgedAt } : {}),
+    ...(row.notes != null ? { notes: row.notes } : {}),
     createdAt: row.createdAt,
   };
 }
@@ -383,6 +389,23 @@ export class SqliteAdapter implements DbAdapter {
     ];
     for (const statement of ddl) {
       this.db.prepare(statement).run();
+    }
+
+    // Migrations: add new columns to existing tables (idempotent — ignore duplicate column errors)
+    const migrations = [
+      'ALTER TABLE update_proposals ADD COLUMN acknowledgedBy TEXT',
+      'ALTER TABLE update_proposals ADD COLUMN acknowledgedAt TEXT',
+      'ALTER TABLE update_proposals ADD COLUMN notes TEXT',
+    ];
+    for (const migration of migrations) {
+      try {
+        this.db.prepare(migration).run();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!msg.includes('duplicate column name')) {
+          throw err;
+        }
+      }
     }
   }
 

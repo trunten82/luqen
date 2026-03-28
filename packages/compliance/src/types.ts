@@ -65,9 +65,12 @@ export interface UpdateProposal {
   readonly affectedJurisdictionId?: string;
   readonly summary: string;
   readonly proposedChanges: ProposedChange;
-  readonly status: 'pending' | 'approved' | 'rejected';
+  readonly status: 'pending' | 'approved' | 'rejected' | 'acknowledged' | 'reviewed' | 'dismissed';
   readonly reviewedBy?: string;
   readonly reviewedAt?: string;
+  readonly acknowledgedBy?: string;
+  readonly acknowledgedAt?: string;
+  readonly notes?: string;
   readonly createdAt: string;
 }
 
