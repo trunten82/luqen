@@ -35,6 +35,7 @@
           <th scope="col">{{t "admin.sources.colType"}}</th>
           <th scope="col">{{t "admin.sources.colSchedule"}}</th>
           <th scope="col">{{t "admin.sources.colLastChecked"}}</th>
+          <th scope="col">{{t "common.owner"}}</th>
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
@@ -45,6 +46,9 @@
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
           <td data-label="Schedule">{{schedule}}</td>
           <td data-label="Last Checked">{{#if lastChecked}}{{lastChecked}}{{else}}{{t "admin.sources.never"}}{{/if}}</td>
+          <td data-label="Owner">
+            {{#if (eq orgId "system")}}<span class="badge badge--neutral">System</span>{{else}}{{orgId}}{{/if}}
+          </td>
           <td>
             <button hx-get="/admin/sources/{{id}}/view"
                     hx-target="#modal-container"
@@ -55,7 +59,7 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="5">{{t "admin.sources.noSources"}}</td>
+          <td colspan="6">{{t "admin.sources.noSources"}}</td>
         </tr>
         {{/each}}
       </tbody>

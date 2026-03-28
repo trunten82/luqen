@@ -75,7 +75,7 @@ function normalizeJurisdictions(value: string | string[] | undefined): string[] 
 /**
  * SSRF protection: block private/internal IP ranges and reserved hostnames.
  */
-function isPrivateHostname(hostname: string): boolean {
+export function isPrivateHostname(hostname: string): boolean {
   const h = hostname.toLowerCase();
   return (
     h === 'localhost' ||
