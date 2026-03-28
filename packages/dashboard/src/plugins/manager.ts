@@ -768,7 +768,19 @@ export class PluginManager {
   }
 
   private resolvePluginPath(packageName: string): string {
-    return resolve(this.resolvePackageDir(packageName));
+    const pkgDir = resolve(this.resolvePackageDir(packageName));
+    // Try to read package.json for the "main" entry point
+    try {
+      const pkgJsonPath = join(pkgDir, 'package.json');
+      const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8')) as { main?: string };
+      if (pkgJson.main) {
+        return join(pkgDir, pkgJson.main);
+      }
+    } catch { /* fall through to default */ }
+    // Default: look for dist/index.js or index.js
+    const distIndex = join(pkgDir, 'dist', 'index.js');
+    if (existsSync(distIndex)) return distIndex;
+    return join(pkgDir, 'index.js');
   }
 
   private readManifest(packageName: string): PluginManifest {

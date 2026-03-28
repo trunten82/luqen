@@ -401,6 +401,17 @@
   /* ── Sidebar collapse (desktop) — persists to localStorage ────────── */
   // Sidebar is always an overlay — no desktop collapse state needed
 
+  /* ── Plugin org picker: select all toggle ──────────────────────────── */
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.dataset && e.target.dataset.action === 'selectAllOrgs') {
+      var checked = e.target.checked;
+      var form = e.target.closest('form');
+      if (form) {
+        form.querySelectorAll('.org-cb-plugin').forEach(function(cb) { cb.checked = checked; });
+      }
+    }
+  });
+
   /* ── Expose layout functions globally ─────────────────────────────── */
   window.toggleSidebar = toggleSidebar;
   window.closeSidebar = closeSidebar;
