@@ -232,7 +232,8 @@ describe('PluginManager', () => {
 
       const record = await manager.activate(id);
 
-      expect(record.status).toBe('error');
+      // Status stays active (enabled) but error records why the plugin code couldn't start
+      expect(record.status).toBe('active');
       expect(record.error).toContain('Activation failed');
     });
   });
