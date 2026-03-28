@@ -4,9 +4,9 @@
 
 Luqen scans your entire website for WCAG violations and tells you which laws in which countries require you to fix each one. One scan covers 58 jurisdictions (EU, US, UK, and more), so your legal and dev teams see the same picture. Run it from the command line, a browser dashboard, or your IDE — it works for a solo developer checking one page or an enterprise team monitoring hundreds of sites across multiple languages.
 
-![Version](https://img.shields.io/badge/version-v2.1.0-blue)
+![Version](https://img.shields.io/badge/version-v2.2.2-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-1918%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-2232%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)
 ![WCAG](https://img.shields.io/badge/WCAG%202.1%20AA-verified-green)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
@@ -31,6 +31,7 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 - **Legal compliance checking** against 58 jurisdictions and 62 regulations (EU EAA, Section 508, ADA, UK Equality Act, RGAA, BITV, JIS X 8341-3, and more)
 - **Confirmed violations vs needs-review** — errors are confirmed violations; notices are flagged separately, never inflating the violation count
 - **Source code mapping** — maps WCAG issues to source files in Next.js, Nuxt, SvelteKit, Angular, and plain HTML projects
+- **Git host integration** — connect GitHub, GitLab, and Azure DevOps repositories as PluginManager plugins; per-developer PAT credentials encrypted with AES-256-GCM; create pull requests directly from accessibility fix proposals under the developer's own identity
 - **Auto-fix proposals** — generates unified diffs for common issues (missing `alt`, missing `aria-label`, missing `lang`)
 - **Template issue deduplication** — issues appearing on 3+ pages are grouped into a "Template & Layout Issues" section, eliminating ~84% of duplicate noise
 - **WCAG hyperlinks** — every criterion links to the official W3C Understanding WCAG 2.1 page
@@ -44,7 +45,7 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 - **Per-org compliance tokens** — each organization can configure its own compliance API credentials, with automatic fallback to the global token for single-tenant deployments
 - **Pluggable storage** — modular StorageAdapter architecture with 14 repository interfaces backed by SQLite; PostgreSQL and MongoDB adapters coming as plugins
 - **Security hardening** — @fastify/helmet security headers (CSP, HSTS, X-Frame-Options), CSRF token verification on state-changing requests, XSS prevention, per-installation encryption salt, SSRF protection on scan URLs, global rate limiting, secure session cookies (httpOnly, SameSite=Strict, AES-256-GCM encrypted)
-- **Plugin system** — 8 plugins in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), and storage (S3, Azure Blob); installed by name via tarball download from GitHub releases, managed via dashboard UI, CLI, or REST API
+- **Plugin system** — 11 plugins total: 8 in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), and storage (S3, Azure Blob), plus 3 built-in git host plugins (GitHub, GitLab, Azure DevOps); managed via dashboard UI, CLI, or REST API
 - **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop
 - **IdP group → team sync** — auth plugins (Entra ID, Okta, Google) read group memberships from tokens and auto-sync to dashboard teams on SSO login
@@ -203,9 +204,9 @@ systemctl disable luqen-dashboard luqen-compliance
 | [`@luqen/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, admin UI | [docs/reference/dashboard-config.md](docs/reference/dashboard-config.md) |
 | [`@luqen/monitor`](packages/monitor) | Regulatory monitor agent — watches legal sources, creates update proposals | [docs/reference/monitor-config.md](docs/reference/monitor-config.md) |
 
-### Plugins (8 available)
+### Plugins (11 available)
 
-Plugins are distributed via the [plugin catalogue](https://github.com/trunten82/luqen-plugins) and installed from the dashboard UI, CLI (`luqen-dashboard plugin install <name>`), or REST API.
+Catalogue plugins are distributed via the [plugin catalogue](https://github.com/trunten82/luqen-plugins) and installed from the dashboard UI, CLI (`luqen-dashboard plugin install <name>`), or REST API. Git host plugins are built-in and auto-activated.
 
 | Plugin | Type | Description |
 |--------|------|-------------|
@@ -217,8 +218,11 @@ Plugins are distributed via the [plugin catalogue](https://github.com/trunten82/
 | notify-email | Notification | SMTP email reports |
 | storage-s3 | Storage | AWS S3 report storage |
 | storage-azure | Storage | Azure Blob report storage |
+| git-host-github | Git Host | GitHub / GitHub Enterprise PR creation |
+| git-host-gitlab | Git Host | GitLab / self-hosted merge request creation |
+| git-host-azure-devops | Git Host | Azure DevOps pull request creation |
 
-Plugins live in the [luqen-plugins](https://github.com/trunten82/luqen-plugins) repository. See [docs/plugins/README.md](docs/plugins/README.md) for configuration details and plugin development guide.
+Catalogue plugins live in the [luqen-plugins](https://github.com/trunten82/luqen-plugins) repository. See [docs/plugins/README.md](docs/plugins/README.md) for configuration details and plugin development guide.
 
 ---
 
