@@ -16,7 +16,7 @@ const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 interface OrgTestContext {
   server: FastifyInstance;
   storage: SqliteStorageAdapter;
-  cleanup: () => void;
+  cleanup: () => Promise<void>;
 }
 
 async function createOrgTestServer(
@@ -70,7 +70,13 @@ async function createOrgTestServer(
   await scanRoutes(server, storage, orchestrator, config);
   await server.ready();
 
-  const cleanup = (): void => {
+  const cleanup = async (): Promise<void> => {
+    // Wait for any background scans to finish before closing the DB
+    while (orchestrator.queuedCount > 0 || orchestrator.activeCount > 0) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    // Brief grace period for final DB writes
+    await new Promise((r) => setTimeout(r, 100));
     void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     if (existsSync(reportsDir)) rmSync(reportsDir, { recursive: true });
@@ -84,8 +90,8 @@ describe('Org-scoped route integration', () => {
   describe('scan creation includes orgId from user context', () => {
     let ctx: OrgTestContext;
 
-    afterEach(() => {
-      ctx.cleanup();
+    afterEach(async () => {
+      await ctx.cleanup();
     });
 
     it('stores orgId as "system" when user has no currentOrgId', async () => {
@@ -127,8 +133,8 @@ describe('Org-scoped route integration', () => {
   describe('scan listing filters by orgId', () => {
     let ctx: OrgTestContext;
 
-    afterEach(() => {
-      ctx.cleanup();
+    afterEach(async () => {
+      await ctx.cleanup();
     });
 
     it('home page shows only scans matching user orgId', async () => {
