@@ -1,23 +1,14 @@
-// packages/dashboard/src/git-hosts/gitlab.ts
+class GitLabPlugin {
+  get type() { return 'gitlab'; }
+  get displayName() { return 'GitLab'; }
 
-import type {
-  GitHostPlugin,
-  GitHostValidation,
-  ReadFileOptions,
-  CreatePullRequestOptions,
-  GitHostPullRequest,
-} from './types.js';
-export class GitLabPlugin implements GitHostPlugin {
-  readonly type = 'gitlab' as const;
-  readonly displayName = 'GitLab';
-
-  private headers(token: string): Record<string, string> {
+  headers(token) {
     return {
       'PRIVATE-TOKEN': token,
     };
   }
 
-  async validateToken(hostUrl: string, token: string): Promise<GitHostValidation> {
+  async validateToken(hostUrl, token) {
     try {
       const res = await fetch(`${hostUrl}/user`, {
         headers: this.headers(token),
@@ -27,7 +18,7 @@ export class GitLabPlugin implements GitHostPlugin {
         return { valid: false, error: `HTTP ${res.status}` };
       }
 
-      const data = await res.json() as { username: string };
+      const data = await res.json();
       return { valid: true, username: data.username };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -35,7 +26,7 @@ export class GitLabPlugin implements GitHostPlugin {
     }
   }
 
-  async readFile(options: ReadFileOptions): Promise<string | null> {
+  async readFile(options) {
     const { hostUrl, repo, path, branch, token } = options;
     try {
       const encodedRepo = encodeURIComponent(repo);
@@ -57,7 +48,7 @@ export class GitLabPlugin implements GitHostPlugin {
     }
   }
 
-  async listFiles(options: ReadFileOptions): Promise<readonly string[]> {
+  async listFiles(options) {
     const { hostUrl, repo, path, branch, token } = options;
     try {
       const encodedRepo = encodeURIComponent(repo);
@@ -68,14 +59,14 @@ export class GitLabPlugin implements GitHostPlugin {
         return [];
       }
 
-      const data = await res.json() as ReadonlyArray<{ name: string }>;
+      const data = await res.json();
       return data.map((entry) => entry.name);
     } catch {
       return [];
     }
   }
 
-  async createPullRequest(options: CreatePullRequestOptions): Promise<GitHostPullRequest> {
+  async createPullRequest(options) {
     const { hostUrl, repo, baseBranch, headBranch, title, body, changes, token } = options;
     const hdrs = this.headers(token);
     const jsonHeaders = { ...hdrs, 'Content-Type': 'application/json' };
@@ -93,7 +84,7 @@ export class GitLabPlugin implements GitHostPlugin {
 
     // 2. Commit all file changes in a single commit
     const actions = changes.map((change) => ({
-      action: 'update' as const,
+      action: 'update',
       file_path: change.path,
       content: change.content,
     }));
@@ -126,7 +117,35 @@ export class GitLabPlugin implements GitHostPlugin {
       throw new Error(`Failed to create merge request: HTTP ${mrRes.status}`);
     }
 
-    const mrData = await mrRes.json() as { web_url: string; iid: number };
+    const mrData = await mrRes.json();
     return { url: mrData.web_url, number: mrData.iid };
   }
 }
+
+const manifest = {
+  name: 'git-host-gitlab',
+  displayName: 'GitLab',
+  type: 'git-host',
+  version: '1.0.0',
+  description: 'Git integration with GitLab for merge request creation from accessibility fixes',
+  configSchema: [
+    {
+      key: 'hostUrl',
+      label: 'API Host URL',
+      type: 'string',
+      required: true,
+      default: 'https://gitlab.com/api/v4',
+      description: 'Use https://gitlab.com/api/v4 for GitLab.com or your self-hosted GitLab API URL',
+    },
+  ],
+};
+
+const instance = new GitLabPlugin();
+
+export default {
+  manifest,
+  gitHost: instance,
+  async activate() {},
+  async deactivate() {},
+  async healthCheck() { return true; },
+};
