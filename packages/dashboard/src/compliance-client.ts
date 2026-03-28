@@ -624,6 +624,7 @@ export interface OAuthClient {
   readonly name: string;
   readonly scopes: string[];
   readonly grantTypes: string[];
+  readonly orgId: string;
   readonly createdAt: string;
 }
 

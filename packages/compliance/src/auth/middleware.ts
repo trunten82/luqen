@@ -52,8 +52,18 @@ export function createAuthMiddleware(verifier: TokenVerifier) {
       const payload = await verifier(token);
       (request as FastifyRequest & { tokenPayload: TokenPayload }).tokenPayload = payload;
       (request as FastifyRequest & { authType: string }).authType = 'jwt';
-      // JWT orgId takes priority; X-Org-Id header is ignored for JWT auth
-      (request as FastifyRequest & { orgId: string }).orgId = payload.orgId ?? 'system';
+      // JWT orgId takes priority. If JWT has admin scope but no orgId
+      // (system service token used on behalf of an org), honor X-Org-Id
+      // header as secondary context. Non-admin JWTs cannot override org.
+      let jwtOrgId = payload.orgId ?? 'system';
+      if (jwtOrgId === 'system' && payload.scopes.includes('admin')) {
+        const headerOrgId = request.headers['x-org-id'];
+        const headerVal = Array.isArray(headerOrgId) ? headerOrgId[0] : headerOrgId;
+        if (headerVal && headerVal !== 'system') {
+          jwtOrgId = headerVal;
+        }
+      }
+      (request as FastifyRequest & { orgId: string }).orgId = jwtOrgId;
     } catch {
       await reply.status(401).send({ error: 'Invalid or expired token', statusCode: 401 });
     }

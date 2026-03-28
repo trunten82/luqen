@@ -41,7 +41,7 @@ describe('X-Org-Id header handling', () => {
     expect(orgNames).toContain('Org Country');
   });
 
-  it('ignores X-Org-Id header when using JWT auth', async () => {
+  it('admin JWT honors X-Org-Id header as secondary org context', async () => {
     // Create data using API key with org-1
     await app.inject({
       method: 'POST',
@@ -50,15 +50,15 @@ describe('X-Org-Id header handling', () => {
       payload: { name: 'Org Only JWT Test', type: 'country' },
     });
 
-    // List with JWT + x-org-id header — should NOT see org-scoped data
-    // because JWT auth ignores x-org-id (defaults to system)
+    // Admin JWT + x-org-id header — SHOULD see org-scoped data
+    // because admin JWTs honor X-Org-Id when no orgId in payload
     const jwtRes = await app.inject({
       method: 'GET',
       url: '/api/v1/jurisdictions',
       headers: { authorization: `Bearer ${ctx.adminToken}`, 'x-org-id': 'org-1' },
     });
     const names = JSON.parse(jwtRes.body).data.map((j: { name: string }) => j.name);
-    expect(names).not.toContain('Org Only JWT Test');
+    expect(names).toContain('Org Only JWT Test');
   });
 
   it('system request does not see org-specific data', async () => {
