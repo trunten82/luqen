@@ -375,6 +375,9 @@
       "stale": "Desatualizado",
       "ok": "OK",
       "noSources": "Nenhuma fonte monitorada configurada.",
+      "noSourcesDesc": "Adicione fontes no serviço de conformidade para monitorar mudanças regulatórias.",
+      "awaitingReview": "Aguardando revisão",
+      "scanDescription": "Verifique todas as fontes monitoradas em busca de mudanças regulatórias e crie propostas para atualizações detectadas.",
       "recentProposals": "Propostas Recentes",
       "colCreated": "Criado",
       "noProposals": "Nenhuma proposta recente."

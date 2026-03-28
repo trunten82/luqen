@@ -1,61 +1,70 @@
 <section aria-label="Monitor dashboard">
   {{#if error}}
-  <div class="alert alert--error" role="alert">
+  <div class="alert alert--error mb-md" role="alert">
     <p>{{error}}</p>
   </div>
   {{/if}}
 
-  <div class="cards">
-    <div class="card card--neutral" aria-label="Sources count">
+  {{! ── KPI Cards ──────────────────────────────────────────────────────────── }}
+  <div class="stats-grid">
+    <div class="card">
       <div class="card__header">
         <h2 class="card__title">{{t "admin.monitor.sources"}}</h2>
       </div>
       <div class="card__body">
-        <span class="text--large">{{sourcesCount}}</span>
+        <div class="card__value">{{sourcesCount}}</div>
+        <div class="card__label">{{t "admin.monitor.monitoredSources"}}</div>
       </div>
     </div>
 
-    <div class="card card--neutral" aria-label="Last scan time">
+    <div class="card">
       <div class="card__header">
         <h2 class="card__title">{{t "admin.monitor.lastScan"}}</h2>
       </div>
       <div class="card__body">
-        <span>{{lastScanTime}}</span>
+        <div class="card__value" style="font-size: var(--font-size-lg)">{{lastScanTime}}</div>
       </div>
     </div>
 
-    <div class="card {{#if pendingProposalsCount}}card--warning{{else}}card--success{{/if}}" aria-label="Pending proposals count">
+    <div class="card">
       <div class="card__header">
         <h2 class="card__title">{{t "admin.monitor.pendingProposals"}}</h2>
       </div>
       <div class="card__body">
-        <span class="text--large">{{pendingProposalsCount}}</span>
+        <div class="card__value {{#if pendingProposalsCount}}text--warning{{else}}text--success{{/if}}">{{pendingProposalsCount}}</div>
+        <div class="card__label">{{t "admin.monitor.awaitingReview"}}</div>
       </div>
     </div>
   </div>
 
+  {{! ── Trigger Scan ───────────────────────────────────────────────────────── }}
   <section class="admin-section" aria-label="Trigger scan">
-    <div class="flex items-center gap-md mb-md">
-      <h2 class="section-title">{{t "admin.monitor.scan"}}</h2>
-      <button class="btn btn--primary btn--sm"
-              hx-post="/admin/monitor/trigger"
-              hx-target="#scan-results"
-              hx-swap="innerHTML"
-              hx-indicator="#scan-spinner"
-              aria-label="Trigger source scan">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        {{t "admin.monitor.triggerScan"}}
-      </button>
-      <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">{{t "admin.sources.scanning"}}</span>
+    <h2 class="section-title">{{t "admin.monitor.scan"}}</h2>
+    <div class="mb-md">
+      <p class="text-sm text-muted mb-sm">{{t "admin.monitor.scanDescription"}}</p>
+      <form>
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <button type="button" class="btn btn--primary btn--sm"
+                hx-post="/admin/monitor/trigger"
+                hx-target="#scan-results"
+                hx-swap="innerHTML"
+                hx-include="[name=_csrf]"
+                hx-indicator="#scan-spinner"
+                aria-label="Trigger source scan">
+          {{t "admin.monitor.triggerScan"}}
+        </button>
+        <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">{{t "admin.sources.scanning"}}</span>
+      </form>
     </div>
     <div id="scan-results" aria-live="polite"></div>
   </section>
 
+  {{! ── Monitored Sources ──────────────────────────────────────────────────── }}
   <section class="admin-section" aria-label="Monitored sources">
     <h2 class="section-title">{{t "admin.monitor.monitoredSources"}}</h2>
     {{#if sources.length}}
     <div class="table-wrapper">
-      <table class="table" aria-label="Monitored sources">
+      <table class="data-table" aria-label="Monitored sources">
         <thead>
           <tr>
             <th scope="col">{{t "admin.sources.colName"}}</th>
@@ -70,8 +79,8 @@
           {{#each sources}}
           <tr>
             <td data-label="Name">{{name}}</td>
-            <td data-label="URL"><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
-            <td data-label="Type">{{type}}</td>
+            <td data-label="URL" class="cell--url"><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
+            <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
             <td data-label="Schedule">{{schedule}}</td>
             <td data-label="Last Checked">{{lastCheckedDisplay}}</td>
             <td data-label="Status">
@@ -87,15 +96,19 @@
       </table>
     </div>
     {{else}}
-    <p>{{t "admin.monitor.noSources"}}</p>
+    <div class="empty-state" role="status">
+      <div class="empty-state__title">{{t "admin.monitor.noSources"}}</div>
+      <div class="empty-state__desc">{{t "admin.monitor.noSourcesDesc"}}</div>
+    </div>
     {{/if}}
   </section>
 
+  {{! ── Recent Proposals ───────────────────────────────────────────────────── }}
   <section class="admin-section" aria-label="Recent proposals">
     <h2 class="section-title">{{t "admin.monitor.recentProposals"}}</h2>
     {{#if proposals.length}}
     <div class="table-wrapper">
-      <table class="table" aria-label="Recent proposals">
+      <table class="data-table" aria-label="Recent proposals">
         <thead>
           <tr>
             <th scope="col">{{t "admin.proposals.colSummary"}}</th>
@@ -125,7 +138,10 @@
       </table>
     </div>
     {{else}}
-    <p>{{t "admin.monitor.noProposals"}}</p>
+    <div class="empty-state" role="status">
+      <div class="empty-state__title">{{t "admin.monitor.noProposals"}}</div>
+      <div class="empty-state__desc">{{t "admin.monitor.noProposalsDesc"}}</div>
+    </div>
     {{/if}}
   </section>
 </section>

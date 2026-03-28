@@ -375,6 +375,9 @@
       "stale": "Veraltet",
       "ok": "OK",
       "noSources": "Keine überwachten Quellen konfiguriert.",
+      "noSourcesDesc": "Fügen Sie Quellen im Compliance-Service hinzu, um Regeländerungen zu überwachen.",
+      "awaitingReview": "Überprüfung ausstehend",
+      "scanDescription": "Überprüfen Sie alle überwachten Quellen auf Regeländerungen und erstellen Sie Vorschläge für erkannte Aktualisierungen.",
       "recentProposals": "Aktuelle Vorschläge",
       "colCreated": "Erstellt",
       "noProposals": "Keine aktuellen Vorschläge."
