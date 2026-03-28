@@ -1,3 +1,5 @@
+<div id="plugin-messages"></div>
+
 <section aria-label="Plugin management dashboard" id="plugin-dashboard"
         hx-get="/admin/plugins" hx-trigger="pluginChanged from:body" hx-select="#plugin-dashboard" hx-swap="outerHTML"
         hx-disinherit="hx-select">
@@ -8,8 +10,6 @@
     <span class="badge badge--queued">{{counts.available}} {{t "admin.plugins.available"}}</span>
     {{/if}}
   </p>
-
-  <div id="plugin-messages"></div>
 
   <section class="admin-section" aria-label="Installed plugins">
     <h2 class="section-title">{{t "admin.plugins.installedPlugins"}}</h2>
