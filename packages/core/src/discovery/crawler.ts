@@ -28,16 +28,8 @@ interface CrawlOptions {
   readonly headers?: Record<string, string>;
 }
 
-const SKIP_PATH_PATTERNS = [
-  /\/scan\/[^/]+\/progress$/,
-  /\/scan\/[^/]+\/events$/,
-  /\/api\//,
-  /\/graphql$/,
-];
-
 function isHtmlUrl(url: string): boolean {
   const pathname = new URL(url).pathname;
-  if (SKIP_PATH_PATTERNS.some((re) => re.test(pathname))) return false;
   const ext = pathname.slice(pathname.lastIndexOf('.'));
   return !NON_HTML_EXTENSIONS.has(ext.toLowerCase());
 }

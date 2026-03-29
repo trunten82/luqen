@@ -75,7 +75,7 @@ function wantsHtml(request: FastifyRequest): boolean {
 }
 
 // Routes that bypass auth guard
-const PUBLIC_PATHS = new Set(['/login', '/health', '/api/v1/setup']);
+const PUBLIC_PATHS = new Set(['/login', '/health', '/api/v1/setup', '/robots.txt']);
 
 function isPublicPath(path: string): boolean {
   if (PUBLIC_PATHS.has(path)) return true;
@@ -252,6 +252,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     setHeaders: (res) => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     },
+  });
+
+  // robots.txt — guides crawlers (including Luqen's own scanner) to skip non-page URLs
+  server.get('/robots.txt', async (_request, reply) => {
+    return reply.type('text/plain').send(
+      `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /graphql\nDisallow: /scan/*/progress\nDisallow: /scan/*/events\n`,
+    );
   });
 
   // Handlebars views
