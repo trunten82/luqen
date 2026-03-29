@@ -6,6 +6,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.4.0] - 2026-03-28
+
+### Added
+- **Proposals redesign** — two-flow system: acknowledge official regulatory changes vs review/dismiss org-custom proposals
+- **Mass acknowledge** — select-all checkbox and bulk action bar on proposals page for batch operations
+- **Change History page** — filterable audit log of all acknowledged/reviewed/dismissed changes with CSV export
+- **Content diff view** — proposals show what changed (added/removed/modified sections) with color-coded inline diff
+- **Monitor source status** — 3-state badges (up-to-date/change-pending/stale) with schedule-aware thresholds
+- **Monitor KPI cards** — sources count, last scan, up-to-date, change pending, stale counts
+- **Monitor source filter** — text search and status filter for large source lists
+- **Automatic source scanning** — scheduler checks sources based on their frequency (daily/weekly/monthly)
+- **Sidebar restructure** — split Compliance (reference data) from Monitoring (change tracking workflow)
+- **Source content storage** — old content stored in DB for meaningful diffs on next scan
+- **i18n** — all new strings in 6 locales
+
+### Fixed
+- **Acknowledge 400 error** — content-hash-only proposals no longer crash applyChange
+- **lastCheckedAt field mismatch** — dashboard now uses correct field name from API
+- **Scan duplicate proposals** — scanner skips sources with existing pending proposals
+- **First scan baseline** — initial scan records hash without creating proposals
+- **Stale threshold** — respects source schedule (daily=24h, weekly=7d, monthly=30d) instead of hardcoded 24h
+- **Mobile overflow** — tab styling, card text, table cells, filter bars all wrap correctly
+- **Select-all on mobile** — moved from thead (hidden on mobile) to always-visible bulk bar
+
+---
+
 ## [2.3.1] - 2026-03-28
 
 ### Added
