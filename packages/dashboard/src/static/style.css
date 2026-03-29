@@ -622,6 +622,13 @@ body {
 .cell--url a:hover {
   text-decoration: underline;
 }
+
+.cell--wrap {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 300px;
+}
+
 .cell--jurisdictions {
   font-size: var(--font-size-xs);
   color: var(--text-muted);

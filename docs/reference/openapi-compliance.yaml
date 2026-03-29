@@ -685,12 +685,109 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /api/v1/updates/{id}/acknowledge:
+    patch:
+      operationId: acknowledgeUpdateProposal
+      tags: [updates]
+      summary: Acknowledge an official regulatory change
+      description: >-
+        Marks an official regulatory change as acknowledged, applies the change
+        to the compliance database, and creates an audit trail entry.
+        Requires `admin` scope.
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+        - $ref: "#/components/parameters/XOrgId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  description: Optional notes to attach to the acknowledgement.
+      responses:
+        "200":
+          description: Proposal acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateProposal"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/updates/{id}/review:
+    patch:
+      operationId: reviewUpdateProposal
+      tags: [updates]
+      summary: Review and apply a custom proposal
+      description: >-
+        Applies the proposed changes and marks the proposal as reviewed.
+        Requires `admin` scope.
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+        - $ref: "#/components/parameters/XOrgId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  description: Optional notes to attach to the review.
+      responses:
+        "200":
+          description: Proposal reviewed and applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateProposal"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/updates/{id}/dismiss:
+    patch:
+      operationId: dismissUpdateProposal
+      tags: [updates]
+      summary: Dismiss a custom proposal
+      description: >-
+        Marks the proposal as dismissed without applying changes.
+        Requires `admin` scope.
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+        - $ref: "#/components/parameters/XOrgId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  description: Optional notes to attach to the dismissal.
+      responses:
+        "200":
+          description: Proposal dismissed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateProposal"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /api/v1/updates/{id}/approve:
     patch:
       operationId: approveUpdateProposal
       tags: [updates]
+      deprecated: true
       summary: Approve an update proposal
-      description: Requires `admin` scope. Sets `reviewedBy` from the token subject.
+      description: >-
+        Deprecated. Use /review instead.
+        Requires `admin` scope. Sets `reviewedBy` from the token subject.
       parameters:
         - $ref: "#/components/parameters/ResourceId"
         - $ref: "#/components/parameters/XOrgId"
@@ -710,8 +807,11 @@ paths:
     patch:
       operationId: rejectUpdateProposal
       tags: [updates]
+      deprecated: true
       summary: Reject an update proposal
-      description: Requires `admin` scope. Sets `reviewedBy` from the token subject.
+      description: >-
+        Deprecated. Use /dismiss instead.
+        Requires `admin` scope. Sets `reviewedBy` from the token subject.
       parameters:
         - $ref: "#/components/parameters/ResourceId"
         - $ref: "#/components/parameters/XOrgId"
