@@ -119,7 +119,7 @@ export async function clientRoutes(
   </div>
 </div>`;
 
-        const row = `<tr id="client-${escapeHtml(created.clientId)}">
+        const row = `<tr id="client-${escapeHtml(created.clientId || '')}">
   <td data-label="Name">${escapeHtml(created.name)}</td>
   <td data-label="Client ID"><code>${escapeHtml(created.clientId)}</code></td>
   <td data-label="Scopes">${escapeHtml(scopes.join(', '))}</td>
