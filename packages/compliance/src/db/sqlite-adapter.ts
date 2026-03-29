@@ -396,6 +396,7 @@ export class SqliteAdapter implements DbAdapter {
       'ALTER TABLE update_proposals ADD COLUMN acknowledgedBy TEXT',
       'ALTER TABLE update_proposals ADD COLUMN acknowledgedAt TEXT',
       'ALTER TABLE update_proposals ADD COLUMN notes TEXT',
+      'ALTER TABLE monitored_sources ADD COLUMN lastContentText TEXT',
     ];
     for (const migration of migrations) {
       try {
@@ -822,11 +823,22 @@ export class SqliteAdapter implements DbAdapter {
     return row != null ? row.org_id : null;
   }
 
-  async updateSourceLastChecked(id: string, contentHash: string): Promise<void> {
+  async updateSourceLastChecked(id: string, contentHash: string, contentText?: string): Promise<void> {
     const now = new Date().toISOString();
-    this.db.prepare(
-      'UPDATE monitored_sources SET lastCheckedAt = ?, lastContentHash = ? WHERE id = ?',
-    ).run(now, contentHash, id);
+    if (contentText !== undefined) {
+      this.db.prepare(
+        'UPDATE monitored_sources SET lastCheckedAt = ?, lastContentHash = ?, lastContentText = ? WHERE id = ?',
+      ).run(now, contentHash, contentText, id);
+    } else {
+      this.db.prepare(
+        'UPDATE monitored_sources SET lastCheckedAt = ?, lastContentHash = ? WHERE id = ?',
+      ).run(now, contentHash, id);
+    }
+  }
+
+  async getSourceContent(id: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT lastContentText FROM monitored_sources WHERE id = ?').get(id) as { lastContentText: string | null } | undefined;
+    return row?.lastContentText ?? null;
   }
 
   // --- OAuth Clients ---

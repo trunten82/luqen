@@ -629,6 +629,20 @@ body {
 .col--check { width: 2.5rem; text-align: center; }
 .bulk-bar__select-all { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-weight: 600; }
 
+/* ── Diff panel (proposal change details) ────────────────── */
+.diff-panel { margin-top: 0.5rem; padding: 0.5rem; background: var(--bg-secondary, #f8f9fa); border-radius: var(--border-radius); font-size: 0.8rem; }
+.diff-section { margin-bottom: 0.4rem; }
+.diff-section ul { margin: 0.2rem 0 0 1.2rem; padding: 0; }
+.diff-section li { margin-bottom: 0.15rem; line-height: 1.4; }
+.diff-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.diff-section--added .diff-label { color: var(--success, #22c55e); }
+.diff-section--removed .diff-label { color: var(--error, #ef4444); }
+.diff-section--modified .diff-label { color: var(--warning, #f59e0b); }
+.diff-section--added li { color: var(--success, #22c55e); }
+.diff-section--removed li { color: var(--error, #ef4444); text-decoration: line-through; }
+.diff-section--modified li { color: var(--text-primary); }
+.btn--xs { padding: 0.15rem 0.5rem; font-size: 0.75rem; }
+
 /* ── Generic tabs (proposals, reusable) ──────────────────── */
 .tabs {
   display: flex;

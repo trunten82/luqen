@@ -43,6 +43,12 @@ export interface ComplianceCheckResult {
   readonly matrix: Record<string, unknown>;
 }
 
+export interface ProposalDiff {
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+  readonly modified: readonly string[];
+}
+
 export interface UpdateProposal {
   readonly id: string;
   readonly status: string;
@@ -54,6 +60,11 @@ export interface UpdateProposal {
   readonly acknowledgedBy?: string;
   readonly acknowledgedAt?: string;
   readonly notes?: string;
+  readonly proposedChanges?: {
+    readonly after?: {
+      readonly diff?: ProposalDiff;
+    };
+  };
 }
 
 export interface SeedStatus {

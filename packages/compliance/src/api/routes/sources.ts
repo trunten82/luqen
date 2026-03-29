@@ -4,6 +4,68 @@ import type { MonitoredSource } from '../../types.js';
 import { requireScope } from '../../auth/middleware.js';
 import { createHash } from 'node:crypto';
 
+// ── Lightweight inline diff for source content ──────────────────────────────
+
+interface ContentDiff {
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+  readonly modified: readonly string[];
+  readonly summary: string;
+}
+
+function splitParagraphs(text: string): string[] {
+  return text
+    .split(/\n{2,}|(?<=[.!?])\s{2,}/)
+    .map((p) => p.replace(/\s+/g, ' ').trim())
+    .filter((p) => p.length > 0);
+}
+
+function computeDiff(oldContent: string, newContent: string): ContentDiff {
+  const oldItems = splitParagraphs(oldContent);
+  const newItems = splitParagraphs(newContent);
+  const oldSet = new Set(oldItems);
+  const newSet = new Set(newItems);
+
+  const rawAdded = newItems.filter((item) => !oldSet.has(item));
+  const rawRemoved = oldItems.filter((item) => !newSet.has(item));
+
+  // Find modified: removed+added pairs with >50% word overlap
+  const modified: string[] = [];
+  const matchedR = new Set<number>();
+  const matchedA = new Set<number>();
+
+  for (let ri = 0; ri < rawRemoved.length; ri++) {
+    const rWords = new Set(rawRemoved[ri].toLowerCase().split(/\s+/));
+    for (let ai = 0; ai < rawAdded.length; ai++) {
+      if (matchedA.has(ai)) continue;
+      const aWords = new Set(rawAdded[ai].toLowerCase().split(/\s+/));
+      const intersection = [...rWords].filter((w) => aWords.has(w)).length;
+      const union = new Set([...rWords, ...aWords]).size;
+      if (union > 0 && intersection / union > 0.5) {
+        modified.push(`"${truncate(rawRemoved[ri], 120)}" → "${truncate(rawAdded[ai], 120)}"`);
+        matchedR.add(ri);
+        matchedA.add(ai);
+        break;
+      }
+    }
+  }
+
+  const added = rawAdded.filter((_, i) => !matchedA.has(i)).map((s) => truncate(s, 200));
+  const removed = rawRemoved.filter((_, i) => !matchedR.has(i)).map((s) => truncate(s, 200));
+
+  const parts: string[] = [];
+  if (added.length > 0) parts.push(`${added.length} section(s) added`);
+  if (removed.length > 0) parts.push(`${removed.length} section(s) removed`);
+  if (modified.length > 0) parts.push(`${modified.length} section(s) modified`);
+  const summary = parts.length > 0 ? parts.join(', ') + '.' : 'Content changed (formatting only).';
+
+  return { added, removed, modified, summary };
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max) + '…' : s;
+}
+
 const SCHEDULE_MS: Record<string, number> = {
   daily: 24 * 60 * 60 * 1000,
   weekly: 7 * 24 * 60 * 60 * 1000,
@@ -111,28 +173,36 @@ export async function registerSourceRoutes(
           scanned++;
 
           if (source.lastContentHash == null) {
-            // First scan — just baseline the hash, don't create a proposal
+            // First scan — just baseline the hash and store content
             baselined++;
-            await db.updateSourceLastChecked(source.id, contentHash);
+            await db.updateSourceLastChecked(source.id, contentHash, content);
           } else if (source.lastContentHash !== contentHash) {
             changed++;
-            // Content changed — create proposal only if no pending proposal for this source
+            // Content changed — compute diff and create proposal
             if (!pendingSourceUrls.has(source.url)) {
+              const oldContent = await db.getSourceContent(source.id);
+              const diff = oldContent != null ? computeDiff(oldContent, content) : null;
+
               const proposal = await db.createUpdateProposal({
                 source: source.url,
                 type: 'amendment',
-                summary: `Content change detected at ${source.name} (${source.url})`,
+                summary: diff != null
+                  ? `${source.name}: ${diff.summary}`
+                  : `Content change detected at ${source.name} (${source.url})`,
                 proposedChanges: {
                   action: 'update',
                   entityType: 'regulation',
                   entityId: source.id,
                   before: { contentHash: source.lastContentHash },
-                  after: { contentHash },
+                  after: {
+                    contentHash,
+                    ...(diff != null ? { diff: { added: diff.added, removed: diff.removed, modified: diff.modified } } : {}),
+                  },
                 },
               });
               proposals.push(proposal);
             }
-            await db.updateSourceLastChecked(source.id, contentHash);
+            await db.updateSourceLastChecked(source.id, contentHash, content);
           } else {
             await db.updateSourceLastChecked(source.id, contentHash);
           }

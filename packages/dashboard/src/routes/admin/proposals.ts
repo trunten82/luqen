@@ -37,14 +37,22 @@ export async function proposalRoutes(
         error = err instanceof Error ? err.message : 'Failed to load proposals';
       }
 
-      const formatProposal = (p: (typeof officialProposals)[0]) => ({
-        ...p,
-        detectedAtDisplay: new Date(p.detectedAt).toLocaleString('en-GB'),
-        isPending: p.status === 'pending',
-        isAcknowledged: p.status === 'acknowledged',
-        isReviewed: p.status === 'reviewed',
-        isDismissed: p.status === 'dismissed',
-      });
+      const formatProposal = (p: (typeof officialProposals)[0]) => {
+        const diff = p.proposedChanges?.after?.diff;
+        const hasDiff = diff != null && (diff.added.length > 0 || diff.removed.length > 0 || diff.modified.length > 0);
+        return {
+          ...p,
+          detectedAtDisplay: new Date(p.detectedAt).toLocaleString('en-GB'),
+          isPending: p.status === 'pending',
+          isAcknowledged: p.status === 'acknowledged',
+          isReviewed: p.status === 'reviewed',
+          isDismissed: p.status === 'dismissed',
+          hasDiff,
+          diffAdded: diff?.added ?? [],
+          diffRemoved: diff?.removed ?? [],
+          diffModified: diff?.modified ?? [],
+        };
+      };
 
       return reply.view('admin/proposals.hbs', {
         pageTitle: tab === 'updates' ? 'Regulatory Updates' : 'Custom Proposals',
