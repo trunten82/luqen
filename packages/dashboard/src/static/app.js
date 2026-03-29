@@ -376,6 +376,101 @@
       if (typeof window.copyFixCode === 'function') window.copyFixCode(parseInt(index, 10));
     },
 
+    /* ── Bulk proposal actions ─────────────────────────────────── */
+    bulkToggle: function () {
+      ['updates', 'custom'].forEach(function (tab) {
+        var checks = document.querySelectorAll('.bulk-check[data-tab="' + tab + '"]:checked');
+        var bar = document.getElementById('bulk-bar-' + tab);
+        var count = document.getElementById('bulk-count-' + tab);
+        if (bar && count) {
+          count.textContent = String(checks.length);
+          bar.hidden = checks.length === 0;
+        }
+      });
+    },
+
+    bulkSelectAll: function (el) {
+      var tab = el.getAttribute('data-tab');
+      var checked = el.checked;
+      document.querySelectorAll('.bulk-check[data-tab="' + tab + '"]').forEach(function (cb) {
+        cb.checked = checked;
+      });
+      actions.bulkToggle();
+    },
+
+    bulkClear: function (el) {
+      var tab = el.getAttribute('data-tab') || 'updates';
+      document.querySelectorAll('.bulk-check[data-tab="' + tab + '"]').forEach(function (cb) {
+        cb.checked = false;
+      });
+      var selectAll = document.querySelector('[data-action="bulkSelectAll"][data-tab="' + tab + '"]');
+      if (selectAll) selectAll.checked = false;
+      actions.bulkToggle();
+    },
+
+    bulkProposalAction: function (el) {
+      var actionName = el.getAttribute('data-bulk-action');
+      var tab = el.getAttribute('data-tab');
+      var checks = document.querySelectorAll('.bulk-check[data-tab="' + tab + '"]:checked');
+      var ids = [];
+      checks.forEach(function (cb) { ids.push(cb.getAttribute('data-id')); });
+      if (ids.length === 0) return;
+
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var headers = { 'Content-Type': 'application/json' };
+      if (csrfMeta) headers['x-csrf-token'] = csrfMeta.getAttribute('content');
+
+      el.disabled = true;
+      var originalText = el.textContent;
+      el.textContent = '...';
+
+      fetch('/admin/proposals/bulk-action', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ ids: ids, action: actionName, notes: '' }),
+        credentials: 'same-origin'
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          var succeeded = res.succeeded || [];
+          succeeded.forEach(function (id) {
+            var row = document.getElementById('proposal-' + id);
+            if (row) {
+              row.style.transition = 'opacity 0.3s';
+              row.style.opacity = '0';
+              setTimeout(function () { row.remove(); }, 300);
+            }
+          });
+          var toast = document.getElementById('toast-container');
+          if (toast) {
+            var msgDiv = document.createElement('div');
+            msgDiv.className = 'toast toast--success';
+            msgDiv.setAttribute('role', 'alert');
+            var msg = succeeded.length + ' of ' + ids.length + ' ' + actionName + 'd successfully.';
+            if (res.failed && res.failed.length > 0) msg += ' ' + res.failed.length + ' failed.';
+            msgDiv.textContent = msg;
+            toast.textContent = '';
+            toast.appendChild(msgDiv);
+          }
+          actions.bulkClear(el);
+        })
+        .catch(function (err) {
+          var toast = document.getElementById('toast-container');
+          if (toast) {
+            var errDiv = document.createElement('div');
+            errDiv.className = 'toast toast--error';
+            errDiv.setAttribute('role', 'alert');
+            errDiv.textContent = 'Bulk action failed: ' + err.message;
+            toast.textContent = '';
+            toast.appendChild(errDiv);
+          }
+        })
+        .finally(function () {
+          el.disabled = false;
+          el.textContent = originalText;
+        });
+    },
+
     /* ── Monitor scan trigger (plain fetch with progress) ────────────── */
     triggerMonitorScan: function (el) {
       var results = document.getElementById('scan-results');

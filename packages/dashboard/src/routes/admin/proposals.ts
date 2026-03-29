@@ -160,6 +160,55 @@ export async function proposalRoutes(
     },
   );
 
+  // POST /admin/proposals/bulk-action — bulk acknowledge/review/dismiss
+  server.post(
+    '/admin/proposals/bulk-action',
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = (request.body ?? {}) as { ids?: string[]; action?: string; notes?: string };
+      const ids = body.ids ?? [];
+      const action = body.action;
+      const notes = body.notes;
+
+      if (!Array.isArray(ids) || ids.length === 0 || !action) {
+        return reply.code(400).send({ error: 'ids and action required' });
+      }
+
+      const actionFn = action === 'acknowledge' ? acknowledgeProposal
+        : action === 'review' ? reviewProposal
+        : action === 'dismiss' ? dismissProposal
+        : null;
+
+      if (actionFn == null) {
+        return reply.code(400).send({ error: `Unknown action: ${action}` });
+      }
+
+      const succeeded: string[] = [];
+      const failed: string[] = [];
+
+      await Promise.all(ids.map(async (id) => {
+        try {
+          await actionFn(baseUrl, getToken(request), id, notes, getOrgId(request));
+          void storage.audit.log({
+            actor: request.user?.username ?? 'unknown',
+            actorId: request.user?.id,
+            action: `proposal.${action}`,
+            resourceType: 'update_proposal',
+            resourceId: id,
+            details: { notes, bulk: true },
+            ipAddress: request.ip,
+            orgId: getOrgId(request),
+          });
+          succeeded.push(id);
+        } catch {
+          failed.push(id);
+        }
+      }));
+
+      return reply.send({ succeeded, failed });
+    },
+  );
+
   // Legacy aliases — keep /approve and /reject working
   server.post(
     '/admin/proposals/:id/approve',
