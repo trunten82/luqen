@@ -202,10 +202,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     global: true,
     max: 100,
     timeWindow: '1 minute',
-    allowList: (req) => {
-      // Exempt API key / Bearer token requests (includes the built-in scanner)
+    keyGenerator: (req) => {
+      // Authenticated requests get their own bucket with a higher limit
       const auth = req.headers.authorization ?? '';
-      return auth.startsWith('Bearer ');
+      return auth.startsWith('Bearer ') ? `auth:${req.ip}` : req.ip;
+    },
+    max: (req) => {
+      const auth = req.headers.authorization ?? '';
+      return auth.startsWith('Bearer ') ? 1000 : 100;
     },
     errorResponseBuilder: (_req, context) => ({
       statusCode: 429,
