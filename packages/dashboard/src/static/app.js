@@ -395,7 +395,7 @@
       document.querySelectorAll('.bulk-check[data-tab="' + tab + '"]').forEach(function (cb) {
         cb.checked = checked;
       });
-      actions.bulkToggle();
+      handlers.bulkToggle();
     },
 
     bulkClear: function (el) {
@@ -405,7 +405,7 @@
       });
       var selectAll = document.querySelector('[data-action="bulkSelectAll"][data-tab="' + tab + '"]');
       if (selectAll) selectAll.checked = false;
-      actions.bulkToggle();
+      handlers.bulkToggle();
     },
 
     bulkProposalAction: function (el) {
@@ -452,7 +452,7 @@
             toast.textContent = '';
             toast.appendChild(msgDiv);
           }
-          actions.bulkClear(el);
+          handlers.bulkClear(el);
         })
         .catch(function (err) {
           var toast = document.getElementById('toast-container');
