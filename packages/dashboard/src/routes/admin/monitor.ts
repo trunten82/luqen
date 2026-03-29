@@ -21,7 +21,9 @@ export interface MonitorSourceView {
   readonly type: string;
   readonly schedule: string;
   readonly lastCheckedDisplay: string;
+  readonly lastDbUpdateDisplay: string;
   readonly stale: boolean;
+  readonly status: 'up_to_date' | 'change_pending' | 'stale';
 }
 
 export interface MonitorProposalView {
@@ -37,6 +39,7 @@ export interface MonitorProposalView {
 export interface MonitorViewData {
   readonly sourcesCount: number;
   readonly pendingProposalsCount: number;
+  readonly upToDateCount: number;
   readonly lastScanTime: string;
   readonly sources: readonly MonitorSourceView[];
   readonly proposals: readonly MonitorProposalView[];
@@ -67,15 +70,50 @@ export function buildMonitorViewData(
   sources: readonly MonitorSource[],
   proposals: readonly MonitorProposal[],
 ): MonitorViewData {
-  const sourcesView: MonitorSourceView[] = sources.map((s) => ({
-    id: s.id,
-    name: s.name,
-    url: s.url,
-    type: s.type,
-    schedule: s.schedule,
-    lastCheckedDisplay: formatLastChecked(s.lastCheckedAt),
-    stale: isSourceStale(s.lastCheckedAt),
-  }));
+  // Build a map of source URL → most recent resolved timestamp
+  const resolvedStatuses = ['acknowledged', 'reviewed', 'approved'];
+  const lastDbUpdateByUrl = new Map<string, number>();
+  for (const p of proposals) {
+    if (resolvedStatuses.includes(p.status)) {
+      const ts = Date.parse((p as any).acknowledgedAt ?? p.detectedAt);
+      if (!Number.isNaN(ts)) {
+        const prev = lastDbUpdateByUrl.get(p.source) ?? 0;
+        if (ts > prev) lastDbUpdateByUrl.set(p.source, ts);
+      }
+    }
+  }
+
+  // Build a set of source URLs that have pending proposals
+  const pendingSourceUrls = new Set(
+    proposals.filter((p) => p.status === 'pending').map((p) => p.source),
+  );
+
+  const sourcesView: MonitorSourceView[] = sources.map((s) => {
+    const lastDbUpdateTs = lastDbUpdateByUrl.get(s.url);
+    const lastDbUpdateDisplay = formatLastChecked(
+      lastDbUpdateTs !== undefined ? new Date(lastDbUpdateTs).toISOString() : undefined,
+    );
+    const stale = isSourceStale(s.lastCheckedAt);
+    let status: 'up_to_date' | 'change_pending' | 'stale';
+    if (stale) {
+      status = 'stale';
+    } else if (pendingSourceUrls.has(s.url)) {
+      status = 'change_pending';
+    } else {
+      status = 'up_to_date';
+    }
+    return {
+      id: s.id,
+      name: s.name,
+      url: s.url,
+      type: s.type,
+      schedule: s.schedule,
+      lastCheckedDisplay: formatLastChecked(s.lastCheckedAt),
+      lastDbUpdateDisplay,
+      stale,
+      status,
+    };
+  });
 
   const proposalsView: MonitorProposalView[] = proposals.map((p) => ({
     id: p.id,
@@ -88,6 +126,7 @@ export function buildMonitorViewData(
   }));
 
   const pendingProposalsCount = proposals.filter((p) => p.status === 'pending').length;
+  const upToDateCount = sourcesView.filter((s) => s.status === 'up_to_date').length;
 
   // Determine last scan time from most recently checked source
   const checkedDates = sources
@@ -103,6 +142,7 @@ export function buildMonitorViewData(
   return {
     sourcesCount: sources.length,
     pendingProposalsCount,
+    upToDateCount,
     lastScanTime,
     sources: sourcesView,
     proposals: proposalsView,

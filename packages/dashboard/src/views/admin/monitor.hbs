@@ -37,6 +37,16 @@
         <div class="card__label">{{t "admin.monitor.awaitingReview"}}</div>
       </div>
     </div>
+
+    <div class="card">
+      <div class="card__header">
+        <h2 class="card__title">Up to Date</h2>
+      </div>
+      <div class="card__body">
+        <div class="card__value text--success">{{upToDateCount}}</div>
+        <div class="card__label">Sources aligned with live</div>
+      </div>
+    </div>
   </div>
 
   {{! ── Trigger Scan ───────────────────────────────────────────────────────── }}
@@ -66,6 +76,7 @@
             <th scope="col">{{t "admin.sources.colType"}}</th>
             <th scope="col">{{t "admin.sources.colSchedule"}}</th>
             <th scope="col">{{t "admin.sources.colLastChecked"}}</th>
+            <th scope="col">Last DB Update</th>
             <th scope="col">{{t "common.status"}}</th>
           </tr>
         </thead>
@@ -77,11 +88,14 @@
             <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
             <td data-label="Schedule">{{schedule}}</td>
             <td data-label="Last Checked">{{lastCheckedDisplay}}</td>
+            <td data-label="Last DB Update">{{lastDbUpdateDisplay}}</td>
             <td data-label="Status">
-              {{#if stale}}
-              <span class="badge badge--warning">{{t "admin.monitor.stale"}}</span>
+              {{#if (eq status 'stale')}}
+              <span class="badge badge--error">Stale</span>
+              {{else if (eq status 'change_pending')}}
+              <span class="badge badge--warning">Change Pending</span>
               {{else}}
-              <span class="badge badge--success">{{t "admin.monitor.ok"}}</span>
+              <span class="badge badge--success">Up to Date</span>
               {{/if}}
             </td>
           </tr>
