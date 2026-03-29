@@ -82,7 +82,9 @@ export interface DbAdapter {
   updateSourceLastChecked(
     id: string,
     contentHash: string,
+    contentText?: string,
   ): Promise<void>;
+  getSourceContent(id: string): Promise<string | null>;
 
   // OAuth clients
   getClientById(clientId: string): Promise<OAuthClient | null>;

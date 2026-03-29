@@ -59,7 +59,32 @@
           <td class="col--check">{{#if isPending}}<input type="checkbox" class="bulk-check" data-tab="updates" data-id="{{id}}" data-action="bulkToggle">{{/if}}</td>
           <td data-label="Source" class="cell--wrap">{{source}}</td>
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
-          <td data-label="Summary" class="cell--wrap">{{summary}}</td>
+          <td data-label="Summary" class="cell--wrap">
+            {{summary}}
+            {{#if hasDiff}}
+            <button type="button" class="btn btn--xs btn--ghost mt-xs" data-action="toggleDiff" data-target="diff-{{id}}">Show changes</button>
+            <div id="diff-{{id}}" class="diff-panel" hidden>
+              {{#if diffAdded.length}}
+              <div class="diff-section diff-section--added">
+                <strong class="diff-label">Added:</strong>
+                <ul>{{#each diffAdded}}<li>{{this}}</li>{{/each}}</ul>
+              </div>
+              {{/if}}
+              {{#if diffRemoved.length}}
+              <div class="diff-section diff-section--removed">
+                <strong class="diff-label">Removed:</strong>
+                <ul>{{#each diffRemoved}}<li>{{this}}</li>{{/each}}</ul>
+              </div>
+              {{/if}}
+              {{#if diffModified.length}}
+              <div class="diff-section diff-section--modified">
+                <strong class="diff-label">Modified:</strong>
+                <ul>{{#each diffModified}}<li>{{this}}</li>{{/each}}</ul>
+              </div>
+              {{/if}}
+            </div>
+            {{/if}}
+          </td>
           <td data-label="Detected">{{detectedAtDisplay}}</td>
           <td data-label="Status">
             {{#if isPending}}
@@ -133,7 +158,32 @@
           <td class="col--check">{{#if isPending}}<input type="checkbox" class="bulk-check" data-tab="custom" data-id="{{id}}" data-action="bulkToggle">{{/if}}</td>
           <td data-label="Source" class="cell--wrap">{{source}}</td>
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
-          <td data-label="Summary" class="cell--wrap">{{summary}}</td>
+          <td data-label="Summary" class="cell--wrap">
+            {{summary}}
+            {{#if hasDiff}}
+            <button type="button" class="btn btn--xs btn--ghost mt-xs" data-action="toggleDiff" data-target="diff-{{id}}">Show changes</button>
+            <div id="diff-{{id}}" class="diff-panel" hidden>
+              {{#if diffAdded.length}}
+              <div class="diff-section diff-section--added">
+                <strong class="diff-label">Added:</strong>
+                <ul>{{#each diffAdded}}<li>{{this}}</li>{{/each}}</ul>
+              </div>
+              {{/if}}
+              {{#if diffRemoved.length}}
+              <div class="diff-section diff-section--removed">
+                <strong class="diff-label">Removed:</strong>
+                <ul>{{#each diffRemoved}}<li>{{this}}</li>{{/each}}</ul>
+              </div>
+              {{/if}}
+              {{#if diffModified.length}}
+              <div class="diff-section diff-section--modified">
+                <strong class="diff-label">Modified:</strong>
+                <ul>{{#each diffModified}}<li>{{this}}</li>{{/each}}</ul>
+              </div>
+              {{/if}}
+            </div>
+            {{/if}}
+          </td>
           <td data-label="Detected">{{detectedAtDisplay}}</td>
           <td data-label="Status">
             {{#if isPending}}

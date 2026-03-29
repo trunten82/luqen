@@ -376,6 +376,16 @@
       if (typeof window.copyFixCode === 'function') window.copyFixCode(parseInt(index, 10));
     },
 
+    /* ── Toggle diff panel ───────────────────────────────────────── */
+    toggleDiff: function (el) {
+      var targetId = el.getAttribute('data-target');
+      if (!targetId) return;
+      var panel = document.getElementById(targetId);
+      if (!panel) return;
+      panel.hidden = !panel.hidden;
+      el.textContent = panel.hidden ? 'Show changes' : 'Hide changes';
+    },
+
     /* ── Bulk proposal actions ─────────────────────────────────── */
     bulkToggle: function () {
       ['updates', 'custom'].forEach(function (tab) {
