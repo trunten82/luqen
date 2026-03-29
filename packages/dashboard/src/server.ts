@@ -202,15 +202,26 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     global: true,
     max: 100,
     timeWindow: '1 minute',
-    errorResponseBuilder: (request, context) => {
-      const accept = (request.headers as Record<string, string>).accept ?? '';
-      const retrySeconds = Math.ceil(context.ttl / 1000);
-      if (accept.includes('text/html')) {
-        // Return HTML string — Fastify will send it as the response body
-        return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Too Many Requests</title><meta http-equiv="refresh" content="${retrySeconds}"><style>body{font-family:system-ui;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8f9fa}div{text-align:center;max-width:400px}h1{font-size:3rem;margin:0}p{color:#666}</style></head><body><div><h1>429</h1><p>Too many requests. This page will refresh in ${retrySeconds} seconds.</p></div></body></html>`;
-      }
-      return { statusCode: 429, error: 'Too Many Requests', message: `Rate limit exceeded, retry in ${retrySeconds} seconds` };
+    errorResponseBuilder: (_req, context) => ({
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: `Rate limit exceeded, retry in ${Math.ceil(context.ttl / 1000)} seconds`,
+    }),
+    onExceeded: (req) => {
+      // Tag the request so the onSend hook can rewrite to HTML for browsers
+      (req as unknown as Record<string, unknown>)._rateLimited = true;
     },
+  });
+  server.addHook('onSend', async (request, reply, payload) => {
+    if ((request as unknown as Record<string, unknown>)._rateLimited && reply.statusCode === 429) {
+      const accept = request.headers.accept ?? '';
+      if (accept.includes('text/html')) {
+        const retryAfter = reply.getHeader('retry-after') ?? '60';
+        void reply.header('content-type', 'text/html');
+        return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Too Many Requests</title><meta http-equiv="refresh" content="${retryAfter}"><style>body{font-family:system-ui;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8f9fa}div{text-align:center;max-width:400px}h1{font-size:3rem;margin:0}p{color:#666}</style></head><body><div><h1>429</h1><p>Too many requests. Page will refresh in ${retryAfter} seconds.</p></div></body></html>`;
+      }
+    }
+    return payload;
   });
 
   // ── Plugins ──────────────────────────────────────────────────────────────
