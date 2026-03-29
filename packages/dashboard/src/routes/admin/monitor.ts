@@ -49,13 +49,18 @@ export interface MonitorViewData {
 
 // ── Pure helpers (exported for testing) ──────────────────────────────────────
 
-const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+const SCHEDULE_MS: Record<string, number> = {
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+  monthly: 30 * 24 * 60 * 60 * 1000,
+};
 
-export function isSourceStale(lastChecked: string | undefined): boolean {
+export function isSourceStale(lastChecked: string | undefined, schedule = 'weekly'): boolean {
   if (lastChecked === undefined) return true;
   const ts = Date.parse(lastChecked);
   if (Number.isNaN(ts)) return true;
-  return Date.now() - ts > STALE_THRESHOLD_MS;
+  const threshold = SCHEDULE_MS[schedule] ?? SCHEDULE_MS.weekly;
+  return Date.now() - ts > threshold;
 }
 
 export function formatLastChecked(lastChecked: string | undefined): string {
@@ -95,7 +100,7 @@ export function buildMonitorViewData(
     const lastDbUpdateDisplay = formatLastChecked(
       lastDbUpdateTs !== undefined ? new Date(lastDbUpdateTs).toISOString() : undefined,
     );
-    const stale = isSourceStale(s.lastCheckedAt);
+    const stale = isSourceStale(s.lastCheckedAt, s.schedule);
     let status: 'up_to_date' | 'change_pending' | 'stale';
     if (stale) {
       status = 'stale';

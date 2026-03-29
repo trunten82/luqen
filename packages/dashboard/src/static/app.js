@@ -376,6 +376,29 @@
       if (typeof window.copyFixCode === 'function') window.copyFixCode(parseInt(index, 10));
     },
 
+    /* ── Monitor source table filter ──────────────────────────────── */
+    filterMonitorSources: function () {
+      var table = document.getElementById('monitor-sources-table');
+      if (!table) return;
+      var search = (document.getElementById('monitor-source-search') || {}).value || '';
+      var statusFilter = (document.getElementById('monitor-status-filter') || {}).value || '';
+      var term = search.toLowerCase();
+      var rows = table.querySelectorAll('tbody tr');
+      var visible = 0;
+      rows.forEach(function (row) {
+        var name = (row.querySelector('[data-label="Name"]') || {}).textContent || '';
+        var url = (row.querySelector('[data-label="URL"]') || {}).textContent || '';
+        var status = row.getAttribute('data-status') || '';
+        var matchText = !term || name.toLowerCase().indexOf(term) !== -1 || url.toLowerCase().indexOf(term) !== -1;
+        var matchStatus = !statusFilter || status === statusFilter;
+        var show = matchText && matchStatus;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      var countEl = document.getElementById('monitor-source-count');
+      if (countEl) countEl.textContent = visible + ' of ' + rows.length + ' sources';
+    },
+
     /* ── Toggle diff panel ───────────────────────────────────────── */
     toggleDiff: function (el) {
       var targetId = el.getAttribute('data-target');
