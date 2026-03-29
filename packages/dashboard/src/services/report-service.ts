@@ -413,15 +413,26 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
   // ── COMPLIANCE MATRIX ──
   const complianceMatrix = raw.compliance?.matrix
     ? Object.values(raw.compliance.matrix).map((entry) => {
-        const confirmed = entry.confirmedViolations ?? entry.mandatoryViolations ?? 0;
+        // confirmedViolations = actual errors on mandatory criteria (from enrichment)
+        // mandatoryViolations = all issues on mandatory criteria regardless of severity (from checker)
+        const hasExplicitConfirmed = entry.confirmedViolations != null;
+        const confirmed = entry.confirmedViolations ?? 0;
+        const mandatoryTotal = entry.mandatoryViolations ?? 0;
         const review = entry.needsReview ?? entry.recommendedViolations ?? 0;
 
         let reviewStatus = entry.reviewStatus;
         if (!reviewStatus) {
-          if (entry.status) {
+          if (entry.status && entry.status !== 'fail') {
+            // Trust non-fail status values (review, pass) from legacy reports
             reviewStatus = entry.status;
-          } else if (confirmed > 0) {
+          } else if (hasExplicitConfirmed && confirmed > 0) {
+            // Report explicitly marked these as confirmed errors
             reviewStatus = 'fail';
+          } else if (!hasExplicitConfirmed && mandatoryTotal > 0) {
+            // Legacy report: mandatoryViolations includes all severity levels
+            // If scan had 0 errors, they're all notices/warnings → review, not fail
+            const scanHasErrors = (scan.errors ?? 0) > 0;
+            reviewStatus = scanHasErrors ? 'fail' : 'review';
           } else if (review > 0) {
             reviewStatus = 'review';
           } else {
@@ -447,7 +458,7 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
 
         return {
           ...entry,
-          confirmedViolations: criteriaCount > 0 ? criteriaCount : confirmed,
+          confirmedViolations: criteriaCount > 0 ? criteriaCount : (hasExplicitConfirmed ? confirmed : mandatoryTotal),
           needsReview: review,
           reviewStatus,
           regulations: flatRegs,
@@ -456,11 +467,28 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
       })
     : null;
 
+  // Recompute compliance summary counts from enriched matrix (fixes legacy reports)
+  const enrichedCompliance = raw.compliance
+    ? {
+        ...raw.compliance,
+        summary: {
+          ...raw.compliance.summary,
+          ...(complianceMatrix != null
+            ? {
+                passing: complianceMatrix.filter((e: any) => e.reviewStatus === 'pass').length,
+                failing: complianceMatrix.filter((e: any) => e.reviewStatus === 'fail').length,
+                needsReview: complianceMatrix.filter((e: any) => e.reviewStatus === 'review').length,
+              }
+            : {}),
+        },
+      }
+    : null;
+
   return {
     summary,
     pages: [...enrichedPages].sort((a, b) => (b.issueCount ?? 0) - (a.issueCount ?? 0)),
     errors: raw.errors ?? [],
-    compliance: raw.compliance ?? null,
+    compliance: enrichedCompliance,
     complianceMatrix,
     templateIssues: enrichedTemplateIssues,
     templateIssueCount,
