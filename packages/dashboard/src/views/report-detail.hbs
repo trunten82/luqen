@@ -67,6 +67,19 @@
 
 {{#if reportData}}
 
+{{! ── Compliance traffic light ─────────────────────────────────────────── }}
+{{#if reportData.complianceMatrix}}
+<div class="rpt-compliance-banner rpt-compliance-banner--{{complianceStatus}}" role="status">
+  {{#if (eq complianceStatus 'fail')}}
+  <strong>{{t "reports.nonCompliant"}}</strong> — {{reportData.compliance.summary.totalConfirmedViolations}} {{t "reports.mandatoryFailures"}}
+  {{else if (eq complianceStatus 'review')}}
+  <strong>{{t "reports.needsReview"}}</strong> — {{reportData.compliance.summary.totalNeedsReview}} {{t "reports.itemsNeedManualReview"}}
+  {{else}}
+  <strong>{{t "reports.compliant"}}</strong> — {{t "reports.noMandatoryFailures"}}
+  {{/if}}
+</div>
+{{/if}}
+
 {{! ── Summary bar (above tabs) ─────────────────────────────────────────── }}
 <div class="rpt-summary-bar" role="region" aria-label="Scan summary">
   <span class="rpt-badge rpt-badge--neutral" id="rpt-stat-pages">{{t "reportDetail.pages"}}: {{reportData.summary.pagesScanned}}</span>
