@@ -38,6 +38,30 @@ vi.mock('../../src/compliance-client.js', () => ({
     summary: 'New criterion added to WCAG 2.2',
     detectedAt: '2024-06-01T10:00:00Z',
   }),
+  acknowledgeProposal: vi.fn().mockResolvedValue({
+    id: 'prop-1',
+    status: 'acknowledged',
+    source: 'w3c-rss',
+    type: 'requirement_change',
+    summary: 'New criterion added to WCAG 2.2',
+    detectedAt: '2024-06-01T10:00:00Z',
+  }),
+  reviewProposal: vi.fn().mockResolvedValue({
+    id: 'prop-1',
+    status: 'reviewed',
+    source: 'w3c-rss',
+    type: 'requirement_change',
+    summary: 'New criterion added to WCAG 2.2',
+    detectedAt: '2024-06-01T10:00:00Z',
+  }),
+  dismissProposal: vi.fn().mockResolvedValue({
+    id: 'prop-1',
+    status: 'dismissed',
+    source: 'w3c-rss',
+    type: 'requirement_change',
+    summary: 'New criterion added to WCAG 2.2',
+    detectedAt: '2024-06-01T10:00:00Z',
+  }),
 }));
 
 import * as complianceClient from '../../src/compliance-client.js';
@@ -49,6 +73,10 @@ interface TestContext {
   server: FastifyInstance;
   cleanup: () => void;
 }
+
+const mockStorage = {
+  audit: { log: vi.fn().mockResolvedValue(undefined) },
+} as unknown as import('../../src/db/index.js').StorageAdapter;
 
 async function createTestServer(permissions: string[] = ['admin.system']): Promise<TestContext> {
   const server = Fastify({ logger: false });
@@ -69,7 +97,7 @@ async function createTestServer(permissions: string[] = ['admin.system']): Promi
     (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
   });
 
-  await proposalRoutes(server, BASE_URL);
+  await proposalRoutes(server, BASE_URL, mockStorage);
   await server.ready();
 
   const cleanup = (): void => { void server.close(); };
@@ -91,11 +119,11 @@ describe('Proposal routes', () => {
       expect(body.template).toBe('admin/proposals.hbs');
     });
 
-    it('lists mocked proposals', async () => {
+    it('lists mocked proposals as officialProposals (no orgId = official)', async () => {
       const response = await ctx.server.inject({ method: 'GET', url: '/admin/proposals' });
-      const body = response.json() as { data: { proposals: Array<{ id: string }> } };
-      expect(Array.isArray(body.data.proposals)).toBe(true);
-      expect(body.data.proposals.length).toBeGreaterThan(0);
+      const body = response.json() as { data: { officialProposals: Array<{ id: string }> } };
+      expect(Array.isArray(body.data.officialProposals)).toBe(true);
+      expect(body.data.officialProposals.length).toBeGreaterThan(0);
     });
 
     it('passes status filter to compliance client when provided', async () => {
@@ -111,9 +139,9 @@ describe('Proposal routes', () => {
 
     it('includes detectedAtDisplay and isPending fields on each proposal', async () => {
       const response = await ctx.server.inject({ method: 'GET', url: '/admin/proposals' });
-      const body = response.json() as { data: { proposals: Array<{ isPending: boolean; detectedAtDisplay: string }> } };
-      expect(body.data.proposals[0]).toHaveProperty('isPending');
-      expect(body.data.proposals[0]).toHaveProperty('detectedAtDisplay');
+      const body = response.json() as { data: { officialProposals: Array<{ isPending: boolean; detectedAtDisplay: string }> } };
+      expect(body.data.officialProposals[0]).toHaveProperty('isPending');
+      expect(body.data.officialProposals[0]).toHaveProperty('detectedAtDisplay');
     });
 
     it('returns 403 without admin.system permission', async () => {
@@ -127,9 +155,10 @@ describe('Proposal routes', () => {
       vi.mocked(complianceClient.listUpdateProposals).mockRejectedValueOnce(new Error('Service unavailable'));
       const response = await ctx.server.inject({ method: 'GET', url: '/admin/proposals' });
       expect(response.statusCode).toBe(200);
-      const body = response.json() as { data: { error: string; proposals: unknown[] } };
+      const body = response.json() as { data: { error: string; officialProposals: unknown[]; customProposals: unknown[] } };
       expect(body.data.error).toBeTruthy();
-      expect(body.data.proposals).toHaveLength(0);
+      expect(body.data.officialProposals).toHaveLength(0);
+      expect(body.data.customProposals).toHaveLength(0);
     });
   });
 
