@@ -2,6 +2,8 @@
 
 Luqen is a site-wide WCAG accessibility scanner with legal compliance mapping. It orchestrates pa11y scanning across entire websites, maps violations to source files, proposes code fixes, and checks every issue against 58 jurisdictions and 62 regulations.
 
+> **v2.4.1** — The Luqen dashboard itself is now fully WCAG 2.1 AA compliant (0 errors across 50 pages), meeting EU accessibility regulation requirements.
+
 ---
 
 ## Where to start
