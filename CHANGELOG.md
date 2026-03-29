@@ -6,6 +6,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.4.1] - 2026-03-29
+
+### Added
+- **robots.txt** — dashboard serves robots.txt to guide crawlers away from non-page URLs (/api/, /graphql, SSE endpoints)
+- **Crawler auth headers** — URL discovery crawler now passes authentication headers, enabling full site crawl on auth-protected sites
+- **Scanner content-type filter** — HEAD check skips non-HTML URLs before scanning
+- **False-positive filter** — scanner discards structural-only errors (missing lang/title) that indicate a non-HTML response was scanned
+
+### Fixed
+- **WCAG compliance (0 errors)** — full EU compliance achieved across 50 pages:
+  - Contrast: `--bg-tertiary` lightened, jurisdiction ID uses `--text-secondary`, review status card darkened
+  - Duplicate IDs: clients template uses `{{id}}` instead of undefined `{{clientId}}`
+  - Unlabelled inputs: bulk assignee select, change-history search input
+  - Duplicate toast-container: removed from proposals template (layout provides it)
+- **Rate limiter** — authenticated requests get 2000 req/min (vs 100 anonymous); returns HTML error page for browsers via onSend hook
+- **Stale threshold** — respects source schedule (daily=24h, weekly=7d, monthly=30d)
+- **Monitor source filter** — text search + status dropdown for large source lists
+- **Assignee scoping** — bulk assign picker shows only org members for non-admin users
+- **i18n audit** — 57 new keys, 13 templates fixed, all hardcoded text replaced
+
+---
+
 ## [2.4.0] - 2026-03-28
 
 ### Added

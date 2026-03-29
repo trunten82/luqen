@@ -54,6 +54,33 @@ Audit-ready log of all resolved proposals:
 - CSV export with current filters applied
 - Paginated (50 per page)
 
+## Scanner Improvements (v2.4.1)
+
+### Authentication Header Passthrough
+
+The URL discovery crawler now forwards authentication headers to the target site. This enables full site crawl on auth-protected deployments — previously, the crawler would only reach publicly accessible pages.
+
+Configure via the standard `AUTH_HEADER` environment variable (see [monitor-config.md](../reference/monitor-config.md)).
+
+### robots.txt Support
+
+The dashboard serves a `robots.txt` that guides crawlers away from non-page URLs:
+- `/api/` — REST API endpoints
+- `/graphql` — GraphQL endpoint
+- SSE (Server-Sent Events) endpoints
+
+This prevents scanners and search bots from triggering API calls inadvertently.
+
+### Content-Type Filtering
+
+The scanner performs a HEAD request before each page scan. URLs that return a non-HTML content-type (e.g. PDF, JSON, XML) are skipped automatically. This avoids wasted scan attempts and false-positive accessibility results on binary or data responses.
+
+### False-Positive Detection
+
+The scanner discards results that contain only structural errors (missing `lang` attribute, missing `title` element) with no other violations. This pattern indicates that a non-HTML response was scanned and the error set is an artefact of the content-type mismatch rather than a real accessibility issue.
+
+---
+
 ## Automatic Scanning
 
 The source monitor scheduler runs every 15 minutes and triggers scans for sources that are due based on their schedule:
