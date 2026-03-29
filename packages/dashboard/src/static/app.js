@@ -380,7 +380,7 @@
     bulkToggle: function () {
       ['updates', 'custom'].forEach(function (tab) {
         var checks = document.querySelectorAll('.bulk-check[data-tab="' + tab + '"]:checked');
-        var bar = document.getElementById('bulk-bar-' + tab);
+        var bar = document.getElementById('bulk-bar-' + tab + '-actions');
         var count = document.getElementById('bulk-count-' + tab);
         if (bar && count) {
           count.textContent = String(checks.length);
