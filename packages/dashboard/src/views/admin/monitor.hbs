@@ -30,21 +30,31 @@
 
     <div class="card">
       <div class="card__header">
-        <h2 class="card__title">{{t "admin.monitor.pendingProposals"}}</h2>
+        <h2 class="card__title">{{t "admin.monitor.upToDate"}}</h2>
       </div>
       <div class="card__body">
-        <div class="card__value {{#if pendingProposalsCount}}text--warning{{else}}text--success{{/if}}">{{pendingProposalsCount}}</div>
+        <div class="card__value text--success">{{upToDateCount}}</div>
+        <div class="card__label">{{t "admin.monitor.sourcesAligned"}}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header">
+        <h2 class="card__title">{{t "admin.monitor.changePending"}}</h2>
+      </div>
+      <div class="card__body">
+        <div class="card__value {{#if changePendingCount}}text--warning{{else}}text--success{{/if}}">{{changePendingCount}}</div>
         <div class="card__label">{{t "admin.monitor.awaitingReview"}}</div>
       </div>
     </div>
 
     <div class="card">
       <div class="card__header">
-        <h2 class="card__title">{{t "admin.monitor.upToDate"}}</h2>
+        <h2 class="card__title">{{t "admin.monitor.stale"}}</h2>
       </div>
       <div class="card__body">
-        <div class="card__value text--success">{{upToDateCount}}</div>
-        <div class="card__label">{{t "admin.monitor.sourcesAligned"}}</div>
+        <div class="card__value {{#if staleCount}}text--error{{else}}text--success{{/if}}">{{staleCount}}</div>
+        <div class="card__label">Need scanning</div>
       </div>
     </div>
   </div>
