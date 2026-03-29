@@ -176,7 +176,7 @@
   <div class="rpt-bulk-bar is-hidden" id="rpt-bulk-bar">
     <label class="rpt-bulk-bar__select-all"><input type="checkbox" id="rpt-bulk-select-all" data-action-change="rptBulkToggleAll"> {{t "reportDetail.selectAllVisible"}}</label>
     <span id="rpt-bulk-count">0 {{t "reportDetail.selected"}}</span>
-    <select id="rpt-bulk-assignee" class="rpt-bulk-bar__select">
+    <select id="rpt-bulk-assignee" class="rpt-bulk-bar__select" aria-label="{{t 'reportDetail.selectAssignee'}}">
       <option value="">{{t "reportDetail.selectAssignee"}}</option>
     </select>
     <button type="button" class="btn btn--primary btn--sm" data-action="rptBulkAssign">{{t "reportDetail.assignSelected"}}</button>
