@@ -202,6 +202,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     global: true,
     max: 100,
     timeWindow: '1 minute',
+    allowList: (req) => {
+      // Exempt API key / Bearer token requests (includes the built-in scanner)
+      const auth = req.headers.authorization ?? '';
+      return auth.startsWith('Bearer ');
+    },
     errorResponseBuilder: (_req, context) => ({
       statusCode: 429,
       error: 'Too Many Requests',
