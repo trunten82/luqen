@@ -119,6 +119,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
             maxPages: effectiveMaxPages,
             crawlDepth: 2,
             alsoCrawl: true,
+            headers: opts.headers,
           }, true);
           urls = result.urls;
         } catch {

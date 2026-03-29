@@ -270,6 +270,7 @@ export class ScanOrchestrator {
               maxPages: effectiveMaxPages,
               crawlDepth: 2,
               alsoCrawl: true,
+              headers: config.headers,
             }, true);
             discoveredUrls = result.urls;
           } catch {

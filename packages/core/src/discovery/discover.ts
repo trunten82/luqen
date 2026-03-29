@@ -7,6 +7,7 @@ interface DiscoverOptions {
   readonly maxPages: number;
   readonly crawlDepth: number;
   readonly alsoCrawl: boolean;
+  readonly headers?: Record<string, string>;
 }
 
 export interface DiscoverResult {
@@ -35,7 +36,7 @@ export async function discoverUrls(baseUrl: string, options: DiscoverOptions, re
   let crawledUrls: string[] = [];
   let wafWarning: string | undefined;
   if (!hasSitemap || alsoCrawl) {
-    const rawResult = await crawlSite(baseUrl, { maxPages, maxDepth: crawlDepth, isAllowed: robots.isAllowed }, true);
+    const rawResult = await crawlSite(baseUrl, { maxPages, maxDepth: crawlDepth, isAllowed: robots.isAllowed, headers: options.headers }, true);
     // Handle both CrawlResult (new) and string[] (legacy/mock)
     if (Array.isArray(rawResult)) {
       crawledUrls = rawResult as unknown as string[];

@@ -25,6 +25,7 @@ interface CrawlOptions {
   readonly maxPages: number;
   readonly maxDepth: number;
   readonly isAllowed: (url: string) => boolean;
+  readonly headers?: Record<string, string>;
 }
 
 function isHtmlUrl(url: string): boolean {
@@ -70,7 +71,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions, returnR
     if (depth > maxDepth) continue;
 
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, options.headers ? { headers: options.headers } : {});
       if (!response.ok) continue;
       const contentType = response.headers.get('content-type') ?? '';
       if (!contentType.includes('text/html')) continue;
