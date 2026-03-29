@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { parsePagination, paginateArray } from '../pagination.js';
-import { proposeUpdate, approveUpdate, rejectUpdate } from '../../engine/proposals.js';
+import { proposeUpdate, approveUpdate, rejectUpdate, acknowledgeUpdate, reviewUpdate, dismissUpdate } from '../../engine/proposals.js';
 import type { TokenPayload } from '../../auth/oauth.js';
 import type { FastifyRequest } from 'fastify';
 
@@ -89,6 +89,57 @@ export async function registerUpdateRoutes(
       const { id } = request.params as { id: string };
       const reviewer = (request as AuthRequest).tokenPayload?.sub ?? 'system';
       const proposal = await rejectUpdate(db, id, reviewer);
+      await reply.send(proposal);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Bad request';
+      const statusCode = message.includes('not found') ? 404 : 400;
+      await reply.status(statusCode).send({ error: message, statusCode });
+    }
+  });
+
+  // PATCH /api/v1/updates/:id/acknowledge
+  app.patch('/api/v1/updates/:id/acknowledge', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const reviewer = (request as AuthRequest).tokenPayload?.sub ?? 'system';
+      const body = (request.body ?? {}) as { notes?: string };
+      const proposal = await acknowledgeUpdate(db, id, reviewer, body.notes);
+      await reply.send(proposal);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Bad request';
+      const statusCode = message.includes('not found') ? 404 : 400;
+      await reply.status(statusCode).send({ error: message, statusCode });
+    }
+  });
+
+  // PATCH /api/v1/updates/:id/review
+  app.patch('/api/v1/updates/:id/review', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const reviewer = (request as AuthRequest).tokenPayload?.sub ?? 'system';
+      const body = (request.body ?? {}) as { notes?: string };
+      const proposal = await reviewUpdate(db, id, reviewer, body.notes);
+      await reply.send(proposal);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Bad request';
+      const statusCode = message.includes('not found') ? 404 : 400;
+      await reply.status(statusCode).send({ error: message, statusCode });
+    }
+  });
+
+  // PATCH /api/v1/updates/:id/dismiss
+  app.patch('/api/v1/updates/:id/dismiss', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const reviewer = (request as AuthRequest).tokenPayload?.sub ?? 'system';
+      const body = (request.body ?? {}) as { notes?: string };
+      const proposal = await dismissUpdate(db, id, reviewer, body.notes);
       await reply.send(proposal);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Bad request';
