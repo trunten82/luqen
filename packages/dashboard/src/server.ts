@@ -57,6 +57,7 @@ import { ServiceTokenManager } from './auth/service-token.js';
 import { ComplianceService } from './services/compliance-service.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
+import { changeHistoryRoutes } from './routes/admin/change-history.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { setGitHostPluginManager } from './git-hosts/registry.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
@@ -559,6 +560,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await jurisdictionRoutes(server, config.complianceUrl);
   await regulationRoutes(server, config.complianceUrl);
   await proposalRoutes(server, config.complianceUrl, storage);
+  await changeHistoryRoutes(server, config.complianceUrl);
   await sourceRoutes(server, config.complianceUrl);
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
