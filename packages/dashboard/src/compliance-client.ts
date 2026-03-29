@@ -51,6 +51,9 @@ export interface UpdateProposal {
   readonly summary: string;
   readonly detectedAt: string;
   readonly orgId?: string;
+  readonly acknowledgedBy?: string;
+  readonly acknowledgedAt?: string;
+  readonly notes?: string;
 }
 
 export interface SeedStatus {
@@ -233,6 +236,48 @@ export async function rejectProposal(
   return apiFetch<UpdateProposal>(`${baseUrl}/api/v1/updates/${encodeURIComponent(id)}/reject`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
+  }, orgId);
+}
+
+export async function acknowledgeProposal(
+  baseUrl: string,
+  token: string,
+  id: string,
+  notes?: string,
+  orgId?: string,
+): Promise<UpdateProposal> {
+  return apiFetch<UpdateProposal>(`${baseUrl}/api/v1/updates/${encodeURIComponent(id)}/acknowledge`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ notes }),
+  }, orgId);
+}
+
+export async function reviewProposal(
+  baseUrl: string,
+  token: string,
+  id: string,
+  notes?: string,
+  orgId?: string,
+): Promise<UpdateProposal> {
+  return apiFetch<UpdateProposal>(`${baseUrl}/api/v1/updates/${encodeURIComponent(id)}/review`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ notes }),
+  }, orgId);
+}
+
+export async function dismissProposal(
+  baseUrl: string,
+  token: string,
+  id: string,
+  notes?: string,
+  orgId?: string,
+): Promise<UpdateProposal> {
+  return apiFetch<UpdateProposal>(`${baseUrl}/api/v1/updates/${encodeURIComponent(id)}/dismiss`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ notes }),
   }, orgId);
 }
 
