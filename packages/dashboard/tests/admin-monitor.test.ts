@@ -16,12 +16,17 @@ describe('admin/monitor', () => {
       expect(isSourceStale(undefined)).toBe(true);
     });
 
-    it('returns true when lastChecked is more than 24 hours ago', () => {
+    it('returns true when daily source is overdue', () => {
       const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-      expect(isSourceStale(twoDaysAgo)).toBe(true);
+      expect(isSourceStale(twoDaysAgo, 'daily')).toBe(true);
     });
 
-    it('returns false when lastChecked is within 24 hours', () => {
+    it('returns false when weekly source was checked 2 days ago', () => {
+      const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      expect(isSourceStale(twoDaysAgo, 'weekly')).toBe(false);
+    });
+
+    it('returns false when lastChecked is within schedule window', () => {
       const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
       expect(isSourceStale(oneHourAgo)).toBe(false);
     });

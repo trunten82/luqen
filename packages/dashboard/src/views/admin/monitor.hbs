@@ -77,8 +77,18 @@
   <section class="admin-section" aria-label="Monitored sources">
     <h2 class="section-title">{{t "admin.monitor.monitoredSources"}}</h2>
     {{#if sources.length}}
+    <div class="filter-bar mb-sm">
+      <input type="text" id="monitor-source-search" class="input input--sm" placeholder="Filter by name or URL..." data-action-input="filterMonitorSources" aria-label="Filter sources">
+      <select id="monitor-status-filter" class="select select--sm" data-action-change="filterMonitorSources" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option value="up_to_date">Up to Date</option>
+        <option value="change_pending">Change Pending</option>
+        <option value="stale">Stale</option>
+      </select>
+      <span id="monitor-source-count" class="text-sm text-muted"></span>
+    </div>
     <div class="table-wrapper">
-      <table class="data-table" aria-label="Monitored sources">
+      <table class="data-table" id="monitor-sources-table" aria-label="Monitored sources">
         <thead>
           <tr>
             <th scope="col">{{t "admin.sources.colName"}}</th>
@@ -92,7 +102,7 @@
         </thead>
         <tbody>
           {{#each sources}}
-          <tr>
+          <tr data-status="{{status}}">
             <td data-label="Name">{{name}}</td>
             <td data-label="URL" class="cell--url cell--wrap"><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a></td>
             <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>

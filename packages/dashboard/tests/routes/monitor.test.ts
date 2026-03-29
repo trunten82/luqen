@@ -18,8 +18,8 @@ vi.mock('../../src/compliance-client.js', () => ({
       name: 'Stale Feed',
       url: 'https://example.com/feed',
       type: 'atom',
-      schedule: 'weekly',
-      lastCheckedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 48 hrs ago — stale
+      schedule: 'daily',
+      lastCheckedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 48 hrs ago — stale for daily
     },
     {
       id: 'src-3',
@@ -197,12 +197,17 @@ describe('isSourceStale', () => {
     expect(isSourceStale('not-a-date')).toBe(true);
   });
 
-  it('returns true when lastChecked is more than 24 hours ago', () => {
+  it('returns true when daily source is overdue', () => {
     const twoDaysAgo = new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString();
-    expect(isSourceStale(twoDaysAgo)).toBe(true);
+    expect(isSourceStale(twoDaysAgo, 'daily')).toBe(true);
   });
 
-  it('returns false when lastChecked is within the last 24 hours', () => {
+  it('returns false when weekly source was checked 2 days ago', () => {
+    const twoDaysAgo = new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString();
+    expect(isSourceStale(twoDaysAgo, 'weekly')).toBe(false);
+  });
+
+  it('returns false when lastChecked is within schedule window', () => {
     const oneHourAgo = new Date(Date.now() - 1000 * 60 * 60).toISOString();
     expect(isSourceStale(oneHourAgo)).toBe(false);
   });
@@ -240,8 +245,8 @@ describe('buildMonitorViewData', () => {
       name: 'Old Feed',
       url: 'https://old.example.com/feed',
       type: 'atom',
-      schedule: 'weekly',
-      lastCheckedAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(), // 30 hrs ago
+      schedule: 'daily',
+      lastCheckedAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(), // 30 hrs ago — stale for daily
     },
   ];
 
