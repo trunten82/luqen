@@ -2504,7 +2504,7 @@ select {
 .rpt-juris-card__head--fail-head { background: var(--status-error-bg); border-bottom: 2px solid var(--status-error); }
 .rpt-juris-card__head--review-head { background: var(--status-warning-bg); border-bottom: 2px solid var(--status-warning); }
 .rpt-juris-card__name { font-weight: 700; font-size: 0.9rem; }
-.rpt-juris-card__id { font-size: 0.7rem; color: var(--text-muted); }
+.rpt-juris-card__id { font-size: 0.7rem; color: var(--text-secondary); }
 .rpt-juris-card__status { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
 .rpt-juris-card__status--s-pass { color: var(--status-success); }
 .rpt-juris-card__status--s-fail { color: var(--status-error); }
