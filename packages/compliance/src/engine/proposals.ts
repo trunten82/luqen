@@ -15,6 +15,16 @@ export async function proposeUpdate(
   return db.createUpdateProposal(input);
 }
 
+/** Apply change only if proposedChanges contain real entity data (not just contentHash metadata). */
+async function safeApplyChange(db: DbAdapter, change: ProposedChange): Promise<void> {
+  const { after } = change;
+  const isContentHashOnly = after != null
+    && 'contentHash' in after
+    && Object.keys(after).length === 1;
+  if (isContentHashOnly) return;
+  await applyChange(db, change);
+}
+
 async function applyChange(db: DbAdapter, change: ProposedChange): Promise<void> {
   const { action, entityType, entityId, after } = change;
 
@@ -68,7 +78,7 @@ export async function approveUpdate(
     throw new Error(`UpdateProposal not found: ${proposalId}`);
   }
 
-  await applyChange(db, proposal.proposedChanges);
+  await safeApplyChange(db, proposal.proposedChanges);
 
   const now = new Date().toISOString();
   return db.updateUpdateProposal(proposalId, {
@@ -111,7 +121,7 @@ export async function acknowledgeUpdate(
     throw new Error(`UpdateProposal not found: ${proposalId}`);
   }
 
-  await applyChange(db, proposal.proposedChanges);
+  await safeApplyChange(db, proposal.proposedChanges);
 
   const now = new Date().toISOString();
   return db.updateUpdateProposal(proposalId, {
@@ -133,7 +143,7 @@ export async function reviewUpdate(
     throw new Error(`UpdateProposal not found: ${proposalId}`);
   }
 
-  await applyChange(db, proposal.proposedChanges);
+  await safeApplyChange(db, proposal.proposedChanges);
 
   const now = new Date().toISOString();
   return db.updateUpdateProposal(proposalId, {

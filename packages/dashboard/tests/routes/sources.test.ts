@@ -11,7 +11,7 @@ vi.mock('../../src/compliance-client.js', () => ({
       url: 'https://www.w3.org/feeds/news.rss',
       type: 'rss',
       schedule: 'daily',
-      lastChecked: '2024-06-01T10:00:00Z',
+      lastCheckedAt: '2024-06-01T10:00:00Z',
     },
     {
       id: 'src-2',
@@ -19,7 +19,7 @@ vi.mock('../../src/compliance-client.js', () => ({
       url: 'https://example.eu/feed',
       type: 'atom',
       schedule: 'weekly',
-      lastChecked: undefined,
+      lastCheckedAt: undefined,
     },
   ]),
   createSource: vi.fn().mockResolvedValue({
@@ -28,10 +28,10 @@ vi.mock('../../src/compliance-client.js', () => ({
     url: 'https://example.com/rss',
     type: 'rss',
     schedule: 'daily',
-    lastChecked: undefined,
+    lastCheckedAt: undefined,
   }),
   deleteSource: vi.fn().mockResolvedValue(undefined),
-  scanSources: vi.fn().mockResolvedValue({ scanned: 2, proposalsCreated: 1 }),
+  scanSources: vi.fn().mockResolvedValue({ scanned: 2, proposalsCreated: 1, changed: 1, baselined: 0, failed: 0 }),
 }));
 
 import * as complianceClient from '../../src/compliance-client.js';
@@ -203,7 +203,7 @@ describe('Source routes', () => {
       });
       expect(response.statusCode).toBe(200);
       expect(response.headers['content-type']).toContain('text/html');
-      expect(response.body).toContain('Scan complete');
+      expect(response.body).toContain('sources checked');
       expect(response.body).toContain('2');
       expect(response.body).toContain('1');
     });

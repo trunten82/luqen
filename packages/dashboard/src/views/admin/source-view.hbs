@@ -20,7 +20,7 @@
       </div>
       <div class="detail-list__item">
         <dt>{{t "admin.sources.colLastChecked"}}</dt>
-        <dd>{{#if source.lastChecked}}{{source.lastChecked}}{{else}}{{t "admin.sources.never"}}{{/if}}</dd>
+        <dd>{{#if source.lastCheckedAt}}{{source.lastCheckedAt}}{{else}}{{t "admin.sources.never"}}{{/if}}</dd>
       </div>
       {{#if source.lastContentHash}}
       <div class="detail-list__item">

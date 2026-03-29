@@ -459,7 +459,7 @@ describe('Scenario 4: Monitor Data Flow', () => {
       url: `https://source-${i}.example.com`,
       type: 'html' as const,
       schedule: 'daily' as const,
-      lastChecked: c.lastChecked,
+      lastCheckedAt: c.lastChecked,
     }));
 
   const makeProposals = (count: number, statuses: string[]): MonitorProposal[] =>

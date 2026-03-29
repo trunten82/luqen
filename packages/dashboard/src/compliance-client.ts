@@ -413,7 +413,7 @@ export interface MonitoredSource {
   readonly url: string;
   readonly type: string;
   readonly schedule: string;
-  readonly lastChecked?: string;
+  readonly lastCheckedAt?: string;
   readonly orgId?: string;
 }
 
@@ -474,7 +474,7 @@ export async function scanSources(
   baseUrl: string,
   token: string,
   force = false,
-): Promise<{ scanned: number; proposalsCreated: number }> {
+): Promise<{ scanned: number; changed?: number; baselined?: number; failed?: number; proposalsCreated: number }> {
   const url = force
     ? `${baseUrl}/api/v1/sources/scan?force=true`
     : `${baseUrl}/api/v1/sources/scan`;

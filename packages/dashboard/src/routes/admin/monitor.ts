@@ -73,8 +73,8 @@ export function buildMonitorViewData(
     url: s.url,
     type: s.type,
     schedule: s.schedule,
-    lastCheckedDisplay: formatLastChecked(s.lastChecked),
-    stale: isSourceStale(s.lastChecked),
+    lastCheckedDisplay: formatLastChecked(s.lastCheckedAt),
+    stale: isSourceStale(s.lastCheckedAt),
   }));
 
   const proposalsView: MonitorProposalView[] = proposals.map((p) => ({
@@ -91,8 +91,8 @@ export function buildMonitorViewData(
 
   // Determine last scan time from most recently checked source
   const checkedDates = sources
-    .filter((s) => s.lastChecked !== undefined)
-    .map((s) => Date.parse(s.lastChecked as string))
+    .filter((s) => s.lastCheckedAt !== undefined)
+    .map((s) => Date.parse(s.lastCheckedAt as string))
     .filter((ts) => !Number.isNaN(ts));
 
   const lastScanTime =
@@ -159,7 +159,19 @@ export async function monitorRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await scanSources(complianceUrl, getToken(request), true);
-        const html = `<div class="alert alert--success"><strong>Scan complete:</strong> ${result.scanned} source(s) checked, ${result.proposalsCreated} proposal(s) created.</div>`;
+        const changed = result.changed ?? 0;
+        const baselined = result.baselined ?? 0;
+        const failed = result.failed ?? 0;
+        const parts: string[] = [`<strong>Scan complete:</strong> ${result.scanned} source(s) checked.`];
+        if (changed > 0) {
+          parts.push(`<strong>${changed} source(s) changed</strong> — ${result.proposalsCreated} new proposal(s) created. <a href="/admin/proposals">Review proposals</a>.`);
+        } else {
+          parts.push('No changes detected — all sources are up to date.');
+        }
+        if (baselined > 0) parts.push(`${baselined} source(s) baselined (first scan).`);
+        if (failed > 0) parts.push(`${failed} source(s) failed to fetch.`);
+        const alertType = changed > 0 ? 'alert--warning' : 'alert--success';
+        const html = `<div class="alert ${alertType}">${parts.join(' ')}</div>`;
 
         return reply
           .code(200)
