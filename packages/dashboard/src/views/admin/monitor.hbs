@@ -40,11 +40,11 @@
 
     <div class="card">
       <div class="card__header">
-        <h2 class="card__title">Up to Date</h2>
+        <h2 class="card__title">{{t "admin.monitor.upToDate"}}</h2>
       </div>
       <div class="card__body">
         <div class="card__value text--success">{{upToDateCount}}</div>
-        <div class="card__label">Sources aligned with live</div>
+        <div class="card__label">{{t "admin.monitor.sourcesAligned"}}</div>
       </div>
     </div>
   </div>
@@ -76,7 +76,7 @@
             <th scope="col">{{t "admin.sources.colType"}}</th>
             <th scope="col">{{t "admin.sources.colSchedule"}}</th>
             <th scope="col">{{t "admin.sources.colLastChecked"}}</th>
-            <th scope="col">Last DB Update</th>
+            <th scope="col">{{t "admin.monitor.lastDbUpdate"}}</th>
             <th scope="col">{{t "common.status"}}</th>
           </tr>
         </thead>
@@ -91,11 +91,11 @@
             <td data-label="Last DB Update">{{lastDbUpdateDisplay}}</td>
             <td data-label="Status">
               {{#if (eq status 'stale')}}
-              <span class="badge badge--error">Stale</span>
+              <span class="badge badge--error">{{t "admin.monitor.stale"}}</span>
               {{else if (eq status 'change_pending')}}
-              <span class="badge badge--warning">Change Pending</span>
+              <span class="badge badge--warning">{{t "admin.monitor.changePending"}}</span>
               {{else}}
-              <span class="badge badge--success">Up to Date</span>
+              <span class="badge badge--success">{{t "admin.monitor.upToDate"}}</span>
               {{/if}}
             </td>
           </tr>
