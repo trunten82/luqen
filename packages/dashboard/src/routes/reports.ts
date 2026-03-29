@@ -214,8 +214,13 @@ export async function reportRoutes(
         }
       }
 
-      // Build assignees list (users + teams) for the assignment picker
-      const dashboardUsers = await storage.users.listUsers();
+      // Build assignees list (users + teams) for the assignment picker — org-scoped
+      const isAdmin = request.user?.role === 'admin';
+      const dashboardUsers = isAdmin
+        ? await storage.users.listUsers()
+        : orgId !== 'system'
+          ? await storage.users.listUsersForOrg(orgId)
+          : await storage.users.listUsers();
       const teams = await storage.teams.listTeams(orgId);
       const assignees = [
         ...dashboardUsers.filter((u) => u.active).map((u) => ({ type: 'user', id: u.username, label: u.username })),
