@@ -222,13 +222,13 @@ export async function reportRoutes(
         ...teams.map((t) => ({ type: 'team', id: `team:${t.id}`, label: `Team: ${t.name}` })),
       ];
 
-      // Compute compliance traffic light for detail page
-      const totalConfirmed = (reportData as any)?.compliance?.summary?.totalConfirmedViolations ?? 0;
-      const totalNeedsReview = (reportData as any)?.compliance?.summary?.totalNeedsReview ?? 0;
+      // Compute compliance traffic light from enriched matrix
       const hasCompliance = reportData?.complianceMatrix != null;
+      const enrichedFailing = (reportData as any)?.compliance?.summary?.failing ?? 0;
+      const enrichedReview = (reportData as any)?.compliance?.summary?.needsReview ?? 0;
       const complianceStatus = !hasCompliance ? 'none'
-        : totalConfirmed > 0 ? 'fail'
-        : totalNeedsReview > 0 ? 'review'
+        : enrichedFailing > 0 ? 'fail'
+        : enrichedReview > 0 ? 'review'
         : 'pass';
 
       return reply.view('report-detail.hbs', {
