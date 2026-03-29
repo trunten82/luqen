@@ -1,7 +1,22 @@
 import type { FastifyInstance } from 'fastify';
 import type { DbAdapter } from '../../db/adapter.js';
+import type { MonitoredSource } from '../../types.js';
 import { requireScope } from '../../auth/middleware.js';
 import { createHash } from 'node:crypto';
+
+const SCHEDULE_MS: Record<string, number> = {
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+  monthly: 30 * 24 * 60 * 60 * 1000,
+};
+
+/** Check if a source is due for a scan based on its schedule and lastCheckedAt. */
+function isSourceDue(source: MonitoredSource): boolean {
+  if (source.lastCheckedAt == null) return true; // never checked
+  const intervalMs = SCHEDULE_MS[source.schedule] ?? SCHEDULE_MS.weekly;
+  const lastChecked = new Date(source.lastCheckedAt).getTime();
+  return Date.now() - lastChecked >= intervalMs;
+}
 
 export async function registerSourceRoutes(
   app: FastifyInstance,
@@ -64,11 +79,18 @@ export async function registerSourceRoutes(
   });
 
   // POST /api/v1/sources/scan
+  // Query param ?force=true skips schedule check (used by manual "Scan Now" button)
   app.post('/api/v1/sources/scan', {
     preHandler: [requireScope('admin')],
-  }, async (_request, reply) => {
+  }, async (request, reply) => {
     try {
-      const sources = await db.listSources();
+      const query = request.query as { force?: string };
+      const force = query.force === 'true';
+      const allSources = await db.listSources();
+
+      // Filter to sources that are due unless force=true (manual scan)
+      const sources = force ? allSources : allSources.filter((s) => isSourceDue(s));
+
       let scanned = 0;
       const proposals = [];
 

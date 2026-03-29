@@ -145,7 +145,7 @@ export async function sourceRoutes(
     { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const result = await scanSources(baseUrl, getToken(request));
+        const result = await scanSources(baseUrl, getToken(request), true);
         const html = `<div id="scan-results" aria-live="polite">
   <p class="text--success">Scan complete: ${result.scanned} source(s) checked, ${result.proposalsCreated} proposal(s) created.</p>
 </div>

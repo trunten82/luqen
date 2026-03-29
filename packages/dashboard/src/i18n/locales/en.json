@@ -397,7 +397,9 @@
       "recentProposals": "Recent Proposals",
       "colCreated": "Created",
       "noProposals": "No recent proposals.",
-      "noProposalsDesc": "Proposals appear here when monitored sources detect regulatory changes."
+      "noProposalsDesc": "Proposals appear here when monitored sources detect regulatory changes.",
+      "pendingChangesMsg": "regulatory change(s) detected and awaiting review.",
+      "viewProposals": "Review Proposals"
     },
     "webhooks": {
       "addWebhook": "Add Webhook",

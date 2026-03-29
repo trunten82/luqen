@@ -473,9 +473,13 @@ export async function deleteSource(
 export async function scanSources(
   baseUrl: string,
   token: string,
+  force = false,
 ): Promise<{ scanned: number; proposalsCreated: number }> {
+  const url = force
+    ? `${baseUrl}/api/v1/sources/scan?force=true`
+    : `${baseUrl}/api/v1/sources/scan`;
   return apiFetch<{ scanned: number; proposalsCreated: number }>(
-    `${baseUrl}/api/v1/sources/scan`,
+    url,
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },

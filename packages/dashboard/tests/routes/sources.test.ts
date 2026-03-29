@@ -210,7 +210,7 @@ describe('Source routes', () => {
 
     it('calls scanSources with the base URL', async () => {
       await ctx.server.inject({ method: 'POST', url: '/admin/sources/scan' });
-      expect(complianceClient.scanSources).toHaveBeenCalledWith(BASE_URL, expect.any(String));
+      expect(complianceClient.scanSources).toHaveBeenCalledWith(BASE_URL, expect.any(String), true);
     });
 
     it('returns 403 without admin.system permission', async () => {
