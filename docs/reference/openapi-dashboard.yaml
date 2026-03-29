@@ -39,6 +39,8 @@ tags:
     description: Report export (CSV, PDF)
   - name: health
     description: Service health
+  - name: proposals
+    description: Compliance update proposal management (admin)
 
 paths:
   # ────────────────────────────────────────────────────────────────────────────
@@ -367,6 +369,111 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Proposals (admin)
+  # ────────────────────────────────────────────────────────────────────────────
+  /admin/proposals:
+    get:
+      operationId: listProposals
+      tags: [proposals]
+      summary: View compliance update proposals
+      description: >-
+        View proposals. Use tab=updates for official regulatory changes,
+        tab=custom for org-specific proposals.
+      parameters:
+        - name: tab
+          in: query
+          required: false
+          description: >-
+            Which proposal queue to view. `updates` shows official regulatory
+            changes; `custom` shows org-specific proposals.
+          schema:
+            type: string
+            enum: [updates, custom]
+            default: updates
+      responses:
+        "200":
+          description: Proposals page (HTML)
+          content:
+            text/html:
+              schema:
+                type: string
+        "302":
+          description: Redirect to login if not authenticated
+
+  /admin/proposals/{id}/acknowledge:
+    post:
+      operationId: acknowledgeProposal
+      tags: [proposals]
+      summary: Acknowledge official regulatory change
+      description: >-
+        Marks an official regulatory change as acknowledged, applies the change
+        to the compliance database, and creates an audit trail entry.
+        Requires admin role.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Proposal acknowledged (HTMX HTML fragment)
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: Proposal not found
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /admin/proposals/{id}/review:
+    post:
+      operationId: reviewProposal
+      tags: [proposals]
+      summary: Review and apply custom proposal
+      description: >-
+        Applies the proposed changes and marks the proposal as reviewed.
+        Requires admin role.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Proposal reviewed (HTMX HTML fragment)
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: Proposal not found
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /admin/proposals/{id}/dismiss:
+    post:
+      operationId: dismissProposal
+      tags: [proposals]
+      summary: Dismiss custom proposal
+      description: >-
+        Marks the proposal as dismissed without applying changes.
+        Requires admin role.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Proposal dismissed (HTMX HTML fragment)
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: Proposal not found
+          content:
+            text/html:
+              schema:
+                type: string
 
   # ────────────────────────────────────────────────────────────────────────────
   # Dashboard User Management (admin)
