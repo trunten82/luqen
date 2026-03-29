@@ -208,7 +208,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     },
     max: (req) => {
       const auth = req.headers.authorization ?? '';
-      return auth.startsWith('Bearer ') ? 1000 : 100;
+      return auth.startsWith('Bearer ') ? 2000 : 100;
     },
     errorResponseBuilder: (_req, context) => ({
       statusCode: 429,
