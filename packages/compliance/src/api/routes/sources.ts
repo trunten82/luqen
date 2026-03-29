@@ -72,6 +72,10 @@ export async function registerSourceRoutes(
       let scanned = 0;
       const proposals = [];
 
+      // Fetch existing pending proposals to avoid duplicates
+      const existingPending = await db.listUpdateProposals({ status: 'pending' });
+      const pendingSourceUrls = new Set(existingPending.map((p) => p.source));
+
       for (const source of sources) {
         try {
           // Fetch source content
@@ -81,21 +85,26 @@ export async function registerSourceRoutes(
 
           scanned++;
 
-          if (source.lastContentHash !== contentHash) {
-            // Content changed — create a proposal
-            const proposal = await db.createUpdateProposal({
-              source: source.url,
-              type: 'amendment',
-              summary: `Content change detected at ${source.name} (${source.url})`,
-              proposedChanges: {
-                action: 'update',
-                entityType: 'regulation',
-                entityId: source.id,
-                before: { contentHash: source.lastContentHash },
-                after: { contentHash },
-              },
-            });
-            proposals.push(proposal);
+          if (source.lastContentHash == null) {
+            // First scan — just baseline the hash, don't create a proposal
+            await db.updateSourceLastChecked(source.id, contentHash);
+          } else if (source.lastContentHash !== contentHash) {
+            // Content changed — create proposal only if no pending proposal for this source
+            if (!pendingSourceUrls.has(source.url)) {
+              const proposal = await db.createUpdateProposal({
+                source: source.url,
+                type: 'amendment',
+                summary: `Content change detected at ${source.name} (${source.url})`,
+                proposedChanges: {
+                  action: 'update',
+                  entityType: 'regulation',
+                  entityId: source.id,
+                  before: { contentHash: source.lastContentHash },
+                  after: { contentHash },
+                },
+              });
+              proposals.push(proposal);
+            }
             await db.updateSourceLastChecked(source.id, contentHash);
           } else {
             await db.updateSourceLastChecked(source.id, contentHash);

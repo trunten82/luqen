@@ -614,6 +614,31 @@ body {
   word-break: break-word;
 }
 
+/* ── Generic tabs (proposals, reusable) ──────────────────── */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 1.25rem;
+}
+.tab {
+  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: var(--text-muted);
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab:hover { color: var(--text-primary); text-decoration: none; }
+.tab--active,
+.tab--active:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.tab .badge { margin-left: 0.4rem; vertical-align: middle; }
+
 .cell--url a {
   color: var(--accent);
   text-decoration: none;
