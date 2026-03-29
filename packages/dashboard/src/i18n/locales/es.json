@@ -37,7 +37,10 @@
     "switchOrganization": "Cambiar organización",
     "edit": "Editar",
     "close": "Cerrar",
-    "create": "Crear"
+    "create": "Crear",
+    "scope": "Ámbito",
+    "owner": "Propietario",
+    "select": "Seleccionar"
   },
   "nav": {
     "overview": "Vista General",
@@ -233,7 +236,14 @@
     "noReportsDesc": "Ejecuta tu primer escaneo de accesibilidad para ver los resultados aquí.",
     "downloadPdf": "Descargar PDF",
     "print": "Imprimir",
-    "vsPrevious": "vs Anterior"
+    "vsPrevious": "vs Anterior",
+    "compliance": "Cumplimiento",
+    "compliant": "Conforme",
+    "needsReview": "Requiere revisión",
+    "nonCompliant": "No conforme",
+    "mandatoryFailures": "infracción/es obligatoria/s encontrada/s",
+    "itemsNeedManualReview": "elemento/s requiere/n revisión manual",
+    "noMandatoryFailures": "No se detectaron infracciones obligatorias"
   },
   "schedules": {
     "title": "Programaciones de Escaneo",
@@ -263,7 +273,8 @@
     "loadMore": "Cargar Más",
     "allActions": "Todas las acciones",
     "allResources": "Todos los tipos de recurso",
-    "noEntries": "No se encontraron entradas en el registro de auditoría."
+    "noEntries": "No se encontraron entradas en el registro de auditoría.",
+    "org": "Org"
   },
   "admin": {
     "jurisdictions": {
@@ -358,7 +369,11 @@
       "acknowledgeAll": "Confirmar Todo",
       "reviewAll": "Revisar Todo",
       "dismissAll": "Descartar Todo",
-      "clearSelection": "Limpiar"
+      "clearSelection": "Limpiar",
+      "showChanges": "Mostrar cambios",
+      "diffAdded": "Añadido:",
+      "diffRemoved": "Eliminado:",
+      "diffModified": "Modificado:"
     },
     "changeHistory": {
       "pageTitle": "Historial de Cambios",
@@ -376,7 +391,9 @@
       "colAction": "Acción Realizada",
       "colBy": "Por",
       "colNotes": "Notas",
-      "noEntries": "No se encontraron registros de historial de cambios."
+      "noEntries": "No se encontraron registros de historial de cambios.",
+      "colSource": "Fuente",
+      "colSummary": "Resumen"
     },
     "sources": {
       "addSource": "Agregar Fuente",
@@ -424,7 +441,9 @@
       "lastDbUpdate": "Última Actualización DB",
       "upToDate": "Actualizado",
       "changePending": "Cambio Pendiente",
-      "sourcesAligned": "Fuentes alineadas con el live"
+      "sourcesAligned": "Fuentes alineadas con el live",
+      "needScanning": "Necesita análisis",
+      "filterPlaceholder": "Filtrar por nombre o URL..."
     },
     "webhooks": {
       "addWebhook": "Agregar Webhook",
@@ -452,7 +471,16 @@
       "install": "Instalar",
       "package": "Paquete",
       "noInstalled": "No hay plugins instalados. Explora los plugins disponibles a continuación.",
-      "allInstalled": "Todos los plugins disponibles ya están instalados."
+      "allInstalled": "Todos los plugins disponibles ya están instalados.",
+      "notActivatedForOrg": "No activado para la org",
+      "needsConfig": "Configuración necesaria:",
+      "activeIn": "Activo en:",
+      "deployToOrgs": "Desplegar en organizaciones",
+      "selectAll": "Seleccionar todo",
+      "activateSelected": "Activar seleccionados",
+      "activateForMyOrg": "Activar para mi organización",
+      "usesGlobalConfig": "Usa la configuración global. Puedes personalizar después de activar.",
+      "contactAdmin": "¿Necesitas un plugin no instalado? Contacta a tu administrador del sistema."
     },
     "teams": {
       "title": "Equipos",
@@ -471,7 +499,14 @@
       "username": "Nombre de usuario",
       "teamRole": "Rol en el Equipo",
       "remove": "Eliminar",
-      "noMembers": "Aún no hay miembros. Agrega usuarios del panel arriba."
+      "noMembers": "Aún no hay miembros. Agrega usuarios del panel arriba.",
+      "noneGlobal": "Ninguna (global)",
+      "noneRole": "Ninguno",
+      "orgLinkDesc": "Vincula este equipo a una organización. Los miembros del equipo heredarán la membresía en la organización vinculada.",
+      "roleLinkDesc": "Asigna un rol con ámbito de org a este equipo. Todos los miembros del equipo heredan los permisos del rol dentro de la organización.",
+      "current": "Actual:",
+      "updateOrganization": "Actualizar organización",
+      "updateRole": "Actualizar rol"
     },
     "roles": {
       "createRole": "Crear Rol",
@@ -513,7 +548,8 @@
       "revokedNote": "Esta clave ha sido revocada y ya no puede utilizarse.",
       "close": "Cerrar",
       "generateKey": "Generar Clave",
-      "labelPlaceholder": "p. ej. pipeline CI, monitoreo"
+      "labelPlaceholder": "p. ej. pipeline CI, monitoreo",
+      "role": "Rol"
     },
     "clients": {
       "addClient": "Agregar Cliente OAuth",
@@ -527,7 +563,10 @@
       "clientNameHint": "Un nombre legible para este cliente",
       "scopesPlaceholder": "read write admin",
       "scopesHint": "Lista de alcances separados por espacios o comas",
-      "createClient": "Crear Cliente"
+      "createClient": "Crear Cliente",
+      "scope": "Ámbito",
+      "systemOwner": "Sistema",
+      "protected": "Protegido"
     },
     "users": {
       "addUser": "Agregar Usuario",
@@ -576,7 +615,10 @@
       "roleName": "Nombre del rol",
       "roleDescription": "Descripción",
       "rolePermissions": "Permisos",
-      "noOrgRoles": "No se encontraron roles organizacionales. Se crean automáticamente al crear una organización."
+      "noOrgRoles": "No se encontraron roles organizacionales. Se crean automáticamente al crear una organización.",
+      "manageViaTeamsTitle": "Gestionar a través de equipos:",
+      "manageViaTeamsDesc": "La pertenencia a la organización se gestiona mediante equipos. Agrega usuarios a un equipo vinculado a esta organización para conceder acceso.",
+      "goToTeams": "Ir a equipos"
     },
     "system": {
       "database": "Base de Datos",
@@ -647,6 +689,19 @@
       "passwordHint": "Mín 8 caracteres, mayúscula, minúscula, número, carácter especial",
       "role": "Rol",
       "createUser": "Crear Usuario"
+    },
+    "gitHosts": {
+      "displayName": "Nombre para mostrar",
+      "type": "Tipo",
+      "hostUrl": "URL del host",
+      "addTitle": "Añadir host Git",
+      "platform": "Plataforma",
+      "hostUrlHint": "URL base de la API. Usa https://api.github.com para GitHub, https://gitlab.com/api/v4 para GitLab, https://dev.azure.com para Azure DevOps.",
+      "displayNamePlaceholder": "GitHub corporativo",
+      "addButton": "Añadir host Git",
+      "remove": "Eliminar",
+      "removeConfirm": "¿Eliminar este host Git? Las credenciales de desarrollador también serán eliminadas.",
+      "noHosts": "No hay hosts Git configurados. Añade uno abajo para habilitar la integración de repositorios."
     }
   },
   "trends": {
@@ -1017,7 +1072,13 @@
     "integrationOptionsDesc": "Las propuestas de corrección también están disponibles vía:",
     "integrationMcp": "<strong>Herramientas MCP:</strong> <code>luqen_propose_fixes</code>, <code>luqen_apply_fix</code> — úsalas desde tu IDE",
     "integrationRest": "<strong>REST API:</strong> <code>GET /api/v1/scans/:id/fixes</code> — para integraciones externas",
-    "integrationA2a": "Protocolo A2A: los agentes pueden llamar a la REST API para proponer y aplicar correcciones de forma programática"
+    "integrationA2a": "Protocolo A2A: los agentes pueden llamar a la REST API para proponer y aplicar correcciones de forma programática",
+    "systemGlobal": "Sistema (global)",
+    "orgHint": "Asignar esta conexión de repositorio a una organización.",
+    "gitHost": "Host Git",
+    "gitHostNone": "Ninguno (solo ruta local)",
+    "gitHostHint": "Selecciona el host Git donde está alojado este repositorio. Requerido para crear PRs.",
+    "gitHostLocal": "Local"
   },
   "fixes": {
     "backToReport": "Volver al Informe",

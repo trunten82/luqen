@@ -10,10 +10,10 @@
 
 {{! Organization assignment }}
 <div class="card mb-lg">
-  <h3>Organization</h3>
+  <h3>{{t "common.organization"}}</h3>
   <p class="text-muted mb-md">
-    Link this team to an organization. Team members will inherit membership in the linked organization.
-    Current: <strong><span id="team-org-label">{{#if linkedOrgName}}{{linkedOrgName}}{{else}}None (global){{/if}}</span></strong>
+    {{t "admin.teams.orgLinkDesc"}}
+    {{t "admin.teams.current"}} <strong><span id="team-org-label">{{#if linkedOrgName}}{{linkedOrgName}}{{else}}{{t "admin.teams.noneGlobal"}}{{/if}}</span></strong>
   </p>
   <form hx-post="/admin/teams/{{team.id}}/org"
         hx-target="#team-org-label"
@@ -21,15 +21,15 @@
         class="flex flex-wrap items-center gap-sm">
     <input type="hidden" name="_csrf" value="{{csrfToken}}">
     <label class="form-group form-group--inline">
-      <span class="form-label">Organization</span>
+      <span class="form-label">{{t "common.organization"}}</span>
       <select name="organizationId" class="input">
-        <option value="">None (global)</option>
+        <option value="">{{t "admin.teams.noneGlobal"}}</option>
         {{#each organizations}}
         <option value="{{id}}"{{#if (eq id ../team.orgId)}} selected{{/if}}>{{name}}</option>
         {{/each}}
       </select>
     </label>
-    <button type="submit" class="btn btn--primary btn--sm">Update Organization</button>
+    <button type="submit" class="btn btn--primary btn--sm">{{t "admin.teams.updateOrganization"}}</button>
   </form>
 </div>
 
@@ -37,8 +37,8 @@
 <div class="card mb-lg">
   <h3>{{t "admin.teams.teamRole"}}</h3>
   <p class="text-muted mb-md">
-    Assign an org-scoped role to this team. All team members inherit the role's permissions within the organization.
-    Current: <strong><span id="team-role-label">{{#if currentRoleName}}{{currentRoleName}}{{else}}None{{/if}}</span></strong>
+    {{t "admin.teams.roleLinkDesc"}}
+    {{t "admin.teams.current"}} <strong><span id="team-role-label">{{#if currentRoleName}}{{currentRoleName}}{{else}}{{t "admin.teams.noneRole"}}{{/if}}</span></strong>
   </p>
   <form hx-post="/admin/teams/{{team.id}}/role"
         hx-target="#team-role-label"
@@ -46,15 +46,15 @@
         class="flex flex-wrap items-center gap-sm">
     <input type="hidden" name="_csrf" value="{{csrfToken}}">
     <label class="form-group form-group--inline">
-      <span class="form-label">Role</span>
+      <span class="form-label">{{t "admin.roles.roleName"}}</span>
       <select name="roleId" class="input">
-        <option value="">None</option>
+        <option value="">{{t "admin.teams.noneRole"}}</option>
         {{#each availableRoles}}
         <option value="{{id}}"{{#if (eq id ../team.roleId)}} selected{{/if}}>{{name}}{{#if (eq orgId "system")}} (global){{/if}}</option>
         {{/each}}
       </select>
     </label>
-    <button type="submit" class="btn btn--primary btn--sm">Update Role</button>
+    <button type="submit" class="btn btn--primary btn--sm">{{t "admin.teams.updateRole"}}</button>
   </form>
 </div>
 

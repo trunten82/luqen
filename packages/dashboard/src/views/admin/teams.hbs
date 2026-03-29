@@ -23,9 +23,9 @@
       <input type="text" name="description" class="input" placeholder="{{t "admin.teams.teamDescriptionPlaceholder"}}">
     </label>
     <label class="form-group form-group--inline">
-      <span class="form-label">Organization</span>
+      <span class="form-label">{{t "common.organization"}}</span>
       <select name="organizationId" class="input">
-        <option value="">None (global)</option>
+        <option value="">{{t "admin.teams.noneGlobal"}}</option>
         {{#each organizations}}
         <option value="{{id}}">{{name}}</option>
         {{/each}}
@@ -34,7 +34,7 @@
     <label class="form-group form-group--inline">
       <span class="form-label">{{t "admin.teams.teamRole"}}</span>
       <select name="roleId" class="input">
-        <option value="">None</option>
+        <option value="">{{t "admin.teams.noneRole"}}</option>
         {{#each availableRoles}}
         <option value="{{id}}">{{name}}{{#if (eq orgId "system")}} (global){{/if}}</option>
         {{/each}}
@@ -51,7 +51,7 @@
       <tr>
         <th scope="col">{{t "common.name"}}</th>
         <th scope="col">{{t "admin.teams.teamDescription"}}</th>
-        <th scope="col">Organization</th>
+        <th scope="col">{{t "common.organization"}}</th>
         <th scope="col">{{t "admin.teams.members"}}</th>
         <th scope="col">{{t "admin.teams.created"}}</th>
         <th scope="col">{{t "common.actions"}}</th>

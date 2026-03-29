@@ -54,7 +54,7 @@
       </div>
       <div class="card__body">
         <div class="card__value {{#if staleCount}}text--error{{else}}text--success{{/if}}">{{staleCount}}</div>
-        <div class="card__label">Need scanning</div>
+        <div class="card__label">{{t "admin.monitor.needScanning"}}</div>
       </div>
     </div>
   </div>
@@ -78,12 +78,12 @@
     <h2 class="section-title">{{t "admin.monitor.monitoredSources"}}</h2>
     {{#if sources.length}}
     <div class="filter-bar mb-sm">
-      <input type="text" id="monitor-source-search" class="input input--sm" placeholder="Filter by name or URL..." data-action-input="filterMonitorSources" aria-label="Filter sources">
+      <input type="text" id="monitor-source-search" class="input input--sm" placeholder="{{t "admin.monitor.filterPlaceholder"}}" data-action-input="filterMonitorSources" aria-label="Filter sources">
       <select id="monitor-status-filter" class="select select--sm" data-action-change="filterMonitorSources" aria-label="Filter by status">
-        <option value="">All statuses</option>
-        <option value="up_to_date">Up to Date</option>
-        <option value="change_pending">Change Pending</option>
-        <option value="stale">Stale</option>
+        <option value="">{{t "reports.allStatuses"}}</option>
+        <option value="up_to_date">{{t "admin.monitor.upToDate"}}</option>
+        <option value="change_pending">{{t "admin.monitor.changePending"}}</option>
+        <option value="stale">{{t "admin.monitor.stale"}}</option>
       </select>
       <span id="monitor-source-count" class="text-sm text-muted"></span>
     </div>

@@ -16,14 +16,14 @@
 
       {{#if isAdmin}}
       <div class="form-group">
-        <label for="orgId">Organization</label>
+        <label for="orgId">{{t "common.organization"}}</label>
         <select id="orgId" name="orgId" class="select">
-          <option value="system">System (global)</option>
+          <option value="system">{{t "repos.systemGlobal"}}</option>
           {{#each orgs}}
           <option value="{{this.id}}">{{this.name}}</option>
           {{/each}}
         </select>
-        <p class="form-hint">Assign this repo connection to an organization.</p>
+        <p class="form-hint">{{t "repos.orgHint"}}</p>
       </div>
       {{/if}}
 
@@ -49,14 +49,14 @@
       </div>
 
       <div class="form-group">
-        <label for="gitHostConfigId">Git Host</label>
+        <label for="gitHostConfigId">{{t "repos.gitHost"}}</label>
         <select id="gitHostConfigId" name="gitHostConfigId" class="select">
-          <option value="">None (local path only)</option>
+          <option value="">{{t "repos.gitHostNone"}}</option>
           {{#each gitHosts}}
           <option value="{{id}}">{{displayName}} ({{pluginType}})</option>
           {{/each}}
         </select>
-        <p class="form-hint">Select the git host where this repo is hosted. Required for PR creation.</p>
+        <p class="form-hint">{{t "repos.gitHostHint"}}</p>
       </div>
 
       <div class="form-group">
@@ -81,7 +81,7 @@
           <tr>
             <th scope="col">{{t "repos.siteUrlPattern"}}</th>
             <th scope="col">{{t "repos.repository"}}</th>
-            <th scope="col">Git Host</th>
+            <th scope="col">{{t "repos.gitHost"}}</th>
             <th scope="col">{{t "repos.branch"}}</th>
             <th scope="col">{{t "repos.localPath"}}</th>
             <th scope="col">{{t "repos.created"}}</th>
@@ -101,7 +101,7 @@
               {{#if this.gitHostConfigId}}
               <span class="badge badge--info">{{this.gitHostConfigId}}</span>
               {{else}}
-              <span class="text--muted">Local</span>
+              <span class="text--muted">{{t "repos.gitHostLocal"}}</span>
               {{/if}}
             </td>
             <td><code>{{this.branch}}</code></td>
