@@ -16,7 +16,8 @@
       <option value="reviewed" {{#if (eq filters.action 'reviewed')}}selected{{/if}}>{{t "admin.proposals.statusReviewed"}}</option>
       <option value="dismissed" {{#if (eq filters.action 'dismissed')}}selected{{/if}}>{{t "admin.proposals.statusDismissed"}}</option>
     </select>
-    <input type="text" name="search" value="{{filters.search}}" class="input input--sm" placeholder="{{t "admin.changeHistory.searchPlaceholder"}}">
+    <label class="form-label" for="filter-search">{{t "admin.changeHistory.search"}}</label>
+    <input type="text" id="filter-search" name="search" value="{{filters.search}}" class="input input--sm" placeholder="{{t "admin.changeHistory.searchPlaceholder"}}">
     <button type="submit" class="btn btn--primary btn--sm">{{t "admin.changeHistory.filter"}}</button>
     <a href="/admin/change-history" class="btn btn--ghost btn--sm">{{t "common.reset"}}</a>
   </form>
