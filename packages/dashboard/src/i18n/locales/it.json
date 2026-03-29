@@ -71,7 +71,9 @@
     "organizations": "Organizzazioni",
     "systemHealth": "Stato del Sistema",
     "auditLog": "Registro Audit",
-    "myProfile": "Il Mio Profilo"
+    "myProfile": "Il Mio Profilo",
+    "monitoring": "Monitoraggio",
+    "changeHistory": "Cronologia Modifiche"
   },
   "auth": {
     "signInTitle": "Accedi",
@@ -350,7 +352,31 @@
       "confirmReject": "Rifiutare questa proposta?",
       "noUpdates": "Nessun aggiornamento normativo rilevato.",
       "noCustom": "Nessuna proposta personalizzata.",
-      "noProposals": "Nessuna proposta trovata."
+      "noProposals": "Nessuna proposta trovata.",
+      "selectAll": "Seleziona tutto",
+      "selected": "selezionato/i",
+      "acknowledgeAll": "Conferma Tutto",
+      "reviewAll": "Rivedi Tutto",
+      "dismissAll": "Ignora Tutto",
+      "clearSelection": "Cancella"
+    },
+    "changeHistory": {
+      "pageTitle": "Cronologia Modifiche",
+      "from": "Da",
+      "to": "A",
+      "action": "Azione",
+      "allActions": "Tutte le Azioni",
+      "search": "Cerca",
+      "searchPlaceholder": "Cerca per fonte o riepilogo...",
+      "filter": "Filtra",
+      "exportCsv": "Esporta CSV",
+      "results": "risultato/i",
+      "colDate": "Data",
+      "colType": "Tipo",
+      "colAction": "Azione Eseguita",
+      "colBy": "Da",
+      "colNotes": "Note",
+      "noEntries": "Nessun record nella cronologia delle modifiche."
     },
     "sources": {
       "addSource": "Aggiungi Fonte",
@@ -394,7 +420,11 @@
       "scanDescription": "Controlla tutte le fonti monitorate per i cambiamenti normativi e crea proposte per gli aggiornamenti rilevati.",
       "recentProposals": "Proposte Recenti",
       "colCreated": "Creato",
-      "noProposals": "Nessuna proposta recente."
+      "noProposals": "Nessuna proposta recente.",
+      "lastDbUpdate": "Ultimo Aggiornamento DB",
+      "upToDate": "Aggiornato",
+      "changePending": "Modifica in Attesa",
+      "sourcesAligned": "Fonti allineate con il live"
     },
     "webhooks": {
       "addWebhook": "Aggiungi Webhook",
