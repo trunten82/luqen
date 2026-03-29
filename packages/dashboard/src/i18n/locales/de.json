@@ -37,7 +37,10 @@
     "switchOrganization": "Organisation wechseln",
     "edit": "Bearbeiten",
     "close": "Schließen",
-    "create": "Erstellen"
+    "create": "Erstellen",
+    "scope": "Bereich",
+    "owner": "Eigentümer",
+    "select": "Auswählen"
   },
   "nav": {
     "overview": "Übersicht",
@@ -233,7 +236,14 @@
     "noReportsDesc": "Führen Sie Ihren ersten Barrierefreiheitsscan durch, um Ergebnisse hier zu sehen.",
     "downloadPdf": "PDF Herunterladen",
     "print": "Drucken",
-    "vsPrevious": "vs Vorherige"
+    "vsPrevious": "vs Vorherige",
+    "compliance": "Compliance",
+    "compliant": "Konform",
+    "needsReview": "Prüfung erforderlich",
+    "nonCompliant": "Nicht konform",
+    "mandatoryFailures": "Pflichtfehler gefunden",
+    "itemsNeedManualReview": "Element(e) erfordern manuelle Prüfung",
+    "noMandatoryFailures": "Keine Pflichtfehler erkannt"
   },
   "schedules": {
     "title": "Scan-Zeitpläne",
@@ -263,7 +273,8 @@
     "loadMore": "Mehr Laden",
     "allActions": "Alle Aktionen",
     "allResources": "Alle Ressourcentypen",
-    "noEntries": "Keine Audit-Protokolleinträge gefunden."
+    "noEntries": "Keine Audit-Protokolleinträge gefunden.",
+    "org": "Org"
   },
   "admin": {
     "jurisdictions": {
@@ -358,7 +369,11 @@
       "acknowledgeAll": "Alle bestätigen",
       "reviewAll": "Alle prüfen",
       "dismissAll": "Alle ablehnen",
-      "clearSelection": "Löschen"
+      "clearSelection": "Löschen",
+      "showChanges": "Änderungen anzeigen",
+      "diffAdded": "Hinzugefügt:",
+      "diffRemoved": "Entfernt:",
+      "diffModified": "Geändert:"
     },
     "changeHistory": {
       "pageTitle": "Änderungsverlauf",
@@ -376,7 +391,9 @@
       "colAction": "Durchgeführte Aktion",
       "colBy": "Von",
       "colNotes": "Notizen",
-      "noEntries": "Keine Änderungsverlaufseinträge gefunden."
+      "noEntries": "Keine Änderungsverlaufseinträge gefunden.",
+      "colSource": "Quelle",
+      "colSummary": "Zusammenfassung"
     },
     "sources": {
       "addSource": "Quelle Hinzufügen",
@@ -424,7 +441,9 @@
       "lastDbUpdate": "Letztes DB-Update",
       "upToDate": "Aktuell",
       "changePending": "Änderung ausstehend",
-      "sourcesAligned": "Quellen mit Live synchronisiert"
+      "sourcesAligned": "Quellen mit Live synchronisiert",
+      "needScanning": "Scan erforderlich",
+      "filterPlaceholder": "Nach Name oder URL filtern..."
     },
     "webhooks": {
       "addWebhook": "Webhook Hinzufügen",
@@ -452,7 +471,16 @@
       "install": "Installieren",
       "package": "Paket",
       "noInstalled": "Keine Plugins installiert. Durchsuchen Sie unten verfügbare Plugins.",
-      "allInstalled": "Alle verfügbaren Plugins sind bereits installiert."
+      "allInstalled": "Alle verfügbaren Plugins sind bereits installiert.",
+      "notActivatedForOrg": "Nicht für Org aktiviert",
+      "needsConfig": "Konfiguration erforderlich:",
+      "activeIn": "Aktiv in:",
+      "deployToOrgs": "In Organisationen bereitstellen",
+      "selectAll": "Alle auswählen",
+      "activateSelected": "Ausgewählte aktivieren",
+      "activateForMyOrg": "Für meine Organisation aktivieren",
+      "usesGlobalConfig": "Verwendet globale Konfiguration. Sie können nach der Aktivierung anpassen.",
+      "contactAdmin": "Benötigen Sie ein nicht installiertes Plugin? Wenden Sie sich an Ihren Systemadministrator."
     },
     "teams": {
       "title": "Teams",
@@ -471,7 +499,14 @@
       "username": "Benutzername",
       "teamRole": "Teamrolle",
       "remove": "Entfernen",
-      "noMembers": "Noch keine Mitglieder. Fügen Sie oben Dashboard-Benutzer hinzu."
+      "noMembers": "Noch keine Mitglieder. Fügen Sie oben Dashboard-Benutzer hinzu.",
+      "noneGlobal": "Keiner (global)",
+      "noneRole": "Keine",
+      "orgLinkDesc": "Verknüpfe dieses Team mit einer Organisation. Teammitglieder erben die Mitgliedschaft in der verknüpften Organisation.",
+      "roleLinkDesc": "Weise diesem Team eine org-bezogene Rolle zu. Alle Teammitglieder erben die Berechtigungen der Rolle innerhalb der Organisation.",
+      "current": "Aktuell:",
+      "updateOrganization": "Organisation aktualisieren",
+      "updateRole": "Rolle aktualisieren"
     },
     "roles": {
       "createRole": "Rolle Erstellen",
@@ -513,7 +548,8 @@
       "revokedNote": "Dieser Schlüssel wurde widerrufen und kann nicht mehr verwendet werden.",
       "close": "Schließen",
       "generateKey": "Schlüssel Generieren",
-      "labelPlaceholder": "z. B. CI-Pipeline, Monitoring"
+      "labelPlaceholder": "z. B. CI-Pipeline, Monitoring",
+      "role": "Rolle"
     },
     "clients": {
       "addClient": "OAuth-Client Hinzufügen",
@@ -527,7 +563,10 @@
       "clientNameHint": "Ein lesbarer Name für diesen Client",
       "scopesPlaceholder": "read write admin",
       "scopesHint": "Leerzeichen- oder kommagetrennte Liste von Bereichen",
-      "createClient": "Client Erstellen"
+      "createClient": "Client Erstellen",
+      "scope": "Bereich",
+      "systemOwner": "System",
+      "protected": "Geschützt"
     },
     "users": {
       "addUser": "Benutzer Hinzufügen",
@@ -576,7 +615,10 @@
       "roleName": "Rollenname",
       "roleDescription": "Beschreibung",
       "rolePermissions": "Berechtigungen",
-      "noOrgRoles": "Keine organisationsspezifischen Rollen gefunden. Sie werden automatisch bei der Erstellung einer Organisation erstellt."
+      "noOrgRoles": "Keine organisationsspezifischen Rollen gefunden. Sie werden automatisch bei der Erstellung einer Organisation erstellt.",
+      "manageViaTeamsTitle": "Über Teams verwalten:",
+      "manageViaTeamsDesc": "Die Organisationsmitgliedschaft wird über Teams verwaltet. Füge Benutzer einem Team hinzu, das mit dieser Organisation verknüpft ist, um Zugang zu gewähren.",
+      "goToTeams": "Zu Teams"
     },
     "system": {
       "database": "Datenbank",
@@ -647,6 +689,19 @@
       "passwordHint": "Min. 8 Zeichen, Großbuchstabe, Kleinbuchstabe, Zahl, Sonderzeichen",
       "role": "Rolle",
       "createUser": "Benutzer Erstellen"
+    },
+    "gitHosts": {
+      "displayName": "Anzeigename",
+      "type": "Typ",
+      "hostUrl": "Host-URL",
+      "addTitle": "Git-Host hinzufügen",
+      "platform": "Plattform",
+      "hostUrlHint": "API-Basis-URL. Verwende https://api.github.com für GitHub, https://gitlab.com/api/v4 für GitLab, https://dev.azure.com für Azure DevOps.",
+      "displayNamePlaceholder": "Unternehmens-GitHub",
+      "addButton": "Git-Host hinzufügen",
+      "remove": "Entfernen",
+      "removeConfirm": "Diesen Git-Host entfernen? Entwickler-Anmeldeinformationen werden ebenfalls gelöscht.",
+      "noHosts": "Keine Git-Hosts konfiguriert. Füge unten einen hinzu, um die Repository-Integration zu aktivieren."
     }
   },
   "trends": {
@@ -1017,7 +1072,13 @@
     "integrationOptionsDesc": "Korrekturvorschläge sind auch verfügbar über:",
     "integrationMcp": "<strong>MCP-Tools:</strong> <code>luqen_propose_fixes</code>, <code>luqen_apply_fix</code> — aus Ihrer IDE verwenden",
     "integrationRest": "<strong>REST API:</strong> <code>GET /api/v1/scans/:id/fixes</code> — für externe Integrationen",
-    "integrationA2a": "A2A-Protokoll: Agenten können die REST API aufrufen, um Korrekturen programmatisch vorzuschlagen und anzuwenden"
+    "integrationA2a": "A2A-Protokoll: Agenten können die REST API aufrufen, um Korrekturen programmatisch vorzuschlagen und anzuwenden",
+    "systemGlobal": "System (global)",
+    "orgHint": "Diese Repository-Verbindung einer Organisation zuweisen.",
+    "gitHost": "Git-Host",
+    "gitHostNone": "Keiner (nur lokaler Pfad)",
+    "gitHostHint": "Wähle den Git-Host aus, auf dem dieses Repository gehostet wird. Erforderlich für die PR-Erstellung.",
+    "gitHostLocal": "Lokal"
   },
   "fixes": {
     "backToReport": "Zurück zum Bericht",

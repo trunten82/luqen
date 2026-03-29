@@ -1,43 +1,43 @@
-<section aria-label="Change History">
+<section aria-label="{{t 'admin.changeHistory.pageTitle'}}">
   <div class="page-actions">
     <a href="/admin/change-history/export?from={{filters.from}}&to={{filters.to}}&action={{filters.action}}&search={{filters.search}}"
-       class="btn btn--secondary btn--sm">Export CSV</a>
+       class="btn btn--secondary btn--sm">{{t "admin.changeHistory.exportCsv"}}</a>
   </div>
 
   <form class="filter-bar mb-md" method="GET" action="/admin/change-history" aria-label="Change history filters">
-    <label class="form-label" for="filter-from">From</label>
-    <input type="date" id="filter-from" name="from" value="{{filters.from}}" class="input input--sm" placeholder="Start date">
-    <label class="form-label" for="filter-to">To</label>
-    <input type="date" id="filter-to" name="to" value="{{filters.to}}" class="input input--sm" placeholder="End date">
-    <label class="form-label" for="filter-action">Action</label>
+    <label class="form-label" for="filter-from">{{t "admin.changeHistory.from"}}</label>
+    <input type="date" id="filter-from" name="from" value="{{filters.from}}" class="input input--sm">
+    <label class="form-label" for="filter-to">{{t "admin.changeHistory.to"}}</label>
+    <input type="date" id="filter-to" name="to" value="{{filters.to}}" class="input input--sm">
+    <label class="form-label" for="filter-action">{{t "admin.changeHistory.action"}}</label>
     <select id="filter-action" name="action" class="select select--sm">
-      <option value="">All Actions</option>
-      <option value="acknowledged" {{#if (eq filters.action 'acknowledged')}}selected{{/if}}>Acknowledged</option>
-      <option value="reviewed" {{#if (eq filters.action 'reviewed')}}selected{{/if}}>Reviewed</option>
-      <option value="dismissed" {{#if (eq filters.action 'dismissed')}}selected{{/if}}>Dismissed</option>
+      <option value="">{{t "admin.changeHistory.allActions"}}</option>
+      <option value="acknowledged" {{#if (eq filters.action 'acknowledged')}}selected{{/if}}>{{t "admin.proposals.statusAcknowledged"}}</option>
+      <option value="reviewed" {{#if (eq filters.action 'reviewed')}}selected{{/if}}>{{t "admin.proposals.statusReviewed"}}</option>
+      <option value="dismissed" {{#if (eq filters.action 'dismissed')}}selected{{/if}}>{{t "admin.proposals.statusDismissed"}}</option>
     </select>
-    <input type="text" name="search" value="{{filters.search}}" class="input input--sm" placeholder="Search source or summary...">
-    <button type="submit" class="btn btn--primary btn--sm">Filter</button>
-    <a href="/admin/change-history" class="btn btn--ghost btn--sm">Reset</a>
+    <input type="text" name="search" value="{{filters.search}}" class="input input--sm" placeholder="{{t "admin.changeHistory.searchPlaceholder"}}">
+    <button type="submit" class="btn btn--primary btn--sm">{{t "admin.changeHistory.filter"}}</button>
+    <a href="/admin/change-history" class="btn btn--ghost btn--sm">{{t "common.reset"}}</a>
   </form>
 
   {{#if error}}
   <div class="alert alert--error mb-md" role="alert"><p>{{error}}</p></div>
   {{/if}}
 
-  <p class="text-muted">{{total}} result(s)</p>
+  <p class="text-muted">{{total}} {{t "admin.changeHistory.results"}}</p>
 
   <div class="table-wrapper" role="region" aria-label="Change history entries" tabindex="0">
     <table class="data-table">
       <thead>
         <tr>
-          <th scope="col">Date</th>
-          <th scope="col">Source</th>
-          <th scope="col">Summary</th>
-          <th scope="col">Type</th>
-          <th scope="col">Action</th>
-          <th scope="col">By</th>
-          <th scope="col">Notes</th>
+          <th scope="col">{{t "admin.changeHistory.colDate"}}</th>
+          <th scope="col">{{t "admin.changeHistory.colSource"}}</th>
+          <th scope="col">{{t "admin.changeHistory.colSummary"}}</th>
+          <th scope="col">{{t "admin.changeHistory.colType"}}</th>
+          <th scope="col">{{t "admin.changeHistory.colAction"}}</th>
+          <th scope="col">{{t "admin.changeHistory.colBy"}}</th>
+          <th scope="col">{{t "admin.changeHistory.colNotes"}}</th>
         </tr>
       </thead>
       <tbody>
@@ -57,7 +57,7 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="7" class="text-center text-muted">No change history records found.</td>
+          <td colspan="7" class="text-center text-muted">{{t "admin.changeHistory.noEntries"}}</td>
         </tr>
         {{/each}}
       </tbody>
@@ -67,19 +67,19 @@
   {{#if prevPage}}
   <nav class="pagination mt-md" aria-label="Pages">
     <a href="/admin/change-history?page={{prevPage}}&from={{filters.from}}&to={{filters.to}}&action={{filters.action}}&search={{filters.search}}"
-       class="btn btn--sm btn--ghost">&laquo; Prev</a>
-    <span class="text-muted">Page {{page}} of {{totalPages}}</span>
+       class="btn btn--sm btn--ghost">&laquo; {{t "common.previous"}}</a>
+    <span class="text-muted">{{t "common.page"}} {{page}} / {{totalPages}}</span>
     {{#if nextPage}}
     <a href="/admin/change-history?page={{nextPage}}&from={{filters.from}}&to={{filters.to}}&action={{filters.action}}&search={{filters.search}}"
-       class="btn btn--sm btn--ghost">Next &raquo;</a>
+       class="btn btn--sm btn--ghost">{{t "common.next"}} &raquo;</a>
     {{/if}}
   </nav>
   {{else}}
   {{#if nextPage}}
   <nav class="pagination mt-md" aria-label="Pages">
-    <span class="text-muted">Page {{page}} of {{totalPages}}</span>
+    <span class="text-muted">{{t "common.page"}} {{page}} / {{totalPages}}</span>
     <a href="/admin/change-history?page={{nextPage}}&from={{filters.from}}&to={{filters.to}}&action={{filters.action}}&search={{filters.search}}"
-       class="btn btn--sm btn--ghost">Next &raquo;</a>
+       class="btn btn--sm btn--ghost">{{t "common.next"}} &raquo;</a>
   </nav>
   {{/if}}
   {{/if}}

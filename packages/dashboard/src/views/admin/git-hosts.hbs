@@ -4,10 +4,10 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th scope="col">Display Name</th>
-          <th scope="col">Type</th>
-          <th scope="col">Host URL</th>
-          <th scope="col">Actions</th>
+          <th scope="col">{{t "admin.gitHosts.displayName"}}</th>
+          <th scope="col">{{t "admin.gitHosts.type"}}</th>
+          <th scope="col">{{t "admin.gitHosts.hostUrl"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody>
@@ -21,8 +21,8 @@
                     hx-delete="/admin/git-hosts/{{id}}"
                     hx-target="#git-host-messages"
                     hx-swap="innerHTML"
-                    hx-confirm="Remove this git host? Developer credentials for it will also be deleted.">
-              Remove
+                    hx-confirm="{{t "admin.gitHosts.removeConfirm"}}">
+              {{t "admin.gitHosts.remove"}}
             </button>
           </td>
         </tr>
@@ -32,18 +32,18 @@
   </div>
   {{else}}
   <div class="empty-state">
-    <p>No git hosts configured. Add one below to enable repository integration.</p>
+    <p>{{t "admin.gitHosts.noHosts"}}</p>
   </div>
   {{/if}}
 
   <div id="git-host-messages"></div>
 
   <div class="card mt-lg">
-    <h3 class="card__title mb-md">Add Git Host</h3>
+    <h3 class="card__title mb-md">{{t "admin.gitHosts.addTitle"}}</h3>
     <form method="POST" action="/admin/git-hosts">
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
       <div class="form-group">
-        <label for="pluginType">Platform</label>
+        <label for="pluginType">{{t "admin.gitHosts.platform"}}</label>
         <select id="pluginType" name="pluginType" class="select" required>
           {{#each pluginTypes}}
           <option value="{{this}}">{{this}}</option>
@@ -51,18 +51,18 @@
         </select>
       </div>
       <div class="form-group">
-        <label for="hostUrl">Host URL</label>
+        <label for="hostUrl">{{t "admin.gitHosts.hostUrl"}}</label>
         <input type="url" id="hostUrl" name="hostUrl" class="input" required
                placeholder="https://api.github.com"
                aria-describedby="hostUrl-hint">
-        <p id="hostUrl-hint" class="form-hint">API base URL. Use https://api.github.com for GitHub, https://gitlab.com/api/v4 for GitLab, https://dev.azure.com for Azure DevOps.</p>
+        <p id="hostUrl-hint" class="form-hint">{{t "admin.gitHosts.hostUrlHint"}}</p>
       </div>
       <div class="form-group">
-        <label for="displayName">Display Name</label>
+        <label for="displayName">{{t "admin.gitHosts.displayName"}}</label>
         <input type="text" id="displayName" name="displayName" class="input" required
-               placeholder="Company GitHub">
+               placeholder="{{t "admin.gitHosts.displayNamePlaceholder"}}">
       </div>
-      <button type="submit" class="btn btn--primary">Add Git Host</button>
+      <button type="submit" class="btn btn--primary">{{t "admin.gitHosts.addButton"}}</button>
     </form>
   </div>
 </section>

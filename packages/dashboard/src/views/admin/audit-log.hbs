@@ -62,7 +62,7 @@
           <th scope="col">{{t "audit.resourceId"}}</th>
           <th scope="col">{{t "audit.details"}}</th>
           <th scope="col">{{t "audit.ipAddress"}}</th>
-          <th scope="col">Org</th>
+          <th scope="col">{{t "audit.org"}}</th>
         </tr>
       </thead>
       <tbody>
@@ -75,7 +75,7 @@
           <td data-label="Resource ID">{{this.resourceId}}</td>
           <td data-label="Details">{{this.details}}</td>
           <td data-label="IP Address"><code>{{this.ipAddress}}</code></td>
-          <td data-label="Org">{{#if this.orgId}}{{this.orgId}}{{else}}System{{/if}}</td>
+          <td data-label="Org">{{#if this.orgId}}{{this.orgId}}{{else}}{{t "common.systemNoOrg"}}{{/if}}</td>
         </tr>
         {{else}}
         <tr>

@@ -34,20 +34,20 @@
               <dt>{{t "common.status"}}</dt>
               <dd>
                 <span class="badge {{#if (eq status 'active')}}badge--success{{else if (eq status 'inactive')}}badge--neutral{{else if (eq status 'error')}}badge--error{{else if (eq status 'unhealthy')}}badge--warning{{else}}badge--neutral{{/if}}">
-                  {{#if isGlobalOnly}}Not activated for org{{else}}{{status}}{{/if}}
+                  {{#if isGlobalOnly}}{{t "admin.plugins.notActivatedForOrg"}}{{else}}{{status}}{{/if}}
                 </span>
               </dd>
             </div>
           </dl>
           {{#if error}}
-          <p class="text-xs text-muted mt-xs"><strong>Needs config:</strong> {{error}}</p>
+          <p class="text-xs text-muted mt-xs"><strong>{{t "admin.plugins.needsConfig"}}</strong> {{error}}</p>
           {{/if}}
 
           <div class="card__actions mt-sm">
             {{#if ../isAdmin}}
               {{#if orgUsageCount}}
               <div class="text-xs text-muted mb-sm">
-                <strong>Active in:</strong>
+                <strong>{{t "admin.plugins.activeIn"}}</strong>
                 {{#each orgUsage}}
                 <span class="badge {{#if (eq status 'active')}}badge--success{{else}}badge--neutral{{/if}}" style="margin-right:2px">
                   {{orgName}}{{#if hasCustomConfig}} ✎{{/if}}
@@ -88,13 +88,13 @@
               {{#if (eq status "active")}}
               {{#if @root.allOrgs.length}}
               <details class="org-deploy mt-md">
-                <summary class="btn btn--sm btn--ghost">Deploy to organizations ({{@root.allOrgs.length}})</summary>
+                <summary class="btn btn--sm btn--ghost">{{t "admin.plugins.deployToOrgs"}} ({{@root.allOrgs.length}})</summary>
                 <form class="org-deploy__form mt-sm" hx-post="/admin/plugins/{{id}}/activate-for-org" hx-target="#plugin-messages" hx-swap="innerHTML">
                   <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
                   <div class="org-deploy__list">
                     <label class="org-deploy__item">
                       <input type="checkbox" data-action="selectAllOrgs">
-                      <span><strong>Select all</strong></span>
+                      <span><strong>{{t "admin.plugins.selectAll"}}</strong></span>
                     </label>
                     {{#each @root.allOrgs}}
                     <label class="org-deploy__item">
@@ -104,7 +104,7 @@
                     </label>
                     {{/each}}
                   </div>
-                  <button type="submit" class="btn btn--sm btn--primary mt-sm">Activate selected</button>
+                  <button type="submit" class="btn btn--sm btn--primary mt-sm">{{t "admin.plugins.activateSelected"}}</button>
                 </form>
               </details>
               {{/if}}
@@ -116,27 +116,27 @@
                 <button type="button" class="btn btn--sm btn--secondary"
                         hx-post="/admin/plugins/{{id}}/org/deactivate"
                         hx-target="#plugin-messages" hx-swap="innerHTML">
-                  Deactivate
+                  {{t "admin.plugins.deactivate"}}
                 </button>
                 <button type="button" class="btn btn--sm btn--ghost"
                         data-action="togglePluginConfig" data-plugin-id="{{id}}">
-                  Configure
+                  {{t "admin.plugins.configure"}}
                 </button>
                 <div id="plugin-config-{{id}}" class="plugin-inline-config" hidden></div>
                 {{else}}
                 <button type="button" class="btn btn--sm btn--primary"
                         hx-post="/admin/plugins/{{id}}/org/activate"
                         hx-target="#plugin-messages" hx-swap="innerHTML">
-                  Activate
+                  {{t "admin.plugins.activate"}}
                 </button>
                 {{/if}}
               {{else}}
                 <button type="button" class="btn btn--sm btn--primary"
                         hx-post="/admin/plugins/{{id}}/org/activate"
                         hx-target="#plugin-messages" hx-swap="innerHTML">
-                  Activate for my organization
+                  {{t "admin.plugins.activateForMyOrg"}}
                 </button>
-                <p class="text-xs text-muted mt-xs">Uses global configuration. You can customize after activating.</p>
+                <p class="text-xs text-muted mt-xs">{{t "admin.plugins.usesGlobalConfig"}}</p>
               {{/if}}
             {{/if}}
           </div>
@@ -191,6 +191,6 @@
     {{/if}}
   </section>
   {{else}}
-  <p class="text-muted mt-lg">Need a plugin that's not installed? Contact your system administrator.</p>
+  <p class="text-muted mt-lg">{{t "admin.plugins.contactAdmin"}}</p>
   {{/if}}
 </section>

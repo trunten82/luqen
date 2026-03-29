@@ -62,23 +62,23 @@
           <td data-label="Summary" class="cell--wrap">
             {{summary}}
             {{#if hasDiff}}
-            <button type="button" class="btn btn--xs btn--ghost mt-xs" data-action="toggleDiff" data-target="diff-{{id}}">Show changes</button>
+            <button type="button" class="btn btn--xs btn--ghost mt-xs" data-action="toggleDiff" data-target="diff-{{id}}">{{t "admin.proposals.showChanges"}}</button>
             <div id="diff-{{id}}" class="diff-panel" hidden>
               {{#if diffAdded.length}}
               <div class="diff-section diff-section--added">
-                <strong class="diff-label">Added:</strong>
+                <strong class="diff-label">{{t "admin.proposals.diffAdded"}}</strong>
                 <ul>{{#each diffAdded}}<li>{{this}}</li>{{/each}}</ul>
               </div>
               {{/if}}
               {{#if diffRemoved.length}}
               <div class="diff-section diff-section--removed">
-                <strong class="diff-label">Removed:</strong>
+                <strong class="diff-label">{{t "admin.proposals.diffRemoved"}}</strong>
                 <ul>{{#each diffRemoved}}<li>{{this}}</li>{{/each}}</ul>
               </div>
               {{/if}}
               {{#if diffModified.length}}
               <div class="diff-section diff-section--modified">
-                <strong class="diff-label">Modified:</strong>
+                <strong class="diff-label">{{t "admin.proposals.diffModified"}}</strong>
                 <ul>{{#each diffModified}}<li>{{this}}</li>{{/each}}</ul>
               </div>
               {{/if}}
@@ -161,23 +161,23 @@
           <td data-label="Summary" class="cell--wrap">
             {{summary}}
             {{#if hasDiff}}
-            <button type="button" class="btn btn--xs btn--ghost mt-xs" data-action="toggleDiff" data-target="diff-{{id}}">Show changes</button>
+            <button type="button" class="btn btn--xs btn--ghost mt-xs" data-action="toggleDiff" data-target="diff-{{id}}">{{t "admin.proposals.showChanges"}}</button>
             <div id="diff-{{id}}" class="diff-panel" hidden>
               {{#if diffAdded.length}}
               <div class="diff-section diff-section--added">
-                <strong class="diff-label">Added:</strong>
+                <strong class="diff-label">{{t "admin.proposals.diffAdded"}}</strong>
                 <ul>{{#each diffAdded}}<li>{{this}}</li>{{/each}}</ul>
               </div>
               {{/if}}
               {{#if diffRemoved.length}}
               <div class="diff-section diff-section--removed">
-                <strong class="diff-label">Removed:</strong>
+                <strong class="diff-label">{{t "admin.proposals.diffRemoved"}}</strong>
                 <ul>{{#each diffRemoved}}<li>{{this}}</li>{{/each}}</ul>
               </div>
               {{/if}}
               {{#if diffModified.length}}
               <div class="diff-section diff-section--modified">
-                <strong class="diff-label">Modified:</strong>
+                <strong class="diff-label">{{t "admin.proposals.diffModified"}}</strong>
                 <ul>{{#each diffModified}}<li>{{this}}</li>{{/each}}</ul>
               </div>
               {{/if}}

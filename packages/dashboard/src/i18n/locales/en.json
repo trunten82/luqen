@@ -39,7 +39,8 @@
     "close": "Close",
     "create": "Create",
     "scope": "Scope",
-    "owner": "Owner"
+    "owner": "Owner",
+    "select": "Select"
   },
   "nav": {
     "overview": "Overview",
@@ -274,7 +275,8 @@
     "loadMore": "Load More",
     "allActions": "All actions",
     "allResources": "All resource types",
-    "noEntries": "No audit log entries found."
+    "noEntries": "No audit log entries found.",
+    "org": "Org"
   },
   "admin": {
     "jurisdictions": {
@@ -369,7 +371,11 @@
       "acknowledgeAll": "Acknowledge All",
       "reviewAll": "Review All",
       "dismissAll": "Dismiss All",
-      "clearSelection": "Clear"
+      "clearSelection": "Clear",
+      "showChanges": "Show changes",
+      "diffAdded": "Added:",
+      "diffRemoved": "Removed:",
+      "diffModified": "Modified:"
     },
     "changeHistory": {
       "pageTitle": "Change History",
@@ -383,6 +389,8 @@
       "exportCsv": "Export CSV",
       "results": "result(s)",
       "colDate": "Date",
+      "colSource": "Source",
+      "colSummary": "Summary",
       "colType": "Type",
       "colAction": "Action Taken",
       "colBy": "By",
@@ -438,7 +446,9 @@
       "lastDbUpdate": "Last DB Update",
       "upToDate": "Up to Date",
       "changePending": "Change Pending",
-      "sourcesAligned": "Sources aligned with live"
+      "sourcesAligned": "Sources aligned with live",
+      "needScanning": "Need scanning",
+      "filterPlaceholder": "Filter by name or URL..."
     },
     "webhooks": {
       "addWebhook": "Add Webhook",
@@ -450,6 +460,19 @@
       "endpointUrl": "Endpoint URL",
       "secret": "Secret",
       "secretHint": "Used to sign webhook payloads (HMAC-SHA256)"
+    },
+    "gitHosts": {
+      "displayName": "Display Name",
+      "type": "Type",
+      "hostUrl": "Host URL",
+      "addTitle": "Add Git Host",
+      "platform": "Platform",
+      "hostUrlHint": "API base URL. Use https://api.github.com for GitHub, https://gitlab.com/api/v4 for GitLab, https://dev.azure.com for Azure DevOps.",
+      "displayNamePlaceholder": "Company GitHub",
+      "addButton": "Add Git Host",
+      "remove": "Remove",
+      "removeConfirm": "Remove this git host? Developer credentials for it will also be deleted.",
+      "noHosts": "No git hosts configured. Add one below to enable repository integration."
     },
     "plugins": {
       "active": "active",
@@ -466,7 +489,16 @@
       "install": "Install",
       "package": "Package",
       "noInstalled": "No plugins installed. Browse available plugins below.",
-      "allInstalled": "All available plugins are already installed."
+      "allInstalled": "All available plugins are already installed.",
+      "notActivatedForOrg": "Not activated for org",
+      "needsConfig": "Needs config:",
+      "activeIn": "Active in:",
+      "deployToOrgs": "Deploy to organizations",
+      "selectAll": "Select all",
+      "activateSelected": "Activate selected",
+      "activateForMyOrg": "Activate for my organization",
+      "usesGlobalConfig": "Uses global configuration. You can customize after activating.",
+      "contactAdmin": "Need a plugin that's not installed? Contact your system administrator."
     },
     "teams": {
       "title": "Teams",
@@ -485,7 +517,14 @@
       "username": "Username",
       "teamRole": "Team Role",
       "remove": "Remove",
-      "noMembers": "No members yet. Add dashboard users above."
+      "noMembers": "No members yet. Add dashboard users above.",
+      "noneGlobal": "None (global)",
+      "noneRole": "None",
+      "orgLinkDesc": "Link this team to an organization. Team members will inherit membership in the linked organization.",
+      "roleLinkDesc": "Assign an org-scoped role to this team. All team members inherit the role's permissions within the organization.",
+      "current": "Current:",
+      "updateOrganization": "Update Organization",
+      "updateRole": "Update Role"
     },
     "roles": {
       "createRole": "Create Role",
@@ -527,7 +566,8 @@
       "revokedNote": "This key has been revoked and can no longer be used.",
       "close": "Close",
       "generateKey": "Generate Key",
-      "labelPlaceholder": "e.g. CI pipeline, monitoring"
+      "labelPlaceholder": "e.g. CI pipeline, monitoring",
+      "role": "Role"
     },
     "clients": {
       "addClient": "Add OAuth Client",
@@ -541,7 +581,10 @@
       "clientNameHint": "A human-readable name for this client",
       "scopesPlaceholder": "read write admin",
       "scopesHint": "Space or comma-separated list of scopes",
-      "createClient": "Create Client"
+      "createClient": "Create Client",
+      "scope": "Scope",
+      "systemOwner": "System",
+      "protected": "Protected"
     },
     "users": {
       "addUser": "Add User",
@@ -590,7 +633,10 @@
       "roleName": "Role Name",
       "roleDescription": "Description",
       "rolePermissions": "Permissions",
-      "noOrgRoles": "No org-scoped roles found. They are created automatically when an organization is created."
+      "noOrgRoles": "No org-scoped roles found. They are created automatically when an organization is created.",
+      "manageViaTeamsTitle": "Manage via Teams:",
+      "manageViaTeamsDesc": "Organization membership is managed through teams. Add users to a team linked to this organization to grant access.",
+      "goToTeams": "Go to Teams"
     },
     "system": {
       "database": "Database",
@@ -1031,7 +1077,13 @@
     "integrationOptionsDesc": "Fix proposals are also available via:",
     "integrationMcp": "<strong>MCP tools:</strong> <code>luqen_propose_fixes</code>, <code>luqen_apply_fix</code> — use from your IDE",
     "integrationRest": "<strong>REST API:</strong> <code>GET /api/v1/scans/:id/fixes</code> — for external integrations",
-    "integrationA2a": "A2A protocol: agents can call the REST API to propose and apply fixes programmatically"
+    "integrationA2a": "A2A protocol: agents can call the REST API to propose and apply fixes programmatically",
+    "systemGlobal": "System (global)",
+    "orgHint": "Assign this repo connection to an organization.",
+    "gitHost": "Git Host",
+    "gitHostNone": "None (local path only)",
+    "gitHostHint": "Select the git host where this repo is hosted. Required for PR creation.",
+    "gitHostLocal": "Local"
   },
   "fixes": {
     "backToReport": "Back to Report",

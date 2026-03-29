@@ -5,18 +5,18 @@
     <caption class="sr-only">Accessibility scan reports</caption>
     <thead>
       <tr>
-        <th scope="col" class="cell--checkbox"><span class="sr-only">Select</span></th>
-        <th scope="col">Site URL</th>
-        <th scope="col">Status</th>
-        <th scope="col">Standard</th>
-        <th scope="col">Jurisdictions</th>
-        <th scope="col">Pages</th>
-        <th scope="col">Errors</th>
-        <th scope="col">Warnings</th>
-        <th scope="col">Notices</th>
+        <th scope="col" class="cell--checkbox"><span class="sr-only">{{t "common.select"}}</span></th>
+        <th scope="col">{{t "reports.siteUrl"}}</th>
+        <th scope="col">{{t "common.status"}}</th>
+        <th scope="col">{{t "reports.standard"}}</th>
+        <th scope="col">{{t "reports.jurisdictions"}}</th>
+        <th scope="col">{{t "reports.pages"}}</th>
+        <th scope="col">{{t "reports.errors"}}</th>
+        <th scope="col">{{t "reports.warnings"}}</th>
+        <th scope="col">{{t "reports.notices"}}</th>
         <th scope="col">{{t "reports.compliance"}}</th>
-        <th scope="col">Date</th>
-        <th scope="col">Actions</th>
+        <th scope="col">{{t "common.date"}}</th>
+        <th scope="col">{{t "common.actions"}}</th>
       </tr>
     </thead>
     <tbody>
@@ -58,7 +58,7 @@
         </td>
         <td><time datetime="{{createdAt}}">{{createdAtDisplay}}</time></td>
         <td class="cell--actions">
-          <a href="/reports/{{id}}" class="btn btn--sm btn--ghost" aria-label="View report for {{siteUrl}}">View</a>
+          <a href="/reports/{{id}}" class="btn btn--sm btn--ghost" aria-label="View report for {{siteUrl}}">{{t "common.view"}}</a>
           {{#if previousScanId}}
           <a
             href="/reports/compare?a={{previousScanId}}&b={{id}}"
@@ -74,7 +74,7 @@
             hx-target="#report-{{id}}"
             hx-swap="outerHTML swap:300ms"
             aria-label="Delete scan report for {{siteUrl}}"
-          >Delete</button>
+          >{{t "common.delete"}}</button>
         </td>
       </tr>
       {{/each}}
@@ -91,9 +91,9 @@
     hx-target="#reports-table-body"
     hx-push-url="true"
     aria-label="Previous page"
-  >&larr; Previous</a>
+  >&larr; {{t "common.previous"}}</a>
   {{/if}}
-  <span class="pagination__info" aria-current="page">Page {{currentPage}}</span>
+  <span class="pagination__info" aria-current="page">{{t "common.page"}} {{currentPage}}</span>
   {{#if hasNext}}
   <a
     href="/reports?offset={{nextOffset}}&limit={{limit}}"
@@ -102,11 +102,11 @@
     hx-target="#reports-table-body"
     hx-push-url="true"
     aria-label="Next page"
-  >Next &rarr;</a>
+  >{{t "common.next"}} &rarr;</a>
   {{/if}}
 </nav>
 {{else}}
 <div class="empty-state" role="status">
-  <p>No reports found.</p>
+  <p>{{t "reports.noReports"}}</p>
 </div>
 {{/if}}

@@ -23,8 +23,8 @@
         <tr>
           <th scope="col">{{t "common.name"}}</th>
           <th scope="col">{{t "admin.clients.clientId"}}</th>
-          <th scope="col">Scope</th>
-          <th scope="col">Owner</th>
+          <th scope="col">{{t "admin.clients.scope"}}</th>
+          <th scope="col">{{t "common.owner"}}</th>
           <th scope="col">{{t "admin.clients.created"}}</th>
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
@@ -37,7 +37,7 @@
           <td data-label="Scope">{{scopesDisplay}}</td>
           <td data-label="Owner">
             {{#if isSystem}}
-            <span class="badge badge--neutral">System</span>
+            <span class="badge badge--neutral">{{t "admin.clients.systemOwner"}}</span>
             {{else}}
             <span class="badge badge--info">{{orgDisplayName}}</span>
             {{/if}}
@@ -53,7 +53,7 @@
                     aria-label="Revoke {{name}}">{{t "admin.clients.revoke"}}</button>
             <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
             {{else}}
-            <span class="text-xs text-muted">Protected</span>
+            <span class="text-xs text-muted">{{t "admin.clients.protected"}}</span>
             {{/if}}
           </td>
         </tr>
