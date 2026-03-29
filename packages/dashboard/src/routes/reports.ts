@@ -74,6 +74,14 @@ export async function reportRoutes(
             previousScanId = prev.id;
           }
         }
+        // Compute compliance traffic light status
+        const confirmed = s.confirmedViolations ?? 0;
+        const hasJurisdictions = s.jurisdictions.length > 0;
+        const complianceStatus = !hasJurisdictions ? 'none'
+          : confirmed > 0 ? 'fail'
+          : (s.notices ?? 0) > 0 ? 'review'
+          : 'pass';
+
         return {
           ...s,
           jurisdictions: s.jurisdictions.join(', '),
@@ -82,6 +90,7 @@ export async function reportRoutes(
             ? new Date(s.completedAt).toLocaleString()
             : '',
           previousScanId,
+          complianceStatus,
         };
       }));
 
@@ -213,12 +222,22 @@ export async function reportRoutes(
         ...teams.map((t) => ({ type: 'team', id: `team:${t.id}`, label: `Team: ${t.name}` })),
       ];
 
+      // Compute compliance traffic light for detail page
+      const totalConfirmed = (reportData as any)?.compliance?.summary?.totalConfirmedViolations ?? 0;
+      const totalNeedsReview = (reportData as any)?.compliance?.summary?.totalNeedsReview ?? 0;
+      const hasCompliance = reportData?.complianceMatrix != null;
+      const complianceStatus = !hasCompliance ? 'none'
+        : totalConfirmed > 0 ? 'fail'
+        : totalNeedsReview > 0 ? 'review'
+        : 'pass';
+
       return reply.view('report-detail.hbs', {
         pageTitle: `Report — ${scan.siteUrl}`,
         currentPath: `/reports/${id}`,
         user: request.user,
         scan: scanMeta,
         reportData,
+        complianceStatus,
         pdfAvailable: true,
         manualTestStats: {
           tested: manualTested,

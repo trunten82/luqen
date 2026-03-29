@@ -237,7 +237,14 @@
     "noReportsDesc": "Run your first accessibility scan to see results here.",
     "downloadPdf": "Download PDF",
     "print": "Print",
-    "vsPrevious": "vs Previous"
+    "vsPrevious": "vs Previous",
+    "compliance": "Compliance",
+    "compliant": "Compliant",
+    "needsReview": "Needs Review",
+    "nonCompliant": "Non-Compliant",
+    "mandatoryFailures": "mandatory failure(s) found",
+    "itemsNeedManualReview": "item(s) need manual review",
+    "noMandatoryFailures": "No mandatory failures detected"
   },
   "schedules": {
     "title": "Scan Schedules",

@@ -14,7 +14,7 @@
         <th scope="col">Errors</th>
         <th scope="col">Warnings</th>
         <th scope="col">Notices</th>
-        <th scope="col">Violations</th>
+        <th scope="col">{{t "reports.compliance"}}</th>
         <th scope="col">Date</th>
         <th scope="col">Actions</th>
       </tr>
@@ -45,7 +45,17 @@
         <td class="text--error">{{errors}}</td>
         <td class="text--warning">{{warnings}}</td>
         <td>{{notices}}</td>
-        <td>{{confirmedViolations}}</td>
+        <td data-label="Compliance">
+          {{#if (eq complianceStatus 'fail')}}
+          <span class="badge badge--error">{{t "reports.nonCompliant"}}</span>
+          {{else if (eq complianceStatus 'review')}}
+          <span class="badge badge--warning">{{t "reports.needsReview"}}</span>
+          {{else if (eq complianceStatus 'pass')}}
+          <span class="badge badge--success">{{t "reports.compliant"}}</span>
+          {{else}}
+          <span class="text-sm text-muted">&mdash;</span>
+          {{/if}}
+        </td>
         <td><time datetime="{{createdAt}}">{{createdAtDisplay}}</time></td>
         <td class="cell--actions">
           <a href="/reports/{{id}}" class="btn btn--sm btn--ghost" aria-label="View report for {{siteUrl}}">View</a>

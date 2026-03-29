@@ -2395,6 +2395,17 @@ select {
 }
 .rpt-tab-panel--hidden { display: none; }
 
+/* ── Compliance traffic light banner ──────────────────────── */
+.rpt-compliance-banner {
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+.rpt-compliance-banner--pass { background: var(--status-success-bg, #dcfce7); color: var(--status-success, #166534); border: 1px solid var(--status-success, #22c55e); }
+.rpt-compliance-banner--review { background: var(--status-warning-bg, #fef9c3); color: var(--status-warning-text, #854d0e); border: 1px solid var(--status-warning, #f59e0b); }
+.rpt-compliance-banner--fail { background: var(--status-error-bg, #fee2e2); color: var(--status-error, #991b1b); border: 1px solid var(--status-error, #ef4444); }
+
 /* ── Summary bar (compact inline badges) ──────────────────── */
 .rpt-summary-bar {
   display: flex;
