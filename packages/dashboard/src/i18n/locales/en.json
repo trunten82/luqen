@@ -75,7 +75,9 @@
     "organizations": "Organizations",
     "systemHealth": "System Health",
     "auditLog": "Audit Log",
-    "myProfile": "My Profile"
+    "myProfile": "My Profile",
+    "monitoring": "Monitoring",
+    "changeHistory": "Change History"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -354,7 +356,31 @@
       "confirmReject": "Reject this proposal?",
       "noUpdates": "No regulatory updates detected.",
       "noCustom": "No custom proposals.",
-      "noProposals": "No proposals found."
+      "noProposals": "No proposals found.",
+      "selectAll": "Select all",
+      "selected": "selected",
+      "acknowledgeAll": "Acknowledge All",
+      "reviewAll": "Review All",
+      "dismissAll": "Dismiss All",
+      "clearSelection": "Clear"
+    },
+    "changeHistory": {
+      "pageTitle": "Change History",
+      "from": "From",
+      "to": "To",
+      "action": "Action",
+      "allActions": "All Actions",
+      "search": "Search",
+      "searchPlaceholder": "Search by source or summary...",
+      "filter": "Filter",
+      "exportCsv": "Export CSV",
+      "results": "result(s)",
+      "colDate": "Date",
+      "colType": "Type",
+      "colAction": "Action Taken",
+      "colBy": "By",
+      "colNotes": "Notes",
+      "noEntries": "No change history records found."
     },
     "sources": {
       "addSource": "Add Source",
@@ -401,7 +427,11 @@
       "noProposals": "No recent proposals.",
       "noProposalsDesc": "Proposals appear here when monitored sources detect regulatory changes.",
       "pendingChangesMsg": "regulatory change(s) detected and awaiting review.",
-      "viewProposals": "Review Proposals"
+      "viewProposals": "Review Proposals",
+      "lastDbUpdate": "Last DB Update",
+      "upToDate": "Up to Date",
+      "changePending": "Change Pending",
+      "sourcesAligned": "Sources aligned with live"
     },
     "webhooks": {
       "addWebhook": "Add Webhook",

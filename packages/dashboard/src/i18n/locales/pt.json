@@ -71,7 +71,9 @@
     "organizations": "Organizações",
     "systemHealth": "Saúde do Sistema",
     "auditLog": "Log de Auditoria",
-    "myProfile": "Meu Perfil"
+    "myProfile": "Meu Perfil",
+    "monitoring": "Monitoramento",
+    "changeHistory": "Histórico de Alterações"
   },
   "auth": {
     "signInTitle": "Entrar",
@@ -350,7 +352,31 @@
       "confirmReject": "Rejeitar esta proposta?",
       "noUpdates": "Nenhuma atualização regulatória detectada.",
       "noCustom": "Nenhuma proposta personalizada.",
-      "noProposals": "Nenhuma proposta encontrada."
+      "noProposals": "Nenhuma proposta encontrada.",
+      "selectAll": "Selecionar tudo",
+      "selected": "selecionado(s)",
+      "acknowledgeAll": "Confirmar Tudo",
+      "reviewAll": "Revisar Tudo",
+      "dismissAll": "Descartar Tudo",
+      "clearSelection": "Limpar"
+    },
+    "changeHistory": {
+      "pageTitle": "Histórico de Alterações",
+      "from": "De",
+      "to": "Até",
+      "action": "Ação",
+      "allActions": "Todas as Ações",
+      "search": "Pesquisar",
+      "searchPlaceholder": "Pesquisar por fonte ou resumo...",
+      "filter": "Filtrar",
+      "exportCsv": "Exportar CSV",
+      "results": "resultado(s)",
+      "colDate": "Data",
+      "colType": "Tipo",
+      "colAction": "Ação Realizada",
+      "colBy": "Por",
+      "colNotes": "Notas",
+      "noEntries": "Nenhum registro de histórico de alterações encontrado."
     },
     "sources": {
       "addSource": "Adicionar Fonte",
@@ -394,7 +420,11 @@
       "scanDescription": "Verifique todas as fontes monitoradas em busca de mudanças regulatórias e crie propostas para atualizações detectadas.",
       "recentProposals": "Propostas Recentes",
       "colCreated": "Criado",
-      "noProposals": "Nenhuma proposta recente."
+      "noProposals": "Nenhuma proposta recente.",
+      "lastDbUpdate": "Última Atualização DB",
+      "upToDate": "Atualizado",
+      "changePending": "Alteração Pendente",
+      "sourcesAligned": "Fontes alinhadas com o live"
     },
     "webhooks": {
       "addWebhook": "Adicionar Webhook",

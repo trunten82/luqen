@@ -71,7 +71,9 @@
     "organizations": "Organizaciones",
     "systemHealth": "Estado del Sistema",
     "auditLog": "Registro de Auditoría",
-    "myProfile": "Mi Perfil"
+    "myProfile": "Mi Perfil",
+    "monitoring": "Monitoreo",
+    "changeHistory": "Historial de Cambios"
   },
   "auth": {
     "signInTitle": "Iniciar sesión",
@@ -350,7 +352,31 @@
       "confirmReject": "¿Rechazar esta propuesta?",
       "noUpdates": "No se detectaron actualizaciones regulatorias.",
       "noCustom": "No hay propuestas personalizadas.",
-      "noProposals": "No se encontraron propuestas."
+      "noProposals": "No se encontraron propuestas.",
+      "selectAll": "Seleccionar todo",
+      "selected": "seleccionado(s)",
+      "acknowledgeAll": "Confirmar Todo",
+      "reviewAll": "Revisar Todo",
+      "dismissAll": "Descartar Todo",
+      "clearSelection": "Limpiar"
+    },
+    "changeHistory": {
+      "pageTitle": "Historial de Cambios",
+      "from": "Desde",
+      "to": "Hasta",
+      "action": "Acción",
+      "allActions": "Todas las Acciones",
+      "search": "Buscar",
+      "searchPlaceholder": "Buscar por fuente o resumen...",
+      "filter": "Filtrar",
+      "exportCsv": "Exportar CSV",
+      "results": "resultado(s)",
+      "colDate": "Fecha",
+      "colType": "Tipo",
+      "colAction": "Acción Realizada",
+      "colBy": "Por",
+      "colNotes": "Notas",
+      "noEntries": "No se encontraron registros de historial de cambios."
     },
     "sources": {
       "addSource": "Agregar Fuente",
@@ -394,7 +420,11 @@
       "scanDescription": "Verifica todas las fuentes monitoreadas en busca de cambios regulatorios y crea propuestas para las actualizaciones detectadas.",
       "recentProposals": "Propuestas Recientes",
       "colCreated": "Creado",
-      "noProposals": "No hay propuestas recientes."
+      "noProposals": "No hay propuestas recientes.",
+      "lastDbUpdate": "Última Actualización DB",
+      "upToDate": "Actualizado",
+      "changePending": "Cambio Pendiente",
+      "sourcesAligned": "Fuentes alineadas con el live"
     },
     "webhooks": {
       "addWebhook": "Agregar Webhook",

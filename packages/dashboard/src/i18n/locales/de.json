@@ -71,7 +71,9 @@
     "organizations": "Organisationen",
     "systemHealth": "Systemzustand",
     "auditLog": "Audit-Protokoll",
-    "myProfile": "Mein Profil"
+    "myProfile": "Mein Profil",
+    "monitoring": "Überwachung",
+    "changeHistory": "Änderungsverlauf"
   },
   "auth": {
     "signInTitle": "Anmelden",
@@ -350,7 +352,31 @@
       "confirmReject": "Diesen Vorschlag ablehnen?",
       "noUpdates": "Keine regulatorischen Updates erkannt.",
       "noCustom": "Keine benutzerdefinierten Vorschläge.",
-      "noProposals": "Keine Vorschläge gefunden."
+      "noProposals": "Keine Vorschläge gefunden.",
+      "selectAll": "Alle auswählen",
+      "selected": "ausgewählt",
+      "acknowledgeAll": "Alle bestätigen",
+      "reviewAll": "Alle prüfen",
+      "dismissAll": "Alle ablehnen",
+      "clearSelection": "Löschen"
+    },
+    "changeHistory": {
+      "pageTitle": "Änderungsverlauf",
+      "from": "Von",
+      "to": "Bis",
+      "action": "Aktion",
+      "allActions": "Alle Aktionen",
+      "search": "Suchen",
+      "searchPlaceholder": "Nach Quelle oder Zusammenfassung suchen...",
+      "filter": "Filtern",
+      "exportCsv": "CSV exportieren",
+      "results": "Ergebnis(se)",
+      "colDate": "Datum",
+      "colType": "Typ",
+      "colAction": "Durchgeführte Aktion",
+      "colBy": "Von",
+      "colNotes": "Notizen",
+      "noEntries": "Keine Änderungsverlaufseinträge gefunden."
     },
     "sources": {
       "addSource": "Quelle Hinzufügen",
@@ -394,7 +420,11 @@
       "scanDescription": "Überprüfen Sie alle überwachten Quellen auf Regeländerungen und erstellen Sie Vorschläge für erkannte Aktualisierungen.",
       "recentProposals": "Aktuelle Vorschläge",
       "colCreated": "Erstellt",
-      "noProposals": "Keine aktuellen Vorschläge."
+      "noProposals": "Keine aktuellen Vorschläge.",
+      "lastDbUpdate": "Letztes DB-Update",
+      "upToDate": "Aktuell",
+      "changePending": "Änderung ausstehend",
+      "sourcesAligned": "Quellen mit Live synchronisiert"
     },
     "webhooks": {
       "addWebhook": "Webhook Hinzufügen",
