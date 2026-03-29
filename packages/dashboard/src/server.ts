@@ -557,7 +557,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);
   await regulationRoutes(server, config.complianceUrl);
-  await proposalRoutes(server, config.complianceUrl);
+  await proposalRoutes(server, config.complianceUrl, storage);
   await sourceRoutes(server, config.complianceUrl);
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);

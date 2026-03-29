@@ -1,18 +1,18 @@
-<section aria-label="Update proposals management">
-  <div class="filter-bar mb-md">
-    <label for="proposal-status-filter" class="form-label">{{t "common.status"}}</label>
-    <select id="proposal-status-filter"
-            name="status"
-            hx-get="/admin/proposals"
-            hx-trigger="change"
-            hx-target="#proposals-table-body"
-            class="select"
-            aria-label="Filter proposals by status">
-      <option value="" {{#if (eq statusFilter '')}}selected{{/if}}>{{t "admin.proposals.allStatuses"}}</option>
-      <option value="pending" {{#if (eq statusFilter 'pending')}}selected{{/if}}>{{t "admin.proposals.statusPending"}}</option>
-      <option value="approved" {{#if (eq statusFilter 'approved')}}selected{{/if}}>{{t "admin.proposals.statusApproved"}}</option>
-      <option value="rejected" {{#if (eq statusFilter 'rejected')}}selected{{/if}}>{{t "admin.proposals.statusRejected"}}</option>
-    </select>
+<section aria-label="{{t 'admin.proposals.pageTitle'}}">
+  {{!-- Tab navigation --}}
+  <div class="tabs mb-md">
+    <a href="/admin/proposals?tab=updates"
+       class="tab {{#if (eq tab 'updates')}}tab--active{{/if}}"
+       aria-current="{{#if (eq tab 'updates')}}page{{/if}}">
+      {{t "admin.proposals.tabUpdates"}}
+      {{#if officialCount}}<span class="badge badge--warning badge--sm">{{officialCount}}</span>{{/if}}
+    </a>
+    <a href="/admin/proposals?tab=custom"
+       class="tab {{#if (eq tab 'custom')}}tab--active{{/if}}"
+       aria-current="{{#if (eq tab 'custom')}}page{{/if}}">
+      {{t "admin.proposals.tabCustom"}}
+      {{#if customCount}}<span class="badge badge--warning badge--sm">{{customCount}}</span>{{/if}}
+    </a>
   </div>
 
   {{#if error}}
@@ -21,10 +21,12 @@
   </div>
   {{/if}}
 
-  <div id="proposal-messages"></div>
+  <div id="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
 
+  {{!-- Regulatory Updates tab --}}
+  {{#if (eq tab 'updates')}}
   <div class="table-wrapper" aria-live="polite" aria-atomic="false">
-    <table class="data-table" aria-label="Update proposals">
+    <table class="data-table" aria-label="{{t 'admin.proposals.tabUpdates'}}">
       <thead>
         <tr>
           <th scope="col">{{t "admin.proposals.colSource"}}</th>
@@ -35,33 +37,95 @@
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
-      <tbody id="proposals-table-body">
-        {{#each proposals}}
+      <tbody>
+        {{#each officialProposals}}
         <tr id="proposal-{{id}}">
-          <td data-label="Source">{{source}}</td>
+          <td data-label="Source" class="cell--wrap">{{source}}</td>
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
           <td data-label="Summary" class="cell--wrap">{{summary}}</td>
           <td data-label="Detected">{{detectedAtDisplay}}</td>
           <td data-label="Status">
-            <span class="badge {{#if (eq status 'pending')}}badge--warning{{else if (eq status 'approved')}}badge--success{{else}}badge--error{{/if}}">
-              {{status}}
-            </span>
+            {{#if isPending}}
+            <span class="badge badge--warning">{{t "admin.proposals.statusPending"}}</span>
+            {{else}}
+            <span class="badge badge--success">{{t "admin.proposals.statusAcknowledged"}}</span>
+            {{/if}}
           </td>
           <td>
             {{#if isPending}}
             <div class="plugin-actions">
               <button type="button" class="btn btn--sm btn--primary"
-                      hx-post="/admin/proposals/{{id}}/approve"
-                      hx-confirm="{{t "admin.proposals.confirmApprove"}}"
+                      hx-post="/admin/proposals/{{id}}/acknowledge"
+                      hx-confirm="{{t 'admin.proposals.confirmAcknowledge'}}"
                       hx-target="#proposal-{{id}}"
                       hx-swap="delete swap:300ms"
-                      aria-label="Approve proposal: {{summary}}">{{t "admin.proposals.approve"}}</button>
+                      hx-vals='{"notes":""}'
+                      aria-label="{{t 'admin.proposals.acknowledge'}}: {{summary}}">{{t "admin.proposals.acknowledge"}}</button>
+            </div>
+            {{else}}
+            <span class="text-sm text-muted">{{t "admin.proposals.statusAcknowledged"}}</span>
+            {{/if}}
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="6" class="table__empty">{{t "admin.proposals.noUpdates"}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{/if}}
+
+  {{!-- Custom Proposals tab --}}
+  {{#if (eq tab 'custom')}}
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="data-table" aria-label="{{t 'admin.proposals.tabCustom'}}">
+      <thead>
+        <tr>
+          <th scope="col">{{t "admin.proposals.colSource"}}</th>
+          <th scope="col">{{t "admin.proposals.colType"}}</th>
+          <th scope="col">{{t "admin.proposals.colSummary"}}</th>
+          <th scope="col">{{t "admin.proposals.colDetected"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each customProposals}}
+        <tr id="proposal-{{id}}">
+          <td data-label="Source" class="cell--wrap">{{source}}</td>
+          <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
+          <td data-label="Summary" class="cell--wrap">{{summary}}</td>
+          <td data-label="Detected">{{detectedAtDisplay}}</td>
+          <td data-label="Status">
+            {{#if isPending}}
+            <span class="badge badge--warning">{{t "admin.proposals.statusPending"}}</span>
+            {{else if isReviewed}}
+            <span class="badge badge--success">{{t "admin.proposals.statusReviewed"}}</span>
+            {{else if isDismissed}}
+            <span class="badge badge--error">{{t "admin.proposals.statusDismissed"}}</span>
+            {{else}}
+            <span class="badge">{{status}}</span>
+            {{/if}}
+          </td>
+          <td>
+            {{#if isPending}}
+            <div class="plugin-actions">
+              <button type="button" class="btn btn--sm btn--primary"
+                      hx-post="/admin/proposals/{{id}}/review"
+                      hx-confirm="{{t 'admin.proposals.confirmReview'}}"
+                      hx-target="#proposal-{{id}}"
+                      hx-swap="delete swap:300ms"
+                      hx-vals='{"notes":""}'
+                      aria-label="{{t 'admin.proposals.review'}}: {{summary}}">{{t "admin.proposals.review"}}</button>
               <button type="button" class="btn btn--sm btn--danger"
-                      hx-post="/admin/proposals/{{id}}/reject"
-                      hx-confirm="{{t "admin.proposals.confirmReject"}}"
+                      hx-post="/admin/proposals/{{id}}/dismiss"
+                      hx-confirm="{{t 'admin.proposals.confirmDismiss'}}"
                       hx-target="#proposal-{{id}}"
                       hx-swap="delete swap:300ms"
-                      aria-label="Reject proposal: {{summary}}">{{t "admin.proposals.reject"}}</button>
+                      hx-vals='{"notes":""}'
+                      aria-label="{{t 'admin.proposals.dismiss'}}: {{summary}}">{{t "admin.proposals.dismiss"}}</button>
             </div>
             {{else}}
             <span class="text-sm text-muted">{{status}}</span>
@@ -70,10 +134,11 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="6" class="table__empty">{{t "admin.proposals.noProposals"}}</td>
+          <td colspan="6" class="table__empty">{{t "admin.proposals.noCustom"}}</td>
         </tr>
         {{/each}}
       </tbody>
     </table>
   </div>
+  {{/if}}
 </section>
