@@ -249,7 +249,7 @@ async function scanUrlDirect(
       includeNotices: options.includeNotices,
     });
 
-    const issues: AccessibilityIssue[] = result.issues.map((issue) => ({
+    const rawIssues: AccessibilityIssue[] = result.issues.map((issue) => ({
       code: issue.code,
       type: issue.type as 'error' | 'warning' | 'notice',
       message: issue.message,
@@ -257,6 +257,18 @@ async function scanUrlDirect(
       context: issue.context,
       fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
     }));
+
+    // Discard false positives from non-HTML responses (429, JSON, CSV, SSE):
+    // if the ONLY errors are structural document-level (missing lang + missing title),
+    // the page was not a real HTML document — a real page with a layout template
+    // would never produce only these two errors.
+    const NON_PAGE_CODES = new Set([
+      'WCAG2AA.Principle3.Guideline3_1.3_1_1.H57.2',
+      'WCAG2AA.Principle2.Guideline2_4.2_4_2.H25.1.NoTitleEl',
+    ]);
+    const errors = rawIssues.filter((i) => i.type === 'error');
+    const isNonPageResponse = errors.length > 0 && errors.length <= 2 && errors.every((i) => NON_PAGE_CODES.has(i.code));
+    const issues = isNonPageResponse ? rawIssues.filter((i) => !NON_PAGE_CODES.has(i.code)) : rawIssues;
 
     const page: PageResult = {
       url: result.url,
