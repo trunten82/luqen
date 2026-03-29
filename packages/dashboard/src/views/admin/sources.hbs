@@ -7,16 +7,11 @@
             aria-haspopup="dialog">
       {{t "admin.sources.addSource"}}
     </button>
-    <button hx-post="/admin/sources/scan"
-            hx-target="#scan-results"
-            hx-swap="outerHTML"
-            hx-indicator="#scan-spinner"
+    <button data-action="triggerSourceScan"
             class="btn btn--secondary"
             aria-label="Trigger scan of all monitored sources now">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
       {{t "admin.sources.scanNow"}}
     </button>
-    <span id="scan-spinner" class="htmx-indicator" aria-hidden="true">{{t "admin.sources.scanning"}}</span>
   </div>
 
   <div id="scan-results" aria-live="polite"></div>

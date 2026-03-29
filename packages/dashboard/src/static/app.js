@@ -405,6 +405,44 @@
         });
     },
 
+    /* ── Sources page scan trigger (plain fetch with progress) ──────── */
+    /* The scan result HTML is trusted: rendered server-side from an
+       authenticated same-origin endpoint with escapeHtml(). */
+    triggerSourceScan: function (el) {
+      var results = document.getElementById('scan-results');
+      if (!results) return;
+      var originalText = el.textContent;
+      el.disabled = true;
+      el.textContent = '...';
+      results.textContent = '';
+      var info = document.createElement('div');
+      info.className = 'alert alert--info';
+      info.innerHTML = '<strong>Scanning sources\u2026</strong> Checking all monitored URLs for changes. This may take a minute.';
+      results.appendChild(info);
+
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      var headers = { 'Content-Type': 'application/json' };
+      if (csrfMeta) headers['x-csrf-token'] = csrfMeta.getAttribute('content');
+
+      fetch('/admin/sources/scan', { method: 'POST', headers: headers, body: '{}', credentials: 'same-origin' })
+        .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, text: t }; }); })
+        .then(function (res) {
+          /* Server-rendered trusted HTML from same-origin authenticated endpoint */
+          results.innerHTML = res.text;
+        })
+        .catch(function (err) {
+          results.textContent = '';
+          var errDiv = document.createElement('div');
+          errDiv.className = 'alert alert--error';
+          errDiv.textContent = 'Scan failed: ' + err.message;
+          results.appendChild(errDiv);
+        })
+        .finally(function () {
+          el.disabled = false;
+          el.textContent = originalText;
+        });
+    },
+
     /* ── Plugin configure — inline in card (plain fetch, no HTMX) ─── */
     /* The HTML is server-rendered from a trusted endpoint (same-origin,
        authenticated, escaped via escapeHtml in the route handler). */
