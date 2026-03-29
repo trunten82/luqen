@@ -25,10 +25,20 @@
 
   {{!-- Regulatory Updates tab --}}
   {{#if (eq tab 'updates')}}
+  <div id="bulk-bar-updates" class="bulk-bar" hidden>
+    <span id="bulk-count-updates">0</span> {{t "admin.proposals.selected"}}
+    <button type="button" class="btn btn--sm btn--primary" data-action="bulkProposalAction" data-bulk-action="acknowledge" data-tab="updates">
+      {{t "admin.proposals.acknowledgeAll"}}
+    </button>
+    <button type="button" class="btn btn--sm btn--ghost" data-action="bulkClear" data-tab="updates">
+      {{t "admin.proposals.clearSelection"}}
+    </button>
+  </div>
   <div class="table-wrapper" aria-live="polite" aria-atomic="false">
     <table class="data-table" aria-label="{{t 'admin.proposals.tabUpdates'}}">
       <thead>
         <tr>
+          <th scope="col" class="col--check"><input type="checkbox" data-action="bulkSelectAll" data-tab="updates" aria-label="Select all"></th>
           <th scope="col">{{t "admin.proposals.colSource"}}</th>
           <th scope="col">{{t "admin.proposals.colType"}}</th>
           <th scope="col">{{t "admin.proposals.colSummary"}}</th>
@@ -40,6 +50,7 @@
       <tbody>
         {{#each officialProposals}}
         <tr id="proposal-{{id}}">
+          <td class="col--check">{{#if isPending}}<input type="checkbox" class="bulk-check" data-tab="updates" data-id="{{id}}" data-action="bulkToggle">{{/if}}</td>
           <td data-label="Source" class="cell--wrap">{{source}}</td>
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
           <td data-label="Summary" class="cell--wrap">{{summary}}</td>
@@ -69,7 +80,7 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="6" class="table__empty">{{t "admin.proposals.noUpdates"}}</td>
+          <td colspan="7" class="table__empty">{{t "admin.proposals.noUpdates"}}</td>
         </tr>
         {{/each}}
       </tbody>
@@ -79,10 +90,23 @@
 
   {{!-- Custom Proposals tab --}}
   {{#if (eq tab 'custom')}}
+  <div id="bulk-bar-custom" class="bulk-bar" hidden>
+    <span id="bulk-count-custom">0</span> {{t "admin.proposals.selected"}}
+    <button type="button" class="btn btn--sm btn--primary" data-action="bulkProposalAction" data-bulk-action="review" data-tab="custom">
+      {{t "admin.proposals.reviewAll"}}
+    </button>
+    <button type="button" class="btn btn--sm btn--danger" data-action="bulkProposalAction" data-bulk-action="dismiss" data-tab="custom">
+      {{t "admin.proposals.dismissAll"}}
+    </button>
+    <button type="button" class="btn btn--sm btn--ghost" data-action="bulkClear" data-tab="custom">
+      {{t "admin.proposals.clearSelection"}}
+    </button>
+  </div>
   <div class="table-wrapper" aria-live="polite" aria-atomic="false">
     <table class="data-table" aria-label="{{t 'admin.proposals.tabCustom'}}">
       <thead>
         <tr>
+          <th scope="col" class="col--check"><input type="checkbox" data-action="bulkSelectAll" data-tab="custom" aria-label="Select all"></th>
           <th scope="col">{{t "admin.proposals.colSource"}}</th>
           <th scope="col">{{t "admin.proposals.colType"}}</th>
           <th scope="col">{{t "admin.proposals.colSummary"}}</th>
@@ -94,6 +118,7 @@
       <tbody>
         {{#each customProposals}}
         <tr id="proposal-{{id}}">
+          <td class="col--check">{{#if isPending}}<input type="checkbox" class="bulk-check" data-tab="custom" data-id="{{id}}" data-action="bulkToggle">{{/if}}</td>
           <td data-label="Source" class="cell--wrap">{{source}}</td>
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
           <td data-label="Summary" class="cell--wrap">{{summary}}</td>
@@ -134,7 +159,7 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="6" class="table__empty">{{t "admin.proposals.noCustom"}}</td>
+          <td colspan="7" class="table__empty">{{t "admin.proposals.noCustom"}}</td>
         </tr>
         {{/each}}
       </tbody>
