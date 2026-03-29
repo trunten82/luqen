@@ -200,7 +200,6 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Rate Limiting ────────────────────────────────────────────────────────
   await server.register(import('@fastify/rate-limit'), {
     global: true,
-    max: 100,
     timeWindow: '1 minute',
     keyGenerator: (req) => {
       // Authenticated requests get their own bucket with a higher limit
