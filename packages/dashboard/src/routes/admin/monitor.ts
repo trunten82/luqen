@@ -40,6 +40,8 @@ export interface MonitorViewData {
   readonly sourcesCount: number;
   readonly pendingProposalsCount: number;
   readonly upToDateCount: number;
+  readonly staleCount: number;
+  readonly changePendingCount: number;
   readonly lastScanTime: string;
   readonly sources: readonly MonitorSourceView[];
   readonly proposals: readonly MonitorProposalView[];
@@ -127,6 +129,8 @@ export function buildMonitorViewData(
 
   const pendingProposalsCount = proposals.filter((p) => p.status === 'pending').length;
   const upToDateCount = sourcesView.filter((s) => s.status === 'up_to_date').length;
+  const staleCount = sourcesView.filter((s) => s.status === 'stale').length;
+  const changePendingCount = sourcesView.filter((s) => s.status === 'change_pending').length;
 
   // Determine last scan time from most recently checked source
   const checkedDates = sources
@@ -143,6 +147,8 @@ export function buildMonitorViewData(
     sourcesCount: sources.length,
     pendingProposalsCount,
     upToDateCount,
+    staleCount,
+    changePendingCount,
     lastScanTime,
     sources: sourcesView,
     proposals: proposalsView,

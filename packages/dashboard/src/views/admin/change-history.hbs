@@ -4,36 +4,21 @@
        class="btn btn--secondary btn--sm">Export CSV</a>
   </div>
 
-  <form class="admin-section" method="GET" action="/admin/change-history" aria-label="Change history filters">
-    <div class="filter-bar filter-bar--wrap">
-      <div class="form-group">
-        <label for="filter-from" class="form-label">From</label>
-        <input type="date" id="filter-from" name="from" value="{{filters.from}}" class="input input--sm">
-      </div>
-      <div class="form-group">
-        <label for="filter-to" class="form-label">To</label>
-        <input type="date" id="filter-to" name="to" value="{{filters.to}}" class="input input--sm">
-      </div>
-      <div class="form-group">
-        <label for="filter-action" class="form-label">Action</label>
-        <select id="filter-action" name="action" class="select select--sm">
-          <option value="">All Actions</option>
-          <option value="acknowledged" {{#if (eq filters.action 'acknowledged')}}selected{{/if}}>Acknowledged</option>
-          <option value="reviewed" {{#if (eq filters.action 'reviewed')}}selected{{/if}}>Reviewed</option>
-          <option value="dismissed" {{#if (eq filters.action 'dismissed')}}selected{{/if}}>Dismissed</option>
-          <option value="approved" {{#if (eq filters.action 'approved')}}selected{{/if}}>Approved</option>
-          <option value="rejected" {{#if (eq filters.action 'rejected')}}selected{{/if}}>Rejected</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="filter-search" class="form-label">Search</label>
-        <input type="text" id="filter-search" name="search" value="{{filters.search}}" class="input input--sm" placeholder="Source or summary...">
-      </div>
-      <div class="form-group">
-        <button type="submit" class="btn btn--primary btn--sm">Filter</button>
-        <a href="/admin/change-history" class="btn btn--ghost btn--sm">Reset</a>
-      </div>
-    </div>
+  <form class="filter-bar mb-md" method="GET" action="/admin/change-history" aria-label="Change history filters">
+    <label class="form-label" for="filter-from">From</label>
+    <input type="date" id="filter-from" name="from" value="{{filters.from}}" class="input input--sm" placeholder="Start date">
+    <label class="form-label" for="filter-to">To</label>
+    <input type="date" id="filter-to" name="to" value="{{filters.to}}" class="input input--sm" placeholder="End date">
+    <label class="form-label" for="filter-action">Action</label>
+    <select id="filter-action" name="action" class="select select--sm">
+      <option value="">All Actions</option>
+      <option value="acknowledged" {{#if (eq filters.action 'acknowledged')}}selected{{/if}}>Acknowledged</option>
+      <option value="reviewed" {{#if (eq filters.action 'reviewed')}}selected{{/if}}>Reviewed</option>
+      <option value="dismissed" {{#if (eq filters.action 'dismissed')}}selected{{/if}}>Dismissed</option>
+    </select>
+    <input type="text" name="search" value="{{filters.search}}" class="input input--sm" placeholder="Search source or summary...">
+    <button type="submit" class="btn btn--primary btn--sm">Filter</button>
+    <a href="/admin/change-history" class="btn btn--ghost btn--sm">Reset</a>
   </form>
 
   {{#if error}}
@@ -43,7 +28,7 @@
   <p class="text-muted">{{total}} result(s)</p>
 
   <div class="table-wrapper" role="region" aria-label="Change history entries" tabindex="0">
-    <table class="table">
+    <table class="data-table">
       <thead>
         <tr>
           <th scope="col">Date</th>
@@ -59,8 +44,8 @@
         {{#each entries}}
         <tr>
           <td data-label="Date"><code>{{this.date}}</code></td>
-          <td data-label="Source">{{this.source}}</td>
-          <td data-label="Summary">{{this.summary}}</td>
+          <td data-label="Source" class="cell--wrap">{{this.source}}</td>
+          <td data-label="Summary" class="cell--wrap">{{this.summary}}</td>
           <td data-label="Type">
             <span class="badge {{#if (eq this.type 'Official')}}badge--info{{else}}badge--neutral{{/if}}">{{this.type}}</span>
           </td>
