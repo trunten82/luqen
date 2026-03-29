@@ -96,6 +96,21 @@ async function scanUrl(
     timestamp: new Date().toISOString(),
   });
 
+  // Skip non-HTML URLs (CSV exports, API endpoints, etc.)
+  try {
+    const headResp = await fetch(url, {
+      method: 'HEAD',
+      headers: options.headers ?? {},
+      signal: AbortSignal.timeout(5000),
+    });
+    const ct = headResp.headers.get('content-type') ?? '';
+    if (!ct.includes('text/html') && !ct.includes('application/xhtml')) {
+      return {};
+    }
+  } catch {
+    // If HEAD fails, proceed with scan — let Pa11y handle the error
+  }
+
   let taskId: string | undefined;
 
   try {
