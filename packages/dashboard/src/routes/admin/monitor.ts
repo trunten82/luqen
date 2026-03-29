@@ -158,7 +158,7 @@ export async function monitorRoutes(
     { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const result = await scanSources(complianceUrl, getToken(request));
+        const result = await scanSources(complianceUrl, getToken(request), true);
         const html = `<div class="alert alert--success"><strong>Scan complete:</strong> ${result.scanned} source(s) checked, ${result.proposalsCreated} proposal(s) created.</div>`;
 
         return reply

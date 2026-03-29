@@ -52,6 +52,7 @@ import { teamRoutes } from './routes/admin/teams.js';
 import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
+import { startSourceMonitorScheduler } from './source-monitor-scheduler.js';
 import { ServiceTokenManager } from './auth/service-token.js';
 import { ComplianceService } from './services/compliance-service.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
@@ -616,9 +617,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   server.addHook('onReady', () => {
     const timer = startScheduler(storage, orchestrator, config);
     const emailTimer = startEmailScheduler(storage, pluginManager);
+    const sourceMonitorTimer = startSourceMonitorScheduler(config, serviceTokenManager);
     server.addHook('onClose', () => {
       clearInterval(timer);
       clearInterval(emailTimer);
+      clearInterval(sourceMonitorTimer);
     });
   });
 
