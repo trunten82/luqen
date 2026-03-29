@@ -489,12 +489,14 @@ describe('Scenario 4: Monitor Data Flow', () => {
   });
 
   it('detects staleness at boundary conditions', async () => {
-    const exactly24hAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const justUnder24h = new Date(Date.now() - 24 * 60 * 60 * 1000 + 60000).toISOString();
     const justOver24h = new Date(Date.now() - 24 * 60 * 60 * 1000 - 60000).toISOString();
 
-    expect(isSourceStale(justUnder24h)).toBe(false);
-    expect(isSourceStale(justOver24h)).toBe(true);
+    // Daily schedule: 24h threshold
+    expect(isSourceStale(justUnder24h, 'daily')).toBe(false);
+    expect(isSourceStale(justOver24h, 'daily')).toBe(true);
+    // Weekly schedule: 7d threshold — 24h ago is not stale
+    expect(isSourceStale(justOver24h, 'weekly')).toBe(false);
     expect(isSourceStale(undefined)).toBe(true);
   });
 
