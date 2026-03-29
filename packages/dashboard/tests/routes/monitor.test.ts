@@ -11,7 +11,7 @@ vi.mock('../../src/compliance-client.js', () => ({
       url: 'https://w3.org/feed',
       type: 'rss',
       schedule: 'daily',
-      lastChecked: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago — fresh
+      lastCheckedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago — fresh
     },
     {
       id: 'src-2',
@@ -19,7 +19,7 @@ vi.mock('../../src/compliance-client.js', () => ({
       url: 'https://example.com/feed',
       type: 'atom',
       schedule: 'weekly',
-      lastChecked: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 48 hrs ago — stale
+      lastCheckedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 48 hrs ago — stale
     },
     {
       id: 'src-3',
@@ -27,7 +27,7 @@ vi.mock('../../src/compliance-client.js', () => ({
       url: 'https://new.example.com/feed',
       type: 'rss',
       schedule: 'daily',
-      lastChecked: undefined,
+      lastCheckedAt: undefined,
     },
   ]),
   listUpdateProposals: vi.fn().mockResolvedValue([
@@ -48,7 +48,7 @@ vi.mock('../../src/compliance-client.js', () => ({
       detectedAt: '2024-05-01T08:00:00Z',
     },
   ]),
-  scanSources: vi.fn().mockResolvedValue({ scanned: 3, proposalsCreated: 2 }),
+  scanSources: vi.fn().mockResolvedValue({ scanned: 3, proposalsCreated: 2, changed: 2, baselined: 0, failed: 0 }),
 }));
 
 import * as complianceClient from '../../src/compliance-client.js';
@@ -233,7 +233,7 @@ describe('buildMonitorViewData', () => {
       url: 'https://example.com/feed',
       type: 'rss',
       schedule: 'daily',
-      lastChecked: new Date(Date.now() - 1000 * 60 * 10).toISOString(), // 10 min ago
+      lastCheckedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(), // 10 min ago
     },
     {
       id: 'src-2',
@@ -241,7 +241,7 @@ describe('buildMonitorViewData', () => {
       url: 'https://old.example.com/feed',
       type: 'atom',
       schedule: 'weekly',
-      lastChecked: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(), // 30 hrs ago
+      lastCheckedAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(), // 30 hrs ago
     },
   ];
 

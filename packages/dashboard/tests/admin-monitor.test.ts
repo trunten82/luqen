@@ -68,7 +68,7 @@ describe('admin/monitor', () => {
         url: 'https://eur-lex.europa.eu/rss',
         type: 'rss',
         schedule: 'daily',
-        lastChecked: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        lastCheckedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
       },
       {
         id: 's2',
@@ -76,7 +76,7 @@ describe('admin/monitor', () => {
         url: 'https://legislation.gov.uk/feed',
         type: 'rss',
         schedule: 'daily',
-        lastChecked: undefined,
+        lastCheckedAt: undefined,
       },
     ];
 

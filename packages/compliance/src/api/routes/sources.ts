@@ -92,6 +92,9 @@ export async function registerSourceRoutes(
       const sources = force ? allSources : allSources.filter((s) => isSourceDue(s));
 
       let scanned = 0;
+      let changed = 0;
+      let baselined = 0;
+      let failed = 0;
       const proposals = [];
 
       // Fetch existing pending proposals to avoid duplicates
@@ -109,8 +112,10 @@ export async function registerSourceRoutes(
 
           if (source.lastContentHash == null) {
             // First scan — just baseline the hash, don't create a proposal
+            baselined++;
             await db.updateSourceLastChecked(source.id, contentHash);
           } else if (source.lastContentHash !== contentHash) {
+            changed++;
             // Content changed — create proposal only if no pending proposal for this source
             if (!pendingSourceUrls.has(source.url)) {
               const proposal = await db.createUpdateProposal({
@@ -134,11 +139,15 @@ export async function registerSourceRoutes(
         } catch {
           // Skip sources that fail to fetch
           scanned++;
+          failed++;
         }
       }
 
       await reply.send({
         scanned,
+        changed,
+        baselined,
+        failed,
         proposalsCreated: proposals.length,
         proposals,
       });

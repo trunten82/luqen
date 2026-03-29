@@ -100,7 +100,7 @@ export async function sourceRoutes(
   <td data-label="Name">${created.name}</td>
   <td data-label="Type"><span class="badge badge--info">${created.type}</span></td>
   <td data-label="Schedule">${created.schedule}</td>
-  <td data-label="Last Checked">${created.lastChecked ?? 'Never'}</td>
+  <td data-label="Last Checked">${created.lastCheckedAt ?? 'Never'}</td>
   <td data-label="Owner">${ownerBadge}</td>
   <td>
     <button hx-get="/admin/sources/${encodeURIComponent(created.id)}/view"
@@ -146,10 +146,14 @@ export async function sourceRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await scanSources(baseUrl, getToken(request), true);
+        const changed = result.changed ?? 0;
+        const summary = changed > 0
+          ? `${result.scanned} sources checked, ${changed} changed, ${result.proposalsCreated} proposals created.`
+          : `${result.scanned} sources checked — no changes detected.`;
         const html = `<div id="scan-results" aria-live="polite">
-  <p class="text--success">Scan complete: ${result.scanned} source(s) checked, ${result.proposalsCreated} proposal(s) created.</p>
+  <p class="${changed > 0 ? 'text--warning' : 'text--success'}">${summary}</p>
 </div>
-${toastHtml(`Scan complete: ${result.scanned} sources scanned, ${result.proposalsCreated} proposals created.`)}`;
+${toastHtml(summary)}`;
 
         return reply.code(200).header('content-type', 'text/html').send(html);
       } catch (err) {

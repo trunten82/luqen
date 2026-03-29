@@ -35,7 +35,7 @@ vi.mock('../../src/compliance-client.js', () => ({
   listSources: vi.fn().mockResolvedValue([]),
   createSource: vi.fn().mockResolvedValue({ id: 'src-1', name: 'EU Monitor', url: 'https://eur-lex.europa.eu/feed.rss', type: 'rss', schedule: 'daily' }),
   deleteSource: vi.fn().mockResolvedValue(undefined),
-  scanSources: vi.fn().mockResolvedValue({ scanned: 3, proposalsCreated: 1 }),
+  scanSources: vi.fn().mockResolvedValue({ scanned: 3, proposalsCreated: 1, changed: 1, baselined: 0, failed: 0 }),
   listWebhooks: vi.fn().mockResolvedValue([]),
   createWebhook: vi.fn().mockResolvedValue({ id: 'wh-1', url: 'https://example.com/hook', events: ['scan.complete'], active: true, createdAt: new Date().toISOString() }),
   deleteWebhook: vi.fn().mockResolvedValue(undefined),
@@ -546,7 +546,7 @@ describe('POST /admin/sources/scan', () => {
   afterEach(() => { ctx.cleanup(); vi.clearAllMocks(); });
 
   it('triggers scan and returns results fragment', async () => {
-    vi.mocked(complianceClient.scanSources).mockResolvedValueOnce({ scanned: 3, proposalsCreated: 1 });
+    vi.mocked(complianceClient.scanSources).mockResolvedValueOnce({ scanned: 3, proposalsCreated: 1, changed: 1, baselined: 0, failed: 0 });
     const response = await ctx.server.inject({ method: 'POST', url: '/admin/sources/scan' });
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('3 source');

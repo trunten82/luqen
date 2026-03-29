@@ -40,7 +40,7 @@
           <td data-label="Name">{{name}}</td>
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
           <td data-label="Schedule">{{schedule}}</td>
-          <td data-label="Last Checked">{{#if lastChecked}}{{lastChecked}}{{else}}{{t "admin.sources.never"}}{{/if}}</td>
+          <td data-label="Last Checked">{{#if lastCheckedAt}}{{lastCheckedAt}}{{else}}{{t "admin.sources.never"}}{{/if}}</td>
           <td data-label="Owner">
             {{#if (eq orgId "system")}}<span class="badge badge--neutral">System</span>{{else}}{{orgId}}{{/if}}
           </td>
