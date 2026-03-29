@@ -82,7 +82,7 @@
     </a>
     {{/if}}
 
-    {{!-- Compliance section — visible to compliance.view or admin.system --}}
+    {{!-- Compliance section — reference data, visible to compliance.view --}}
     {{#if perm.complianceView}}
     <span class="sidebar__section-label">{{t "nav.compliance"}}</span>
 
@@ -106,22 +106,8 @@
       {{t "nav.regulations"}}
     </a>
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/proposals')}}is-active{{/if}}"
-       href="/admin/proposals">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M11 5H6a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-5M14 3l3 3-8 8H6v-3l8-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.proposals"}}
-    </a>
-
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/sources')}}is-active{{/if}}"
-       href="/admin/sources">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zM4 10h12" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M10 2c-2 2-3 5-3 8s1 6 3 8m0-16c2 2 3 5 3 8s-1 6-3 8" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      {{t "nav.sources"}}
-    </a>
+    {{!-- Monitoring section — change tracking --}}
+    <span class="sidebar__section-label">{{t "nav.monitoring"}}</span>
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/monitor')}}is-active{{/if}}"
        href="/admin/monitor"
@@ -134,16 +120,32 @@
       {{t "nav.monitor"}}
     </a>
 
-    {{#if perm.complianceManage}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/clients')}}is-active{{/if}}"
-       href="/admin/clients">
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/sources')}}is-active{{/if}}"
+       href="/admin/sources">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <rect x="3" y="6" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M7 6V5a3 3 0 016 0v1" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zM4 10h12" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 2c-2 2-3 5-3 8s1 6 3 8m0-16c2 2 3 5 3 8s-1 6-3 8" stroke="currentColor" stroke-width="1.5"/>
       </svg>
-      {{t "nav.oauthClients"}}
+      {{t "nav.sources"}}
     </a>
-    {{/if}}
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/proposals')}}is-active{{/if}}"
+       href="/admin/proposals">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M11 5H6a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-5M14 3l3 3-8 8H6v-3l8-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      {{t "nav.proposals"}}
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/change-history')}}is-active{{/if}}"
+       href="/admin/change-history"
+       aria-current="{{#if (startsWith currentPath '/admin/change-history')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M4 4h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M6 8h8M6 11h8M6 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      {{t "nav.changeHistory"}}
+    </a>
     {{/if}}
 
     {{!-- Plugins section — visible to admin.plugins (org owners) or admin.system --}}
@@ -306,6 +308,17 @@
       </svg>
       {{t "nav.webhooks"}}
     </a>
+
+    {{#if perm.complianceManage}}
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/clients')}}is-active{{/if}}"
+       href="/admin/clients">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="3" y="6" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7 6V5a3 3 0 016 0v1" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      {{t "nav.oauthClients"}}
+    </a>
+    {{/if}}
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/system')}}is-active{{/if}}"
        href="/admin/system">

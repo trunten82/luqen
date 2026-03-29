@@ -56,6 +56,8 @@
     "proposals": "Proposals",
     "sources": "Sources",
     "monitor": "Monitor",
+    "monitoring": "Monitoring",
+    "changeHistory": "Change History",
     "plugins": "Plugins",
     "integrations": "Integrations",
     "connectedRepos": "Connected Repos",
