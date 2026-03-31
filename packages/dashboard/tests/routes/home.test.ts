@@ -262,24 +262,24 @@ describe('Home routes', () => {
       expect(body.data.stats.trendDirection).toBe('Stable');
     });
 
-    it('reports trendDirection as "Improving" when issues decrease', async () => {
+    it('reports trendDirection as "Improving" when errors per page decrease', async () => {
       const id1 = randomUUID();
       const id2 = randomUUID();
-      // Older scan with more issues
+      // Older scan with more errors
       await ctx.storage.scans.createScan(createScanInput({
         id: id1,
         siteUrl: 'https://improving.com',
         createdAt: new Date(Date.now() - 10000).toISOString(),
       }));
-      await ctx.storage.scans.updateScan(id1, { status: 'completed', totalIssues: 10 });
+      await ctx.storage.scans.updateScan(id1, { status: 'completed', errors: 10, pagesScanned: 10 });
 
-      // Newer scan with fewer issues
+      // Newer scan with fewer errors
       await ctx.storage.scans.createScan(createScanInput({
         id: id2,
         siteUrl: 'https://improving.com',
         createdAt: new Date().toISOString(),
       }));
-      await ctx.storage.scans.updateScan(id2, { status: 'completed', totalIssues: 3 });
+      await ctx.storage.scans.updateScan(id2, { status: 'completed', errors: 3, pagesScanned: 10 });
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -290,7 +290,7 @@ describe('Home routes', () => {
       expect(body.data.stats.trendDirection).toBe('Improving');
     });
 
-    it('reports trendDirection as "Regressing" when issues increase', async () => {
+    it('reports trendDirection as "Regressing" when errors per page increase', async () => {
       const id1 = randomUUID();
       const id2 = randomUUID();
       await ctx.storage.scans.createScan(createScanInput({
@@ -298,14 +298,14 @@ describe('Home routes', () => {
         siteUrl: 'https://regressing.com',
         createdAt: new Date(Date.now() - 10000).toISOString(),
       }));
-      await ctx.storage.scans.updateScan(id1, { status: 'completed', totalIssues: 3 });
+      await ctx.storage.scans.updateScan(id1, { status: 'completed', errors: 3, pagesScanned: 10 });
 
       await ctx.storage.scans.createScan(createScanInput({
         id: id2,
         siteUrl: 'https://regressing.com',
         createdAt: new Date().toISOString(),
       }));
-      await ctx.storage.scans.updateScan(id2, { status: 'completed', totalIssues: 10 });
+      await ctx.storage.scans.updateScan(id2, { status: 'completed', errors: 10, pagesScanned: 10 });
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -316,38 +316,22 @@ describe('Home routes', () => {
       expect(body.data.stats.trendDirection).toBe('Regressing');
     });
 
-    it('reports trendDirection as "Stable" when improving equals regressing', async () => {
-      // Site 1: improving (10 -> 3)
+    it('reports trendDirection as "Stable" when error rates are equal across sites', async () => {
+      // Site 1: errors/page stays same (5/10 = 0.5 both scans)
       const id1 = randomUUID();
       const id2 = randomUUID();
       await ctx.storage.scans.createScan(createScanInput({
         id: id1,
-        siteUrl: 'https://improving.com',
+        siteUrl: 'https://stable1.com',
         createdAt: new Date(Date.now() - 20000).toISOString(),
       }));
-      await ctx.storage.scans.updateScan(id1, { status: 'completed', totalIssues: 10 });
+      await ctx.storage.scans.updateScan(id1, { status: 'completed', errors: 5, pagesScanned: 10 });
       await ctx.storage.scans.createScan(createScanInput({
         id: id2,
-        siteUrl: 'https://improving.com',
+        siteUrl: 'https://stable1.com',
         createdAt: new Date(Date.now() - 10000).toISOString(),
       }));
-      await ctx.storage.scans.updateScan(id2, { status: 'completed', totalIssues: 3 });
-
-      // Site 2: regressing (3 -> 10)
-      const id3 = randomUUID();
-      const id4 = randomUUID();
-      await ctx.storage.scans.createScan(createScanInput({
-        id: id3,
-        siteUrl: 'https://regressing.com',
-        createdAt: new Date(Date.now() - 20000).toISOString(),
-      }));
-      await ctx.storage.scans.updateScan(id3, { status: 'completed', totalIssues: 3 });
-      await ctx.storage.scans.createScan(createScanInput({
-        id: id4,
-        siteUrl: 'https://regressing.com',
-        createdAt: new Date().toISOString(),
-      }));
-      await ctx.storage.scans.updateScan(id4, { status: 'completed', totalIssues: 10 });
+      await ctx.storage.scans.updateScan(id2, { status: 'completed', errors: 5, pagesScanned: 10 });
 
       const response = await ctx.server.inject({
         method: 'GET',

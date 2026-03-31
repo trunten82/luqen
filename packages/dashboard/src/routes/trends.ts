@@ -110,6 +110,13 @@ function buildOrgTotals(scans: readonly ScanRecord[]): readonly OrgTotalPoint[] 
   }));
 }
 
+function computeSiteScore(errors: number, pagesScanned: number): number {
+  // Score based on errors-per-page ratio (errors only, not warnings/notices)
+  const pages = Math.max(pagesScanned, 1);
+  const raw = 100 - (errors * 10) / pages;
+  return Math.max(0, Math.min(100, raw));
+}
+
 function computeOrgScore(scans: readonly ScanRecord[]): number {
   // Average of per-site scores (prevents one bad site from tanking org score)
   const latestBySite = new Map<string, ScanRecord>();
@@ -124,9 +131,7 @@ function computeOrgScore(scans: readonly ScanRecord[]): number {
 
   let scoreSum = 0;
   for (const scan of latestBySite.values()) {
-    const pages = Math.max(scan.pagesScanned ?? 1, 1);
-    const raw = 100 - ((scan.errors ?? 0) * 10 + (scan.warnings ?? 0) * 3 + (scan.notices ?? 0) * 0.5) / pages;
-    scoreSum += Math.max(0, Math.min(100, raw));
+    scoreSum += computeSiteScore(scan.errors ?? 0, scan.pagesScanned ?? 1);
   }
 
   return Math.round(scoreSum / latestBySite.size);
@@ -140,18 +145,14 @@ function buildSiteScores(trends: readonly SiteTrend[]): readonly SiteScoreEntry[
     if (points.length === 0) continue;
 
     const latest = points[points.length - 1];
-    const pagesScanned = Math.max(latest.pagesScanned, 1);
-    const rawScore = 100 - (latest.errors * 10 + latest.warnings * 3 + latest.notices * 0.5) / pagesScanned;
-    const score = Math.round(Math.max(0, Math.min(100, rawScore)));
+    const score = Math.round(computeSiteScore(latest.errors, latest.pagesScanned));
 
     let trend: SiteScoreEntry['trend'];
     if (points.length < 2) {
       trend = 'new';
     } else {
       const previous = points[points.length - 2];
-      const prevPages = Math.max(previous.pagesScanned, 1);
-      const prevRaw = 100 - (previous.errors * 10 + previous.warnings * 3 + previous.notices * 0.5) / prevPages;
-      const prevScore = Math.round(Math.max(0, Math.min(100, prevRaw)));
+      const prevScore = Math.round(computeSiteScore(previous.errors, previous.pagesScanned));
 
       if (score > prevScore) {
         trend = 'improving';
@@ -183,10 +184,10 @@ function buildKpi(
   const totalSites = trends.length;
   const totalScans = scans.length;
 
-  // Compute per-site percentage change in total issues (latest vs previous)
+  // Compute per-site error rate change (errors per page, normalized)
   const siteChanges: Array<{ siteUrl: string; changePct: number }> = [];
-  let latestIssueSum = 0;
-  let previousIssueSum = 0;
+  let latestErrorRateSum = 0;
+  let previousErrorRateSum = 0;
 
   for (const site of trends) {
     const pts = site.points;
@@ -194,19 +195,17 @@ function buildKpi(
 
     const latest = pts[pts.length - 1];
     const previous = pts[pts.length - 2];
-    const prevTotal = previous.totalIssues;
+    const latestRate = latest.errors / Math.max(latest.pagesScanned, 1);
+    const prevRate = previous.errors / Math.max(previous.pagesScanned, 1);
 
-    latestIssueSum += latest.totalIssues;
-    previousIssueSum += prevTotal;
+    latestErrorRateSum += latestRate;
+    previousErrorRateSum += prevRate;
 
-    if (prevTotal === 0) {
-      if (latest.totalIssues > 0) {
-        siteChanges.push({ siteUrl: site.siteUrl, changePct: 100 });
-      } else {
-        siteChanges.push({ siteUrl: site.siteUrl, changePct: 0 });
-      }
+    // Percentage change in errors (negative = improving, positive = regressing)
+    if (prevRate === 0) {
+      siteChanges.push({ siteUrl: site.siteUrl, changePct: latestRate > 0 ? 100 : 0 });
     } else {
-      const pct = Math.round(((latest.totalIssues - prevTotal) / prevTotal) * 100);
+      const pct = Math.round(((latestRate - prevRate) / prevRate) * 100);
       siteChanges.push({ siteUrl: site.siteUrl, changePct: pct });
     }
   }
@@ -224,15 +223,16 @@ function buildKpi(
     };
   }
 
-  // Weighted overall change based on total issue counts (not site-count average)
-  const avgChange = previousIssueSum === 0
-    ? (latestIssueSum > 0 ? 100 : 0)
-    : Math.round(((latestIssueSum - previousIssueSum) / previousIssueSum) * 100);
+  // Overall error rate change (negative = fewer errors = improving)
+  const avgChange = previousErrorRateSum === 0
+    ? (latestErrorRateSum > 0 ? 100 : 0)
+    : Math.round(((latestErrorRateSum - previousErrorRateSum) / previousErrorRateSum) * 100);
 
   const sorted = [...siteChanges].sort((a, b) => a.changePct - b.changePct);
-  const best = sorted[0]; // Most negative = most improved
+  const best = sorted[0]; // Most negative = most improved (fewer errors)
   const worst = sorted[sorted.length - 1]; // Most positive = most regressed
 
+  // Negative avgChange = error rates went down = improving
   const direction: TrendKpi['overallChangeDirection'] =
     avgChange < 0 ? 'improving' : avgChange > 0 ? 'regressing' : 'stable';
 
