@@ -40,6 +40,7 @@
     "create": "Crea",
     "scope": "Ambito",
     "owner": "Proprietario",
+    "service": "Servizio",
     "select": "Seleziona"
   },
   "nav": {

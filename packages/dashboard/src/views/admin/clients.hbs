@@ -24,6 +24,7 @@
           <th scope="col">{{t "common.name"}}</th>
           <th scope="col">{{t "admin.clients.clientId"}}</th>
           <th scope="col">{{t "admin.clients.scope"}}</th>
+          <th scope="col">{{t "common.service"}}</th>
           <th scope="col">{{t "common.owner"}}</th>
           <th scope="col">{{t "admin.clients.created"}}</th>
           <th scope="col">{{t "common.actions"}}</th>
@@ -31,10 +32,11 @@
       </thead>
       <tbody id="clients-table-body">
         {{#each clients}}
-        <tr id="client-{{id}}">
+        <tr id="client-{{clientId}}">
           <td data-label="Name">{{name}}</td>
           <td data-label="Client ID"><code>{{clientId}}</code></td>
           <td data-label="Scope">{{scopesDisplay}}</td>
+          <td data-label="Service"><span class="badge badge--neutral">{{service}}</span></td>
           <td data-label="Owner">
             {{#if isSystem}}
             <span class="badge badge--neutral">{{t "admin.clients.systemOwner"}}</span>
@@ -45,7 +47,7 @@
           <td data-label="Created">{{createdAtDisplay}}</td>
           <td>
             {{#if canRevoke}}
-            <button hx-post="/admin/clients/{{clientId}}/revoke"
+            <button hx-post="/admin/clients/{{clientId}}/{{#if (eq service 'Branding')}}revoke-branding{{else}}revoke{{/if}}"
                     hx-confirm="Revoke client {{name}}? This cannot be undone."
                     hx-target="closest tr"
                     hx-swap="outerHTML swap:500ms"
@@ -59,7 +61,7 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="6" class="table__empty">{{t "admin.clients.noClients"}}</td>
+          <td colspan="7" class="table__empty">{{t "admin.clients.noClients"}}</td>
         </tr>
         {{/each}}
       </tbody>

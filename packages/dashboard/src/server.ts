@@ -606,17 +606,18 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await sourceRoutes(server, config.complianceUrl);
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
-  await clientRoutes(server, config.complianceUrl, storage);
+  await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl);
   await monitorRoutes(server, config.complianceUrl);
   await systemRoutes(server, {
     complianceUrl: config.complianceUrl,
+    brandingUrl: config.brandingUrl,
     webserviceUrl: config.webserviceUrl,
     dbPath: config.dbPath,
   });
 
   await dashboardUserRoutes(server, storage);
   await apiKeyRoutes(server, storage);
-  await organizationRoutes(server, storage, config.complianceUrl);
+  await organizationRoutes(server, storage, config.complianceUrl, config.brandingUrl);
   await roleRoutes(server, storage);
   await teamRoutes(server, storage);
   await emailReportRoutes(server, storage, pluginManager);

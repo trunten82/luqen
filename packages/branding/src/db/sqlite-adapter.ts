@@ -438,6 +438,11 @@ export class SqliteAdapter implements IBrandingStore {
     this.db.prepare('DELETE FROM oauth_clients WHERE id = ?').run(id);
   }
 
+  async getClientOrgId(clientId: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT org_id FROM oauth_clients WHERE id = ?').get(clientId) as { org_id: string } | undefined;
+    return row != null ? row.org_id : null;
+  }
+
   // ---------------------------------------------------------------------------
   // Internal helpers
   // ---------------------------------------------------------------------------

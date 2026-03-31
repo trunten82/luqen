@@ -4,6 +4,11 @@ import {
   createClient,
   revokeClient,
 } from '../../compliance-client.js';
+import {
+  listBrandingClients,
+  createBrandingClient,
+  revokeBrandingClient,
+} from '../../branding-client.js';
 import type { StorageAdapter } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml, escapeHtml } from './helpers.js';
@@ -12,30 +17,44 @@ export async function clientRoutes(
   server: FastifyInstance,
   baseUrl: string,
   storage?: StorageAdapter,
+  brandingUrl?: string,
 ): Promise<void> {
   // GET /admin/clients — list OAuth clients
   server.get(
     '/admin/clients',
     { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      let clients: Awaited<ReturnType<typeof listClients>> = [];
+      let complianceClients: Awaited<ReturnType<typeof listClients>> = [];
+      let brandingClients: Awaited<ReturnType<typeof listBrandingClients>> = [];
       let error: string | undefined;
 
+      const token = getToken(request);
+      const orgId = getOrgId(request);
+
       try {
-        clients = await listClients(baseUrl, getToken(request), getOrgId(request));
+        complianceClients = await listClients(baseUrl, token, orgId);
       } catch (err) {
-        error = err instanceof Error ? err.message : 'Failed to load OAuth clients';
+        error = err instanceof Error ? err.message : 'Failed to load compliance OAuth clients';
       }
 
-      const currentOrgId = getOrgId(request) ?? 'system';
+      if (brandingUrl != null) {
+        try {
+          brandingClients = await listBrandingClients(brandingUrl, token, orgId);
+        } catch {
+          // Non-fatal — branding service may be unavailable
+        }
+      }
+
+      const currentOrgId = orgId ?? 'system';
       const isGlobalAdmin = request.user?.role === 'admin' && (currentOrgId === 'system' || !currentOrgId);
 
       // Resolve org names for display
       const allOrgs = storage ? await storage.organizations.listOrgs() : [];
       const orgNameMap = new Map(allOrgs.map((o: { id: string; name: string }) => [o.id, o.name]));
 
-      const formatted = clients.map((c) => ({
+      const complianceFormatted = complianceClients.map((c) => ({
         ...c,
+        service: 'Compliance',
         createdAtDisplay: new Date(c.createdAt).toLocaleString(),
         scopesDisplay: c.scopes.join(', '),
         grantTypesDisplay: c.grantTypes.join(', '),
@@ -44,12 +63,27 @@ export async function clientRoutes(
         canRevoke: isGlobalAdmin || (c.orgId !== 'system' && c.orgId === currentOrgId),
       }));
 
+      const brandingFormatted = brandingClients.map((c) => ({
+        ...c,
+        clientId: c.id,
+        service: 'Branding',
+        createdAtDisplay: new Date(c.createdAt).toLocaleString(),
+        scopesDisplay: c.scopes.join(', '),
+        grantTypesDisplay: c.grantTypes.join(', '),
+        isSystem: c.orgId === 'system',
+        orgDisplayName: c.orgId === 'system' ? 'System' : (orgNameMap.get(c.orgId) ?? c.orgId),
+        canRevoke: isGlobalAdmin || (c.orgId !== 'system' && c.orgId === currentOrgId),
+      }));
+
+      const formatted = [...complianceFormatted, ...brandingFormatted];
+
       return reply.view('admin/clients.hbs', {
         pageTitle: 'OAuth Clients',
         currentPath: '/admin/clients',
         user: request.user,
         clients: formatted,
         isGlobalAdmin,
+        hasBranding: brandingUrl != null,
         error,
       });
     },
@@ -62,8 +96,11 @@ export async function clientRoutes(
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/client-form.hbs', {
         isNew: true,
-        formClient: { name: '', scopes: '', grantTypes: 'client_credentials' },
+        formClient: { name: '', scopes: '', grantTypes: 'client_credentials', service: 'compliance' },
         availableGrantTypes: ['client_credentials', 'password', 'authorization_code', 'refresh_token'],
+        availableServices: brandingUrl != null
+          ? [{ value: 'compliance', label: 'Compliance' }, { value: 'branding', label: 'Branding' }]
+          : [{ value: 'compliance', label: 'Compliance' }],
       });
     },
   );
@@ -77,6 +114,7 @@ export async function clientRoutes(
         name?: string;
         scopes?: string;
         grantTypes?: string | string[];
+        service?: string;
       };
 
       if (!body.name?.trim()) {
@@ -94,12 +132,35 @@ export async function clientRoutes(
         ? [body.grantTypes]
         : ['client_credentials'];
 
+      const service = body.service === 'branding' ? 'branding' : 'compliance';
+
       try {
-        const created = await createClient(baseUrl, getToken(request), {
-          name: body.name.trim(),
-          scopes,
-          grantTypes,
-        }, getOrgId(request));
+        let createdClientId: string;
+        let createdSecret: string;
+        let createdName: string;
+        let createdAt: string;
+
+        if (service === 'branding' && brandingUrl != null) {
+          const created = await createBrandingClient(
+            brandingUrl, getToken(request), body.name.trim(), scopes, grantTypes, getOrgId(request),
+          );
+          createdClientId = created.id;
+          createdSecret = created.secret;
+          createdName = created.name;
+          createdAt = created.createdAt;
+        } else {
+          const created = await createClient(baseUrl, getToken(request), {
+            name: body.name.trim(),
+            scopes,
+            grantTypes,
+          }, getOrgId(request));
+          createdClientId = created.clientId;
+          createdSecret = created.secret;
+          createdName = created.name;
+          createdAt = created.createdAt;
+        }
+
+        const serviceLabel = service === 'branding' ? 'Branding' : 'Compliance';
 
         // Secret is shown once in a modal dialog; no inline JS handlers needed
         const secretModal = `<div id="modal-container" hx-swap-oob="true">
@@ -108,10 +169,11 @@ export async function clientRoutes(
       <h2 id="secret-modal-title">Client Secret — Copy Now</h2>
       <p class="text--warning">This secret will only be shown once. Copy it now and store it securely.</p>
       <div class="secret-box">
-        <code id="client-secret-display">${escapeHtml(created.secret)}</code>
+        <code id="client-secret-display">${escapeHtml(createdSecret)}</code>
       </div>
-      <p><strong>Client ID:</strong> <code>${escapeHtml(created.clientId)}</code></p>
-      <p><strong>Name:</strong> ${escapeHtml(created.name)}</p>
+      <p><strong>Client ID:</strong> <code>${escapeHtml(createdClientId)}</code></p>
+      <p><strong>Name:</strong> ${escapeHtml(createdName)}</p>
+      <p><strong>Service:</strong> ${escapeHtml(serviceLabel)}</p>
       <button class="btn btn--primary close-modal-btn" aria-label="Close — I have copied the secret">
         I have copied the secret
       </button>
@@ -119,19 +181,23 @@ export async function clientRoutes(
   </div>
 </div>`;
 
-        const row = `<tr id="client-${escapeHtml(created.clientId || '')}">
-  <td data-label="Name">${escapeHtml(created.name)}</td>
-  <td data-label="Client ID"><code>${escapeHtml(created.clientId)}</code></td>
+        const revokeUrl = service === 'branding'
+          ? `/admin/clients/${encodeURIComponent(createdClientId)}/revoke-branding`
+          : `/admin/clients/${encodeURIComponent(createdClientId)}/revoke`;
+
+        const row = `<tr id="client-${escapeHtml(createdClientId || '')}">
+  <td data-label="Name">${escapeHtml(createdName)}</td>
+  <td data-label="Client ID"><code>${escapeHtml(createdClientId)}</code></td>
   <td data-label="Scopes">${escapeHtml(scopes.join(', '))}</td>
-  <td data-label="Grant Types">${escapeHtml(grantTypes.join(', '))}</td>
-  <td data-label="Created">${new Date(created.createdAt).toLocaleString()}</td>
+  <td data-label="Service"><span class="badge badge--neutral">${escapeHtml(serviceLabel)}</span></td>
+  <td data-label="Created">${new Date(createdAt).toLocaleString()}</td>
   <td>
-    <button hx-post="/admin/clients/${encodeURIComponent(created.clientId)}/revoke"
-            hx-confirm="Revoke client ${escapeHtml(created.name)}? This cannot be undone."
+    <button hx-post="${revokeUrl}"
+            hx-confirm="Revoke client ${escapeHtml(createdName)}? This cannot be undone."
             hx-target="closest tr"
             hx-swap="outerHTML swap:500ms"
             class="btn btn--sm btn--danger"
-            aria-label="Revoke ${escapeHtml(created.name)}">Revoke</button>
+            aria-label="Revoke ${escapeHtml(createdName)}">Revoke</button>
   </td>
 </tr>`;
 
@@ -146,7 +212,7 @@ export async function clientRoutes(
     },
   );
 
-  // POST /admin/clients/:id/revoke — revoke OAuth client
+  // POST /admin/clients/:id/revoke — revoke compliance OAuth client
   server.post(
     '/admin/clients/:id/revoke',
     { preHandler: requirePermission('admin.system', 'compliance.manage') },
@@ -161,6 +227,30 @@ export async function clientRoutes(
           .send(toastHtml('OAuth client revoked successfully.'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to revoke client';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // POST /admin/clients/:id/revoke-branding — revoke branding OAuth client
+  server.post(
+    '/admin/clients/:id/revoke-branding',
+    { preHandler: requirePermission('admin.system', 'branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      if (brandingUrl == null) {
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml('Branding service not configured.', 'error'));
+      }
+
+      try {
+        await revokeBrandingClient(brandingUrl, getToken(request), id);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Branding OAuth client revoked successfully.'));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to revoke branding client';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
     },
