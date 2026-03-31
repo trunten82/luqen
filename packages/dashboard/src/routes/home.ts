@@ -14,10 +14,12 @@ export async function homeRoutes(
   });
 
   server.get('/home', async (request: FastifyRequest, reply: FastifyReply) => {
+    const isAdmin = request.user?.role === 'admin';
     const orgId = request.user?.currentOrgId;
-    const recentScans = await storage.scans.listScans({ limit: 10, orgId });
+    const orgFilter = !isAdmin ? { orgId } : {};
+    const recentScans = await storage.scans.listScans({ limit: 10, ...orgFilter });
 
-    const allScans = await storage.scans.listScans({ orgId });
+    const allScans = await storage.scans.listScans(orgFilter);
     const totalScans = allScans.length;
 
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
