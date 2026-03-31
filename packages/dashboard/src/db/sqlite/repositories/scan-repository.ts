@@ -25,6 +25,9 @@ interface ScanRow {
   json_report: string | null;
   error: string | null;
   org_id: string;
+  branding_guideline_id: string | null;
+  branding_guideline_version: number | null;
+  brand_related_count: number | null;
 }
 
 function rowToRecord(row: ScanRow): ScanRecord {
@@ -50,6 +53,9 @@ function rowToRecord(row: ScanRow): ScanRecord {
     ...(row.confirmed_violations !== null ? { confirmedViolations: row.confirmed_violations } : {}),
     ...(row.json_report_path !== null ? { jsonReportPath: row.json_report_path } : {}),
     ...(row.error !== null ? { error: row.error } : {}),
+    ...(row.branding_guideline_id !== null ? { brandingGuidelineId: row.branding_guideline_id } : {}),
+    ...(row.branding_guideline_version !== null ? { brandingGuidelineVersion: row.branding_guideline_version } : {}),
+    ...(row.brand_related_count !== null ? { brandRelatedCount: row.brand_related_count } : {}),
   };
 }
 
@@ -159,6 +165,9 @@ export class SqliteScanRepository implements ScanRepository {
       jsonReportPath: 'json_report_path',
       jsonReport: 'json_report',
       error: 'error',
+      brandingGuidelineId: 'branding_guideline_id',
+      brandingGuidelineVersion: 'branding_guideline_version',
+      brandRelatedCount: 'brand_related_count',
     };
 
     const setClauses: string[] = [];

@@ -42,6 +42,9 @@ export interface ScanRecord {
   readonly jsonReport?: string;
   readonly error?: string;
   readonly orgId: string;
+  readonly brandingGuidelineId?: string;
+  readonly brandingGuidelineVersion?: number;
+  readonly brandRelatedCount?: number;
 }
 
 export interface ScanFilters {
@@ -411,3 +414,66 @@ export interface DeveloperCredential {
   readonly validatedUsername: string | null;
   readonly createdAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// Branding types
+// ---------------------------------------------------------------------------
+
+export interface BrandingGuidelineRecord {
+  readonly id: string;
+  readonly orgId: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly version: number;
+  readonly active: boolean;
+  readonly createdBy?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly colors?: readonly BrandingColorRecord[];
+  readonly fonts?: readonly BrandingFontRecord[];
+  readonly selectors?: readonly BrandingSelectorRecord[];
+  readonly siteCount?: number;
+}
+
+export interface BrandingColorRecord {
+  readonly id: string;
+  readonly guidelineId: string;
+  readonly name: string;
+  readonly hexValue: string;
+  readonly usage?: string;
+  readonly context?: string;
+}
+
+export interface BrandingFontRecord {
+  readonly id: string;
+  readonly guidelineId: string;
+  readonly family: string;
+  readonly weights?: readonly string[];
+  readonly usage?: string;
+  readonly context?: string;
+}
+
+export interface BrandingSelectorRecord {
+  readonly id: string;
+  readonly guidelineId: string;
+  readonly pattern: string;
+  readonly description?: string;
+}
+
+export interface SiteBrandingRecord {
+  readonly siteUrl: string;
+  readonly guidelineId: string;
+  readonly orgId: string;
+}
+
+export interface CreateBrandingGuidelineInput {
+  readonly id: string;
+  readonly orgId: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly createdBy?: string;
+}
+
+export type BrandingGuidelineUpdateData = Partial<
+  Omit<BrandingGuidelineRecord, 'id' | 'orgId' | 'createdBy' | 'createdAt'>
+>;
