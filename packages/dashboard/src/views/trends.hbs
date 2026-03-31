@@ -23,7 +23,7 @@
         <div class="trends-kpi-card__label">{{t "trends.accessibilityScore"}}</div>
       </div>
       <div class="card trends-kpi-card">
-        {{#if kpi.overallChangePct}}
+        {{#if kpi.hasChangePct}}
         <div class="trends-kpi-card__value {{kpiDirectionClass}}">{{kpi.overallChangePct}}%</div>
         {{else}}
         <div class="trends-kpi-card__value text--muted">&mdash;</div>

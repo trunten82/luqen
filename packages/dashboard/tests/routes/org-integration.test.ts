@@ -21,6 +21,7 @@ interface OrgTestContext {
 
 async function createOrgTestServer(
   currentOrgId?: string,
+  role: string = 'admin',
 ): Promise<OrgTestContext> {
   const dbPath = join(tmpdir(), `test-org-int-${randomUUID()}.db`);
   const reportsDir = join(tmpdir(), `test-reports-${randomUUID()}`);
@@ -61,7 +62,7 @@ async function createOrgTestServer(
     request.user = {
       id: 'test-user-id',
       username: 'testuser',
-      role: 'admin',
+      role,
       currentOrgId,
     };
   });
@@ -141,7 +142,8 @@ describe('Org-scoped route integration', () => {
       const orgA = 'org-a-' + randomUUID();
       const orgB = 'org-b-' + randomUUID();
 
-      ctx = await createOrgTestServer(orgA);
+      // Non-admin user: should only see scans from their org
+      ctx = await createOrgTestServer(orgA, 'developer');
 
       // Create scans for two different orgs
       await ctx.storage.scans.createScan({
