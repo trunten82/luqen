@@ -6,6 +6,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.4.2] - 2026-03-31
+
+### Added
+- **DELETE /api/v1/scans/:id** — REST endpoint for deleting scan records (admin or org-scoped)
+- **X-Org-Id header** — admin API keys can operate in the context of any organization
+- **Scan endpoints in OpenAPI spec** — GET /api/v1/scans, GET /api/v1/scans/:id, DELETE /api/v1/scans/:id with Scan schema
+
+### Fixed
+- **KPI: Compliance rate** — now shows % of SITES currently compliant (latest scan per site) instead of counting all historical scans; scans with jurisdictions use confirmedViolations, without use errors === 0
+- **KPI: Overall trend** — uses errors-per-page (normalized) instead of raw issue counts; correctly shows "Improving" when error rates decrease across sites
+- **KPI: Accessibility score** — errors-only (not warnings/notices), per-site average with weight 5 per error/page (was 10, too aggressive for commercial sites)
+- **KPI: Overall change %** — positive = improvement, negative = degradation (intuitive sign convention); Handlebars template handles 0% correctly
+- **KPI: Summary table trend** — uses errors-per-page for trend direction (consistent with KPIs and scorecard)
+- **KPI: Home trend card** — color-coded green/red/neutral matching direction
+- **Admin org scoping** — admin users see all scans in home and trends (matching reports page behavior)
+- **Scan progress deduplication** — each page appears once in progress feed (was showing start + complete events)
+
+---
+
 ## [2.4.1] - 2026-03-29
 
 ### Added
