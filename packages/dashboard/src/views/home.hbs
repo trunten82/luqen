@@ -5,7 +5,10 @@
   <div class="exec-summary" role="list" aria-label="Executive summary statistics">
     {{> stat-card value=stats.totalScans label=(t "home.totalScans") accentColor="var(--accent)"}}
     {{> stat-card value=stats.sitesMonitored label=(t "home.sitesMonitored") accentColor="var(--status-info)"}}
-    {{> stat-card value=stats.trendDirection label=(t "home.overallTrend") accentColor="var(--accent)"}}
+    <article class="stat-card" role="listitem" style="border-left: 3px solid var(--accent)">
+      <span class="stat-card__value {{stats.trendClass}}">{{stats.trendDirection}}</span>
+      <span class="stat-card__label">{{t "home.overallTrend"}}</span>
+    </article>
     <article class="stat-card" role="listitem" style="border-left: 3px solid var(--status-success)">
       <span class="stat-card__value" aria-label="{{stats.complianceRate}} percent {{t "home.complianceRate"}}">{{stats.complianceRate}}%</span>
       <span class="stat-card__label">{{t "home.complianceRate"}}</span>

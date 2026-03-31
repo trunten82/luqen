@@ -264,15 +264,14 @@ function buildSummaryTable(trends: readonly SiteTrend[]): readonly SiteSummaryRo
     const deltaNotices = previous !== null ? latest.notices - previous.notices : null;
     const deltaTotal = previous !== null ? latest.totalIssues - previous.totalIssues : null;
 
+    // Trend based on errors-per-page (consistent with KPIs and scorecard)
     let trend: SiteSummaryRow['trend'];
     if (previous === null) {
       trend = 'new';
-    } else if (deltaTotal !== null && deltaTotal < 0) {
-      trend = 'improving';
-    } else if (deltaTotal !== null && deltaTotal > 0) {
-      trend = 'regressing';
     } else {
-      trend = 'stable';
+      const latestEpp = latest.errors / Math.max(latest.pagesScanned, 1);
+      const prevEpp = previous.errors / Math.max(previous.pagesScanned, 1);
+      trend = latestEpp < prevEpp ? 'improving' : latestEpp > prevEpp ? 'regressing' : 'stable';
     }
 
     rows.push({
@@ -369,6 +368,8 @@ export async function trendRoutes(
           ...kpi,
           // Invert sign: positive = fewer errors (improvement), negative = more errors (degradation)
           overallChangePct: kpi.overallChangePct !== null ? -kpi.overallChangePct : null,
+          // Handlebars {{#if}} treats 0 as falsy; provide explicit flag
+          hasChangePct: kpi.overallChangePct !== null,
         },
         kpiDirectionClass: kpi.overallChangeDirection === 'improving'
           ? 'text--success'

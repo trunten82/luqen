@@ -15,8 +15,8 @@ export async function homeRoutes(
 
   server.get('/home', async (request: FastifyRequest, reply: FastifyReply) => {
     const isAdmin = request.user?.role === 'admin';
-    const orgId = request.user?.currentOrgId;
-    const orgFilter = !isAdmin ? { orgId } : {};
+    const orgId = isAdmin ? undefined : request.user?.currentOrgId;
+    const orgFilter = orgId !== undefined ? { orgId } : {};
     const recentScans = await storage.scans.listScans({ limit: 10, ...orgFilter });
 
     const allScans = await storage.scans.listScans(orgFilter);
@@ -69,16 +69,25 @@ export async function homeRoutes(
       trendDirection = 'Stable';
     }
 
-    // Compliance: scans with jurisdictions use confirmedViolations,
-    // scans without jurisdictions use errors === 0
-    const compliantScans = completedScans.filter((s) => {
-      const hasJurisdictions = s.jurisdictions.length > 0;
-      return hasJurisdictions
-        ? (s.confirmedViolations ?? 0) === 0
-        : (s.errors ?? 0) === 0;
-    }).length;
-    const complianceRate = completedScans.length > 0
-      ? Math.round((compliantScans / completedScans.length) * 100)
+    // Compliance: % of SITES whose latest scan is compliant
+    // With jurisdictions → confirmedViolations === 0; without → errors === 0
+    const latestPerSite = new Map<string, typeof completedScans[0]>();
+    for (const scan of completedScans) {
+      const existing = latestPerSite.get(scan.siteUrl);
+      if (existing === undefined || scan.createdAt > existing.createdAt) {
+        latestPerSite.set(scan.siteUrl, scan);
+      }
+    }
+    let compliantSites = 0;
+    for (const scan of latestPerSite.values()) {
+      const hasJurisdictions = scan.jurisdictions.length > 0;
+      const isCompliant = hasJurisdictions
+        ? (scan.confirmedViolations ?? 0) === 0
+        : (scan.errors ?? 0) === 0;
+      if (isCompliant) compliantSites++;
+    }
+    const complianceRate = latestPerSite.size > 0
+      ? Math.round((compliantSites / latestPerSite.size) * 100)
       : 0;
 
     // Load jurisdictions + regulations for quick scan form
@@ -107,6 +116,11 @@ export async function homeRoutes(
         issuesFound,
         sitesMonitored,
         trendDirection,
+        trendClass: trendDirection === 'Improving'
+          ? 'text--success'
+          : trendDirection === 'Regressing'
+            ? 'text--error'
+            : 'text--muted',
         complianceRate,
       },
       jurisdictions,

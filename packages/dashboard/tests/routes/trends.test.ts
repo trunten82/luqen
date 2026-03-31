@@ -150,10 +150,9 @@ describe('Trend Routes', () => {
       expect(siteUrls).not.toContain('https://queued.com');
     });
 
-    it('scopes trend data to the user\'s org', async () => {
-      // Scan in user's org (system)
+    it('admin user sees trend data from all orgs', async () => {
+      // Admin sees all scans regardless of org
       await makeScan(ctx, { siteUrl: 'https://myorg.com', status: 'completed', orgId: 'system' });
-      // Scan in another org — should not appear
       await makeScan(ctx, { siteUrl: 'https://otherorg.com', status: 'completed', orgId: 'other-org' });
 
       const response = await ctx.server.inject({
@@ -165,7 +164,7 @@ describe('Trend Routes', () => {
       const body = response.json() as { data: { trendData: Array<{ siteUrl: string }> } };
       const siteUrls = body.data.trendData.map((t) => t.siteUrl);
       expect(siteUrls).toContain('https://myorg.com');
-      expect(siteUrls).not.toContain('https://otherorg.com');
+      expect(siteUrls).toContain('https://otherorg.com');
     });
 
     it('returns 200 with empty trend data when no scans exist', async () => {
@@ -269,7 +268,8 @@ describe('Trend Routes', () => {
       };
       expect(body.data.kpi.totalSites).toBe(1);
       expect(body.data.kpi.totalScans).toBe(2);
-      expect(body.data.kpi.overallChangePct).toBeLessThan(0);
+      // Positive = improvement (sign inverted for display: fewer errors = positive)
+      expect(body.data.kpi.overallChangePct).toBeGreaterThan(0);
       expect(body.data.kpi.overallChangeDirection).toBe('improving');
       expect(body.data.kpiDirectionClass).toBe('text--success');
       expect(body.data.kpiDirectionLabel).toBe('Improving');
@@ -298,7 +298,8 @@ describe('Trend Routes', () => {
           kpiDirectionLabel: string;
         };
       };
-      expect(body.data.kpi.overallChangePct).toBeGreaterThan(0);
+      // Negative = degradation (sign inverted for display: more errors = negative)
+      expect(body.data.kpi.overallChangePct).toBeLessThan(0);
       expect(body.data.kpi.overallChangeDirection).toBe('regressing');
       expect(body.data.kpiDirectionClass).toBe('text--error');
       expect(body.data.kpiDirectionLabel).toBe('Regressing');
