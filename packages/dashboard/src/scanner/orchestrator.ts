@@ -526,6 +526,76 @@ export class ScanOrchestrator {
         }
       }
 
+      // ── Branding enrichment (no-op if no guideline assigned) ────────────
+      let brandRelatedCount = 0;
+      let brandingGuidelineId: string | undefined;
+      let brandingGuidelineVersion: number | undefined;
+
+      try {
+        const brandGuideline = await this.storage.branding.getGuidelineForSite(
+          config.siteUrl,
+          config.orgId ?? 'system',
+        );
+
+        if (brandGuideline?.active && brandGuideline.colors && brandGuideline.fonts && brandGuideline.selectors) {
+          const { BrandingMatcher } = await import('@luqen/branding');
+          const matcher = new BrandingMatcher();
+          const branded = matcher.match(allIssues as ReadonlyArray<{ readonly code: string; readonly type: 'error' | 'warning' | 'notice'; readonly message: string; readonly selector: string; readonly context: string }>, {
+            id: brandGuideline.id,
+            orgId: brandGuideline.orgId,
+            name: brandGuideline.name,
+            version: brandGuideline.version,
+            active: brandGuideline.active,
+            colors: brandGuideline.colors.map(c => ({
+              id: c.id, name: c.name, hexValue: c.hexValue,
+              ...(c.usage ? { usage: c.usage as any } : {}),
+              ...(c.context ? { context: c.context } : {}),
+            })),
+            fonts: brandGuideline.fonts.map(f => ({
+              id: f.id, family: f.family,
+              ...(f.weights ? { weights: f.weights } : {}),
+              ...(f.usage ? { usage: f.usage as any } : {}),
+              ...(f.context ? { context: f.context } : {}),
+            })),
+            selectors: brandGuideline.selectors.map(s => ({
+              id: s.id, pattern: s.pattern,
+              ...(s.description ? { description: s.description } : {}),
+            })),
+          });
+
+          // Enrich page issues with branding tags
+          for (const page of reportData.pages as Array<{ issues: Array<Record<string, unknown>> }>) {
+            for (let i = 0; i < page.issues.length; i++) {
+              const match = branded.find(
+                (b) => b.issue.code === page.issues[i].code &&
+                       b.issue.selector === page.issues[i].selector &&
+                       b.issue.context === page.issues[i].context,
+              );
+              if (match?.brandMatch.matched) {
+                (page.issues[i] as Record<string, unknown>).brandMatch = match.brandMatch;
+                brandRelatedCount++;
+              }
+            }
+          }
+
+          brandingGuidelineId = brandGuideline.id;
+          brandingGuidelineVersion = brandGuideline.version;
+          reportData.branding = {
+            guidelineId: brandGuideline.id,
+            guidelineName: brandGuideline.name,
+            guidelineVersion: brandGuideline.version,
+            brandRelatedCount,
+          };
+        }
+      } catch (brandingErr) {
+        // Non-fatal — branding enrichment failure doesn't fail the scan
+        emit({
+          type: 'scan_error',
+          timestamp: new Date().toISOString(),
+          data: { error: `Branding enrichment failed: ${String(brandingErr)}` },
+        });
+      }
+
       const reportJson = JSON.stringify(reportData, null, 2);
 
       // Store report in DB (primary) and optionally on filesystem (backup)
@@ -538,6 +608,7 @@ export class ScanOrchestrator {
         warnings,
         notices,
         ...(confirmedViolations !== undefined ? { confirmedViolations } : {}),
+        ...(brandingGuidelineId !== undefined ? { brandingGuidelineId, brandingGuidelineVersion, brandRelatedCount } : {}),
         jsonReport: reportJson,
         jsonReportPath: jsonPath,
       });
