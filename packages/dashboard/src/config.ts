@@ -12,6 +12,9 @@ const ConfigSchema = z.object({
   maxConcurrentScans: z.number().int().min(1).default(2),
   complianceClientId: z.string().default(''),
   complianceClientSecret: z.string().default(''),
+  brandingUrl: z.string().url().default('http://localhost:4100'),
+  brandingClientId: z.string().default(''),
+  brandingClientSecret: z.string().default(''),
   pluginsDir: z.string().default('./plugins'),
   pluginsConfigFile: z.string().optional(),
   catalogueUrl: z.string().url().optional(),
@@ -33,6 +36,9 @@ export interface DashboardConfig {
   readonly maxConcurrentScans: number;
   readonly complianceClientId: string;
   readonly complianceClientSecret: string;
+  readonly brandingUrl: string;
+  readonly brandingClientId: string;
+  readonly brandingClientSecret: string;
   readonly pluginsDir: string;
   readonly pluginsConfigFile?: string;
   /** URL to fetch the remote plugin catalogue. Defaults to GitHub raw URL. */
@@ -58,6 +64,9 @@ const DEFAULTS: DashboardConfig = {
   maxConcurrentScans: 2,
   complianceClientId: '',
   complianceClientSecret: '',
+  brandingUrl: 'http://localhost:4100',
+  brandingClientId: '',
+  brandingClientSecret: '',
   pluginsDir: './plugins',
   catalogueCacheTtl: 3600,
   maxPages: 50,
@@ -98,6 +107,9 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
       : config.maxConcurrentScans,
     complianceClientId: process.env['DASHBOARD_COMPLIANCE_CLIENT_ID'] ?? config.complianceClientId,
     complianceClientSecret: process.env['DASHBOARD_COMPLIANCE_CLIENT_SECRET'] ?? config.complianceClientSecret,
+    brandingUrl: process.env['DASHBOARD_BRANDING_URL'] ?? config.brandingUrl,
+    brandingClientId: process.env['DASHBOARD_BRANDING_CLIENT_ID'] ?? config.brandingClientId,
+    brandingClientSecret: process.env['DASHBOARD_BRANDING_CLIENT_SECRET'] ?? config.brandingClientSecret,
     pluginsDir: process.env['DASHBOARD_PLUGINS_DIR'] ?? config.pluginsDir,
     pluginsConfigFile: process.env['DASHBOARD_PLUGINS_CONFIG'] ?? config.pluginsConfigFile,
     catalogueUrl: process.env['DASHBOARD_CATALOGUE_URL'] ?? config.catalogueUrl,
