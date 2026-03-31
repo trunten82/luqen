@@ -33,6 +33,8 @@ export const ALL_PERMISSIONS = [
   { id: 'audit.view', label: 'View audit log', group: 'Administration' },
   { id: 'compliance.view', label: 'View compliance data', group: 'Compliance' },
   { id: 'compliance.manage', label: 'Manage compliance items', group: 'Compliance' },
+  { id: 'branding.view', label: 'View branding guidelines', group: 'Branding' },
+  { id: 'branding.manage', label: 'Manage branding guidelines', group: 'Branding' },
 ] as const;
 
 export type PermissionId = typeof ALL_PERMISSIONS[number]['id'];
@@ -101,6 +103,7 @@ export const ORG_OWNER_PERMISSIONS: readonly string[] = [
   'admin.roles', 'admin.teams', 'admin.org', 'admin.plugins',
   'users.create', 'users.delete', 'users.activate', 'users.reset_password',
   'compliance.view', 'compliance.manage', 'audit.view',
+  'branding.view', 'branding.manage',
 ];
 
 /** Permissions for the org-level "Admin" role. */
@@ -110,17 +113,20 @@ export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
   'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
   'admin.plugins', 'users.create', 'users.delete', 'users.activate', 'users.reset_password',
   'compliance.view', 'compliance.manage',
+  'branding.view', 'branding.manage',
 ];
 
 /** Permissions for the org-level "Member" role. */
 export const ORG_MEMBER_PERMISSIONS: readonly string[] = [
   'scans.create', 'reports.view', 'reports.view_technical', 'reports.export',
   'reports.compare', 'manual_testing', 'repos.credentials', 'trends.view', 'compliance.view',
+  'branding.view',
 ];
 
 /** Permissions for the org-level "Viewer" role. */
 export const ORG_VIEWER_PERMISSIONS: readonly string[] = [
   'reports.view', 'trends.view', 'compliance.view',
+  'branding.view',
 ];
 
 /**

@@ -13,6 +13,7 @@ import type { ApiKeyRepository } from './interfaces/api-key-repository.js';
 import type { PageHashRepository } from './interfaces/page-hash-repository.js';
 import type { ManualTestRepository } from './interfaces/manual-test-repository.js';
 import type { GitHostRepository } from './interfaces/git-host-repository.js';
+import type { BrandingRepository } from './interfaces/branding-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -36,4 +37,5 @@ export interface StorageAdapter {
   readonly pageHashes: PageHashRepository;
   readonly manualTests: ManualTestRepository;
   readonly gitHosts: GitHostRepository;
+  readonly branding: BrandingRepository;
 }

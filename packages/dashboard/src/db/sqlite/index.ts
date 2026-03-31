@@ -17,6 +17,7 @@ import {
   SqlitePageHashRepository,
   SqliteManualTestRepository,
   SqliteGitHostRepository,
+  SqliteBrandingRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -39,6 +40,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly pageHashes: SqlitePageHashRepository;
   readonly manualTests: SqliteManualTestRepository;
   readonly gitHosts: SqliteGitHostRepository;
+  readonly branding: SqliteBrandingRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -57,6 +59,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.pageHashes = new SqlitePageHashRepository(this.db);
     this.manualTests = new SqliteManualTestRepository(this.db);
     this.gitHosts = new SqliteGitHostRepository(this.db);
+    this.branding = new SqliteBrandingRepository(this.db);
   }
 
   async connect(): Promise<void> {

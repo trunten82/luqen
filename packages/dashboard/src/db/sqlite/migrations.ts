@@ -1007,4 +1007,91 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission)
   AND r.org_id = 'system';
     `,
   },
+  {
+    id: '034',
+    name: 'branding-guidelines-tables',
+    sql: `
+CREATE TABLE IF NOT EXISTS branding_guidelines (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  version INTEGER NOT NULL DEFAULT 1,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_by TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_branding_guidelines_org ON branding_guidelines(org_id);
+
+CREATE TABLE IF NOT EXISTS branding_colors (
+  id TEXT PRIMARY KEY,
+  guideline_id TEXT NOT NULL REFERENCES branding_guidelines(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  hex_value TEXT NOT NULL,
+  usage TEXT,
+  context TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_branding_colors_guideline ON branding_colors(guideline_id);
+
+CREATE TABLE IF NOT EXISTS branding_fonts (
+  id TEXT PRIMARY KEY,
+  guideline_id TEXT NOT NULL REFERENCES branding_guidelines(id) ON DELETE CASCADE,
+  family TEXT NOT NULL,
+  weights TEXT,
+  usage TEXT,
+  context TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_branding_fonts_guideline ON branding_fonts(guideline_id);
+
+CREATE TABLE IF NOT EXISTS branding_selectors (
+  id TEXT PRIMARY KEY,
+  guideline_id TEXT NOT NULL REFERENCES branding_guidelines(id) ON DELETE CASCADE,
+  pattern TEXT NOT NULL,
+  description TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_branding_selectors_guideline ON branding_selectors(guideline_id);
+
+CREATE TABLE IF NOT EXISTS site_branding (
+  site_url TEXT NOT NULL,
+  guideline_id TEXT NOT NULL REFERENCES branding_guidelines(id) ON DELETE CASCADE,
+  org_id TEXT NOT NULL,
+  PRIMARY KEY (site_url, org_id)
+);
+CREATE INDEX IF NOT EXISTS idx_site_branding_guideline ON site_branding(guideline_id);
+
+ALTER TABLE scan_records ADD COLUMN branding_guideline_id TEXT;
+ALTER TABLE scan_records ADD COLUMN branding_guideline_version INTEGER;
+ALTER TABLE scan_records ADD COLUMN brand_related_count INTEGER DEFAULT 0;
+    `,
+  },
+  {
+    id: '035',
+    name: 'branding-permissions',
+    sql: `
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'branding.view'
+  FROM roles r
+  WHERE r.name IN ('Owner', 'Admin', 'Member', 'Viewer')
+  AND r.org_id != 'system';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'branding.manage'
+  FROM roles r
+  WHERE r.name IN ('Owner', 'Admin')
+  AND r.org_id != 'system';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'branding.view'
+  FROM roles r
+  WHERE r.name IN ('admin', 'developer', 'user', 'viewer', 'executive')
+  AND r.org_id = 'system';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT r.id, 'branding.manage'
+  FROM roles r
+  WHERE r.name IN ('admin', 'developer')
+  AND r.org_id = 'system';
+    `,
+  },
 ];
