@@ -1,11 +1,13 @@
 {
   "name": "@luqen/core",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "description": "Accessibility testing agent using pa11y webservice",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": { "luqen": "dist/cli.js" },
+  "bin": {
+    "luqen": "dist/cli.js"
+  },
   "exports": {
     ".": "./dist/index.js",
     "./cli": "./dist/cli.js"

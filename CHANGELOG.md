@@ -6,6 +6,44 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.5.0] - 2026-03-31
+
+### Added
+- **New package: `@luqen/branding`** — standalone brand guideline matching service for accessibility findings
+  - REST API with OAuth2 client_credentials authentication (port 4100)
+  - CLI: `luqen-branding serve`, `keys generate`, `clients create/list/revoke`
+  - Three matching strategies: color-pair (contrast issues), font-family, CSS selector rules
+  - GuidelineParser: CSV, JSON template import; PDF parsing via LLM plugin interface
+  - GuidelineStore: in-memory implementation + IBrandingStore interface for custom backends
+  - SQLite database with full CRUD for guidelines, colors, fonts, selectors, site assignments
+  - OpenAPI spec and Swagger UI at `/api/v1/docs`
+- **Brand-aware accessibility analysis** — scanner enriches findings with branding context
+  - Multi-brand, multi-site model (e.g., Campari Group → Aperol, Campari, Grand Marnier)
+  - Each brand guideline assigned to one or more sites
+  - Post-scan enrichment tags issues as "Brand-Related" or "Unexpected"
+  - Version tracking per scan enables future re-tagging without re-scanning
+- **Admin UI: Brand Guidelines** — full management interface
+  - Guidelines list page with status, site count, version
+  - Tabbed detail page: Colors (visual swatches), Fonts, Selector Rules, Site Assignments, Import/Export
+  - CSV and JSON template download/upload for bulk guideline creation
+  - Sidebar navigation with branding section (6 locales: en, it, de, es, fr, pt)
+- **Report integration** — brand-related findings in scan reports
+  - Filter bar: All / Unexpected / Brand-Related toggle
+  - Inline brand badge on matched issues (no background tint — severity drives visual hierarchy)
+  - Match detail line showing why each issue matched (color pair, font, or selector rule)
+  - Dual KPI display: overall compliance rate + rate excluding brand-related
+  - Brand KPI card with guideline name and version reference
+- **Permissions** — `branding.view` and `branding.manage` (org-scoped RBAC)
+- **Dashboard ↔ Branding OAuth integration** — auto-refreshing service tokens via ServiceTokenManager
+- **Installer updated** — `install.sh` and `start.sh` include branding service setup, JWT keys, OAuth client creation, systemd service
+
+### Documentation
+- OpenAPI spec: `docs/reference/openapi-branding.yaml`
+- Module guide: `docs/branding/README.md`
+- API reference updated with branding service endpoints
+
+---
+
 ## [2.4.2] - 2026-03-31
 
 ### Added
