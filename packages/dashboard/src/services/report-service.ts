@@ -112,6 +112,12 @@ export interface JsonReportFile {
     wcagImpact?: string; wcagUrl?: string;
     regulations?: Array<{ shortName: string; url?: string; obligation?: string }>;
   }>;
+  branding?: {
+    guidelineName?: string;
+    guidelineVersion?: string;
+    complianceExcludingBrand?: number;
+    [key: string]: unknown;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -484,6 +490,32 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
       }
     : null;
 
+  // Branding summary — count brand-related issues if branding data present
+  let brandingSummary: {
+    guidelineName?: string;
+    guidelineVersion?: string;
+    complianceExcludingBrand?: number;
+    brandRelatedCount: number;
+    unexpectedCount: number;
+    [key: string]: unknown;
+  } | undefined;
+  if (raw.branding) {
+    let brandRelatedCount = 0;
+    for (const page of enrichedPages) {
+      for (const issue of (page.issues ?? [])) {
+        if ((issue as Record<string, unknown>).brandMatch &&
+            ((issue as Record<string, unknown>).brandMatch as Record<string, unknown>).matched) {
+          brandRelatedCount++;
+        }
+      }
+    }
+    brandingSummary = {
+      ...raw.branding,
+      brandRelatedCount,
+      unexpectedCount: (summary?.totalIssues ?? 0) - brandRelatedCount,
+    };
+  }
+
   return {
     summary,
     pages: [...enrichedPages].sort((a, b) => (b.issueCount ?? 0) - (a.issueCount ?? 0)),
@@ -508,5 +540,6 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
         pageCount: g.pageCount,
         regulations: g.regulations,
       })),
+    ...(brandingSummary !== undefined ? { branding: brandingSummary } : {}),
   };
 }

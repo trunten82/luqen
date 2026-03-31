@@ -245,7 +245,12 @@
     "nonCompliant": "Non conforme",
     "mandatoryFailures": "errore/i obbligatorio/i rilevato/i",
     "itemsNeedManualReview": "elemento/i richiede/richiedono revisione manuale",
-    "noMandatoryFailures": "Nessuna violazione obbligatoria rilevata"
+    "noMandatoryFailures": "Nessuna violazione obbligatoria rilevata",
+    "brandRelated": "Correlato al Brand",
+    "unexpected": "Inatteso",
+    "show": "Mostra",
+    "all": "Tutti",
+    "excludingBrand": "esclusi quelli correlati al brand"
   },
   "schedules": {
     "title": "Pianificazioni Scansione",

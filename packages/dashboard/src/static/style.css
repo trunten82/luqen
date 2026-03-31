@@ -3249,3 +3249,56 @@ details[open] > .mt-examples-toggle::before {
   right: 0.25rem;
   font-size: 0.7rem;
 }
+
+/* ── Brand-related badges and filter bar ─────────────────────────────── */
+.badge--brand {
+  background: var(--status-warning_bg, #fef3c7);
+  color: var(--status-warning, #92400e);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.badge__dot--brand {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--status-warning, #f59e0b);
+}
+
+.issue__brand-detail {
+  font-size: 0.75rem;
+  color: var(--status-warning, #d97706);
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary, #f9fafb);
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color, #e5e7eb);
+  margin-bottom: var(--space-md);
+}
+
+.filter-bar__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.kpi-card--brand {
+  border-color: var(--status-warning, #f59e0b);
+  background: var(--status-warning_bg, #fffbeb);
+}
+
+.kpi-card__secondary {
+  font-size: 0.8125rem;
+  color: var(--status-success, #059669);
+  margin-top: var(--space-xs);
+}

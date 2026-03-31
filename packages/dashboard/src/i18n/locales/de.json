@@ -245,7 +245,12 @@
     "nonCompliant": "Nicht konform",
     "mandatoryFailures": "Pflichtfehler gefunden",
     "itemsNeedManualReview": "Element(e) erfordern manuelle Prüfung",
-    "noMandatoryFailures": "Keine Pflichtfehler erkannt"
+    "noMandatoryFailures": "Keine Pflichtfehler erkannt",
+    "brandRelated": "Markenbezogen",
+    "unexpected": "Unerwartet",
+    "show": "Anzeigen",
+    "all": "Alle",
+    "excludingBrand": "ohne markenbezogene"
   },
   "schedules": {
     "title": "Scan-Zeitpläne",
