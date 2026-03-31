@@ -351,15 +351,7 @@ export class ScanOrchestrator {
               ...(config.runner !== undefined ? { runner: config.runner } : {}),
               onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
                 if (progress.type === 'scan:start') {
-                  emit({
-                    type: 'scan_complete',
-                    timestamp: new Date().toISOString(),
-                    data: {
-                      pagesScanned: pagesSkipped + progress.current - 1,
-                      totalPages: discoveredUrls.length,
-                      currentUrl: progress.url,
-                    },
-                  });
+                  // Don't emit scan_complete on start — wait for actual completion
                 } else {
                   emit({
                     type: 'scan_complete',
@@ -428,15 +420,7 @@ export class ScanOrchestrator {
                     data: { pagesDiscovered: progress.total },
                   });
                 }
-                emit({
-                  type: 'scan_complete',
-                  timestamp: new Date().toISOString(),
-                  data: {
-                    pagesScanned: progress.current - 1,
-                    totalPages: progress.total,
-                    currentUrl: progress.url,
-                  },
-                });
+                // Don't emit scan_complete on start — wait for actual completion
               } else {
                 emit({
                   type: 'scan_complete',
