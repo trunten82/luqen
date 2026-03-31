@@ -359,19 +359,19 @@ describe('Home routes', () => {
     });
 
     it('calculates complianceRate correctly', async () => {
-      // 2 compliant (0 confirmed violations), 1 non-compliant
+      // 2 compliant (0 errors), 1 non-compliant (has errors)
       const id1 = randomUUID();
       const id2 = randomUUID();
       const id3 = randomUUID();
 
       await ctx.storage.scans.createScan(createScanInput({ id: id1, siteUrl: 'https://a.com' }));
-      await ctx.storage.scans.updateScan(id1, { status: 'completed', confirmedViolations: 0 });
+      await ctx.storage.scans.updateScan(id1, { status: 'completed', errors: 0 });
 
       await ctx.storage.scans.createScan(createScanInput({ id: id2, siteUrl: 'https://b.com' }));
-      await ctx.storage.scans.updateScan(id2, { status: 'completed', confirmedViolations: 0 });
+      await ctx.storage.scans.updateScan(id2, { status: 'completed', errors: 0 });
 
       await ctx.storage.scans.createScan(createScanInput({ id: id3, siteUrl: 'https://c.com' }));
-      await ctx.storage.scans.updateScan(id3, { status: 'completed', confirmedViolations: 5 });
+      await ctx.storage.scans.updateScan(id3, { status: 'completed', errors: 5 });
 
       const response = await ctx.server.inject({
         method: 'GET',
@@ -393,10 +393,10 @@ describe('Home routes', () => {
       expect(body.data.stats.complianceRate).toBe(0);
     });
 
-    it('returns complianceRate 100 when all scans have 0 violations', async () => {
+    it('returns complianceRate 100 when all scans have 0 errors', async () => {
       const id = randomUUID();
       await ctx.storage.scans.createScan(createScanInput({ id }));
-      await ctx.storage.scans.updateScan(id, { status: 'completed', confirmedViolations: 0 });
+      await ctx.storage.scans.updateScan(id, { status: 'completed', errors: 0 });
 
       const response = await ctx.server.inject({
         method: 'GET',

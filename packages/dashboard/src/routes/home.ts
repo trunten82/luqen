@@ -39,36 +39,34 @@ export async function homeRoutes(
     const uniqueSiteUrls = new Set(completedScans.map((s) => s.siteUrl));
     const sitesMonitored = uniqueSiteUrls.size;
 
-    // Overall trend: compare latest vs previous scan per URL
-    let improvingCount = 0;
-    let regressingCount = 0;
+    // Overall trend: weighted by total issue change across all sites
+    let latestIssueSum = 0;
+    let previousIssueSum = 0;
+    let sitesWithHistory = 0;
     for (const url of uniqueSiteUrls) {
       const siteScans = completedScans
         .filter((s) => s.siteUrl === url)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       if (siteScans.length >= 2) {
-        const latest = siteScans[siteScans.length - 1];
-        const previous = siteScans[siteScans.length - 2];
-        const latestTotal = latest.totalIssues ?? 0;
-        const previousTotal = previous.totalIssues ?? 0;
-        if (latestTotal < previousTotal) improvingCount++;
-        if (latestTotal > previousTotal) regressingCount++;
+        latestIssueSum += siteScans[siteScans.length - 1].totalIssues ?? 0;
+        previousIssueSum += siteScans[siteScans.length - 2].totalIssues ?? 0;
+        sitesWithHistory++;
       }
     }
 
     let trendDirection: string;
-    if (improvingCount > regressingCount) {
+    if (sitesWithHistory === 0) {
+      trendDirection = completedScans.length === 0 ? 'No data' : 'Stable';
+    } else if (latestIssueSum < previousIssueSum) {
       trendDirection = 'Improving';
-    } else if (regressingCount > improvingCount) {
+    } else if (latestIssueSum > previousIssueSum) {
       trendDirection = 'Regressing';
-    } else if (completedScans.length === 0) {
-      trendDirection = 'No data';
     } else {
       trendDirection = 'Stable';
     }
 
     const compliantScans = completedScans.filter(
-      (s) => (s.confirmedViolations ?? 0) === 0,
+      (s) => (s.errors ?? 0) === 0,
     ).length;
     const complianceRate = completedScans.length > 0
       ? Math.round((compliantScans / completedScans.length) * 100)
