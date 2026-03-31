@@ -1,0 +1,14 @@
+{
+  "name": "Brand Guide Name",
+  "description": "Optional description",
+  "colors": [
+    { "name": "Primary Blue", "hex": "#1E40AF", "usage": "primary", "context": "Headers, CTAs" },
+    { "name": "White", "hex": "#FFFFFF", "usage": "background", "context": "Page backgrounds" }
+  ],
+  "fonts": [
+    { "family": "Inter", "weights": ["400", "600", "700"], "usage": "body", "context": "Body text" }
+  ],
+  "selectors": [
+    { "pattern": ".brand-header", "description": "Top navigation bar" }
+  ]
+}
