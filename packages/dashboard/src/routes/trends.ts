@@ -367,8 +367,8 @@ export async function trendRoutes(
         hasTrends: trends.length > 0,
         kpi: {
           ...kpi,
-          // Display absolute value — direction label conveys good/bad
-          overallChangePct: kpi.overallChangePct !== null ? Math.abs(kpi.overallChangePct) : null,
+          // Invert sign: positive = fewer errors (improvement), negative = more errors (degradation)
+          overallChangePct: kpi.overallChangePct !== null ? -kpi.overallChangePct : null,
         },
         kpiDirectionClass: kpi.overallChangeDirection === 'improving'
           ? 'text--success'
