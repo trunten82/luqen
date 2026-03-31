@@ -245,7 +245,12 @@
     "nonCompliant": "No conforme",
     "mandatoryFailures": "infracción/es obligatoria/s encontrada/s",
     "itemsNeedManualReview": "elemento/s requiere/n revisión manual",
-    "noMandatoryFailures": "No se detectaron infracciones obligatorias"
+    "noMandatoryFailures": "No se detectaron infracciones obligatorias",
+    "brandRelated": "Relacionado con la Marca",
+    "unexpected": "Inesperado",
+    "show": "Mostrar",
+    "all": "Todos",
+    "excludingBrand": "excluyendo los relacionados con la marca"
   },
   "schedules": {
     "title": "Programaciones de Escaneo",

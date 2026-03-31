@@ -245,7 +245,12 @@
     "nonCompliant": "Não conforme",
     "mandatoryFailures": "falha(s) obrigatória(s) encontrada(s)",
     "itemsNeedManualReview": "item(ns) precisa(m) de revisão manual",
-    "noMandatoryFailures": "Nenhuma falha obrigatória detectada"
+    "noMandatoryFailures": "Nenhuma falha obrigatória detectada",
+    "brandRelated": "Relacionado à Marca",
+    "unexpected": "Inesperado",
+    "show": "Mostrar",
+    "all": "Todos",
+    "excludingBrand": "excluindo os relacionados à marca"
   },
   "schedules": {
     "title": "Agendamentos de Varredura",

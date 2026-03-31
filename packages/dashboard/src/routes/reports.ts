@@ -227,6 +227,8 @@ export async function reportRoutes(
         ...teams.map((t) => ({ type: 'team', id: `team:${t.id}`, label: `Team: ${t.name}` })),
       ];
 
+      const brandFilter = (request.query as Record<string, string>).brandFilter ?? 'all';
+
       // Compute compliance traffic light from enriched matrix
       const hasCompliance = reportData?.complianceMatrix != null;
       const enrichedFailing = (reportData as any)?.compliance?.summary?.failing ?? 0;
@@ -243,6 +245,7 @@ export async function reportRoutes(
         scan: scanMeta,
         reportData,
         complianceStatus,
+        brandFilter,
         pdfAvailable: true,
         manualTestStats: {
           tested: manualTested,

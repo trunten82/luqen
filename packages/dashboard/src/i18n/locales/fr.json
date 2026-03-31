@@ -245,7 +245,12 @@
     "nonCompliant": "Non conforme",
     "mandatoryFailures": "violation(s) obligatoire(s) détectée(s)",
     "itemsNeedManualReview": "élément(s) nécessite(nt) une révision manuelle",
-    "noMandatoryFailures": "Aucune violation obligatoire détectée"
+    "noMandatoryFailures": "Aucune violation obligatoire détectée",
+    "brandRelated": "Lié à la Marque",
+    "unexpected": "Inattendu",
+    "show": "Afficher",
+    "all": "Tous",
+    "excludingBrand": "hors éléments liés à la marque"
   },
   "schedules": {
     "title": "Planifications d'Analyse",

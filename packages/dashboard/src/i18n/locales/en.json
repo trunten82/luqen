@@ -247,7 +247,12 @@
     "nonCompliant": "Non-Compliant",
     "mandatoryFailures": "mandatory failure(s) found",
     "itemsNeedManualReview": "item(s) need manual review",
-    "noMandatoryFailures": "No mandatory failures detected"
+    "noMandatoryFailures": "No mandatory failures detected",
+    "brandRelated": "Brand-Related",
+    "unexpected": "Unexpected",
+    "show": "Show",
+    "all": "All",
+    "excludingBrand": "excluding brand-related"
   },
   "schedules": {
     "title": "Scan Schedules",
