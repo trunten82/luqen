@@ -1,50 +1,64 @@
-// ─── Entities ────────────────────────────────────────────────────────────────
+/**
+ * Domain types for the @luqen/branding package.
+ */
 
-export type ColorUsage = 'primary' | 'secondary' | 'accent' | 'background' | 'text' | 'border' | 'error' | 'warning' | 'success' | 'info';
-export type FontUsage = 'heading' | 'body' | 'monospace' | 'caption' | 'display';
-
-export interface BrandColor {
-  readonly hex: string;
-  readonly name?: string;
-  readonly usage?: readonly ColorUsage[];
-  readonly variants?: readonly string[];
-}
-
-export interface BrandFont {
-  readonly family: string;
-  readonly usage?: readonly FontUsage[];
-  readonly weights?: readonly number[];
-  readonly fallbacks?: readonly string[];
-}
-
-export interface BrandSelector {
-  readonly selector: string;
-  readonly description?: string;
-  readonly appliesTo?: readonly string[];
-}
+// ---------------------------------------------------------------------------
+// Brand guideline entities
+// ---------------------------------------------------------------------------
 
 export interface BrandGuideline {
   readonly id: string;
   readonly orgId: string;
   readonly name: string;
+  readonly description?: string;
+  readonly version: number;
+  readonly active: boolean;
   readonly colors: readonly BrandColor[];
   readonly fonts: readonly BrandFont[];
   readonly selectors: readonly BrandSelector[];
-  readonly createdAt: string;
-  readonly updatedAt: string;
+  readonly createdBy?: string;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
 }
 
-// ─── Matching ─────────────────────────────────────────────────────────────────
+export interface BrandColor {
+  readonly id: string;
+  readonly name: string;
+  readonly hexValue: string;
+  readonly usage?: ColorUsage;
+  readonly context?: string;
+}
 
-export type MatchStrategy = 'color' | 'font' | 'selector';
+export type ColorUsage = 'primary' | 'secondary' | 'background' | 'text' | 'accent';
+
+export interface BrandFont {
+  readonly id: string;
+  readonly family: string;
+  readonly weights?: readonly string[];
+  readonly usage?: FontUsage;
+  readonly context?: string;
+}
+
+export type FontUsage = 'heading' | 'body' | 'accent' | 'monospace';
+
+export interface BrandSelector {
+  readonly id: string;
+  readonly pattern: string;
+  readonly description?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Matching result types
+// ---------------------------------------------------------------------------
+
+export type MatchStrategy = 'color-pair' | 'font' | 'selector';
 
 export interface BrandMatch {
   readonly matched: true;
   readonly strategy: MatchStrategy;
-  readonly confidence: number;
-  readonly detail: string;
-  readonly guidelineId: string;
   readonly guidelineName: string;
+  readonly guidelineId: string;
+  readonly matchDetail: string;
 }
 
 export interface NoBrandMatch {
@@ -53,13 +67,16 @@ export interface NoBrandMatch {
 
 export type BrandMatchResult = BrandMatch | NoBrandMatch;
 
-// ─── Issues ───────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Issue types (minimal — we accept any object with these fields)
+// ---------------------------------------------------------------------------
 
 export interface MatchableIssue {
   readonly code: string;
+  readonly type: 'error' | 'warning' | 'notice';
   readonly message: string;
-  readonly context?: string;
-  readonly selector?: string;
+  readonly selector: string;
+  readonly context: string;
 }
 
 export interface BrandedIssue<T extends MatchableIssue = MatchableIssue> {
@@ -67,7 +84,9 @@ export interface BrandedIssue<T extends MatchableIssue = MatchableIssue> {
   readonly brandMatch: BrandMatchResult;
 }
 
-// ─── Store Interface ──────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Store interface
+// ---------------------------------------------------------------------------
 
 export interface IBrandingStore {
   addGuideline(guideline: BrandGuideline): void;
@@ -81,24 +100,36 @@ export interface IBrandingStore {
   getSiteAssignments(guidelineId: string): readonly string[];
 }
 
-// ─── LLM Interface ────────────────────────────────────────────────────────────
-
-export interface ExtractedBrandData {
-  readonly colors: readonly BrandColor[];
-  readonly fonts: readonly BrandFont[];
-  readonly selectors: readonly BrandSelector[];
-}
+// ---------------------------------------------------------------------------
+// LLM provider interface (for PDF parsing)
+// ---------------------------------------------------------------------------
 
 export interface IBrandingLLMProvider {
-  extractBrandData(content: string, mimeType: string): Promise<ExtractedBrandData>;
+  extractBrandData(text: string): Promise<ExtractedBrandData>;
 }
 
-// ─── Parser Input ─────────────────────────────────────────────────────────────
+export interface ExtractedBrandData {
+  readonly colors: ReadonlyArray<{
+    readonly name: string;
+    readonly hex: string;
+    readonly usage?: string;
+  }>;
+  readonly fonts: ReadonlyArray<{
+    readonly family: string;
+    readonly weights?: readonly string[];
+    readonly usage?: string;
+  }>;
+}
+
+// ---------------------------------------------------------------------------
+// Parser input types
+// ---------------------------------------------------------------------------
 
 export interface CreateGuidelineInput {
-  readonly orgId: string;
   readonly name: string;
-  readonly colors?: readonly BrandColor[];
-  readonly fonts?: readonly BrandFont[];
-  readonly selectors?: readonly BrandSelector[];
+  readonly orgId: string;
+  readonly description?: string;
+  readonly colors?: ReadonlyArray<Omit<BrandColor, 'id'>>;
+  readonly fonts?: ReadonlyArray<Omit<BrandFont, 'id'>>;
+  readonly selectors?: ReadonlyArray<Omit<BrandSelector, 'id'>>;
 }
