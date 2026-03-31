@@ -1,0 +1,8 @@
+type,name,value,usage,context
+color,Primary Blue,#1E40AF,primary,"Headers, CTAs"
+color,White,#FFFFFF,background,"Page backgrounds"
+color,Dark Grey,#1F2937,text,"Body text"
+font,Inter,400;600;700,body,"Body text, paragraphs"
+font,Playfair Display,700,heading,"H1, H2 headings"
+selector,.brand-header,,,Top navigation bar
+selector,#hero-*,,,Hero banner sections
