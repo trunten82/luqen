@@ -50,6 +50,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@luqen/branding": "*",
     "@fastify/csrf-protection": "^7.1.0",
     "@fastify/formbody": "^8.0.0",
     "@fastify/helmet": "^13.0.2",
