@@ -25,7 +25,7 @@ describe('getEffectivePermissions', () => {
     const user = await storage.users.createUser('global-user', 'pass', 'user');
     const perms = await storage.roles.getEffectivePermissions(user.id);
 
-    // Should match the 'user' system role permissions (9)
+    // Should match the 'user' system role permissions (10)
     const userRole = await storage.roles.getRoleByName('user');
     expect(perms.size).toBe(userRole!.permissions.length);
   });
@@ -47,7 +47,7 @@ describe('getEffectivePermissions', () => {
   });
 
   it('unions global and org role permissions via team membership', async () => {
-    // Create a user with 'executive' role (3 global perms: reports.view, reports.export, trends.view)
+    // Create a user with 'executive' role (4 global perms: reports.view, reports.export, trends.view, branding.view)
     const user = await storage.users.createUser('exec-team', 'pass', 'executive');
 
     // Create org (auto-creates Owner/Admin/Member/Viewer roles)
@@ -116,8 +116,8 @@ describe('getEffectivePermissions', () => {
 
     const perms = await storage.roles.getEffectivePermissions(user.id, org.id);
 
-    // Only global executive perms (3)
-    expect(perms.size).toBe(3);
+    // Only global executive perms (4)
+    expect(perms.size).toBe(4);
   });
 
   it('ignores teams with no role_id', async () => {
@@ -133,7 +133,7 @@ describe('getEffectivePermissions', () => {
     const perms = await storage.roles.getEffectivePermissions(user.id, org.id);
 
     // Only global executive perms, no org additions
-    expect(perms.size).toBe(3);
+    expect(perms.size).toBe(4);
   });
 });
 

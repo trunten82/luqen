@@ -33,7 +33,7 @@ describe('RBAC Permission Matrix', () => {
       }
     });
 
-    it('developer has exactly 12 permissions', async () => {
+    it('developer has exactly 14 permissions', async () => {
       const user = await storage.users.createUser(`dev-${randomUUID()}`, 'pass', 'developer');
       const perms = await storage.roles.getUserPermissions(user.id);
 
@@ -50,16 +50,18 @@ describe('RBAC Permission Matrix', () => {
         'repos.manage',
         'repos.credentials',
         'trends.view',
+        'branding.view',
+        'branding.manage',
       ]);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(12);
+      expect(perms.size).toBe(14);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
     });
 
-    it('user has exactly 9 permissions', async () => {
+    it('user has exactly 10 permissions', async () => {
       const user = await storage.users.createUser(`user-${randomUUID()}`, 'pass', 'user');
       const perms = await storage.roles.getUserPermissions(user.id);
 
@@ -73,23 +75,24 @@ describe('RBAC Permission Matrix', () => {
         'issues.assign',
         'manual_testing',
         'trends.view',
+        'branding.view',
       ]);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(9);
+      expect(perms.size).toBe(10);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
     });
 
-    it('executive has exactly 3 permissions', async () => {
+    it('executive has exactly 4 permissions', async () => {
       const user = await storage.users.createUser(`exec-${randomUUID()}`, 'pass', 'executive');
       const perms = await storage.roles.getUserPermissions(user.id);
 
-      const expected = new Set(['reports.view', 'reports.export', 'trends.view']);
+      const expected = new Set(['reports.view', 'reports.export', 'trends.view', 'branding.view']);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(3);
+      expect(perms.size).toBe(4);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
@@ -123,22 +126,23 @@ describe('RBAC Permission Matrix', () => {
       'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view', 'users.create', 'users.delete',
       'users.activate', 'users.reset_password', 'users.roles', 'admin.users', 'admin.roles',
       'admin.teams', 'admin.plugins', 'admin.org', 'admin.system', 'audit.view',
-      'compliance.view', 'compliance.manage',
+      'compliance.view', 'compliance.manage', 'branding.view', 'branding.manage',
     ]);
 
     const developerPermissions = new Set([
       'scans.create', 'reports.view', 'reports.view_technical', 'reports.export',
       'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
       'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
+      'branding.view', 'branding.manage',
     ]);
 
     const userPermissions = new Set([
       'scans.create', 'scans.schedule', 'reports.view', 'reports.export', 'reports.delete',
-      'reports.compare', 'issues.assign', 'manual_testing', 'trends.view',
+      'reports.compare', 'issues.assign', 'manual_testing', 'trends.view', 'branding.view',
     ]);
 
     const executivePermissions = new Set([
-      'reports.view', 'reports.export', 'trends.view',
+      'reports.view', 'reports.export', 'trends.view', 'branding.view',
     ]);
 
     for (const permission of ALL_PERMISSION_IDS) {
