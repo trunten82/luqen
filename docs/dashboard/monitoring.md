@@ -54,6 +54,32 @@ Audit-ready log of all resolved proposals:
 - CSV export with current filters applied
 - Paginated (50 per page)
 
+## KPI Methodology (v2.4.2)
+
+### Home Page KPIs
+
+| KPI | Definition |
+|-----|-----------|
+| **Compliance Rate** | % of sites whose latest scan is compliant. Scans with jurisdictions: `confirmedViolations === 0`. Scans without: `errors === 0`. |
+| **Overall Trend** | Compares errors-per-page rate between latest and previous scan per site. "Improving" if error rate decreased, "Regressing" if increased. |
+| **Sites Monitored** | Count of unique URLs with at least one completed scan. |
+
+### Trends Page KPIs
+
+| KPI | Definition |
+|-----|-----------|
+| **Accessibility Score** | Per-site score: `100 - (errors × 5) / pages`. Org score = average across all sites' latest scans. Scale: 0 e/p=100, 2 e/p=90, 10 e/p=50, 20 e/p=0. |
+| **Overall Change %** | Aggregate error rate change. Positive = improvement (fewer errors), negative = degradation. |
+| **Site Scorecard** | Per-site score with trend (improving/regressing/stable/new) based on score comparison of latest vs previous scan. |
+| **Summary Table** | Detailed error/warning/notice counts with deltas. Trend column uses errors-per-page for consistency with KPIs. |
+
+### Design Principles
+
+- **Errors only** in KPI calculations — warnings and notices are informational
+- **Normalized per page** — fair comparison across scans with different page counts
+- **Per-site averaging** — one bad site doesn't tank the org score
+- **Latest scan per site** for compliance — historical bad scans don't penalize current state
+
 ## Scanner Improvements (v2.4.1)
 
 ### Authentication Header Passthrough
