@@ -5,6 +5,7 @@
   "workspaces": [
     "packages/core",
     "packages/compliance",
+    "packages/branding",
     "packages/dashboard"
   ],
   "scripts": {
@@ -12,6 +13,7 @@
     "build:all": "npm run build --workspaces",
     "build:core": "npm run build -w packages/core",
     "build:compliance": "npm run build -w packages/compliance",
+    "build:branding": "npm run build -w packages/branding",
     "build:dashboard": "npm run build -w packages/dashboard",
     "build:monitor": "npm run build -w packages/monitor",
     "test": "npm run test --workspaces",
