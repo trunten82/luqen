@@ -76,7 +76,9 @@
     "auditLog": "Registro Audit",
     "myProfile": "Il Mio Profilo",
     "monitoring": "Monitoraggio",
-    "changeHistory": "Cronologia Modifiche"
+    "changeHistory": "Cronologia Modifiche",
+    "branding": "Branding",
+    "brandGuidelines": "Linee Guida Brand"
   },
   "auth": {
     "signInTitle": "Accedi",

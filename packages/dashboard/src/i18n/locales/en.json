@@ -78,7 +78,9 @@
     "auditLog": "Audit Log",
     "myProfile": "My Profile",
     "monitoring": "Monitoring",
-    "changeHistory": "Change History"
+    "changeHistory": "Change History",
+    "branding": "Branding",
+    "brandGuidelines": "Brand Guidelines"
   },
   "auth": {
     "signInTitle": "Sign in",

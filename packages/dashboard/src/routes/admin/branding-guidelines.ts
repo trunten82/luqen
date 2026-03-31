@@ -133,6 +133,16 @@ export async function brandingGuidelineRoutes(
     },
   );
 
+  // ── Create form (modal) ──────────────────────────────────────────────────
+
+  server.get(
+    '/admin/branding-guidelines/new',
+    { preHandler: requirePermission('branding.manage') },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      return reply.view('admin/branding-guideline-form.hbs', {});
+    },
+  );
+
   // ── List page ────────────────────────────────────────────────────────────
 
   server.get(
@@ -181,8 +191,9 @@ export async function brandingGuidelineRoutes(
 
         return reply
           .code(200)
-          .header('content-type', 'application/json')
-          .send({ guideline, toast: toastHtml(`Guideline "${escapeHtml(guideline.name)}" created.`) });
+          .header('HX-Redirect', `/admin/branding-guidelines/${guideline.id}`)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Guideline "${escapeHtml(guideline.name)}" created.`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create guideline';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
