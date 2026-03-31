@@ -1,0 +1,113 @@
+<section aria-label="Branding guidelines management">
+  <div class="page-actions">
+    {{#if perm.brandingManage}}
+    <button class="btn btn--primary"
+            hx-get="/admin/branding-guidelines/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            aria-haspopup="dialog">
+      Create Guideline
+    </button>
+    {{/if}}
+    <a href="/admin/branding-guidelines/templates/csv" class="btn btn--ghost btn--sm">Download CSV Template</a>
+    <a href="/admin/branding-guidelines/templates/json" class="btn btn--ghost btn--sm">Download JSON Template</a>
+  </div>
+
+  <div id="branding-guidelines-alert" aria-live="polite"></div>
+
+  {{#if guidelines.length}}
+  <div class="table-wrapper">
+    <table class="table" aria-label="Branding guidelines">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Sites</th>
+          <th scope="col">Status</th>
+          <th scope="col">Version</th>
+          <th scope="col">{{t "common.actions"}}</th>
+        </tr>
+      </thead>
+      <tbody id="branding-guidelines-table">
+        {{#each guidelines}}
+        <tr id="branding-guideline-{{this.id}}">
+          <td data-label="Name">
+            <a href="/admin/branding-guidelines/{{this.id}}">{{this.name}}</a>
+            {{#if this.description}}
+            <p class="text-sm text-muted">{{this.description}}</p>
+            {{/if}}
+          </td>
+          <td data-label="Sites">
+            <span class="badge badge--neutral">{{this.siteCount}} site{{#unless (eq this.siteCount 1)}}s{{/unless}}</span>
+          </td>
+          <td data-label="Status">
+            {{#if this.active}}
+            <span class="badge badge--success">{{t "common.active"}}</span>
+            {{else}}
+            <span class="badge badge--neutral">{{t "common.inactive"}}</span>
+            {{/if}}
+          </td>
+          <td data-label="Version">
+            {{#if this.version}}
+            <span class="badge badge--info">v{{this.version}}</span>
+            {{else}}
+            <span class="text-muted">—</span>
+            {{/if}}
+          </td>
+          <td>
+            <a href="/admin/branding-guidelines/{{this.id}}"
+               class="btn btn--sm btn--ghost"
+               aria-label="View {{this.name}}">View</a>
+            {{#if ../perm.brandingManage}}
+            <button hx-post="/admin/branding-guidelines/{{this.id}}/delete"
+                    hx-confirm="Delete guideline &quot;{{this.name}}&quot;? This cannot be undone."
+                    hx-target="#branding-guideline-{{this.id}}"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Delete {{this.name}}">
+              <input type="hidden" name="_csrf" value="{{csrfToken}}">
+              {{t "common.delete"}}
+            </button>
+            {{/if}}
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="text-muted">No branding guidelines configured. Create one to start classifying accessibility findings as brand-related.</p>
+  {{/if}}
+
+  {{!-- Upload / import form --}}
+  {{#if perm.brandingManage}}
+  <div class="card mt-lg">
+    <h2>Import Guidelines</h2>
+    <p class="text-muted mb-md">Upload a CSV or JSON file to import brand guidelines.</p>
+    <form method="POST"
+          action="/admin/branding-guidelines/upload"
+          class="form-group">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <div class="form-group">
+        <label class="form-label" for="import-content">Content (CSV or JSON)</label>
+        <textarea id="import-content"
+                  name="content"
+                  class="input"
+                  rows="6"
+                  placeholder="Paste CSV or JSON content here…"
+                  aria-describedby="import-format-hint"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="import-format">Format</label>
+        <select id="import-format" name="format" class="select">
+          <option value="csv">CSV</option>
+          <option value="json">JSON</option>
+        </select>
+        <p id="import-format-hint" class="text-sm text-muted mt-xs">Download a template above to see the expected format.</p>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Import</button>
+      </div>
+    </form>
+  </div>
+  {{/if}}
+</section>

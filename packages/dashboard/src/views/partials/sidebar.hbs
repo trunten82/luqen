@@ -106,6 +106,26 @@
       {{t "nav.regulations"}}
     </a>
 
+    {{/if}}
+
+    {{!-- Branding section — brand guidelines management --}}
+    {{#if perm.brandingView}}
+    <span class="sidebar__section-label">{{t "nav.branding"}}</span>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/branding-guidelines')}}is-active{{/if}}"
+       href="/admin/branding-guidelines"
+       aria-current="{{#if (startsWith currentPath '/admin/branding-guidelines')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="7" cy="7" r="2" fill="currentColor"/>
+        <circle cx="13" cy="7" r="2" fill="currentColor"/>
+        <circle cx="7" cy="13" r="2" fill="currentColor"/>
+        <circle cx="13" cy="13" r="2" fill="currentColor"/>
+      </svg>
+      {{t "nav.brandGuidelines"}}
+    </a>
+    {{/if}}
+
     {{!-- Monitoring section — change tracking --}}
     <span class="sidebar__section-label">{{t "nav.monitoring"}}</span>
 
@@ -146,7 +166,6 @@
       </svg>
       {{t "nav.changeHistory"}}
     </a>
-    {{/if}}
 
     {{!-- Plugins section — visible to admin.plugins (org owners) or admin.system --}}
     {{#if perm.adminPlugins}}
