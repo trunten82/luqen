@@ -550,6 +550,34 @@ curl -H "X-API-Key: $LUQEN_API_KEY" \
 
 ---
 
+### `DELETE /api/v1/scans/:id`
+
+Delete a scan record and its associated report files.
+
+**Authentication:** Requires admin role or API key. Non-admin users can only delete scans belonging to their organization.
+
+**Example request:**
+
+```bash
+curl -X DELETE -H "X-API-Key: $LUQEN_API_KEY" \
+  "http://localhost:5000/api/v1/scans/abc123"
+```
+
+**Success response (200):**
+
+```json
+{ "success": true }
+```
+
+**Error responses:**
+
+| Code | Description |
+|------|-------------|
+| 404 | Scan not found |
+| 403 | Forbidden — not admin and scan belongs to different org |
+
+---
+
 ### `GET /api/v1/trends`
 
 Time-series data showing issue counts per site across scans. Use this to build trend charts in Power BI or other tools.

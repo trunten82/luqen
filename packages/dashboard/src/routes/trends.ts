@@ -111,7 +111,7 @@ function buildOrgTotals(scans: readonly ScanRecord[]): readonly OrgTotalPoint[] 
 }
 
 function computeOrgScore(scans: readonly ScanRecord[]): number {
-  // Use the latest scan per site to compute the org-wide score
+  // Average of per-site scores (prevents one bad site from tanking org score)
   const latestBySite = new Map<string, ScanRecord>();
   for (const scan of scans) {
     const existing = latestBySite.get(scan.siteUrl);
@@ -122,21 +122,14 @@ function computeOrgScore(scans: readonly ScanRecord[]): number {
 
   if (latestBySite.size === 0) return 100;
 
-  let totalErrors = 0;
-  let totalWarnings = 0;
-  let totalNotices = 0;
-  let totalPages = 0;
-
+  let scoreSum = 0;
   for (const scan of latestBySite.values()) {
-    totalErrors += scan.errors ?? 0;
-    totalWarnings += scan.warnings ?? 0;
-    totalNotices += scan.notices ?? 0;
-    totalPages += scan.pagesScanned ?? 1;
+    const pages = Math.max(scan.pagesScanned ?? 1, 1);
+    const raw = 100 - ((scan.errors ?? 0) * 10 + (scan.warnings ?? 0) * 3 + (scan.notices ?? 0) * 0.5) / pages;
+    scoreSum += Math.max(0, Math.min(100, raw));
   }
 
-  const pagesScanned = Math.max(totalPages, 1);
-  const rawScore = 100 - (totalErrors * 10 + totalWarnings * 3 + totalNotices * 0.5) / pagesScanned;
-  return Math.round(Math.max(0, Math.min(100, rawScore)));
+  return Math.round(scoreSum / latestBySite.size);
 }
 
 function buildSiteScores(trends: readonly SiteTrend[]): readonly SiteScoreEntry[] {
@@ -192,6 +185,8 @@ function buildKpi(
 
   // Compute per-site percentage change in total issues (latest vs previous)
   const siteChanges: Array<{ siteUrl: string; changePct: number }> = [];
+  let latestIssueSum = 0;
+  let previousIssueSum = 0;
 
   for (const site of trends) {
     const pts = site.points;
@@ -201,8 +196,10 @@ function buildKpi(
     const previous = pts[pts.length - 2];
     const prevTotal = previous.totalIssues;
 
+    latestIssueSum += latest.totalIssues;
+    previousIssueSum += prevTotal;
+
     if (prevTotal === 0) {
-      // Avoid division by zero; treat as 100% increase if latest > 0
       if (latest.totalIssues > 0) {
         siteChanges.push({ siteUrl: site.siteUrl, changePct: 100 });
       } else {
@@ -227,9 +224,10 @@ function buildKpi(
     };
   }
 
-  const avgChange = Math.round(
-    siteChanges.reduce((sum, s) => sum + s.changePct, 0) / siteChanges.length,
-  );
+  // Weighted overall change based on total issue counts (not site-count average)
+  const avgChange = previousIssueSum === 0
+    ? (latestIssueSum > 0 ? 100 : 0)
+    : Math.round(((latestIssueSum - previousIssueSum) / previousIssueSum) * 100);
 
   const sorted = [...siteChanges].sort((a, b) => a.changePct - b.changePct);
   const best = sorted[0]; // Most negative = most improved

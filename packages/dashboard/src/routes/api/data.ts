@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { readFile } from 'node:fs/promises';
+import { readFile, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter, ScanRecord } from '../../db/index.js';
 import { SqliteStorageAdapter } from '../../db/sqlite/index.js';
@@ -495,6 +495,32 @@ export async function dataApiRoutes(
         mcpTools: ['luqen_propose_fixes', 'luqen_apply_fix'],
         a2aHint: 'Agents can call GET /api/v1/scans/:id/fixes for fix proposals',
       });
+    },
+  );
+
+  // ── DELETE /api/v1/scans/:id ──────────────────────────────────────────
+  server.delete<{ Params: ScanParams }>(
+    '/api/v1/scans/:id',
+    { config: rateLimitConfig },
+    async (request: FastifyRequest<{ Params: ScanParams }>, reply: FastifyReply) => {
+      const scan = await storage.scans.getScan(request.params.id);
+
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Scan not found' });
+      }
+
+      // Admin-only: API key users are treated as admin
+      const orgId = getOrgId(request);
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId) {
+        return reply.code(403).send({ error: 'Forbidden' });
+      }
+
+      if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
+        await unlink(scan.jsonReportPath).catch(() => undefined);
+      }
+
+      await storage.scans.deleteScan(request.params.id);
+      return reply.code(200).send({ success: true });
     },
   );
 }

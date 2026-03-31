@@ -39,6 +39,8 @@ tags:
     description: Report export (CSV, PDF)
   - name: health
     description: Service health
+  - name: scans
+    description: Accessibility scan management
   - name: proposals
     description: Compliance update proposal management (admin)
 
@@ -69,6 +71,99 @@ paths:
               example:
                 status: ok
                 version: "0.1.0"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Scans
+  # ────────────────────────────────────────────────────────────────────────────
+  /api/v1/scans:
+    get:
+      operationId: listScans
+      tags: [scans]
+      summary: List accessibility scans
+      parameters:
+        - name: siteUrl
+          in: query
+          schema: { type: string }
+          description: Filter by site URL (substring match)
+        - name: status
+          in: query
+          schema: { type: string, enum: [queued, running, completed, failed] }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+          description: Start date (ISO 8601)
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+          description: End date (ISO 8601)
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Paginated list of scans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Scan" }
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+
+  /api/v1/scans/{id}:
+    get:
+      operationId: getScan
+      tags: [scans]
+      summary: Get scan details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Scan details with report summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Scan" }
+        "404":
+          description: Scan not found
+    delete:
+      operationId: deleteScan
+      tags: [scans]
+      summary: Delete a scan and its report files
+      description: >-
+        Permanently deletes a scan record and associated report files.
+        Admin users can delete any scan; non-admin users can only delete
+        scans belonging to their organization.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Scan deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        "403":
+          description: Forbidden — scan belongs to a different organization
+        "404":
+          description: Scan not found
 
   # ────────────────────────────────────────────────────────────────────────────
   # Plugins
@@ -885,6 +980,24 @@ components:
         format: uuid
 
   schemas:
+    # ── Scans ──────────────────────────────────────────────────────────────────
+    Scan:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        siteUrl: { type: string, format: uri }
+        status: { type: string, enum: [queued, running, completed, failed] }
+        standard: { type: string, enum: [WCAG2A, WCAG2AA, WCAG2AAA] }
+        jurisdictions: { type: array, items: { type: string } }
+        orgId: { type: string }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+        pagesScanned: { type: integer, nullable: true }
+        totalIssues: { type: integer, nullable: true }
+        errors: { type: integer, nullable: true }
+        warnings: { type: integer, nullable: true }
+        notices: { type: integer, nullable: true }
+
     # ── Setup ─────────────────────────────────────────────────────────────────
     SetupUserResponse:
       type: object
