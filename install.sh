@@ -88,6 +88,8 @@ SMTP_FROM=""
 
 # CLI-only options
 INCLUDE_COMPLIANCE=false
+INCLUDE_BRANDING=false
+BRANDING_PORT=4100
 
 # Storage plugins
 STORAGE_S3=false
@@ -310,6 +312,12 @@ run_wizard() {
         INCLUDE_COMPLIANCE=true
         success "Compliance module included"
       fi
+      printf "\n  %sAlso install the branding module?%s\n" "${DIM}" "${RESET}"
+      printf "  (adds brand-aware accessibility analysis — classifies findings as brand-related vs unexpected)\n\n"
+      if ask_yn "Include branding module?" "n"; then
+        INCLUDE_BRANDING=true
+        success "Branding module included"
+      fi
       ;;
     3)
       DEPLOY_MODE="docker"
@@ -361,6 +369,8 @@ run_wizard_docker() {
   # ── Ports ────────────────────────────────────
   header "2. Ports"
   ask "Compliance port" "${COMPLIANCE_PORT}" COMPLIANCE_PORT
+  BRANDING_PORT=$(( COMPLIANCE_PORT + 100 ))
+  ask "Branding port" "${BRANDING_PORT}" BRANDING_PORT
   DASHBOARD_PORT=$(( COMPLIANCE_PORT + 1000 ))
   ask "Dashboard port" "${DASHBOARD_PORT}" DASHBOARD_PORT
 
@@ -612,6 +622,8 @@ run_wizard_bare_metal() {
   # ── 6: Ports ─────────────────────────────────
   header "6. Ports"
   ask "Compliance port" "${COMPLIANCE_PORT}" COMPLIANCE_PORT
+  BRANDING_PORT=$(( COMPLIANCE_PORT + 100 ))
+  ask "Branding port" "${BRANDING_PORT}" BRANDING_PORT
   DASHBOARD_PORT=$(( COMPLIANCE_PORT + 1000 ))
   ask "Dashboard port" "${DASHBOARD_PORT}" DASHBOARD_PORT
 
@@ -650,6 +662,7 @@ print_summary_bare_metal() {
   printf "  %-22s %s\n" "Mode:" "Bare metal"
   printf "  %-22s %s\n" "Install directory:" "${INSTALL_DIR}"
   printf "  %-22s %s\n" "Compliance port:" "${COMPLIANCE_PORT}"
+  printf "  %-22s %s\n" "Branding port:" "${BRANDING_PORT}"
   printf "  %-22s %s\n" "Dashboard port:" "${DASHBOARD_PORT}"
   printf "  %-22s %s\n" "Scanner:" "$([ "${PA11Y_MODE}" = "external" ] && echo "external (${PA11Y_URL})" || echo "built-in (pa11y library)")"
   printf "  %-22s %s\n" "Database:" "${DB_ADAPTER}"
@@ -682,6 +695,7 @@ print_summary_docker() {
   printf "\n"
   printf "  %-22s %s\n" "Mode:" "Docker Compose"
   printf "  %-22s %s\n" "Compliance port:" "${COMPLIANCE_PORT}"
+  printf "  %-22s %s\n" "Branding port:" "${BRANDING_PORT}"
   printf "  %-22s %s\n" "Dashboard port:" "${DASHBOARD_PORT}"
   printf "  %-22s %s\n" "Scanner:" "built-in (pa11y library)"
   printf "  %-22s %s\n" "Database:" "SQLite (container volume)"
@@ -789,9 +803,10 @@ install_and_build() {
 
   cd "${INSTALL_DIR}"
   run_quiet "Installing npm dependencies" npm install --prefer-offline
-  # Build order matters: core → compliance → dashboard
+  # Build order matters: core → compliance → branding → dashboard
   run_quiet "Building @luqen/core" npm run build -w packages/core
   run_quiet "Building @luqen/compliance" npm run build -w packages/compliance
+  run_quiet "Building @luqen/branding" npm run build -w packages/branding
   run_quiet "Building @luqen/dashboard" npm run build -w packages/dashboard
 }
 
@@ -803,11 +818,20 @@ generate_secrets() {
 
   KEYS_DIR="${INSTALL_DIR}/packages/compliance/keys"
   if [ -f "${KEYS_DIR}/private.pem" ]; then
-    info "JWT keys already exist -- reusing"
+    info "Compliance JWT keys already exist -- reusing"
   else
     mkdir -p "${KEYS_DIR}"
     (cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js keys generate) >/dev/null 2>&1
-    success "JWT RS256 key pair generated"
+    success "Compliance JWT RS256 key pair generated"
+  fi
+
+  BRANDING_KEYS_DIR="${INSTALL_DIR}/packages/branding/keys"
+  if [ -f "${BRANDING_KEYS_DIR}/private.pem" ]; then
+    info "Branding JWT keys already exist -- reusing"
+  else
+    mkdir -p "${BRANDING_KEYS_DIR}"
+    (cd "${INSTALL_DIR}/packages/branding" && node dist/cli.js keys generate) >/dev/null 2>&1
+    success "Branding JWT RS256 key pair generated"
   fi
 
   SESSION_SECRET=$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")
@@ -832,20 +856,36 @@ seed_data() {
 # Step 6: Create OAuth client
 # ──────────────────────────────────────────────
 create_oauth_client() {
-  step 6 $TOTAL_STEPS_BM "Creating OAuth client"
+  step 6 $TOTAL_STEPS_BM "Creating OAuth clients"
 
+  # Compliance OAuth client
   CLIENT_CACHE="${INSTALL_DIR}/.install-client"
   if [ -f "${CLIENT_CACHE}" ]; then
     CLIENT_ID=$(grep "^client_id=" "${CLIENT_CACHE}" | cut -d= -f2-)
     CLIENT_SECRET=$(grep "^client_secret=" "${CLIENT_CACHE}" | cut -d= -f2-)
-    info "OAuth client already exists -- reusing"
+    info "Compliance OAuth client already exists -- reusing"
   else
     CLIENT_OUT=$(cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js clients create --name "luqen-dashboard" --scope "admin" --grant client_credentials 2>&1)
     CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "client_id:" | awk '{print $2}')
     CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "client_secret:" | awk '{print $2}')
     printf "client_id=%s\nclient_secret=%s\n" "${CLIENT_ID}" "${CLIENT_SECRET}" > "${CLIENT_CACHE}"
     chmod 600 "${CLIENT_CACHE}"
-    success "OAuth client created"
+    success "Compliance OAuth client created"
+  fi
+
+  # Branding OAuth client
+  BRANDING_CLIENT_CACHE="${INSTALL_DIR}/.install-branding-client"
+  if [ -f "${BRANDING_CLIENT_CACHE}" ]; then
+    BRANDING_CLIENT_ID=$(grep "^client_id=" "${BRANDING_CLIENT_CACHE}" | cut -d= -f2-)
+    BRANDING_CLIENT_SECRET=$(grep "^client_secret=" "${BRANDING_CLIENT_CACHE}" | cut -d= -f2-)
+    info "Branding OAuth client already exists -- reusing"
+  else
+    CLIENT_OUT=$(cd "${INSTALL_DIR}/packages/branding" && node dist/cli.js clients create --name "luqen-dashboard" --scope "admin" --grant client_credentials 2>&1)
+    BRANDING_CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "client_id:" | awk '{print $2}')
+    BRANDING_CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "client_secret:" | awk '{print $2}')
+    printf "client_id=%s\nclient_secret=%s\n" "${BRANDING_CLIENT_ID}" "${BRANDING_CLIENT_SECRET}" > "${BRANDING_CLIENT_CACHE}"
+    chmod 600 "${BRANDING_CLIENT_CACHE}"
+    success "Branding OAuth client created"
   fi
 }
 
@@ -879,9 +919,12 @@ write_config() {
 {
   "port": ${DASHBOARD_PORT},
   "complianceUrl": "http://localhost:${COMPLIANCE_PORT}",
+  "brandingUrl": "http://localhost:${BRANDING_PORT}",
   "sessionSecret": "${SESSION_SECRET}",
   "complianceClientId": "${CLIENT_ID}",
   "complianceClientSecret": "${CLIENT_SECRET}",
+  "brandingClientId": "${BRANDING_CLIENT_ID:-}",
+  "brandingClientSecret": "${BRANDING_CLIENT_SECRET:-}",
   "dbPath": "${INSTALL_DIR}/dashboard.db",
   "reportsDir": "${INSTALL_DIR}/reports",
   "pluginsDir": "${INSTALL_DIR}/plugins"${webservice_field}${db_config}
@@ -925,6 +968,26 @@ RestartSec=5
 WantedBy=multi-user.target
 UNIT
 
+  # Branding service
+  cat > /etc/systemd/system/luqen-branding.service <<UNIT
+[Unit]
+Description=Luqen Branding Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${INSTALL_DIR}/packages/branding
+Environment=NODE_ENV=production
+Environment=BRANDING_PORT=${BRANDING_PORT}
+ExecStart=${node_path} ${INSTALL_DIR}/packages/branding/dist/cli.js serve --port ${BRANDING_PORT}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
   # Dashboard service — absolute paths everywhere
   local env_webservice=""
   if [ "${PA11Y_MODE}" = "external" ] && [ -n "${PA11Y_URL}" ]; then
@@ -934,8 +997,8 @@ UNIT
   cat > /etc/systemd/system/luqen-dashboard.service <<UNIT
 [Unit]
 Description=Luqen Dashboard
-After=network.target luqen-compliance.service
-Wants=luqen-compliance.service
+After=network.target luqen-compliance.service luqen-branding.service
+Wants=luqen-compliance.service luqen-branding.service
 
 [Service]
 Type=simple
@@ -952,6 +1015,7 @@ UNIT
 
   systemctl daemon-reload >/dev/null 2>&1
   systemctl enable luqen-compliance.service >/dev/null 2>&1
+  systemctl enable luqen-branding.service >/dev/null 2>&1
   systemctl enable luqen-dashboard.service >/dev/null 2>&1
   success "systemd services created and enabled"
 }
@@ -975,6 +1039,19 @@ start_services_and_post_install() {
       sleep 2
     done
     success "Compliance service running"
+
+    systemctl start luqen-branding.service >/dev/null 2>&1
+    info "Waiting for branding service..."
+    attempts=0
+    until curl -sf "http://localhost:${BRANDING_PORT}/api/v1/health" >/dev/null 2>&1; do
+      attempts=$(( attempts + 1 ))
+      if [ "${attempts}" -ge 15 ]; then
+        error "Branding service did not start. Check: journalctl -u luqen-branding"
+        return
+      fi
+      sleep 2
+    done
+    success "Branding service running"
 
     systemctl start luqen-dashboard.service >/dev/null 2>&1
     info "Waiting for dashboard..."
@@ -1006,6 +1083,21 @@ start_services_and_post_install() {
       sleep 2
     done
     success "Compliance service running"
+
+    nohup node "${INSTALL_DIR}/packages/branding/dist/cli.js" serve --port "${BRANDING_PORT}" \
+      > /tmp/luqen-branding-install.log 2>&1 &
+    BRANDING_PID=$!
+    info "Waiting for branding service..."
+    attempts=0
+    until curl -sf "http://localhost:${BRANDING_PORT}/api/v1/health" >/dev/null 2>&1; do
+      attempts=$(( attempts + 1 ))
+      if [ "${attempts}" -ge 15 ]; then
+        error "Branding service did not start. Check: /tmp/luqen-branding-install.log"
+        return
+      fi
+      sleep 2
+    done
+    success "Branding service running"
 
     nohup node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" serve --config "${CONFIG_FILE}" \
       > /tmp/luqen-dash-install.log 2>&1 &
