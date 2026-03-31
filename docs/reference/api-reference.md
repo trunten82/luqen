@@ -770,4 +770,139 @@ Set up **Scheduled Refresh** in the Power BI service to pull updated data automa
 
 ---
 
-*See also: [compliance/README.md](../compliance/README.md) | [integrations/claude-code.md](claude-code.md) | [configuration/compliance.md](../configuration/compliance.md)*
+---
+
+## Branding Service API
+
+Base URL: `http://localhost:4100/api/v1` (branding service). Auth: Bearer JWT token obtained from `/api/v1/oauth/token`.
+
+Full interactive docs: `http://localhost:4100/docs` (Swagger UI).
+
+OpenAPI spec: [`docs/reference/openapi-branding.yaml`](openapi-branding.yaml).
+
+For full module documentation including architecture, matching strategies, template format, and dashboard integration, see [`docs/branding/README.md`](../branding/README.md).
+
+### Authentication
+
+```bash
+curl -X POST http://localhost:4100/api/v1/oauth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "grant_type": "client_credentials",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_SECRET",
+    "scope": "read"
+  }'
+```
+
+Response: `{ "access_token": "eyJ...", "token_type": "Bearer", "expires_in": 3600 }`
+
+### Health
+
+#### `GET /health`
+
+No auth required.
+
+Response: `{ "status": "ok", "version": "1.0.0", "timestamp": "..." }`
+
+### Guidelines
+
+| Method | Path | Scope | Description |
+|--------|------|-------|-------------|
+| `GET` | `/guidelines` | `read` | List guidelines (`?orgId=` to scope by org) |
+| `POST` | `/guidelines` | `write` | Create guideline |
+| `GET` | `/guidelines/:id` | `read` | Get guideline with colors, fonts, and selectors |
+| `PUT` | `/guidelines/:id` | `write` | Update guideline name/description |
+| `DELETE` | `/guidelines/:id` | `admin` | Delete guideline (cascades to colors/fonts/selectors/sites) |
+
+### Colors, Fonts, and Selectors
+
+| Method | Path | Scope | Description |
+|--------|------|-------|-------------|
+| `POST` | `/guidelines/:id/colors` | `write` | Add a color pair (foreground + background hex) |
+| `DELETE` | `/guidelines/:id/colors/:colorId` | `write` | Remove a color |
+| `POST` | `/guidelines/:id/fonts` | `write` | Add a font family |
+| `DELETE` | `/guidelines/:id/fonts/:fontId` | `write` | Remove a font |
+| `POST` | `/guidelines/:id/selectors` | `write` | Add a CSS selector pattern |
+| `DELETE` | `/guidelines/:id/selectors/:selectorId` | `write` | Remove a selector |
+
+### Site Assignments
+
+| Method | Path | Scope | Description |
+|--------|------|-------|-------------|
+| `GET` | `/guidelines/:id/sites` | `read` | List sites assigned to a guideline |
+| `POST` | `/guidelines/:id/sites` | `write` | Assign a site URL to a guideline |
+| `DELETE` | `/guidelines/:id/sites` | `write` | Unassign a site (body: `{ "siteUrl": "..." }`) |
+
+### Matching
+
+#### `POST /match` — `read` scope
+
+Match scan issues against branding guidelines. Returns each issue annotated with a `brandingMatch` result (or null).
+
+```bash
+curl -X POST http://localhost:4100/api/v1/match \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "siteUrl": "https://www.campari.com",
+    "orgId": "campari",
+    "issues": [
+      {
+        "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+        "type": "error",
+        "message": "This element has insufficient colour contrast ratio.",
+        "selector": ".brand-header h1",
+        "context": "<h1 class=\"brand-header\">Welcome</h1>"
+      }
+    ]
+  }'
+```
+
+Response:
+```json
+{
+  "annotatedIssues": [
+    {
+      "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+      "type": "error",
+      "message": "This element has insufficient colour contrast ratio.",
+      "selector": ".brand-header h1",
+      "context": "<h1 class=\"brand-header\">Welcome</h1>",
+      "brandingMatch": {
+        "guidelineId": "abc-123",
+        "guidelineName": "Campari Group Main Brand",
+        "strategy": "selector",
+        "detail": ".brand-header"
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "brandRelated": 1,
+    "unexpected": 0,
+    "byStrategy": { "color": 0, "font": 0, "selector": 1 }
+  }
+}
+```
+
+Matching strategies applied in order: **color-pair** (Delta-E ≤ 5.0), **font** (normalized family name), **selector** (substring/prefix match).
+
+### Templates
+
+| Method | Path | Scope | Description |
+|--------|------|-------|-------------|
+| `GET` | `/templates/csv` | `read` | Download CSV import template |
+| `GET` | `/templates/json` | `read` | Download JSON import template |
+
+### Scope reference
+
+| Scope | Access |
+|-------|--------|
+| `read` | All GETs, `POST /match`, `GET /templates` |
+| `write` | Create/update guidelines; add/remove colors, fonts, selectors, sites |
+| `admin` | All write + delete guidelines, manage OAuth clients |
+
+---
+
+*See also: [compliance/README.md](../compliance/README.md) | [branding/README.md](../branding/README.md) | [integrations/claude-code.md](claude-code.md) | [configuration/compliance.md](../configuration/compliance.md)*
