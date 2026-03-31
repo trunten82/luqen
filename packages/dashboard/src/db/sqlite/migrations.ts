@@ -1094,4 +1094,12 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission)
   AND r.org_id = 'system';
     `,
   },
+  {
+    id: '036',
+    name: 'add-branding-client-to-orgs',
+    sql: `
+ALTER TABLE organizations ADD COLUMN branding_client_id TEXT;
+ALTER TABLE organizations ADD COLUMN branding_client_secret TEXT;
+    `,
+  },
 ];

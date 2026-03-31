@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { safeGetSystemHealth, getSeedStatus } from '../../compliance-client.js';
+import { safeGetHealth as safeGetBrandingHealth } from '../../branding-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -22,7 +23,7 @@ async function getPackageVersion(): Promise<string> {
 
 export async function systemRoutes(
   server: FastifyInstance,
-  config: { complianceUrl: string; webserviceUrl?: string; dbPath: string },
+  config: { complianceUrl: string; brandingUrl?: string; webserviceUrl?: string; dbPath: string },
 ): Promise<void> {
   // GET /admin/system — service health, DB stats, seed status
   server.get(
@@ -31,12 +32,13 @@ export async function systemRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
 
-      const [complianceHealth, , seedStatus, packageVersion] =
+      const [complianceHealth, , seedStatus, packageVersion, brandingHealth] =
         await Promise.allSettled([
           safeGetSystemHealth(config.complianceUrl, config.webserviceUrl),
           Promise.resolve(undefined), // pa11y health is part of getSystemHealth
           getSeedStatus(config.complianceUrl, token),
           getPackageVersion(),
+          config.brandingUrl != null ? safeGetBrandingHealth(config.brandingUrl) : Promise.resolve(null),
         ]);
 
       const complianceStatus =
@@ -56,6 +58,16 @@ export async function systemRoutes(
       } else {
         pa11yStatus = 'unknown';
         pa11yLabel = 'Pa11y Webservice';
+      }
+
+      // Branding service status
+      let brandingStatus: string;
+      if (config.brandingUrl == null) {
+        brandingStatus = 'unknown';
+      } else if (brandingHealth.status === 'fulfilled' && brandingHealth.value != null) {
+        brandingStatus = brandingHealth.value.status === 'ok' ? 'ok' : 'error';
+      } else {
+        brandingStatus = 'error';
       }
 
       // Database stats
@@ -87,6 +99,7 @@ export async function systemRoutes(
           dashboard: { status: 'ok', label: 'Dashboard' },
           compliance: { status: complianceStatus, label: 'Compliance Service' },
           pa11y: { status: pa11yStatus, label: pa11yLabel },
+          branding: { status: brandingStatus, label: 'Branding Service' },
         },
         db: {
           sizeKb: dbSizeKb,

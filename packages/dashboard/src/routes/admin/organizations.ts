@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter, Organization } from '../../db/index.js';
 import { deleteOrgData, createComplianceClient } from '../../compliance-client.js';
+import { createBrandingOrgClient } from '../../branding-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, toastHtml, escapeHtml } from './helpers.js';
 
@@ -27,6 +28,7 @@ export async function organizationRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
   complianceUrl?: string,
+  brandingUrl?: string,
 ): Promise<void> {
   // GET /admin/organizations — list all organizations
   server.get(
@@ -99,6 +101,19 @@ export async function organizationRoutes(
             await storage.organizations.updateOrgComplianceClient(created.id, clientId, clientSecret);
           } catch (err) {
             server.log.warn({ err }, 'Failed to create compliance client for org');
+          }
+        }
+
+        // Best effort — branding client creation failure must not block org creation
+        if (brandingUrl !== undefined) {
+          try {
+            const token = getToken(request);
+            const { clientId, clientSecret } = await createBrandingOrgClient(
+              brandingUrl, token, created.id, created.slug,
+            );
+            await storage.organizations.updateOrgBrandingClient(created.id, clientId, clientSecret);
+          } catch (err) {
+            server.log.warn({ err }, 'Failed to create branding client for org');
           }
         }
 

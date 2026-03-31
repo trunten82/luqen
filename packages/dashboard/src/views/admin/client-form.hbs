@@ -24,6 +24,17 @@
         <span id="cl-scopes-hint" class="form-hint">{{t "admin.clients.scopesHint"}}</span>
       </div>
 
+      {{#if availableServices}}
+      <div class="form-group">
+        <label for="cl-service" class="form-label">{{t "common.service"}}</label>
+        <select id="cl-service" name="service" class="input">
+          {{#each availableServices}}
+          <option value="{{value}}">{{label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{/if}}
+
       <fieldset class="form-group">
         <legend class="form-label">{{t "admin.clients.grantTypes"}}</legend>
         {{#each availableGrantTypes}}

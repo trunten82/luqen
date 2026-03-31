@@ -171,6 +171,98 @@ export async function matchIssues(
   return unwrapList<BrandedIssueResponse>(result);
 }
 
+// ── OAuth Client Management ──────────────────────────────────────────────────
+
+export interface BrandingOAuthClient {
+  readonly id: string;
+  readonly name: string;
+  readonly scopes: string[];
+  readonly grantTypes: string[];
+  readonly orgId: string;
+  readonly createdAt: string;
+}
+
+export async function listBrandingClients(
+  brandingUrl: string,
+  token: string,
+  orgId?: string,
+): Promise<BrandingOAuthClient[]> {
+  const result = await apiFetch<unknown>(`${brandingUrl}/api/v1/clients`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, orgId);
+  return unwrapList<BrandingOAuthClient>(result);
+}
+
+export async function createBrandingClient(
+  brandingUrl: string,
+  token: string,
+  name: string,
+  scopes: string[],
+  grantTypes: string[],
+  orgId?: string,
+): Promise<BrandingOAuthClient & { secret: string }> {
+  const result = await apiFetch<unknown>(
+    `${brandingUrl}/api/v1/clients`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name, scopes, grantTypes, orgId }),
+    },
+    orgId,
+  );
+  // The branding API wraps in { data: ... }
+  if (result != null && typeof result === 'object' && 'data' in result) {
+    return (result as { data: BrandingOAuthClient & { secret: string } }).data;
+  }
+  return result as BrandingOAuthClient & { secret: string };
+}
+
+export async function createBrandingOrgClient(
+  brandingUrl: string,
+  adminToken: string,
+  orgId: string,
+  orgName: string,
+): Promise<{ clientId: string; clientSecret: string }> {
+  const response = await fetch(`${brandingUrl}/api/v1/clients`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${adminToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: `dashboard-${orgName}`,
+      scopes: ['read', 'write'],
+      grantTypes: ['client_credentials'],
+      orgId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create branding client: ${response.status}`);
+  }
+
+  const data = await response.json() as { data: { id: string; secret: string } };
+  return { clientId: data.data.id, clientSecret: data.data.secret };
+}
+
+export async function revokeBrandingClient(
+  brandingUrl: string,
+  token: string,
+  clientId: string,
+): Promise<void> {
+  const response = await fetch(`${brandingUrl}/api/v1/clients/${encodeURIComponent(clientId)}/revoke`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`HTTP ${response.status}: ${body}`);
+  }
+}
+
 export async function safeGetHealth(
   brandingUrl: string,
 ): Promise<{ status: string } | null> {

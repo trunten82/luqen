@@ -15,6 +15,8 @@ interface OrgRow {
   created_at: string;
   compliance_client_id: string | null;
   compliance_client_secret: string | null;
+  branding_client_id: string | null;
+  branding_client_secret: string | null;
 }
 
 interface OrgMemberRow {
@@ -32,6 +34,8 @@ function rowToOrg(row: OrgRow): Organization {
     createdAt: row.created_at,
     ...(row.compliance_client_id ? { complianceClientId: row.compliance_client_id } : {}),
     ...(row.compliance_client_secret ? { complianceClientSecret: row.compliance_client_secret } : {}),
+    ...(row.branding_client_id ? { brandingClientId: row.branding_client_id } : {}),
+    ...(row.branding_client_secret ? { brandingClientSecret: row.branding_client_secret } : {}),
   };
 }
 
@@ -178,6 +182,24 @@ export class SqliteOrgRepository implements OrgRepository {
   async updateOrgComplianceClient(orgId: string, clientId: string, clientSecret: string): Promise<void> {
     this.db.prepare(
       'UPDATE organizations SET compliance_client_id = ?, compliance_client_secret = ? WHERE id = ?',
+    ).run(clientId, clientSecret, orgId);
+  }
+
+  async getOrgBrandingCredentials(orgId: string): Promise<{ clientId: string; clientSecret: string } | null> {
+    const row = this.db.prepare(
+      'SELECT branding_client_id, branding_client_secret FROM organizations WHERE id = ?',
+    ).get(orgId) as { branding_client_id: string | null; branding_client_secret: string | null } | undefined;
+
+    if (row === undefined || !row.branding_client_id || !row.branding_client_secret) {
+      return null;
+    }
+
+    return { clientId: row.branding_client_id, clientSecret: row.branding_client_secret };
+  }
+
+  async updateOrgBrandingClient(orgId: string, clientId: string, clientSecret: string): Promise<void> {
+    this.db.prepare(
+      'UPDATE organizations SET branding_client_id = ?, branding_client_secret = ? WHERE id = ?',
     ).run(clientId, clientSecret, orgId);
   }
 

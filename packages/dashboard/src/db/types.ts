@@ -309,6 +309,8 @@ export interface Organization {
   readonly createdAt: string;
   readonly complianceClientId?: string;
   readonly complianceClientSecret?: string;
+  readonly brandingClientId?: string;
+  readonly brandingClientSecret?: string;
 }
 
 export interface OrgMember {
