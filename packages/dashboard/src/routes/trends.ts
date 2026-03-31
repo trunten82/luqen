@@ -303,7 +303,8 @@ export async function trendRoutes(
   server.get(
     '/reports/trends',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const orgId = request.user?.currentOrgId;
+      const isAdmin = request.user?.role === 'admin';
+      const orgId = isAdmin ? undefined : request.user?.currentOrgId;
       const scans = await storage.scans.getTrendData(orgId);
       const trends = groupBySite(scans);
       const summaryTable = buildSummaryTable(trends);
