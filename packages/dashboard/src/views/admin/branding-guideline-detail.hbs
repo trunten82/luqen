@@ -1,19 +1,14 @@
-<section aria-label="Branding guideline detail">
+<section aria-label="{{t "admin.branding.guidelineDetail"}}">
 
   {{!-- Header --}}
   <div class="admin-header">
     <div class="flex flex-wrap items-center gap-sm mb-sm">
-      <a href="/admin/branding-guidelines" class="btn btn--ghost btn--sm">&larr; Back to Guidelines</a>
+      <a href="/admin/branding-guidelines" class="btn btn--ghost btn--sm">&larr; {{t "admin.branding.backToList"}}</a>
     </div>
     <div class="flex flex-wrap items-center gap-sm">
       <h2 class="page-header__title">{{guideline.name}}</h2>
       {{#if guideline.version}}
       <span class="badge badge--info">v{{guideline.version}}</span>
-      {{/if}}
-      {{#if guideline.active}}
-      <span class="badge badge--success">{{t "common.active"}}</span>
-      {{else}}
-      <span class="badge badge--neutral">{{t "common.inactive"}}</span>
       {{/if}}
     </div>
     {{#if guideline.description}}
@@ -21,22 +16,40 @@
     {{/if}}
 
     {{#if perm.brandingManage}}
-    <div class="flex flex-wrap gap-sm mt-sm">
+    <div id="branding-status-area" class="flex flex-wrap items-center gap-sm mt-sm">
+      {{#if guideline.active}}
+      <span class="badge badge--success">{{t "common.active"}}</span>
       <button hx-post="/admin/branding-guidelines/{{guideline.id}}/toggle"
-              hx-target="#branding-detail-toast"
-              hx-swap="innerHTML"
+              hx-target="#branding-status-area"
+              hx-swap="outerHTML"
               class="btn btn--sm btn--ghost">
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        {{#if guideline.active}}Deactivate{{else}}Activate{{/if}}
+        {{t "admin.branding.deactivate"}}
       </button>
+      {{else}}
+      <span class="badge badge--neutral">{{t "common.inactive"}}</span>
+      <button hx-post="/admin/branding-guidelines/{{guideline.id}}/toggle"
+              hx-target="#branding-status-area"
+              hx-swap="outerHTML"
+              class="btn btn--sm btn--ghost">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        {{t "admin.branding.activate"}}
+      </button>
+      {{/if}}
       <button hx-post="/admin/branding-guidelines/{{guideline.id}}/delete"
-              hx-confirm="Delete guideline &quot;{{guideline.name}}&quot;? This cannot be undone."
-              hx-target="#branding-detail-toast"
-              hx-swap="innerHTML"
+              hx-confirm="{{t "admin.branding.confirmDelete" name=guideline.name}}"
               class="btn btn--sm btn--danger">
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
         {{t "common.delete"}}
       </button>
+    </div>
+    {{else}}
+    <div class="flex flex-wrap items-center gap-sm mt-sm">
+      {{#if guideline.active}}
+      <span class="badge badge--success">{{t "common.active"}}</span>
+      {{else}}
+      <span class="badge badge--neutral">{{t "common.inactive"}}</span>
+      {{/if}}
     </div>
     {{/if}}
   </div>
@@ -44,192 +57,223 @@
   <div id="branding-detail-toast" aria-live="polite"></div>
 
   {{!-- Tab navigation --}}
-  <div class="tabs" role="tablist" aria-label="Guideline sections">
-    <button class="tab tab--active" role="tab" aria-selected="true" aria-controls="tab-colors"
-            data-action="switch-tab" data-target-show="tab-colors" data-target-hide="tab-fonts tab-selectors tab-sites tab-import"
-            data-peer="tab-btn-fonts tab-btn-selectors tab-btn-sites tab-btn-import"
+  <div class="rpt-tabs" role="tablist" aria-label="{{t "admin.branding.guidelineSections"}}">
+    <button class="rpt-tab rpt-tab--active" role="tab" aria-selected="true" aria-controls="tab-colors"
+            data-action="switch-tab" data-target-show="tab-colors" data-target-hide="tab-fonts tab-selectors tab-sites"
+            data-peer="tab-btn-fonts tab-btn-selectors tab-btn-sites"
             id="tab-btn-colors">
-      Colors <span class="badge badge--neutral">{{colors.length}}</span>
+      {{t "admin.branding.colors"}} <span class="badge badge--neutral">{{colors.length}}</span>
     </button>
-    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-fonts"
-            data-action="switch-tab" data-target-show="tab-fonts" data-target-hide="tab-colors tab-selectors tab-sites tab-import"
-            data-peer="tab-btn-colors tab-btn-selectors tab-btn-sites tab-btn-import"
+    <button class="rpt-tab" role="tab" aria-selected="false" aria-controls="tab-fonts"
+            data-action="switch-tab" data-target-show="tab-fonts" data-target-hide="tab-colors tab-selectors tab-sites"
+            data-peer="tab-btn-colors tab-btn-selectors tab-btn-sites"
             id="tab-btn-fonts">
-      Fonts <span class="badge badge--neutral">{{fonts.length}}</span>
+      {{t "admin.branding.fonts"}} <span class="badge badge--neutral">{{fonts.length}}</span>
     </button>
-    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-selectors"
-            data-action="switch-tab" data-target-show="tab-selectors" data-target-hide="tab-colors tab-fonts tab-sites tab-import"
-            data-peer="tab-btn-colors tab-btn-fonts tab-btn-sites tab-btn-import"
+    <button class="rpt-tab" role="tab" aria-selected="false" aria-controls="tab-selectors"
+            data-action="switch-tab" data-target-show="tab-selectors" data-target-hide="tab-colors tab-fonts tab-sites"
+            data-peer="tab-btn-colors tab-btn-fonts tab-btn-sites"
             id="tab-btn-selectors">
-      Selectors <span class="badge badge--neutral">{{selectors.length}}</span>
+      {{t "admin.branding.selectors"}} <span class="badge badge--neutral">{{selectors.length}}</span>
     </button>
-    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-sites"
-            data-action="switch-tab" data-target-show="tab-sites" data-target-hide="tab-colors tab-fonts tab-selectors tab-import"
-            data-peer="tab-btn-colors tab-btn-fonts tab-btn-selectors tab-btn-import"
+    <button class="rpt-tab" role="tab" aria-selected="false" aria-controls="tab-sites"
+            data-action="switch-tab" data-target-show="tab-sites" data-target-hide="tab-colors tab-fonts tab-selectors"
+            data-peer="tab-btn-colors tab-btn-fonts tab-btn-selectors"
             id="tab-btn-sites">
-      Sites <span class="badge badge--neutral">{{sites.length}}</span>
-    </button>
-    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-import"
-            data-action="switch-tab" data-target-show="tab-import" data-target-hide="tab-colors tab-fonts tab-selectors tab-sites"
-            data-peer="tab-btn-colors tab-btn-fonts tab-btn-selectors tab-btn-sites"
-            id="tab-btn-import">
-      Import / Export
+      {{t "admin.branding.sites"}} <span class="badge badge--neutral">{{sites.length}}</span>
     </button>
   </div>
 
   {{!-- Colors tab --}}
   <div id="tab-colors" role="tabpanel" aria-labelledby="tab-btn-colors">
     {{#if perm.brandingManage}}
-    <form hx-post="/admin/branding-guidelines/{{guideline.id}}/colors"
-          hx-target="#branding-detail-toast"
-          hx-swap="innerHTML"
-          data-reset-on-success
-          class="card mb-lg mt-md">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
-      <h3>Add Color</h3>
-      <div class="flex flex-wrap gap-sm mt-sm">
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="color-name">Name</label>
-          <input id="color-name" type="text" name="name" class="input" placeholder="Primary Blue" required>
+    <details class="card mb-lg mt-md">
+      <summary class="btn btn--sm btn--ghost">{{t "admin.branding.addColor"}}</summary>
+      <form hx-post="/admin/branding-guidelines/{{guideline.id}}/colors"
+            hx-target="#branding-detail-toast"
+            hx-swap="innerHTML"
+            data-reset-on-success
+            novalidate
+            class="mt-sm">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <div class="flex flex-wrap gap-sm mt-sm">
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="color-name">{{t "common.name"}}</label>
+            <input id="color-name" type="text" name="name" class="input" placeholder="{{t "admin.branding.colorNamePlaceholder"}}" required>
+          </div>
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="color-hex">{{t "admin.branding.hexValue"}}</label>
+            <input id="color-hex" type="text" name="hexValue" class="input" placeholder="#0056b3" pattern="^#[0-9a-fA-F]{3,8}$" required>
+          </div>
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="color-usage">{{t "admin.branding.usage"}}</label>
+            <input id="color-usage" type="text" name="usage" class="input" placeholder="{{t "admin.branding.usagePlaceholder"}}">
+          </div>
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="color-context">{{t "admin.branding.context"}}</label>
+            <input id="color-context" type="text" name="context" class="input" placeholder="{{t "admin.branding.contextPlaceholder"}}">
+          </div>
+          <button type="submit" class="btn btn--primary btn--sm">{{t "admin.branding.addColor"}}</button>
         </div>
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="color-hex">Hex Value</label>
-          <input id="color-hex" type="text" name="hexValue" class="input" placeholder="#0056b3" pattern="^#[0-9a-fA-F]{3,8}$" required>
-        </div>
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="color-usage">Usage</label>
-          <input id="color-usage" type="text" name="usage" class="input" placeholder="primary">
-        </div>
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="color-context">Context</label>
-          <input id="color-context" type="text" name="context" class="input" placeholder="backgrounds, buttons">
-        </div>
-        <button type="submit" class="btn btn--primary btn--sm">Add Color</button>
-      </div>
-    </form>
+      </form>
+    </details>
     {{/if}}
 
     {{#if colors.length}}
-    <div class="card-grid">
-      {{#each colors}}
-      <div class="card card--compact" id="color-card-{{this.id}}">
-        <div class="color-swatch" style="background-color: {{this.hexValue}}; width: 48px; height: 48px; border-radius: 4px; border: 1px solid var(--border-color);" aria-label="Color swatch for {{this.name}}"></div>
-        <div class="mt-xs">
-          <strong>{{this.name}}</strong>
-          <code class="text-sm">{{this.hexValue}}</code>
-          {{#if this.usage}}
-          <span class="badge badge--info">{{this.usage}}</span>
-          {{/if}}
-          {{#if this.context}}
-          <p class="text-sm text-muted">{{this.context}}</p>
-          {{/if}}
-        </div>
-        {{#if ../perm.brandingManage}}
-        <button hx-post="/admin/branding-guidelines/{{../guideline.id}}/colors/{{this.id}}/delete"
-                hx-confirm="Remove color &quot;{{this.name}}&quot;?"
-                hx-target="#color-card-{{this.id}}"
-                hx-swap="outerHTML"
-                class="btn btn--sm btn--danger mt-xs">
-          <input type="hidden" name="_csrf" value="{{csrfToken}}">
-          Remove
-        </button>
-        {{/if}}
-      </div>
-      {{/each}}
+    <div class="table-wrapper mt-md">
+      <table class="table" aria-label="{{t "admin.branding.colors"}}">
+        <thead>
+          <tr>
+            <th scope="col">{{t "admin.branding.swatch"}}</th>
+            <th scope="col">{{t "common.name"}}</th>
+            <th scope="col">{{t "admin.branding.hexValue"}}</th>
+            <th scope="col">{{t "admin.branding.usage"}}</th>
+            <th scope="col">{{t "admin.branding.context"}}</th>
+            {{#if perm.brandingManage}}
+            <th scope="col">{{t "common.actions"}}</th>
+            {{/if}}
+          </tr>
+        </thead>
+        <tbody id="colors-table">
+          {{#each colors}}
+          <tr id="color-row-{{this.id}}">
+            <td data-label="Swatch">
+              <span style="display:inline-block;width:24px;height:24px;border-radius:4px;border:1px solid var(--border-color);background-color:{{this.hexValue}};" aria-label="{{this.name}}"></span>
+            </td>
+            <td data-label="Name"><strong>{{this.name}}</strong></td>
+            <td data-label="Hex"><code>{{this.hexValue}}</code></td>
+            <td data-label="Usage">{{#if this.usage}}<span class="badge badge--info">{{this.usage}}</span>{{else}}<span class="text-muted">—</span>{{/if}}</td>
+            <td data-label="Context">{{#if this.context}}{{this.context}}{{else}}<span class="text-muted">—</span>{{/if}}</td>
+            {{#if ../perm.brandingManage}}
+            <td>
+              <button hx-post="/admin/branding-guidelines/{{../guideline.id}}/colors/{{this.id}}/delete"
+                      hx-confirm="{{t "admin.branding.confirmRemoveColor" name=this.name}}"
+                      hx-target="#color-row-{{this.id}}"
+                      hx-swap="outerHTML"
+                      class="btn btn--sm btn--danger"
+                      aria-label="{{t "admin.branding.remove"}} {{this.name}}">
+                <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                {{t "admin.branding.remove"}}
+              </button>
+            </td>
+            {{/if}}
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
     </div>
     {{else}}
-    <p class="text-muted mt-md">No colors defined. Add colors above to enable color matching.</p>
+    <p class="text-muted mt-md">{{t "admin.branding.noColors"}}</p>
     {{/if}}
   </div>
 
   {{!-- Fonts tab --}}
   <div id="tab-fonts" role="tabpanel" aria-labelledby="tab-btn-fonts" class="rpt-tab-panel--hidden">
     {{#if perm.brandingManage}}
-    <form hx-post="/admin/branding-guidelines/{{guideline.id}}/fonts"
-          hx-target="#branding-detail-toast"
-          hx-swap="innerHTML"
-          data-reset-on-success
-          class="card mb-lg mt-md">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
-      <h3>Add Font</h3>
-      <div class="flex flex-wrap gap-sm mt-sm">
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="font-family">Family</label>
-          <input id="font-family" type="text" name="family" class="input" placeholder="Helvetica Neue" required>
+    <details class="card mb-lg mt-md">
+      <summary class="btn btn--sm btn--ghost">{{t "admin.branding.addFont"}}</summary>
+      <form hx-post="/admin/branding-guidelines/{{guideline.id}}/fonts"
+            hx-target="#branding-detail-toast"
+            hx-swap="innerHTML"
+            data-reset-on-success
+            novalidate
+            class="mt-sm">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <div class="flex flex-wrap gap-sm mt-sm">
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="font-family">{{t "admin.branding.fontFamily"}}</label>
+            <input id="font-family" type="text" name="family" class="input" placeholder="{{t "admin.branding.fontFamilyPlaceholder"}}" required>
+          </div>
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="font-weights">{{t "admin.branding.fontWeights"}}</label>
+            <input id="font-weights" type="text" name="weights" class="input" placeholder="400, 700">
+          </div>
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="font-usage">{{t "admin.branding.usage"}}</label>
+            <input id="font-usage" type="text" name="usage" class="input" placeholder="{{t "admin.branding.fontUsagePlaceholder"}}">
+          </div>
+          <button type="submit" class="btn btn--primary btn--sm">{{t "admin.branding.addFont"}}</button>
         </div>
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="font-weights">Weights (comma-separated)</label>
-          <input id="font-weights" type="text" name="weights" class="input" placeholder="400, 700">
-        </div>
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="font-usage">Usage</label>
-          <input id="font-usage" type="text" name="usage" class="input" placeholder="body">
-        </div>
-        <button type="submit" class="btn btn--primary btn--sm">Add Font</button>
-      </div>
-    </form>
+      </form>
+    </details>
     {{/if}}
 
     {{#if fonts.length}}
-    <div class="card-grid">
-      {{#each fonts}}
-      <div class="card card--compact" id="font-card-{{this.id}}">
-        <strong>{{this.family}}</strong>
-        {{#if this.weights}}
-        <p class="text-sm text-muted">Weights: {{this.weights}}</p>
-        {{/if}}
-        {{#if this.usage}}
-        <span class="badge badge--info">{{this.usage}}</span>
-        {{/if}}
-        {{#if ../perm.brandingManage}}
-        <button hx-post="/admin/branding-guidelines/{{../guideline.id}}/fonts/{{this.id}}/delete"
-                hx-confirm="Remove font &quot;{{this.family}}&quot;?"
-                hx-target="#font-card-{{this.id}}"
-                hx-swap="outerHTML"
-                class="btn btn--sm btn--danger mt-xs">
-          <input type="hidden" name="_csrf" value="{{csrfToken}}">
-          Remove
-        </button>
-        {{/if}}
-      </div>
-      {{/each}}
+    <div class="table-wrapper mt-md">
+      <table class="table" aria-label="{{t "admin.branding.fonts"}}">
+        <thead>
+          <tr>
+            <th scope="col">{{t "admin.branding.fontFamily"}}</th>
+            <th scope="col">{{t "admin.branding.fontWeights"}}</th>
+            <th scope="col">{{t "admin.branding.usage"}}</th>
+            {{#if perm.brandingManage}}
+            <th scope="col">{{t "common.actions"}}</th>
+            {{/if}}
+          </tr>
+        </thead>
+        <tbody id="fonts-table">
+          {{#each fonts}}
+          <tr id="font-row-{{this.id}}">
+            <td data-label="Family"><strong>{{this.family}}</strong></td>
+            <td data-label="Weights">{{#if this.weights}}{{this.weights}}{{else}}<span class="text-muted">—</span>{{/if}}</td>
+            <td data-label="Usage">{{#if this.usage}}<span class="badge badge--info">{{this.usage}}</span>{{else}}<span class="text-muted">—</span>{{/if}}</td>
+            {{#if ../perm.brandingManage}}
+            <td>
+              <button hx-post="/admin/branding-guidelines/{{../guideline.id}}/fonts/{{this.id}}/delete"
+                      hx-confirm="{{t "admin.branding.confirmRemoveFont" name=this.family}}"
+                      hx-target="#font-row-{{this.id}}"
+                      hx-swap="outerHTML"
+                      class="btn btn--sm btn--danger"
+                      aria-label="{{t "admin.branding.remove"}} {{this.family}}">
+                <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                {{t "admin.branding.remove"}}
+              </button>
+            </td>
+            {{/if}}
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
     </div>
     {{else}}
-    <p class="text-muted mt-md">No fonts defined. Add fonts above to enable font matching.</p>
+    <p class="text-muted mt-md">{{t "admin.branding.noFonts"}}</p>
     {{/if}}
   </div>
 
   {{!-- Selectors tab --}}
   <div id="tab-selectors" role="tabpanel" aria-labelledby="tab-btn-selectors" class="rpt-tab-panel--hidden">
     {{#if perm.brandingManage}}
-    <form hx-post="/admin/branding-guidelines/{{guideline.id}}/selectors"
-          hx-target="#branding-detail-toast"
-          hx-swap="innerHTML"
-          data-reset-on-success
-          class="card mb-lg mt-md">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
-      <h3>Add Selector</h3>
-      <div class="flex flex-wrap gap-sm mt-sm">
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="selector-pattern">Pattern</label>
-          <input id="selector-pattern" type="text" name="pattern" class="input" placeholder=".brand-header, #hero-section" required>
+    <details class="card mb-lg mt-md">
+      <summary class="btn btn--sm btn--ghost">{{t "admin.branding.addSelector"}}</summary>
+      <form hx-post="/admin/branding-guidelines/{{guideline.id}}/selectors"
+            hx-target="#branding-detail-toast"
+            hx-swap="innerHTML"
+            data-reset-on-success
+            novalidate
+            class="mt-sm">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <div class="flex flex-wrap gap-sm mt-sm">
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="selector-pattern">{{t "admin.branding.pattern"}}</label>
+            <input id="selector-pattern" type="text" name="pattern" class="input" placeholder="{{t "admin.branding.patternPlaceholder"}}" required>
+          </div>
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="selector-description">{{t "admin.branding.selectorDescription"}}</label>
+            <input id="selector-description" type="text" name="description" class="input" placeholder="{{t "admin.branding.selectorDescriptionPlaceholder"}}">
+          </div>
+          <button type="submit" class="btn btn--primary btn--sm">{{t "admin.branding.addSelector"}}</button>
         </div>
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="selector-description">Description</label>
-          <input id="selector-description" type="text" name="description" class="input" placeholder="Brand header elements">
-        </div>
-        <button type="submit" class="btn btn--primary btn--sm">Add Selector</button>
-      </div>
-    </form>
+      </form>
+    </details>
     {{/if}}
 
     {{#if selectors.length}}
     <div class="table-wrapper mt-md">
-      <table class="table" aria-label="CSS selectors">
+      <table class="table" aria-label="{{t "admin.branding.selectors"}}">
         <thead>
           <tr>
-            <th scope="col">Pattern</th>
-            <th scope="col">Description</th>
+            <th scope="col">{{t "admin.branding.pattern"}}</th>
+            <th scope="col">{{t "admin.branding.selectorDescription"}}</th>
             {{#if perm.brandingManage}}
             <th scope="col">{{t "common.actions"}}</th>
             {{/if}}
@@ -243,12 +287,13 @@
             {{#if ../perm.brandingManage}}
             <td>
               <button hx-post="/admin/branding-guidelines/{{../guideline.id}}/selectors/{{this.id}}/delete"
-                      hx-confirm="Remove selector &quot;{{this.pattern}}&quot;?"
+                      hx-confirm="{{t "admin.branding.confirmRemoveSelector" name=this.pattern}}"
                       hx-target="#selector-row-{{this.id}}"
                       hx-swap="outerHTML"
-                      class="btn btn--sm btn--danger">
+                      class="btn btn--sm btn--danger"
+                      aria-label="{{t "admin.branding.remove"}} {{this.pattern}}">
                 <input type="hidden" name="_csrf" value="{{csrfToken}}">
-                Remove
+                {{t "admin.branding.remove"}}
               </button>
             </td>
             {{/if}}
@@ -258,37 +303,40 @@
       </table>
     </div>
     {{else}}
-    <p class="text-muted mt-md">No selectors defined. Add selectors above to enable selector-based matching.</p>
+    <p class="text-muted mt-md">{{t "admin.branding.noSelectors"}}</p>
     {{/if}}
   </div>
 
   {{!-- Sites tab --}}
   <div id="tab-sites" role="tabpanel" aria-labelledby="tab-btn-sites" class="rpt-tab-panel--hidden">
     {{#if perm.brandingManage}}
-    <form hx-post="/admin/branding-guidelines/{{guideline.id}}/sites"
-          hx-target="#branding-detail-toast"
-          hx-swap="innerHTML"
-          data-reset-on-success
-          class="card mb-lg mt-md">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
-      <h3>Assign to Site</h3>
-      <div class="flex flex-wrap items-center gap-sm mt-sm">
-        <div class="form-group form-group--inline">
-          <label class="form-label" for="site-url">Site URL</label>
-          <input id="site-url" type="url" name="siteUrl" class="input" placeholder="https://example.com" required>
+    <details class="card mb-lg mt-md">
+      <summary class="btn btn--sm btn--ghost">{{t "admin.branding.assignSite"}}</summary>
+      <form hx-post="/admin/branding-guidelines/{{guideline.id}}/sites"
+            hx-target="#branding-detail-toast"
+            hx-swap="innerHTML"
+            data-reset-on-success
+            novalidate
+            class="mt-sm">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <div class="flex flex-wrap items-center gap-sm mt-sm">
+          <div class="form-group form-group--inline">
+            <label class="form-label" for="site-url">{{t "admin.branding.siteUrl"}}</label>
+            <input id="site-url" type="url" name="siteUrl" class="input" placeholder="https://example.com" required>
+          </div>
+          <button type="submit" class="btn btn--primary btn--sm">{{t "admin.branding.assign"}}</button>
         </div>
-        <button type="submit" class="btn btn--primary btn--sm">Assign</button>
-      </div>
-    </form>
+      </form>
+    </details>
     {{/if}}
 
     {{#if sites.length}}
     <div class="table-wrapper mt-md">
-      <table class="table" aria-label="Assigned sites">
+      <table class="table" aria-label="{{t "admin.branding.assignedSites"}}">
         <thead>
           <tr>
-            <th scope="col">Site URL</th>
-            <th scope="col">Assigned</th>
+            <th scope="col">{{t "admin.branding.siteUrl"}}</th>
+            <th scope="col">{{t "admin.branding.assigned"}}</th>
             {{#if perm.brandingManage}}
             <th scope="col">{{t "common.actions"}}</th>
             {{/if}}
@@ -302,13 +350,14 @@
             {{#if ../perm.brandingManage}}
             <td>
               <button hx-post="/admin/branding-guidelines/{{../guideline.id}}/sites/unassign"
-                      hx-confirm="Unassign &quot;{{this.siteUrl}}&quot; from this guideline?"
+                      hx-confirm="{{t "admin.branding.confirmUnassign" url=this.siteUrl}}"
                       hx-target="#site-row-{{@index}}"
                       hx-swap="outerHTML"
-                      class="btn btn--sm btn--warning">
+                      class="btn btn--sm btn--warning"
+                      aria-label="{{t "admin.branding.unassign"}} {{this.siteUrl}}">
                 <input type="hidden" name="_csrf" value="{{csrfToken}}">
                 <input type="hidden" name="siteUrl" value="{{this.siteUrl}}">
-                Unassign
+                {{t "admin.branding.unassign"}}
               </button>
             </td>
             {{/if}}
@@ -318,51 +367,7 @@
       </table>
     </div>
     {{else}}
-    <p class="text-muted mt-md">No sites assigned. Assign a site above to apply this guideline to its scans.</p>
-    {{/if}}
-  </div>
-
-  {{!-- Import / Export tab --}}
-  <div id="tab-import" role="tabpanel" aria-labelledby="tab-btn-import" class="rpt-tab-panel--hidden">
-    <div class="card mt-md mb-lg">
-      <h3>Export Templates</h3>
-      <p class="text-muted mb-sm">Download blank templates to see the expected format for importing data.</p>
-      <div class="flex gap-sm">
-        <a href="/admin/branding-guidelines/templates/csv" class="btn btn--ghost btn--sm">Download CSV Template</a>
-        <a href="/admin/branding-guidelines/templates/json" class="btn btn--ghost btn--sm">Download JSON Template</a>
-      </div>
-    </div>
-
-    {{#if perm.brandingManage}}
-    <div class="card">
-      <h3>Import Data</h3>
-      <p class="text-muted mb-sm">Upload a CSV or JSON file to import colors, fonts, and selectors for this guideline.</p>
-      <form hx-post="/admin/branding-guidelines/upload"
-            hx-target="#branding-detail-toast"
-            hx-swap="innerHTML"
-            class="mt-md">
-        <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        <input type="hidden" name="guidelineId" value="{{guideline.id}}">
-        <div class="form-group">
-          <label class="form-label" for="import-content">Content (CSV or JSON)</label>
-          <textarea id="import-content"
-                    name="content"
-                    class="input"
-                    rows="8"
-                    placeholder="Paste CSV or JSON content here…"></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="import-format">Format</label>
-          <select id="import-format" name="format" class="select">
-            <option value="csv">CSV</option>
-            <option value="json">JSON</option>
-          </select>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn--primary">Import</button>
-        </div>
-      </form>
-    </div>
+    <p class="text-muted mt-md">{{t "admin.branding.noSites"}}</p>
     {{/if}}
   </div>
 

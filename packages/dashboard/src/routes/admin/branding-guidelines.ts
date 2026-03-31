@@ -255,10 +255,15 @@ export async function brandingGuidelineRoutes(
 
       try {
         await storage.branding.deleteGuideline(id);
-        return reply
-          .code(200)
-          .header('content-type', 'text/html')
-          .send(toastHtml(`Guideline "${escapeHtml(guideline.name)}" deleted.`));
+        const isHtmx = request.headers['hx-request'] === 'true';
+        if (isHtmx) {
+          return reply
+            .code(200)
+            .header('content-type', 'text/html')
+            .header('HX-Redirect', '/admin/branding-guidelines')
+            .send(toastHtml(`Guideline "${escapeHtml(guideline.name)}" deleted.`));
+        }
+        return reply.redirect('/admin/branding-guidelines');
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to delete guideline';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
@@ -285,10 +290,35 @@ export async function brandingGuidelineRoutes(
       try {
         const updated = await storage.branding.updateGuideline(id, { active: !guideline.active });
         const status = updated.active ? 'activated' : 'deactivated';
+        const csrfToken = typeof reply.generateCsrf === 'function' ? reply.generateCsrf() : '';
+
+        // Return the updated status area partial for HTMX swap
+        const badgeClass = updated.active ? 'badge--success' : 'badge--neutral';
+        const badgeText = updated.active ? 'Active' : 'Inactive';
+        const toggleText = updated.active ? 'Deactivate' : 'Activate';
+
+        const html = `<div id="branding-status-area" class="flex flex-wrap items-center gap-sm mt-sm">
+  <span class="badge ${badgeClass}">${escapeHtml(badgeText)}</span>
+  <button hx-post="/admin/branding-guidelines/${escapeHtml(id)}/toggle"
+          hx-target="#branding-status-area"
+          hx-swap="outerHTML"
+          class="btn btn--sm btn--ghost">
+    <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+    ${escapeHtml(toggleText)}
+  </button>
+  <button hx-post="/admin/branding-guidelines/${escapeHtml(id)}/delete"
+          hx-confirm="Delete guideline &quot;${escapeHtml(updated.name)}&quot;? This cannot be undone."
+          class="btn btn--sm btn--danger">
+    <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+    Delete
+  </button>
+</div>
+${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`));
+          .send(html);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to toggle guideline';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));

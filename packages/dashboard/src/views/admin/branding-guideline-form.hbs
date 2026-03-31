@@ -1,37 +1,38 @@
 <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
-    <h2 id="modal-title">Create Brand Guideline</h2>
+    <h2 id="modal-title">{{t "admin.branding.createGuideline"}}</h2>
 
     <form hx-post="/admin/branding-guidelines"
           hx-target="#branding-guidelines-alert"
-          hx-swap="innerHTML">
+          hx-swap="innerHTML"
+          novalidate>
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
       <div class="form-group">
-        <label for="guideline-name" class="form-label">Name <span aria-hidden="true">*</span></label>
+        <label for="guideline-name" class="form-label">{{t "common.name"}} <span aria-hidden="true">*</span></label>
         <input id="guideline-name"
                name="name"
                type="text"
                class="input"
-               placeholder="Acme Brand Guidelines"
+               placeholder="{{t "admin.branding.guidelineNamePlaceholder"}}"
                required
                aria-required="true">
       </div>
 
       <div class="form-group">
-        <label for="guideline-description" class="form-label">Description</label>
+        <label for="guideline-description" class="form-label">{{t "admin.branding.description"}}</label>
         <textarea id="guideline-description"
                   name="description"
                   class="input"
                   rows="3"
-                  placeholder="Optional description of this brand guideline set…"></textarea>
+                  placeholder="{{t "admin.branding.guidelineDescriptionPlaceholder"}}"></textarea>
       </div>
 
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">{{t "common.create"}}</button>
         <button type="button"
                 class="btn btn--ghost close-modal-btn"
-                aria-label="Cancel and close dialog">{{t "common.cancel"}}</button>
+                aria-label="{{t "common.cancel"}}">{{t "common.cancel"}}</button>
       </div>
     </form>
   </div>
