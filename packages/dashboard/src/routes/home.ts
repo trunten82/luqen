@@ -41,17 +41,19 @@ export async function homeRoutes(
     const uniqueSiteUrls = new Set(completedScans.map((s) => s.siteUrl));
     const sitesMonitored = uniqueSiteUrls.size;
 
-    // Overall trend: weighted by total issue change across all sites
-    let latestIssueSum = 0;
-    let previousIssueSum = 0;
+    // Overall trend: compare errors-per-page (normalized) across sites
+    let latestErrorRate = 0;
+    let previousErrorRate = 0;
     let sitesWithHistory = 0;
     for (const url of uniqueSiteUrls) {
       const siteScans = completedScans
         .filter((s) => s.siteUrl === url)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       if (siteScans.length >= 2) {
-        latestIssueSum += siteScans[siteScans.length - 1].totalIssues ?? 0;
-        previousIssueSum += siteScans[siteScans.length - 2].totalIssues ?? 0;
+        const latest = siteScans[siteScans.length - 1];
+        const previous = siteScans[siteScans.length - 2];
+        latestErrorRate += (latest.errors ?? 0) / Math.max(latest.pagesScanned ?? 1, 1);
+        previousErrorRate += (previous.errors ?? 0) / Math.max(previous.pagesScanned ?? 1, 1);
         sitesWithHistory++;
       }
     }
@@ -59,17 +61,22 @@ export async function homeRoutes(
     let trendDirection: string;
     if (sitesWithHistory === 0) {
       trendDirection = completedScans.length === 0 ? 'No data' : 'Stable';
-    } else if (latestIssueSum < previousIssueSum) {
+    } else if (latestErrorRate < previousErrorRate) {
       trendDirection = 'Improving';
-    } else if (latestIssueSum > previousIssueSum) {
+    } else if (latestErrorRate > previousErrorRate) {
       trendDirection = 'Regressing';
     } else {
       trendDirection = 'Stable';
     }
 
-    const compliantScans = completedScans.filter(
-      (s) => (s.errors ?? 0) === 0,
-    ).length;
+    // Compliance: scans with jurisdictions use confirmedViolations,
+    // scans without jurisdictions use errors === 0
+    const compliantScans = completedScans.filter((s) => {
+      const hasJurisdictions = s.jurisdictions.length > 0;
+      return hasJurisdictions
+        ? (s.confirmedViolations ?? 0) === 0
+        : (s.errors ?? 0) === 0;
+    }).length;
     const complianceRate = completedScans.length > 0
       ? Math.round((compliantScans / completedScans.length) * 100)
       : 0;
