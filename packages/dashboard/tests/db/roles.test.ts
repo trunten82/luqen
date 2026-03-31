@@ -116,7 +116,7 @@ describe('RoleRepository', () => {
 
       const perms = await storage.roles.getRolePermissions(devRole!.id);
       expect(Array.isArray(perms)).toBe(true);
-      expect(perms.length).toBe(12);
+      expect(perms.length).toBe(14);
       // Verify sorted
       expect(perms).toEqual([...perms].sort());
     });
@@ -243,7 +243,7 @@ describe('RoleRepository', () => {
   });
 
   describe('getUserPermissions', () => {
-    it('admin gets ALL permissions (21)', async () => {
+    it('admin gets ALL permissions', async () => {
       const adminUser = await storage.users.createUser('admin-user', 'pass123', 'admin');
       const perms = await storage.roles.getUserPermissions(adminUser.id);
 
@@ -254,34 +254,34 @@ describe('RoleRepository', () => {
       }
     });
 
-    it('developer gets 12 permissions', async () => {
+    it('developer gets 14 permissions', async () => {
       const devUser = await storage.users.createUser('dev-user', 'pass123', 'developer');
       const perms = await storage.roles.getUserPermissions(devUser.id);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(12);
+      expect(perms.size).toBe(14);
     });
 
-    it('user gets 9 permissions', async () => {
+    it('user gets 10 permissions', async () => {
       const normalUser = await storage.users.createUser('normal-user', 'pass123', 'user');
       const perms = await storage.roles.getUserPermissions(normalUser.id);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(9);
+      expect(perms.size).toBe(10);
     });
 
-    it('executive gets 3 permissions', async () => {
+    it('executive gets 4 permissions', async () => {
       const execUser = await storage.users.createUser('exec-user', 'pass123', 'executive');
       const perms = await storage.roles.getUserPermissions(execUser.id);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(3);
+      expect(perms.size).toBe(4);
     });
 
     it('unknown user falls back to user permissions', async () => {
       const perms = await storage.roles.getUserPermissions('unknown-user-id');
 
-      // Should fall back to 'user' role (9 permissions)
+      // Should fall back to 'user' role (10 permissions)
       const userRole = await storage.roles.getRoleByName('user');
       expect(perms).toBeInstanceOf(Set);
       expect(perms.size).toBe(userRole!.permissions.length);
