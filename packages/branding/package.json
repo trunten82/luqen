@@ -1,6 +1,6 @@
 {
   "name": "@luqen/branding",
-  "version": "2.4.2",
+  "version": "2.5.0",
   "description": "Brand guideline matching for accessibility findings",
   "type": "module",
   "main": "dist/index.js",
@@ -29,7 +29,11 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "publishConfig": {
     "access": "public"
   },
