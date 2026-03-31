@@ -1,0 +1,539 @@
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { randomUUID } from 'node:crypto';
+import type { StorageAdapter } from '../../db/adapter.js';
+import { requirePermission } from '../../auth/middleware.js';
+import { toastHtml, escapeHtml } from './helpers.js';
+
+export async function brandingGuidelineRoutes(
+  server: FastifyInstance,
+  storage: StorageAdapter,
+): Promise<void> {
+  // ── Template downloads ───────────────────────────────────────────────────
+  // (registered before :id routes to avoid parameter capture)
+
+  server.get(
+    '/admin/branding-guidelines/templates/csv',
+    { preHandler: requirePermission('branding.view') },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      const { GuidelineParser } = await import('@luqen/branding');
+      const csv = GuidelineParser.generateCSVTemplate();
+      return reply
+        .header('content-type', 'text/csv')
+        .header('content-disposition', 'attachment; filename="branding-template.csv"')
+        .send(csv);
+    },
+  );
+
+  server.get(
+    '/admin/branding-guidelines/templates/json',
+    { preHandler: requirePermission('branding.view') },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      const { GuidelineParser } = await import('@luqen/branding');
+      const json = GuidelineParser.generateJSONTemplate();
+      return reply
+        .header('content-type', 'application/json')
+        .header('content-disposition', 'attachment; filename="branding-template.json"')
+        .send(json);
+    },
+  );
+
+  // ── Template upload ──────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/upload',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as {
+        content?: string;
+        format?: 'csv' | 'json';
+        name?: string;
+      };
+
+      const content = body.content?.trim();
+      const format = body.format?.trim();
+      const nameOverride = body.name?.trim();
+
+      if (!content || !format) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Content and format are required.', 'error'));
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+      const { GuidelineParser } = await import('@luqen/branding');
+      const parser = new GuidelineParser();
+
+      try {
+        let parsedName = nameOverride ?? 'Imported Guideline';
+        let parsedDescription: string | undefined;
+        let colors: ReadonlyArray<{ name: string; hex: string; usage?: string; context?: string }> = [];
+        let fonts: ReadonlyArray<{ family: string; weights?: readonly string[]; usage?: string; context?: string }> = [];
+        let selectors: ReadonlyArray<{ pattern: string; description?: string }> = [];
+
+        if (format === 'csv') {
+          const result = await parser.parseCSV(content);
+          colors = result.colors;
+          fonts = result.fonts;
+          selectors = result.selectors;
+        } else {
+          const result = await parser.parseJSON(content);
+          parsedName = nameOverride ?? result.name;
+          parsedDescription = result.description;
+          colors = result.colors;
+          fonts = result.fonts;
+          selectors = result.selectors;
+        }
+
+        const guidelineId = randomUUID();
+        const guideline = await storage.branding.createGuideline({
+          id: guidelineId,
+          orgId,
+          name: parsedName,
+          description: parsedDescription,
+          createdBy: request.user?.id,
+        });
+
+        for (const c of colors) {
+          await storage.branding.addColor(guidelineId, {
+            id: randomUUID(),
+            name: c.name,
+            hexValue: c.hex,
+            usage: c.usage,
+            context: c.context,
+          });
+        }
+
+        for (const f of fonts) {
+          await storage.branding.addFont(guidelineId, {
+            id: randomUUID(),
+            family: f.family,
+            weights: f.weights as string[] | undefined,
+            usage: f.usage,
+            context: f.context,
+          });
+        }
+
+        for (const s of selectors) {
+          await storage.branding.addSelector(guidelineId, {
+            id: randomUUID(),
+            pattern: s.pattern,
+            description: s.description,
+          });
+        }
+
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Guideline "${escapeHtml(guideline.name)}" imported successfully.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to parse file';
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // ── List page ────────────────────────────────────────────────────────────
+
+  server.get(
+    '/admin/branding-guidelines',
+    { preHandler: requirePermission('branding.view') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const orgId = request.user?.currentOrgId ?? 'system';
+      const guidelines = await storage.branding.listGuidelines(orgId);
+
+      return reply.view('admin/branding-guidelines.hbs', {
+        pageTitle: 'Branding Guidelines',
+        currentPath: '/admin/branding-guidelines',
+        user: request.user,
+        guidelines,
+      });
+    },
+  );
+
+  // ── Create ───────────────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as { name?: string; description?: string };
+      const name = body.name?.trim();
+      const description = body.description?.trim();
+
+      if (!name) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Name is required.', 'error'));
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+
+      try {
+        const guideline = await storage.branding.createGuideline({
+          id: randomUUID(),
+          orgId,
+          name,
+          description,
+          createdBy: request.user?.id,
+        });
+
+        return reply
+          .code(200)
+          .header('content-type', 'application/json')
+          .send({ guideline, toast: toastHtml(`Guideline "${escapeHtml(guideline.name)}" created.`) });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to create guideline';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // ── Detail page ──────────────────────────────────────────────────────────
+
+  server.get(
+    '/admin/branding-guidelines/:id',
+    { preHandler: requirePermission('branding.view') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const guideline = await storage.branding.getGuideline(id);
+      if (guideline === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Guideline not found.', 'error'));
+      }
+
+      const [colors, fonts, selectors, sites] = await Promise.all([
+        storage.branding.listColors(id),
+        storage.branding.listFonts(id),
+        storage.branding.listSelectors(id),
+        storage.branding.getSiteAssignments(id),
+      ]);
+
+      return reply.view('admin/branding-guideline-detail.hbs', {
+        pageTitle: `Branding — ${guideline.name}`,
+        currentPath: '/admin/branding-guidelines',
+        user: request.user,
+        guideline,
+        colors,
+        fonts,
+        selectors,
+        sites,
+      });
+    },
+  );
+
+  // ── Delete ───────────────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/delete',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const guideline = await storage.branding.getGuideline(id);
+      if (guideline === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Guideline not found.', 'error'));
+      }
+
+      try {
+        await storage.branding.deleteGuideline(id);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Guideline "${escapeHtml(guideline.name)}" deleted.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to delete guideline';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // ── Toggle active ────────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/toggle',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const guideline = await storage.branding.getGuideline(id);
+      if (guideline === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Guideline not found.', 'error'));
+      }
+
+      try {
+        const updated = await storage.branding.updateGuideline(id, { active: !guideline.active });
+        const status = updated.active ? 'activated' : 'deactivated';
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to toggle guideline';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // ── Color CRUD ───────────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/colors',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as {
+        name?: string;
+        hexValue?: string;
+        usage?: string;
+        context?: string;
+      };
+
+      const name = body.name?.trim();
+      const hexValue = body.hexValue?.trim();
+
+      if (!name || !hexValue) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Color name and hex value are required.', 'error'));
+      }
+
+      if (!/^#[0-9a-fA-F]{3,8}$/.test(hexValue)) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Invalid hex color value.', 'error'));
+      }
+
+      try {
+        await storage.branding.addColor(id, {
+          id: randomUUID(),
+          name,
+          hexValue,
+          usage: body.usage?.trim(),
+          context: body.context?.trim(),
+        });
+
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Color "${escapeHtml(name)}" added.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to add color';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  server.post(
+    '/admin/branding-guidelines/:id/colors/:colorId/delete',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { colorId } = request.params as { id: string; colorId: string };
+
+      try {
+        await storage.branding.removeColor(colorId);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Color removed.'));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to remove color';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // ── Font CRUD ────────────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/fonts',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as {
+        family?: string;
+        weights?: string;
+        usage?: string;
+        context?: string;
+      };
+
+      const family = body.family?.trim();
+
+      if (!family) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Font family is required.', 'error'));
+      }
+
+      const weights = body.weights
+        ? body.weights.split(',').map((w) => w.trim()).filter(Boolean)
+        : undefined;
+
+      try {
+        await storage.branding.addFont(id, {
+          id: randomUUID(),
+          family,
+          weights,
+          usage: body.usage?.trim(),
+          context: body.context?.trim(),
+        });
+
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Font "${escapeHtml(family)}" added.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to add font';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  server.post(
+    '/admin/branding-guidelines/:id/fonts/:fontId/delete',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { fontId } = request.params as { id: string; fontId: string };
+
+      try {
+        await storage.branding.removeFont(fontId);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Font removed.'));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to remove font';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // ── Selector CRUD ────────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/selectors',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { pattern?: string; description?: string };
+
+      const pattern = body.pattern?.trim();
+
+      if (!pattern) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Selector pattern is required.', 'error'));
+      }
+
+      try {
+        await storage.branding.addSelector(id, {
+          id: randomUUID(),
+          pattern,
+          description: body.description?.trim(),
+        });
+
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Selector "${escapeHtml(pattern)}" added.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to add selector';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  server.post(
+    '/admin/branding-guidelines/:id/selectors/:selectorId/delete',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { selectorId } = request.params as { id: string; selectorId: string };
+
+      try {
+        await storage.branding.removeSelector(selectorId);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Selector removed.'));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to remove selector';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // ── Site assignment ──────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/sites',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { siteUrl?: string };
+      const siteUrl = body.siteUrl?.trim();
+
+      if (!siteUrl) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Site URL is required.', 'error'));
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+
+      try {
+        await storage.branding.assignToSite(id, siteUrl, orgId);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Site "${escapeHtml(siteUrl)}" assigned.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to assign site';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  server.post(
+    '/admin/branding-guidelines/:id/sites/unassign',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as { siteUrl?: string };
+      const siteUrl = body.siteUrl?.trim();
+
+      if (!siteUrl) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Site URL is required.', 'error'));
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+
+      try {
+        await storage.branding.unassignFromSite(siteUrl, orgId);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Site "${escapeHtml(siteUrl)}" unassigned.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to unassign site';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+}

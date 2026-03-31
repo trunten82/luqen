@@ -59,6 +59,7 @@ import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { changeHistoryRoutes } from './routes/admin/change-history.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
+import { brandingGuidelineRoutes } from './routes/admin/branding-guidelines.js';
 import { setGitHostPluginManager } from './git-hosts/registry.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
@@ -620,6 +621,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   await auditRoutes(server, storage);
   await gitHostRoutes(server, storage);
+  await brandingGuidelineRoutes(server, storage);
   await pluginAdminRoutes(server, pluginManager, registryEntries, storage);
 
   // ── Export API routes ────────────────────────────────────────────────────
