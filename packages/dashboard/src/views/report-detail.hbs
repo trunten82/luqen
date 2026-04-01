@@ -734,6 +734,7 @@
       if (severityFilters.indexOf(f) !== -1) activeSev.push(f);
     });
 
+    var bf = window.rptBrandFilter || 'all';
     var visibleCriteria = 0;
     var visibleErrors = 0;
     var visibleWarnings = 0;
@@ -751,6 +752,22 @@
         show = searchable.indexOf(rptSearchQuery) !== -1;
       }
       group.style.display = show ? '' : 'none';
+
+      /* ── Item-level brand filtering ──────────────────────────────────── */
+      /* When brand filter is active, show/hide individual issue items     */
+      /* within each group. This runs on every group (even hidden ones)    */
+      /* so state is always consistent when groups are toggled open.       */
+      var items = group.querySelectorAll('.rpt-issue-item[data-brand-related]');
+      items.forEach(function(item) {
+        if (bf === 'unexpected') {
+          item.style.display = item.getAttribute('data-brand-related') === 'true' ? 'none' : '';
+        } else if (bf === 'brand') {
+          item.style.display = item.getAttribute('data-brand-related') === 'false' ? 'none' : '';
+        } else {
+          item.style.display = '';
+        }
+      });
+
       if (show) {
         visibleCriteria++;
         visibleErrors += parseInt(group.getAttribute('data-error-count') || '0', 10);
@@ -780,7 +797,6 @@
     var detailEl = document.getElementById('rpt-issues-detail');
     if (!countEl || !detailEl) return;
 
-    var bf = window.rptBrandFilter || 'all';
     if (rptActiveFilters.size === 0 && !rptSearchQuery && bf === 'all') {
       countEl.textContent = rptTotals.issues + ' {{t "reportDetail.issuesLabel"}}';
       detailEl.textContent = ' {{t "reportDetail.groupedBy"}} ' + rptTotals.criteria + ' {{t "reportDetail.wcagCriteriaLabel"}}';
@@ -1041,42 +1057,24 @@
     });
   })();
 
-  /* ── Brand filter (dynamic stylesheet approach) ──────────────────────── */
-  /* Uses a <style> tag with !important rules so no JS or CSS can override */
+  /* ── Brand filter ─────────────────────────────────────────────────────── */
+  /* Integrated directly into the main filter system — one mechanism for    */
+  /* both group-level visibility and item-level visibility.                 */
   window.rptBrandFilter = 'all';
   (function() {
     var bar = document.getElementById('brand-filter-bar');
     if (!bar) return;
-
-    /* Inject a dedicated <style> element we toggle the content of */
-    var styleEl = document.createElement('style');
-    styleEl.id = 'brand-filter-rules';
-    document.head.appendChild(styleEl);
-
-    function applyBrandStylesheet() {
-      var bf = window.rptBrandFilter;
-      if (bf === 'unexpected') {
-        styleEl.textContent =
-          '.rpt-issue-item[data-brand-related="true"] { display: none !important; }';
-      } else if (bf === 'brand') {
-        styleEl.textContent =
-          '.rpt-issue-item[data-brand-related="false"] { display: none !important; }';
-      } else {
-        styleEl.textContent = '';
-      }
-    }
 
     bar.addEventListener('click', function(e) {
       var btn = e.target.closest('[data-brand-filter]');
       if (!btn) return;
       window.rptBrandFilter = btn.getAttribute('data-brand-filter');
       bar.querySelectorAll('[data-brand-filter]').forEach(function(b) {
-        b.className = b.className.replace('btn--primary', 'btn--secondary');
+        b.classList.remove('btn--primary');
+        b.classList.add('btn--secondary');
       });
-      btn.className = btn.className.replace('btn--secondary', 'btn--primary');
-      /* Apply the CSS rule — this is independent of the JS filter system */
-      applyBrandStylesheet();
-      /* Re-run group-level filters (hides groups with zero matching items) */
+      btn.classList.remove('btn--secondary');
+      btn.classList.add('btn--primary');
       rptApplyFilters();
     });
   })();
