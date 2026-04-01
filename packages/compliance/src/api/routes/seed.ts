@@ -18,7 +18,8 @@ export async function registerSeedRoutes(
     try {
       const force = request.body?.force === true;
       const result = await seedBaseline(db, { force });
-      await reply.status(200).send({ success: true, ...result });
+      const seeded = result.jurisdictions > 0 && result.regulations > 0 && result.requirements > 0;
+      await reply.status(200).send({ success: true, seeded, ...result });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Seed failed';
       await reply.status(500).send({ error: message, statusCode: 500 });
@@ -31,7 +32,8 @@ export async function registerSeedRoutes(
   }, async (_request, reply) => {
     try {
       const result = await seedBaseline(db, { force: true });
-      await reply.status(200).send({ success: true, ...result });
+      const seeded = result.jurisdictions > 0 && result.regulations > 0 && result.requirements > 0;
+      await reply.status(200).send({ success: true, seeded, ...result });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Reseed failed';
       await reply.status(500).send({ error: message, statusCode: 500 });

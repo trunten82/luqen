@@ -381,12 +381,12 @@ function runContractTests(
           sectors: [],
           description: 'desc',
         });
-        // Wildcard requirement for EU
+        // Explicit EU requirement for 1.1.1
         await db.createRequirement({
           regulationId: 'eu-eaa',
           wcagVersion: '2.1',
           wcagLevel: 'AA',
-          wcagCriterion: '*',
+          wcagCriterion: '1.1.1',
           obligation: 'mandatory',
         });
         // Specific requirement for US
@@ -416,11 +416,10 @@ function runContractTests(
         expect(results[0].jurisdictionId).toBe('EU');
       });
 
-      it('finds wildcard requirements (criterion = "*")', async () => {
+      it('returns no results for criteria with no matching explicit requirements', async () => {
+        // Wildcards are not matched at query time — only exact criterion matches
         const results = await db.findRequirementsByCriteria(['EU'], ['2.4.7']);
-        expect(results.length).toBeGreaterThanOrEqual(1);
-        // The wildcard requirement should be included
-        expect(results.some(r => r.wcagCriterion === '*')).toBe(true);
+        expect(results).toHaveLength(0);
       });
 
       it('includes regulation metadata', async () => {
@@ -435,7 +434,7 @@ function runContractTests(
 
       it('finds requirements across multiple jurisdictions', async () => {
         const results = await db.findRequirementsByCriteria(['EU', 'US'], ['1.1.1']);
-        // EU wildcard + US explicit 1.1.1
+        // EU explicit 1.1.1 + US explicit 1.1.1
         expect(results.length).toBeGreaterThanOrEqual(2);
       });
     });
