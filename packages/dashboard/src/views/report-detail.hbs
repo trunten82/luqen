@@ -160,7 +160,7 @@
           {{#if violations.length}}
           <div class="rpt-juris-card__violations">
             {{#each violations}}
-            <div class="rpt-violation-row" data-regulation-filter="{{#each regulations}}{{this}} {{/each}}">
+            <div class="rpt-violation-row" data-regulation-filter="{{#each regulations}}{{this}}||{{/each}}">
               <span class="rpt-violation-criterion">{{wcagCriterion}}</span>
               <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{obligation}}</span>
               <span class="rpt-text--muted">{{issueCount}} issue{{#unless (eq issueCount 1)}}s{{/unless}}</span>
@@ -1181,7 +1181,7 @@
       if (regName === 'all') {
         row.style.display = '';
       } else {
-        var regs = (row.getAttribute('data-regulation-filter') || '').split(' ');
+        var regs = (row.getAttribute('data-regulation-filter') || '').split('||').filter(Boolean);
         row.style.display = regs.indexOf(regName) !== -1 ? '' : 'none';
       }
     });
