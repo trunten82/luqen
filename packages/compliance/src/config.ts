@@ -69,5 +69,9 @@ export function loadConfig(
       ...(fileConfig.jwtKeyPair ?? {}),
     },
   };
-  return applyEnvOverrides(merged);
+  const withEnv = applyEnvOverrides(merged);
+  return {
+    ...withEnv,
+    reseedInterval: process.env['COMPLIANCE_RESEED_INTERVAL'] ?? withEnv.reseedInterval ?? 'off',
+  };
 }

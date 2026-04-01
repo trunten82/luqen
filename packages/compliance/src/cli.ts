@@ -86,6 +86,7 @@ export function createProgram(): Command {
         rateLimitWindowMs: config.rateLimit.windowMs,
         logger: true,
         cache,
+        reseedInterval: config.reseedInterval,
       });
 
       await app.register(registerAgentCardPlugin);
@@ -99,19 +100,16 @@ export function createProgram(): Command {
   program
     .command('seed')
     .description('Load the baseline compliance dataset')
-    .action(async () => {
+    .option('--force', 'Delete all system records and re-seed from scratch')
+    .action(async (opts: { force?: boolean }) => {
       const db = createDbAdapter();
       await db.initialize();
-      await seedBaseline(db);
-      const [jurisdictions, regulations, requirements] = await Promise.all([
-        db.listJurisdictions(),
-        db.listRegulations(),
-        db.listRequirements(),
-      ]);
+      const result = await seedBaseline(db, { force: opts.force });
       console.log('Seed complete:');
-      console.log(`  Jurisdictions: ${jurisdictions.length}`);
-      console.log(`  Regulations:   ${regulations.length}`);
-      console.log(`  Requirements:  ${requirements.length}`);
+      console.log(`  WCAG Criteria: ${result.wcagCriteria}`);
+      console.log(`  Jurisdictions: ${result.jurisdictions}`);
+      console.log(`  Regulations:   ${result.regulations}`);
+      console.log(`  Requirements:  ${result.requirements}`);
       await db.close();
     });
 
