@@ -12,6 +12,7 @@ import type { StorageAdapter, ScanRecord } from '../db/index.js';
 import { VERSION } from '../version.js';
 import { validatePassword, validateUsername } from '../validation.js';
 import { validateScanUrl, VALID_STANDARDS } from '../services/scan-service.js';
+import { retagScansForSite } from '../services/branding-retag.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -357,6 +358,46 @@ export const resolvers = {
       status: 'ok',
       version: VERSION,
     }),
+
+    // ── Branding ─────────────────────────────────────────────────────
+
+    async brandingGuidelines(_: unknown, _args: unknown, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.view');
+      const guidelines = await ctx.storage.branding.listGuidelines(ctx.orgId);
+      return Promise.all(guidelines.map(async (g) => ({
+        ...g,
+        colors: g.colors ?? [],
+        fonts: g.fonts ?? [],
+        selectors: g.selectors ?? [],
+        sites: await ctx.storage.branding.getSiteAssignments(g.id),
+      })));
+    },
+
+    async brandingGuideline(_: unknown, args: { id: string }, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.view');
+      const g = await ctx.storage.branding.getGuideline(args.id);
+      if (!g) return null;
+      return {
+        ...g,
+        colors: g.colors ?? [],
+        fonts: g.fonts ?? [],
+        selectors: g.selectors ?? [],
+        sites: await ctx.storage.branding.getSiteAssignments(g.id),
+      };
+    },
+
+    async brandingGuidelineForSite(_: unknown, args: { siteUrl: string }, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.view');
+      const g = await ctx.storage.branding.getGuidelineForSite(args.siteUrl, ctx.orgId);
+      if (!g) return null;
+      return {
+        ...g,
+        colors: g.colors ?? [],
+        fonts: g.fonts ?? [],
+        selectors: g.selectors ?? [],
+        sites: await ctx.storage.branding.getSiteAssignments(g.id),
+      };
+    },
   },
 
   Mutation: {
@@ -589,6 +630,134 @@ export const resolvers = {
       }
       await ctx.storage.users.updatePassword(args.id, args.newPassword);
       return true;
+    },
+
+    // ── Branding mutations ─────────────────────────────────────────────
+
+    async createBrandingGuideline(
+      _: unknown,
+      args: { input: { name: string; description?: string } },
+      ctx: GraphQLContext,
+    ) {
+      requirePerm(ctx, 'branding.manage');
+      const guideline = await ctx.storage.branding.createGuideline({
+        id: randomUUID(),
+        orgId: ctx.orgId,
+        name: args.input.name,
+        description: args.input.description,
+        createdBy: ctx.user?.id,
+      });
+      return {
+        ...guideline,
+        colors: guideline.colors ?? [],
+        fonts: guideline.fonts ?? [],
+        selectors: guideline.selectors ?? [],
+        sites: await ctx.storage.branding.getSiteAssignments(guideline.id),
+      };
+    },
+
+    async deleteBrandingGuideline(_: unknown, args: { id: string }, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.manage');
+      await ctx.storage.branding.deleteGuideline(args.id);
+      return true;
+    },
+
+    async toggleBrandingGuideline(_: unknown, args: { id: string }, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.manage');
+      const existing = await ctx.storage.branding.getGuideline(args.id);
+      if (!existing) throw new Error('Guideline not found');
+      const updated = await ctx.storage.branding.updateGuideline(args.id, { active: !existing.active });
+      return {
+        ...updated,
+        colors: updated.colors ?? [],
+        fonts: updated.fonts ?? [],
+        selectors: updated.selectors ?? [],
+        sites: await ctx.storage.branding.getSiteAssignments(updated.id),
+      };
+    },
+
+    async addBrandColor(
+      _: unknown,
+      args: { guidelineId: string; input: { name: string; hexValue: string; usage?: string; context?: string } },
+      ctx: GraphQLContext,
+    ) {
+      requirePerm(ctx, 'branding.manage');
+      return ctx.storage.branding.addColor(args.guidelineId, {
+        id: randomUUID(),
+        name: args.input.name,
+        hexValue: args.input.hexValue.toUpperCase(),
+        ...(args.input.usage ? { usage: args.input.usage } : {}),
+        ...(args.input.context ? { context: args.input.context } : {}),
+      });
+    },
+
+    async removeBrandColor(_: unknown, args: { id: string }, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.manage');
+      await ctx.storage.branding.removeColor(args.id);
+      return true;
+    },
+
+    async addBrandFont(
+      _: unknown,
+      args: { guidelineId: string; input: { family: string; weights?: string[]; usage?: string; context?: string } },
+      ctx: GraphQLContext,
+    ) {
+      requirePerm(ctx, 'branding.manage');
+      return ctx.storage.branding.addFont(args.guidelineId, {
+        id: randomUUID(),
+        family: args.input.family,
+        ...(args.input.weights ? { weights: args.input.weights } : {}),
+        ...(args.input.usage ? { usage: args.input.usage } : {}),
+        ...(args.input.context ? { context: args.input.context } : {}),
+      });
+    },
+
+    async removeBrandFont(_: unknown, args: { id: string }, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.manage');
+      await ctx.storage.branding.removeFont(args.id);
+      return true;
+    },
+
+    async addBrandSelector(
+      _: unknown,
+      args: { guidelineId: string; input: { pattern: string; description?: string } },
+      ctx: GraphQLContext,
+    ) {
+      requirePerm(ctx, 'branding.manage');
+      return ctx.storage.branding.addSelector(args.guidelineId, {
+        id: randomUUID(),
+        pattern: args.input.pattern,
+        ...(args.input.description ? { description: args.input.description } : {}),
+      });
+    },
+
+    async removeBrandSelector(_: unknown, args: { id: string }, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.manage');
+      await ctx.storage.branding.removeSelector(args.id);
+      return true;
+    },
+
+    async assignBrandingToSite(
+      _: unknown,
+      args: { guidelineId: string; siteUrl: string },
+      ctx: GraphQLContext,
+    ) {
+      requirePerm(ctx, 'branding.manage');
+      await ctx.storage.branding.assignToSite(args.guidelineId, args.siteUrl, ctx.orgId);
+      // Retag existing scans
+      try { await retagScansForSite(ctx.storage, args.siteUrl, ctx.orgId); } catch { /* non-fatal */ }
+      return true;
+    },
+
+    async unassignBrandingFromSite(_: unknown, args: { siteUrl: string }, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.manage');
+      await ctx.storage.branding.unassignFromSite(args.siteUrl, ctx.orgId);
+      return true;
+    },
+
+    async retagBrandingScans(_: unknown, args: { siteUrl: string }, ctx: GraphQLContext) {
+      requirePerm(ctx, 'branding.manage');
+      return retagScansForSite(ctx.storage, args.siteUrl, ctx.orgId);
     },
   },
 };
