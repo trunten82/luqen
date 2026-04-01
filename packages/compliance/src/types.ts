@@ -326,6 +326,7 @@ export interface ComplianceConfig {
     readonly origin: readonly string[];
     readonly credentials: boolean;
   };
+  readonly reseedInterval?: string;
 }
 
 // === Seed data shape ===

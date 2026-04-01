@@ -155,5 +155,32 @@ export async function createServer(options: ServerOptions) {
   await registerOrgRoutes(app, db);
   await registerWcagCriteriaRoutes(app, db);
 
+  // Startup seed: runs once after server is ready
+  app.addHook('onReady', async () => {
+    try {
+      const { seedBaseline } = await import('../seed/loader.js');
+      const result = await seedBaseline(db, { force: true });
+      app.log.info(`Compliance seed complete: ${result.requirements} requirements across ${result.regulations} regulations, ${result.wcagCriteria} WCAG criteria`);
+    } catch (err) {
+      app.log.warn({ err }, 'Compliance seed failed on startup');
+    }
+
+    // Scheduled reseed if configured
+    if (reseedInterval !== 'off') {
+      const intervalMs = parseInterval(reseedInterval);
+      const timer = setInterval(async () => {
+        try {
+          const { seedBaseline } = await import('../seed/loader.js');
+          const result = await seedBaseline(db, { force: true });
+          app.log.info(`Scheduled reseed complete: ${result.requirements} requirements across ${result.regulations} regulations, ${result.wcagCriteria} WCAG criteria`);
+        } catch (err) {
+          app.log.warn({ err }, 'Scheduled reseed failed');
+        }
+      }, intervalMs);
+      // Unref so the timer doesn't prevent clean shutdown
+      timer.unref();
+    }
+  });
+
   return app;
 }
