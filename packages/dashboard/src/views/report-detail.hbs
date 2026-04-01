@@ -775,11 +775,6 @@
       btn.classList.toggle('btn--active', rptActiveFilters.has(btn.getAttribute('data-filter')));
     });
 
-    /* Update summary text */
-    var countEl = document.getElementById('rpt-issues-count');
-    var detailEl = document.getElementById('rpt-issues-detail');
-    if (!countEl || !detailEl) return;
-
     // Brand filter: show/hide individual issues within visible groups
     var bf = window.rptBrandFilter || 'all';
     if (bf !== 'all') {
@@ -796,6 +791,11 @@
         item.style.display = '';
       });
     }
+
+    /* Update summary text */
+    var countEl = document.getElementById('rpt-issues-count');
+    var detailEl = document.getElementById('rpt-issues-detail');
+    if (!countEl || !detailEl) return;
 
     if (rptActiveFilters.size === 0 && !rptSearchQuery && bf === 'all') {
       countEl.textContent = rptTotals.issues + ' {{t "reportDetail.issuesLabel"}}';
