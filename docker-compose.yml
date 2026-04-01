@@ -19,6 +19,23 @@ services:
       timeout: 5s
       retries: 3
 
+  branding:
+    build: .
+    command: >
+      sh -c "cd packages/branding &&
+        node dist/cli.js keys generate 2>/dev/null || true &&
+        node dist/cli.js serve --port 4100"
+    ports:
+      - "${BRANDING_PORT:-4100}:4100"
+    volumes:
+      - branding-data:/app/packages/branding
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4100/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   dashboard:
     build: .
     command: >
@@ -30,6 +47,7 @@ services:
     environment:
       - DASHBOARD_SESSION_SECRET=${SESSION_SECRET:-changeme-generate-a-real-secret}
       - DASHBOARD_COMPLIANCE_URL=http://compliance:4000
+      - DASHBOARD_BRANDING_URL=http://branding:4100
       - DASHBOARD_DB_PATH=/app/data/dashboard.db
       - DASHBOARD_WEBSERVICE_URL=${PA11Y_URL:-}
       - NODE_ENV=production
@@ -37,8 +55,11 @@ services:
       - dashboard-data:/app/data
       - dashboard-plugins:/app/plugins
       - dashboard-reports:/app/reports
+      - dashboard-uploads:/app/uploads
     depends_on:
       compliance:
+        condition: service_healthy
+      branding:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -49,6 +70,8 @@ services:
 
 volumes:
   compliance-data:
+  branding-data:
   dashboard-data:
   dashboard-plugins:
   dashboard-reports:
+  dashboard-uploads:
