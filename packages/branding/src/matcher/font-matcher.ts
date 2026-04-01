@@ -20,6 +20,7 @@ export class FontMatcher {
   }
 
   match(issue: MatchableIssue): BrandMatchResult {
+    if (!issue.context) return { matched: false };
     const fontName = extractFirstFont(issue.context);
     if (!fontName) {
       return { matched: false };

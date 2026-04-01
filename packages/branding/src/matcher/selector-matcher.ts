@@ -18,6 +18,7 @@ export class SelectorMatcher {
   }
 
   match(issue: MatchableIssue): BrandMatchResult {
+    if (!issue.selector) return { matched: false };
     for (const { selector, re } of this.rules) {
       if (re.test(issue.selector)) {
         const descriptionPart = selector.description ? ` (${selector.description})` : '';
