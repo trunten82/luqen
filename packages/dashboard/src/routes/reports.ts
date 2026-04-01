@@ -229,6 +229,17 @@ export async function reportRoutes(
 
       const brandFilter = (request.query as Record<string, string>).brandFilter ?? 'all';
 
+      // Check if the branding guideline used for this scan is still active
+      let brandingGuidelineActive = true;
+      if (scan.brandingGuidelineId) {
+        try {
+          const guideline = await storage.branding.getGuideline(scan.brandingGuidelineId);
+          brandingGuidelineActive = guideline?.active ?? false;
+        } catch {
+          brandingGuidelineActive = false;
+        }
+      }
+
       // Compute compliance traffic light from enriched matrix
       const hasCompliance = reportData?.complianceMatrix != null;
       const enrichedFailing = (reportData as any)?.compliance?.summary?.failing ?? 0;
@@ -246,6 +257,7 @@ export async function reportRoutes(
         reportData,
         complianceStatus,
         brandFilter,
+        brandingGuidelineActive,
         pdfAvailable: true,
         manualTestStats: {
           tested: manualTested,
