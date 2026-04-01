@@ -1,8 +1,20 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
+import { mkdir } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { pipeline } from 'node:stream';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
+import { retagScansForSite, retagAllSitesForGuideline } from '../../services/branding-retag.js';
+
+const pump = promisify(pipeline);
+const _routeDir = fileURLToPath(new URL('.', import.meta.url));
+// Static directory: src/routes/admin -> ../../../static -> src/static (dev) or dist/static (prod)
+const staticDir = join(_routeDir, '..', '..', 'static');
 
 export async function brandingGuidelineRoutes(
   server: FastifyInstance,
@@ -290,6 +302,17 @@ export async function brandingGuidelineRoutes(
       try {
         const updated = await storage.branding.updateGuideline(id, { active: !guideline.active });
         const status = updated.active ? 'activated' : 'deactivated';
+
+        // Retag assigned sites when activating
+        let retagCount = 0;
+        if (updated.active) {
+          const orgId = request.user?.currentOrgId ?? 'system';
+          try {
+            const { totalRetagged } = await retagAllSitesForGuideline(storage, id, orgId);
+            retagCount = totalRetagged;
+          } catch { /* non-fatal */ }
+        }
+
         const csrfToken = typeof reply.generateCsrf === 'function' ? reply.generateCsrf() : '';
 
         // Return the updated status area partial for HTMX swap
@@ -313,7 +336,7 @@ export async function brandingGuidelineRoutes(
     Delete
   </button>
 </div>
-${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
+${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 ? ` ${retagCount} scan(s) retagged.` : ''}`)}`;
 
         return reply
           .code(200)
@@ -366,6 +389,12 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
           context: body.context?.trim(),
         });
 
+        // Retag assigned sites after modifying guideline
+        const orgId = request.user?.currentOrgId ?? 'system';
+        try {
+          await retagAllSitesForGuideline(storage, id, orgId);
+        } catch { /* non-fatal */ }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -381,10 +410,17 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
     '/admin/branding-guidelines/:id/colors/:colorId/delete',
     { preHandler: requirePermission('branding.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const { colorId } = request.params as { id: string; colorId: string };
+      const { id, colorId } = request.params as { id: string; colorId: string };
 
       try {
         await storage.branding.removeColor(colorId);
+
+        // Retag assigned sites after modifying guideline
+        const orgId = request.user?.currentOrgId ?? 'system';
+        try {
+          await retagAllSitesForGuideline(storage, id, orgId);
+        } catch { /* non-fatal */ }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -432,6 +468,12 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
           context: body.context?.trim(),
         });
 
+        // Retag assigned sites after modifying guideline
+        const orgId = request.user?.currentOrgId ?? 'system';
+        try {
+          await retagAllSitesForGuideline(storage, id, orgId);
+        } catch { /* non-fatal */ }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -447,10 +489,17 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
     '/admin/branding-guidelines/:id/fonts/:fontId/delete',
     { preHandler: requirePermission('branding.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const { fontId } = request.params as { id: string; fontId: string };
+      const { id, fontId } = request.params as { id: string; fontId: string };
 
       try {
         await storage.branding.removeFont(fontId);
+
+        // Retag assigned sites after modifying guideline
+        const orgId = request.user?.currentOrgId ?? 'system';
+        try {
+          await retagAllSitesForGuideline(storage, id, orgId);
+        } catch { /* non-fatal */ }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -487,6 +536,12 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
           description: body.description?.trim(),
         });
 
+        // Retag assigned sites after modifying guideline
+        const orgId = request.user?.currentOrgId ?? 'system';
+        try {
+          await retagAllSitesForGuideline(storage, id, orgId);
+        } catch { /* non-fatal */ }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -502,10 +557,17 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
     '/admin/branding-guidelines/:id/selectors/:selectorId/delete',
     { preHandler: requirePermission('branding.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const { selectorId } = request.params as { id: string; selectorId: string };
+      const { id, selectorId } = request.params as { id: string; selectorId: string };
 
       try {
         await storage.branding.removeSelector(selectorId);
+
+        // Retag assigned sites after modifying guideline
+        const orgId = request.user?.currentOrgId ?? 'system';
+        try {
+          await retagAllSitesForGuideline(storage, id, orgId);
+        } catch { /* non-fatal */ }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -538,10 +600,19 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
 
       try {
         await storage.branding.assignToSite(id, siteUrl, orgId);
+
+        // Retag existing completed scans for this site
+        let retagCount = 0;
+        try {
+          const { retagged } = await retagScansForSite(storage, siteUrl, orgId);
+          retagCount = retagged;
+        } catch { /* non-fatal */ }
+
+        const retagMsg = retagCount > 0 ? ` ${retagCount} existing scan(s) retagged.` : '';
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(toastHtml(`Site "${escapeHtml(siteUrl)}" assigned.`));
+          .send(toastHtml(`Site "${escapeHtml(siteUrl)}" assigned.${retagMsg}`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to assign site';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
@@ -575,6 +646,61 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`)}`;
         const message = err instanceof Error ? err.message : 'Failed to unassign site';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
+    },
+  );
+
+  // ── Image upload ─────────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/image',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const guideline = await storage.branding.getGuideline(id);
+      if (guideline === null) {
+        return reply.code(404).header('content-type', 'text/html').send(toastHtml('Guideline not found.', 'error'));
+      }
+
+      const data = await request.file();
+      if (data === undefined) {
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml('No file uploaded.', 'error'));
+      }
+
+      if (!data.mimetype.startsWith('image/')) {
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml('Only image files are allowed.', 'error'));
+      }
+
+      const rawExt = data.filename.split('.').pop() ?? 'png';
+      const ext = rawExt.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'png';
+      const filename = `${id}.${ext}`;
+      const dir = join(staticDir, 'branding-images');
+
+      try {
+        await mkdir(dir, { recursive: true });
+        const filepath = join(dir, filename);
+        const writeStream = createWriteStream(filepath);
+        await pump(data.file, writeStream);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to save image';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+
+      const imagePath = `/static/branding-images/${filename}`;
+
+      try {
+        await storage.branding.updateGuideline(id, { imagePath });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to update guideline';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+
+      const imageHtml = `<div id="brand-image-area">
+  <img src="${imagePath}" alt="${escapeHtml(guideline.name)} brand logo" width="64" height="64" style="border-radius:var(--radius-md);object-fit:cover;">
+  ${toastHtml('Brand image uploaded.')}
+</div>`;
+
+      return reply.code(200).header('content-type', 'text/html').send(imageHtml);
     },
   );
 }

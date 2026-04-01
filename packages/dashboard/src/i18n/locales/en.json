@@ -775,7 +775,9 @@
       "remove": "Remove",
       "description": "Description",
       "guidelineNamePlaceholder": "Acme Brand Guidelines",
-      "guidelineDescriptionPlaceholder": "Optional description of this brand guideline set\u2026"
+      "guidelineDescriptionPlaceholder": "Optional description of this brand guideline set\u2026",
+      "uploadImage": "Upload Image",
+      "brandLogo": "Brand Logo"
     }
   },
   "trends": {

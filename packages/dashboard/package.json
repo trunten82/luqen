@@ -50,14 +50,15 @@
     "access": "public"
   },
   "dependencies": {
-    "@luqen/branding": "*",
     "@fastify/csrf-protection": "^7.1.0",
     "@fastify/formbody": "^8.0.0",
     "@fastify/helmet": "^13.0.2",
+    "@fastify/multipart": "^9.4.0",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/secure-session": "^8.0.0",
     "@fastify/static": "^8.0.0",
     "@fastify/view": "^10.0.0",
+    "@luqen/branding": "*",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.0.0",
     "commander": "^14.0.3",
