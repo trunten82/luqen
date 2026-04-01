@@ -30,15 +30,9 @@ async function resolveJurisdictionHierarchy(
   return resolved;
 }
 
-// ---- Level matching helpers ----
+// ---- Level type ----
 
 type WcagLevel = 'A' | 'AA' | 'AAA';
-
-const LEVEL_ORDER: Record<WcagLevel, number> = { A: 1, AA: 2, AAA: 3 };
-
-function wildcardLevelMatches(reqLevel: WcagLevel, issueLevel: WcagLevel): boolean {
-  return LEVEL_ORDER[issueLevel] <= LEVEL_ORDER[reqLevel];
-}
 
 // ---- Sector filter helper ----
 
@@ -87,7 +81,7 @@ export async function checkCompliance(
   const resolvedJurisdictionIds = await resolveJurisdictionHierarchy(jurisdictions, db);
   const allJurisdictionIds = [...resolvedJurisdictionIds];
 
-  // Step 4: Query requirements (handles wildcard '*' matching in DB)
+  // Step 4: Query requirements for all criteria
   const requirements: RequirementWithRegulation[] =
     uniqueCriteria.length > 0 && allJurisdictionIds.length > 0
       ? await db.findRequirementsByCriteria(allJurisdictionIds, uniqueCriteria, orgId)
@@ -182,24 +176,15 @@ function findMatchingRegulations(
   regulationSectorCache: Map<string, readonly string[]>,
   sectorFilter: readonly string[],
 ): RequirementWithRegulation[] {
-  if (parsed.criterion === null || parsed.level === null) return [];
-
-  const matches: RequirementWithRegulation[] = [];
-
-  for (const req of requirements) {
-    const sectors = regulationSectorCache.get(req.regulationId) ?? [];
-    if (!regulationMatchesSectors(sectors, sectorFilter)) continue;
-
-    const isExactMatch = req.wcagCriterion === parsed.criterion;
-    const isWildcardMatch =
-      req.wcagCriterion === '*' && wildcardLevelMatches(req.wcagLevel, parsed.level);
-
-    if (isExactMatch || isWildcardMatch) {
-      matches.push(req);
+  if (parsed.criterion === null) return [];
+  return requirements.filter(req => {
+    if (req.wcagCriterion !== parsed.criterion) return false;
+    if (sectorFilter.length > 0) {
+      const regSectors = regulationSectorCache.get(req.regulationId) ?? [];
+      if (!regulationMatchesSectors(regSectors, sectorFilter)) return false;
     }
-  }
-
-  return matches;
+    return true;
+  });
 }
 
 // ---- Build per-jurisdiction result ----
@@ -239,17 +224,10 @@ async function buildJurisdictionResult(
     const entry = regulationViolations.get(req.regulationId)!;
 
     for (const parsed of parsedIssues) {
-      if (parsed.criterion === null || parsed.level === null) continue;
+      if (parsed.criterion === null) continue;
+      if (req.wcagCriterion !== parsed.criterion) continue;
 
-      const isExactMatch = req.wcagCriterion === parsed.criterion;
-      const isWildcardMatch =
-        req.wcagCriterion === '*' && wildcardLevelMatches(req.wcagLevel, parsed.level);
-
-      if (!isExactMatch && !isWildcardMatch) continue;
-
-      // Use the display criterion for the violation key
-      const displayCriterion = req.wcagCriterion === '*' ? parsed.criterion : req.wcagCriterion;
-      const key: ViolationKey = `${displayCriterion}:${req.obligation}`;
+      const key: ViolationKey = `${req.wcagCriterion}:${req.obligation}`;
       entry.violations.set(key, (entry.violations.get(key) ?? 0) + 1);
     }
   }

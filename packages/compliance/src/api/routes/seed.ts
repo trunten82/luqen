@@ -3,20 +3,37 @@ import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { seedBaseline, getSeedStatus } from '../../seed/loader.js';
 
+interface SeedBody {
+  force?: boolean;
+}
+
 export async function registerSeedRoutes(
   app: FastifyInstance,
   db: DbAdapter,
 ): Promise<void> {
   // POST /api/v1/seed
-  app.post('/api/v1/seed', {
+  app.post<{ Body: SeedBody }>('/api/v1/seed', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    try {
+      const force = request.body?.force === true;
+      const result = await seedBaseline(db, { force });
+      await reply.status(200).send({ success: true, ...result });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Seed failed';
+      await reply.status(500).send({ error: message, statusCode: 500 });
+    }
+  });
+
+  // POST /api/v1/admin/reseed — always force reseed
+  app.post('/api/v1/admin/reseed', {
     preHandler: [requireScope('admin')],
   }, async (_request, reply) => {
     try {
-      await seedBaseline(db);
-      const status = await getSeedStatus(db);
-      await reply.status(200).send({ success: true, ...status });
+      const result = await seedBaseline(db, { force: true });
+      await reply.status(200).send({ success: true, ...result });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Seed failed';
+      const message = err instanceof Error ? err.message : 'Reseed failed';
       await reply.status(500).send({ error: message, statusCode: 500 });
     }
   });
