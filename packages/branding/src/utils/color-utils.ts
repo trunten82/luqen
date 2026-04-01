@@ -22,7 +22,8 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${hex.toUpperCase()}`;
 }
 
-export function extractColorsFromContext(context: string): readonly string[] {
+export function extractColorsFromContext(context: string | null | undefined): readonly string[] {
+  if (!context) return [];
   const colors: string[] = [];
   const hexMatches = context.matchAll(INLINE_HEX_RE);
   for (const m of hexMatches) {
