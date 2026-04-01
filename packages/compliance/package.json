@@ -9,7 +9,7 @@
     "luqen-compliance": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && cp src/seed/baseline.json dist/seed/baseline.json",
+    "build": "tsc && cp src/seed/baseline.json dist/seed/baseline.json && cp src/seed/wcag-criteria.json dist/seed/wcag-criteria.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
