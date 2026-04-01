@@ -834,6 +834,25 @@ Response: `{ "status": "ok", "version": "1.0.0", "timestamp": "..." }`
 | `POST` | `/guidelines/:id/sites` | `write` | Assign a site URL to a guideline |
 | `DELETE` | `/guidelines/:id/sites` | `write` | Unassign a site (body: `{ "siteUrl": "..." }`) |
 
+### Get by Site URL
+
+#### `GET /sites?siteUrl=...` — `read` scope
+
+Get the guideline (with colors, fonts, and selectors) assigned to a specific site URL.
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `siteUrl` | string | **(required)** The site URL to look up |
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:5000/api/v1/branding/sites?siteUrl=https%3A%2F%2Fwww.campari.com"
+```
+
+Returns `404` if no guideline is assigned to that site.
+
 ### Matching
 
 #### `POST /match` — `read` scope
@@ -888,6 +907,48 @@ Response:
 
 Matching strategies applied in order: **color-pair** (Delta-E ≤ 5.0), **font** (normalized family name), **selector** (substring/prefix match).
 
+### Image Upload
+
+Brand images are managed through the dashboard admin routes. Upload via:
+
+```
+POST /admin/branding-guidelines/:id/image
+```
+
+- Requires `branding.manage` permission (session cookie).
+- Accepts multipart form data; only image MIME types are accepted.
+- Stores the file at `/uploads/{orgId}/branding-images/{slug}-{id}.{ext}` on the dashboard host.
+- Returns an HTML partial (HTMX swap) with the updated image preview.
+- Sets the `imagePath` field on the guideline record; visible in all subsequent GET responses.
+
+### Scan Retag
+
+#### `POST /api/v1/branding/retag` — `branding.manage`
+
+Re-run branding matching on all completed scans for a given site using the currently active guideline. Use this to backfill branding tags after modifying a guideline or to trigger a manual refresh.
+
+Note: The dashboard also triggers automatic retag internally whenever a guideline is modified (colors, fonts, selectors added/removed) or a site assignment changes. You only need to call this endpoint for explicit manual retags.
+
+```bash
+curl -X POST http://localhost:5000/api/v1/branding/retag \
+  -H "Content-Type: application/json" \
+  -d '{ "siteUrl": "https://www.campari.com" }'
+```
+
+**Request body:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `siteUrl` | string | **(required)** The site URL whose scans should be retagged |
+
+**Response:**
+
+```json
+{ "data": { "retagged": 12 } }
+```
+
+The `retagged` count reflects the number of completed scans updated. Returns `{ "data": { "retagged": 0 } }` if no active guideline is assigned or if there are no completed scans.
+
 ### Templates
 
 | Method | Path | Scope | Description |
@@ -902,6 +963,114 @@ Matching strategies applied in order: **color-pair** (Delta-E ≤ 5.0), **font**
 | `read` | All GETs, `POST /match`, `GET /templates` |
 | `write` | Create/update guidelines; add/remove colors, fonts, selectors, sites |
 | `admin` | All write + delete guidelines, manage OAuth clients |
+
+---
+
+## Dashboard GraphQL API — Branding
+
+Base URL: `http://localhost:5000/graphql`. Requires a valid session cookie. All branding operations are scoped to the user's current organization.
+
+### Queries
+
+```graphql
+# List all guidelines for the current org
+query {
+  brandingGuidelines {
+    id name description version active imagePath
+    colors { id name hexValue usage context }
+    fonts { id family weights usage context }
+    selectors { id pattern description }
+    sites
+  }
+}
+
+# Get a single guideline by ID
+query {
+  brandingGuideline(id: "abc-123") {
+    id name version active imagePath
+    colors { name hexValue } fonts { family } selectors { pattern }
+    sites
+  }
+}
+
+# Get the guideline assigned to a specific site URL
+query {
+  brandingGuidelineForSite(siteUrl: "https://www.campari.com") {
+    id name version active
+    colors { name hexValue usage } fonts { family weights } selectors { pattern }
+  }
+}
+```
+
+### Mutations
+
+```graphql
+# Create a guideline
+mutation {
+  createBrandingGuideline(input: { name: "Aperol Brand", description: "Primary palette" }) {
+    id name active version
+  }
+}
+
+# Toggle active/inactive (triggers auto-retag when activating)
+mutation {
+  toggleBrandingGuideline(id: "abc-123") { id name active }
+}
+
+# Delete a guideline (cascades to colors/fonts/selectors/sites)
+mutation {
+  deleteBrandingGuideline(id: "abc-123")
+}
+
+# Add a color (triggers auto-retag for all assigned sites)
+mutation {
+  addBrandColor(guidelineId: "abc-123", input: {
+    name: "Aperol Orange", hexValue: "#F26522", usage: "primary", context: "Hero sections, CTAs"
+  }) { id name hexValue }
+}
+
+# Remove a color (triggers auto-retag for all assigned sites)
+mutation { removeBrandColor(id: "color-456") }
+
+# Add a font (triggers auto-retag for all assigned sites)
+mutation {
+  addBrandFont(guidelineId: "abc-123", input: {
+    family: "Montserrat", weights: ["400", "700"], usage: "heading"
+  }) { id family weights }
+}
+
+# Remove a font (triggers auto-retag for all assigned sites)
+mutation { removeBrandFont(id: "font-789") }
+
+# Add a CSS selector rule (triggers auto-retag for all assigned sites)
+mutation {
+  addBrandSelector(guidelineId: "abc-123", input: {
+    pattern: ".aperol-header", description: "Top navigation bar"
+  }) { id pattern }
+}
+
+# Remove a selector (triggers auto-retag for all assigned sites)
+mutation { removeBrandSelector(id: "sel-012") }
+
+# Assign a site to a guideline (triggers retag for that site)
+mutation {
+  assignBrandingToSite(guidelineId: "abc-123", siteUrl: "https://www.aperol.com")
+}
+
+# Unassign a site
+mutation {
+  unassignBrandingFromSite(siteUrl: "https://www.aperol.com")
+}
+
+# Manually retag existing scans for a site
+mutation {
+  retagBrandingScans(siteUrl: "https://www.campari.com") {
+    retagged
+  }
+}
+```
+
+The `retagBrandingScans` mutation returns a `RetagResult` with a `retagged` count indicating how many completed scans were updated with fresh branding tags.
 
 ---
 
