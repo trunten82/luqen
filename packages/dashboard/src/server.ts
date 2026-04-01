@@ -258,6 +258,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     },
   });
 
+  // Uploaded files (persistent across builds — stored alongside DB, not in dist/)
+  const uploadsRoot = resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads');
+  await server.register(import('@fastify/static'), {
+    root: uploadsRoot,
+    prefix: '/uploads/',
+    decorateReply: false,
+  });
+
   // robots.txt — guides crawlers (including Luqen's own scanner) to skip non-page URLs
   server.get('/robots.txt', async (_request, reply) => {
     return reply.type('text/plain').send(
@@ -627,7 +635,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   await auditRoutes(server, storage);
   await gitHostRoutes(server, storage);
-  await brandingGuidelineRoutes(server, storage);
+  const uploadsDir = resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads');
+  await brandingGuidelineRoutes(server, storage, uploadsDir);
   await pluginAdminRoutes(server, pluginManager, registryEntries, storage);
 
   // ── Export API routes ────────────────────────────────────────────────────

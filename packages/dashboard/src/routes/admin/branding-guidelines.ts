@@ -5,20 +5,17 @@ import { mkdir } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream';
 import { promisify } from 'node:util';
-import { fileURLToPath } from 'node:url';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { retagScansForSite, retagAllSitesForGuideline } from '../../services/branding-retag.js';
 
 const pump = promisify(pipeline);
-const _routeDir = fileURLToPath(new URL('.', import.meta.url));
-// Static directory: src/routes/admin -> ../../../static -> src/static (dev) or dist/static (prod)
-const staticDir = join(_routeDir, '..', '..', 'static');
 
 export async function brandingGuidelineRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  uploadsDir?: string,
 ): Promise<void> {
   // ── Template downloads ───────────────────────────────────────────────────
   // (registered before :id routes to avoid parameter capture)
@@ -674,7 +671,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       const rawExt = data.filename.split('.').pop() ?? 'png';
       const ext = rawExt.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'png';
       const filename = `${id}.${ext}`;
-      const dir = join(staticDir, 'branding-images');
+      const dir = join(uploadsDir ?? './uploads', 'branding-images');
 
       try {
         await mkdir(dir, { recursive: true });
@@ -686,7 +683,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
 
-      const imagePath = `/static/branding-images/${filename}`;
+      const imagePath = `/uploads/branding-images/${filename}`;
 
       try {
         await storage.branding.updateGuideline(id, { imagePath });
