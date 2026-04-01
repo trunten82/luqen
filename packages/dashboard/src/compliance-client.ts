@@ -703,7 +703,15 @@ export async function listClients(
   const result = await apiFetch<unknown>(`${baseUrl}/api/v1/clients`, {
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);
-  return unwrapList<OAuthClient>(result);
+  // The compliance API returns `id`; normalize to `clientId` for the dashboard
+  return unwrapList<Record<string, unknown>>(result).map((c) => ({
+    clientId: (c.clientId ?? c.id) as string,
+    name: c.name as string,
+    scopes: c.scopes as string[],
+    grantTypes: c.grantTypes as string[],
+    orgId: c.orgId as string,
+    createdAt: c.createdAt as string,
+  }));
 }
 
 export async function createClient(
