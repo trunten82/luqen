@@ -775,23 +775,6 @@
       btn.classList.toggle('btn--active', rptActiveFilters.has(btn.getAttribute('data-filter')));
     });
 
-    // Brand filter: show/hide individual issues within visible groups
-    var bf = window.rptBrandFilter || 'all';
-    if (bf !== 'all') {
-      document.querySelectorAll('.rpt-issue-item[data-brand-related]').forEach(function(item) {
-        var isBrand = item.getAttribute('data-brand-related') === 'true';
-        if (bf === 'brand') {
-          item.style.display = isBrand ? '' : 'none';
-        } else {
-          item.style.display = isBrand ? 'none' : '';
-        }
-      });
-    } else {
-      document.querySelectorAll('.rpt-issue-item[data-brand-related]').forEach(function(item) {
-        item.style.display = '';
-      });
-    }
-
     /* Update summary text */
     var countEl = document.getElementById('rpt-issues-count');
     var detailEl = document.getElementById('rpt-issues-detail');
@@ -1061,7 +1044,8 @@
   window.rptBrandFilter = 'all';
   (function() {
     var bar = document.getElementById('brand-filter-bar');
-    if (!bar) return;
+    var list = document.getElementById('rpt-issue-list');
+    if (!bar || !list) return;
     bar.addEventListener('click', function(e) {
       var btn = e.target.closest('[data-brand-filter]');
       if (!btn) return;
@@ -1070,6 +1054,10 @@
         b.className = b.className.replace('btn--primary', 'btn--secondary');
       });
       btn.className = btn.className.replace('btn--secondary', 'btn--primary');
+      // Toggle CSS classes on the list container
+      list.classList.remove('brand-mode-unexpected', 'brand-mode-brand');
+      if (window.rptBrandFilter === 'unexpected') list.classList.add('brand-mode-unexpected');
+      if (window.rptBrandFilter === 'brand') list.classList.add('brand-mode-brand');
       rptApplyFilters();
     });
   })();
@@ -1117,8 +1105,9 @@
   .rpt-assigned-badge--verified { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
   .rpt-assigned-badge--open { background: var(--status-error-bg, #fee2e2); color: var(--status-error, #991b1b); }
 
-  /* Brand filter */
-  .rpt-issue-item[data-brand-related].brand-hidden { display: none !important; }
+  /* Brand filter — CSS-based hiding via container class */
+  .brand-mode-unexpected .rpt-issue-item[data-brand-related="true"] { display: none !important; }
+  .brand-mode-brand .rpt-issue-item[data-brand-related="false"] { display: none !important; }
 </style>
 
 <!-- brand filter merged into main script block -->
