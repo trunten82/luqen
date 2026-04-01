@@ -1056,6 +1056,23 @@
       bulkSelect.appendChild(opt);
     });
   })();
+
+  /* ── Brand filter ─────────────────────────────────────────────────────── */
+  window.rptBrandFilter = 'all';
+  (function() {
+    var bar = document.getElementById('brand-filter-bar');
+    if (!bar) return;
+    bar.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-brand-filter]');
+      if (!btn) return;
+      window.rptBrandFilter = btn.getAttribute('data-brand-filter');
+      bar.querySelectorAll('[data-brand-filter]').forEach(function(b) {
+        b.className = b.className.replace('btn--primary', 'btn--secondary');
+      });
+      btn.className = btn.className.replace('btn--secondary', 'btn--primary');
+      rptApplyFilters();
+    });
+  })();
 </script>
 
 <style>
@@ -1104,27 +1121,4 @@
   .rpt-issue-item[data-brand-related].brand-hidden { display: none !important; }
 </style>
 
-<script>
-(function() {
-  var bar = document.getElementById('brand-filter-bar');
-  if (!bar || typeof rptApplyFilters === 'undefined') return;
-
-  // Store active brand filter globally so rptApplyFilters can use it
-  window.rptBrandFilter = 'all';
-
-  bar.addEventListener('click', function(e) {
-    var btn = e.target.closest('[data-brand-filter]');
-    if (!btn) return;
-    window.rptBrandFilter = btn.getAttribute('data-brand-filter');
-
-    // Update active button
-    bar.querySelectorAll('[data-brand-filter]').forEach(function(b) {
-      b.className = b.className.replace('btn--primary', 'btn--secondary');
-    });
-    btn.className = btn.className.replace('btn--secondary', 'btn--primary');
-
-    // Re-run the main filter system which now respects rptBrandFilter
-    rptApplyFilters();
-  });
-})();
-</script>
+<!-- brand filter merged into main script block -->
