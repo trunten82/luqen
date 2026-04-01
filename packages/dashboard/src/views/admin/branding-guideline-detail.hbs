@@ -372,7 +372,7 @@
         <thead>
           <tr>
             <th scope="col">{{t "admin.branding.siteUrl"}}</th>
-            <th scope="col">{{t "admin.branding.assigned"}}</th>
+            <th scope="col">{{t "common.status"}}</th>
             {{#if perm.brandingManage}}
             <th scope="col">{{t "common.actions"}}</th>
             {{/if}}
@@ -382,7 +382,7 @@
           {{#each sites}}
           <tr id="site-row-{{@index}}">
             <td data-label="Site URL">{{this.siteUrl}}</td>
-            <td data-label="Assigned">{{this.assignedAt}}</td>
+            <td data-label="Status"><span class="badge badge--success">{{t "common.active"}}</span></td>
             {{#if ../perm.brandingManage}}
             <td>
               <button hx-post="/admin/branding-guidelines/{{../guideline.id}}/sites/unassign"
