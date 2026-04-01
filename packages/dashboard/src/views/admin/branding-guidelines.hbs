@@ -83,6 +83,13 @@
                class="btn btn--sm btn--secondary"
                aria-label="{{t "common.view"}} {{this.name}}">{{t "common.view"}}</a>
             {{#if ../perm.brandingManage}}
+            <button hx-post="/admin/branding-guidelines/{{this.id}}/toggle-active"
+                    hx-target="body"
+                    class="btn btn--sm {{#if this.active}}btn--warning{{else}}btn--success{{/if}}"
+                    aria-label="{{#if this.active}}{{t "admin.branding.deactivate"}}{{else}}{{t "admin.branding.activate"}}{{/if}} {{this.name}}">
+              <input type="hidden" name="_csrf" value="{{csrfToken}}">
+              {{#if this.active}}{{t "admin.branding.deactivate"}}{{else}}{{t "admin.branding.activate"}}{{/if}}
+            </button>
             <button hx-post="/admin/branding-guidelines/{{this.id}}/delete"
                     hx-confirm="{{t "admin.branding.confirmDelete" name=this.name}}"
                     hx-target="#branding-guideline-{{this.id}}"
