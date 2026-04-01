@@ -101,6 +101,7 @@ interface MonitoredSourceRow {
   url: string;
   type: string;
   schedule: string;
+  source_category: string;
   lastCheckedAt: string | null;
   lastContentHash: string | null;
   createdAt: string;
@@ -220,6 +221,7 @@ function toMonitoredSource(row: MonitoredSourceRow): MonitoredSource {
     url: row.url,
     type: row.type as MonitoredSource['type'],
     schedule: row.schedule as MonitoredSource['schedule'],
+    sourceCategory: (row.source_category ?? 'generic') as MonitoredSource['sourceCategory'],
     ...(row.lastCheckedAt != null ? { lastCheckedAt: row.lastCheckedAt } : {}),
     ...(row.lastContentHash != null ? { lastContentHash: row.lastContentHash } : {}),
     createdAt: row.createdAt,
@@ -428,6 +430,12 @@ export class SqliteAdapter implements DbAdapter {
     const regCols = this.db.prepare("PRAGMA table_info(regulations)").all() as Array<{ name: string }>;
     if (!regCols.some(c => c.name === 'parent_regulation_id')) {
       this.db.prepare('ALTER TABLE regulations ADD COLUMN parent_regulation_id TEXT REFERENCES regulations(id)').run();
+    }
+
+    // Column migration: add source_category to monitored_sources if missing
+    const srcCols = this.db.prepare("PRAGMA table_info(monitored_sources)").all() as Array<{ name: string }>;
+    if (!srcCols.some(c => c.name === 'source_category')) {
+      this.db.exec("ALTER TABLE monitored_sources ADD COLUMN source_category TEXT NOT NULL DEFAULT 'generic'");
     }
   }
 
@@ -829,9 +837,9 @@ export class SqliteAdapter implements DbAdapter {
     const id = randomUUID();
     const now = new Date().toISOString();
     this.db.prepare(`
-      INSERT INTO monitored_sources (id, name, url, type, schedule, createdAt, org_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, data.name, data.url, data.type, data.schedule, now, data.orgId ?? 'system');
+      INSERT INTO monitored_sources (id, name, url, type, schedule, source_category, createdAt, org_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, data.name, data.url, data.type, data.schedule, data.sourceCategory ?? 'generic', now, data.orgId ?? 'system');
     const row = this.db.prepare('SELECT * FROM monitored_sources WHERE id = ?').get(id) as MonitoredSourceRow;
     return toMonitoredSource(row);
   }

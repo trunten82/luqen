@@ -101,6 +101,7 @@ export interface MonitoredSource {
   readonly url: string;
   readonly type: 'html' | 'rss' | 'api';
   readonly schedule: 'daily' | 'weekly' | 'monthly';
+  readonly sourceCategory: 'w3c-policy' | 'government' | 'wcag-upstream' | 'generic';
   readonly lastCheckedAt?: string;
   readonly lastContentHash?: string;
   readonly createdAt: string;
@@ -281,6 +282,7 @@ export interface CreateSourceInput {
   readonly url: string;
   readonly type: 'html' | 'rss' | 'api';
   readonly schedule: 'daily' | 'weekly' | 'monthly';
+  readonly sourceCategory?: 'w3c-policy' | 'government' | 'wcag-upstream' | 'generic';
   readonly orgId?: string;
 }
 
@@ -342,5 +344,27 @@ export interface BaselineSeedData {
     version: string; level: string; criterion: string;
     title: string; description?: string; url?: string;
   }[];
+}
+
+// ── LLM Provider Interface (optional — for parsing government regulatory pages) ──
+
+export interface ExtractedRequirements {
+  readonly wcagVersion: string;
+  readonly wcagLevel: string;
+  readonly criteria: ReadonlyArray<{
+    readonly criterion: string;
+    readonly obligation: 'mandatory' | 'recommended' | 'optional' | 'excluded';
+    readonly notes?: string;
+  }>;
+  readonly confidence: number;
+}
+
+export interface IComplianceLLMProvider {
+  extractRequirements(pageContent: string, context: {
+    readonly regulationId: string;
+    readonly regulationName: string;
+    readonly currentWcagVersion?: string;
+    readonly currentWcagLevel?: string;
+  }): Promise<ExtractedRequirements>;
 }
 
