@@ -263,6 +263,37 @@ export async function brandingGuidelineRoutes(
     },
   );
 
+  // ── Toggle active (list page) ────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/toggle-active',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const guideline = await storage.branding.getGuideline(id);
+      if (guideline === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Guideline not found.', 'error'));
+      }
+
+      try {
+        const updated = await storage.branding.updateGuideline(id, { active: !guideline.active });
+        const status = updated.active ? 'activated' : 'deactivated';
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', '/admin/branding-guidelines')
+          .send(toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to toggle guideline';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
   // ── Delete ───────────────────────────────────────────────────────────────
 
   server.post(
