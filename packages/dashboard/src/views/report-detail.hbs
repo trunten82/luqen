@@ -1080,54 +1080,86 @@
 (function() {
   var bar = document.getElementById('brand-filter-bar');
   if (!bar) return;
+
   bar.addEventListener('click', function(e) {
     var btn = e.target.closest('[data-brand-filter]');
     if (!btn) return;
     var filter = btn.getAttribute('data-brand-filter');
-    // Update button styles
+
+    // Update active button
     bar.querySelectorAll('[data-brand-filter]').forEach(function(b) {
       b.className = b.className.replace('btn--primary', 'btn--secondary');
     });
     btn.className = btn.className.replace('btn--secondary', 'btn--primary');
-    // Filter at group level
+
+    var totalIssues = 0;
+    var visibleGroupCount = 0;
+
+    // Process each group
     document.querySelectorAll('[data-issue-group]').forEach(function(group) {
-      var hasBrand = group.getAttribute('data-has-brand') === 'true';
-      var brandCount = parseInt(group.getAttribute('data-brand-count') || '0', 10);
+      var total = parseInt(group.getAttribute('data-total-count') || '0', 10);
+      var brandCt = parseInt(group.getAttribute('data-brand-count') || '0', 10);
+      var unexpectedCt = total - brandCt;
+      var showGroup = false;
+
       if (filter === 'all') {
-        group.style.display = '';
+        showGroup = true;
+        totalIssues += total;
       } else if (filter === 'brand') {
-        group.style.display = hasBrand ? '' : 'none';
-      } else if (filter === 'unexpected') {
-        group.style.display = (parseInt(group.getAttribute('data-total-count') || '0', 10) > brandCount) ? '' : 'none';
+        showGroup = brandCt > 0;
+        totalIssues += brandCt;
+      } else {
+        showGroup = unexpectedCt > 0;
+        totalIssues += unexpectedCt;
+      }
+
+      group.style.display = showGroup ? '' : 'none';
+      if (showGroup) visibleGroupCount++;
+
+      // Show/hide "excluded" note on group header
+      var note = group.querySelector('.brand-filter-note');
+      if (filter === 'unexpected' && brandCt > 0 && showGroup) {
+        if (!note) {
+          note = document.createElement('span');
+          note.className = 'brand-filter-note rpt-text--muted';
+          note.style.fontSize = '0.7rem';
+          note.style.marginLeft = '0.5rem';
+          group.querySelector('.rpt-group__counts').appendChild(note);
+        }
+        note.textContent = '(' + brandCt + ' brand excluded)';
+        note.style.display = '';
+      } else if (filter === 'brand' && unexpectedCt > 0 && showGroup) {
+        if (!note) {
+          note = document.createElement('span');
+          note.className = 'brand-filter-note rpt-text--muted';
+          note.style.fontSize = '0.7rem';
+          note.style.marginLeft = '0.5rem';
+          group.querySelector('.rpt-group__counts').appendChild(note);
+        }
+        note.textContent = '(showing ' + brandCt + ' of ' + total + ')';
+        note.style.display = '';
+      } else if (note) {
+        note.style.display = 'none';
       }
     });
-    // Also filter individual issues within expanded groups
+
+    // Show/hide individual issues within groups
     document.querySelectorAll('.rpt-issue-item[data-brand-related]').forEach(function(item) {
       var isBrand = item.getAttribute('data-brand-related') === 'true';
       if (filter === 'all') {
         item.style.display = '';
       } else if (filter === 'brand') {
         item.style.display = isBrand ? '' : 'none';
-      } else if (filter === 'unexpected') {
+      } else {
         item.style.display = isBrand ? 'none' : '';
       }
     });
-    // Update summary counts
-    var visibleGroups = document.querySelectorAll('[data-issue-group]:not([style*="display: none"])');
-    var totalIssues = 0;
-    visibleGroups.forEach(function(g) {
-      if (filter === 'brand') {
-        totalIssues += parseInt(g.getAttribute('data-brand-count') || '0', 10);
-      } else if (filter === 'unexpected') {
-        totalIssues += parseInt(g.getAttribute('data-total-count') || '0', 10) - parseInt(g.getAttribute('data-brand-count') || '0', 10);
-      } else {
-        totalIssues += parseInt(g.getAttribute('data-total-count') || '0', 10);
-      }
-    });
+
+    // Update summary text
     var countEl = document.getElementById('rpt-issues-count');
     var detailEl = document.getElementById('rpt-issues-detail');
     if (countEl) countEl.textContent = totalIssues + ' issues';
-    if (detailEl) detailEl.textContent = ' grouped by ' + visibleGroups.length + ' WCAG criteria';
+    if (detailEl) detailEl.textContent = ' grouped by ' + visibleGroupCount + ' WCAG criteria';
   });
 })();
 </script>
