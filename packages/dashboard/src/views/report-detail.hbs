@@ -240,7 +240,7 @@
         <div class="rpt-template-block">
           <div class="rpt-template-block__label">{{t "reportDetail.sharedComponentsLabel"}}</div>
           {{#each templateItems}}
-          <div class="rpt-issue-item" data-severity="{{type}}">
+          <div class="rpt-issue-item" data-severity="{{type}}" data-brand-related="false">
             <div class="rpt-issue-item__head">
               <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
               <span class="rpt-component-tag">{{componentName}}</span>
@@ -700,15 +700,9 @@
       else if (categoryFilters.indexOf(f) !== -1) activeCat.push(f);
     });
 
-    // Brand filter: hide groups with no matching issues
-    var bf = window.rptBrandFilter || 'all';
-    if (bf === 'brand') {
-      if (group.getAttribute('data-has-brand') !== 'true') return false;
-    } else if (bf === 'unexpected') {
-      var total = parseInt(group.getAttribute('data-total-count') || '0', 10);
-      var brandCt = parseInt(group.getAttribute('data-brand-count') || '0', 10);
-      if (total <= brandCt) return false;
-    }
+    /* Brand filter group-level check removed — item-level filtering    */
+    /* in rptApplyFilters now handles visibility per-item and hides     */
+    /* groups when all their items are filtered out.                    */
 
     if (activeSev.length === 0 && activeCat.length === 0) return true;
 
@@ -751,28 +745,51 @@
         var searchable = (criterion + ' ' + title + ' ' + tags.join(' ')).toLowerCase();
         show = searchable.indexOf(rptSearchQuery) !== -1;
       }
-      group.style.display = show ? '' : 'none';
 
       /* ── Item-level brand filtering ──────────────────────────────────── */
-      /* When brand filter is active, show/hide individual issue items     */
-      /* within each group. This runs on every group (even hidden ones)    */
-      /* so state is always consistent when groups are toggled open.       */
-      var items = group.querySelectorAll('.rpt-issue-item[data-brand-related]');
+      /* Show/hide individual issue items based on brand filter.           */
+      /* All items have data-brand-related (true/false). Items without     */
+      /* the attribute are treated as non-brand (unexpected).              */
+      var items = group.querySelectorAll('.rpt-issue-item');
+      var groupHasVisibleItems = false;
       items.forEach(function(item) {
+        var isBrand = item.getAttribute('data-brand-related') === 'true';
         if (bf === 'unexpected') {
-          item.style.display = item.getAttribute('data-brand-related') === 'true' ? 'none' : '';
+          item.style.display = isBrand ? 'none' : '';
+          if (!isBrand) groupHasVisibleItems = true;
         } else if (bf === 'brand') {
-          item.style.display = item.getAttribute('data-brand-related') === 'false' ? 'none' : '';
+          item.style.display = isBrand ? '' : 'none';
+          if (isBrand) groupHasVisibleItems = true;
         } else {
           item.style.display = '';
+          groupHasVisibleItems = true;
         }
       });
 
+      /* Hide the entire group if brand filter hides all its items */
+      if (show && bf !== 'all' && !groupHasVisibleItems) {
+        show = false;
+      }
+
+      group.style.display = show ? '' : 'none';
+
       if (show) {
         visibleCriteria++;
-        visibleErrors += parseInt(group.getAttribute('data-error-count') || '0', 10);
-        visibleWarnings += parseInt(group.getAttribute('data-warning-count') || '0', 10);
-        visibleNotices += parseInt(group.getAttribute('data-notice-count') || '0', 10);
+        /* When brand filter is active, count from visible items instead  */
+        /* of group-level data attributes to match actual displayed items */
+        if (bf !== 'all') {
+          items.forEach(function(item) {
+            if (item.style.display === 'none') return;
+            var sev = item.getAttribute('data-severity');
+            if (sev === 'error') visibleErrors++;
+            else if (sev === 'warning') visibleWarnings++;
+            else if (sev === 'notice') visibleNotices++;
+          });
+        } else {
+          visibleErrors += parseInt(group.getAttribute('data-error-count') || '0', 10);
+          visibleWarnings += parseInt(group.getAttribute('data-warning-count') || '0', 10);
+          visibleNotices += parseInt(group.getAttribute('data-notice-count') || '0', 10);
+        }
       }
     });
 
