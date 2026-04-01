@@ -40,14 +40,14 @@ export async function retagScansForSite(
       id: c.id,
       name: c.name,
       hexValue: c.hexValue,
-      ...(c.usage ? { usage: c.usage as 'primary' | 'secondary' | 'accent' | 'background' | 'text' } : {}),
+      ...(c.usage ? { usage: c.usage as any } : {}),
       ...(c.context ? { context: c.context } : {}),
     })),
     fonts: guideline.fonts.map((f) => ({
       id: f.id,
       family: f.family,
       ...(f.weights ? { weights: f.weights } : {}),
-      ...(f.usage ? { usage: f.usage as 'heading' | 'body' | 'accent' | 'code' } : {}),
+      ...(f.usage ? { usage: f.usage as any } : {}),
       ...(f.context ? { context: f.context } : {}),
     })),
     selectors: guideline.selectors.map((s) => ({
