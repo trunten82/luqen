@@ -507,6 +507,29 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
 
         const uniqueMandatoryViolations = deduplicatedViolations.filter((v) => v.obligation === 'mandatory').length;
 
+        // Detect if all regulations have identical requirement sets
+        const regCount = flatRegs.length;
+        const allRegulationsIdentical = regCount > 1 && deduplicatedViolations.length > 0 &&
+          deduplicatedViolations.every((v) => v.regulations.length === regCount);
+
+        // Compute diff summary when regulations differ
+        let regulationDiffs: Array<{ shortName: string; uniqueCriteria: string[] }> | undefined;
+        if (!allRegulationsIdentical && regCount > 1) {
+          const allCriteria = new Set(deduplicatedViolations.map((v) => v.wcagCriterion));
+          regulationDiffs = flatRegs.map((reg) => {
+            const regCriteria = new Set(
+              deduplicatedViolations
+                .filter((v) => v.regulations.includes(reg.shortName))
+                .map((v) => v.wcagCriterion),
+            );
+            const uniqueToReg = [...regCriteria].filter((c) => {
+              const v = deduplicatedViolations.find((d) => d.wcagCriterion === c);
+              return v != null && v.regulations.length < regCount;
+            });
+            return { shortName: reg.shortName, uniqueCriteria: uniqueToReg };
+          }).filter((d) => d.uniqueCriteria.length > 0);
+        }
+
         return {
           ...entry,
           confirmedViolations: uniqueMandatoryViolations > 0 ? uniqueMandatoryViolations : (hasExplicitConfirmed ? confirmed : mandatoryTotal),
@@ -516,6 +539,8 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
           regulationCount: flatRegs.length,
           violations: deduplicatedViolations,
           uniqueMandatoryViolations,
+          allRegulationsIdentical,
+          regulationDiffs,
         };
       })
     : null;

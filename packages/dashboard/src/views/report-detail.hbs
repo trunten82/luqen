@@ -149,11 +149,37 @@
             {{/if}}
             {{/each}}
           </div>
-          {{#if regulations.length}}
-          <div class="rpt-reg-filter" style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.25rem;">
+          {{#if allRegulationsIdentical}}
+          {{! ── Identical regulations: collapsed summary ── }}
+          <p class="rpt-text--muted" style="margin:0.4rem 0 0.2rem;font-size:0.75rem;">All {{regulationCount}} regulations require the same criteria</p>
+          {{#if violations.length}}
+          <details class="rpt-violations-expandable">
+            <summary class="rpt-violations-toggle">Show {{violations.length}} violated criteria</summary>
+            <div class="rpt-juris-card__violations">
+              {{#each violations}}
+              <div class="rpt-violation-row">
+                <span class="rpt-violation-criterion">{{wcagCriterion}}</span>
+                <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{obligation}}</span>
+                <span class="rpt-text--muted">{{issueCount}} issue{{#unless (eq issueCount 1)}}s{{/unless}}</span>
+              </div>
+              {{/each}}
+            </div>
+          </details>
+          {{/if}}
+          {{else}}
+          {{! ── Different regulations: expanded with filter ── }}
+          {{#if (gt regulationCount 1)}}
+          <div class="rpt-reg-filter">
             <button type="button" class="rpt-mini-tag rpt-mini-tag--active" data-reg-filter="all" onclick="rptFilterRegulation(this, 'all')">All</button>
             {{#each regulations}}
             <button type="button" class="rpt-mini-tag" data-reg-filter="{{shortName}}" onclick="rptFilterRegulation(this, '{{shortName}}')">{{shortName}}</button>
+            {{/each}}
+          </div>
+          {{/if}}
+          {{#if regulationDiffs.length}}
+          <div class="rpt-reg-diff-summary">
+            {{#each regulationDiffs}}
+            <span class="rpt-text--muted" style="font-size:0.7rem;">{{uniqueCriteria.length}} criteria unique to <strong>{{shortName}}</strong></span>
             {{/each}}
           </div>
           {{/if}}
@@ -172,6 +198,7 @@
             </div>
             {{/each}}
           </div>
+          {{/if}}
           {{/if}}
           {{/if}}
         </div>
@@ -1222,6 +1249,10 @@
   .rpt-mini-tag--active { background: var(--primary-color, #2563eb); color: #fff; }
   .rpt-reg-filter { margin-bottom: 0.5rem; }
   .rpt-violation-criterion { font-family: var(--font-mono, monospace); font-weight: 600; min-width: 3rem; }
+  .rpt-violations-expandable { margin-top: 0.4rem; }
+  .rpt-violations-toggle { cursor: pointer; font-size: 0.75rem; color: var(--primary-color, #2563eb); font-weight: 500; padding: 0.2rem 0; }
+  .rpt-violations-toggle:hover { text-decoration: underline; }
+  .rpt-reg-diff-summary { margin: 0.3rem 0; display: flex; flex-direction: column; gap: 0.15rem; }
   .rpt-assign-btn {
     padding: 0.2rem 0.5rem; font-size: 0.7rem; border: 1px solid var(--primary-color, #2563eb);
     border-radius: 3px; background: var(--primary-color, #2563eb); color: #fff; cursor: pointer; white-space: nowrap; margin-left: auto;
