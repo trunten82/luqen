@@ -24,8 +24,20 @@ export interface Regulation {
   readonly scope: 'public' | 'private' | 'all';
   readonly sectors: readonly string[];
   readonly description: string;
+  readonly parentRegulationId?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface WcagCriterion {
+  readonly id: string;
+  readonly wcagVersion: '2.0' | '2.1' | '2.2';
+  readonly level: 'A' | 'AA' | 'AAA';
+  readonly criterion: string;
+  readonly title: string;
+  readonly description?: string;
+  readonly url?: string;
+  readonly orgId: string;
 }
 
 export interface Requirement {
@@ -35,7 +47,7 @@ export interface Requirement {
   readonly wcagVersion: '2.0' | '2.1' | '2.2';
   readonly wcagLevel: 'A' | 'AA' | 'AAA';
   readonly wcagCriterion: string;
-  readonly obligation: 'mandatory' | 'recommended' | 'optional';
+  readonly obligation: 'mandatory' | 'recommended' | 'optional' | 'excluded';
   readonly notes?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -164,7 +176,7 @@ export interface AnnotatedIssue {
     readonly regulationName: string;
     readonly shortName: string;
     readonly jurisdictionId: string;
-    readonly obligation: 'mandatory' | 'recommended' | 'optional';
+    readonly obligation: 'mandatory' | 'recommended' | 'optional' | 'excluded';
     readonly enforcementDate: string;
   }[];
 }
@@ -239,6 +251,7 @@ export interface CreateRegulationInput {
   readonly scope: 'public' | 'private' | 'all';
   readonly sectors: readonly string[];
   readonly description: string;
+  readonly parentRegulationId?: string;
   readonly orgId?: string;
 }
 
@@ -247,7 +260,7 @@ export interface CreateRequirementInput {
   readonly wcagVersion: '2.0' | '2.1' | '2.2';
   readonly wcagLevel: 'A' | 'AA' | 'AAA';
   readonly wcagCriterion: string;
-  readonly obligation: 'mandatory' | 'recommended' | 'optional';
+  readonly obligation: 'mandatory' | 'recommended' | 'optional' | 'excluded';
   readonly notes?: string;
   readonly orgId?: string;
 }
@@ -324,5 +337,9 @@ export interface BaselineSeedData {
   readonly regulations: readonly CreateRegulationInput[];
   readonly requirements: readonly CreateRequirementInput[];
   readonly sources?: readonly CreateSourceInput[];
+  readonly wcagCriteria?: readonly {
+    version: string; level: string; criterion: string;
+    title: string; description?: string; url?: string;
+  }[];
 }
 

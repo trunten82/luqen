@@ -8,6 +8,7 @@ import type {
   OAuthClient,
   User,
   Webhook,
+  WcagCriterion,
   JurisdictionFilters,
   RegulationFilters,
   RequirementFilters,
@@ -111,6 +112,20 @@ export interface DbAdapter {
   getRequirementOrgId(id: string): Promise<string | null>;
   getClientOrgId(id: string): Promise<string | null>;
   getSourceOrgId(id: string): Promise<string | null>;
+
+  // WCAG Criteria
+  listWcagCriteria(filters?: { version?: string; level?: string }): Promise<WcagCriterion[]>;
+  bulkCreateWcagCriteria(data: readonly {
+    version: string; level: string; criterion: string;
+    title: string; description?: string; url?: string;
+  }[]): Promise<void>;
+
+  // Force-delete system records
+  deleteAllSystemWcagCriteria(): Promise<void>;
+  deleteAllSystemRequirements(): Promise<void>;
+  deleteAllSystemRegulations(): Promise<void>;
+  deleteAllSystemJurisdictions(): Promise<void>;
+  deleteAllSystemSources(): Promise<void>;
 
   // Org data
   deleteOrgData(orgId: string): Promise<void>;
