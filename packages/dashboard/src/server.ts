@@ -56,6 +56,8 @@ import { startEmailScheduler } from './email/scheduler.js';
 import { startSourceMonitorScheduler } from './source-monitor-scheduler.js';
 import { ServiceTokenManager } from './auth/service-token.js';
 import { ComplianceService } from './services/compliance-service.js';
+import { createComplianceClient } from './compliance-client.js';
+import { createBrandingOrgClient } from './branding-client.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { changeHistoryRoutes } from './routes/admin/change-history.js';
@@ -675,7 +677,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Scheduler — start after server is ready ────────────────────────────
-  server.addHook('onReady', () => {
+  server.addHook('onReady', async () => {
     const timer = startScheduler(storage, orchestrator, config);
     const emailTimer = startEmailScheduler(storage, pluginManager);
     const sourceMonitorTimer = startSourceMonitorScheduler(config, serviceTokenManager);
@@ -684,6 +686,51 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       clearInterval(emailTimer);
       clearInterval(sourceMonitorTimer);
     });
+
+    // ── Backfill missing OAuth clients for existing orgs ──────────────────
+    // Orgs created before a service was added won't have stored credentials.
+    // We create them now (best-effort) so every org has both compliance and
+    // branding clients ready.
+    try {
+      const token = await serviceTokenManager.getToken();
+      const allOrgs = await storage.organizations.listOrgs();
+
+      for (const org of allOrgs) {
+        // Compliance client
+        if (config.complianceUrl) {
+          const compCreds = await storage.organizations.getOrgComplianceCredentials(org.id);
+          if (compCreds === null) {
+            try {
+              const { clientId, clientSecret } = await createComplianceClient(
+                config.complianceUrl, token, org.id, org.slug,
+              );
+              await storage.organizations.updateOrgComplianceClient(org.id, clientId, clientSecret);
+              server.log.info(`Created compliance OAuth client for org "${org.name}"`);
+            } catch (err) {
+              server.log.warn({ err }, `Failed to backfill compliance client for org "${org.name}"`);
+            }
+          }
+        }
+
+        // Branding client
+        if (config.brandingUrl) {
+          const brandCreds = await storage.organizations.getOrgBrandingCredentials(org.id);
+          if (brandCreds === null) {
+            try {
+              const { clientId, clientSecret } = await createBrandingOrgClient(
+                config.brandingUrl, token, org.id, org.slug,
+              );
+              await storage.organizations.updateOrgBrandingClient(org.id, clientId, clientSecret);
+              server.log.info(`Created branding OAuth client for org "${org.name}"`);
+            } catch (err) {
+              server.log.warn({ err }, `Failed to backfill branding client for org "${org.name}"`);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      server.log.warn({ err }, 'OAuth client backfill encountered an error');
+    }
   });
 
   // ── Error page renderer (no layout) ──────────────────────────────────────
