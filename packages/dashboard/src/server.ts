@@ -30,6 +30,7 @@ import { pluginAdminRoutes } from './routes/admin/plugins.js';
 import { pluginApiRoutes } from './routes/api/plugins.js';
 import { exportRoutes } from './routes/api/export.js';
 import { dataApiRoutes } from './routes/api/data.js';
+import { brandingApiRoutes } from './routes/api/branding.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { repoRoutes } from './routes/repos.js';
@@ -634,6 +635,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Data API routes (Power BI / external integrations) ──────────────────
   await dataApiRoutes(server, storage);
+
+  // ── Branding API routes ──────────────────────────────────────────────────
+  await brandingApiRoutes(server, storage);
 
   // ── Setup API (create admin user via API key) ──────────────────────────
   await setupRoutes(server, storage, authService);
