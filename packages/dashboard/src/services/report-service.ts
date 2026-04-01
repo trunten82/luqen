@@ -145,6 +145,17 @@ export function inferComponent(selector: string, context: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// obligationPriority — used for deduplication of violations across regulations
+// ---------------------------------------------------------------------------
+
+function obligationPriority(obligation: string): number {
+  if (obligation === 'mandatory') return 3;
+  if (obligation === 'recommended') return 2;
+  if (obligation === 'optional') return 1;
+  return 0;
+}
+
+// ---------------------------------------------------------------------------
 // normalizeReportData — single source of truth for report rendering
 // ---------------------------------------------------------------------------
 
@@ -460,23 +471,51 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
           })),
         }));
 
-        const violatedCriteria = new Set<string>();
-        for (const reg of entry.regulations ?? []) {
-          for (const v of reg.violations ?? []) {
-            if (v.obligation === 'mandatory') {
-              violatedCriteria.add(v.wcagCriterion);
+        // Deduplicate violations across regulations — group by criterion
+        const criterionMap = new Map<string, {
+          wcagCriterion: string;
+          obligation: string;
+          issueCount: number;
+          regulations: string[];
+        }>();
+
+        for (const reg of flatRegs) {
+          for (const v of (reg.violations ?? [])) {
+            const key = v.wcagCriterion;
+            const existing = criterionMap.get(key);
+            if (existing) {
+              if (obligationPriority(v.obligation) > obligationPriority(existing.obligation)) {
+                existing.obligation = v.obligation;
+              }
+              if (!existing.regulations.includes(reg.shortName)) {
+                existing.regulations.push(reg.shortName);
+              }
+            } else {
+              criterionMap.set(key, {
+                wcagCriterion: v.wcagCriterion,
+                obligation: v.obligation,
+                issueCount: v.issueCount,
+                regulations: [reg.shortName],
+              });
             }
           }
         }
-        const criteriaCount = violatedCriteria.size;
+
+        const deduplicatedViolations = [...criterionMap.values()].sort((a, b) =>
+          a.wcagCriterion.localeCompare(b.wcagCriterion, undefined, { numeric: true })
+        );
+
+        const uniqueMandatoryViolations = deduplicatedViolations.filter((v) => v.obligation === 'mandatory').length;
 
         return {
           ...entry,
-          confirmedViolations: criteriaCount > 0 ? criteriaCount : (hasExplicitConfirmed ? confirmed : mandatoryTotal),
+          confirmedViolations: uniqueMandatoryViolations > 0 ? uniqueMandatoryViolations : (hasExplicitConfirmed ? confirmed : mandatoryTotal),
           needsReview: review,
           reviewStatus,
           regulations: flatRegs,
           regulationCount: flatRegs.length,
+          violations: deduplicatedViolations,
+          uniqueMandatoryViolations,
         };
       })
     : null;

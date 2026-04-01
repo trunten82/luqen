@@ -149,19 +149,30 @@
             {{/if}}
             {{/each}}
           </div>
-          {{#each regulations}}
-            {{#if violations.length}}
-            <div class="rpt-juris-card__violations">
-              {{#each violations}}
-              <div class="rpt-violation-row">
-                <span class="rpt-violation-criterion">{{wcagCriterion}}</span>
-                <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{obligation}}</span>
-                <span class="rpt-text--muted">{{issueCount}} issue{{#unless (eq issueCount 1)}}s{{/unless}}</span>
-              </div>
-              {{/each}}
+          {{#if regulations.length}}
+          <div class="rpt-reg-filter" style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.25rem;">
+            <button type="button" class="rpt-mini-tag rpt-mini-tag--active" data-reg-filter="all" onclick="rptFilterRegulation(this, 'all')">All</button>
+            {{#each regulations}}
+            <button type="button" class="rpt-mini-tag" data-reg-filter="{{shortName}}" onclick="rptFilterRegulation(this, '{{shortName}}')">{{shortName}}</button>
+            {{/each}}
+          </div>
+          {{/if}}
+          {{#if violations.length}}
+          <div class="rpt-juris-card__violations">
+            {{#each violations}}
+            <div class="rpt-violation-row" data-regulation-filter="{{#each regulations}}{{this}} {{/each}}">
+              <span class="rpt-violation-criterion">{{wcagCriterion}}</span>
+              <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{obligation}}</span>
+              <span class="rpt-text--muted">{{issueCount}} issue{{#unless (eq issueCount 1)}}s{{/unless}}</span>
+              <span class="rpt-violation-regs">
+                {{#each regulations}}
+                <span class="rpt-mini-tag">{{this}}</span>
+                {{/each}}
+              </span>
             </div>
-            {{/if}}
-          {{/each}}
+            {{/each}}
+          </div>
+          {{/if}}
           {{/if}}
         </div>
       </div>
@@ -1154,6 +1165,28 @@
     });
   })();
 
+  /* ── Regulation filter (compliance matrix) ───────────────────────────── */
+  function rptFilterRegulation(btn, regName) {
+    var container = btn.closest('.rpt-juris-card__body');
+    if (!container) return;
+
+    // Update active state
+    container.querySelectorAll('[data-reg-filter]').forEach(function(b) {
+      b.classList.remove('rpt-mini-tag--active');
+    });
+    btn.classList.add('rpt-mini-tag--active');
+
+    // Filter violation rows
+    container.querySelectorAll('.rpt-violation-row').forEach(function(row) {
+      if (regName === 'all') {
+        row.style.display = '';
+      } else {
+        var regs = (row.getAttribute('data-regulation-filter') || '').split(' ');
+        row.style.display = regs.indexOf(regName) !== -1 ? '' : 'none';
+      }
+    });
+  }
+
   /* ── Brand filter ─────────────────────────────────────────────────────── */
   /* Integrated directly into the main filter system — one mechanism for    */
   /* both group-level visibility and item-level visibility.                 */
@@ -1183,7 +1216,11 @@
 
 <style>
   .rpt-juris-card__violations { margin-top: 0.5rem; font-size: 0.8rem; border-top: 1px solid var(--border-color, #e5e7eb); padding-top: 0.5rem; }
-  .rpt-violation-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.15rem 0; }
+  .rpt-violation-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.15rem 0; flex-wrap: wrap; }
+  .rpt-violation-regs { display: flex; gap: 0.2rem; flex-wrap: wrap; margin-left: auto; }
+  .rpt-mini-tag { display: inline-block; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.65rem; background: var(--bg-tertiary, #e5e7eb); color: var(--text-secondary); cursor: pointer; border: 1px solid transparent; }
+  .rpt-mini-tag--active { background: var(--primary-color, #2563eb); color: #fff; }
+  .rpt-reg-filter { margin-bottom: 0.5rem; }
   .rpt-violation-criterion { font-family: var(--font-mono, monospace); font-weight: 600; min-width: 3rem; }
   .rpt-assign-btn {
     padding: 0.2rem 0.5rem; font-size: 0.7rem; border: 1px solid var(--primary-color, #2563eb);
