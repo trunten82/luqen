@@ -1044,8 +1044,25 @@
   window.rptBrandFilter = 'all';
   (function() {
     var bar = document.getElementById('brand-filter-bar');
-    var list = document.getElementById('rpt-issue-list');
-    if (!bar || !list) return;
+    if (!bar) return;
+
+    function applyBrandItemFilter() {
+      var bf = window.rptBrandFilter;
+      var items = document.querySelectorAll('.rpt-issue-item[data-brand-related]');
+      for (var i = 0; i < items.length; i++) {
+        var isBrand = items[i].getAttribute('data-brand-related') === 'true';
+        if (bf === 'all') {
+          items[i].removeAttribute('hidden');
+        } else if (bf === 'brand') {
+          if (isBrand) items[i].removeAttribute('hidden');
+          else items[i].setAttribute('hidden', '');
+        } else {
+          if (isBrand) items[i].setAttribute('hidden', '');
+          else items[i].removeAttribute('hidden');
+        }
+      }
+    }
+
     bar.addEventListener('click', function(e) {
       var btn = e.target.closest('[data-brand-filter]');
       if (!btn) return;
@@ -1054,11 +1071,25 @@
         b.className = b.className.replace('btn--primary', 'btn--secondary');
       });
       btn.className = btn.className.replace('btn--secondary', 'btn--primary');
-      // Toggle CSS classes on the list container
-      list.classList.remove('brand-mode-unexpected', 'brand-mode-brand');
-      if (window.rptBrandFilter === 'unexpected') list.classList.add('brand-mode-unexpected');
-      if (window.rptBrandFilter === 'brand') list.classList.add('brand-mode-brand');
+      // First apply group-level filters via the main system
       rptApplyFilters();
+      // Then apply item-level brand filtering
+      applyBrandItemFilter();
+    });
+
+    // Also re-apply brand filter whenever severity/category filters change
+    var origToggle = window.rptToggleFilter;
+    if (typeof origToggle === 'function') {
+      window.rptToggleFilter = function(f) {
+        origToggle(f);
+        applyBrandItemFilter();
+      };
+    }
+    // Hook into the filter buttons
+    document.querySelectorAll('.rpt-issue-filter-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        setTimeout(applyBrandItemFilter, 10);
+      });
     });
   })();
 </script>
@@ -1105,9 +1136,6 @@
   .rpt-assigned-badge--verified { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
   .rpt-assigned-badge--open { background: var(--status-error-bg, #fee2e2); color: var(--status-error, #991b1b); }
 
-  /* Brand filter — CSS-based hiding via container class */
-  .brand-mode-unexpected .rpt-issue-item[data-brand-related="true"] { display: none !important; }
-  .brand-mode-brand .rpt-issue-item[data-brand-related="false"] { display: none !important; }
 </style>
 
 <!-- brand filter merged into main script block -->
