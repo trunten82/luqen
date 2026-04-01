@@ -589,6 +589,7 @@ export class ScanOrchestrator {
         }
       } catch (brandingErr) {
         // Non-fatal — branding enrichment failure doesn't fail the scan
+        console.error('[branding] enrichment failed:', brandingErr);
         emit({
           type: 'scan_error',
           timestamp: new Date().toISOString(),
