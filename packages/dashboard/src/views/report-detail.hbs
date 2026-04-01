@@ -149,6 +149,19 @@
             {{/if}}
             {{/each}}
           </div>
+          {{#each regulations}}
+            {{#if violations.length}}
+            <div class="rpt-juris-card__violations">
+              {{#each violations}}
+              <div class="rpt-violation-row">
+                <span class="rpt-violation-criterion">{{wcagCriterion}}</span>
+                <span class="rpt-reg-tag rpt-reg-tag--{{obligationClass obligation}}">{{obligation}}</span>
+                <span class="rpt-text--muted">{{issueCount}} issue{{#unless (eq issueCount 1)}}s{{/unless}}</span>
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
+          {{/each}}
           {{/if}}
         </div>
       </div>
@@ -1169,6 +1182,9 @@
 </script>
 
 <style>
+  .rpt-juris-card__violations { margin-top: 0.5rem; font-size: 0.8rem; border-top: 1px solid var(--border-color, #e5e7eb); padding-top: 0.5rem; }
+  .rpt-violation-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.15rem 0; }
+  .rpt-violation-criterion { font-family: var(--font-mono, monospace); font-weight: 600; min-width: 3rem; }
   .rpt-assign-btn {
     padding: 0.2rem 0.5rem; font-size: 0.7rem; border: 1px solid var(--primary-color, #2563eb);
     border-radius: 3px; background: var(--primary-color, #2563eb); color: #fff; cursor: pointer; white-space: nowrap; margin-left: auto;

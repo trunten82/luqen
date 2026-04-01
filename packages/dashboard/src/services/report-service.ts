@@ -453,6 +453,11 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
           shortName: r.shortName,
           url: r.url,
           obligation: r.obligation ?? (r.violations?.some((v) => v.obligation === 'mandatory') ? 'mandatory' : 'optional'),
+          violations: (r.violations ?? []).map((v) => ({
+            wcagCriterion: v.wcagCriterion,
+            obligation: v.obligation,
+            issueCount: v.issueCount,
+          })),
         }));
 
         const violatedCriteria = new Set<string>();
