@@ -670,7 +670,8 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
       const rawExt = data.filename.split('.').pop() ?? 'png';
       const ext = rawExt.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'png';
-      const filename = `${id}.${ext}`;
+      const slug = guideline.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const filename = `${slug}-${id}.${ext}`;
       const orgId = guideline.orgId;
       const dir = join(uploadsDir ?? './uploads', orgId, 'branding-images');
 
