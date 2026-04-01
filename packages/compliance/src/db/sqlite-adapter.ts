@@ -13,6 +13,7 @@ import type {
   OAuthClient,
   User,
   Webhook,
+  WcagCriterion,
   JurisdictionFilters,
   RegulationFilters,
   RequirementFilters,
@@ -51,6 +52,7 @@ interface RegulationRow {
   scope: string;
   sectors: string;
   description: string;
+  parent_regulation_id: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -160,6 +162,7 @@ function toRegulation(row: RegulationRow): Regulation {
     scope: row.scope as Regulation['scope'],
     sectors: JSON.parse(row.sectors) as string[],
     description: row.description,
+    ...(row.parent_regulation_id != null ? { parentRegulationId: row.parent_regulation_id } : {}),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -386,6 +389,18 @@ export class SqliteAdapter implements DbAdapter {
         org_id TEXT NOT NULL DEFAULT 'system'
       )`,
       `CREATE INDEX IF NOT EXISTS idx_webhooks_org_id ON webhooks(org_id)`,
+
+      `CREATE TABLE IF NOT EXISTS wcag_criteria (
+        id TEXT PRIMARY KEY,
+        wcag_version TEXT NOT NULL,
+        level TEXT NOT NULL,
+        criterion TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        url TEXT,
+        org_id TEXT NOT NULL DEFAULT 'system'
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_wcag_criteria_version_level ON wcag_criteria(wcag_version, level)`,
     ];
     for (const statement of ddl) {
       this.db.prepare(statement).run();
@@ -407,6 +422,12 @@ export class SqliteAdapter implements DbAdapter {
           throw err;
         }
       }
+    }
+
+    // Column migration: add parent_regulation_id to regulations if missing
+    const regCols = this.db.prepare("PRAGMA table_info(regulations)").all() as Array<{ name: string }>;
+    if (!regCols.some(c => c.name === 'parent_regulation_id')) {
+      this.db.prepare('ALTER TABLE regulations ADD COLUMN parent_regulation_id TEXT REFERENCES regulations(id)').run();
     }
   }
 
@@ -522,8 +543,8 @@ export class SqliteAdapter implements DbAdapter {
     const id = data.id ?? randomUUID();
     const now = new Date().toISOString();
     this.db.prepare(`
-      INSERT INTO regulations (id, jurisdictionId, name, shortName, reference, url, enforcementDate, status, scope, sectors, description, createdAt, updatedAt, org_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO regulations (id, jurisdictionId, name, shortName, reference, url, enforcementDate, status, scope, sectors, description, parent_regulation_id, createdAt, updatedAt, org_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       data.jurisdictionId,
@@ -536,6 +557,7 @@ export class SqliteAdapter implements DbAdapter {
       data.scope,
       JSON.stringify(data.sectors),
       data.description,
+      data.parentRegulationId ?? null,
       now,
       now,
       data.orgId ?? 'system',
@@ -684,7 +706,7 @@ export class SqliteAdapter implements DbAdapter {
     const jPlaceholders = jurisdictionIds.map(() => '?').join(', ');
     const cPlaceholders = wcagCriteria.map(() => '?').join(', ');
 
-    // Match exact criteria OR wildcard '*'
+    // Match exact criteria only
     let sql = `
       SELECT
         req.id, req.regulationId, req.wcagVersion, req.wcagLevel,
@@ -694,7 +716,7 @@ export class SqliteAdapter implements DbAdapter {
       FROM requirements req
       JOIN regulations reg ON req.regulationId = reg.id
       WHERE reg.jurisdictionId IN (${jPlaceholders})
-        AND (req.wcagCriterion IN (${cPlaceholders}) OR req.wcagCriterion = '*')
+        AND req.wcagCriterion IN (${cPlaceholders})
     `;
 
     const params: unknown[] = [...jurisdictionIds, ...wcagCriteria];
@@ -953,6 +975,67 @@ export class SqliteAdapter implements DbAdapter {
 
   async deleteWebhook(id: string): Promise<void> {
     this.db.prepare('DELETE FROM webhooks WHERE id = ?').run(id);
+  }
+
+  // --- WCAG Criteria ---
+
+  async listWcagCriteria(filters?: { version?: string; level?: string }): Promise<WcagCriterion[]> {
+    let sql = 'SELECT * FROM wcag_criteria WHERE 1=1';
+    const params: unknown[] = [];
+    if (filters?.version) { sql += ' AND wcag_version = ?'; params.push(filters.version); }
+    if (filters?.level) { sql += ' AND level = ?'; params.push(filters.level); }
+    sql += ' ORDER BY criterion ASC';
+    const rows = this.db.prepare(sql).all(...params) as Array<{
+      id: string; wcag_version: string; level: string; criterion: string;
+      title: string; description: string | null; url: string | null; org_id: string;
+    }>;
+    return rows.map(r => ({
+      id: r.id,
+      wcagVersion: r.wcag_version as '2.0' | '2.1' | '2.2',
+      level: r.level as 'A' | 'AA' | 'AAA',
+      criterion: r.criterion,
+      title: r.title,
+      ...(r.description ? { description: r.description } : {}),
+      ...(r.url ? { url: r.url } : {}),
+      orgId: r.org_id,
+    }));
+  }
+
+  async bulkCreateWcagCriteria(data: readonly {
+    version: string; level: string; criterion: string;
+    title: string; description?: string; url?: string;
+  }[]): Promise<void> {
+    const insert = this.db.prepare(`
+      INSERT OR REPLACE INTO wcag_criteria (id, wcag_version, level, criterion, title, description, url, org_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'system')
+    `);
+    const tx = this.db.transaction(() => {
+      for (const c of data) {
+        const id = `${c.version}-${c.level}-${c.criterion}`;
+        insert.run(id, c.version, c.level, c.criterion, c.title, c.description ?? null, c.url ?? null);
+      }
+    });
+    tx();
+  }
+
+  async deleteAllSystemWcagCriteria(): Promise<void> {
+    this.db.prepare("DELETE FROM wcag_criteria WHERE org_id = 'system'").run();
+  }
+
+  async deleteAllSystemRequirements(): Promise<void> {
+    this.db.prepare("DELETE FROM requirements WHERE org_id = 'system'").run();
+  }
+
+  async deleteAllSystemRegulations(): Promise<void> {
+    this.db.prepare("DELETE FROM regulations WHERE org_id = 'system'").run();
+  }
+
+  async deleteAllSystemJurisdictions(): Promise<void> {
+    this.db.prepare("DELETE FROM jurisdictions WHERE org_id = 'system'").run();
+  }
+
+  async deleteAllSystemSources(): Promise<void> {
+    this.db.prepare("DELETE FROM monitored_sources WHERE org_id = 'system'").run();
   }
 
   // --- Org Data ---
