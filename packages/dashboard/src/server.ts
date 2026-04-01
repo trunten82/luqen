@@ -346,7 +346,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     return '0';
   });
   handlebars.registerHelper('json', (context: unknown) => {
-    return new handlebars.SafeString(JSON.stringify(context).replace(/</g, '\\u003c'));
+    const str = JSON.stringify(context ?? null);
+    return new handlebars.SafeString(str.replace(/</g, '\\u003c'));
   });
   handlebars.registerHelper('includes', (arr: unknown, value: unknown) =>
     Array.isArray(arr) && arr.includes(value),
