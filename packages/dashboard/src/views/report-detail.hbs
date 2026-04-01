@@ -1112,6 +1112,22 @@
         item.style.display = isBrand ? 'none' : '';
       }
     });
+    // Update summary counts
+    var visibleGroups = document.querySelectorAll('[data-issue-group]:not([style*="display: none"])');
+    var totalIssues = 0;
+    visibleGroups.forEach(function(g) {
+      if (filter === 'brand') {
+        totalIssues += parseInt(g.getAttribute('data-brand-count') || '0', 10);
+      } else if (filter === 'unexpected') {
+        totalIssues += parseInt(g.getAttribute('data-total-count') || '0', 10) - parseInt(g.getAttribute('data-brand-count') || '0', 10);
+      } else {
+        totalIssues += parseInt(g.getAttribute('data-total-count') || '0', 10);
+      }
+    });
+    var countEl = document.getElementById('rpt-issues-count');
+    var detailEl = document.getElementById('rpt-issues-detail');
+    if (countEl) countEl.textContent = totalIssues + ' issues';
+    if (detailEl) detailEl.textContent = ' grouped by ' + visibleGroups.length + ' WCAG criteria';
   });
 })();
 </script>
