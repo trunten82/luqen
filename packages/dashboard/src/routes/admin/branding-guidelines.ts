@@ -244,7 +244,7 @@ export async function brandingGuidelineRoutes(
         colors,
         fonts,
         selectors,
-        sites,
+        sites: sites.map((url) => ({ siteUrl: url })),
       });
     },
   );
