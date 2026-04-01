@@ -694,8 +694,9 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
 
+      const cacheBust = Date.now();
       const imageHtml = `<div id="brand-image-area">
-  <img src="${imagePath}" alt="${escapeHtml(guideline.name)} brand logo" width="64" height="64" style="border-radius:var(--radius-md);object-fit:cover;">
+  <img src="${imagePath}?v=${cacheBust}" alt="${escapeHtml(guideline.name)} brand logo" width="64" height="64" style="border-radius:var(--radius-md);object-fit:cover;">
   ${toastHtml('Brand image uploaded.')}
 </div>`;
 
