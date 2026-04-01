@@ -7,6 +7,7 @@ export interface BrandingRepository {
   createGuideline(data: CreateBrandingGuidelineInput): Promise<BrandingGuidelineRecord>;
   getGuideline(id: string): Promise<BrandingGuidelineRecord | null>;
   listGuidelines(orgId: string): Promise<readonly BrandingGuidelineRecord[]>;
+  listAllGuidelines(): Promise<readonly BrandingGuidelineRecord[]>;
   updateGuideline(id: string, data: BrandingGuidelineUpdateData): Promise<BrandingGuidelineRecord>;
   deleteGuideline(id: string): Promise<void>;
 

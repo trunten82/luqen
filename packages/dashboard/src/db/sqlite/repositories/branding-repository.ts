@@ -182,6 +182,16 @@ export class SqliteBrandingRepository implements BrandingRepository {
     return rows.map(guidelineRowToRecord);
   }
 
+  async listAllGuidelines(): Promise<readonly BrandingGuidelineRecord[]> {
+    const rows = this.db.prepare(`
+      SELECT g.*, (SELECT COUNT(*) FROM site_branding sb WHERE sb.guideline_id = g.id) AS site_count
+      FROM branding_guidelines g
+      ORDER BY g.org_id ASC, g.name ASC
+    `).all() as GuidelineRow[];
+
+    return rows.map(guidelineRowToRecord);
+  }
+
   async updateGuideline(id: string, data: BrandingGuidelineUpdateData): Promise<BrandingGuidelineRecord> {
     const fieldMap: Record<string, string> = {
       name: 'name',
