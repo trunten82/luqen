@@ -387,6 +387,7 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
     const warningCount = allItems.filter((i) => i.type === 'warning').length;
     const noticeCount = allItems.filter((i) => i.type === 'notice').length;
     const totalCount = g.issues.length + g.templateItems.reduce((s, t) => s + t.affectedCount, 0);
+    const brandCount = g.issues.filter((i) => (i as Record<string, unknown>).brandMatch && ((i as Record<string, unknown>).brandMatch as Record<string, unknown>).matched).length;
     return {
       criterion: g.criterion,
       title: g.title,
@@ -400,6 +401,8 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
       pageCount: g.pages.size,
       isRegulatory,
       hasTemplate,
+      hasBrandIssues: brandCount > 0,
+      brandCount,
       regulations: [...g.regulations.values()],
       components: [...g.components].sort(),
       issues: g.issues,

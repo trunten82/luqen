@@ -204,7 +204,7 @@
   {{#if reportData.allIssueGroups}}
   <div class="rpt-issue-list" id="rpt-issue-list">
     {{#each reportData.allIssueGroups}}
-    <div class="rpt-group rpt-group--collapsed" data-issue-group data-criterion="{{criterion}}" data-criterion-title="{{title}}" data-severity="{{#if errorCount}}error{{else}}{{#if warningCount}}warning{{else}}notice{{/if}}{{/if}}" data-regulatory="{{isRegulatory}}" data-template="{{hasTemplate}}" data-total-count="{{totalCount}}" data-error-count="{{errorCount}}" data-warning-count="{{warningCount}}" data-notice-count="{{noticeCount}}" data-page-count="{{pageCount}}">
+    <div class="rpt-group rpt-group--collapsed" data-issue-group data-criterion="{{criterion}}" data-criterion-title="{{title}}" data-severity="{{#if errorCount}}error{{else}}{{#if warningCount}}warning{{else}}notice{{/if}}{{/if}}" data-regulatory="{{isRegulatory}}" data-template="{{hasTemplate}}" data-total-count="{{totalCount}}" data-error-count="{{errorCount}}" data-warning-count="{{warningCount}}" data-notice-count="{{noticeCount}}" data-page-count="{{pageCount}}" data-has-brand="{{hasBrandIssues}}" data-brand-count="{{brandCount}}">
       <div class="rpt-group__header" data-action="rptToggleGroup" role="button" tabindex="0" aria-expanded="false">
         {{#if ../perm.issuesAssign}}{{#unless (issueAssignStatus ../assignedMap "" "" "" criterion)}}<input type="checkbox" class="rpt-bulk-cb" data-action="rptBulkUpdate" aria-label="Select {{criterion}}">{{/unless}}{{/if}}
         <span class="rpt-chevron" aria-hidden="true">&#9660;</span>
@@ -230,6 +230,9 @@
         {{#each components}}
           <span class="rpt-component-tag">{{this}}</span>
         {{/each}}
+        {{#if brandCount}}
+          <span class="rpt-badge rpt-badge--warning-light" style="font-size:0.65rem;">{{brandCount}} brand</span>
+        {{/if}}
       </div>
       <div class="rpt-group__body">
         {{! Template items (fix-once-fix-everywhere) }}
@@ -1086,15 +1089,27 @@
       b.className = b.className.replace('btn--primary', 'btn--secondary');
     });
     btn.className = btn.className.replace('btn--secondary', 'btn--primary');
-    // Filter issue items
+    // Filter at group level
+    document.querySelectorAll('[data-issue-group]').forEach(function(group) {
+      var hasBrand = group.getAttribute('data-has-brand') === 'true';
+      var brandCount = parseInt(group.getAttribute('data-brand-count') || '0', 10);
+      if (filter === 'all') {
+        group.style.display = '';
+      } else if (filter === 'brand') {
+        group.style.display = hasBrand ? '' : 'none';
+      } else if (filter === 'unexpected') {
+        group.style.display = (parseInt(group.getAttribute('data-total-count') || '0', 10) > brandCount) ? '' : 'none';
+      }
+    });
+    // Also filter individual issues within expanded groups
     document.querySelectorAll('.rpt-issue-item[data-brand-related]').forEach(function(item) {
       var isBrand = item.getAttribute('data-brand-related') === 'true';
       if (filter === 'all') {
-        item.classList.remove('brand-hidden');
+        item.style.display = '';
       } else if (filter === 'brand') {
-        item.classList.toggle('brand-hidden', !isBrand);
+        item.style.display = isBrand ? '' : 'none';
       } else if (filter === 'unexpected') {
-        item.classList.toggle('brand-hidden', isBrand);
+        item.style.display = isBrand ? 'none' : '';
       }
     });
   });
