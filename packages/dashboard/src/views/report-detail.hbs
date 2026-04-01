@@ -90,13 +90,10 @@
 </div>
 
 {{#if reportData.branding}}
-<div class="kpi-card kpi-card--brand" role="region" aria-label="Branding summary">
-  <div class="kpi-card__label">{{t "reports.brandRelated"}}</div>
-  <div class="kpi-card__value">{{reportData.branding.brandRelatedCount}}</div>
-  <div class="kpi-card__detail">{{reportData.branding.guidelineName}} v{{reportData.branding.guidelineVersion}}</div>
-  {{#if reportData.branding.complianceExcludingBrand}}
-  <div class="kpi-card__secondary">{{reportData.branding.complianceExcludingBrand}}% {{t "reports.excludingBrand"}}</div>
-  {{/if}}
+<div class="rpt-stat-bar" style="margin-top:var(--space-sm);">
+  <span class="rpt-badge rpt-badge--warning-light">{{t "reports.brandRelated"}}: {{reportData.branding.brandRelatedCount}}</span>
+  <span class="rpt-badge rpt-badge--neutral">{{t "reports.unexpected"}}: {{reportData.branding.unexpectedCount}}</span>
+  <span class="rpt-badge rpt-badge--neutral" style="font-size:var(--font-size-xs);">{{reportData.branding.guidelineName}} v{{reportData.branding.guidelineVersion}}</span>
 </div>
 {{/if}}
 
@@ -168,11 +165,11 @@
 <div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-issues" role="tabpanel" aria-labelledby="tab-issues">
 
   {{#if reportData.branding}}
-  <div class="filter-bar">
+  <div class="filter-bar" id="brand-filter-bar">
     <span class="filter-bar__label">{{t "reports.show"}}:</span>
-    <a href="?brandFilter=all" class="btn btn--sm {{#if (eq brandFilter 'all')}}btn--primary{{else}}btn--secondary{{/if}}">{{t "reports.all"}} ({{reportData.summary.totalIssues}})</a>
-    <a href="?brandFilter=unexpected" class="btn btn--sm {{#if (eq brandFilter 'unexpected')}}btn--primary{{else}}btn--secondary{{/if}}">{{t "reports.unexpected"}} ({{reportData.branding.unexpectedCount}})</a>
-    <a href="?brandFilter=brand" class="btn btn--sm {{#if (eq brandFilter 'brand')}}btn--primary{{else}}btn--secondary{{/if}}">{{t "reports.brandRelated"}} ({{reportData.branding.brandRelatedCount}})</a>
+    <button type="button" class="btn btn--sm btn--primary" data-brand-filter="all">{{t "reports.all"}} ({{reportData.summary.totalIssues}})</button>
+    <button type="button" class="btn btn--sm btn--secondary" data-brand-filter="unexpected">{{t "reports.unexpected"}} ({{reportData.branding.unexpectedCount}})</button>
+    <button type="button" class="btn btn--sm btn--secondary" data-brand-filter="brand">{{t "reports.brandRelated"}} ({{reportData.branding.brandRelatedCount}})</button>
   </div>
   {{/if}}
 
@@ -272,13 +269,12 @@
         {{/if}}
         {{! Page-specific issues }}
         {{#each issues}}
-        <div class="rpt-issue-item" data-severity="{{type}}">
+        <div class="rpt-issue-item" data-severity="{{type}}" data-brand-related="{{#if this.brandMatch.matched}}true{{else}}false{{/if}}">
           <div class="rpt-issue-item__head">
             <span class="rpt-severity rpt-severity--{{type}}">{{type}}</span>
             <span class="rpt-issue-item__message">{{message}}</span>
             {{#if this.brandMatch.matched}}
-            <span class="badge badge--brand">
-              <span class="badge__dot badge__dot--brand"></span>
+            <span class="rpt-badge rpt-badge--warning-light" style="font-size:var(--font-size-xs);margin-left:var(--space-xs);">
               {{t "reports.brandRelated"}}
             </span>
             {{/if}}
@@ -1072,4 +1068,35 @@
   .rpt-assigned-badge--fixed { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
   .rpt-assigned-badge--verified { background: var(--status-success-bg, #d1fae5); color: var(--status-success, #065f46); }
   .rpt-assigned-badge--open { background: var(--status-error-bg, #fee2e2); color: var(--status-error, #991b1b); }
+
+  /* Brand filter */
+  .rpt-issue-item[data-brand-related].brand-hidden { display: none !important; }
 </style>
+
+<script>
+(function() {
+  var bar = document.getElementById('brand-filter-bar');
+  if (!bar) return;
+  bar.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-brand-filter]');
+    if (!btn) return;
+    var filter = btn.getAttribute('data-brand-filter');
+    // Update button styles
+    bar.querySelectorAll('[data-brand-filter]').forEach(function(b) {
+      b.className = b.className.replace('btn--primary', 'btn--secondary');
+    });
+    btn.className = btn.className.replace('btn--secondary', 'btn--primary');
+    // Filter issue items
+    document.querySelectorAll('.rpt-issue-item[data-brand-related]').forEach(function(item) {
+      var isBrand = item.getAttribute('data-brand-related') === 'true';
+      if (filter === 'all') {
+        item.classList.remove('brand-hidden');
+      } else if (filter === 'brand') {
+        item.classList.toggle('brand-hidden', !isBrand);
+      } else if (filter === 'unexpected') {
+        item.classList.toggle('brand-hidden', isBrand);
+      }
+    });
+  });
+})();
+</script>
