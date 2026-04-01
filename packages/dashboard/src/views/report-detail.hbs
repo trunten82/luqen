@@ -93,7 +93,7 @@
 <div class="rpt-stat-bar" style="margin-top:var(--space-sm);">
   <span class="rpt-badge {{#if brandingGuidelineActive}}rpt-badge--warning-light{{else}}rpt-badge--neutral{{/if}}">{{t "reports.brandRelated"}}: {{reportData.branding.brandRelatedCount}}</span>
   <span class="rpt-badge rpt-badge--neutral">{{t "reports.unexpected"}}: {{reportData.branding.unexpectedCount}}</span>
-  <span class="rpt-badge {{#if brandingGuidelineActive}}rpt-badge--neutral{{else}}rpt-badge--error-light{{/if}}" style="font-size:var(--font-size-xs);">{{reportData.branding.guidelineName}} v{{reportData.branding.guidelineVersion}}{{#unless brandingGuidelineActive}} ({{t "common.inactive"}}){{/unless}}</span>
+  <span class="rpt-badge {{#if brandingGuidelineActive}}rpt-badge--success-light{{else}}rpt-badge--error-light{{/if}}" style="font-size:var(--font-size-xs);">{{reportData.branding.guidelineName}} v{{reportData.branding.guidelineVersion}}{{#unless brandingGuidelineActive}} ({{t "common.inactive"}}){{/unless}}</span>
 </div>
 {{/if}}
 

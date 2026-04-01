@@ -2423,6 +2423,7 @@ select {
 .rpt-badge--error-light { background: var(--status-error-bg); color: var(--status-error); }
 .rpt-badge--warning-light { background: var(--status-warning-bg); color: var(--status-warning); }
 .rpt-badge--notice-light { background: var(--status-info-bg); color: var(--status-info); }
+.rpt-badge--success-light { background: var(--status-success-bg, #dcfce7); color: var(--status-success, #166534); }
 
 /* ── Section wrapper ──────────────────────────────────────── */
 .rpt-section { background: var(--bg-primary); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 1.25rem; }
