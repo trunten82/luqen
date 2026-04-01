@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter, Organization } from '../../db/index.js';
+import type { ServiceTokenManager } from '../../auth/service-token.js';
 import { deleteOrgData, createComplianceClient } from '../../compliance-client.js';
 import { createBrandingOrgClient } from '../../branding-client.js';
 import { requirePermission } from '../../auth/middleware.js';
@@ -29,6 +30,7 @@ export async function organizationRoutes(
   storage: StorageAdapter,
   complianceUrl?: string,
   brandingUrl?: string,
+  brandingTokenManager?: ServiceTokenManager | null,
 ): Promise<void> {
   // GET /admin/organizations — list all organizations
   server.get(
@@ -105,11 +107,11 @@ export async function organizationRoutes(
         }
 
         // Best effort — branding client creation failure must not block org creation
-        if (brandingUrl !== undefined) {
+        if (brandingUrl !== undefined && brandingTokenManager != null) {
           try {
-            const token = getToken(request);
+            const brandingToken = await brandingTokenManager.getToken();
             const { clientId, clientSecret } = await createBrandingOrgClient(
-              brandingUrl, token, created.id, created.slug,
+              brandingUrl, brandingToken, created.id, created.slug,
             );
             await storage.organizations.updateOrgBrandingClient(created.id, clientId, clientSecret);
           } catch (err) {

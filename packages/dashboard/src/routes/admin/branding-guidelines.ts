@@ -159,13 +159,30 @@ export async function brandingGuidelineRoutes(
     { preHandler: requirePermission('branding.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
-      const guidelines = await storage.branding.listGuidelines(orgId);
+      const isGlobalAdmin = request.user?.role === 'admin';
+
+      // Global admin sees all guidelines across orgs; org users see their own
+      const guidelines = isGlobalAdmin
+        ? await storage.branding.listAllGuidelines()
+        : await storage.branding.listGuidelines(orgId);
+
+      // Resolve org names for display
+      const allOrgs = isGlobalAdmin ? await storage.organizations.listOrgs() : [];
+      const orgNameMap = new Map(allOrgs.map((o: { id: string; name: string }) => [o.id, o.name]));
+
+      const enriched = guidelines.map((g) => ({
+        ...g,
+        orgDisplayName: isGlobalAdmin
+          ? (orgNameMap.get(g.orgId) ?? g.orgId)
+          : undefined,
+      }));
 
       return reply.view('admin/branding-guidelines.hbs', {
         pageTitle: 'Branding Guidelines',
         currentPath: '/admin/branding-guidelines',
         user: request.user,
-        guidelines,
+        guidelines: enriched,
+        isGlobalAdmin,
       });
     },
   );

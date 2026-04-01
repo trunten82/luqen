@@ -149,7 +149,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     }
   }
 
-  // ── Service Token Manager (auto-refresh for compliance API calls) ────────
+  // ── Service Token Managers (auto-refresh for API calls) ─────────────────
   const serviceTokenManager = new ServiceTokenManager(
     config.complianceUrl,
     config.complianceClientId,
@@ -157,6 +157,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   );
   server.decorate('serviceTokenManager', serviceTokenManager);
   server.addHook('onClose', () => { serviceTokenManager.destroy(); });
+
+  // Branding service token manager (separate JWT realm)
+  const brandingTokenManager = config.brandingUrl
+    ? new ServiceTokenManager(config.brandingUrl, config.brandingClientId, config.brandingClientSecret)
+    : null;
+  if (brandingTokenManager) {
+    server.addHook('onClose', () => { brandingTokenManager.destroy(); });
+  }
 
   // ── Optional Redis ────────────────────────────────────────────────────────
   const redisClient = createRedisClient(config.redisUrl);
@@ -619,7 +627,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await sourceRoutes(server, config.complianceUrl);
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
-  await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl);
+  await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, brandingTokenManager);
   await monitorRoutes(server, config.complianceUrl);
   await systemRoutes(server, {
     complianceUrl: config.complianceUrl,
@@ -630,7 +638,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   await dashboardUserRoutes(server, storage);
   await apiKeyRoutes(server, storage);
-  await organizationRoutes(server, storage, config.complianceUrl, config.brandingUrl);
+  await organizationRoutes(server, storage, config.complianceUrl, config.brandingUrl, brandingTokenManager);
   await roleRoutes(server, storage);
   await teamRoutes(server, storage);
   await emailReportRoutes(server, storage, pluginManager);
@@ -692,7 +700,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     // We create them now (best-effort) so every org has both compliance and
     // branding clients ready.
     try {
-      const token = await serviceTokenManager.getToken();
+      const complianceToken = await serviceTokenManager.getToken();
+      const brandingToken = brandingTokenManager ? await brandingTokenManager.getToken() : null;
       const allOrgs = await storage.organizations.listOrgs();
 
       for (const org of allOrgs) {
@@ -702,7 +711,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           if (compCreds === null) {
             try {
               const { clientId, clientSecret } = await createComplianceClient(
-                config.complianceUrl, token, org.id, org.slug,
+                config.complianceUrl, complianceToken, org.id, org.slug,
               );
               await storage.organizations.updateOrgComplianceClient(org.id, clientId, clientSecret);
               server.log.info(`Created compliance OAuth client for org "${org.name}"`);
@@ -713,12 +722,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         }
 
         // Branding client
-        if (config.brandingUrl) {
+        if (config.brandingUrl && brandingToken) {
           const brandCreds = await storage.organizations.getOrgBrandingCredentials(org.id);
           if (brandCreds === null) {
             try {
               const { clientId, clientSecret } = await createBrandingOrgClient(
-                config.brandingUrl, token, org.id, org.slug,
+                config.brandingUrl, brandingToken, org.id, org.slug,
               );
               await storage.organizations.updateOrgBrandingClient(org.id, clientId, clientSecret);
               server.log.info(`Created branding OAuth client for org "${org.name}"`);

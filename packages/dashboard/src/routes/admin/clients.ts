@@ -10,6 +10,7 @@ import {
   revokeBrandingClient,
 } from '../../branding-client.js';
 import type { StorageAdapter } from '../../db/index.js';
+import type { ServiceTokenManager } from '../../auth/service-token.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml, escapeHtml } from './helpers.js';
 
@@ -18,6 +19,7 @@ export async function clientRoutes(
   baseUrl: string,
   storage?: StorageAdapter,
   brandingUrl?: string,
+  brandingTokenManager?: ServiceTokenManager | null,
 ): Promise<void> {
   // GET /admin/clients — list OAuth clients
   server.get(
@@ -37,9 +39,10 @@ export async function clientRoutes(
         error = err instanceof Error ? err.message : 'Failed to load compliance OAuth clients';
       }
 
-      if (brandingUrl != null) {
+      if (brandingUrl != null && brandingTokenManager != null) {
         try {
-          brandingClients = await listBrandingClients(brandingUrl, token, orgId);
+          const brandingToken = await brandingTokenManager.getToken();
+          brandingClients = await listBrandingClients(brandingUrl, brandingToken, orgId);
         } catch {
           // Non-fatal — branding service may be unavailable
         }
@@ -140,9 +143,10 @@ export async function clientRoutes(
         let createdName: string;
         let createdAt: string;
 
-        if (service === 'branding' && brandingUrl != null) {
+        if (service === 'branding' && brandingUrl != null && brandingTokenManager != null) {
+          const brandingToken = await brandingTokenManager.getToken();
           const created = await createBrandingClient(
-            brandingUrl, getToken(request), body.name.trim(), scopes, grantTypes, getOrgId(request),
+            brandingUrl, brandingToken, body.name.trim(), scopes, grantTypes, getOrgId(request),
           );
           createdClientId = created.id;
           createdSecret = created.secret;
@@ -239,12 +243,13 @@ export async function clientRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
-      if (brandingUrl == null) {
+      if (brandingUrl == null || brandingTokenManager == null) {
         return reply.code(400).header('content-type', 'text/html').send(toastHtml('Branding service not configured.', 'error'));
       }
 
       try {
-        await revokeBrandingClient(brandingUrl, getToken(request), id);
+        const brandingToken = await brandingTokenManager.getToken();
+        await revokeBrandingClient(brandingUrl, brandingToken, id);
         return reply
           .code(200)
           .header('content-type', 'text/html')

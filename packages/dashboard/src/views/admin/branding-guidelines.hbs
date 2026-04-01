@@ -22,6 +22,9 @@
         <tr>
           <th scope="col">{{t "admin.branding.brandLogo"}}</th>
           <th scope="col">{{t "common.name"}}</th>
+          {{#if isGlobalAdmin}}
+          <th scope="col">{{t "common.organization"}}</th>
+          {{/if}}
           <th scope="col">{{t "admin.branding.sites"}}</th>
           <th scope="col">{{t "common.status"}}</th>
           <th scope="col">{{t "admin.branding.version"}}</th>
@@ -53,6 +56,11 @@
             <p class="text-sm text-muted">{{this.description}}</p>
             {{/if}}
           </td>
+          {{#if ../isGlobalAdmin}}
+          <td data-label="Organization">
+            <span class="badge badge--neutral">{{this.orgDisplayName}}</span>
+          </td>
+          {{/if}}
           <td data-label="Sites">
             <span class="badge badge--neutral">{{this.siteCount}} site{{#unless (eq this.siteCount 1)}}s{{/unless}}</span>
           </td>
