@@ -498,17 +498,33 @@
   {{#if scan.error}}
   <p>{{scan.error}}</p>
   {{/if}}
-  <a href="/scan/new" class="btn btn--sm btn--primary">{{t "reportDetail.tryAgain"}}</a>
+  <button hx-post="/reports/{{scan.id}}/retry" hx-target="body" class="btn btn--sm btn--primary">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    {{t "reportDetail.retryScan"}}
+  </button>
+  <a href="/scan/new" class="btn btn--sm btn--ghost">{{t "reportDetail.newScan"}}</a>
 </div>
 {{else if (eq scan.status 'running')}}
 <div class="alert alert--info" role="status" aria-live="polite">
   {{t "reportDetail.scanInProgress"}}
   <a href="/scan/{{scan.id}}/progress" class="btn btn--sm btn--ghost">{{t "reportDetail.viewProgress"}}</a>
+  <button hx-post="/reports/{{scan.id}}/cancel" hx-confirm="Cancel this scan?" hx-target="body" class="btn btn--sm btn--danger">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    {{t "reportDetail.cancelScan"}}
+  </button>
 </div>
 {{else if (eq scan.status 'queued')}}
 <div class="alert alert--info" role="status" aria-live="polite">
   {{t "reportDetail.scanQueued"}}
   <a href="/scan/{{scan.id}}/progress" class="btn btn--sm btn--ghost">{{t "reportDetail.viewQueueStatus"}}</a>
+  <button hx-post="/reports/{{scan.id}}/retry" hx-target="body" class="btn btn--sm btn--primary">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    {{t "reportDetail.retryScan"}}
+  </button>
+  <button hx-post="/reports/{{scan.id}}/cancel" hx-confirm="Cancel this scan?" hx-target="body" class="btn btn--sm btn--danger">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    {{t "reportDetail.cancelScan"}}
+  </button>
 </div>
 {{else}}
 <div class="alert alert--info" role="status">

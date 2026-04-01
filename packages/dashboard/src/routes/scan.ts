@@ -247,4 +247,77 @@ export async function scanRoutes(
       });
     },
   );
+
+  // POST /reports/:id/retry — re-enqueue a stuck queued/failed scan
+  server.post(
+    '/reports/:id/retry',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Scan not found' });
+      }
+
+      if (scan.status !== 'queued' && scan.status !== 'failed') {
+        return reply.code(400).send({ error: 'Only queued or failed scans can be retried' });
+      }
+
+      await storage.scans.updateScan(id, { status: 'queued' });
+
+      orchestrator.startScan(id, {
+        siteUrl: scan.siteUrl,
+        standard: scan.standard,
+        concurrency: config.maxConcurrentScans,
+        jurisdictions: scan.jurisdictions,
+        ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
+        ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
+          ? { webserviceUrls: config.webserviceUrls }
+          : {}),
+        complianceUrl: config.complianceUrl,
+        orgId: scan.orgId,
+      });
+
+      const isHtmx = request.headers['hx-request'] === 'true';
+      if (isHtmx) {
+        return reply
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', `/scan/${id}/progress`)
+          .send('');
+      }
+      return reply.redirect(`/scan/${id}/progress`);
+    },
+  );
+
+  // POST /reports/:id/cancel — mark a stuck queued/running scan as failed
+  server.post(
+    '/reports/:id/cancel',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Scan not found' });
+      }
+
+      if (scan.status !== 'queued' && scan.status !== 'running') {
+        return reply.code(400).send({ error: 'Only queued or running scans can be cancelled' });
+      }
+
+      await storage.scans.updateScan(id, {
+        status: 'failed',
+        error: 'Cancelled by user',
+        completedAt: new Date().toISOString(),
+      });
+
+      const isHtmx = request.headers['hx-request'] === 'true';
+      if (isHtmx) {
+        return reply
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', `/reports/${id}`)
+          .send('');
+      }
+      return reply.redirect(`/reports/${id}`);
+    },
+  );
 }

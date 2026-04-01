@@ -741,6 +741,45 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     } catch (err) {
       server.log.warn({ err }, 'OAuth client backfill encountered an error');
     }
+
+    // ── Recover stuck scans ─────────────────────────────────────────────
+    // Scans left in queued/running state after a restart will never complete.
+    // Re-enqueue queued scans; mark running scans as failed (partial state).
+    try {
+      const stuckQueued = await storage.scans.listScans({ status: 'queued' });
+      const stuckRunning = await storage.scans.listScans({ status: 'running' });
+
+      for (const scan of stuckRunning) {
+        await storage.scans.updateScan(scan.id, {
+          status: 'failed',
+          error: 'Interrupted by server restart',
+          completedAt: new Date().toISOString(),
+        });
+        server.log.info(`Marked interrupted scan ${scan.id} (${scan.siteUrl}) as failed`);
+      }
+
+      for (const scan of stuckQueued) {
+        orchestrator.startScan(scan.id, {
+          siteUrl: scan.siteUrl,
+          standard: scan.standard,
+          concurrency: config.maxConcurrentScans,
+          jurisdictions: scan.jurisdictions,
+          ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
+          ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
+            ? { webserviceUrls: config.webserviceUrls }
+            : {}),
+          complianceUrl: config.complianceUrl,
+          orgId: scan.orgId,
+        });
+        server.log.info(`Re-enqueued stuck scan ${scan.id} (${scan.siteUrl})`);
+      }
+
+      if (stuckRunning.length > 0 || stuckQueued.length > 0) {
+        server.log.info(`Scan recovery: ${stuckRunning.length} marked failed, ${stuckQueued.length} re-enqueued`);
+      }
+    } catch (err) {
+      server.log.warn({ err }, 'Scan recovery encountered an error');
+    }
   });
 
   // ── Error page renderer (no layout) ──────────────────────────────────────
