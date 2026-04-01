@@ -196,6 +196,74 @@ export const schema = `
     pageInfo: PageInfo!
   }
 
+  # ── Branding ────────────────────────────────────────────────────────
+
+  type BrandColor {
+    id: ID!
+    name: String!
+    hexValue: String!
+    usage: String
+    context: String
+  }
+
+  type BrandFont {
+    id: ID!
+    family: String!
+    weights: [String!]
+    usage: String
+    context: String
+  }
+
+  type BrandSelector {
+    id: ID!
+    pattern: String!
+    description: String
+  }
+
+  type BrandGuideline {
+    id: ID!
+    orgId: String!
+    name: String!
+    description: String
+    version: Int!
+    active: Boolean!
+    imagePath: String
+    createdAt: String!
+    updatedAt: String!
+    colors: [BrandColor!]!
+    fonts: [BrandFont!]!
+    selectors: [BrandSelector!]!
+    sites: [String!]!
+  }
+
+  type RetagResult {
+    retagged: Int!
+  }
+
+  input CreateBrandGuidelineInput {
+    name: String!
+    description: String
+  }
+
+  input AddBrandColorInput {
+    name: String!
+    hexValue: String!
+    usage: String
+    context: String
+  }
+
+  input AddBrandFontInput {
+    family: String!
+    weights: [String!]
+    usage: String
+    context: String
+  }
+
+  input AddBrandSelectorInput {
+    pattern: String!
+    description: String
+  }
+
   # ── System ──────────────────────────────────────────────────────────
 
   type HealthStatus {
@@ -244,6 +312,15 @@ export const schema = `
 
     """System health check."""
     health: HealthStatus!
+
+    """List branding guidelines for the current org."""
+    brandingGuidelines: [BrandGuideline!]!
+
+    """Fetch a single branding guideline by ID."""
+    brandingGuideline(id: ID!): BrandGuideline
+
+    """Get the branding guideline assigned to a site URL."""
+    brandingGuidelineForSite(siteUrl: String!): BrandGuideline
   }
 
   # ── Root Mutation ──────────────────────────────────────────────────
@@ -278,5 +355,41 @@ export const schema = `
 
     """Reset a user's password (requires users.reset_password)."""
     resetPassword(id: ID!, newPassword: String!): Boolean!
+
+    """Create a branding guideline (requires branding.manage)."""
+    createBrandingGuideline(input: CreateBrandGuidelineInput!): BrandGuideline!
+
+    """Delete a branding guideline (requires branding.manage)."""
+    deleteBrandingGuideline(id: ID!): Boolean!
+
+    """Toggle a branding guideline active/inactive."""
+    toggleBrandingGuideline(id: ID!): BrandGuideline!
+
+    """Add a color to a branding guideline."""
+    addBrandColor(guidelineId: ID!, input: AddBrandColorInput!): BrandColor!
+
+    """Remove a color from a branding guideline."""
+    removeBrandColor(id: ID!): Boolean!
+
+    """Add a font to a branding guideline."""
+    addBrandFont(guidelineId: ID!, input: AddBrandFontInput!): BrandFont!
+
+    """Remove a font from a branding guideline."""
+    removeBrandFont(id: ID!): Boolean!
+
+    """Add a selector rule to a branding guideline."""
+    addBrandSelector(guidelineId: ID!, input: AddBrandSelectorInput!): BrandSelector!
+
+    """Remove a selector rule from a branding guideline."""
+    removeBrandSelector(id: ID!): Boolean!
+
+    """Assign a branding guideline to a site URL."""
+    assignBrandingToSite(guidelineId: ID!, siteUrl: String!): Boolean!
+
+    """Unassign branding from a site URL."""
+    unassignBrandingFromSite(siteUrl: String!): Boolean!
+
+    """Retag existing scans for a site with current branding guideline."""
+    retagBrandingScans(siteUrl: String!): RetagResult!
   }
 `;
