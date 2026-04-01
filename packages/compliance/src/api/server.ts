@@ -20,6 +20,7 @@ import { registerUserRoutes } from './routes/users.js';
 import { registerClientRoutes } from './routes/clients.js';
 import { registerSeedRoutes } from './routes/seed.js';
 import { registerOrgRoutes } from './routes/orgs.js';
+import { registerWcagCriteriaRoutes } from './routes/wcag-criteria.js';
 import { VERSION } from '../version.js';
 
 export interface ServerOptions {
@@ -34,6 +35,18 @@ export interface ServerOptions {
   readonly logger?: boolean;
   /** Optional Redis-backed compliance result cache. */
   readonly cache?: ComplianceCache;
+  /** Scheduled reseed interval, e.g. '7d', '12h', '30m'. Default 'off'. */
+  readonly reseedInterval?: string;
+}
+
+function parseInterval(s: string): number {
+  const match = s.match(/^(\d+)(m|h|d)$/);
+  if (!match) return 7 * 24 * 60 * 60 * 1000;
+  const n = parseInt(match[1], 10);
+  const unit = match[2];
+  if (unit === 'm') return n * 60 * 1000;
+  if (unit === 'h') return n * 60 * 60 * 1000;
+  return n * 24 * 60 * 60 * 1000;
 }
 
 export async function createServer(options: ServerOptions) {
@@ -47,6 +60,7 @@ export async function createServer(options: ServerOptions) {
     rateLimitWindowMs = 60000,
     logger = false,
     cache,
+    reseedInterval = 'off',
   } = options;
 
   const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }); // 10MB for large site scans
@@ -139,6 +153,7 @@ export async function createServer(options: ServerOptions) {
   await registerClientRoutes(app, db);
   await registerSeedRoutes(app, db);
   await registerOrgRoutes(app, db);
+  await registerWcagCriteriaRoutes(app, db);
 
   return app;
 }
