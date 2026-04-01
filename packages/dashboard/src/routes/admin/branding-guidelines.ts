@@ -671,7 +671,8 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       const rawExt = data.filename.split('.').pop() ?? 'png';
       const ext = rawExt.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'png';
       const filename = `${id}.${ext}`;
-      const dir = join(uploadsDir ?? './uploads', 'branding-images');
+      const orgId = guideline.orgId;
+      const dir = join(uploadsDir ?? './uploads', orgId, 'branding-images');
 
       try {
         await mkdir(dir, { recursive: true });
@@ -683,7 +684,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
 
-      const imagePath = `/uploads/branding-images/${filename}`;
+      const imagePath = `/uploads/${orgId}/branding-images/${filename}`;
 
       try {
         await storage.branding.updateGuideline(id, { imagePath });
