@@ -231,7 +231,7 @@
           <span class="rpt-component-tag">{{this}}</span>
         {{/each}}
         {{#if brandCount}}
-          <span class="rpt-badge rpt-badge--warning-light" style="font-size:0.65rem;">{{brandCount}} brand</span>
+          <span class="rpt-badge rpt-badge--warning-light rpt-brand-tag" style="font-size:0.65rem;">{{brandCount}} brand</span>
         {{/if}}
       </div>
       <div class="rpt-group__body">
@@ -1093,6 +1093,10 @@
       btn.classList.remove('btn--secondary');
       btn.classList.add('btn--primary');
       rptApplyFilters();
+      // Hide/show brand badges on group headers based on filter
+      document.querySelectorAll('.rpt-brand-tag').forEach(function(tag) {
+        tag.style.display = (window.rptBrandFilter === 'unexpected') ? 'none' : '';
+      });
     });
   })();
 </script>
