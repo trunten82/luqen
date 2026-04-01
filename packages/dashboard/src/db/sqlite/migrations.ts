@@ -1102,4 +1102,11 @@ ALTER TABLE organizations ADD COLUMN branding_client_id TEXT;
 ALTER TABLE organizations ADD COLUMN branding_client_secret TEXT;
     `,
   },
+  {
+    id: '037',
+    name: 'add-branding-guideline-image',
+    sql: `
+ALTER TABLE branding_guidelines ADD COLUMN image_path TEXT;
+    `,
+  },
 ];

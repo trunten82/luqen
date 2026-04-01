@@ -20,6 +20,7 @@
     <table class="table" aria-label="{{t "admin.branding.title"}}">
       <thead>
         <tr>
+          <th scope="col">{{t "admin.branding.brandLogo"}}</th>
           <th scope="col">{{t "common.name"}}</th>
           <th scope="col">{{t "admin.branding.sites"}}</th>
           <th scope="col">{{t "common.status"}}</th>
@@ -30,6 +31,22 @@
       <tbody id="branding-guidelines-table">
         {{#each guidelines}}
         <tr id="branding-guideline-{{this.id}}">
+          <td class="table__cell" data-label="Logo">
+            {{#if this.imagePath}}
+            <img src="{{this.imagePath}}"
+                 alt="{{this.name}} brand logo"
+                 width="40" height="40"
+                 style="border-radius:var(--radius-sm);object-fit:cover;">
+            {{else}}
+            <div style="width:40px;height:40px;border-radius:var(--radius-sm);background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="7" cy="7" r="1.5" fill="currentColor"/>
+                <path d="M3 13 L7 9 L11 13 L14 10 L17 13" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            {{/if}}
+          </td>
           <td data-label="Name">
             <a href="/admin/branding-guidelines/{{this.id}}">{{this.name}}</a>
             {{#if this.description}}

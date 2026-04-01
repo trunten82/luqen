@@ -5,15 +5,51 @@
     <div class="flex flex-wrap items-center gap-sm mb-sm">
       <a href="/admin/branding-guidelines" class="btn btn--ghost btn--sm">&larr; {{t "admin.branding.backToList"}}</a>
     </div>
-    <div class="flex flex-wrap items-center gap-sm">
-      <h2 class="page-header__title">{{guideline.name}}</h2>
-      {{#if guideline.version}}
-      <span class="badge badge--info">v{{guideline.version}}</span>
-      {{/if}}
+    <div class="flex flex-wrap items-center gap-md">
+      <div id="brand-image-area">
+        {{#if guideline.imagePath}}
+        <img src="{{guideline.imagePath}}"
+             alt="{{guideline.name}} brand logo"
+             width="64" height="64"
+             style="border-radius:var(--radius-md);object-fit:cover;">
+        {{else}}
+        <div style="width:64px;height:64px;border-radius:var(--radius-md);background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="11" cy="11" r="2.5" fill="currentColor"/>
+            <path d="M4 22 L11 15 L17 21 L22 16 L28 22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        {{/if}}
+      </div>
+      <div>
+        <div class="flex flex-wrap items-center gap-sm">
+          <h2 class="page-header__title">{{guideline.name}}</h2>
+          {{#if guideline.version}}
+          <span class="badge badge--info">v{{guideline.version}}</span>
+          {{/if}}
+        </div>
+        {{#if guideline.description}}
+        <p class="text-muted mt-xs">{{guideline.description}}</p>
+        {{/if}}
+        {{#if perm.brandingManage}}
+        <form hx-post="/admin/branding-guidelines/{{guideline.id}}/image"
+              hx-encoding="multipart/form-data"
+              hx-target="#brand-image-area"
+              hx-swap="outerHTML"
+              class="mt-sm">
+          <input type="hidden" name="_csrf" value="{{csrfToken}}">
+          <label for="brand-image" class="btn btn--sm btn--secondary" style="cursor:pointer;">
+            {{t "admin.branding.uploadImage"}}
+          </label>
+          <input type="file" id="brand-image" name="file" accept="image/*"
+                 style="display:none;"
+                 onchange="this.form.requestSubmit();"
+                 aria-label="{{t "admin.branding.uploadImage"}}">
+        </form>
+        {{/if}}
+      </div>
     </div>
-    {{#if guideline.description}}
-    <p class="text-muted mt-xs">{{guideline.description}}</p>
-    {{/if}}
 
     {{#if perm.brandingManage}}
     <div id="branding-status-area" class="flex flex-wrap items-center gap-sm mt-sm">

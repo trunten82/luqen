@@ -234,6 +234,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Plugins ──────────────────────────────────────────────────────────────
+  await server.register(import('@fastify/multipart'), { limits: { fileSize: 5 * 1024 * 1024 } });
+
   await server.register(import('@fastify/formbody'));
 
   await registerSession(server, config.sessionSecret);

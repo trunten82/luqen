@@ -20,6 +20,7 @@ interface GuidelineRow {
   created_at: string;
   updated_at: string;
   site_count?: number;
+  image_path: string | null;
 }
 
 interface ColorRow {
@@ -63,6 +64,7 @@ function guidelineRowToRecord(row: GuidelineRow): BrandingGuidelineRecord {
     ...(row.description !== null ? { description: row.description } : {}),
     ...(row.created_by !== null ? { createdBy: row.created_by } : {}),
     ...(row.site_count !== undefined ? { siteCount: row.site_count } : {}),
+    ...(row.image_path !== null ? { imagePath: row.image_path } : {}),
   };
 }
 
@@ -185,6 +187,7 @@ export class SqliteBrandingRepository implements BrandingRepository {
       name: 'name',
       description: 'description',
       active: 'active',
+      imagePath: 'image_path',
     };
 
     const setClauses: string[] = ['version = version + 1', "updated_at = @updatedAt"];

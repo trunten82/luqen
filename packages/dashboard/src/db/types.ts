@@ -435,6 +435,7 @@ export interface BrandingGuidelineRecord {
   readonly fonts?: readonly BrandingFontRecord[];
   readonly selectors?: readonly BrandingSelectorRecord[];
   readonly siteCount?: number;
+  readonly imagePath?: string;
 }
 
 export interface BrandingColorRecord {
