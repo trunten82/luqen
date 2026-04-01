@@ -660,7 +660,8 @@
       "nodeVersion": "Node.js Version",
       "uptime": "Uptime",
       "complianceUrl": "Compliance URL",
-      "webserviceUrl": "Webservice URL"
+      "webserviceUrl": "Webservice URL",
+      "reseedCompliance": "Re-seed Compliance Data"
     },
     "emailReports": {
       "title": "Email Reports",

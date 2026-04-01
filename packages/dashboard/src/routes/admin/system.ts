@@ -6,7 +6,7 @@ import { statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getToken } from './helpers.js';
+import { getToken, toastHtml } from './helpers.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -109,6 +109,33 @@ export async function systemRoutes(
         nodeVersion: process.version,
         uptime: uptimeDisplay,
       });
+    },
+  );
+  // POST /admin/system/reseed — trigger compliance data reseed
+  server.post(
+    '/admin/system/reseed',
+    { preHandler: requirePermission('admin.system') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const token = getToken(request);
+      try {
+        const response = await fetch(`${config.complianceUrl}/api/v1/admin/reseed`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: '{}',
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json() as Record<string, unknown>;
+        return reply
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', '/admin/system')
+          .send(toastHtml(`Compliance data reseeded: ${result.requirements} requirements across ${result.regulations} regulations.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Reseed failed';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
     },
   );
 }
