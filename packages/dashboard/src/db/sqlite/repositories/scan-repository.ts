@@ -52,6 +52,7 @@ function rowToRecord(row: ScanRow): ScanRecord {
     ...(row.notices !== null ? { notices: row.notices } : {}),
     ...(row.confirmed_violations !== null ? { confirmedViolations: row.confirmed_violations } : {}),
     ...(row.json_report_path !== null ? { jsonReportPath: row.json_report_path } : {}),
+    ...(row.json_report !== null ? { jsonReport: row.json_report } : {}),
     ...(row.error !== null ? { error: row.error } : {}),
     ...(row.branding_guideline_id !== null ? { brandingGuidelineId: row.branding_guideline_id } : {}),
     ...(row.branding_guideline_version !== null ? { brandingGuidelineVersion: row.branding_guideline_version } : {}),
