@@ -46,13 +46,27 @@ async function seedData(db: SqliteAdapter): Promise<void> {
     description: 'US federal accessibility law',
   });
 
-  // Requirements: EAA — wildcard AA (covers all AA and A criteria)
+  // Requirements: EAA — explicit criteria used in SAMPLE_ISSUES
   await db.createRequirement({
     regulationId: 'eu-eaa',
     wcagVersion: '2.1',
     wcagLevel: 'AA',
-    wcagCriterion: '*',
+    wcagCriterion: '1.1.1',
     obligation: 'mandatory',
+  });
+  await db.createRequirement({
+    regulationId: 'eu-eaa',
+    wcagVersion: '2.1',
+    wcagLevel: 'AA',
+    wcagCriterion: '4.1.2',
+    obligation: 'mandatory',
+  });
+  await db.createRequirement({
+    regulationId: 'eu-eaa',
+    wcagVersion: '2.1',
+    wcagLevel: 'AAA',
+    wcagCriterion: '1.4.6',
+    obligation: 'optional',
   });
 
   // Section 508 — specific criteria
@@ -214,11 +228,10 @@ describe('checkCompliance', () => {
     }
   });
 
-  it('wildcard requirement at AA level matches A-level issues', async () => {
-    // 1.1.1 is an A-level criterion; EAA uses wildcard at AA — should still match
+  it('explicit EU requirement for 1.1.1 annotates matching issues with EAA', async () => {
     const request: ComplianceCheckRequest = {
       jurisdictions: ['EU'],
-      issues: [SAMPLE_ISSUES[0]], // 1.1.1 which is A-level
+      issues: [SAMPLE_ISSUES[0]], // 1.1.1
     };
 
     const result = await checkCompliance(request, db);

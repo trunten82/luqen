@@ -38,6 +38,7 @@ export async function createTestApp(): Promise<TestContext> {
     tokenExpiry: '1h',
     corsOrigins: ['*'],
     logger: false,
+    skipSeed: true,
   });
 
   // Create an admin OAuth client

@@ -359,7 +359,7 @@ describe('SqliteAdapter', () => {
         regulationId: 'eu-eaa',
         wcagVersion: '2.1',
         wcagLevel: 'AA',
-        wcagCriterion: '*',
+        wcagCriterion: '1.1.1',
         obligation: 'mandatory',
       });
       await db.createRequirement({
@@ -381,12 +381,13 @@ describe('SqliteAdapter', () => {
       expect(results[0].jurisdictionId).toBe('EU');
     });
 
-    it('finds wildcard requirements', async () => {
+    it('returns no results for criteria with no matching explicit requirements', async () => {
+      // Wildcards are not matched at query time — only exact criterion matches
       const results = await db.findRequirementsByCriteria(
         ['EU'],
         ['2.4.7'],
       );
-      expect(results.length).toBeGreaterThanOrEqual(1);
+      expect(results).toHaveLength(0);
     });
 
     it('finds requirements across multiple jurisdictions', async () => {

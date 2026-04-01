@@ -37,6 +37,8 @@ export interface ServerOptions {
   readonly cache?: ComplianceCache;
   /** Scheduled reseed interval, e.g. '7d', '12h', '30m'. Default 'off'. */
   readonly reseedInterval?: string;
+  /** Skip the automatic baseline seed on startup. Useful in tests. */
+  readonly skipSeed?: boolean;
 }
 
 function parseInterval(s: string): number {
@@ -61,6 +63,7 @@ export async function createServer(options: ServerOptions) {
     logger = false,
     cache,
     reseedInterval = 'off',
+    skipSeed = false,
   } = options;
 
   const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }); // 10MB for large site scans
@@ -157,12 +160,14 @@ export async function createServer(options: ServerOptions) {
 
   // Startup seed: runs once after server is ready
   app.addHook('onReady', async () => {
-    try {
-      const { seedBaseline } = await import('../seed/loader.js');
-      const result = await seedBaseline(db, { force: true });
-      app.log.info(`Compliance seed complete: ${result.requirements} requirements across ${result.regulations} regulations, ${result.wcagCriteria} WCAG criteria`);
-    } catch (err) {
-      app.log.warn({ err }, 'Compliance seed failed on startup');
+    if (!skipSeed) {
+      try {
+        const { seedBaseline } = await import('../seed/loader.js');
+        const result = await seedBaseline(db, { force: true });
+        app.log.info(`Compliance seed complete: ${result.requirements} requirements across ${result.regulations} regulations, ${result.wcagCriteria} WCAG criteria`);
+      } catch (err) {
+        app.log.warn({ err }, 'Compliance seed failed on startup');
+      }
     }
 
     // Scheduled reseed if configured
