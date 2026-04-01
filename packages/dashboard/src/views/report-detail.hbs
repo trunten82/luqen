@@ -699,6 +699,17 @@
       if (severityFilters.indexOf(f) !== -1) activeSev.push(f);
       else if (categoryFilters.indexOf(f) !== -1) activeCat.push(f);
     });
+
+    // Brand filter: hide groups with no matching issues
+    var bf = window.rptBrandFilter || 'all';
+    if (bf === 'brand') {
+      if (group.getAttribute('data-has-brand') !== 'true') return false;
+    } else if (bf === 'unexpected') {
+      var total = parseInt(group.getAttribute('data-total-count') || '0', 10);
+      var brandCt = parseInt(group.getAttribute('data-brand-count') || '0', 10);
+      if (total <= brandCt) return false;
+    }
+
     if (activeSev.length === 0 && activeCat.length === 0) return true;
 
     var matchSev = activeSev.length === 0 || activeSev.some(function(s) {
@@ -769,7 +780,24 @@
     var detailEl = document.getElementById('rpt-issues-detail');
     if (!countEl || !detailEl) return;
 
-    if (rptActiveFilters.size === 0 && !rptSearchQuery) {
+    // Brand filter: show/hide individual issues within visible groups
+    var bf = window.rptBrandFilter || 'all';
+    if (bf !== 'all') {
+      document.querySelectorAll('.rpt-issue-item[data-brand-related]').forEach(function(item) {
+        var isBrand = item.getAttribute('data-brand-related') === 'true';
+        if (bf === 'brand') {
+          item.style.display = isBrand ? '' : 'none';
+        } else {
+          item.style.display = isBrand ? 'none' : '';
+        }
+      });
+    } else {
+      document.querySelectorAll('.rpt-issue-item[data-brand-related]').forEach(function(item) {
+        item.style.display = '';
+      });
+    }
+
+    if (rptActiveFilters.size === 0 && !rptSearchQuery && bf === 'all') {
       countEl.textContent = rptTotals.issues + ' {{t "reportDetail.issuesLabel"}}';
       detailEl.textContent = ' {{t "reportDetail.groupedBy"}} ' + rptTotals.criteria + ' {{t "reportDetail.wcagCriteriaLabel"}}';
     } else {
@@ -1079,12 +1107,15 @@
 <script>
 (function() {
   var bar = document.getElementById('brand-filter-bar');
-  if (!bar) return;
+  if (!bar || typeof rptApplyFilters === 'undefined') return;
+
+  // Store active brand filter globally so rptApplyFilters can use it
+  window.rptBrandFilter = 'all';
 
   bar.addEventListener('click', function(e) {
     var btn = e.target.closest('[data-brand-filter]');
     if (!btn) return;
-    var filter = btn.getAttribute('data-brand-filter');
+    window.rptBrandFilter = btn.getAttribute('data-brand-filter');
 
     // Update active button
     bar.querySelectorAll('[data-brand-filter]').forEach(function(b) {
@@ -1092,74 +1123,8 @@
     });
     btn.className = btn.className.replace('btn--secondary', 'btn--primary');
 
-    var totalIssues = 0;
-    var visibleGroupCount = 0;
-
-    // Process each group
-    document.querySelectorAll('[data-issue-group]').forEach(function(group) {
-      var total = parseInt(group.getAttribute('data-total-count') || '0', 10);
-      var brandCt = parseInt(group.getAttribute('data-brand-count') || '0', 10);
-      var unexpectedCt = total - brandCt;
-      var showGroup = false;
-
-      if (filter === 'all') {
-        showGroup = true;
-        totalIssues += total;
-      } else if (filter === 'brand') {
-        showGroup = brandCt > 0;
-        totalIssues += brandCt;
-      } else {
-        showGroup = unexpectedCt > 0;
-        totalIssues += unexpectedCt;
-      }
-
-      group.style.display = showGroup ? '' : 'none';
-      if (showGroup) visibleGroupCount++;
-
-      // Show/hide "excluded" note on group header
-      var note = group.querySelector('.brand-filter-note');
-      if (filter === 'unexpected' && brandCt > 0 && showGroup) {
-        if (!note) {
-          note = document.createElement('span');
-          note.className = 'brand-filter-note rpt-text--muted';
-          note.style.fontSize = '0.7rem';
-          note.style.marginLeft = '0.5rem';
-          group.querySelector('.rpt-group__counts').appendChild(note);
-        }
-        note.textContent = '(' + brandCt + ' brand excluded)';
-        note.style.display = '';
-      } else if (filter === 'brand' && unexpectedCt > 0 && showGroup) {
-        if (!note) {
-          note = document.createElement('span');
-          note.className = 'brand-filter-note rpt-text--muted';
-          note.style.fontSize = '0.7rem';
-          note.style.marginLeft = '0.5rem';
-          group.querySelector('.rpt-group__counts').appendChild(note);
-        }
-        note.textContent = '(showing ' + brandCt + ' of ' + total + ')';
-        note.style.display = '';
-      } else if (note) {
-        note.style.display = 'none';
-      }
-    });
-
-    // Show/hide individual issues within groups
-    document.querySelectorAll('.rpt-issue-item[data-brand-related]').forEach(function(item) {
-      var isBrand = item.getAttribute('data-brand-related') === 'true';
-      if (filter === 'all') {
-        item.style.display = '';
-      } else if (filter === 'brand') {
-        item.style.display = isBrand ? '' : 'none';
-      } else {
-        item.style.display = isBrand ? 'none' : '';
-      }
-    });
-
-    // Update summary text
-    var countEl = document.getElementById('rpt-issues-count');
-    var detailEl = document.getElementById('rpt-issues-detail');
-    if (countEl) countEl.textContent = totalIssues + ' issues';
-    if (detailEl) detailEl.textContent = ' grouped by ' + visibleGroupCount + ' WCAG criteria';
+    // Re-run the main filter system which now respects rptBrandFilter
+    rptApplyFilters();
   });
 })();
 </script>
