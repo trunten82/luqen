@@ -721,6 +721,36 @@
     return matchSev && matchCat;
   }
 
+  function rptRebuildGroupCounts(group, errors, warnings, notices, pages) {
+    var countsEl = group.querySelector('.rpt-group__counts');
+    if (!countsEl) return;
+    while (countsEl.firstChild) countsEl.removeChild(countsEl.firstChild);
+    if (errors) {
+      var span = document.createElement('span');
+      span.className = 'rpt-severity rpt-severity--error';
+      span.textContent = errors + ' error' + (errors !== 1 ? 's' : '');
+      countsEl.appendChild(span);
+    }
+    if (warnings) {
+      var span = document.createElement('span');
+      span.className = 'rpt-severity rpt-severity--warning';
+      span.textContent = warnings + ' warning' + (warnings !== 1 ? 's' : '');
+      countsEl.appendChild(span);
+    }
+    if (notices) {
+      var span = document.createElement('span');
+      span.className = 'rpt-severity rpt-severity--notice';
+      span.textContent = notices + ' notice' + (notices !== 1 ? 's' : '');
+      countsEl.appendChild(span);
+    }
+    if (pages !== null) {
+      var span = document.createElement('span');
+      span.className = 'rpt-text--muted';
+      span.textContent = pages + ' pg';
+      countsEl.appendChild(span);
+    }
+  }
+
   function rptApplyFilters() {
     var severityFilters = ['error', 'warning', 'notice'];
     var activeSev = [];
@@ -778,17 +808,26 @@
         /* When brand filter is active, count from visible items instead  */
         /* of group-level data attributes to match actual displayed items */
         if (bf !== 'all') {
+          var groupErrors = 0, groupWarnings = 0, groupNotices = 0;
           items.forEach(function(item) {
             if (item.style.display === 'none') return;
             var sev = item.getAttribute('data-severity');
-            if (sev === 'error') visibleErrors++;
-            else if (sev === 'warning') visibleWarnings++;
-            else if (sev === 'notice') visibleNotices++;
+            if (sev === 'error') { visibleErrors++; groupErrors++; }
+            else if (sev === 'warning') { visibleWarnings++; groupWarnings++; }
+            else if (sev === 'notice') { visibleNotices++; groupNotices++; }
           });
+          /* Update the group header counts to reflect filtered view */
+          rptRebuildGroupCounts(group, groupErrors, groupWarnings, groupNotices, null);
         } else {
           visibleErrors += parseInt(group.getAttribute('data-error-count') || '0', 10);
           visibleWarnings += parseInt(group.getAttribute('data-warning-count') || '0', 10);
           visibleNotices += parseInt(group.getAttribute('data-notice-count') || '0', 10);
+          /* Restore original group header counts */
+          rptRebuildGroupCounts(group,
+            parseInt(group.getAttribute('data-error-count') || '0', 10),
+            parseInt(group.getAttribute('data-warning-count') || '0', 10),
+            parseInt(group.getAttribute('data-notice-count') || '0', 10),
+            group.getAttribute('data-page-count') || '0');
         }
       }
     });
@@ -813,6 +852,18 @@
     var countEl = document.getElementById('rpt-issues-count');
     var detailEl = document.getElementById('rpt-issues-detail');
     if (!countEl || !detailEl) return;
+
+    /* Update top stat bar badges to reflect filtered counts */
+    var statIssues = document.getElementById('rpt-stat-issues');
+    var statErrors = document.getElementById('rpt-stat-errors');
+    var statWarnings = document.getElementById('rpt-stat-warnings');
+    var statNotices = document.getElementById('rpt-stat-notices');
+    var isFiltered = rptActiveFilters.size > 0 || rptSearchQuery || bf !== 'all';
+
+    if (statIssues) statIssues.textContent = '{{t "reportDetail.issues"}}: ' + (isFiltered ? displayTotal : rptTotals.issues);
+    if (statErrors) statErrors.textContent = '{{t "reportDetail.errors"}}: ' + (isFiltered ? visibleErrors : rptTotals.errors);
+    if (statWarnings) statWarnings.textContent = '{{t "reportDetail.warnings"}}: ' + (isFiltered ? visibleWarnings : rptTotals.warnings);
+    if (statNotices) statNotices.textContent = '{{t "reportDetail.notices"}}: ' + (isFiltered ? visibleNotices : rptTotals.notices);
 
     if (rptActiveFilters.size === 0 && !rptSearchQuery && bf === 'all') {
       countEl.textContent = rptTotals.issues + ' {{t "reportDetail.issuesLabel"}}';
