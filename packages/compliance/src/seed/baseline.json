@@ -389,7 +389,11 @@
       "enforcementDate": "2025-06-28",
       "status": "active",
       "scope": "all",
-      "sectors": ["products", "services", "digital"],
+      "sectors": [
+        "products",
+        "services",
+        "digital"
+      ],
       "description": "The European Accessibility Act requires certain products and services to be accessible to persons with disabilities."
     },
     {
@@ -402,7 +406,10 @@
       "enforcementDate": "2018-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["government", "public-sector"],
+      "sectors": [
+        "government",
+        "public-sector"
+      ],
       "description": "The Web Accessibility Directive requires public sector bodies in the EU to make their websites and mobile applications accessible."
     },
     {
@@ -415,7 +422,9 @@
       "enforcementDate": "1998-08-07",
       "status": "active",
       "scope": "public",
-      "sectors": ["federal-government"],
+      "sectors": [
+        "federal-government"
+      ],
       "description": "Section 508 requires federal agencies to make their electronic and information technology accessible to people with disabilities."
     },
     {
@@ -428,7 +437,11 @@
       "enforcementDate": "1990-07-26",
       "status": "active",
       "scope": "all",
-      "sectors": ["public-accommodation", "employment", "government"],
+      "sectors": [
+        "public-accommodation",
+        "employment",
+        "government"
+      ],
       "description": "The ADA prohibits discrimination against people with disabilities and requires accessibility in places of public accommodation."
     },
     {
@@ -441,7 +454,11 @@
       "enforcementDate": "2010-10-01",
       "status": "active",
       "scope": "all",
-      "sectors": ["services", "employment", "public-sector"],
+      "sectors": [
+        "services",
+        "employment",
+        "public-sector"
+      ],
       "description": "The Equality Act 2010 requires service providers to make reasonable adjustments for disabled people, including digital accessibility."
     },
     {
@@ -454,8 +471,11 @@
       "enforcementDate": "2018-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Requires public sector bodies in the UK to meet accessibility requirements for their websites and mobile applications."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Requires public sector bodies in the UK to meet accessibility requirements for their websites and mobile applications.",
+      "parentRegulationId": "UK-EA"
     },
     {
       "id": "DE-BITV",
@@ -467,8 +487,11 @@
       "enforcementDate": "2011-09-22",
       "status": "active",
       "scope": "public",
-      "sectors": ["federal-government"],
-      "description": "BITV 2.0 implements web accessibility requirements for German federal public sector websites and mobile applications."
+      "sectors": [
+        "federal-government"
+      ],
+      "description": "BITV 2.0 implements web accessibility requirements for German federal public sector websites and mobile applications.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "FR-RGAA",
@@ -480,8 +503,11 @@
       "enforcementDate": "2020-09-14",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "RGAA is France's general accessibility improvement framework for digital public services."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "RGAA is France's general accessibility improvement framework for digital public services.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "AU-DDA",
@@ -493,7 +519,11 @@
       "enforcementDate": "1992-11-05",
       "status": "active",
       "scope": "all",
-      "sectors": ["services", "employment", "government"],
+      "sectors": [
+        "services",
+        "employment",
+        "government"
+      ],
       "description": "The DDA prohibits discrimination on the grounds of disability in Australia, including inaccessible digital services."
     },
     {
@@ -506,7 +536,10 @@
       "enforcementDate": "2019-07-11",
       "status": "active",
       "scope": "public",
-      "sectors": ["federal-government", "regulated-entities"],
+      "sectors": [
+        "federal-government",
+        "regulated-entities"
+      ],
       "description": "The Accessible Canada Act aims to create a barrier-free Canada by 2040, including digital accessibility requirements."
     },
     {
@@ -519,7 +552,10 @@
       "enforcementDate": "2016-03-22",
       "status": "active",
       "scope": "all",
-      "sectors": ["government", "services"],
+      "sectors": [
+        "government",
+        "services"
+      ],
       "description": "JIS X 8341-3 is the Japanese standard for web content accessibility, aligned with WCAG 2.1."
     },
     {
@@ -532,8 +568,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Austria's national transposition of the EU Web Accessibility Directive, requiring public sector bodies to meet WCAG 2.1 AA."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Austria's national transposition of the EU Web Accessibility Directive, requiring public sector bodies to meet WCAG 2.1 AA.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "BE-WAD",
@@ -545,8 +584,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Belgium's royal decree transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Belgium's royal decree transposing the EU Web Accessibility Directive for public sector websites and mobile applications.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "BG-WAD",
@@ -558,8 +600,11 @@
       "enforcementDate": "2019-10-10",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Bulgaria's ordinance transposing the EU Web Accessibility Directive for public sector digital services."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Bulgaria's ordinance transposing the EU Web Accessibility Directive for public sector digital services.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "HR-WAD",
@@ -571,8 +616,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Croatia's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Croatia's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "CY-WAD",
@@ -584,8 +632,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Cyprus' law transposing the EU Web Accessibility Directive for public sector bodies' websites and mobile apps."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Cyprus' law transposing the EU Web Accessibility Directive for public sector bodies' websites and mobile apps.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "CZ-WAD",
@@ -597,8 +648,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Czech law transposing the EU Web Accessibility Directive, requiring public sector websites to meet WCAG 2.1 AA."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Czech law transposing the EU Web Accessibility Directive, requiring public sector websites to meet WCAG 2.1 AA.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "DK-WAD",
@@ -610,8 +664,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Denmark's order transposing the EU Web Accessibility Directive for public sector digital services."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Denmark's order transposing the EU Web Accessibility Directive for public sector digital services.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "EE-WAD",
@@ -623,8 +680,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Estonia's amendment to the Public Information Act transposing the EU Web Accessibility Directive."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Estonia's amendment to the Public Information Act transposing the EU Web Accessibility Directive.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "FI-WAD",
@@ -636,8 +696,12 @@
       "enforcementDate": "2019-04-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector", "digital-services"],
-      "description": "Finland's Act on the Provision of Digital Services transposes the EU Web Accessibility Directive and sets WCAG 2.1 AA requirements."
+      "sectors": [
+        "public-sector",
+        "digital-services"
+      ],
+      "description": "Finland's Act on the Provision of Digital Services transposes the EU Web Accessibility Directive and sets WCAG 2.1 AA requirements.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "GR-WAD",
@@ -649,8 +713,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Greece's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Greece's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "HU-WAD",
@@ -662,8 +729,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Hungary's transposition of the EU Web Accessibility Directive through amendment of the e-Administration Act."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Hungary's transposition of the EU Web Accessibility Directive through amendment of the e-Administration Act.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "IE-WAD",
@@ -675,8 +745,11 @@
       "enforcementDate": "2020-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Ireland's statutory instrument transposing the EU Web Accessibility Directive for public sector digital services."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Ireland's statutory instrument transposing the EU Web Accessibility Directive for public sector digital services.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "IT-STANCA",
@@ -688,8 +761,12 @@
       "enforcementDate": "2004-01-09",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector", "private-sector"],
-      "description": "Italy's Stanca Law mandates web accessibility for public administration and private entities offering public services."
+      "sectors": [
+        "public-sector",
+        "private-sector"
+      ],
+      "description": "Italy's Stanca Law mandates web accessibility for public administration and private entities offering public services.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "IT-WAD",
@@ -701,8 +778,11 @@
       "enforcementDate": "2018-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Italy's legislative decree transposing the EU Web Accessibility Directive, updating and extending the Stanca Law."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Italy's legislative decree transposing the EU Web Accessibility Directive, updating and extending the Stanca Law.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "LV-WAD",
@@ -714,8 +794,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Latvia's Cabinet of Ministers regulations transposing the EU Web Accessibility Directive."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Latvia's Cabinet of Ministers regulations transposing the EU Web Accessibility Directive.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "LT-WAD",
@@ -727,8 +810,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Lithuania's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Lithuania's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "LU-WAD",
@@ -740,8 +826,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Luxembourg's law transposing the EU Web Accessibility Directive for public sector digital services."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Luxembourg's law transposing the EU Web Accessibility Directive for public sector digital services.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "MT-WAD",
@@ -753,8 +842,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Malta's regulations transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Malta's regulations transposing the EU Web Accessibility Directive for public sector websites and mobile applications.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "NL-WAB",
@@ -766,8 +858,11 @@
       "enforcementDate": "2018-07-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "The Netherlands' decree on digital accessibility for government transposing the EU Web Accessibility Directive."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "The Netherlands' decree on digital accessibility for government transposing the EU Web Accessibility Directive.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "PL-WAD",
@@ -779,8 +874,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Poland's act on digital accessibility of websites and mobile applications of public sector bodies."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Poland's act on digital accessibility of websites and mobile applications of public sector bodies.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "PT-WAD",
@@ -792,8 +890,11 @@
       "enforcementDate": "2018-11-19",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Portugal's decree-law transposing the EU Web Accessibility Directive for public sector digital services."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Portugal's decree-law transposing the EU Web Accessibility Directive for public sector digital services.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "RO-WAD",
@@ -805,8 +906,11 @@
       "enforcementDate": "2022-03-21",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Romania's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Romania's law transposing the EU Web Accessibility Directive for public sector websites and mobile applications.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "SK-WAD",
@@ -818,8 +922,11 @@
       "enforcementDate": "2019-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Slovakia's law transposing the EU Web Accessibility Directive for public sector digital services."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Slovakia's law transposing the EU Web Accessibility Directive for public sector digital services.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "SI-WAD",
@@ -831,8 +938,11 @@
       "enforcementDate": "2018-05-05",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Slovenia's Act on Accessibility of Websites and Mobile Applications transposes the EU Web Accessibility Directive."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Slovenia's Act on Accessibility of Websites and Mobile Applications transposes the EU Web Accessibility Directive.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "ES-LSSICE",
@@ -844,8 +954,11 @@
       "enforcementDate": "2018-10-20",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Spain's Royal Decree transposing the EU Web Accessibility Directive for public sector websites and mobile applications."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Spain's Royal Decree transposing the EU Web Accessibility Directive for public sector websites and mobile applications.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "SE-WAD",
@@ -857,8 +970,11 @@
       "enforcementDate": "2019-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
-      "description": "Sweden's Act on Accessibility to Digital Public Services transposes the EU Web Accessibility Directive."
+      "sectors": [
+        "public-sector"
+      ],
+      "description": "Sweden's Act on Accessibility to Digital Public Services transposes the EU Web Accessibility Directive.",
+      "parentRegulationId": "EU-WAD"
     },
     {
       "id": "NO-LDL",
@@ -870,7 +986,11 @@
       "enforcementDate": "2013-07-01",
       "status": "active",
       "scope": "all",
-      "sectors": ["public-sector", "private-sector", "digital"],
+      "sectors": [
+        "public-sector",
+        "private-sector",
+        "digital"
+      ],
       "description": "Norway's ICT regulations under the Equality and Anti-Discrimination Act require WCAG 2.0 AA compliance for public and private sector digital services."
     },
     {
@@ -883,7 +1003,10 @@
       "enforcementDate": "2004-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government", "public-services"],
+      "sectors": [
+        "government",
+        "public-services"
+      ],
       "description": "Switzerland's Federal Act on the Elimination of Disadvantages to People with Disabilities requires accessible websites for public administration."
     },
     {
@@ -896,7 +1019,9 @@
       "enforcementDate": "2020-11-20",
       "status": "active",
       "scope": "public",
-      "sectors": ["public-sector"],
+      "sectors": [
+        "public-sector"
+      ],
       "description": "Iceland's regulation implementing the EEA equivalent of the EU Web Accessibility Directive for public sector digital services."
     },
     {
@@ -909,7 +1034,9 @@
       "enforcementDate": "2019-07-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "New Zealand's Web Accessibility Standard 1.1 mandates WCAG 2.1 AA compliance for New Zealand government websites and apps."
     },
     {
@@ -922,7 +1049,11 @@
       "enforcementDate": "2021-06-01",
       "status": "active",
       "scope": "all",
-      "sectors": ["government", "public-services", "digital"],
+      "sectors": [
+        "government",
+        "public-services",
+        "digital"
+      ],
       "description": "South Korea's Web Content Accessibility Guidelines (KWCAG 2.1) apply to public and private sector digital services."
     },
     {
@@ -935,7 +1066,9 @@
       "enforcementDate": "2009-03-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "India's Guidelines for Indian Government Websites 2.0 mandate WCAG 2.0 AA compliance for all Indian government websites."
     },
     {
@@ -948,7 +1081,11 @@
       "enforcementDate": "2017-10-26",
       "status": "active",
       "scope": "all",
-      "sectors": ["government", "private-sector", "digital"],
+      "sectors": [
+        "government",
+        "private-sector",
+        "digital"
+      ],
       "description": "Israel's Standard 5568 requires WCAG 2.0 AA compliance for websites targeting Israeli users across public and private sectors."
     },
     {
@@ -961,7 +1098,9 @@
       "enforcementDate": "2014-09-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Brazil's eMAG model for e-government accessibility sets WCAG-based requirements for all Brazilian federal government websites."
     },
     {
@@ -974,7 +1113,9 @@
       "enforcementDate": "2010-11-26",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Argentina's Law 26.653 requires all public sector websites to meet WCAG 2.0 AA accessibility standards."
     },
     {
@@ -987,7 +1128,9 @@
       "enforcementDate": "2015-05-26",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Colombia's Decree 1078/2015 establishes WCAG 2.0 AA accessibility requirements for state entity websites."
     },
     {
@@ -1000,7 +1143,9 @@
       "enforcementDate": "2012-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Mexico's technical standard for federal government website accessibility requires WCAG 2.0 AA compliance."
     },
     {
@@ -1013,7 +1158,9 @@
       "enforcementDate": "2019-07-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Chile's technical standard for State website accessibility and usability requires WCAG 2.1 AA for government digital services."
     },
     {
@@ -1026,7 +1173,10 @@
       "enforcementDate": "2002-08-02",
       "status": "active",
       "scope": "public",
-      "sectors": ["government", "e-commerce"],
+      "sectors": [
+        "government",
+        "e-commerce"
+      ],
       "description": "South Africa's ECTA includes provisions requiring accessible digital services for persons with disabilities."
     },
     {
@@ -1039,7 +1189,10 @@
       "enforcementDate": "2019-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government", "digital-services"],
+      "sectors": [
+        "government",
+        "digital-services"
+      ],
       "description": "Kenya's ICT Accessibility Standard requires government digital services to be accessible to persons with disabilities."
     },
     {
@@ -1052,7 +1205,10 @@
       "enforcementDate": "2019-01-23",
       "status": "active",
       "scope": "public",
-      "sectors": ["government", "public-services"],
+      "sectors": [
+        "government",
+        "public-services"
+      ],
       "description": "Nigeria's Disability Rights Act 2018 includes requirements for accessible digital information and communications."
     },
     {
@@ -1065,7 +1221,9 @@
       "enforcementDate": "2019-06-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Singapore's Government Design System mandates WCAG 2.1 AA compliance for all Singapore government digital services."
     },
     {
@@ -1078,7 +1236,9 @@
       "enforcementDate": "2012-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Hong Kong's OGCIO guidelines require government websites to conform to WCAG 2.0 AA standards."
     },
     {
@@ -1091,7 +1251,9 @@
       "enforcementDate": "2016-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Taiwan's Web Accessibility Guidelines for Government Websites require WCAG 2.0 AA compliance for all government digital services."
     },
     {
@@ -1104,7 +1266,10 @@
       "enforcementDate": "2020-04-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government", "digital-services"],
+      "sectors": [
+        "government",
+        "digital-services"
+      ],
       "description": "China's national standard GB/T 37668-2019 on information accessibility of websites covers public sector digital services."
     },
     {
@@ -1117,7 +1282,10 @@
       "enforcementDate": "2020-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government", "public-services"],
+      "sectors": [
+        "government",
+        "public-services"
+      ],
       "description": "Russia's national standard GOST R 52872-2019 sets accessibility requirements for web resources and digital information."
     },
     {
@@ -1130,7 +1298,9 @@
       "enforcementDate": "2013-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Turkey's public internet website guide requires government websites to meet WCAG 2.0 AA accessibility standards."
     },
     {
@@ -1143,7 +1313,11 @@
       "enforcementDate": "2019-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government", "telecom", "digital-services"],
+      "sectors": [
+        "government",
+        "telecom",
+        "digital-services"
+      ],
       "description": "Saudi Arabia's ICT accessibility framework requires WCAG 2.1 AA compliance for government and regulated digital services."
     },
     {
@@ -1156,7 +1330,9 @@
       "enforcementDate": "2019-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "The UAE's Telecommunications and Digital Regulatory Authority requires government websites to meet WCAG 2.1 AA standards."
     },
     {
@@ -1169,7 +1345,9 @@
       "enforcementDate": "2012-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Egypt's Ministry of Communications and IT guidelines require government web portals to meet WCAG 2.0 AA accessibility standards."
     },
     {
@@ -1182,7 +1360,9 @@
       "enforcementDate": "2018-01-01",
       "status": "active",
       "scope": "public",
-      "sectors": ["government"],
+      "sectors": [
+        "government"
+      ],
       "description": "Thailand's ETDA government website standard requires public sector websites to meet WCAG 2.1 AA accessibility criteria."
     }
   ],
@@ -1223,27 +1403,6 @@
       "obligation": "mandatory"
     },
     {
-      "regulationId": "UK-PSBAR",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "DE-BITV",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "FR-RGAA",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
       "regulationId": "AU-DDA",
       "wcagVersion": "2.1",
       "wcagLevel": "AA",
@@ -1259,188 +1418,6 @@
     },
     {
       "regulationId": "JP-JIS",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "AT-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "BE-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "BG-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "HR-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "CY-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "CZ-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "DK-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "EE-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "FI-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "GR-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "HU-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "IE-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "IT-STANCA",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "IT-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "LV-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "LT-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "LU-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "MT-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "NL-WAB",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "PL-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "PT-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "RO-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "SK-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "SI-WAD",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "ES-LSSICE",
-      "wcagVersion": "2.1",
-      "wcagLevel": "AA",
-      "wcagCriterion": "*",
-      "obligation": "mandatory"
-    },
-    {
-      "regulationId": "SE-WAD",
       "wcagVersion": "2.1",
       "wcagLevel": "AA",
       "wcagCriterion": "*",
@@ -1620,6 +1597,30 @@
       "wcagLevel": "AA",
       "wcagCriterion": "*",
       "obligation": "mandatory"
+    },
+    {
+      "regulationId": "DE-BITV",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AAA",
+      "wcagCriterion": "1.2.6",
+      "obligation": "mandatory",
+      "notes": "Sign language for prerecorded content (BITV 2.0)"
+    },
+    {
+      "regulationId": "DE-BITV",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AAA",
+      "wcagCriterion": "1.2.8",
+      "obligation": "mandatory",
+      "notes": "Media alternative for prerecorded content (BITV 2.0)"
+    },
+    {
+      "regulationId": "FR-RGAA",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AAA",
+      "wcagCriterion": "1.4.8",
+      "obligation": "recommended",
+      "notes": "Visual Presentation — RGAA methodology"
     }
   ],
   "sources": [
