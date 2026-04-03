@@ -66,7 +66,12 @@
       "packageName": "@luqen/plugin-notify-email",
       "icon": "email",
       "adminPages": [
-        { "path": "/admin/email-reports", "title": "Email Reports", "icon": "envelope", "permission": "admin.system" }
+        {
+          "path": "/admin/email-reports",
+          "title": "Email Reports",
+          "icon": "envelope",
+          "permission": "admin.system"
+        }
       ],
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/notify-email-v1.0.0/luqen-plugin-notify-email-1.0.0.tgz",
       "checksum": "sha256:1ef953d040856996f7d8456ce78b56531c21c45d66a71db7450d64b83a1d92a8"
@@ -135,7 +140,14 @@
       "packageName": "@luqen/plugin-git-host-github",
       "icon": "git",
       "configSchema": [
-        { "key": "hostUrl", "label": "API Host URL", "type": "string", "required": true, "default": "https://api.github.com", "description": "Use https://api.github.com for GitHub.com or your GitHub Enterprise API URL" }
+        {
+          "key": "hostUrl",
+          "label": "API Host URL",
+          "type": "string",
+          "required": true,
+          "default": "https://api.github.com",
+          "description": "Use https://api.github.com for GitHub.com or your GitHub Enterprise API URL"
+        }
       ],
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/git-host-github-v1.0.0/luqen-plugin-git-host-github-1.0.0.tgz",
       "checksum": "sha256:1b6465034cdb065ae48f0271f6cf3dc046101bc74c6a0642c8f343d8419a00e8"
@@ -149,7 +161,14 @@
       "packageName": "@luqen/plugin-git-host-gitlab",
       "icon": "git",
       "configSchema": [
-        { "key": "hostUrl", "label": "API Host URL", "type": "string", "required": true, "default": "https://gitlab.com/api/v4", "description": "Use https://gitlab.com/api/v4 for GitLab.com or your self-hosted GitLab API URL" }
+        {
+          "key": "hostUrl",
+          "label": "API Host URL",
+          "type": "string",
+          "required": true,
+          "default": "https://gitlab.com/api/v4",
+          "description": "Use https://gitlab.com/api/v4 for GitLab.com or your self-hosted GitLab API URL"
+        }
       ],
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/git-host-gitlab-v1.0.0/luqen-plugin-git-host-gitlab-1.0.0.tgz",
       "checksum": "sha256:25838fdd30756ea54ed277cf5684739c061b7718393e439d662ed78013780967"
@@ -163,7 +182,14 @@
       "packageName": "@luqen/plugin-git-host-azure-devops",
       "icon": "git",
       "configSchema": [
-        { "key": "hostUrl", "label": "API Host URL", "type": "string", "required": true, "default": "https://dev.azure.com", "description": "Use https://dev.azure.com for Azure DevOps Services or your on-prem TFS URL" }
+        {
+          "key": "hostUrl",
+          "label": "API Host URL",
+          "type": "string",
+          "required": true,
+          "default": "https://dev.azure.com",
+          "description": "Use https://dev.azure.com for Azure DevOps Services or your on-prem TFS URL"
+        }
       ],
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/git-host-azure-devops-v1.0.0/luqen-plugin-git-host-azure-devops-1.0.0.tgz",
       "checksum": "sha256:90b095329ca59570e36dcf275c857b1d5fced2886d484384fbf45f91b4dd6c70"
@@ -177,7 +203,7 @@
       "packageName": "@luqen/plugin-llm-anthropic",
       "icon": "llm",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-anthropic-v1.0.0/luqen-plugin-llm-anthropic-1.0.0.tgz",
-      "checksum": "sha256:2b1f94edde2297d5a0bb8cb55f8a044ba47f5aa1811d5a68918616d3b0582683"
+      "checksum": "sha256:36ee0e759ef4df167e8cec022950fd27cd288d4f9b9a5afc5e41202203241a4c"
     },
     {
       "name": "llm-openai",
@@ -188,7 +214,7 @@
       "packageName": "@luqen/plugin-llm-openai",
       "icon": "llm",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-openai-v1.0.0/luqen-plugin-llm-openai-1.0.0.tgz",
-      "checksum": "sha256:a9d1da407c22fa3374109bc819447dcd9a5b8f91ce7c53a2f4db3bd15c7f442b"
+      "checksum": "sha256:f7b28846d4085fecd0e4a1d8dbff19b7e24b0c5ff1bfa9914153bcb6fa23f3bc"
     },
     {
       "name": "llm-gemini",
@@ -199,7 +225,7 @@
       "packageName": "@luqen/plugin-llm-gemini",
       "icon": "llm",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-gemini-v1.0.0/luqen-plugin-llm-gemini-1.0.0.tgz",
-      "checksum": "sha256:58c28e6971b60827f8b64e89646ad63d6c8fc0fe25c74ac7377e330b4c427b5f"
+      "checksum": "sha256:5635a45b7a077ec343f2f46f7567bde2a6a0f856e44916b6440a7a0d33dd4e88"
     },
     {
       "name": "llm-ollama",
@@ -210,7 +236,7 @@
       "packageName": "@luqen/plugin-llm-ollama",
       "icon": "llm",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-ollama-v1.0.0/luqen-plugin-llm-ollama-1.0.0.tgz",
-      "checksum": "sha256:e681abad45cf194659a87cd64f17f6b47396ef20dd310079295e26ebac2ef9a3"
+      "checksum": "sha256:89946b70d491e988c7b2d7634666b3a0e3d5b448fae0fcd0d44f3ea63b5f7399"
     }
   ]
 }
