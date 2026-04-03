@@ -513,6 +513,7 @@ export async function uploadSource(
     regulationName?: string;
     jurisdictionId?: string;
     url?: string;
+    pluginId?: string;
   },
   orgId?: string,
 ): Promise<Record<string, unknown>> {

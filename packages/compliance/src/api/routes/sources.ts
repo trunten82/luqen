@@ -458,6 +458,7 @@ export async function registerSourceRoutes(
         regulationName?: string;
         jurisdictionId?: string;
         url?: string;
+        pluginId?: string;
       };
 
       if (!body.content || typeof body.content !== 'string' || body.content.trim().length === 0) {
@@ -474,7 +475,7 @@ export async function registerSourceRoutes(
       const extracted = await llmProvider!.extractRequirements(body.content, {
         regulationId: regId,
         regulationName: regName,
-      });
+      }, body.pluginId);
 
       if (extracted.criteria.length === 0) {
         await reply.send({

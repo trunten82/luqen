@@ -13,6 +13,7 @@ import { getToken, getOrgId, toastHtml } from './helpers.js';
 export async function sourceRoutes(
   server: FastifyInstance,
   baseUrl: string,
+  pluginManager?: import('../../plugins/manager.js').PluginManager,
 ): Promise<void> {
   // GET /admin/sources — list monitored sources
   server.get(
@@ -28,12 +29,20 @@ export async function sourceRoutes(
         error = err instanceof Error ? err.message : 'Failed to load sources';
       }
 
+      // Active LLM plugins for the upload form selector
+      const llmPlugins = pluginManager
+        ? pluginManager.list().filter((p) => p.type === 'llm' && p.status === 'active')
+            .map((p) => ({ id: p.id, name: p.packageName.replace('@luqen/plugin-', '') }))
+        : [];
+
       return reply.view('admin/sources.hbs', {
         pageTitle: 'Monitored Sources',
         currentPath: '/admin/sources',
         user: request.user,
         sources,
         error,
+        llmPlugins,
+        hasLlm: llmPlugins.length > 0,
       });
     },
   );
@@ -152,6 +161,7 @@ export async function sourceRoutes(
         regulationId?: string;
         regulationName?: string;
         jurisdictionId?: string;
+        pluginId?: string;
       };
 
       if (!body.content?.trim() || !body.name?.trim()) {
@@ -165,6 +175,7 @@ export async function sourceRoutes(
           regulationId: body.regulationId,
           regulationName: body.regulationName ?? body.name.trim(),
           jurisdictionId: body.jurisdictionId,
+          pluginId: body.pluginId,
         }, getOrgId(request));
 
         const msg = result.message as string ?? `Extracted ${result.criteriaCount ?? 0} requirement(s)`;
