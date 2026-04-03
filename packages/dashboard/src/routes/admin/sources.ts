@@ -29,9 +29,10 @@ export async function sourceRoutes(
         error = err instanceof Error ? err.message : 'Failed to load sources';
       }
 
-      // Active LLM plugins for the upload form selector
+      // Active LLM plugins for the upload form selector (global only, no org duplicates)
       const llmPlugins = pluginManager
-        ? pluginManager.list().filter((p) => p.type === 'llm' && p.status === 'active')
+        ? pluginManager.list()
+            .filter((p) => p.type === 'llm' && p.status === 'active' && (p.orgId === 'system' || p.orgId === undefined))
             .map((p) => ({ id: p.id, name: p.packageName.replace('@luqen/plugin-', '') }))
         : [];
 
