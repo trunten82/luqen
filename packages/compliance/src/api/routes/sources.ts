@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { DbAdapter } from '../../db/adapter.js';
-import type { MonitoredSource } from '../../types.js';
+import type { IComplianceLLMProvider, MonitoredSource } from '../../types.js';
 import { requireScope } from '../../auth/middleware.js';
 import { createHash } from 'node:crypto';
 
@@ -80,9 +80,64 @@ function isSourceDue(source: MonitoredSource): boolean {
   return Date.now() - lastChecked >= intervalMs;
 }
 
+// ── Helper: extract jurisdiction ISO code from W3C policy URL ──────────────
+
+function extractJurisdictionFromUrl(url: string): string {
+  const match = url.match(/\/([^/]+)\.md$/);
+  if (!match) return 'unknown';
+  const name = match[1].replace(/-/g, ' ');
+  const COUNTRY_MAP: Record<string, string> = {
+    'germany': 'DE', 'france': 'FR', 'italy': 'IT', 'spain': 'ES',
+    'united states': 'US', 'united kingdom': 'UK', 'australia': 'AU',
+    'canada': 'CA', 'japan': 'JP', 'european union': 'EU',
+    'netherlands': 'NL', 'austria': 'AT', 'belgium': 'BE',
+    'sweden': 'SE', 'norway': 'NO', 'switzerland': 'CH',
+    'ireland': 'IE', 'india': 'IN', 'brazil': 'BR',
+    'argentina': 'AR', 'colombia': 'CO', 'mexico': 'MX',
+    'chile': 'CL', 'china': 'CN', 'korea': 'KR',
+    'hong kong': 'HK', 'taiwan': 'TW', 'israel': 'IL',
+    'new zealand': 'NZ', 'south africa': 'ZA',
+    'russian federation': 'RU', 'nigeria': 'NG',
+    'kenya': 'KE', 'singapore': 'SG', 'thailand': 'TH',
+  };
+  return COUNTRY_MAP[name] ?? name.toUpperCase().slice(0, 2);
+}
+
+// ── Helper: generic paragraph-diff proposal ─────────────────────────────────
+
+async function createGenericProposal(
+  db: DbAdapter,
+  source: MonitoredSource,
+  content: string,
+  contentHash: string,
+  proposals: unknown[],
+): Promise<void> {
+  const oldContent = await db.getSourceContent(source.id);
+  const diff = oldContent != null ? computeDiff(oldContent, content) : null;
+  const proposal = await db.createUpdateProposal({
+    source: source.url,
+    type: 'amendment',
+    summary: diff != null
+      ? `${source.name}: ${diff.summary}`
+      : `Content change detected at ${source.name} (${source.url})`,
+    proposedChanges: {
+      action: 'update',
+      entityType: 'regulation',
+      entityId: source.id,
+      before: { contentHash: source.lastContentHash },
+      after: {
+        contentHash,
+        ...(diff != null ? { diff: { added: diff.added, removed: diff.removed, modified: diff.modified } } : {}),
+      },
+    },
+  });
+  proposals.push(proposal);
+}
+
 export async function registerSourceRoutes(
   app: FastifyInstance,
   db: DbAdapter,
+  llmProvider?: IComplianceLLMProvider,
 ): Promise<void> {
   // GET /api/v1/sources
   app.get('/api/v1/sources', {
@@ -178,29 +233,117 @@ export async function registerSourceRoutes(
             await db.updateSourceLastChecked(source.id, contentHash, content);
           } else if (source.lastContentHash !== contentHash) {
             changed++;
-            // Content changed — compute diff and create proposal
+            // Content changed — route by sourceCategory
             if (!pendingSourceUrls.has(source.url)) {
-              const oldContent = await db.getSourceContent(source.id);
-              const diff = oldContent != null ? computeDiff(oldContent, content) : null;
+              const category = source.sourceCategory ?? 'generic';
 
-              const proposal = await db.createUpdateProposal({
-                source: source.url,
-                type: 'amendment',
-                summary: diff != null
-                  ? `${source.name}: ${diff.summary}`
-                  : `Content change detected at ${source.name} (${source.url})`,
-                proposedChanges: {
-                  action: 'update',
-                  entityType: 'regulation',
-                  entityId: source.id,
-                  before: { contentHash: source.lastContentHash },
-                  after: {
-                    contentHash,
-                    ...(diff != null ? { diff: { added: diff.added, removed: diff.removed, modified: diff.modified } } : {}),
-                  },
-                },
-              });
-              proposals.push(proposal);
+              if (category === 'w3c-policy') {
+                try {
+                  const { parseW3cPolicyYaml } = await import('../../parsers/w3c-parser.js');
+                  const jurisdictionId = extractJurisdictionFromUrl(source.url);
+                  const parsed = parseW3cPolicyYaml(content, jurisdictionId);
+
+                  if (parsed.length > 0) {
+                    const summary = `W3C policy update for ${jurisdictionId}: ${parsed.length} regulation(s) found`;
+                    const proposal = await db.createUpdateProposal({
+                      source: source.url,
+                      type: 'amendment',
+                      summary,
+                      affectedJurisdictionId: jurisdictionId,
+                      proposedChanges: {
+                        action: 'update',
+                        entityType: 'regulation',
+                        after: {
+                          contentHash,
+                          regulations: parsed,
+                        },
+                      },
+                    });
+                    proposals.push(proposal);
+                  }
+                } catch {
+                  await createGenericProposal(db, source, content, contentHash, proposals);
+                }
+              } else if (category === 'wcag-upstream') {
+                try {
+                  const { parseQuickRefJson, parseTenOnJson } = await import('../../parsers/wcag-upstream-parser.js');
+                  let parsed;
+                  if (source.url.includes('wcag21.json') || source.url.includes('quickref')) {
+                    parsed = parseQuickRefJson(JSON.parse(content));
+                  } else {
+                    parsed = parseTenOnJson(JSON.parse(content), '2.2');
+                  }
+
+                  if (parsed.length > 0) {
+                    const proposal = await db.createUpdateProposal({
+                      source: source.url,
+                      type: 'new_requirement',
+                      summary: `WCAG criteria upstream update: ${parsed.length} criteria parsed`,
+                      proposedChanges: {
+                        action: 'update',
+                        entityType: 'requirement',
+                        after: {
+                          contentHash,
+                          criteria: parsed,
+                        },
+                      },
+                    });
+                    proposals.push(proposal);
+                  }
+                } catch {
+                  await createGenericProposal(db, source, content, contentHash, proposals);
+                }
+              } else if (category === 'government' && llmProvider != null) {
+                try {
+                  const allRegs = await db.listRegulations();
+                  const matchedReg = allRegs.find(r => r.url === source.url);
+
+                  const extracted = await llmProvider.extractRequirements(content, {
+                    regulationId: matchedReg?.id ?? source.name,
+                    regulationName: matchedReg?.name ?? source.name,
+                    currentWcagVersion: undefined,
+                    currentWcagLevel: undefined,
+                  });
+
+                  const { diffRequirements } = await import('../../parsers/requirement-differ.js');
+                  const currentReqs = matchedReg
+                    ? await db.listRequirements({ regulationId: matchedReg.id })
+                    : [];
+                  const extractedReqs = extracted.criteria.map(c => ({
+                    regulationId: matchedReg?.id ?? '',
+                    wcagVersion: extracted.wcagVersion as '2.0' | '2.1' | '2.2',
+                    wcagLevel: c.obligation === 'excluded' ? 'A' as const : 'AA' as const,
+                    wcagCriterion: c.criterion,
+                    obligation: c.obligation,
+                    ...(c.notes ? { notes: c.notes } : {}),
+                  }));
+
+                  const diff = diffRequirements(matchedReg?.id ?? '', currentReqs, extractedReqs);
+
+                  if (diff.hasChanges) {
+                    const proposal = await db.createUpdateProposal({
+                      source: source.url,
+                      type: 'amendment',
+                      affectedRegulationId: matchedReg?.id,
+                      summary: `LLM-extracted changes (confidence: ${(extracted.confidence * 100).toFixed(0)}%): ${diff.added.length} added, ${diff.removed.length} removed, ${diff.changed.length} changed`,
+                      proposedChanges: {
+                        action: 'update',
+                        entityType: 'requirement',
+                        after: {
+                          contentHash,
+                          diff: { added: diff.added, removed: diff.removed, changed: diff.changed },
+                          confidence: extracted.confidence,
+                        },
+                      },
+                    });
+                    proposals.push(proposal);
+                  }
+                } catch {
+                  await createGenericProposal(db, source, content, contentHash, proposals);
+                }
+              } else {
+                await createGenericProposal(db, source, content, contentHash, proposals);
+              }
             }
             await db.updateSourceLastChecked(source.id, contentHash, content);
           } else {
