@@ -21,11 +21,13 @@ export type PluginStatus =
 export interface ConfigField {
   readonly key: string;
   readonly label: string;
-  readonly type: 'string' | 'secret' | 'number' | 'boolean' | 'select';
+  readonly type: 'string' | 'secret' | 'number' | 'boolean' | 'select' | 'dynamic-select';
   readonly required?: boolean;
   readonly default?: unknown;
   readonly options?: readonly string[];
   readonly description?: string;
+  /** For dynamic-select: list of config field keys whose values are needed to fetch options. */
+  readonly dependsOn?: readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -65,6 +67,8 @@ export interface PluginInstance {
   activate(config: Readonly<Record<string, unknown>>): Promise<void>;
   deactivate(): Promise<void>;
   healthCheck(): Promise<boolean>;
+  /** Return options for a dynamic-select field given the current config values. */
+  getConfigOptions?(fieldKey: string, currentConfig: Readonly<Record<string, unknown>>): Promise<readonly string[]>;
 }
 
 // ---------------------------------------------------------------------------
