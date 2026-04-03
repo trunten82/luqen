@@ -581,14 +581,60 @@
     /* ── Plugin configure — inline in card (plain fetch, no HTMX) ─── */
     /* The HTML is server-rendered from a trusted endpoint (same-origin,
        authenticated, escaped via escapeHtml in the route handler). */
+    refreshDynamicOptions: function (btn) {
+      var fieldKey = btn.getAttribute('data-field-key');
+      var form = btn.closest('form');
+      if (!form || !fieldKey) return;
+      var select = form.querySelector('[data-dynamic-field="' + fieldKey + '"]');
+      if (!select) return;
+      var dependsOn = (select.getAttribute('data-depends-on') || '').split(',').filter(Boolean);
+      var pluginId = form.id.replace('plugin-cfg-', '');
+      var params = new URLSearchParams({ field: fieldKey });
+      dependsOn.forEach(function(dep) {
+        var input = form.querySelector('[name="' + dep + '"]');
+        if (input) params.append(dep, input.value);
+      });
+      btn.disabled = true;
+      btn.textContent = '...';
+      fetch('/admin/plugins/' + pluginId + '/config-options?' + params.toString(), { credentials: 'same-origin' })
+        .then(function (r) {
+          if (!r.ok) return r.text().then(function(t) { throw new Error(t); });
+          return r.json();
+        })
+        .then(function (options) {
+          var currentVal = select.value;
+          while (select.firstChild) select.removeChild(select.firstChild);
+          if (options.length === 0) {
+            var o = document.createElement('option');
+            o.value = ''; o.textContent = 'No options available';
+            select.appendChild(o);
+          } else {
+            options.forEach(function(opt) {
+              var o = document.createElement('option');
+              o.value = opt; o.textContent = opt;
+              if (opt === currentVal) o.selected = true;
+              select.appendChild(o);
+            });
+          }
+        })
+        .catch(function (err) {
+          while (select.firstChild) select.removeChild(select.firstChild);
+          var o = document.createElement('option');
+          o.value = ''; o.textContent = 'Error: ' + String(err.message || 'failed').substring(0, 60);
+          select.appendChild(o);
+        })
+        .finally(function () {
+          btn.disabled = false;
+          btn.textContent = '\u21bb';
+        });
+    },
     togglePluginConfig: function (el) {
       var pluginId = el.getAttribute('data-plugin-id');
       if (!pluginId) return;
       var target = document.getElementById('plugin-config-' + pluginId);
       if (!target) return;
 
-      /* Toggle: if already visible, just hide it */
-      if (!target.hidden && target.innerHTML !== '') {
+      if (!target.hidden && target.textContent.trim() !== '') {
         target.hidden = true;
         return;
       }
@@ -599,9 +645,14 @@
       fetch('/admin/plugins/' + pluginId + '/configure', { headers: headers, credentials: 'same-origin' })
         .then(function (r) { return r.text(); })
         .then(function (html) {
-          target.innerHTML = html; /* trusted server HTML — all values escaped server-side */
+          /* Server-rendered trusted HTML from same-origin authenticated endpoint with escapeHtml() */
+          target.innerHTML = html;
           target.hidden = false;
           if (window.htmx) htmx.process(target);
+          /* Auto-load dynamic-select options */
+          target.querySelectorAll('[data-action="refreshDynamicOptions"]').forEach(function(btn) {
+            actions.refreshDynamicOptions(btn);
+          });
         })
         .catch(function (err) {
           target.textContent = 'Failed to load configuration: ' + err.message;
