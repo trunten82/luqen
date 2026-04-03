@@ -661,7 +661,8 @@
       "uptime": "Uptime",
       "complianceUrl": "Compliance URL",
       "webserviceUrl": "Webservice URL",
-      "reseedCompliance": "Re-seed Compliance Data"
+      "reseedCompliance": "Re-seed Compliance Data",
+      "seededOnStartup": "Auto-seeded on service startup"
     },
     "emailReports": {
       "title": "Email Reports",
