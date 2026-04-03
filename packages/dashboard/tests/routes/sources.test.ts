@@ -196,20 +196,20 @@ describe('Source routes', () => {
   describe('POST /admin/sources/scan (trigger scan)', () => {
     beforeEach(async () => { ctx = await createTestServer(); });
 
-    it('returns 200 with scan results HTML', async () => {
+    it('returns 200 with async scan started message', async () => {
       const response = await ctx.server.inject({
         method: 'POST',
         url: '/admin/sources/scan',
       });
       expect(response.statusCode).toBe(200);
       expect(response.headers['content-type']).toContain('text/html');
-      expect(response.body).toContain('sources checked');
-      expect(response.body).toContain('2');
-      expect(response.body).toContain('1');
+      expect(response.body).toContain('Source scan started');
     });
 
     it('calls scanSources with the base URL', async () => {
       await ctx.server.inject({ method: 'POST', url: '/admin/sources/scan' });
+      // Wait briefly for fire-and-forget to execute
+      await new Promise((r) => setTimeout(r, 50));
       expect(complianceClient.scanSources).toHaveBeenCalledWith(BASE_URL, expect.any(String), true);
     });
 
@@ -220,11 +220,11 @@ describe('Source routes', () => {
       expect(response.statusCode).toBe(403);
     });
 
-    it('returns 500 toast HTML when scan fails', async () => {
+    it('returns 200 even when scan fails (async — error logged)', async () => {
       vi.mocked(complianceClient.scanSources).mockRejectedValueOnce(new Error('Scan failed'));
       const response = await ctx.server.inject({ method: 'POST', url: '/admin/sources/scan' });
-      expect(response.statusCode).toBe(500);
-      expect(response.body).toContain('Scan failed');
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toContain('Source scan started');
     });
   });
 });
