@@ -29,10 +29,16 @@ export async function sourceRoutes(
         error = err instanceof Error ? err.message : 'Failed to load sources';
       }
 
-      // Active LLM plugins for the upload form selector (global only, no org duplicates)
+      // Active LLM plugins for the upload form — deduplicated by package name
+      const seenLlm = new Set<string>();
       const llmPlugins = pluginManager
         ? pluginManager.list()
-            .filter((p) => p.type === 'llm' && p.status === 'active' && (p.orgId === 'system' || p.orgId === undefined))
+            .filter((p) => {
+              if (p.type !== 'llm' || p.status !== 'active') return false;
+              if (seenLlm.has(p.packageName)) return false;
+              seenLlm.add(p.packageName);
+              return true;
+            })
             .map((p) => ({ id: p.id, name: p.packageName.replace('@luqen/plugin-', '') }))
         : [];
 
