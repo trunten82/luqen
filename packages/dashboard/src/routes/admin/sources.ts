@@ -4,7 +4,9 @@ import {
   createSource,
   deleteSource,
   scanSources,
+  uploadSource,
 } from '../../compliance-client.js';
+import { escapeHtml } from './helpers.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
 
@@ -135,6 +137,41 @@ export async function sourceRoutes(
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to remove source';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // POST /admin/sources/upload — upload document for LLM parsing
+  server.post(
+    '/admin/sources/upload',
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as {
+        content?: string;
+        name?: string;
+        regulationId?: string;
+        regulationName?: string;
+        jurisdictionId?: string;
+      };
+
+      if (!body.content?.trim() || !body.name?.trim()) {
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml('Name and content are required.', 'error'));
+      }
+
+      try {
+        const result = await uploadSource(baseUrl, getToken(request), {
+          content: body.content.trim(),
+          name: body.name.trim(),
+          regulationId: body.regulationId,
+          regulationName: body.regulationName ?? body.name.trim(),
+          jurisdictionId: body.jurisdictionId,
+        }, getOrgId(request));
+
+        const msg = result.message as string ?? `Extracted ${result.criteriaCount ?? 0} requirement(s)`;
+        return reply.code(200).header('content-type', 'text/html').send(toastHtml(escapeHtml(msg)));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Upload failed';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(escapeHtml(message), 'error'));
       }
     },
   );

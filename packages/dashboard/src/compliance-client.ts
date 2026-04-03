@@ -499,6 +499,32 @@ export async function scanSources(
   );
 }
 
+export async function uploadSource(
+  baseUrl: string,
+  token: string,
+  input: {
+    content: string;
+    name: string;
+    regulationId?: string;
+    regulationName?: string;
+    jurisdictionId?: string;
+    url?: string;
+  },
+  orgId?: string,
+): Promise<Record<string, unknown>> {
+  const url = orgId != null
+    ? `${baseUrl}/api/v1/sources/upload?orgId=${encodeURIComponent(orgId)}`
+    : `${baseUrl}/api/v1/sources/upload`;
+  return apiFetch<Record<string, unknown>>(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+}
+
 // ── Webhooks ──────────────────────────────────────────────────────────────────
 
 export interface Webhook {
