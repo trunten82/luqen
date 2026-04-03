@@ -1785,6 +1785,49 @@ See [docs/plugins/README.md](../plugins/README.md) for full configuration refere
 
 When no LLM plugin is active, `government` and `generic` sources are skipped during pipeline runs — only `w3c-policy` and `wcag-upstream` parsers run. The service logs a warning but does not fail.
 
+### LLM pipeline (source intelligence extraction)
+
+The dashboard acts as a bridge between the compliance service and the active LLM plugin. At startup, the dashboard auto-registers itself with the compliance service by generating an API key and calling `POST /api/v1/admin/register-llm`. This enables the compliance service to delegate LLM extraction calls back to the dashboard.
+
+**Flow:**
+
+```
+Compliance service                    Dashboard                      LLM plugin
+      │                                   │                              │
+      │  POST /api/v1/llm/extract         │                              │
+      │  (DashboardLLMBridge) ───────────►│                              │
+      │                                   │  plugin.extract(prompt, content)
+      │                                   │─────────────────────────────►│
+      │                                   │◄─────────────────────────────│
+      │◄──────────────────────────────────│  structured JSON             │
+```
+
+- `DashboardLLMBridge` in the compliance service calls the dashboard's `POST /api/v1/llm/extract` endpoint
+- The dashboard routes the request to whichever LLM plugin is currently active
+- The response is structured JSON describing regulations and requirements found in the content
+
+### Document upload endpoint
+
+`POST /api/v1/sources/upload` on the compliance service accepts document content and metadata, sends the content to the LLM for extraction, and creates an update proposal from the result:
+
+```bash
+curl -X POST http://localhost:4000/api/v1/sources/upload \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Example Regulation",
+    "content": "<full text of the regulation>",
+    "sourceCategory": "government",
+    "url": "https://example.gov/accessibility-law"
+  }'
+```
+
+The dashboard proxies this via `POST /admin/sources/upload`, which provides the "Upload Regulation" form on the sources admin page.
+
+### First-time LLM extraction
+
+Government sources receive LLM extraction on their first scan (not just on subsequent change-detection scans). This ensures that newly added government sources produce proposals immediately rather than waiting for a content change.
+
 ---
 
 ## Update Proposals
@@ -1801,6 +1844,17 @@ Propose → Review → Approve (applies) or Reject
 2. **Review:** List pending proposals (`GET /updates?status=pending`).
 3. **Approve:** `PATCH /updates/:id/approve` — applies the change and sets `status: "approved"`.
 4. **Reject:** `PATCH /updates/:id/reject` — discards the change and sets `status: "rejected"`.
+
+### Trust levels
+
+Proposals carry a `trustLevel` field that determines the review workflow in the dashboard UI:
+
+| Trust level | Source categories | UI behaviour |
+|-------------|-------------------|--------------|
+| `certified` | `w3c-policy`, `wcag-upstream` | Auto-acknowledged; UI shows **Acknowledge** only |
+| `extracted` | `government`, `generic` | Requires human review; UI shows **Review** + **Dismiss** |
+
+Certified proposals come from structured, authoritative sources (W3C specs) and are treated as factual. Extracted proposals come from LLM-parsed unstructured content and need manual verification before acceptance.
 
 ### Proposal types
 

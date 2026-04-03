@@ -26,6 +26,51 @@ npm install @luqen/dashboard
 npx luqen-dashboard serve
 ```
 
+## Dynamic Plugin Configuration
+
+Plugins can declare `dynamic-select` config fields whose options are fetched from the plugin's own API at runtime rather than hardcoded in the manifest. This is used by all four LLM plugins (v1.1.0+) for model selection.
+
+### Manifest schema
+
+```json
+{
+  "key": "model",
+  "label": "Model",
+  "type": "dynamic-select",
+  "dependsOn": ["apiKey"],
+  "description": "Select a model from the provider's API"
+}
+```
+
+- `type: "dynamic-select"` tells the dashboard to render a dropdown with a refresh button
+- `dependsOn` lists other config fields that must be set before options can be fetched (e.g., `apiKey` must be configured before querying available models)
+
+### Plugin implementation
+
+Plugins implement `getConfigOptions(fieldKey, currentConfig)` to return options:
+
+```typescript
+async getConfigOptions(fieldKey: string, currentConfig: Record<string, unknown>): Promise<Array<{ value: string; label: string }>> {
+  if (fieldKey === 'model') {
+    const models = await this.listModels(currentConfig.apiKey as string);
+    return models.map(m => ({ value: m.id, label: m.name }));
+  }
+  return [];
+}
+```
+
+### Dashboard endpoint
+
+`GET /admin/plugins/:id/config-options?field=model` calls the plugin's `getConfigOptions` and returns the options array. The dashboard UI uses this to populate the dynamic dropdown.
+
+## LLM Bridge
+
+The dashboard bridges the compliance service and the active LLM plugin:
+
+- **`POST /api/v1/llm/extract`** -- receives extraction requests from the compliance service's `DashboardLLMBridge`, routes them to the active LLM plugin, and returns structured JSON
+- **Auto-registration** -- at startup, the dashboard generates an API key and calls `POST /api/v1/admin/register-llm` on the compliance service to register itself as the LLM provider
+- **`POST /admin/sources/upload`** -- proxies regulation document uploads to the compliance service's `POST /api/v1/sources/upload` endpoint; powers the "Upload Regulation" form on the sources admin page
+
 ## Documentation
 
 See the [main repository](https://github.com/trunten82/luqen) for full documentation.
