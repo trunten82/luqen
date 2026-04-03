@@ -134,7 +134,8 @@ function renderConfigFormWithDynamic(
     if (isSel) o.selected = true;
     sel.appendChild(o);
   }
-  var form = document.currentScript.closest('form');
+  var form = document.getElementById('plugin-cfg-${escapeHtml(pluginId)}');
+  if (!form) return;
   form.addEventListener('click', async function(e) {
     var btn = e.target.closest('[data-action="refreshDynamicOptions"]');
     if (!btn) return;
@@ -390,7 +391,8 @@ export async function pluginAdminRoutes(
           : '<p>This plugin has no configurable settings.</p>';
 
         const html = `
-          <form hx-patch="/admin/plugins/${escapeHtml(plugin.id)}/config"
+          <form id="plugin-cfg-${escapeHtml(plugin.id)}"
+                hx-patch="/admin/plugins/${escapeHtml(plugin.id)}/config"
                 hx-target="#plugin-messages" hx-swap="innerHTML">
             <h3>Configure ${escapeHtml(plugin.packageName)}</h3>
             ${fieldsHtml}
