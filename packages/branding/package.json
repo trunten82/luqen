@@ -1,6 +1,6 @@
 {
   "name": "@luqen/branding",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "Brand guideline matching for accessibility findings",
   "type": "module",
   "main": "dist/index.js",

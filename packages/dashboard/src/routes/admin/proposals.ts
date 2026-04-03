@@ -37,6 +37,18 @@ export async function proposalRoutes(
         error = err instanceof Error ? err.message : 'Failed to load proposals';
       }
 
+      const formatDiffItem = (item: unknown): string => {
+        if (typeof item === 'string') return item;
+        const obj = item as Record<string, unknown>;
+        if (obj.wcagCriterion) {
+          return `${obj.wcagCriterion} — ${obj.obligation ?? 'mandatory'}${obj.notes ? ` (${obj.notes})` : ''}`;
+        }
+        if (obj.wcagCriterion === undefined && obj.oldObligation) {
+          return `${obj.wcagCriterion ?? '?'}: ${obj.oldObligation} → ${obj.newObligation}`;
+        }
+        return JSON.stringify(item);
+      };
+
       const formatProposal = (p: (typeof officialProposals)[0]) => {
         const diff = p.proposedChanges?.after?.diff;
         const hasDiff = diff != null && (diff.added.length > 0 || diff.removed.length > 0 || diff.modified.length > 0);
@@ -50,9 +62,9 @@ export async function proposalRoutes(
           isCertified: p.trustLevel === 'certified',
           isExtracted: p.trustLevel === 'extracted',
           hasDiff,
-          diffAdded: diff?.added ?? [],
-          diffRemoved: diff?.removed ?? [],
-          diffModified: diff?.modified ?? [],
+          diffAdded: (diff?.added ?? []).map(formatDiffItem),
+          diffRemoved: (diff?.removed ?? []).map(formatDiffItem),
+          diffModified: (diff?.modified ?? []).map(formatDiffItem),
         };
       };
 
