@@ -536,6 +536,13 @@
     /* ── Sources page scan trigger (plain fetch with progress) ──────── */
     /* The scan result HTML is trusted: rendered server-side from an
        authenticated same-origin endpoint with escapeHtml(). */
+    toggleUploadForm: function (el) {
+      var form = document.getElementById('upload-regulation-form');
+      if (!form) return;
+      var isHidden = form.hidden;
+      form.hidden = !isHidden;
+      el.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+    },
     triggerSourceScan: function (el) {
       var results = document.getElementById('scan-results');
       if (!results) return;

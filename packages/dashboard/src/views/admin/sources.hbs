@@ -12,6 +12,42 @@
             aria-label="Trigger scan of all monitored sources now">
       {{t "admin.sources.scanNow"}}
     </button>
+    <button data-action="toggleUploadForm"
+            class="btn btn--secondary"
+            aria-expanded="false"
+            aria-controls="upload-regulation-form">
+      Upload Regulation
+    </button>
+  </div>
+
+  <div id="upload-regulation-form" class="card mt-sm" hidden>
+    <form hx-post="/admin/sources/upload"
+          hx-target="#plugin-messages" hx-swap="innerHTML"
+          class="card__body">
+      <h3 class="card__title">Upload Regulation Document</h3>
+      <p class="form-hint">Paste the text content of a regulatory document. An LLM will extract WCAG requirements and create a proposal for review.</p>
+      <div class="form-group">
+        <label for="upload-name">Document Name</label>
+        <input type="text" id="upload-name" name="name" class="input" required placeholder="e.g. Section 508 ICT Standards" />
+      </div>
+      <div class="form-group">
+        <label for="upload-reg">Regulation ID (optional)</label>
+        <input type="text" id="upload-reg" name="regulationId" class="input" placeholder="e.g. US-508" />
+        <small class="form-hint">Links extracted requirements to an existing regulation</small>
+      </div>
+      <div class="form-group">
+        <label for="upload-jurisdiction">Jurisdiction (optional)</label>
+        <input type="text" id="upload-jurisdiction" name="jurisdictionId" class="input" placeholder="e.g. US" />
+      </div>
+      <div class="form-group">
+        <label for="upload-content">Document Content</label>
+        <textarea id="upload-content" name="content" class="input" rows="10" required
+                  placeholder="Paste the regulation text here..."></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Extract Requirements</button>
+      </div>
+    </form>
   </div>
 
   <div id="scan-results" aria-live="polite"></div>
