@@ -38,8 +38,10 @@ The Luqen compliance service fetches regulatory and WCAG criteria data from the 
    - WCAG JSON → structured criteria extraction
    - Government pages → LLM-based extraction (when configured)
 4. Parsed data is compared against the current database
-5. Differences are created as **proposals** requiring admin review
-6. No data is auto-applied — all changes require human approval
+5. Differences are created as **proposals** with a trust level:
+   - `w3c-policy` and `wcag-upstream` sources produce **certified** proposals (auto-acknowledged)
+   - `government` and `generic` sources produce **extracted** proposals (require human review)
+6. Certified proposals from structured authoritative sources are treated as factual; extracted proposals from LLM-parsed content need manual verification
 
 ## Attribution
 

@@ -14,6 +14,7 @@ How to build plugins for the Luqen dashboard.
 | `notification` | `NotificationPlugin` | Send scan events to channels (e.g., Slack, Teams) |
 | `storage` | `StoragePlugin` | External report storage (e.g., S3, Azure Blob) |
 | `scanner` | `ScannerPlugin` | Custom WCAG rule evaluation |
+| `llm` | `LLMPlugin` | LLM-based extraction for the compliance source intelligence pipeline |
 
 ---
 
@@ -58,7 +59,7 @@ Every plugin package must include a `manifest.json` at its root.
 |-------|------|----------|-------------|
 | `name` | `string` | Yes | Unique slug identifier |
 | `displayName` | `string` | Yes | Human-readable name shown in the UI |
-| `type` | `string` | Yes | One of: `auth`, `notification`, `storage`, `scanner` |
+| `type` | `string` | Yes | One of: `auth`, `notification`, `storage`, `scanner`, `llm` |
 | `version` | `string` | Yes | SemVer version string |
 | `description` | `string` | Yes | Short description |
 | `icon` | `string` | No | Icon identifier for the dashboard UI |
@@ -75,11 +76,14 @@ Each entry in `configSchema` defines one configuration field.
 |----------|------|----------|-------------|
 | `key` | `string` | Yes | Config key (used in `config` object) |
 | `label` | `string` | Yes | Display label in the UI |
-| `type` | `string` | Yes | One of: `string`, `secret`, `number`, `boolean`, `select` |
+| `type` | `string` | Yes | One of: `string`, `secret`, `number`, `boolean`, `select`, `dynamic-select` |
 | `required` | `boolean` | No | Whether the field must be set before activation |
 | `default` | `any` | No | Default value |
 | `options` | `string[]` | No | Valid options (only for `select` type) |
+| `dependsOn` | `string[]` | No | Config fields that must be set before options can be fetched (only for `dynamic-select` type) |
 | `description` | `string` | No | Help text shown in the UI |
+
+Fields with `type: "dynamic-select"` render a dropdown with a refresh button in the UI. The options are fetched at runtime by calling the plugin's `getConfigOptions(fieldKey, currentConfig)` method via `GET /admin/plugins/:id/config-options?field=<key>`. The `dependsOn` array specifies which other config fields must be configured before the options endpoint can be called (e.g., an API key must be set before querying available models).
 
 Fields with `type: "secret"` are encrypted with AES-256-GCM before being stored in the database. They are masked in API responses and the UI.
 
@@ -140,6 +144,15 @@ delete(key: string): Promise<void>;
 readonly rules: readonly WcagRule[];
 evaluate(page: PageResult): Promise<readonly ScannerIssue[]>;
 ```
+
+**LLMPlugin** extends `PluginInstance`:
+
+```typescript
+extract(prompt: string, content: string): Promise<LLMExtractionResult>;
+getConfigOptions?(fieldKey: string, currentConfig: Record<string, unknown>): Promise<Array<{ value: string; label: string }>>;
+```
+
+Used by the compliance source intelligence pipeline for `government` and `generic` source categories. The optional `getConfigOptions` method supports `dynamic-select` config fields (e.g., fetching available models from the provider API).
 
 ---
 

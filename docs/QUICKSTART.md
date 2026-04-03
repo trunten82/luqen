@@ -262,13 +262,14 @@ curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh |
 
 ---
 
-## New in v1.9.0
+## New in v2.6.0
 
-- **PDF export rewritten with PDFKit** — no Puppeteer or Chromium dependency; PDF generation uses PDFKit directly
-- **Security hardening** — @fastify/helmet security headers, CSRF token verification, XSS prevention, per-installation session salt
-- **Trend KPI cards** — key performance indicator cards on the trends page showing score changes and issue counts
-- **Power BI connector** — Power Query M connector for importing scan data into Power BI Desktop
-- **Mercurius v16.8.0** — fixes a CSRF vulnerability in the GraphQL endpoint
+- **LLM pipeline** — upload regulation documents from the dashboard Sources page; an LLM plugin (Claude, GPT-4o, Gemini, or Ollama) extracts regulations into structured proposals
+- **Dynamic plugin config** — LLM plugins fetch available models from the provider API at runtime (dropdown + refresh button)
+- **Trust levels** — proposals from W3C/WCAG sources are auto-acknowledged; LLM-extracted proposals require human review
+- **Wildcard requirement matching** — regulations that mandate "all WCAG AA" now match any criterion violation
+- **Async source scanning** — background execution prevents gateway timeouts on large source sets
+- **Sources page Parser badges** — visual indicators showing which parser (LLM/W3C/WCAG/Generic) handles each source
 
 > **Note:** Chromium is only required for the pa11y scanner (installed automatically by pa11y). The dashboard itself does not require Chromium.
 

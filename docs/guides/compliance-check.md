@@ -49,6 +49,12 @@ Each regulation maps WCAG criteria to one of three obligation levels:
 | **Recommended** | Amber | Officially recommended but not strictly enforceable. Warnings and notices are flagged for review. |
 | **Optional** | Blue | Voluntary. Included for completeness. |
 
+### Wildcard requirement matching
+
+Some regulations specify that **all WCAG AA criteria** are mandatory without listing individual criteria. These are stored with `wcagCriterion='*'` in the requirements table. The compliance engine expands wildcard requirements to match any WCAG violation, so a regulation mandating "all WCAG 2.1 Level AA" will correctly flag any criterion failure.
+
+Granular per-criterion requirements (e.g., `wcagCriterion='1.4.3'`) take precedence over wildcards when both exist for the same regulation.
+
 ### Jurisdiction inheritance
 
 Jurisdictions can inherit regulations from parent jurisdictions. For example:

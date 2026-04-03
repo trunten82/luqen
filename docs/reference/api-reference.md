@@ -137,7 +137,22 @@ Accepts request bodies up to 10 MB to accommodate large site scans.
 | `GET` | `/sources` | `read` | List all monitored sources |
 | `POST` | `/sources` | `admin` | Add a source |
 | `DELETE` | `/sources/:id` | `admin` | Remove a source |
-| `POST` | `/sources/scan` | `admin` | Trigger synchronous scan of all sources |
+| `POST` | `/sources/scan` | `admin` | Trigger scan of all sources (async on dashboard, sync on direct API) |
+| `POST` | `/sources/upload` | `admin` | Upload document content + metadata for LLM-based regulation extraction |
+
+---
+
+## LLM Bridge (Dashboard)
+
+Base URL: `http://localhost:5000` (dashboard service).
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/v1/llm/extract` | API key | Bridges compliance service to the active LLM plugin; accepts optional `pluginId` |
+| `GET` | `/api/v1/llm/plugins` | Session | Lists active LLM plugins (for UI dropdowns) |
+| `POST` | `/admin/sources/upload` | Session (`admin.system`) | Proxies regulation upload to compliance service with LLM plugin selector |
+| `POST` | `/admin/sources/scan` | Session (`admin.system`) | Triggers background source scan (fire-and-forget, prevents 504) |
+| `GET` | `/admin/plugins/:id/config-options` | Session (`admin.system`) | Fetches dynamic config options from a plugin (e.g., available models) |
 
 ---
 
