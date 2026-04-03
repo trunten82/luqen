@@ -4,7 +4,7 @@
 
 Luqen scans your entire website for WCAG violations and tells you which laws in which countries require you to fix each one. One scan covers 58 jurisdictions (EU, US, UK, and more), so your legal and dev teams see the same picture. Run it from the command line, a browser dashboard, or your IDE — it works for a solo developer checking one page or an enterprise team monitoring hundreds of sites across multiple languages.
 
-![Version](https://img.shields.io/badge/version-v2.2.2-blue)
+![Version](https://img.shields.io/badge/version-v2.6.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Tests](https://img.shields.io/badge/tests-2232%20passing-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)
@@ -56,44 +56,49 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                         luqen monorepo                           │
-│                                                                  │
-│  ┌───────────────────────────┐  ┌──────────────────────────────┐ │
-│  │   @luqen/dashboard        │  │   Plugin Catalogue           │ │
-│  │                           │  │   (GitHub: luqen-plugins)    │ │
-│  │  Web UI + REST API        │◄─┤                              │ │
-│  │  ─ start scans            │  │  catalogue.json              │ │
-│  │  ─ view reports           │  │  8 plugin tarballs (.tgz)    │ │
-│  │  ─ manage plugins         │  └──────────────────────────────┘ │
-│  │  ─ team & role admin      │                                   │
-│  │  ─ HTMX, no JS build step│  ┌──────────────────────────────┐ │
-│  │                           │  │   Plugins (installed)        │ │
-│  │  StorageAdapter (14 repos)│◄─┤  auth: entra, okta, google   │ │
-│  │  SQLite (built-in)        │  │  notify: slack, teams, email │ │
-│  └──────────┬────────────────┘  │  storage: s3, azure          │ │
-│             │ HTTP (REST)       └──────────────────────────────┘ │
-│             ▼                                                    │
-│  ┌───────────────────────────┐  ┌───────────────────────────┐   │
-│  │  @luqen/compliance        │  │   @luqen/monitor          │   │
-│  │                           │  │                           │   │
-│  │  ─ 58 jurisdictions       │◄─┤  ─ watches legal sources  │   │
-│  │  ─ 62 regulations         │  │  ─ creates proposals      │   │
-│  │  ─ 225 WCAG criteria      │  │  ─ SHA-256 change detect  │   │
-│  │  ─ per-criterion mapping  │  └───────────────────────────┘   │
-│  │  ─ source intel pipeline  │                                   │
-│  │  ─ LLM plugin interface   │                                   │
-│  │  ─ OAuth2 / JWT auth      │                                   │
-│  └──────────┬────────────────┘                                   │
-│             │ uses as library                                    │
-│             ▼                                                    │
-│  ┌───────────────────────────┐                                   │
-│  │   @luqen/core             │  CLI + MCP server                 │
-│  │  ─ site scan & crawl      │  ─ source mapping                 │
-│  │  ─ fix proposals          │  ─ HTML/JSON reports              │
-│  │  ─ pa11y (built-in)       │                                   │
-│  └───────────────────────────┘                                   │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              luqen monorepo                                  │
+│                                                                              │
+│  ┌─────────────────────────────┐  ┌────────────────────────────────────────┐ │
+│  │   @luqen/dashboard (5000)   │  │   Plugin Catalogue                     │ │
+│  │                             │  │   (GitHub: luqen-plugins)              │ │
+│  │  Web UI + REST API          │◄─┤                                        │ │
+│  │  ─ start scans              │  │  catalogue.json                        │ │
+│  │  ─ view reports             │  │  12 plugin tarballs (.tgz)             │ │
+│  │  ─ brand filter in reports  │  └────────────────────────────────────────┘ │
+│  │  ─ manage plugins           │                                             │
+│  │  ─ team & role admin        │  ┌────────────────────────────────────────┐ │
+│  │  ─ HTMX, no JS build step   │  │   Plugins (installed)                  │ │
+│  │                             │  │  auth:    entra, okta, google          │ │
+│  │  StorageAdapter (14 repos)  │◄─┤  notify:  slack, teams, email          │ │
+│  │  SQLite (built-in)          │  │  storage: s3, azure                    │ │
+│  └──────┬─────────────┬────────┘  │  llm:     anthropic, openai,           │ │
+│         │ OAuth2      │ OAuth2    │           gemini, ollama               │ │
+│         ▼             ▼           └────────────────────────────────────────┘ │
+│  ┌──────────────┐  ┌─────────────────────────┐  ┌───────────────────────┐   │
+│  │  @luqen/     │  │  @luqen/compliance       │  │  @luqen/monitor       │   │
+│  │  branding    │  │  (port 4000)             │  │                       │   │
+│  │  (port 4100) │  │                          │◄─┤  ─ watches sources    │   │
+│  │              │  │  ─ 58 jurisdictions      │  │  ─ creates proposals  │   │
+│  │  ─ brand     │  │  ─ 62 regulations        │  │  ─ SHA-256 detection  │   │
+│  │    matching  │  │  ─ 225 WCAG criteria      │  └───────────────────────┘   │
+│  │  ─ image     │  │  ─ per-criterion mapping  │                              │
+│  │    upload    │  │  ─ source intel pipeline  │  ┌───────────────────────┐   │
+│  │  ─ retag     │  │    W3cPolicyParser        │  │  External sources     │   │
+│  │  ─ SQLite    │  │    WcagUpstreamParser     │◄─┤  W3C WAI policies     │   │
+│  │  ─ OAuth2 /  │  │    LLM extractor          │  │  W3C WCAG upstream    │   │
+│  │    JWT auth  │  │  ─ IComplianceLLMProvider │  │  tenon-io (community) │   │
+│  └──────────────┘  │  ─ OAuth2 / JWT auth      │  └───────────────────────┘   │
+│                    └──────────┬──────────────────┘                            │
+│                               │ uses as library                               │
+│                               ▼                                               │
+│  ┌────────────────────────────────────────────────────────────────────────┐   │
+│  │   @luqen/core                          CLI + MCP server                │   │
+│  │  ─ site scan & crawl                   ─ source mapping                │   │
+│  │  ─ fix proposals                       ─ HTML/JSON reports             │   │
+│  │  ─ pa11y (built-in)                                                    │   │
+│  └────────────────────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -142,7 +147,7 @@ export SESSION_SECRET="$(openssl rand -base64 32)"
 docker compose up -d
 ```
 
-Services start on ports 4000 (compliance) and 5000 (dashboard). No external pa11y-webservice needed — scanning is built in.
+Services start on ports 4000 (compliance), 4100 (branding), and 5000 (dashboard). No external pa11y-webservice needed — scanning is built in.
 
 ### Manual install
 
@@ -170,31 +175,32 @@ cd ~/luqen
 git pull
 npm install
 npm run build --workspaces
-systemctl restart luqen-compliance luqen-dashboard
+systemctl restart luqen-compliance luqen-branding luqen-dashboard
 ```
 
 Or as a one-liner:
 
 ```bash
-cd ~/luqen && git pull && npm install && npm run build --workspaces && systemctl restart luqen-compliance luqen-dashboard
+cd ~/luqen && git pull && npm install && npm run build --workspaces && systemctl restart luqen-compliance luqen-branding luqen-dashboard
 ```
 
 ### Service management
 
 ```bash
 # Status
-systemctl status luqen-compliance luqen-dashboard
+systemctl status luqen-compliance luqen-branding luqen-dashboard
 
 # Logs
 journalctl -u luqen-dashboard -f
 journalctl -u luqen-compliance -f
+journalctl -u luqen-branding -f
 
 # Stop / Start
-systemctl stop luqen-dashboard luqen-compliance
-systemctl start luqen-compliance luqen-dashboard
+systemctl stop luqen-dashboard luqen-branding luqen-compliance
+systemctl start luqen-compliance luqen-branding luqen-dashboard
 
 # Disable auto-start on boot
-systemctl disable luqen-dashboard luqen-compliance
+systemctl disable luqen-dashboard luqen-branding luqen-compliance
 ```
 
 ---
@@ -204,8 +210,9 @@ systemctl disable luqen-dashboard luqen-compliance
 | Package | Description | Docs |
 |---------|-------------|------|
 | [`@luqen/core`](packages/core) | Site scanner, source mapper, fix engine, CLI, MCP server | [docs/reference/core-config.md](docs/reference/core-config.md) |
-| [`@luqen/compliance`](packages/compliance) | Compliance rule engine, REST API, MCP server | [docs/reference/compliance-config.md](docs/reference/compliance-config.md) |
-| [`@luqen/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, admin UI | [docs/reference/dashboard-config.md](docs/reference/dashboard-config.md) |
+| [`@luqen/compliance`](packages/compliance) | Compliance rule engine, REST API, MCP server, source intelligence pipeline | [docs/reference/compliance-config.md](docs/reference/compliance-config.md) |
+| [`@luqen/branding`](packages/branding) | Brand guideline matching service — color, font, selector matching; image upload; scan retag | [docs/branding/README.md](docs/branding/README.md) |
+| [`@luqen/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, brand filter, admin UI | [docs/reference/dashboard-config.md](docs/reference/dashboard-config.md) |
 | [`@luqen/monitor`](packages/monitor) | Regulatory monitor agent — watches legal sources, creates update proposals | [docs/reference/monitor-config.md](docs/reference/monitor-config.md) |
 
 ### Plugins (15 available)
@@ -256,6 +263,39 @@ node dist/cli.js clients create \
 ```
 
 The REST API is documented at `http://localhost:4000/docs` (Swagger UI).
+
+---
+
+## Branding Service
+
+The branding service (`@luqen/branding`) classifies accessibility issues as brand-related or unexpected by matching scan findings against stored color palettes, font families, and CSS selector patterns. It runs as a standalone Fastify microservice on port 4100.
+
+```bash
+cd packages/branding
+
+# 1. Generate JWT signing keys
+node dist/cli.js keys generate
+
+# 2. Create an OAuth client for the dashboard
+node dist/cli.js clients create --name dashboard --scope "read write"
+
+# 3. Start the service (REST API on port 4100)
+node dist/cli.js serve --port 4100
+```
+
+Add the credentials to `dashboard.config.json` to enable post-scan brand enrichment and the brand filter in scan reports:
+
+```json
+{
+  "branding": {
+    "url": "http://localhost:4100",
+    "clientId": "dashboard",
+    "clientSecret": "your-secret-here"
+  }
+}
+```
+
+See [docs/branding/README.md](docs/branding/README.md) for the full guide including image upload, scan retag, matching strategies, and the multi-brand multi-site model.
 
 ---
 
@@ -314,7 +354,7 @@ export SESSION_SECRET="$(openssl rand -base64 32)"
 docker compose up -d
 ```
 
-This starts the compliance service (port 4000) and the dashboard (port 5000). The scanner uses the pa11y library directly inside the container — no external pa11y-webservice is needed. If you have an existing pa11y-webservice you want to use instead, set `PA11Y_URL` in a `.env` file for backward compatibility.
+This starts the compliance service (port 4000), the branding service (port 4100), and the dashboard (port 5000). The scanner uses the pa11y library directly inside the container — no external pa11y-webservice is needed. If you have an existing pa11y-webservice you want to use instead, set `PA11Y_URL` in a `.env` file for backward compatibility.
 
 ---
 

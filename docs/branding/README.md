@@ -11,14 +11,15 @@
 5. [CLI Reference](#cli-reference)
 6. [API Reference](#api-reference)
 7. [Dashboard Integration](#dashboard-integration)
-8. [Brand Image Upload](#brand-image-upload)
-9. [Scan Retag](#scan-retag)
-10. [Matching Strategies](#matching-strategies)
-11. [Template Format](#template-format)
-12. [Multi-Brand Multi-Site Model](#multi-brand-multi-site-model)
-13. [REST API Endpoints](#rest-api-endpoints)
-14. [GraphQL API](#graphql-api)
-15. [Docker Compose](#docker-compose)
+8. [Report Integration](#report-integration)
+9. [Brand Image Upload](#brand-image-upload)
+10. [Scan Retag](#scan-retag)
+11. [Matching Strategies](#matching-strategies)
+12. [Template Format](#template-format)
+13. [Multi-Brand Multi-Site Model](#multi-brand-multi-site-model)
+14. [REST API Endpoints](#rest-api-endpoints)
+15. [GraphQL API](#graphql-api)
+16. [Docker Compose](#docker-compose)
 
 ---
 
@@ -364,6 +365,17 @@ When configured, the dashboard:
 4. Surfaces brand-related vs unexpected issue counts in the scan report and trends views.
 
 If the branding service is unreachable at startup, the dashboard logs a warning and continues — branding enrichment is non-blocking.
+
+### Report integration
+
+When branding enrichment is active, each scan report gains:
+
+- **Filter bar** — All / Unexpected / Brand-Related toggle to isolate issues by brand classification.
+- **Brand badge** — an inline badge on each matched issue showing which guideline matched and the matching detail (e.g. `Brand Red (#CC0000 / #FFFFFF, ΔE=2.3)`).
+- **Dual KPI cards** — overall compliance rate alongside the rate excluding brand-related issues, so teams see both the full picture and the non-brand baseline.
+- **Brand KPI card** — guideline name, version reference, and count of brand-related issues in the current scan.
+
+Filter pill counts update live as the brand filter is applied or cleared. The filter state is preserved across page navigations within the same report session.
 
 ---
 
