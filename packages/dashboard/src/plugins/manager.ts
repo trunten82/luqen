@@ -110,10 +110,15 @@ export class PluginManager {
 
   private downloadFn: DownloadFn = defaultDownloadFn;
   private loaderFn: PluginLoaderFn = async (pluginPath: string) => {
-    const mod = await import(pluginPath) as { default?: PluginInstance | (() => PluginInstance) };
+    const mod = await import(pluginPath) as { default?: PluginInstance | (new () => PluginInstance) | (() => PluginInstance) };
     const exported = mod.default ?? (mod as unknown as PluginInstance);
-    // Support both direct instances and factory functions (e.g. createPlugin())
-    return typeof exported === 'function' ? (exported as () => PluginInstance)() : exported;
+    if (typeof exported !== 'function') return exported;
+    // Detect class constructors (prototype with methods) vs plain factory functions
+    const proto = exported.prototype;
+    if (proto && typeof proto.activate === 'function') {
+      return new (exported as new () => PluginInstance)();
+    }
+    return (exported as () => PluginInstance)();
   };
 
   constructor(options: PluginManagerOptions) {
