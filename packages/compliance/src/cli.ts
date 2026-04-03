@@ -8,6 +8,7 @@ import { loadConfig } from './config.js';
 import { createComplianceMcpServer } from './mcp/server.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { VERSION } from './version.js';
+import type { IComplianceLLMProvider } from './types.js';
 
 // ---- Utility: load DB adapter ----
 
@@ -75,6 +76,22 @@ export function createProgram(): Command {
         }
       }
 
+      let llmProvider: IComplianceLLMProvider | undefined;
+      if (config.llmProvider) {
+        const { createLLMProvider } = await import('./llm/index.js');
+        try {
+          llmProvider = createLLMProvider({
+            provider: config.llmProvider,
+            apiKey: config.llmApiKey,
+            model: config.llmModel,
+            baseUrl: config.llmBaseUrl,
+          });
+          console.log(`LLM provider: ${config.llmProvider} (model: ${config.llmModel ?? 'default'})`);
+        } catch (err) {
+          console.warn(`Failed to create LLM provider: ${err instanceof Error ? err.message : err}`);
+        }
+      }
+
       const app = await createServer({
         db,
         signToken,
@@ -87,6 +104,7 @@ export function createProgram(): Command {
         logger: true,
         cache,
         reseedInterval: config.reseedInterval,
+        llmProvider,
       });
 
       await app.register(registerAgentCardPlugin);
