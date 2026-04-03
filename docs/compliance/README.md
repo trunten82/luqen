@@ -33,7 +33,7 @@
 
 The Luqen Compliance Service answers the question: "Given these WCAG accessibility violations, which laws are we breaking and in which countries?"
 
-It is a self-contained HTTP service with REST API, MCP server (for Claude Code), and A2A agent protocol support. It ships with a baseline dataset covering the major accessibility regulations across 60+ jurisdictions — EU, US, UK, Germany, France, Australia, Canada, Japan, and more.
+It is a self-contained HTTP service with REST API, MCP server (for Claude Code), and A2A agent protocol support. It ships with a baseline dataset covering the major accessibility regulations across 60+ jurisdictions — EU, US, UK, Germany, France, Australia, Canada, Japan, and more. A source intelligence pipeline enriches this baseline with granular per-criterion obligation mappings sourced from W3C WAI, WCAG upstream, and tenon-io; a pluggable LLM provider interface (4 providers: Claude, ChatGPT, Gemini, Ollama) handles unstructured government and community sources. The `wcag_criteria` table stores all 225 WCAG 2.0/2.1/2.2 criteria for wildcard expansion and criterion-level obligation lookups.
 
 ### Problem it solves
 

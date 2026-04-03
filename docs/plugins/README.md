@@ -4,6 +4,8 @@
 
 The Luqen dashboard supports a plugin system that extends its capabilities through five plugin types: authentication providers, notification channels, external storage backends, custom scanner rules, and LLM providers. Plugins are discovered from a [remote catalogue](https://github.com/trunten82/luqen-plugins), installed as self-contained tarballs (no npm required), and managed through the dashboard UI, CLI, or REST API.
 
+The four **LLM plugins** (`llm-anthropic`, `llm-openai`, `llm-gemini`, `llm-ollama`) implement the `IComplianceLLMProvider` interface used by the compliance source intelligence pipeline to extract regulations from unstructured government pages and community data sources. When no LLM plugin is active, only the structured `W3cPolicyParser` and `WcagUpstreamParser` run during a force-reseed.
+
 ---
 
 ## Overview
