@@ -73,6 +73,18 @@ The dashboard bridges the compliance service and the active LLM plugin:
 - **`POST /admin/sources/upload`** -- proxies regulation document uploads to the compliance service's `POST /api/v1/sources/upload` endpoint; powers the "Upload Regulation" form on the sources admin page. The form includes an "LLM Provider" dropdown allowing admins to choose which LLM plugin processes the extraction.
 - **`POST /admin/sources/scan`** -- triggers a background scan of all monitored sources. Returns immediately with a "Source scan started in background" message instead of waiting for completion, preventing 504 gateway timeouts on large source sets.
 
+### Source Intelligence API (API key auth)
+
+These endpoints are accessible via API key (`Authorization: Bearer <key>`) for automation:
+
+- **`POST /api/v1/sources/scan`** -- trigger async source scan. Returns `{"status":"started"}` immediately. Optional `?force=false` to only scan sources due per their schedule.
+- **`POST /api/v1/sources/upload`** -- upload a regulation document for LLM extraction. Accepts JSON body: `{name, content, regulationId?, jurisdictionId?, pluginId?}`. Returns extracted requirements count, confidence, and the created proposal.
+- **`GET /api/v1/llm/status`** -- check LLM availability: `{available: true, pluginCount: N}`
+
+### Reseed + Scan
+
+Reseed (`POST /admin/system/reseed`) automatically triggers a source scan after reloading baseline data, ensuring the monitor page shows current timestamps.
+
 ## Documentation
 
 See the [main repository](https://github.com/trunten82/luqen) for full documentation.
