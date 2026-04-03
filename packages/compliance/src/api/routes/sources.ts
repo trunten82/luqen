@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { DbAdapter } from '../../db/adapter.js';
 import type { IComplianceLLMProvider, MonitoredSource } from '../../types.js';
+import { acknowledgeUpdate } from '../../engine/proposals.js';
 import { requireScope } from '../../auth/middleware.js';
 import { createHash } from 'node:crypto';
 
@@ -132,6 +133,18 @@ async function createGenericProposal(
     },
   });
   proposals.push(proposal);
+}
+
+/** Auto-acknowledge a certified proposal (trusted structured source). */
+async function autoAcknowledgeCertified(
+  db: DbAdapter,
+  proposal: { readonly id: string; readonly trustLevel?: string },
+): Promise<void> {
+  if (proposal.trustLevel === 'certified') {
+    try {
+      await acknowledgeUpdate(db, proposal.id, 'system', 'Auto-acknowledged (certified source)');
+    } catch { /* best-effort */ }
+  }
 }
 
 export async function registerSourceRoutes(
@@ -307,6 +320,7 @@ export async function registerSourceRoutes(
                       },
                     });
                     proposals.push(proposal);
+                    await autoAcknowledgeCertified(db, proposal);
                   }
                 } catch {
                   await createGenericProposal(db, source, content, contentHash, proposals);
@@ -337,6 +351,7 @@ export async function registerSourceRoutes(
                       },
                     });
                     proposals.push(proposal);
+                    await autoAcknowledgeCertified(db, proposal);
                   }
                 } catch {
                   await createGenericProposal(db, source, content, contentHash, proposals);

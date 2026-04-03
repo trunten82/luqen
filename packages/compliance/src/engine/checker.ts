@@ -178,7 +178,8 @@ function findMatchingRegulations(
 ): RequirementWithRegulation[] {
   if (parsed.criterion === null) return [];
   return requirements.filter(req => {
-    if (req.wcagCriterion !== parsed.criterion) return false;
+    // Match exact criterion or wildcard '*' (means all criteria under this regulation)
+    if (req.wcagCriterion !== parsed.criterion && req.wcagCriterion !== '*') return false;
     if (sectorFilter.length > 0) {
       const regSectors = regulationSectorCache.get(req.regulationId) ?? [];
       if (!regulationMatchesSectors(regSectors, sectorFilter)) return false;
@@ -225,9 +226,11 @@ async function buildJurisdictionResult(
 
     for (const parsed of parsedIssues) {
       if (parsed.criterion === null) continue;
-      if (req.wcagCriterion !== parsed.criterion) continue;
+      if (req.wcagCriterion !== parsed.criterion && req.wcagCriterion !== '*') continue;
 
-      const key: ViolationKey = `${req.wcagCriterion}:${req.obligation}`;
+      // For wildcard requirements, use the actual criterion in the violation key
+      const effectiveCriterion = req.wcagCriterion === '*' ? parsed.criterion : req.wcagCriterion;
+      const key: ViolationKey = `${effectiveCriterion}:${req.obligation}`;
       entry.violations.set(key, (entry.violations.get(key) ?? 0) + 1);
     }
   }
