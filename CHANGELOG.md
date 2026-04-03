@@ -38,6 +38,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Sources page Parser column** — shows LLM/W3C/WCAG/Generic badges indicating which parser handles each source
 - **Regulations page jurisdiction filter** — fixed missing partial template
 
+**Source intelligence API**
+- **`POST /api/v1/sources/scan`** — API-key accessible endpoint to trigger async source scan for automation
+- **`POST /api/v1/sources/upload`** — API-key accessible endpoint to upload regulation documents for LLM parsing
+- **Reseed auto-scan** — reseed now automatically triggers a source scan, ensuring monitor timestamps stay current
+- **Duplicate proposal prevention** — source scans check all existing proposals (not just pending) to avoid re-creating proposals for sources with dynamic page content
+- **US regulation expansion** — 10 US regulations total: Section 508, ADA, ADA Title II Web Rule (2024), Section 255, ACAA, CVAA, California Gov Code 7405, Illinois IITAA, Colorado HB21-1110, New York Web A11y
+- **Stale source fixes** — Greece (EUR-Lex URL), Colombia (updated to Resolución 1519/2020)
+
 **Plugin loader**
 - ES class constructors detected correctly (checks `prototype.activate`)
 

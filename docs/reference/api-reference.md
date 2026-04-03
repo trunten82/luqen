@@ -149,10 +149,37 @@ Base URL: `http://localhost:5000` (dashboard service).
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `POST` | `/api/v1/llm/extract` | API key | Bridges compliance service to the active LLM plugin; accepts optional `pluginId` |
-| `GET` | `/api/v1/llm/plugins` | Session | Lists active LLM plugins (for UI dropdowns) |
+| `GET` | `/api/v1/llm/plugins` | API key | Lists active LLM plugins (for UI dropdowns and automation) |
+| `GET` | `/api/v1/llm/status` | API key | Check if an LLM plugin is available (`{available, pluginCount}`) |
+| `POST` | `/api/v1/sources/scan` | API key | Trigger async source scan — returns immediately, runs in background |
+| `POST` | `/api/v1/sources/upload` | API key | Upload document for LLM parsing — returns extracted requirements and proposal |
 | `POST` | `/admin/sources/upload` | Session (`admin.system`) | Proxies regulation upload to compliance service with LLM plugin selector |
 | `POST` | `/admin/sources/scan` | Session (`admin.system`) | Triggers background source scan (fire-and-forget, prevents 504) |
 | `GET` | `/admin/plugins/:id/config-options` | Session (`admin.system`) | Fetches dynamic config options from a plugin (e.g., available models) |
+
+### POST /api/v1/sources/scan
+
+Trigger an async source scan via API key. Returns immediately.
+
+```bash
+curl -X POST -H "Authorization: Bearer <API_KEY>" \
+  https://luqen.example.com/api/v1/sources/scan
+# Response: {"status":"started","message":"Source scan started in background"}
+```
+
+Optional query param `?force=false` to only scan sources that are due per their schedule.
+
+### POST /api/v1/sources/upload
+
+Upload a regulation document for LLM extraction via API key.
+
+```bash
+curl -X POST -H "Authorization: Bearer <API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Section 508","regulationId":"US-508","jurisdictionId":"US","content":"...text...","pluginId":"optional-llm-plugin-id"}' \
+  https://luqen.example.com/api/v1/sources/upload
+# Response: {"message":"Extracted 23 requirement(s)","confidence":0.95,"criteriaCount":23,"proposal":{...}}
+```
 
 ---
 
