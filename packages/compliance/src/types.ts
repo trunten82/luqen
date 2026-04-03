@@ -329,10 +329,6 @@ export interface ComplianceConfig {
     readonly credentials: boolean;
   };
   readonly reseedInterval?: string;
-  readonly llmProvider?: 'anthropic' | 'openai' | 'gemini' | 'ollama';
-  readonly llmApiKey?: string;
-  readonly llmModel?: string;
-  readonly llmBaseUrl?: string;
 }
 
 // === Seed data shape ===
