@@ -25,7 +25,20 @@
           hx-target="#plugin-messages" hx-swap="innerHTML"
           class="card__body">
       <h3 class="card__title">Upload Regulation Document</h3>
-      <p class="form-hint">Paste the text content of a regulatory document. An LLM will extract WCAG requirements and create a proposal for review.</p>
+      <p class="form-hint">Paste the text content of a regulatory document. The selected LLM will extract WCAG requirements and create a proposal for review.</p>
+      {{#if hasLlm}}
+      <div class="form-group">
+        <label for="upload-llm">LLM Provider</label>
+        <select id="upload-llm" name="pluginId" class="input" required>
+          {{#each llmPlugins}}
+          <option value="{{id}}">{{name}}</option>
+          {{/each}}
+        </select>
+        <small class="form-hint">Choose which LLM processes this document</small>
+      </div>
+      {{else}}
+      <div class="alert alert--warning">No active LLM plugin. Activate one in Plugins first.</div>
+      {{/if}}
       <div class="form-group">
         <label for="upload-name">Document Name</label>
         <input type="text" id="upload-name" name="name" class="input" required placeholder="e.g. Section 508 ICT Standards" />
@@ -45,7 +58,7 @@
                   placeholder="Paste the regulation text here..."></textarea>
       </div>
       <div class="form-actions">
-        <button type="submit" class="btn btn--primary">Extract Requirements</button>
+        <button type="submit" class="btn btn--primary" {{#unless hasLlm}}disabled{{/unless}}>Extract Requirements</button>
       </div>
     </form>
   </div>

@@ -21,6 +21,7 @@ export class DashboardLLMBridge implements IComplianceLLMProvider {
       readonly currentWcagVersion?: string;
       readonly currentWcagLevel?: string;
     },
+    pluginId?: string,
   ): Promise<ExtractedRequirements> {
     const response = await fetch(`${this.dashboardUrl}/api/v1/llm/extract`, {
       method: 'POST',
@@ -28,8 +29,8 @@ export class DashboardLLMBridge implements IComplianceLLMProvider {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.apiKey}`,
       },
-      body: JSON.stringify({ pageContent, context }),
-      signal: AbortSignal.timeout(120_000), // LLM calls can be slow
+      body: JSON.stringify({ pageContent, context, ...(pluginId ? { pluginId } : {}) }),
+      signal: AbortSignal.timeout(120_000),
     });
 
     if (!response.ok) {

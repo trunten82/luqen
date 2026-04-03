@@ -372,6 +372,6 @@ export interface IComplianceLLMProvider {
     readonly regulationName: string;
     readonly currentWcagVersion?: string;
     readonly currentWcagLevel?: string;
-  }): Promise<ExtractedRequirements>;
+  }, pluginId?: string): Promise<ExtractedRequirements>;
 }
 

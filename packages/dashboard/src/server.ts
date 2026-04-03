@@ -628,7 +628,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await regulationRoutes(server, config.complianceUrl);
   await proposalRoutes(server, config.complianceUrl, storage);
   await changeHistoryRoutes(server, config.complianceUrl);
-  await sourceRoutes(server, config.complianceUrl);
+  await sourceRoutes(server, config.complianceUrl, pluginManager);
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
   await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, brandingTokenManager);
