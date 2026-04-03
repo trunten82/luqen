@@ -22,7 +22,58 @@ async function safeApplyChange(db: DbAdapter, change: ProposedChange): Promise<v
     && 'contentHash' in after
     && Object.keys(after).length === 1;
   if (isContentHashOnly) return;
+
+  // Handle LLM requirement diff proposals (batch of added/removed/changed)
+  if (after != null && 'diff' in after && change.entityType === 'requirement') {
+    await applyRequirementDiff(db, after as Record<string, unknown>);
+    return;
+  }
+
   await applyChange(db, change);
+}
+
+/** Apply a batch requirement diff from LLM extraction. */
+async function applyRequirementDiff(
+  db: DbAdapter,
+  after: Record<string, unknown>,
+): Promise<void> {
+  const diff = after['diff'] as { added?: unknown[]; removed?: unknown[]; changed?: unknown[] } | undefined;
+  if (!diff) return;
+
+  for (const req of diff.added ?? []) {
+    try {
+      await db.createRequirement(req as CreateRequirementInput);
+    } catch { /* skip duplicates */ }
+  }
+
+  for (const req of diff.removed ?? []) {
+    const r = req as { regulationId?: string; wcagVersion?: string; wcagCriterion?: string };
+    if (r.regulationId && r.wcagCriterion) {
+      const existing = await db.listRequirements({ regulationId: r.regulationId });
+      const match = existing.find(
+        (e) => e.wcagCriterion === r.wcagCriterion && e.wcagVersion === r.wcagVersion,
+      );
+      if (match) {
+        await db.deleteRequirement(match.id);
+      }
+    }
+  }
+
+  for (const ch of diff.changed ?? []) {
+    const c = ch as { wcagCriterion?: string; wcagVersion?: string; newObligation?: string };
+    if (!c.wcagCriterion || !c.newObligation) continue;
+    // Find and update the requirement by criterion + version
+    const afterData = after as Record<string, unknown>;
+    const regId = (afterData['regulationId'] ?? '') as string;
+    if (!regId) continue;
+    const existing = await db.listRequirements({ regulationId: regId });
+    const match = existing.find(
+      (e) => e.wcagCriterion === c.wcagCriterion && e.wcagVersion === c.wcagVersion,
+    );
+    if (match) {
+      await db.updateRequirement(match.id, { obligation: c.newObligation as 'mandatory' | 'recommended' | 'optional' | 'excluded' });
+    }
+  }
 }
 
 async function applyChange(db: DbAdapter, change: ProposedChange): Promise<void> {

@@ -8,7 +8,7 @@ import { loadConfig } from './config.js';
 import { createComplianceMcpServer } from './mcp/server.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { VERSION } from './version.js';
-import type { IComplianceLLMProvider } from './types.js';
+import { createLLMBridge } from './llm/dashboard-bridge.js';
 
 // ---- Utility: load DB adapter ----
 
@@ -76,7 +76,10 @@ export function createProgram(): Command {
         }
       }
 
-      const llmProvider: IComplianceLLMProvider | undefined = undefined;
+      const llmProvider = createLLMBridge();
+      if (llmProvider) {
+        console.log('LLM bridge enabled (via dashboard).');
+      }
 
       const app = await createServer({
         db,

@@ -228,8 +228,52 @@ export async function registerSourceRoutes(
           scanned++;
 
           if (source.lastContentHash == null) {
-            // First scan — just baseline the hash and store content
+            // First scan — baseline hash and store content
             baselined++;
+
+            // For government sources with LLM available, extract requirements on first scan
+            const firstCategory = source.sourceCategory ?? 'generic';
+            if (firstCategory === 'government' && llmProvider != null && !pendingSourceUrls.has(source.url)) {
+              try {
+                const allRegs = await db.listRegulations();
+                const matchedReg = allRegs.find(r => r.url === source.url);
+
+                const extracted = await llmProvider.extractRequirements(content, {
+                  regulationId: matchedReg?.id ?? source.name,
+                  regulationName: matchedReg?.name ?? source.name,
+                });
+
+                if (extracted.criteria.length > 0) {
+                  const reqs = extracted.criteria.map(c => ({
+                    regulationId: matchedReg?.id ?? '',
+                    wcagVersion: extracted.wcagVersion as '2.0' | '2.1' | '2.2',
+                    wcagLevel: c.obligation === 'excluded' ? 'A' as const : 'AA' as const,
+                    wcagCriterion: c.criterion,
+                    obligation: c.obligation,
+                    ...(c.notes ? { notes: c.notes } : {}),
+                  }));
+
+                  const proposal = await db.createUpdateProposal({
+                    source: source.url,
+                    type: 'new_requirement',
+                    affectedRegulationId: matchedReg?.id,
+                    summary: `Initial LLM extraction (confidence: ${(extracted.confidence * 100).toFixed(0)}%): ${reqs.length} requirement(s) found`,
+                    proposedChanges: {
+                      action: 'update',
+                      entityType: 'requirement',
+                      after: {
+                        contentHash,
+                        regulationId: matchedReg?.id ?? '',
+                        diff: { added: reqs, removed: [], changed: [] },
+                        confidence: extracted.confidence,
+                      },
+                    },
+                  });
+                  proposals.push(proposal);
+                }
+              } catch { /* LLM extraction failed — still baseline the hash */ }
+            }
+
             await db.updateSourceLastChecked(source.id, contentHash, content);
           } else if (source.lastContentHash !== contentHash) {
             changed++;
@@ -331,6 +375,7 @@ export async function registerSourceRoutes(
                         entityType: 'requirement',
                         after: {
                           contentHash,
+                          regulationId: matchedReg?.id ?? '',
                           diff: { added: diff.added, removed: diff.removed, changed: diff.changed },
                           confidence: extracted.confidence,
                         },
@@ -366,6 +411,129 @@ export async function registerSourceRoutes(
       });
     } catch (err) {
       await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+
+  // POST /api/v1/sources/upload — upload document content for LLM parsing
+  // Creates a source record + proposal with extracted requirements
+  app.post('/api/v1/sources/upload', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    try {
+      if (llmProvider == null) {
+        await reply.status(503).send({
+          error: 'No LLM provider configured. Set DASHBOARD_URL and DASHBOARD_API_KEY environment variables and ensure an LLM plugin is active.',
+          statusCode: 503,
+        });
+        return;
+      }
+
+      const body = request.body as {
+        content?: string;
+        name?: string;
+        regulationId?: string;
+        regulationName?: string;
+        jurisdictionId?: string;
+        url?: string;
+      };
+
+      if (!body.content || typeof body.content !== 'string' || body.content.trim().length === 0) {
+        await reply.status(400).send({ error: 'content is required (text/HTML of the regulation document)', statusCode: 400 });
+        return;
+      }
+
+      const name = body.name ?? 'Uploaded document';
+      const regId = body.regulationId ?? name;
+      const regName = body.regulationName ?? name;
+      const sourceUrl = body.url ?? `upload://${name.replace(/\s+/g, '-').toLowerCase()}`;
+
+      // Extract requirements via LLM
+      const extracted = await llmProvider.extractRequirements(body.content, {
+        regulationId: regId,
+        regulationName: regName,
+      });
+
+      if (extracted.criteria.length === 0) {
+        await reply.send({
+          message: 'LLM could not extract any WCAG requirements from the document.',
+          confidence: extracted.confidence,
+          criteria: [],
+        });
+        return;
+      }
+
+      // Create or find source record
+      const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
+      const contentHash = createHash('sha256').update(body.content).digest('hex');
+
+      let sourceRecord;
+      try {
+        sourceRecord = await db.createSource({
+          name,
+          url: sourceUrl,
+          type: 'html',
+          schedule: 'monthly',
+          sourceCategory: 'government',
+          orgId,
+        });
+      } catch {
+        // Source may already exist
+        const existing = await db.listSources();
+        sourceRecord = existing.find(s => s.url === sourceUrl) ?? null;
+      }
+
+      // Find matching regulation if regulationId provided
+      const allRegs = await db.listRegulations();
+      const matchedReg = body.regulationId
+        ? allRegs.find(r => r.id === body.regulationId)
+        : allRegs.find(r => r.url === sourceUrl);
+
+      // Build requirement records
+      const reqs = extracted.criteria.map(c => ({
+        regulationId: matchedReg?.id ?? regId,
+        wcagVersion: extracted.wcagVersion as '2.0' | '2.1' | '2.2',
+        wcagLevel: c.obligation === 'excluded' ? 'A' as const : 'AA' as const,
+        wcagCriterion: c.criterion,
+        obligation: c.obligation,
+        ...(c.notes ? { notes: c.notes } : {}),
+      }));
+
+      // Create proposal
+      const proposal = await db.createUpdateProposal({
+        source: sourceUrl,
+        type: 'new_requirement',
+        affectedRegulationId: matchedReg?.id,
+        affectedJurisdictionId: body.jurisdictionId,
+        summary: `Uploaded document "${name}": ${reqs.length} requirement(s) extracted (confidence: ${(extracted.confidence * 100).toFixed(0)}%)`,
+        proposedChanges: {
+          action: 'update',
+          entityType: 'requirement',
+          after: {
+            contentHash,
+            regulationId: matchedReg?.id ?? regId,
+            diff: { added: reqs, removed: [], changed: [] },
+            confidence: extracted.confidence,
+          },
+        },
+        orgId,
+      });
+
+      // Store content hash on source
+      if (sourceRecord) {
+        await db.updateSourceLastChecked(sourceRecord.id, contentHash, body.content);
+      }
+
+      await reply.status(201).send({
+        message: `Extracted ${reqs.length} requirement(s) from "${name}"`,
+        confidence: extracted.confidence,
+        wcagVersion: extracted.wcagVersion,
+        wcagLevel: extracted.wcagLevel,
+        criteriaCount: reqs.length,
+        proposal,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload processing failed';
+      await reply.status(500).send({ error: message, statusCode: 500 });
     }
   });
 }
