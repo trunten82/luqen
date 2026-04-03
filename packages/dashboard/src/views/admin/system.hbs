@@ -50,14 +50,16 @@
         <dd>{{seed.requirements}}</dd>
       </div>
     </dl>
-    <div class="mt-md">
+    <div class="mt-md" style="display:flex;align-items:center;gap:1rem;">
       <button hx-post="/admin/system/reseed"
               hx-confirm="Re-seed all compliance data? This replaces all system records."
-              hx-target="body"
+              hx-target="#toast-container"
+              hx-swap="innerHTML"
               class="btn btn--sm btn--primary">
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
         {{t "admin.system.reseedCompliance"}}
       </button>
+      <span class="text-sm text-muted">{{t "admin.system.seededOnStartup"}}</span>
     </div>
   </section>
 

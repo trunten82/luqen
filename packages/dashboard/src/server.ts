@@ -289,6 +289,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // Register helpers on Handlebars instance directly (required by @fastify/view v10)
   handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+  handlebars.registerHelper('gt', (a: unknown, b: unknown) => Number(a) > Number(b));
   // Legacy role helpers kept for backward compatibility — they still work if
   // templates reference them, but the canonical approach is the `perm.*` flags.
   handlebars.registerHelper('canScan', (role: string) => role === 'user' || role === 'admin' || role === 'developer');

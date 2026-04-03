@@ -130,7 +130,6 @@ export async function systemRoutes(
         const result = await response.json() as Record<string, unknown>;
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Redirect', '/admin/system')
           .send(toastHtml(`Compliance data reseeded: ${result.requirements} requirements across ${result.regulations} regulations.`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Reseed failed';
