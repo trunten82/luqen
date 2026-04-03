@@ -78,6 +78,8 @@ export interface UpdateProposal {
   readonly summary: string;
   readonly proposedChanges: ProposedChange;
   readonly status: 'pending' | 'approved' | 'rejected' | 'acknowledged' | 'reviewed' | 'dismissed';
+  /** certified = structured/official source (acknowledge only), extracted = LLM-parsed (needs review) */
+  readonly trustLevel?: 'certified' | 'extracted';
   readonly reviewedBy?: string;
   readonly reviewedAt?: string;
   readonly acknowledgedBy?: string;
@@ -274,6 +276,7 @@ export interface CreateUpdateProposalInput {
   readonly affectedJurisdictionId?: string;
   readonly summary: string;
   readonly proposedChanges: ProposedChange | string;
+  readonly trustLevel?: 'certified' | 'extracted';
   readonly orgId?: string;
 }
 

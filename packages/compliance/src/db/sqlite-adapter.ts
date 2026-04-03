@@ -92,6 +92,7 @@ interface UpdateProposalRow {
   acknowledgedBy: string | null;
   acknowledgedAt: string | null;
   notes: string | null;
+  trust_level: string | null;
   createdAt: string;
 }
 
@@ -210,6 +211,7 @@ function toUpdateProposal(row: UpdateProposalRow): UpdateProposal {
     ...(row.acknowledgedBy != null ? { acknowledgedBy: row.acknowledgedBy } : {}),
     ...(row.acknowledgedAt != null ? { acknowledgedAt: row.acknowledgedAt } : {}),
     ...(row.notes != null ? { notes: row.notes } : {}),
+    ...(row.trust_level != null ? { trustLevel: row.trust_level as 'certified' | 'extracted' } : {}),
     createdAt: row.createdAt,
   };
 }
@@ -413,6 +415,7 @@ export class SqliteAdapter implements DbAdapter {
       'ALTER TABLE update_proposals ADD COLUMN acknowledgedBy TEXT',
       'ALTER TABLE update_proposals ADD COLUMN acknowledgedAt TEXT',
       'ALTER TABLE update_proposals ADD COLUMN notes TEXT',
+      'ALTER TABLE update_proposals ADD COLUMN trust_level TEXT',
       'ALTER TABLE monitored_sources ADD COLUMN lastContentText TEXT',
     ];
     for (const migration of migrations) {
@@ -779,8 +782,8 @@ export class SqliteAdapter implements DbAdapter {
       ? data.proposedChanges
       : JSON.stringify(data.proposedChanges);
     this.db.prepare(`
-      INSERT INTO update_proposals (id, source, detectedAt, type, affectedRegulationId, affectedJurisdictionId, summary, proposedChanges, status, createdAt, org_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+      INSERT INTO update_proposals (id, source, detectedAt, type, affectedRegulationId, affectedJurisdictionId, summary, proposedChanges, status, createdAt, org_id, trust_level)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
     `).run(
       id,
       data.source,
@@ -792,6 +795,7 @@ export class SqliteAdapter implements DbAdapter {
       proposedChanges,
       now,
       data.orgId ?? 'system',
+      data.trustLevel ?? null,
     );
     const row = this.db.prepare('SELECT * FROM update_proposals WHERE id = ?').get(id) as UpdateProposalRow;
     return toUpdateProposal(row);

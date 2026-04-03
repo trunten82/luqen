@@ -47,6 +47,8 @@ export async function proposalRoutes(
           isAcknowledged: p.status === 'acknowledged',
           isReviewed: p.status === 'reviewed',
           isDismissed: p.status === 'dismissed',
+          isCertified: p.trustLevel === 'certified',
+          isExtracted: p.trustLevel === 'extracted',
           hasDiff,
           diffAdded: diff?.added ?? [],
           diffRemoved: diff?.removed ?? [],

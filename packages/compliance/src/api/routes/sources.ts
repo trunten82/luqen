@@ -258,6 +258,7 @@ export async function registerSourceRoutes(
                     type: 'new_requirement',
                     affectedRegulationId: matchedReg?.id,
                     summary: `Initial LLM extraction (confidence: ${(extracted.confidence * 100).toFixed(0)}%): ${reqs.length} requirement(s) found`,
+                    trustLevel: 'extracted',
                     proposedChanges: {
                       action: 'update',
                       entityType: 'requirement',
@@ -289,10 +290,12 @@ export async function registerSourceRoutes(
 
                   if (parsed.length > 0) {
                     const summary = `W3C policy update for ${jurisdictionId}: ${parsed.length} regulation(s) found`;
+                    const trustLevel = 'certified' as const;
                     const proposal = await db.createUpdateProposal({
                       source: source.url,
                       type: 'amendment',
                       summary,
+                      trustLevel,
                       affectedJurisdictionId: jurisdictionId,
                       proposedChanges: {
                         action: 'update',
@@ -323,6 +326,7 @@ export async function registerSourceRoutes(
                       source: source.url,
                       type: 'new_requirement',
                       summary: `WCAG criteria upstream update: ${parsed.length} criteria parsed`,
+                      trustLevel: 'certified',
                       proposedChanges: {
                         action: 'update',
                         entityType: 'requirement',
@@ -370,6 +374,7 @@ export async function registerSourceRoutes(
                       type: 'amendment',
                       affectedRegulationId: matchedReg?.id,
                       summary: `LLM-extracted changes (confidence: ${(extracted.confidence * 100).toFixed(0)}%): ${diff.added.length} added, ${diff.removed.length} removed, ${diff.changed.length} changed`,
+                      trustLevel: 'extracted',
                       proposedChanges: {
                         action: 'update',
                         entityType: 'requirement',
@@ -508,6 +513,7 @@ export async function registerSourceRoutes(
         affectedRegulationId: matchedReg?.id,
         affectedJurisdictionId: body.jurisdictionId,
         summary: `Uploaded document "${name}": ${reqs.length} requirement(s) extracted (confidence: ${(extracted.confidence * 100).toFixed(0)}%)`,
+        trustLevel: 'extracted',
         proposedChanges: {
           action: 'update',
           entityType: 'requirement',
