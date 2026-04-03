@@ -1600,7 +1600,7 @@ The service ships with a baseline dataset covering 8 jurisdictions and 10 regula
 | Jurisdiction | Type | Regulations |
 |-------------|------|-------------|
 | EU | supranational | EAA (European Accessibility Act), WAD (Web Accessibility Directive) |
-| US | country | Section 508, ADA (Americans with Disabilities Act) |
+| US | country | Section 508 (23 granular WCAG 2.0 Level AA requirements, 4 non-web exclusions), ADA (WCAG 2.1 Level AA) |
 | UK | country | Equality Act 2010, PSBAR (Public Sector Bodies Accessibility Regulations) |
 | DE | country (EU) | BITV 2.0 |
 | FR | country (EU) | RGAA 4.1 |
@@ -1803,8 +1803,12 @@ Compliance service                    Dashboard                      LLM plugin
 ```
 
 - `DashboardLLMBridge` in the compliance service calls the dashboard's `POST /api/v1/llm/extract` endpoint
-- The dashboard routes the request to whichever LLM plugin is currently active
+- The dashboard routes the request to whichever LLM plugin is currently active, or to a specific plugin if `pluginId` is provided
 - The response is structured JSON describing regulations and requirements found in the content
+
+### LLM plugin selector
+
+When multiple LLM plugins are installed and active, admins can choose which one processes each upload. The Upload Regulation form on the sources admin page includes an "LLM Provider" dropdown populated by `GET /api/v1/llm/plugins`. The selected `pluginId` flows through the entire chain: form -> dashboard -> compliance service -> bridge -> specific plugin. If no `pluginId` is specified, the default active LLM plugin is used.
 
 ### Document upload endpoint
 
@@ -1822,7 +1826,11 @@ curl -X POST http://localhost:4000/api/v1/sources/upload \
   }'
 ```
 
-The dashboard proxies this via `POST /admin/sources/upload`, which provides the "Upload Regulation" form on the sources admin page.
+The dashboard proxies this via `POST /admin/sources/upload`, which provides the "Upload Regulation" form on the sources admin page. The form includes an "LLM Provider" dropdown so admins can choose which LLM plugin processes the extraction (see [LLM plugin selector](#llm-plugin-selector) above).
+
+### Async source scan
+
+`POST /admin/sources/scan` on the dashboard triggers a background scan of all monitored sources and returns immediately with a confirmation message. This prevents 504 gateway timeouts that previously occurred when scanning large source sets synchronously.
 
 ### First-time LLM extraction
 
