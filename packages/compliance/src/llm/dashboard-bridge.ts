@@ -1,4 +1,4 @@
-import type { IComplianceLLMProvider, ExtractedRequirements } from '../types.js';
+import type { IComplianceLLMProvider, ExtractedRequirements, ComplianceConfig } from '../types.js';
 
 /**
  * LLM provider that bridges to the dashboard's active LLM plugin via HTTP.
@@ -42,12 +42,16 @@ export class DashboardLLMBridge implements IComplianceLLMProvider {
 }
 
 /**
- * Create an LLM bridge if dashboard URL and API key are available.
- * Returns undefined if env vars are not set.
+ * Create an LLM bridge from config or environment variables.
+ * Priority: config file > env vars.
  */
-export function createLLMBridge(): IComplianceLLMProvider | undefined {
-  const dashboardUrl = process.env['DASHBOARD_URL'] ?? process.env['COMPLIANCE_DASHBOARD_URL'];
-  const apiKey = process.env['DASHBOARD_API_KEY'] ?? process.env['COMPLIANCE_DASHBOARD_API_KEY'];
+export function createLLMBridge(config?: ComplianceConfig): IComplianceLLMProvider | undefined {
+  const dashboardUrl = config?.dashboardUrl
+    ?? process.env['DASHBOARD_URL']
+    ?? process.env['COMPLIANCE_DASHBOARD_URL'];
+  const apiKey = config?.dashboardApiKey
+    ?? process.env['DASHBOARD_API_KEY']
+    ?? process.env['COMPLIANCE_DASHBOARD_API_KEY'];
 
   if (!dashboardUrl || !apiKey) {
     return undefined;

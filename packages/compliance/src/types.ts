@@ -329,6 +329,10 @@ export interface ComplianceConfig {
     readonly credentials: boolean;
   };
   readonly reseedInterval?: string;
+  /** Dashboard URL for LLM bridge (e.g. http://localhost:5000) */
+  readonly dashboardUrl?: string;
+  /** Dashboard API key for LLM bridge authentication */
+  readonly dashboardApiKey?: string;
 }
 
 // === Seed data shape ===

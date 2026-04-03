@@ -76,7 +76,7 @@ export function createProgram(): Command {
         }
       }
 
-      const llmProvider = createLLMBridge();
+      const llmProvider = createLLMBridge(config);
       if (llmProvider) {
         console.log('LLM bridge enabled (via dashboard).');
       }
