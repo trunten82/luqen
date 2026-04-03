@@ -77,7 +77,7 @@ export async function llmApiRoutes(
 
       const all = pluginManager.list();
       const llmPlugins = all
-        .filter((p) => p.type === 'llm' && p.status === 'active')
+        .filter((p) => p.type === 'llm' && p.status === 'active' && (p.orgId === 'system' || p.orgId === undefined))
         .map((p) => ({ id: p.id, packageName: p.packageName, version: p.version }));
       return reply.send(llmPlugins);
     },
