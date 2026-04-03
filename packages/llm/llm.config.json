@@ -1,0 +1,11 @@
+{
+  "port": 4200,
+  "host": "0.0.0.0",
+  "dbPath": "./llm.db",
+  "jwtKeyPair": {
+    "publicKeyPath": "./keys/public.pem",
+    "privateKeyPath": "./keys/private.pem"
+  },
+  "tokenExpiry": "1h",
+  "cors": { "origin": ["http://localhost:5000"] }
+}
