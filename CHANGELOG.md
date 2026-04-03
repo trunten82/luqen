@@ -6,9 +6,40 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [2.6.0] - 2026-04-01
+## [2.6.0] - 2026-04-03
 
 ### Added
+
+**Dynamic plugin configuration (v1.1.0 LLM plugins)**
+- **`dynamic-select` config field type** — plugins can declare config fields with `type: "dynamic-select"` and a `dependsOn` array; the dashboard renders a dropdown with a refresh button that fetches options at runtime via `GET /admin/plugins/:id/config-options`
+- **`getConfigOptions(fieldKey, currentConfig)`** — new optional method on the plugin interface; returns available options for dynamic config fields
+- All 4 LLM plugins updated to use `dynamic-select` for model selection (queries provider APIs for available models)
+
+**LLM pipeline**
+- **`POST /api/v1/llm/extract`** — dashboard endpoint that bridges the compliance service and the active LLM plugin; accepts optional `pluginId` to target a specific LLM plugin
+- **`GET /api/v1/llm/plugins`** — lists active LLM plugins (used by the UI to populate the LLM Provider dropdown)
+- **Dashboard auto-registration** — at startup, the dashboard generates an API key and calls `POST /api/v1/admin/register-llm` on the compliance service with retry logic
+- **`POST /api/v1/sources/upload`** (compliance) — accepts document content + metadata for LLM-based regulation extraction
+- **`POST /admin/sources/upload`** (dashboard) — proxies regulation uploads with LLM plugin selector (`pluginId`)
+- **Upload Regulation form** — new form on the Sources admin page with LLM Provider dropdown
+- **`DashboardLLMBridge`** — compliance service component that delegates LLM extraction to the dashboard
+- **First-time government source extraction** — newly added government sources run LLM extraction immediately (not just on subsequent content changes)
+
+**Trust levels**
+- **`trustLevel` field on proposals** — `certified` (W3C/WCAG structured sources) or `extracted` (LLM-parsed sources)
+- Certified proposals are auto-acknowledged (no admin action required)
+- Extracted proposals require Review + Dismiss in the dashboard UI
+- Source category mapping: `w3c-policy`/`wcag-upstream` -> certified; `government`/`generic` -> extracted
+
+**Compliance engine enhancements**
+- **Wildcard requirement matching** — regulations specifying `wcagCriterion='*'` (all WCAG AA) now match any violation
+- **`findRequirementsByCriteria`** — includes wildcard rows in results
+- **Async source scan** — `POST /admin/sources/scan` fires in background (prevents 504 timeout)
+- **Sources page Parser column** — shows LLM/W3C/WCAG/Generic badges indicating which parser handles each source
+- **Regulations page jurisdiction filter** — fixed missing partial template
+
+**Plugin loader**
+- ES class constructors detected correctly (checks `prototype.activate`)
 
 **Compliance service — granular WCAG mapping**
 - **`wcag_criteria` table** — 225 WCAG 2.0/2.1/2.2 success criteria seeded on startup; used by the engine to expand wildcard requirements and validate criterion codes

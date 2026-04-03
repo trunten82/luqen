@@ -187,6 +187,19 @@ Each issue in a report can be assigned to a user or team and tracked through a l
 
 **Roles:** Admin, Developer, and User roles can manage assignments; the Executive role has read-only access.
 
+### Uploading regulations (LLM extraction)
+
+If an LLM plugin is installed and active (Claude, GPT-4o, Gemini, or Ollama), the **Sources** admin page shows an **Upload Regulation** form. Paste or upload regulatory text, select an LLM Provider from the dropdown, and submit. The LLM extracts structured regulation and requirement data from the document, creating a proposal for admin review.
+
+Proposals carry a **trust level**:
+
+| Trust level | Sources | Review workflow |
+|-------------|---------|-----------------|
+| **Certified** | W3C/WCAG structured sources | Auto-acknowledged (no action needed) |
+| **Extracted** | LLM-parsed documents | Requires Review + Dismiss by an admin |
+
+The Sources page also shows a **Parser** column with badges (LLM, W3C, WCAG, Generic) indicating which parser handles each monitored source.
+
 ### Connected repositories
 
 Link GitHub or GitLab repositories under **Settings > Connected Repos**. When a scan completes, luqen analyses the issues against connected repo source files and generates fix proposals (up to 21 suggestion types) via MCP/A2A integration. View proposals in the report under the **Fixes** tab or at `/admin/proposals`.
