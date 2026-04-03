@@ -727,7 +727,7 @@ export class SqliteAdapter implements DbAdapter {
       FROM requirements req
       JOIN regulations reg ON req.regulationId = reg.id
       WHERE reg.jurisdictionId IN (${jPlaceholders})
-        AND req.wcagCriterion IN (${cPlaceholders})
+        AND (req.wcagCriterion IN (${cPlaceholders}) OR req.wcagCriterion = '*')
     `;
 
     const params: unknown[] = [...jurisdictionIds, ...wcagCriteria];
