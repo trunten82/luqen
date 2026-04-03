@@ -76,21 +76,7 @@ export function createProgram(): Command {
         }
       }
 
-      let llmProvider: IComplianceLLMProvider | undefined;
-      if (config.llmProvider) {
-        const { createLLMProvider } = await import('./llm/index.js');
-        try {
-          llmProvider = createLLMProvider({
-            provider: config.llmProvider,
-            apiKey: config.llmApiKey,
-            model: config.llmModel,
-            baseUrl: config.llmBaseUrl,
-          });
-          console.log(`LLM provider: ${config.llmProvider} (model: ${config.llmModel ?? 'default'})`);
-        } catch (err) {
-          console.warn(`Failed to create LLM provider: ${err instanceof Error ? err.message : err}`);
-        }
-      }
+      const llmProvider: IComplianceLLMProvider | undefined = undefined;
 
       const app = await createServer({
         db,

@@ -73,9 +73,5 @@ export function loadConfig(
   return {
     ...withEnv,
     reseedInterval: process.env['COMPLIANCE_RESEED_INTERVAL'] ?? withEnv.reseedInterval ?? 'off',
-    llmProvider: process.env['COMPLIANCE_LLM_PROVIDER'] as 'anthropic' | 'openai' | 'gemini' | 'ollama' | undefined,
-    llmApiKey: process.env['COMPLIANCE_LLM_API_KEY'],
-    llmModel: process.env['COMPLIANCE_LLM_MODEL'],
-    llmBaseUrl: process.env['COMPLIANCE_LLM_BASE_URL'],
   };
 }
