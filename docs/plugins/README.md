@@ -270,7 +270,7 @@ Create `manifest.json` with the plugin's name, type, version, description, and c
 }
 ```
 
-Config field types: `string`, `secret`, `number`, `boolean`, `select` (with `options` array).
+Config field types: `string`, `secret`, `number`, `boolean`, `select` (with `options` array), `dynamic-select` (with `dependsOn` array -- options fetched at runtime from the plugin's `getConfigOptions` method).
 
 ### Step 3: Implement the interface
 
@@ -393,6 +393,10 @@ For the full manifest schema, lifecycle details, and admin pages reference, see 
 ### Secret values not accepted
 
 - Secret fields are encrypted with AES-256-GCM using a per-installation salt. If you restore a database backup to a different installation, encrypted secrets cannot be decrypted. Re-enter secret values after restoring.
+
+### ES class constructor not detected
+
+- The plugin loader detects ES class constructors by checking for `prototype.activate`. If your plugin exports a plain object instead of a class, activation will fail. Ensure the default export is a class with an `activate` method on its prototype.
 
 ### Catalogue not updating
 
