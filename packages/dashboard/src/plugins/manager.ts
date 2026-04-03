@@ -739,6 +739,25 @@ export class PluginManager {
     return this.activeInstances.get(id) ?? null;
   }
 
+  /**
+   * Fetch dynamic-select options from an active plugin instance.
+   * Returns the options array or throws if the plugin doesn't support it.
+   */
+  async getConfigOptions(
+    id: string,
+    fieldKey: string,
+    currentConfig: Readonly<Record<string, unknown>>,
+  ): Promise<readonly string[]> {
+    const instance = this.activeInstances.get(id);
+    if (!instance) {
+      throw new Error('Plugin is not active');
+    }
+    if (typeof instance.getConfigOptions !== 'function') {
+      throw new Error('Plugin does not support dynamic config options');
+    }
+    return instance.getConfigOptions(fieldKey, currentConfig);
+  }
+
   getActiveInstanceByPackageName(packageName: string): PluginInstance | null {
     const row = this.db
       .prepare("SELECT id FROM plugins WHERE package_name = @package_name AND status = 'active'")

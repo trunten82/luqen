@@ -92,9 +92,87 @@ function renderConfigField(field: ConfigField, currentValue: unknown): string {
           </select>
           ${descHtml}
         </div>`;
+    case 'dynamic-select':
+      return `
+        <div class="form-group">
+          <label for="cfg-${escapeHtml(field.key)}">${escapeHtml(field.label)}</label>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <select id="cfg-${escapeHtml(field.key)}" name="${escapeHtml(field.key)}" class="input" ${requiredAttr}
+                    data-dynamic-field="${escapeHtml(field.key)}"
+                    data-depends-on="${escapeHtml((field.dependsOn ?? []).join(','))}">
+              ${value ? `<option value="${escapeHtml(String(value))}" selected>${escapeHtml(String(value))}</option>` : '<option value="">-- click refresh to load --</option>'}
+            </select>
+            <button type="button" class="btn btn--small btn--secondary" data-action="refreshDynamicOptions"
+                    data-field-key="${escapeHtml(field.key)}" title="Fetch available options">&#x21bb;</button>
+          </div>
+          ${descHtml}
+        </div>`;
     default:
       return '';
   }
+}
+
+/** Render config form with dynamic-select JS wiring. */
+function renderConfigFormWithDynamic(
+  configSchema: readonly ConfigField[],
+  config: Readonly<Record<string, unknown>>,
+  pluginId: string,
+): string {
+  const fieldsHtml = configSchema
+    .map((field) => renderConfigField(field, config[field.key]))
+    .join('\n');
+
+  const hasDynamic = configSchema.some((f) => f.type === 'dynamic-select');
+  if (!hasDynamic) return fieldsHtml;
+
+  // Client-side JS: uses DOM manipulation only (no innerHTML with untrusted data)
+  const script = `<script>
+(function() {
+  function addOpt(sel, val, txt, isSel) {
+    var o = document.createElement('option');
+    o.value = val; o.textContent = txt;
+    if (isSel) o.selected = true;
+    sel.appendChild(o);
+  }
+  var form = document.currentScript.closest('form');
+  form.addEventListener('click', async function(e) {
+    var btn = e.target.closest('[data-action="refreshDynamicOptions"]');
+    if (!btn) return;
+    e.preventDefault();
+    var fieldKey = btn.dataset.fieldKey;
+    var select = form.querySelector('[data-dynamic-field="' + fieldKey + '"]');
+    if (!select) return;
+    var dependsOn = (select.dataset.dependsOn || '').split(',').filter(Boolean);
+    var params = new URLSearchParams({ field: fieldKey });
+    dependsOn.forEach(function(dep) {
+      var input = form.querySelector('[name="' + dep + '"]');
+      if (input) params.append(dep, input.value);
+    });
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+      var resp = await fetch('/admin/plugins/${escapeHtml(pluginId)}/config-options?' + params.toString());
+      if (!resp.ok) { var t = await resp.text(); throw new Error(t); }
+      var options = await resp.json();
+      var currentVal = select.value;
+      while (select.firstChild) select.removeChild(select.firstChild);
+      if (options.length === 0) {
+        addOpt(select, '', 'No options available', false);
+      } else {
+        options.forEach(function(opt) { addOpt(select, opt, opt, opt === currentVal); });
+      }
+    } catch (err) {
+      while (select.firstChild) select.removeChild(select.firstChild);
+      addOpt(select, '', 'Error: ' + String(err.message || 'fetch failed').substring(0, 60), false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '\\u21bb';
+    }
+  });
+})();
+</script>`;
+
+  return fieldsHtml + script;
 }
 
 // ---------------------------------------------------------------------------
@@ -304,9 +382,7 @@ export async function pluginAdminRoutes(
         }
 
         const fieldsHtml = configSchema.length > 0
-          ? configSchema
-              .map((field) => renderConfigField(field, plugin.config[field.key]))
-              .join('\n')
+          ? renderConfigFormWithDynamic(configSchema, plugin.config, plugin.id)
           : '<p>This plugin has no configurable settings.</p>';
 
         const html = `
@@ -358,6 +434,41 @@ export async function pluginAdminRoutes(
           .code(500)
           .header('content-type', 'text/html')
           .send(`<div class="alert alert--error">Save failed: ${escapeHtml(message)}</div>`);
+      }
+    },
+  );
+
+  // GET /admin/plugins/:id/config-options — fetch dynamic-select options from active plugin
+  server.get<{ Params: { id: string }; Querystring: { field?: string; [k: string]: unknown } }>(
+    '/admin/plugins/:id/config-options',
+    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    async (request, reply) => {
+      try {
+        const fieldKey = (request.query as Record<string, unknown>).field as string | undefined;
+        if (!fieldKey) {
+          return reply.code(400).send('Missing field parameter');
+        }
+
+        const instance = pluginManager.getActiveInstance(request.params.id);
+        if (!instance) {
+          return reply.code(400).send('Plugin is not active — activate it first');
+        }
+
+        if (typeof instance.getConfigOptions !== 'function') {
+          return reply.code(400).send('Plugin does not support dynamic config options');
+        }
+
+        // Pass all query params (except "field") as current config context
+        const currentConfig: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(request.query as Record<string, unknown>)) {
+          if (k !== 'field') currentConfig[k] = v;
+        }
+
+        const options = await instance.getConfigOptions(fieldKey, currentConfig);
+        return reply.send(options);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply.code(500).send(`Failed to fetch options: ${message}`);
       }
     },
   );
