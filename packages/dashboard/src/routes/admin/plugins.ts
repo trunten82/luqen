@@ -169,6 +169,10 @@ function renderConfigFormWithDynamic(
       btn.textContent = '\\u21bb';
     }
   });
+  // Auto-load options on form open
+  form.querySelectorAll('[data-action="refreshDynamicOptions"]').forEach(function(btn) {
+    btn.click();
+  });
 })();
 </script>`;
 
