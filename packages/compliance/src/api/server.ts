@@ -6,8 +6,7 @@ import rateLimit from '@fastify/rate-limit';
 import type { DbAdapter } from '../db/adapter.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
 import type { IComplianceLLMProvider } from '../types.js';
-import { DashboardLLMBridge } from '../llm/dashboard-bridge.js';
-import { createAuthMiddleware, requireScope } from '../auth/middleware.js';
+import { createAuthMiddleware } from '../auth/middleware.js';
 import type { ComplianceCache } from '../cache/redis.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerOAuthRoutes } from './routes/oauth.js';
@@ -154,25 +153,7 @@ export async function createServer(options: ServerOptions) {
   await registerRequirementRoutes(app, db);
   await registerComplianceRoutes(app, db, cache);
   await registerUpdateRoutes(app, db);
-  // LLM provider holder — mutable so the dashboard can register itself after startup
-  const llmHolder: { provider: IComplianceLLMProvider | undefined } = {
-    provider: options.llmProvider,
-  };
-
-  // POST /api/v1/admin/register-llm — called by the dashboard on startup
-  app.post('/api/v1/admin/register-llm', {
-    preHandler: [requireScope('admin')],
-  }, async (request, reply) => {
-    const body = request.body as { dashboardUrl?: string; apiKey?: string } | undefined;
-    if (!body?.dashboardUrl || !body?.apiKey) {
-      return reply.status(400).send({ error: 'dashboardUrl and apiKey are required' });
-    }
-    llmHolder.provider = new DashboardLLMBridge(body.dashboardUrl.replace(/\/$/, ''), body.apiKey);
-    app.log.info('LLM bridge registered by dashboard at %s', body.dashboardUrl);
-    return reply.send({ registered: true });
-  });
-
-  await registerSourceRoutes(app, db, llmHolder);
+  await registerSourceRoutes(app, db, options.llmProvider);
   await registerWebhookRoutes(app, db);
   await registerUserRoutes(app, db);
   await registerClientRoutes(app, db);
