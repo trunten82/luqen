@@ -76,7 +76,7 @@
       <thead>
         <tr>
           <th scope="col">{{t "admin.sources.colName"}}</th>
-          <th scope="col">{{t "admin.sources.colType"}}</th>
+          <th scope="col">Parser</th>
           <th scope="col">{{t "admin.sources.colSchedule"}}</th>
           <th scope="col">{{t "admin.sources.colLastChecked"}}</th>
           <th scope="col">{{t "common.owner"}}</th>
@@ -87,7 +87,13 @@
         {{#each sources}}
         <tr id="source-{{id}}">
           <td data-label="Name">{{name}}</td>
-          <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
+          <td data-label="Parser">
+            {{#if (eq sourceCategory "government")}}<span class="badge badge--warning">LLM</span>
+            {{else if (eq sourceCategory "w3c-policy")}}<span class="badge badge--success">W3C</span>
+            {{else if (eq sourceCategory "wcag-upstream")}}<span class="badge badge--success">WCAG</span>
+            {{else}}<span class="badge badge--neutral">Generic</span>
+            {{/if}}
+          </td>
           <td data-label="Schedule">{{schedule}}</td>
           <td data-label="Last Checked">{{#if lastCheckedAt}}{{lastCheckedAt}}{{else}}{{t "admin.sources.never"}}{{/if}}</td>
           <td data-label="Owner">
