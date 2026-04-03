@@ -67,9 +67,11 @@ async getConfigOptions(fieldKey: string, currentConfig: Record<string, unknown>)
 
 The dashboard bridges the compliance service and the active LLM plugin:
 
-- **`POST /api/v1/llm/extract`** -- receives extraction requests from the compliance service's `DashboardLLMBridge`, routes them to the active LLM plugin, and returns structured JSON
+- **`POST /api/v1/llm/extract`** -- receives extraction requests from the compliance service's `DashboardLLMBridge`, routes them to the active LLM plugin, and returns structured JSON. Accepts an optional `pluginId` parameter to target a specific LLM plugin instead of the default active one.
+- **`GET /api/v1/llm/plugins`** -- lists all active LLM plugins, used by the UI to populate the "LLM Provider" dropdown on the Upload Regulation form
 - **Auto-registration** -- at startup, the dashboard generates an API key and calls `POST /api/v1/admin/register-llm` on the compliance service to register itself as the LLM provider
-- **`POST /admin/sources/upload`** -- proxies regulation document uploads to the compliance service's `POST /api/v1/sources/upload` endpoint; powers the "Upload Regulation" form on the sources admin page
+- **`POST /admin/sources/upload`** -- proxies regulation document uploads to the compliance service's `POST /api/v1/sources/upload` endpoint; powers the "Upload Regulation" form on the sources admin page. The form includes an "LLM Provider" dropdown allowing admins to choose which LLM plugin processes the extraction.
+- **`POST /admin/sources/scan`** -- triggers a background scan of all monitored sources. Returns immediately with a "Source scan started in background" message instead of waiting for completion, preventing 504 gateway timeouts on large source sets.
 
 ## Documentation
 
