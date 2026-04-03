@@ -29,6 +29,7 @@ import { monitorRoutes } from './routes/admin/monitor.js';
 import { pluginAdminRoutes } from './routes/admin/plugins.js';
 import { pluginApiRoutes } from './routes/api/plugins.js';
 import { llmApiRoutes } from './routes/api/llm.js';
+import { generateApiKey, storeApiKey } from './auth/api-key.js';
 import { exportRoutes } from './routes/api/export.js';
 import { dataApiRoutes } from './routes/api/data.js';
 import { brandingApiRoutes } from './routes/api/branding.js';
@@ -747,7 +748,32 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       server.log.warn({ err }, 'OAuth client backfill encountered an error');
     }
 
-
+    // ── Register LLM bridge on compliance service ───────────────────────
+    // Same pattern as creating OAuth clients: dashboard registers itself
+    // so the compliance service can call back for LLM extraction.
+    if (config.complianceUrl && pluginManager.getActivePluginsByType('llm').length > 0) {
+      const registerLlm = async (attempt: number): Promise<void> => {
+        try {
+          const token = await serviceTokenManager.getToken();
+          const bridgeKey = generateApiKey();
+          storeApiKey(rawDb, bridgeKey, 'llm-bridge', 'admin');
+          const resp = await fetch(`${config.complianceUrl}/api/v1/admin/register-llm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ dashboardUrl: `http://localhost:${config.port}`, apiKey: bridgeKey }),
+            signal: AbortSignal.timeout(5000),
+          });
+          if (resp.ok) {
+            server.log.info('LLM bridge registered on compliance service');
+          } else if (attempt < 3) {
+            setTimeout(() => { void registerLlm(attempt + 1); }, 3000);
+          }
+        } catch {
+          if (attempt < 3) setTimeout(() => { void registerLlm(attempt + 1); }, 3000);
+        }
+      };
+      void registerLlm(1);
+    }
 
     // ── Recover stuck scans ─────────────────────────────────────────────
     // Scans left in queued/running state after a restart will never complete.
