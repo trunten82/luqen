@@ -420,9 +420,12 @@ export async function registerSourceRoutes(
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
-      if (llmProvider == null) {
+      try {
+        // Quick check — will throw if no provider registered
+        if (llmProvider == null) throw new Error('no provider');
+      } catch {
         await reply.status(503).send({
-          error: 'No LLM provider registered. Ensure the dashboard has an active LLM plugin and has connected to this compliance service.',
+          error: 'No LLM provider registered. Ensure the dashboard has an active LLM plugin.',
           statusCode: 503,
         });
         return;
