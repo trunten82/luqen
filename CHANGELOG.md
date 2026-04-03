@@ -6,6 +6,52 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.6.0] - 2026-04-01
+
+### Added
+
+**Compliance service — granular WCAG mapping**
+- **`wcag_criteria` table** — 225 WCAG 2.0/2.1/2.2 success criteria seeded on startup; used by the engine to expand wildcard requirements and validate criterion codes
+- **Per-criterion requirement mapping** — requirements now support individual criterion targets (e.g. `"1.4.3"`) alongside existing wildcards (`"*"`); granular entries take precedence over wildcards for obligation level
+- **Regulation inheritance** — child regulations inherit requirements from parent regulations (e.g. EU member-state laws inherit EU-level criteria)
+- **`GET /api/v1/wcag-criteria`** — new endpoint listing all 225 criteria (filters: `?version=`, `?level=`, `?principle=`)
+- **`POST /api/v1/admin/reseed`** — shortcut endpoint for force-reseed (equivalent to `POST /seed` with `{ "force": true }`)
+- **`POST /api/v1/seed` with `{ "force": true }`** — re-runs full source intelligence pipeline and refreshes the `wcag_criteria` table
+
+**Compliance service — source intelligence pipeline**
+- **W3C WAI parser (`W3cPolicyParser`)** — parses W3C WAI Laws & Policies YAML into jurisdiction/regulation records (https://www.w3.org/WAI/policies/)
+- **WCAG upstream parser (`WcagUpstreamParser`)** — extracts per-criterion obligation levels from W3C WCAG Quick Reference (https://www.w3.org/WAI/WCAG21/quickref/)
+- **tenon-io integration** — community WCAG criterion metadata used as supplementary source (https://github.com/tenon-io/wcag-as-json)
+- **`sourceCategory` field** — monitored sources now carry `w3c-policy`, `wcag-upstream`, `government`, or `generic` to route to the correct parser
+- **Requirement differ** — structured diff between old and new requirement sets; only changed records are written; diff summary attached to seed result
+- **`IComplianceLLMProvider` interface** — standard interface for pluggable LLM extraction from unstructured regulatory content
+
+**Compliance service — force-reseed mechanism**
+- Auto-reseed on startup when database is empty
+- Scheduled reseed (default: weekly, configurable via `reseedSchedule` cron in config)
+- "Force Reseed" button on System Health admin page in the dashboard
+
+**4 new LLM plugins** (available in the remote catalogue)
+- **`@luqen/plugin-llm-anthropic`** — Claude (claude-3-5-haiku / claude-3-5-sonnet); requires `ANTHROPIC_API_KEY`
+- **`@luqen/plugin-llm-openai`** — GPT-4o / any OpenAI-compatible endpoint; requires `OPENAI_API_KEY` or custom `baseUrl`
+- **`@luqen/plugin-llm-gemini`** — Gemini 1.5 Flash / Pro; requires `GEMINI_API_KEY`
+- **`@luqen/plugin-llm-ollama`** — local Ollama instance; configurable `baseUrl` and model name
+
+**Dashboard UX improvements**
+- **Smart compliance cards** — compliance matrix cards collapse when all jurisdictions show identical results; expand when results differ across regulations
+- **Regulation filter** — compliance matrix page now has a regulation dropdown filter
+- **Per-criterion obligation display** — report shows per-criterion obligation level (mandatory/recommended/optional) when granular mappings exist
+- **Reseed button on System Health** — admin can trigger a force-reseed directly from the dashboard without CLI access
+- **Brand filter count updates** — filter bar pill counts update live as brand filter is applied/cleared
+- **Deactivated brand visual indicators** — inactive branding guidelines show a visual indicator in the guidelines list
+- **Scan retry/cancel** — stuck scans (in-progress beyond timeout) can be retried or cancelled from the scan list
+- **OAuth client backfill** — on startup, the dashboard creates missing OAuth clients for all existing orgs automatically
+
+### Changed
+- Plugin catalogue now lists 12 catalogue plugins (up from 8); total plugin count is 15 including built-in git host plugins
+
+---
+
 ## [2.5.0] - 2026-03-31
 
 ### Added

@@ -28,7 +28,7 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 - **WCAG 2.1 AA verified** — all 21 dashboard pages pass pa11y automated checks with correct color contrast, screen reader labels, and semantic markup
 - **Authenticated scanning** — scan pages behind login using custom HTTP headers or pa11y pre-scan actions (e.g., fill in a login form before testing)
 - **Site-wide scanning** via built-in pa11y scanner — sitemap + crawl discovery, concurrency control, robots.txt respect (no external pa11y-webservice required)
-- **Legal compliance checking** against 58 jurisdictions and 62 regulations (EU EAA, Section 508, ADA, UK Equality Act, RGAA, BITV, JIS X 8341-3, and more)
+- **Legal compliance checking** against 58 jurisdictions and 62 regulations (EU EAA, Section 508, ADA, UK Equality Act, RGAA, BITV, JIS X 8341-3, and more), with granular per-criterion obligation mapping sourced from W3C WAI, WCAG upstream, and tenon-io
 - **Confirmed violations vs needs-review** — errors are confirmed violations; notices are flagged separately, never inflating the violation count
 - **Source code mapping** — maps WCAG issues to source files in Next.js, Nuxt, SvelteKit, Angular, and plain HTML projects
 - **Git host integration** — connect GitHub, GitLab, and Azure DevOps repositories as PluginManager plugins; per-developer PAT credentials encrypted with AES-256-GCM; create pull requests directly from accessibility fix proposals under the developer's own identity
@@ -45,7 +45,7 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 - **Per-org compliance tokens** — each organization can configure its own compliance API credentials, with automatic fallback to the global token for single-tenant deployments
 - **Pluggable storage** — modular StorageAdapter architecture with 14 repository interfaces backed by SQLite; PostgreSQL and MongoDB adapters coming as plugins
 - **Security hardening** — @fastify/helmet security headers (CSP, HSTS, X-Frame-Options), CSRF token verification on state-changing requests, XSS prevention, per-installation encryption salt, SSRF protection on scan URLs, global rate limiting, secure session cookies (httpOnly, SameSite=Strict, AES-256-GCM encrypted)
-- **Plugin system** — 11 plugins total: 8 in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), and storage (S3, Azure Blob), plus 3 built-in git host plugins (GitHub, GitLab, Azure DevOps); managed via dashboard UI, CLI, or REST API
+- **Plugin system** — 15 plugins total: 12 in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), storage (S3, Azure Blob), and LLM providers (Anthropic, OpenAI, Gemini, Ollama), plus 3 built-in git host plugins (GitHub, GitLab, Azure DevOps); managed via dashboard UI, CLI, or REST API
 - **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop
 - **IdP group → team sync** — auth plugins (Entra ID, Okta, Google) read group memberships from tokens and auto-sync to dashboard teams on SSO login
@@ -79,8 +79,12 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 │  │                           │  │                           │   │
 │  │  ─ 58 jurisdictions       │◄─┤  ─ watches legal sources  │   │
 │  │  ─ 62 regulations         │  │  ─ creates proposals      │   │
-│  │  ─ OAuth2 / JWT auth      │  │  ─ SHA-256 change detect  │   │
-│  └──────────┬────────────────┘  └───────────────────────────┘   │
+│  │  ─ 225 WCAG criteria      │  │  ─ SHA-256 change detect  │   │
+│  │  ─ per-criterion mapping  │  └───────────────────────────┘   │
+│  │  ─ source intel pipeline  │                                   │
+│  │  ─ LLM plugin interface   │                                   │
+│  │  ─ OAuth2 / JWT auth      │                                   │
+│  └──────────┬────────────────┘                                   │
 │             │ uses as library                                    │
 │             ▼                                                    │
 │  ┌───────────────────────────┐                                   │
@@ -204,7 +208,7 @@ systemctl disable luqen-dashboard luqen-compliance
 | [`@luqen/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, admin UI | [docs/reference/dashboard-config.md](docs/reference/dashboard-config.md) |
 | [`@luqen/monitor`](packages/monitor) | Regulatory monitor agent — watches legal sources, creates update proposals | [docs/reference/monitor-config.md](docs/reference/monitor-config.md) |
 
-### Plugins (11 available)
+### Plugins (15 available)
 
 Catalogue plugins are distributed via the [plugin catalogue](https://github.com/trunten82/luqen-plugins) and installed from the dashboard UI, CLI (`luqen-dashboard plugin install <name>`), or REST API. Git host plugins are built-in and auto-activated.
 
@@ -218,6 +222,10 @@ Catalogue plugins are distributed via the [plugin catalogue](https://github.com/
 | notify-email | Notification | SMTP email reports |
 | storage-s3 | Storage | AWS S3 report storage |
 | storage-azure | Storage | Azure Blob report storage |
+| llm-anthropic | LLM | Claude — for compliance source intelligence extraction |
+| llm-openai | LLM | GPT-4o / OpenAI-compatible — for compliance extraction |
+| llm-gemini | LLM | Google Gemini — for compliance extraction |
+| llm-ollama | LLM | Local Ollama — for air-gapped compliance extraction |
 | git-host-github | Git Host | GitHub / GitHub Enterprise PR creation |
 | git-host-gitlab | Git Host | GitLab / self-hosted merge request creation |
 | git-host-azure-devops | Git Host | Azure DevOps pull request creation |

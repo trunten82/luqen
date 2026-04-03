@@ -15,12 +15,15 @@
 9. [A2A Agent](#a2a-agent)
 10. [Database Adapters](#database-adapters)
 11. [Baseline Data](#baseline-data)
-12. [Update Proposals](#update-proposals)
-13. [Monitored Sources](#monitored-sources)
-14. [Webhooks](#webhooks)
-15. [CLI Reference](#cli-reference)
-16. [Troubleshooting](#troubleshooting)
-17. [API Types Reference](#api-types-reference)
+12. [Force-Reseed Mechanism](#force-reseed-mechanism)
+13. [Source Intelligence Pipeline](#source-intelligence-pipeline)
+14. [LLM Provider Integration](#llm-provider-integration)
+15. [Update Proposals](#update-proposals)
+16. [Monitored Sources](#monitored-sources)
+17. [Webhooks](#webhooks)
+18. [CLI Reference](#cli-reference)
+19. [Troubleshooting](#troubleshooting)
+20. [API Types Reference](#api-types-reference)
 
 ---
 
@@ -1080,17 +1083,17 @@ When checking a member state, the engine automatically includes its parent's reg
 
 This means checking `DE` gives you German-specific laws (BITV 2.0) plus EU-level laws (EAA, WAD).
 
-### Wildcard criterion matching
+### Criterion matching — granular and wildcard
 
-Most regulations require all WCAG criteria at a given level, not individual criteria. These are stored with `wcagCriterion: "*"`.
+Requirements map to WCAG criteria in two ways:
 
-A wildcard requirement at level `AA` matches:
-- All `WCAG2A` issues (level A criteria)
-- All `WCAG2AA` issues (level AA criteria)
+**Granular (per-criterion):** A requirement targets a specific success criterion, e.g. `wcagCriterion: "1.4.3"`. The compliance engine checks only issues that match exactly that criterion. The seed data includes per-criterion entries for regulations that have known criterion-level obligations (sourced from W3C WAI and WCAG upstream parsing).
 
-A wildcard at level `AAA` matches all three levels.
+**Wildcard:** Most regulations require all WCAG criteria at a given level. These are stored with `wcagCriterion: "*"`. A wildcard requirement at level `AA` matches all level A and AA criteria; a wildcard at level `AAA` matches all three levels.
 
-This means a single requirement `{ wcagCriterion: "*", wcagLevel: "AA" }` covers the entire WCAG 2.1 AA standard.
+When both a wildcard and a granular requirement exist for the same criterion, the granular entry takes precedence and its specific `obligation` is reported (e.g. a criterion that is `mandatory` even though the wildcard says `recommended`).
+
+The `wcag_criteria` table stores all 225 WCAG 2.0/2.1/2.2 criteria as reference data, enabling the engine to expand wildcards and validate criterion codes at runtime.
 
 ### Sector filtering
 
@@ -1184,12 +1187,30 @@ Requirement
 └── updatedAt
 ```
 
+### WcagCriterion
+
+Reference table of all 225 WCAG 2.0, 2.1, and 2.2 success criteria. Used by the engine to expand wildcard requirements and validate criterion codes.
+
+```
+WcagCriterion
+├── id          "1.1.1"
+├── version     "2.0" | "2.1" | "2.2"
+├── level       "A" | "AA" | "AAA"
+├── title       "Non-text Content"
+├── url         W3C Understanding link
+└── principle   1 | 2 | 3 | 4
+```
+
+The table is populated automatically on startup and during force-reseed. See [Force-Reseed Mechanism](#force-reseed-mechanism).
+
 ### Relationships diagram
 
 ```
 Jurisdiction (1) ──< (many) Regulation (1) ──< (many) Requirement
      │
      └── parentId ──> Jurisdiction (self-referential hierarchy)
+
+WcagCriterion (225 rows) ─── referenced by Requirement.wcagCriterion
 ```
 
 ### Baseline data example
@@ -1587,7 +1608,7 @@ The service ships with a baseline dataset covering 8 jurisdictions and 10 regula
 | CA | country | ACA (Accessible Canada Act) |
 | JP | country | JIS X 8341-3 |
 
-All regulations in the baseline use `wcagCriterion: "*"` requirements, meaning they require conformance to an entire WCAG level. Most require WCAG 2.1 AA.
+Regulations shipped in the baseline use `wcagCriterion: "*"` requirements (conformance to an entire WCAG level). The seed pipeline enriches these with granular per-criterion entries parsed from W3C WAI, WCAG upstream, and tenon-io data sources. Seed data counts after enrichment are higher than 10 regulations/requirements — the exact counts depend on the LLM and W3C parsers run at seed time.
 
 ### How to seed
 
@@ -1598,7 +1619,20 @@ luqen-compliance seed
 
 **Via API (requires admin token):**
 ```bash
+# Normal seed (idempotent, skips if data already present)
 curl -X POST http://localhost:4000/api/v1/seed \
+  -H "Authorization: Bearer <admin-token>"
+
+# Force reseed (re-runs parsers and overwrites existing data)
+curl -X POST http://localhost:4000/api/v1/seed \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{ "force": true }'
+```
+
+**Via admin API shortcut:**
+```bash
+curl -X POST http://localhost:4000/api/v1/admin/reseed \
   -H "Authorization: Bearer <admin-token>"
 ```
 
@@ -1607,7 +1641,9 @@ curl -X POST http://localhost:4000/api/v1/seed \
 compliance_seed
 ```
 
-The seed operation is idempotent — running it multiple times does not create duplicates. It uses upsert logic based on entity IDs.
+The seed operation is idempotent — running it multiple times does not create duplicates. It uses upsert logic based on entity IDs. The `force: true` option re-runs the source intelligence pipeline (W3C parser, WCAG upstream parser, LLM extraction) and refreshes the `wcag_criteria` table.
+
+The compliance service also runs a force-reseed automatically on first startup if the database is empty, and on a configurable schedule (default: weekly). See [Force-Reseed Mechanism](#force-reseed-mechanism).
 
 ### How to verify
 
@@ -1650,6 +1686,104 @@ curl -X POST http://localhost:4000/api/v1/regulations \
     "description": "Prohibits discrimination on grounds of disability"
   }'
 ```
+
+---
+
+## Force-Reseed Mechanism
+
+The compliance service can re-run the full seed pipeline at any time to refresh baseline data, WCAG criteria, and granular requirement mappings.
+
+### When it runs
+
+| Trigger | Condition |
+|---------|-----------|
+| **Startup** | Automatically if the database is empty (first run) |
+| **Scheduled** | Configurable interval (default: weekly) via `reseedSchedule` in config |
+| **API** | `POST /api/v1/admin/reseed` or `POST /api/v1/seed` with `{ "force": true }` |
+| **Dashboard** | "Force Reseed" button on the System Health admin page |
+
+### What it does
+
+1. Drops and re-populates the `wcag_criteria` table with all 225 WCAG 2.0/2.1/2.2 criteria.
+2. Upserts the baseline jurisdictions, regulations, and requirements.
+3. Runs the source intelligence pipeline to produce granular per-criterion requirement entries.
+4. Overwrites any existing system-owned requirement records with fresh data.
+
+Org-owned data (created via the write API under a specific `X-Org-Id`) is not affected.
+
+### Config
+
+```json
+{
+  "reseedSchedule": "0 2 * * 0"
+}
+```
+
+Cron expression (default: `"0 2 * * 0"` = 2 AM Sunday). Set to `null` to disable scheduled reseeds.
+
+---
+
+## Source Intelligence Pipeline
+
+The source intelligence pipeline enriches the baseline compliance data with granular per-criterion obligation mappings by parsing official and community data sources.
+
+### Data sources
+
+| Source | Category | What it provides | URL |
+|--------|----------|-----------------|-----|
+| W3C WAI Web Accessibility Laws & Policies | `w3c-policy` | Jurisdiction/regulation metadata for 80+ countries | https://www.w3.org/WAI/policies/ |
+| W3C WCAG Quick Reference | `wcag-upstream` | Per-criterion obligation levels extracted from the WCAG spec | https://www.w3.org/WAI/WCAG21/quickref/ |
+| tenon-io WCAG criterion database | `generic` | Community-maintained criterion metadata (supplementary) | https://github.com/tenon-io/wcag-as-json |
+
+All external source URLs are attributed in the `MonitoredSource` records (visible in `GET /api/v1/sources`).
+
+### Source categories
+
+Each monitored source has a `sourceCategory` field that controls how the scanner routes parsing:
+
+| Category | Parser | Description |
+|----------|--------|-------------|
+| `w3c-policy` | `W3cPolicyParser` | Parses W3C WAI YAML policy listings into jurisdictions/regulations |
+| `wcag-upstream` | `WcagUpstreamParser` | Parses the WCAG Quick Reference for per-criterion success criteria metadata |
+| `government` | LLM extractor | Extracts regulations from government web pages using an LLM plugin |
+| `generic` | LLM extractor | General-purpose extraction for community sources and supplementary data |
+
+### Requirement differ
+
+When the pipeline re-runs, it computes a structured diff (`RequirementDiffer`) between the existing requirement set and the newly parsed data. Only changed records are written, and a diff summary is attached to the seed result for audit purposes.
+
+---
+
+## LLM Provider Integration
+
+The compliance service supports pluggable LLM providers for parsing unstructured regulatory content. LLM extraction is used for `government` and `generic` source categories.
+
+### IComplianceLLMProvider interface
+
+Any compliance LLM plugin implements this interface:
+
+```typescript
+interface IComplianceLLMProvider {
+  extract(prompt: string, content: string): Promise<LLMExtractionResult>;
+}
+```
+
+The `extract` method receives a system prompt and source content, and returns structured JSON describing regulations and requirements found in the content.
+
+### Configuring an LLM plugin
+
+Install one of the four LLM plugins from the dashboard **Plugins** page, then configure it:
+
+| Plugin | Model | Notes |
+|--------|-------|-------|
+| `@luqen/plugin-llm-anthropic` | Claude (claude-3-5-haiku / claude-3-5-sonnet) | Requires `ANTHROPIC_API_KEY` |
+| `@luqen/plugin-llm-openai` | GPT-4o / OpenAI-compatible | Requires `OPENAI_API_KEY` or custom `baseUrl` |
+| `@luqen/plugin-llm-gemini` | Gemini 1.5 Flash / Pro | Requires `GEMINI_API_KEY` |
+| `@luqen/plugin-llm-ollama` | Any Ollama local model | Requires running Ollama instance |
+
+See [docs/plugins/README.md](../plugins/README.md) for full configuration reference.
+
+When no LLM plugin is active, `government` and `generic` sources are skipped during pipeline runs — only `w3c-policy` and `wcag-upstream` parsers run. The service logs a warning but does not fail.
 
 ---
 
@@ -1742,9 +1876,12 @@ curl -X POST http://localhost:4000/api/v1/sources \
     "name": "W3C WAI Web Accessibility Laws and Policies",
     "url": "https://www.w3.org/WAI/policies/",
     "type": "html",
-    "schedule": "weekly"
+    "schedule": "weekly",
+    "sourceCategory": "w3c-policy"
   }'
 ```
+
+The `sourceCategory` field controls which parser handles this source during the intelligence pipeline run. See [Source Intelligence Pipeline](#source-intelligence-pipeline).
 
 ### Source types
 
@@ -1753,6 +1890,17 @@ curl -X POST http://localhost:4000/api/v1/sources \
 | `html` | Fetch HTML page and hash the content |
 | `rss` | Parse RSS/Atom feed for new entries |
 | `api` | Fetch JSON API response |
+
+### Source categories
+
+| Category | Parser used | When to use |
+|----------|------------|-------------|
+| `w3c-policy` | `W3cPolicyParser` | W3C WAI policy pages (YAML-structured) |
+| `wcag-upstream` | `WcagUpstreamParser` | W3C WCAG Quick Reference pages |
+| `government` | LLM extractor | Government regulation pages |
+| `generic` | LLM extractor | Other community or supplementary sources |
+
+Omit `sourceCategory` (or set to `generic`) for general change-detection sources that do not need structured extraction.
 
 ### Triggering a scan
 

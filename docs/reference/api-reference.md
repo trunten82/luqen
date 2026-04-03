@@ -141,12 +141,21 @@ Accepts request bodies up to 10 MB to accommodate large site scans.
 
 ---
 
+## WCAG Criteria
+
+| Method | Path | Scope | Description |
+|--------|------|-------|-------------|
+| `GET` | `/wcag-criteria` | `read` | List all 225 WCAG 2.0/2.1/2.2 criteria (filters: `?version=`, `?level=`, `?principle=`) |
+
+---
+
 ## Seed
 
 | Method | Path | Scope | Description |
 |--------|------|-------|-------------|
-| `POST` | `/seed` | `admin` | Load baseline dataset (idempotent) |
+| `POST` | `/seed` | `admin` | Load baseline dataset (idempotent); pass `{ "force": true }` to re-run the full source intelligence pipeline |
 | `GET` | `/seed/status` | `read` | Check baseline data counts |
+| `POST` | `/admin/reseed` | `admin` | Shortcut for force-reseed (equivalent to `POST /seed` with `{ "force": true }`) |
 
 ---
 
