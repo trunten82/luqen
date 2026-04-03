@@ -122,62 +122,7 @@ function renderConfigFormWithDynamic(
     .map((field) => renderConfigField(field, config[field.key]))
     .join('\n');
 
-  const hasDynamic = configSchema.some((f) => f.type === 'dynamic-select');
-  if (!hasDynamic) return fieldsHtml;
-
-  // Client-side JS: uses DOM manipulation only (no innerHTML with untrusted data)
-  const script = `<script>
-(function() {
-  function addOpt(sel, val, txt, isSel) {
-    var o = document.createElement('option');
-    o.value = val; o.textContent = txt;
-    if (isSel) o.selected = true;
-    sel.appendChild(o);
-  }
-  var form = document.getElementById('plugin-cfg-${escapeHtml(pluginId)}');
-  if (!form) return;
-  form.addEventListener('click', async function(e) {
-    var btn = e.target.closest('[data-action="refreshDynamicOptions"]');
-    if (!btn) return;
-    e.preventDefault();
-    var fieldKey = btn.dataset.fieldKey;
-    var select = form.querySelector('[data-dynamic-field="' + fieldKey + '"]');
-    if (!select) return;
-    var dependsOn = (select.dataset.dependsOn || '').split(',').filter(Boolean);
-    var params = new URLSearchParams({ field: fieldKey });
-    dependsOn.forEach(function(dep) {
-      var input = form.querySelector('[name="' + dep + '"]');
-      if (input) params.append(dep, input.value);
-    });
-    btn.disabled = true;
-    btn.textContent = '...';
-    try {
-      var resp = await fetch('/admin/plugins/${escapeHtml(pluginId)}/config-options?' + params.toString());
-      if (!resp.ok) { var t = await resp.text(); throw new Error(t); }
-      var options = await resp.json();
-      var currentVal = select.value;
-      while (select.firstChild) select.removeChild(select.firstChild);
-      if (options.length === 0) {
-        addOpt(select, '', 'No options available', false);
-      } else {
-        options.forEach(function(opt) { addOpt(select, opt, opt, opt === currentVal); });
-      }
-    } catch (err) {
-      while (select.firstChild) select.removeChild(select.firstChild);
-      addOpt(select, '', 'Error: ' + String(err.message || 'fetch failed').substring(0, 60), false);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '\\u21bb';
-    }
-  });
-  // Auto-load options on form open
-  form.querySelectorAll('[data-action="refreshDynamicOptions"]').forEach(function(btn) {
-    btn.click();
-  });
-})();
-</script>`;
-
-  return fieldsHtml + script;
+  return fieldsHtml;
 }
 
 // ---------------------------------------------------------------------------
