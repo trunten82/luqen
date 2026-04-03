@@ -6,7 +6,7 @@ import { statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getToken, toastHtml } from './helpers.js';
+import { getToken, toastHtml, escapeHtml } from './helpers.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -128,9 +128,11 @@ export async function systemRoutes(
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json() as Record<string, unknown>;
+        const timestamp = new Date().toLocaleString();
+        const statusUpdate = `<span id="reseed-status" hx-swap-oob="innerHTML" class="text-sm text-muted">Last reseeded: ${escapeHtml(timestamp)}</span>`;
         return reply
           .header('content-type', 'text/html')
-          .send(toastHtml(`Compliance data reseeded: ${result.requirements} requirements across ${result.regulations} regulations.`));
+          .send(toastHtml(`Compliance data reseeded: ${result.requirements} requirements across ${result.regulations} regulations.`) + statusUpdate);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Reseed failed';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
