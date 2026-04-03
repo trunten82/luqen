@@ -477,7 +477,7 @@ export async function deleteSource(
     headers['X-Org-Id'] = orgId;
   }
   const response = await fetch(`${baseUrl}/api/v1/sources/${encodeURIComponent(id)}`, {
-    method: 'DELETE', headers,
+    method: 'DELETE', headers, body: '{}',
   });
   if (!response.ok) {
     const body = await response.text().catch(() => '');
