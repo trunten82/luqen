@@ -5,6 +5,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import rateLimit from '@fastify/rate-limit';
 import type { DbAdapter } from '../db/adapter.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
+import type { IComplianceLLMProvider } from '../types.js';
 import { createAuthMiddleware } from '../auth/middleware.js';
 import type { ComplianceCache } from '../cache/redis.js';
 import { registerHealthRoutes } from './routes/health.js';
@@ -39,6 +40,8 @@ export interface ServerOptions {
   readonly reseedInterval?: string;
   /** Skip the automatic baseline seed on startup. Useful in tests. */
   readonly skipSeed?: boolean;
+  /** Optional LLM provider for government regulatory page extraction. */
+  readonly llmProvider?: IComplianceLLMProvider;
 }
 
 function parseInterval(s: string): number {
@@ -150,7 +153,7 @@ export async function createServer(options: ServerOptions) {
   await registerRequirementRoutes(app, db);
   await registerComplianceRoutes(app, db, cache);
   await registerUpdateRoutes(app, db);
-  await registerSourceRoutes(app, db);
+  await registerSourceRoutes(app, db, options.llmProvider);
   await registerWebhookRoutes(app, db);
   await registerUserRoutes(app, db);
   await registerClientRoutes(app, db);
