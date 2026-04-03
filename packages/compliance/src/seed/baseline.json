@@ -417,7 +417,7 @@
       "jurisdictionId": "US",
       "name": "Section 508 of the Rehabilitation Act",
       "shortName": "Section 508",
-      "reference": "29 U.S.C. § 794d",
+      "reference": "29 U.S.C. \u00a7 794d",
       "url": "https://www.section508.gov/",
       "enforcementDate": "1998-08-07",
       "status": "active",
@@ -432,7 +432,7 @@
       "jurisdictionId": "US",
       "name": "Americans with Disabilities Act",
       "shortName": "ADA",
-      "reference": "42 U.S.C. § 12101",
+      "reference": "42 U.S.C. \u00a7 12101",
       "url": "https://www.ada.gov/",
       "enforcementDate": "1990-07-26",
       "status": "active",
@@ -496,7 +496,7 @@
     {
       "id": "FR-RGAA",
       "jurisdictionId": "FR",
-      "name": "Référentiel Général d'Amélioration de l'Accessibilité",
+      "name": "R\u00e9f\u00e9rentiel G\u00e9n\u00e9ral d'Am\u00e9lioration de l'Accessibilit\u00e9",
       "shortName": "RGAA",
       "reference": "RGAA 4.1",
       "url": "https://accessibilite.numerique.gouv.fr/",
@@ -561,7 +561,7 @@
     {
       "id": "AT-WAD",
       "jurisdictionId": "AT",
-      "name": "Barrierefreiheitsgesetz — Web Accessibility Act (Austria)",
+      "name": "Barrierefreiheitsgesetz \u2014 Web Accessibility Act (Austria)",
       "shortName": "BaFG",
       "reference": "BGBl. I Nr. 59/2019",
       "url": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20010727",
@@ -577,8 +577,8 @@
     {
       "id": "BE-WAD",
       "jurisdictionId": "BE",
-      "name": "Arrêté royal relatif à l'accessibilité des sites internet et des applications mobiles",
-      "shortName": "AR Accessibilité Web",
+      "name": "Arr\u00eat\u00e9 royal relatif \u00e0 l'accessibilit\u00e9 des sites internet et des applications mobiles",
+      "shortName": "AR Accessibilit\u00e9 Web",
       "reference": "AR 2019-09-16",
       "url": "https://www.ejustice.just.fgov.be/eli/arrete/2019/09/16/2019015017/justel",
       "enforcementDate": "2019-09-23",
@@ -593,9 +593,9 @@
     {
       "id": "BG-WAD",
       "jurisdictionId": "BG",
-      "name": "Наредба за достъпност на уебсайтовете и мобилните приложения",
-      "shortName": "Наредба WAD",
-      "reference": "ПМС № 233 / 2019",
+      "name": "\u041d\u0430\u0440\u0435\u0434\u0431\u0430 \u0437\u0430 \u0434\u043e\u0441\u0442\u044a\u043f\u043d\u043e\u0441\u0442 \u043d\u0430 \u0443\u0435\u0431\u0441\u0430\u0439\u0442\u043e\u0432\u0435\u0442\u0435 \u0438 \u043c\u043e\u0431\u0438\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u044f",
+      "shortName": "\u041d\u0430\u0440\u0435\u0434\u0431\u0430 WAD",
+      "reference": "\u041f\u041c\u0421 \u2116 233 / 2019",
       "url": "https://www.w3.org/WAI/policies/bulgaria/",
       "enforcementDate": "2019-10-10",
       "status": "active",
@@ -609,8 +609,8 @@
     {
       "id": "HR-WAD",
       "jurisdictionId": "HR",
-      "name": "Zakon o pristupačnosti mrežnih stranica i programskih rješenja za pokretne uređaje tijela javnog sektora",
-      "shortName": "Zakon o pristupačnosti",
+      "name": "Zakon o pristupa\u010dnosti mre\u017enih stranica i programskih rje\u0161enja za pokretne ure\u0111aje tijela javnog sektora",
+      "shortName": "Zakon o pristupa\u010dnosti",
       "reference": "NN 17/2019",
       "url": "https://www.zakon.hr/z/1115/Zakon-o-pristupa%C4%8Dnosti-mre%C5%BEnih-stranica-i-programskih-rje%C5%A1enja-za-pokretne-ure%C4%91aje-tijela-javnog-sektora",
       "enforcementDate": "2019-09-23",
@@ -625,7 +625,7 @@
     {
       "id": "CY-WAD",
       "jurisdictionId": "CY",
-      "name": "Νόμος για την Προσβασιμότητα των Ιστοτόπων και των Εφαρμογών για Φορητές Συσκευές",
+      "name": "\u039d\u03cc\u03bc\u03bf\u03c2 \u03b3\u03b9\u03b1 \u03c4\u03b7\u03bd \u03a0\u03c1\u03bf\u03c3\u03b2\u03b1\u03c3\u03b9\u03bc\u03cc\u03c4\u03b7\u03c4\u03b1 \u03c4\u03c9\u03bd \u0399\u03c3\u03c4\u03bf\u03c4\u03cc\u03c0\u03c9\u03bd \u03ba\u03b1\u03b9 \u03c4\u03c9\u03bd \u0395\u03c6\u03b1\u03c1\u03bc\u03bf\u03b3\u03ce\u03bd \u03b3\u03b9\u03b1 \u03a6\u03bf\u03c1\u03b7\u03c4\u03ad\u03c2 \u03a3\u03c5\u03c3\u03ba\u03b5\u03c5\u03ad\u03c2",
       "shortName": "WAD Cyprus",
       "reference": "N. 180(I)/2019",
       "url": "https://www.w3.org/WAI/policies/cyprus/",
@@ -641,9 +641,9 @@
     {
       "id": "CZ-WAD",
       "jurisdictionId": "CZ",
-      "name": "Zákon o přístupnosti internetových stránek a mobilních aplikací",
-      "shortName": "Zákon č. 99/2019",
-      "reference": "Zákon č. 99/2019 Sb.",
+      "name": "Z\u00e1kon o p\u0159\u00edstupnosti internetov\u00fdch str\u00e1nek a mobiln\u00edch aplikac\u00ed",
+      "shortName": "Z\u00e1kon \u010d. 99/2019",
+      "reference": "Z\u00e1kon \u010d. 99/2019 Sb.",
       "url": "https://www.zakonyprolidi.cz/cs/2019-99",
       "enforcementDate": "2019-09-23",
       "status": "active",
@@ -657,7 +657,7 @@
     {
       "id": "DK-WAD",
       "jurisdictionId": "DK",
-      "name": "Bekendtgørelse om tilgængelighed af offentlige organers websteder og mobilapplikationer",
+      "name": "Bekendtg\u00f8relse om tilg\u00e6ngelighed af offentlige organers websteder og mobilapplikationer",
       "shortName": "BEK nr 772 / 2019",
       "reference": "BEK nr 772 af 09/07/2019",
       "url": "https://www.retsinformation.dk/eli/lta/2019/772",
@@ -673,7 +673,7 @@
     {
       "id": "EE-WAD",
       "jurisdictionId": "EE",
-      "name": "Avaliku teabe seaduse muutmise seadus — veebilehtede ja mobiilirakenduste ligipääsetavus",
+      "name": "Avaliku teabe seaduse muutmise seadus \u2014 veebilehtede ja mobiilirakenduste ligip\u00e4\u00e4setavus",
       "shortName": "ATS muutmise seadus",
       "reference": "RT I, 10.07.2019, 2",
       "url": "https://www.riigiteataja.ee/akt/110072019002",
@@ -706,8 +706,8 @@
     {
       "id": "GR-WAD",
       "jurisdictionId": "GR",
-      "name": "Νόμος για την Προσβασιμότητα Ιστοτόπων και Εφαρμογών για Φορητές Συσκευές Φορέων του Δημόσιου Τομέα",
-      "shortName": "Ν. 4591/2019",
+      "name": "\u039d\u03cc\u03bc\u03bf\u03c2 \u03b3\u03b9\u03b1 \u03c4\u03b7\u03bd \u03a0\u03c1\u03bf\u03c3\u03b2\u03b1\u03c3\u03b9\u03bc\u03cc\u03c4\u03b7\u03c4\u03b1 \u0399\u03c3\u03c4\u03bf\u03c4\u03cc\u03c0\u03c9\u03bd \u03ba\u03b1\u03b9 \u0395\u03c6\u03b1\u03c1\u03bc\u03bf\u03b3\u03ce\u03bd \u03b3\u03b9\u03b1 \u03a6\u03bf\u03c1\u03b7\u03c4\u03ad\u03c2 \u03a3\u03c5\u03c3\u03ba\u03b5\u03c5\u03ad\u03c2 \u03a6\u03bf\u03c1\u03ad\u03c9\u03bd \u03c4\u03bf\u03c5 \u0394\u03b7\u03bc\u03cc\u03c3\u03b9\u03bf\u03c5 \u03a4\u03bf\u03bc\u03ad\u03b1",
+      "shortName": "\u039d. 4591/2019",
       "reference": "N. 4591/2019",
       "url": "https://www.e-nomothesia.gr/kat-ekpaideuse/n-4591-2019.html",
       "enforcementDate": "2019-09-23",
@@ -722,9 +722,9 @@
     {
       "id": "HU-WAD",
       "jurisdictionId": "HU",
-      "name": "Az elektronikus ügyintézés és a bizalmi szolgáltatások általános szabályairól szóló törvény módosítása",
-      "shortName": "E-ügyintézési törvény mód.",
-      "reference": "2019. évi LXXIII. törvény",
+      "name": "Az elektronikus \u00fcgyint\u00e9z\u00e9s \u00e9s a bizalmi szolg\u00e1ltat\u00e1sok \u00e1ltal\u00e1nos szab\u00e1lyair\u00f3l sz\u00f3l\u00f3 t\u00f6rv\u00e9ny m\u00f3dos\u00edt\u00e1sa",
+      "shortName": "E-\u00fcgyint\u00e9z\u00e9si t\u00f6rv\u00e9ny m\u00f3d.",
+      "reference": "2019. \u00e9vi LXXIII. t\u00f6rv\u00e9ny",
       "url": "https://www.w3.org/WAI/policies/hungary/",
       "enforcementDate": "2019-09-23",
       "status": "active",
@@ -754,7 +754,7 @@
     {
       "id": "IT-STANCA",
       "jurisdictionId": "IT",
-      "name": "Legge Stanca — Disposizioni per favorire l'accesso dei soggetti disabili agli strumenti informatici",
+      "name": "Legge Stanca \u2014 Disposizioni per favorire l'accesso dei soggetti disabili agli strumenti informatici",
       "shortName": "Legge Stanca",
       "reference": "Legge n. 4/2004",
       "url": "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:legge:2004-01-09;4",
@@ -787,7 +787,7 @@
     {
       "id": "LV-WAD",
       "jurisdictionId": "LV",
-      "name": "Publisko iestāžu tīmekļa vietņu un mobilās lietotnes pieejamības noteikumi",
+      "name": "Publisko iest\u0101\u017eu t\u012bmek\u013ca viet\u0146u un mobil\u0101s lietotnes pieejam\u012bbas noteikumi",
       "shortName": "MK noteikumi Nr. 445",
       "reference": "MK noteikumi Nr. 445",
       "url": "https://likumi.lv/ta/id/308140",
@@ -803,8 +803,8 @@
     {
       "id": "LT-WAD",
       "jurisdictionId": "LT",
-      "name": "Viešojo sektoriaus subjektų interneto svetainių ir mobiliųjų programų prieinamumo įstatymas",
-      "shortName": "Prieinamumo įstatymas",
+      "name": "Vie\u0161ojo sektoriaus subjekt\u0173 interneto svetaini\u0173 ir mobili\u0173j\u0173 program\u0173 prieinamumo \u012fstatymas",
+      "shortName": "Prieinamumo \u012fstatymas",
       "reference": "2019 m. Nr. XIV",
       "url": "https://www.w3.org/WAI/policies/lithuania/",
       "enforcementDate": "2019-09-23",
@@ -819,9 +819,9 @@
     {
       "id": "LU-WAD",
       "jurisdictionId": "LU",
-      "name": "Loi relative à l'accessibilité des sites internet et des applications mobiles des organismes du secteur public",
-      "shortName": "Loi accessibilité 2019",
-      "reference": "Mém. A 2019, no. 594",
+      "name": "Loi relative \u00e0 l'accessibilit\u00e9 des sites internet et des applications mobiles des organismes du secteur public",
+      "shortName": "Loi accessibilit\u00e9 2019",
+      "reference": "M\u00e9m. A 2019, no. 594",
       "url": "http://data.legilux.public.lu/eli/etat/leg/loi/2019/05/28/a594/jo",
       "enforcementDate": "2019-09-23",
       "status": "active",
@@ -867,8 +867,8 @@
     {
       "id": "PL-WAD",
       "jurisdictionId": "PL",
-      "name": "Ustawa o dostępności cyfrowej stron internetowych i aplikacji mobilnych podmiotów publicznych",
-      "shortName": "Ustawa o dostępności cyfrowej",
+      "name": "Ustawa o dost\u0119pno\u015bci cyfrowej stron internetowych i aplikacji mobilnych podmiot\u00f3w publicznych",
+      "shortName": "Ustawa o dost\u0119pno\u015bci cyfrowej",
       "reference": "Dz.U. 2019 poz. 848",
       "url": "https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20190000848",
       "enforcementDate": "2019-09-23",
@@ -883,9 +883,9 @@
     {
       "id": "PT-WAD",
       "jurisdictionId": "PT",
-      "name": "Decreto-Lei n.º 83/2018 — Acessibilidade dos sítios web e aplicações móveis",
+      "name": "Decreto-Lei n.\u00ba 83/2018 \u2014 Acessibilidade dos s\u00edtios web e aplica\u00e7\u00f5es m\u00f3veis",
       "shortName": "DL 83/2018",
-      "reference": "DL n.º 83/2018",
+      "reference": "DL n.\u00ba 83/2018",
       "url": "https://dre.pt/application/conteudo/116734769",
       "enforcementDate": "2018-11-19",
       "status": "active",
@@ -899,7 +899,7 @@
     {
       "id": "RO-WAD",
       "jurisdictionId": "RO",
-      "name": "Lege privind accesibilitatea site-urilor web și a aplicațiilor mobile ale organismelor din sectorul public",
+      "name": "Lege privind accesibilitatea site-urilor web \u0219i a aplica\u021biilor mobile ale organismelor din sectorul public",
       "shortName": "Legea nr. 24/2022",
       "reference": "Legea nr. 24/2022",
       "url": "https://legislatie.just.ro/Public/DetaliiDocumentAfis/263218",
@@ -915,9 +915,9 @@
     {
       "id": "SK-WAD",
       "jurisdictionId": "SK",
-      "name": "Zákon o prístupnosti webových sídel a mobilných aplikácií subjektov verejného sektora",
-      "shortName": "Zákon č. 95/2019 Z.z.",
-      "reference": "Zákon č. 95/2019 Z.z.",
+      "name": "Z\u00e1kon o pr\u00edstupnosti webov\u00fdch s\u00eddel a mobiln\u00fdch aplik\u00e1ci\u00ed subjektov verejn\u00e9ho sektora",
+      "shortName": "Z\u00e1kon \u010d. 95/2019 Z.z.",
+      "reference": "Z\u00e1kon \u010d. 95/2019 Z.z.",
       "url": "https://www.slov-lex.sk/pravne-predpisy/SK/ZZ/2019/95/",
       "enforcementDate": "2019-09-23",
       "status": "active",
@@ -931,9 +931,9 @@
     {
       "id": "SI-WAD",
       "jurisdictionId": "SI",
-      "name": "Zakon o dostopnosti spletišč in mobilnih aplikacij",
+      "name": "Zakon o dostopnosti spleti\u0161\u010d in mobilnih aplikacij",
       "shortName": "ZDSMA",
-      "reference": "Ur.l. RS, št. 30/18",
+      "reference": "Ur.l. RS, \u0161t. 30/18",
       "url": "https://www.uradni-list.si/glasilo-uradni-list-rs/vsebina/2018-01-1303",
       "enforcementDate": "2018-05-05",
       "status": "active",
@@ -947,7 +947,7 @@
     {
       "id": "ES-LSSICE",
       "jurisdictionId": "ES",
-      "name": "Real Decreto 1112/2018 sobre accesibilidad de los sitios web y aplicaciones para dispositivos móviles del sector público",
+      "name": "Real Decreto 1112/2018 sobre accesibilidad de los sitios web y aplicaciones para dispositivos m\u00f3viles del sector p\u00fablico",
       "shortName": "RD 1112/2018",
       "reference": "RD 1112/2018, BOE-A-2018-12699",
       "url": "https://www.boe.es/eli/es/rd/2018/09/07/1112",
@@ -963,7 +963,7 @@
     {
       "id": "SE-WAD",
       "jurisdictionId": "SE",
-      "name": "Lag om tillgänglighet till digital offentlig service",
+      "name": "Lag om tillg\u00e4nglighet till digital offentlig service",
       "shortName": "DOS-lagen",
       "reference": "SFS 2018:1937",
       "url": "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/lag-20181937-om-tillganglighet-till-digital_sfs-2018-1937",
@@ -979,7 +979,7 @@
     {
       "id": "NO-LDL",
       "jurisdictionId": "NO",
-      "name": "Likestillings- og diskrimineringsloven — IKT-forskriften",
+      "name": "Likestillings- og diskrimineringsloven \u2014 IKT-forskriften",
       "shortName": "IKT-forskriften",
       "reference": "FOR-2013-06-21-732",
       "url": "https://lovdata.no/dokument/SF/forskrift/2013-06-21-732",
@@ -996,7 +996,7 @@
     {
       "id": "CH-BehiG",
       "jurisdictionId": "CH",
-      "name": "Bundesgesetz über die Beseitigung von Benachteiligungen von Menschen mit Behinderungen",
+      "name": "Bundesgesetz \u00fcber die Beseitigung von Benachteiligungen von Menschen mit Behinderungen",
       "shortName": "BehiG / LHand",
       "reference": "SR 151.3",
       "url": "https://www.fedlex.admin.ch/eli/cc/2003/667/de",
@@ -1012,9 +1012,9 @@
     {
       "id": "IS-WAD",
       "jurisdictionId": "IS",
-      "name": "Reglugerð um aðgængi vefsíðna og farsímaforrita opinberra aðila",
-      "shortName": "Reglugerð nr. 1101/2020",
-      "reference": "Reglugerð nr. 1101/2020",
+      "name": "Regluger\u00f0 um a\u00f0g\u00e6ngi vefs\u00ed\u00f0na og fars\u00edmaforrita opinberra a\u00f0ila",
+      "shortName": "Regluger\u00f0 nr. 1101/2020",
+      "reference": "Regluger\u00f0 nr. 1101/2020",
       "url": "https://www.reglugerd.is/reglugerdir/eftir-ministrium/forsaetisraduneytid/nr/1101-2020",
       "enforcementDate": "2020-11-20",
       "status": "active",
@@ -1042,7 +1042,7 @@
     {
       "id": "KR-KWCAG",
       "jurisdictionId": "KR",
-      "name": "한국형 웹 콘텐츠 접근성 지침 — Korean Web Content Accessibility Guidelines",
+      "name": "\ud55c\uad6d\ud615 \uc6f9 \ucf58\ud150\uce20 \uc811\uadfc\uc131 \uc9c0\uce68 \u2014 Korean Web Content Accessibility Guidelines",
       "shortName": "KWCAG 2.1",
       "reference": "KS X OT0003:2021",
       "url": "https://www.w3.org/WAI/policies/korea/",
@@ -1074,7 +1074,7 @@
     {
       "id": "IL-5568",
       "jurisdictionId": "IL",
-      "name": "Israeli Standard 5568 — Web Content Accessibility",
+      "name": "Israeli Standard 5568 \u2014 Web Content Accessibility",
       "shortName": "IS 5568",
       "reference": "Israeli Standard 5568",
       "url": "https://www.w3.org/WAI/policies/israel/",
@@ -1091,7 +1091,7 @@
     {
       "id": "BR-EMAG",
       "jurisdictionId": "BR",
-      "name": "Modelo de Acessibilidade em Governo Eletrônico",
+      "name": "Modelo de Acessibilidade em Governo Eletr\u00f4nico",
       "shortName": "eMAG 3.1",
       "reference": "eMAG 3.1 / Portaria 3/2007",
       "url": "http://emag.governoeletronico.gov.br/",
@@ -1106,7 +1106,7 @@
     {
       "id": "AR-LEY26653",
       "jurisdictionId": "AR",
-      "name": "Ley 26.653 — Accesibilidad de la Información en las Páginas Web",
+      "name": "Ley 26.653 \u2014 Accesibilidad de la Informaci\u00f3n en las P\u00e1ginas Web",
       "shortName": "Ley 26.653",
       "reference": "Ley 26.653",
       "url": "http://servicios.infoleg.gob.ar/infolegInternet/anexos/175000-179999/175694/norma.htm",
@@ -1121,11 +1121,11 @@
     {
       "id": "CO-NTCGP",
       "jurisdictionId": "CO",
-      "name": "Decreto 1078 de 2015 — Accesibilidad web para entidades del Estado",
-      "shortName": "Decreto 1078/2015",
+      "name": "Resoluci\u00f3n 1519 del 2020 \u2014 Accesibilidad web",
+      "shortName": "Res. 1519/2020",
       "reference": "Decreto 1078 de 2015",
-      "url": "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=77135",
-      "enforcementDate": "2015-05-26",
+      "url": "https://gobiernodigital.mintic.gov.co/692/w3-propertyvalue-36382.html",
+      "enforcementDate": "2020-08-24",
       "status": "active",
       "scope": "public",
       "sectors": [
@@ -1136,7 +1136,7 @@
     {
       "id": "MX-NMX",
       "jurisdictionId": "MX",
-      "name": "Norma Técnica para la Accesibilidad de los Sitios Web del Gobierno Federal",
+      "name": "Norma T\u00e9cnica para la Accesibilidad de los Sitios Web del Gobierno Federal",
       "shortName": "NTACSGF",
       "reference": "NTACSGF-001",
       "url": "https://www.w3.org/WAI/policies/mexico/",
@@ -1151,7 +1151,7 @@
     {
       "id": "CL-DECRETO",
       "jurisdictionId": "CL",
-      "name": "Norma Técnica sobre Accesibilidad y Usabilidad de Sitios Web del Estado",
+      "name": "Norma T\u00e9cnica sobre Accesibilidad y Usabilidad de Sitios Web del Estado",
       "shortName": "NTG-009",
       "reference": "Decreto 45/2019",
       "url": "https://www.digital.gob.cl/contenidos-digitales/normas-tecnicas/",
@@ -1214,7 +1214,7 @@
     {
       "id": "SG-DGSS",
       "jurisdictionId": "SG",
-      "name": "Singapore Government Design System — Accessibility Standard",
+      "name": "Singapore Government Design System \u2014 Accessibility Standard",
       "shortName": "SGDS Accessibility",
       "reference": "SGDS 1.0",
       "url": "https://www.designsystem.tech.gov.sg/",
@@ -1244,7 +1244,7 @@
     {
       "id": "TW-WCAG",
       "jurisdictionId": "TW",
-      "name": "無障礙網頁開發規範 — Web Accessibility Guidelines for Government Websites",
+      "name": "\u7121\u969c\u7919\u7db2\u9801\u958b\u767c\u898f\u7bc4 \u2014 Web Accessibility Guidelines for Government Websites",
       "shortName": "TWCAG 2.0",
       "reference": "TWCAG 2.0",
       "url": "https://accessibility.moda.gov.tw/",
@@ -1259,7 +1259,7 @@
     {
       "id": "CN-GB",
       "jurisdictionId": "CN",
-      "name": "网站设计通用规范 — National Standard for Information Accessibility",
+      "name": "\u7f51\u7ad9\u8bbe\u8ba1\u901a\u7528\u89c4\u8303 \u2014 National Standard for Information Accessibility",
       "shortName": "GB/T 37668-2019",
       "reference": "GB/T 37668-2019",
       "url": "https://www.w3.org/WAI/policies/china/",
@@ -1275,8 +1275,8 @@
     {
       "id": "RU-GOST",
       "jurisdictionId": "RU",
-      "name": "ГОСТ Р 52872-2019 — Интернет-ресурсы и другая информация, представленная в электронно-цифровой форме",
-      "shortName": "ГОСТ Р 52872-2019",
+      "name": "\u0413\u041e\u0421\u0422 \u0420 52872-2019 \u2014 \u0418\u043d\u0442\u0435\u0440\u043d\u0435\u0442-\u0440\u0435\u0441\u0443\u0440\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0430\u044f \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f, \u043f\u0440\u0435\u0434\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u043d\u0430\u044f \u0432 \u044d\u043b\u0435\u043a\u0442\u0440\u043e\u043d\u043d\u043e-\u0446\u0438\u0444\u0440\u043e\u0432\u043e\u0439 \u0444\u043e\u0440\u043c\u0435",
+      "shortName": "\u0413\u041e\u0421\u0422 \u0420 52872-2019",
       "reference": "GOST R 52872-2019",
       "url": "https://protect.gost.ru/document1.aspx?control=31&id=229797",
       "enforcementDate": "2020-01-01",
@@ -1291,9 +1291,9 @@
     {
       "id": "TR-EBYS",
       "jurisdictionId": "TR",
-      "name": "Kamu İnternet Sitesi Kılavuzu ve İçerik Yönetim Sistemi — Web Erişilebilirliği",
-      "shortName": "e-Devlet Web Erişilebilirliği",
-      "reference": "2013/3 Başbakanlık Genelgesi",
+      "name": "Kamu \u0130nternet Sitesi K\u0131lavuzu ve \u0130\u00e7erik Y\u00f6netim Sistemi \u2014 Web Eri\u015filebilirli\u011fi",
+      "shortName": "e-Devlet Web Eri\u015filebilirli\u011fi",
+      "reference": "2013/3 Ba\u015fbakanl\u0131k Genelgesi",
       "url": "https://www.w3.org/WAI/policies/turkey/",
       "enforcementDate": "2013-01-01",
       "status": "active",
@@ -1353,7 +1353,7 @@
     {
       "id": "TH-WCAG",
       "jurisdictionId": "TH",
-      "name": "มาตรฐานเว็บไซต์ภาครัฐ — Thai Government Website Standard",
+      "name": "\u0e21\u0e32\u0e15\u0e23\u0e10\u0e32\u0e19\u0e40\u0e27\u0e47\u0e1a\u0e44\u0e0b\u0e15\u0e4c\u0e20\u0e32\u0e04\u0e23\u0e31\u0e10 \u2014 Thai Government Website Standard",
       "shortName": "Thai WCAG Standard",
       "reference": "ETDA Web Standard v2.0",
       "url": "https://www.w3.org/WAI/policies/thailand/",
@@ -1364,6 +1364,128 @@
         "government"
       ],
       "description": "Thailand's ETDA government website standard requires public sector websites to meet WCAG 2.1 AA accessibility criteria."
+    },
+    {
+      "id": "US-ADA-T2-WEB",
+      "jurisdictionId": "US",
+      "name": "ADA Title II Web Accessibility Rule (2024)",
+      "shortName": "ADA Title II Web",
+      "reference": "28 CFR Part 35",
+      "url": "https://www.ada.gov/law-and-regs/regulations/title-ii-2024/",
+      "enforcementDate": "2026-04-24",
+      "status": "active",
+      "scope": "public",
+      "sectors": [
+        "government"
+      ],
+      "description": "DOJ final rule requiring state and local government web content and mobile apps to conform to WCAG 2.1 Level AA."
+    },
+    {
+      "id": "US-255",
+      "jurisdictionId": "US",
+      "name": "Section 255 of the Telecommunications Act",
+      "shortName": "Section 255",
+      "reference": "47 U.S.C. \u00a7 255",
+      "url": "https://www.access-board.gov/law/ta.html",
+      "enforcementDate": "1996-02-08",
+      "status": "active",
+      "scope": "private",
+      "sectors": [
+        "telecommunications"
+      ],
+      "description": "Requires telecommunications equipment and services to be accessible to persons with disabilities."
+    },
+    {
+      "id": "US-ACAA",
+      "jurisdictionId": "US",
+      "name": "Air Carrier Access Act",
+      "shortName": "ACAA",
+      "reference": "14 CFR Part 382",
+      "url": "https://www.ecfr.gov/current/title-14/chapter-II/subchapter-D/part-382",
+      "enforcementDate": "1986-10-02",
+      "status": "active",
+      "scope": "private",
+      "sectors": [
+        "transportation"
+      ],
+      "description": "Requires airline websites to conform to WCAG 2.0 Level AA."
+    },
+    {
+      "id": "US-CVAA",
+      "jurisdictionId": "US",
+      "name": "21st Century Communications and Video Accessibility Act",
+      "shortName": "CVAA",
+      "reference": "47 U.S.C. \u00a7\u00a7 615c, 619",
+      "url": "https://www.fcc.gov/consumers/guides/21st-century-communications-and-video-accessibility-act-cvaa",
+      "enforcementDate": "2010-10-08",
+      "status": "active",
+      "scope": "private",
+      "sectors": [
+        "telecommunications",
+        "media"
+      ],
+      "description": "Requires advanced communications services and video programming to be accessible. References WCAG 2.0 Level AA."
+    },
+    {
+      "id": "US-CA-GOV7405",
+      "jurisdictionId": "US",
+      "name": "California Government Code Section 7405",
+      "shortName": "CA Gov 7405",
+      "reference": "Cal. Gov. Code \u00a7 7405",
+      "url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?sectionNum=7405&lawCode=GOV",
+      "enforcementDate": "2017-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": [
+        "government"
+      ],
+      "description": "Requires California state entities to comply with Section 508 accessibility standards for IT."
+    },
+    {
+      "id": "US-IL-IITAA",
+      "jurisdictionId": "US",
+      "name": "Illinois Information Technology Accessibility Act",
+      "shortName": "IITAA",
+      "reference": "30 ILCS 587",
+      "url": "https://www.ilga.gov/legislation/ilcs/ilcs3.asp?ActID=2862",
+      "enforcementDate": "2007-10-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": [
+        "government",
+        "education"
+      ],
+      "description": "Requires Illinois state agencies and universities to ensure websites and IT systems are accessible."
+    },
+    {
+      "id": "US-CO-HB211110",
+      "jurisdictionId": "US",
+      "name": "Colorado HB21-1110 Accessibility for Persons with Disabilities",
+      "shortName": "CO HB21-1110",
+      "reference": "HB21-1110",
+      "url": "https://leg.colorado.gov/bills/hb21-1110",
+      "enforcementDate": "2021-07-06",
+      "status": "active",
+      "scope": "public",
+      "sectors": [
+        "government"
+      ],
+      "description": "Strengthened protections against discrimination related to accessibility of Colorado government IT."
+    },
+    {
+      "id": "US-NY-WEB",
+      "jurisdictionId": "US",
+      "name": "New York State Web Accessibility Policy",
+      "shortName": "NY Web A11y",
+      "reference": "ITS-P23-001",
+      "url": "https://its.ny.gov/accessibility",
+      "enforcementDate": "2023-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": [
+        "government"
+      ],
+      "description": "Requires New York State agencies to comply with WCAG 2.1 AA and Section 508 standards for web content."
     }
   ],
   "requirements": [
@@ -1620,635 +1742,684 @@
       "wcagLevel": "AAA",
       "wcagCriterion": "1.4.8",
       "obligation": "recommended",
-      "notes": "Visual Presentation — RGAA methodology"
+      "notes": "Visual Presentation \u2014 RGAA methodology"
+    },
+    {
+      "regulationId": "US-ADA-T2-WEB",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "US-ACAA",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "US-CVAA",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "US-CA-GOV7405",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "US-IL-IITAA",
+      "wcagVersion": "2.0",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "US-CO-HB211110",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
+    },
+    {
+      "regulationId": "US-NY-WEB",
+      "wcagVersion": "2.1",
+      "wcagLevel": "AA",
+      "wcagCriterion": "*",
+      "obligation": "mandatory"
     }
   ],
   "sources": [
     {
-      "name": "EAA — European Union",
+      "name": "EAA \u2014 European Union",
       "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0882",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "WAD — European Union",
+      "name": "WAD \u2014 European Union",
       "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32016L2102",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Section 508 — United States",
+      "name": "Section 508 \u2014 United States",
       "url": "https://www.section508.gov/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "ADA — United States",
+      "name": "ADA \u2014 United States",
       "url": "https://www.ada.gov/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Equality Act — United Kingdom",
+      "name": "Equality Act \u2014 United Kingdom",
       "url": "https://www.legislation.gov.uk/ukpga/2010/15/contents",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "PSBAR — United Kingdom",
+      "name": "PSBAR \u2014 United Kingdom",
       "url": "https://www.legislation.gov.uk/uksi/2018/952/contents",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "BITV 2.0 — Germany",
+      "name": "BITV 2.0 \u2014 Germany",
       "url": "https://www.gesetze-im-internet.de/bitv_2_0/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "RGAA — France",
+      "name": "RGAA \u2014 France",
       "url": "https://accessibilite.numerique.gouv.fr/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "DDA — Australia",
+      "name": "DDA \u2014 Australia",
       "url": "https://www.legislation.gov.au/Details/C2018C00125",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "ACA — Canada",
+      "name": "ACA \u2014 Canada",
       "url": "https://laws-lois.justice.gc.ca/eng/acts/A-0.6/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "JIS X 8341-3 — Japan",
+      "name": "JIS X 8341-3 \u2014 Japan",
       "url": "https://www.jisc.go.jp/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "BaFG — Austria",
+      "name": "BaFG \u2014 Austria",
       "url": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20010727",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "AR Accessibilité Web — Belgium",
+      "name": "AR Accessibilit\u00e9 Web \u2014 Belgium",
       "url": "https://www.ejustice.just.fgov.be/eli/arrete/2019/09/16/2019015017/justel",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Наредба WAD — Bulgaria",
+      "name": "\u041d\u0430\u0440\u0435\u0434\u0431\u0430 WAD \u2014 Bulgaria",
       "url": "https://www.w3.org/WAI/policies/bulgaria/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Zakon o pristupačnosti — Croatia",
+      "name": "Zakon o pristupa\u010dnosti \u2014 Croatia",
       "url": "https://www.zakon.hr/z/1115/Zakon-o-pristupa%C4%8Dnosti-mre%C5%BEnih-stranica-i-programskih-rje%C5%A1enja-za-pokretne-ure%C4%91aje-tijela-javnog-sektora",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "WAD Cyprus — Cyprus",
+      "name": "WAD Cyprus \u2014 Cyprus",
       "url": "https://www.w3.org/WAI/policies/cyprus/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Zákon č. 99/2019 — Czech Republic",
+      "name": "Z\u00e1kon \u010d. 99/2019 \u2014 Czech Republic",
       "url": "https://www.zakonyprolidi.cz/cs/2019-99",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "BEK nr 772 / 2019 — Denmark",
+      "name": "BEK nr 772 / 2019 \u2014 Denmark",
       "url": "https://www.retsinformation.dk/eli/lta/2019/772",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "ATS muutmise seadus — Estonia",
+      "name": "ATS muutmise seadus \u2014 Estonia",
       "url": "https://www.riigiteataja.ee/akt/110072019002",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Digipalvelulaki — Finland",
+      "name": "Digipalvelulaki \u2014 Finland",
       "url": "https://www.finlex.fi/fi/laki/ajantasa/2019/20190306",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Ν. 4591/2019 — Greece",
-      "url": "https://www.e-nomothesia.gr/kat-ekpaideuse/n-4591-2019.html",
+      "name": "\u039d. 4591/2019 \u2014 Greece (EUR-Lex)",
+      "url": "https://eur-lex.europa.eu/legal-content/EL/TXT/PDF/?uri=CELEX:72016L2102GRC_289107",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "E-ügyintézési törvény mód. — Hungary",
+      "name": "E-\u00fcgyint\u00e9z\u00e9si t\u00f6rv\u00e9ny m\u00f3d. \u2014 Hungary",
       "url": "https://www.w3.org/WAI/policies/hungary/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "SI 358/2020 — Ireland",
+      "name": "SI 358/2020 \u2014 Ireland",
       "url": "https://www.irishstatutebook.ie/eli/2020/si/358/made/en/print",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Legge Stanca — Italy",
+      "name": "Legge Stanca \u2014 Italy",
       "url": "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:legge:2004-01-09;4",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "D.Lgs. 106/2018 — Italy",
+      "name": "D.Lgs. 106/2018 \u2014 Italy",
       "url": "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2018-08-10;106",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "MK noteikumi Nr. 445 — Latvia",
+      "name": "MK noteikumi Nr. 445 \u2014 Latvia",
       "url": "https://likumi.lv/ta/id/308140",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Prieinamumo įstatymas — Lithuania",
+      "name": "Prieinamumo \u012fstatymas \u2014 Lithuania",
       "url": "https://www.w3.org/WAI/policies/lithuania/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Loi accessibilité 2019 — Luxembourg",
+      "name": "Loi accessibilit\u00e9 2019 \u2014 Luxembourg",
       "url": "http://data.legilux.public.lu/eli/etat/leg/loi/2019/05/28/a594/jo",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "LN 243/2019 — Malta",
+      "name": "LN 243/2019 \u2014 Malta",
       "url": "https://legislation.mt/eli/sl/451.15/eng",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Besluit digitale toegankelijkheid — Netherlands",
+      "name": "Besluit digitale toegankelijkheid \u2014 Netherlands",
       "url": "https://wetten.overheid.nl/BWBR0040936/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Ustawa o dostępności cyfrowej — Poland",
+      "name": "Ustawa o dost\u0119pno\u015bci cyfrowej \u2014 Poland",
       "url": "https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20190000848",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "DL 83/2018 — Portugal",
+      "name": "DL 83/2018 \u2014 Portugal",
       "url": "https://dre.pt/application/conteudo/116734769",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Legea nr. 24/2022 — Romania",
+      "name": "Legea nr. 24/2022 \u2014 Romania",
       "url": "https://legislatie.just.ro/Public/DetaliiDocumentAfis/263218",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Zákon č. 95/2019 Z.z. — Slovakia",
+      "name": "Z\u00e1kon \u010d. 95/2019 Z.z. \u2014 Slovakia",
       "url": "https://www.slov-lex.sk/pravne-predpisy/SK/ZZ/2019/95/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "ZDSMA — Slovenia",
+      "name": "ZDSMA \u2014 Slovenia",
       "url": "https://www.uradni-list.si/glasilo-uradni-list-rs/vsebina/2018-01-1303",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "RD 1112/2018 — Spain",
+      "name": "RD 1112/2018 \u2014 Spain",
       "url": "https://www.boe.es/eli/es/rd/2018/09/07/1112",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "DOS-lagen — Sweden",
+      "name": "DOS-lagen \u2014 Sweden",
       "url": "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/lag-20181937-om-tillganglighet-till-digital_sfs-2018-1937",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "IKT-forskriften — Norway",
+      "name": "IKT-forskriften \u2014 Norway",
       "url": "https://lovdata.no/dokument/SF/forskrift/2013-06-21-732",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "BehiG / LHand — Switzerland",
+      "name": "BehiG / LHand \u2014 Switzerland",
       "url": "https://www.fedlex.admin.ch/eli/cc/2003/667/de",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Reglugerð nr. 1101/2020 — Iceland",
+      "name": "Regluger\u00f0 nr. 1101/2020 \u2014 Iceland",
       "url": "https://www.reglugerd.is/reglugerdir/eftir-ministrium/forsaetisraduneytid/nr/1101-2020",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "NZ WAS 1.1 — New Zealand",
+      "name": "NZ WAS 1.1 \u2014 New Zealand",
       "url": "https://www.digital.govt.nz/standards-and-guidance/nz-government-web-standards/web-accessibility-standard-1-1/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "KWCAG 2.1 — South Korea",
+      "name": "KWCAG 2.1 \u2014 South Korea",
       "url": "https://www.w3.org/WAI/policies/korea/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "GIGW 2.0 — India",
+      "name": "GIGW 2.0 \u2014 India",
       "url": "https://guidelines.india.gov.in/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "IS 5568 — Israel",
+      "name": "IS 5568 \u2014 Israel",
       "url": "https://www.w3.org/WAI/policies/israel/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "eMAG 3.1 — Brazil",
+      "name": "eMAG 3.1 \u2014 Brazil",
       "url": "http://emag.governoeletronico.gov.br/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Ley 26.653 — Argentina",
+      "name": "Ley 26.653 \u2014 Argentina",
       "url": "http://servicios.infoleg.gob.ar/infolegInternet/anexos/175000-179999/175694/norma.htm",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Decreto 1078/2015 — Colombia",
-      "url": "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=77135",
+      "name": "Resoluci\u00f3n 1519/2020 \u2014 Colombia",
+      "url": "https://gobiernodigital.mintic.gov.co/692/w3-propertyvalue-36382.html",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "NTACSGF — Mexico",
+      "name": "NTACSGF \u2014 Mexico",
       "url": "https://www.w3.org/WAI/policies/mexico/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "NTG-009 — Chile",
+      "name": "NTG-009 \u2014 Chile",
       "url": "https://www.digital.gob.cl/contenidos-digitales/normas-tecnicas/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "ECTA 2002 — South Africa",
+      "name": "ECTA 2002 \u2014 South Africa",
       "url": "https://www.gov.za/documents/electronic-communications-and-transactions-act",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "KS 2803 — Kenya",
+      "name": "KS 2803 \u2014 Kenya",
       "url": "https://www.w3.org/WAI/policies/kenya/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "DRA 2018 — Nigeria",
+      "name": "DRA 2018 \u2014 Nigeria",
       "url": "https://www.w3.org/WAI/policies/nigeria/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "SGDS Accessibility — Singapore",
+      "name": "SGDS Accessibility \u2014 Singapore",
       "url": "https://www.designsystem.tech.gov.sg/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "OGCIO Accessibility Guidelines — Hong Kong",
+      "name": "OGCIO Accessibility Guidelines \u2014 Hong Kong",
       "url": "https://www.ogcio.gov.hk/en/our_work/infrastructure/e_government/web_accessibility/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "TWCAG 2.0 — Taiwan",
+      "name": "TWCAG 2.0 \u2014 Taiwan",
       "url": "https://accessibility.moda.gov.tw/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "GB/T 37668-2019 — China",
+      "name": "GB/T 37668-2019 \u2014 China",
       "url": "https://www.w3.org/WAI/policies/china/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "ГОСТ Р 52872-2019 — Russia",
+      "name": "\u0413\u041e\u0421\u0422 \u0420 52872-2019 \u2014 Russia",
       "url": "https://protect.gost.ru/document1.aspx?control=31&id=229797",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "e-Devlet Web Erişilebilirliği — Turkey",
+      "name": "e-Devlet Web Eri\u015filebilirli\u011fi \u2014 Turkey",
       "url": "https://www.w3.org/WAI/policies/turkey/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "SAFICT — Saudi Arabia",
+      "name": "SAFICT \u2014 Saudi Arabia",
       "url": "https://www.w3.org/WAI/policies/saudi-arabia/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "TDRA Web Standards — United Arab Emirates",
+      "name": "TDRA Web Standards \u2014 United Arab Emirates",
       "url": "https://www.tdra.gov.ae/en/digital-government/digital-standards/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "MCIT Accessibility Guidelines — Egypt",
+      "name": "MCIT Accessibility Guidelines \u2014 Egypt",
       "url": "https://www.w3.org/WAI/policies/egypt/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "Thai WCAG Standard — Thailand",
+      "name": "Thai WCAG Standard \u2014 Thailand",
       "url": "https://www.w3.org/WAI/policies/thailand/",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "government"
     },
     {
-      "name": "W3C WAI Policy — Argentina",
+      "name": "W3C WAI Policy \u2014 Argentina",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/argentina.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Australia",
+      "name": "W3C WAI Policy \u2014 Australia",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/australia.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Austria",
+      "name": "W3C WAI Policy \u2014 Austria",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/austria.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Belgium",
+      "name": "W3C WAI Policy \u2014 Belgium",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/belgium.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Brazil",
+      "name": "W3C WAI Policy \u2014 Brazil",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/brazil.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Canada",
+      "name": "W3C WAI Policy \u2014 Canada",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/canada.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — China",
+      "name": "W3C WAI Policy \u2014 China",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/china.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Colombia",
+      "name": "W3C WAI Policy \u2014 Colombia",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/colombia.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — European Union",
+      "name": "W3C WAI Policy \u2014 European Union",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/european-union.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — France",
+      "name": "W3C WAI Policy \u2014 France",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/france.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Germany",
+      "name": "W3C WAI Policy \u2014 Germany",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/germany.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Hong Kong",
+      "name": "W3C WAI Policy \u2014 Hong Kong",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/hong-kong.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — India",
+      "name": "W3C WAI Policy \u2014 India",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/india.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Ireland",
+      "name": "W3C WAI Policy \u2014 Ireland",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/ireland.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Israel",
+      "name": "W3C WAI Policy \u2014 Israel",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/israel.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Italy",
+      "name": "W3C WAI Policy \u2014 Italy",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/italy.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Japan",
+      "name": "W3C WAI Policy \u2014 Japan",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/japan.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Korea",
+      "name": "W3C WAI Policy \u2014 Korea",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/korea.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Netherlands",
+      "name": "W3C WAI Policy \u2014 Netherlands",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/netherlands.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — New Zealand",
+      "name": "W3C WAI Policy \u2014 New Zealand",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/new-zealand.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Norway",
+      "name": "W3C WAI Policy \u2014 Norway",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/norway.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Russian Federation",
+      "name": "W3C WAI Policy \u2014 Russian Federation",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/russian-federation.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Spain",
+      "name": "W3C WAI Policy \u2014 Spain",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/spain.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Sweden",
+      "name": "W3C WAI Policy \u2014 Sweden",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/sweden.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Switzerland",
+      "name": "W3C WAI Policy \u2014 Switzerland",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/switzerland.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — Taiwan",
+      "name": "W3C WAI Policy \u2014 Taiwan",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/taiwan.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — United Kingdom",
+      "name": "W3C WAI Policy \u2014 United Kingdom",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/united-kingdom.md",
       "type": "html",
       "schedule": "weekly",
       "sourceCategory": "w3c-policy"
     },
     {
-      "name": "W3C WAI Policy — United States",
+      "name": "W3C WAI Policy \u2014 United States",
       "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/united-states.md",
       "type": "html",
       "schedule": "weekly",
@@ -2267,6 +2438,41 @@
       "type": "api",
       "schedule": "monthly",
       "sourceCategory": "wcag-upstream"
+    },
+    {
+      "name": "ADA Title II Web Rule \u2014 United States",
+      "url": "https://www.ada.gov/law-and-regs/regulations/title-ii-2024/",
+      "type": "html",
+      "schedule": "monthly",
+      "sourceCategory": "government"
+    },
+    {
+      "name": "Section 255 \u2014 United States",
+      "url": "https://www.access-board.gov/law/ta.html",
+      "type": "html",
+      "schedule": "monthly",
+      "sourceCategory": "government"
+    },
+    {
+      "name": "ACAA \u2014 United States",
+      "url": "https://www.ecfr.gov/current/title-14/chapter-II/subchapter-D/part-382",
+      "type": "html",
+      "schedule": "monthly",
+      "sourceCategory": "government"
+    },
+    {
+      "name": "CVAA \u2014 United States",
+      "url": "https://www.fcc.gov/consumers/guides/21st-century-communications-and-video-accessibility-act-cvaa",
+      "type": "html",
+      "schedule": "monthly",
+      "sourceCategory": "government"
+    },
+    {
+      "name": "California Gov Code 7405 \u2014 United States",
+      "url": "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?sectionNum=7405&lawCode=GOV",
+      "type": "html",
+      "schedule": "monthly",
+      "sourceCategory": "government"
     }
   ]
 }
