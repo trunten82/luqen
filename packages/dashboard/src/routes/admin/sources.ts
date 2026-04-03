@@ -181,22 +181,30 @@ export async function sourceRoutes(
     '/admin/sources/scan',
     { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const result = await scanSources(baseUrl, getToken(request), true);
-        const changed = result.changed ?? 0;
-        const summary = changed > 0
-          ? `${result.scanned} sources checked, ${changed} changed, ${result.proposalsCreated} proposals created.`
-          : `${result.scanned} sources checked — no changes detected.`;
-        const html = `<div id="scan-results" aria-live="polite">
-  <p class="${changed > 0 ? 'text--warning' : 'text--success'}">${summary}</p>
-</div>
-${toastHtml(summary)}`;
+      const token = getToken(request);
 
-        return reply.code(200).header('content-type', 'text/html').send(html);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to trigger scan';
-        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
-      }
+      // Fire-and-forget: respond immediately, run scan in background
+      const scanPromise = scanSources(baseUrl, token, true)
+        .then((result) => {
+          const changed = result.changed ?? 0;
+          request.log.info(
+            { scanned: result.scanned, changed, proposals: result.proposalsCreated },
+            'Source scan completed',
+          );
+        })
+        .catch((err) => {
+          request.log.error({ err }, 'Background source scan failed');
+        });
+
+      // Don't block the response — let it run
+      void scanPromise;
+
+      const html = `<div id="scan-results" aria-live="polite">
+  <p class="text--info">Source scan started in background. Check proposals for results.</p>
+</div>
+${toastHtml('Source scan started — results will appear in Regulatory Updates when complete.')}`;
+
+      return reply.code(200).header('content-type', 'text/html').send(html);
     },
   );
 }
