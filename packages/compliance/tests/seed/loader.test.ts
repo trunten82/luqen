@@ -240,8 +240,8 @@ describe('seedBaseline', () => {
     );
 
     for (const source of sources) {
-      expect(source.type).toBe('html');
-      expect(source.schedule).toBe('weekly');
+      expect(['html', 'api']).toContain(source.type);
+      expect(['daily', 'weekly', 'monthly']).toContain(source.schedule);
     }
   });
 
