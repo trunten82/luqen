@@ -651,7 +651,7 @@
           if (window.htmx) htmx.process(target);
           /* Auto-load dynamic-select options */
           target.querySelectorAll('[data-action="refreshDynamicOptions"]').forEach(function(btn) {
-            actions.refreshDynamicOptions(btn);
+            handlers.refreshDynamicOptions(btn);
           });
         })
         .catch(function (err) {
