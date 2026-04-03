@@ -750,10 +750,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     // ── Register LLM bridge on compliance service ───────────────────────
     // If an LLM plugin is active, tell the compliance service to use this
     // dashboard as its LLM provider. Fully automatic — no config needed.
+    // Retries on failure (compliance service may start after dashboard).
     if (config.complianceUrl) {
-      try {
-        const llmPlugins = pluginManager.getActivePluginsByType('llm');
-        if (llmPlugins.length > 0) {
+      const registerLlmBridge = async (attempt: number): Promise<void> => {
+        try {
+          const llmPlugins = pluginManager.getActivePluginsByType('llm');
+          if (llmPlugins.length === 0) return;
           const complianceToken = await serviceTokenManager.getToken();
           const dashboardPort = config.port ?? 5000;
           const apiKeyRecord = await storage.apiKeys.getOrCreateKey();
@@ -767,16 +769,20 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
               dashboardUrl: `http://localhost:${dashboardPort}`,
               apiKey: apiKeyRecord.key,
             }),
+            signal: AbortSignal.timeout(5000),
           });
           if (registerResp.ok) {
             server.log.info('LLM bridge registered on compliance service');
-          } else {
-            server.log.warn('Failed to register LLM bridge: HTTP %d', registerResp.status);
+          } else if (attempt < 3) {
+            setTimeout(() => { void registerLlmBridge(attempt + 1); }, 5000);
+          }
+        } catch {
+          if (attempt < 3) {
+            setTimeout(() => { void registerLlmBridge(attempt + 1); }, 5000);
           }
         }
-      } catch (err) {
-        server.log.warn({ err }, 'LLM bridge registration failed (compliance service may not be running yet)');
-      }
+      };
+      void registerLlmBridge(1);
     }
 
     // ── Recover stuck scans ─────────────────────────────────────────────
