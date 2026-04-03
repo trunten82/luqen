@@ -130,9 +130,17 @@ export async function systemRoutes(
         const result = await response.json() as Record<string, unknown>;
         const timestamp = new Date().toLocaleString();
         const statusUpdate = `<span id="reseed-status" hx-swap-oob="innerHTML" class="text-sm text-muted">Last reseeded: ${escapeHtml(timestamp)}</span>`;
+
+        // Auto-trigger source scan after reseed (fire-and-forget)
+        void fetch(`${config.complianceUrl}/api/v1/sources/scan?force=true`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: '{}',
+        }).catch(() => { /* best-effort */ });
+
         return reply
           .header('content-type', 'text/html')
-          .send(toastHtml(`Compliance data reseeded: ${result.requirements} requirements across ${result.regulations} regulations.`) + statusUpdate);
+          .send(toastHtml(`Compliance data reseeded: ${result.requirements} requirements across ${result.regulations} regulations. Source scan started.`) + statusUpdate);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Reseed failed';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
