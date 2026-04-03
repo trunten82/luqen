@@ -134,15 +134,10 @@ async function createGenericProposal(
   proposals.push(proposal);
 }
 
-/** Mutable holder so the LLM provider can be registered after server startup. */
-interface LLMProviderHolder {
-  provider: IComplianceLLMProvider | undefined;
-}
-
 export async function registerSourceRoutes(
   app: FastifyInstance,
   db: DbAdapter,
-  llmHolder?: LLMProviderHolder,
+  llmProvider?: IComplianceLLMProvider,
 ): Promise<void> {
   // GET /api/v1/sources
   app.get('/api/v1/sources', {
@@ -238,12 +233,12 @@ export async function registerSourceRoutes(
 
             // For government sources with LLM available, extract requirements on first scan
             const firstCategory = source.sourceCategory ?? 'generic';
-            if (firstCategory === 'government' && llmHolder?.provider != null && !pendingSourceUrls.has(source.url)) {
+            if (firstCategory === 'government' && llmProvider != null && !pendingSourceUrls.has(source.url)) {
               try {
                 const allRegs = await db.listRegulations();
                 const matchedReg = allRegs.find(r => r.url === source.url);
 
-                const extracted = await llmHolder!.provider!.extractRequirements(content, {
+                const extracted = await llmProvider!.extractRequirements(content, {
                   regulationId: matchedReg?.id ?? source.name,
                   regulationName: matchedReg?.name ?? source.name,
                 });
@@ -342,12 +337,12 @@ export async function registerSourceRoutes(
                 } catch {
                   await createGenericProposal(db, source, content, contentHash, proposals);
                 }
-              } else if (category === 'government' && llmHolder?.provider != null) {
+              } else if (category === 'government' && llmProvider != null) {
                 try {
                   const allRegs = await db.listRegulations();
                   const matchedReg = allRegs.find(r => r.url === source.url);
 
-                  const extracted = await llmHolder!.provider!.extractRequirements(content, {
+                  const extracted = await llmProvider!.extractRequirements(content, {
                     regulationId: matchedReg?.id ?? source.name,
                     regulationName: matchedReg?.name ?? source.name,
                     currentWcagVersion: undefined,
@@ -425,7 +420,7 @@ export async function registerSourceRoutes(
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
-      if (llmHolder?.provider == null) {
+      if (llmProvider == null) {
         await reply.status(503).send({
           error: 'No LLM provider registered. Ensure the dashboard has an active LLM plugin and has connected to this compliance service.',
           statusCode: 503,
@@ -453,7 +448,7 @@ export async function registerSourceRoutes(
       const sourceUrl = body.url ?? `upload://${name.replace(/\s+/g, '-').toLowerCase()}`;
 
       // Extract requirements via LLM
-      const extracted = await llmHolder!.provider!.extractRequirements(body.content, {
+      const extracted = await llmProvider!.extractRequirements(body.content, {
         regulationId: regId,
         regulationName: regName,
       });
