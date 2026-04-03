@@ -177,7 +177,7 @@
       "packageName": "@luqen/plugin-llm-anthropic",
       "icon": "llm",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-anthropic-v1.0.0/luqen-plugin-llm-anthropic-1.0.0.tgz",
-      "checksum": "sha256:3779d1d4774710e9d2d52df36ee4b59aa34991e7aebcec3671c87c5fcb729143"
+      "checksum": "sha256:2b1f94edde2297d5a0bb8cb55f8a044ba47f5aa1811d5a68918616d3b0582683"
     },
     {
       "name": "llm-openai",
@@ -188,7 +188,7 @@
       "packageName": "@luqen/plugin-llm-openai",
       "icon": "llm",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-openai-v1.0.0/luqen-plugin-llm-openai-1.0.0.tgz",
-      "checksum": "sha256:63f74e979066a16939ca8dce7c394a0e817b2b1249d0490533d71d8ee8a63d51"
+      "checksum": "sha256:a9d1da407c22fa3374109bc819447dcd9a5b8f91ce7c53a2f4db3bd15c7f442b"
     },
     {
       "name": "llm-gemini",
@@ -199,7 +199,7 @@
       "packageName": "@luqen/plugin-llm-gemini",
       "icon": "llm",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-gemini-v1.0.0/luqen-plugin-llm-gemini-1.0.0.tgz",
-      "checksum": "sha256:3b4d8648b6257866b9a79a22103345909bb93c74048a7676933974691ff70cae"
+      "checksum": "sha256:58c28e6971b60827f8b64e89646ad63d6c8fc0fe25c74ac7377e330b4c427b5f"
     },
     {
       "name": "llm-ollama",
@@ -210,7 +210,7 @@
       "packageName": "@luqen/plugin-llm-ollama",
       "icon": "llm",
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-ollama-v1.0.0/luqen-plugin-llm-ollama-1.0.0.tgz",
-      "checksum": "sha256:64216055ca88212fb56ab2d40588c329fb6d7cd38ba0eae1880f15a2a09be226"
+      "checksum": "sha256:e681abad45cf194659a87cd64f17f6b47396ef20dd310079295e26ebac2ef9a3"
     }
   ]
 }
