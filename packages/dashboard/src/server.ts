@@ -747,6 +747,38 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       server.log.warn({ err }, 'OAuth client backfill encountered an error');
     }
 
+    // ── Register LLM bridge on compliance service ───────────────────────
+    // If an LLM plugin is active, tell the compliance service to use this
+    // dashboard as its LLM provider. Fully automatic — no config needed.
+    if (config.complianceUrl) {
+      try {
+        const llmPlugins = pluginManager.getActivePluginsByType('llm');
+        if (llmPlugins.length > 0) {
+          const complianceToken = await serviceTokenManager.getToken();
+          const dashboardPort = config.port ?? 5000;
+          const apiKeyRecord = await storage.apiKeys.getOrCreateKey();
+          const registerResp = await fetch(`${config.complianceUrl}/api/v1/admin/register-llm`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${complianceToken}`,
+            },
+            body: JSON.stringify({
+              dashboardUrl: `http://localhost:${dashboardPort}`,
+              apiKey: apiKeyRecord.key,
+            }),
+          });
+          if (registerResp.ok) {
+            server.log.info('LLM bridge registered on compliance service');
+          } else {
+            server.log.warn('Failed to register LLM bridge: HTTP %d', registerResp.status);
+          }
+        }
+      } catch (err) {
+        server.log.warn({ err }, 'LLM bridge registration failed (compliance service may not be running yet)');
+      }
+    }
+
     // ── Recover stuck scans ─────────────────────────────────────────────
     // Scans left in queued/running state after a restart will never complete.
     // Re-enqueue queued scans; mark running scans as failed (partial state).
