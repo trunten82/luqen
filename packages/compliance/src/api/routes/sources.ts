@@ -227,9 +227,25 @@ export async function registerSourceRoutes(
       let failed = 0;
       const proposals = [];
 
-      // Fetch existing pending proposals to avoid duplicates
-      const existingPending = await db.listUpdateProposals({ status: 'pending' });
-      const pendingSourceUrls = new Set(existingPending.map((p) => p.source));
+      // Collect content hashes from ALL existing proposals (not just pending)
+      // to prevent re-creating proposals when page has dynamic content but
+      // the actual regulatory text hasn't changed
+      const existingProposals = await db.listUpdateProposals();
+      const proposalSourceUrls = new Set(
+        existingProposals
+          .filter((p) => p.status === 'pending')
+          .map((p) => p.source),
+      );
+      // Track content hashes from recent proposals to detect "same content, different page chrome"
+      const proposalContentHashes = new Set(
+        existingProposals
+          .filter((p) => p.status !== 'rejected' && p.status !== 'dismissed')
+          .map((p) => {
+            const after = p.proposedChanges?.after as Record<string, unknown> | undefined;
+            return after?.contentHash as string | undefined;
+          })
+          .filter((h): h is string => h != null),
+      );
 
       for (const source of sources) {
         try {
@@ -246,7 +262,10 @@ export async function registerSourceRoutes(
 
             // For government sources with LLM available, extract requirements on first scan
             const firstCategory = source.sourceCategory ?? 'generic';
-            if (firstCategory === 'government' && llmProvider != null && !pendingSourceUrls.has(source.url)) {
+            const hasExistingProposal = existingProposals.some(
+              (p) => p.source === source.url && p.status !== 'rejected' && p.status !== 'dismissed',
+            );
+            if (firstCategory === 'government' && llmProvider != null && !hasExistingProposal) {
               try {
                 const allRegs = await db.listRegulations();
                 const matchedReg = allRegs.find(r => r.url === source.url);
@@ -292,7 +311,12 @@ export async function registerSourceRoutes(
           } else if (source.lastContentHash !== contentHash) {
             changed++;
             // Content changed — route by sourceCategory
-            if (!pendingSourceUrls.has(source.url)) {
+            // Skip if there's already ANY active proposal for this source
+            // (pending, acknowledged, or reviewed — only create new if rejected/dismissed or none exist)
+            const hasActiveProposal = existingProposals.some(
+              (p) => p.source === source.url && p.status !== 'rejected' && p.status !== 'dismissed',
+            );
+            if (!hasActiveProposal) {
               const category = source.sourceCategory ?? 'generic';
 
               if (category === 'w3c-policy') {
