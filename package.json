@@ -6,6 +6,7 @@
     "packages/core",
     "packages/compliance",
     "packages/branding",
+    "packages/llm",
     "packages/dashboard"
   ],
   "scripts": {
@@ -14,6 +15,7 @@
     "build:core": "npm run build -w packages/core",
     "build:compliance": "npm run build -w packages/compliance",
     "build:branding": "npm run build -w packages/branding",
+    "build:llm": "npm run build -w packages/llm",
     "build:dashboard": "npm run build -w packages/dashboard",
     "build:monitor": "npm run build -w packages/monitor",
     "test": "npm run test --workspaces",
@@ -21,6 +23,7 @@
     "test:coverage": "npm run test:coverage --workspaces",
     "test:core": "npm run test -w packages/core",
     "test:compliance": "npm run test -w packages/compliance",
+    "test:llm": "npm run test -w packages/llm",
     "test:dashboard": "npm run test -w packages/dashboard",
     "test:monitor": "npm run test -w packages/monitor",
     "lint": "npm run lint --workspaces",

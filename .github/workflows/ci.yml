@@ -36,6 +36,9 @@ jobs:
       - name: Build branding
         run: npm run build -w packages/branding
 
+      - name: Build llm
+        run: npm run build -w packages/llm
+
       - name: Build dashboard
         run: npm run build -w packages/dashboard
 
@@ -47,6 +50,9 @@ jobs:
 
       - name: Test branding
         run: npm run test -w packages/branding
+
+      - name: Test llm
+        run: npm run test -w packages/llm
 
       - name: Test dashboard
         run: npm run test -w packages/dashboard
