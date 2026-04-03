@@ -60,6 +60,7 @@ export interface UpdateProposal {
   readonly acknowledgedBy?: string;
   readonly acknowledgedAt?: string;
   readonly notes?: string;
+  readonly trustLevel?: 'certified' | 'extracted';
   readonly proposedChanges?: {
     readonly after?: {
       readonly diff?: ProposalDiff;
@@ -219,7 +220,10 @@ export async function listUpdateProposals(
   status?: string,
   orgId?: string,
 ): Promise<UpdateProposal[]> {
-  const params = status !== undefined ? `?status=${encodeURIComponent(status)}` : '';
+  const qs = new URLSearchParams();
+  if (status !== undefined) qs.set('status', status);
+  qs.set('limit', '200');
+  const params = `?${qs.toString()}`;
   const result = await apiFetch<unknown>(`${baseUrl}/api/v1/updates${params}`, {
     headers: { Authorization: `Bearer ${token}` },
   }, orgId);

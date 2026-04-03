@@ -94,6 +94,21 @@
           <td>
             {{#if isPending}}
             <div class="plugin-actions">
+              {{#if isExtracted}}
+              <button type="button" class="btn btn--sm btn--primary"
+                      hx-post="/admin/proposals/{{id}}/review"
+                      hx-confirm="Apply these LLM-extracted changes to regulatory data?"
+                      hx-target="#proposal-{{id}}"
+                      hx-swap="delete swap:300ms"
+                      hx-vals='{"notes":""}'
+                      aria-label="{{t 'admin.proposals.review'}}: {{summary}}">{{t "admin.proposals.review"}}</button>
+              <button type="button" class="btn btn--sm btn--danger"
+                      hx-post="/admin/proposals/{{id}}/dismiss"
+                      hx-target="#proposal-{{id}}"
+                      hx-swap="delete swap:300ms"
+                      hx-vals='{"notes":""}'
+                      aria-label="{{t 'admin.proposals.dismiss'}}: {{summary}}">{{t "admin.proposals.dismiss"}}</button>
+              {{else}}
               <button type="button" class="btn btn--sm btn--primary"
                       hx-post="/admin/proposals/{{id}}/acknowledge"
                       hx-confirm="{{t 'admin.proposals.confirmAcknowledge'}}"
@@ -101,9 +116,10 @@
                       hx-swap="delete swap:300ms"
                       hx-vals='{"notes":""}'
                       aria-label="{{t 'admin.proposals.acknowledge'}}: {{summary}}">{{t "admin.proposals.acknowledge"}}</button>
+              {{/if}}
             </div>
             {{else}}
-            <span class="text-sm text-muted">{{t "admin.proposals.statusAcknowledged"}}</span>
+            <span class="text-sm text-muted">{{#if isExtracted}}Reviewed{{else}}{{t "admin.proposals.statusAcknowledged"}}{{/if}}</span>
             {{/if}}
           </td>
         </tr>
