@@ -1628,373 +1628,645 @@
       "name": "EAA — European Union",
       "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0882",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "WAD — European Union",
       "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32016L2102",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Section 508 — United States",
       "url": "https://www.section508.gov/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "ADA — United States",
       "url": "https://www.ada.gov/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Equality Act — United Kingdom",
       "url": "https://www.legislation.gov.uk/ukpga/2010/15/contents",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "PSBAR — United Kingdom",
       "url": "https://www.legislation.gov.uk/uksi/2018/952/contents",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "BITV 2.0 — Germany",
       "url": "https://www.gesetze-im-internet.de/bitv_2_0/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "RGAA — France",
       "url": "https://accessibilite.numerique.gouv.fr/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "DDA — Australia",
       "url": "https://www.legislation.gov.au/Details/C2018C00125",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "ACA — Canada",
       "url": "https://laws-lois.justice.gc.ca/eng/acts/A-0.6/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "JIS X 8341-3 — Japan",
       "url": "https://www.jisc.go.jp/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "BaFG — Austria",
       "url": "https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20010727",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "AR Accessibilité Web — Belgium",
       "url": "https://www.ejustice.just.fgov.be/eli/arrete/2019/09/16/2019015017/justel",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Наредба WAD — Bulgaria",
       "url": "https://www.w3.org/WAI/policies/bulgaria/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Zakon o pristupačnosti — Croatia",
       "url": "https://www.zakon.hr/z/1115/Zakon-o-pristupa%C4%8Dnosti-mre%C5%BEnih-stranica-i-programskih-rje%C5%A1enja-za-pokretne-ure%C4%91aje-tijela-javnog-sektora",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "WAD Cyprus — Cyprus",
       "url": "https://www.w3.org/WAI/policies/cyprus/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Zákon č. 99/2019 — Czech Republic",
       "url": "https://www.zakonyprolidi.cz/cs/2019-99",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "BEK nr 772 / 2019 — Denmark",
       "url": "https://www.retsinformation.dk/eli/lta/2019/772",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "ATS muutmise seadus — Estonia",
       "url": "https://www.riigiteataja.ee/akt/110072019002",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Digipalvelulaki — Finland",
       "url": "https://www.finlex.fi/fi/laki/ajantasa/2019/20190306",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Ν. 4591/2019 — Greece",
       "url": "https://www.e-nomothesia.gr/kat-ekpaideuse/n-4591-2019.html",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "E-ügyintézési törvény mód. — Hungary",
       "url": "https://www.w3.org/WAI/policies/hungary/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "SI 358/2020 — Ireland",
       "url": "https://www.irishstatutebook.ie/eli/2020/si/358/made/en/print",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Legge Stanca — Italy",
       "url": "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:legge:2004-01-09;4",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "D.Lgs. 106/2018 — Italy",
       "url": "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2018-08-10;106",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "MK noteikumi Nr. 445 — Latvia",
       "url": "https://likumi.lv/ta/id/308140",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Prieinamumo įstatymas — Lithuania",
       "url": "https://www.w3.org/WAI/policies/lithuania/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Loi accessibilité 2019 — Luxembourg",
       "url": "http://data.legilux.public.lu/eli/etat/leg/loi/2019/05/28/a594/jo",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "LN 243/2019 — Malta",
       "url": "https://legislation.mt/eli/sl/451.15/eng",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Besluit digitale toegankelijkheid — Netherlands",
       "url": "https://wetten.overheid.nl/BWBR0040936/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Ustawa o dostępności cyfrowej — Poland",
       "url": "https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20190000848",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "DL 83/2018 — Portugal",
       "url": "https://dre.pt/application/conteudo/116734769",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Legea nr. 24/2022 — Romania",
       "url": "https://legislatie.just.ro/Public/DetaliiDocumentAfis/263218",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Zákon č. 95/2019 Z.z. — Slovakia",
       "url": "https://www.slov-lex.sk/pravne-predpisy/SK/ZZ/2019/95/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "ZDSMA — Slovenia",
       "url": "https://www.uradni-list.si/glasilo-uradni-list-rs/vsebina/2018-01-1303",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "RD 1112/2018 — Spain",
       "url": "https://www.boe.es/eli/es/rd/2018/09/07/1112",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "DOS-lagen — Sweden",
       "url": "https://www.riksdagen.se/sv/dokument-lagar/dokument/svensk-forfattningssamling/lag-20181937-om-tillganglighet-till-digital_sfs-2018-1937",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "IKT-forskriften — Norway",
       "url": "https://lovdata.no/dokument/SF/forskrift/2013-06-21-732",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "BehiG / LHand — Switzerland",
       "url": "https://www.fedlex.admin.ch/eli/cc/2003/667/de",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Reglugerð nr. 1101/2020 — Iceland",
       "url": "https://www.reglugerd.is/reglugerdir/eftir-ministrium/forsaetisraduneytid/nr/1101-2020",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "NZ WAS 1.1 — New Zealand",
       "url": "https://www.digital.govt.nz/standards-and-guidance/nz-government-web-standards/web-accessibility-standard-1-1/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "KWCAG 2.1 — South Korea",
       "url": "https://www.w3.org/WAI/policies/korea/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "GIGW 2.0 — India",
       "url": "https://guidelines.india.gov.in/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "IS 5568 — Israel",
       "url": "https://www.w3.org/WAI/policies/israel/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "eMAG 3.1 — Brazil",
       "url": "http://emag.governoeletronico.gov.br/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Ley 26.653 — Argentina",
       "url": "http://servicios.infoleg.gob.ar/infolegInternet/anexos/175000-179999/175694/norma.htm",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Decreto 1078/2015 — Colombia",
       "url": "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=77135",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "NTACSGF — Mexico",
       "url": "https://www.w3.org/WAI/policies/mexico/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "NTG-009 — Chile",
       "url": "https://www.digital.gob.cl/contenidos-digitales/normas-tecnicas/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "ECTA 2002 — South Africa",
       "url": "https://www.gov.za/documents/electronic-communications-and-transactions-act",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "KS 2803 — Kenya",
       "url": "https://www.w3.org/WAI/policies/kenya/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "DRA 2018 — Nigeria",
       "url": "https://www.w3.org/WAI/policies/nigeria/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "SGDS Accessibility — Singapore",
       "url": "https://www.designsystem.tech.gov.sg/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "OGCIO Accessibility Guidelines — Hong Kong",
       "url": "https://www.ogcio.gov.hk/en/our_work/infrastructure/e_government/web_accessibility/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "TWCAG 2.0 — Taiwan",
       "url": "https://accessibility.moda.gov.tw/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "GB/T 37668-2019 — China",
       "url": "https://www.w3.org/WAI/policies/china/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "ГОСТ Р 52872-2019 — Russia",
       "url": "https://protect.gost.ru/document1.aspx?control=31&id=229797",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "e-Devlet Web Erişilebilirliği — Turkey",
       "url": "https://www.w3.org/WAI/policies/turkey/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "SAFICT — Saudi Arabia",
       "url": "https://www.w3.org/WAI/policies/saudi-arabia/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "TDRA Web Standards — United Arab Emirates",
       "url": "https://www.tdra.gov.ae/en/digital-government/digital-standards/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "MCIT Accessibility Guidelines — Egypt",
       "url": "https://www.w3.org/WAI/policies/egypt/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
     },
     {
       "name": "Thai WCAG Standard — Thailand",
       "url": "https://www.w3.org/WAI/policies/thailand/",
       "type": "html",
-      "schedule": "weekly"
+      "schedule": "weekly",
+      "sourceCategory": "government"
+    },
+    {
+      "name": "W3C WAI Policy — Argentina",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/argentina.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Australia",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/australia.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Austria",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/austria.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Belgium",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/belgium.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Brazil",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/brazil.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Canada",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/canada.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — China",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/china.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Colombia",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/colombia.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — European Union",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/european-union.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — France",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/france.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Germany",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/germany.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Hong Kong",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/hong-kong.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — India",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/india.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Ireland",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/ireland.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Israel",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/israel.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Italy",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/italy.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Japan",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/japan.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Korea",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/korea.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Netherlands",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/netherlands.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — New Zealand",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/new-zealand.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Norway",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/norway.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Russian Federation",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/russian-federation.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Spain",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/spain.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Sweden",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/sweden.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Switzerland",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/switzerland.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — Taiwan",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/taiwan.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — United Kingdom",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/united-kingdom.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WAI Policy — United States",
+      "url": "https://raw.githubusercontent.com/w3c/wai-policies-prototype/master/_policies/united-states.md",
+      "type": "html",
+      "schedule": "weekly",
+      "sourceCategory": "w3c-policy"
+    },
+    {
+      "name": "W3C WCAG 2.1 Quick Reference (upstream)",
+      "url": "https://raw.githubusercontent.com/w3c/wai-wcag-quickref/gh-pages/_data/wcag21.json",
+      "type": "api",
+      "schedule": "monthly",
+      "sourceCategory": "wcag-upstream"
+    },
+    {
+      "name": "tenon-io WCAG 2.2 as JSON (upstream)",
+      "url": "https://raw.githubusercontent.com/nickakey/wcag-as-json/master/wcag.json",
+      "type": "api",
+      "schedule": "monthly",
+      "sourceCategory": "wcag-upstream"
     }
   ]
 }
