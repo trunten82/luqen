@@ -29,6 +29,7 @@ import { monitorRoutes } from './routes/admin/monitor.js';
 import { pluginAdminRoutes } from './routes/admin/plugins.js';
 import { pluginApiRoutes } from './routes/api/plugins.js';
 import { llmApiRoutes } from './routes/api/llm.js';
+import { sourceApiRoutes } from './routes/api/sources.js';
 import { generateApiKey, storeApiKey } from './auth/api-key.js';
 import { exportRoutes } from './routes/api/export.js';
 import { dataApiRoutes } from './routes/api/data.js';
@@ -670,6 +671,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── LLM API routes (inter-service bridge for compliance → dashboard) ───
   await llmApiRoutes(server, pluginManager);
+
+  // ── Source intelligence API routes ─────────────────────────────────────
+  await sourceApiRoutes(server, config.complianceUrl, pluginManager, serviceTokenManager);
 
   // ── GraphQL API (mercurius) ──────────────────────────────────────────────
   await server.register(mercurius, {

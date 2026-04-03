@@ -1,0 +1,88 @@
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { scanSources, uploadSource } from '../../compliance-client.js';
+import type { PluginManager } from '../../plugins/manager.js';
+
+/**
+ * Source intelligence API routes.
+ * Accessible via API key (Bearer) for automation and inter-service calls.
+ */
+export async function sourceApiRoutes(
+  server: FastifyInstance,
+  complianceUrl: string,
+  pluginManager: PluginManager,
+  serviceTokenManager: { getToken(): Promise<string> },
+): Promise<void> {
+  // POST /api/v1/sources/scan — trigger async source scan
+  server.post(
+    '/api/v1/sources/scan',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!request.user) {
+        return reply.code(401).send({ error: 'Authentication required' });
+      }
+
+      const query = request.query as { force?: string };
+      const force = query.force !== 'false';
+
+      try {
+        const token = await serviceTokenManager.getToken();
+
+        // Fire-and-forget — return immediately
+        const scanPromise = scanSources(complianceUrl, token, force)
+          .then((result) => {
+            request.log.info(
+              { scanned: result.scanned, changed: result.changed, proposals: result.proposalsCreated },
+              'API source scan completed',
+            );
+          })
+          .catch((err) => {
+            request.log.error({ err }, 'API source scan failed');
+          });
+        void scanPromise;
+
+        return reply.send({ status: 'started', message: 'Source scan started in background' });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply.code(500).send({ error: message });
+      }
+    },
+  );
+
+  // POST /api/v1/sources/upload — upload document for LLM parsing
+  server.post(
+    '/api/v1/sources/upload',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!request.user) {
+        return reply.code(401).send({ error: 'Authentication required' });
+      }
+
+      const body = request.body as {
+        content?: string;
+        name?: string;
+        regulationId?: string;
+        regulationName?: string;
+        jurisdictionId?: string;
+        pluginId?: string;
+      } | undefined;
+
+      if (!body?.content?.trim() || !body?.name?.trim()) {
+        return reply.code(400).send({ error: 'name and content are required' });
+      }
+
+      try {
+        const token = await serviceTokenManager.getToken();
+        const result = await uploadSource(complianceUrl, token, {
+          content: body.content.trim(),
+          name: body.name.trim(),
+          regulationId: body.regulationId,
+          regulationName: body.regulationName ?? body.name.trim(),
+          jurisdictionId: body.jurisdictionId,
+          pluginId: body.pluginId,
+        });
+        return reply.code(201).send(result);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply.code(500).send({ error: message });
+      }
+    },
+  );
+}
