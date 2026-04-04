@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 Plans:
 - [x] 01-01-PLAN.md — LLM service: generate-fix capability executor, prompt template, POST /api/v1/generate-fix endpoint
-- [ ] 01-02-PLAN.md — Dashboard: generateFix LLM client method, fix-suggestion route, upgraded helper, CSS, i18n, admin hint
+- [x] 01-02-PLAN.md — Dashboard: generateFix LLM client method, fix-suggestion route, upgraded helper, CSS, i18n, admin hint
 **UI hint**: yes
 
 ### Phase 2: Analyse Report
