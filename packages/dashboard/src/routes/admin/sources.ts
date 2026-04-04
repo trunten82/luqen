@@ -29,27 +29,14 @@ export async function sourceRoutes(
         error = err instanceof Error ? err.message : 'Failed to load sources';
       }
 
-      // Active LLM plugins for the upload form — deduplicated by package name
-      const seenLlm = new Set<string>();
-      const llmPlugins = pluginManager
-        ? pluginManager.list()
-            .filter((p) => {
-              if (p.type !== 'llm' || p.status !== 'active') return false;
-              if (seenLlm.has(p.packageName)) return false;
-              seenLlm.add(p.packageName);
-              return true;
-            })
-            .map((p) => ({ id: p.id, name: p.packageName.replace('@luqen/plugin-', '') }))
-        : [];
-
       return reply.view('admin/sources.hbs', {
         pageTitle: 'Monitored Sources',
         currentPath: '/admin/sources',
         user: request.user,
         sources,
         error,
-        llmPlugins,
-        hasLlm: llmPlugins.length > 0,
+        llmPlugins: [],
+        hasLlm: false,
       });
     },
   );
