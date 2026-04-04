@@ -165,6 +165,7 @@ export async function reportRoutes(
           scan: scanMeta,
           reportData: null,
           pdfAvailable: true,
+          llmEnabled: llmClient !== null,
         });
       }
 
@@ -192,6 +193,7 @@ export async function reportRoutes(
           scan: scanMeta,
           reportData: null,
           pdfAvailable: true,
+          llmEnabled: llmClient !== null,
         });
       }
 
@@ -262,6 +264,7 @@ export async function reportRoutes(
         brandFilter,
         brandingGuidelineActive,
         pdfAvailable: true,
+        llmEnabled: llmClient !== null,
         manualTestStats: {
           tested: manualTested,
           total: manualTotal,
@@ -456,6 +459,172 @@ export async function reportRoutes(
 
       // No match — return empty
       return reply.header('content-type', 'text/html').send('');
+    },
+  );
+
+  // GET /reports/:id/ai-summary — HTMX partial: AI executive summary
+  server.get(
+    '/reports/:id/ai-summary',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+
+      if (scan === null) {
+        return reply.header('content-type', 'text/html').send(
+          `<div class="alert alert--warning">Report not found.</div>`,
+        );
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.header('content-type', 'text/html').send(
+          `<div class="alert alert--warning">Access denied.</div>`,
+        );
+      }
+
+      // Load current report data
+      let reportData: ReturnType<typeof normalizeReportData> | null = null;
+      try {
+        const dbReport = await storage.scans.getReport(id);
+        if (dbReport !== null) {
+          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+        } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
+          const raw = JSON.parse(
+            await readFile(scan.jsonReportPath, 'utf-8'),
+          ) as JsonReportFile;
+          reportData = normalizeReportData(raw, scan);
+        }
+      } catch {
+        // Fall through — reportData stays null
+      }
+
+      if (reportData === null || llmClient === null) {
+        return reply.header('content-type', 'text/html').send(
+          `<div class="alert alert--info">AI summary is not available for this report.</div>`,
+        );
+      }
+
+      // Build issuesList from issueGroups — flatten to unique criterion + message pairs with counts
+      const issueMap = new Map<string, { criterion: string; message: string; count: number; level: string }>();
+      for (const group of (reportData as any).issueGroups ?? []) {
+        for (const issue of group.issues ?? []) {
+          const key = `${group.criterion as string}::${(issue.message ?? issue.title ?? '') as string}`;
+          const existing = issueMap.get(key);
+          if (existing !== undefined) {
+            issueMap.set(key, { ...existing, count: existing.count + (issue.count ?? 1) });
+          } else {
+            issueMap.set(key, {
+              criterion: (group.criterion ?? '') as string,
+              message: ((issue.message ?? issue.title ?? '') as string),
+              count: (issue.count ?? 1) as number,
+              level: (issue.level ?? 'error') as string,
+            });
+          }
+        }
+      }
+      const issuesList = Array.from(issueMap.values());
+
+      // Build complianceSummary string
+      const complianceMatrix = (reportData as any).complianceMatrix ?? [];
+      const complianceSummary = (complianceMatrix as any[]).length > 0
+        ? (complianceMatrix as any[])
+            .map((j: any) => `${(j.jurisdiction ?? j.name ?? 'Unknown') as string}: ${(j.reviewStatus ?? 'unknown') as string}`)
+            .join(', ')
+        : 'No compliance data available.';
+
+      // RPT-06: Pattern detection — find prior completed scans for same site
+      const recurringPatterns: string[] = [];
+      try {
+        const priorScans = await storage.scans.listScans({
+          siteUrl: scan.siteUrl,
+          orgId: scan.orgId,
+          status: 'completed',
+          limit: 5,
+        });
+        // Exclude the current scan
+        const otherScans = priorScans.filter((s) => s.id !== id);
+
+        if (otherScans.length > 0) {
+          // Collect all criterion keys from prior scans
+          const criteriaFrequency = new Map<string, number>();
+          for (const priorScan of otherScans) {
+            try {
+              const priorReport = await storage.scans.getReport(priorScan.id);
+              if (priorReport !== null) {
+                const priorData = normalizeReportData(priorReport as JsonReportFile, priorScan);
+                for (const group of (priorData as any).issueGroups ?? []) {
+                  const c = group.criterion as string;
+                  if (c) criteriaFrequency.set(c, (criteriaFrequency.get(c) ?? 0) + 1);
+                }
+              }
+            } catch {
+              // Skip unreadable prior scans
+            }
+          }
+          // Criteria that appear in current scan AND at least 1 prior scan
+          const currentCriteria = new Set(issuesList.map((i) => i.criterion));
+          for (const [criterion, freq] of criteriaFrequency.entries()) {
+            if (currentCriteria.has(criterion) && freq >= 1) {
+              recurringPatterns.push(`${criterion} has appeared in ${freq} previous scan(s) for this site`);
+            }
+          }
+        }
+      } catch {
+        // Pattern detection is best-effort — continue without it
+      }
+
+      // Call LLM
+      try {
+        const result = await llmClient.analyseReport({
+          siteUrl: scan.siteUrl,
+          totalIssues: ((reportData as any).summary?.totalIssues ?? issuesList.reduce((s, i) => s + i.count, 0)) as number,
+          issuesList,
+          complianceSummary,
+          recurringPatterns,
+          ...(orgId !== 'system' ? { orgId } : {}),
+        });
+
+        const esc = (s: string) =>
+          s
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        const renderList = (items: string[]) =>
+          items.length > 0
+            ? `<ul class="rpt-ai-summary__list">${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`
+            : `<p class="text-muted">None identified.</p>`;
+
+        const html =
+          `<div class="rpt-ai-summary">`
+          + `<section class="rpt-ai-summary__section">`
+          + `<h3 class="rpt-ai-summary__heading">Executive Summary</h3>`
+          + `<p class="rpt-ai-summary__body">${esc(result.executiveSummary)}</p>`
+          + `</section>`
+          + `<section class="rpt-ai-summary__section">`
+          + `<h3 class="rpt-ai-summary__heading">Key Findings</h3>`
+          + renderList(result.keyFindings)
+          + `</section>`
+          + (result.patterns.length > 0
+            ? `<section class="rpt-ai-summary__section">`
+              + `<h3 class="rpt-ai-summary__heading">Recurring Patterns</h3>`
+              + renderList(result.patterns)
+              + `</section>`
+            : '')
+          + `<section class="rpt-ai-summary__section">`
+          + `<h3 class="rpt-ai-summary__heading">Recommended Priorities</h3>`
+          + renderList(result.priorities)
+          + `</section>`
+          + `<p class="rpt-ai-summary__footer text-muted">Generated by AI &middot; ${new Date().toLocaleString()}</p>`
+          + `</div>`;
+
+        return reply.header('content-type', 'text/html').send(html);
+      } catch {
+        // LLM unavailable — graceful notice
+        return reply.header('content-type', 'text/html').send(
+          `<div class="alert alert--info">AI summary is currently unavailable. The LLM service may not be configured or reachable. Please try again later.</div>`,
+        );
+      }
     },
   );
 }
