@@ -441,4 +441,15 @@ When the user manually acts on a degraded proposal (edits requirements by hand):
 - The source status returns to `'active'` (no longer degraded — the user has handled it)
 - If later reprocessed with LLM, the source tag reverts to `'llm-extracted'`
 
-Sources that don't require LLM (w3c-policy, wcag-upstream with deterministic parsers) are unaffected.
+### Source Management Mode
+
+Each government source has a `managementMode` field: `'llm'` | `'manual'`.
+
+- **Default:** `'llm'` when LLM capability is configured, `'manual'` otherwise
+- **User can switch at any time** via the sources admin UI:
+  - **LLM -> Manual:** user takes ownership of the source. Scans still detect content changes but create generic proposals instead of LLM extraction. Source never goes degraded. Good for sources where the user knows better than the LLM.
+  - **Manual -> LLM:** next scan runs LLM extraction. If LLM is unavailable, source goes degraded as normal.
+- **Degraded -> Manual:** user explicitly says "I'll handle this myself". Source returns to active, tagged as manual.
+- The switch is a conscious choice, not automatic. If LLM fails, the source degrades — it doesn't silently flip to manual.
+
+Sources that don't require LLM (w3c-policy, wcag-upstream with deterministic parsers) are unaffected — they always use their deterministic parsers regardless of this setting.
