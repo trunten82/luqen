@@ -407,4 +407,38 @@
     {{/if}}
   </div>
 
+  {{!-- Discover Brand (LLM-powered, shown only when LLM is configured) --}}
+  {{#if llmEnabled}}
+  {{#if perm.brandingManage}}
+  <div class="card brd-discover mt-lg">
+    <div class="card__header">
+      <h3 class="card__title">{{t "admin.branding.discoverHeading"}}</h3>
+    </div>
+    <div class="card__body">
+      <p class="text-muted mb-md">{{t "admin.branding.discoverDescription"}}</p>
+      <div class="brd-discover__form">
+        <div class="brd-discover__input-group form-group">
+          <label class="form-label" for="discover-url">{{t "admin.branding.siteUrl"}}</label>
+          <input id="discover-url"
+                 type="url"
+                 name="url"
+                 class="input"
+                 placeholder="{{t "admin.branding.discoverUrlPlaceholder"}}">
+        </div>
+        <button type="button"
+                class="btn btn--primary btn--sm"
+                hx-post="/admin/branding-guidelines/{{guideline.id}}/discover-branding"
+                hx-target="#brd-discover-result"
+                hx-swap="innerHTML"
+                hx-include="#discover-url,[name='_csrf']">
+          {{t "admin.branding.discoverButton"}}
+        </button>
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      </div>
+      <div id="brd-discover-result" aria-live="polite" class="mt-sm"></div>
+    </div>
+  </div>
+  {{/if}}
+  {{/if}}
+
 </section>

@@ -782,7 +782,14 @@
       "guidelineNamePlaceholder": "Acme Brand Guidelines",
       "guidelineDescriptionPlaceholder": "Optional description of this brand guideline set\u2026",
       "uploadImage": "Upload Image",
-      "brandLogo": "Brand Logo"
+      "brandLogo": "Brand Logo",
+      "discoverHeading": "Discover Brand",
+      "discoverDescription": "Automatically detect colors, fonts, and brand name from a web page URL.",
+      "discoverButton": "Discover Brand",
+      "discoverUrlPlaceholder": "https://example.com",
+      "discoverSuccess": "Brand discovery complete",
+      "discoverEmpty": "No brand signals detected — try a different URL.",
+      "discoverError": "Brand discovery failed"
     }
   },
   "trends": {
