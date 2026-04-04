@@ -61,7 +61,7 @@ Plans:
   4. An admin can customise the discover-branding prompt template per org
 **Plans**: 2 plans
 Plans:
-- [ ] 03-01-PLAN.md — LLM service: discover-branding capability executor (URL fetch + brand signal extraction), prompt template, POST /api/v1/discover-branding endpoint
+- [x] 03-01-PLAN.md — LLM service: discover-branding capability executor (URL fetch + brand signal extraction), prompt template, POST /api/v1/discover-branding endpoint
 - [ ] 03-02-PLAN.md — Dashboard: discoverBranding LLM client method, POST discover route writing to BrandGuideline, UI form on guideline detail page, CSS, i18n, admin prompt hint
 **UI hint**: yes
 
