@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Generate Fix** - AI-powered WCAG fix suggestions on report detail pages, with hardcoded pattern fallback
 - [ ] **Phase 2: Analyse Report** - AI executive summaries and pattern detection on report detail pages
-- [ ] **Phase 3: Discover Branding** - Auto-detect brand colors, fonts, and logo from URLs, feeding into branding service
+- [x] **Phase 3: Discover Branding** - Auto-detect brand colors, fonts, and logo from URLs, feeding into branding service (completed 2026-04-04)
 - [ ] **Phase 4: Ship Ready** - Installer, test suite to 80%+ coverage, and full documentation
 - [ ] **Phase 5: UI Review & Polish** - Full UI audit and visual consistency pass using Stitch MCP
 
@@ -62,7 +62,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 03-01-PLAN.md — LLM service: discover-branding capability executor (URL fetch + brand signal extraction), prompt template, POST /api/v1/discover-branding endpoint
-- [ ] 03-02-PLAN.md — Dashboard: discoverBranding LLM client method, POST discover route writing to BrandGuideline, UI form on guideline detail page, CSS, i18n, admin prompt hint
+- [x] 03-02-PLAN.md — Dashboard: discoverBranding LLM client method, POST discover route writing to BrandGuideline, UI form on guideline detail page, CSS, i18n, admin prompt hint
 **UI hint**: yes
 
 ### Phase 4: Ship Ready
@@ -98,6 +98,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Generate Fix | 2/2 | Complete |  |
 | 2. Analyse Report | 0/2 | Not started | - |
-| 3. Discover Branding | 0/2 | Not started | - |
+| 3. Discover Branding | 2/2 | Complete   | 2026-04-04 |
 | 4. Ship Ready | 0/? | Not started | - |
 | 5. UI Review & Polish | 0/? | Not started | - |
