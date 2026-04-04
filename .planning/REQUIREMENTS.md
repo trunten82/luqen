@@ -29,15 +29,15 @@
 - [x] **BRD-02**: Returns detected colors, fonts, logo URL, brand name
 - [x] **BRD-03**: Uses capability engine with retry/fallback
 - [x] **BRD-04**: Prompt template with per-org override support
-- [ ] **BRD-05**: Branding service integration — auto-populate BrandGuideline from discovery results
+- [x] **BRD-05**: Branding service integration — auto-populate BrandGuideline from discovery results
 
 ### Standalone Hardening
 
 - [ ] **STD-01**: Interactive installer script (same pattern as compliance/branding installers)
 - [ ] **STD-02**: Installer configures OAuth client, provider, default models
-- [ ] **STD-03**: Comprehensive unit tests for all API endpoints and capability engine
-- [ ] **STD-04**: Integration tests for provider communication and fallback chains
-- [ ] **STD-05**: 80%+ test coverage across the LLM package
+- [x] **STD-03**: Comprehensive unit tests for all API endpoints and capability engine
+- [x] **STD-04**: Integration tests for provider communication and fallback chains
+- [x] **STD-05**: 80%+ test coverage across the LLM package
 
 ### Documentation
 
@@ -94,12 +94,12 @@
 | BRD-02 | Phase 3 | Complete |
 | BRD-03 | Phase 3 | Complete |
 | BRD-04 | Phase 3 | Complete |
-| BRD-05 | Phase 3 | Pending |
+| BRD-05 | Phase 3 | Complete |
 | STD-01 | Phase 4 | Pending |
 | STD-02 | Phase 4 | Pending |
-| STD-03 | Phase 4 | Pending |
-| STD-04 | Phase 4 | Pending |
-| STD-05 | Phase 4 | Pending |
+| STD-03 | Phase 4 | Complete |
+| STD-04 | Phase 4 | Complete |
+| STD-05 | Phase 4 | Complete |
 | DOC-01 | Phase 4 | Pending |
 | DOC-02 | Phase 4 | Pending |
 | DOC-03 | Phase 4 | Pending |
