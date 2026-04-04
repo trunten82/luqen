@@ -15,6 +15,37 @@ export async function registerCapabilityExecRoutes(
   // POST /api/v1/extract-requirements
   app.post('/api/v1/extract-requirements', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['Capabilities'],
+      summary: 'Extract requirements from a regulation document',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['content', 'regulationId', 'regulationName'],
+        properties: {
+          content:        { type: 'string', description: 'Full text of the regulation document' },
+          regulationId:   { type: 'string', description: 'Unique identifier for the regulation (e.g. "wcag-2.2")' },
+          regulationName: { type: 'string', description: 'Human-readable regulation name' },
+          jurisdictionId: { type: 'string', description: 'Optional jurisdiction ID' },
+          orgId:          { type: 'string', description: 'Optional organisation ID for per-org prompt overrides' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            requirements: { type: 'array', items: { type: 'object' } },
+            model:        { type: 'string' },
+            provider:     { type: 'string' },
+            attempts:     { type: 'number' },
+          },
+        },
+        400: { $ref: '#/components/schemas/ErrorResponse' },
+        502: { $ref: '#/components/schemas/ErrorResponse' },
+        503: { $ref: '#/components/schemas/ErrorResponse' },
+        504: { $ref: '#/components/schemas/ErrorResponse' },
+      },
+    },
   }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
 
@@ -71,6 +102,39 @@ export async function registerCapabilityExecRoutes(
   // POST /api/v1/generate-fix
   app.post('/api/v1/generate-fix', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['Capabilities'],
+      summary: 'Generate an AI fix suggestion for a WCAG issue',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['wcagCriterion', 'issueMessage', 'htmlContext'],
+        properties: {
+          wcagCriterion: { type: 'string', description: 'WCAG success criterion (e.g. "1.1.1 Non-text Content")' },
+          issueMessage:  { type: 'string', description: 'Accessibility issue description from the scanner' },
+          htmlContext:   { type: 'string', description: 'HTML snippet containing the problematic element' },
+          cssContext:    { type: 'string', description: 'Optional: relevant CSS for the element' },
+          orgId:         { type: 'string', description: 'Optional organisation ID for per-org prompt overrides' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            fixedHtml:   { type: 'string' },
+            explanation: { type: 'string' },
+            effortLevel: { type: 'string', enum: ['low', 'medium', 'high'] },
+            model:       { type: 'string' },
+            provider:    { type: 'string' },
+            attempts:    { type: 'number' },
+          },
+        },
+        400: { $ref: '#/components/schemas/ErrorResponse' },
+        502: { $ref: '#/components/schemas/ErrorResponse' },
+        503: { $ref: '#/components/schemas/ErrorResponse' },
+        504: { $ref: '#/components/schemas/ErrorResponse' },
+      },
+    },
   }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
 
@@ -127,6 +191,53 @@ export async function registerCapabilityExecRoutes(
   // POST /api/v1/analyse-report
   app.post('/api/v1/analyse-report', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['Capabilities'],
+      summary: 'Generate an AI executive summary for a scan report',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['siteUrl', 'totalIssues', 'issuesList'],
+        properties: {
+          siteUrl:           { type: 'string', description: 'URL of the scanned site' },
+          totalIssues:       { type: 'number', description: 'Total issue count from the scan' },
+          issuesList:        {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                criterion: { type: 'string' },
+                message:   { type: 'string' },
+                count:     { type: 'number' },
+                level:     { type: 'string' },
+              },
+            },
+            description: 'Top issues from the scan',
+          },
+          complianceSummary: { type: 'string', description: 'Optional: compliance matrix summary text' },
+          recurringPatterns: { type: 'array', items: { type: 'string' }, description: 'Optional: recurring criteria from prior scans' },
+          orgId:             { type: 'string', description: 'Optional organisation ID for per-org prompt overrides' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            summary:      { type: 'string' },
+            keyFindings:  { type: 'array', items: { type: 'string' } },
+            priorities:   { type: 'array', items: { type: 'string' } },
+            patterns:     { type: 'array', items: { type: 'string' } },
+            model:        { type: 'string' },
+            provider:     { type: 'string' },
+            attempts:     { type: 'number' },
+          },
+        },
+        400: { $ref: '#/components/schemas/ErrorResponse' },
+        502: { $ref: '#/components/schemas/ErrorResponse' },
+        503: { $ref: '#/components/schemas/ErrorResponse' },
+        504: { $ref: '#/components/schemas/ErrorResponse' },
+      },
+    },
   }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
 
@@ -186,6 +297,37 @@ export async function registerCapabilityExecRoutes(
   // POST /api/v1/discover-branding
   app.post('/api/v1/discover-branding', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['Capabilities'],
+      summary: 'Auto-detect brand colors, fonts, and logo from a URL',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['url'],
+        properties: {
+          url:   { type: 'string', description: 'URL to fetch and analyse for brand signals (http/https)' },
+          orgId: { type: 'string', description: 'Optional organisation ID for per-org prompt overrides' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            colors:    { type: 'array', items: { type: 'string' }, description: 'Detected hex color values' },
+            fonts:     { type: 'array', items: { type: 'string' }, description: 'Detected font family names' },
+            logoUrl:   { type: 'string', description: 'Detected logo URL (if found)' },
+            brandName: { type: 'string', description: 'Detected brand name (if found)' },
+            model:     { type: 'string' },
+            provider:  { type: 'string' },
+            attempts:  { type: 'number' },
+          },
+        },
+        400: { $ref: '#/components/schemas/ErrorResponse' },
+        502: { $ref: '#/components/schemas/ErrorResponse' },
+        503: { $ref: '#/components/schemas/ErrorResponse' },
+        504: { $ref: '#/components/schemas/ErrorResponse' },
+      },
+    },
   }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
 
