@@ -10,6 +10,12 @@ packages/*/node_modules/
 # Secrets and key material — NEVER commit these
 packages/compliance/keys/
 packages/compliance/*.db
+# Installer idempotency cache files (contain OAuth secrets)
+packages/*/.install-llm-client
+packages/*/.install-llm-provider
+packages/*/.install-llm-model
+packages/*/.install-client
+packages/*/.install-branding-client
 packages/compliance/*.db-shm
 packages/compliance/*.db-wal
 packages/dashboard/*.db
@@ -35,3 +41,5 @@ docs/design/
 :memory:
 .superpowers/
 docs/superpowers/
+.planning/
+CLAUDE.md
