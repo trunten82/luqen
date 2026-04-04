@@ -4,6 +4,7 @@ import type { MonitoredSource } from '../../types.js';
 import { acknowledgeUpdate } from '../../engine/proposals.js';
 import { requireScope } from '../../auth/middleware.js';
 import { createHash } from 'node:crypto';
+import type { LLMClient } from '../../llm/llm-client.js';
 
 // ── Lightweight inline diff for source content ──────────────────────────────
 
@@ -150,6 +151,7 @@ async function autoAcknowledgeCertified(
 export async function registerSourceRoutes(
   app: FastifyInstance,
   db: DbAdapter,
+  llmClient?: LLMClient,
 ): Promise<void> {
   // GET /api/v1/sources
   app.get('/api/v1/sources', {
@@ -332,6 +334,41 @@ export async function registerSourceRoutes(
                 } catch {
                   await createGenericProposal(db, source, content, contentHash, proposals);
                 }
+              } else if (category === 'government' && source.managementMode === 'llm' && llmClient != null) {
+                try {
+                  const extracted = await llmClient.extractRequirements({
+                    content,
+                    regulationId: source.id,
+                    regulationName: source.name,
+                  });
+                  const proposal = await db.createUpdateProposal({
+                    source: source.url,
+                    type: 'amendment',
+                    summary: `LLM extraction for ${source.name}: ${extracted.criteria.length} criteria found (confidence ${extracted.confidence})`,
+                    trustLevel: 'extracted',
+                    proposedChanges: {
+                      action: 'update',
+                      entityType: 'regulation',
+                      entityId: source.id,
+                      before: { contentHash: source.lastContentHash },
+                      after: {
+                        contentHash,
+                        wcagVersion: extracted.wcagVersion,
+                        wcagLevel: extracted.wcagLevel,
+                        criteria: extracted.criteria,
+                        confidence: extracted.confidence,
+                        model: extracted.model,
+                        provider: extracted.provider,
+                      },
+                    },
+                  });
+                  proposals.push(proposal);
+                  await db.updateSourceStatus(source.id, 'active');
+                } catch {
+                  // LLM extraction failed — create degraded generic proposal
+                  await createGenericProposal(db, source, content, contentHash, proposals);
+                  await db.updateSourceStatus(source.id, 'degraded');
+                }
               } else {
                 await createGenericProposal(db, source, content, contentHash, proposals);
               }
@@ -361,13 +398,162 @@ export async function registerSourceRoutes(
   });
 
   // POST /api/v1/sources/upload — upload document content for LLM parsing
-  // TODO: Re-implement using @luqen/llm module instead of old dashboard plugin bridge
   app.post('/api/v1/sources/upload', {
     preHandler: [requireScope('admin')],
-  }, async (_request, reply) => {
-    await reply.status(503).send({
-      error: 'LLM-based document upload is being migrated to @luqen/llm. Not yet available.',
-      statusCode: 503,
-    });
+  }, async (request, reply) => {
+    if (llmClient == null) {
+      await reply.status(503).send({
+        error: 'LLM service not configured. Set COMPLIANCE_LLM_URL and COMPLIANCE_LLM_API_KEY.',
+        statusCode: 503,
+      });
+      return;
+    }
+
+    try {
+      const body = request.body as {
+        content: string;
+        name: string;
+        url?: string;
+        regulationId?: string;
+        jurisdictionId?: string;
+      };
+      const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
+
+      if (typeof body.content !== 'string' || body.content.length === 0) {
+        await reply.status(400).send({ error: 'content is required', statusCode: 400 });
+        return;
+      }
+      if (typeof body.name !== 'string' || body.name.length === 0) {
+        await reply.status(400).send({ error: 'name is required', statusCode: 400 });
+        return;
+      }
+
+      const sourceUrl = body.url ?? `upload://${Date.now()}/${encodeURIComponent(body.name)}`;
+
+      // Create source record
+      const source = await db.createSource({
+        name: body.name,
+        url: sourceUrl,
+        type: 'html',
+        schedule: 'monthly',
+        sourceCategory: 'government',
+        orgId,
+      });
+
+      // Extract requirements via LLM
+      const extracted = await llmClient.extractRequirements({
+        content: body.content,
+        regulationId: body.regulationId ?? source.id,
+        regulationName: body.name,
+        jurisdictionId: body.jurisdictionId,
+      });
+
+      const contentHash = createHash('sha256').update(body.content).digest('hex');
+      await db.updateSourceLastChecked(source.id, contentHash, body.content);
+
+      const proposal = await db.createUpdateProposal({
+        source: sourceUrl,
+        type: 'new_regulation',
+        summary: `Uploaded document "${body.name}": ${extracted.criteria.length} criteria extracted (confidence ${extracted.confidence})`,
+        trustLevel: 'extracted',
+        proposedChanges: {
+          action: 'create',
+          entityType: 'regulation',
+          entityId: source.id,
+          after: {
+            contentHash,
+            wcagVersion: extracted.wcagVersion,
+            wcagLevel: extracted.wcagLevel,
+            criteria: extracted.criteria,
+            confidence: extracted.confidence,
+            model: extracted.model,
+            provider: extracted.provider,
+          },
+        },
+        orgId,
+      });
+
+      await reply.status(201).send({ source, proposal });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Internal server error';
+      await reply.status(500).send({ error: message, statusCode: 500 });
+    }
+  });
+
+  // POST /api/v1/sources/:id/reprocess — re-run LLM extraction on a source
+  app.post('/api/v1/sources/:id/reprocess', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    if (llmClient == null) {
+      await reply.status(503).send({
+        error: 'LLM service not configured. Set COMPLIANCE_LLM_URL and COMPLIANCE_LLM_API_KEY.',
+        statusCode: 503,
+      });
+      return;
+    }
+
+    try {
+      const { id } = request.params as { id: string };
+
+      const source = await db.getSource(id);
+      if (source == null) {
+        await reply.status(404).send({ error: `Source '${id}' not found`, statusCode: 404 });
+        return;
+      }
+
+      // Fetch content — use stored content or re-fetch from URL
+      let content = await db.getSourceContent(id);
+      if (content == null) {
+        if (!source.url.startsWith('upload://')) {
+          const response = await fetch(source.url, { signal: AbortSignal.timeout(30000) });
+          content = await response.text();
+        } else {
+          await reply.status(422).send({
+            error: 'No stored content for this source and URL is not fetchable.',
+            statusCode: 422,
+          });
+          return;
+        }
+      }
+
+      const extracted = await llmClient.extractRequirements({
+        content,
+        regulationId: source.id,
+        regulationName: source.name,
+      }).catch(async (err: unknown) => {
+        await db.updateSourceStatus(id, 'degraded');
+        throw err;
+      });
+
+      await db.updateSourceStatus(id, 'active');
+
+      const contentHash = createHash('sha256').update(content).digest('hex');
+      const proposal = await db.createUpdateProposal({
+        source: source.url,
+        type: 'amendment',
+        summary: `Reprocessed "${source.name}": ${extracted.criteria.length} criteria extracted (confidence ${extracted.confidence})`,
+        trustLevel: 'extracted',
+        proposedChanges: {
+          action: 'update',
+          entityType: 'regulation',
+          entityId: source.id,
+          after: {
+            contentHash,
+            wcagVersion: extracted.wcagVersion,
+            wcagLevel: extracted.wcagLevel,
+            criteria: extracted.criteria,
+            confidence: extracted.confidence,
+            model: extracted.model,
+            provider: extracted.provider,
+          },
+        },
+      });
+
+      await reply.send({ source: { ...source, status: 'active' as const }, proposal });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Internal server error';
+      const statusCode = message.includes('not found') ? 404 : 502;
+      await reply.status(statusCode).send({ error: message, statusCode });
+    }
   });
 }

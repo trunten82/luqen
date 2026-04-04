@@ -87,6 +87,8 @@ export function createProgram(): Command {
         logger: true,
         cache,
         reseedInterval: config.reseedInterval,
+        llmUrl: config.llmUrl,
+        llmApiKey: config.llmApiKey,
       });
 
       await app.register(registerAgentCardPlugin);
