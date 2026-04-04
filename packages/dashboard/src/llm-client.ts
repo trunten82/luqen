@@ -311,6 +311,28 @@ export class LLMClient {
     });
   }
 
+  // -- Discover Branding ──────────────────────────────────────────────────
+
+  async discoverBranding(input: {
+    readonly url: string;
+    readonly orgId?: string;
+  }): Promise<{
+    colors: Array<{ name: string; hex: string; usage?: string }>;
+    fonts: Array<{ family: string; usage?: string }>;
+    logoUrl: string;
+    brandName: string;
+  }> {
+    return this.apiFetch<{
+      colors: Array<{ name: string; hex: string; usage?: string }>;
+      fonts: Array<{ family: string; usage?: string }>;
+      logoUrl: string;
+      brandName: string;
+    }>(`${this.baseUrl}/api/v1/discover-branding`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
   // -- OAuth Clients (admin) ──────────────────────────────────────────────
 
   async listOAuthClients(): Promise<Array<{ id: string; name: string; scopes: string[]; grantTypes: string[]; orgId: string; createdAt: string }>> {
