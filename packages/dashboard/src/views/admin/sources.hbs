@@ -18,6 +18,17 @@
             aria-controls="upload-regulation-form">
       Upload Regulation
     </button>
+    {{#if llmConnected}}
+    <button hx-post="/admin/sources/bulk-switch"
+            hx-vals='{"mode":"llm"}'
+            hx-confirm="Switch all government sources to LLM mode? They will use AI extraction on next scan."
+            hx-target="#scan-results"
+            hx-swap="innerHTML"
+            class="btn btn--secondary"
+            type="button">
+      Switch All Gov &rarr; LLM
+    </button>
+    {{/if}}
   </div>
 
   <div id="upload-regulation-form" class="card mt-sm" hidden>
@@ -78,6 +89,7 @@
           <th scope="col">{{t "admin.sources.colSchedule"}}</th>
           <th scope="col">{{t "admin.sources.colLastChecked"}}</th>
           <th scope="col">{{t "common.owner"}}</th>
+          <th scope="col">Status</th>
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
@@ -86,7 +98,27 @@
         <tr id="source-{{id}}">
           <td data-label="Name">{{name}}</td>
           <td data-label="Parser">
-            {{#if (eq sourceCategory "government")}}<span class="badge badge--warning">LLM</span>
+            {{#if (eq sourceCategory "government")}}
+              {{#if (eq managementMode "llm")}}
+              <span class="badge badge--info">LLM</span>
+              <button hx-post="/admin/sources/{{id}}/mode"
+                      hx-vals='{"mode":"manual"}'
+                      hx-target="#scan-results"
+                      hx-swap="innerHTML"
+                      class="btn btn--xs btn--ghost"
+                      type="button"
+                      title="Switch to manual">&rarr; Manual</button>
+              {{else}}
+              <span class="badge badge--neutral">Manual</span>
+              <button hx-post="/admin/sources/{{id}}/mode"
+                      hx-vals='{"mode":"llm"}'
+                      hx-target="#scan-results"
+                      hx-swap="innerHTML"
+                      class="btn btn--xs btn--ghost"
+                      type="button"
+                      title="Switch to LLM"
+                      {{#unless ../llmConnected}}disabled{{/unless}}>&rarr; LLM</button>
+              {{/if}}
             {{else if (eq sourceCategory "w3c-policy")}}<span class="badge badge--success">W3C</span>
             {{else if (eq sourceCategory "wcag-upstream")}}<span class="badge badge--success">WCAG</span>
             {{else}}<span class="badge badge--neutral">Generic</span>
@@ -96,6 +128,13 @@
           <td data-label="Last Checked">{{#if lastCheckedAt}}{{lastCheckedAt}}{{else}}{{t "admin.sources.never"}}{{/if}}</td>
           <td data-label="Owner">
             {{#if (eq orgId "system")}}<span class="badge badge--neutral">System</span>{{else}}{{orgId}}{{/if}}
+          </td>
+          <td data-label="Status">
+            {{#if (eq status "degraded")}}
+            <span class="badge badge--warning">Degraded</span>
+            {{else}}
+            <span class="badge badge--success">Active</span>
+            {{/if}}
           </td>
           <td>
             <button hx-get="/admin/sources/{{id}}/view"
@@ -107,7 +146,7 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="6">{{t "admin.sources.noSources"}}</td>
+          <td colspan="7">{{t "admin.sources.noSources"}}</td>
         </tr>
         {{/each}}
       </tbody>

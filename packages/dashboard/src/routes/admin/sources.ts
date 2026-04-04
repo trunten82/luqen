@@ -5,6 +5,8 @@ import {
   deleteSource,
   scanSources,
   uploadSource,
+  updateSourceMode,
+  bulkSwitchSourceMode,
 } from '../../compliance-client.js';
 import { escapeHtml } from './helpers.js';
 import { requirePermission } from '../../auth/middleware.js';
@@ -187,6 +189,53 @@ export async function sourceRoutes(
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Upload failed';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(escapeHtml(message), 'error'));
+      }
+    },
+  );
+
+  // POST /admin/sources/bulk-switch — switch all government sources
+  server.post(
+    '/admin/sources/bulk-switch',
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as { mode?: string };
+      const mode = body.mode === 'manual' ? 'manual' : 'llm';
+      try {
+        const result = await bulkSwitchSourceMode(baseUrl, getToken(request), mode);
+        return reply
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', '/admin/sources')
+          .send(toastHtml(`${result.updated} sources switched to ${mode}`, 'success'));
+      } catch (err) {
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(toastHtml(err instanceof Error ? err.message : 'Failed', 'error'));
+      }
+    },
+  );
+
+  // POST /admin/sources/:id/mode — toggle management mode
+  server.post(
+    '/admin/sources/:id/mode',
+    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { mode?: string };
+      if (body.mode !== 'llm' && body.mode !== 'manual') {
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml('Invalid mode', 'error'));
+      }
+      try {
+        await updateSourceMode(baseUrl, getToken(request), id, body.mode);
+        return reply
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', '/admin/sources')
+          .send(toastHtml(`Switched to ${body.mode}`, 'success'));
+      } catch (err) {
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(toastHtml(err instanceof Error ? err.message : 'Failed', 'error'));
       }
     },
   );
