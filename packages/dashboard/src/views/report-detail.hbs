@@ -103,6 +103,9 @@
   <button role="tab" class="rpt-tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" data-action="rptSwitchTab" data-tab="issues">{{t "reportDetail.tabIssues"}}</button>
   {{#if reportData.templateComponents.length}}<button role="tab" class="rpt-tab" id="tab-templates" aria-controls="panel-templates" aria-selected="false" data-action="rptSwitchTab" data-tab="templates">{{t "reportDetail.tabTemplates"}}</button>{{/if}}
   <button role="tab" class="rpt-tab" id="tab-pages" aria-controls="panel-pages" aria-selected="false" data-action="rptSwitchTab" data-tab="pages">{{t "reportDetail.tabPages"}}</button>
+  {{#if llmEnabled}}
+  <button role="tab" class="rpt-tab" id="tab-ai-summary" aria-controls="panel-ai-summary" aria-selected="false" data-action="rptSwitchTab" data-tab="ai-summary">{{t "reportDetail.tabAiSummary"}}</button>
+  {{/if}}
 </div>
 
 {{! ── Tab 1: Compliance Overview ──────────────────────────────────────────── }}
@@ -539,6 +542,19 @@
   {{/if}}
 
 </div>
+
+{{#if llmEnabled}}
+<div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-ai-summary" role="tabpanel" aria-labelledby="tab-ai-summary"
+  hx-get="/reports/{{scan.id}}/ai-summary"
+  hx-trigger="revealed"
+  hx-swap="innerHTML">
+  <div class="rpt-ai-summary__loading">
+    <div class="skeleton" style="height:1rem;margin-bottom:var(--space-sm);"></div>
+    <div class="skeleton" style="height:1rem;margin-bottom:var(--space-sm);width:80%;"></div>
+    <div class="skeleton" style="height:4rem;"></div>
+  </div>
+</div>
+{{/if}}
 
 {{else}}
 

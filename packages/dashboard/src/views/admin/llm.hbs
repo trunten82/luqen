@@ -347,6 +347,8 @@
           <small class="form-hint">
             {{#if (eq capability 'generate-fix')}}
               Use <code>{{"{{"}}wcagCriterion{{"}}"}}</code> for the WCAG criterion, <code>{{"{{"}}issueMessage{{"}}"}}</code> for the issue description, <code>{{"{{"}}htmlContext{{"}}"}}</code> for the flagged HTML, and <code>{{"{{"}}cssContext{{"}}"}}</code> for relevant CSS.
+            {{else if (eq capability 'analyse-report')}}
+              Use <code>{{"{{"}}siteUrl{{"}}"}}</code> for the site URL, <code>{{"{{"}}totalIssues{{"}}"}}</code> for the issue count, <code>{{"{{"}}issuesList{{"}}"}}</code> for the formatted list of issues, <code>{{"{{"}}complianceSummary{{"}}"}}</code> for the compliance status, and <code>{{"{{"}}recurringPatterns{{"}}"}}</code> for patterns from prior scans.
             {{else}}
               Use <code>{{"{{"}}content{{"}}"}}</code> to inject the document text.
             {{/if}}

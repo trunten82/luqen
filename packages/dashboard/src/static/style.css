@@ -3113,6 +3113,44 @@ details[open] > .mt-examples-toggle::before {
   100% { background-position: -200% 0; }
 }
 
+/* ── AI Summary Panel — Phase 2 additions ────────────────────────────── */
+.rpt-ai-summary {
+  padding: var(--space-md);
+}
+.rpt-ai-summary__section {
+  margin-bottom: var(--space-lg);
+}
+.rpt-ai-summary__heading {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  color: var(--text-primary, inherit);
+}
+.rpt-ai-summary__body {
+  font-size: var(--font-size-sm);
+  line-height: var(--leading-relaxed, 1.6);
+  margin: 0;
+}
+.rpt-ai-summary__list {
+  font-size: var(--font-size-sm);
+  line-height: var(--leading-relaxed, 1.6);
+  padding-left: var(--space-lg);
+  margin: 0;
+}
+.rpt-ai-summary__list li {
+  margin-bottom: var(--space-xs);
+}
+.rpt-ai-summary__footer {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted, #64748b);
+  margin-top: var(--space-lg);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+.rpt-ai-summary__loading {
+  padding: var(--space-md);
+}
+
 /* ── Empty state ─────────────────────────────────────────────────────── */
 .empty-state__icon {
   font-size: 2.5rem;
