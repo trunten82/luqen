@@ -47,7 +47,7 @@
   {{#if (eq activeTab 'providers')}}
   <div id="tab-providers" class="tab-content" role="tabpanel">
 
-    <div class="table-wrapper mt-sm">
+    <div class="table-responsive mt-sm" role="region" aria-label="LLM providers table" tabindex="0">
       <table class="table" aria-label="LLM providers">
         <thead>
           <tr>
@@ -63,27 +63,27 @@
           <tr id="provider-{{id}}">
             <td data-label="Name">{{name}}</td>
             <td data-label="Type"><span class="badge badge--neutral">{{type}}</span></td>
-            <td data-label="Base URL">{{#if baseUrl}}<code>{{baseUrl}}</code>{{else}}&mdash;{{/if}}</td>
+            <td data-label="Base URL">{{#if baseUrl}}<code style="word-break: break-all">{{baseUrl}}</code>{{else}}&mdash;{{/if}}</td>
             <td data-label="Status">
               <span class="badge {{statusClass}}">{{statusLabel}}</span>
             </td>
             <td data-label="Actions">
               <div class="btn-group">
-                <button
-                  hx-post="/admin/llm/providers/{{id}}/test"
-                  hx-target="#llm-messages"
-                  hx-swap="innerHTML"
-                  hx-include="#global-csrf"
-                  class="btn btn--sm btn--secondary"
-                  type="button">Test</button>
-                <button
-                  hx-delete="/admin/llm/providers/{{id}}"
-                  hx-confirm="Delete provider {{name}}? All associated models will also be removed."
-                  hx-target="#llm-messages"
-                  hx-swap="innerHTML"
-                  hx-include="#global-csrf"
-                  class="btn btn--sm btn--danger"
-                  type="button">Delete</button>
+                <form hx-post="/admin/llm/providers/{{id}}/test"
+                      hx-target="#llm-messages"
+                      hx-swap="innerHTML"
+                      style="display:inline">
+                  <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+                  <button type="submit" class="btn btn--sm btn--secondary">Test</button>
+                </form>
+                <form hx-delete="/admin/llm/providers/{{id}}"
+                      hx-confirm="Delete provider {{name}}? All associated models will also be removed."
+                      hx-target="#llm-messages"
+                      hx-swap="innerHTML"
+                      style="display:inline">
+                  <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+                  <button type="submit" class="btn btn--sm btn--danger">Delete</button>
+                </form>
               </div>
             </td>
           </tr>
@@ -107,7 +107,7 @@
             hx-swap="innerHTML"
             data-reset-on-success>
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        <div class="form-row">
+        <div class="form-row" style="flex-wrap: wrap">
           <div class="form-group">
             <label for="prov-name">Name <span aria-hidden="true">*</span></label>
             <input type="text" id="prov-name" name="name" class="input" required
@@ -123,7 +123,7 @@
             </select>
           </div>
         </div>
-        <div class="form-row">
+        <div class="form-row" style="flex-wrap: wrap">
           <div class="form-group">
             <label for="prov-apikey">API Key</label>
             <input type="password" id="prov-apikey" name="apiKey" class="input"
@@ -158,37 +158,39 @@
       </div>
       <div class="card__body">
         {{#if models.length}}
-        <table class="table" aria-label="Models for {{name}}">
-          <thead>
-            <tr>
-              <th scope="col">Model ID</th>
-              <th scope="col">Display Name</th>
-              <th scope="col">Status</th>
-              <th scope="col">{{t "common.actions"}}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {{#each models}}
-            <tr id="model-{{id}}">
-              <td data-label="Model ID"><code>{{modelId}}</code></td>
-              <td data-label="Display Name">{{displayName}}</td>
-              <td data-label="Status">
-                <span class="badge {{statusClass}}">{{statusLabel}}</span>
-              </td>
-              <td data-label="Actions">
-                <button
-                  hx-delete="/admin/llm/models/{{id}}"
-                  hx-confirm="Delete model {{displayName}}?"
-                  hx-target="#llm-messages"
-                  hx-swap="innerHTML"
-                  hx-include="#global-csrf"
-                  class="btn btn--sm btn--danger"
-                  type="button">Delete</button>
-              </td>
-            </tr>
-            {{/each}}
-          </tbody>
-        </table>
+        <div class="table-responsive" role="region" aria-label="Models for {{name}}" tabindex="0">
+          <table class="table" aria-label="Models for {{name}}">
+            <thead>
+              <tr>
+                <th scope="col">Model ID</th>
+                <th scope="col">Display Name</th>
+                <th scope="col">Status</th>
+                <th scope="col">{{t "common.actions"}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each models}}
+              <tr id="model-{{id}}">
+                <td data-label="Model ID"><code style="word-break: break-all">{{modelId}}</code></td>
+                <td data-label="Display Name">{{displayName}}</td>
+                <td data-label="Status">
+                  <span class="badge {{statusClass}}">{{statusLabel}}</span>
+                </td>
+                <td data-label="Actions">
+                  <form hx-delete="/admin/llm/models/{{id}}"
+                        hx-confirm="Delete model {{displayName}}?"
+                        hx-target="#llm-messages"
+                        hx-swap="innerHTML"
+                        style="display:inline">
+                    <input type="hidden" name="_csrf" value="{{../../csrfToken}}">
+                    <button type="submit" class="btn btn--sm btn--danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
         {{else}}
         <p class="text-muted">No models registered for this provider.</p>
 
@@ -212,7 +214,7 @@
             hx-swap="innerHTML"
             data-reset-on-success>
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        <div class="form-row">
+        <div class="form-row" style="flex-wrap: wrap">
           <div class="form-group">
             <label for="model-provider">Provider <span aria-hidden="true">*</span></label>
             <select id="model-provider" name="providerId" class="input" required
@@ -234,7 +236,7 @@
             </select>
           </div>
         </div>
-        <div class="form-row">
+        <div class="form-row" style="flex-wrap: wrap">
           <div class="form-group">
             <label for="model-name">Display Name <span aria-hidden="true">*</span></label>
             <input type="text" id="model-name" name="displayName" class="input" required
@@ -268,15 +270,16 @@
             {{#each assignedModels}}
             <li>
               <span class="badge badge--info">{{name}}</span>
-              <button
-                hx-delete="/admin/llm/capabilities/{{../name}}/unassign/{{id}}"
-                hx-confirm="Unassign this model from {{../name}}?"
-                hx-target="#llm-messages"
-                hx-swap="innerHTML"
-                hx-include="#global-csrf"
-                class="btn btn--xs btn--ghost"
-                type="button"
-                aria-label="Unassign {{name}}">&times;</button>
+              <form hx-delete="/admin/llm/capabilities/{{../name}}/unassign/{{id}}"
+                    hx-confirm="Unassign this model from {{../name}}?"
+                    hx-target="#llm-messages"
+                    hx-swap="innerHTML"
+                    style="display:inline">
+                <input type="hidden" name="_csrf" value="{{../../csrfToken}}">
+                <button type="submit"
+                  class="btn btn--xs btn--ghost"
+                  aria-label="Unassign {{name}}">&times;</button>
+              </form>
             </li>
             {{/each}}
           </ul>
@@ -291,7 +294,7 @@
                 hx-swap="innerHTML"
                 data-reset-on-success>
             <input type="hidden" name="_csrf" value="{{../csrfToken}}">
-            <div class="form-row">
+            <div class="form-row" style="flex-wrap: wrap">
               <div class="form-group" style="flex:1">
                 <label for="cap-model-{{name}}" class="sr-only">Assign model to {{name}}</label>
                 <select id="cap-model-{{name}}" name="modelId" class="input" required>
@@ -326,10 +329,13 @@
         <h2 class="card__title"><code>{{capability}}</code></h2>
         {{#if isCustom}}
         <span class="badge badge--info">Custom</span>
-        {{else}}
+        {{else if template}}
         <span class="badge badge--neutral">Default</span>
+        {{else}}
+        <span class="badge badge--neutral">Not Available</span>
         {{/if}}
       </div>
+      {{#if template}}
       <form class="card__body"
             hx-put="/admin/llm/prompts/{{capability}}"
             hx-target="#llm-messages"
@@ -344,21 +350,29 @@
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn--primary">Save Override</button>
-          {{#if isCustom}}
-          <button type="button"
-                  hx-delete="/admin/llm/prompts/{{capability}}"
-                  hx-confirm="Reset prompt for {{capability}} to the default?"
-                  hx-target="#llm-messages"
-                  hx-swap="innerHTML"
-                  hx-include="#global-csrf"
-                  class="btn btn--secondary">Reset to Default</button>
-          {{/if}}
         </div>
       </form>
+      {{#if isCustom}}
+      <form class="card__body" style="padding-top:0"
+            hx-delete="/admin/llm/prompts/{{capability}}"
+            hx-confirm="Reset prompt for {{capability}} to the default?"
+            hx-target="#llm-messages"
+            hx-swap="innerHTML">
+        <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+        <div class="form-actions">
+          <button type="submit" class="btn btn--secondary">Reset to Default</button>
+        </div>
+      </form>
+      {{/if}}
+      {{else}}
+      <div class="card__body">
+        <p class="text-muted">This capability does not have a prompt template yet. It will be available in a future update.</p>
+      </div>
+      {{/if}}
     </div>
     {{/each}}
     {{else}}
-    <div class="alert alert--warning mt-sm">No prompts found. Ensure the LLM service is seeded.</div>
+    <div class="alert alert--info mt-sm">Prompt management is not available when the LLM service is disconnected.</div>
     {{/if}}
   </div>
   {{/if}}
@@ -367,13 +381,31 @@
 
   <script>
   (function () {
+    var userEditedName = false;
+
+    var nameInput = document.getElementById('model-name');
+    if (nameInput) {
+      nameInput.addEventListener('input', function () {
+        userEditedName = true;
+      });
+    }
+
     /* Auto-fill display name from selected remote model */
     document.addEventListener('change', function (e) {
       if (e.target && e.target.id === 'remote-model-list') {
-        var nameInput = document.getElementById('model-name');
-        if (nameInput && !nameInput.value) {
-          nameInput.value = e.target.options[e.target.selectedIndex].text;
+        var ni = document.getElementById('model-name');
+        if (ni && !userEditedName) {
+          ni.value = e.target.options[e.target.selectedIndex].text;
         }
+      }
+    });
+
+    /* Reset flag when provider changes (new model list loaded) */
+    document.addEventListener('change', function (e) {
+      if (e.target && e.target.id === 'model-provider') {
+        userEditedName = false;
+        var ni = document.getElementById('model-name');
+        if (ni) ni.value = '';
       }
     });
   })();
