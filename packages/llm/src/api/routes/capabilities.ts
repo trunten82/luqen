@@ -51,10 +51,19 @@ export async function registerCapabilityRoutes(
         return;
       }
 
+      let priority = body.priority != null ? Number(body.priority) : 0;
+      if (priority === 0) {
+        const maxPri = await db.getMaxCapabilityPriority(
+          name as CapabilityName,
+          body.orgId != null ? String(body.orgId) : undefined,
+        );
+        priority = maxPri + 1;
+      }
+
       const assignment = await db.assignCapability({
         capability: name as CapabilityName,
         modelId: String(body.modelId),
-        ...(body.priority != null ? { priority: Number(body.priority) } : {}),
+        priority,
         ...(body.orgId != null ? { orgId: String(body.orgId) } : {}),
       });
 
@@ -87,6 +96,40 @@ export async function registerCapabilityRoutes(
         return;
       }
       await reply.status(204).send();
+    } catch (_err) {
+      await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+
+  // PATCH /api/v1/capabilities/:name/assign/:modelId — update priority
+  app.patch('/api/v1/capabilities/:name/assign/:modelId', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    try {
+      const { name, modelId } = request.params as { name: string; modelId: string };
+      const body = request.body as Record<string, unknown>;
+
+      if (!(CAPABILITY_NAMES as readonly string[]).includes(name)) {
+        await reply.status(400).send({
+          error: `Invalid capability name. Valid names: ${CAPABILITY_NAMES.join(', ')}`,
+          statusCode: 400,
+        });
+        return;
+      }
+
+      if (body.priority === undefined || typeof body.priority !== 'number') {
+        await reply.status(400).send({ error: 'priority is required', statusCode: 400 });
+        return;
+      }
+
+      const assignment = await db.assignCapability({
+        capability: name as CapabilityName,
+        modelId,
+        priority: body.priority,
+        ...(body.orgId != null ? { orgId: String(body.orgId) } : {}),
+      });
+
+      await reply.send({ updated: true, priority: assignment.priority });
     } catch (_err) {
       await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
     }

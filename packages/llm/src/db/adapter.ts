@@ -37,6 +37,9 @@ export interface DbAdapter {
   // Full chain for retry
   getModelsForCapability(capability: CapabilityName, orgId?: string): Promise<readonly Model[]>;
 
+  // Priority helpers
+  getMaxCapabilityPriority(capability: CapabilityName, orgId?: string): Promise<number>;
+
   // OAuth clients
   getClientById(id: string): Promise<OAuthClient | undefined>;
   createClient(data: { name: string; secretHash: string; scopes: readonly string[]; grantTypes: readonly string[]; orgId: string }): Promise<OAuthClient>;

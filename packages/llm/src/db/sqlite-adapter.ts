@@ -398,6 +398,16 @@ export class SqliteAdapter implements DbAdapter {
     return rows.map(toPromptOverride);
   }
 
+  // ---- getMaxCapabilityPriority ----
+
+  async getMaxCapabilityPriority(capability: CapabilityName, orgId?: string): Promise<number> {
+    const resolvedOrgId = orgId ?? 'system';
+    const row = this.conn.prepare(
+      'SELECT MAX(priority) as max_pri FROM capability_assignments WHERE capability = ? AND org_id = ?'
+    ).get(capability, resolvedOrgId) as { max_pri: number | null } | undefined;
+    return row?.max_pri ?? -1;
+  }
+
   // ---- getModelsForCapability ----
 
   async getModelsForCapability(capability: CapabilityName, orgId?: string): Promise<readonly Model[]> {
