@@ -15,6 +15,7 @@ import { registerRequirementRoutes } from './routes/requirements.js';
 import { registerComplianceRoutes } from './routes/compliance.js';
 import { registerUpdateRoutes } from './routes/updates.js';
 import { registerSourceRoutes } from './routes/sources.js';
+import { createLLMClient } from '../llm/llm-client.js';
 import { registerWebhookRoutes } from './routes/webhooks.js';
 import { registerUserRoutes } from './routes/users.js';
 import { registerClientRoutes } from './routes/clients.js';
@@ -39,6 +40,10 @@ export interface ServerOptions {
   readonly reseedInterval?: string;
   /** Skip the automatic baseline seed on startup. Useful in tests. */
   readonly skipSeed?: boolean;
+  /** @luqen/llm service URL (e.g. http://localhost:4200) */
+  readonly llmUrl?: string;
+  /** @luqen/llm service API key */
+  readonly llmApiKey?: string;
 }
 
 function parseInterval(s: string): number {
@@ -64,7 +69,11 @@ export async function createServer(options: ServerOptions) {
     cache,
     reseedInterval = 'off',
     skipSeed = false,
+    llmUrl,
+    llmApiKey,
   } = options;
+
+  const llmClient = createLLMClient({ llmUrl, llmApiKey });
 
   const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }); // 10MB for large site scans
 
@@ -150,7 +159,7 @@ export async function createServer(options: ServerOptions) {
   await registerRequirementRoutes(app, db);
   await registerComplianceRoutes(app, db, cache);
   await registerUpdateRoutes(app, db);
-  await registerSourceRoutes(app, db);
+  await registerSourceRoutes(app, db, llmClient);
   await registerWebhookRoutes(app, db);
   await registerUserRoutes(app, db);
   await registerClientRoutes(app, db);

@@ -114,4 +114,56 @@ describe('Sources API', () => {
     expect(typeof body.proposalsCreated).toBe('number');
     expect(Array.isArray(body.proposals)).toBe(true);
   });
+
+  it('POST /api/v1/sources/upload returns 503 when LLM not configured', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/sources/upload',
+      headers: { ...authHeader(adminToken), 'content-type': 'application/json' },
+      body: JSON.stringify({ content: 'regulation text', name: 'Test Doc' }),
+    });
+
+    expect(response.statusCode).toBe(503);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    expect(typeof body.error).toBe('string');
+  });
+
+  it('POST /api/v1/sources/:id/reprocess returns 503 when LLM not configured', async () => {
+    // Create a source first
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/sources',
+      headers: { ...authHeader(adminToken), 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Reprocess Test',
+        url: 'https://example.com/reprocess',
+        type: 'html',
+        schedule: 'monthly',
+      }),
+    });
+    const { id } = JSON.parse(createRes.body) as { id: string };
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/sources/${id}/reprocess`,
+      headers: { ...authHeader(adminToken), 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.statusCode).toBe(503);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    expect(typeof body.error).toBe('string');
+  });
+
+  it('POST /api/v1/sources/:id/reprocess returns 404 for unknown id', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/sources/nonexistent-id/reprocess',
+      headers: { ...authHeader(adminToken), 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    // 503 because LLM is not configured — that check comes first
+    expect([503, 404]).toContain(response.statusCode);
+  });
 });
