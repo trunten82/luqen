@@ -229,32 +229,33 @@ cd ~/luqen
 git pull
 npm install
 npm run build --workspaces
-systemctl restart luqen-compliance luqen-dashboard
+systemctl restart luqen-compliance luqen-llm luqen-dashboard
 ```
 
 Or as a one-liner:
 
 ```bash
-cd ~/luqen && git pull && npm install && npm run build --workspaces && systemctl restart luqen-compliance luqen-dashboard
+cd ~/luqen && git pull && npm install && npm run build --workspaces && systemctl restart luqen-compliance luqen-llm luqen-dashboard
 ```
 
 ### Service management
 
 | Action | Command |
 |--------|---------|
-| **Status** | `systemctl status luqen-compliance luqen-dashboard` |
+| **Status** | `systemctl status luqen-compliance luqen-llm luqen-dashboard` |
 | **Dashboard logs** | `journalctl -u luqen-dashboard -f` |
 | **Compliance logs** | `journalctl -u luqen-compliance -f` |
-| **Stop all** | `systemctl stop luqen-dashboard luqen-compliance` |
-| **Start all** | `systemctl start luqen-compliance luqen-dashboard` |
-| **Restart all** | `systemctl restart luqen-compliance luqen-dashboard` |
-| **Disable auto-start** | `systemctl disable luqen-dashboard luqen-compliance` |
+| **LLM logs** | `journalctl -u luqen-llm -f` |
+| **Stop all** | `systemctl stop luqen-dashboard luqen-llm luqen-compliance` |
+| **Start all** | `systemctl start luqen-compliance luqen-llm luqen-dashboard` |
+| **Restart all** | `systemctl restart luqen-compliance luqen-llm luqen-dashboard` |
+| **Disable auto-start** | `systemctl disable luqen-dashboard luqen-llm luqen-compliance` |
 
 ### Clean reinstall
 
 ```bash
-systemctl stop luqen-dashboard luqen-compliance
-systemctl disable luqen-dashboard luqen-compliance
+systemctl stop luqen-dashboard luqen-llm luqen-compliance
+systemctl disable luqen-dashboard luqen-llm luqen-compliance
 rm -rf ~/luqen /etc/systemd/system/luqen-*.service
 systemctl daemon-reload
 curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh | bash
@@ -264,8 +265,8 @@ curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh |
 
 ## New in v2.6.0
 
-- **LLM pipeline** — upload regulation documents from the dashboard Sources page; an LLM plugin (Claude, GPT-4o, Gemini, or Ollama) extracts regulations into structured proposals
-- **Dynamic plugin config** — LLM plugins fetch available models from the provider API at runtime (dropdown + refresh button)
+- **@luqen/llm service** — new standalone microservice (port 4200) replacing the former LLM dashboard plugins; manages providers (Anthropic, OpenAI, Ollama, OpenAI-compatible) with full CRUD and OAuth2 authentication
+- **LLM pipeline** — upload regulation documents from the dashboard Sources page; the LLM service extracts regulations into structured proposals
 - **Trust levels** — proposals from W3C/WCAG sources are auto-acknowledged; LLM-extracted proposals require human review
 - **Wildcard requirement matching** — regulations that mandate "all WCAG AA" now match any criterion violation
 - **Async source scanning** — background execution prevents gateway timeouts on large source sets

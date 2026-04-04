@@ -803,10 +803,11 @@ install_and_build() {
 
   cd "${INSTALL_DIR}"
   run_quiet "Installing npm dependencies" npm install --prefer-offline
-  # Build order matters: core → compliance → branding → dashboard
+  # Build order matters: core → compliance → branding → llm → dashboard
   run_quiet "Building @luqen/core" npm run build -w packages/core
   run_quiet "Building @luqen/compliance" npm run build -w packages/compliance
   run_quiet "Building @luqen/branding" npm run build -w packages/branding
+  run_quiet "Building @luqen/llm" npm run build -w packages/llm
   run_quiet "Building @luqen/dashboard" npm run build -w packages/dashboard
 }
 
@@ -832,6 +833,15 @@ generate_secrets() {
     mkdir -p "${BRANDING_KEYS_DIR}"
     (cd "${INSTALL_DIR}/packages/branding" && node dist/cli.js keys generate) >/dev/null 2>&1
     success "Branding JWT RS256 key pair generated"
+  fi
+
+  LLM_KEYS_DIR="${INSTALL_DIR}/packages/llm/keys"
+  if [ -f "${LLM_KEYS_DIR}/private.pem" ]; then
+    info "LLM JWT keys already exist -- reusing"
+  else
+    mkdir -p "${LLM_KEYS_DIR}"
+    (cd "${INSTALL_DIR}/packages/llm" && node dist/cli.js keys generate) >/dev/null 2>&1
+    success "LLM JWT RS256 key pair generated"
   fi
 
   SESSION_SECRET=$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")
@@ -988,6 +998,26 @@ RestartSec=5
 WantedBy=multi-user.target
 UNIT
 
+  # LLM service
+  cat > /etc/systemd/system/luqen-llm.service <<UNIT
+[Unit]
+Description=Luqen LLM Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${INSTALL_DIR}/packages/llm
+Environment=NODE_ENV=production
+Environment=LLM_PORT=4200
+ExecStart=${node_path} ${INSTALL_DIR}/packages/llm/dist/cli.js serve --port 4200
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
   # Dashboard service — absolute paths everywhere
   local env_webservice=""
   if [ "${PA11Y_MODE}" = "external" ] && [ -n "${PA11Y_URL}" ]; then
@@ -997,8 +1027,8 @@ UNIT
   cat > /etc/systemd/system/luqen-dashboard.service <<UNIT
 [Unit]
 Description=Luqen Dashboard
-After=network.target luqen-compliance.service luqen-branding.service
-Wants=luqen-compliance.service luqen-branding.service
+After=network.target luqen-compliance.service luqen-branding.service luqen-llm.service
+Wants=luqen-compliance.service luqen-branding.service luqen-llm.service
 
 [Service]
 Type=simple
@@ -1016,6 +1046,7 @@ UNIT
   systemctl daemon-reload >/dev/null 2>&1
   systemctl enable luqen-compliance.service >/dev/null 2>&1
   systemctl enable luqen-branding.service >/dev/null 2>&1
+  systemctl enable luqen-llm.service >/dev/null 2>&1
   systemctl enable luqen-dashboard.service >/dev/null 2>&1
   success "systemd services created and enabled"
 }
@@ -1052,6 +1083,19 @@ start_services_and_post_install() {
       sleep 2
     done
     success "Branding service running"
+
+    systemctl start luqen-llm.service >/dev/null 2>&1
+    info "Waiting for LLM service..."
+    attempts=0
+    until curl -sf "http://localhost:4200/api/v1/health" >/dev/null 2>&1; do
+      attempts=$(( attempts + 1 ))
+      if [ "${attempts}" -ge 15 ]; then
+        error "LLM service did not start. Check: journalctl -u luqen-llm"
+        return
+      fi
+      sleep 2
+    done
+    success "LLM service running"
 
     systemctl start luqen-dashboard.service >/dev/null 2>&1
     info "Waiting for dashboard..."
@@ -1099,6 +1143,21 @@ start_services_and_post_install() {
     done
     success "Branding service running"
 
+    nohup node "${INSTALL_DIR}/packages/llm/dist/cli.js" serve --port 4200 \
+      > /tmp/luqen-llm-install.log 2>&1 &
+    LLM_PID=$!
+    info "Waiting for LLM service..."
+    attempts=0
+    until curl -sf "http://localhost:4200/api/v1/health" >/dev/null 2>&1; do
+      attempts=$(( attempts + 1 ))
+      if [ "${attempts}" -ge 15 ]; then
+        error "LLM service did not start. Check: /tmp/luqen-llm-install.log"
+        return
+      fi
+      sleep 2
+    done
+    success "LLM service running"
+
     nohup node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" serve --config "${CONFIG_FILE}" \
       > /tmp/luqen-dash-install.log 2>&1 &
     DASH_PID=$!
@@ -1145,8 +1204,8 @@ start_services_and_post_install() {
 
   # Stop temp processes if not using systemd
   if ! command -v systemctl &>/dev/null; then
-    kill "${COMP_PID}" "${DASH_PID}" 2>/dev/null || true
-    wait "${COMP_PID}" "${DASH_PID}" 2>/dev/null || true
+    kill "${COMP_PID}" "${LLM_PID:-}" "${DASH_PID}" 2>/dev/null || true
+    wait "${COMP_PID}" "${LLM_PID:-}" "${DASH_PID}" 2>/dev/null || true
   fi
 }
 
@@ -1250,6 +1309,7 @@ show_summary_bare_metal() {
   printf "  %sURLs:%s\n" "${BOLD}" "${RESET}"
   printf "    Dashboard:   %s%shttp://localhost:${DASHBOARD_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
   printf "    Compliance:  %s%shttp://localhost:${COMPLIANCE_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
+  printf "    LLM:         %s%shttp://localhost:4200%s\n" "${BOLD}" "${CYAN}" "${RESET}"
   if [ "${PA11Y_MODE}" = "external" ] && [ -n "${PA11Y_URL}" ]; then
     printf "    pa11y:       %s\n" "${PA11Y_URL}"
   else
@@ -1275,14 +1335,16 @@ show_summary_bare_metal() {
 
   if command -v systemctl &>/dev/null; then
     printf "  %sService management:%s\n" "${BOLD}" "${RESET}"
-    printf "    systemctl status  luqen-compliance luqen-dashboard\n"
-    printf "    systemctl restart luqen-compliance luqen-dashboard\n"
-    printf "    systemctl stop    luqen-compliance luqen-dashboard\n"
+    printf "    systemctl status  luqen-compliance luqen-llm luqen-dashboard\n"
+    printf "    systemctl restart luqen-compliance luqen-llm luqen-dashboard\n"
+    printf "    systemctl stop    luqen-compliance luqen-llm luqen-dashboard\n"
     printf "    journalctl -fu    luqen-dashboard\n"
+    printf "    journalctl -fu    luqen-llm\n"
     printf "\n"
 
     printf "  %sCurrent status:%s\n" "${BOLD}" "${RESET}"
     systemctl --no-pager status luqen-compliance.service 2>/dev/null | head -3 | sed 's/^/    /' || true
+    systemctl --no-pager status luqen-llm.service 2>/dev/null | head -3 | sed 's/^/    /' || true
     systemctl --no-pager status luqen-dashboard.service 2>/dev/null | head -3 | sed 's/^/    /' || true
     printf "\n"
   else

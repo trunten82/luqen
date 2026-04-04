@@ -27,6 +27,7 @@ docker compose up -d
 
 Services:
 - `compliance` on port **4000** (REST API + MCP)
+- `llm` on port **4200** (LLM provider management)
 - `dashboard` on port **5000** (Web UI)
 
 The compliance container automatically generates JWT keys and seeds baseline data on first start. The scanner uses the pa11y library directly inside the container — no external pa11y-webservice is needed.
@@ -49,6 +50,9 @@ SESSION_SECRET=<min 32 random bytes>
 
 # Compliance service (optional overrides)
 # COMPLIANCE_PORT=4000
+
+# LLM service (optional overrides)
+# LLM_PORT=4200
 
 # Dashboard (optional overrides)
 # DASHBOARD_PORT=5000
@@ -80,6 +84,7 @@ For production Docker deployments, ensure the SQLite database file is on a persi
 | Volume | Mount path | Purpose |
 |--------|------------|---------|
 | `compliance-data` | `/data` | Compliance SQLite database and JWT keys |
+| `llm-data` | `/app/data` | LLM SQLite database (`llm.db`) and JWT keys |
 | `dashboard-data` | `/app/data` | Dashboard SQLite database (`dashboard.db`) — persistent mount recommended |
 | `dashboard-reports` | `/app/reports` | Generated scan reports |
 
@@ -151,6 +156,9 @@ docker compose exec compliance node dist/cli.js users create \
 ```bash
 # Compliance service
 curl http://localhost:4000/api/v1/health
+
+# LLM service
+curl http://localhost:4200/api/v1/health
 
 # Dashboard (redirects to login when healthy)
 curl -I http://localhost:5000

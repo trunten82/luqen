@@ -144,10 +144,16 @@ Full reference of environment variables for each service:
 | compliance | `COMPLIANCE_JWT_PUBLIC_KEY` | Yes | Path to public PEM file |
 | compliance | `COMPLIANCE_CORS_ORIGIN` | Yes | Frontend origin(s) |
 | compliance | `COMPLIANCE_PORT` | No | Default: 4000 |
+| llm | `LLM_DB_PATH` | If sqlite | Absolute path to `llm.db` |
+| llm | `LLM_JWT_PRIVATE_KEY` | Yes | Path to private PEM file |
+| llm | `LLM_JWT_PUBLIC_KEY` | Yes | Path to public PEM file |
+| llm | `LLM_CORS_ORIGIN` | Yes | Frontend origin(s) |
+| llm | `LLM_PORT` | No | Default: 4200 |
 | dashboard | `DASHBOARD_SESSION_SECRET` | Yes | Min 32 bytes |
 | dashboard | `DASHBOARD_COMPLIANCE_URL` | Yes | Internal URL of compliance service |
 | dashboard | `DASHBOARD_COMPLIANCE_CLIENT_ID` | Yes | OAuth client ID |
 | dashboard | `DASHBOARD_COMPLIANCE_CLIENT_SECRET` | Yes | OAuth client secret |
+| dashboard | `DASHBOARD_LLM_URL` | Yes | Internal URL of LLM service |
 
 ---
 

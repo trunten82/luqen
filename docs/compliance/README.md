@@ -1745,7 +1745,7 @@ Each monitored source has a `sourceCategory` field that controls how the scanner
 |----------|--------|-------------|
 | `w3c-policy` | `W3cPolicyParser` | Parses W3C WAI YAML policy listings into jurisdictions/regulations |
 | `wcag-upstream` | `WcagUpstreamParser` | Parses the WCAG Quick Reference for per-criterion success criteria metadata |
-| `government` | LLM extractor | Extracts regulations from government web pages using an LLM plugin |
+| `government` | LLM extractor | Extracts regulations from government web pages using the @luqen/llm service |
 | `generic` | LLM extractor | General-purpose extraction for community sources and supplementary data |
 
 ### Requirement differ
@@ -1756,59 +1756,46 @@ When the pipeline re-runs, it computes a structured diff (`RequirementDiffer`) b
 
 ## LLM Provider Integration
 
-The compliance service supports pluggable LLM providers for parsing unstructured regulatory content. LLM extraction is used for `government` and `generic` source categories.
+The compliance service supports pluggable LLM providers for parsing unstructured regulatory content. LLM extraction is used for `government` and `generic` source categories. LLM capability is provided by the `@luqen/llm` microservice (port 4200).
 
-### IComplianceLLMProvider interface
+### Configuring the LLM service
 
-Any compliance LLM plugin implements this interface:
+The `@luqen/llm` service manages providers and models independently of the dashboard. Configure providers at **Admin > LLM Providers** in the dashboard, or directly via the LLM service API:
 
-```typescript
-interface IComplianceLLMProvider {
-  extract(prompt: string, content: string): Promise<LLMExtractionResult>;
-}
-```
+| Provider type | Notes |
+|---------------|-------|
+| Anthropic | Requires `ANTHROPIC_API_KEY` |
+| OpenAI | Requires `OPENAI_API_KEY` or custom `baseUrl` for compatible endpoints |
+| Ollama | Requires a running Ollama instance at the configured URL |
 
-The `extract` method receives a system prompt and source content, and returns structured JSON describing regulations and requirements found in the content.
+See [packages/llm/README.md](../../packages/llm/README.md) for the full API reference and configuration options.
 
-### Configuring an LLM plugin
-
-Install one of the four LLM plugins from the dashboard **Plugins** page, then configure it:
-
-| Plugin | Model | Notes |
-|--------|-------|-------|
-| `@luqen/plugin-llm-anthropic` | Claude (claude-3-5-haiku / claude-3-5-sonnet) | Requires `ANTHROPIC_API_KEY` |
-| `@luqen/plugin-llm-openai` | GPT-4o / OpenAI-compatible | Requires `OPENAI_API_KEY` or custom `baseUrl` |
-| `@luqen/plugin-llm-gemini` | Gemini 1.5 Flash / Pro | Requires `GEMINI_API_KEY` |
-| `@luqen/plugin-llm-ollama` | Any Ollama local model | Requires running Ollama instance |
-
-See [docs/plugins/README.md](../plugins/README.md) for full configuration reference.
-
-When no LLM plugin is active, `government` and `generic` sources are skipped during pipeline runs — only `w3c-policy` and `wcag-upstream` parsers run. The service logs a warning but does not fail.
+When the LLM service is unavailable or no providers are configured, `government` and `generic` sources are skipped during pipeline runs — only `w3c-policy` and `wcag-upstream` parsers run. The service logs a warning but does not fail.
 
 ### LLM pipeline (source intelligence extraction)
 
-The dashboard acts as a bridge between the compliance service and the active LLM plugin. At startup, the dashboard auto-registers itself with the compliance service by generating an API key and calling `POST /api/v1/admin/register-llm`. This enables the compliance service to delegate LLM extraction calls back to the dashboard.
+The dashboard acts as a bridge between the compliance service and the `@luqen/llm` service. At startup, the dashboard auto-registers itself with the compliance service by generating an API key and calling `POST /api/v1/admin/register-llm`. This enables the compliance service to delegate LLM extraction calls back to the dashboard, which forwards them to the LLM service.
 
 **Flow:**
 
 ```
-Compliance service                    Dashboard                      LLM plugin
+Compliance service                    Dashboard                    @luqen/llm
       │                                   │                              │
       │  POST /api/v1/llm/extract         │                              │
       │  (DashboardLLMBridge) ───────────►│                              │
-      │                                   │  plugin.extract(prompt, content)
+      │                                   │  POST /api/v1/extract        │
       │                                   │─────────────────────────────►│
       │                                   │◄─────────────────────────────│
       │◄──────────────────────────────────│  structured JSON             │
 ```
 
 - `DashboardLLMBridge` in the compliance service calls the dashboard's `POST /api/v1/llm/extract` endpoint
-- The dashboard routes the request to whichever LLM plugin is currently active, or to a specific plugin if `pluginId` is provided
+- The dashboard forwards the request to the `@luqen/llm` service using the configured provider
 - The response is structured JSON describing regulations and requirements found in the content
 
-### LLM plugin selector
+### LLM provider selector
 
-When multiple LLM plugins are installed and active, admins can choose which one processes each upload. The Upload Regulation form on the sources admin page includes an "LLM Provider" dropdown populated by `GET /api/v1/llm/plugins`. The selected `pluginId` flows through the entire chain: form -> dashboard -> compliance service -> bridge -> specific plugin. If no `pluginId` is specified, the default active LLM plugin is used.
+Admins can choose which provider processes each upload. The Upload Regulation form on the sources admin page includes an "LLM Provider" dropdown populated by `GET /api/v1/llm/providers` on the LLM service. The selected provider flows through the entire chain: form -> dashboard -> compliance service -> bridge -> LLM service. If no provider is specified, the default configured provider is used.
 
 ### Document upload endpoint
 
@@ -1826,7 +1813,7 @@ curl -X POST http://localhost:4000/api/v1/sources/upload \
   }'
 ```
 
-The dashboard proxies this via `POST /admin/sources/upload`, which provides the "Upload Regulation" form on the sources admin page. The form includes an "LLM Provider" dropdown so admins can choose which LLM plugin processes the extraction (see [LLM plugin selector](#llm-plugin-selector) above).
+The dashboard proxies this via `POST /admin/sources/upload`, which provides the "Upload Regulation" form on the sources admin page. The form includes an "LLM Provider" dropdown so admins can choose which provider processes the extraction.
 
 ### Async source scan
 
