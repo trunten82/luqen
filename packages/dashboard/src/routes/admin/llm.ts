@@ -150,13 +150,41 @@ export async function llmAdminRoutes(
 
       try {
         const result = await llmClient.testProvider(request.params.id);
-        const msg = result.message ?? (result.status === 'ok' ? 'Connection successful' : 'Connection failed');
-        const type = result.status === 'ok' ? 'success' : 'error';
-        return reply.header('content-type', 'text/html').send(toastHtml(msg, type));
+        const msg = result.ok ? 'Connection successful' : 'Connection failed';
+        const type = result.ok ? 'success' : 'error';
+        return reply.header('content-type', 'text/html').header('HX-Refresh', 'true').send(toastHtml(msg, type));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return reply.code(500).header('content-type', 'text/html').send(
           toastHtml(`Test failed: ${message}`, 'error'),
+        );
+      }
+    },
+  );
+
+  // ── GET /admin/llm/remote-models — fetch models from provider API ────────
+
+  server.get(
+    '/admin/llm/remote-models',
+    { preHandler: requirePermission('admin.system') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { providerId } = request.query as { providerId?: string };
+      if (!providerId || !llmClient) {
+        return reply.header('content-type', 'text/html').send(
+          '<option value="">Select a provider first</option>',
+        );
+      }
+      try {
+        const models = await llmClient.listRemoteModels(providerId);
+        const options = models.map((m) =>
+          `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name || m.id)}</option>`,
+        ).join('');
+        return reply.header('content-type', 'text/html').send(
+          `<option value="">Select model...</option>${options}`,
+        );
+      } catch {
+        return reply.header('content-type', 'text/html').send(
+          '<option value="">Failed to fetch models</option>',
         );
       }
     },
@@ -249,8 +277,8 @@ export async function llmAdminRoutes(
         displayName?: string;
       };
 
-      const modelId = (body.externalId ?? body.modelId)?.trim() ?? '';
-      const displayName = (body.name ?? body.displayName)?.trim() ?? '';
+      const modelId = (body.modelId ?? body.externalId)?.trim() ?? '';
+      const displayName = (body.displayName ?? body.name)?.trim() ?? '';
 
       if (!body.providerId?.trim() || !modelId || !displayName) {
         return reply.code(400).header('content-type', 'text/html').send(

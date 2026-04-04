@@ -180,8 +180,8 @@ export class LLMClient {
     await this.deleteRequest(`${this.baseUrl}/api/v1/providers/${encodeURIComponent(id)}`);
   }
 
-  async testProvider(id: string): Promise<{ status: string; message: string }> {
-    return this.apiFetch<{ status: string; message: string }>(
+  async testProvider(id: string): Promise<{ ok: boolean; status: string }> {
+    return this.apiFetch<{ ok: boolean; status: string }>(
       `${this.baseUrl}/api/v1/providers/${encodeURIComponent(id)}/test`,
       { method: 'POST', body: '{}' },
     );
