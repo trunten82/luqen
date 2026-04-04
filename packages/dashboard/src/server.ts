@@ -618,7 +618,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await compareRoutes(server, storage);
   await trendRoutes(server, storage);
   await scheduleRoutes(server, storage);
-  await reportRoutes(server, storage);
+  // ── LLM client (used in report routes and admin routes below) ───────────
+  const llmClient = createLLMClient(config.llmUrl, config.llmClientId, config.llmClientSecret);
+  if (llmClient) {
+    server.addHook('onClose', () => { llmClient.destroy(); });
+  }
+
+  await reportRoutes(server, storage, llmClient);
   await manualTestRoutes(server, storage);
   await assignmentRoutes(server, storage);
   await orgRoutes(server, storage);
@@ -626,12 +632,6 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await repoRoutes(server, storage, config);
   await gitCredentialRoutes(server, storage, config);
   await fixPrRoutes(server, storage, config);
-
-  // ── LLM client (used in admin routes below) ──────────────────────────────
-  const llmClient = createLLMClient(config.llmUrl, config.llmClientId, config.llmClientSecret);
-  if (llmClient) {
-    server.addHook('onClose', () => { llmClient.destroy(); });
-  }
 
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);

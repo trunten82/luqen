@@ -265,6 +265,21 @@ export class LLMClient {
     );
   }
 
+  // -- Generate Fix ───────────────────────────────────────────────────────
+
+  async generateFix(input: {
+    readonly wcagCriterion: string;
+    readonly issueMessage: string;
+    readonly htmlContext: string;
+    readonly cssContext?: string;
+    readonly orgId?: string;
+  }): Promise<{ fixedHtml: string; explanation: string; effort: string }> {
+    return this.apiFetch<{ fixedHtml: string; explanation: string; effort: string }>(
+      `${this.baseUrl}/api/v1/generate-fix`,
+      { method: 'POST', body: JSON.stringify(input) },
+    );
+  }
+
   // -- OAuth Clients (admin) ──────────────────────────────────────────────
 
   async listOAuthClients(): Promise<Array<{ id: string; name: string; scopes: string[]; grantTypes: string[]; orgId: string; createdAt: string }>> {
