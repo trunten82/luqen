@@ -5,7 +5,7 @@ import type {
   Provider, CreateProviderInput, UpdateProviderInput,
   Model, CreateModelInput,
   CapabilityAssignment, AssignCapabilityInput, CapabilityName,
-  OAuthClient, User,
+  OAuthClient, User, PromptOverride,
 } from '../types.js';
 import type { DbAdapter } from './adapter.js';
 
@@ -18,6 +18,15 @@ interface ProviderRow {
   base_url: string;
   api_key: string | null;
   status: string;
+  timeout: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PromptOverrideRow {
+  capability: string;
+  org_id: string;
+  template: string;
   created_at: string;
   updated_at: string;
 }
@@ -68,6 +77,17 @@ function toProvider(row: ProviderRow): Provider {
     baseUrl: row.base_url,
     ...(row.api_key !== null ? { apiKey: row.api_key } : {}),
     status: row.status as Provider['status'],
+    timeout: row.timeout,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toPromptOverride(row: PromptOverrideRow): PromptOverride {
+  return {
+    capability: row.capability as PromptOverride['capability'],
+    orgId: row.org_id,
+    template: row.template,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -179,6 +199,15 @@ export class SqliteAdapter implements DbAdapter {
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
     this.db.exec(SCHEMA_SQL);
+    try { this.db.exec('ALTER TABLE providers ADD COLUMN timeout INTEGER NOT NULL DEFAULT 120'); } catch { /* column already exists */ }
+    this.db.exec(`CREATE TABLE IF NOT EXISTS prompt_overrides (
+      capability TEXT NOT NULL,
+      org_id TEXT NOT NULL DEFAULT 'system',
+      template TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (capability, org_id)
+    );`);
   }
 
   async close(): Promise<void> {
@@ -206,9 +235,10 @@ export class SqliteAdapter implements DbAdapter {
   async createProvider(data: CreateProviderInput): Promise<Provider> {
     const id = randomUUID();
     const now = new Date().toISOString();
+    const timeout = data.timeout ?? 120;
     this.conn.prepare(
-      'INSERT INTO providers (id, name, type, base_url, api_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(id, data.name, data.type, data.baseUrl, data.apiKey ?? null, 'active', now, now);
+      'INSERT INTO providers (id, name, type, base_url, api_key, status, timeout, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, data.name, data.type, data.baseUrl, data.apiKey ?? null, 'active', timeout, now, now);
     const row = this.conn.prepare('SELECT * FROM providers WHERE id = ?').get(id) as ProviderRow;
     return toProvider(row);
   }
@@ -222,10 +252,11 @@ export class SqliteAdapter implements DbAdapter {
     const baseUrl = data.baseUrl ?? existing.base_url;
     const apiKey = data.apiKey !== undefined ? data.apiKey : existing.api_key;
     const status = data.status ?? existing.status;
+    const timeout = data.timeout ?? existing.timeout;
 
     this.conn.prepare(
-      'UPDATE providers SET name = ?, base_url = ?, api_key = ?, status = ?, updated_at = ? WHERE id = ?'
-    ).run(name, baseUrl, apiKey ?? null, status, now, id);
+      'UPDATE providers SET name = ?, base_url = ?, api_key = ?, status = ?, timeout = ?, updated_at = ? WHERE id = ?'
+    ).run(name, baseUrl, apiKey ?? null, status, timeout, now, id);
 
     const row = this.conn.prepare('SELECT * FROM providers WHERE id = ?').get(id) as ProviderRow;
     return toProvider(row);
@@ -328,6 +359,65 @@ export class SqliteAdapter implements DbAdapter {
     }
 
     return row ? toModel(row) : undefined;
+  }
+
+  // ---- Prompt overrides ----
+
+  async getPromptOverride(capability: CapabilityName, orgId?: string): Promise<PromptOverride | undefined> {
+    const resolvedOrgId = orgId ?? 'system';
+    const row = this.conn.prepare(
+      'SELECT * FROM prompt_overrides WHERE capability = ? AND org_id = ?'
+    ).get(capability, resolvedOrgId) as PromptOverrideRow | undefined;
+    return row ? toPromptOverride(row) : undefined;
+  }
+
+  async setPromptOverride(capability: CapabilityName, template: string, orgId?: string): Promise<PromptOverride> {
+    const resolvedOrgId = orgId ?? 'system';
+    const now = new Date().toISOString();
+    this.conn.prepare(
+      'INSERT INTO prompt_overrides (capability, org_id, template, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(capability, org_id) DO UPDATE SET template = excluded.template, updated_at = excluded.updated_at'
+    ).run(capability, resolvedOrgId, template, now, now);
+    const row = this.conn.prepare(
+      'SELECT * FROM prompt_overrides WHERE capability = ? AND org_id = ?'
+    ).get(capability, resolvedOrgId) as PromptOverrideRow;
+    return toPromptOverride(row);
+  }
+
+  async deletePromptOverride(capability: CapabilityName, orgId?: string): Promise<boolean> {
+    const resolvedOrgId = orgId ?? 'system';
+    const result = this.conn.prepare(
+      'DELETE FROM prompt_overrides WHERE capability = ? AND org_id = ?'
+    ).run(capability, resolvedOrgId);
+    return result.changes > 0;
+  }
+
+  async listPromptOverrides(): Promise<readonly PromptOverride[]> {
+    const rows = this.conn.prepare(
+      'SELECT * FROM prompt_overrides ORDER BY capability ASC, org_id ASC'
+    ).all() as PromptOverrideRow[];
+    return rows.map(toPromptOverride);
+  }
+
+  // ---- getModelsForCapability ----
+
+  async getModelsForCapability(capability: CapabilityName, orgId?: string): Promise<readonly Model[]> {
+    // Returns all models ordered by priority ASC, org-scoped first then system fallback
+    if (orgId !== undefined && orgId !== '') {
+      const rows = this.conn.prepare(`
+        SELECT m.*, ca.org_id AS _scope, ca.priority AS _priority FROM models m
+        INNER JOIN capability_assignments ca ON ca.model_id = m.id
+        WHERE ca.capability = ? AND (ca.org_id = ? OR ca.org_id = '')
+        ORDER BY (ca.org_id = ?) DESC, ca.priority ASC
+      `).all(capability, orgId, orgId) as ModelRow[];
+      return rows.map(toModel);
+    }
+    const rows = this.conn.prepare(`
+      SELECT m.* FROM models m
+      INNER JOIN capability_assignments ca ON ca.model_id = m.id
+      WHERE ca.capability = ? AND ca.org_id = ''
+      ORDER BY ca.priority ASC
+    `).all(capability) as ModelRow[];
+    return rows.map(toModel);
   }
 
   // ---- OAuth clients ----
