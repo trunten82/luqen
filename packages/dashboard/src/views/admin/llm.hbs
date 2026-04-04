@@ -259,9 +259,17 @@
           <p class="form-hint">Fallback chain (tried in order):</p>
           <ol class="fallback-chain" style="margin: 0 0 var(--space-sm) 0; padding-left: var(--space-md); list-style: decimal;">
             {{#each assignedModels}}
-            <li style="padding: var(--space-xs) 0; display: flex; align-items: center; gap: var(--space-xs);">
+            <li style="padding: var(--space-xs) 0; display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap;">
               <span class="badge badge--info">{{name}}</span>
-              <span class="text-muted text-sm">priority: {{priority}}</span>
+              <form hx-post="/admin/llm/capabilities/{{../name}}/priority/{{id}}"
+                    hx-target="#llm-messages" hx-swap="innerHTML"
+                    style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                <input type="hidden" name="_csrf" value="{{../../csrfToken}}">
+                <input type="number" name="priority" value="{{priority}}" min="0" max="99"
+                       class="input" style="width: 3.5rem; padding: 0.15rem 0.3rem; font-size: 0.8rem;"
+                       aria-label="Priority for {{name}}">
+                <button type="submit" class="btn btn--xs btn--ghost" title="Save priority">&#10003;</button>
+              </form>
               <button hx-delete="/admin/llm/capabilities/{{../name}}/unassign/{{id}}"
                       hx-confirm="Remove {{name}} from fallback chain?"
                       hx-target="#llm-messages"
@@ -293,11 +301,6 @@
                   <option value="{{id}}">{{displayName}} ({{modelId}})</option>
                   {{/each}}
                 </select>
-              </div>
-              <div class="form-group">
-                <label for="cap-priority-{{name}}" class="sr-only">Priority</label>
-                <input type="number" id="cap-priority-{{name}}" name="priority" class="input input--narrow"
-                       value="0" min="0" max="99" placeholder="Priority (0=highest)" />
               </div>
               <button type="submit" class="btn btn--primary btn--sm">Add to Chain</button>
             </div>

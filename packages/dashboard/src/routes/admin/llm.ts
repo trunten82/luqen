@@ -424,6 +424,33 @@ export async function llmAdminRoutes(
     },
   );
 
+  // ── POST /admin/llm/capabilities/:name/priority/:modelId — update priority ─
+
+  server.post<{ Params: { name: string; modelId: string } }>(
+    '/admin/llm/capabilities/:name/priority/:modelId',
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    async (request, reply) => {
+      if (!llmClient) {
+        return reply.code(503).header('content-type', 'text/html').send(toastHtml('LLM not configured', 'error'));
+      }
+      const { name, modelId } = request.params;
+      const body = request.body as { priority?: string };
+      const priority = parseInt(body.priority ?? '0', 10);
+
+      try {
+        await llmClient.updateCapabilityPriority(name, modelId, priority);
+        return reply
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', '/admin/llm?tab=capabilities')
+          .send(toastHtml(`Priority updated to ${priority}`, 'success'));
+      } catch (err) {
+        return reply.code(500).header('content-type', 'text/html').send(
+          toastHtml(err instanceof Error ? err.message : 'Failed', 'error'),
+        );
+      }
+    },
+  );
+
   // ── PUT /admin/llm/prompts/:capability — save prompt override ─────────────
 
   server.put<{ Params: { capability: string } }>(

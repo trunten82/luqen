@@ -232,6 +232,13 @@ export class LLMClient {
     );
   }
 
+  async updateCapabilityPriority(capability: string, modelId: string, priority: number): Promise<void> {
+    await this.apiFetch<unknown>(
+      `${this.baseUrl}/api/v1/capabilities/${encodeURIComponent(capability)}/assign/${encodeURIComponent(modelId)}`,
+      { method: 'PATCH', body: JSON.stringify({ priority }) },
+    );
+  }
+
   // -- Prompts ────────────────────────────────────────────────────────────
 
   async listPrompts(): Promise<LLMPrompt[]> {
