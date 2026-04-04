@@ -36,7 +36,7 @@ export async function registerCapabilityExecRoutes(
     try {
       const capResult = await executeExtractRequirements(
         db,
-        createAdapter,
+        (type: string) => createAdapter(type as import('../../types.js').ProviderType),
         {
           content: body.content,
           regulationId: body.regulationId,
