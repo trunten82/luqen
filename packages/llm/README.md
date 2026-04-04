@@ -215,7 +215,7 @@ Generate an AI-powered fix suggestion for a WCAG accessibility issue.
 |-------|------|-------------|
 | `fixedHtml` | string | Corrected HTML snippet |
 | `explanation` | string | Human-readable explanation of the fix |
-| `effortLevel` | string | Fix effort estimate: `"low"`, `"medium"`, or `"high"` |
+| `effort` | string | Fix effort estimate: `"low"`, `"medium"`, or `"high"` |
 | `model` | string | Model name used for this request |
 | `provider` | string | Provider name used for this request |
 | `attempts` | number | Number of model attempts before success |
