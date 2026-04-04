@@ -78,7 +78,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [ ] 04-01-PLAN.md — Installer: install-llm.sh interactive script + bash test harness
-- [ ] 04-02-PLAN.md — Tests: coverage expansion to ≥80% (capability exec routes, auth middleware, OAuth, clients, providers)
+- [x] 04-02-PLAN.md — Tests: coverage expansion to ≥80% (capability exec routes, auth middleware, OAuth, clients, providers)
 - [ ] 04-03-PLAN.md — Docs: OpenAPI schemas on capability routes, module README, main README + architecture diagram
 
 ### Phase 5: UI Review & Polish
@@ -103,5 +103,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Generate Fix | 2/2 | Complete |  |
 | 2. Analyse Report | 0/2 | Not started | - |
 | 3. Discover Branding | 2/2 | Complete   | 2026-04-04 |
-| 4. Ship Ready | 0/3 | Not started | - |
+| 4. Ship Ready | 1/3 | In Progress|  |
 | 5. UI Review & Polish | 0/? | Not started | - |
