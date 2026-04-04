@@ -258,6 +258,29 @@ export class LLMClient {
     );
   }
 
+  // -- OAuth Clients (admin) ──────────────────────────────────────────────
+
+  async listOAuthClients(): Promise<Array<{ id: string; name: string; scopes: string[]; grantTypes: string[]; orgId: string; createdAt: string }>> {
+    const result = await this.apiFetch<unknown>(`${this.baseUrl}/api/v1/clients`);
+    return unwrapList(result);
+  }
+
+  async createOAuthClient(
+    name: string,
+    scopes: string[],
+    grantTypes: string[],
+    orgId?: string,
+  ): Promise<{ id: string; clientId: string; clientSecret: string; name: string; createdAt: string }> {
+    return this.apiFetch(`${this.baseUrl}/api/v1/clients`, {
+      method: 'POST',
+      body: JSON.stringify({ name, scopes, grantTypes, orgId }),
+    });
+  }
+
+  async deleteOAuthClient(id: string): Promise<void> {
+    await this.deleteRequest(`${this.baseUrl}/api/v1/clients/${encodeURIComponent(id)}`);
+  }
+
   // -- Health / Status ────────────────────────────────────────────────────
 
   async health(): Promise<LLMHealth> {

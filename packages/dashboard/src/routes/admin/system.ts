@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { safeGetSystemHealth, getSeedStatus } from '../../compliance-client.js';
 import { safeGetHealth as safeGetBrandingHealth } from '../../branding-client.js';
+import type { LLMClient } from '../../llm-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -24,6 +25,7 @@ async function getPackageVersion(): Promise<string> {
 export async function systemRoutes(
   server: FastifyInstance,
   config: { complianceUrl: string; brandingUrl?: string; webserviceUrl?: string; dbPath: string },
+  llmClient?: LLMClient | null,
 ): Promise<void> {
   // GET /admin/system — service health, DB stats, seed status
   server.get(
@@ -32,13 +34,14 @@ export async function systemRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
 
-      const [complianceHealth, , seedStatus, packageVersion, brandingHealth] =
+      const [complianceHealth, , seedStatus, packageVersion, brandingHealth, llmHealth] =
         await Promise.allSettled([
           safeGetSystemHealth(config.complianceUrl, config.webserviceUrl),
           Promise.resolve(undefined), // pa11y health is part of getSystemHealth
           getSeedStatus(config.complianceUrl, token),
           getPackageVersion(),
           config.brandingUrl != null ? safeGetBrandingHealth(config.brandingUrl) : Promise.resolve(null),
+          llmClient != null ? llmClient.health().catch(() => null) : Promise.resolve(null),
         ]);
 
       const complianceStatus =
@@ -68,6 +71,16 @@ export async function systemRoutes(
         brandingStatus = brandingHealth.value.status === 'ok' ? 'ok' : 'error';
       } else {
         brandingStatus = 'error';
+      }
+
+      // LLM service status
+      let llmStatus: string;
+      if (llmClient == null) {
+        llmStatus = 'not configured';
+      } else if (llmHealth.status === 'fulfilled' && llmHealth.value != null) {
+        llmStatus = llmHealth.value.status === 'ok' ? 'ok' : 'error';
+      } else {
+        llmStatus = 'error';
       }
 
       // Database stats
@@ -100,6 +113,7 @@ export async function systemRoutes(
           compliance: { status: complianceStatus, label: 'Compliance Service' },
           pa11y: { status: pa11yStatus, label: pa11yLabel },
           branding: { status: brandingStatus, label: 'Branding Service' },
+          llm: { status: llmStatus, label: 'LLM Service' },
         },
         db: {
           sizeKb: dbSizeKb,
