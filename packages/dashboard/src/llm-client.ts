@@ -19,7 +19,8 @@ export interface LLMProvider {
   readonly name: string;
   readonly type: string;
   readonly baseUrl?: string;
-  readonly enabled: boolean;
+  readonly status: 'active' | 'inactive' | 'error';
+  readonly timeout: number;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -29,14 +30,14 @@ export interface CreateProviderInput {
   readonly type: string;
   readonly apiKey?: string;
   readonly baseUrl?: string;
-  readonly enabled?: boolean;
+  readonly timeout?: number;
 }
 
 export interface UpdateProviderInput {
   readonly name?: string;
   readonly apiKey?: string;
   readonly baseUrl?: string;
-  readonly enabled?: boolean;
+  readonly status?: 'active' | 'inactive';
 }
 
 // ── Model types ─────────────────────────────────────────────────────────────
@@ -44,28 +45,30 @@ export interface UpdateProviderInput {
 export interface LLMModel {
   readonly id: string;
   readonly providerId: string;
-  readonly externalId: string;
-  readonly name: string;
-  readonly contextWindow?: number;
-  readonly enabled: boolean;
+  readonly modelId: string;
+  readonly displayName: string;
+  readonly status: 'active' | 'inactive';
+  readonly capabilities: readonly string[];
   readonly createdAt: string;
-  readonly updatedAt: string;
 }
 
 export interface CreateModelInput {
   readonly providerId: string;
-  readonly externalId: string;
-  readonly name: string;
-  readonly contextWindow?: number;
-  readonly enabled?: boolean;
+  readonly modelId: string;
+  readonly displayName: string;
+  readonly capabilities?: readonly string[];
 }
 
 // ── Capability types ────────────────────────────────────────────────────────
 
 export interface LLMCapability {
   readonly name: string;
-  readonly description?: string;
-  readonly assignedModels: readonly string[];
+  readonly assignments: ReadonlyArray<{
+    readonly capability: string;
+    readonly modelId: string;
+    readonly priority: number;
+    readonly orgId: string;
+  }>;
 }
 
 export interface AssignCapabilityInput {
@@ -177,8 +180,8 @@ export class LLMClient {
     await this.deleteRequest(`${this.baseUrl}/api/v1/providers/${encodeURIComponent(id)}`);
   }
 
-  async testProvider(id: string): Promise<{ ok: boolean; message?: string }> {
-    return this.apiFetch<{ ok: boolean; message?: string }>(
+  async testProvider(id: string): Promise<{ status: string; message: string }> {
+    return this.apiFetch<{ status: string; message: string }>(
       `${this.baseUrl}/api/v1/providers/${encodeURIComponent(id)}/test`,
       { method: 'POST', body: '{}' },
     );

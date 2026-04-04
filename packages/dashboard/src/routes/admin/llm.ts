@@ -43,10 +43,37 @@ export async function llmAdminRoutes(
         llmConnected = false;
       }
 
-      // Group models by provider for display
-      const modelsByProvider = providers.map((p) => ({
+      // Add status badge fields to providers
+      const providersWithBadge = providers.map((p) => ({
         ...p,
-        models: models.filter((m) => m.providerId === p.id),
+        statusClass: p.status === 'active' ? 'badge--success' : p.status === 'error' ? 'badge--error' : 'badge--neutral',
+        statusLabel: p.status === 'active' ? 'Active' : p.status === 'error' ? 'Error' : 'Inactive',
+      }));
+
+      // Add status badge fields to models
+      const modelsWithBadge = models.map((m) => ({
+        ...m,
+        statusClass: m.status === 'active' ? 'badge--success' : 'badge--neutral',
+        statusLabel: m.status === 'active' ? 'Active' : 'Inactive',
+      }));
+
+      // Group models by provider for display
+      const modelsByProvider = providersWithBadge.map((p) => ({
+        ...p,
+        models: modelsWithBadge.filter((m) => m.providerId === p.id),
+      }));
+
+      // Resolve capability assignments to include model display names
+      const capabilitiesWithModels = capabilities.map((cap) => ({
+        ...cap,
+        assignedModels: cap.assignments.map((a) => {
+          const model = models.find((m) => m.id === a.modelId);
+          return {
+            id: a.modelId,
+            name: model ? `${model.displayName} (${model.modelId})` : a.modelId,
+            priority: a.priority,
+          };
+        }),
       }));
 
       return reply.view('admin/llm.hbs', {
@@ -55,10 +82,10 @@ export async function llmAdminRoutes(
         user: request.user,
         llmConnected,
         error,
-        providers,
-        models,
+        providers: providersWithBadge,
+        models: modelsWithBadge,
         modelsByProvider,
-        capabilities,
+        capabilities: capabilitiesWithModels,
         prompts,
       });
     },
@@ -81,7 +108,6 @@ export async function llmAdminRoutes(
         type?: string;
         apiKey?: string;
         baseUrl?: string;
-        enabled?: string;
       };
 
       if (!body.name?.trim() || !body.type?.trim()) {
@@ -96,11 +122,10 @@ export async function llmAdminRoutes(
           type: body.type.trim(),
           apiKey: body.apiKey?.trim() || undefined,
           baseUrl: body.baseUrl?.trim() || undefined,
-          enabled: body.enabled === 'on' || body.enabled === 'true',
         });
         return reply
           .header('content-type', 'text/html')
-          .header('hx-trigger', 'llmChanged')
+          .header('HX-Refresh', 'true')
           .send(toastHtml('Provider created successfully', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -125,8 +150,8 @@ export async function llmAdminRoutes(
 
       try {
         const result = await llmClient.testProvider(request.params.id);
-        const msg = result.message ?? (result.ok ? 'Connection successful' : 'Connection failed');
-        const type = result.ok ? 'success' : 'error';
+        const msg = result.message ?? (result.status === 'ok' ? 'Connection successful' : 'Connection failed');
+        const type = result.status === 'ok' ? 'success' : 'error';
         return reply.header('content-type', 'text/html').send(toastHtml(msg, type));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -153,7 +178,7 @@ export async function llmAdminRoutes(
         name?: string;
         apiKey?: string;
         baseUrl?: string;
-        enabled?: string;
+        status?: string;
       };
 
       try {
@@ -161,12 +186,12 @@ export async function llmAdminRoutes(
         if (body.name?.trim()) data['name'] = body.name.trim();
         if (body.apiKey?.trim()) data['apiKey'] = body.apiKey.trim();
         if (body.baseUrl !== undefined) data['baseUrl'] = body.baseUrl.trim() || undefined;
-        if (body.enabled !== undefined) data['enabled'] = body.enabled === 'on' || body.enabled === 'true';
+        if (body.status === 'active' || body.status === 'inactive') data['status'] = body.status;
 
         await llmClient.updateProvider(request.params.id, data);
         return reply
           .header('content-type', 'text/html')
-          .header('hx-trigger', 'llmChanged')
+          .header('HX-Refresh', 'true')
           .send(toastHtml('Provider updated', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -193,7 +218,7 @@ export async function llmAdminRoutes(
         await llmClient.deleteProvider(request.params.id);
         return reply
           .header('content-type', 'text/html')
-          .header('hx-trigger', 'llmChanged')
+          .header('HX-Refresh', 'true')
           .send(toastHtml('Provider deleted', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -219,28 +244,29 @@ export async function llmAdminRoutes(
       const body = request.body as {
         providerId?: string;
         externalId?: string;
+        modelId?: string;
         name?: string;
-        contextWindow?: string;
-        enabled?: string;
+        displayName?: string;
       };
 
-      if (!body.providerId?.trim() || !body.externalId?.trim() || !body.name?.trim()) {
+      const modelId = (body.externalId ?? body.modelId)?.trim() ?? '';
+      const displayName = (body.name ?? body.displayName)?.trim() ?? '';
+
+      if (!body.providerId?.trim() || !modelId || !displayName) {
         return reply.code(400).header('content-type', 'text/html').send(
-          toastHtml('Provider, external ID, and name are required', 'error'),
+          toastHtml('Provider, model ID, and display name are required', 'error'),
         );
       }
 
       try {
         await llmClient.createModel({
           providerId: body.providerId.trim(),
-          externalId: body.externalId.trim(),
-          name: body.name.trim(),
-          contextWindow: body.contextWindow ? parseInt(body.contextWindow, 10) : undefined,
-          enabled: body.enabled === 'on' || body.enabled === 'true',
+          modelId,
+          displayName,
         });
         return reply
           .header('content-type', 'text/html')
-          .header('hx-trigger', 'llmChanged')
+          .header('HX-Refresh', 'true')
           .send(toastHtml('Model registered', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -267,7 +293,7 @@ export async function llmAdminRoutes(
         await llmClient.deleteModel(request.params.id);
         return reply
           .header('content-type', 'text/html')
-          .header('hx-trigger', 'llmChanged')
+          .header('HX-Refresh', 'true')
           .send(toastHtml('Model deleted', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -305,7 +331,7 @@ export async function llmAdminRoutes(
         });
         return reply
           .header('content-type', 'text/html')
-          .header('hx-trigger', 'llmChanged')
+          .header('HX-Refresh', 'true')
           .send(toastHtml('Model assigned to capability', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -332,7 +358,7 @@ export async function llmAdminRoutes(
         await llmClient.unassignCapability(request.params.name, request.params.modelId);
         return reply
           .header('content-type', 'text/html')
-          .header('hx-trigger', 'llmChanged')
+          .header('HX-Refresh', 'true')
           .send(toastHtml('Model unassigned from capability', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -367,7 +393,7 @@ export async function llmAdminRoutes(
         await llmClient.setPrompt(request.params.capability, body.template.trim());
         return reply
           .header('content-type', 'text/html')
-          .header('hx-trigger', 'llmChanged')
+          .header('HX-Refresh', 'true')
           .send(toastHtml('Prompt saved', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -394,7 +420,7 @@ export async function llmAdminRoutes(
         await llmClient.deletePrompt(request.params.capability);
         return reply
           .header('content-type', 'text/html')
-          .header('hx-trigger', 'llmChanged')
+          .header('HX-Refresh', 'true')
           .send(toastHtml('Prompt reset to default', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
