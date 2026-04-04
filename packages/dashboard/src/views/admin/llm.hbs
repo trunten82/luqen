@@ -57,11 +57,7 @@
             <td data-label="Type"><span class="badge badge--neutral">{{type}}</span></td>
             <td data-label="Base URL">{{#if baseUrl}}<code>{{baseUrl}}</code>{{else}}&mdash;{{/if}}</td>
             <td data-label="Status">
-              {{#if enabled}}
-              <span class="badge badge--success">Enabled</span>
-              {{else}}
-              <span class="badge badge--neutral">Disabled</span>
-              {{/if}}
+              <span class="badge {{statusClass}}">{{statusLabel}}</span>
             </td>
             <td data-label="Actions">
               <div class="btn-group">
@@ -133,12 +129,6 @@
             <small class="form-hint">Required for Ollama / OpenAI-compatible endpoints</small>
           </div>
         </div>
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" name="enabled" value="on" checked />
-            Enable provider
-          </label>
-        </div>
         <div class="form-actions">
           <button type="submit" class="btn btn--primary">Add Provider</button>
         </div>
@@ -161,9 +151,8 @@
         <table class="table" aria-label="Models for {{name}}">
           <thead>
             <tr>
-              <th scope="col">External ID</th>
+              <th scope="col">Model ID</th>
               <th scope="col">Display Name</th>
-              <th scope="col">Context Window</th>
               <th scope="col">Status</th>
               <th scope="col">{{t "common.actions"}}</th>
             </tr>
@@ -171,20 +160,15 @@
           <tbody>
             {{#each models}}
             <tr id="model-{{id}}">
-              <td data-label="External ID"><code>{{externalId}}</code></td>
-              <td data-label="Name">{{name}}</td>
-              <td data-label="Context Window">{{#if contextWindow}}{{contextWindow}}{{else}}&mdash;{{/if}}</td>
+              <td data-label="Model ID"><code>{{modelId}}</code></td>
+              <td data-label="Display Name">{{displayName}}</td>
               <td data-label="Status">
-                {{#if enabled}}
-                <span class="badge badge--success">Enabled</span>
-                {{else}}
-                <span class="badge badge--neutral">Disabled</span>
-                {{/if}}
+                <span class="badge {{statusClass}}">{{statusLabel}}</span>
               </td>
               <td data-label="Actions">
                 <button
                   hx-delete="/admin/llm/models/{{id}}"
-                  hx-confirm="Delete model {{name}}?"
+                  hx-confirm="Delete model {{displayName}}?"
                   hx-target="#llm-messages"
                   hx-swap="innerHTML"
                   hx-include="[name='_csrf']"
@@ -197,6 +181,7 @@
         </table>
         {{else}}
         <p class="text-muted">No models registered for this provider.</p>
+
         {{/if}}
       </div>
     </div>
@@ -240,17 +225,6 @@
             <input type="text" id="model-name" name="name" class="input" required
                    placeholder="e.g. GPT-4o" />
           </div>
-          <div class="form-group">
-            <label for="model-ctx">Context Window</label>
-            <input type="number" id="model-ctx" name="contextWindow" class="input"
-                   placeholder="e.g. 128000" min="1" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" name="enabled" value="on" checked />
-            Enable model
-          </label>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn--primary">Register Model</button>
@@ -269,7 +243,6 @@
       <div class="card">
         <div class="card__header">
           <h2 class="card__title"><code>{{name}}</code></h2>
-          {{#if description}}<p class="card__subtitle">{{description}}</p>{{/if}}
         </div>
         <div class="card__body">
           {{#if assignedModels.length}}
@@ -277,16 +250,16 @@
           <ul class="badge-list">
             {{#each assignedModels}}
             <li>
-              <span class="badge badge--info">{{this}}</span>
+              <span class="badge badge--info">{{name}}</span>
               <button
-                hx-delete="/admin/llm/capabilities/{{../name}}/unassign/{{this}}"
+                hx-delete="/admin/llm/capabilities/{{../name}}/unassign/{{id}}"
                 hx-confirm="Unassign this model from {{../name}}?"
                 hx-target="#llm-messages"
                 hx-swap="innerHTML"
                 hx-include="[name='_csrf']"
                 class="btn btn--xs btn--ghost"
                 type="button"
-                aria-label="Unassign {{this}}">&times;</button>
+                aria-label="Unassign {{name}}">&times;</button>
             </li>
             {{/each}}
           </ul>
@@ -307,9 +280,7 @@
                 <select id="cap-model-{{name}}" name="modelId" class="input" required>
                   <option value="">Assign model...</option>
                   {{#each ../models}}
-                  {{#if enabled}}
-                  <option value="{{id}}">{{name}} ({{externalId}})</option>
-                  {{/if}}
+                  <option value="{{id}}">{{displayName}} ({{modelId}})</option>
                   {{/each}}
                 </select>
               </div>
