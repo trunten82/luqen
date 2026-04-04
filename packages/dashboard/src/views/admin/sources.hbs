@@ -25,19 +25,17 @@
           hx-target="#plugin-messages" hx-swap="innerHTML"
           class="card__body">
       <h3 class="card__title">Upload Regulation Document</h3>
-      <p class="form-hint">Paste the text content of a regulatory document. The selected LLM will extract WCAG requirements and create a proposal for review.</p>
-      {{#if hasLlm}}
-      <div class="form-group">
-        <label for="upload-llm">LLM Provider</label>
-        <select id="upload-llm" name="pluginId" class="input" required>
-          {{#each llmPlugins}}
-          <option value="{{id}}">{{name}}</option>
-          {{/each}}
-        </select>
-        <small class="form-hint">Choose which LLM processes this document</small>
+      <p class="form-hint">Paste the text content of a regulatory document. The LLM service will extract WCAG requirements and create a proposal for review.</p>
+      {{#if llmConnected}}
+      <div class="alert alert--success" role="status" aria-label="LLM service status">
+        LLM Service: <strong>Connected</strong>
       </div>
       {{else}}
-      <div class="alert alert--warning">No active LLM plugin. Activate one in Plugins first.</div>
+      <div class="alert alert--warning" role="status" aria-label="LLM service status">
+        LLM Service: <strong>Not configured</strong> &mdash;
+        set <code>DASHBOARD_LLM_URL</code> and configure a provider in
+        <a href="/admin/llm">LLM Config</a>.
+      </div>
       {{/if}}
       <div class="form-group">
         <label for="upload-name">Document Name</label>
@@ -58,7 +56,7 @@
                   placeholder="Paste the regulation text here..."></textarea>
       </div>
       <div class="form-actions">
-        <button type="submit" class="btn btn--primary" {{#unless hasLlm}}disabled{{/unless}}>Extract Requirements</button>
+        <button type="submit" class="btn btn--primary" {{#unless llmConnected}}disabled{{/unless}}>Extract Requirements</button>
       </div>
     </form>
   </div>
