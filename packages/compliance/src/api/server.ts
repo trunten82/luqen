@@ -42,8 +42,10 @@ export interface ServerOptions {
   readonly skipSeed?: boolean;
   /** @luqen/llm service URL (e.g. http://localhost:4200) */
   readonly llmUrl?: string;
-  /** @luqen/llm service API key */
-  readonly llmApiKey?: string;
+  /** @luqen/llm service OAuth2 client ID */
+  readonly llmClientId?: string;
+  /** @luqen/llm service OAuth2 client secret */
+  readonly llmClientSecret?: string;
 }
 
 function parseInterval(s: string): number {
@@ -70,10 +72,11 @@ export async function createServer(options: ServerOptions) {
     reseedInterval = 'off',
     skipSeed = false,
     llmUrl,
-    llmApiKey,
+    llmClientId,
+    llmClientSecret,
   } = options;
 
-  const llmClient = createLLMClient({ llmUrl, llmApiKey });
+  const llmClient = createLLMClient({ llmUrl, llmClientId, llmClientSecret });
 
   const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }); // 10MB for large site scans
 

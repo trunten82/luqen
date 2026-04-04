@@ -88,7 +88,8 @@ export function createProgram(): Command {
         cache,
         reseedInterval: config.reseedInterval,
         llmUrl: config.llmUrl,
-        llmApiKey: config.llmApiKey,
+        llmClientId: config.llmClientId,
+        llmClientSecret: config.llmClientSecret,
       });
 
       await app.register(registerAgentCardPlugin);

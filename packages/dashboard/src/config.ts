@@ -16,6 +16,8 @@ const ConfigSchema = z.object({
   brandingClientId: z.string().default(''),
   brandingClientSecret: z.string().default(''),
   llmUrl: z.string().url().optional(),
+  llmClientId: z.string().default(''),
+  llmClientSecret: z.string().default(''),
   pluginsDir: z.string().default('./plugins'),
   pluginsConfigFile: z.string().optional(),
   catalogueUrl: z.string().url().optional(),
@@ -42,6 +44,8 @@ export interface DashboardConfig {
   readonly brandingClientSecret: string;
   /** URL to the @luqen/llm service. Enables LLM management admin page when set. */
   readonly llmUrl?: string;
+  readonly llmClientId: string;
+  readonly llmClientSecret: string;
   readonly pluginsDir: string;
   readonly pluginsConfigFile?: string;
   /** URL to fetch the remote plugin catalogue. Defaults to GitHub raw URL. */
@@ -70,6 +74,8 @@ const DEFAULTS: DashboardConfig = {
   brandingUrl: 'http://localhost:4100',
   brandingClientId: '',
   brandingClientSecret: '',
+  llmClientId: '',
+  llmClientSecret: '',
   pluginsDir: './plugins',
   catalogueCacheTtl: 3600,
   maxPages: 50,
@@ -114,6 +120,8 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
     brandingClientId: process.env['DASHBOARD_BRANDING_CLIENT_ID'] ?? config.brandingClientId,
     brandingClientSecret: process.env['DASHBOARD_BRANDING_CLIENT_SECRET'] ?? config.brandingClientSecret,
     llmUrl: process.env['DASHBOARD_LLM_URL'] ?? config.llmUrl,
+    llmClientId: process.env['DASHBOARD_LLM_CLIENT_ID'] ?? config.llmClientId,
+    llmClientSecret: process.env['DASHBOARD_LLM_CLIENT_SECRET'] ?? config.llmClientSecret,
     pluginsDir: process.env['DASHBOARD_PLUGINS_DIR'] ?? config.pluginsDir,
     pluginsConfigFile: process.env['DASHBOARD_PLUGINS_CONFIG'] ?? config.pluginsConfigFile,
     catalogueUrl: process.env['DASHBOARD_CATALOGUE_URL'] ?? config.catalogueUrl,

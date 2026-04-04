@@ -340,8 +340,10 @@ export interface ComplianceConfig {
   readonly dashboardApiKey?: string;
   /** @luqen/llm service URL (e.g. http://localhost:4200) */
   readonly llmUrl?: string;
-  /** @luqen/llm service API key */
-  readonly llmApiKey?: string;
+  /** @luqen/llm service OAuth2 client ID */
+  readonly llmClientId?: string;
+  /** @luqen/llm service OAuth2 client secret */
+  readonly llmClientSecret?: string;
 }
 
 // === Seed data shape ===

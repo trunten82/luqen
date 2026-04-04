@@ -403,7 +403,7 @@ export async function registerSourceRoutes(
   }, async (request, reply) => {
     if (llmClient == null) {
       await reply.status(503).send({
-        error: 'LLM service not configured. Set COMPLIANCE_LLM_URL and COMPLIANCE_LLM_API_KEY.',
+        error: 'LLM service not configured. Set COMPLIANCE_LLM_URL, COMPLIANCE_LLM_CLIENT_ID, and COMPLIANCE_LLM_CLIENT_SECRET.',
         statusCode: 503,
       });
       return;
@@ -486,7 +486,7 @@ export async function registerSourceRoutes(
   }, async (request, reply) => {
     if (llmClient == null) {
       await reply.status(503).send({
-        error: 'LLM service not configured. Set COMPLIANCE_LLM_URL and COMPLIANCE_LLM_API_KEY.',
+        error: 'LLM service not configured. Set COMPLIANCE_LLM_URL, COMPLIANCE_LLM_CLIENT_ID, and COMPLIANCE_LLM_CLIENT_SECRET.',
         statusCode: 503,
       });
       return;

@@ -50,7 +50,8 @@ function applyEnvOverrides(config: ComplianceConfig): ComplianceConfig {
         }
       : config.cors,
     llmUrl: env.COMPLIANCE_LLM_URL ?? config.llmUrl,
-    llmApiKey: env.COMPLIANCE_LLM_API_KEY ?? config.llmApiKey,
+    llmClientId: env.COMPLIANCE_LLM_CLIENT_ID ?? config.llmClientId,
+    llmClientSecret: env.COMPLIANCE_LLM_CLIENT_SECRET ?? config.llmClientSecret,
   };
 }
 
