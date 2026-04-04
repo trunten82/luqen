@@ -571,6 +571,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
           complianceManage: perms.has('compliance.manage') || perms.has('admin.system'),
           brandingView: perms.has('branding.view') || perms.has('admin.system'),
           brandingManage: perms.has('branding.manage') || perms.has('admin.system'),
+          llmView: perms.has('llm.view') || perms.has('admin.system'),
+          llmManage: perms.has('llm.manage') || perms.has('admin.system'),
           reposCredentials: perms.has('repos.credentials'),
           auditView: perms.has('audit.view'),
         },

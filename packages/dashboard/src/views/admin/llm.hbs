@@ -100,7 +100,7 @@
             hx-swap="innerHTML"
             data-reset-on-success>
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        <div class="form-row" style="flex-wrap: wrap">
+        <div class="form-grid">
           <div class="form-group">
             <label for="prov-name">Name <span aria-hidden="true">*</span></label>
             <input type="text" id="prov-name" name="name" class="input" required
@@ -116,7 +116,7 @@
             </select>
           </div>
         </div>
-        <div class="form-row" style="flex-wrap: wrap">
+        <div class="form-grid">
           <div class="form-group">
             <label for="prov-apikey">API Key</label>
             <input type="password" id="prov-apikey" name="apiKey" class="input"
@@ -205,7 +205,7 @@
             hx-swap="innerHTML"
             data-reset-on-success>
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
-        <div class="form-row" style="flex-wrap: wrap">
+        <div class="form-grid">
           <div class="form-group">
             <label for="model-provider">Provider <span aria-hidden="true">*</span></label>
             <select id="model-provider" name="providerId" class="input" required
@@ -227,7 +227,7 @@
             </select>
           </div>
         </div>
-        <div class="form-row" style="flex-wrap: wrap">
+        <div class="form-grid">
           <div class="form-group">
             <label for="model-name">Display Name <span aria-hidden="true">*</span></label>
             <input type="text" id="model-name" name="displayName" class="input" required
@@ -282,7 +282,7 @@
                 hx-swap="innerHTML"
                 data-reset-on-success>
             <input type="hidden" name="_csrf" value="{{../csrfToken}}">
-            <div class="form-row" style="flex-wrap: wrap">
+            <div class="form-grid">
               <div class="form-group" style="flex:1">
                 <label for="cap-model-{{name}}" class="sr-only">Assign model to {{name}}</label>
                 <select id="cap-model-{{name}}" name="modelId" class="input" required>
