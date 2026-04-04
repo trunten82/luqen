@@ -6,6 +6,9 @@
   <div id="toast-container" aria-live="polite" role="region" aria-label="Notifications"></div>
   <div id="llm-messages" aria-live="polite"></div>
 
+  {{!-- Global CSRF token for HTMX buttons outside forms --}}
+  <input type="hidden" name="_csrf" id="global-csrf" value="{{csrfToken}}">
+
   {{#if error}}
   <div class="alert alert--error" role="alert">{{error}}</div>
   {{/if}}
@@ -16,28 +19,33 @@
   </div>
   {{else}}
 
-  {{!-- Tab navigation --}}
+  {{!-- Tab navigation (server-side, same pattern as proposals) --}}
   <div class="tabs" role="tablist" aria-label="LLM management sections">
-    <button class="tab tab--active" role="tab" aria-selected="true" aria-controls="tab-providers"
-            id="btn-tab-providers" data-action="llmSwitchTab" data-tab="providers" type="button">
+    <a href="/admin/llm?tab=providers"
+       class="tab {{#if (eq activeTab 'providers')}}tab--active{{/if}}"
+       aria-current="{{#if (eq activeTab 'providers')}}page{{/if}}">
       Providers
-    </button>
-    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-models"
-            id="btn-tab-models" data-action="llmSwitchTab" data-tab="models" type="button">
+    </a>
+    <a href="/admin/llm?tab=models"
+       class="tab {{#if (eq activeTab 'models')}}tab--active{{/if}}"
+       aria-current="{{#if (eq activeTab 'models')}}page{{/if}}">
       Models
-    </button>
-    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-capabilities"
-            id="btn-tab-capabilities" data-action="llmSwitchTab" data-tab="capabilities" type="button">
+    </a>
+    <a href="/admin/llm?tab=capabilities"
+       class="tab {{#if (eq activeTab 'capabilities')}}tab--active{{/if}}"
+       aria-current="{{#if (eq activeTab 'capabilities')}}page{{/if}}">
       Capabilities
-    </button>
-    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-prompts"
-            id="btn-tab-prompts" data-action="llmSwitchTab" data-tab="prompts" type="button">
+    </a>
+    <a href="/admin/llm?tab=prompts"
+       class="tab {{#if (eq activeTab 'prompts')}}tab--active{{/if}}"
+       aria-current="{{#if (eq activeTab 'prompts')}}page{{/if}}">
       Prompts
-    </button>
+    </a>
   </div>
 
   {{!-- ── PROVIDERS TAB ──────────────────────────────────────────────────── --}}
-  <div id="tab-providers" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-providers">
+  {{#if (eq activeTab 'providers')}}
+  <div id="tab-providers" class="tab-content" role="tabpanel">
 
     <div class="table-wrapper mt-sm">
       <table class="table" aria-label="LLM providers">
@@ -65,7 +73,7 @@
                   hx-post="/admin/llm/providers/{{id}}/test"
                   hx-target="#llm-messages"
                   hx-swap="innerHTML"
-                  hx-include="[name='_csrf']"
+                  hx-include="#global-csrf"
                   class="btn btn--sm btn--secondary"
                   type="button">Test</button>
                 <button
@@ -73,7 +81,7 @@
                   hx-confirm="Delete provider {{name}}? All associated models will also be removed."
                   hx-target="#llm-messages"
                   hx-swap="innerHTML"
-                  hx-include="[name='_csrf']"
+                  hx-include="#global-csrf"
                   class="btn btn--sm btn--danger"
                   type="button">Delete</button>
               </div>
@@ -135,9 +143,11 @@
       </form>
     </div>
   </div>
+  {{/if}}
 
   {{!-- ── MODELS TAB ───────────────────────────────────────────────────────── --}}
-  <div id="tab-models" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-models" hidden>
+  {{#if (eq activeTab 'models')}}
+  <div id="tab-models" class="tab-content" role="tabpanel">
 
     {{#if providers}}
     {{#each modelsByProvider}}
@@ -171,7 +181,7 @@
                   hx-confirm="Delete model {{displayName}}?"
                   hx-target="#llm-messages"
                   hx-swap="innerHTML"
-                  hx-include="[name='_csrf']"
+                  hx-include="#global-csrf"
                   class="btn btn--sm btn--danger"
                   type="button">Delete</button>
               </td>
@@ -238,9 +248,11 @@
     </div>
     {{/if}}
   </div>
+  {{/if}}
 
   {{!-- ── CAPABILITIES TAB ─────────────────────────────────────────────────── --}}
-  <div id="tab-capabilities" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-capabilities" hidden>
+  {{#if (eq activeTab 'capabilities')}}
+  <div id="tab-capabilities" class="tab-content" role="tabpanel">
 
     {{#if capabilities}}
     <div class="cards mt-sm">
@@ -261,7 +273,7 @@
                 hx-confirm="Unassign this model from {{../name}}?"
                 hx-target="#llm-messages"
                 hx-swap="innerHTML"
-                hx-include="[name='_csrf']"
+                hx-include="#global-csrf"
                 class="btn btn--xs btn--ghost"
                 type="button"
                 aria-label="Unassign {{name}}">&times;</button>
@@ -301,9 +313,11 @@
     <div class="alert alert--warning mt-sm">No capabilities found. Ensure the LLM service is seeded.</div>
     {{/if}}
   </div>
+  {{/if}}
 
   {{!-- ── PROMPTS TAB ──────────────────────────────────────────────────────── --}}
-  <div id="tab-prompts" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-prompts" hidden>
+  {{#if (eq activeTab 'prompts')}}
+  <div id="tab-prompts" class="tab-content" role="tabpanel">
 
     {{#if prompts}}
     {{#each prompts}}
@@ -336,7 +350,7 @@
                   hx-confirm="Reset prompt for {{capability}} to the default?"
                   hx-target="#llm-messages"
                   hx-swap="innerHTML"
-                  hx-include="[name='_csrf']"
+                  hx-include="#global-csrf"
                   class="btn btn--secondary">Reset to Default</button>
           {{/if}}
         </div>
@@ -347,28 +361,12 @@
     <div class="alert alert--warning mt-sm">No prompts found. Ensure the LLM service is seeded.</div>
     {{/if}}
   </div>
+  {{/if}}
 
   {{/unless}}
 
   <script>
   (function () {
-    function llmSwitchTab(name) {
-      document.querySelectorAll('.tab-content[id^="tab-"]').forEach(function (el) {
-        el.hidden = el.id !== 'tab-' + name;
-      });
-      document.querySelectorAll('[data-action="llmSwitchTab"]').forEach(function (btn) {
-        var isActive = btn.getAttribute('data-tab') === name;
-        btn.classList.toggle('tab--active', isActive);
-        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      });
-    }
-
-    /* Wire up data-action="llmSwitchTab" via app.js delegation */
-    window.llmSwitchTab = function (el) {
-      var tab = el.getAttribute('data-tab');
-      if (tab) llmSwitchTab(tab);
-    };
-
     /* Auto-fill display name from selected remote model */
     document.addEventListener('change', function (e) {
       if (e.target && e.target.id === 'remote-model-list') {
@@ -376,13 +374,6 @@
         if (nameInput && !nameInput.value) {
           nameInput.value = e.target.options[e.target.selectedIndex].text;
         }
-      }
-    });
-
-    /* Re-listen after HTMX swaps */
-    document.addEventListener('htmx:afterOnLoad', function (e) {
-      if (e.detail.target && e.detail.target.id === 'llm-messages') {
-        /* nothing extra needed — badge-list rebuilt on next page load */
       }
     });
   })();

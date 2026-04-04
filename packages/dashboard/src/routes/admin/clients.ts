@@ -9,6 +9,7 @@ import {
   createBrandingClient,
   revokeBrandingClient,
 } from '../../branding-client.js';
+import type { LLMClient } from '../../llm-client.js';
 import type { StorageAdapter } from '../../db/index.js';
 import type { ServiceTokenManager } from '../../auth/service-token.js';
 import { requirePermission } from '../../auth/middleware.js';
@@ -20,6 +21,7 @@ export async function clientRoutes(
   storage?: StorageAdapter,
   brandingUrl?: string,
   brandingTokenManager?: ServiceTokenManager | null,
+  llmClient?: LLMClient | null,
 ): Promise<void> {
   // GET /admin/clients — list OAuth clients
   server.get(
@@ -46,6 +48,13 @@ export async function clientRoutes(
         } catch {
           // Non-fatal — branding service may be unavailable
         }
+      }
+
+      let llmClients: Array<{ id: string; name: string; scopes: string[]; grantTypes: string[]; orgId: string; createdAt: string }> = [];
+      if (llmClient != null) {
+        try {
+          llmClients = await llmClient.listOAuthClients();
+        } catch { /* non-fatal */ }
       }
 
       const currentOrgId = orgId ?? 'system';
@@ -78,7 +87,19 @@ export async function clientRoutes(
         canRevoke: isGlobalAdmin || (c.orgId !== 'system' && c.orgId === currentOrgId),
       }));
 
-      const formatted = [...complianceFormatted, ...brandingFormatted];
+      const llmFormatted = llmClients.map((c) => ({
+        ...c,
+        clientId: c.id,
+        service: 'LLM',
+        createdAtDisplay: new Date(c.createdAt).toLocaleString(),
+        scopesDisplay: Array.isArray(c.scopes) ? c.scopes.join(', ') : String(c.scopes),
+        grantTypesDisplay: Array.isArray(c.grantTypes) ? c.grantTypes.join(', ') : String(c.grantTypes),
+        isSystem: c.orgId === 'system',
+        orgDisplayName: c.orgId === 'system' ? 'System' : (orgNameMap.get(c.orgId) ?? c.orgId),
+        canRevoke: isGlobalAdmin || (c.orgId !== 'system' && c.orgId === currentOrgId),
+      }));
+
+      const formatted = [...complianceFormatted, ...brandingFormatted, ...llmFormatted];
 
       return reply.view('admin/clients.hbs', {
         pageTitle: 'OAuth Clients',
@@ -87,6 +108,7 @@ export async function clientRoutes(
         clients: formatted,
         isGlobalAdmin,
         hasBranding: brandingUrl != null,
+        hasLlm: llmClient != null,
         error,
       });
     },
@@ -101,9 +123,11 @@ export async function clientRoutes(
         isNew: true,
         formClient: { name: '', scopes: '', grantTypes: 'client_credentials', service: 'compliance' },
         availableGrantTypes: ['client_credentials', 'password', 'authorization_code', 'refresh_token'],
-        availableServices: brandingUrl != null
-          ? [{ value: 'compliance', label: 'Compliance' }, { value: 'branding', label: 'Branding' }]
-          : [{ value: 'compliance', label: 'Compliance' }],
+        availableServices: [
+          { value: 'compliance', label: 'Compliance' },
+          ...(brandingUrl != null ? [{ value: 'branding', label: 'Branding' }] : []),
+          ...(llmClient != null ? [{ value: 'llm', label: 'LLM' }] : []),
+        ],
       });
     },
   );
@@ -135,7 +159,7 @@ export async function clientRoutes(
         ? [body.grantTypes]
         : ['client_credentials'];
 
-      const service = body.service === 'branding' ? 'branding' : 'compliance';
+      const service = body.service === 'branding' ? 'branding' : body.service === 'llm' ? 'llm' : 'compliance';
 
       try {
         let createdClientId: string;
@@ -143,7 +167,15 @@ export async function clientRoutes(
         let createdName: string;
         let createdAt: string;
 
-        if (service === 'branding' && brandingUrl != null && brandingTokenManager != null) {
+        if (service === 'llm' && llmClient != null) {
+          const created = await llmClient.createOAuthClient(
+            body.name.trim(), scopes, grantTypes, getOrgId(request),
+          );
+          createdClientId = created.id ?? created.clientId;
+          createdSecret = created.clientSecret;
+          createdName = created.name ?? body.name.trim();
+          createdAt = created.createdAt ?? new Date().toISOString();
+        } else if (service === 'branding' && brandingUrl != null && brandingTokenManager != null) {
           const brandingToken = await brandingTokenManager.getToken();
           const created = await createBrandingClient(
             brandingUrl, brandingToken, body.name.trim(), scopes, grantTypes, getOrgId(request),
@@ -164,7 +196,7 @@ export async function clientRoutes(
           createdAt = created.createdAt;
         }
 
-        const serviceLabel = service === 'branding' ? 'Branding' : 'Compliance';
+        const serviceLabel = service === 'llm' ? 'LLM' : service === 'branding' ? 'Branding' : 'Compliance';
 
         // Secret is shown once in a modal dialog; no inline JS handlers needed
         const secretModal = `<div id="modal-container" hx-swap-oob="true">
@@ -185,7 +217,9 @@ export async function clientRoutes(
   </div>
 </div>`;
 
-        const revokeUrl = service === 'branding'
+        const revokeUrl = service === 'llm'
+          ? `/admin/clients/${encodeURIComponent(createdClientId)}/revoke-llm`
+          : service === 'branding'
           ? `/admin/clients/${encodeURIComponent(createdClientId)}/revoke-branding`
           : `/admin/clients/${encodeURIComponent(createdClientId)}/revoke`;
 
@@ -256,6 +290,30 @@ export async function clientRoutes(
           .send(toastHtml('Branding OAuth client revoked successfully.'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to revoke branding client';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // POST /admin/clients/:id/revoke-llm — revoke LLM OAuth client
+  server.post(
+    '/admin/clients/:id/revoke-llm',
+    { preHandler: requirePermission('admin.system') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      if (llmClient == null) {
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml('LLM service not configured.', 'error'));
+      }
+
+      try {
+        await llmClient.deleteOAuthClient(id);
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml('LLM OAuth client revoked successfully.'));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to revoke LLM client';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
     },

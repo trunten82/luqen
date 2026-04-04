@@ -639,14 +639,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await sourceRoutes(server, config.complianceUrl, pluginManager, llmClient);
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
-  await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, brandingTokenManager);
+  await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, brandingTokenManager, llmClient);
   await monitorRoutes(server, config.complianceUrl);
   await systemRoutes(server, {
     complianceUrl: config.complianceUrl,
     brandingUrl: config.brandingUrl,
     webserviceUrl: config.webserviceUrl,
     dbPath: config.dbPath,
-  });
+  }, llmClient);
 
   await dashboardUserRoutes(server, storage);
   await apiKeyRoutes(server, storage);

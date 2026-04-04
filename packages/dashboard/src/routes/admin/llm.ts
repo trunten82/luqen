@@ -13,30 +13,34 @@ export async function llmAdminRoutes(
     '/admin/llm',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const { tab } = request.query as { tab?: string };
+      const activeTab = ['providers', 'models', 'capabilities', 'prompts'].includes(tab ?? '')
+        ? tab!
+        : 'providers';
+
       if (!llmClient) {
         return reply.view('admin/llm.hbs', {
           pageTitle: 'LLM Configuration',
           currentPath: '/admin/llm',
           user: request.user,
           llmConnected: false,
+          activeTab,
         });
       }
 
       let providers: Awaited<ReturnType<typeof llmClient.listProviders>> = [];
       let models: Awaited<ReturnType<typeof llmClient.listModels>> = [];
       let capabilities: Awaited<ReturnType<typeof llmClient.listCapabilities>> = [];
-      let prompts: Awaited<ReturnType<typeof llmClient.listPrompts>> = [];
       let llmConnected = false;
       let error: string | undefined;
 
       try {
         await llmClient.health();
         llmConnected = true;
-        [providers, models, capabilities, prompts] = await Promise.all([
+        [providers, models, capabilities] = await Promise.all([
           llmClient.listProviders(),
           llmClient.listModels(),
           llmClient.listCapabilities(),
-          llmClient.listPrompts(),
         ]);
       } catch (err) {
         error = err instanceof Error ? err.message : 'Failed to connect to LLM service';
@@ -76,17 +80,38 @@ export async function llmAdminRoutes(
         }),
       }));
 
+      // Build prompts for all 4 capabilities (getPrompt returns default when no override)
+      const CAPABILITY_NAMES = ['extract-requirements', 'generate-fix', 'analyse-report', 'discover-branding'];
+      const promptData = llmConnected
+        ? await Promise.all(
+            CAPABILITY_NAMES.map(async (cap) => {
+              try {
+                const p = await llmClient.getPrompt(cap);
+                return {
+                  capability: cap,
+                  template: p.template,
+                  isCustom: p.isCustom ?? false,
+                  updatedAt: p.updatedAt ?? null,
+                };
+              } catch {
+                return { capability: cap, template: '', isCustom: false, updatedAt: null };
+              }
+            }),
+          )
+        : [];
+
       return reply.view('admin/llm.hbs', {
         pageTitle: 'LLM Configuration',
         currentPath: '/admin/llm',
         user: request.user,
         llmConnected,
+        activeTab,
         error,
         providers: providersWithBadge,
         models: modelsWithBadge,
         modelsByProvider,
         capabilities: capabilitiesWithModels,
-        prompts,
+        prompts: promptData,
       });
     },
   );
@@ -125,7 +150,7 @@ export async function llmAdminRoutes(
         });
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
+          .header('HX-Redirect', '/admin/llm?tab=providers')
           .send(toastHtml('Provider created successfully', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -152,7 +177,10 @@ export async function llmAdminRoutes(
         const result = await llmClient.testProvider(request.params.id);
         const msg = result.ok ? 'Connection successful' : 'Connection failed';
         const type = result.ok ? 'success' : 'error';
-        return reply.header('content-type', 'text/html').header('HX-Refresh', 'true').send(toastHtml(msg, type));
+        return reply
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', '/admin/llm?tab=providers')
+          .send(toastHtml(msg, type));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return reply.code(500).header('content-type', 'text/html').send(
@@ -219,7 +247,7 @@ export async function llmAdminRoutes(
         await llmClient.updateProvider(request.params.id, data);
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
+          .header('HX-Redirect', '/admin/llm?tab=providers')
           .send(toastHtml('Provider updated', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -246,7 +274,7 @@ export async function llmAdminRoutes(
         await llmClient.deleteProvider(request.params.id);
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
+          .header('HX-Redirect', '/admin/llm?tab=providers')
           .send(toastHtml('Provider deleted', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -294,7 +322,7 @@ export async function llmAdminRoutes(
         });
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
+          .header('HX-Redirect', '/admin/llm?tab=models')
           .send(toastHtml('Model registered', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -321,7 +349,7 @@ export async function llmAdminRoutes(
         await llmClient.deleteModel(request.params.id);
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
+          .header('HX-Redirect', '/admin/llm?tab=models')
           .send(toastHtml('Model deleted', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -359,7 +387,7 @@ export async function llmAdminRoutes(
         });
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
+          .header('HX-Redirect', '/admin/llm?tab=capabilities')
           .send(toastHtml('Model assigned to capability', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -386,7 +414,7 @@ export async function llmAdminRoutes(
         await llmClient.unassignCapability(request.params.name, request.params.modelId);
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
+          .header('HX-Redirect', '/admin/llm?tab=capabilities')
           .send(toastHtml('Model unassigned from capability', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -421,7 +449,7 @@ export async function llmAdminRoutes(
         await llmClient.setPrompt(request.params.capability, body.template.trim());
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
+          .header('HX-Redirect', '/admin/llm?tab=prompts')
           .send(toastHtml('Prompt saved', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -448,7 +476,7 @@ export async function llmAdminRoutes(
         await llmClient.deletePrompt(request.params.capability);
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
+          .header('HX-Redirect', '/admin/llm?tab=prompts')
           .send(toastHtml('Prompt reset to default', 'success'));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
