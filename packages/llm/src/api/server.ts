@@ -12,6 +12,8 @@ import { registerClientRoutes } from './routes/clients.js';
 import { registerProviderRoutes } from './routes/providers.js';
 import { registerModelRoutes } from './routes/models.js';
 import { registerCapabilityRoutes } from './routes/capabilities.js';
+import { registerCapabilityExecRoutes } from './routes/capabilities-exec.js';
+import { registerPromptRoutes } from './routes/prompts.js';
 import { VERSION } from '../version.js';
 
 export interface ServerOptions {
@@ -37,7 +39,7 @@ export async function createServer(options: ServerOptions) {
     logger = false,
   } = options;
 
-  const app = Fastify({ logger, bodyLimit: 1024 * 1024 }); // 1MB
+  const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }); // 10MB
 
   // Register CORS
   await app.register(cors, {
@@ -120,6 +122,8 @@ export async function createServer(options: ServerOptions) {
   await registerProviderRoutes(app, db);
   await registerModelRoutes(app, db);
   await registerCapabilityRoutes(app, db);
+  await registerCapabilityExecRoutes(app, db);
+  await registerPromptRoutes(app, db);
 
   return app;
 }
