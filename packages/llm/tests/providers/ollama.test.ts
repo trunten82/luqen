@@ -75,6 +75,26 @@ describe('OllamaAdapter', () => {
     expect(body.options.num_predict).toBe(100);
   });
 
+  it('complete aborts on timeout', async () => {
+    await adapter.connect({ baseUrl: 'http://localhost:11434' });
+    mockFetch.mockImplementationOnce((_url: string, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        const signal = init?.signal;
+        if (signal) {
+          if (signal.aborted) {
+            reject(new DOMException('The operation was aborted', 'AbortError'));
+            return;
+          }
+          signal.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted', 'AbortError'));
+          });
+        }
+        // Never resolves — simulates a slow server
+      })
+    );
+    await expect(adapter.complete('test', { model: 'x', timeout: 0.01 })).rejects.toThrow();
+  }, 10000);
+
   it('complete includes system prompt as first message when provided', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
