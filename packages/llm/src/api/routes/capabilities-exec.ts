@@ -21,7 +21,6 @@ export async function registerCapabilityExecRoutes(
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
-        required: ['content', 'regulationId', 'regulationName'],
         properties: {
           content:        { type: 'string', description: 'Full text of the regulation document' },
           regulationId:   { type: 'string', description: 'Unique identifier for the regulation (e.g. "wcag-2.2")' },
@@ -33,6 +32,7 @@ export async function registerCapabilityExecRoutes(
       response: {
         200: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             requirements: { type: 'array', items: { type: 'object' } },
             model:        { type: 'string' },
@@ -40,10 +40,10 @@ export async function registerCapabilityExecRoutes(
             attempts:     { type: 'number' },
           },
         },
-        400: { $ref: '#/components/schemas/ErrorResponse' },
-        502: { $ref: '#/components/schemas/ErrorResponse' },
-        503: { $ref: '#/components/schemas/ErrorResponse' },
-        504: { $ref: '#/components/schemas/ErrorResponse' },
+        400: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        502: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        503: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        504: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
       },
     },
   }, async (request, reply) => {
@@ -108,7 +108,6 @@ export async function registerCapabilityExecRoutes(
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
-        required: ['wcagCriterion', 'issueMessage', 'htmlContext'],
         properties: {
           wcagCriterion: { type: 'string', description: 'WCAG success criterion (e.g. "1.1.1 Non-text Content")' },
           issueMessage:  { type: 'string', description: 'Accessibility issue description from the scanner' },
@@ -120,19 +119,20 @@ export async function registerCapabilityExecRoutes(
       response: {
         200: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             fixedHtml:   { type: 'string' },
             explanation: { type: 'string' },
-            effortLevel: { type: 'string', enum: ['low', 'medium', 'high'] },
+            effort:      { type: 'string', enum: ['low', 'medium', 'high'] },
             model:       { type: 'string' },
             provider:    { type: 'string' },
             attempts:    { type: 'number' },
           },
         },
-        400: { $ref: '#/components/schemas/ErrorResponse' },
-        502: { $ref: '#/components/schemas/ErrorResponse' },
-        503: { $ref: '#/components/schemas/ErrorResponse' },
-        504: { $ref: '#/components/schemas/ErrorResponse' },
+        400: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        502: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        503: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        504: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
       },
     },
   }, async (request, reply) => {
@@ -197,10 +197,9 @@ export async function registerCapabilityExecRoutes(
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
-        required: ['siteUrl', 'totalIssues', 'issuesList'],
         properties: {
           siteUrl:           { type: 'string', description: 'URL of the scanned site' },
-          totalIssues:       { type: 'number', description: 'Total issue count from the scan' },
+          totalIssues:       { description: 'Total issue count from the scan (number)' },
           issuesList:        {
             type: 'array',
             items: {
@@ -222,6 +221,7 @@ export async function registerCapabilityExecRoutes(
       response: {
         200: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             summary:      { type: 'string' },
             keyFindings:  { type: 'array', items: { type: 'string' } },
@@ -232,10 +232,10 @@ export async function registerCapabilityExecRoutes(
             attempts:     { type: 'number' },
           },
         },
-        400: { $ref: '#/components/schemas/ErrorResponse' },
-        502: { $ref: '#/components/schemas/ErrorResponse' },
-        503: { $ref: '#/components/schemas/ErrorResponse' },
-        504: { $ref: '#/components/schemas/ErrorResponse' },
+        400: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        502: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        503: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        504: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
       },
     },
   }, async (request, reply) => {
@@ -303,7 +303,6 @@ export async function registerCapabilityExecRoutes(
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
-        required: ['url'],
         properties: {
           url:   { type: 'string', description: 'URL to fetch and analyse for brand signals (http/https)' },
           orgId: { type: 'string', description: 'Optional organisation ID for per-org prompt overrides' },
@@ -312,6 +311,7 @@ export async function registerCapabilityExecRoutes(
       response: {
         200: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             colors:    { type: 'array', items: { type: 'string' }, description: 'Detected hex color values' },
             fonts:     { type: 'array', items: { type: 'string' }, description: 'Detected font family names' },
@@ -322,10 +322,10 @@ export async function registerCapabilityExecRoutes(
             attempts:  { type: 'number' },
           },
         },
-        400: { $ref: '#/components/schemas/ErrorResponse' },
-        502: { $ref: '#/components/schemas/ErrorResponse' },
-        503: { $ref: '#/components/schemas/ErrorResponse' },
-        504: { $ref: '#/components/schemas/ErrorResponse' },
+        400: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        502: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        503: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        504: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
       },
     },
   }, async (request, reply) => {
