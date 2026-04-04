@@ -11,7 +11,7 @@ export async function llmAdminRoutes(
 
   server.get(
     '/admin/llm',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { tab } = request.query as { tab?: string };
       const activeTab = ['providers', 'models', 'capabilities', 'prompts'].includes(tab ?? '')
@@ -120,7 +120,7 @@ export async function llmAdminRoutes(
 
   server.post(
     '/admin/llm/providers',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
@@ -165,7 +165,7 @@ export async function llmAdminRoutes(
 
   server.post<{ Params: { id: string } }>(
     '/admin/llm/providers/:id/test',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
@@ -179,7 +179,6 @@ export async function llmAdminRoutes(
         const type = result.ok ? 'success' : 'error';
         return reply
           .header('content-type', 'text/html')
-          .header('HX-Redirect', '/admin/llm?tab=providers')
           .send(toastHtml(msg, type));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -194,7 +193,7 @@ export async function llmAdminRoutes(
 
   server.get(
     '/admin/llm/remote-models',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { providerId } = request.query as { providerId?: string };
       if (!providerId || !llmClient) {
@@ -222,7 +221,7 @@ export async function llmAdminRoutes(
 
   server.patch<{ Params: { id: string } }>(
     '/admin/llm/providers/:id',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
@@ -262,7 +261,7 @@ export async function llmAdminRoutes(
 
   server.delete<{ Params: { id: string } }>(
     '/admin/llm/providers/:id',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
@@ -289,7 +288,7 @@ export async function llmAdminRoutes(
 
   server.post(
     '/admin/llm/models',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
@@ -337,7 +336,7 @@ export async function llmAdminRoutes(
 
   server.delete<{ Params: { id: string } }>(
     '/admin/llm/models/:id',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
@@ -364,7 +363,7 @@ export async function llmAdminRoutes(
 
   server.put<{ Params: { name: string } }>(
     '/admin/llm/capabilities/:name/assign',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
@@ -402,7 +401,7 @@ export async function llmAdminRoutes(
 
   server.delete<{ Params: { name: string; modelId: string } }>(
     '/admin/llm/capabilities/:name/unassign/:modelId',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
@@ -429,7 +428,7 @@ export async function llmAdminRoutes(
 
   server.put<{ Params: { capability: string } }>(
     '/admin/llm/prompts/:capability',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
@@ -464,7 +463,7 @@ export async function llmAdminRoutes(
 
   server.delete<{ Params: { capability: string } }>(
     '/admin/llm/prompts/:capability',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
