@@ -74,23 +74,25 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 │  │                             │  │  auth:    entra, okta, google          │ │
 │  │  StorageAdapter (14 repos)  │◄─┤  notify:  slack, teams, email          │ │
 │  │  SQLite (built-in)          │  │  storage: s3, azure                    │ │
-│  └──────┬──────┬───────┬───────┘  └────────────────────────────────────────┘ │
-│         │OAuth2│OAuth2 │OAuth2                                               │
-│         ▼      ▼       ▼                                                     │
-│  ┌──────────┐ ┌──────────────────┐  ┌──────────────┐  ┌───────────────────┐ │
-│  │ @luqen/  │ │ @luqen/compliance│  │  @luqen/llm  │  │  @luqen/monitor   │ │
-│  │ branding │ │ (port 4000)      │  │  (port 4200) │  │                   │ │
-│  │ (4100)   │ │                  │◄─┤              │◄─┤  ─ watches sources│ │
-│  │          │ │ ─ 58 jurisdic.   │  │  ─ providers │  │  ─ creates props  │ │
-│  │  ─ brand │ │ ─ 62 regulations │  │  ─ models    │  │  ─ SHA-256 detect │ │
-│  │   match  │ │ ─ 225 criteria   │  │  ─ capabilit.│  └───────────────────┘ │
-│  │  ─ image │ │ ─ source intel   │  │  ─ fallback  │                        │
-│  │   upload │ │   W3cPolicyParser│  │    chains    │  ┌───────────────────┐ │
-│  │  ─ retag │ │   WcagUpstream   │  │  ─ OAuth2 /  │  │  External sources │ │
-│  │  ─ SQLite│ │   LLM routing    │  │    JWT auth  │◄─┤  W3C WAI policies │ │
-│  │  ─ OAuth2│ │ ─ OAuth2 / JWT   │  └──────────────┘  │  W3C WCAG upstr.  │ │
-│  └──────────┘ └────────┬─────────┘                    │  tenon-io (comm.) │ │
-│                        │ uses as library               └───────────────────┘ │
+│  └──┬──────────┬──────────┬────┘  └────────────────────────────────────────┘ │
+│     │OAuth2    │OAuth2    │OAuth2                                             │
+│     ▼          ▼          ▼                                                   │
+│  ┌──────────┐ ┌──────────────────┐  ┌─────────────────────────────────────┐  │
+│  │ @luqen/  │ │ @luqen/compliance│  │  @luqen/llm  (port 4200)            │  │
+│  │ branding │ │ (port 4000)      │  │                                     │  │
+│  │ (4100)   │ │                  │  │  ─ providers (Ollama, OpenAI, ...)  │  │
+│  │          │ │ ─ 58 jurisdic.   │  │  ─ model registry                  │  │
+│  │  ─ brand │ │ ─ 62 regulations │  │  ─ capability-based routing        │  │
+│  │   match  │ │ ─ 225 criteria   │  │  ─ retry / fallback chains         │  │
+│  │  ─ image │ │ ─ source intel   │  │  ─ per-org prompt overrides        │  │
+│  │   upload │ │   W3cPolicyParser│  │  ─ OAuth2 / RS256 JWT auth         │  │
+│  │  ─ retag │ │   WcagUpstream   │  │                                     │  │
+│  │  ─ SQLite│ │   LLM routing ───┼──►  capabilities:                     │  │
+│  │  ─ OAuth2│ │ ─ OAuth2 / JWT   │  │   extract-requirements             │  │
+│  └──────────┘ └────────┬─────────┘  │   generate-fix                     │  │
+│                        │            │   analyse-report                    │  │
+│                        │ uses as    │   discover-branding                 │  │
+│                        │ library    └─────────────────────────────────────┘  │
 │                        ▼                                                     │
 │  ┌────────────────────────────────────────────────────────────────────────┐  │
 │  │   @luqen/core                          CLI + MCP server                │  │
@@ -98,6 +100,13 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 │  │  ─ fix proposals                       ─ HTML/JSON reports             │  │
 │  │  ─ pa11y (built-in)                                                    │  │
 │  └────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌───────────────────────────────┐  ┌──────────────────────────────────────┐ │
+│  │  @luqen/monitor               │  │  External sources                    │ │
+│  │  ─ watches legal sources      │  │  W3C WAI policies                    │ │
+│  │  ─ creates update proposals   │  │  W3C WCAG upstream                   │ │
+│  │  ─ SHA-256 change detection   │  │  tenon-io (community)                │ │
+│  └───────────────────────────────┘  └──────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -330,7 +339,9 @@ Add the credentials to `dashboard.config.json` to enable the LLM admin page:
 
 The LLM service manages four capabilities: `extract-requirements`, `generate-fix`, `analyse-report`, and `discover-branding`. Each capability can have multiple models assigned at different priority levels — the service tries each model in priority order and falls through to the next on failure or timeout.
 
-The interactive API docs are at `http://localhost:4200/docs` (Swagger UI). See [packages/llm/README.md](packages/llm/README.md) for the full configuration and CLI reference.
+For guided setup, run `bash packages/llm/installer/install-llm.sh` from the project root — it configures JWT keys, an OAuth client, provider registration, and capability assignments interactively.
+
+The interactive API docs are at `http://localhost:4200/api/v1/docs` (Swagger UI). See [packages/llm/README.md](packages/llm/README.md) for the full configuration, CLI reference, and capability API documentation.
 
 ---
 

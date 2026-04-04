@@ -28,9 +28,31 @@ luqen-llm clients create --name dashboard --scopes read,write,admin
 # → note the client_id and client_secret
 ```
 
-The service starts on port 4200 by default. Interactive API docs are available at `http://localhost:4200/docs` (Swagger UI).
+The service starts on port 4200 by default. Interactive API docs are available at `http://localhost:4200/api/v1/docs` (Swagger UI).
 
 Machine-to-machine callers (dashboard, compliance service) authenticate using **OAuth2 client credentials**. Pass `clientId` and `clientSecret` from the `clients create` output into your dashboard config (`llmClientId` / `llmClientSecret`) or compliance env vars (`COMPLIANCE_LLM_CLIENT_ID` / `COMPLIANCE_LLM_CLIENT_SECRET`).
+
+## Installer
+
+The fastest way to configure the service from scratch:
+
+```bash
+bash installer/install-llm.sh
+```
+
+The interactive wizard configures:
+1. JWT RS256 key pair (in `./keys/`)
+2. OAuth client for the calling service (dashboard, compliance, etc.)
+3. LLM provider registration (Ollama or OpenAI)
+4. Model registration and assignment to all four capabilities
+
+**Non-interactive / CI mode:**
+
+```bash
+bash installer/install-llm.sh --non-interactive --provider-type ollama --provider-url http://localhost:11434 --model llama3.2 --client-name dashboard
+```
+
+**Idempotency:** Re-running the installer detects existing keys and clients and skips re-creation.
 
 ## Configuration
 
@@ -118,6 +140,187 @@ Authentication: `Authorization: Bearer <token>` on all endpoints except `/api/v1
 | `DELETE` | `/capabilities/:name/assign/:modelId` | `admin` | Remove a capability assignment (filter: `?orgId=`) |
 
 **Available capabilities:** `extract-requirements`, `generate-fix`, `analyse-report`, `discover-branding`
+
+## Capability Endpoints
+
+All capability endpoints require `Authorization: Bearer <token>` with at minimum `read` scope. They return `{ error, statusCode }` on failure.
+
+### Common error responses
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid or missing required request field |
+| `401` | Missing or invalid bearer token |
+| `502` | Upstream LLM provider returned an unexpected error |
+| `503` | No model assigned to capability (capability not configured) |
+| `504` | All assigned models failed or timed out (capability exhausted) |
+
+---
+
+### POST /api/v1/extract-requirements
+
+Extract structured accessibility requirements from a regulation document using AI.
+
+**Request body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `content` | string | Yes | Full text of the regulation document |
+| `regulationId` | string | Yes | Unique identifier for the regulation (e.g. `"wcag-2.2"`) |
+| `regulationName` | string | Yes | Human-readable regulation name |
+| `jurisdictionId` | string | No | Jurisdiction ID for contextual filtering |
+| `orgId` | string | No | Organisation ID for per-org prompt overrides |
+
+**Response 200**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `requirements` | array | Extracted requirement objects |
+| `model` | string | Model name used for this request |
+| `provider` | string | Provider name used for this request |
+| `attempts` | number | Number of model attempts before success |
+
+**Example**
+
+```bash
+curl -X POST http://localhost:4200/api/v1/extract-requirements \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Section 1.1.1: All non-text content must have a text alternative...",
+    "regulationId": "wcag-2.2",
+    "regulationName": "WCAG 2.2"
+  }'
+```
+
+---
+
+### POST /api/v1/generate-fix
+
+Generate an AI-powered fix suggestion for a WCAG accessibility issue.
+
+**Request body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `wcagCriterion` | string | Yes | WCAG success criterion (e.g. `"1.1.1 Non-text Content"`) |
+| `issueMessage` | string | Yes | Accessibility issue description from the scanner |
+| `htmlContext` | string | Yes | HTML snippet containing the problematic element |
+| `cssContext` | string | No | Relevant CSS for the element |
+| `orgId` | string | No | Organisation ID for per-org prompt overrides |
+
+**Response 200**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `fixedHtml` | string | Corrected HTML snippet |
+| `explanation` | string | Human-readable explanation of the fix |
+| `effortLevel` | string | Fix effort estimate: `"low"`, `"medium"`, or `"high"` |
+| `model` | string | Model name used for this request |
+| `provider` | string | Provider name used for this request |
+| `attempts` | number | Number of model attempts before success |
+
+**Example**
+
+```bash
+curl -X POST http://localhost:4200/api/v1/generate-fix \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wcagCriterion": "1.1.1 Non-text Content",
+    "issueMessage": "Image element missing alt attribute",
+    "htmlContext": "<img src=\"logo.png\">"
+  }'
+```
+
+---
+
+### POST /api/v1/analyse-report
+
+Generate an AI executive summary for a completed accessibility scan report, including pattern detection across prior scans.
+
+**Request body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `siteUrl` | string | Yes | URL of the scanned site |
+| `totalIssues` | number | Yes | Total issue count from the scan |
+| `issuesList` | array | Yes | Top issues from the scan (see schema below) |
+| `complianceSummary` | string | No | Compliance matrix summary text |
+| `recurringPatterns` | string[] | No | Recurring criteria codes from prior scans |
+| `orgId` | string | No | Organisation ID for per-org prompt overrides |
+
+**issuesList item schema**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `criterion` | string | WCAG criterion code (e.g. `"1.1.1"`) |
+| `message` | string | Issue description |
+| `count` | number | Number of occurrences |
+| `level` | string | WCAG level: `"A"`, `"AA"`, or `"AAA"` |
+
+**Response 200**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `summary` | string | AI-generated executive summary paragraph |
+| `keyFindings` | string[] | Bullet-point key findings |
+| `priorities` | string[] | Ordered remediation priorities |
+| `patterns` | string[] | Detected recurring patterns |
+| `model` | string | Model name used for this request |
+| `provider` | string | Provider name used for this request |
+| `attempts` | number | Number of model attempts before success |
+
+**Example**
+
+```bash
+curl -X POST http://localhost:4200/api/v1/analyse-report \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "siteUrl": "https://example.com",
+    "totalIssues": 47,
+    "issuesList": [
+      { "criterion": "1.1.1", "message": "Missing alt text", "count": 12, "level": "A" }
+    ]
+  }'
+```
+
+---
+
+### POST /api/v1/discover-branding
+
+Auto-detect brand colors, fonts, and logo from a website URL using AI-assisted HTML/CSS analysis.
+
+**Request body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | Yes | URL to fetch and analyse for brand signals (must be `http://` or `https://`) |
+| `orgId` | string | No | Organisation ID for per-org prompt overrides |
+
+**Response 200**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `colors` | string[] | Detected hex color values (e.g. `["#003087", "#FFD700"]`) |
+| `fonts` | string[] | Detected font family names (e.g. `["Inter", "Georgia"]`) |
+| `logoUrl` | string | Detected logo URL (if found; empty string otherwise) |
+| `brandName` | string | Detected brand name (if found; empty string otherwise) |
+| `model` | string | Model name used for this request |
+| `provider` | string | Provider name used for this request |
+| `attempts` | number | Number of model attempts before success |
+
+**Example**
+
+```bash
+curl -X POST http://localhost:4200/api/v1/discover-branding \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://example.com" }'
+```
+
+---
 
 ## CLI Commands Reference
 
