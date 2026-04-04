@@ -1,0 +1,404 @@
+<section aria-label="LLM configuration">
+  <div class="page-actions">
+    <h1 class="page-title">LLM Configuration</h1>
+  </div>
+
+  <div id="toast-container" aria-live="polite" role="region" aria-label="Notifications"></div>
+  <div id="llm-messages" aria-live="polite"></div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">{{error}}</div>
+  {{/if}}
+
+  {{#unless llmConnected}}
+  <div class="alert alert--warning" role="status">
+    LLM service not reachable. Set <code>DASHBOARD_LLM_URL</code> and ensure the service is running.
+  </div>
+  {{else}}
+
+  {{!-- Tab navigation --}}
+  <div class="tabs" role="tablist" aria-label="LLM management sections">
+    <button class="tab is-active" role="tab" aria-selected="true" aria-controls="tab-providers"
+            id="btn-tab-providers" data-action="llmSwitchTab" data-tab="providers" type="button">
+      Providers
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-models"
+            id="btn-tab-models" data-action="llmSwitchTab" data-tab="models" type="button">
+      Models
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-capabilities"
+            id="btn-tab-capabilities" data-action="llmSwitchTab" data-tab="capabilities" type="button">
+      Capabilities
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="tab-prompts"
+            id="btn-tab-prompts" data-action="llmSwitchTab" data-tab="prompts" type="button">
+      Prompts
+    </button>
+  </div>
+
+  {{!-- ── PROVIDERS TAB ──────────────────────────────────────────────────── --}}
+  <div id="tab-providers" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-providers">
+
+    <div class="table-wrapper mt-sm">
+      <table class="table" aria-label="LLM providers">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Type</th>
+            <th scope="col">Base URL</th>
+            <th scope="col">Status</th>
+            <th scope="col">{{t "common.actions"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each providers}}
+          <tr id="provider-{{id}}">
+            <td data-label="Name">{{name}}</td>
+            <td data-label="Type"><span class="badge badge--neutral">{{type}}</span></td>
+            <td data-label="Base URL">{{#if baseUrl}}<code>{{baseUrl}}</code>{{else}}&mdash;{{/if}}</td>
+            <td data-label="Status">
+              {{#if enabled}}
+              <span class="badge badge--success">Enabled</span>
+              {{else}}
+              <span class="badge badge--neutral">Disabled</span>
+              {{/if}}
+            </td>
+            <td data-label="Actions">
+              <div class="btn-group">
+                <button
+                  hx-post="/admin/llm/providers/{{id}}/test"
+                  hx-target="#llm-messages"
+                  hx-swap="innerHTML"
+                  hx-include="[name='_csrf']"
+                  class="btn btn--sm btn--secondary"
+                  type="button">Test</button>
+                <button
+                  hx-delete="/admin/llm/providers/{{id}}"
+                  hx-confirm="Delete provider {{name}}? All associated models will also be removed."
+                  hx-target="#llm-messages"
+                  hx-swap="innerHTML"
+                  hx-include="[name='_csrf']"
+                  class="btn btn--sm btn--danger"
+                  type="button">Delete</button>
+              </div>
+            </td>
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="5">No providers configured. Add one below.</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    {{!-- Add provider form --}}
+    <div class="card mt-md">
+      <div class="card__header">
+        <h2 class="card__title">Add Provider</h2>
+      </div>
+      <form class="card__body"
+            hx-post="/admin/llm/providers"
+            hx-target="#llm-messages"
+            hx-swap="innerHTML"
+            data-reset-on-success>
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="prov-name">Name <span aria-hidden="true">*</span></label>
+            <input type="text" id="prov-name" name="name" class="input" required
+                   placeholder="e.g. OpenAI Production" />
+          </div>
+          <div class="form-group">
+            <label for="prov-type">Type <span aria-hidden="true">*</span></label>
+            <select id="prov-type" name="type" class="input" required>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="ollama">Ollama</option>
+              <option value="openai-compatible">OpenAI Compatible</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="prov-apikey">API Key</label>
+            <input type="password" id="prov-apikey" name="apiKey" class="input"
+                   placeholder="sk-..." autocomplete="new-password" />
+            <small class="form-hint">Leave blank for local providers (Ollama)</small>
+          </div>
+          <div class="form-group">
+            <label for="prov-baseurl">Base URL</label>
+            <input type="url" id="prov-baseurl" name="baseUrl" class="input"
+                   placeholder="http://localhost:11434" />
+            <small class="form-hint">Required for Ollama / OpenAI-compatible endpoints</small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="enabled" value="on" checked />
+            Enable provider
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn--primary">Add Provider</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {{!-- ── MODELS TAB ───────────────────────────────────────────────────────── --}}
+  <div id="tab-models" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-models" hidden>
+
+    {{#if providers}}
+    {{#each modelsByProvider}}
+    <div class="card mt-sm">
+      <div class="card__header">
+        <h2 class="card__title">{{name}}</h2>
+        <span class="badge badge--neutral">{{type}}</span>
+      </div>
+      <div class="card__body">
+        {{#if models.length}}
+        <table class="table" aria-label="Models for {{name}}">
+          <thead>
+            <tr>
+              <th scope="col">External ID</th>
+              <th scope="col">Display Name</th>
+              <th scope="col">Context Window</th>
+              <th scope="col">Status</th>
+              <th scope="col">{{t "common.actions"}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each models}}
+            <tr id="model-{{id}}">
+              <td data-label="External ID"><code>{{externalId}}</code></td>
+              <td data-label="Name">{{name}}</td>
+              <td data-label="Context Window">{{#if contextWindow}}{{contextWindow}}{{else}}&mdash;{{/if}}</td>
+              <td data-label="Status">
+                {{#if enabled}}
+                <span class="badge badge--success">Enabled</span>
+                {{else}}
+                <span class="badge badge--neutral">Disabled</span>
+                {{/if}}
+              </td>
+              <td data-label="Actions">
+                <button
+                  hx-delete="/admin/llm/models/{{id}}"
+                  hx-confirm="Delete model {{name}}?"
+                  hx-target="#llm-messages"
+                  hx-swap="innerHTML"
+                  hx-include="[name='_csrf']"
+                  class="btn btn--sm btn--danger"
+                  type="button">Delete</button>
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+        {{else}}
+        <p class="text-muted">No models registered for this provider.</p>
+        {{/if}}
+      </div>
+    </div>
+    {{/each}}
+    {{else}}
+    <div class="alert alert--warning mt-sm">No providers configured. Add a provider first.</div>
+    {{/if}}
+
+    {{!-- Register model form --}}
+    {{#if providers}}
+    <div class="card mt-md">
+      <div class="card__header">
+        <h2 class="card__title">Register Model</h2>
+      </div>
+      <form class="card__body"
+            hx-post="/admin/llm/models"
+            hx-target="#llm-messages"
+            hx-swap="innerHTML"
+            data-reset-on-success>
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="model-provider">Provider <span aria-hidden="true">*</span></label>
+            <select id="model-provider" name="providerId" class="input" required>
+              <option value="">Select provider...</option>
+              {{#each providers}}
+              <option value="{{id}}">{{name}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="model-extid">External ID <span aria-hidden="true">*</span></label>
+            <input type="text" id="model-extid" name="externalId" class="input" required
+                   placeholder="e.g. gpt-4o or claude-3-5-sonnet-20241022" />
+            <small class="form-hint">The model identifier used in API calls</small>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="model-name">Display Name <span aria-hidden="true">*</span></label>
+            <input type="text" id="model-name" name="name" class="input" required
+                   placeholder="e.g. GPT-4o" />
+          </div>
+          <div class="form-group">
+            <label for="model-ctx">Context Window</label>
+            <input type="number" id="model-ctx" name="contextWindow" class="input"
+                   placeholder="e.g. 128000" min="1" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" name="enabled" value="on" checked />
+            Enable model
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn--primary">Register Model</button>
+        </div>
+      </form>
+    </div>
+    {{/if}}
+  </div>
+
+  {{!-- ── CAPABILITIES TAB ─────────────────────────────────────────────────── --}}
+  <div id="tab-capabilities" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-capabilities" hidden>
+
+    {{#if capabilities}}
+    <div class="cards mt-sm">
+      {{#each capabilities}}
+      <div class="card">
+        <div class="card__header">
+          <h2 class="card__title"><code>{{name}}</code></h2>
+          {{#if description}}<p class="card__subtitle">{{description}}</p>{{/if}}
+        </div>
+        <div class="card__body">
+          {{#if assignedModels.length}}
+          <p class="form-hint">Assigned models:</p>
+          <ul class="badge-list">
+            {{#each assignedModels}}
+            <li>
+              <span class="badge badge--info">{{this}}</span>
+              <button
+                hx-delete="/admin/llm/capabilities/{{../name}}/unassign/{{this}}"
+                hx-confirm="Unassign this model from {{../name}}?"
+                hx-target="#llm-messages"
+                hx-swap="innerHTML"
+                hx-include="[name='_csrf']"
+                class="btn btn--xs btn--ghost"
+                type="button"
+                aria-label="Unassign {{this}}">&times;</button>
+            </li>
+            {{/each}}
+          </ul>
+          {{else}}
+          <p class="text-muted">No models assigned.</p>
+          {{/if}}
+
+          {{#if ../models.length}}
+          <form class="mt-sm"
+                hx-put="/admin/llm/capabilities/{{name}}/assign"
+                hx-target="#llm-messages"
+                hx-swap="innerHTML"
+                data-reset-on-success>
+            <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label for="cap-model-{{name}}" class="sr-only">Assign model to {{name}}</label>
+                <select id="cap-model-{{name}}" name="modelId" class="input" required>
+                  <option value="">Assign model...</option>
+                  {{#each ../models}}
+                  {{#if enabled}}
+                  <option value="{{id}}">{{name}} ({{externalId}})</option>
+                  {{/if}}
+                  {{/each}}
+                </select>
+              </div>
+              <button type="submit" class="btn btn--primary btn--sm">Assign</button>
+            </div>
+          </form>
+          {{/if}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
+    {{else}}
+    <div class="alert alert--warning mt-sm">No capabilities found. Ensure the LLM service is seeded.</div>
+    {{/if}}
+  </div>
+
+  {{!-- ── PROMPTS TAB ──────────────────────────────────────────────────────── --}}
+  <div id="tab-prompts" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-prompts" hidden>
+
+    {{#if prompts}}
+    {{#each prompts}}
+    <div class="card mt-sm">
+      <div class="card__header">
+        <h2 class="card__title"><code>{{capability}}</code></h2>
+        {{#if isCustom}}
+        <span class="badge badge--info">Custom</span>
+        {{else}}
+        <span class="badge badge--neutral">Default</span>
+        {{/if}}
+      </div>
+      <form class="card__body"
+            hx-put="/admin/llm/prompts/{{capability}}"
+            hx-target="#llm-messages"
+            hx-swap="innerHTML">
+        <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+        <div class="form-group">
+          <label for="prompt-{{capability}}">Prompt Template</label>
+          <textarea id="prompt-{{capability}}" name="template" class="input"
+                    rows="8"
+                    placeholder="Enter prompt template...">{{template}}</textarea>
+          <small class="form-hint">Use <code>{{"{{"}}content{{"}}"}}</code> to inject the document text.</small>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn--primary">Save Override</button>
+          {{#if isCustom}}
+          <button type="button"
+                  hx-delete="/admin/llm/prompts/{{capability}}"
+                  hx-confirm="Reset prompt for {{capability}} to the default?"
+                  hx-target="#llm-messages"
+                  hx-swap="innerHTML"
+                  hx-include="[name='_csrf']"
+                  class="btn btn--secondary">Reset to Default</button>
+          {{/if}}
+        </div>
+      </form>
+    </div>
+    {{/each}}
+    {{else}}
+    <div class="alert alert--warning mt-sm">No prompts found. Ensure the LLM service is seeded.</div>
+    {{/if}}
+  </div>
+
+  {{/unless}}
+
+  <script>
+  (function () {
+    function llmSwitchTab(name) {
+      document.querySelectorAll('.tab-content[id^="tab-"]').forEach(function (el) {
+        el.hidden = el.id !== 'tab-' + name;
+      });
+      document.querySelectorAll('[data-action="llmSwitchTab"]').forEach(function (btn) {
+        var isActive = btn.getAttribute('data-tab') === name;
+        btn.classList.toggle('is-active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+    }
+
+    /* Wire up data-action="llmSwitchTab" via app.js delegation */
+    window.llmSwitchTab = function (el) {
+      var tab = el.getAttribute('data-tab');
+      if (tab) llmSwitchTab(tab);
+    };
+
+    /* Re-listen after HTMX swaps */
+    document.addEventListener('htmx:afterOnLoad', function (e) {
+      if (e.detail.target && e.detail.target.id === 'llm-messages') {
+        /* nothing extra needed — badge-list rebuilt on next page load */
+      }
+    });
+  })();
+  </script>
+</section>

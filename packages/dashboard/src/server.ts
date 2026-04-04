@@ -65,6 +65,8 @@ import { auditRoutes } from './routes/admin/audit.js';
 import { changeHistoryRoutes } from './routes/admin/change-history.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { brandingGuidelineRoutes } from './routes/admin/branding-guidelines.js';
+import { llmAdminRoutes } from './routes/admin/llm.js';
+import { createLLMClient } from './llm-client.js';
 import { setGitHostPluginManager } from './git-hosts/registry.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
@@ -623,12 +625,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await gitCredentialRoutes(server, storage, config);
   await fixPrRoutes(server, storage, config);
 
+  // ── LLM client (used in admin routes below) ──────────────────────────────
+  const llmClient = createLLMClient(config.llmUrl);
+
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);
   await regulationRoutes(server, config.complianceUrl);
   await proposalRoutes(server, config.complianceUrl, storage);
   await changeHistoryRoutes(server, config.complianceUrl);
-  await sourceRoutes(server, config.complianceUrl, pluginManager);
+  await sourceRoutes(server, config.complianceUrl, pluginManager, llmClient);
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
   await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, brandingTokenManager);
@@ -652,6 +657,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   const uploadsDir = resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads');
   await brandingGuidelineRoutes(server, storage, uploadsDir);
   await pluginAdminRoutes(server, pluginManager, registryEntries, storage);
+
+  // ── LLM admin routes ────────────────────────────────────────────────────
+  await llmAdminRoutes(server, llmClient);
 
   // ── Export API routes ────────────────────────────────────────────────────
   await exportRoutes(server, storage);
