@@ -47,10 +47,14 @@ export class OllamaAdapter implements LLMProviderAdapter {
       },
     };
 
+    const timeoutMs = options.timeout ? options.timeout * 1000 : undefined;
+    const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
+
     const res = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal,
     });
 
     const data = await res.json() as {

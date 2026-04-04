@@ -3,6 +3,7 @@ export interface CompletionOptions {
   readonly maxTokens?: number;
   readonly temperature?: number;
   readonly systemPrompt?: string;
+  readonly timeout?: number; // seconds
 }
 
 export interface CompletionResult {

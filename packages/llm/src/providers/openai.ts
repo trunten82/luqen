@@ -51,6 +51,9 @@ export class OpenAIAdapter implements LLMProviderAdapter {
       temperature: options.temperature,
     };
 
+    const timeoutMs = options.timeout ? options.timeout * 1000 : undefined;
+    const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined;
+
     const res = await fetch(`${this.baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
@@ -58,6 +61,7 @@ export class OpenAIAdapter implements LLMProviderAdapter {
         Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify(body),
+      signal,
     });
 
     const data = await res.json() as {
