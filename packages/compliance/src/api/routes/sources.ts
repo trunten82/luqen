@@ -397,6 +397,48 @@ export async function registerSourceRoutes(
     }
   });
 
+  // PATCH /api/v1/sources/:id — update managementMode
+  app.patch('/api/v1/sources/:id', {
+    preHandler: [requireScope('write')],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const body = request.body as { managementMode?: string };
+      if (body.managementMode === 'llm' || body.managementMode === 'manual') {
+        await db.updateSourceManagementMode(id, body.managementMode);
+        await reply.send({ updated: true, managementMode: body.managementMode });
+      } else {
+        await reply.status(400).send({ error: 'managementMode must be "llm" or "manual"', statusCode: 400 });
+      }
+    } catch (err) {
+      await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+
+  // POST /api/v1/sources/bulk-switch-mode — switch all government sources
+  app.post('/api/v1/sources/bulk-switch-mode', {
+    preHandler: [requireScope('admin')],
+  }, async (request, reply) => {
+    const body = request.body as { mode?: string };
+    if (body.mode !== 'llm' && body.mode !== 'manual') {
+      await reply.status(400).send({ error: 'mode must be "llm" or "manual"', statusCode: 400 });
+      return;
+    }
+    try {
+      const sources = await db.listSources();
+      let count = 0;
+      for (const s of sources) {
+        if (s.sourceCategory === 'government') {
+          await db.updateSourceManagementMode(s.id, body.mode);
+          count++;
+        }
+      }
+      await reply.send({ updated: count, mode: body.mode });
+    } catch (err) {
+      await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+
   // POST /api/v1/sources/upload — upload document content for LLM parsing
   app.post('/api/v1/sources/upload', {
     preHandler: [requireScope('admin')],

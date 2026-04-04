@@ -530,6 +530,34 @@ export async function uploadSource(
   });
 }
 
+export async function updateSourceMode(
+  baseUrl: string,
+  token: string,
+  sourceId: string,
+  mode: 'llm' | 'manual',
+): Promise<void> {
+  const res = await fetch(`${baseUrl}/api/v1/sources/${encodeURIComponent(sourceId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ managementMode: mode }),
+  });
+  if (!res.ok) throw new Error(`Failed to update source mode: ${res.status}`);
+}
+
+export async function bulkSwitchSourceMode(
+  baseUrl: string,
+  token: string,
+  mode: 'llm' | 'manual',
+): Promise<{ updated: number }> {
+  const res = await fetch(`${baseUrl}/api/v1/sources/bulk-switch-mode`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ mode }),
+  });
+  if (!res.ok) throw new Error(`Failed to bulk switch: ${res.status}`);
+  return res.json() as Promise<{ updated: number }>;
+}
+
 // ── Webhooks ──────────────────────────────────────────────────────────────────
 
 export interface Webhook {
