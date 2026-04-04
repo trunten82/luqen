@@ -90,7 +90,10 @@ Plans:
   2. LLM admin page and new capability UI sections work correctly on mobile viewports
   3. AI-powered feature UX flows (fix suggestions, report summary, brand discovery) are intuitive and consistent
   4. Stitch MCP validates design system alignment across all modified pages
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Audit + structural fixes: i18n keys, mobile layout, design system token alignment
+- [ ] 05-02-PLAN.md — UX polish + Stitch MCP validation: AI feature flow improvements, design system sign-off
 **UI hint**: yes
 
 ## Progress
