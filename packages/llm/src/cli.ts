@@ -148,6 +148,133 @@ export function createProgram(): Command {
       console.log(`Keys written to ${opts.dir}/`);
     });
 
+  // ---- providers ----
+  const providers = program.command('providers').description('Manage LLM providers');
+
+  providers
+    .command('create')
+    .description('Register a new LLM provider')
+    .requiredOption('--name <name>', 'Provider display name')
+    .requiredOption('--type <type>', 'Provider type: ollama | openai | anthropic | gemini')
+    .requiredOption('--url <url>', 'Provider base URL')
+    .option('--api-key <key>', 'API key (required for openai/anthropic/gemini)')
+    .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
+    .option('--db <path>', 'Path to database file')
+    .action(async (opts: { name: string; type: string; url: string; apiKey?: string; timeout: string; db?: string }) => {
+      const db = createDbAdapter(opts.db);
+      await db.initialize();
+      const provider = await db.createProvider({
+        name: opts.name,
+        type: opts.type as import('./types.js').ProviderType,
+        baseUrl: opts.url,
+        apiKey: opts.apiKey,
+        timeout: parseInt(opts.timeout, 10),
+      });
+      console.log(JSON.stringify(provider));
+      await db.close();
+    });
+
+  providers
+    .command('list')
+    .description('List all providers')
+    .option('--db <path>', 'Path to database file')
+    .action(async (opts: { db?: string }) => {
+      const db = createDbAdapter(opts.db);
+      await db.initialize();
+      const list = await db.listProviders();
+      if (list.length === 0) {
+        console.log('No providers configured.');
+      } else {
+        for (const p of list) {
+          console.log(`  ${p.id} -- ${p.name} [${p.type}] ${p.baseUrl} status:${p.status}`);
+        }
+      }
+      await db.close();
+    });
+
+  // ---- models ----
+  const models = program.command('models').description('Manage registered models');
+
+  models
+    .command('register')
+    .description('Register a model under a provider')
+    .requiredOption('--name <name>', 'Model display name')
+    .requiredOption('--provider-id <id>', 'Provider ID')
+    .option('--model-id <id>', 'Model identifier on the provider (defaults to --name)')
+    .option('--db <path>', 'Path to database file')
+    .action(async (opts: { name: string; providerId: string; modelId?: string; db?: string }) => {
+      const db = createDbAdapter(opts.db);
+      await db.initialize();
+      const model = await db.createModel({
+        providerId: opts.providerId,
+        modelId: opts.modelId ?? opts.name,
+        displayName: opts.name,
+      });
+      console.log(JSON.stringify(model));
+      await db.close();
+    });
+
+  models
+    .command('list')
+    .description('List registered models')
+    .option('--provider-id <id>', 'Filter by provider ID')
+    .option('--db <path>', 'Path to database file')
+    .action(async (opts: { providerId?: string; db?: string }) => {
+      const db = createDbAdapter(opts.db);
+      await db.initialize();
+      const list = await db.listModels(opts.providerId);
+      if (list.length === 0) {
+        console.log('No models registered.');
+      } else {
+        for (const m of list) {
+          console.log(`  ${m.id} -- ${m.displayName} [${m.modelId}] provider:${m.providerId}`);
+        }
+      }
+      await db.close();
+    });
+
+  // ---- capabilities ----
+  const capabilities = program.command('capabilities').description('Manage capability assignments');
+
+  capabilities
+    .command('assign')
+    .description('Assign a model to a capability')
+    .requiredOption('--capability <name>', 'Capability name (extract-requirements | generate-fix | analyse-report | discover-branding)')
+    .requiredOption('--model-id <id>', 'Model ID to assign')
+    .option('--priority <n>', 'Assignment priority (lower = higher priority)', '10')
+    .option('--org <orgId>', 'Organisation ID (default: system)', 'system')
+    .option('--db <path>', 'Path to database file')
+    .action(async (opts: { capability: string; modelId: string; priority: string; org: string; db?: string }) => {
+      const db = createDbAdapter(opts.db);
+      await db.initialize();
+      const assignment = await db.assignCapability({
+        capability: opts.capability as import('./types.js').CapabilityName,
+        modelId: opts.modelId,
+        priority: parseInt(opts.priority, 10),
+        orgId: opts.org,
+      });
+      console.log(`Assigned ${assignment.capability} → model ${assignment.modelId} (priority ${assignment.priority})`);
+      await db.close();
+    });
+
+  capabilities
+    .command('list')
+    .description('List all capability assignments')
+    .option('--db <path>', 'Path to database file')
+    .action(async (opts: { db?: string }) => {
+      const db = createDbAdapter(opts.db);
+      await db.initialize();
+      const list = await db.listCapabilityAssignments();
+      if (list.length === 0) {
+        console.log('No capability assignments.');
+      } else {
+        for (const a of list) {
+          console.log(`  ${a.capability} → model ${a.modelId} priority:${a.priority} org:${a.orgId}`);
+        }
+      }
+      await db.close();
+    });
+
   return program;
 }
 
