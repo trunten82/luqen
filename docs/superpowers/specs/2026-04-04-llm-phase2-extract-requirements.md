@@ -445,11 +445,41 @@ When the user manually acts on a degraded proposal (edits requirements by hand):
 
 Each government source has a `managementMode` field: `'llm'` | `'manual'`.
 
-- **Default:** `'llm'` when LLM capability is configured, `'manual'` otherwise
-- **User can switch at any time** via the sources admin UI:
-  - **LLM -> Manual:** user takes ownership of the source. Scans still detect content changes but create generic proposals instead of LLM extraction. Source never goes degraded. Good for sources where the user knows better than the LLM.
-  - **Manual -> LLM:** next scan runs LLM extraction. If LLM is unavailable, source goes degraded as normal.
-- **Degraded -> Manual:** user explicitly says "I'll handle this myself". Source returns to active, tagged as manual.
-- The switch is a conscious choice, not automatic. If LLM fails, the source degrades — it doesn't silently flip to manual.
+**Core principle:** the user explicitly chooses the mode per source. The system never switches modes automatically.
 
-Sources that don't require LLM (w3c-policy, wcag-upstream with deterministic parsers) are unaffected — they always use their deterministic parsers regardless of this setting.
+**Manual mode:**
+- Default for all sources when LLM is not configured
+- Source is always considered valid/active — scans detect content changes and create generic proposals
+- User manages requirements by hand
+- Never degrades (manual is the baseline)
+
+**LLM mode:**
+- User explicitly enables per source
+- Scans run LLM extraction, create proposals with `trustLevel: 'extracted'`
+- If LLM fails: source goes `'degraded'`, generic proposal created
+- User can act manually on degraded proposals (source returns to active, requirements tagged `source: 'manual'`) but the source stays in LLM mode — next scan will try LLM again
+- User can switch back to manual mode at any time (explicit choice)
+
+**Switching Manual -> LLM:**
+- User selects individual sources to switch
+- Next scan runs LLM extraction on those sources
+
+**Switching LLM -> Manual:**
+- User selects sources to switch back
+- Source becomes active (even if it was degraded), future scans use generic proposals
+- Existing LLM-extracted requirements remain, tagged with their original provenance
+
+**First-time LLM activation (onboarding):**
+When the extract-requirements capability is first configured (first model assigned), the admin UI offers a bulk action:
+- "Switch all manual government sources to LLM?" with a confirmation dialog
+- User can choose: all, select individually, or none (keep manual)
+- This is a one-time convenience — after that, switching is per-source
+
+**Provenance tracking:**
+Requirements track how they were created/updated:
+- `source: 'seed'` — from baseline seed data
+- `source: 'llm-extracted'` — from LLM extraction
+- `source: 'manual'` — user edited/created manually
+- `source: 'parser'` — from deterministic parsers (w3c-policy, wcag-upstream)
+
+Sources that use deterministic parsers (w3c-policy, wcag-upstream) are unaffected — they always use their parsers regardless of management mode.
