@@ -5,6 +5,7 @@ import { createAdapter } from '../../providers/registry.js';
 import { executeExtractRequirements } from '../../capabilities/extract-requirements.js';
 import { executeGenerateFix } from '../../capabilities/generate-fix.js';
 import { executeAnalyseReport } from '../../capabilities/analyse-report.js';
+import { executeDiscoverBranding } from '../../capabilities/discover-branding.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../capabilities/types.js';
 
 export async function registerCapabilityExecRoutes(
@@ -161,6 +162,52 @@ export async function registerCapabilityExecRoutes(
             : [],
           orgId,
         },
+      );
+
+      await reply.send({
+        ...capResult.data,
+        model: capResult.model,
+        provider: capResult.provider,
+        attempts: capResult.attempts,
+      });
+    } catch (err) {
+      if (err instanceof CapabilityNotConfiguredError) {
+        await reply.status(503).send({ error: err.message, statusCode: 503 });
+        return;
+      }
+      if (err instanceof CapabilityExhaustedError) {
+        await reply.status(504).send({ error: err.message, statusCode: 504 });
+        return;
+      }
+      await reply.status(502).send({ error: 'Upstream LLM error', statusCode: 502 });
+    }
+  });
+
+  // POST /api/v1/discover-branding
+  app.post('/api/v1/discover-branding', {
+    preHandler: [requireScope('read')],
+  }, async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+
+    if (!body.url || typeof body.url !== 'string') {
+      await reply.status(400).send({ error: 'url is required', statusCode: 400 });
+      return;
+    }
+    if (!body.url.startsWith('http://') && !body.url.startsWith('https://')) {
+      await reply.status(400).send({ error: 'url must be a valid http/https URL', statusCode: 400 });
+      return;
+    }
+
+    const reqOrgId = (request as unknown as { orgId: string }).orgId;
+    const orgId = typeof body.orgId === 'string' && body.orgId.length > 0
+      ? body.orgId
+      : reqOrgId;
+
+    try {
+      const capResult = await executeDiscoverBranding(
+        db,
+        (type: string) => createAdapter(type as import('../../types.js').ProviderType),
+        { url: body.url, orgId },
       );
 
       await reply.send({
