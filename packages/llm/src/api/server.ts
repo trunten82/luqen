@@ -69,6 +69,15 @@ export async function createServer(options: ServerOptions) {
       },
       servers: [{ url: 'http://localhost:5100' }],
       components: {
+        schemas: {
+          ErrorResponse: {
+            type: 'object' as const,
+            properties: {
+              error: { type: 'string' as const },
+              statusCode: { type: 'number' as const },
+            },
+          },
+        },
         securitySchemes: {
           bearerAuth: {
             type: 'http',
