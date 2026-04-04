@@ -193,50 +193,6 @@
       ],
       "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/git-host-azure-devops-v1.0.0/luqen-plugin-git-host-azure-devops-1.0.0.tgz",
       "checksum": "sha256:90b095329ca59570e36dcf275c857b1d5fced2886d484384fbf45f91b4dd6c70"
-    },
-    {
-      "name": "llm-anthropic",
-      "displayName": "Anthropic Claude (LLM)",
-      "type": "llm",
-      "version": "1.1.0",
-      "description": "Uses Anthropic Claude to extract WCAG requirements from regulatory pages",
-      "packageName": "@luqen/plugin-llm-anthropic",
-      "icon": "llm",
-      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-anthropic-v1.1.0/luqen-plugin-llm-anthropic-1.1.0.tgz",
-      "checksum": "sha256:6cc588e9ad9577c3858ad341c055da7228a5198d056febafabbf7c1d4f3efc17"
-    },
-    {
-      "name": "llm-openai",
-      "displayName": "OpenAI ChatGPT (LLM)",
-      "type": "llm",
-      "version": "1.1.0",
-      "description": "Uses OpenAI ChatGPT to extract WCAG requirements from regulatory pages",
-      "packageName": "@luqen/plugin-llm-openai",
-      "icon": "llm",
-      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-openai-v1.1.0/luqen-plugin-llm-openai-1.1.0.tgz",
-      "checksum": "sha256:6a5dce71b9c87e671adb821e772de205ef94e9ae55bd6aa744b9160895c6da7f"
-    },
-    {
-      "name": "llm-gemini",
-      "displayName": "Google Gemini (LLM)",
-      "type": "llm",
-      "version": "1.1.0",
-      "description": "Uses Google Gemini to extract WCAG requirements from regulatory pages",
-      "packageName": "@luqen/plugin-llm-gemini",
-      "icon": "llm",
-      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-gemini-v1.1.0/luqen-plugin-llm-gemini-1.1.0.tgz",
-      "checksum": "sha256:bffd359aeb0d135ae415d69693ae2535ec1586584f62cb2245ed2e11b4d02ea4"
-    },
-    {
-      "name": "llm-ollama",
-      "displayName": "Ollama Local (LLM)",
-      "type": "llm",
-      "version": "1.1.0",
-      "description": "Uses a locally-running Ollama instance to extract WCAG requirements from regulatory pages",
-      "packageName": "@luqen/plugin-llm-ollama",
-      "icon": "llm",
-      "downloadUrl": "https://github.com/trunten82/luqen-plugins/releases/download/llm-ollama-v1.1.0/luqen-plugin-llm-ollama-1.1.0.tgz",
-      "checksum": "sha256:795e68e3012af28961b3bf0a5e78c8ef3316bdb498177d2069cfb194f94bf6dc"
     }
   ]
 }

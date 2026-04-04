@@ -5,8 +5,6 @@ import swaggerUi from '@fastify/swagger-ui';
 import rateLimit from '@fastify/rate-limit';
 import type { DbAdapter } from '../db/adapter.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
-import type { IComplianceLLMProvider } from '../types.js';
-import { DashboardLLMBridge } from '../llm/dashboard-bridge.js';
 import { createAuthMiddleware, requireScope } from '../auth/middleware.js';
 import type { ComplianceCache } from '../cache/redis.js';
 import { registerHealthRoutes } from './routes/health.js';
@@ -41,8 +39,6 @@ export interface ServerOptions {
   readonly reseedInterval?: string;
   /** Skip the automatic baseline seed on startup. Useful in tests. */
   readonly skipSeed?: boolean;
-  /** Optional LLM provider for government regulatory page extraction. */
-  readonly llmProvider?: IComplianceLLMProvider;
 }
 
 function parseInterval(s: string): number {
@@ -154,31 +150,7 @@ export async function createServer(options: ServerOptions) {
   await registerRequirementRoutes(app, db);
   await registerComplianceRoutes(app, db, cache);
   await registerUpdateRoutes(app, db);
-  // Mutable LLM provider — can be set at startup (config) or via registration endpoint
-  const llm: { provider: IComplianceLLMProvider | undefined } = { provider: options.llmProvider };
-
-  // POST /api/v1/admin/register-llm — dashboard registers itself as LLM provider
-  app.post('/api/v1/admin/register-llm', {
-    preHandler: [requireScope('admin')],
-  }, async (request, reply) => {
-    const body = request.body as { dashboardUrl?: string; apiKey?: string } | undefined;
-    if (!body?.dashboardUrl || !body?.apiKey) {
-      return reply.status(400).send({ error: 'dashboardUrl and apiKey required' });
-    }
-    llm.provider = new DashboardLLMBridge(body.dashboardUrl.replace(/\/$/, ''), body.apiKey);
-    app.log.info('LLM bridge registered: %s', body.dashboardUrl);
-    return reply.send({ registered: true });
-  });
-
-  // Source routes get a proxy that reads from the mutable holder at call time
-  const llmProxy: IComplianceLLMProvider = {
-    extractRequirements: (c, ctx) => {
-      if (!llm.provider) throw new Error('No LLM provider registered');
-      return llm.provider.extractRequirements(c, ctx);
-    },
-  };
-  // Always pass the proxy — source routes check provider availability at call time
-  await registerSourceRoutes(app, db, llmProxy);
+  await registerSourceRoutes(app, db);
   await registerWebhookRoutes(app, db);
   await registerUserRoutes(app, db);
   await registerClientRoutes(app, db);

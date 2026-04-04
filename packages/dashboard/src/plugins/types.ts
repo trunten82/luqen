@@ -5,7 +5,7 @@ import type { GitHostPlugin } from '../git-hosts/types.js';
 // Core enums & primitives
 // ---------------------------------------------------------------------------
 
-export type PluginType = 'auth' | 'notification' | 'storage' | 'scanner' | 'git-host' | 'llm';
+export type PluginType = 'auth' | 'notification' | 'storage' | 'scanner' | 'git-host';
 
 export type PluginStatus =
   | 'inactive'
@@ -169,28 +169,6 @@ export interface ScannerPlugin extends PluginInstance {
 
 export interface GitHostPluginInstance extends PluginInstance {
   readonly gitHost: GitHostPlugin;
-}
-
-// ---------------------------------------------------------------------------
-// LLM plugin (for compliance regulation parsing)
-// ---------------------------------------------------------------------------
-
-export interface LLMPlugin extends PluginInstance {
-  extractRequirements(pageContent: string, context: {
-    readonly regulationId: string;
-    readonly regulationName: string;
-    readonly currentWcagVersion?: string;
-    readonly currentWcagLevel?: string;
-  }): Promise<{
-    readonly wcagVersion: string;
-    readonly wcagLevel: string;
-    readonly criteria: ReadonlyArray<{
-      readonly criterion: string;
-      readonly obligation: 'mandatory' | 'recommended' | 'optional' | 'excluded';
-      readonly notes?: string;
-    }>;
-    readonly confidence: number;
-  }>;
 }
 
 // ---------------------------------------------------------------------------

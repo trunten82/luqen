@@ -353,7 +353,7 @@ export interface BaselineSeedData {
   }[];
 }
 
-// ── LLM Provider Interface (optional — for parsing government regulatory pages) ──
+// ── LLM extraction result type (used by @luqen/llm response parser) ──
 
 export interface ExtractedRequirements {
   readonly wcagVersion: string;
@@ -365,13 +365,3 @@ export interface ExtractedRequirements {
   }>;
   readonly confidence: number;
 }
-
-export interface IComplianceLLMProvider {
-  extractRequirements(pageContent: string, context: {
-    readonly regulationId: string;
-    readonly regulationName: string;
-    readonly currentWcagVersion?: string;
-    readonly currentWcagLevel?: string;
-  }, pluginId?: string): Promise<ExtractedRequirements>;
-}
-
