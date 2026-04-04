@@ -142,6 +142,117 @@ Accepts request bodies up to 10 MB to accommodate large site scans.
 
 ---
 
+## LLM Service
+
+Base URL: `http://localhost:4200/api/v1`
+
+Authentication: `Authorization: Bearer <token>` on all endpoints except `/api/v1/health` and `/api/v1/oauth/token`.
+
+Full interactive docs: `http://localhost:4200/docs` (Swagger UI).
+
+### Authentication
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/oauth/token` | Obtain an access token (`client_credentials` or `password` grant) |
+| `POST` | `/oauth/revoke` | Revoke a token (best-effort for stateless JWTs) |
+
+```bash
+curl -X POST http://localhost:4200/api/v1/oauth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "grant_type": "client_credentials",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_SECRET"
+  }'
+```
+
+Response: `{ "access_token": "eyJ...", "token_type": "Bearer", "expires_in": 3600, "scope": "read" }`
+
+### Health
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/health` | None | Service health check |
+| `GET` | `/status` | `read` | System overview: provider count, model count, capability coverage |
+
+Response for `/status`: `{ "providers": 2, "models": 5, "capabilities": { "total": 4, "covered": 3, "coverage": 75 } }`
+
+### Provider Management
+
+| Method | Path | Scope | Description |
+|--------|------|-------|-------------|
+| `GET` | `/providers` | `read` | List all providers (API keys omitted from responses) |
+| `GET` | `/providers/:id` | `read` | Get a single provider |
+| `POST` | `/providers` | `admin` | Create a provider (`name`, `type`, `baseUrl` required; `apiKey` optional) |
+| `PATCH` | `/providers/:id` | `admin` | Update provider fields (`name`, `baseUrl`, `apiKey`, `status`) |
+| `DELETE` | `/providers/:id` | `admin` | Delete a provider |
+| `POST` | `/providers/:id/test` | `admin` | Test provider connectivity; updates status to `active` or `error` |
+| `GET` | `/providers/:id/models` | `admin` | List models available from the provider's remote API |
+
+Provider types: `ollama`, `openai`, `anthropic`, `gemini`
+
+Provider statuses: `active`, `inactive`, `error`
+
+```bash
+# Create an Ollama provider
+curl -X POST http://localhost:4200/api/v1/providers \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Local Ollama", "type": "ollama", "baseUrl": "http://localhost:11434" }'
+
+# Test provider connectivity
+curl -X POST http://localhost:4200/api/v1/providers/PROVIDER_ID/test \
+  -H "Authorization: Bearer $TOKEN"
+# Response: { "ok": true, "status": "active" }
+```
+
+### Model Management
+
+| Method | Path | Scope | Description |
+|--------|------|-------|-------------|
+| `GET` | `/models` | `read` | List registered models (filter: `?providerId=`) |
+| `GET` | `/models/:id` | `read` | Get a single model |
+| `POST` | `/models` | `admin` | Register a model under a provider (`providerId`, `modelId`, `displayName` required) |
+| `DELETE` | `/models/:id` | `admin` | Remove a registered model |
+
+```bash
+# Register a model
+curl -X POST http://localhost:4200/api/v1/models \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "providerId": "PROVIDER_ID",
+    "modelId": "llama3",
+    "displayName": "Llama 3",
+    "capabilities": ["extract-requirements", "generate-fix"]
+  }'
+```
+
+### Capability Assignment
+
+| Method | Path | Scope | Description |
+|--------|------|-------|-------------|
+| `GET` | `/capabilities` | `read` | List all 4 capabilities with their current model assignments |
+| `PUT` | `/capabilities/:name/assign` | `admin` | Assign a model to a capability |
+| `DELETE` | `/capabilities/:name/assign/:modelId` | `admin` | Remove a capability assignment (filter: `?orgId=`) |
+
+Available capability names: `extract-requirements`, `generate-fix`, `analyse-report`, `discover-branding`
+
+```bash
+# Assign a model to a capability (with org-scoped override)
+curl -X PUT http://localhost:4200/api/v1/capabilities/extract-requirements/assign \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "modelId": "MODEL_ID", "priority": 1, "orgId": "acme-corp" }'
+
+# Remove a capability assignment for a specific org
+curl -X DELETE "http://localhost:4200/api/v1/capabilities/extract-requirements/assign/MODEL_ID?orgId=acme-corp" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
 ## LLM Bridge (Dashboard)
 
 Base URL: `http://localhost:5000` (dashboard service).

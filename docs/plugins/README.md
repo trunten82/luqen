@@ -2,15 +2,15 @@
 
 # Plugin System
 
-The Luqen dashboard supports a plugin system that extends its capabilities through five plugin types: authentication providers, notification channels, external storage backends, custom scanner rules, and LLM providers. Plugins are discovered from a [remote catalogue](https://github.com/trunten82/luqen-plugins), installed as self-contained tarballs (no npm required), and managed through the dashboard UI, CLI, or REST API.
+The Luqen dashboard supports a plugin system that extends its capabilities through four plugin types: authentication providers, notification channels, external storage backends, and custom scanner rules. Plugins are discovered from a [remote catalogue](https://github.com/trunten82/luqen-plugins), installed as self-contained tarballs (no npm required), and managed through the dashboard UI, CLI, or REST API.
 
-The four **LLM plugins** (`llm-anthropic`, `llm-openai`, `llm-gemini`, `llm-ollama`) implement the `IComplianceLLMProvider` interface used by the compliance source intelligence pipeline to extract regulations from unstructured government pages and community data sources. When no LLM plugin is active, only the structured `W3cPolicyParser` and `WcagUpstreamParser` run during a force-reseed.
+> **LLM functionality has moved.** LLM provider management is no longer part of the dashboard plugin system. It is now provided by the standalone `@luqen/llm` service. See [packages/llm/README.md](../../packages/llm/README.md).
 
 ---
 
 ## Overview
 
-- **12 plugins available** across 5 types (auth, notification, storage, scanner, llm)
+- **8 plugins available** across 4 types (auth, notification, storage, scanner)
 - **Remote catalogue** hosted at [github.com/trunten82/luqen-plugins](https://github.com/trunten82/luqen-plugins), fetched and cached automatically
 - **Tarball-based install** -- plugins bundle their own dependencies, no npm on the server
 - **Encrypted secrets** -- config fields marked as `secret` are encrypted with AES-256-GCM at rest
@@ -31,10 +31,6 @@ The four **LLM plugins** (`llm-anthropic`, `llm-openai`, `llm-gemini`, `llm-olla
 | `notify-email` | Email Notifications & Reports | notification | 1.0.0 | `@luqen/plugin-notify-email` | Scan notifications and scheduled reports via SMTP |
 | `storage-s3` | AWS S3 Storage | storage | 1.0.0 | `@luqen/plugin-storage-s3` | Store reports and scan data in AWS S3 |
 | `storage-azure` | Azure Blob Storage | storage | 1.0.0 | `@luqen/plugin-storage-azure` | Store reports and scan data in Azure Blob Storage |
-| `llm-anthropic` | Anthropic Claude | llm | 1.0.0 | `@luqen/plugin-llm-anthropic` | LLM extraction using Claude (claude-3-5-haiku / claude-3-5-sonnet) |
-| `llm-openai` | OpenAI / ChatGPT | llm | 1.0.0 | `@luqen/plugin-llm-openai` | LLM extraction using GPT-4o or any OpenAI-compatible endpoint |
-| `llm-gemini` | Google Gemini | llm | 1.0.0 | `@luqen/plugin-llm-gemini` | LLM extraction using Gemini 1.5 Flash or Pro |
-| `llm-ollama` | Ollama (local) | llm | 1.0.0 | `@luqen/plugin-llm-ollama` | LLM extraction using a locally running Ollama instance |
 
 ---
 
@@ -125,37 +121,6 @@ The four **LLM plugins** (`llm-anthropic`, `llm-openai`, `llm-gemini`, `llm-olla
 | `containerName` | Container Name | string | Yes | -- | Blob container name |
 | `prefix` | Blob Prefix | string | No | `luqen-agent/` | Prefix for all blob names |
 
-### llm-anthropic (Anthropic Claude)
-
-Used by the compliance source intelligence pipeline to extract regulations from unstructured government pages and community sources.
-
-| Key | Label | Type | Required | Default | Description |
-|-----|-------|------|----------|---------|-------------|
-| `apiKey` | API Key | secret | Yes | -- | Anthropic API key (`ANTHROPIC_API_KEY`) |
-| `model` | Model | string | No | `claude-3-5-haiku-20241022` | Model ID to use for extraction |
-
-### llm-openai (OpenAI / ChatGPT)
-
-| Key | Label | Type | Required | Default | Description |
-|-----|-------|------|----------|---------|-------------|
-| `apiKey` | API Key | secret | Yes | -- | OpenAI API key (`OPENAI_API_KEY`) |
-| `model` | Model | string | No | `gpt-4o` | Model ID |
-| `baseUrl` | Base URL | string | No | `https://api.openai.com/v1` | Override for OpenAI-compatible endpoints (e.g. Azure OpenAI, LM Studio) |
-
-### llm-gemini (Google Gemini)
-
-| Key | Label | Type | Required | Default | Description |
-|-----|-------|------|----------|---------|-------------|
-| `apiKey` | API Key | secret | Yes | -- | Google AI Studio API key (`GEMINI_API_KEY`) |
-| `model` | Model | string | No | `gemini-1.5-flash` | Model ID (`gemini-1.5-flash` or `gemini-1.5-pro`) |
-
-### llm-ollama (Local Ollama)
-
-| Key | Label | Type | Required | Default | Description |
-|-----|-------|------|----------|---------|-------------|
-| `baseUrl` | Ollama Base URL | string | Yes | `http://localhost:11434` | URL of the running Ollama instance |
-| `model` | Model | string | Yes | -- | Ollama model name (e.g. `llama3`, `mistral`, `phi3`) |
-
 ---
 
 ## Plugin Interfaces
@@ -218,16 +183,6 @@ Adds custom WCAG rule evaluation. Extends `PluginInstance` with:
 readonly rules: readonly WcagRule[];
 evaluate(page: PageResult): Promise<readonly ScannerIssue[]>;
 ```
-
-### LLMPlugin
-
-Provides LLM-based extraction for the compliance source intelligence pipeline. Extends `PluginInstance` with:
-
-```typescript
-extract(prompt: string, content: string): Promise<LLMExtractionResult>;
-```
-
-Used by the compliance service for `government` and `generic` source categories. When no LLM plugin is active, those source categories are skipped and only the `w3c-policy` and `wcag-upstream` structured parsers run.
 
 ---
 
