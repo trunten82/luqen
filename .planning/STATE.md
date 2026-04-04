@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-ship-ready-04-02-PLAN.md
-last_updated: "2026-04-04T19:02:55.389Z"
+stopped_at: Completed 04-ship-ready-04-01-PLAN.md
+last_updated: "2026-04-04T19:07:23.629Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 04 (ship-ready) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-04
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-discover-branding P01 | 2m | 2 tasks | 4 files |
 | Phase 03-discover-branding P02 | 15m | 2 tasks | 7 files |
 | Phase 04-ship-ready P02 | 25m | 2 tasks | 10 files |
+| Phase 04-ship-ready P01 | 10 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase 03-discover-branding]: Empty LLM discover-branding result (no colors/fonts) returns success toast explaining no signals detected, not an error
 - [Phase 04-ship-ready]: vi.mock used for capability executor modules in capabilities-exec tests to avoid real LLM setup
 - [Phase 04-ship-ready]: Extended test files supplement existing tests (oauth-password, capabilities-extended, prompts-extended) rather than replacing them
+- [Phase 04-ship-ready]: LUQEN_LLM_INSTALL_DIR env var added for test isolation without full sourcing
+- [Phase 04-ship-ready]: Re-exec guard uses (exec </dev/tty) test to detect usable tty in containers
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T19:02:55.385Z
-Stopped at: Completed 04-ship-ready-04-02-PLAN.md
+Last session: 2026-04-04T19:07:23.626Z
+Stopped at: Completed 04-ship-ready-04-01-PLAN.md
 Resume file: None

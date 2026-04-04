@@ -33,8 +33,8 @@
 
 ### Standalone Hardening
 
-- [ ] **STD-01**: Interactive installer script (same pattern as compliance/branding installers)
-- [ ] **STD-02**: Installer configures OAuth client, provider, default models
+- [x] **STD-01**: Interactive installer script (same pattern as compliance/branding installers)
+- [x] **STD-02**: Installer configures OAuth client, provider, default models
 - [x] **STD-03**: Comprehensive unit tests for all API endpoints and capability engine
 - [x] **STD-04**: Integration tests for provider communication and fallback chains
 - [x] **STD-05**: 80%+ test coverage across the LLM package
@@ -43,7 +43,7 @@
 
 - [ ] **DOC-01**: OpenAPI/Swagger specs updated for all endpoints (generate-fix, analyse-report, discover-branding)
 - [ ] **DOC-02**: LLM module README with setup, configuration, and usage instructions
-- [ ] **DOC-03**: Installer documentation
+- [x] **DOC-03**: Installer documentation
 - [ ] **DOC-04**: Main project README updated with LLM module section
 - [ ] **DOC-05**: API reference documentation for all capability endpoints
 - [ ] **DOC-06**: Review and update README architecture diagram to reflect actual implementation and improve readability
@@ -95,14 +95,14 @@
 | BRD-03 | Phase 3 | Complete |
 | BRD-04 | Phase 3 | Complete |
 | BRD-05 | Phase 3 | Complete |
-| STD-01 | Phase 4 | Pending |
-| STD-02 | Phase 4 | Pending |
+| STD-01 | Phase 4 | Complete |
+| STD-02 | Phase 4 | Complete |
 | STD-03 | Phase 4 | Complete |
 | STD-04 | Phase 4 | Complete |
 | STD-05 | Phase 4 | Complete |
 | DOC-01 | Phase 4 | Pending |
 | DOC-02 | Phase 4 | Pending |
-| DOC-03 | Phase 4 | Pending |
+| DOC-03 | Phase 4 | Complete |
 | DOC-04 | Phase 4 | Pending |
 | DOC-05 | Phase 4 | Pending |
 | DOC-06 | Phase 4 | Pending |
