@@ -189,7 +189,9 @@ Each issue in a report can be assigned to a user or team and tracked through a l
 
 ### Uploading regulations (LLM extraction)
 
-If an LLM plugin is installed and active (Claude, GPT-4o, Gemini, or Ollama), the **Sources** admin page shows an **Upload Regulation** form. Paste or upload regulatory text, select an LLM Provider from the dropdown, and submit. The LLM extracts structured regulation and requirement data from the document, creating a proposal for admin review.
+The **Sources** admin page shows an **Upload Regulation** form when the `@luqen/llm` service is running (port 4200). Paste or upload regulatory text, select an LLM Provider from the dropdown, and submit. The LLM service extracts structured regulation and requirement data from the document, creating a proposal for admin review.
+
+The LLM service is a standalone microservice that manages providers (Anthropic, OpenAI, Ollama, and any OpenAI-compatible endpoint) independently of the dashboard. Configure providers at **Admin > LLM Providers** or directly via the LLM service API at `http://localhost:4200/api/v1`.
 
 Proposals carry a **trust level**:
 
