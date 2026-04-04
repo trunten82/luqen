@@ -75,7 +75,7 @@ run_quiet() {
 # ──────────────────────────────────────────────
 # Defaults
 # ──────────────────────────────────────────────
-INSTALL_DIR="$(cd "${_SCRIPT_DIR}/.." && pwd)"  # packages/llm/
+INSTALL_DIR="${LUQEN_LLM_INSTALL_DIR:-$(cd "${_SCRIPT_DIR}/.." && pwd)}"  # packages/llm/
 LLM_PORT=4200
 INTERACTIVE=true
 PROVIDER_TYPE="ollama"
