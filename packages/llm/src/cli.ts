@@ -139,7 +139,7 @@ export function createProgram(): Command {
     .option('--dir <dir>', 'Output directory', './keys')
     .action(async (opts: { dir: string }) => {
       const { generateKeyPair, exportPKCS8, exportSPKI } = await import('jose');
-      const { privateKey, publicKey } = await generateKeyPair('RS256');
+      const { privateKey, publicKey } = await generateKeyPair('RS256', { extractable: true });
       const privatePem = await exportPKCS8(privateKey);
       const publicPem = await exportSPKI(publicKey);
       mkdirSync(opts.dir, { recursive: true });
