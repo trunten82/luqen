@@ -46,7 +46,7 @@ Plans:
   4. Summary generation degrades gracefully (tab hidden or shows notice) when the LLM service is unavailable
 **Plans**: 2 plans
 Plans:
-- [ ] 02-01-PLAN.md — LLM service: analyse-report capability executor, prompt template with truncation, POST /api/v1/analyse-report endpoint
+- [x] 02-01-PLAN.md — LLM service: analyse-report capability executor, prompt template with truncation, POST /api/v1/analyse-report endpoint
 - [ ] 02-02-PLAN.md — Dashboard: analyseReport LLM client method, ai-summary route with pattern detection, AI Summary tab, CSS, i18n, admin hint
 **UI hint**: yes
 
