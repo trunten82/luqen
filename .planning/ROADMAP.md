@@ -79,7 +79,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Installer: install-llm.sh interactive script + bash test harness
 - [x] 04-02-PLAN.md — Tests: coverage expansion to ≥80% (capability exec routes, auth middleware, OAuth, clients, providers)
-- [ ] 04-03-PLAN.md — Docs: OpenAPI schemas on capability routes, module README, main README + architecture diagram
+- [x] 04-03-PLAN.md — Docs: OpenAPI schemas on capability routes, module README, main README + architecture diagram
 
 ### Phase 5: UI Review & Polish
 **Goal**: Comprehensive UI audit and polish pass across all dashboard pages, ensuring visual consistency, design system adherence, and improved UX for AI-powered features

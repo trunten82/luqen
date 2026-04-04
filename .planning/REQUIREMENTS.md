@@ -41,12 +41,12 @@
 
 ### Documentation
 
-- [ ] **DOC-01**: OpenAPI/Swagger specs updated for all endpoints (generate-fix, analyse-report, discover-branding)
-- [ ] **DOC-02**: LLM module README with setup, configuration, and usage instructions
+- [x] **DOC-01**: OpenAPI/Swagger specs updated for all endpoints (generate-fix, analyse-report, discover-branding)
+- [x] **DOC-02**: LLM module README with setup, configuration, and usage instructions
 - [x] **DOC-03**: Installer documentation
-- [ ] **DOC-04**: Main project README updated with LLM module section
-- [ ] **DOC-05**: API reference documentation for all capability endpoints
-- [ ] **DOC-06**: Review and update README architecture diagram to reflect actual implementation and improve readability
+- [x] **DOC-04**: Main project README updated with LLM module section
+- [x] **DOC-05**: API reference documentation for all capability endpoints
+- [x] **DOC-06**: Review and update README architecture diagram to reflect actual implementation and improve readability
 
 ### UI Review & Polish
 
@@ -100,12 +100,12 @@
 | STD-03 | Phase 4 | Complete |
 | STD-04 | Phase 4 | Complete |
 | STD-05 | Phase 4 | Complete |
-| DOC-01 | Phase 4 | Pending |
-| DOC-02 | Phase 4 | Pending |
+| DOC-01 | Phase 4 | Complete |
+| DOC-02 | Phase 4 | Complete |
 | DOC-03 | Phase 4 | Complete |
-| DOC-04 | Phase 4 | Pending |
-| DOC-05 | Phase 4 | Pending |
-| DOC-06 | Phase 4 | Pending |
+| DOC-04 | Phase 4 | Complete |
+| DOC-05 | Phase 4 | Complete |
+| DOC-06 | Phase 4 | Complete |
 | UIR-01 | Phase 5 | Pending |
 | UIR-02 | Phase 5 | Pending |
 | UIR-03 | Phase 5 | Pending |

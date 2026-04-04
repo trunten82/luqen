@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-ship-ready-04-01-PLAN.md
-last_updated: "2026-04-04T19:07:23.629Z"
+status: verifying
+stopped_at: Completed 04-ship-ready-04-03-PLAN.md
+last_updated: "2026-04-04T19:16:48.294Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 Phase: 04 (ship-ready) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-04
 
 Progress: [░░░░░░░░░░] 0%
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-discover-branding P02 | 15m | 2 tasks | 7 files |
 | Phase 04-ship-ready P02 | 25m | 2 tasks | 10 files |
 | Phase 04-ship-ready P01 | 10 | 2 tasks | 5 files |
+| Phase 04-ship-ready P03 | 8m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ Recent decisions affecting current work:
 - [Phase 04-ship-ready]: Extended test files supplement existing tests (oauth-password, capabilities-extended, prompts-extended) rather than replacing them
 - [Phase 04-ship-ready]: LUQEN_LLM_INSTALL_DIR env var added for test isolation without full sourcing
 - [Phase 04-ship-ready]: Re-exec guard uses (exec </dev/tty) test to detect usable tty in containers
+- [Phase 04-ship-ready]: Remove body.required arrays from OpenAPI schemas so handler validation runs (not Fastify JSON schema interceptor)
+- [Phase 04-ship-ready]: Use additionalProperties:true on 200 response schemas to preserve dynamically spread fields from capResult.data
+- [Phase 04-ship-ready]: Inline ErrorResponse schema in capability routes instead of dollar-sign ref (test environment compatibility)
 
 ### Pending Todos
 
@@ -98,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T19:07:23.626Z
-Stopped at: Completed 04-ship-ready-04-01-PLAN.md
+Last session: 2026-04-04T19:16:48.291Z
+Stopped at: Completed 04-ship-ready-04-03-PLAN.md
 Resume file: None
