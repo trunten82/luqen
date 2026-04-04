@@ -280,6 +280,37 @@ export class LLMClient {
     );
   }
 
+  // -- Analyse Report ─────────────────────────────────────────────────────
+
+  async analyseReport(input: {
+    readonly siteUrl: string;
+    readonly totalIssues: number;
+    readonly issuesList: ReadonlyArray<{
+      readonly criterion: string;
+      readonly message: string;
+      readonly count: number;
+      readonly level: string;
+    }>;
+    readonly complianceSummary: string;
+    readonly recurringPatterns: readonly string[];
+    readonly orgId?: string;
+  }): Promise<{
+    executiveSummary: string;
+    keyFindings: string[];
+    patterns: string[];
+    priorities: string[];
+  }> {
+    return this.apiFetch<{
+      executiveSummary: string;
+      keyFindings: string[];
+      patterns: string[];
+      priorities: string[];
+    }>(`${this.baseUrl}/api/v1/analyse-report`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
   // -- OAuth Clients (admin) ──────────────────────────────────────────────
 
   async listOAuthClients(): Promise<Array<{ id: string; name: string; scopes: string[]; grantTypes: string[]; orgId: string; createdAt: string }>> {
