@@ -10,6 +10,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+**@luqen/llm — new standalone LLM service**
+- **New `@luqen/llm` package** — Fastify microservice running on port 4200 for LLM provider management and capability routing
+- **Provider management** — CRUD, connectivity testing, and remote model listing for `ollama`, `openai`, `anthropic`, and `gemini` provider types
+- **Ollama and OpenAI adapters** — built-in provider adapters with health checking and model enumeration; additional provider types (Anthropic, Gemini) to follow
+- **Model registration** — register and manage models under providers; models carry capability hints for assignment
+- **Capability-based model assignment** — map the 4 capabilities (`extract-requirements`, `generate-fix`, `analyse-report`, `discover-branding`) to models with priority ordering
+- **Org-scoped overrides** — capability assignments can be scoped to a specific organisation, with system-level defaults as fallback
+- **OAuth2 authentication** — RS256 JWT, `client_credentials` and `password` grant types, same pattern as `@luqen/compliance` and `@luqen/branding`
+- **`luqen-llm` CLI** — `serve`, `keys generate`, `clients create`, `clients list`, `users create`
+- **`GET /api/v1/status`** — system overview endpoint reporting provider count, model count, and capability coverage percentage
+
+### Removed
+
+- **Dashboard LLM plugin system** (breaking change) — the four dashboard LLM plugins (`@luqen/plugin-llm-anthropic`, `@luqen/plugin-llm-openai`, `@luqen/plugin-llm-gemini`, `@luqen/plugin-llm-ollama`) and the `IComplianceLLMProvider` plugin interface have been removed from the dashboard plugin architecture. LLM functionality is now provided exclusively by the `@luqen/llm` service. If you were using dashboard LLM plugins directly, migrate to the new service — see [packages/llm/README.md](packages/llm/README.md).
+
+---
+
 **Dynamic plugin configuration (v1.1.0 LLM plugins)**
 - **`dynamic-select` config field type** — plugins can declare config fields with `type: "dynamic-select"` and a `dependsOn` array; the dashboard renders a dropdown with a refresh button that fetches options at runtime via `GET /admin/plugins/:id/config-options`
 - **`getConfigOptions(fieldKey, currentConfig)`** — new optional method on the plugin interface; returns available options for dynamic config fields

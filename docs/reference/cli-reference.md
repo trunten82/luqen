@@ -1,6 +1,6 @@
 # CLI Reference
 
-All CLI commands across the four Luqen packages.
+All CLI commands across the Luqen packages.
 
 ---
 
@@ -475,6 +475,120 @@ luqen-dashboard plugin remove <id> [options]
 | Flag | Description |
 |------|-------------|
 | `-c, --config <path>` | Path to config file (default: `dashboard.config.json`) |
+
+---
+
+## @luqen/llm (`luqen-llm`)
+
+### luqen-llm serve
+
+Start the LLM provider management service.
+
+```bash
+luqen-llm serve [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--port <number>` | Port to listen on (default: `4200`) |
+
+**Prerequisites:** JWT keys must be generated first with `luqen-llm keys generate`.
+
+**Example:**
+
+```bash
+luqen-llm serve --port 4200
+```
+
+---
+
+### luqen-llm keys generate
+
+Generate an RS256 JWT key pair and save to the specified directory.
+
+```bash
+luqen-llm keys generate [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--dir <dir>` | Output directory (default: `./keys`) |
+
+**Example:**
+
+```bash
+luqen-llm keys generate
+# Keys written to ./keys/
+#   ./keys/private.pem
+#   ./keys/public.pem
+```
+
+---
+
+### luqen-llm clients create
+
+Create a new OAuth2 client for machine-to-machine access.
+
+```bash
+luqen-llm clients create --name <name> [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--name <name>` | **(required)** Client display name |
+| `--scopes <scopes>` | Comma-separated scopes (default: `read`) |
+| `--org <orgId>` | Organisation ID (default: `system`) |
+
+**Example:**
+
+```bash
+luqen-llm clients create --name "compliance-service" --scopes "read,admin"
+# Client created:
+#   ID:     abc123
+#   Secret: secret456
+#   Scopes: read, admin
+```
+
+---
+
+### luqen-llm clients list
+
+List all OAuth2 clients.
+
+```bash
+luqen-llm clients list
+```
+
+---
+
+### luqen-llm users create
+
+Create a new user for password-based token access.
+
+```bash
+luqen-llm users create --username <username> --password <password> [options]
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--username <username>` | **(required)** Username |
+| `--password <password>` | **(required)** Password |
+| `--role <role>` | Role: `viewer`, `editor`, or `admin` (default: `admin`) |
+
+**Example:**
+
+```bash
+luqen-llm users create --username admin --password secret --role admin
+# User created: admin (admin)
+```
 
 ---
 

@@ -16,8 +16,9 @@ The luqen dashboard supports a plugin system that extends its capabilities in fi
 | **Notification** | Send scan events to external channels | Slack, Microsoft Teams, Email |
 | **Storage** | External report storage backends | AWS S3, Azure Blob Storage |
 | **Scanner** | Custom WCAG rule evaluation | (custom implementations) |
-| **LLM** | LLM-based extraction for compliance source intelligence | Claude, GPT-4o, Gemini, Ollama |
 | **Git Host** | Git platform integration for fix PRs | GitHub, GitLab, Azure DevOps |
+
+> **LLM functionality has moved.** LLM provider management is no longer handled by dashboard plugins. It is now provided by the standalone `@luqen/llm` service (port 4200). See [packages/llm/README.md](../../packages/llm/README.md) and the [LLM Service API reference](api-reference.md#llm-service).
 
 Plugins are managed from **Admin > Plugins** in the dashboard UI, or via the CLI (`luqen-dashboard plugin install|configure|activate|deactivate|remove`). Plugins are installed by name (e.g., `luqen-dashboard plugin install auth-entra`), not by npm package name.
 
@@ -397,94 +398,15 @@ This plugin registers an admin page:
 
 ---
 
-## LLM plugins
+## LLM functionality
 
-Four LLM plugins enable the compliance source intelligence pipeline to extract regulations from unstructured government pages and community sources. When no LLM plugin is active, only the structured W3C and WCAG parsers run during a reseed.
-
-All LLM plugins use **dynamic model selection** (v1.1.0) — the model field is a `dynamic-select` that queries the provider API for available models. A refresh button in the UI re-fetches the model list.
-
----
-
-### Anthropic Claude (`llm-anthropic`)
-
-**Package:** `@luqen/plugin-llm-anthropic`
-**Type:** LLM
-**Description:** LLM extraction using Claude (claude-3-5-haiku / claude-3-5-sonnet)
-
-**When to use:** You want to use Anthropic's Claude models for extracting regulations from unstructured content.
-
-#### Configuration fields
-
-| Field | Key | Type | Required | Default | Description |
-|-------|-----|------|----------|---------|-------------|
-| API Key | `apiKey` | secret | Yes | -- | Anthropic API key (`ANTHROPIC_API_KEY`) |
-| Model | `model` | dynamic-select | No | `claude-3-5-haiku-20241022` | Model ID (fetched from Anthropic API) |
-
-#### Setup steps
-
-1. Get an API key from [console.anthropic.com](https://console.anthropic.com)
-2. Go to **Admin > Plugins** and install **Anthropic Claude**
-3. Enter your API key, then click the refresh button next to Model to fetch available models
-4. Select a model, click **Save**, then **Activate**
-
----
-
-### OpenAI / ChatGPT (`llm-openai`)
-
-**Package:** `@luqen/plugin-llm-openai`
-**Type:** LLM
-**Description:** LLM extraction using GPT-4o or any OpenAI-compatible endpoint
-
-**When to use:** You want to use OpenAI models or any OpenAI-compatible endpoint (Azure OpenAI, LM Studio) for regulation extraction.
-
-#### Configuration fields
-
-| Field | Key | Type | Required | Default | Description |
-|-------|-----|------|----------|---------|-------------|
-| API Key | `apiKey` | secret | Yes | -- | OpenAI API key (`OPENAI_API_KEY`) |
-| Model | `model` | dynamic-select | No | `gpt-4o` | Model ID (fetched from OpenAI API) |
-| Base URL | `baseUrl` | string | No | `https://api.openai.com/v1` | Override for OpenAI-compatible endpoints |
-
----
-
-### Google Gemini (`llm-gemini`)
-
-**Package:** `@luqen/plugin-llm-gemini`
-**Type:** LLM
-**Description:** LLM extraction using Gemini 1.5 Flash or Pro
-
-**When to use:** You want to use Google's Gemini models for regulation extraction.
-
-#### Configuration fields
-
-| Field | Key | Type | Required | Default | Description |
-|-------|-----|------|----------|---------|-------------|
-| API Key | `apiKey` | secret | Yes | -- | Google AI Studio API key (`GEMINI_API_KEY`) |
-| Model | `model` | dynamic-select | No | `gemini-1.5-flash` | Model ID (fetched from Google AI API) |
-
----
-
-### Ollama (`llm-ollama`)
-
-**Package:** `@luqen/plugin-llm-ollama`
-**Type:** LLM
-**Description:** LLM extraction using a locally running Ollama instance
-
-**When to use:** You want to use a local Ollama installation for regulation extraction (no API key needed, data stays on-premise).
-
-#### Configuration fields
-
-| Field | Key | Type | Required | Default | Description |
-|-------|-----|------|----------|---------|-------------|
-| Ollama Base URL | `baseUrl` | string | Yes | `http://localhost:11434` | URL of the running Ollama instance |
-| Model | `model` | dynamic-select | Yes | -- | Model name (fetched from Ollama API, e.g. `llama3`, `mistral`, `phi3`) |
-
-#### Setup steps
-
-1. Install [Ollama](https://ollama.com) and pull a model (e.g. `ollama pull llama3`)
-2. Go to **Admin > Plugins** and install **Ollama (local)**
-3. Enter the Ollama base URL, then click the refresh button next to Model to fetch available models
-4. Select a model, click **Save**, then **Activate**
+> LLM provider management and capability routing has moved out of the plugin system. It is now handled by the standalone **`@luqen/llm`** service.
+>
+> - **Service documentation:** [packages/llm/README.md](../../packages/llm/README.md)
+> - **API reference:** [api-reference.md — LLM Service section](api-reference.md#llm-service)
+> - **CLI reference:** [cli-reference.md — @luqen/llm section](cli-reference.md#luqenllm-luqen-llm)
+>
+> The `@luqen/llm` service (port 4200) replaces the four former dashboard LLM plugins (`llm-anthropic`, `llm-openai`, `llm-gemini`, `llm-ollama`). It provides full CRUD for providers and models, capability-based assignment with org-scoped overrides, and OAuth2 authentication.
 
 ---
 
@@ -510,7 +432,7 @@ For multi-replica Kubernetes deployments or environments requiring a shared data
 Plugins are packages with a `manifest.json` and a default export implementing the `PluginInstance` interface. They are distributed as tarballs via the [luqen-plugins](https://github.com/trunten82/luqen-plugins) catalogue on GitHub. The development guide covers:
 
 - Manifest schema and config field types
-- Plugin instance interfaces (`AuthPlugin`, `NotificationPlugin`, `StoragePlugin`, `ScannerPlugin`, `LLMPlugin`, `GitHostPlugin`)
+- Plugin instance interfaces (`AuthPlugin`, `NotificationPlugin`, `StoragePlugin`, `ScannerPlugin`, `GitHostPlugin`)
 - Lifecycle hooks (`activate`, `deactivate`, `healthCheck`)
 - The `adminPages` system for registering custom admin pages
 - Publishing to the plugin catalogue
