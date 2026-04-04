@@ -87,6 +87,7 @@ export interface DbAdapter {
     contentText?: string,
   ): Promise<void>;
   updateSourceStatus(id: string, status: 'active' | 'degraded'): Promise<void>;
+  updateSourceManagementMode(id: string, mode: 'llm' | 'manual'): Promise<void>;
   getSourceContent(id: string): Promise<string | null>;
 
   // OAuth clients

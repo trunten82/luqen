@@ -1,6 +1,5 @@
 <section aria-label="LLM configuration">
   <div class="page-actions">
-    <h1 class="page-title">LLM Configuration</h1>
   </div>
 
   <div id="toast-container" aria-live="polite" role="region" aria-label="Notifications"></div>
@@ -255,24 +254,27 @@
           <h2 class="card__title"><code>{{name}}</code></h2>
         </div>
         <div class="card__body">
+          <p class="form-hint text-sm">Models are tried in priority order (lowest number first). If one fails, the next is tried automatically.</p>
           {{#if assignedModels.length}}
-          <p class="form-hint">Assigned models:</p>
-          <ul class="badge-list">
+          <p class="form-hint">Fallback chain (tried in order):</p>
+          <ol class="fallback-chain" style="margin: 0 0 var(--space-sm) 0; padding-left: var(--space-md); list-style: decimal;">
             {{#each assignedModels}}
-            <li>
+            <li style="padding: var(--space-xs) 0; display: flex; align-items: center; gap: var(--space-xs);">
               <span class="badge badge--info">{{name}}</span>
+              <span class="text-muted text-sm">priority: {{priority}}</span>
               <button hx-delete="/admin/llm/capabilities/{{../name}}/unassign/{{id}}"
-                      hx-confirm="Unassign this model from {{../name}}?"
+                      hx-confirm="Remove {{name}} from fallback chain?"
                       hx-target="#llm-messages"
                       hx-swap="innerHTML"
                       class="btn btn--xs btn--ghost"
                       type="button"
-                      aria-label="Unassign {{name}}">&times;</button>
+                      aria-label="Remove {{name}}">&times;</button>
             </li>
             {{/each}}
-          </ul>
+          </ol>
+          <p class="form-hint text-sm text-muted">If the primary model fails or times out, the system automatically tries the next one.</p>
           {{else}}
-          <p class="text-muted">No models assigned.</p>
+          <p class="text-muted">No models assigned. This capability is not available until a model is assigned.</p>
           {{/if}}
 
           {{#if ../models.length}}
@@ -283,16 +285,21 @@
                 data-reset-on-success>
             <input type="hidden" name="_csrf" value="{{../csrfToken}}">
             <div class="form-grid">
-              <div class="form-group" style="flex:1">
-                <label for="cap-model-{{name}}" class="sr-only">Assign model to {{name}}</label>
+              <div class="form-group">
+                <label for="cap-model-{{name}}" class="sr-only">Add model to {{name}}</label>
                 <select id="cap-model-{{name}}" name="modelId" class="input" required>
-                  <option value="">Assign model...</option>
+                  <option value="">Select model...</option>
                   {{#each ../models}}
                   <option value="{{id}}">{{displayName}} ({{modelId}})</option>
                   {{/each}}
                 </select>
               </div>
-              <button type="submit" class="btn btn--primary btn--sm">Assign</button>
+              <div class="form-group">
+                <label for="cap-priority-{{name}}" class="sr-only">Priority</label>
+                <input type="number" id="cap-priority-{{name}}" name="priority" class="input input--narrow"
+                       value="0" min="0" max="99" placeholder="Priority (0=highest)" />
+              </div>
+              <button type="submit" class="btn btn--primary btn--sm">Add to Chain</button>
             </div>
           </form>
           {{/if}}

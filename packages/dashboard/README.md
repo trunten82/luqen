@@ -28,7 +28,7 @@ npx luqen-dashboard serve
 
 ## Dynamic Plugin Configuration
 
-Plugins can declare `dynamic-select` config fields whose options are fetched from the plugin's own API at runtime rather than hardcoded in the manifest. This is used by all four LLM plugins (v1.1.0+) for model selection.
+Plugins can declare `dynamic-select` config fields whose options are fetched from the plugin's own API at runtime rather than hardcoded in the manifest.
 
 ### Manifest schema
 
@@ -43,7 +43,7 @@ Plugins can declare `dynamic-select` config fields whose options are fetched fro
 ```
 
 - `type: "dynamic-select"` tells the dashboard to render a dropdown with a refresh button
-- `dependsOn` lists other config fields that must be set before options can be fetched (e.g., `apiKey` must be configured before querying available models)
+- `dependsOn` lists other config fields that must be set before options can be fetched
 
 ### Plugin implementation
 
@@ -63,14 +63,12 @@ async getConfigOptions(fieldKey: string, currentConfig: Record<string, unknown>)
 
 `GET /admin/plugins/:id/config-options?field=model` calls the plugin's `getConfigOptions` and returns the options array. The dashboard UI uses this to populate the dynamic dropdown.
 
-## LLM Bridge
+## LLM Integration
 
-The dashboard bridges the compliance service and the active LLM plugin:
+The dashboard connects to the `@luqen/llm` service (port 4200) for AI capability management. Configure the connection in `dashboard.config.json` under the `llm` key (`url`, `clientId`, `clientSecret`).
 
-- **`POST /api/v1/llm/extract`** -- receives extraction requests from the compliance service's `DashboardLLMBridge`, routes them to the active LLM plugin, and returns structured JSON. Accepts an optional `pluginId` parameter to target a specific LLM plugin instead of the default active one.
-- **`GET /api/v1/llm/plugins`** -- lists all active LLM plugins, used by the UI to populate the "LLM Provider" dropdown on the Upload Regulation form
-- **Auto-registration** -- at startup, the dashboard generates an API key and calls `POST /api/v1/admin/register-llm` on the compliance service to register itself as the LLM provider
-- **`POST /admin/sources/upload`** -- proxies regulation document uploads to the compliance service's `POST /api/v1/sources/upload` endpoint; powers the "Upload Regulation" form on the sources admin page. The form includes an "LLM Provider" dropdown allowing admins to choose which LLM plugin processes the extraction.
+- **Admin → LLM** -- manage providers, register models, assign models to capabilities (extract-requirements, generate-fix, analyse-report, discover-branding) with priority-ordered fallback chains
+- **`POST /admin/sources/upload`** -- proxies regulation document uploads to the compliance service's `POST /api/v1/sources/upload` endpoint; the LLM service routes extraction through the configured capability chain
 - **`POST /admin/sources/scan`** -- triggers a background scan of all monitored sources. Returns immediately with a "Source scan started in background" message instead of waiting for completion, preventing 504 gateway timeouts on large source sets.
 
 ### Source Intelligence API (API key auth)
@@ -78,8 +76,8 @@ The dashboard bridges the compliance service and the active LLM plugin:
 These endpoints are accessible via API key (`Authorization: Bearer <key>`) for automation:
 
 - **`POST /api/v1/sources/scan`** -- trigger async source scan. Returns `{"status":"started"}` immediately. Optional `?force=false` to only scan sources due per their schedule.
-- **`POST /api/v1/sources/upload`** -- upload a regulation document for LLM extraction. Accepts JSON body: `{name, content, regulationId?, jurisdictionId?, pluginId?}`. Returns extracted requirements count, confidence, and the created proposal.
-- **`GET /api/v1/llm/status`** -- check LLM availability: `{available: true, pluginCount: N}`
+- **`POST /api/v1/sources/upload`** -- upload a regulation document for LLM extraction. Accepts JSON body: `{name, content, regulationId?, jurisdictionId?}`. Returns extracted requirements count, confidence, and the created proposal.
+- **`GET /api/v1/llm/status`** -- check LLM service connectivity: `{available: true, capabilityCount: N}`
 
 ### Reseed + Scan
 
