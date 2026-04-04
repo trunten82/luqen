@@ -78,6 +78,7 @@ export interface DbAdapter {
 
   // Monitored sources
   listSources(filters?: { orgId?: string }): Promise<MonitoredSource[]>;
+  getSource(id: string): Promise<MonitoredSource | null>;
   createSource(data: CreateSourceInput): Promise<MonitoredSource>;
   deleteSource(id: string): Promise<void>;
   updateSourceLastChecked(
@@ -85,6 +86,7 @@ export interface DbAdapter {
     contentHash: string,
     contentText?: string,
   ): Promise<void>;
+  updateSourceStatus(id: string, status: 'active' | 'degraded'): Promise<void>;
   getSourceContent(id: string): Promise<string | null>;
 
   // OAuth clients

@@ -49,6 +49,8 @@ function applyEnvOverrides(config: ComplianceConfig): ComplianceConfig {
           origin: env.COMPLIANCE_CORS_ORIGIN.split(',').map(s => s.trim()),
         }
       : config.cors,
+    llmUrl: env.COMPLIANCE_LLM_URL ?? config.llmUrl,
+    llmApiKey: env.COMPLIANCE_LLM_API_KEY ?? config.llmApiKey,
   };
 }
 

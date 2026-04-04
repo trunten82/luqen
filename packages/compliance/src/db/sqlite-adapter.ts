@@ -106,6 +106,8 @@ interface MonitoredSourceRow {
   lastCheckedAt: string | null;
   lastContentHash: string | null;
   createdAt: string;
+  management_mode: string | null;
+  status: string | null;
 }
 
 interface OAuthClientRow {
@@ -227,6 +229,8 @@ function toMonitoredSource(row: MonitoredSourceRow): MonitoredSource {
     ...(row.lastCheckedAt != null ? { lastCheckedAt: row.lastCheckedAt } : {}),
     ...(row.lastContentHash != null ? { lastContentHash: row.lastContentHash } : {}),
     createdAt: row.createdAt,
+    managementMode: (row.management_mode ?? 'manual') as MonitoredSource['managementMode'],
+    status: (row.status ?? 'active') as MonitoredSource['status'],
   };
 }
 
@@ -438,7 +442,13 @@ export class SqliteAdapter implements DbAdapter {
     // Column migration: add source_category to monitored_sources if missing
     const srcCols = this.db.prepare("PRAGMA table_info(monitored_sources)").all() as Array<{ name: string }>;
     if (!srcCols.some(c => c.name === 'source_category')) {
-      this.db.exec("ALTER TABLE monitored_sources ADD COLUMN source_category TEXT NOT NULL DEFAULT 'generic'");
+      this.db.prepare("ALTER TABLE monitored_sources ADD COLUMN source_category TEXT NOT NULL DEFAULT 'generic'").run();
+    }
+    if (!srcCols.some(c => c.name === 'management_mode')) {
+      this.db.prepare("ALTER TABLE monitored_sources ADD COLUMN management_mode TEXT NOT NULL DEFAULT 'manual'").run();
+    }
+    if (!srcCols.some(c => c.name === 'status')) {
+      this.db.prepare("ALTER TABLE monitored_sources ADD COLUMN status TEXT NOT NULL DEFAULT 'active'").run();
     }
   }
 
@@ -837,6 +847,11 @@ export class SqliteAdapter implements DbAdapter {
     return rows.map(toMonitoredSource);
   }
 
+  async getSource(id: string): Promise<MonitoredSource | null> {
+    const row = this.db.prepare('SELECT * FROM monitored_sources WHERE id = ?').get(id) as MonitoredSourceRow | undefined;
+    return row != null ? toMonitoredSource(row) : null;
+  }
+
   async createSource(data: CreateSourceInput): Promise<MonitoredSource> {
     const id = randomUUID();
     const now = new Date().toISOString();
@@ -868,6 +883,10 @@ export class SqliteAdapter implements DbAdapter {
         'UPDATE monitored_sources SET lastCheckedAt = ?, lastContentHash = ? WHERE id = ?',
       ).run(now, contentHash, id);
     }
+  }
+
+  async updateSourceStatus(id: string, status: 'active' | 'degraded'): Promise<void> {
+    this.db.prepare('UPDATE monitored_sources SET status = ? WHERE id = ?').run(status, id);
   }
 
   async getSourceContent(id: string): Promise<string | null> {
