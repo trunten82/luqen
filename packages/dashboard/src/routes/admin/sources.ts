@@ -14,6 +14,7 @@ export async function sourceRoutes(
   server: FastifyInstance,
   baseUrl: string,
   pluginManager?: import('../../plugins/manager.js').PluginManager,
+  llmClient?: import('../../llm-client.js').LLMClient | null,
 ): Promise<void> {
   // GET /admin/sources — list monitored sources
   server.get(
@@ -22,11 +23,21 @@ export async function sourceRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       let sources: Awaited<ReturnType<typeof listSources>> = [];
       let error: string | undefined;
+      let llmConnected = false;
 
       try {
         sources = await listSources(baseUrl, getToken(request), getOrgId(request));
       } catch (err) {
         error = err instanceof Error ? err.message : 'Failed to load sources';
+      }
+
+      if (llmClient) {
+        try {
+          await llmClient.health();
+          llmConnected = true;
+        } catch {
+          // LLM service unreachable — leave llmConnected = false
+        }
       }
 
       return reply.view('admin/sources.hbs', {
@@ -35,8 +46,7 @@ export async function sourceRoutes(
         user: request.user,
         sources,
         error,
-        llmPlugins: [],
-        hasLlm: false,
+        llmConnected,
       });
     },
   );
