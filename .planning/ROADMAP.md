@@ -44,7 +44,10 @@ Plans:
   2. The tab displays an executive summary, key findings list, and prioritised remediation recommendations
   3. Where multiple scans exist for the same site, recurring patterns are surfaced in the summary
   4. Summary generation degrades gracefully (tab hidden or shows notice) when the LLM service is unavailable
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — LLM service: analyse-report capability executor, prompt template with truncation, POST /api/v1/analyse-report endpoint
+- [ ] 02-02-PLAN.md — Dashboard: analyseReport LLM client method, ai-summary route with pattern detection, AI Summary tab, CSS, i18n, admin hint
 **UI hint**: yes
 
 ### Phase 3: Discover Branding
@@ -89,8 +92,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Generate Fix | 1/2 | In Progress|  |
-| 2. Analyse Report | 0/? | Not started | - |
+| 1. Generate Fix | 2/2 | Complete |  |
+| 2. Analyse Report | 0/2 | Not started | - |
 | 3. Discover Branding | 0/? | Not started | - |
 | 4. Ship Ready | 0/? | Not started | - |
 | 5. UI Review & Polish | 0/? | Not started | - |
