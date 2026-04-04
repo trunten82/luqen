@@ -20,14 +20,17 @@ npx luqen-llm serve
 # 1. Generate RS256 JWT keys
 luqen-llm keys generate
 
-# 2. Create an admin user
-luqen-llm users create --username admin --password secret --role admin
-
-# 3. Start the service
+# 2. Start the service
 luqen-llm serve
+
+# 3. Create an OAuth2 client for inter-service access (e.g. dashboard or compliance)
+luqen-llm clients create --name dashboard --scopes read,write,admin
+# → note the client_id and client_secret
 ```
 
 The service starts on port 4200 by default. Interactive API docs are available at `http://localhost:4200/docs` (Swagger UI).
+
+Machine-to-machine callers (dashboard, compliance service) authenticate using **OAuth2 client credentials**. Pass `clientId` and `clientSecret` from the `clients create` output into your dashboard config (`llmClientId` / `llmClientSecret`) or compliance env vars (`COMPLIANCE_LLM_CLIENT_ID` / `COMPLIANCE_LLM_CLIENT_SECRET`).
 
 ## Configuration
 
@@ -64,7 +67,6 @@ All environment variables override values in `llm.config.json`.
 | `LLM_JWT_PUBLIC_KEY_PATH` | Path to RS256 public key PEM | `./keys/public.pem` |
 | `LLM_JWT_EXPIRY` | Token expiry duration (e.g. `1h`, `30m`) | `1h` |
 | `LLM_CORS_ORIGIN` | Comma-separated allowed CORS origins | `http://localhost:5000` |
-| `LLM_API_KEY` | Optional static API key for machine access | — |
 
 ## API Endpoints Overview
 

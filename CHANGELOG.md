@@ -6,6 +6,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.6.1] - 2026-04-03
+
+### Fixed
+
+- **LLM service auth** — inter-service authentication now uses OAuth2 client credentials (`clientId` + `clientSecret`) instead of raw API keys, consistent with the compliance and branding services. Set `llmClientId` / `llmClientSecret` in `dashboard.config.json` (env: `DASHBOARD_LLM_CLIENT_ID` / `DASHBOARD_LLM_CLIENT_SECRET`) and `COMPLIANCE_LLM_CLIENT_ID` / `COMPLIANCE_LLM_CLIENT_SECRET` for the compliance service. Create clients with `luqen-llm clients create --name <name> --scopes read,write,admin`.
+- **install.sh** — now creates two LLM OAuth clients (one for dashboard, one for compliance) during installation and injects credentials into `dashboard.config.json` and the compliance systemd unit
+- **start.sh** — now creates LLM OAuth clients on first run and exports `DASHBOARD_LLM_CLIENT_ID`, `DASHBOARD_LLM_CLIENT_SECRET`, `COMPLIANCE_LLM_CLIENT_ID`, `COMPLIANCE_LLM_CLIENT_SECRET`
+- **Removed `LLM_API_KEY`** — the `LLM_API_KEY` environment variable (static API key bypass) is no longer supported; all machine access uses OAuth2 client credentials
+
+---
+
 ## [2.6.0] - 2026-04-03
 
 ### Added

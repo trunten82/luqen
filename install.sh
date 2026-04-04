@@ -897,6 +897,48 @@ create_oauth_client() {
     chmod 600 "${BRANDING_CLIENT_CACHE}"
     success "Branding OAuth client created"
   fi
+
+  # LLM OAuth client (dashboard → LLM)
+  LLM_CLIENT_CACHE="${INSTALL_DIR}/.install-llm-client"
+  if [ -f "${LLM_CLIENT_CACHE}" ]; then
+    LLM_CLIENT_ID=$(grep "^client_id=" "${LLM_CLIENT_CACHE}" | cut -d= -f2-)
+    LLM_CLIENT_SECRET=$(grep "^client_secret=" "${LLM_CLIENT_CACHE}" | cut -d= -f2-)
+    info "LLM OAuth client already exists -- reusing"
+  else
+    CLIENT_OUT=$(cd "${INSTALL_DIR}/packages/llm" && node dist/cli.js clients create --name "dashboard" --scopes "read,write,admin" 2>&1)
+    LLM_CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "ID:" | awk '{print $NF}')
+    LLM_CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "Secret:" | awk '{print $NF}')
+    if [ -n "${LLM_CLIENT_ID}" ] && [ -n "${LLM_CLIENT_SECRET}" ]; then
+      printf "client_id=%s\nclient_secret=%s\n" "${LLM_CLIENT_ID}" "${LLM_CLIENT_SECRET}" > "${LLM_CLIENT_CACHE}"
+      chmod 600 "${LLM_CLIENT_CACHE}"
+      success "LLM OAuth client created (dashboard)"
+    else
+      warn "Could not parse LLM OAuth client output -- dashboard LLM integration will need manual config"
+      LLM_CLIENT_ID=""
+      LLM_CLIENT_SECRET=""
+    fi
+  fi
+
+  # LLM OAuth client (compliance → LLM)
+  COMPLIANCE_LLM_CLIENT_CACHE="${INSTALL_DIR}/.install-compliance-llm-client"
+  if [ -f "${COMPLIANCE_LLM_CLIENT_CACHE}" ]; then
+    COMPLIANCE_LLM_CLIENT_ID=$(grep "^client_id=" "${COMPLIANCE_LLM_CLIENT_CACHE}" | cut -d= -f2-)
+    COMPLIANCE_LLM_CLIENT_SECRET=$(grep "^client_secret=" "${COMPLIANCE_LLM_CLIENT_CACHE}" | cut -d= -f2-)
+    info "Compliance→LLM OAuth client already exists -- reusing"
+  else
+    CLIENT_OUT=$(cd "${INSTALL_DIR}/packages/llm" && node dist/cli.js clients create --name "compliance" --scopes "read,write,admin" 2>&1)
+    COMPLIANCE_LLM_CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "ID:" | awk '{print $NF}')
+    COMPLIANCE_LLM_CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "Secret:" | awk '{print $NF}')
+    if [ -n "${COMPLIANCE_LLM_CLIENT_ID}" ] && [ -n "${COMPLIANCE_LLM_CLIENT_SECRET}" ]; then
+      printf "client_id=%s\nclient_secret=%s\n" "${COMPLIANCE_LLM_CLIENT_ID}" "${COMPLIANCE_LLM_CLIENT_SECRET}" > "${COMPLIANCE_LLM_CLIENT_CACHE}"
+      chmod 600 "${COMPLIANCE_LLM_CLIENT_CACHE}"
+      success "LLM OAuth client created (compliance)"
+    else
+      warn "Could not parse Compliance→LLM OAuth client output -- compliance LLM integration will need manual config"
+      COMPLIANCE_LLM_CLIENT_ID=""
+      COMPLIANCE_LLM_CLIENT_SECRET=""
+    fi
+  fi
 }
 
 # ──────────────────────────────────────────────
@@ -930,11 +972,14 @@ write_config() {
   "port": ${DASHBOARD_PORT},
   "complianceUrl": "http://localhost:${COMPLIANCE_PORT}",
   "brandingUrl": "http://localhost:${BRANDING_PORT}",
+  "llmUrl": "http://localhost:4200",
   "sessionSecret": "${SESSION_SECRET}",
   "complianceClientId": "${CLIENT_ID}",
   "complianceClientSecret": "${CLIENT_SECRET}",
   "brandingClientId": "${BRANDING_CLIENT_ID:-}",
   "brandingClientSecret": "${BRANDING_CLIENT_SECRET:-}",
+  "llmClientId": "${LLM_CLIENT_ID:-}",
+  "llmClientSecret": "${LLM_CLIENT_SECRET:-}",
   "dbPath": "${INSTALL_DIR}/dashboard.db",
   "reportsDir": "${INSTALL_DIR}/reports",
   "pluginsDir": "${INSTALL_DIR}/plugins"${webservice_field}${db_config}
@@ -970,6 +1015,9 @@ User=root
 WorkingDirectory=${INSTALL_DIR}/packages/compliance
 Environment=NODE_ENV=production
 Environment=COMPLIANCE_PORT=${COMPLIANCE_PORT}
+Environment=COMPLIANCE_LLM_URL=http://localhost:4200
+Environment=COMPLIANCE_LLM_CLIENT_ID=${COMPLIANCE_LLM_CLIENT_ID:-}
+Environment=COMPLIANCE_LLM_CLIENT_SECRET=${COMPLIANCE_LLM_CLIENT_SECRET:-}
 ExecStart=${node_path} ${INSTALL_DIR}/packages/compliance/dist/cli.js serve --port ${COMPLIANCE_PORT}
 Restart=always
 RestartSec=5
