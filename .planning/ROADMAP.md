@@ -59,7 +59,11 @@ Plans:
   2. The discovered values are written directly into the BrandGuideline record in the branding service
   3. Discovery falls back gracefully (returns empty result with explanation) when the LLM service is unavailable
   4. An admin can customise the discover-branding prompt template per org
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 03-01-PLAN.md — LLM service: discover-branding capability executor (URL fetch + brand signal extraction), prompt template, POST /api/v1/discover-branding endpoint
+- [ ] 03-02-PLAN.md — Dashboard: discoverBranding LLM client method, POST discover route writing to BrandGuideline, UI form on guideline detail page, CSS, i18n, admin prompt hint
+**UI hint**: yes
 
 ### Phase 4: Ship Ready
 **Goal**: The LLM module can be installed, tested, and handed off — installer script, 80%+ test coverage, complete documentation, and updated architecture diagram
@@ -94,6 +98,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Generate Fix | 2/2 | Complete |  |
 | 2. Analyse Report | 0/2 | Not started | - |
-| 3. Discover Branding | 0/? | Not started | - |
+| 3. Discover Branding | 0/2 | Not started | - |
 | 4. Ship Ready | 0/? | Not started | - |
 | 5. UI Review & Polish | 0/? | Not started | - |
