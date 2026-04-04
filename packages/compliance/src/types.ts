@@ -107,6 +107,8 @@ export interface MonitoredSource {
   readonly lastCheckedAt?: string;
   readonly lastContentHash?: string;
   readonly createdAt: string;
+  readonly managementMode?: 'llm' | 'manual';  // default 'manual'
+  readonly status?: 'active' | 'degraded';       // default 'active'
 }
 
 export interface OAuthClient {
@@ -336,6 +338,10 @@ export interface ComplianceConfig {
   readonly dashboardUrl?: string;
   /** Dashboard API key for LLM bridge authentication */
   readonly dashboardApiKey?: string;
+  /** @luqen/llm service URL (e.g. http://localhost:4200) */
+  readonly llmUrl?: string;
+  /** @luqen/llm service API key */
+  readonly llmApiKey?: string;
 }
 
 // === Seed data shape ===
