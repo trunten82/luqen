@@ -201,6 +201,22 @@
     {{/if}}
     {{/if}}
 
+    {{!-- LLM section — visible to admin.system only --}}
+    {{#if perm.adminSystem}}
+    <span class="sidebar__section-label">LLM</span>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/llm')}}is-active{{/if}}"
+       href="/admin/llm"
+       aria-current="{{#if (startsWith currentPath '/admin/llm')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M6 9h8M6 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="15" cy="5" r="2" fill="currentColor"/>
+      </svg>
+      LLM Config
+    </a>
+    {{/if}}
+
     {{!-- Administration section — visible to anyone with users.* permissions --}}
     {{#if perm.usersManageAny}}
     <span class="sidebar__section-label">{{t "nav.usersAccess"}}</span>
