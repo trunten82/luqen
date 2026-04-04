@@ -9,12 +9,14 @@ import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { retagScansForSite, retagAllSitesForGuideline } from '../../services/branding-retag.js';
+import type { LLMClient } from '../../llm-client.js';
 
 const pump = promisify(pipeline);
 
 export async function brandingGuidelineRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  llmClient: LLMClient | null,
   uploadsDir?: string,
 ): Promise<void> {
   // ── Template downloads ───────────────────────────────────────────────────
@@ -259,6 +261,7 @@ export async function brandingGuidelineRoutes(
         fonts,
         selectors,
         sites: sites.map((url) => ({ siteUrl: url })),
+        llmEnabled: llmClient !== null,
       });
     },
   );
@@ -390,6 +393,79 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to toggle guideline';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // ── Discover Branding ────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/discover-branding',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const guideline = await storage.branding.getGuideline(id);
+      if (guideline === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Guideline not found.', 'error'));
+      }
+
+      if (llmClient === null) {
+        return reply
+          .code(503)
+          .header('content-type', 'text/html')
+          .send(toastHtml('LLM service is not configured.', 'error'));
+      }
+
+      const body = request.body as { url?: string };
+      const url = body.url?.trim();
+
+      if (!url || !/^https?:\/\//i.test(url)) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('A valid URL starting with http:// or https:// is required.', 'error'));
+      }
+
+      try {
+        const result = await llmClient.discoverBranding({ url, orgId: guideline.orgId });
+
+        if (result.colors.length === 0 && result.fonts.length === 0) {
+          return reply
+            .code(200)
+            .header('content-type', 'text/html')
+            .send(toastHtml('No brand signals detected — try a different URL.'));
+        }
+
+        for (const color of result.colors) {
+          await storage.branding.addColor(id, {
+            id: randomUUID(),
+            name: color.name,
+            hexValue: color.hex,
+            usage: color.usage,
+          });
+        }
+
+        for (const font of result.fonts) {
+          await storage.branding.addFont(id, {
+            id: randomUUID(),
+            family: font.family,
+            usage: font.usage,
+          });
+        }
+
+        const colorCount = result.colors.length;
+        const fontCount = result.fonts.length;
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`Brand discovery complete. Discovered ${colorCount} color(s) and ${fontCount} font(s).`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Brand discovery failed';
+        return reply.code(502).header('content-type', 'text/html').send(toastHtml(message, 'error'));
       }
     },
   );

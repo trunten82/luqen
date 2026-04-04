@@ -686,7 +686,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await auditRoutes(server, storage);
   await gitHostRoutes(server, storage);
   const uploadsDir = resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads');
-  await brandingGuidelineRoutes(server, storage, uploadsDir);
+  await brandingGuidelineRoutes(server, storage, llmClient, uploadsDir);
   await pluginAdminRoutes(server, pluginManager, registryEntries, storage);
 
   // ── LLM admin routes ────────────────────────────────────────────────────
