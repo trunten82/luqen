@@ -626,7 +626,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await fixPrRoutes(server, storage, config);
 
   // ── LLM client (used in admin routes below) ──────────────────────────────
-  const llmClient = createLLMClient(config.llmUrl);
+  const llmClient = createLLMClient(config.llmUrl, config.llmClientId, config.llmClientSecret);
+  if (llmClient) {
+    server.addHook('onClose', () => { llmClient.destroy(); });
+  }
 
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);
