@@ -3070,6 +3070,37 @@ details[open] > .mt-examples-toggle::before {
   color: var(--status-error);
 }
 
+/* ── AI Fix Hint — Phase 1 additions ──────────────────────────────────────── */
+.rpt-fix-hint__source {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 2px var(--space-xs);
+  border-radius: 9999px;
+  line-height: 1.2;
+}
+.rpt-fix-hint__source--ai {
+  background: var(--accent-light, #f0fdf4);
+  color: var(--accent, #15803d);
+}
+.rpt-fix-hint__source--pattern {
+  background: var(--bg-tertiary, #f8f9fa);
+  color: var(--text-muted, #64748b);
+}
+.rpt-fix-hint__loading {
+  padding: var(--space-sm) var(--space-md);
+}
+.rpt-fix-hint__loading-wrap {
+  padding: 0;
+}
+.rpt-fix-hint__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md) var(--space-sm);
+}
+
 /* ── Loading skeleton ────────────────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);

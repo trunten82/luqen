@@ -393,12 +393,38 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     );
   });
 
-  handlebars.registerHelper('fixSuggestion', (criterion: string, message: string) => {
-    const fix = getFixSuggestion(criterion, message);
-    if (!fix) return '';
-    const escaped = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  handlebars.registerHelper('fixSuggestion', (criterion: string, message: string, scanId: string) => {
+    if (!criterion || !message || !scanId) return '';
+
+    const esc = (s: string) =>
+      s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+    const params = new URLSearchParams({ criterion, message, htmlContext: '' });
+
+    const loadingHtml =
+      `<div class="rpt-fix-hint__loading" aria-busy="true" aria-label="Loading AI fix suggestion">`
+      + `<div class="skeleton" style="height:1rem;margin-bottom:var(--space-xs);"></div>`
+      + `<div class="skeleton" style="height:1rem;margin-bottom:var(--space-xs);width:80%;"></div>`
+      + `<div class="skeleton" style="height:3rem;"></div>`
+      + `</div>`;
+
     return new handlebars.SafeString(
-      `<details class="rpt-fix-hint"><summary class="rpt-fix-hint__toggle">How to fix: ${escaped(fix.title)} <span class="rpt-fix-effort rpt-fix-effort--${fix.effort}">${fix.effort}</span></summary><p class="rpt-fix-hint__desc">${escaped(fix.description)}</p><pre class="rpt-fix-hint__code"><code>${escaped(fix.codeExample)}</code></pre></details>`
+      `<details class="rpt-fix-hint" `
+      + `hx-get="/reports/${esc(scanId)}/fix-suggestion?${params.toString()}" `
+      + `hx-trigger="toggle once" `
+      + `hx-target="find .rpt-fix-hint__loading-wrap" `
+      + `hx-swap="innerHTML">`
+      + `<summary class="rpt-fix-hint__toggle">`
+      + `How to fix: ${esc(criterion)} `
+      + `</summary>`
+      + `<div class="rpt-fix-hint__loading-wrap">`
+      + loadingHtml
+      + `</div>`
+      + `</details>`
     );
   });
 

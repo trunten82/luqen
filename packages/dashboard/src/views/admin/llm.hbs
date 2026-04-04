@@ -344,7 +344,13 @@
           <textarea id="prompt-{{capability}}" name="template" class="input"
                     rows="8"
                     placeholder="Enter prompt template...">{{template}}</textarea>
-          <small class="form-hint">Use <code>{{"{{"}}content{{"}}"}}</code> to inject the document text.</small>
+          <small class="form-hint">
+            {{#if (eq capability 'generate-fix')}}
+              Use <code>{{"{{"}}wcagCriterion{{"}}"}}</code> for the WCAG criterion, <code>{{"{{"}}issueMessage{{"}}"}}</code> for the issue description, <code>{{"{{"}}htmlContext{{"}}"}}</code> for the flagged HTML, and <code>{{"{{"}}cssContext{{"}}"}}</code> for relevant CSS.
+            {{else}}
+              Use <code>{{"{{"}}content{{"}}"}}</code> to inject the document text.
+            {{/if}}
+          </small>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn--primary">Save Override</button>
