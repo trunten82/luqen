@@ -3372,3 +3372,20 @@ details[open] > .mt-examples-toggle::before {
   color: var(--status-success, #059669);
   margin-top: var(--space-xs);
 }
+
+/* ── Brand Discovery ─────────────────────────────────────────────── */
+.brd-discover {
+  margin-top: var(--spacing-6, var(--space-lg));
+}
+
+.brd-discover__form {
+  display: flex;
+  gap: var(--spacing-3, var(--space-sm));
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.brd-discover__input-group {
+  flex: 1;
+  min-width: 240px;
+}
