@@ -45,8 +45,9 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 - **Per-org compliance tokens** — each organization can configure its own compliance API credentials, with automatic fallback to the global token for single-tenant deployments
 - **Pluggable storage** — modular StorageAdapter architecture with 14 repository interfaces backed by SQLite; PostgreSQL and MongoDB adapters coming as plugins
 - **Security hardening** — @fastify/helmet security headers (CSP, HSTS, X-Frame-Options), CSRF token verification on state-changing requests, XSS prevention, per-installation encryption salt, SSRF protection on scan URLs, global rate limiting, secure session cookies (httpOnly, SameSite=Strict, AES-256-GCM encrypted)
-- **LLM-powered source intelligence** — upload regulation documents or add government source URLs; the active LLM plugin extracts structured compliance data and creates review proposals with trust levels (`certified` for W3C sources, `extracted` for LLM-parsed content); admins can choose which LLM plugin handles each upload via an "LLM Provider" dropdown
-- **Plugin system** — 15 plugins total: 12 in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), storage (S3, Azure Blob), and LLM providers (Anthropic, OpenAI, Gemini, Ollama), plus 3 built-in git host plugins (GitHub, GitLab, Azure DevOps); managed via dashboard UI, CLI, or REST API; plugins support dynamic config fields (`dynamic-select`) for API-driven option lists (e.g., LLM model selection)
+- **LLM service** — dedicated `@luqen/llm` microservice (port 4200) for provider management, model registration, and capability-based routing with automatic fallback chains; supports OpenAI, Anthropic, Ollama, and any OpenAI-compatible endpoint; capabilities (`extract-requirements`, `generate-fix`, `analyse-report`, `discover-branding`) can each have multiple models assigned at different priorities — the service tries each in order and falls through on failure
+- **LLM-powered source intelligence** — upload regulation documents or add government source URLs; the LLM service routes extraction requests through the configured capability chain, creating review proposals with trust levels (`certified` for W3C sources, `extracted` for LLM-parsed content)
+- **Plugin system** — 11 plugins total: in the [remote catalogue](https://github.com/trunten82/luqen-plugins) for authentication (Entra ID, Okta, Google), notifications (Slack, Teams, Email), and storage (S3, Azure Blob), plus 3 built-in git host plugins (GitHub, GitLab, Azure DevOps); managed via dashboard UI, CLI, or REST API
 - **Granular permissions** — fine-grained permission scopes for user management (`users.create`, `users.delete`, `users.activate`, `users.reset_password`, `users.roles`) assignable to custom roles
 - **Power BI custom connector** — Power Query M connector (.mez) wrapping the Data API for scans, trends, compliance summary, and issues data sources in Power BI Desktop
 - **IdP group → team sync** — auth plugins (Entra ID, Okta, Google) read group memberships from tokens and auto-sync to dashboard teams on SSO login
@@ -65,41 +66,38 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 │  │                             │  │   (GitHub: luqen-plugins)              │ │
 │  │  Web UI + REST API          │◄─┤                                        │ │
 │  │  ─ start scans              │  │  catalogue.json                        │ │
-│  │  ─ view reports             │  │  12 plugin tarballs (.tgz)             │ │
+│  │  ─ view reports             │  │  11 plugin tarballs (.tgz)             │ │
 │  │  ─ brand filter in reports  │  └────────────────────────────────────────┘ │
 │  │  ─ manage plugins           │                                             │
-│  │  ─ LLM bridge (extract)    │                                             │
 │  │  ─ team & role admin        │  ┌────────────────────────────────────────┐ │
 │  │  ─ HTMX, no JS build step   │  │   Plugins (installed)                  │ │
 │  │                             │  │  auth:    entra, okta, google          │ │
 │  │  StorageAdapter (14 repos)  │◄─┤  notify:  slack, teams, email          │ │
 │  │  SQLite (built-in)          │  │  storage: s3, azure                    │ │
-│  └──────┬─────────────┬────────┘  │  llm:     anthropic, openai,           │ │
-│         │ OAuth2      │ OAuth2    │           gemini, ollama               │ │
-│         ▼             ▼           └────────────────────────────────────────┘ │
-│  ┌──────────────┐  ┌─────────────────────────┐  ┌───────────────────────┐   │
-│  │  @luqen/     │  │  @luqen/compliance       │  │  @luqen/monitor       │   │
-│  │  branding    │  │  (port 4000)             │  │                       │   │
-│  │  (port 4100) │  │                          │◄─┤  ─ watches sources    │   │
-│  │              │  │  ─ 58 jurisdictions      │  │  ─ creates proposals  │   │
-│  │  ─ brand     │  │  ─ 62 regulations        │  │  ─ SHA-256 detection  │   │
-│  │    matching  │  │  ─ 225 WCAG criteria      │  └───────────────────────┘   │
-│  │  ─ image     │  │  ─ per-criterion mapping  │                              │
-│  │    upload    │  │  ─ source intel pipeline  │  ┌───────────────────────┐   │
-│  │  ─ retag     │  │    W3cPolicyParser        │  │  External sources     │   │
-│  │  ─ SQLite    │  │    WcagUpstreamParser     │◄─┤  W3C WAI policies     │   │
-│  │  ─ OAuth2 /  │  │    LLM extractor          │  │  W3C WCAG upstream    │   │
-│  │    JWT auth  │  │  ─ IComplianceLLMProvider │  │  tenon-io (community) │   │
-│  └──────────────┘  │  ─ OAuth2 / JWT auth      │  └───────────────────────┘   │
-│                    └──────────┬──────────────────┘                            │
-│                               │ uses as library                               │
-│                               ▼                                               │
-│  ┌────────────────────────────────────────────────────────────────────────┐   │
-│  │   @luqen/core                          CLI + MCP server                │   │
-│  │  ─ site scan & crawl                   ─ source mapping                │   │
-│  │  ─ fix proposals                       ─ HTML/JSON reports             │   │
-│  │  ─ pa11y (built-in)                                                    │   │
-│  └────────────────────────────────────────────────────────────────────────┘   │
+│  └──────┬──────┬───────┬───────┘  └────────────────────────────────────────┘ │
+│         │OAuth2│OAuth2 │OAuth2                                               │
+│         ▼      ▼       ▼                                                     │
+│  ┌──────────┐ ┌──────────────────┐  ┌──────────────┐  ┌───────────────────┐ │
+│  │ @luqen/  │ │ @luqen/compliance│  │  @luqen/llm  │  │  @luqen/monitor   │ │
+│  │ branding │ │ (port 4000)      │  │  (port 4200) │  │                   │ │
+│  │ (4100)   │ │                  │◄─┤              │◄─┤  ─ watches sources│ │
+│  │          │ │ ─ 58 jurisdic.   │  │  ─ providers │  │  ─ creates props  │ │
+│  │  ─ brand │ │ ─ 62 regulations │  │  ─ models    │  │  ─ SHA-256 detect │ │
+│  │   match  │ │ ─ 225 criteria   │  │  ─ capabilit.│  └───────────────────┘ │
+│  │  ─ image │ │ ─ source intel   │  │  ─ fallback  │                        │
+│  │   upload │ │   W3cPolicyParser│  │    chains    │  ┌───────────────────┐ │
+│  │  ─ retag │ │   WcagUpstream   │  │  ─ OAuth2 /  │  │  External sources │ │
+│  │  ─ SQLite│ │   LLM routing    │  │    JWT auth  │◄─┤  W3C WAI policies │ │
+│  │  ─ OAuth2│ │ ─ OAuth2 / JWT   │  └──────────────┘  │  W3C WCAG upstr.  │ │
+│  └──────────┘ └────────┬─────────┘                    │  tenon-io (comm.) │ │
+│                        │ uses as library               └───────────────────┘ │
+│                        ▼                                                     │
+│  ┌────────────────────────────────────────────────────────────────────────┐  │
+│  │   @luqen/core                          CLI + MCP server                │  │
+│  │  ─ site scan & crawl                   ─ source mapping                │  │
+│  │  ─ fix proposals                       ─ HTML/JSON reports             │  │
+│  │  ─ pa11y (built-in)                                                    │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -149,7 +147,7 @@ export SESSION_SECRET="$(openssl rand -base64 32)"
 docker compose up -d
 ```
 
-Services start on ports 4000 (compliance), 4100 (branding), and 5000 (dashboard). No external pa11y-webservice needed — scanning is built in.
+Services start on ports 4000 (compliance), 4100 (branding), 4200 (LLM), and 5000 (dashboard). No external pa11y-webservice needed — scanning is built in.
 
 ### Manual install
 
@@ -177,32 +175,33 @@ cd ~/luqen
 git pull
 npm install
 npm run build --workspaces
-systemctl restart luqen-compliance luqen-branding luqen-dashboard
+systemctl restart luqen-compliance luqen-branding luqen-llm luqen-dashboard
 ```
 
 Or as a one-liner:
 
 ```bash
-cd ~/luqen && git pull && npm install && npm run build --workspaces && systemctl restart luqen-compliance luqen-branding luqen-dashboard
+cd ~/luqen && git pull && npm install && npm run build --workspaces && systemctl restart luqen-compliance luqen-branding luqen-llm luqen-dashboard
 ```
 
 ### Service management
 
 ```bash
 # Status
-systemctl status luqen-compliance luqen-branding luqen-dashboard
+systemctl status luqen-compliance luqen-branding luqen-llm luqen-dashboard
 
 # Logs
 journalctl -u luqen-dashboard -f
 journalctl -u luqen-compliance -f
 journalctl -u luqen-branding -f
+journalctl -u luqen-llm -f
 
 # Stop / Start
-systemctl stop luqen-dashboard luqen-branding luqen-compliance
-systemctl start luqen-compliance luqen-branding luqen-dashboard
+systemctl stop luqen-dashboard luqen-llm luqen-branding luqen-compliance
+systemctl start luqen-compliance luqen-branding luqen-llm luqen-dashboard
 
 # Disable auto-start on boot
-systemctl disable luqen-dashboard luqen-branding luqen-compliance
+systemctl disable luqen-dashboard luqen-llm luqen-branding luqen-compliance
 ```
 
 ---
@@ -215,9 +214,10 @@ systemctl disable luqen-dashboard luqen-branding luqen-compliance
 | [`@luqen/compliance`](packages/compliance) | Compliance rule engine, REST API, MCP server, source intelligence pipeline | [docs/reference/compliance-config.md](docs/reference/compliance-config.md) |
 | [`@luqen/branding`](packages/branding) | Brand guideline matching service — color, font, selector matching; image upload; scan retag | [docs/branding/README.md](docs/branding/README.md) |
 | [`@luqen/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, brand filter, admin UI | [docs/reference/dashboard-config.md](docs/reference/dashboard-config.md) |
+| [`@luqen/llm`](packages/llm) | LLM provider management service (port 4200) — provider registration, model management, capability-based routing with fallback chains | [packages/llm/README.md](packages/llm/README.md) |
 | [`@luqen/monitor`](packages/monitor) | Regulatory monitor agent — watches legal sources, creates update proposals | [docs/reference/monitor-config.md](docs/reference/monitor-config.md) |
 
-### Plugins (15 available)
+### Plugins (11 available)
 
 Catalogue plugins are distributed via the [plugin catalogue](https://github.com/trunten82/luqen-plugins) and installed from the dashboard UI, CLI (`luqen-dashboard plugin install <name>`), or REST API. Git host plugins are built-in and auto-activated.
 
@@ -231,13 +231,11 @@ Catalogue plugins are distributed via the [plugin catalogue](https://github.com/
 | notify-email | Notification | SMTP email reports |
 | storage-s3 | Storage | AWS S3 report storage |
 | storage-azure | Storage | Azure Blob report storage |
-| llm-anthropic | LLM | Claude — for compliance source intelligence extraction |
-| llm-openai | LLM | GPT-4o / OpenAI-compatible — for compliance extraction |
-| llm-gemini | LLM | Google Gemini — for compliance extraction |
-| llm-ollama | LLM | Local Ollama — for air-gapped compliance extraction |
 | git-host-github | Git Host | GitHub / GitHub Enterprise PR creation |
 | git-host-gitlab | Git Host | GitLab / self-hosted merge request creation |
 | git-host-azure-devops | Git Host | Azure DevOps pull request creation |
+
+LLM providers (OpenAI, Anthropic, Ollama, OpenAI-compatible) are managed directly through the `@luqen/llm` service — no plugins required. Configure them from the dashboard **Admin → LLM** page.
 
 Catalogue plugins live in the [luqen-plugins](https://github.com/trunten82/luqen-plugins) repository. See [docs/plugins/README.md](docs/plugins/README.md) for configuration details and plugin development guide.
 
@@ -301,6 +299,41 @@ See [docs/branding/README.md](docs/branding/README.md) for the full guide includ
 
 ---
 
+## LLM Service
+
+The LLM service (`@luqen/llm`) is a dedicated Fastify microservice for managing AI providers and routing capabilities with automatic fallback chains. It runs on port 4200.
+
+```bash
+cd packages/llm
+
+# 1. Generate RS256 JWT keys
+node dist/cli.js keys generate
+
+# 2. Create an OAuth2 client for the dashboard
+node dist/cli.js clients create --name dashboard --scopes read,write,admin
+
+# 3. Start the service (REST API on port 4200)
+node dist/cli.js serve --port 4200
+```
+
+Add the credentials to `dashboard.config.json` to enable the LLM admin page:
+
+```json
+{
+  "llm": {
+    "url": "http://localhost:4200",
+    "clientId": "dashboard",
+    "clientSecret": "your-secret-here"
+  }
+}
+```
+
+The LLM service manages four capabilities: `extract-requirements`, `generate-fix`, `analyse-report`, and `discover-branding`. Each capability can have multiple models assigned at different priority levels — the service tries each model in priority order and falls through to the next on failure or timeout.
+
+The interactive API docs are at `http://localhost:4200/docs` (Swagger UI). See [packages/llm/README.md](packages/llm/README.md) for the full configuration and CLI reference.
+
+---
+
 ## Dashboard
 
 The dashboard is a browser-based UI for managing accessibility scans and administering the compliance service. No JavaScript build step — it uses HTMX for live updates.
@@ -356,7 +389,7 @@ export SESSION_SECRET="$(openssl rand -base64 32)"
 docker compose up -d
 ```
 
-This starts the compliance service (port 4000), the branding service (port 4100), and the dashboard (port 5000). The scanner uses the pa11y library directly inside the container — no external pa11y-webservice is needed. If you have an existing pa11y-webservice you want to use instead, set `PA11Y_URL` in a `.env` file for backward compatibility.
+This starts the compliance service (port 4000), the branding service (port 4100), the LLM service (port 4200), and the dashboard (port 5000). The scanner uses the pa11y library directly inside the container — no external pa11y-webservice is needed. If you have an existing pa11y-webservice you want to use instead, set `PA11Y_URL` in a `.env` file for backward compatibility.
 
 ---
 

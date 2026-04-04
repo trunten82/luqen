@@ -889,6 +889,10 @@ export class SqliteAdapter implements DbAdapter {
     this.db.prepare('UPDATE monitored_sources SET status = ? WHERE id = ?').run(status, id);
   }
 
+  async updateSourceManagementMode(id: string, mode: 'llm' | 'manual'): Promise<void> {
+    this.db.prepare('UPDATE monitored_sources SET management_mode = ? WHERE id = ?').run(mode, id);
+  }
+
   async getSourceContent(id: string): Promise<string | null> {
     const row = this.db.prepare('SELECT lastContentText FROM monitored_sources WHERE id = ?').get(id) as { lastContentText: string | null } | undefined;
     return row?.lastContentText ?? null;
