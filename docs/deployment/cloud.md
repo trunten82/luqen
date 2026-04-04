@@ -151,9 +151,14 @@ Full reference of environment variables for each service:
 | llm | `LLM_PORT` | No | Default: 4200 |
 | dashboard | `DASHBOARD_SESSION_SECRET` | Yes | Min 32 bytes |
 | dashboard | `DASHBOARD_COMPLIANCE_URL` | Yes | Internal URL of compliance service |
-| dashboard | `DASHBOARD_COMPLIANCE_CLIENT_ID` | Yes | OAuth client ID |
-| dashboard | `DASHBOARD_COMPLIANCE_CLIENT_SECRET` | Yes | OAuth client secret |
+| dashboard | `DASHBOARD_COMPLIANCE_CLIENT_ID` | Yes | OAuth client ID for compliance service |
+| dashboard | `DASHBOARD_COMPLIANCE_CLIENT_SECRET` | Yes | OAuth client secret for compliance service |
 | dashboard | `DASHBOARD_LLM_URL` | Yes | Internal URL of LLM service |
+| dashboard | `DASHBOARD_LLM_CLIENT_ID` | If LLM enabled | OAuth client ID for LLM service (`luqen-llm clients create --name dashboard`) |
+| dashboard | `DASHBOARD_LLM_CLIENT_SECRET` | If LLM enabled | OAuth client secret for LLM service |
+| compliance | `COMPLIANCE_LLM_URL` | If LLM enabled | Internal URL of LLM service |
+| compliance | `COMPLIANCE_LLM_CLIENT_ID` | If LLM enabled | OAuth client ID for LLM service (`luqen-llm clients create --name compliance`) |
+| compliance | `COMPLIANCE_LLM_CLIENT_SECRET` | If LLM enabled | OAuth client secret for LLM service |
 
 ---
 

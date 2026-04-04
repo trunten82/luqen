@@ -14,6 +14,7 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 {
   "port": 5000,
   "complianceUrl": "http://localhost:4000",
+  "llmUrl": "http://localhost:4200",
   "webserviceUrl": "",
   "reportsDir": "./reports",
   "dbPath": "./dashboard.db",
@@ -22,6 +23,8 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
   "runner": "htmlcs",
   "complianceClientId": "",
   "complianceClientSecret": "",
+  "llmClientId": "",
+  "llmClientSecret": "",
   "catalogueUrl": "https://github.com/trunten82/luqen-plugins",
   "catalogueCacheTtl": 3600
 }
@@ -45,6 +48,9 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `webserviceUrls` | `string[]` | — | **Optional.** Additional pa11y webservice URLs for horizontal scaling. Only relevant when `webserviceUrl` is set. Scans are distributed round-robin across all URLs (including `webserviceUrl`). |
 | `complianceClientId` | `string` | — | OAuth2 client ID for auto-refreshing compliance service tokens via `client_credentials` grant. When set together with `complianceClientSecret`, manual token management is not required. |
 | `complianceClientSecret` | `string` | — | OAuth2 client secret paired with `complianceClientId`. Store securely; use `DASHBOARD_COMPLIANCE_CLIENT_SECRET` env var in production. |
+| `llmUrl` | `string` | `http://localhost:4200` | Base URL of the `@luqen/llm` service REST API |
+| `llmClientId` | `string` | — | OAuth2 client ID for authenticating to the LLM service via `client_credentials` grant. Create with `luqen-llm clients create --name dashboard --scopes read,write,admin`. |
+| `llmClientSecret` | `string` | — | OAuth2 client secret paired with `llmClientId`. Store securely; use `DASHBOARD_LLM_CLIENT_SECRET` env var in production. |
 | `catalogueUrl` | `string` | `https://github.com/trunten82/luqen-plugins` | Base URL of the remote plugin catalogue GitHub repository. The dashboard fetches `catalogue.json` from GitHub releases at this URL. |
 | `catalogueCacheTtl` | `number` | `3600` | Time-to-live in seconds for the cached plugin catalogue. The dashboard re-fetches `catalogue.json` from GitHub after this interval. Set to `0` to disable caching. |
 
@@ -56,6 +62,9 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 |----------|-----------|-------------|
 | `DASHBOARD_PORT` | `port` | Server port |
 | `DASHBOARD_COMPLIANCE_URL` | `complianceUrl` | Compliance service base URL |
+| `DASHBOARD_LLM_URL` | `llmUrl` | LLM service base URL |
+| `DASHBOARD_LLM_CLIENT_ID` | `llmClientId` | OAuth2 client ID for the LLM service |
+| `DASHBOARD_LLM_CLIENT_SECRET` | `llmClientSecret` | OAuth2 client secret for the LLM service |
 | `DASHBOARD_WEBSERVICE_URL` | `webserviceUrl` | **Optional.** External pa11y webservice URL. Omit to use the built-in scanner. |
 | `DASHBOARD_REPORTS_DIR` | `reportsDir` | Report storage directory |
 | `DASHBOARD_DB_PATH` | `dbPath` | SQLite database path |
@@ -69,7 +78,6 @@ Place in the working directory where you run `luqen-dashboard serve`. All fields
 | `DASHBOARD_CATALOGUE_URL` | `catalogueUrl` | Base URL of the remote plugin catalogue GitHub repository (default: `https://github.com/trunten82/luqen-plugins`). |
 | `DASHBOARD_CATALOGUE_CACHE_TTL` | `catalogueCacheTtl` | Plugin catalogue cache TTL in seconds (default: `3600`). |
 | `DASHBOARD_REDIS_URL` | — | Optional Redis URL for distributed scan queue and SSE pub/sub. |
-| `COMPLIANCE_API_KEY` | — | API key for service-to-service calls to the compliance service. Set this on the compliance service side; the dashboard sends it in the `X-API-Key` header when making compliance API requests. |
 | `DASHBOARD_API_KEY` | — | API key for the dashboard data API endpoints (`/api/v1/scans`, `/api/v1/trends`, etc.) and Excel/CSV export. Clients authenticate by sending `X-API-Key: <key>` in the request header. Generate keys from the admin UI at `/admin/api-keys`. |
 
 **SMTP configuration:** Email report settings (host, port, TLS, credentials, from address) are managed entirely through the dashboard UI at **Admin > Email Reports**. No environment variables or config file entries are needed — credentials are stored in the dashboard database.
@@ -165,11 +173,21 @@ The dashboard calls the compliance service API for jurisdictions, regulations, a
 
 1. **Auto-refresh (recommended):** When `complianceClientId` and `complianceClientSecret` are set in the dashboard config, the dashboard obtains an OAuth token via `client_credentials` grant and refreshes it automatically before expiry. No manual token setup needed.
 
-2. **Manual token (fallback):** Set `DASHBOARD_COMPLIANCE_API_KEY` to a valid OAuth token. This token will expire and must be refreshed manually.
+2. **Per-org tokens (v2.1.0):** Organizations can configure their own `complianceClientId` and `complianceClientSecret` via the organization admin UI. When a user with an org context makes a request, the dashboard uses the org-specific token. If no org-specific credentials are configured, the global token is used as a fallback. Per-org tokens are cached independently via per-org `ServiceTokenManager` instances.
 
-3. **Per-org tokens (v2.1.0):** Organizations can configure their own `complianceClientId` and `complianceClientSecret` via the organization admin UI. When a user with an org context makes a request, the dashboard uses the org-specific token. If no org-specific credentials are configured, the global token is used as a fallback. Per-org tokens are cached independently via per-org `ServiceTokenManager` instances.
+3. **No compliance service:** If the compliance service is unreachable, the dashboard still works but jurisdiction/regulation features are unavailable.
 
-4. **No compliance service:** If the compliance service is unreachable, the dashboard still works but jurisdiction/regulation features are unavailable.
+---
+
+## LLM service integration
+
+The dashboard calls the `@luqen/llm` service for provider management, model listing, and regulation extraction. Authentication uses the same OAuth2 client credentials pattern as the compliance service.
+
+1. **Setup:** Create an OAuth2 client on the LLM service with `luqen-llm clients create --name dashboard --scopes read,write,admin`. Set the resulting `clientId` and `clientSecret` in `llmClientId` / `llmClientSecret` (or env vars `DASHBOARD_LLM_CLIENT_ID` / `DASHBOARD_LLM_CLIENT_SECRET`).
+
+2. **Auto-refresh:** When `llmClientId` and `llmClientSecret` are set, the dashboard obtains and refreshes tokens automatically.
+
+3. **No LLM service:** If the LLM service is unreachable or credentials are not configured, LLM-dependent features (Upload Regulation, provider dropdown) are unavailable — all other dashboard functionality continues normally.
 
 ---
 

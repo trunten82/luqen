@@ -10,7 +10,7 @@
 #   - Generates session secret (if not set)
 #   - Generates JWT keys for compliance, branding, and llm (if missing)
 #   - Seeds baseline compliance data (if not done)
-#   - Creates OAuth clients for dashboard↔compliance and dashboard↔branding auth
+#   - Creates OAuth clients for dashboard↔compliance, dashboard↔branding, dashboard↔llm, and compliance↔llm auth
 #   - Starts all services with correct environment variables
 
 set -euo pipefail
@@ -164,6 +164,50 @@ else
   fi
 fi
 
+# ── OAuth client for dashboard → LLM ─────────────────────────────
+LLM_CLIENT_CACHE="${ROOT_DIR}/.llm-oauth-client"
+if [ -f "${LLM_CLIENT_CACHE}" ]; then
+  LLM_CLIENT_ID=$(grep "^client_id=" "${LLM_CLIENT_CACHE}" | cut -d= -f2-)
+  LLM_CLIENT_SECRET=$(grep "^client_secret=" "${LLM_CLIENT_CACHE}" | cut -d= -f2-)
+  info "LLM OAuth client (dashboard) loaded from .llm-oauth-client"
+else
+  info "Creating OAuth client for dashboard → LLM..."
+  CLIENT_OUT=$(cd packages/llm && node dist/cli.js clients create --name "dashboard" --scopes "read,write,admin" 2>&1)
+  LLM_CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "ID:" | awk '{print $NF}' || echo "")
+  LLM_CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "Secret:" | awk '{print $NF}' || echo "")
+
+  if [ -z "${LLM_CLIENT_ID}" ] || [ -z "${LLM_CLIENT_SECRET}" ]; then
+    warn "Could not parse LLM OAuth client output. Dashboard LLM integration may need manual config."
+    warn "Output was: ${CLIENT_OUT}"
+  else
+    printf "client_id=%s\nclient_secret=%s\n" "${LLM_CLIENT_ID}" "${LLM_CLIENT_SECRET}" > "${LLM_CLIENT_CACHE}"
+    chmod 600 "${LLM_CLIENT_CACHE}"
+    success "LLM OAuth client created (dashboard) (saved to .llm-oauth-client)"
+  fi
+fi
+
+# ── OAuth client for compliance → LLM ────────────────────────────
+COMPLIANCE_LLM_CLIENT_CACHE="${ROOT_DIR}/.compliance-llm-oauth-client"
+if [ -f "${COMPLIANCE_LLM_CLIENT_CACHE}" ]; then
+  COMPLIANCE_LLM_CLIENT_ID=$(grep "^client_id=" "${COMPLIANCE_LLM_CLIENT_CACHE}" | cut -d= -f2-)
+  COMPLIANCE_LLM_CLIENT_SECRET=$(grep "^client_secret=" "${COMPLIANCE_LLM_CLIENT_CACHE}" | cut -d= -f2-)
+  info "LLM OAuth client (compliance) loaded from .compliance-llm-oauth-client"
+else
+  info "Creating OAuth client for compliance → LLM..."
+  CLIENT_OUT=$(cd packages/llm && node dist/cli.js clients create --name "compliance" --scopes "read,write,admin" 2>&1)
+  COMPLIANCE_LLM_CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "ID:" | awk '{print $NF}' || echo "")
+  COMPLIANCE_LLM_CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "Secret:" | awk '{print $NF}' || echo "")
+
+  if [ -z "${COMPLIANCE_LLM_CLIENT_ID}" ] || [ -z "${COMPLIANCE_LLM_CLIENT_SECRET}" ]; then
+    warn "Could not parse Compliance→LLM OAuth client output. Compliance LLM integration may need manual config."
+    warn "Output was: ${CLIENT_OUT}"
+  else
+    printf "client_id=%s\nclient_secret=%s\n" "${COMPLIANCE_LLM_CLIENT_ID}" "${COMPLIANCE_LLM_CLIENT_SECRET}" > "${COMPLIANCE_LLM_CLIENT_CACHE}"
+    chmod 600 "${COMPLIANCE_LLM_CLIENT_CACHE}"
+    success "LLM OAuth client created (compliance) (saved to .compliance-llm-oauth-client)"
+  fi
+fi
+
 # ── Export environment ────────────────────────────────
 export DASHBOARD_COMPLIANCE_URL="http://localhost:${COMPLIANCE_PORT}"
 export DASHBOARD_BRANDING_URL="http://localhost:${BRANDING_PORT}"
@@ -173,6 +217,11 @@ export DASHBOARD_COMPLIANCE_CLIENT_ID="${COMPLIANCE_CLIENT_ID:-}"
 export DASHBOARD_COMPLIANCE_CLIENT_SECRET="${COMPLIANCE_CLIENT_SECRET:-}"
 export DASHBOARD_BRANDING_CLIENT_ID="${BRANDING_CLIENT_ID:-}"
 export DASHBOARD_BRANDING_CLIENT_SECRET="${BRANDING_CLIENT_SECRET:-}"
+export DASHBOARD_LLM_CLIENT_ID="${LLM_CLIENT_ID:-}"
+export DASHBOARD_LLM_CLIENT_SECRET="${LLM_CLIENT_SECRET:-}"
+export COMPLIANCE_LLM_URL="http://localhost:${LLM_PORT}"
+export COMPLIANCE_LLM_CLIENT_ID="${COMPLIANCE_LLM_CLIENT_ID:-}"
+export COMPLIANCE_LLM_CLIENT_SECRET="${COMPLIANCE_LLM_CLIENT_SECRET:-}"
 
 # ── Summary ───────────────────────────────────────────
 printf "\n"

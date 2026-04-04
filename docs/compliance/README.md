@@ -1774,7 +1774,7 @@ When the LLM service is unavailable or no providers are configured, `government`
 
 ### LLM pipeline (source intelligence extraction)
 
-The dashboard acts as a bridge between the compliance service and the `@luqen/llm` service. At startup, the dashboard auto-registers itself with the compliance service by generating an API key and calling `POST /api/v1/admin/register-llm`. This enables the compliance service to delegate LLM extraction calls back to the dashboard, which forwards them to the LLM service.
+The dashboard acts as a bridge between the compliance service and the `@luqen/llm` service. Both the dashboard and the compliance service authenticate to the LLM service using **OAuth2 client credentials** — the same pattern used for compliance and branding service auth. Configure `llmClientId` + `llmClientSecret` in the dashboard config and `COMPLIANCE_LLM_CLIENT_ID` + `COMPLIANCE_LLM_CLIENT_SECRET` in the compliance environment.
 
 **Flow:**
 
