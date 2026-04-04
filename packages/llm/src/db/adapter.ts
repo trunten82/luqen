@@ -2,7 +2,7 @@ import type {
   Provider, CreateProviderInput, UpdateProviderInput,
   Model, CreateModelInput,
   CapabilityAssignment, AssignCapabilityInput, CapabilityName,
-  OAuthClient, User,
+  OAuthClient, User, PromptOverride,
 } from '../types.js';
 
 export interface DbAdapter {
@@ -27,6 +27,15 @@ export interface DbAdapter {
   assignCapability(data: AssignCapabilityInput): Promise<CapabilityAssignment>;
   unassignCapability(capability: CapabilityName, modelId: string, orgId?: string): Promise<boolean>;
   getModelForCapability(capability: CapabilityName, orgId?: string): Promise<Model | undefined>;
+
+  // Prompt overrides
+  getPromptOverride(capability: CapabilityName, orgId?: string): Promise<PromptOverride | undefined>;
+  setPromptOverride(capability: CapabilityName, template: string, orgId?: string): Promise<PromptOverride>;
+  deletePromptOverride(capability: CapabilityName, orgId?: string): Promise<boolean>;
+  listPromptOverrides(): Promise<readonly PromptOverride[]>;
+
+  // Full chain for retry
+  getModelsForCapability(capability: CapabilityName, orgId?: string): Promise<readonly Model[]>;
 
   // OAuth clients
   getClientById(id: string): Promise<OAuthClient | undefined>;

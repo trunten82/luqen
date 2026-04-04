@@ -7,6 +7,7 @@ export interface Provider {
   readonly baseUrl: string;
   readonly apiKey?: string;
   readonly status: ProviderStatus;
+  readonly timeout: number;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -51,6 +52,7 @@ export interface CreateProviderInput {
   readonly type: ProviderType;
   readonly baseUrl: string;
   readonly apiKey?: string;
+  readonly timeout?: number;
 }
 
 export interface UpdateProviderInput {
@@ -58,6 +60,7 @@ export interface UpdateProviderInput {
   readonly baseUrl?: string;
   readonly apiKey?: string;
   readonly status?: ProviderStatus;
+  readonly timeout?: number;
 }
 
 export interface CreateModelInput {
@@ -93,6 +96,27 @@ export interface User {
   readonly role: string;
   readonly active: boolean;
   readonly createdAt: string;
+}
+
+// ---- Capability execution ----
+
+export interface ExtractedRequirements {
+  readonly wcagVersion: string;
+  readonly wcagLevel: string;
+  readonly criteria: ReadonlyArray<{
+    readonly criterion: string;
+    readonly obligation: 'mandatory' | 'recommended' | 'optional' | 'excluded';
+    readonly notes?: string;
+  }>;
+  readonly confidence: number;
+}
+
+export interface PromptOverride {
+  readonly capability: CapabilityName;
+  readonly orgId: string;
+  readonly template: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
 
 // ---- Config ----

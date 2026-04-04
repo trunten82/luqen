@@ -235,7 +235,111 @@ describe('SqliteAdapter', () => {
     expect(listed[0]).toEqual(client);
   });
 
-  // 12. Creates and retrieves a user
+  // 12. Creates provider with custom timeout
+  it('creates provider with custom timeout', async () => {
+    const provider = await adapter.createProvider({
+      name: 'Custom Timeout Provider',
+      type: 'ollama',
+      baseUrl: 'http://localhost:11434',
+      timeout: 30,
+    });
+    expect(provider.timeout).toBe(30);
+  });
+
+  // 13. Creates provider with default timeout
+  it('creates provider with default timeout of 120', async () => {
+    const provider = await adapter.createProvider({
+      name: 'Default Timeout Provider',
+      type: 'openai',
+      baseUrl: 'http://api.openai.com',
+    });
+    expect(provider.timeout).toBe(120);
+  });
+
+  // 14. Updates provider timeout
+  it('updates provider timeout', async () => {
+    const provider = await adapter.createProvider({
+      name: 'Updatable Provider',
+      type: 'ollama',
+      baseUrl: 'http://localhost:11434',
+    });
+    expect(provider.timeout).toBe(120);
+
+    const updated = await adapter.updateProvider(provider.id, { timeout: 60 });
+    expect(updated).toBeDefined();
+    expect(updated!.timeout).toBe(60);
+  });
+
+  // 15. Sets and gets a prompt override
+  it('sets and gets a prompt override', async () => {
+    const override = await adapter.setPromptOverride('generate-fix', 'Fix this: {{issue}}');
+    expect(override.capability).toBe('generate-fix');
+    expect(override.orgId).toBe('system');
+    expect(override.template).toBe('Fix this: {{issue}}');
+    expect(override.createdAt).toBeDefined();
+    expect(override.updatedAt).toBeDefined();
+
+    const fetched = await adapter.getPromptOverride('generate-fix');
+    expect(fetched).toEqual(override);
+  });
+
+  // 16. Gets org-scoped prompt override
+  it('gets org-scoped prompt override separately from system', async () => {
+    await adapter.setPromptOverride('analyse-report', 'System template');
+    await adapter.setPromptOverride('analyse-report', 'Org template', 'org-1');
+
+    const systemOverride = await adapter.getPromptOverride('analyse-report');
+    expect(systemOverride?.template).toBe('System template');
+    expect(systemOverride?.orgId).toBe('system');
+
+    const orgOverride = await adapter.getPromptOverride('analyse-report', 'org-1');
+    expect(orgOverride?.template).toBe('Org template');
+    expect(orgOverride?.orgId).toBe('org-1');
+  });
+
+  // 17. Deletes a prompt override
+  it('deletes a prompt override', async () => {
+    await adapter.setPromptOverride('discover-branding', 'My template');
+
+    const deleted = await adapter.deletePromptOverride('discover-branding');
+    expect(deleted).toBe(true);
+
+    const fetched = await adapter.getPromptOverride('discover-branding');
+    expect(fetched).toBeUndefined();
+
+    const notFound = await adapter.deletePromptOverride('discover-branding');
+    expect(notFound).toBe(false);
+  });
+
+  // 18. Lists all prompt overrides
+  it('lists all prompt overrides', async () => {
+    await adapter.setPromptOverride('generate-fix', 'Template A');
+    await adapter.setPromptOverride('analyse-report', 'Template B');
+    await adapter.setPromptOverride('generate-fix', 'Org Template A', 'org-1');
+
+    const all = await adapter.listPromptOverrides();
+    expect(all).toHaveLength(3);
+  });
+
+  // 19. getModelsForCapability returns all models ordered by priority
+  it('getModelsForCapability returns all models ordered by priority', async () => {
+    const provider = await adapter.createProvider({ name: 'P', type: 'ollama', baseUrl: 'http://p.com' });
+    const modelA = await adapter.createModel({ providerId: provider.id, modelId: 'mA', displayName: 'Model A' });
+    const modelB = await adapter.createModel({ providerId: provider.id, modelId: 'mB', displayName: 'Model B' });
+    const modelC = await adapter.createModel({ providerId: provider.id, modelId: 'mC', displayName: 'Model C' });
+
+    await adapter.assignCapability({ capability: 'analyse-report', modelId: modelA.id, priority: 10 });
+    await adapter.assignCapability({ capability: 'analyse-report', modelId: modelB.id, priority: 1 });
+    await adapter.assignCapability({ capability: 'analyse-report', modelId: modelC.id, priority: 5 });
+
+    const models = await adapter.getModelsForCapability('analyse-report');
+    expect(models).toHaveLength(3);
+    expect(models[0].id).toBe(modelB.id); // priority 1
+    expect(models[1].id).toBe(modelC.id); // priority 5
+    expect(models[2].id).toBe(modelA.id); // priority 10
+  });
+
+  // 20. Creates and retrieves a user
   it('creates and retrieves a user', async () => {
     const user = await adapter.createUser({
       username: 'admin',
