@@ -75,7 +75,11 @@ Plans:
   3. The Swagger UI at /documentation lists all capability endpoints (generate-fix, analyse-report, discover-branding) with accurate schemas
   4. A developer can follow the LLM module README from zero to running service without consulting source code
   5. The README architecture diagram accurately reflects the current implementation (all services, their connections, and the LLM module's role) and is readable/consistent
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 04-01-PLAN.md — Installer: install-llm.sh interactive script + bash test harness
+- [ ] 04-02-PLAN.md — Tests: coverage expansion to ≥80% (capability exec routes, auth middleware, OAuth, clients, providers)
+- [ ] 04-03-PLAN.md — Docs: OpenAPI schemas on capability routes, module README, main README + architecture diagram
 
 ### Phase 5: UI Review & Polish
 **Goal**: Comprehensive UI audit and polish pass across all dashboard pages, ensuring visual consistency, design system adherence, and improved UX for AI-powered features
@@ -99,5 +103,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Generate Fix | 2/2 | Complete |  |
 | 2. Analyse Report | 0/2 | Not started | - |
 | 3. Discover Branding | 2/2 | Complete   | 2026-04-04 |
-| 4. Ship Ready | 0/? | Not started | - |
+| 4. Ship Ready | 0/3 | Not started | - |
 | 5. UI Review & Polish | 0/? | Not started | - |
