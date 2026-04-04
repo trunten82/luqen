@@ -6,10 +6,7 @@
   <div id="toast-container" aria-live="polite" role="region" aria-label="Notifications"></div>
   <div id="llm-messages" aria-live="polite"></div>
 
-  {{!-- Global CSRF token for HTMX buttons outside forms --}}
-  <input type="hidden" name="_csrf" id="global-csrf" value="{{csrfToken}}">
-
-  {{#if error}}
+{{#if error}}
   <div class="alert alert--error" role="alert">{{error}}</div>
   {{/if}}
 
@@ -69,21 +66,17 @@
             </td>
             <td data-label="Actions">
               <div class="btn-group">
-                <form hx-post="/admin/llm/providers/{{id}}/test"
-                      hx-target="#llm-messages"
-                      hx-swap="innerHTML"
-                      style="display:inline">
-                  <input type="hidden" name="_csrf" value="{{../csrfToken}}">
-                  <button type="submit" class="btn btn--sm btn--secondary">Test</button>
-                </form>
-                <form hx-delete="/admin/llm/providers/{{id}}"
-                      hx-confirm="Delete provider {{name}}? All associated models will also be removed."
-                      hx-target="#llm-messages"
-                      hx-swap="innerHTML"
-                      style="display:inline">
-                  <input type="hidden" name="_csrf" value="{{../csrfToken}}">
-                  <button type="submit" class="btn btn--sm btn--danger">Delete</button>
-                </form>
+                <button hx-post="/admin/llm/providers/{{id}}/test"
+                        hx-target="#llm-messages"
+                        hx-swap="innerHTML"
+                        class="btn btn--sm btn--secondary"
+                        type="button">Test</button>
+                <button hx-delete="/admin/llm/providers/{{id}}"
+                        hx-confirm="Delete provider {{name}}? All associated models will also be removed."
+                        hx-target="#llm-messages"
+                        hx-swap="innerHTML"
+                        class="btn btn--sm btn--danger"
+                        type="button">Delete</button>
               </div>
             </td>
           </tr>
@@ -177,14 +170,12 @@
                   <span class="badge {{statusClass}}">{{statusLabel}}</span>
                 </td>
                 <td data-label="Actions">
-                  <form hx-delete="/admin/llm/models/{{id}}"
-                        hx-confirm="Delete model {{displayName}}?"
-                        hx-target="#llm-messages"
-                        hx-swap="innerHTML"
-                        style="display:inline">
-                    <input type="hidden" name="_csrf" value="{{../../csrfToken}}">
-                    <button type="submit" class="btn btn--sm btn--danger">Delete</button>
-                  </form>
+                  <button hx-delete="/admin/llm/models/{{id}}"
+                          hx-confirm="Delete model {{displayName}}?"
+                          hx-target="#llm-messages"
+                          hx-swap="innerHTML"
+                          class="btn btn--sm btn--danger"
+                          type="button">Delete</button>
                 </td>
               </tr>
               {{/each}}
@@ -270,16 +261,13 @@
             {{#each assignedModels}}
             <li>
               <span class="badge badge--info">{{name}}</span>
-              <form hx-delete="/admin/llm/capabilities/{{../name}}/unassign/{{id}}"
-                    hx-confirm="Unassign this model from {{../name}}?"
-                    hx-target="#llm-messages"
-                    hx-swap="innerHTML"
-                    style="display:inline">
-                <input type="hidden" name="_csrf" value="{{../../csrfToken}}">
-                <button type="submit"
-                  class="btn btn--xs btn--ghost"
-                  aria-label="Unassign {{name}}">&times;</button>
-              </form>
+              <button hx-delete="/admin/llm/capabilities/{{../name}}/unassign/{{id}}"
+                      hx-confirm="Unassign this model from {{../name}}?"
+                      hx-target="#llm-messages"
+                      hx-swap="innerHTML"
+                      class="btn btn--xs btn--ghost"
+                      type="button"
+                      aria-label="Unassign {{name}}">&times;</button>
             </li>
             {{/each}}
           </ul>
