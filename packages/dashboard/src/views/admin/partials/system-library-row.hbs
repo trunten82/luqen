@@ -1,0 +1,51 @@
+<tr id="system-branding-guideline-{{id}}">
+  <td class="table__cell" data-label="Logo">
+    {{#if imagePath}}
+    <img src="{{imagePath}}"
+         alt="{{name}} brand logo"
+         width="40" height="40"
+         style="width:40px;height:40px;max-width:40px;max-height:40px;border-radius:var(--radius-sm);object-fit:contain;background:var(--bg-secondary);">
+    {{else}}
+    <div style="width:40px;height:40px;border-radius:var(--radius-sm);background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="7" cy="7" r="1.5" fill="currentColor"/>
+        <path d="M3 13 L7 9 L11 13 L14 10 L17 13" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    {{/if}}
+  </td>
+  <td data-label="Name">
+    <span>{{name}}</span>
+    {{#if description}}
+    <p class="text-sm text-muted">{{description}}</p>
+    {{/if}}
+  </td>
+  <td data-label="Scope">
+    <span class="badge badge--info">{{t "admin.systemBrand.systemBadge"}}</span>
+  </td>
+  <td data-label="Version">
+    {{#if version}}
+    <span class="badge badge--info">v{{version}}</span>
+    {{else}}
+    <span class="text-muted">—</span>
+    {{/if}}
+  </td>
+  <td>
+    <button type="button"
+            class="btn btn--sm btn--secondary"
+            hx-get="/admin/branding-guidelines/{{id}}/link-to-site"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            aria-label="Link to site — {{name}}">
+      {{t "admin.systemBrand.action.linkToSite"}}
+    </button>
+    <button type="button"
+            class="btn btn--sm btn--primary"
+            hx-post="/admin/branding-guidelines/system/{{id}}/clone"
+            hx-confirm="{{t "admin.systemBrand.confirmClone" name=name}}"
+            aria-label="Clone {{name}} into organization">
+      {{t "admin.systemBrand.action.cloneIntoOrg"}}
+    </button>
+  </td>
+</tr>

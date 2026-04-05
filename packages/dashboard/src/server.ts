@@ -468,6 +468,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'alert': 'partials/alert.hbs',
         'service-connection-row': 'admin/partials/service-connection-row.hbs',
         'service-connection-edit-row': 'admin/partials/service-connection-edit-row.hbs',
+        'system-library-row': 'admin/partials/system-library-row.hbs',
         'rpt-regulation-card': 'partials/rpt-regulation-card.hbs',
       },
     },
