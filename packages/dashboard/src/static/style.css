@@ -3040,16 +3040,25 @@ details[open] > .mt-examples-toggle::before {
   word-break: break-word;
 }
 .rpt-fix-hint__code {
-  margin: var(--space-xs) var(--space-sm) var(--space-sm);
-  padding: 0.5rem 0.6rem;
+  display: block;
+  margin: var(--space-sm);
+  padding: var(--space-sm);
   font-size: var(--font-size-xs);
   font-family: var(--font-mono);
-  background: var(--bg-tertiary);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
   line-height: 1.45;
+}
+.rpt-fix-hint__code code {
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+  padding: 0;
 }
 .rpt-fix-effort {
   display: inline-block;
