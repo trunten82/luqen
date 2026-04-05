@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generatePdfFromData } from '../../src/pdf/generator.js';
+import { generatePdfFromData, formatSubtitle } from '../../src/pdf/generator.js';
 import type { PdfScanMeta, PdfReportData } from '../../src/pdf/generator.js';
 
 // ---------------------------------------------------------------------------
@@ -247,6 +247,43 @@ describe('PDF Generator (PDFKit)', () => {
     it('works with empty jurisdictions', async () => {
       const result = await generatePdfFromData(
         makeScanMeta({ jurisdictions: '' }),
+        makeReportData(),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    });
+
+    // ── REG-06 / P07-P04 Task 1 Tests D, E ──────────────────────────────────
+    it('Test D (REG-06): formatSubtitle emits a Regulations segment when regulations provided', () => {
+      const subtitle = formatSubtitle(
+        makeScanMeta({ jurisdictions: 'EU', regulations: 'ADA, EN301549' }),
+      );
+      // Regulations segment present in the subtitle using the same separator pattern as Jurisdictions
+      expect(subtitle).toContain('Regulations: ADA, EN301549');
+      // Jurisdictions segment still present, unchanged formatting
+      expect(subtitle).toContain('EU');
+    });
+
+    it('Test E (stable format): formatSubtitle omits Regulations segment when regulations empty', () => {
+      const subtitle = formatSubtitle(
+        makeScanMeta({ jurisdictions: 'EU', regulations: '' }),
+      );
+      // Matches existing Jurisdictions behavior — omitted when empty (mirrors line 129 pattern)
+      expect(subtitle).not.toContain('Regulations:');
+    });
+
+    it('Test D-2 (integration): generatePdfFromData accepts regulations field without throwing', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta({ regulations: 'ADA, EN301549' }),
+        makeReportData(),
+      );
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    });
+
+    it('works with empty regulations', async () => {
+      const result = await generatePdfFromData(
+        makeScanMeta({ regulations: '' }),
         makeReportData(),
       );
       expect(result).toBeInstanceOf(Buffer);

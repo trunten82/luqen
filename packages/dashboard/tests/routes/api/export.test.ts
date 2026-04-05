@@ -58,14 +58,15 @@ async function createTestServer(): Promise<TestContext> {
 async function makeCompletedScan(
   ctx: TestContext,
   siteUrl = 'https://example.com',
-  opts?: { orgId?: string; status?: string; jsonReportPath?: string },
+  opts?: { orgId?: string; status?: string; jsonReportPath?: string; jurisdictions?: string[]; regulations?: string[] },
 ): Promise<string> {
   const id = randomUUID();
   await ctx.storage.scans.createScan({
     id,
     siteUrl,
     standard: 'WCAG2AA',
-    jurisdictions: ['eu'],
+    jurisdictions: opts?.jurisdictions ?? ['eu'],
+    regulations: opts?.regulations ?? [],
     createdBy: 'alice',
     createdAt: new Date().toISOString(),
     orgId: opts?.orgId ?? 'system',
@@ -207,6 +208,70 @@ describe('Export API routes', () => {
       expect(response.statusCode).toBe(200);
       // The CSV should include jurisdiction data
       expect(response.body).toContain('eu');
+    });
+
+    // ── REG-06 / P07-P04 Task 1 Tests A, B, C ────────────────────────────
+    it('Test A (REG-06): CSV header includes Regulations column and data populated', async () => {
+      await makeCompletedScan(ctx, 'https://example.com', {
+        jurisdictions: ['EU'],
+        regulations: ['ADA', 'EN301549'],
+      });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: '/api/v1/export/scans.csv',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const csv = response.body;
+      // Header row contains Regulations column
+      expect(csv).toContain('Regulations');
+      // Data row contains the joined regulation short names
+      expect(csv).toContain('ADA; EN301549');
+      // Jurisdictions column still present (D-28 freeze)
+      expect(csv).toContain('Jurisdictions');
+    });
+
+    it('Test B (D-28 freeze): Regulations column always present with empty value when no regulations selected', async () => {
+      await makeCompletedScan(ctx, 'https://example.com', {
+        jurisdictions: ['EU'],
+        regulations: [],
+      });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: '/api/v1/export/scans.csv',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const csv = response.body;
+      // Header contains Regulations unconditionally (stable format)
+      expect(csv).toContain('Regulations');
+      // Jurisdictions value intact
+      expect(csv).toContain('EU');
+    });
+
+    it('Test C (D-28 freeze): Regulations column is positioned immediately after Jurisdictions in header row', async () => {
+      await makeCompletedScan(ctx, 'https://example.com', {
+        jurisdictions: ['EU'],
+        regulations: ['ADA'],
+      });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: '/api/v1/export/scans.csv',
+      });
+
+      const csv = response.body;
+      // Extract the header row (first line after the BOM)
+      const firstLine = csv.split('\r\n')[0] ?? '';
+      const cols = firstLine.split(',').map((c) => c.replace(/^"|"$/g, ''));
+      const jurIdx = cols.indexOf('Jurisdictions');
+      const regIdx = cols.indexOf('Regulations');
+      expect(jurIdx).toBeGreaterThan(-1);
+      expect(regIdx).toBe(jurIdx + 1);
+      // Jurisdictions name frozen (D-28)
+      expect(cols[jurIdx]).toBe('Jurisdictions');
     });
   });
 
