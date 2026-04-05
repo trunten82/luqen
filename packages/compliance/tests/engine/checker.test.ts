@@ -363,4 +363,148 @@ describe('checkCompliance', () => {
     expect(section508).toBeDefined();
     expect(section508!.violations.length).toBeGreaterThan(0);
   });
+
+  // ─── Phase 07 / Plan 01: regulationMatrix (REG-03, REG-04, D-08, D-12, D-31) ───
+  describe('regulationMatrix (Phase 07)', () => {
+    it('T1 (D-31): jurisdictions-only request yields empty regulationMatrix and unchanged matrix/summary', async () => {
+      const request: ComplianceCheckRequest = {
+        jurisdictions: ['EU'],
+        issues: [...SAMPLE_ISSUES],
+      };
+
+      const result = await checkCompliance(request, db);
+
+      expect(result.regulationMatrix).toEqual({});
+      // Matrix still populated for jurisdictions-only callers
+      expect(result.matrix['EU']).toBeDefined();
+      expect(result.matrix['EU'].status).toBe('fail');
+      expect(result.summary.totalJurisdictions).toBe(1);
+    });
+
+    it('T2 (REG-03 mixed): jurisdictions + regulations populates both matrices without double-counting', async () => {
+      const request: ComplianceCheckRequest = {
+        jurisdictions: ['EU'],
+        regulations: ['us-508'],
+        issues: [...SAMPLE_ISSUES],
+      };
+
+      const result = await checkCompliance(request, db);
+
+      // jurisdiction matrix has EU
+      expect(result.matrix['EU']).toBeDefined();
+      // regulationMatrix has us-508
+      expect(result.regulationMatrix['us-508']).toBeDefined();
+      expect(result.regulationMatrix['us-508'].shortName).toBe('Section 508');
+      expect(result.regulationMatrix['us-508'].mandatoryViolations).toBeGreaterThan(0);
+
+      // Summary still computed from matrix only (D-31: jurisdictions-only unchanged)
+      expect(result.summary.totalJurisdictions).toBe(1);
+    });
+
+    it('T3 (regulations-only): empty jurisdictions, regulations-only request returns matrix:{} and populated regulationMatrix', async () => {
+      const request: ComplianceCheckRequest = {
+        jurisdictions: [],
+        regulations: ['eu-eaa'],
+        issues: [...SAMPLE_ISSUES],
+      };
+
+      const result = await checkCompliance(request, db);
+
+      expect(result.matrix).toEqual({});
+      expect(result.regulationMatrix['eu-eaa']).toBeDefined();
+      expect(result.regulationMatrix['eu-eaa'].mandatoryViolations).toBeGreaterThan(0);
+      expect(result.regulationMatrix['eu-eaa'].status).toBe('fail');
+      expect(result.regulationMatrix['eu-eaa'].jurisdictionId).toBe('EU');
+    });
+
+    it('T4 (D-08 home-jurisdiction widening): regulations-only widens requirement query to home jurisdiction', async () => {
+      // us-508 lives in US. Empty jurisdictions + regulations:['us-508'] must still
+      // resolve US requirements (widened home jurisdiction).
+      const request: ComplianceCheckRequest = {
+        jurisdictions: [],
+        regulations: ['us-508'],
+        issues: [SAMPLE_ISSUES[0]], // 1.1.1
+      };
+
+      const result = await checkCompliance(request, db);
+
+      expect(result.regulationMatrix['us-508']).toBeDefined();
+      expect(result.regulationMatrix['us-508'].mandatoryViolations).toBeGreaterThan(0);
+      const violated = result.regulationMatrix['us-508'].violatedRequirements;
+      expect(violated.some(v => v.wcagCriterion === '1.1.1')).toBe(true);
+    });
+
+    it('T5 (unknown regulation id): skipped silently with empty matrix entry absent', async () => {
+      const request: ComplianceCheckRequest = {
+        jurisdictions: ['EU'],
+        regulations: ['DOES_NOT_EXIST'],
+        issues: [...SAMPLE_ISSUES],
+      };
+
+      // Must not throw
+      const result = await checkCompliance(request, db);
+
+      expect(result.regulationMatrix['DOES_NOT_EXIST']).toBeUndefined();
+      // EU jurisdiction still works as normal
+      expect(result.matrix['EU']).toBeDefined();
+    });
+
+    it('T6 (D-12 status union): partial when only recommended/optional; fail on mandatory; pass on none', async () => {
+      // Create a scratch regulation with ONLY an optional requirement for 1.4.6
+      await db.createRegulation({
+        id: 'opt-only',
+        jurisdictionId: 'EU',
+        name: 'Optional Only Reg',
+        shortName: 'OPT',
+        reference: 'x',
+        url: 'x',
+        enforcementDate: '2025-01-01',
+        status: 'active',
+        scope: 'all',
+        sectors: [],
+        description: 'x',
+      });
+      await db.createRequirement({
+        regulationId: 'opt-only',
+        wcagVersion: '2.1',
+        wcagLevel: 'AAA',
+        wcagCriterion: '1.4.6',
+        obligation: 'optional',
+      });
+
+      // Fail case — mandatory violation (eu-eaa has mandatory 1.1.1)
+      const failResult = await checkCompliance(
+        {
+          jurisdictions: [],
+          regulations: ['eu-eaa'],
+          issues: [SAMPLE_ISSUES[0]], // 1.1.1
+        },
+        db,
+      );
+      expect(failResult.regulationMatrix['eu-eaa'].status).toBe('fail');
+
+      // Partial case — only optional violation, includeOptional:true
+      const partialResult = await checkCompliance(
+        {
+          jurisdictions: [],
+          regulations: ['opt-only'],
+          issues: [SAMPLE_ISSUES[2]], // 1.4.6 optional
+          includeOptional: true,
+        },
+        db,
+      );
+      expect(partialResult.regulationMatrix['opt-only'].status).toBe('partial');
+
+      // Pass case — no matching issues
+      const passResult = await checkCompliance(
+        {
+          jurisdictions: [],
+          regulations: ['eu-eaa'],
+          issues: [],
+        },
+        db,
+      );
+      expect(passResult.regulationMatrix['eu-eaa'].status).toBe('pass');
+    });
+  });
 });
