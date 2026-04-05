@@ -85,7 +85,8 @@
     "monitoring": "Monitoring",
     "changeHistory": "Change History",
     "branding": "Branding",
-    "brandGuidelines": "Brand Guidelines"
+    "brandGuidelines": "Brand Guidelines",
+    "serviceConnections": "Service Connections"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -580,6 +581,67 @@
       "generateKey": "Generate Key",
       "labelPlaceholder": "e.g. CI pipeline, monitoring",
       "role": "Role"
+    },
+    "serviceConnections": {
+      "title": "Service Connections",
+      "description": "Manage outbound OAuth connections to the compliance, branding, and LLM services. Credentials are encrypted at rest. Saving a change reloads the live client without a restart.",
+      "column": {
+        "service": "Service",
+        "url": "URL",
+        "clientId": "Client ID",
+        "status": "Status",
+        "source": "Source",
+        "lastUpdated": "Last updated",
+        "actions": "Actions"
+      },
+      "service": {
+        "compliance": "Compliance",
+        "branding": "Branding",
+        "llm": "LLM"
+      },
+      "status": {
+        "ok": "OK",
+        "error": "Error",
+        "untested": "Untested",
+        "notConfigured": "Not configured",
+        "hasSecret": "Secret set",
+        "noSecret": "No secret"
+      },
+      "fallback": {
+        "db": "From database",
+        "config": "From config file (fallback)"
+      },
+      "action": {
+        "edit": "Edit",
+        "test": "Test connection",
+        "save": "Save",
+        "cancel": "Cancel",
+        "clearSecret": "Clear secret",
+        "confirmClear": "Clear the stored secret for this service? The live client will be rebuilt without credentials."
+      },
+      "form": {
+        "url": "Service URL",
+        "clientId": "OAuth Client ID",
+        "clientSecret": "OAuth Client Secret",
+        "clientSecretPlaceholder": "●●●●●●●● (leave blank to keep)",
+        "clientSecretHint": "Leave blank to keep the current secret. Type a new value to replace it."
+      },
+      "toast": {
+        "saved": "Saved and clients reloaded",
+        "reloadFailed": "Save succeeded but client reload failed",
+        "testPassed": "Connection test succeeded",
+        "testFailed": "Connection test failed",
+        "secretCleared": "Secret cleared"
+      },
+      "test": {
+        "running": "Testing…",
+        "success": "Success ({{latencyMs}}ms)",
+        "failureOauth": "OAuth failed: {{error}}",
+        "failureHealth": "Health check failed: {{error}}"
+      },
+      "empty": {
+        "noConnections": "No service connections configured."
+      }
     },
     "clients": {
       "addClient": "Add OAuth Client",
