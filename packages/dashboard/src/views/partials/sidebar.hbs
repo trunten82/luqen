@@ -355,6 +355,7 @@
     </a>
     {{/if}}
 
+    {{#if perm.adminSystem}}
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/service-connections')}}is-active{{/if}}"
        href="/admin/service-connections"
        aria-current="{{#if (startsWith currentPath '/admin/service-connections')}}page{{/if}}">
@@ -364,6 +365,7 @@
       </svg>
       {{t "nav.serviceConnections"}}
     </a>
+    {{/if}}
 
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/system')}}is-active{{/if}}"
