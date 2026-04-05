@@ -101,15 +101,20 @@ describe('Capability Exec Routes', () => {
       expect(res.json().error).toMatch(/issueMessage/);
     });
 
-    it('returns 400 when htmlContext is missing', async () => {
+    it('accepts missing htmlContext (optional — defaults to empty string)', async () => {
+      mockGenerateFix.mockResolvedValueOnce({
+        data: { fixedHtml: '<img alt="">', explanation: 'x', effort: 'low' },
+        model: 'gpt-4',
+        provider: 'OpenAI',
+        attempts: 1,
+      });
       const res = await app.inject({
         method: 'POST',
         url: '/api/v1/generate-fix',
         headers: { authorization: `Bearer ${readToken}` },
         payload: { wcagCriterion: '1.1.1', issueMessage: 'Missing alt text' },
       });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toMatch(/htmlContext/);
+      expect(res.statusCode).toBe(200);
     });
 
     it('returns 503 when capability not configured (CapabilityNotConfiguredError)', async () => {
@@ -293,7 +298,12 @@ describe('Capability Exec Routes', () => {
 
     it('returns 200 with colors/fonts on success', async () => {
       mockDiscoverBranding.mockResolvedValueOnce({
-        data: { colors: ['#ff0000'], fonts: ['Arial'] },
+        data: {
+          colors: [{ name: 'primary', hex: '#ff0000', usage: 'primary' }],
+          fonts: [{ family: 'Arial', usage: 'body' }],
+          logoUrl: '',
+          brandName: '',
+        },
         model: 'llama3.2',
         provider: 'Ollama',
         attempts: 1,
@@ -305,9 +315,12 @@ describe('Capability Exec Routes', () => {
         payload: { url: 'https://example.com' },
       });
       expect(res.statusCode).toBe(200);
-      const body = res.json<{ colors: string[]; fonts: string[] }>();
-      expect(body.colors).toContain('#ff0000');
-      expect(body.fonts).toContain('Arial');
+      const body = res.json<{
+        colors: Array<{ name: string; hex: string; usage?: string }>;
+        fonts: Array<{ family: string; usage?: string }>;
+      }>();
+      expect(body.colors.some((c) => c.hex === '#ff0000')).toBe(true);
+      expect(body.fonts.some((f) => f.family === 'Arial')).toBe(true);
     });
   });
 
