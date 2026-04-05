@@ -1109,4 +1109,18 @@ ALTER TABLE organizations ADD COLUMN branding_client_secret TEXT;
 ALTER TABLE branding_guidelines ADD COLUMN image_path TEXT;
     `,
   },
+  {
+    id: '038',
+    name: 'create-service-connections',
+    sql: `
+CREATE TABLE IF NOT EXISTS service_connections (
+  service_id TEXT PRIMARY KEY,
+  url TEXT NOT NULL,
+  client_id TEXT NOT NULL DEFAULT '',
+  client_secret_encrypted TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL,
+  updated_by TEXT
+);
+    `,
+  },
 ];
