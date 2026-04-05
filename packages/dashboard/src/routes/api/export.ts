@@ -110,6 +110,11 @@ export async function exportRoutes(
         'Notices',
         'Confirmed Violations',
         'Jurisdictions',
+        // REG-06: Regulations column positioned immediately after Jurisdictions.
+        // Always emitted so the format is stable regardless of selection. D-28 freeze
+        // requires the Jurisdictions column itself remain unchanged (name, separator,
+        // position); adding a new column at the next index preserves that.
+        'Regulations',
         'Created At',
         'Completed At',
       ];
@@ -126,6 +131,8 @@ export async function exportRoutes(
         String(s.notices ?? 0),
         String(s.confirmedViolations ?? 0),
         s.jurisdictions.join('; '),
+        // Mirrors the jurisdictions join separator for consistency (REG-06).
+        (s.regulations ?? []).join('; '),
         s.createdAt,
         s.completedAt ?? '',
       ]);
@@ -379,6 +386,9 @@ export async function exportRoutes(
           siteUrl: scan.siteUrl,
           standard: scan.standard,
           jurisdictions: scan.jurisdictions.join(', '),
+          // REG-06: surface regulation selection in the PDF subtitle. Empty
+          // string produces no segment (matches the Jurisdictions omit-when-empty pattern).
+          regulations: (scan.regulations ?? []).join(', '),
           createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
         };
 
