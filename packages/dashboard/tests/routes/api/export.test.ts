@@ -4,9 +4,41 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import ExcelJS from 'exceljs';
 import { SqliteStorageAdapter } from '../../../src/db/sqlite/index.js';
 import { registerSession } from '../../../src/auth/session.js';
 import { exportRoutes } from '../../../src/routes/api/export.js';
+
+const XLSX_CONTENT_TYPE =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/**
+ * Parse an xlsx response body into its first worksheet's header row + data
+ * rows as plain strings. Used to assert header shape, column ordering, and
+ * cell values for export endpoints.
+ */
+async function parseXlsxResponse(
+  rawPayload: Buffer,
+): Promise<{ headers: string[]; rows: string[][] }> {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(rawPayload);
+  const ws = wb.worksheets[0];
+  if (!ws) return { headers: [], rows: [] };
+  const headers: string[] = [];
+  ws.getRow(1).eachCell({ includeEmpty: false }, (cell) => {
+    headers.push(String(cell.value ?? ''));
+  });
+  const rows: string[][] = [];
+  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const cells: string[] = [];
+    for (let i = 1; i <= headers.length; i++) {
+      cells.push(String(row.getCell(i).value ?? ''));
+    }
+    rows.push(cells);
+  });
+  return { headers, rows };
+}
 
 const TEST_SESSION_SECRET = 'test-session-secret-at-least-32b';
 
@@ -145,40 +177,41 @@ describe('Export API routes', () => {
   beforeEach(async () => { ctx = await createTestServer(); });
   afterEach(() => { ctx.cleanup(); });
 
-  // ── GET /api/v1/export/scans.csv ────────────────────────────────────────
+  // ── GET /api/v1/export/scans.xlsx ──────────────────────────────────────
 
-  describe('GET /api/v1/export/scans.csv', () => {
-    it('returns CSV with headers when no scans exist', async () => {
+  describe('GET /api/v1/export/scans.xlsx', () => {
+    it('returns an xlsx workbook with headers when no scans exist', async () => {
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/scans.csv',
+        url: '/api/v1/export/scans.xlsx',
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.headers['content-type']).toBe('text/csv');
+      expect(response.headers['content-type']).toBe(XLSX_CONTENT_TYPE);
       expect(response.headers['content-disposition']).toContain('luqen-scans-');
-      expect(response.headers['content-disposition']).toContain('.csv');
+      expect(response.headers['content-disposition']).toContain('.xlsx');
 
-      const csv = response.body;
-      // BOM + headers
-      expect(csv).toContain('Scan ID');
-      expect(csv).toContain('Site URL');
-      expect(csv).toContain('Standard');
+      const { headers } = await parseXlsxResponse(response.rawPayload);
+      expect(headers).toContain('Scan ID');
+      expect(headers).toContain('Site URL');
+      expect(headers).toContain('Standard');
     });
 
-    it('includes scan data in CSV rows', async () => {
-      const id = await makeCompletedScan(ctx, 'https://test-site.com');
+    it('includes scan data in workbook rows', async () => {
+      await makeCompletedScan(ctx, 'https://test-site.com');
 
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/scans.csv',
+        url: '/api/v1/export/scans.xlsx',
       });
 
       expect(response.statusCode).toBe(200);
-      const csv = response.body;
-      expect(csv).toContain('https://test-site.com');
-      expect(csv).toContain('WCAG2AA');
-      expect(csv).toContain('completed');
+      const { rows } = await parseXlsxResponse(response.rawPayload);
+      expect(rows.length).toBe(1);
+      const row = rows[0]!;
+      expect(row).toContain('https://test-site.com');
+      expect(row).toContain('WCAG2AA');
+      expect(row).toContain('completed');
     });
 
     it('exports multiple scans', async () => {
@@ -188,30 +221,35 @@ describe('Export API routes', () => {
 
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/scans.csv',
+        url: '/api/v1/export/scans.xlsx',
       });
 
-      const csv = response.body;
-      expect(csv).toContain('https://site1.com');
-      expect(csv).toContain('https://site2.com');
-      expect(csv).toContain('https://site3.com');
+      const { rows } = await parseXlsxResponse(response.rawPayload);
+      const siteUrls = rows.map((r) => r[1]);
+      expect(siteUrls).toContain('https://site1.com');
+      expect(siteUrls).toContain('https://site2.com');
+      expect(siteUrls).toContain('https://site3.com');
     });
 
-    it('includes jurisdictions separated by semicolons', async () => {
-      await makeCompletedScan(ctx, 'https://example.com');
+    it('joins jurisdictions with semicolons', async () => {
+      await makeCompletedScan(ctx, 'https://example.com', {
+        jurisdictions: ['eu', 'us'],
+      });
 
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/scans.csv',
+        url: '/api/v1/export/scans.xlsx',
       });
 
       expect(response.statusCode).toBe(200);
-      // The CSV should include jurisdiction data
-      expect(response.body).toContain('eu');
+      const { headers, rows } = await parseXlsxResponse(response.rawPayload);
+      const jurIdx = headers.indexOf('Jurisdictions');
+      expect(jurIdx).toBeGreaterThan(-1);
+      expect(rows[0]![jurIdx]).toBe('eu; us');
     });
 
-    // ── REG-06 / P07-P04 Task 1 Tests A, B, C ────────────────────────────
-    it('Test A (REG-06): CSV header includes Regulations column and data populated', async () => {
+    // ── REG-06 / P07-P04 Tests A, B, C ───────────────────────────────────
+    it('Test A (REG-06): workbook header includes Regulations column with joined data', async () => {
       await makeCompletedScan(ctx, 'https://example.com', {
         jurisdictions: ['EU'],
         regulations: ['ADA', 'EN301549'],
@@ -219,20 +257,18 @@ describe('Export API routes', () => {
 
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/scans.csv',
+        url: '/api/v1/export/scans.xlsx',
       });
 
       expect(response.statusCode).toBe(200);
-      const csv = response.body;
-      // Header row contains Regulations column
-      expect(csv).toContain('Regulations');
-      // Data row contains the joined regulation short names
-      expect(csv).toContain('ADA; EN301549');
-      // Jurisdictions column still present (D-28 freeze)
-      expect(csv).toContain('Jurisdictions');
+      const { headers, rows } = await parseXlsxResponse(response.rawPayload);
+      expect(headers).toContain('Regulations');
+      expect(headers).toContain('Jurisdictions');
+      const regIdx = headers.indexOf('Regulations');
+      expect(rows[0]![regIdx]).toBe('ADA; EN301549');
     });
 
-    it('Test B (D-28 freeze): Regulations column always present with empty value when no regulations selected', async () => {
+    it('Test B: Regulations column always present with empty cell when no regulations selected', async () => {
       await makeCompletedScan(ctx, 'https://example.com', {
         jurisdictions: ['EU'],
         regulations: [],
@@ -240,18 +276,20 @@ describe('Export API routes', () => {
 
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/scans.csv',
+        url: '/api/v1/export/scans.xlsx',
       });
 
       expect(response.statusCode).toBe(200);
-      const csv = response.body;
-      // Header contains Regulations unconditionally (stable format)
-      expect(csv).toContain('Regulations');
-      // Jurisdictions value intact
-      expect(csv).toContain('EU');
+      const { headers, rows } = await parseXlsxResponse(response.rawPayload);
+      expect(headers).toContain('Regulations');
+      const regIdx = headers.indexOf('Regulations');
+      expect(rows[0]![regIdx]).toBe('');
+      // Jurisdictions still populated
+      const jurIdx = headers.indexOf('Jurisdictions');
+      expect(rows[0]![jurIdx]).toBe('EU');
     });
 
-    it('Test C (D-28 freeze): Regulations column is positioned immediately after Jurisdictions in header row', async () => {
+    it('Test C: Regulations column sits immediately after Jurisdictions', async () => {
       await makeCompletedScan(ctx, 'https://example.com', {
         jurisdictions: ['EU'],
         regulations: ['ADA'],
@@ -259,19 +297,15 @@ describe('Export API routes', () => {
 
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/scans.csv',
+        url: '/api/v1/export/scans.xlsx',
       });
 
-      const csv = response.body;
-      // Extract the header row (first line after the BOM)
-      const firstLine = csv.split('\r\n')[0] ?? '';
-      const cols = firstLine.split(',').map((c) => c.replace(/^"|"$/g, ''));
-      const jurIdx = cols.indexOf('Jurisdictions');
-      const regIdx = cols.indexOf('Regulations');
+      const { headers } = await parseXlsxResponse(response.rawPayload);
+      const jurIdx = headers.indexOf('Jurisdictions');
+      const regIdx = headers.indexOf('Regulations');
       expect(jurIdx).toBeGreaterThan(-1);
       expect(regIdx).toBe(jurIdx + 1);
-      // Jurisdictions name frozen (D-28)
-      expect(cols[jurIdx]).toBe('Jurisdictions');
+      expect(headers[jurIdx]).toBe('Jurisdictions');
     });
   });
 
@@ -531,52 +565,52 @@ describe('Export API routes', () => {
     });
   });
 
-  // ── GET /api/v1/export/scans/:id/issues.csv (legacy URL) ───────────────
+  // ── GET /api/v1/export/scans/:id/issues.csv — removed (CSV retired) ────
 
-  describe('GET /api/v1/export/scans/:id/issues.csv', () => {
-    it('returns Excel file (same as .xlsx endpoint)', async () => {
-      const id = await makeCompletedScan(ctx, 'https://example.com');
-      const report = makeSampleReport();
-      await ctx.storage.scans.updateScan(id, { jsonReport: JSON.stringify(report) });
-
+  describe('legacy CSV endpoints are removed', () => {
+    it('GET /api/v1/export/scans.csv returns 404', async () => {
       const response = await ctx.server.inject({
         method: 'GET',
-        url: `/api/v1/export/scans/${id}/issues.csv`,
+        url: '/api/v1/export/scans.csv',
       });
-
-      expect(response.statusCode).toBe(200);
-      // Legacy CSV URL now serves Excel
-      expect(response.headers['content-type']).toBe(
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      );
-    });
-
-    it('returns 404 for non-existent scan', async () => {
-      const response = await ctx.server.inject({
-        method: 'GET',
-        url: `/api/v1/export/scans/${randomUUID()}/issues.csv`,
-      });
-
       expect(response.statusCode).toBe(404);
     });
-  });
 
-  // ── GET /api/v1/export/trends.csv ───────────────────────────────────────
-
-  describe('GET /api/v1/export/trends.csv', () => {
-    it('returns CSV with headers when no data', async () => {
+    it('GET /api/v1/export/trends.csv returns 404', async () => {
       const response = await ctx.server.inject({
         method: 'GET',
         url: '/api/v1/export/trends.csv',
       });
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('GET /api/v1/export/scans/:id/issues.csv returns 404', async () => {
+      const id = await makeCompletedScan(ctx, 'https://example.com');
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/api/v1/export/scans/${id}/issues.csv`,
+      });
+      expect(response.statusCode).toBe(404);
+    });
+  });
+
+  // ── GET /api/v1/export/trends.xlsx ─────────────────────────────────────
+
+  describe('GET /api/v1/export/trends.xlsx', () => {
+    it('returns an xlsx workbook with headers when no data', async () => {
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: '/api/v1/export/trends.xlsx',
+      });
 
       expect(response.statusCode).toBe(200);
-      expect(response.headers['content-type']).toBe('text/csv');
+      expect(response.headers['content-type']).toBe(XLSX_CONTENT_TYPE);
       expect(response.headers['content-disposition']).toContain('luqen-trends-');
+      expect(response.headers['content-disposition']).toContain('.xlsx');
 
-      const csv = response.body;
-      expect(csv).toContain('Site URL');
-      expect(csv).toContain('Total Issues');
+      const { headers } = await parseXlsxResponse(response.rawPayload);
+      expect(headers).toContain('Site URL');
+      expect(headers).toContain('Total Issues');
     });
 
     it('includes completed scan data in trends', async () => {
@@ -584,11 +618,13 @@ describe('Export API routes', () => {
 
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/trends.csv',
+        url: '/api/v1/export/trends.xlsx',
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.body).toContain('https://trend-site.com');
+      const { rows } = await parseXlsxResponse(response.rawPayload);
+      const siteUrls = rows.map((r) => r[0]);
+      expect(siteUrls).toContain('https://trend-site.com');
     });
 
     it('filters by siteUrl query parameter', async () => {
@@ -597,13 +633,14 @@ describe('Export API routes', () => {
 
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/trends.csv?siteUrl=https://site-a.com',
+        url: '/api/v1/export/trends.xlsx?siteUrl=https://site-a.com',
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.body).toContain('https://site-a.com');
-      // site-b should not appear (filtered out)
-      expect(response.body).not.toContain('https://site-b.com');
+      const { rows } = await parseXlsxResponse(response.rawPayload);
+      const siteUrls = rows.map((r) => r[0]);
+      expect(siteUrls).toContain('https://site-a.com');
+      expect(siteUrls).not.toContain('https://site-b.com');
     });
 
     it('returns all sites when no siteUrl filter', async () => {
@@ -612,11 +649,13 @@ describe('Export API routes', () => {
 
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/trends.csv',
+        url: '/api/v1/export/trends.xlsx',
       });
 
-      expect(response.body).toContain('https://alpha.com');
-      expect(response.body).toContain('https://beta.com');
+      const { rows } = await parseXlsxResponse(response.rawPayload);
+      const siteUrls = rows.map((r) => r[0]);
+      expect(siteUrls).toContain('https://alpha.com');
+      expect(siteUrls).toContain('https://beta.com');
     });
   });
 

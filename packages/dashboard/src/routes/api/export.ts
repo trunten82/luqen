@@ -10,19 +10,50 @@ import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
 
 // ---------------------------------------------------------------------------
-// CSV helper
+// Excel helper — single source of truth for all scan-data workbook exports
 // ---------------------------------------------------------------------------
 
-function toCsv(headers: readonly string[], rows: readonly (readonly string[])[]): string {
-  // Always quote every field to handle commas, semicolons, quotes, and newlines
-  // in issue messages, selectors, and HTML context snippets.
-  const escape = (val: string): string => '"' + val.replace(/"/g, '""') + '"';
-  const lines = [headers.map(escape).join(',')];
+const XLSX_CONTENT_TYPE =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+async function buildXlsx(
+  sheetName: string,
+  headers: readonly string[],
+  rows: readonly (readonly string[])[],
+  columnWidths?: readonly number[],
+): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Luqen';
+  wb.created = new Date();
+  const ws = wb.addWorksheet(sheetName);
+
+  ws.columns = headers.map((h, i) => ({
+    header: h,
+    key: `col${i}`,
+    width: columnWidths?.[i] ?? 20,
+  }));
+
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true, size: 10 };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFF5F6FA' },
+  };
+
   for (const row of rows) {
-    lines.push(row.map((v) => escape(String(v ?? ''))).join(','));
+    ws.addRow([...row]);
   }
-  // BOM + CRLF for Excel compatibility
-  return '\uFEFF' + lines.join('\r\n') + '\r\n';
+
+  // Auto-filter across all columns, freeze header row
+  ws.autoFilter = {
+    from: 'A1',
+    to: `${String.fromCharCode(64 + headers.length)}1`,
+  };
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  const buffer = await wb.xlsx.writeBuffer();
+  return Buffer.from(buffer as ArrayBuffer);
 }
 
 function todayStamp(): string {
@@ -87,9 +118,12 @@ export async function exportRoutes(
   storage: StorageAdapter,
 ): Promise<void> {
 
-  // ── GET /api/v1/export/scans.csv ──────────────────────────────────────────
+  // ── GET /api/v1/export/scans.xlsx ─────────────────────────────────────────
+  // Scans listing workbook. Mirrors the data the legacy CSV endpoint produced
+  // (retired — CSV was unreliable with quoted context strings and multi-byte
+  // payloads). Excel is the only supported listing format.
   server.get(
-    '/api/v1/export/scans.csv',
+    '/api/v1/export/scans.xlsx',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const scans = await storage.scans.listScans({
@@ -111,9 +145,7 @@ export async function exportRoutes(
         'Confirmed Violations',
         'Jurisdictions',
         // REG-06: Regulations column positioned immediately after Jurisdictions.
-        // Always emitted so the format is stable regardless of selection. D-28 freeze
-        // requires the Jurisdictions column itself remain unchanged (name, separator,
-        // position); adding a new column at the next index preserves that.
+        // Always emitted so the format is stable regardless of selection.
         'Regulations',
         'Created At',
         'Completed At',
@@ -137,21 +169,24 @@ export async function exportRoutes(
         s.completedAt ?? '',
       ]);
 
-      const csv = toCsv(headers, rows);
-      const filename = `luqen-scans-${todayStamp()}.csv`;
+      const buffer = await buildXlsx(
+        'Scans',
+        headers,
+        rows,
+        [38, 40, 10, 12, 12, 12, 10, 10, 10, 12, 20, 20, 22, 22],
+      );
+      const filename = `luqen-scans-${todayStamp()}.xlsx`;
 
       return reply
-        .header('Content-Type', 'text/csv')
+        .header('Content-Type', XLSX_CONTENT_TYPE)
         .header('Content-Disposition', `attachment; filename="${filename}"`)
-        .send(csv);
+        .send(buffer);
     },
   );
 
-  // ── GET /api/v1/export/scans/:id/issues.xlsx — Excel export
-  // ── GET /api/v1/export/scans/:id/issues.csv  — legacy URL, serves Excel
-  for (const ext of ['xlsx', 'csv'] as const) {
+  // ── GET /api/v1/export/scans/:id/issues.xlsx — per-report issues workbook
   server.get(
-    `/api/v1/export/scans/:id/issues.${ext}`,
+    '/api/v1/export/scans/:id/issues.xlsx',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -268,18 +303,25 @@ export async function exportRoutes(
 
       const filename = `luqen-issues-${siteSlug(scan.siteUrl)}-${todayStamp()}`;
 
+      // Build workbook with shared helper, then apply per-row severity/priority
+      // colouring which is specific to the issues sheet.
       const wb = new ExcelJS.Workbook();
       wb.creator = 'Luqen';
       wb.created = new Date();
       const ws = wb.addWorksheet('Issues');
-
-      // Header row with styling
-      ws.columns = headers.map((h, i) => ({ header: h, key: `col${i}`, width: [8, 8, 10, 20, 40, 40, 30, 30, 40, 10, 20, 15, 30][i] ?? 20 }));
+      ws.columns = headers.map((h, i) => ({
+        header: h,
+        key: `col${i}`,
+        width: [8, 8, 10, 20, 40, 40, 30, 30, 40, 10, 20, 15, 30][i] ?? 20,
+      }));
       const headerRow = ws.getRow(1);
       headerRow.font = { bold: true, size: 10 };
-      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F6FA' } };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF5F6FA' },
+      };
 
-      // Data rows
       for (const row of rows) {
         const dataRow = ws.addRow(row);
         const sev = row[0];
@@ -290,22 +332,20 @@ export async function exportRoutes(
         else if (pri === 'High') dataRow.getCell(2).font = { color: { argb: 'FF7A4F00' }, bold: true };
       }
 
-      // Auto-filter and freeze header
       ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + headers.length)}1` };
       ws.views = [{ state: 'frozen', ySplit: 1 }];
 
       const buffer = await wb.xlsx.writeBuffer();
       return reply
-        .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        .header('Content-Type', XLSX_CONTENT_TYPE)
         .header('Content-Disposition', `attachment; filename="${filename}.xlsx"`)
         .send(Buffer.from(buffer as ArrayBuffer));
     },
   );
-  } // end for (xlsx/csv)
 
-  // ── GET /api/v1/export/trends.csv ─────────────────────────────────────────
+  // ── GET /api/v1/export/trends.xlsx ────────────────────────────────────────
   server.get(
-    '/api/v1/export/trends.csv',
+    '/api/v1/export/trends.xlsx',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { siteUrl?: string };
       const orgId = request.user?.currentOrgId;
@@ -337,13 +377,18 @@ export async function exportRoutes(
         String(s.confirmedViolations ?? 0),
       ]);
 
-      const csv = toCsv(headers, rows);
-      const filename = `luqen-trends-${todayStamp()}.csv`;
+      const buffer = await buildXlsx(
+        'Trends',
+        headers,
+        rows,
+        [40, 22, 14, 14, 10, 12, 10, 18],
+      );
+      const filename = `luqen-trends-${todayStamp()}.xlsx`;
 
       return reply
-        .header('Content-Type', 'text/csv')
+        .header('Content-Type', XLSX_CONTENT_TYPE)
         .header('Content-Disposition', `attachment; filename="${filename}"`)
-        .send(csv);
+        .send(buffer);
     },
   );
 
