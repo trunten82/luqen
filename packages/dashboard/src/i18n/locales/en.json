@@ -215,7 +215,8 @@
     "standard": "Standard",
     "startScan": "Start Scan",
     "includeWarnings": "Include warnings",
-    "includeNotices": "Include notices"
+    "includeNotices": "Include notices",
+    "errorJurisdictionOrRegulationRequired": "Select at least one jurisdiction or regulation"
   },
   "reports": {
     "title": "Reports",

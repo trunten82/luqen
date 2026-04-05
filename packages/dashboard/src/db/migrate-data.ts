@@ -165,6 +165,7 @@ async function migrateScans(
       siteUrl: scan.siteUrl,
       standard: scan.standard,
       jurisdictions: scan.jurisdictions,
+      regulations: scan.regulations ?? [],
       createdBy: scan.createdBy,
       createdAt: scan.createdAt,
       orgId: scan.orgId,

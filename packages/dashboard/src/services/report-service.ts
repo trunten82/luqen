@@ -42,6 +42,26 @@ export interface JsonReportFile {
       totalConfirmedViolations?: number;
       totalNeedsReview?: number;
     };
+    /**
+     * 07-P02: per-regulation breakdown keyed by regulationId. Always present
+     * on fresh scans as `{}` when no regulations were requested; legacy scans
+     * may omit it entirely (treated as `{}`).
+     */
+    regulationMatrix?: Record<string, {
+      regulationId: string;
+      regulationName?: string;
+      shortName?: string;
+      jurisdictionId?: string;
+      status: 'pass' | 'fail' | 'partial';
+      mandatoryViolations: number;
+      recommendedViolations?: number;
+      optionalViolations?: number;
+      violatedRequirements?: Array<{
+        wcagCriterion: string;
+        obligation: 'mandatory' | 'recommended' | 'optional';
+        issueCount: number;
+      }>;
+    }>;
     matrix?: Record<string, {
       jurisdictionId: string;
       jurisdictionName: string;
@@ -588,12 +608,20 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
     };
   }
 
+  // 07-P02: regulationMatrix is a first-class peer to complianceMatrix.
+  // Always an array (possibly empty) — legacy scans with no regulationMatrix
+  // in their stored compliance blob still serialize as [].
+  const regulationMatrix: Array<Record<string, unknown>> = raw.compliance?.regulationMatrix
+    ? Object.values(raw.compliance.regulationMatrix as Record<string, Record<string, unknown>>)
+    : [];
+
   return {
     summary,
     pages: [...enrichedPages].sort((a, b) => (b.issueCount ?? 0) - (a.issueCount ?? 0)),
     errors: raw.errors ?? [],
     compliance: enrichedCompliance,
     complianceMatrix,
+    regulationMatrix,
     templateIssues: enrichedTemplateIssues,
     templateIssueCount,
     templateOccurrenceCount,

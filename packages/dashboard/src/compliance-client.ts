@@ -32,6 +32,22 @@ export interface Requirement {
   readonly notes?: string;
 }
 
+export interface RegulationMatrixEntry {
+  readonly regulationId: string;
+  readonly regulationName?: string;
+  readonly shortName?: string;
+  readonly jurisdictionId?: string;
+  readonly status: 'pass' | 'fail' | 'partial';
+  readonly mandatoryViolations: number;
+  readonly recommendedViolations?: number;
+  readonly optionalViolations?: number;
+  readonly violatedRequirements?: readonly {
+    readonly wcagCriterion: string;
+    readonly obligation: 'mandatory' | 'recommended' | 'optional';
+    readonly issueCount: number;
+  }[];
+}
+
 export interface ComplianceCheckResult {
   readonly summary: {
     readonly totalJurisdictions: number;
@@ -41,6 +57,8 @@ export interface ComplianceCheckResult {
     readonly totalConfirmedViolations?: number;
   };
   readonly matrix: Record<string, unknown>;
+  /** 07-P02: always present, `{}` when no regulations were requested. */
+  readonly regulationMatrix?: Record<string, RegulationMatrixEntry>;
 }
 
 export interface ProposalDiff {
@@ -194,13 +212,14 @@ export async function checkCompliance(
   baseUrl: string,
   token: string,
   jurisdictions: readonly string[],
+  regulations: readonly string[],
   issues: readonly ComplianceIssueInput[],
   orgId?: string,
 ): Promise<ComplianceCheckResult> {
   return apiFetch<ComplianceCheckResult>(`${baseUrl}/api/v1/compliance/check`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ jurisdictions, issues }),
+    body: JSON.stringify({ jurisdictions, regulations, issues }),
   }, orgId);
 }
 

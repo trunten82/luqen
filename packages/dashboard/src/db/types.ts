@@ -29,6 +29,12 @@ export interface ScanRecord {
   readonly status: 'queued' | 'running' | 'completed' | 'failed';
   readonly standard: string;
   readonly jurisdictions: string[];
+  /**
+   * Explicit regulation ids selected at scan time, independent of jurisdictions.
+   * Added in migration 039 (07-P02). Always an array — empty when the scan was
+   * jurisdictions-only. Pre-migration rows default to `[]` via the column default.
+   */
+  readonly regulations: string[];
   readonly createdBy: string;
   readonly createdAt: string;
   readonly completedAt?: string;
@@ -65,6 +71,8 @@ export interface CreateScanInput {
   readonly siteUrl: string;
   readonly standard: string;
   readonly jurisdictions: string[];
+  /** Optional — defaults to [] when omitted (07-P02). */
+  readonly regulations?: string[];
   readonly createdBy: string;
   readonly createdAt: string;
   readonly orgId?: string;
