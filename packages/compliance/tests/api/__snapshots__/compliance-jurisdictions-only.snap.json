@@ -1,0 +1,305 @@
+{
+  "request": {
+    "jurisdictions": [
+      "EU",
+      "DE"
+    ],
+    "issues": [
+      {
+        "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+        "type": "error",
+        "message": "Img element missing an alt attribute",
+        "selector": "img",
+        "context": "<img src=\"test.png\">"
+      },
+      {
+        "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18",
+        "type": "error",
+        "message": "Insufficient contrast",
+        "selector": "p.small",
+        "context": "<p class=\"small\">text</p>"
+      },
+      {
+        "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77",
+        "type": "warning",
+        "message": "Link text may not be descriptive",
+        "selector": "a.more",
+        "context": "<a class=\"more\">click</a>"
+      }
+    ],
+    "includeOptional": false
+  },
+  "response": {
+    "matrix": {
+      "EU": {
+        "jurisdictionId": "EU",
+        "jurisdictionName": "European Union",
+        "status": "fail",
+        "mandatoryViolations": 6,
+        "recommendedViolations": 0,
+        "optionalViolations": 0,
+        "regulations": [
+          {
+            "regulationId": "EU-EAA",
+            "regulationName": "European Accessibility Act",
+            "shortName": "EAA",
+            "status": "fail",
+            "enforcementDate": "2025-06-28",
+            "scope": "all",
+            "violations": [
+              {
+                "wcagCriterion": "1.1.1",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "2.4.4",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "1.4.3",
+                "obligation": "mandatory",
+                "issueCount": 1
+              }
+            ]
+          },
+          {
+            "regulationId": "EU-WAD",
+            "regulationName": "Web Accessibility Directive",
+            "shortName": "WAD",
+            "status": "fail",
+            "enforcementDate": "2018-09-23",
+            "scope": "public",
+            "violations": [
+              {
+                "wcagCriterion": "1.1.1",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "2.4.4",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "1.4.3",
+                "obligation": "mandatory",
+                "issueCount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "DE": {
+        "jurisdictionId": "DE",
+        "jurisdictionName": "Germany",
+        "status": "fail",
+        "mandatoryViolations": 9,
+        "recommendedViolations": 0,
+        "optionalViolations": 0,
+        "regulations": [
+          {
+            "regulationId": "EU-EAA",
+            "regulationName": "European Accessibility Act",
+            "shortName": "EAA",
+            "status": "fail",
+            "enforcementDate": "2025-06-28",
+            "scope": "all",
+            "violations": [
+              {
+                "wcagCriterion": "1.1.1",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "2.4.4",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "1.4.3",
+                "obligation": "mandatory",
+                "issueCount": 1
+              }
+            ]
+          },
+          {
+            "regulationId": "EU-WAD",
+            "regulationName": "Web Accessibility Directive",
+            "shortName": "WAD",
+            "status": "fail",
+            "enforcementDate": "2018-09-23",
+            "scope": "public",
+            "violations": [
+              {
+                "wcagCriterion": "1.1.1",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "2.4.4",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "1.4.3",
+                "obligation": "mandatory",
+                "issueCount": 1
+              }
+            ]
+          },
+          {
+            "regulationId": "DE-BITV",
+            "regulationName": "Barrierefreie-Informationstechnik-Verordnung 2.0",
+            "shortName": "BITV 2.0",
+            "status": "fail",
+            "enforcementDate": "2011-09-22",
+            "scope": "public",
+            "violations": [
+              {
+                "wcagCriterion": "1.1.1",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "2.4.4",
+                "obligation": "mandatory",
+                "issueCount": 1
+              },
+              {
+                "wcagCriterion": "1.4.3",
+                "obligation": "mandatory",
+                "issueCount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "summary": {
+      "totalJurisdictions": 2,
+      "passing": 0,
+      "failing": 2,
+      "totalMandatoryViolations": 15,
+      "totalOptionalViolations": 0
+    },
+    "annotatedIssues": [
+      {
+        "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+        "wcagCriterion": "1.1.1",
+        "wcagLevel": "AA",
+        "originalIssue": {
+          "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+          "type": "error",
+          "message": "Img element missing an alt attribute",
+          "selector": "img",
+          "context": "<img src=\"test.png\">"
+        },
+        "regulations": [
+          {
+            "regulationId": "EU-EAA",
+            "regulationName": "European Accessibility Act",
+            "shortName": "EAA",
+            "jurisdictionId": "EU",
+            "obligation": "mandatory",
+            "enforcementDate": "2025-06-28"
+          },
+          {
+            "regulationId": "EU-WAD",
+            "regulationName": "Web Accessibility Directive",
+            "shortName": "WAD",
+            "jurisdictionId": "EU",
+            "obligation": "mandatory",
+            "enforcementDate": "2018-09-23"
+          },
+          {
+            "regulationId": "DE-BITV",
+            "regulationName": "Barrierefreie-Informationstechnik-Verordnung 2.0",
+            "shortName": "BITV 2.0",
+            "jurisdictionId": "DE",
+            "obligation": "mandatory",
+            "enforcementDate": "2011-09-22"
+          }
+        ]
+      },
+      {
+        "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18",
+        "wcagCriterion": "1.4.3",
+        "wcagLevel": "AA",
+        "originalIssue": {
+          "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18",
+          "type": "error",
+          "message": "Insufficient contrast",
+          "selector": "p.small",
+          "context": "<p class=\"small\">text</p>"
+        },
+        "regulations": [
+          {
+            "regulationId": "EU-EAA",
+            "regulationName": "European Accessibility Act",
+            "shortName": "EAA",
+            "jurisdictionId": "EU",
+            "obligation": "mandatory",
+            "enforcementDate": "2025-06-28"
+          },
+          {
+            "regulationId": "EU-WAD",
+            "regulationName": "Web Accessibility Directive",
+            "shortName": "WAD",
+            "jurisdictionId": "EU",
+            "obligation": "mandatory",
+            "enforcementDate": "2018-09-23"
+          },
+          {
+            "regulationId": "DE-BITV",
+            "regulationName": "Barrierefreie-Informationstechnik-Verordnung 2.0",
+            "shortName": "BITV 2.0",
+            "jurisdictionId": "DE",
+            "obligation": "mandatory",
+            "enforcementDate": "2011-09-22"
+          }
+        ]
+      },
+      {
+        "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77",
+        "wcagCriterion": "2.4.4",
+        "wcagLevel": "AA",
+        "originalIssue": {
+          "code": "WCAG2AA.Principle2.Guideline2_4.2_4_4.H77",
+          "type": "warning",
+          "message": "Link text may not be descriptive",
+          "selector": "a.more",
+          "context": "<a class=\"more\">click</a>"
+        },
+        "regulations": [
+          {
+            "regulationId": "EU-EAA",
+            "regulationName": "European Accessibility Act",
+            "shortName": "EAA",
+            "jurisdictionId": "EU",
+            "obligation": "mandatory",
+            "enforcementDate": "2025-06-28"
+          },
+          {
+            "regulationId": "EU-WAD",
+            "regulationName": "Web Accessibility Directive",
+            "shortName": "WAD",
+            "jurisdictionId": "EU",
+            "obligation": "mandatory",
+            "enforcementDate": "2018-09-23"
+          },
+          {
+            "regulationId": "DE-BITV",
+            "regulationName": "Barrierefreie-Informationstechnik-Verordnung 2.0",
+            "shortName": "BITV 2.0",
+            "jurisdictionId": "DE",
+            "obligation": "mandatory",
+            "enforcementDate": "2011-09-22"
+          }
+        ]
+      }
+    ],
+    "regulationMatrix": {}
+  }
+}
