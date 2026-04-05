@@ -98,6 +98,7 @@ function baseScanConfig(overrides: Partial<ScanConfig> = {}): ScanConfig {
     standard: 'WCAG2AA',
     concurrency: 2,
     jurisdictions: [],
+    regulations: [],
     scanMode: 'single',
     webserviceUrl: 'http://localhost:4000',
     ...overrides,
@@ -680,6 +681,7 @@ describe('ScanOrchestrator', () => {
         'http://compliance:5000',
         'tok-123',
         ['eu', 'us'],
+        [],
         expect.any(Array),
       );
 
@@ -723,7 +725,8 @@ describe('ScanOrchestrator', () => {
       await eventsPromise;
 
       // Should only pass 2 unique issues (deduplicated by code)
-      const passedIssues = mockCheckCompliance.mock.calls[0][3];
+      // checkCompliance signature: (baseUrl, token, jurisdictions, regulations, issues, orgId)
+      const passedIssues = mockCheckCompliance.mock.calls[0][4];
       expect(passedIssues).toHaveLength(2);
     });
 
@@ -745,7 +748,7 @@ describe('ScanOrchestrator', () => {
       expect(mockCheckCompliance).not.toHaveBeenCalled();
     });
 
-    it('does not run compliance when jurisdictions is empty', async () => {
+    it('does not run compliance when both jurisdictions and regulations are empty', async () => {
       const scanResult = makeScanResult([{ url: 'https://example.com', issues: [] }]);
       const mockScanner = { scan: vi.fn().mockResolvedValue(scanResult) };
       mockCreateScanner.mockReturnValue(mockScanner);
@@ -754,6 +757,7 @@ describe('ScanOrchestrator', () => {
         complianceUrl: 'http://compliance:5000',
         complianceToken: 'tok',
         jurisdictions: [],
+        regulations: [],
       });
 
       const eventsPromise = waitForScan(orchestrator, 'scan-nojur');
@@ -761,6 +765,79 @@ describe('ScanOrchestrator', () => {
       await eventsPromise;
 
       expect(mockCheckCompliance).not.toHaveBeenCalled();
+    });
+
+    // ── 07-P02 regulations forwarding ───────────────────────────────────
+    it('forwards regulations to checkCompliance (REG-01)', async () => {
+      const scanResult = makeScanResult([
+        {
+          url: 'https://example.com',
+          issues: [{ type: 'error', code: 'W.1.1.1', message: 'm', selector: 's', context: 'c' }],
+        },
+      ]);
+      const mockScanner = { scan: vi.fn().mockResolvedValue(scanResult) };
+      mockCreateScanner.mockReturnValue(mockScanner);
+
+      mockCheckCompliance.mockResolvedValue({
+        summary: { totalConfirmedViolations: 1 },
+        matrix: {},
+        regulationMatrix: { en301549: { regulationId: 'en301549', status: 'fail', mandatoryViolations: 1 } },
+      });
+
+      const config = baseScanConfig({
+        complianceUrl: 'http://compliance:5000',
+        complianceToken: 'tok',
+        jurisdictions: ['eu'],
+        regulations: ['en301549'],
+      });
+
+      const eventsPromise = waitForScan(orchestrator, 'scan-reg');
+      orchestrator.startScan('scan-reg', config);
+      await eventsPromise;
+
+      expect(mockCheckCompliance).toHaveBeenCalledWith(
+        'http://compliance:5000',
+        'tok',
+        ['eu'],
+        ['en301549'],
+        expect.any(Array),
+      );
+    });
+
+    it('runs compliance when only regulations are set (jurisdictions empty)', async () => {
+      const scanResult = makeScanResult([
+        {
+          url: 'https://example.com',
+          issues: [{ type: 'error', code: 'W.1.1.1', message: 'm', selector: 's', context: 'c' }],
+        },
+      ]);
+      const mockScanner = { scan: vi.fn().mockResolvedValue(scanResult) };
+      mockCreateScanner.mockReturnValue(mockScanner);
+
+      mockCheckCompliance.mockResolvedValue({
+        summary: { totalConfirmedViolations: 0 },
+        matrix: {},
+        regulationMatrix: {},
+      });
+
+      const config = baseScanConfig({
+        complianceUrl: 'http://compliance:5000',
+        complianceToken: 'tok',
+        jurisdictions: [],
+        regulations: ['ada'],
+      });
+
+      const eventsPromise = waitForScan(orchestrator, 'scan-regonly');
+      orchestrator.startScan('scan-regonly', config);
+      await eventsPromise;
+
+      expect(mockCheckCompliance).toHaveBeenCalledWith(
+        'http://compliance:5000',
+        'tok',
+        [],
+        ['ada'],
+        expect.any(Array),
+      );
     });
 
     it('emits scan_error but still completes when compliance check fails', async () => {
@@ -814,12 +891,16 @@ describe('ScanOrchestrator', () => {
           eu: { jurisdiction: 'eu', violations: 1 },
           us: { jurisdiction: 'us', violations: 0 },
         },
+        regulationMatrix: {
+          en301549: { regulationId: 'en301549', status: 'fail', mandatoryViolations: 1 },
+        },
       });
 
       const config = baseScanConfig({
         complianceUrl: 'http://compliance:5000',
         complianceToken: 'tok',
         jurisdictions: ['eu', 'us'],
+        regulations: ['en301549'],
       });
 
       const eventsPromise = waitForScan(orchestrator, 'scan-matrix');
@@ -830,6 +911,10 @@ describe('ScanOrchestrator', () => {
       const completedCall = updateCalls.find((c: unknown[]) => (c[1] as Record<string, unknown>).status === 'completed');
       const reportData = JSON.parse(completedCall![1].jsonReport as string);
       expect(reportData.complianceMatrix).toHaveLength(2);
+      // 07-P02: regulationMatrix flows through to reportData as an array of entries
+      expect(Array.isArray(reportData.regulationMatrix)).toBe(true);
+      expect(reportData.regulationMatrix).toHaveLength(1);
+      expect(reportData.regulationMatrix[0].regulationId).toBe('en301549');
     });
 
     // ── Incremental scan ────────────────────────────────────────────────

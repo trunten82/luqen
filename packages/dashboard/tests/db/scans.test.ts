@@ -215,4 +215,52 @@ describe('ScanDb', () => {
       await expect(storage.scans.deleteScan('non-existent')).resolves.not.toThrow();
     });
   });
+
+  // ── Regulation filter (07-P02) ─────────────────────────────────────────────
+  describe('regulations column (07-P02)', () => {
+    it('migration 039 adds scan_records.regulations as TEXT NOT NULL DEFAULT [] ', () => {
+      const db = storage.getRawDatabase();
+      const rows = db
+        .prepare("PRAGMA table_info('scan_records')")
+        .all() as Array<{ name: string; type: string; notnull: number; dflt_value: string | null }>;
+
+      const reg = rows.find((r) => r.name === 'regulations');
+      expect(reg).toBeDefined();
+      expect(reg!.type.toUpperCase()).toBe('TEXT');
+      expect(reg!.notnull).toBe(1);
+      // SQLite stores the default as the quoted literal
+      expect(reg!.dflt_value).toBe("'[]'");
+    });
+
+    it('createScan persists regulations as JSON and round-trips back as string[]', async () => {
+      const id = randomUUID();
+      await storage.scans.createScan({
+        id,
+        siteUrl: 'https://example.com',
+        standard: 'WCAG2AA',
+        jurisdictions: ['eu'],
+        regulations: ['en301549', 'eu-eaa'],
+        createdBy: 'alice',
+        createdAt: new Date().toISOString(),
+      });
+
+      const record = await storage.scans.getScan(id);
+      expect(record?.regulations).toEqual(['en301549', 'eu-eaa']);
+    });
+
+    it('defaults regulations to [] when omitted from createScan', async () => {
+      const id = randomUUID();
+      await storage.scans.createScan({
+        id,
+        siteUrl: 'https://example.com',
+        standard: 'WCAG2AA',
+        jurisdictions: ['eu'],
+        createdBy: 'alice',
+        createdAt: new Date().toISOString(),
+      });
+
+      const record = await storage.scans.getScan(id);
+      expect(record?.regulations).toEqual([]);
+    });
+  });
 });

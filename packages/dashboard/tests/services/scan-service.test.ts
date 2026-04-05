@@ -220,3 +220,79 @@ describe('ScanService.getScanForOrg', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// ScanService.initiateScan — regulation filter (07-P02)
+// ---------------------------------------------------------------------------
+
+describe('ScanService.initiateScan — regulations (07-P02)', () => {
+  beforeEach(() => {
+    // Stub fetch so probeUrl resolves quickly regardless of real DNS
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+  });
+
+  it('normalizes a single regulation string into an array and persists it', async () => {
+    const storage = makeStorage({ id: 'scan-1', orgId: 'org-1' });
+    const orchestrator = makeOrchestrator();
+    const service = new ScanService(storage, orchestrator, makeConfig());
+
+    const result = await service.initiateScan(
+      {
+        siteUrl: 'https://example.com',
+        standard: 'WCAG2AA',
+        jurisdictions: 'eu',
+        regulations: 'en301549',
+      },
+      { username: 'alice', orgId: 'org-1', complianceToken: 'tok' },
+    );
+
+    expect(result.ok).toBe(true);
+    const createCall = (storage.scans.createScan as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(createCall.regulations).toEqual(['en301549']);
+    expect(createCall.jurisdictions).toEqual(['eu']);
+
+    const startCall = (orchestrator.startScan as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(startCall.regulations).toEqual(['en301549']);
+    expect(startCall.jurisdictions).toEqual(['eu']);
+  });
+
+  it('accepts multi-value regulations array from form submission', async () => {
+    const storage = makeStorage({ id: 'scan-1', orgId: 'org-1' });
+    const orchestrator = makeOrchestrator();
+    const service = new ScanService(storage, orchestrator, makeConfig());
+
+    const result = await service.initiateScan(
+      {
+        siteUrl: 'https://example.com',
+        standard: 'WCAG2AA',
+        jurisdictions: [],
+        regulations: ['ada', 'en301549'],
+      },
+      { username: 'alice', orgId: 'org-1', complianceToken: 'tok' },
+    );
+
+    expect(result.ok).toBe(true);
+    const startCall = (orchestrator.startScan as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(startCall.regulations).toEqual(['ada', 'en301549']);
+    expect(startCall.jurisdictions).toEqual([]);
+  });
+
+  it('defaults regulations to [] when omitted', async () => {
+    const storage = makeStorage({ id: 'scan-1', orgId: 'org-1' });
+    const orchestrator = makeOrchestrator();
+    const service = new ScanService(storage, orchestrator, makeConfig());
+
+    const result = await service.initiateScan(
+      {
+        siteUrl: 'https://example.com',
+        standard: 'WCAG2AA',
+        jurisdictions: ['eu'],
+      },
+      { username: 'alice', orgId: 'org-1', complianceToken: 'tok' },
+    );
+
+    expect(result.ok).toBe(true);
+    const createCall = (storage.scans.createScan as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(createCall.regulations).toEqual([]);
+  });
+});
