@@ -857,7 +857,27 @@
       "discoverUrlPlaceholder": "https://example.com",
       "discoverSuccess": "Brand discovery complete",
       "discoverEmpty": "No brand signals detected — try a different URL.",
-      "discoverError": "Brand discovery failed"
+      "discoverError": "Brand discovery failed",
+      "tabsLabel": "Brand guideline scope",
+      "tabs": {
+        "myGuidelines": "My guidelines",
+        "systemLibrary": "System library"
+      }
+    },
+    "systemBrand": {
+      "systemBadge": "System",
+      "library": {
+        "emptyHeading": "No system templates available",
+        "emptyBody": "Your dashboard admin has not published any system brand guidelines yet."
+      },
+      "action": {
+        "linkToSite": "Link to site",
+        "cloneIntoOrg": "Clone into org"
+      },
+      "confirmClone": "Clone \"{{name}}\" into your organization? You will be able to rename it on the next screen.",
+      "cloneSuccess": "Cloned from system guideline — rename to finish.",
+      "linkSuccess": "Linked \"{{name}}\" to {{siteUrl}}. Next scan will use the live system template.",
+      "cloneDefaultSuffix": " (cloned)"
     },
     "llm": {
       "tabProviders": "Providers",
