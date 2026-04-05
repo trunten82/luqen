@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream';
 import { promisify } from 'node:util';
@@ -433,7 +433,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       try {
         const result = await llmClient.discoverBranding({ url, orgId: guideline.orgId });
 
-        if (result.colors.length === 0 && result.fonts.length === 0) {
+        if (result.colors.length === 0 && result.fonts.length === 0 && !result.logoUrl) {
           return reply
             .code(200)
             .header('content-type', 'text/html')
@@ -457,12 +457,44 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           });
         }
 
-        const colorCount = result.colors.length;
-        const fontCount = result.fonts.length;
+        // Download and save the logo if one was detected
+        let logoSaved = false;
+        if (result.logoUrl && /^https?:\/\//i.test(result.logoUrl)) {
+          try {
+            const logoResponse = await fetch(result.logoUrl);
+            if (logoResponse.ok) {
+              const contentType = logoResponse.headers.get('content-type') ?? '';
+              if (contentType.startsWith('image/')) {
+                const buffer = Buffer.from(await logoResponse.arrayBuffer());
+                const urlPath = new URL(result.logoUrl).pathname;
+                const rawExt = urlPath.split('.').pop() ?? 'png';
+                const ext = rawExt.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 5) || 'png';
+                const slug = guideline.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                const filename = `${slug}-${id}.${ext}`;
+                const dir = join(uploadsDir ?? './uploads', guideline.orgId, 'branding-images');
+                await mkdir(dir, { recursive: true });
+                await writeFile(join(dir, filename), buffer);
+                const imagePath = `/uploads/${guideline.orgId}/branding-images/${filename}`;
+                await storage.branding.updateGuideline(id, { imagePath });
+                logoSaved = true;
+              }
+            }
+          } catch {
+            // non-fatal — logo download failure shouldn't block the whole flow
+          }
+        }
+
+        const parts: string[] = [];
+        if (result.colors.length > 0) parts.push(`${result.colors.length} color(s)`);
+        if (result.fonts.length > 0) parts.push(`${result.fonts.length} font(s)`);
+        if (logoSaved) parts.push('logo');
+        const summary = parts.join(', ');
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(toastHtml(`Brand discovery complete. Discovered ${colorCount} color(s) and ${fontCount} font(s). Note: AI-generated results — please validate.`));
+          .header('HX-Refresh', 'true')
+          .send(toastHtml(`Brand discovery complete. Discovered ${summary}. Note: AI-generated results — please validate.`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Brand discovery failed';
         return reply.code(502).header('content-type', 'text/html').send(toastHtml(message, 'error'));
