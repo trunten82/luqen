@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { unlinkSync, existsSync } from 'node:fs';
+import { unlinkSync, existsSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { SqliteAdapter } from '../../src/db/sqlite-adapter.js';
 import { executeExtractRequirements } from '../../src/capabilities/extract-requirements.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../src/capabilities/types.js';
 import type { LLMProviderAdapter } from '../../src/providers/types.js';
 
-const TEST_DB = '/tmp/llm-cap-exec-test.db';
+const TEST_DIR = mkdtempSync(join(tmpdir(), 'llm-cap-exec-test-'));
+const TEST_DB = join(TEST_DIR, 'test.db');
 
 function cleanup() {
   if (existsSync(TEST_DB)) unlinkSync(TEST_DB);

@@ -440,12 +440,14 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
             .send(toastHtml('No brand signals detected — try a different URL.'));
         }
 
+        const discoveryContext = `Discovered from ${url}`;
         for (const color of result.colors) {
           await storage.branding.addColor(id, {
             id: randomUUID(),
             name: color.name,
             hexValue: color.hex,
             usage: color.usage,
+            context: discoveryContext,
           });
         }
 
@@ -454,6 +456,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
             id: randomUUID(),
             family: font.family,
             usage: font.usage,
+            context: discoveryContext,
           });
         }
 

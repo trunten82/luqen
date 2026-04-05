@@ -138,7 +138,7 @@ describe('executeDiscoverBranding', () => {
     expect(result.attempts).toBe(1);
   });
 
-  it('retries on LLM error and throws CapabilityExhaustedError after all models exhausted', async () => {
+  it('falls back to deterministic result when all LLM attempts fail but signals were extracted', async () => {
     const allFailOrgId = 'discover-branding-all-fail-org';
     await db.assignCapability({ capability: 'discover-branding', modelId, priority: 1, orgId: allFailOrgId });
 
@@ -151,14 +151,41 @@ describe('executeDiscoverBranding', () => {
     ]);
     const factory = vi.fn().mockReturnValue(adapter);
 
-    await expect(
-      executeDiscoverBranding(
-        db,
-        factory,
-        { url: 'https://example.com', orgId: allFailOrgId },
-        { maxRetries: 2, retryDelayMs: 0 },
-      ),
-    ).rejects.toThrow(CapabilityExhaustedError);
+    const result = await executeDiscoverBranding(
+      db,
+      factory,
+      { url: 'https://example.com', orgId: allFailOrgId },
+      { maxRetries: 2, retryDelayMs: 0 },
+    );
+
+    // Deterministic fallback should return whatever was extracted from the HTML
+    expect(result.provider).toBeTruthy();
+    expect(Array.isArray(result.data.colors)).toBe(true);
+  });
+
+  it('throws CapabilityExhaustedError when LLM fails AND no deterministic signals exist', async () => {
+    const emptyOrgId = 'discover-branding-empty-org';
+    await db.assignCapability({ capability: 'discover-branding', modelId, priority: 1, orgId: emptyOrgId });
+
+    // Mock fetch to return an empty HTML page with no brand signals
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeFetchResponse('<html><head></head><body></body></html>')));
+
+    const adapter = makeAdapter([
+      new Error('fail 1'),
+      new Error('fail 2'),
+      new Error('fail 3'),
+    ]);
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    // With no signals, the executor returns early with deterministic empty result (no LLM attempt)
+    const result = await executeDiscoverBranding(
+      db,
+      factory,
+      { url: 'https://example.com', orgId: emptyOrgId },
+      { maxRetries: 2, retryDelayMs: 0 },
+    );
+    expect(result.data.colors).toEqual([]);
+    expect(result.data.fonts).toEqual([]);
   });
 
   it('applies prompt override template ({{url}}, {{htmlContent}}, {{cssContent}}) when org override exists', async () => {
