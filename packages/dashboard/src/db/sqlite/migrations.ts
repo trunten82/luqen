@@ -1130,4 +1130,11 @@ CREATE TABLE IF NOT EXISTS service_connections (
 ALTER TABLE scan_records ADD COLUMN regulations TEXT NOT NULL DEFAULT '[]';
     `,
   },
+  {
+    id: '040',
+    name: 'add_branding_guidelines_cloned_from_system_guideline_id',
+    sql: `
+ALTER TABLE branding_guidelines ADD COLUMN cloned_from_system_guideline_id TEXT;
+    `,
+  },
 ];
