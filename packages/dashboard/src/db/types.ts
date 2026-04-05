@@ -444,6 +444,12 @@ export interface BrandingGuidelineRecord {
   readonly selectors?: readonly BrandingSelectorRecord[];
   readonly siteCount?: number;
   readonly imagePath?: string;
+  /**
+   * Set when this guideline was produced by cloneSystemGuideline() — references
+   * the source system guideline id. Null/undefined for all other rows.
+   * Added in 08-P01 (migration 040).
+   */
+  readonly clonedFromSystemGuidelineId?: string | null;
 }
 
 export interface BrandingColorRecord {
