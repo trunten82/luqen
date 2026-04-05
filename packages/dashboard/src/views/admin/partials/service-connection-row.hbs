@@ -1,4 +1,4 @@
-<tr id="service-connection-row-{{serviceId}}">
+<tr id="service-connection-row-{{serviceId}}"{{#if oob}} hx-swap-oob="outerHTML"{{/if}}>
   <td data-label="Service">
     <strong>
       {{#if (eq serviceId "compliance")}}{{t "admin.serviceConnections.service.compliance"}}{{/if}}
