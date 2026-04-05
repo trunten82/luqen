@@ -3011,6 +3011,8 @@ details[open] > .mt-examples-toggle::before {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   overflow: hidden;
+  max-width: 100%;
+  overflow: hidden;
   background: var(--bg-secondary);
 }
 .rpt-fix-hint__toggle {
@@ -3039,6 +3041,9 @@ details[open] > .mt-examples-toggle::before {
   margin: var(--space-xs) var(--space-sm) var(--space-sm);
   padding: 0.5rem 0.6rem;
   font-size: var(--font-size-xs);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
   font-family: var(--font-mono);
   background: var(--bg-tertiary);
   border-radius: var(--border-radius);
