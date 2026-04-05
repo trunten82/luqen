@@ -81,6 +81,29 @@ const { registerServiceConnectionsRoutes } = await import(
   '../../src/routes/admin/service-connections.js'
 );
 const { ALL_PERMISSION_IDS } = await import('../../src/permissions.js');
+const { loadTranslations, t: translateKey } = await import(
+  '../../src/i18n/index.js'
+);
+const handlebarsModule = await import('handlebars');
+const handlebars = handlebarsModule.default;
+
+loadTranslations();
+if (!handlebars.helpers['eq']) {
+  handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+}
+if (!handlebars.helpers['t']) {
+  handlebars.registerHelper('t', function (
+    key: string,
+    options: { hash?: Record<string, unknown>; data?: { root?: { locale?: string } } },
+  ) {
+    const locale = (options?.data?.root?.locale ?? 'en') as 'en';
+    const params: Record<string, string> = {};
+    if (options?.hash) {
+      for (const [k, v] of Object.entries(options.hash)) params[k] = String(v);
+    }
+    return translateKey(key, locale, params);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Shared setup
@@ -402,5 +425,211 @@ describe('Phase 06 P05 — bootstrap + fallback + permission gating', () => {
         .baseUrl,
     ).toBe('http://cfg-branding.test');
     expect(ctx.registry.getLLMClient()).not.toBeNull();
+  });
+
+  it('POST /:id/clear-secret wipes the ciphertext, writes an audit row, and returns 200 (JSON path)', async () => {
+    ctx = await buildServer({ config: FULL_CONFIG });
+
+    // Bootstrap imported compliance from config; ciphertext is non-empty.
+    const beforeRow = ctx.storage
+      .getRawDatabase()
+      .prepare(
+        'SELECT client_secret_encrypted FROM service_connections WHERE service_id = ?',
+      )
+      .get('compliance') as { client_secret_encrypted: string };
+    expect(beforeRow.client_secret_encrypted).toBeTruthy();
+
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/compliance/clear-secret',
+      payload: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ ok: true });
+
+    const afterRow = ctx.storage
+      .getRawDatabase()
+      .prepare(
+        'SELECT client_secret_encrypted FROM service_connections WHERE service_id = ?',
+      )
+      .get('compliance') as { client_secret_encrypted: string };
+    expect(afterRow.client_secret_encrypted).toBe('');
+
+    // Audit log captured the clear
+    const audit = await ctx.storage.audit.query({
+      action: 'service_connection.clear_secret',
+    });
+    expect(audit.entries.length).toBeGreaterThanOrEqual(1);
+    const entry = audit.entries.find((e) => e.resourceId === 'compliance');
+    expect(entry).toBeDefined();
+    expect(entry!.actor).toBe('e2e-admin');
+  });
+
+  it('HTMX POST /:id/clear-secret returns the re-rendered row fragment plus secretCleared OOB toast', async () => {
+    ctx = await buildServer({ config: FULL_CONFIG });
+
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/branding/clear-secret',
+      headers: { 'hx-request': 'true' },
+      payload: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    const html = res.payload;
+    expect(html).toContain('service-connection-row-branding');
+    expect(html).toContain('hx-swap-oob');
+    expect(html).toContain('toast-container');
+  });
+
+  it('HTMX POST /:id (save) with a registry reload failure returns 500 with the row fragment + error toast, DB row still updated', async () => {
+    ctx = await buildServer({ config: FULL_CONFIG });
+
+    // Sabotage the registry so reload() throws.
+    const boom = new Error('simulated reload failure');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ctx.registry as any).reload = async (): Promise<void> => {
+      throw boom;
+    };
+
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/compliance',
+      headers: { 'hx-request': 'true' },
+      payload: {
+        url: 'http://reload-failing.test',
+        clientId: 'fail-cli',
+        clientSecret: 'fail-secret',
+      },
+    });
+    expect(res.statusCode).toBe(500);
+    const html = res.payload;
+    expect(html).toContain('service-connection-row-compliance');
+    expect(html).toContain('http://reload-failing.test');
+    expect(html).toContain('hx-swap-oob');
+    expect(html).toContain('simulated reload failure');
+    // Plaintext secret must NOT leak into the error HTML.
+    expect(html).not.toContain('fail-secret');
+
+    // DB row IS updated — exception safety is at the registry level, not at
+    // the persistence level.
+    const stored = await ctx.repo.get('compliance');
+    expect(stored).not.toBeNull();
+    expect(stored!.url).toBe('http://reload-failing.test');
+    expect(stored!.clientId).toBe('fail-cli');
+    expect(stored!.clientSecret).toBe('fail-secret');
+  });
+
+  it('HTMX POST /:id/test returns a failure badge fragment when the OAuth probe fails', async () => {
+    ctx = await buildServer({ config: FULL_CONFIG });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : (input as URL).toString();
+      if (url.endsWith('/oauth/token')) {
+        return new Response('unauthorized', { status: 401 });
+      }
+      return new Response('ok', { status: 200 });
+    }) as unknown as typeof fetch;
+
+    try {
+      const res = await ctx.server.inject({
+        method: 'POST',
+        url: '/admin/service-connections/compliance/test',
+        headers: { 'hx-request': 'true' },
+        payload: {
+          url: 'http://probe.test',
+          clientId: 'probe-cli',
+          clientSecret: 'probe-secret',
+        },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['content-type']).toContain('text/html');
+      expect(res.payload).toContain('badge--error');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('GET /:id/edit and GET /:id/row return HTMX partial fragments for admins', async () => {
+    ctx = await buildServer({ config: FULL_CONFIG });
+
+    const editRes = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/service-connections/compliance/edit',
+      headers: { 'hx-request': 'true' },
+    });
+    expect(editRes.statusCode).toBe(200);
+    expect(editRes.headers['content-type']).toContain('text/html');
+    expect(editRes.payload).toContain('service-connection-row-compliance');
+    // The edit partial has no plaintext secret (type=password, no value=).
+    expect(editRes.payload).not.toContain('cfg-compliance-plain-secret');
+
+    const rowRes = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/service-connections/compliance/row',
+      headers: { 'hx-request': 'true' },
+    });
+    expect(rowRes.statusCode).toBe(200);
+    expect(rowRes.payload).toContain('service-connection-row-compliance');
+  });
+
+  it('GET /:id/edit and GET /:id/row reject invalid service ids with 400', async () => {
+    ctx = await buildServer({ config: FULL_CONFIG });
+
+    const edit = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/service-connections/bogus/edit',
+    });
+    expect(edit.statusCode).toBe(400);
+    expect(edit.json()).toEqual({ ok: false, error: 'invalid_service_id' });
+
+    const row = await ctx.server.inject({
+      method: 'GET',
+      url: '/admin/service-connections/bogus/row',
+    });
+    expect(row.statusCode).toBe(400);
+
+    const clear = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/bogus/clear-secret',
+      payload: {},
+    });
+    expect(clear.statusCode).toBe(400);
+
+    const test = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/bogus/test',
+      payload: { url: 'http://x.test', clientId: 'x', clientSecret: 'x' },
+    });
+    expect(test.statusCode).toBe(400);
+  });
+
+  it('POST /:id returns 400 for invalid bodies (missing url, non-string clientId, non-string clientSecret)', async () => {
+    ctx = await buildServer({ config: FULL_CONFIG });
+
+    const missingUrl = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/compliance',
+      payload: { url: '', clientId: 'x', clientSecret: 'y' },
+    });
+    expect(missingUrl.statusCode).toBe(400);
+    expect(missingUrl.json()).toEqual({ ok: false, error: 'invalid_url' });
+
+    const badClientId = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/compliance',
+      payload: { url: 'http://x.test', clientId: 123, clientSecret: 'y' },
+    });
+    expect(badClientId.statusCode).toBe(400);
+    expect(badClientId.json()).toEqual({ ok: false, error: 'invalid_client_id' });
+
+    const badSecret = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/compliance',
+      payload: { url: 'http://x.test', clientId: 'x', clientSecret: 42 },
+    });
+    expect(badSecret.statusCode).toBe(400);
+    expect(badSecret.json()).toEqual({ ok: false, error: 'invalid_client_secret' });
   });
 });
