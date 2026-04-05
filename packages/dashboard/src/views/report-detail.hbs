@@ -111,7 +111,10 @@
 {{! ── Tab 1: Compliance Overview ──────────────────────────────────────────── }}
 <div class="rpt-tab-panel" id="panel-compliance" role="tabpanel" aria-labelledby="tab-compliance">
 
-  {{#if reportData.regulationMatrix.length}}
+  {{! Sub-tab bar is always rendered so users on older scans still discover
+      the By Regulation view. Old scans (no regulationMatrix) show an empty
+      state in the By Regulation panel. REG-04 byte-identity is locked by the
+      API regression snapshot, not by the UI. }}
   <div class="rpt-tabs" role="tablist" data-subtab-group="compliance">
     <button type="button" role="tab"
       class="rpt-tab rpt-tab--active"
@@ -130,7 +133,6 @@
       data-subtab="by-regulation"
       data-parent="compliance">{{t "reportDetail.subtabByRegulation"}}</button>
   </div>
-  {{/if}}
 
   <div class="rpt-tab-panel" id="subpanel-compliance-by-jurisdiction" role="tabpanel" aria-labelledby="subtab-compliance-by-jurisdiction">
 
@@ -238,8 +240,8 @@
 
   </div>{{! /subpanel-compliance-by-jurisdiction }}
 
-  {{#if reportData.regulationMatrix.length}}
   <div class="rpt-tab-panel rpt-tab-panel--hidden" id="subpanel-compliance-by-regulation" role="tabpanel" aria-labelledby="subtab-compliance-by-regulation">
+    {{#if reportData.regulationMatrix.length}}
     <section class="rpt-section" aria-labelledby="regulation-heading">
       <div class="rpt-section__header rpt-section__header--dark">
         <h2 id="regulation-heading" class="rpt-section__title">{{t "reportDetail.perRegulationBreakdown"}}</h2>
@@ -250,8 +252,10 @@
         {{/each}}
       </div>
     </section>
+    {{else}}
+    <div class="alert alert--info" role="status">{{t "reportDetail.regulationEmpty"}}</div>
+    {{/if}}
   </div>
-  {{/if}}
 
 </div>
 
@@ -663,6 +667,11 @@
     });
 
     panels.forEach(function(p) {
+      // Only toggle top-level panels (panel-*), never inner sub-panels
+      // (subpanel-*). Sub-panels share the .rpt-tab-panel class and have
+      // their own switcher — including them here would hide compliance
+      // content after any top-level tab switch.
+      if (!p.id || !p.id.startsWith('panel-')) return;
       var isActive = p.id === 'panel-' + tab;
       p.classList.toggle('rpt-tab-panel--hidden', !isActive);
     });

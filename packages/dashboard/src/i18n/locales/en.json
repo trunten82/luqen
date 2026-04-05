@@ -1000,6 +1000,7 @@
       "partial": "Partial"
     },
     "regulationViolations": "Violated requirements",
+    "showViolatedRequirements": "Show {{count}} violated requirements",
     "mandatoryViolations": "Mandatory violations",
     "recommendedViolations": "Recommended violations",
     "optionalViolations": "Optional violations",

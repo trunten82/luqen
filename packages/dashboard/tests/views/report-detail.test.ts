@@ -107,16 +107,19 @@ const baseReportData = {
 };
 
 describe('report-detail.hbs — regulation sub-tabs', () => {
-  it('hides sub-tab bar entirely when regulationMatrix is empty', () => {
+  it('always renders sub-tab bar, showing empty-state in By Regulation when regulationMatrix is empty', () => {
     const html = renderReportDetail({
       ...baseReportData,
       regulationMatrix: [],
     });
 
-    expect(html).not.toContain('subtab-compliance-by-regulation');
-    expect(html).not.toContain('subpanel-compliance-by-regulation');
-    // The jurisdictions sub-panel wrapper is still present (it always wraps the matrix)
+    // Sub-tab bar is always present so the feature is discoverable on older reports
+    expect(html).toContain('subtab-compliance-by-jurisdiction');
+    expect(html).toContain('subtab-compliance-by-regulation');
     expect(html).toContain('subpanel-compliance-by-jurisdiction');
+    // By Regulation panel is rendered but shows an empty-state message
+    expect(html).toContain('subpanel-compliance-by-regulation');
+    expect(html).toContain('No regulations selected for this scan');
   });
 
   it('renders sub-tab bar and regulation cards when regulationMatrix has entries', () => {
@@ -195,5 +198,72 @@ describe('report-detail.hbs — regulation sub-tabs', () => {
       regulationMatrix: [],
     });
     expect(html).toContain('function rptSwitchSubTab');
+  });
+});
+
+describe('report-detail.hbs — rptSwitchTab scoping (bug: tab switch hides subpanel)', () => {
+  // Regression: rptSwitchTab used to match .rpt-tab-panel globally, including the
+  // inner `subpanel-compliance-by-jurisdiction` div. Clicking away to Issues and
+  // back hid the compliance content permanently. The fix scopes rptSwitchTab to
+  // IDs that start with `panel-` so inner subpanels are never toggled.
+  it('rptSwitchTab only toggles panels whose id starts with "panel-"', () => {
+    const html = renderReportDetail({
+      ...baseReportData,
+      regulationMatrix: [],
+    });
+
+    // Extract the function source
+    const fnMatch = html.match(/function rptSwitchTab\(tab\)[\s\S]*?\n  \}/);
+    expect(fnMatch).toBeTruthy();
+    const fnSrc = fnMatch![0];
+
+    // Must guard against non-panel- IDs (subpanel-*, etc.) before toggling --hidden
+    expect(fnSrc).toMatch(/p\.id[^]*startsWith\(['"]panel-['"]\)|p\.id[^]*indexOf\(['"]panel-['"]\)\s*===\s*0/);
+  });
+});
+
+describe('rpt-regulation-card.hbs — expandable requirements list', () => {
+  // Regression: the By Regulation card rendered violatedRequirements as a fixed
+  // list. The existing By Jurisdiction card wraps the same data in
+  // <details>/<summary> for collapse/expand. Mirror that pattern.
+  function renderCard(data: Record<string, unknown>): string {
+    const source = readFileSync(
+      join(VIEWS_DIR, 'partials', 'rpt-regulation-card.hbs'),
+      'utf8',
+    );
+    const template = handlebars.compile(source);
+    return template(data);
+  }
+
+  it('wraps violatedRequirements in a <details> element with a <summary>', () => {
+    const html = renderCard({
+      regulationId: 'ADA',
+      regulationName: 'Americans with Disabilities Act',
+      shortName: 'ADA',
+      status: 'fail',
+      mandatoryViolations: 2,
+      violatedRequirements: [
+        { wcagCriterion: '1.1.1', obligation: 'mandatory', issueCount: 2 },
+        { wcagCriterion: '1.3.1', obligation: 'mandatory', issueCount: 5 },
+      ],
+    });
+
+    expect(html).toContain('<details');
+    expect(html).toContain('<summary');
+    expect(html).toContain('1.1.1');
+    expect(html).toContain('1.3.1');
+  });
+
+  it('does not render a <details> block when violatedRequirements is empty', () => {
+    const html = renderCard({
+      regulationId: 'EAA',
+      regulationName: 'European Accessibility Act',
+      shortName: 'EAA',
+      status: 'pass',
+      mandatoryViolations: 0,
+      violatedRequirements: [],
+    });
+
+    expect(html).not.toContain('<details');
   });
 });
