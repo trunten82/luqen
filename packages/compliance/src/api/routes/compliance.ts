@@ -10,11 +10,17 @@ import { createHash } from 'node:crypto';
  * Stable cache key derived from the compliance check request payload and org context.
  * Uses SHA-256 so the key is fixed-length regardless of payload size.
  * orgId is included to prevent cross-org cache hits.
+ *
+ * Phase 07 / D-06: includes `regulations` so requests with the same jurisdictions
+ * but different regulation scoping do NOT collide.
+ *
+ * Exported for unit-testability (tests assert key divergence directly).
  */
-function cacheKey(body: ComplianceCheckRequest, orgId: string | undefined): string {
+export function cacheKey(body: ComplianceCheckRequest, orgId: string | undefined): string {
   const stable = JSON.stringify({
     orgId: orgId ?? null,
-    jurisdictions: [...body.jurisdictions].sort(),
+    jurisdictions: [...(body.jurisdictions ?? [])].sort(),
+    regulations: [...(body.regulations ?? [])].sort(),
     issues: [...body.issues].map((i) => ({
       code: i.code,
       type: i.type,
@@ -39,8 +45,13 @@ export async function registerComplianceRoutes(
       const body = request.body as ComplianceCheckRequest;
       const orgId = (request as any).orgId as string | undefined;
 
-      if (!Array.isArray(body.jurisdictions) || body.jurisdictions.length === 0) {
-        await reply.status(400).send({ error: 'jurisdictions array is required', statusCode: 400 });
+      // Phase 07 / D-05a: accept jurisdictions OR regulations (at least one non-empty)
+      const hasJurisdictions = Array.isArray(body.jurisdictions) && body.jurisdictions.length > 0;
+      const hasRegulations = Array.isArray(body.regulations) && body.regulations.length > 0;
+      if (!hasJurisdictions && !hasRegulations) {
+        await reply
+          .status(400)
+          .send({ error: 'jurisdictions or regulations array is required', statusCode: 400 });
         return;
       }
       if (!Array.isArray(body.issues)) {
@@ -48,9 +59,16 @@ export async function registerComplianceRoutes(
         return;
       }
 
+      // Normalize absent jurisdictions/regulations to [] so downstream code can assume arrays.
+      const normalizedBody: ComplianceCheckRequest = {
+        ...body,
+        jurisdictions: body.jurisdictions ?? [],
+        regulations: body.regulations ?? [],
+      };
+
       // ── Cache read ────────────────────────────────────────────────────────
       if (cache !== undefined) {
-        const key = cacheKey(body, orgId);
+        const key = cacheKey(normalizedBody, orgId);
         const cached = await cache.getCachedCheck(key);
         if (cached !== null) {
           await reply.header('X-Cache', 'HIT').send(JSON.parse(cached));
@@ -58,7 +76,7 @@ export async function registerComplianceRoutes(
         }
 
         // ── Compute result ────────────────────────────────────────────────
-        const result = await checkCompliance(body, db, orgId);
+        const result = await checkCompliance(normalizedBody, db, orgId);
 
         // ── Cache write (non-blocking) ─────────────────────────────────────
         void cache.setCachedCheck(key, JSON.stringify(result), 300);
@@ -68,7 +86,7 @@ export async function registerComplianceRoutes(
       }
 
       // No cache — compute directly
-      const result = await checkCompliance(body, db, orgId);
+      const result = await checkCompliance(normalizedBody, db, orgId);
       await reply.send(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Internal server error';

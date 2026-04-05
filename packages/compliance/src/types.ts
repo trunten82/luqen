@@ -135,6 +135,7 @@ export interface User {
 
 export interface ComplianceCheckRequest {
   readonly jurisdictions: readonly string[];
+  readonly regulations?: readonly string[];
   readonly issues: readonly {
     readonly code: string;
     readonly type: string;
@@ -186,8 +187,33 @@ export interface AnnotatedIssue {
   }[];
 }
 
+/**
+ * Top-level regulationMatrix entry (Phase 07 / REG-02, REG-03).
+ *
+ * Distinct from the nested `RegulationResult` inside `JurisdictionResult.regulations`
+ * — this is the regulation-first view returned alongside the jurisdiction matrix
+ * when callers explicitly scope by regulation. Adds 'partial' status for the case
+ * where a regulation has only recommended/optional violations (D-12).
+ */
+export interface RegulationMatrixEntry {
+  readonly regulationId: string;
+  readonly regulationName: string;
+  readonly shortName: string;
+  readonly jurisdictionId: string; // regulation's home jurisdiction
+  readonly status: 'pass' | 'fail' | 'partial';
+  readonly mandatoryViolations: number;
+  readonly recommendedViolations: number;
+  readonly optionalViolations: number;
+  readonly violatedRequirements: readonly {
+    readonly wcagCriterion: string;
+    readonly obligation: 'mandatory' | 'recommended' | 'optional';
+    readonly issueCount: number;
+  }[];
+}
+
 export interface ComplianceCheckResponse {
   readonly matrix: Record<string, JurisdictionResult>;
+  readonly regulationMatrix: Record<string, RegulationMatrixEntry>;
   readonly annotatedIssues: readonly AnnotatedIssue[];
   readonly summary: {
     readonly totalJurisdictions: number;
