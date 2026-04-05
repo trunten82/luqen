@@ -3150,6 +3150,10 @@ details[open] > .mt-examples-toggle::before {
 .rpt-ai-summary__loading {
   padding: var(--space-md);
 }
+.rpt-ai-summary--unavailable {
+  color: var(--text-muted);
+  font-style: italic;
+}
 
 /* ── Empty state ─────────────────────────────────────────────────────── */
 .empty-state__icon {
@@ -3378,6 +3382,17 @@ details[open] > .mt-examples-toggle::before {
   margin-top: var(--space-lg);
 }
 
+.brd-discover__heading {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+  color: var(--text-primary);
+}
+.brd-discover__desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+}
 .brd-discover__form {
   display: flex;
   gap: var(--space-sm);
