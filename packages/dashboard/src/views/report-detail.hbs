@@ -111,6 +111,29 @@
 {{! ── Tab 1: Compliance Overview ──────────────────────────────────────────── }}
 <div class="rpt-tab-panel" id="panel-compliance" role="tabpanel" aria-labelledby="tab-compliance">
 
+  {{#if reportData.regulationMatrix.length}}
+  <div class="rpt-tabs" role="tablist" data-subtab-group="compliance">
+    <button type="button" role="tab"
+      class="rpt-tab rpt-tab--active"
+      id="subtab-compliance-by-jurisdiction"
+      aria-controls="subpanel-compliance-by-jurisdiction"
+      aria-selected="true"
+      data-action="rptSwitchSubTab"
+      data-subtab="by-jurisdiction"
+      data-parent="compliance">{{t "reportDetail.subtabByJurisdiction"}}</button>
+    <button type="button" role="tab"
+      class="rpt-tab"
+      id="subtab-compliance-by-regulation"
+      aria-controls="subpanel-compliance-by-regulation"
+      aria-selected="false"
+      data-action="rptSwitchSubTab"
+      data-subtab="by-regulation"
+      data-parent="compliance">{{t "reportDetail.subtabByRegulation"}}</button>
+  </div>
+  {{/if}}
+
+  <div class="rpt-tab-panel" id="subpanel-compliance-by-jurisdiction" role="tabpanel" aria-labelledby="subtab-compliance-by-jurisdiction">
+
   {{! Compliance matrix }}
   {{#if reportData.complianceMatrix}}
   <section class="rpt-section" aria-labelledby="compliance-heading">
@@ -211,6 +234,23 @@
   </section>
   {{else}}
   <div class="alert alert--info" role="status">{{t "reportDetail.noJurisdictions"}}</div>
+  {{/if}}
+
+  </div>{{! /subpanel-compliance-by-jurisdiction }}
+
+  {{#if reportData.regulationMatrix.length}}
+  <div class="rpt-tab-panel rpt-tab-panel--hidden" id="subpanel-compliance-by-regulation" role="tabpanel" aria-labelledby="subtab-compliance-by-regulation">
+    <section class="rpt-section" aria-labelledby="regulation-heading">
+      <div class="rpt-section__header rpt-section__header--dark">
+        <h2 id="regulation-heading" class="rpt-section__title">{{t "reportDetail.perRegulationBreakdown"}}</h2>
+      </div>
+      <div class="rpt-juris-grid">
+        {{#each reportData.regulationMatrix}}
+          {{> rpt-regulation-card this}}
+        {{/each}}
+      </div>
+    </section>
+  </div>
   {{/if}}
 
 </div>
@@ -659,6 +699,32 @@
         next.click();
       }
     });
+  });
+
+  /* ── Sub-tab switching (scoped inside a parent panel) ───────────────────── */
+  function rptSwitchSubTab(subtab, parent) {
+    var parentPanel = document.getElementById('panel-' + parent);
+    if (!parentPanel) return;
+    var tabs = parentPanel.querySelectorAll('[data-action="rptSwitchSubTab"][data-parent="' + parent + '"]');
+    var panels = parentPanel.querySelectorAll(':scope > .rpt-tab-panel');
+    tabs.forEach(function(t) {
+      var isActive = t.getAttribute('data-subtab') === subtab;
+      t.classList.toggle('rpt-tab--active', isActive);
+      t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    panels.forEach(function(p) {
+      var isActive = p.id === 'subpanel-' + parent + '-' + subtab;
+      p.classList.toggle('rpt-tab-panel--hidden', !isActive);
+    });
+  }
+
+  /* Delegated click handler for sub-tabs */
+  document.addEventListener('click', function(evt) {
+    var target = evt.target;
+    if (!target || !target.getAttribute) return;
+    var el = target.closest ? target.closest('[data-action="rptSwitchSubTab"]') : null;
+    if (!el) return;
+    rptSwitchSubTab(el.getAttribute('data-subtab'), el.getAttribute('data-parent'));
   });
 
   /* ── Collapsible groups ─────────────────────────────────────────────────── */

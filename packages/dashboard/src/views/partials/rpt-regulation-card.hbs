@@ -1,0 +1,40 @@
+<div class="rpt-juris-card">
+  <div class="rpt-juris-card__head {{#if (eq status 'pass')}}rpt-juris-card__head--pass-head{{/if}}{{#if (eq status 'fail')}}rpt-juris-card__head--fail-head{{/if}}{{#if (eq status 'partial')}}rpt-juris-card__head--review-head{{/if}}">
+    <div>
+      <div class="rpt-juris-card__name">{{shortName}}</div>
+      <div class="rpt-juris-card__id">{{regulationName}}{{#if jurisdictionId}} — {{jurisdictionId}}{{/if}}</div>
+    </div>
+    <div class="rpt-juris-card__status {{#if (eq status 'pass')}}rpt-juris-card__status--s-pass{{/if}}{{#if (eq status 'fail')}}rpt-juris-card__status--s-fail{{/if}}{{#if (eq status 'partial')}}rpt-juris-card__status--s-review{{/if}}">
+      {{#if (eq status 'pass')}}{{t "reportDetail.regulationStatus.pass"}}{{/if}}
+      {{#if (eq status 'fail')}}{{t "reportDetail.regulationStatus.fail"}}{{/if}}
+      {{#if (eq status 'partial')}}{{t "reportDetail.regulationStatus.partial"}}{{/if}}
+    </div>
+  </div>
+  <div class="rpt-juris-card__body">
+    <div class="rpt-juris-card__viol">
+      {{t "reportDetail.mandatoryViolations"}}: <strong class="rpt-text--fail">{{mandatoryViolations}}</strong>
+    </div>
+    {{#if recommendedViolations}}
+    <div class="rpt-juris-card__viol">
+      {{t "reportDetail.recommendedViolations"}}: <strong>{{recommendedViolations}}</strong>
+    </div>
+    {{/if}}
+    {{#if optionalViolations}}
+    <div class="rpt-juris-card__viol">
+      {{t "reportDetail.optionalViolations"}}: <strong>{{optionalViolations}}</strong>
+    </div>
+    {{/if}}
+    {{#if violatedRequirements.length}}
+    <div class="rpt-juris-card__violations">
+      <div class="rpt-juris-card__viol"><strong>{{t "reportDetail.regulationViolations"}}</strong></div>
+      {{#each violatedRequirements}}
+      <div class="rpt-violation-row">
+        <span class="rpt-violation-criterion">{{wcagCriterion}}</span>
+        <span class="rpt-reg-tag rpt-reg-tag--{{obligation}}">{{obligation}}</span>
+        <span class="rpt-text--muted">{{issueCount}}</span>
+      </div>
+      {{/each}}
+    </div>
+    {{/if}}
+  </div>
+</div>
