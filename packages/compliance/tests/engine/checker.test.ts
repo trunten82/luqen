@@ -506,5 +506,46 @@ describe('checkCompliance', () => {
       );
       expect(passResult.regulationMatrix['eu-eaa'].status).toBe('pass');
     });
+
+    it('T7 (annotation filter): when regulations[] is set, per-issue annotations are intersected with the selection', async () => {
+      // Same issue violates criteria required by both eu-eaa and us-508 (1.1.1).
+      // Caller asks only for us-508 → per-issue annotations must contain us-508
+      // only, even though eu-eaa would otherwise also annotate via EU widening.
+      const result = await checkCompliance(
+        {
+          jurisdictions: ['EU'],
+          regulations: ['us-508'],
+          issues: [SAMPLE_ISSUES[0]], // 1.1.1
+        },
+        db,
+      );
+
+      // Annotated issues exist
+      expect(result.annotatedIssues.length).toBeGreaterThan(0);
+      const annotated = result.annotatedIssues[0];
+      expect(annotated.wcagCriterion).toBe('1.1.1');
+
+      // Only us-508 in the per-issue regulations array — eu-eaa filtered out
+      const regIds = annotated.regulations.map(r => r.regulationId);
+      expect(regIds).toContain('us-508');
+      expect(regIds).not.toContain('eu-eaa');
+    });
+
+    it('T8 (REG-04 preserved): jurisdictions-only request leaves per-issue annotations untouched', async () => {
+      // No regulations[] provided → annotations include all applicable regs
+      // (legacy behaviour locked by the regression snapshot).
+      const result = await checkCompliance(
+        {
+          jurisdictions: ['EU'],
+          issues: [SAMPLE_ISSUES[0]], // 1.1.1
+        },
+        db,
+      );
+
+      expect(result.annotatedIssues.length).toBeGreaterThan(0);
+      const regIds = result.annotatedIssues[0].regulations.map(r => r.regulationId);
+      // eu-eaa applies to EU for criterion 1.1.1, must be present
+      expect(regIds).toContain('eu-eaa');
+    });
   });
 });
