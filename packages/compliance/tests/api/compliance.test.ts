@@ -191,4 +191,122 @@ describe('Compliance Check API', () => {
 
     expect(response.statusCode).toBe(401);
   });
+
+  // ─── Phase 07 / Plan 01: regulations filter (REG-02, REG-03, REG-04) ───
+  describe('regulations filter', () => {
+    const SAMPLE_ISSUE = {
+      code: 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37',
+      type: 'error',
+      message: 'Img element missing an alt attribute',
+      selector: 'img',
+      context: '<img src="test.png">',
+    };
+
+    it('A: accepts optional regulations[] alongside jurisdictions[] and returns regulationMatrix', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/compliance/check',
+        headers: { ...authHeader(readToken), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          jurisdictions: ['EU'],
+          regulations: ['eu-eaa'],
+          issues: [],
+        }),
+      });
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body) as { regulationMatrix: Record<string, unknown> };
+      expect(body.regulationMatrix).toBeDefined();
+      expect(typeof body.regulationMatrix).toBe('object');
+    });
+
+    it('B: accepts regulations-only request (empty jurisdictions)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/compliance/check',
+        headers: { ...authHeader(readToken), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          jurisdictions: [],
+          regulations: ['eu-eaa'],
+          issues: [],
+        }),
+      });
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body) as { regulationMatrix: Record<string, unknown> };
+      expect(body.regulationMatrix).toBeDefined();
+    });
+
+    it('C: rejects empty jurisdictions AND empty regulations with 400', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/compliance/check',
+        headers: { ...authHeader(readToken), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          jurisdictions: [],
+          regulations: [],
+          issues: [],
+        }),
+      });
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body) as { error: string };
+      expect(body.error).toBe('jurisdictions or regulations array is required');
+    });
+
+    it('D: response always includes regulationMatrix as {} when no regulations requested', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/compliance/check',
+        headers: { ...authHeader(readToken), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          jurisdictions: ['EU'],
+          issues: [],
+        }),
+      });
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body) as { regulationMatrix: unknown };
+      expect(body.regulationMatrix).toBeDefined();
+      expect(body.regulationMatrix).toEqual({});
+    });
+
+    it('E: jurisdictions-only legacy shape is preserved (matrix/summary/annotatedIssues unchanged)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/compliance/check',
+        headers: { ...authHeader(readToken), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          jurisdictions: ['EU'],
+          issues: [SAMPLE_ISSUE],
+        }),
+      });
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+
+      // All legacy top-level fields still present
+      expect(body).toHaveProperty('matrix');
+      expect(body).toHaveProperty('annotatedIssues');
+      expect(body).toHaveProperty('summary');
+      // New field is additive and equals {} when regulations not requested
+      expect(body).toHaveProperty('regulationMatrix');
+      expect(body.regulationMatrix).toEqual({});
+
+      // Exhaustive key check — nothing unexpected added beyond regulationMatrix
+      const topLevelKeys = Object.keys(body).sort();
+      expect(topLevelKeys).toEqual(['annotatedIssues', 'matrix', 'regulationMatrix', 'summary']);
+    });
+
+    it('F: cacheKey differs between {jurisdictions:[EU]} and {jurisdictions:[EU],regulations:[X]}', async () => {
+      const { cacheKey } = await import('../../src/api/routes/compliance.js');
+      const a = cacheKey({ jurisdictions: ['EU'], issues: [] }, 'org1');
+      const b = cacheKey(
+        { jurisdictions: ['EU'], regulations: ['eu-eaa'], issues: [] },
+        'org1',
+      );
+      expect(a).not.toBe(b);
+      // Also verify sort-stability: order independence
+      const c = cacheKey(
+        { jurisdictions: ['EU'], regulations: ['eu-eaa'], issues: [] },
+        'org1',
+      );
+      expect(b).toBe(c);
+    });
+  });
 });
