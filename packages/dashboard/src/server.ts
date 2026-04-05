@@ -466,6 +466,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'login-form': 'partials/login-form.hbs',
         'pagination': 'partials/pagination.hbs',
         'alert': 'partials/alert.hbs',
+        'service-connection-row': 'admin/partials/service-connection-row.hbs',
+        'service-connection-edit-row': 'admin/partials/service-connection-edit-row.hbs',
       },
     },
   });

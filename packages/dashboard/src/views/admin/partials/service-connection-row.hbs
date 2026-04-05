@@ -1,0 +1,59 @@
+<tr id="service-connection-row-{{serviceId}}">
+  <td data-label="Service">
+    <strong>
+      {{#if (eq serviceId "compliance")}}{{t "admin.serviceConnections.service.compliance"}}{{/if}}
+      {{#if (eq serviceId "branding")}}{{t "admin.serviceConnections.service.branding"}}{{/if}}
+      {{#if (eq serviceId "llm")}}{{t "admin.serviceConnections.service.llm"}}{{/if}}
+    </strong>
+  </td>
+  <td data-label="URL">
+    {{#if url}}
+      <code>{{url}}</code>
+    {{else}}
+      <span class="text-muted">—</span>
+    {{/if}}
+  </td>
+  <td data-label="Client ID">
+    {{#if clientId}}
+      <code>{{clientId}}</code>
+    {{else}}
+      <span class="text-muted">—</span>
+    {{/if}}
+  </td>
+  <td data-label="Status">
+    {{#if hasSecret}}
+      <span class="badge badge--success">{{t "admin.serviceConnections.status.hasSecret"}}</span>
+    {{else}}
+      {{#if url}}
+        <span class="badge badge--warning">{{t "admin.serviceConnections.status.noSecret"}}</span>
+      {{else}}
+        <span class="badge badge--neutral">{{t "admin.serviceConnections.status.notConfigured"}}</span>
+      {{/if}}
+    {{/if}}
+  </td>
+  <td data-label="Source">
+    {{#if (eq source "db")}}
+      <span class="badge badge--info">{{t "admin.serviceConnections.fallback.db"}}</span>
+    {{else}}
+      <span class="badge badge--neutral">{{t "admin.serviceConnections.fallback.config"}}</span>
+    {{/if}}
+  </td>
+  <td data-label="Last updated">
+    {{#if updatedAt}}
+      <span>{{updatedAt}}</span>
+    {{else}}
+      <span class="text-muted">—</span>
+    {{/if}}
+  </td>
+  <td data-label="Actions">
+    <button type="button"
+            hx-get="/admin/service-connections/{{serviceId}}/edit"
+            hx-target="#service-connection-row-{{serviceId}}"
+            hx-swap="outerHTML"
+            class="btn btn--sm btn--secondary"
+            aria-label="Edit {{serviceId}} connection">
+      {{t "admin.serviceConnections.action.edit"}}
+    </button>
+    <span id="test-result-{{serviceId}}"></span>
+  </td>
+</tr>

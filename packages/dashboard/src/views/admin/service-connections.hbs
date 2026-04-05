@@ -1,0 +1,39 @@
+<section aria-label="Service connections management">
+  <p class="page-header__subtitle">{{t "admin.serviceConnections.description"}}</p>
+
+  {{!-- Page-local OOB toast target. The global #toast-container (layouts/main.hbs)
+       is the primary OOB swap target used by helpers.toastHtml(). This element is
+       kept as a secondary sentinel so route responses can target it explicitly. --}}
+  <div id="service-conn-toast" aria-live="polite" aria-atomic="true"></div>
+
+  {{#if error}}
+  <div class="alert alert--error" role="alert">
+    <p>{{error}}</p>
+  </div>
+  {{/if}}
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="Service connections">
+      <thead>
+        <tr>
+          <th scope="col">{{t "admin.serviceConnections.column.service"}}</th>
+          <th scope="col">{{t "admin.serviceConnections.column.url"}}</th>
+          <th scope="col">{{t "admin.serviceConnections.column.clientId"}}</th>
+          <th scope="col">{{t "admin.serviceConnections.column.status"}}</th>
+          <th scope="col">{{t "admin.serviceConnections.column.source"}}</th>
+          <th scope="col">{{t "admin.serviceConnections.column.lastUpdated"}}</th>
+          <th scope="col">{{t "admin.serviceConnections.column.actions"}}</th>
+        </tr>
+      </thead>
+      <tbody id="service-connections-table-body">
+        {{#each connections}}
+          {{> service-connection-row this}}
+        {{else}}
+        <tr>
+          <td colspan="7" class="table__empty">{{t "admin.serviceConnections.empty.noConnections"}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>
