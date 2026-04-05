@@ -49,8 +49,16 @@ export interface ComplianceLookupResult {
 
 // ── Service class ────────────────────────────────────────────────────────────
 
+/**
+ * Getter function for the current global compliance token manager. Returning
+ * a function (rather than a direct reference) lets the ServiceClientRegistry
+ * hot-swap the underlying token manager after an admin UI save without the
+ * ComplianceService caching a stale reference.
+ */
+export type ComplianceTokenManagerGetter = () => ServiceTokenManager | null;
+
 export class ComplianceService {
-  private readonly tokenManager: ServiceTokenManager;
+  private readonly getTokenManager: ComplianceTokenManagerGetter;
   private readonly complianceUrl: string;
   private readonly orgRepository?: OrgRepository;
 
@@ -65,28 +73,35 @@ export class ComplianceService {
 
   constructor(
     config: DashboardConfig,
-    tokenManager?: ServiceTokenManager,
+    getTokenManager: ComplianceTokenManagerGetter,
     orgRepository?: OrgRepository,
   ) {
     this.complianceUrl = config.complianceUrl;
     this.cacheTtlMs = 5 * 60 * 1000;
     this.orgRepository = orgRepository;
-
-    this.tokenManager = tokenManager ?? new ServiceTokenManager(
-      config.complianceUrl,
-      config.complianceClientId,
-      config.complianceClientSecret,
-    );
+    this.getTokenManager = getTokenManager;
   }
 
   // ── Token helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Resolve the current global compliance token manager. Throws if no
+   * compliance connection is configured (neither DB row nor config fallback).
+   */
+  private requireTokenManager(): ServiceTokenManager {
+    const tm = this.getTokenManager();
+    if (tm === null) {
+      throw new Error('Compliance service is not configured');
+    }
+    return tm;
+  }
 
   /**
    * Get a valid compliance API token. Uses the ServiceTokenManager's
    * auto-refreshing client_credentials flow internally.
    */
   async getToken(): Promise<string> {
-    return this.tokenManager.getToken();
+    return this.requireTokenManager().getToken();
   }
 
   /**
@@ -105,12 +120,12 @@ export class ComplianceService {
 
     // Look up org credentials from the DB
     if (this.orgRepository === undefined) {
-      return this.tokenManager.getToken();
+      return this.requireTokenManager().getToken();
     }
 
     const credentials = await this.orgRepository.getOrgComplianceCredentials(orgId);
     if (credentials === null || credentials.clientId === '' || credentials.clientSecret === '') {
-      return this.tokenManager.getToken();
+      return this.requireTokenManager().getToken();
     }
 
     // Create and cache a new token manager for this org

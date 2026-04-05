@@ -33,7 +33,12 @@ const PAGE_SIZE = 20;
 export async function reportRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
-  llmClient: LLMClient | null = null,
+  /**
+   * Getter for the current LLM client. Called at the top of each handler so
+   * a runtime reload via the admin UI is picked up on the next request.
+   * Returns null when LLM is not configured.
+   */
+  getLLMClient: () => LLMClient | null = () => null,
 ): Promise<void> {
   // GET /reports — list with pagination and search
   server.get(
@@ -140,6 +145,7 @@ export async function reportRoutes(
   server.get(
     '/reports/:id',
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
 
@@ -396,6 +402,7 @@ export async function reportRoutes(
   server.get(
     '/reports/:id/fix-suggestion',
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       const query = request.query as {
         criterion?: string;
         message?: string;
@@ -474,6 +481,7 @@ export async function reportRoutes(
   server.get(
     '/reports/:id/ai-summary',
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
 

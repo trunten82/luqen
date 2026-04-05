@@ -16,7 +16,12 @@ import type { ServiceTokenManager } from './auth/service-token.js';
  */
 export function startSourceMonitorScheduler(
   config: DashboardConfig,
-  tokenManager: ServiceTokenManager,
+  /**
+   * Getter for the current global compliance token manager. Resolved on each
+   * tick so that runtime reloads of the compliance service client are picked
+   * up without restarting the scheduler.
+   */
+  getTokenManager: () => ServiceTokenManager | null,
   intervalMs = 15 * 60 * 1000,
 ): NodeJS.Timeout {
   let lastFullScanAt = 0;
@@ -27,6 +32,8 @@ export function startSourceMonitorScheduler(
       const now = Date.now();
       if (now - lastFullScanAt < MIN_SCAN_INTERVAL_MS) return;
 
+      const tokenManager = getTokenManager();
+      if (tokenManager === null) return;
       const token = await tokenManager.getToken();
       if (!token) return;
 

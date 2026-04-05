@@ -30,7 +30,8 @@ export async function organizationRoutes(
   storage: StorageAdapter,
   complianceUrl?: string,
   brandingUrl?: string,
-  brandingTokenManager?: ServiceTokenManager | null,
+  /** Getter for current branding token manager (runtime reload support). */
+  getBrandingTokenManager: () => ServiceTokenManager | null = () => null,
 ): Promise<void> {
   // GET /admin/organizations — list all organizations
   server.get(
@@ -62,6 +63,7 @@ export async function organizationRoutes(
     '/admin/organizations',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const brandingTokenManager = getBrandingTokenManager();
       const body = request.body as { name?: string; slug?: string };
 
       const name = body.name?.trim();

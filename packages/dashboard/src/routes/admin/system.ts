@@ -25,13 +25,15 @@ async function getPackageVersion(): Promise<string> {
 export async function systemRoutes(
   server: FastifyInstance,
   config: { complianceUrl: string; brandingUrl?: string; webserviceUrl?: string; dbPath: string },
-  llmClient?: LLMClient | null,
+  /** Getter for current LLM client (runtime reload support). */
+  getLLMClient: () => LLMClient | null = () => null,
 ): Promise<void> {
   // GET /admin/system — service health, DB stats, seed status
   server.get(
     '/admin/system',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       const token = getToken(request);
 
       const [complianceHealth, , seedStatus, packageVersion, brandingHealth, llmHealth] =
