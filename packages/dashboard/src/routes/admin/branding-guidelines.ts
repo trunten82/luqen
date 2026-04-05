@@ -164,6 +164,11 @@ export async function brandingGuidelineRoutes(
       const orgId = request.user?.currentOrgId ?? 'system';
       const isGlobalAdmin = request.user?.role === 'admin';
 
+      // Tab selection — URL-driven, no client state. (08-P03)
+      const rawTab = (request.query as { tab?: unknown } | undefined)?.tab;
+      const tab: 'mine' | 'system' = rawTab === 'system' ? 'system' : 'mine';
+      const systemLibraryActive = tab === 'system';
+
       // Global admin sees all guidelines across orgs; org users see their own
       const guidelines = isGlobalAdmin
         ? await storage.branding.listAllGuidelines()
@@ -180,13 +185,59 @@ export async function brandingGuidelineRoutes(
           : undefined,
       }));
 
+      // System Library tab: load system-scoped guidelines only when the
+      // system tab is active. Keeps the default (My guidelines) tab
+      // byte-identical when nothing references systemGuidelines in the
+      // template. (08-P03)
+      const systemGuidelines = systemLibraryActive
+        ? await storage.branding.listSystemGuidelines()
+        : [];
+
       return reply.view('admin/branding-guidelines.hbs', {
         pageTitle: 'Branding Guidelines',
         currentPath: '/admin/branding-guidelines',
         user: request.user,
         guidelines: enriched,
         isGlobalAdmin,
+        tab,
+        systemLibraryActive,
+        systemGuidelines,
       });
+    },
+  );
+
+  // ── Clone system guideline into org ─────────────────────────────────────
+  // (08-P03) SYS-03: POST /admin/branding-guidelines/system/:id/clone
+  // Creates an org-owned independent copy of a system-scoped guideline and
+  // HX-Redirects to the clone's edit page so the user can rename it.
+
+  server.post(
+    '/admin/branding-guidelines/system/:id/clone',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const orgId = request.user?.currentOrgId ?? 'system';
+
+      // Guard: source must exist and be system-scoped. An org-owned row
+      // must never be clonable through this endpoint.
+      const source = await storage.branding.getGuideline(id);
+      if (source === null || source.orgId !== 'system') {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('System guideline not found.', 'error'));
+      }
+
+      try {
+        const clone = await storage.branding.cloneSystemGuideline(id, orgId);
+        return reply
+          .header('HX-Redirect', `/admin/branding-guidelines/${clone.id}`)
+          .code(204)
+          .send();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to clone system guideline';
+        return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
     },
   );
 
