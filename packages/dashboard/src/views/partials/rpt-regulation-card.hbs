@@ -25,16 +25,18 @@
     </div>
     {{/if}}
     {{#if violatedRequirements.length}}
-    <div class="rpt-juris-card__violations">
-      <div class="rpt-juris-card__viol"><strong>{{t "reportDetail.regulationViolations"}}</strong></div>
-      {{#each violatedRequirements}}
-      <div class="rpt-violation-row">
-        <span class="rpt-violation-criterion">{{wcagCriterion}}</span>
-        <span class="rpt-reg-tag rpt-reg-tag--{{obligation}}">{{obligation}}</span>
-        <span class="rpt-text--muted">{{issueCount}}</span>
+    <details class="rpt-violations-expandable">
+      <summary class="rpt-violations-toggle">{{t "reportDetail.showViolatedRequirements" count=violatedRequirements.length}}</summary>
+      <div class="rpt-juris-card__violations">
+        {{#each violatedRequirements}}
+        <div class="rpt-violation-row">
+          <span class="rpt-violation-criterion">{{wcagCriterion}}</span>
+          <span class="rpt-reg-tag rpt-reg-tag--{{obligation}}">{{obligation}}</span>
+          <span class="rpt-text--muted">{{issueCount}}</span>
+        </div>
+        {{/each}}
       </div>
-      {{/each}}
-    </div>
+    </details>
     {{/if}}
   </div>
 </div>
