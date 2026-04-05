@@ -149,6 +149,7 @@ describe.skipIf(!available)('Compliance API Integration', () => {
         BASE_URL,
         token,
         jurisdictionIds,
+        [],
         issues,
       );
 
@@ -170,6 +171,7 @@ describe.skipIf(!available)('Compliance API Integration', () => {
         BASE_URL,
         token,
         jurisdictionIds,
+        [],
         [],
       );
 

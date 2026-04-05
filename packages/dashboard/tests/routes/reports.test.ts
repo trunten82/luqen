@@ -625,6 +625,79 @@ describe('Report routes', () => {
       }
     });
 
+    // 07-P02 — regulationMatrix passthrough
+    it('exposes regulationMatrix as an array in reportData (07-P02)', async () => {
+      const id = await makeScan(ctx, { status: 'completed' });
+      const reportJson = {
+        summary: {
+          url: 'https://example.com',
+          pagesScanned: 1,
+          totalIssues: 1,
+          byLevel: { error: 1, warning: 0, notice: 0 },
+        },
+        pages: [
+          {
+            url: 'https://example.com',
+            issueCount: 1,
+            issues: [
+              { type: 'error', code: 'WCAG2AA.Principle1.Guideline1_1.1_1_1.H37', message: 'Missing alt', selector: 'img', context: '<img>' },
+            ],
+          },
+        ],
+        errors: [],
+        compliance: {
+          summary: { passing: 0, failing: 1, totalConfirmedViolations: 1 },
+          matrix: {},
+          regulationMatrix: {
+            en301549: {
+              regulationId: 'en301549',
+              regulationName: 'EN 301 549',
+              shortName: 'EN 301 549',
+              jurisdictionId: 'eu',
+              status: 'fail',
+              mandatoryViolations: 1,
+              recommendedViolations: 0,
+              optionalViolations: 0,
+              violatedRequirements: [],
+            },
+          },
+        },
+      };
+      await ctx.storage.scans.updateScan(id, { jsonReport: JSON.stringify(reportJson) });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/reports/${id}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { data: { reportData: { regulationMatrix: Array<{ regulationId: string; status: string }> } } };
+      expect(Array.isArray(body.data.reportData.regulationMatrix)).toBe(true);
+      expect(body.data.reportData.regulationMatrix).toHaveLength(1);
+      expect(body.data.reportData.regulationMatrix[0].regulationId).toBe('en301549');
+      expect(body.data.reportData.regulationMatrix[0].status).toBe('fail');
+    });
+
+    it('exposes regulationMatrix as empty array when compliance has no regulations (07-P02)', async () => {
+      const id = await makeScan(ctx, { status: 'completed' });
+      const reportJson = {
+        summary: { url: 'https://example.com', pagesScanned: 1, totalIssues: 0, byLevel: { error: 0, warning: 0, notice: 0 } },
+        pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+        errors: [],
+        compliance: { summary: {}, matrix: {}, regulationMatrix: {} },
+      };
+      await ctx.storage.scans.updateScan(id, { jsonReport: JSON.stringify(reportJson) });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/reports/${id}`,
+      });
+
+      const body = response.json() as { data: { reportData: { regulationMatrix: unknown } } };
+      expect(Array.isArray(body.data.reportData.regulationMatrix)).toBe(true);
+      expect(body.data.reportData.regulationMatrix).toEqual([]);
+    });
+
     it('report data includes allIssueGroups', async () => {
       const id = await makeScanWithReport(ctx);
 

@@ -51,14 +51,71 @@ describe('compliance-client X-Org-Id header', () => {
           Promise.resolve({
             summary: { totalJurisdictions: 0, passing: 0, failing: 0, totalMandatoryViolations: 0 },
             matrix: {},
+            regulationMatrix: {},
           }),
       });
 
       const { checkCompliance } = await import('../src/compliance-client.js');
-      await checkCompliance('http://localhost:3000', 'tok', ['eu'], [], 'org-99');
+      await checkCompliance('http://localhost:3000', 'tok', ['eu'], [], [], 'org-99');
 
       const [, opts] = mockFetch.mock.calls[0];
       expect(opts.headers).toHaveProperty('X-Org-Id', 'org-99');
+    });
+  });
+
+  describe('checkCompliance with regulations (REG-01)', () => {
+    it('sends jurisdictions, regulations, issues in POST body', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            summary: { totalJurisdictions: 1, passing: 0, failing: 0, totalMandatoryViolations: 0 },
+            matrix: {},
+            regulationMatrix: {},
+          }),
+      });
+
+      const { checkCompliance } = await import('../src/compliance-client.js');
+      const issues = [
+        { code: 'W.1.1.1', type: 'error', message: 'm', selector: 's', context: 'c' },
+      ];
+      await checkCompliance(
+        'http://localhost:3000',
+        'tok',
+        ['eu'],
+        ['en301549'],
+        issues,
+      );
+
+      expect(mockFetch).toHaveBeenCalledOnce();
+      const [url, opts] = mockFetch.mock.calls[0];
+      expect(url).toBe('http://localhost:3000/api/v1/compliance/check');
+      expect(opts.method).toBe('POST');
+      const body = JSON.parse(opts.body as string);
+      expect(body).toEqual({
+        jurisdictions: ['eu'],
+        regulations: ['en301549'],
+        issues,
+      });
+    });
+
+    it('sends regulations:[] when caller passes an empty array', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            summary: { totalJurisdictions: 1, passing: 0, failing: 0, totalMandatoryViolations: 0 },
+            matrix: {},
+            regulationMatrix: {},
+          }),
+      });
+
+      const { checkCompliance } = await import('../src/compliance-client.js');
+      await checkCompliance('http://localhost:3000', 'tok', ['eu'], [], []);
+
+      const [, opts] = mockFetch.mock.calls[0];
+      const body = JSON.parse(opts.body as string);
+      expect(body).toEqual({ jurisdictions: ['eu'], regulations: [], issues: [] });
     });
   });
 
