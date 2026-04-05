@@ -146,10 +146,7 @@ export async function registerCapabilityExecRoutes(
       await reply.status(400).send({ error: 'issueMessage is required', statusCode: 400 });
       return;
     }
-    if (!body.htmlContext || typeof body.htmlContext !== 'string') {
-      await reply.status(400).send({ error: 'htmlContext is required', statusCode: 400 });
-      return;
-    }
+    const htmlContext = typeof body.htmlContext === 'string' ? body.htmlContext : '';
 
     const reqOrgId = (request as unknown as { orgId: string }).orgId;
     const orgId = typeof body.orgId === 'string' && body.orgId.length > 0
@@ -163,7 +160,7 @@ export async function registerCapabilityExecRoutes(
         {
           wcagCriterion: body.wcagCriterion,
           issueMessage: body.issueMessage,
-          htmlContext: body.htmlContext,
+          htmlContext,
           ...(typeof body.cssContext === 'string' ? { cssContext: body.cssContext } : {}),
           orgId,
         },
