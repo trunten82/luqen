@@ -35,6 +35,9 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
 import type { StorageAdapter } from '../../db/index.js';
 import type { ServiceClientRegistry } from '../../services/service-client-registry.js';
 import type {
@@ -43,6 +46,56 @@ import type {
   ServiceId,
 } from '../../db/service-connections-repository.js';
 import { requirePermission } from '../../auth/middleware.js';
+import { toastHtml, escapeHtml } from './helpers.js';
+import { t as translate } from '../../i18n/index.js';
+import type { Locale } from '../../i18n/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const VIEWS_DIR = join(__dirname, '..', '..', 'views');
+
+// Lazy-compiled Handlebars templates for HTMX fragment responses. Compiled on
+// first use and cached for the lifetime of the process. The global handlebars
+// singleton already has the `t`, `eq`, etc. helpers registered by server.ts
+// before any route runs, so these compiled templates can use them freely.
+type HbsTemplate = (data: Record<string, unknown>) => string;
+let cachedRowTemplate: HbsTemplate | null = null;
+let cachedEditRowTemplate: HbsTemplate | null = null;
+
+async function getRowTemplate(): Promise<HbsTemplate> {
+  if (cachedRowTemplate !== null) return cachedRowTemplate;
+  const hbs = (await import('handlebars')).default;
+  const src = readFileSync(
+    join(VIEWS_DIR, 'admin', 'partials', 'service-connection-row.hbs'),
+    'utf-8',
+  );
+  cachedRowTemplate = hbs.compile(src) as HbsTemplate;
+  return cachedRowTemplate;
+}
+
+async function getEditRowTemplate(): Promise<HbsTemplate> {
+  if (cachedEditRowTemplate !== null) return cachedEditRowTemplate;
+  const hbs = (await import('handlebars')).default;
+  const src = readFileSync(
+    join(VIEWS_DIR, 'admin', 'partials', 'service-connection-edit-row.hbs'),
+    'utf-8',
+  );
+  cachedEditRowTemplate = hbs.compile(src) as HbsTemplate;
+  return cachedEditRowTemplate;
+}
+
+function resolveLocale(request: FastifyRequest): Locale {
+  const session = request.session as { get?(key: string): unknown } | undefined;
+  const fromSession =
+    typeof session?.get === 'function'
+      ? (session.get('locale') as Locale | undefined)
+      : undefined;
+  return fromSession ?? 'en';
+}
+
+function isHtmxRequest(request: FastifyRequest): boolean {
+  return request.headers['hx-request'] === 'true';
+}
 
 // Fastify instance decorations set by server.ts (plan 06-02).
 declare module 'fastify' {
@@ -100,10 +153,13 @@ export async function registerServiceConnectionsRoutes(
   }
 
   // ── GET /admin/service-connections ────────────────────────────────────────
+  // Content-negotiated: returns the full admin page (HTML) when the client
+  // accepts text/html, and the masked JSON list otherwise. HTMX requests hit
+  // the same endpoint for the initial page load.
   fastify.get(
     '/admin/service-connections',
     { preHandler: requirePermission('admin.system') },
-    async (_request: FastifyRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const dbRows = await repo.list();
       const byId = new Map<ServiceId, ServiceConnection>(
         dbRows.map((row) => [row.serviceId, row]),
@@ -119,7 +175,62 @@ export async function registerServiceConnectionsRoutes(
         return synthesizeFromConfig(id, config);
       });
 
+      const accept = String(request.headers.accept ?? '');
+      if (accept.includes('text/html') || isHtmxRequest(request)) {
+        return reply.view('admin/service-connections.hbs', {
+          pageTitle: 'Service Connections',
+          currentPath: '/admin/service-connections',
+          user: request.user,
+          connections,
+        });
+      }
+
       return reply.code(200).send({ connections });
+    },
+  );
+
+  // ── GET /admin/service-connections/:id/edit ──────────────────────────────
+  // Returns the inline edit-row partial as an HTML fragment. HTMX-only.
+  fastify.get(
+    '/admin/service-connections/:id/edit',
+    { preHandler: requirePermission('admin.system') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id?: string };
+      if (id === undefined || !VALID_SERVICE_IDS.has(id)) {
+        return reply.code(400).send({ ok: false, error: 'invalid_service_id' });
+      }
+      const serviceId = id as ServiceId;
+
+      const stored = await repo.get(serviceId);
+      const row: PublicServiceConnection =
+        stored !== null ? maskConnection(stored) : synthesizeFromConfig(serviceId, config);
+
+      const render = await getEditRowTemplate();
+      const html = render({ ...row, locale: resolveLocale(request) });
+      return reply.code(200).type('text/html').send(html);
+    },
+  );
+
+  // ── GET /admin/service-connections/:id/row ────────────────────────────────
+  // Re-renders the read-only row partial. Used by the Cancel button and by the
+  // successful-save response path. HTMX-only.
+  fastify.get(
+    '/admin/service-connections/:id/row',
+    { preHandler: requirePermission('admin.system') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id?: string };
+      if (id === undefined || !VALID_SERVICE_IDS.has(id)) {
+        return reply.code(400).send({ ok: false, error: 'invalid_service_id' });
+      }
+      const serviceId = id as ServiceId;
+
+      const stored = await repo.get(serviceId);
+      const row: PublicServiceConnection =
+        stored !== null ? maskConnection(stored) : synthesizeFromConfig(serviceId, config);
+
+      const render = await getRowTemplate();
+      const html = render({ ...row, locale: resolveLocale(request) });
+      return reply.code(200).type('text/html').send(html);
     },
   );
 
@@ -189,29 +300,55 @@ export async function registerServiceConnectionsRoutes(
 
       // Rebuild the live client. If construction throws, the DB row stays
       // updated and the old in-memory client remains active (P02 D-09).
+      let reloadError: string | null = null;
       try {
         await registry.reload(serviceId);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'reload failed';
+        reloadError = err instanceof Error ? err.message : 'reload failed';
         fastify.log.error(
           { err, serviceId },
           'service_connection.reload_failed',
         );
-        return reply.code(500).send({
-          ok: false,
-          error: 'reload_failed',
-          message,
-        });
       }
 
       const refreshed = await repo.get(serviceId);
-      return reply.code(200).send({
-        ok: true,
-        connection:
-          refreshed !== null
-            ? maskConnection(refreshed)
-            : synthesizeFromConfig(serviceId, config),
-      });
+      const connection: PublicServiceConnection =
+        refreshed !== null
+          ? maskConnection(refreshed)
+          : synthesizeFromConfig(serviceId, config);
+
+      // HTMX HTML response: re-rendered row partial + out-of-band toast swap
+      // targeting the global #toast-container (layouts/main.hbs) via the
+      // reusable toastHtml() helper. On reload failure we return 500 so the
+      // client-side code can style the toast distinctly, but the row is still
+      // re-rendered (DB row was written — only the runtime client swap failed).
+      if (isHtmxRequest(request)) {
+        const locale = resolveLocale(request);
+        const render = await getRowTemplate();
+        const rowHtml = render({ ...connection, locale });
+        if (reloadError !== null) {
+          const toast = toastHtml(
+            `${translate('admin.serviceConnections.toast.reloadFailed', locale)} — ${reloadError}`,
+            'error',
+          );
+          return reply.code(500).type('text/html').send(`${rowHtml}\n${toast}`);
+        }
+        const toast = toastHtml(
+          translate('admin.serviceConnections.toast.saved', locale),
+          'success',
+        );
+        return reply.code(200).type('text/html').send(`${rowHtml}\n${toast}`);
+      }
+
+      if (reloadError !== null) {
+        return reply.code(500).send({
+          ok: false,
+          error: 'reload_failed',
+          message: reloadError,
+        });
+      }
+
+      return reply.code(200).send({ ok: true, connection });
     },
   );
 
@@ -262,6 +399,31 @@ export async function registerServiceConnectionsRoutes(
         '../../services/service-connection-tester.js'
       );
       const result = await testServiceConnection({ url, clientId, clientSecret });
+
+      if (isHtmxRequest(request)) {
+        const locale = resolveLocale(request);
+        if (result.ok) {
+          const label = translate(
+            'admin.serviceConnections.test.success',
+            locale,
+            { latencyMs: String(result.latencyMs) },
+          );
+          return reply
+            .code(200)
+            .type('text/html')
+            .send(`<span class="badge badge--success">${escapeHtml(label)}</span>`);
+        }
+        const key =
+          result.step === 'oauth'
+            ? 'admin.serviceConnections.test.failureOauth'
+            : 'admin.serviceConnections.test.failureHealth';
+        const label = translate(key, locale, { error: result.error });
+        return reply
+          .code(200)
+          .type('text/html')
+          .send(`<span class="badge badge--error">${escapeHtml(label)}</span>`);
+      }
+
       return reply.code(200).send(result);
     },
   );
@@ -300,6 +462,20 @@ export async function registerServiceConnectionsRoutes(
         );
         // Still return 200 — the secret is cleared; reload failure just
         // means the registry could not build a new client without creds.
+      }
+
+      if (isHtmxRequest(request)) {
+        const stored = await repo.get(serviceId);
+        const connection: PublicServiceConnection =
+          stored !== null ? maskConnection(stored) : synthesizeFromConfig(serviceId, config);
+        const locale = resolveLocale(request);
+        const render = await getRowTemplate();
+        const rowHtml = render({ ...connection, locale });
+        const toast = toastHtml(
+          translate('admin.serviceConnections.toast.secretCleared', locale),
+          'success',
+        );
+        return reply.code(200).type('text/html').send(`${rowHtml}\n${toast}`);
       }
 
       return reply.code(200).send({ ok: true });

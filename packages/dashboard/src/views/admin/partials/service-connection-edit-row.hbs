@@ -1,0 +1,101 @@
+{{!--
+  Inline edit row for a service connection.
+
+  IMPORTANT: this partial MUST NOT nest an HTML FORM element — it is swapped
+  in place of a TR, and a FORM cannot be a child of TR/TD (HTML spec). The
+  HTMX save/test/clear-secret buttons use hx-include="closest tr" to sweep up
+  the bare input values from the sibling cells.
+
+  CSRF: the dashboard ships a global htmx:configRequest handler in
+  layouts/main.hbs that reads <meta name="csrf-token"> and attaches an
+  X-CSRF-Token header to every HTMX request — no hidden input needed here.
+
+  Secret handling (D-18, D-19): the Client Secret input NEVER has a `value`
+  attribute. Leaving it blank on save keeps the stored ciphertext unchanged.
+  Typing any value replaces it.
+--}}
+<tr id="service-connection-row-{{serviceId}}" class="service-connection-edit-row">
+  <td data-label="Service">
+    <strong>
+      {{#if (eq serviceId "compliance")}}{{t "admin.serviceConnections.service.compliance"}}{{/if}}
+      {{#if (eq serviceId "branding")}}{{t "admin.serviceConnections.service.branding"}}{{/if}}
+      {{#if (eq serviceId "llm")}}{{t "admin.serviceConnections.service.llm"}}{{/if}}
+    </strong>
+  </td>
+  <td data-label="URL">
+    <label class="sr-only" for="sc-url-{{serviceId}}">{{t "admin.serviceConnections.form.url"}}</label>
+    <input id="sc-url-{{serviceId}}"
+           type="url"
+           name="url"
+           value="{{url}}"
+           required
+           class="input"
+           aria-label="{{t 'admin.serviceConnections.form.url'}}">
+  </td>
+  <td data-label="Client ID">
+    <label class="sr-only" for="sc-client-id-{{serviceId}}">{{t "admin.serviceConnections.form.clientId"}}</label>
+    <input id="sc-client-id-{{serviceId}}"
+           type="text"
+           name="clientId"
+           value="{{clientId}}"
+           required
+           class="input"
+           aria-label="{{t 'admin.serviceConnections.form.clientId'}}">
+  </td>
+  <td data-label="Client Secret" colspan="2">
+    <label class="sr-only" for="sc-client-secret-{{serviceId}}">{{t "admin.serviceConnections.form.clientSecret"}}</label>
+    <input id="sc-client-secret-{{serviceId}}"
+           type="password"
+           name="clientSecret"
+           placeholder="{{t 'admin.serviceConnections.form.clientSecretPlaceholder'}}"
+           autocomplete="new-password"
+           class="input"
+           aria-label="{{t 'admin.serviceConnections.form.clientSecret'}}">
+    <small class="text-xs text-muted">{{t "admin.serviceConnections.form.clientSecretHint"}}</small>
+  </td>
+  <td data-label="Last updated">
+    {{#if updatedAt}}
+      <span class="text-xs text-muted">{{updatedAt}}</span>
+    {{else}}
+      <span class="text-muted">—</span>
+    {{/if}}
+  </td>
+  <td data-label="Actions">
+    <div class="btn-group">
+      <button type="button"
+              hx-post="/admin/service-connections/{{serviceId}}"
+              hx-include="closest tr"
+              hx-target="closest tr"
+              hx-swap="outerHTML"
+              class="btn btn--sm btn--primary">
+        {{t "admin.serviceConnections.action.save"}}
+      </button>
+      <button type="button"
+              hx-get="/admin/service-connections/{{serviceId}}/row"
+              hx-target="closest tr"
+              hx-swap="outerHTML"
+              class="btn btn--sm btn--ghost">
+        {{t "admin.serviceConnections.action.cancel"}}
+      </button>
+      <button type="button"
+              hx-post="/admin/service-connections/{{serviceId}}/test"
+              hx-include="closest tr"
+              hx-target="#test-result-{{serviceId}}"
+              hx-swap="innerHTML"
+              class="btn btn--sm btn--secondary">
+        {{t "admin.serviceConnections.action.test"}}
+      </button>
+      {{#if hasSecret}}
+      <button type="button"
+              hx-post="/admin/service-connections/{{serviceId}}/clear-secret"
+              hx-confirm="{{t 'admin.serviceConnections.action.confirmClear'}}"
+              hx-target="closest tr"
+              hx-swap="outerHTML"
+              class="btn btn--sm btn--danger">
+        {{t "admin.serviceConnections.action.clearSecret"}}
+      </button>
+      {{/if}}
+    </div>
+    <span id="test-result-{{serviceId}}"></span>
+  </td>
+</tr>
