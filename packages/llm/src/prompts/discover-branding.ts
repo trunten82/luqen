@@ -32,14 +32,14 @@ ${css}
 
 ## Extraction Rules (follow exactly)
 
-1. **Colors** — Extract EVERY unique hex color that appears in the CSS as a value for:
+1. **Colors** — Extract EVERY unique brand color that appears in the CSS as a value for:
    - CSS custom properties (e.g., \`--primary: #ff6900\`)
    - \`color:\`, \`background-color:\`, \`background:\`, \`border-color:\`, \`fill:\`, \`stroke:\` declarations
    - Convert rgb()/rgba() to hex
-   - Deduplicate. Ignore white (#ffffff), black (#000000), grey tones (#eee, #ccc, #666, etc.), and transparent
-   - For \`name\`, use the CSS variable name if present (e.g., "primary"), otherwise "brand-color-N"
-   - For \`usage\`, use "primary" if it's the most frequent or named "primary", otherwise "secondary"
-   - Return AT LEAST 3 colors if available, up to 8
+   - Deduplicate. Ignore pure white, pure black, and neutral greys (#eee, #ccc, #999, #666, #333), and transparent
+   - For \`name\`, use a human-friendly descriptive name based on the color (e.g., "Campari Red", "Aperol Orange", "Deep Blue", "Warm Cream"). If a CSS variable name hints at a brand term, use that as inspiration
+   - For \`usage\`, infer from context: "primary" for dominant brand colors, "secondary" for accents, "background" for surfaces, "text" for foreground
+   - Return ALL unique brand colors found, typically 4-10 for a well-designed site
 
 2. **Fonts** — Extract EVERY unique font-family from:
    - \`@font-face { font-family: ... }\`

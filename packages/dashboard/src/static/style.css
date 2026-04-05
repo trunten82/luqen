@@ -3416,6 +3416,12 @@ details[open] > .mt-examples-toggle::before {
   gap: var(--space-sm);
   align-items: flex-end;
   flex-wrap: wrap;
+  max-width: 600px;
+}
+.brd-discover__form button[type="submit"] {
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 0;
 }
 
 .brd-discover__input-group {
