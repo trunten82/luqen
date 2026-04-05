@@ -191,6 +191,13 @@ export async function registerServiceConnectionsRoutes(
 
   // ── GET /admin/service-connections/:id/edit ──────────────────────────────
   // Returns the inline edit-row partial as an HTML fragment. HTMX-only.
+  //
+  // To enforce "at most one edit row open at a time", the response also
+  // includes OOB swap fragments for the other two service rows in their
+  // read-only display form. HTMX applies these OOB swaps on top of the main
+  // target swap, so any previously-open edit row gets closed automatically.
+  // The OOB fragments are wrapped in <template> tags to survive the browser's
+  // tbody parser context (HTMX unwraps templates before processing).
   fastify.get(
     '/admin/service-connections/:id/edit',
     { preHandler: requirePermission('admin.system') },
@@ -200,14 +207,41 @@ export async function registerServiceConnectionsRoutes(
         return reply.code(400).send({ ok: false, error: 'invalid_service_id' });
       }
       const serviceId = id as ServiceId;
+      const locale = resolveLocale(request);
 
       const stored = await repo.get(serviceId);
       const row: PublicServiceConnection =
         stored !== null ? maskConnection(stored) : synthesizeFromConfig(serviceId, config);
 
-      const render = await getEditRowTemplate();
-      const html = render({ ...row, locale: resolveLocale(request) });
-      return reply.code(200).type('text/html').send(html);
+      const editTemplate = await getEditRowTemplate();
+      const editHtml = editTemplate({ ...row, locale });
+
+      // Close any other open edit row by re-rendering the other two services
+      // as read-only rows, each with an OOB swap targeting its matching <tr>.
+      const displayTemplate = await getRowTemplate();
+      const otherIds = (['compliance', 'branding', 'llm'] as const).filter(
+        (sid) => sid !== serviceId,
+      );
+      const oobFragments: string[] = [];
+      for (const otherId of otherIds) {
+        const otherStored = await repo.get(otherId);
+        const otherRow: PublicServiceConnection =
+          otherStored !== null
+            ? maskConnection(otherStored)
+            : synthesizeFromConfig(otherId, config);
+        // hx-swap-oob="outerHTML:<selector>" swaps the target by ID with this
+        // element's outerHTML — but we just add the attribute to the root <tr>
+        // and let HTMX match by id.
+        const displayHtml = displayTemplate({
+          ...otherRow,
+          locale,
+          oob: true, // tells the partial to stamp hx-swap-oob on the root tr
+        });
+        oobFragments.push(`<template>${displayHtml}</template>`);
+      }
+
+      const body = `${editHtml}\n${oobFragments.join('\n')}`;
+      return reply.code(200).type('text/html').send(body);
     },
   );
 
@@ -322,6 +356,13 @@ export async function registerServiceConnectionsRoutes(
       // reusable toastHtml() helper. On reload failure we return 500 so the
       // client-side code can style the toast distinctly, but the row is still
       // re-rendered (DB row was written — only the runtime client swap failed).
+      //
+      // The OOB toast fragment MUST be wrapped in <template> tags. When the
+      // main content is a <tr>, the browser's HTML parser enters <tbody>
+      // context and strips any non-tbody-valid siblings from the response —
+      // our toast <div> gets eaten and HTMX never sees the OOB swap, so the
+      // raw toast HTML leaks inline next to the Save button. HTMX unwraps
+      // <template> tags before processing, so this survives table context.
       if (isHtmxRequest(request)) {
         const locale = resolveLocale(request);
         const render = await getRowTemplate();
@@ -331,13 +372,19 @@ export async function registerServiceConnectionsRoutes(
             `${translate('admin.serviceConnections.toast.reloadFailed', locale)} — ${reloadError}`,
             'error',
           );
-          return reply.code(500).type('text/html').send(`${rowHtml}\n${toast}`);
+          return reply
+            .code(500)
+            .type('text/html')
+            .send(`${rowHtml}\n<template>${toast}</template>`);
         }
         const toast = toastHtml(
           translate('admin.serviceConnections.toast.saved', locale),
           'success',
         );
-        return reply.code(200).type('text/html').send(`${rowHtml}\n${toast}`);
+        return reply
+          .code(200)
+          .type('text/html')
+          .send(`${rowHtml}\n<template>${toast}</template>`);
       }
 
       if (reloadError !== null) {
@@ -475,7 +522,10 @@ export async function registerServiceConnectionsRoutes(
           translate('admin.serviceConnections.toast.secretCleared', locale),
           'success',
         );
-        return reply.code(200).type('text/html').send(`${rowHtml}\n${toast}`);
+        return reply
+          .code(200)
+          .type('text/html')
+          .send(`${rowHtml}\n<template>${toast}</template>`);
       }
 
       return reply.code(200).send({ ok: true });
