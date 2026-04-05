@@ -72,6 +72,83 @@ function normalizeHex(hex: string): string {
   return '#' + h;
 }
 
+/**
+ * Classify a hex color into a broad hue category.
+ * Used to sanity-check LLM-provided color names against reality.
+ */
+function hueCategory(hex: string): 'red' | 'orange' | 'yellow' | 'gold' | 'green' | 'blue' | 'purple' | 'pink' | 'brown' | 'cream' | 'dark' | 'light' | 'unknown' {
+  const h = hex.replace('#', '').toLowerCase();
+  if (h.length !== 6) return 'unknown';
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const lightness = (max + min) / 2;
+
+  if (lightness < 40) return 'dark';
+  if (lightness > 230 && max - min < 30) return 'light';
+
+  // Cream/warm neutrals
+  if (r > 200 && g > 180 && b > 150 && max - min < 60 && r >= g && g >= b) return 'cream';
+
+  // Red-dominant
+  if (r > g + 30 && r > b + 30) {
+    if (g > 100 && b < 100) return 'orange';
+    if (r > 200 && g > 150 && b < 100) return 'gold';
+    if (g < 80 && b > 100) return 'pink';
+    return 'red';
+  }
+  // Yellow (r and g high, b low)
+  if (r > 180 && g > 180 && b < 120) return r > g + 20 ? 'gold' : 'yellow';
+  // Green-dominant
+  if (g > r + 20 && g > b) return 'green';
+  // Blue-dominant
+  if (b > r + 20 && b > g - 20) return 'blue';
+  // Purple
+  if (r > 80 && b > 80 && g < Math.min(r, b) - 20) return 'purple';
+  // Brown (low-medium everything, warm)
+  if (r > g && g > b && r < 180 && b < 120) return 'brown';
+  return 'unknown';
+}
+
+/**
+ * Sanitize LLM-provided color name. If the name mentions a color word that
+ * contradicts the actual hex hue (e.g. naming a red #cd0136 as "Gold"),
+ * strip the wrong word and use a generic fallback.
+ */
+function sanitizeColorName(name: string, hex: string): string {
+  const actualHue = hueCategory(hex);
+  if (actualHue === 'unknown') return name;
+
+  const lower = name.toLowerCase();
+  const colorWords = ['red', 'orange', 'yellow', 'gold', 'green', 'blue', 'purple', 'pink', 'brown', 'cream', 'black', 'white', 'grey', 'gray'];
+  const mentioned = colorWords.find((w) => lower.includes(w));
+
+  if (!mentioned) return name; // no color word → accept as-is
+
+  // Map mentioned color word to its hue category
+  const mentionedHue: Record<string, string> = {
+    red: 'red', orange: 'orange', yellow: 'yellow', gold: 'gold',
+    green: 'green', blue: 'blue', purple: 'purple', pink: 'pink',
+    brown: 'brown', cream: 'cream', black: 'dark', white: 'light',
+    grey: 'light', gray: 'light',
+  };
+
+  if (mentionedHue[mentioned] === actualHue) return name; // matches → OK
+
+  // Mismatch — LLM used wrong color word. Replace it with the actual hue.
+  const hueLabels: Record<string, string> = {
+    red: 'Red', orange: 'Orange', yellow: 'Yellow', gold: 'Gold',
+    green: 'Green', blue: 'Blue', purple: 'Purple', pink: 'Pink',
+    brown: 'Brown', cream: 'Cream', dark: 'Dark', light: 'Light',
+  };
+  const replacement = hueLabels[actualHue] ?? 'Accent';
+  // Replace the wrong word with the correct hue (case-insensitive)
+  const re = new RegExp(`\\b${mentioned}\\b`, 'i');
+  return name.replace(re, replacement);
+}
+
 function isNeutralColor(hex: string): boolean {
   const h = hex.replace('#', '').toLowerCase();
   if (h.length !== 6) return false;
@@ -117,13 +194,36 @@ async function extractBrandSignals(url: string): Promise<BrandSignals> {
     .map((s) => s.replace(/<style[^>]*>/i, '').replace(/<\/style>/i, '').trim())
     .join('\n');
 
+  // Collect CSS URLs from:
+  // 1. <link rel="stylesheet"> tags (standard)
+  // 2. <noscript> blocks (often contain real links when CSS is lazy-loaded)
+  // 3. ANY quoted string ending in .css (WP Rocket, Next.js, and other lazy loaders
+  //    store CSS URLs in JS strings that aren't visible to tag-based parsers)
+  const cssUrls = new Set<string>();
+
   const linkMatches = rawHtml.match(/<link[^>]+rel=["']stylesheet["'][^>]*>/gi) ?? [];
-  const hrefs = linkMatches
-    .map((l) => {
+  for (const l of linkMatches) {
+    const m = l.match(/href=["']([^"']+)["']/i);
+    if (m) cssUrls.add(m[1]);
+  }
+
+  const noscriptBlocks = rawHtml.match(/<noscript[\s\S]*?<\/noscript>/gi) ?? [];
+  for (const ns of noscriptBlocks) {
+    const nsLinks = ns.match(/<link[^>]+href=["']([^"']+\.css[^"']*)["']/gi) ?? [];
+    for (const l of nsLinks) {
       const m = l.match(/href=["']([^"']+)["']/i);
-      return m ? m[1] : null;
-    })
-    .filter((x): x is string => x !== null)
+      if (m) cssUrls.add(m[1]);
+    }
+  }
+
+  // Fallback: any quoted URL that ends in .css (WP Rocket, Next.js chunks, etc.)
+  const anyCssMatches = rawHtml.match(/['"]([^'"]+\.css[^'"]*?)['"]/gi) ?? [];
+  for (const raw of anyCssMatches) {
+    const cleaned = raw.replace(/^['"]|['"]$/g, '');
+    if (cleaned.length > 0 && cleaned.length < 500) cssUrls.add(cleaned);
+  }
+
+  const hrefs = Array.from(cssUrls)
     .map((href) => {
       try {
         return new URL(href, url).toString();
@@ -135,12 +235,19 @@ async function extractBrandSignals(url: string): Promise<BrandSignals> {
 
   const origin = new URL(url).origin;
   const prioritised = hrefs
-    .map((h) => ({
-      href: h,
-      score: (h.startsWith(origin) ? 10 : 0) + (/(main|style|theme|app|brand)/i.test(h) ? 5 : 0),
-    }))
+    .map((h) => {
+      let score = 0;
+      if (h.startsWith(origin)) score += 10;
+      if (/\bmain\.css/i.test(h)) score += 20;
+      if (/\btheme/i.test(h)) score += 8;
+      if (/\bstyle\.css/i.test(h)) score += 8;
+      if (/\b(brand|fonts|typography)/i.test(h)) score += 6;
+      if (/google-fonts/i.test(h)) score += 5;
+      if (/\b(admin|widget|modal|marker|calendar|print|rtl|editor|block-library)/i.test(h)) score -= 5;
+      return { href: h, score };
+    })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
+    .slice(0, 5)
     .map((x) => x.href);
 
   const externalCssChunks = await Promise.all(
@@ -245,7 +352,7 @@ async function extractBrandSignals(url: string): Promise<BrandSignals> {
     const familyMatch = m.match(/family=([^&:]+)/);
     if (familyMatch) {
       const family = decodeURIComponent(familyMatch[1]).replace(/\+/g, ' ').trim();
-      if (family) fontFamilies.add(family);
+      if (family && isValidFontName(family)) fontFamilies.add(family);
     }
   }
 
@@ -388,10 +495,17 @@ function mergeResults(
   deterministic: DiscoverBrandingResult,
 ): DiscoverBrandingResult {
   // Build a map of deterministic hex -> count for validation
-  const validHexes = new Set(signals.topColors.map((c) => c.hex));
+  const validHexes = new Set(signals.topColors.map((c) => c.hex.toLowerCase()));
 
   // Accept LLM colors ONLY if they're in our extracted list (authoritative)
-  const validLlmColors = llm.colors.filter((c) => validHexes.has(c.hex.toLowerCase()));
+  // Also sanity-check the name matches the actual hex hue (reject obviously wrong names)
+  const validLlmColors = llm.colors
+    .filter((c) => typeof c.hex === 'string' && validHexes.has(c.hex.toLowerCase()))
+    .map((c) => ({
+      ...c,
+      hex: c.hex.toLowerCase(),
+      name: sanitizeColorName(c.name, c.hex),
+    }));
 
   // Merge: use LLM colors if available, else deterministic
   const colors: readonly DiscoverBrandingColor[] = validLlmColors.length > 0
