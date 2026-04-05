@@ -85,6 +85,32 @@ const { registerServiceConnectionsRoutes } = await import(
   '../../src/routes/admin/service-connections.js'
 );
 const { ALL_PERMISSION_IDS } = await import('../../src/permissions.js');
+const { loadTranslations, t: translateKey } = await import(
+  '../../src/i18n/index.js'
+);
+const handlebarsModule = await import('handlebars');
+const handlebars = handlebarsModule.default;
+
+// Register the minimal set of helpers the service-connection-row /
+// service-connection-edit-row partials reference so HTMX fragment responses
+// can compile and render inside the tests. Mirrors server.ts registration.
+loadTranslations();
+if (!handlebars.helpers['eq']) {
+  handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+}
+if (!handlebars.helpers['t']) {
+  handlebars.registerHelper('t', function (
+    key: string,
+    options: { hash?: Record<string, unknown>; data?: { root?: { locale?: string } } },
+  ) {
+    const locale = (options?.data?.root?.locale ?? 'en') as 'en';
+    const params: Record<string, string> = {};
+    if (options?.hash) {
+      for (const [k, v] of Object.entries(options.hash)) params[k] = String(v);
+    }
+    return translateKey(key, locale, params);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Shared setup
@@ -313,6 +339,74 @@ describe('Phase 06 P05 — end-to-end save → reload → GET flow', () => {
     expect((live as unknown as { clientSecret: string }).clientSecret).toBe(
       'original-secret-value',
     );
+  });
+
+  it('HTMX save response returns the re-rendered row fragment plus an out-of-band success toast', async () => {
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/compliance',
+      headers: { 'hx-request': 'true' },
+      payload: {
+        url: 'http://htmx-save.test',
+        clientId: 'htmx-cli',
+        clientSecret: 'htmx-plain-secret',
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    const html = res.payload;
+    // Re-rendered row must carry the new url and the row id anchor.
+    expect(html).toContain('service-connection-row-compliance');
+    expect(html).toContain('http://htmx-save.test');
+    // Out-of-band toast swap targeting the global toast container.
+    expect(html).toContain('hx-swap-oob');
+    expect(html).toContain('toast-container');
+    // Plaintext secret MUST NOT appear in the response body.
+    expect(html).not.toContain('htmx-plain-secret');
+  });
+
+  it('HTMX /test endpoint returns a success badge fragment when OAuth + health succeed', async () => {
+    // Install a stored secret so /test can fall back to it.
+    await ctx.server.inject({
+      method: 'POST',
+      url: '/admin/service-connections/compliance',
+      payload: {
+        url: 'http://badge.test',
+        clientId: 'badge-cli',
+        clientSecret: 'badge-secret',
+      },
+    });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : (input as URL).toString();
+      if (url.endsWith('/oauth/token')) {
+        return new Response(
+          JSON.stringify({ access_token: 'tok', expires_in: 3600 }),
+          { status: 200 },
+        );
+      }
+      return new Response('ok', { status: 200 });
+    }) as unknown as typeof fetch;
+
+    try {
+      const res = await ctx.server.inject({
+        method: 'POST',
+        url: '/admin/service-connections/compliance/test',
+        headers: { 'hx-request': 'true' },
+        payload: {
+          url: 'http://probe.test',
+          clientId: 'probe-cli',
+          clientSecret: '',
+        },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['content-type']).toContain('text/html');
+      expect(res.payload).toContain('badge--success');
+      expect(res.payload).not.toContain('badge-secret');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it('/test endpoint falls back to the stored decrypted secret when clientSecret is blank', async () => {
