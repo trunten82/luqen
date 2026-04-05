@@ -61,7 +61,13 @@ export async function checkCompliance(
   db: DbAdapter,
   orgId?: string,
 ): Promise<ComplianceCheckResponse> {
-  const { jurisdictions, issues, includeOptional = false, sectors: sectorFilter = [] } = request;
+  const {
+    jurisdictions,
+    regulations: requestedRegulations = [],
+    issues,
+    includeOptional = false,
+    sectors: sectorFilter = [],
+  } = request;
 
   // Step 1: Parse all issue codes
   const parsedIssues: ParsedIssue[] = issues.map(issue => {
@@ -80,6 +86,35 @@ export async function checkCompliance(
 
   // Step 3: Resolve all requested jurisdictions + their ancestors
   const resolvedJurisdictionIds = await resolveJurisdictionHierarchy(jurisdictions, db);
+
+  // Step 3b: Phase 07 (D-08) — look up home jurisdictions for explicit regulations
+  // and widen the jurisdiction set so requirement queries include them. Unknown
+  // regulation ids are skipped silently (no throw; they are simply absent from
+  // the final regulationMatrix — see Step 7b).
+  interface RegulationMeta {
+    readonly regulationId: string;
+    readonly regulationName: string;
+    readonly shortName: string;
+    readonly homeJurisdictionId: string;
+  }
+  const explicitRegulationMeta = new Map<string, RegulationMeta>();
+  for (const regId of requestedRegulations) {
+    const reg = await db.getRegulation(regId);
+    if (reg == null) continue; // D-08: unknown regulation → skip silently
+    explicitRegulationMeta.set(regId, {
+      regulationId: reg.id,
+      regulationName: reg.name,
+      shortName: reg.shortName,
+      homeJurisdictionId: reg.jurisdictionId,
+    });
+    // Widen: include home jurisdiction (and its ancestors) so requirement query
+    // reaches this regulation even when caller did not list the jurisdiction.
+    if (!resolvedJurisdictionIds.has(reg.jurisdictionId)) {
+      const ancestors = await resolveJurisdictionHierarchy([reg.jurisdictionId], db);
+      for (const id of ancestors) resolvedJurisdictionIds.add(id);
+    }
+  }
+
   const allJurisdictionIds = [...resolvedJurisdictionIds];
 
   // Step 4: Query requirements for all criteria
@@ -156,10 +191,77 @@ export async function checkCompliance(
   const totalMandatoryViolations = matrixValues.reduce((sum, j) => sum + j.mandatoryViolations, 0);
   const totalOptionalViolations = matrixValues.reduce((sum, j) => sum + j.optionalViolations, 0);
 
-  // Phase 07 placeholder — real regulationMatrix population happens in Task 2.
-  // Response shape now always includes `regulationMatrix` (REG-04: field present,
-  // empty object when no regulations requested or before Task 2 lands).
+  // Step 7b (Phase 07 / REG-03, D-07, D-12): build the regulation matrix for each
+  // EXPLICITLY requested regulation. This is additive — the jurisdiction `matrix`
+  // and `summary` above are unchanged so REG-04 (byte-for-byte backwards compat
+  // for jurisdictions-only callers) holds. Unknown regulation ids were already
+  // dropped in Step 3b; they are simply absent here.
   const regulationMatrix: Record<string, RegulationMatrixEntry> = {};
+  for (const regId of requestedRegulations) {
+    const meta = explicitRegulationMeta.get(regId);
+    if (meta == null) continue; // unknown regulation id — skip
+
+    const regReqs = requirements.filter(r => r.regulationId === regId);
+
+    type VKey = string; // `${criterion}:${obligation}`
+    const violationsMap = new Map<
+      VKey,
+      { wcagCriterion: string; obligation: 'mandatory' | 'recommended' | 'optional'; issueCount: number }
+    >();
+    let mandatory = 0;
+    let recommended = 0;
+    let optional = 0;
+
+    for (const req of regReqs) {
+      for (const parsed of parsedIssues) {
+        if (parsed.criterion === null) continue;
+        if (req.wcagCriterion !== parsed.criterion && req.wcagCriterion !== '*') continue;
+
+        const effectiveCriterion = req.wcagCriterion === '*' ? parsed.criterion : req.wcagCriterion;
+        const obligation = req.obligation;
+        // 'excluded' obligations never count as violations
+        if (obligation === 'excluded') continue;
+        // Respect includeOptional flag (D-12 partial status depends on seeing optionals)
+        if (!includeOptional && obligation === 'optional') continue;
+
+        const key: VKey = `${effectiveCriterion}:${obligation}`;
+        const existing = violationsMap.get(key);
+        if (existing) {
+          existing.issueCount += 1;
+        } else {
+          violationsMap.set(key, {
+            wcagCriterion: effectiveCriterion,
+            obligation,
+            issueCount: 1,
+          });
+        }
+
+        if (obligation === 'mandatory') mandatory += 1;
+        else if (obligation === 'recommended') recommended += 1;
+        else optional += 1;
+      }
+    }
+
+    // D-12 status union: fail (any mandatory) > partial (only recommended/optional) > pass
+    const status: 'pass' | 'fail' | 'partial' =
+      mandatory > 0
+        ? 'fail'
+        : (recommended > 0 || optional > 0)
+          ? 'partial'
+          : 'pass';
+
+    regulationMatrix[regId] = {
+      regulationId: meta.regulationId,
+      regulationName: meta.regulationName,
+      shortName: meta.shortName,
+      jurisdictionId: meta.homeJurisdictionId,
+      status,
+      mandatoryViolations: mandatory,
+      recommendedViolations: recommended,
+      optionalViolations: optional,
+      violatedRequirements: Array.from(violationsMap.values()),
+    };
+  }
 
   return {
     matrix,
