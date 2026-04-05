@@ -28,7 +28,10 @@ export interface DiscoverBrandingResult {
 
 export function parseDiscoverBrandingResponse(text: string): DiscoverBrandingResult {
   try {
-    const parsed = JSON.parse(text) as Record<string, unknown>;
+    const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
+    const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
     const colors = Array.isArray(parsed['colors'])
       ? (parsed['colors'] as unknown[]).filter(
           (c): c is DiscoverBrandingColor =>

@@ -26,7 +26,10 @@ export interface AnalyseReportResult {
 
 export function parseAnalyseReportResponse(text: string): AnalyseReportResult {
   try {
-    const parsed = JSON.parse(text) as Record<string, unknown>;
+    const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
+    const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
     return {
       executiveSummary: typeof parsed['executiveSummary'] === 'string' ? parsed['executiveSummary'] : '',
       keyFindings: Array.isArray(parsed['keyFindings'])
