@@ -61,6 +61,19 @@
 
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
 
+  /* ── AI fix hint: copy button (delegated click) ──────────────────── */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('.rpt-fix-hint__copy-btn');
+    if (!btn) return;
+    var text = btn.getAttribute('data-copy-text') || '';
+    if (!navigator.clipboard) return;
+    navigator.clipboard.writeText(text).then(function () {
+      var original = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function () { btn.textContent = original; }, 1500);
+    });
+  });
+
   /* ── HTMX after-request: close modal / reset form / remove load-more ── */
   /* Replaces all hx-on::after-request inline attributes (blocked by CSP) */
   document.addEventListener('htmx:afterRequest', function (e) {

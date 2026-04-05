@@ -416,10 +416,8 @@ export async function reportRoutes(
           .replace(/"/g, '&quot;');
 
       const copyBtn = (html: string) =>
-        `<button type="button" class="btn btn--sm btn--ghost" aria-label="Copy fix suggestion to clipboard" `
-        + `onclick="(function(btn){navigator.clipboard.writeText(${JSON.stringify(html)}).then(function(){`
-        + `var t=btn.textContent;btn.textContent='Copied!';setTimeout(function(){btn.textContent=t},1500)`
-        + `});})(this)">Copy</button>`;
+        `<button type="button" class="btn btn--sm btn--ghost rpt-fix-hint__copy-btn" aria-label="Copy fix suggestion to clipboard" `
+        + `data-copy-text="${esc(html)}">Copy</button>`;
 
       // Try LLM first
       let llmFailed = false;
