@@ -428,7 +428,8 @@ describe('Phase 06 P05 — end-to-end save → reload → GET flow', () => {
       const url = typeof input === 'string' ? input : (input as URL).toString();
       if (url.endsWith('/oauth/token')) {
         const body = (init?.body as string | undefined) ?? '';
-        expect(body).toContain('client_secret=stored-plain-secret');
+        // JSON body format (services don't register @fastify/formbody).
+        expect(body).toContain('"client_secret":"stored-plain-secret"');
         return new Response(
           JSON.stringify({ access_token: 'tok', expires_in: 3600 }),
           { status: 200 },

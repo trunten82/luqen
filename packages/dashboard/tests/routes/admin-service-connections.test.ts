@@ -362,8 +362,10 @@ describe('POST /admin/service-connections/:id/test', () => {
       const url = typeof input === 'string' ? input : (input as URL).toString();
       if (url.endsWith('/oauth/token')) {
         const body = (init?.body as string | undefined) ?? '';
-        // The stored plaintext secret should be the value POSTed to /oauth/token
-        expect(body).toContain('client_secret=stored-plain-secret');
+        // The stored plaintext secret should be the value POSTed to /oauth/token.
+        // Luqen services only accept JSON (no @fastify/formbody), so the body
+        // is serialized as `{"client_secret":"stored-plain-secret",...}`.
+        expect(body).toContain('"client_secret":"stored-plain-secret"');
         return new Response(JSON.stringify({ access_token: 'tok', expires_in: 3600 }), { status: 200 });
       }
       return new Response('ok', { status: 200 });

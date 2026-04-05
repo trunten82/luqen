@@ -40,17 +40,20 @@ export async function testServiceConnection(
   const startedAt = Date.now();
 
   // ── Step 1: OAuth2 client_credentials token fetch ─────────────────────────
+  // NOTE: Luqen services only accept JSON for /api/v1/oauth/token — they do
+  // not register @fastify/formbody, so x-www-form-urlencoded returns 415.
+  // Matches the existing ServiceTokenManager convention in auth/service-token.ts.
   let accessToken: string;
   try {
-    const body =
-      'grant_type=client_credentials' +
-      `&client_id=${encodeURIComponent(clientId)}` +
-      `&client_secret=${encodeURIComponent(clientSecret)}`;
-
     const tokenResponse = await fetch(`${baseUrl}/api/v1/oauth/token`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'client_credentials',
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: 'admin',
+      }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
 
