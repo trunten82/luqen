@@ -381,6 +381,45 @@ describe('Export API routes', () => {
       expect(response.headers['content-disposition']).toContain('.xlsx');
     });
 
+    it('includes a Summary sheet exposing scan jurisdictions and regulations (REG-06)', async () => {
+      const id = await makeCompletedScan(ctx, 'https://example.com', {
+        jurisdictions: ['EU', 'UK'],
+        regulations: ['EAA', 'IT-STANCA'],
+      });
+      const report = makeSampleReport();
+      await ctx.storage.scans.updateScan(id, { jsonReport: JSON.stringify(report) });
+
+      const response = await ctx.server.inject({
+        method: 'GET',
+        url: `/api/v1/export/scans/${id}/issues.xlsx`,
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      // Load the workbook and verify both sheets exist with the expected content
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(response.rawPayload);
+      const sheetNames = wb.worksheets.map((s) => s.name);
+      expect(sheetNames).toContain('Summary');
+      expect(sheetNames).toContain('Issues');
+
+      const summary = wb.getWorksheet('Summary');
+      expect(summary).toBeDefined();
+      // Flatten into a field→value map
+      const metaMap = new Map<string, string>();
+      summary!.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+        if (rowNumber === 1) return; // header row
+        metaMap.set(
+          String(row.getCell(1).value ?? ''),
+          String(row.getCell(2).value ?? ''),
+        );
+      });
+      expect(metaMap.get('Jurisdictions')).toBe('EU; UK');
+      expect(metaMap.get('Regulations')).toBe('EAA; IT-STANCA');
+      expect(metaMap.get('Site URL')).toBe('https://example.com');
+      expect(metaMap.get('Standard')).toBe('WCAG2AA');
+    });
+
     it('reads report from JSON file when DB report is null', async () => {
       const reportPath = join(ctx.reportsDir, `report-${randomUUID()}.json`);
       const report = makeSampleReport();

@@ -308,6 +308,43 @@ export async function exportRoutes(
       const wb = new ExcelJS.Workbook();
       wb.creator = 'Luqen';
       wb.created = new Date();
+
+      // ── Sheet 1: Summary — scan-level metadata (REG-06 surfaces selection) ──
+      // Developers opening the workbook land here first and see which
+      // jurisdictions/regulations the scan was run against, plus totals. The
+      // Issues sheet remains a clean grid for filtering and sorting.
+      const summary = wb.addWorksheet('Summary');
+      summary.columns = [
+        { header: 'Field', key: 'field', width: 24 },
+        { header: 'Value', key: 'value', width: 60 },
+      ];
+      const summaryHeaderRow = summary.getRow(1);
+      summaryHeaderRow.font = { bold: true, size: 10 };
+      summaryHeaderRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF5F6FA' },
+      };
+      const summaryRows: Array<[string, string]> = [
+        ['Site URL', scan.siteUrl],
+        ['Standard', scan.standard],
+        ['Status', scan.status],
+        ['Jurisdictions', (scan.jurisdictions ?? []).join('; ')],
+        ['Regulations', (scan.regulations ?? []).join('; ')],
+        ['Created At', scan.createdAt],
+        ['Completed At', scan.completedAt ?? ''],
+        ['Pages Scanned', String(scan.pagesScanned ?? 0)],
+        ['Total Issues', String(scan.totalIssues ?? 0)],
+        ['Errors', String(scan.errors ?? 0)],
+        ['Warnings', String(scan.warnings ?? 0)],
+        ['Notices', String(scan.notices ?? 0)],
+        ['Confirmed Violations', String(scan.confirmedViolations ?? 0)],
+      ];
+      for (const [field, value] of summaryRows) {
+        const row = summary.addRow([field, value]);
+        row.getCell(1).font = { bold: true };
+      }
+
       const ws = wb.addWorksheet('Issues');
       ws.columns = headers.map((h, i) => ({
         header: h,
