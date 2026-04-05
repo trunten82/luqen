@@ -24,6 +24,7 @@ import { sourceRoutes } from './routes/admin/sources.js';
 import { webhookRoutes } from './routes/admin/webhooks.js';
 import { userRoutes } from './routes/admin/users.js';
 import { clientRoutes } from './routes/admin/clients.js';
+import { registerServiceConnectionsRoutes } from './routes/admin/service-connections.js';
 import { systemRoutes } from './routes/admin/system.js';
 import { monitorRoutes } from './routes/admin/monitor.js';
 import { pluginAdminRoutes } from './routes/admin/plugins.js';
@@ -685,6 +686,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
   await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, getBrandingTokenManager, getLLMClient);
+  await registerServiceConnectionsRoutes(server, storage, config);
   await monitorRoutes(server, config.complianceUrl);
   await systemRoutes(server, {
     complianceUrl: config.complianceUrl,
