@@ -61,54 +61,57 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                              luqen monorepo                                  │
 │                                                                              │
-│  ┌─────────────────────────────┐  ┌────────────────────────────────────────┐ │
-│  │   @luqen/dashboard (5000)   │  │   Plugin Catalogue                     │ │
-│  │                             │  │   (GitHub: luqen-plugins)              │ │
-│  │  Web UI + REST API          │◄─┤                                        │ │
-│  │  ─ start scans              │  │  catalogue.json                        │ │
-│  │  ─ view reports             │  │  11 plugin tarballs (.tgz)             │ │
-│  │  ─ brand filter in reports  │  └────────────────────────────────────────┘ │
-│  │  ─ manage plugins           │                                             │
-│  │  ─ team & role admin        │  ┌────────────────────────────────────────┐ │
-│  │  ─ HTMX, no JS build step   │  │   Plugins (installed)                  │ │
-│  │                             │  │  auth:    entra, okta, google          │ │
-│  │  StorageAdapter (14 repos)  │◄─┤  notify:  slack, teams, email          │ │
-│  │  SQLite (built-in)          │  │  storage: s3, azure                    │ │
-│  └──┬──────────┬──────────┬────┘  └────────────────────────────────────────┘ │
-│     │OAuth2    │OAuth2    │OAuth2                                             │
-│     ▼          ▼          ▼                                                   │
-│  ┌──────────┐ ┌──────────────────┐  ┌─────────────────────────────────────┐  │
-│  │ @luqen/  │ │ @luqen/compliance│  │  @luqen/llm  (port 4200)            │  │
-│  │ branding │ │ (port 4000)      │  │                                     │  │
-│  │ (4100)   │ │                  │  │  ─ providers (Ollama, OpenAI, ...)  │  │
-│  │          │ │ ─ 58 jurisdic.   │  │  ─ model registry                  │  │
-│  │  ─ brand │ │ ─ 62 regulations │  │  ─ capability-based routing        │  │
-│  │   match  │ │ ─ 225 criteria   │  │  ─ retry / fallback chains         │  │
-│  │  ─ image │ │ ─ source intel   │  │  ─ per-org prompt overrides        │  │
-│  │   upload │ │   W3cPolicyParser│  │  ─ OAuth2 / RS256 JWT auth         │  │
-│  │  ─ retag │ │   WcagUpstream   │  │                                     │  │
-│  │  ─ SQLite│ │   LLM routing ───┼──►  capabilities:                     │  │
-│  │  ─ OAuth2│ │ ─ OAuth2 / JWT   │  │   extract-requirements             │  │
-│  └──────────┘ └────────┬─────────┘  │   generate-fix                     │  │
-│                        │            │   analyse-report                    │  │
-│                        │ uses as    │   discover-branding                 │  │
-│                        │ library    └─────────────────────────────────────┘  │
-│                        ▼                                                     │
-│  ┌────────────────────────────────────────────────────────────────────────┐  │
-│  │   @luqen/core                          CLI + MCP server                │  │
-│  │  ─ site scan & crawl                   ─ source mapping                │  │
-│  │  ─ fix proposals                       ─ HTML/JSON reports             │  │
-│  │  ─ pa11y (built-in)                                                    │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│  ┌───────────────────────────────┐  ┌──────────────────────────────────────┐ │
-│  │  @luqen/monitor               │  │  External sources                    │ │
-│  │  ─ watches legal sources      │  │  W3C WAI policies                    │ │
-│  │  ─ creates update proposals   │  │  W3C WCAG upstream                   │ │
-│  │  ─ SHA-256 change detection   │  │  tenon-io (community)                │ │
-│  └───────────────────────────────┘  └──────────────────────────────────────┘ │
+│  ┌──────────────────────────────────┐  ┌─────────────────────────────────┐   │
+│  │   @luqen/dashboard (port 5000)   │  │  Plugin Catalogue               │   │
+│  │                                  │  │  (GitHub: luqen-plugins)        │   │
+│  │  Web UI + REST API + GraphQL     │◄─┤                                 │   │
+│  │  ─ start scans                   │  │  catalogue.json                 │   │
+│  │  ─ view reports                  │  │  11 plugin tarballs (.tgz)      │   │
+│  │  ─ AI fix suggestions per issue  │  └─────────────────────────────────┘   │
+│  │  ─ AI report summary + patterns  │                                        │
+│  │  ─ AI brand discovery from URL   │  ┌─────────────────────────────────┐   │
+│  │  ─ brand filter in reports       │  │  Plugins (installed)            │   │
+│  │  ─ manage plugins, teams, roles  │◄─┤  auth:    entra, okta, google   │   │
+│  │  ─ HTMX, no JS build step        │  │  notify:  slack, teams, email   │   │
+│  │                                  │  │  storage: s3, azure             │   │
+│  │  StorageAdapter (14 repos)       │  └─────────────────────────────────┘   │
+│  │  SQLite (built-in)               │                                        │
+│  └───┬──────┬──────┬──────┬─────────┘                                        │
+│      │OAuth2│OAuth2│OAuth2│OAuth2                                            │
+│      ▼      ▼      ▼      ▼                                                  │
+│  ┌────────┐ ┌──────────┐ ┌──────────────┐ ┌──────────────────────────────┐   │
+│  │ @luqen │ │  @luqen  │ │    @luqen    │ │       @luqen/llm             │   │
+│  │/monitor│ │ /branding│ │  /compliance │ │        (port 4200)           │   │
+│  │        │ │ (4100)   │ │   (port 4000)│ │                              │   │
+│  │─watches│ │          │ │              │ │ ─ providers (Ollama,OpenAI…) │   │
+│  │ legal  │ │─brand    │ │─58 jurisdict.│ │ ─ model registry             │   │
+│  │ sources│ │ match    │ │─62 regulat.  │ │ ─ capability routing         │   │
+│  │─SHA256 │ │─image    │ │─225 criteria │ │ ─ retry / fallback chains    │   │
+│  │ change │ │ upload   │ │─source intel │ │ ─ per-org prompt overrides   │   │
+│  │ detect │ │─retag    │ │ W3cPolicy    │ │ ─ OAuth2 / RS256 JWT         │   │
+│  │─update │ │─OAuth2   │ │ WcagUpstream │ │                              │   │
+│  │ propos.│ │─SQLite   │ │─LLM routing ─┼─┼─► capabilities:              │   │
+│  └────────┘ └──────────┘ │─OAuth2 / JWT │ │   • extract-requirements     │   │
+│                          └──────────────┘ │   • generate-fix             │   │
+│                                           │   • analyse-report           │   │
+│  ┌────────────────────────────────────┐   │   • discover-branding        │   │
+│  │ @luqen/core                        │   └──────────────────────────────┘   │
+│  │  ─ site scan & crawl               │                                      │
+│  │  ─ fix proposals                   │   ┌──────────────────────────────┐   │
+│  │  ─ pa11y (built-in)                │   │ External sources             │   │
+│  │  ─ HTML/JSON reports               │   │  W3C WAI policies            │   │
+│  │  CLI + MCP server                  │   │  W3C WCAG upstream           │   │
+│  └────────────────────────────────────┘   │  tenon-io (community)        │   │
+│                                           └──────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Service-to-service flow:**
+- Dashboard → Compliance: fetch jurisdictions/regulations, check scan results against obligations
+- Dashboard → Branding: store brand guidelines, retag historical scans when guidelines change
+- Dashboard → LLM: request AI fix suggestions, report summaries, and brand discovery
+- Compliance → LLM: route regulation extraction through LLM capability chains (embedded as library, not over HTTP)
+- All service-to-service calls use OAuth2 client credentials with RS256 JWT tokens
 
 ---
 
@@ -223,7 +226,7 @@ systemctl disable luqen-dashboard luqen-llm luqen-branding luqen-compliance
 | [`@luqen/compliance`](packages/compliance) | Compliance rule engine, REST API, MCP server, source intelligence pipeline | [docs/reference/compliance-config.md](docs/reference/compliance-config.md) |
 | [`@luqen/branding`](packages/branding) | Brand guideline matching service — color, font, selector matching; image upload; scan retag | [docs/branding/README.md](docs/branding/README.md) |
 | [`@luqen/dashboard`](packages/dashboard) | Web dashboard — scan management, report browser, brand filter, admin UI | [docs/reference/dashboard-config.md](docs/reference/dashboard-config.md) |
-| [`@luqen/llm`](packages/llm) | LLM provider management service (port 4200) — provider registration, model management, capability-based routing with fallback chains | [packages/llm/README.md](packages/llm/README.md) |
+| [`@luqen/llm`](packages/llm) | LLM microservice (port 4200) — provider management (Ollama, OpenAI, any OpenAI-compatible endpoint), model registry, capability-based routing with retry/fallback chains, per-org prompt overrides, OAuth2/RS256 JWT auth. Capabilities: `extract-requirements` (regulation parsing), `generate-fix` (AI WCAG fix suggestions per issue), `analyse-report` (AI executive summary + recurring pattern detection across scan history), `discover-branding` (deterministic CSS extraction + LLM-curated brand colors/fonts/logo/description from any URL) | [packages/llm/README.md](packages/llm/README.md) |
 | [`@luqen/monitor`](packages/monitor) | Regulatory monitor agent — watches legal sources, creates update proposals | [docs/reference/monitor-config.md](docs/reference/monitor-config.md) |
 
 ### Plugins (11 available)
@@ -337,7 +340,16 @@ Add the credentials to `dashboard.config.json` to enable the LLM admin page:
 }
 ```
 
-The LLM service manages four capabilities: `extract-requirements`, `generate-fix`, `analyse-report`, and `discover-branding`. Each capability can have multiple models assigned at different priority levels — the service tries each model in priority order and falls through to the next on failure or timeout.
+The LLM service manages four capabilities. Each can have multiple models assigned at different priority levels — the service tries each model in priority order and falls through to the next on failure or timeout.
+
+| Capability | Endpoint | What it does |
+|------------|----------|--------------|
+| `extract-requirements` | `POST /api/v1/extract-requirements` | Parses regulation documents into structured WCAG criteria with obligation levels |
+| `generate-fix` | `POST /api/v1/generate-fix` | Generates AI fix suggestions for individual WCAG issues — returns fixed HTML snippet, plain-English explanation, and effort level. Dashboard shows these on report detail pages with hardcoded pattern fallback |
+| `analyse-report` | `POST /api/v1/analyse-report` | Produces an executive summary, key findings, and prioritised recommendations for a scan. Detects recurring patterns across scan history for the same site |
+| `discover-branding` | `POST /api/v1/discover-branding` | Takes a URL and returns colors, fonts, logo URL, brand name, and description. Uses deterministic CSS/HTML extraction (top hex colors by frequency, font families, logo img tags, meta tags) as ground truth, then calls the LLM only to curate and name the results. Gracefully falls back to deterministic-only output if LLM fails |
+
+All capabilities support per-org prompt overrides via the **Admin → LLM → Prompts** tab. All AI-generated content is marked with a disclaimer in the dashboard UI.
 
 For guided setup, run `bash packages/llm/installer/install-llm.sh` from the project root — it configures JWT keys, an OAuth client, provider registration, and capability assignments interactively.
 
