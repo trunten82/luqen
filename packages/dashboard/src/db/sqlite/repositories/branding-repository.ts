@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { BrandingRepository } from '../../interfaces/branding-repository.js';
 import type {
@@ -21,6 +22,7 @@ interface GuidelineRow {
   updated_at: string;
   site_count?: number;
   image_path: string | null;
+  cloned_from_system_guideline_id: string | null;
 }
 
 interface ColorRow {
@@ -65,6 +67,7 @@ function guidelineRowToRecord(row: GuidelineRow): BrandingGuidelineRecord {
     ...(row.created_by !== null ? { createdBy: row.created_by } : {}),
     ...(row.site_count !== undefined ? { siteCount: row.site_count } : {}),
     ...(row.image_path !== null ? { imagePath: row.image_path } : {}),
+    clonedFromSystemGuidelineId: row.cloned_from_system_guideline_id ?? null,
   };
 }
 
@@ -190,6 +193,189 @@ export class SqliteBrandingRepository implements BrandingRepository {
     `).all() as GuidelineRow[];
 
     return rows.map(guidelineRowToRecord);
+  }
+
+  // -------------------------------------------------------------------------
+  // System brand guidelines (08-P01)
+  // -------------------------------------------------------------------------
+
+  async listSystemGuidelines(): Promise<readonly BrandingGuidelineRecord[]> {
+    const rows = this.db.prepare(`
+      SELECT g.*, (SELECT COUNT(*) FROM site_branding sb WHERE sb.guideline_id = g.id) AS site_count
+      FROM branding_guidelines g
+      WHERE g.org_id = 'system'
+      ORDER BY g.name ASC
+    `).all() as GuidelineRow[];
+
+    return Promise.all(
+      rows.map(async (row) => ({
+        ...guidelineRowToRecord(row),
+        colors: await this.listColors(row.id),
+        fonts: await this.listFonts(row.id),
+        selectors: await this.listSelectors(row.id),
+      })),
+    );
+  }
+
+  async cloneSystemGuideline(
+    sourceId: string,
+    targetOrgId: string,
+    overrides?: { name?: string },
+  ): Promise<BrandingGuidelineRecord> {
+    const source = await this.getGuideline(sourceId);
+    if (source === null) {
+      throw new Error(`Source guideline ${sourceId} not found`);
+    }
+    if (source.orgId !== 'system') {
+      throw new Error(
+        `Cannot clone non-system guideline ${sourceId} (org_id=${source.orgId})`,
+      );
+    }
+
+    const newId = randomUUID();
+    const cloneName = overrides?.name ?? `${source.name} (cloned)`;
+    const now = new Date().toISOString();
+
+    const insertGuideline = this.db.prepare(`
+      INSERT INTO branding_guidelines (
+        id, org_id, name, description, created_by, created_at, updated_at,
+        cloned_from_system_guideline_id
+      ) VALUES (
+        @id, @orgId, @name, @description, @createdBy, @createdAt, @updatedAt,
+        @clonedFromSystemGuidelineId
+      )
+    `);
+
+    const insertColor = this.db.prepare(`
+      INSERT INTO branding_colors (id, guideline_id, name, hex_value, usage, context)
+      VALUES (@id, @guidelineId, @name, @hexValue, @usage, @context)
+    `);
+
+    const insertFont = this.db.prepare(`
+      INSERT INTO branding_fonts (id, guideline_id, family, weights, usage, context)
+      VALUES (@id, @guidelineId, @family, @weights, @usage, @context)
+    `);
+
+    const insertSelector = this.db.prepare(`
+      INSERT INTO branding_selectors (id, guideline_id, pattern, description)
+      VALUES (@id, @guidelineId, @pattern, @description)
+    `);
+
+    // Snapshot the source children so the transaction body is synchronous
+    // (better-sqlite3 transactions cannot span async boundaries).
+    const sourceColors = source.colors ?? [];
+    const sourceFonts = source.fonts ?? [];
+    const sourceSelectors = source.selectors ?? [];
+
+    const clonedColors: Array<{
+      id: string;
+      guidelineId: string;
+      name: string;
+      hexValue: string;
+      usage?: string;
+      context?: string;
+    }> = [];
+    const clonedFonts: Array<{
+      id: string;
+      guidelineId: string;
+      family: string;
+      weights?: readonly string[];
+      usage?: string;
+      context?: string;
+    }> = [];
+    const clonedSelectors: Array<{
+      id: string;
+      guidelineId: string;
+      pattern: string;
+      description?: string;
+    }> = [];
+
+    const runClone = this.db.transaction(() => {
+      insertGuideline.run({
+        id: newId,
+        orgId: targetOrgId,
+        name: cloneName,
+        description: source.description ?? null,
+        createdBy: source.createdBy ?? null,
+        createdAt: now,
+        updatedAt: now,
+        clonedFromSystemGuidelineId: sourceId,
+      });
+
+      for (const c of sourceColors) {
+        const childId = randomUUID();
+        insertColor.run({
+          id: childId,
+          guidelineId: newId,
+          name: c.name,
+          hexValue: c.hexValue,
+          usage: c.usage ?? null,
+          context: c.context ?? null,
+        });
+        clonedColors.push({
+          id: childId,
+          guidelineId: newId,
+          name: c.name,
+          hexValue: c.hexValue,
+          ...(c.usage !== undefined ? { usage: c.usage } : {}),
+          ...(c.context !== undefined ? { context: c.context } : {}),
+        });
+      }
+
+      for (const f of sourceFonts) {
+        const childId = randomUUID();
+        insertFont.run({
+          id: childId,
+          guidelineId: newId,
+          family: f.family,
+          weights: f.weights !== undefined ? JSON.stringify(f.weights) : null,
+          usage: f.usage ?? null,
+          context: f.context ?? null,
+        });
+        clonedFonts.push({
+          id: childId,
+          guidelineId: newId,
+          family: f.family,
+          ...(f.weights !== undefined ? { weights: f.weights } : {}),
+          ...(f.usage !== undefined ? { usage: f.usage } : {}),
+          ...(f.context !== undefined ? { context: f.context } : {}),
+        });
+      }
+
+      for (const s of sourceSelectors) {
+        const childId = randomUUID();
+        insertSelector.run({
+          id: childId,
+          guidelineId: newId,
+          pattern: s.pattern,
+          description: s.description ?? null,
+        });
+        clonedSelectors.push({
+          id: childId,
+          guidelineId: newId,
+          pattern: s.pattern,
+          ...(s.description !== undefined ? { description: s.description } : {}),
+        });
+      }
+    });
+
+    runClone();
+
+    return {
+      id: newId,
+      orgId: targetOrgId,
+      name: cloneName,
+      version: 1,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+      ...(source.description !== undefined ? { description: source.description } : {}),
+      ...(source.createdBy !== undefined ? { createdBy: source.createdBy } : {}),
+      clonedFromSystemGuidelineId: sourceId,
+      colors: clonedColors,
+      fonts: clonedFonts,
+      selectors: clonedSelectors,
+    };
   }
 
   async updateGuideline(id: string, data: BrandingGuidelineUpdateData): Promise<BrandingGuidelineRecord> {

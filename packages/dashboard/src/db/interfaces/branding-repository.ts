@@ -8,6 +8,24 @@ export interface BrandingRepository {
   getGuideline(id: string): Promise<BrandingGuidelineRecord | null>;
   listGuidelines(orgId: string): Promise<readonly BrandingGuidelineRecord[]>;
   listAllGuidelines(): Promise<readonly BrandingGuidelineRecord[]>;
+  /**
+   * List all guidelines with `org_id = 'system'` — the System Library shown
+   * on the dashboard admin page and the org-scoped System Library tab.
+   * Added in 08-P01 (migration 040).
+   */
+  listSystemGuidelines(): Promise<readonly BrandingGuidelineRecord[]>;
+  /**
+   * Clone a system-scoped guideline (and its colors/fonts/selectors) into
+   * `targetOrgId` as an independent, editable row. The clone's
+   * `clonedFromSystemGuidelineId` is set to the source id. Throws if the
+   * source does not exist or is not org_id='system'.
+   * Added in 08-P01 (migration 040).
+   */
+  cloneSystemGuideline(
+    sourceId: string,
+    targetOrgId: string,
+    overrides?: { name?: string },
+  ): Promise<BrandingGuidelineRecord>;
   updateGuideline(id: string, data: BrandingGuidelineUpdateData): Promise<BrandingGuidelineRecord>;
   deleteGuideline(id: string): Promise<void>;
 
