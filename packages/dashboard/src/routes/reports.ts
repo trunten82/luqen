@@ -417,6 +417,7 @@ export async function reportRoutes(
         + `});})(this)">Copy</button>`;
 
       // Try LLM first
+      let llmFailed = false;
       if (llmClient) {
         try {
           const orgId = request.user?.currentOrgId ?? undefined;
@@ -439,21 +440,24 @@ export async function reportRoutes(
             return reply.header('content-type', 'text/html').send(html);
           }
         } catch {
-          // LLM unavailable or errored — fall through to hardcoded pattern
+          llmFailed = true;
         }
       }
 
       // Fallback: hardcoded pattern from fix-suggestions.ts
       const fix = getFixSuggestion(criterion, message);
       if (fix) {
+        const unavailableNote = (!llmClient || llmFailed)
+          ? `<p class="rpt-fix-hint__desc text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-xs);">`
+            + `AI fix suggestions are unavailable. Showing a pattern-based suggestion.</p>`
+          : '';
         const html =
           `<pre class="rpt-fix-hint__code"><code>${esc(fix.codeExample)}</code></pre>`
           + `<p class="rpt-fix-hint__desc">${esc(fix.description)}</p>`
           + `<div class="rpt-fix-hint__actions">`
           + `<span class="rpt-fix-hint__source rpt-fix-hint__source--pattern">Pattern-based suggestion</span>`
           + `</div>`
-          + `<p class="rpt-fix-hint__desc text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-xs);">`
-          + `AI fix suggestions are unavailable. Showing a pattern-based suggestion.</p>`;
+          + unavailableNote;
         return reply.header('content-type', 'text/html').send(html);
       }
 
