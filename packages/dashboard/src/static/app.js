@@ -61,6 +61,14 @@
 
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
 
+  /* ── HTMX: swap error responses (4xx/5xx) so toast messages show ─── */
+  document.addEventListener('htmx:beforeSwap', function (e) {
+    if (e.detail.xhr && e.detail.xhr.status >= 400 && e.detail.xhr.status < 600) {
+      e.detail.shouldSwap = true;
+      e.detail.isError = false;
+    }
+  });
+
   /* ── AI fix hint: copy button (delegated click) ──────────────────── */
   document.addEventListener('click', function (e) {
     var btn = e.target.closest && e.target.closest('.rpt-fix-hint__copy-btn');
