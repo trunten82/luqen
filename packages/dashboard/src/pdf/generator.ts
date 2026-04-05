@@ -51,7 +51,27 @@ export interface PdfScanMeta {
   readonly siteUrl: string;
   readonly standard: string;
   readonly jurisdictions: string;
+  readonly regulations?: string;
   readonly createdAtDisplay: string;
+}
+
+// ---------------------------------------------------------------------------
+// Subtitle formatter (exported for testing — pure, no PDF context)
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the subtitle string for the PDF header. Jurisdictions and regulations
+ * segments are omitted when empty, mirroring the existing pattern used for the
+ * Jurisdictions segment (D-28 freeze — the Jurisdictions portion is byte-identical
+ * to its pre-Phase-07 form).
+ */
+export function formatSubtitle(scan: PdfScanMeta): string {
+  return (
+    `${scan.siteUrl}    ${formatStandard(scan.standard)}` +
+    (scan.jurisdictions ? `    ${scan.jurisdictions}` : '') +
+    (scan.regulations ? `    Regulations: ${scan.regulations}` : '') +
+    `    ${scan.createdAtDisplay}`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -124,12 +144,7 @@ export async function generatePdfFromData(
 
       // ── Subtitle ──
       doc.fontSize(9).fillColor(MUTED).font('Helvetica')
-        .text(
-          `${scan.siteUrl}    ${formatStandard(scan.standard)}` +
-          (scan.jurisdictions ? `    ${scan.jurisdictions}` : '') +
-          `    ${scan.createdAtDisplay}`,
-          { lineGap: 6 },
-        );
+        .text(formatSubtitle(scan), { lineGap: 6 });
 
       doc.moveDown(0.5);
 
