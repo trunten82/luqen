@@ -543,18 +543,24 @@
 
 </div>
 
-{{#if llmEnabled}}
 <div class="rpt-tab-panel rpt-tab-panel--hidden" id="panel-ai-summary" role="tabpanel" aria-labelledby="tab-ai-summary"
+  {{#if llmEnabled}}
   hx-get="/reports/{{scan.id}}/ai-summary"
   hx-trigger="revealed"
-  hx-swap="innerHTML">
+  hx-swap="innerHTML"
+  {{/if}}>
+  {{#if llmEnabled}}
   <div class="rpt-ai-summary__loading">
     <div class="skeleton" style="height:1rem;margin-bottom:var(--space-sm);"></div>
     <div class="skeleton" style="height:1rem;margin-bottom:var(--space-sm);width:80%;"></div>
     <div class="skeleton" style="height:4rem;"></div>
   </div>
+  {{else}}
+  <div class="rpt-ai-summary rpt-ai-summary--unavailable">
+    <p class="rpt-ai-summary__body">{{t "reportDetail.aiSummaryUnavailable"}}</p>
+  </div>
+  {{/if}}
 </div>
-{{/if}}
 
 {{else}}
 
