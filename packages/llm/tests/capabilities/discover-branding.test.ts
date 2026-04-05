@@ -246,15 +246,22 @@ describe('parseDiscoverBrandingResponse', () => {
 });
 
 describe('buildDiscoverBrandingPrompt', () => {
-  it('includes the url, htmlContent, and cssContent in the returned string', () => {
+  it('includes the url, htmlContent, and pre-extracted data in the returned string', () => {
     const prompt = buildDiscoverBrandingPrompt({
       url: 'https://example.com',
-      htmlContent: '<html><head><title>Test</title></head><body></body></html>',
-      cssContent: ':root { --color-primary: #ff6600; }',
+      htmlContent: '<title>Test</title>',
+      cssContent: '',
+      topColors: [{ hex: '#ff6600', count: 12 }],
+      fontFamilies: ['Inter'],
+      logoCandidates: ['https://example.com/logo.svg'],
+      brandHint: 'example',
     });
 
     expect(prompt).toContain('https://example.com');
-    expect(prompt).toContain('<html><head><title>Test</title></head>');
-    expect(prompt).toContain('--color-primary: #ff6600');
+    expect(prompt).toContain('<title>Test</title>');
+    expect(prompt).toContain('#ff6600');
+    expect(prompt).toContain('Inter');
+    expect(prompt).toContain('https://example.com/logo.svg');
+    expect(prompt).toContain('example');
   });
 });

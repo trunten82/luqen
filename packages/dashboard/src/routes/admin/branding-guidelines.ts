@@ -457,6 +457,15 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           });
         }
 
+        // Update the guideline description if the LLM extracted one
+        if (result.description && result.description.trim().length > 0) {
+          try {
+            await storage.branding.updateGuideline(id, { description: result.description.trim() });
+          } catch {
+            // non-fatal
+          }
+        }
+
         // Download and save the logo if one was detected
         let logoSaved = false;
         if (result.logoUrl && /^https?:\/\//i.test(result.logoUrl)) {

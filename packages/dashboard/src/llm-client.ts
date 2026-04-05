@@ -321,12 +321,14 @@ export class LLMClient {
     fonts: Array<{ family: string; usage?: string }>;
     logoUrl: string;
     brandName: string;
+    description: string;
   }> {
     return this.apiFetch<{
       colors: Array<{ name: string; hex: string; usage?: string }>;
       fonts: Array<{ family: string; usage?: string }>;
       logoUrl: string;
       brandName: string;
+      description: string;
     }>(`${this.baseUrl}/api/v1/discover-branding`, {
       method: 'POST',
       body: JSON.stringify(input),
