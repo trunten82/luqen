@@ -219,6 +219,9 @@ describe('report-detail.hbs — rptSwitchTab scoping (bug: tab switch hides subp
 
     // Must guard against non-panel- IDs (subpanel-*, etc.) before toggling --hidden
     expect(fnSrc).toMatch(/p\.id[^]*startsWith\(['"]panel-['"]\)|p\.id[^]*indexOf\(['"]panel-['"]\)\s*===\s*0/);
+    // Same guard for tab buttons so sub-tab (subtab-*) highlight survives
+    // top-level tab switches
+    expect(fnSrc).toMatch(/t\.id[^]*startsWith\(['"]tab-['"]\)|t\.id[^]*indexOf\(['"]tab-['"]\)\s*===\s*0/);
   });
 });
 
