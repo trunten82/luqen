@@ -264,27 +264,106 @@ async function extractBrandSignals(url: string): Promise<BrandSignals> {
   const inlineStyleContent = (rawHtml.match(/style=["'][^"']*["']/gi) ?? []).join('\n');
   const combinedColorSource = allCss + '\n' + inlineStyleContent;
 
-  // Count hex colors (6-digit and 3-digit)
-  const hexPattern = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g;
+  // Weighted color counting.
+  //
+  // Problem: sites that share a CMS theme (e.g. Campari Group's WordPress theme
+  // used across Aperol, Campari, Crodino) contain multiple sister-brand palettes
+  // in the same stylesheet. Pure frequency picks the theme-wide dominant color,
+  // not the current brand's color.
+  //
+  // Solution: give design-token declarations (`--name: #hex`) and inline <style>
+  // blocks heavier weight than generic CSS rules. Design tokens ARE the brand
+  // palette by definition; inline styles are page-authored and brand-specific.
+  //
+  // Weights:
+  //   ×  1 — color appears in an external stylesheet rule
+  //   ×  3 — color appears in the page's inline <style> block
+  //   × 10 — color appears as a CSS custom property value (--token: #hex)
+  //   × 25 — color appears in a brand-named context: a selector, class, id,
+  //          variable name, or comment containing the brand hint
+  //          (e.g. --aperol-orange, .campari-red, /* Aperol primary */).
+  //          Strongest signal — name-based association beats frequency alone.
+  const BRAND_NAME_WEIGHT = 25;
+  const VAR_WEIGHT = 10;
+  const INLINE_WEIGHT = 3;
+  const BASE_WEIGHT = 1;
+
   const colorCounts = new Map<string, number>();
-  const hexMatches = combinedColorSource.match(hexPattern) ?? [];
-  for (const raw of hexMatches) {
-    const hex = normalizeHex(raw);
-    if (isNeutralColor(hex)) continue;
-    colorCounts.set(hex, (colorCounts.get(hex) ?? 0) + 1);
+  const addColorHit = (hex: string, weight: number): void => {
+    if (isNeutralColor(hex)) return;
+    colorCounts.set(hex, (colorCounts.get(hex) ?? 0) + weight);
+  };
+
+  const hexPattern = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g;
+  const rgbPattern = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/g;
+  const varDeclPattern = /--[a-z0-9-]+\s*:\s*(#[0-9a-fA-F]{3,6}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+[^)]*\))/gi;
+
+  const rgbMatchToHex = (rgb: string): string | null => {
+    const m = rgb.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (!m) return null;
+    const r = parseInt(m[1], 10);
+    const g = parseInt(m[2], 10);
+    const b = parseInt(m[3], 10);
+    if (r > 255 || g > 255 || b > 255) return null;
+    return '#' + [r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('');
+  };
+
+  // Pass 1 — base weight across all CSS sources.
+  for (const raw of combinedColorSource.match(hexPattern) ?? []) {
+    addColorHit(normalizeHex(raw), BASE_WEIGHT);
+  }
+  for (const rgbMatch of combinedColorSource.matchAll(rgbPattern)) {
+    const hex = rgbMatchToHex(rgbMatch[0]);
+    if (hex) addColorHit(hex, BASE_WEIGHT);
   }
 
-  // Convert rgb()/rgba() to hex
-  const rgbPattern = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/g;
-  const rgbMatches = combinedColorSource.matchAll(rgbPattern);
-  for (const rgbMatch of rgbMatches) {
-    const r = parseInt(rgbMatch[1], 10);
-    const g = parseInt(rgbMatch[2], 10);
-    const b = parseInt(rgbMatch[3], 10);
-    if (r > 255 || g > 255 || b > 255) continue;
-    const hex = '#' + [r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('');
-    if (isNeutralColor(hex)) continue;
-    colorCounts.set(hex, (colorCounts.get(hex) ?? 0) + 1);
+  // Pass 2 — inline <style> bonus (page-authored is more signal than shared theme).
+  for (const raw of inlineCss.match(hexPattern) ?? []) {
+    addColorHit(normalizeHex(raw), INLINE_WEIGHT - BASE_WEIGHT);
+  }
+  for (const rgbMatch of inlineCss.matchAll(rgbPattern)) {
+    const hex = rgbMatchToHex(rgbMatch[0]);
+    if (hex) addColorHit(hex, INLINE_WEIGHT - BASE_WEIGHT);
+  }
+
+  // Pass 3 — CSS custom property declarations anywhere (--token: #hex).
+  // These are the authoritative brand palette — give them heavy weight.
+  for (const m of combinedColorSource.matchAll(varDeclPattern)) {
+    const value = m[1];
+    const hex = value.startsWith('#') ? normalizeHex(value) : rgbMatchToHex(value);
+    if (hex) addColorHit(hex, VAR_WEIGHT - BASE_WEIGHT);
+  }
+
+  // Pass 4 — brand-named context bonus.
+  //
+  // If a hex/rgb value appears within a small window of the brand hint (from
+  // the domain, e.g. "aperol" from aperol.com), it is almost certainly a brand
+  // color. This catches:
+  //   --aperol-orange: #ff5000;
+  //   .aperol-cta { background: #ff5000 }
+  //   /* Aperol primary */ color: #ff5000;
+  //   #aperol-header { border-color: #ff5000 }
+  //
+  // We scan a 120-char window preceding each hex/rgb occurrence for a
+  // case-insensitive brand-hint match. The check is cheap and precise.
+  if (brandHint && brandHint.length >= 3) {
+    const hintLower = brandHint.toLowerCase();
+    const sourceLower = combinedColorSource.toLowerCase();
+    const WINDOW = 120;
+    const scanBrandHits = (pattern: RegExp, toHex: (raw: string) => string | null): void => {
+      for (const m of combinedColorSource.matchAll(pattern)) {
+        const hex = toHex(m[0]);
+        if (!hex) continue;
+        const idx = m.index ?? 0;
+        const from = Math.max(0, idx - WINDOW);
+        const window = sourceLower.slice(from, idx);
+        if (window.includes(hintLower)) {
+          addColorHit(hex, BRAND_NAME_WEIGHT - BASE_WEIGHT);
+        }
+      }
+    };
+    scanBrandHits(hexPattern, (raw) => normalizeHex(raw));
+    scanBrandHits(rgbPattern, (raw) => rgbMatchToHex(raw));
   }
 
   const topColors = Array.from(colorCounts.entries())

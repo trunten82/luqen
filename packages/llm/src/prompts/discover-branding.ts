@@ -20,7 +20,7 @@ export function buildDiscoverBrandingPrompt(input: DiscoverBrandingPromptInput):
     : '';
 
   const topColorsList = input.topColors && input.topColors.length > 0
-    ? input.topColors.map((c, i) => `${i + 1}. ${c.hex} — appears ${c.count} times`).join('\n')
+    ? input.topColors.map((c, i) => `${i + 1}. ${c.hex} — brand signal score: ${c.count}`).join('\n')
     : '(none extracted — CSS parsing yielded no colors)';
 
   const fontsList = input.fontFamilies && input.fontFamilies.length > 0
