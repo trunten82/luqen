@@ -2,8 +2,10 @@
  * testServiceConnection — validate candidate service connection values without
  * saving them. Used by `POST /admin/service-connections/:id/test` (plan 06-03).
  *
- * Performs a full OAuth2 client_credentials handshake followed by a GET
- * {url}/health with the acquired Bearer token. Each network call is bounded
+ * Performs a full OAuth2 client_credentials handshake against
+ * {url}/api/v1/oauth/token followed by a GET {url}/api/v1/health with the
+ * acquired Bearer token (matches the existing ServiceTokenManager
+ * convention in auth/service-token.ts). Each network call is bounded
  * by a 10-second timeout (CONTEXT D-21). The candidate clientSecret is never
  * logged, rethrown, or interpolated into the returned error string.
  *
@@ -45,7 +47,7 @@ export async function testServiceConnection(
       `&client_id=${encodeURIComponent(clientId)}` +
       `&client_secret=${encodeURIComponent(clientSecret)}`;
 
-    const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
+    const tokenResponse = await fetch(`${baseUrl}/api/v1/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
@@ -85,7 +87,7 @@ export async function testServiceConnection(
 
   // ── Step 2: GET /health with Bearer token ─────────────────────────────────
   try {
-    const healthResponse = await fetch(`${baseUrl}/health`, {
+    const healthResponse = await fetch(`${baseUrl}/api/v1/health`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
