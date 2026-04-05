@@ -135,7 +135,19 @@ export async function checkCompliance(
     }
   }
 
-  // Step 6: Build annotated issues
+  // Step 6: Build annotated issues.
+  //
+  // When the caller explicitly selected regulations[] the per-issue
+  // `regulations` array is filtered down to the intersection of (a) the regs
+  // that actually apply to the criterion and (b) the explicit selection.
+  // Without this filter, Step 3b's jurisdiction widening surfaces sibling
+  // regulations the caller did not ask about (e.g. selecting only IT-STANCA
+  // would still annotate issues with EAA and WAD because they share Italy's
+  // ancestor jurisdictions). Jurisdictions-only requests keep current
+  // behaviour — REG-04 byte-identity is locked by the regression snapshot.
+  const explicitRegulationFilter =
+    requestedRegulations.length > 0 ? new Set(requestedRegulations) : null;
+
   const annotatedIssues: AnnotatedIssue[] = parsedIssues.map(parsed => {
     const matchingRegs = findMatchingRegulations(
       parsed,
@@ -144,12 +156,16 @@ export async function checkCompliance(
       sectorFilter,
     );
 
+    const scopedRegs = explicitRegulationFilter
+      ? matchingRegs.filter(req => explicitRegulationFilter.has(req.regulationId))
+      : matchingRegs;
+
     return {
       code: parsed.originalIssue.code,
       wcagCriterion: parsed.criterion ?? parsed.originalIssue.code,
       wcagLevel: parsed.level ?? 'A',
       originalIssue: parsed.originalIssue as unknown as Record<string, unknown>,
-      regulations: matchingRegs.map(req => ({
+      regulations: scopedRegs.map(req => ({
         regulationId: req.regulationId,
         regulationName: req.regulationName,
         shortName: req.regulationShortName,
