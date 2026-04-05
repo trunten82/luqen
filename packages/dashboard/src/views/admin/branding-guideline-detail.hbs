@@ -419,7 +419,8 @@
       <form class="brd-discover__form"
             hx-post="/admin/branding-guidelines/{{guideline.id}}/discover-branding"
             hx-target="#toast-container"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            hx-disabled-elt="find button[type=submit]">
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <div class="brd-discover__input-group form-group">
           <label class="form-label" for="discover-url">{{t "admin.branding.siteUrl"}}</label>
