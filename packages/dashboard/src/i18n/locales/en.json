@@ -216,7 +216,10 @@
     "startScan": "Start Scan",
     "includeWarnings": "Include warnings",
     "includeNotices": "Include notices",
-    "errorJurisdictionOrRegulationRequired": "Select at least one jurisdiction or regulation"
+    "errorJurisdictionOrRegulationRequired": "Select at least one jurisdiction or regulation",
+    "regulationsSelected": "Selected regulations",
+    "regulationTypeBadge": "R",
+    "jurisdictionTypeBadge": "J"
   },
   "reports": {
     "title": "Reports",

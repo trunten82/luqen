@@ -89,15 +89,15 @@
         <input type="search" class="picker__search" placeholder="{{t "common.search"}}" data-action-input="pickerSearch" aria-label="Search">
         <div class="picker__list">
           {{#each jurisdictions}}
-          <label class="picker__item" data-tab="jurisdictions" data-name="{{name}}">
+          <label class="picker__item" data-tab="jurisdictions" data-type="jurisdiction" data-name="{{name}}">
             <input type="checkbox" name="jurisdictions" value="{{id}}">
             <span>{{name}}</span>
             <span class="text-xs text-muted">{{id}}</span>
           </label>
           {{/each}}
           {{#each regulations}}
-          <label class="picker__item" data-tab="regulations" data-name="{{name}} {{shortName}}" style="display:none">
-            <input type="checkbox" name="jurisdictions" value="{{jurisdictionId}}">
+          <label class="picker__item" data-tab="regulations" data-type="regulation" data-name="{{name}} {{shortName}}" style="display:none">
+            <input type="checkbox" name="regulations" value="{{id}}">
             <span>{{shortName}}</span>
             <span class="text-xs text-muted">{{name}}</span>
           </label>
