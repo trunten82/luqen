@@ -19,7 +19,12 @@ export interface GenerateFixResult {
 
 export function parseGenerateFixResponse(text: string): GenerateFixResult {
   try {
-    const parsed = JSON.parse(text) as Record<string, unknown>;
+    // Strip markdown fences (```json ... ```) that LLMs often add despite instructions
+    const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    // Try to extract JSON object if there's surrounding text
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
+    const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
     const effort = parsed['effort'];
     return {
       fixedHtml: typeof parsed['fixedHtml'] === 'string' ? parsed['fixedHtml'] : '',
