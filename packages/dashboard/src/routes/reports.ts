@@ -14,7 +14,9 @@ import { t } from '../i18n/index.js';
 export { normalizeReportData, inferComponent };
 export type { JsonReportFile };
 
-const AI_DISCLAIMER = `<p class="ai-disclaimer text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-sm);font-style:italic;">${t('common.aiDisclaimer')}</p>`;
+function aiDisclaimer(): string {
+  return `<p class="ai-disclaimer text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-sm);font-style:italic;">${t('common.aiDisclaimer')}</p>`;
+}
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -440,7 +442,7 @@ export async function reportRoutes(
               + `<span class="rpt-fix-hint__source rpt-fix-hint__source--ai">${t('reportDetail.fixSourceAi')}</span>`
               + copyBtn(result.fixedHtml)
               + `</div>`
-              + AI_DISCLAIMER;
+              + aiDisclaimer();
             return reply.header('content-type', 'text/html').send(html);
           }
         } catch {
@@ -624,7 +626,7 @@ export async function reportRoutes(
           + renderList(result.priorities)
           + `</section>`
           + `<p class="rpt-ai-summary__footer text-muted">${t('reportDetail.aiSummaryFooter')} &middot; ${new Date().toLocaleString()}</p>`
-          + AI_DISCLAIMER
+          + aiDisclaimer()
           + `</div>`;
 
         return reply.header('content-type', 'text/html').send(html);
