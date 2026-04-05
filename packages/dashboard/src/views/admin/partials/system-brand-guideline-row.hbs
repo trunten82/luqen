@@ -1,0 +1,60 @@
+<tr id="system-brand-guideline-{{id}}">
+  <td data-label="Logo">
+    {{#if imagePath}}
+    <img src="{{imagePath}}"
+         alt="{{name}} brand logo"
+         width="40" height="40"
+         style="width:40px;height:40px;max-width:40px;max-height:40px;border-radius:var(--radius-sm);object-fit:contain;background:var(--bg-secondary);">
+    {{else}}
+    <div style="width:40px;height:40px;border-radius:var(--radius-sm);background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="7" cy="7" r="1.5" fill="currentColor"/>
+        <path d="M3 13 L7 9 L11 13 L14 10 L17 13" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    {{/if}}
+  </td>
+  <td data-label="Name">
+    <a href="/admin/system-brand-guidelines/{{id}}">{{name}}</a>
+    {{#if description}}
+    <p class="text-sm text-muted">{{description}}</p>
+    {{/if}}
+  </td>
+  <td data-label="Usage">
+    <div>
+      <span class="badge badge--neutral">{{t "admin.systemBrand.usage.linkedBy" count="0" plural="s"}}</span>
+    </div>
+    <div>
+      <span class="badge badge--neutral">{{t "admin.systemBrand.usage.clonedCount" count="0" plural="s"}}</span>
+    </div>
+  </td>
+  <td data-label="Status">
+    {{#if active}}
+    <span class="badge badge--success">Active</span>
+    {{else}}
+    <span class="badge badge--neutral">Inactive</span>
+    {{/if}}
+  </td>
+  <td data-label="Version">
+    {{#if version}}
+    <span class="badge badge--info">v{{version}}</span>
+    {{else}}
+    <span class="text-muted">—</span>
+    {{/if}}
+  </td>
+  <td data-label="Actions">
+    <a href="/admin/system-brand-guidelines/{{id}}"
+       class="btn btn--sm btn--secondary"
+       aria-label="View {{name}}">View</a>
+    <button hx-post="/admin/system-brand-guidelines/{{id}}/delete"
+            hx-confirm="{{t "admin.systemBrand.confirmDelete" name=name}}"
+            hx-target="#system-brand-guideline-{{id}}"
+            hx-swap="outerHTML"
+            class="btn btn--sm btn--danger"
+            aria-label="Delete {{name}}">
+      <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+      Delete
+    </button>
+  </td>
+</tr>
