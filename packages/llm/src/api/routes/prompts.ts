@@ -3,6 +3,9 @@ import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { CAPABILITY_NAMES, type CapabilityName } from '../../types.js';
 import { buildExtractionPrompt } from '../../prompts/extract-requirements.js';
+import { buildGenerateFixPrompt } from '../../prompts/generate-fix.js';
+import { buildAnalyseReportPrompt } from '../../prompts/analyse-report.js';
+import { buildDiscoverBrandingPrompt } from '../../prompts/discover-branding.js';
 
 const EXTRACT_DEFAULT_TEMPLATE = buildExtractionPrompt(
   '{content}',
@@ -10,10 +13,33 @@ const EXTRACT_DEFAULT_TEMPLATE = buildExtractionPrompt(
 );
 
 function getDefaultTemplate(capability: CapabilityName): string {
-  if (capability === 'extract-requirements') {
-    return EXTRACT_DEFAULT_TEMPLATE;
+  switch (capability) {
+    case 'extract-requirements':
+      return EXTRACT_DEFAULT_TEMPLATE;
+    case 'generate-fix':
+      return buildGenerateFixPrompt({
+        wcagCriterion: '{{wcagCriterion}}',
+        issueMessage: '{{issueMessage}}',
+        htmlContext: '{{htmlContext}}',
+        cssContext: '{{cssContext}}',
+      });
+    case 'analyse-report':
+      return buildAnalyseReportPrompt({
+        siteUrl: '{{siteUrl}}',
+        totalIssues: 0,
+        issuesList: [],
+        complianceSummary: '{{complianceSummary}}',
+        recurringPatterns: [],
+      });
+    case 'discover-branding':
+      return buildDiscoverBrandingPrompt({
+        url: '{{url}}',
+        htmlContent: '{{htmlContent}}',
+        cssContent: '{{cssContent}}',
+      });
+    default:
+      return `Capability: ${capability}\nContent: {content}`;
   }
-  return `Capability: ${capability}\nContent: {content}`;
 }
 
 export async function registerPromptRoutes(
