@@ -58,60 +58,45 @@ Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                              luqen monorepo                                  │
-│                                                                              │
-│  ┌──────────────────────────────────┐  ┌─────────────────────────────────┐   │
-│  │   @luqen/dashboard (port 5000)   │  │  Plugin Catalogue               │   │
-│  │                                  │  │  (GitHub: luqen-plugins)        │   │
-│  │  Web UI + REST API + GraphQL     │◄─┤                                 │   │
-│  │  ─ start scans                   │  │  catalogue.json                 │   │
-│  │  ─ view reports                  │  │  11 plugin tarballs (.tgz)      │   │
-│  │  ─ AI fix suggestions per issue  │  └─────────────────────────────────┘   │
-│  │  ─ AI report summary + patterns  │                                        │
-│  │  ─ AI brand discovery from URL   │  ┌─────────────────────────────────┐   │
-│  │  ─ brand filter in reports       │  │  Plugins (installed)            │   │
-│  │  ─ manage plugins, teams, roles  │◄─┤  auth:    entra, okta, google   │   │
-│  │  ─ HTMX, no JS build step        │  │  notify:  slack, teams, email   │   │
-│  │                                  │  │  storage: s3, azure             │   │
-│  │  StorageAdapter (14 repos)       │  └─────────────────────────────────┘   │
-│  │  SQLite (built-in)               │                                        │
-│  └───┬──────┬──────┬──────┬─────────┘                                        │
-│      │OAuth2│OAuth2│OAuth2│OAuth2                                            │
-│      ▼      ▼      ▼      ▼                                                  │
-│  ┌────────┐ ┌──────────┐ ┌──────────────┐ ┌──────────────────────────────┐   │
-│  │ @luqen │ │  @luqen  │ │    @luqen    │ │       @luqen/llm             │   │
-│  │/monitor│ │ /branding│ │  /compliance │ │        (port 4200)           │   │
-│  │        │ │ (4100)   │ │   (port 4000)│ │                              │   │
-│  │─watches│ │          │ │              │ │ ─ providers (Ollama,OpenAI…) │   │
-│  │ legal  │ │─brand    │ │─58 jurisdict.│ │ ─ model registry             │   │
-│  │ sources│ │ match    │ │─62 regulat.  │ │ ─ capability routing         │   │
-│  │─SHA256 │ │─image    │ │─225 criteria │ │ ─ retry / fallback chains    │   │
-│  │ change │ │ upload   │ │─source intel │ │ ─ per-org prompt overrides   │   │
-│  │ detect │ │─retag    │ │ W3cPolicy    │ │ ─ OAuth2 / RS256 JWT         │   │
-│  │─update │ │─OAuth2   │ │ WcagUpstream │ │                              │   │
-│  │ propos.│ │─SQLite   │ │─LLM routing ─┼─┼─► capabilities:              │   │
-│  └────────┘ └──────────┘ │─OAuth2 / JWT │ │   • extract-requirements     │   │
-│                          └──────────────┘ │   • generate-fix             │   │
-│                                           │   • analyse-report           │   │
-│  ┌────────────────────────────────────┐   │   • discover-branding        │   │
-│  │ @luqen/core                        │   └──────────────────────────────┘   │
-│  │  ─ site scan & crawl               │                                      │
-│  │  ─ fix proposals                   │   ┌──────────────────────────────┐   │
-│  │  ─ pa11y (built-in)                │   │ External sources             │   │
-│  │  ─ HTML/JSON reports               │   │  W3C WAI policies            │   │
-│  │  CLI + MCP server                  │   │  W3C WCAG upstream           │   │
-│  └────────────────────────────────────┘   │  tenon-io (community)        │   │
-│                                           └──────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────────────────┘
+                       ┌──────────────────────────┐
+    Users / CI   ────► │     @luqen/dashboard     │ ◄──── Plugins
+    Web browser        │         (port 5000)      │       (auth · notify · storage)
+    Power BI           │                          │
+                       │   Web UI · REST · GraphQL│
+                       │       Scan orchestrator  │
+                       └──┬────────┬──────────┬───┘
+                          │        │          │         All service calls over
+                          ▼        ▼          ▼          OAuth2 + RS256 JWT
+                  ┌──────────┐ ┌──────────┐ ┌──────────┐
+                  │  @luqen  │ │  @luqen  │ │  @luqen  │
+                  │compliance│ │ branding │ │   llm    │
+                  │  (4000)  │ │  (4100)  │ │  (4200)  │
+                  │          │ │          │ │          │
+                  │ jurisdic.│ │  colors  │ │ providers│
+                  │  regs.   │ │  fonts   │ │  models  │
+                  │  WCAG    │ │  logos   │ │ routing  │
+                  └────┬─────┘ └──────────┘ └────▲─────┘
+                       │                         │
+                       └──── LLM capabilities ───┘
+                              (embedded lib)
+
+       ┌─────────────────────┐         ┌─────────────────────┐
+       │    @luqen/core      │         │   @luqen/monitor    │
+       │  CLI · MCP server   │         │  watches legal src  │
+       │  pa11y scanner      │         │  creates proposals  │
+       └─────────────────────┘         └─────────────────────┘
 ```
 
-**Service-to-service flow:**
-- Dashboard → Compliance: fetch jurisdictions/regulations, check scan results against obligations
-- Dashboard → Branding: store brand guidelines, retag historical scans when guidelines change
-- Dashboard → LLM: request AI fix suggestions, report summaries, and brand discovery
-- Compliance → LLM: route regulation extraction through LLM capability chains (embedded as library, not over HTTP)
-- All service-to-service calls use OAuth2 client credentials with RS256 JWT tokens
+**Request flow at a glance**
+
+| From | To | Purpose |
+|------|----|---------|
+| Dashboard | Compliance | Check scans against WCAG obligations; map issues to regulations |
+| Dashboard | Branding | Store guidelines; retag historical scans; discover brand from URL |
+| Dashboard | LLM | AI fix suggestions · report summaries · brand discovery curation |
+| Compliance | LLM | Route regulation extraction through capability chains (embedded library) |
+| Monitor | Compliance | Submit update proposals when legal sources change |
+| Core CLI | — | Scan sites locally with no backend dependency |
 
 ---
 
