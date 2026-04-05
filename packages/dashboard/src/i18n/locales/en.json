@@ -648,6 +648,36 @@
         "noConnections": "No service connections configured."
       }
     },
+    "systemBrand": {
+      "title": "System brand guidelines",
+      "description": "Publish brand guideline templates that every organization can link to their sites or clone into their own workspace.",
+      "createGuideline": "+ New system guideline",
+      "systemBadge": "System",
+      "column": {
+        "logo": "Logo",
+        "name": "Name",
+        "usage": "Usage",
+        "status": "Status",
+        "version": "Version",
+        "actions": "Actions"
+      },
+      "usage": {
+        "linkedBy": "Linked by {{count}} org{{plural}}",
+        "clonedCount": "Cloned {{count}} time{{plural}}"
+      },
+      "empty": {
+        "heading": "No system brand guidelines yet",
+        "body": "Create the first template to make it available to every organization.",
+        "cta": "Create your first system guideline"
+      },
+      "confirmDelete": "Delete \"{{name}}\"? Orgs that have linked this template will lose access on their next scan. Orgs that cloned it keep their copies.",
+      "deleteBlocked": "Cannot delete \"{{name}}\" — {{count}} sites are currently linked to it. Unlink first, then retry.",
+      "toast": {
+        "created": "System brand guideline \"{{name}}\" created.",
+        "updated": "System brand guideline \"{{name}}\" saved.",
+        "deleted": "System brand guideline \"{{name}}\" deleted."
+      }
+    },
     "clients": {
       "addClient": "Add OAuth Client",
       "clientId": "Client ID",
