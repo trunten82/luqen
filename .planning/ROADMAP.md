@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Analyse Report** - AI executive summaries and pattern detection on report detail pages
 - [x] **Phase 3: Discover Branding** - Auto-detect brand colors, fonts, and logo from URLs, feeding into branding service (completed 2026-04-04)
 - [ ] **Phase 4: Ship Ready** - Installer, test suite to 80%+ coverage, and full documentation
-- [ ] **Phase 5: UI Review & Polish** - Full UI audit and visual consistency pass using Stitch MCP
+- [x] **Phase 5: UI Review & Polish** - Full UI audit and visual consistency pass using Stitch MCP (completed 2026-04-05)
 
 ## Phase Details
 
@@ -93,7 +93,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 05-01-PLAN.md — Audit + structural fixes: i18n keys, mobile layout, design system token alignment
-- [ ] 05-02-PLAN.md — UX polish + Stitch MCP validation: AI feature flow improvements, design system sign-off
+- [x] 05-02-PLAN.md — UX polish + Stitch MCP validation: AI feature flow improvements, design system sign-off
 **UI hint**: yes
 
 ## Progress
@@ -107,4 +107,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Analyse Report | 0/2 | Not started | - |
 | 3. Discover Branding | 2/2 | Complete   | 2026-04-04 |
 | 4. Ship Ready | 2/3 | In Progress|  |
-| 5. UI Review & Polish | 0/? | Not started | - |
+| 5. UI Review & Polish | 2/2 | Complete   | 2026-04-05 |
