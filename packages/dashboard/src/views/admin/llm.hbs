@@ -20,22 +20,22 @@
     <a href="/admin/llm?tab=providers"
        class="tab {{#if (eq activeTab 'providers')}}tab--active{{/if}}"
        aria-current="{{#if (eq activeTab 'providers')}}page{{/if}}">
-      Providers
+      {{t "admin.llm.tabProviders"}}
     </a>
     <a href="/admin/llm?tab=models"
        class="tab {{#if (eq activeTab 'models')}}tab--active{{/if}}"
        aria-current="{{#if (eq activeTab 'models')}}page{{/if}}">
-      Models
+      {{t "admin.llm.tabModels"}}
     </a>
     <a href="/admin/llm?tab=capabilities"
        class="tab {{#if (eq activeTab 'capabilities')}}tab--active{{/if}}"
        aria-current="{{#if (eq activeTab 'capabilities')}}page{{/if}}">
-      Capabilities
+      {{t "admin.llm.tabCapabilities"}}
     </a>
     <a href="/admin/llm?tab=prompts"
        class="tab {{#if (eq activeTab 'prompts')}}tab--active{{/if}}"
        aria-current="{{#if (eq activeTab 'prompts')}}page{{/if}}">
-      Prompts
+      {{t "admin.llm.tabPrompts"}}
     </a>
   </div>
 
@@ -81,7 +81,7 @@
           </tr>
           {{else}}
           <tr>
-            <td colspan="5">No providers configured. Add one below.</td>
+            <td colspan="5">{{t "admin.llm.noProviders"}}</td>
           </tr>
           {{/each}}
         </tbody>
@@ -91,7 +91,7 @@
     {{!-- Add provider form --}}
     <div class="card mt-md">
       <div class="card__header">
-        <h2 class="card__title">Add Provider</h2>
+        <h2 class="card__title">{{t "admin.llm.addProvider"}}</h2>
       </div>
       <form class="card__body"
             hx-post="/admin/llm/providers"
@@ -130,7 +130,7 @@
           </div>
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn btn--primary">Add Provider</button>
+          <button type="submit" class="btn btn--primary">{{t "admin.llm.addProvider"}}</button>
         </div>
       </form>
     </div>
@@ -182,21 +182,21 @@
           </table>
         </div>
         {{else}}
-        <p class="text-muted">No models registered for this provider.</p>
+        <p class="text-muted">{{t "admin.llm.noModelsForProvider"}}</p>
 
         {{/if}}
       </div>
     </div>
     {{/each}}
     {{else}}
-    <div class="alert alert--warning mt-sm">No providers configured. Add a provider first.</div>
+    <div class="alert alert--warning mt-sm">{{t "admin.llm.modelsNoProviders"}}</div>
     {{/if}}
 
     {{!-- Register model form --}}
     {{#if providers}}
     <div class="card mt-md">
       <div class="card__header">
-        <h2 class="card__title">Register Model</h2>
+        <h2 class="card__title">{{t "admin.llm.registerModel"}}</h2>
       </div>
       <form class="card__body"
             hx-post="/admin/llm/models"
@@ -234,7 +234,7 @@
           </div>
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn btn--primary">Register Model</button>
+          <button type="submit" class="btn btn--primary">{{t "admin.llm.registerModel"}}</button>
         </div>
       </form>
     </div>
@@ -254,9 +254,9 @@
           <h2 class="card__title"><code>{{name}}</code></h2>
         </div>
         <div class="card__body">
-          <p class="form-hint text-sm">Models are tried in priority order (lowest number first). If one fails, the next is tried automatically.</p>
+          <p class="form-hint text-sm">{{t "admin.llm.capabilityFallbackIntro"}}</p>
           {{#if assignedModels.length}}
-          <p class="form-hint">Fallback chain (tried in order):</p>
+          <p class="form-hint">{{t "admin.llm.capabilityFallbackLabel"}}</p>
           <ol class="fallback-chain" style="margin: 0 0 var(--space-sm) 0; padding-left: var(--space-md); list-style: decimal;">
             {{#each assignedModels}}
             <li style="padding: var(--space-xs) 0; display: flex; align-items: center; gap: var(--space-xs); flex-wrap: wrap;">
@@ -280,9 +280,9 @@
             </li>
             {{/each}}
           </ol>
-          <p class="form-hint text-sm text-muted">If the primary model fails or times out, the system automatically tries the next one.</p>
+          <p class="form-hint text-sm text-muted">{{t "admin.llm.capabilityFallbackFooter"}}</p>
           {{else}}
-          <p class="text-muted">No models assigned. This capability is not available until a model is assigned.</p>
+          <p class="text-muted">{{t "admin.llm.capabilityNoModels"}}</p>
           {{/if}}
 
           {{#if ../models.length}}
@@ -302,7 +302,7 @@
                   {{/each}}
                 </select>
               </div>
-              <button type="submit" class="btn btn--primary btn--sm">Add to Chain</button>
+              <button type="submit" class="btn btn--primary btn--sm">{{t "admin.llm.addToChain"}}</button>
             </div>
           </form>
           {{/if}}
@@ -311,7 +311,7 @@
       {{/each}}
     </div>
     {{else}}
-    <div class="alert alert--warning mt-sm">No capabilities found. Ensure the LLM service is seeded.</div>
+    <div class="alert alert--warning mt-sm">{{t "admin.llm.noCapabilities"}}</div>
     {{/if}}
   </div>
   {{/if}}
@@ -357,7 +357,7 @@
           </small>
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn btn--primary">Save Override</button>
+          <button type="submit" class="btn btn--primary">{{t "admin.llm.saveOverride"}}</button>
         </div>
       </form>
       {{#if isCustom}}
@@ -368,19 +368,19 @@
             hx-swap="innerHTML">
         <input type="hidden" name="_csrf" value="{{../csrfToken}}">
         <div class="form-actions">
-          <button type="submit" class="btn btn--secondary">Reset to Default</button>
+          <button type="submit" class="btn btn--secondary">{{t "admin.llm.resetToDefault"}}</button>
         </div>
       </form>
       {{/if}}
       {{else}}
       <div class="card__body">
-        <p class="text-muted">This capability does not have a prompt template yet. It will be available in a future update.</p>
+        <p class="text-muted">{{t "admin.llm.promptNoTemplate"}}</p>
       </div>
       {{/if}}
     </div>
     {{/each}}
     {{else}}
-    <div class="alert alert--info mt-sm">Prompt management is not available when the LLM service is disconnected.</div>
+    <div class="alert alert--info mt-sm">{{t "admin.llm.noPromptsAvailable"}}</div>
     {{/if}}
   </div>
   {{/if}}
