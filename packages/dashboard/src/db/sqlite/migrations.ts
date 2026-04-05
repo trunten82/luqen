@@ -1123,4 +1123,11 @@ CREATE TABLE IF NOT EXISTS service_connections (
 );
     `,
   },
+  {
+    id: '039',
+    name: 'add_scan_records_regulations_column',
+    sql: `
+ALTER TABLE scan_records ADD COLUMN regulations TEXT NOT NULL DEFAULT '[]';
+    `,
+  },
 ];

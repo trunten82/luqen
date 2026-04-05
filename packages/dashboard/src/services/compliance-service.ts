@@ -262,10 +262,11 @@ export class ComplianceService {
   async checkCompliance(
     token: string,
     jurisdictions: readonly string[],
+    regulations: readonly string[],
     issues: readonly ComplianceIssueInput[],
     orgId?: string,
   ): Promise<ComplianceCheckResult> {
-    return checkCompliance(this.complianceUrl, token, jurisdictions, issues, orgId);
+    return checkCompliance(this.complianceUrl, token, jurisdictions, regulations, issues, orgId);
   }
 
   // ── Cache management ─────────────────────────────────────────────────────

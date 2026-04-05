@@ -15,6 +15,7 @@ interface NewScanBody {
   standard: string;
   scanMode?: string;
   jurisdictions?: string | string[];
+  regulations?: string | string[];
   concurrency?: string;
   maxPages?: string;
   runner?: string;
@@ -109,6 +110,7 @@ export async function scanRoutes(
         standard: body.standard,
         scanMode: body.scanMode,
         jurisdictions: body.jurisdictions,
+        regulations: body.regulations,
         concurrency: body.concurrency,
         maxPages: body.maxPages,
         runner: body.runner,
@@ -276,6 +278,7 @@ export async function scanRoutes(
         standard: scan.standard,
         concurrency: config.maxConcurrentScans,
         jurisdictions: scan.jurisdictions,
+        regulations: scan.regulations ?? [],
         ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
         ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
           ? { webserviceUrls: config.webserviceUrls }

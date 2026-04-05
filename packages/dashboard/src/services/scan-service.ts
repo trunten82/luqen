@@ -27,6 +27,8 @@ export interface InitiateScanInput {
   readonly standard?: string;
   readonly scanMode?: string;
   readonly jurisdictions?: string | string[];
+  /** Explicit regulation ids selected on the scan form (07-P02). */
+  readonly regulations?: string | string[];
   readonly concurrency?: string | number;
   readonly maxPages?: string | number;
   readonly runner?: string;
@@ -67,6 +69,16 @@ export type ScanLookupResult = ScanValidationError | ScanProgressResult;
 // ── Validation helpers (pure functions) ──────────────────────────────────────
 
 function normalizeJurisdictions(value: string | string[] | undefined): string[] {
+  if (value === undefined) return [];
+  if (Array.isArray(value)) return value;
+  return [value];
+}
+
+/**
+ * Normalize a form-submitted multi-value field into a string[].
+ * Handles single string, array, and undefined consistently (07-P02).
+ */
+function normalizeStringArray(value: string | string[] | undefined): string[] {
   if (value === undefined) return [];
   if (Array.isArray(value)) return value;
   return [value];
@@ -192,10 +204,14 @@ export class ScanService {
       return { ok: false, error: 'concurrency must be between 1 and 10' };
     }
 
-    // 5. Validate jurisdictions
+    // 5. Validate jurisdictions + regulations (07-P02)
     const jurisdictions = normalizeJurisdictions(input.jurisdictions);
     if (jurisdictions.length > 50) {
       return { ok: false, error: 'Maximum 50 jurisdictions per scan' };
+    }
+    const regulations = normalizeStringArray(input.regulations);
+    if (regulations.length > 50) {
+      return { ok: false, error: 'Maximum 50 regulations per scan' };
     }
 
     // 6. Validate runner
@@ -222,6 +238,7 @@ export class ScanService {
       siteUrl: parsedUrl.toString(),
       standard,
       jurisdictions,
+      regulations,
       createdBy: context.username,
       createdAt: new Date().toISOString(),
       orgId: context.orgId,
@@ -233,6 +250,7 @@ export class ScanService {
       standard,
       concurrency: rawConcurrency,
       jurisdictions,
+      regulations,
       scanMode,
       ...(this.config.webserviceUrl !== undefined ? { webserviceUrl: this.config.webserviceUrl } : {}),
       ...(this.config.webserviceUrls !== undefined && this.config.webserviceUrls.length > 0

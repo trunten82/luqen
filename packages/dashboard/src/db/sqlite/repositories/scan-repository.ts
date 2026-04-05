@@ -12,6 +12,7 @@ interface ScanRow {
   status: string;
   standard: string;
   jurisdictions: string;
+  regulations: string | null;
   created_by: string;
   created_at: string;
   completed_at: string | null;
@@ -30,13 +31,25 @@ interface ScanRow {
   brand_related_count: number | null;
 }
 
+function parseJsonArraySafe(raw: string | null | undefined): string[] {
+  // D-04: null / missing / malformed column reads as []
+  if (raw === null || raw === undefined || raw === '') return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 function rowToRecord(row: ScanRow): ScanRecord {
   const base: ScanRecord = {
     id: row.id,
     siteUrl: row.site_url,
     status: row.status as ScanRecord['status'],
     standard: row.standard,
-    jurisdictions: JSON.parse(row.jurisdictions) as string[],
+    jurisdictions: parseJsonArraySafe(row.jurisdictions),
+    regulations: parseJsonArraySafe(row.regulations),
     createdBy: row.created_by,
     createdAt: row.created_at,
     orgId: row.org_id,
@@ -106,8 +119,8 @@ export class SqliteScanRepository implements ScanRepository {
 
   async createScan(data: CreateScanInput): Promise<ScanRecord> {
     const stmt = this.db.prepare(`
-      INSERT INTO scan_records (id, site_url, status, standard, jurisdictions, created_by, created_at, org_id)
-      VALUES (@id, @siteUrl, 'queued', @standard, @jurisdictions, @createdBy, @createdAt, @orgId)
+      INSERT INTO scan_records (id, site_url, status, standard, jurisdictions, regulations, created_by, created_at, org_id)
+      VALUES (@id, @siteUrl, 'queued', @standard, @jurisdictions, @regulations, @createdBy, @createdAt, @orgId)
     `);
 
     stmt.run({
@@ -115,6 +128,7 @@ export class SqliteScanRepository implements ScanRepository {
       siteUrl: data.siteUrl,
       standard: data.standard,
       jurisdictions: JSON.stringify(data.jurisdictions),
+      regulations: JSON.stringify(data.regulations ?? []),
       createdBy: data.createdBy,
       createdAt: data.createdAt,
       orgId: data.orgId ?? 'system',
@@ -156,6 +170,8 @@ export class SqliteScanRepository implements ScanRepository {
       status: 'status',
       siteUrl: 'site_url',
       standard: 'standard',
+      jurisdictions: 'jurisdictions',
+      regulations: 'regulations',
       completedAt: 'completed_at',
       pagesScanned: 'pages_scanned',
       totalIssues: 'total_issues',
@@ -178,7 +194,7 @@ export class SqliteScanRepository implements ScanRepository {
       const col = fieldMap[key];
       if (col === undefined) continue;
       setClauses.push(`${col} = @${key}`);
-      params[key] = key === 'jurisdictions' && Array.isArray(value)
+      params[key] = (key === 'jurisdictions' || key === 'regulations') && Array.isArray(value)
         ? JSON.stringify(value)
         : value;
     }

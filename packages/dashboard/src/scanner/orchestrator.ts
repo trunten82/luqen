@@ -30,6 +30,12 @@ export interface ScanConfig {
   readonly standard: string;
   readonly concurrency: number;
   readonly jurisdictions: string[];
+  /**
+   * Explicit regulation ids selected at scan time. Independent of jurisdictions.
+   * Forwarded to the compliance API alongside jurisdictions (07-P02 / D-13).
+   * Callers must pass `[]` when none are selected.
+   */
+  readonly regulations: string[];
   readonly scanMode?: 'single' | 'site';
   /** When set, uses pa11y webservice HTTP API. When omitted, uses direct pa11y library. */
   readonly webserviceUrl?: string;
@@ -484,7 +490,7 @@ export class ScanOrchestrator {
         config.complianceUrl !== '' &&
         config.complianceToken !== undefined &&
         config.complianceToken !== '' &&
-        config.jurisdictions.length > 0
+        (config.jurisdictions.length > 0 || config.regulations.length > 0)
       ) {
         try {
           emit({
@@ -505,6 +511,7 @@ export class ScanOrchestrator {
             config.complianceUrl,
             config.complianceToken,
             config.jurisdictions,
+            config.regulations,
             uniqueIssues,
           );
           confirmedViolations = complianceResult.summary.totalConfirmedViolations ?? 0;
@@ -516,6 +523,11 @@ export class ScanOrchestrator {
           if (complianceResult.matrix) {
             reportData.complianceMatrix = Object.values(complianceResult.matrix as Record<string, unknown>);
           }
+
+          // 07-P02: expose regulationMatrix as an array (empty when no regulations requested)
+          reportData.regulationMatrix = Object.values(
+            (complianceResult.regulationMatrix ?? {}) as Record<string, unknown>,
+          );
         } catch (complianceErr) {
           // Non-fatal — compliance check failure doesn't fail the scan
           emit({

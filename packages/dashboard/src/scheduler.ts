@@ -24,6 +24,7 @@ export function startScheduler(
           siteUrl: schedule.siteUrl,
           standard: schedule.standard,
           jurisdictions: schedule.jurisdictions,
+          regulations: [],
           createdBy: `scheduler:${schedule.createdBy}`,
           createdAt: now.toISOString(),
           orgId: schedule.orgId,
@@ -35,6 +36,7 @@ export function startScheduler(
           standard: schedule.standard,
           concurrency: config.maxConcurrentScans,
           jurisdictions: schedule.jurisdictions,
+          regulations: [],
           scanMode: schedule.scanMode as 'single' | 'site',
           ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
           ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
