@@ -25,6 +25,7 @@ import { webhookRoutes } from './routes/admin/webhooks.js';
 import { userRoutes } from './routes/admin/users.js';
 import { clientRoutes } from './routes/admin/clients.js';
 import { registerServiceConnectionsRoutes } from './routes/admin/service-connections.js';
+import { systemBrandGuidelineRoutes } from './routes/admin/system-brand-guidelines.js';
 import { systemRoutes } from './routes/admin/system.js';
 import { monitorRoutes } from './routes/admin/monitor.js';
 import { pluginAdminRoutes } from './routes/admin/plugins.js';
@@ -468,6 +469,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'alert': 'partials/alert.hbs',
         'service-connection-row': 'admin/partials/service-connection-row.hbs',
         'service-connection-edit-row': 'admin/partials/service-connection-edit-row.hbs',
+        'system-brand-guideline-row': 'admin/partials/system-brand-guideline-row.hbs',
         'system-library-row': 'admin/partials/system-library-row.hbs',
         'rpt-regulation-card': 'partials/rpt-regulation-card.hbs',
       },
@@ -691,6 +693,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await userRoutes(server, config.complianceUrl);
   await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, getBrandingTokenManager, getLLMClient);
   await registerServiceConnectionsRoutes(server, storage, config);
+  await systemBrandGuidelineRoutes(server, storage);
   await monitorRoutes(server, config.complianceUrl);
   await systemRoutes(server, {
     complianceUrl: config.complianceUrl,
