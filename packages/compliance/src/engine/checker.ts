@@ -4,6 +4,7 @@ import type {
   ComplianceCheckResponse,
   JurisdictionResult,
   RegulationResult,
+  RegulationMatrixEntry,
   AnnotatedIssue,
   RequirementWithRegulation,
 } from '../types.js';
@@ -155,8 +156,14 @@ export async function checkCompliance(
   const totalMandatoryViolations = matrixValues.reduce((sum, j) => sum + j.mandatoryViolations, 0);
   const totalOptionalViolations = matrixValues.reduce((sum, j) => sum + j.optionalViolations, 0);
 
+  // Phase 07 placeholder — real regulationMatrix population happens in Task 2.
+  // Response shape now always includes `regulationMatrix` (REG-04: field present,
+  // empty object when no regulations requested or before Task 2 lands).
+  const regulationMatrix: Record<string, RegulationMatrixEntry> = {};
+
   return {
     matrix,
+    regulationMatrix,
     annotatedIssues,
     summary: {
       totalJurisdictions: matrixValues.length,
