@@ -661,6 +661,11 @@
     var panels = document.querySelectorAll('.rpt-tab-panel');
 
     tabs.forEach(function(t) {
+      // Only toggle top-level tabs (id="tab-*"); sub-tab buttons also carry
+      // the .rpt-tab class but their ids start with "subtab-" — stripping
+      // --active from them would clear the sub-tab highlight every time
+      // the top-level tab is switched.
+      if (!t.id || !t.id.startsWith('tab-')) return;
       var isActive = t.id === 'tab-' + tab;
       t.classList.toggle('rpt-tab--active', isActive);
       t.setAttribute('aria-selected', isActive ? 'true' : 'false');
