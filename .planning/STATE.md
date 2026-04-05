@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-ui-review-polish-05-01-PLAN.md
-last_updated: "2026-04-05T05:30:11.096Z"
+stopped_at: "Checkpoint Task 2: Stitch MCP validation — 05-02-PLAN.md"
+last_updated: "2026-04-05T05:33:42.614Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
   percent: 0
 ---
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04-ship-ready P01 | 10 | 2 tasks | 5 files |
 | Phase 04-ship-ready P03 | 8m | 2 tasks | 4 files |
 | Phase 05-ui-review-polish P01 | 2m | 2 tasks | 3 files |
+| Phase 05-ui-review-polish P02 | 5min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,7 @@ Recent decisions affecting current work:
 - [Phase 04-ship-ready]: Inline ErrorResponse schema in capability routes instead of dollar-sign ref (test environment compatibility)
 - [Phase 05-ui-review-polish]: All UI copy in llm.hbs replaced with {{t}} keys — no hardcoded English remains
 - [Phase 05-ui-review-polish]: brd-discover fallback wrappers (--spacing-6/3) removed — use Emerald tokens directly
+- [Phase 05-ui-review-polish]: panel-ai-summary div always rendered — HTMX attrs conditional inside div (not outer if) so tab never leads to blank panel
 
 ### Pending Todos
 
@@ -105,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T05:30:11.092Z
-Stopped at: Completed 05-ui-review-polish-05-01-PLAN.md
+Last session: 2026-04-05T05:33:30.962Z
+Stopped at: Checkpoint Task 2: Stitch MCP validation — 05-02-PLAN.md
 Resume file: None

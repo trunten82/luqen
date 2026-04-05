@@ -50,11 +50,11 @@
 
 ### UI Review & Polish
 
-- [ ] **UIR-01**: Full UI audit of all dashboard pages for visual consistency, spacing, and design system adherence
-- [ ] **UIR-02**: Fix identified inconsistencies across admin, report, and branding pages
-- [ ] **UIR-03**: Improve mobile responsiveness on LLM admin page and new capability UI sections
-- [ ] **UIR-04**: Review and improve UX flows for AI-powered features (fix suggestions, report summary, brand discovery)
-- [ ] **UIR-05**: Use Stitch MCP to generate/validate design system alignment across all modified pages
+- [x] **UIR-01**: Full UI audit of all dashboard pages for visual consistency, spacing, and design system adherence
+- [x] **UIR-02**: Fix identified inconsistencies across admin, report, and branding pages
+- [x] **UIR-03**: Improve mobile responsiveness on LLM admin page and new capability UI sections
+- [x] **UIR-04**: Review and improve UX flows for AI-powered features (fix suggestions, report summary, brand discovery)
+- [x] **UIR-05**: Use Stitch MCP to generate/validate design system alignment across all modified pages
 
 ## v2 Requirements
 
@@ -106,11 +106,11 @@
 | DOC-04 | Phase 4 | Complete |
 | DOC-05 | Phase 4 | Complete |
 | DOC-06 | Phase 4 | Complete |
-| UIR-01 | Phase 5 | Pending |
-| UIR-02 | Phase 5 | Pending |
-| UIR-03 | Phase 5 | Pending |
-| UIR-04 | Phase 5 | Pending |
-| UIR-05 | Phase 5 | Pending |
+| UIR-01 | Phase 5 | Complete |
+| UIR-02 | Phase 5 | Complete |
+| UIR-03 | Phase 5 | Complete |
+| UIR-04 | Phase 5 | Complete |
+| UIR-05 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 33 total
