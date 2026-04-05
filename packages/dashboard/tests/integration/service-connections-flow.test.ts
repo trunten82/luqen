@@ -402,7 +402,11 @@ describe('Phase 06 P05 — end-to-end save → reload → GET flow', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
-      expect(res.payload).toContain('badge--success');
+      // Test results are delivered as an OOB swap into the global
+      // #toast-container (wrapped in <template> to survive any tr context).
+      expect(res.payload).toContain('toast--success');
+      expect(res.payload).toContain('hx-swap-oob');
+      expect(res.payload).toContain('<template>');
       expect(res.payload).not.toContain('badge-secret');
     } finally {
       globalThis.fetch = originalFetch;

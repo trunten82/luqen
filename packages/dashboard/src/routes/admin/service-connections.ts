@@ -447,6 +447,11 @@ export async function registerServiceConnectionsRoutes(
       );
       const result = await testServiceConnection({ url, clientId, clientSecret });
 
+      // HTMX path: return an OOB swap into the global toast container so the
+      // result floats in bottom-right without disrupting the edit row layout.
+      // The button uses hx-swap="none" so there is no main swap — only the
+      // OOB toast is processed. Template wrap is defensive in case the caller
+      // ever embeds this in a tr context.
       if (isHtmxRequest(request)) {
         const locale = resolveLocale(request);
         if (result.ok) {
@@ -458,7 +463,7 @@ export async function registerServiceConnectionsRoutes(
           return reply
             .code(200)
             .type('text/html')
-            .send(`<span class="badge badge--success">${escapeHtml(label)}</span>`);
+            .send(`<template>${toastHtml(label, 'success')}</template>`);
         }
         const key =
           result.step === 'oauth'
@@ -468,7 +473,7 @@ export async function registerServiceConnectionsRoutes(
         return reply
           .code(200)
           .type('text/html')
-          .send(`<span class="badge badge--error">${escapeHtml(label)}</span>`);
+          .send(`<template>${toastHtml(label, 'error')}</template>`);
       }
 
       return reply.code(200).send(result);

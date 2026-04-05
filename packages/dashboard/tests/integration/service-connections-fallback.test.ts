@@ -545,7 +545,10 @@ describe('Phase 06 P05 — bootstrap + fallback + permission gating', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
-      expect(res.payload).toContain('badge--error');
+      // Failure is delivered as an OOB toast swap into #toast-container.
+      expect(res.payload).toContain('toast--error');
+      expect(res.payload).toContain('hx-swap-oob');
+      expect(res.payload).toContain('<template>');
     } finally {
       globalThis.fetch = originalFetch;
     }
