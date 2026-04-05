@@ -790,6 +790,27 @@
       "discoverSuccess": "Brand discovery complete",
       "discoverEmpty": "No brand signals detected — try a different URL.",
       "discoverError": "Brand discovery failed"
+    },
+    "llm": {
+      "tabProviders": "Providers",
+      "tabModels": "Models",
+      "tabCapabilities": "Capabilities",
+      "tabPrompts": "Prompts",
+      "addProvider": "Add Provider",
+      "registerModel": "Register Model",
+      "addToChain": "Add to Chain",
+      "saveOverride": "Save Override",
+      "resetToDefault": "Reset to Default",
+      "noProviders": "No providers configured. Add one below.",
+      "noModelsForProvider": "No models registered for this provider.",
+      "noCapabilities": "No capabilities found. Ensure the LLM service is seeded.",
+      "noPromptsAvailable": "Prompt management is not available when the LLM service is disconnected.",
+      "capabilityFallbackIntro": "Models are tried in priority order (lowest number first). If one fails, the next is tried automatically.",
+      "capabilityFallbackLabel": "Fallback chain (tried in order):",
+      "capabilityFallbackFooter": "If the primary model fails or times out, the system automatically tries the next one.",
+      "capabilityNoModels": "No models assigned. This capability is not available until a model is assigned.",
+      "modelsNoProviders": "No providers configured. Add a provider first.",
+      "promptNoTemplate": "This capability does not have a prompt template yet. It will be available in a future update."
     }
   },
   "trends": {
