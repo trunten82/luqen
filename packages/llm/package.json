@@ -1,6 +1,6 @@
 {
   "name": "@luqen/llm",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "LLM provider management and AI capabilities service",
   "type": "module",
   "main": "dist/cli.js",

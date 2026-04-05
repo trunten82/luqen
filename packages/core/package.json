@@ -1,6 +1,6 @@
 {
   "name": "@luqen/core",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "Accessibility testing agent using pa11y webservice",
   "type": "module",
   "main": "dist/index.js",
