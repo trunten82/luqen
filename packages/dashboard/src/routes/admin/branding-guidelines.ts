@@ -462,7 +462,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(toastHtml(`Brand discovery complete. Discovered ${colorCount} color(s) and ${fontCount} font(s).`));
+          .send(toastHtml(`Brand discovery complete. Discovered ${colorCount} color(s) and ${fontCount} font(s). Note: AI-generated results — please validate.`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Brand discovery failed';
         return reply.code(502).header('content-type', 'text/html').send(toastHtml(message, 'error'));
