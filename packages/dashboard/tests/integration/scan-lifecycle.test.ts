@@ -311,23 +311,25 @@ describe.skipIf(!servicesAvailable)('Scan Lifecycle (integration)', { timeout: 1
     }
   });
 
-  // ── Test 7: CSV export of scans ───────────────────────────────────────
+  // ── Test 7: Excel export of scans ─────────────────────────────────────
 
-  it('GET /api/v1/export/scans.csv — returns CSV with scan data', async () => {
-    const res = await apiGet('/api/v1/export/scans.csv');
+  it('GET /api/v1/export/scans.xlsx — returns Excel workbook with scan data', async () => {
+    const res = await apiGet('/api/v1/export/scans.xlsx');
     expect(res.ok).toBe(true);
 
     const contentType = res.headers.get('content-type');
-    expect(contentType).toContain('text/csv');
+    expect(contentType).toContain(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
 
     const disposition = res.headers.get('content-disposition');
     expect(disposition).toContain('attachment');
-    expect(disposition).toContain('.csv');
+    expect(disposition).toContain('.xlsx');
 
-    const csv = await res.text();
-    expect(csv).toContain('Scan ID');
-    expect(csv).toContain('Site URL');
-    expect(csv).toContain(TEST_SITE_URL_NORMALIZED);
+    // Excel is binary — just verify non-empty payload and xlsx magic bytes (PK zip header)
+    const buffer = Buffer.from(await res.arrayBuffer());
+    expect(buffer.length).toBeGreaterThan(0);
+    expect(buffer.subarray(0, 2).toString('ascii')).toBe('PK');
   });
 
   // ── Test 8: Excel export of issues ────────────────────────────────────

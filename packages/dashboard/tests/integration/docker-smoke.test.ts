@@ -177,10 +177,10 @@ describe('Docker Deployment Smoke Test', () => {
       expect(response.statusCode).not.toBe(404);
     });
 
-    it('GET /api/v1/export/scans.csv returns a response (route is registered)', async () => {
+    it('GET /api/v1/export/scans.xlsx returns a response (route is registered)', async () => {
       const response = await ctx.server.inject({
         method: 'GET',
-        url: '/api/v1/export/scans.csv',
+        url: '/api/v1/export/scans.xlsx',
       });
 
       // Export route exists (might need auth)
