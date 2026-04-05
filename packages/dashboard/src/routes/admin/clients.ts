@@ -20,14 +20,18 @@ export async function clientRoutes(
   baseUrl: string,
   storage?: StorageAdapter,
   brandingUrl?: string,
-  brandingTokenManager?: ServiceTokenManager | null,
-  llmClient?: LLMClient | null,
+  /** Getter for current branding token manager (runtime reload support). */
+  getBrandingTokenManager: () => ServiceTokenManager | null = () => null,
+  /** Getter for current LLM client (runtime reload support). */
+  getLLMClient: () => LLMClient | null = () => null,
 ): Promise<void> {
   // GET /admin/clients — list OAuth clients
   server.get(
     '/admin/clients',
     { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const brandingTokenManager = getBrandingTokenManager();
+      const llmClient = getLLMClient();
       let complianceClients: Awaited<ReturnType<typeof listClients>> = [];
       let brandingClients: Awaited<ReturnType<typeof listBrandingClients>> = [];
       let error: string | undefined;
@@ -119,6 +123,7 @@ export async function clientRoutes(
     '/admin/clients/new',
     { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (_request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       return reply.view('admin/client-form.hbs', {
         isNew: true,
         formClient: { name: '', scopes: '', grantTypes: 'client_credentials', service: 'compliance' },
@@ -137,6 +142,8 @@ export async function clientRoutes(
     '/admin/clients',
     { preHandler: requirePermission('admin.system', 'compliance.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const brandingTokenManager = getBrandingTokenManager();
+      const llmClient = getLLMClient();
       const body = request.body as {
         name?: string;
         scopes?: string;
@@ -275,6 +282,7 @@ export async function clientRoutes(
     '/admin/clients/:id/revoke-branding',
     { preHandler: requirePermission('admin.system', 'branding.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const brandingTokenManager = getBrandingTokenManager();
       const { id } = request.params as { id: string };
 
       if (brandingUrl == null || brandingTokenManager == null) {
@@ -300,6 +308,7 @@ export async function clientRoutes(
     '/admin/clients/:id/revoke-llm',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
 
       if (llmClient == null) {

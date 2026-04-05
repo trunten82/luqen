@@ -93,7 +93,7 @@ describe('ComplianceService', () => {
         updateOrgComplianceClient: vi.fn(),
       } as unknown as OrgRepository;
 
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager, orgRepo);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager, orgRepo);
       const token = await service.getOrgToken('org-1');
 
       expect(token).toBe('org-specific-token');
@@ -111,7 +111,7 @@ describe('ComplianceService', () => {
         updateOrgComplianceClient: vi.fn(),
       } as unknown as OrgRepository;
 
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager, orgRepo);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager, orgRepo);
       const token = await service.getOrgToken('org-1');
 
       expect(token).toBe('global-fallback-token');
@@ -123,7 +123,7 @@ describe('ComplianceService', () => {
         destroy: vi.fn(),
       };
 
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager);
       const token = await service.getOrgToken('org-1');
 
       expect(token).toBe('global-fallback-token');
@@ -151,7 +151,7 @@ describe('ComplianceService', () => {
         updateOrgComplianceClient: vi.fn(),
       } as unknown as OrgRepository;
 
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager, orgRepo);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager, orgRepo);
       await service.getOrgToken('org-1');
       await service.getOrgToken('org-1');
 
@@ -186,7 +186,7 @@ describe('ComplianceService', () => {
         updateOrgComplianceClient: vi.fn(),
       } as unknown as OrgRepository;
 
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager, orgRepo);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager, orgRepo);
       await service.getOrgToken('org-1');
 
       service.destroyOrgTokenManagers();
@@ -210,7 +210,7 @@ describe('ComplianceService', () => {
         getToken: vi.fn().mockResolvedValue('token'),
         destroy: vi.fn(),
       };
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager);
 
       const first = await service.listJurisdictions('token-1');
       const second = await service.listJurisdictions('token-1');
@@ -232,7 +232,7 @@ describe('ComplianceService', () => {
         getToken: vi.fn().mockResolvedValue('token'),
         destroy: vi.fn(),
       };
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager);
 
       const first = await service.listRegulations('token-1');
       const second = await service.listRegulations('token-1');
@@ -253,7 +253,7 @@ describe('ComplianceService', () => {
         getToken: vi.fn().mockResolvedValue('token'),
         destroy: vi.fn(),
       };
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager);
 
       const result = await service.safeListJurisdictions('token-1');
 
@@ -271,7 +271,7 @@ describe('ComplianceService', () => {
         getToken: vi.fn().mockResolvedValue('token'),
         destroy: vi.fn(),
       };
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager);
 
       const result = await service.safeListRegulations('token-1');
 
@@ -291,7 +291,7 @@ describe('ComplianceService', () => {
         getToken: vi.fn().mockResolvedValue('token'),
         destroy: vi.fn(),
       };
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager);
 
       await service.listJurisdictions('token-1');
       expect(listJurisdictions).toHaveBeenCalledTimes(1);
@@ -317,7 +317,7 @@ describe('ComplianceService', () => {
         getToken: vi.fn().mockResolvedValue('token'),
         destroy: vi.fn(),
       };
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager);
 
       const result = await service.getComplianceLookupData('token-1', 'org-1');
 
@@ -338,7 +338,7 @@ describe('ComplianceService', () => {
         getToken: vi.fn().mockResolvedValue('token'),
         destroy: vi.fn(),
       };
-      const service = new ComplianceService(config, globalTokenManager as unknown as ServiceTokenManager);
+      const service = new ComplianceService(config, () => globalTokenManager as unknown as ServiceTokenManager);
 
       const result = await service.getComplianceLookupData('token-1');
 

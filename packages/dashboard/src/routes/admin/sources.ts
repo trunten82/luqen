@@ -16,13 +16,15 @@ export async function sourceRoutes(
   server: FastifyInstance,
   baseUrl: string,
   pluginManager?: import('../../plugins/manager.js').PluginManager,
-  llmClient?: import('../../llm-client.js').LLMClient | null,
+  /** Getter for current LLM client (runtime reload support). */
+  getLLMClient: () => import('../../llm-client.js').LLMClient | null = () => null,
 ): Promise<void> {
   // GET /admin/sources — list monitored sources
   server.get(
     '/admin/sources',
     { preHandler: requirePermission('admin.system', 'compliance.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       let sources: Awaited<ReturnType<typeof listSources>> = [];
       let error: string | undefined;
       let llmConnected = false;

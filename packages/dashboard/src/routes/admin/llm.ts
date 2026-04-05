@@ -5,7 +5,8 @@ import { escapeHtml, toastHtml } from './helpers.js';
 
 export async function llmAdminRoutes(
   server: FastifyInstance,
-  llmClient: LLMClient | null,
+  /** Getter for current LLM client (runtime reload support). */
+  getLLMClient: () => LLMClient | null,
 ): Promise<void> {
   // ── GET /admin/llm — main page ────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ export async function llmAdminRoutes(
         ? tab!
         : 'providers';
 
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.view('admin/llm.hbs', {
           pageTitle: 'LLM Configuration',
@@ -28,9 +30,9 @@ export async function llmAdminRoutes(
         });
       }
 
-      let providers: Awaited<ReturnType<typeof llmClient.listProviders>> = [];
-      let models: Awaited<ReturnType<typeof llmClient.listModels>> = [];
-      let capabilities: Awaited<ReturnType<typeof llmClient.listCapabilities>> = [];
+      let providers: Awaited<ReturnType<LLMClient['listProviders']>> = [];
+      let models: Awaited<ReturnType<LLMClient['listModels']>> = [];
+      let capabilities: Awaited<ReturnType<LLMClient['listCapabilities']>> = [];
       let llmConnected = false;
       let error: string | undefined;
 
@@ -122,6 +124,7 @@ export async function llmAdminRoutes(
     '/admin/llm/providers',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),
@@ -167,6 +170,7 @@ export async function llmAdminRoutes(
     '/admin/llm/providers/:id/test',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),
@@ -195,6 +199,7 @@ export async function llmAdminRoutes(
     '/admin/llm/remote-models',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       const { providerId } = request.query as { providerId?: string };
       if (!providerId || !llmClient) {
         return reply.header('content-type', 'text/html').send(
@@ -223,6 +228,7 @@ export async function llmAdminRoutes(
     '/admin/llm/providers/:id',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),
@@ -263,6 +269,7 @@ export async function llmAdminRoutes(
     '/admin/llm/providers/:id',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),
@@ -290,6 +297,7 @@ export async function llmAdminRoutes(
     '/admin/llm/models',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),
@@ -338,6 +346,7 @@ export async function llmAdminRoutes(
     '/admin/llm/models/:id',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),
@@ -365,6 +374,7 @@ export async function llmAdminRoutes(
     '/admin/llm/capabilities/:name/assign',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),
@@ -403,6 +413,7 @@ export async function llmAdminRoutes(
     '/admin/llm/capabilities/:name/unassign/:modelId',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),
@@ -430,6 +441,7 @@ export async function llmAdminRoutes(
     '/admin/llm/capabilities/:name/priority/:modelId',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(toastHtml('LLM not configured', 'error'));
       }
@@ -457,6 +469,7 @@ export async function llmAdminRoutes(
     '/admin/llm/prompts/:capability',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),
@@ -492,6 +505,7 @@ export async function llmAdminRoutes(
     '/admin/llm/prompts/:capability',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
+      const llmClient = getLLMClient();
       if (!llmClient) {
         return reply.code(503).header('content-type', 'text/html').send(
           toastHtml('LLM service not configured', 'error'),

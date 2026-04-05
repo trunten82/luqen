@@ -16,7 +16,8 @@ const pump = promisify(pipeline);
 export async function brandingGuidelineRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
-  llmClient: LLMClient | null,
+  /** Getter for current LLM client (runtime reload support). */
+  getLLMClient: () => LLMClient | null,
   uploadsDir?: string,
 ): Promise<void> {
   // ── Template downloads ───────────────────────────────────────────────────
@@ -235,6 +236,7 @@ export async function brandingGuidelineRoutes(
     '/admin/branding-guidelines/:id',
     { preHandler: requirePermission('branding.view') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
 
       const guideline = await storage.branding.getGuideline(id);
@@ -403,6 +405,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
     '/admin/branding-guidelines/:id/discover-branding',
     { preHandler: requirePermission('branding.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
 
       const guideline = await storage.branding.getGuideline(id);

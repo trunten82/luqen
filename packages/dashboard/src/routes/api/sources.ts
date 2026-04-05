@@ -10,7 +10,12 @@ export async function sourceApiRoutes(
   server: FastifyInstance,
   complianceUrl: string,
   pluginManager: PluginManager,
-  serviceTokenManager: { getToken(): Promise<string> },
+  /**
+   * Getter for the current global compliance token manager. Called inside
+   * each handler so that a runtime reload of the compliance client is picked
+   * up immediately (no captured stale reference).
+   */
+  getServiceTokenManager: () => { getToken(): Promise<string> } | null,
 ): Promise<void> {
   // POST /api/v1/sources/scan — trigger async source scan
   server.post(
@@ -24,6 +29,10 @@ export async function sourceApiRoutes(
       const force = query.force !== 'false';
 
       try {
+        const serviceTokenManager = getServiceTokenManager();
+        if (serviceTokenManager === null) {
+          return reply.code(503).send({ error: 'Compliance service not configured' });
+        }
         const token = await serviceTokenManager.getToken();
 
         // Fire-and-forget — return immediately
@@ -69,6 +78,10 @@ export async function sourceApiRoutes(
       }
 
       try {
+        const serviceTokenManager = getServiceTokenManager();
+        if (serviceTokenManager === null) {
+          return reply.code(503).send({ error: 'Compliance service not configured' });
+        }
         const token = await serviceTokenManager.getToken();
         const result = await uploadSource(complianceUrl, token, {
           content: body.content.trim(),

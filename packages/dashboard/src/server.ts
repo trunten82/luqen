@@ -56,8 +56,10 @@ import { emailReportRoutes } from './routes/admin/email-reports.js';
 import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
 import { startSourceMonitorScheduler } from './source-monitor-scheduler.js';
-import { ServiceTokenManager } from './auth/service-token.js';
 import { ComplianceService } from './services/compliance-service.js';
+import { ServiceClientRegistry } from './services/service-client-registry.js';
+import { SqliteServiceConnectionsRepository } from './db/sqlite/service-connections-sqlite.js';
+import { importFromConfigIfEmpty } from './services/service-connections-bootstrap.js';
 import { createComplianceClient } from './compliance-client.js';
 import { createBrandingOrgClient } from './branding-client.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
@@ -66,7 +68,6 @@ import { changeHistoryRoutes } from './routes/admin/change-history.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { brandingGuidelineRoutes } from './routes/admin/branding-guidelines.js';
 import { llmAdminRoutes } from './routes/admin/llm.js';
-import { createLLMClient } from './llm-client.js';
 import { setGitHostPluginManager } from './git-hosts/registry.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
@@ -153,22 +154,40 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     }
   }
 
-  // ── Service Token Managers (auto-refresh for API calls) ─────────────────
-  const serviceTokenManager = new ServiceTokenManager(
-    config.complianceUrl,
-    config.complianceClientId,
-    config.complianceClientSecret,
+  // ── Service Connections Registry (compliance + branding + LLM) ──────────
+  // The registry is the single owner of the three outbound service clients
+  // and supports runtime hot-swap (Phase 06 D-07..D-11). server.ts holds
+  // only the registry handle; routes receive getter functions and resolve
+  // the current live client inside each handler so that an admin UI save
+  // (plan 06-03) is picked up without a restart.
+  const serviceConnectionsRepo = new SqliteServiceConnectionsRepository(
+    rawDb,
+    config.sessionSecret,
   );
-  server.decorate('serviceTokenManager', serviceTokenManager);
-  server.addHook('onClose', () => { serviceTokenManager.destroy(); });
+  await importFromConfigIfEmpty(serviceConnectionsRepo, config, server.log);
+  const serviceClientRegistry = await ServiceClientRegistry.create(
+    serviceConnectionsRepo,
+    config,
+    server.log,
+  );
+  server.addHook('onClose', async () => {
+    await serviceClientRegistry.destroyAll();
+  });
+  // Expose registry + repo so the admin save route (plan 06-03) can invoke
+  // registry.reload(serviceId) after an upsert. Decorated untyped — the
+  // admin route will import the types directly.
+  server.decorate('serviceClientRegistry', serviceClientRegistry);
+  server.decorate('serviceConnectionsRepo', serviceConnectionsRepo);
 
-  // Branding service token manager (separate JWT realm)
-  const brandingTokenManager = config.brandingUrl
-    ? new ServiceTokenManager(config.brandingUrl, config.brandingClientId, config.brandingClientSecret)
-    : null;
-  if (brandingTokenManager) {
-    server.addHook('onClose', () => { brandingTokenManager.destroy(); });
-  }
+  // Stable getter functions passed to downstream services/routes. Each call
+  // re-resolves the current live client from the registry — capturing the
+  // return value of these getters at module-load time would defeat hot-swap.
+  const getComplianceTokenManager = (): ReturnType<typeof serviceClientRegistry.getComplianceTokenManager> =>
+    serviceClientRegistry.getComplianceTokenManager();
+  const getBrandingTokenManager = (): ReturnType<typeof serviceClientRegistry.getBrandingTokenManager> =>
+    serviceClientRegistry.getBrandingTokenManager();
+  const getLLMClient = (): ReturnType<typeof serviceClientRegistry.getLLMClient> =>
+    serviceClientRegistry.getLLMClient();
 
   // ── Optional Redis ────────────────────────────────────────────────────────
   const redisClient = createRedisClient(config.redisUrl);
@@ -524,7 +543,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Service token injection (auto-refresh for compliance API calls) ────
-  const complianceService = new ComplianceService(config, serviceTokenManager, storage.organizations);
+  const complianceService = new ComplianceService(config, getComplianceTokenManager, storage.organizations);
   server.decorate('complianceService', complianceService);
   server.addHook('onClose', () => { complianceService.destroyOrgTokenManagers(); });
 
@@ -532,7 +551,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     const session = request.session as { token?: string };
     if (!session.token) {
       const reqExt = request as unknown as Record<string, unknown>;
-      reqExt['_serviceToken'] = await serviceTokenManager.getToken();
+      const complianceTm = getComplianceTokenManager();
+      reqExt['_serviceToken'] = complianceTm !== null ? await complianceTm.getToken() : '';
 
       // Inject per-org token when the user has a current org with stored credentials
       const orgId = request.user?.currentOrgId;
@@ -640,17 +660,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Routes ────────────────────────────────────────────────────────────────
   await authRoutes(server, config, authService, storage);
   await homeRoutes(server, storage, config);
-  await scanRoutes(server, storage, orchestrator, config);
+  await scanRoutes(server, storage, orchestrator, config, complianceService);
   await compareRoutes(server, storage);
   await trendRoutes(server, storage);
   await scheduleRoutes(server, storage);
-  // ── LLM client (used in report routes and admin routes below) ───────────
-  const llmClient = createLLMClient(config.llmUrl, config.llmClientId, config.llmClientSecret);
-  if (llmClient) {
-    server.addHook('onClose', () => { llmClient.destroy(); });
-  }
-
-  await reportRoutes(server, storage, llmClient);
+  // LLM client is owned by serviceClientRegistry (constructed above).
+  // Routes receive getLLMClient and resolve the current live instance per
+  // request so a runtime reload is picked up without a restart.
+  await reportRoutes(server, storage, getLLMClient);
   await manualTestRoutes(server, storage);
   await assignmentRoutes(server, storage);
   await orgRoutes(server, storage);
@@ -664,21 +681,21 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await regulationRoutes(server, config.complianceUrl);
   await proposalRoutes(server, config.complianceUrl, storage);
   await changeHistoryRoutes(server, config.complianceUrl);
-  await sourceRoutes(server, config.complianceUrl, pluginManager, llmClient);
+  await sourceRoutes(server, config.complianceUrl, pluginManager, getLLMClient);
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
-  await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, brandingTokenManager, llmClient);
+  await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, getBrandingTokenManager, getLLMClient);
   await monitorRoutes(server, config.complianceUrl);
   await systemRoutes(server, {
     complianceUrl: config.complianceUrl,
     brandingUrl: config.brandingUrl,
     webserviceUrl: config.webserviceUrl,
     dbPath: config.dbPath,
-  }, llmClient);
+  }, getLLMClient);
 
   await dashboardUserRoutes(server, storage);
   await apiKeyRoutes(server, storage);
-  await organizationRoutes(server, storage, config.complianceUrl, config.brandingUrl, brandingTokenManager);
+  await organizationRoutes(server, storage, config.complianceUrl, config.brandingUrl, getBrandingTokenManager);
   await roleRoutes(server, storage);
   await teamRoutes(server, storage);
   await emailReportRoutes(server, storage, pluginManager);
@@ -686,11 +703,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await auditRoutes(server, storage);
   await gitHostRoutes(server, storage);
   const uploadsDir = resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads');
-  await brandingGuidelineRoutes(server, storage, llmClient, uploadsDir);
+  await brandingGuidelineRoutes(server, storage, getLLMClient, uploadsDir);
   await pluginAdminRoutes(server, pluginManager, registryEntries, storage);
 
   // ── LLM admin routes ────────────────────────────────────────────────────
-  await llmAdminRoutes(server, llmClient);
+  await llmAdminRoutes(server, getLLMClient);
 
   // ── Export API routes ────────────────────────────────────────────────────
   await exportRoutes(server, storage);
@@ -708,7 +725,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await pluginApiRoutes(server, pluginManager);
 
   // ── Source intelligence API routes ─────────────────────────────────────
-  await sourceApiRoutes(server, config.complianceUrl, pluginManager, serviceTokenManager);
+  await sourceApiRoutes(server, config.complianceUrl, pluginManager, getComplianceTokenManager);
 
   // ── GraphQL API (mercurius) ──────────────────────────────────────────────
   await server.register(mercurius, {
@@ -734,7 +751,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   server.addHook('onReady', async () => {
     const timer = startScheduler(storage, orchestrator, config);
     const emailTimer = startEmailScheduler(storage, pluginManager);
-    const sourceMonitorTimer = startSourceMonitorScheduler(config, serviceTokenManager);
+    const sourceMonitorTimer = startSourceMonitorScheduler(config, getComplianceTokenManager);
     server.addHook('onClose', () => {
       clearInterval(timer);
       clearInterval(emailTimer);
@@ -746,8 +763,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     // We create them now (best-effort) so every org has both compliance and
     // branding clients ready.
     try {
-      const complianceToken = await serviceTokenManager.getToken();
-      const brandingToken = brandingTokenManager ? await brandingTokenManager.getToken() : null;
+      const complianceTm = getComplianceTokenManager();
+      const brandingTm = getBrandingTokenManager();
+      const complianceToken = complianceTm !== null ? await complianceTm.getToken() : '';
+      const brandingToken = brandingTm !== null ? await brandingTm.getToken() : null;
       const allOrgs = await storage.organizations.listOrgs();
 
       for (const org of allOrgs) {

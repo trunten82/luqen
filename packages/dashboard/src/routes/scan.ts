@@ -30,9 +30,15 @@ export async function scanRoutes(
   storage: StorageAdapter,
   orchestrator: ScanOrchestrator,
   config: DashboardConfig,
+  /**
+   * ComplianceService instance. When omitted (tests/legacy callers) a local
+   * instance is created with a no-op token getter — the compliance lookup
+   * will return its graceful-degradation fallback.
+   */
+  complianceService?: ComplianceService,
 ): Promise<void> {
   const scanService = new ScanService(storage, orchestrator, config);
-  const complianceService = new ComplianceService(config);
+  const complianceSvc = complianceService ?? new ComplianceService(config, () => null);
 
   // GET /scan/new — render new scan form
   server.get(
@@ -45,7 +51,7 @@ export async function scanRoutes(
 
       const token = getToken(request);
       const orgId = getOrgId(request);
-      const lookupData = await complianceService.getComplianceLookupData(token, orgId);
+      const lookupData = await complianceSvc.getComplianceLookupData(token, orgId);
 
       return reply.view('scan-new.hbs', {
         pageTitle: 'New Scan',
@@ -124,7 +130,7 @@ export async function scanRoutes(
         if (isHtmx || request.headers['accept']?.includes('text/html')) {
           const token = getToken(request);
           const orgId = getOrgId(request);
-          const lookupData = await complianceService.getComplianceLookupData(token, orgId);
+          const lookupData = await complianceSvc.getComplianceLookupData(token, orgId);
           return reply.code(400).view('scan-new.hbs', {
             pageTitle: 'New Scan',
             currentPath: '/scan/new',
