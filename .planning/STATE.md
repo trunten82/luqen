@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 04-ship-ready-04-03-PLAN.md
-last_updated: "2026-04-04T19:16:48.294Z"
-last_activity: 2026-04-04
+status: executing
+stopped_at: Completed 05-ui-review-polish-05-01-PLAN.md
+last_updated: "2026-04-05T05:30:11.096Z"
+last_activity: 2026-04-05
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** AI-powered accessibility fix suggestions that help users remediate WCAG issues faster than manual research
-**Current focus:** Phase 04 — ship-ready
+**Current focus:** Phase 05 — ui-review-polish
 
 ## Current Position
 
-Phase: 04 (ship-ready) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-04-04
+Phase: 05 (ui-review-polish) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-05
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04-ship-ready P02 | 25m | 2 tasks | 10 files |
 | Phase 04-ship-ready P01 | 10 | 2 tasks | 5 files |
 | Phase 04-ship-ready P03 | 8m | 2 tasks | 4 files |
+| Phase 05-ui-review-polish P01 | 2m | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,8 @@ Recent decisions affecting current work:
 - [Phase 04-ship-ready]: Remove body.required arrays from OpenAPI schemas so handler validation runs (not Fastify JSON schema interceptor)
 - [Phase 04-ship-ready]: Use additionalProperties:true on 200 response schemas to preserve dynamically spread fields from capResult.data
 - [Phase 04-ship-ready]: Inline ErrorResponse schema in capability routes instead of dollar-sign ref (test environment compatibility)
+- [Phase 05-ui-review-polish]: All UI copy in llm.hbs replaced with {{t}} keys — no hardcoded English remains
+- [Phase 05-ui-review-polish]: brd-discover fallback wrappers (--spacing-6/3) removed — use Emerald tokens directly
 
 ### Pending Todos
 
@@ -102,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T19:16:48.291Z
-Stopped at: Completed 04-ship-ready-04-03-PLAN.md
+Last session: 2026-04-05T05:30:11.092Z
+Stopped at: Completed 05-ui-review-polish-05-01-PLAN.md
 Resume file: None

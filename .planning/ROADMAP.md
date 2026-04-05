@@ -92,7 +92,7 @@ Plans:
   4. Stitch MCP validates design system alignment across all modified pages
 **Plans**: 2 plans
 Plans:
-- [ ] 05-01-PLAN.md — Audit + structural fixes: i18n keys, mobile layout, design system token alignment
+- [x] 05-01-PLAN.md — Audit + structural fixes: i18n keys, mobile layout, design system token alignment
 - [ ] 05-02-PLAN.md — UX polish + Stitch MCP validation: AI feature flow improvements, design system sign-off
 **UI hint**: yes
 
