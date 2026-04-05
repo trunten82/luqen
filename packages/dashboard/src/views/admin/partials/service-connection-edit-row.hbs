@@ -80,8 +80,7 @@
       <button type="button"
               hx-post="/admin/service-connections/{{serviceId}}/test"
               hx-include="closest tr"
-              hx-target="#test-result-{{serviceId}}"
-              hx-swap="innerHTML"
+              hx-swap="none"
               class="btn btn--sm btn--secondary">
         {{t "admin.serviceConnections.action.test"}}
       </button>
@@ -96,6 +95,5 @@
       </button>
       {{/if}}
     </div>
-    <span id="test-result-{{serviceId}}"></span>
   </td>
 </tr>
