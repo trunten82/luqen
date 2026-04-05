@@ -310,8 +310,31 @@ export async function registerCapabilityExecRoutes(
           type: 'object',
           additionalProperties: true,
           properties: {
-            colors:    { type: 'array', items: { type: 'string' }, description: 'Detected hex color values' },
-            fonts:     { type: 'array', items: { type: 'string' }, description: 'Detected font family names' },
+            colors: {
+              type: 'array',
+              description: 'Detected brand colors',
+              items: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  name:  { type: 'string' },
+                  hex:   { type: 'string' },
+                  usage: { type: 'string' },
+                },
+              },
+            },
+            fonts: {
+              type: 'array',
+              description: 'Detected brand fonts',
+              items: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  family: { type: 'string' },
+                  usage:  { type: 'string' },
+                },
+              },
+            },
             logoUrl:   { type: 'string', description: 'Detected logo URL (if found)' },
             brandName: { type: 'string', description: 'Detected brand name (if found)' },
             model:     { type: 'string' },
