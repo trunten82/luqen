@@ -416,26 +416,24 @@
     </div>
     <div class="card__body">
       <p class="brd-discover__desc">{{t "admin.branding.discoverDescription"}}</p>
-      <div class="brd-discover__form">
+      <form class="brd-discover__form"
+            hx-post="/admin/branding-guidelines/{{guideline.id}}/discover-branding"
+            hx-target="#toast-container"
+            hx-swap="innerHTML">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <div class="brd-discover__input-group form-group">
           <label class="form-label" for="discover-url">{{t "admin.branding.siteUrl"}}</label>
           <input id="discover-url"
                  type="url"
                  name="url"
                  class="input"
+                 required
                  placeholder="{{t "admin.branding.discoverUrlPlaceholder"}}">
         </div>
-        <button type="button"
-                class="btn btn--primary btn--sm"
-                hx-post="/admin/branding-guidelines/{{guideline.id}}/discover-branding"
-                hx-target="#brd-discover-result"
-                hx-swap="innerHTML"
-                hx-include="#discover-url,[name='_csrf']">
+        <button type="submit" class="btn btn--primary btn--sm">
           {{t "admin.branding.discoverButton"}}
         </button>
-        <input type="hidden" name="_csrf" value="{{csrfToken}}">
-      </div>
-      <div id="brd-discover-result" aria-live="polite" class="mt-sm"></div>
+      </form>
     </div>
   </div>
   {{/if}}
