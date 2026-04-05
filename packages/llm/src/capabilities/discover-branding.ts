@@ -55,49 +55,72 @@ export function parseDiscoverBrandingResponse(text: string): DiscoverBrandingRes
   }
 }
 
+async function fetchWithTimeout(url: string, timeoutMs = 15000): Promise<string> {
+  const response = await fetch(url, {
+    headers: { 'User-Agent': 'Luqen-BrandDiscovery/1.0' },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.text();
+}
+
 async function extractBrandSignals(url: string): Promise<{ htmlContent: string; cssContent: string }> {
   let rawHtml: string;
   try {
-    const response = await fetch(url, {
-      headers: { 'User-Agent': 'Luqen-BrandDiscovery/1.0' },
-      signal: AbortSignal.timeout(15000),
-    });
-    rawHtml = await response.text();
+    rawHtml = await fetchWithTimeout(url);
   } catch {
     return { htmlContent: '', cssContent: '' };
   }
 
-  // Extract <style> tag content for cssContent
+  // Extract <style> tag content
   const styleMatches = rawHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/gi) ?? [];
   const inlineCss = styleMatches
     .map((s) => s.replace(/<style[^>]*>/i, '').replace(/<\/style>/i, '').trim())
     .join('\n');
 
-  // Include <link rel="stylesheet"> hrefs as comments so LLM knows frameworks used
+  // Fetch up to 3 external stylesheets (prioritise same-origin and main CSS files)
   const linkMatches = rawHtml.match(/<link[^>]+rel=["']stylesheet["'][^>]*>/gi) ?? [];
-  const linkHrefs = linkMatches
+  const hrefs = linkMatches
     .map((l) => {
       const m = l.match(/href=["']([^"']+)["']/i);
-      return m ? `/* external: ${m[1]} */` : null;
+      return m ? m[1] : null;
     })
-    .filter((x): x is string => x !== null);
+    .filter((x): x is string => x !== null)
+    .map((href) => {
+      try {
+        return new URL(href, url).toString();
+      } catch {
+        return null;
+      }
+    })
+    .filter((x): x is string => x !== null)
+    .slice(0, 3);
 
-  const cssContent = [inlineCss, ...linkHrefs].join('\n').trim();
+  const externalCssChunks = await Promise.all(
+    hrefs.map(async (href) => {
+      try {
+        const css = await fetchWithTimeout(href, 8000);
+        return `/* from ${href} */\n${css}`;
+      } catch {
+        return '';
+      }
+    }),
+  );
 
-  // Strip scripts and reduce HTML to structural skeleton
-  const stripped = rawHtml
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
+  const cssContent = [inlineCss, ...externalCssChunks].filter(Boolean).join('\n\n').trim();
 
-  // Keep head (for meta tags / title) + first 3000 chars of body
-  const headMatch = stripped.match(/<head[\s\S]*?<\/head>/i);
-  const bodyMatch = stripped.match(/<body[^>]*>([\s\S]*)/i);
+  // Extract inline style attributes from elements (often contain brand colors)
+  const inlineStyles = (rawHtml.match(/style=["'][^"']{5,200}["']/gi) ?? []).slice(0, 50).join('\n');
+
+  // Extract meta tags and title for brand name
+  const headMatch = rawHtml.match(/<head[\s\S]*?<\/head>/i);
   const head = headMatch ? headMatch[0] : '';
-  const body = bodyMatch ? bodyMatch[1].slice(0, 3000) : stripped.slice(0, 3000);
-  const htmlContent = `${head}\n<body>${body}</body>`;
+
+  // Extract logo-related elements
+  const logoElements = (rawHtml.match(/<img[^>]*(?:logo|brand)[^>]*>/gi) ?? []).slice(0, 5).join('\n');
+  const svgLogos = (rawHtml.match(/<svg[^>]*(?:logo|brand)[^>]*>[\s\S]{0,500}?<\/svg>/gi) ?? []).slice(0, 3).join('\n');
+
+  const htmlContent = [head, logoElements, svgLogos, '<!-- inline styles -->', inlineStyles].filter(Boolean).join('\n');
 
   return { htmlContent, cssContent };
 }
@@ -162,7 +185,7 @@ export async function executeDiscoverBranding(
 
         const result = await adapter.complete(prompt, {
           model: model.modelId,
-          temperature: 0.2,
+          temperature: 0,
           timeout: provider.timeout,
         });
 
