@@ -3007,7 +3007,7 @@ details[open] > .mt-examples-toggle::before {
 
 /* ── Fix suggestion hints (report detail) ────────────────────────────── */
 .rpt-fix-hint {
-  margin-top: 0.5rem;
+  margin-top: var(--space-sm);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   overflow: hidden;
@@ -3036,9 +3036,9 @@ details[open] > .mt-examples-toggle::before {
   line-height: 1.5;
 }
 .rpt-fix-hint__code {
-  margin: 0.25rem 0.7rem 0.7rem;
+  margin: var(--space-xs) var(--space-sm) var(--space-sm);
   padding: 0.5rem 0.6rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   background: var(--bg-tertiary);
   border-radius: var(--border-radius);
@@ -3055,7 +3055,7 @@ details[open] > .mt-examples-toggle::before {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  margin-left: 0.25rem;
+  margin-left: var(--space-xs);
 }
 .rpt-fix-effort--low {
   background: var(--status-success-bg);
@@ -3375,12 +3375,12 @@ details[open] > .mt-examples-toggle::before {
 
 /* ── Brand Discovery ─────────────────────────────────────────────── */
 .brd-discover {
-  margin-top: var(--spacing-6, var(--space-lg));
+  margin-top: var(--space-lg);
 }
 
 .brd-discover__form {
   display: flex;
-  gap: var(--spacing-3, var(--space-sm));
+  gap: var(--space-sm);
   align-items: flex-end;
   flex-wrap: wrap;
 }
