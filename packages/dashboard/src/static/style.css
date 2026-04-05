@@ -2576,7 +2576,7 @@ select {
 .rpt-group__counts { display: flex; gap: 0.25rem; align-items: center; margin-left: auto; flex-shrink: 0; }
 
 /* ── Page sections (Tab 3) ────────────────────────────────── */
-.rpt-page { background: var(--bg-primary); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 0.6rem; overflow: hidden; }
+.rpt-page { background: var(--bg-primary); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 0.6rem; overflow-x: hidden; }
 .rpt-page__header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: background 0.1s; }
 .rpt-page__header:hover { background: var(--bg-secondary); }
 .rpt-page__url { font-size: 0.85rem; font-weight: 600; color: var(--status-info); word-break: break-all; min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 1; }
@@ -3012,10 +3012,8 @@ details[open] > .mt-examples-toggle::before {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   background: var(--bg-secondary);
-  width: 100%;
   box-sizing: border-box;
   min-width: 0;
-  overflow-x: hidden;
 }
 .rpt-fix-hint__toggle {
   cursor: pointer;
@@ -3052,8 +3050,6 @@ details[open] > .mt-examples-toggle::before {
   word-break: break-word;
   overflow-wrap: anywhere;
   line-height: 1.45;
-  max-width: calc(100% - var(--space-sm) * 2);
-  overflow-x: auto;
 }
 .rpt-fix-effort {
   display: inline-block;
