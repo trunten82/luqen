@@ -1,4 +1,50 @@
 <section aria-label="{{t "admin.branding.title"}}">
+  <nav class="tabs" role="tablist" aria-label="{{t "admin.branding.tabsLabel"}}">
+    <a class="tab {{#unless systemLibraryActive}}tab--active{{/unless}}"
+       href="/admin/branding-guidelines"
+       role="tab"
+       aria-selected="{{#unless systemLibraryActive}}true{{else}}false{{/unless}}">
+      {{t "admin.branding.tabs.myGuidelines"}}
+      <span class="badge badge--neutral">{{guidelines.length}}</span>
+    </a>
+    <a class="tab {{#if systemLibraryActive}}tab--active{{/if}}"
+       href="/admin/branding-guidelines?tab=system"
+       role="tab"
+       aria-selected="{{#if systemLibraryActive}}true{{else}}false{{/if}}">
+      {{t "admin.branding.tabs.systemLibrary"}}
+      <span class="badge badge--info">{{systemGuidelines.length}}</span>
+    </a>
+  </nav>
+
+  {{#if systemLibraryActive}}
+  {{!-- System Library tab panel — read-only list of system guidelines --}}
+  <div id="branding-guidelines-alert" aria-live="polite"></div>
+  {{#if systemGuidelines.length}}
+  <div class="table-wrapper">
+    <table class="table" aria-label="{{t "admin.branding.tabs.systemLibrary"}}">
+      <thead>
+        <tr>
+          <th scope="col">{{t "admin.branding.brandLogo"}}</th>
+          <th scope="col">{{t "common.name"}}</th>
+          <th scope="col">{{t "common.scope"}}</th>
+          <th scope="col">{{t "admin.branding.version"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
+        </tr>
+      </thead>
+      <tbody id="system-library-table">
+        {{#each systemGuidelines}}
+        {{> system-library-row this}}
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="empty-state">
+    <h3>{{t "admin.systemBrand.library.emptyHeading"}}</h3>
+    <p class="text-muted">{{t "admin.systemBrand.library.emptyBody"}}</p>
+  </div>
+  {{/if}}
+  {{else}}
   <div class="page-actions">
     {{#if perm.brandingManage}}
     <button class="btn btn--primary"
@@ -142,5 +188,6 @@
       </div>
     </form>
   </div>
+  {{/if}}
   {{/if}}
 </section>
