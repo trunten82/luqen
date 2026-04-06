@@ -239,10 +239,10 @@ export class SqliteBrandingRepository implements BrandingRepository {
     const insertGuideline = this.db.prepare(`
       INSERT INTO branding_guidelines (
         id, org_id, name, description, created_by, created_at, updated_at,
-        cloned_from_system_guideline_id
+        cloned_from_system_guideline_id, image_path
       ) VALUES (
         @id, @orgId, @name, @description, @createdBy, @createdAt, @updatedAt,
-        @clonedFromSystemGuidelineId
+        @clonedFromSystemGuidelineId, @imagePath
       )
     `);
 
@@ -300,6 +300,7 @@ export class SqliteBrandingRepository implements BrandingRepository {
         createdAt: now,
         updatedAt: now,
         clonedFromSystemGuidelineId: sourceId,
+        imagePath: source.imagePath ?? null,
       });
 
       for (const c of sourceColors) {
@@ -371,6 +372,7 @@ export class SqliteBrandingRepository implements BrandingRepository {
       updatedAt: now,
       ...(source.description !== undefined ? { description: source.description } : {}),
       ...(source.createdBy !== undefined ? { createdBy: source.createdBy } : {}),
+      ...(source.imagePath !== undefined ? { imagePath: source.imagePath } : {}),
       clonedFromSystemGuidelineId: sourceId,
       colors: clonedColors,
       fonts: clonedFonts,
