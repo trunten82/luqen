@@ -1,0 +1,84 @@
+{
+  "pages": [
+    {
+      "url": "https://www.aperol.com",
+      "issues": [
+        {
+          "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+          "type": "error",
+          "message": "This element has insufficient colour contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 2.1:1.",
+          "selector": ".hero-banner > h1",
+          "context": "<h1 style=\"color: #FF5F15; background-color: #FFFFFF;\">Summer Spritz</h1>"
+        },
+        {
+          "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+          "type": "error",
+          "message": "This element has insufficient colour contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 2.8:1.",
+          "selector": ".brand-cta",
+          "context": "<button class=\"brand-cta\" style=\"background-color: #FF5F15;\">Discover Aperol</button>"
+        },
+        {
+          "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+          "type": "error",
+          "message": "Img element missing an alt attribute. Use the alt attribute to specify a short text alternative.",
+          "selector": ".hero-banner img",
+          "context": "<img src=\"/images/aperol-bottle.jpg\" class=\"hero-banner\">"
+        },
+        {
+          "code": "WCAG2AA.Principle4.Guideline4_1.4_1_2.H91.A.NoContent",
+          "type": "error",
+          "message": "Anchor element found with a valid href attribute, but no link content has been supplied.",
+          "selector": "nav > ul > li:nth-child(3) > a",
+          "context": "<a href=\"/cocktails\"></a>"
+        },
+        {
+          "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+          "type": "error",
+          "message": "This element has insufficient colour contrast. Expected 4.5:1, got 1.8:1.",
+          "selector": "footer .tagline",
+          "context": "<p class=\"tagline\" style=\"color: #FF8C00; background-color: #FFFFFF;\">Feel the Spritz</p>"
+        }
+      ]
+    },
+    {
+      "url": "https://www.aperol.com/cocktails",
+      "issues": [
+        {
+          "code": "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+          "type": "error",
+          "message": "This element has insufficient colour contrast at this conformance level. Expected a contrast ratio of at least 4.5:1, but text in this element has a contrast ratio of 2.3:1.",
+          "selector": ".recipe-card .brand-cta",
+          "context": "<button class=\"brand-cta\" style=\"color: #FFFFFF; background-color: #FF5F15;\">View Recipe</button>"
+        },
+        {
+          "code": "WCAG2AA.Principle1.Guideline1_1.1_1_1.H37",
+          "type": "error",
+          "message": "Img element missing an alt attribute.",
+          "selector": ".recipe-card:nth-child(2) img",
+          "context": "<img src=\"/images/spritz-recipe.jpg\">"
+        },
+        {
+          "code": "WCAG2AA.Principle2.Guideline2_4.2_4_3.H4.2",
+          "type": "warning",
+          "message": "If this element contains a navigation section, it is recommended that it be marked up as a list.",
+          "selector": ".cocktail-nav",
+          "context": "<div class=\"cocktail-nav\"><a href=\"/spritz\">Spritz</a><a href=\"/negroni\">Negroni</a></div>"
+        },
+        {
+          "code": "WCAG2AA.Principle1.Guideline1_3.1_3_1.H42",
+          "type": "notice",
+          "message": "Check that the heading level is appropriate for the content hierarchy.",
+          "selector": ".recipe-card h3",
+          "context": "<h3 class=\"recipe-title\">Aperol Spritz Classic</h3>"
+        },
+        {
+          "code": "WCAG2AA.Principle1.Guideline1_4.1_4_11.G195",
+          "type": "error",
+          "message": "This element has insufficient non-text contrast for UI components.",
+          "selector": "input[type=\"search\"]",
+          "context": "<input type=\"search\" placeholder=\"Search cocktails\" style=\"border-color: #CCCCCC;\">"
+        }
+      ]
+    }
+  ]
+}

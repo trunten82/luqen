@@ -1,0 +1,48 @@
+{
+  "name": "Aperol Brand Guide",
+  "description": "Official Aperol brand guidelines for digital properties",
+  "colors": [
+    {
+      "name": "Aperol Orange",
+      "hexValue": "#FF5F15",
+      "usage": "brand"
+    },
+    {
+      "name": "Aperol White",
+      "hexValue": "#FFFFFF",
+      "usage": "neutral"
+    },
+    {
+      "name": "Aperol Dark",
+      "hexValue": "#1A1A1A",
+      "usage": "neutral"
+    },
+    {
+      "name": "Aperol Amber",
+      "hexValue": "#FF8C00",
+      "usage": "accent"
+    }
+  ],
+  "fonts": [
+    {
+      "family": "Aperol Display",
+      "weights": ["400", "700", "900"],
+      "usage": "display"
+    },
+    {
+      "family": "Helvetica Neue",
+      "weights": ["300", "400", "500"],
+      "usage": "body"
+    }
+  ],
+  "selectors": [
+    {
+      "pattern": ".hero-banner",
+      "description": "Primary hero section with brand visuals"
+    },
+    {
+      "pattern": ".brand-cta",
+      "description": "Brand call-to-action buttons"
+    }
+  ]
+}
