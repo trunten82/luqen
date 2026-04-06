@@ -1,0 +1,48 @@
+{
+  "name": "Tailspin Brand Guide",
+  "description": "Official Tailspin brand guidelines for digital properties",
+  "colors": [
+    {
+      "name": "Tailspin Orange",
+      "hexValue": "#FF5F15",
+      "usage": "brand"
+    },
+    {
+      "name": "Tailspin White",
+      "hexValue": "#FFFFFF",
+      "usage": "neutral"
+    },
+    {
+      "name": "Tailspin Dark",
+      "hexValue": "#1A1A1A",
+      "usage": "neutral"
+    },
+    {
+      "name": "Tailspin Amber",
+      "hexValue": "#FF8C00",
+      "usage": "accent"
+    }
+  ],
+  "fonts": [
+    {
+      "family": "Tailspin Display",
+      "weights": ["400", "700", "900"],
+      "usage": "display"
+    },
+    {
+      "family": "Helvetica Neue",
+      "weights": ["300", "400", "500"],
+      "usage": "body"
+    }
+  ],
+  "selectors": [
+    {
+      "pattern": ".hero-banner",
+      "description": "Primary hero section with brand visuals"
+    },
+    {
+      "pattern": ".brand-cta",
+      "description": "Brand call-to-action buttons"
+    }
+  ]
+}
