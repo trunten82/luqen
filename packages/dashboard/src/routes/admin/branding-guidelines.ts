@@ -539,32 +539,32 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         const existing = await storage.branding.getGuidelineForSite(normalizedUrl, guideline.orgId);
         if (existing !== null && existing.id !== id) {
           const safeUrl = escapeHtml(url);
-          const freshCsrf = escapeHtml(reply.generateCsrf());
           // Conflict detected — ask user to confirm before proceeding.
-          // Fresh CSRF token injected into hidden fields AND meta tag (OOB swap).
+          // CSRF token sent via x-csrf-token header by htmx:configRequest interceptor
+          // (reads from <meta name="csrf-token"> set on page load — still valid, HMAC-based).
           return reply
             .code(200)
             .header('content-type', 'text/html')
-            .send(`<meta name="csrf-token" content="${freshCsrf}" hx-swap-oob="outerHTML:meta[name='csrf-token']">
-<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-overwrite-title">
+            .send(`<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-overwrite-title">
   <div class="modal">
     <h2 id="confirm-overwrite-title">Site already linked</h2>
     <p class="mb-md">Site <strong>${escapeHtml(normalizedUrl)}</strong> is currently linked to <strong>${escapeHtml(existing.name)}</strong>.</p>
     <p class="mb-lg">Do you want to switch it to <strong>${escapeHtml(guideline.name)}</strong>? The old link will be removed and scans will be retagged with the new guideline.</p>
     <div class="form-actions" data-confirm-actions>
-      <form hx-post="/admin/branding-guidelines/${id}/discover-branding" hx-target="#toast-container" hx-swap="innerHTML" style="display:inline">
-        <input type="hidden" name="_csrf" value="${freshCsrf}">
-        <input type="hidden" name="url" value="${safeUrl}">
-        <input type="hidden" name="linkSiteAfterDiscover" value="on">
-        <input type="hidden" name="confirmOverwrite" value="yes">
-        <button type="submit" class="btn btn--primary" data-action="confirm-close">Yes, switch to this guideline</button>
-      </form>
-      <form hx-post="/admin/branding-guidelines/${id}/discover-branding" hx-target="#toast-container" hx-swap="innerHTML" style="display:inline">
-        <input type="hidden" name="_csrf" value="${freshCsrf}">
-        <input type="hidden" name="url" value="${safeUrl}">
-        <input type="hidden" name="confirmOverwrite" value="no">
-        <button type="submit" class="btn btn--ghost" data-action="confirm-close">No, just discover without linking</button>
-      </form>
+      <button class="btn btn--primary"
+              hx-post="/admin/branding-guidelines/${id}/discover-branding"
+              hx-vals='{"url":"${safeUrl}","linkSiteAfterDiscover":"on","confirmOverwrite":"yes"}'
+              hx-target="#toast-container" hx-swap="innerHTML"
+              data-action="confirm-close">
+        Yes, switch to this guideline
+      </button>
+      <button class="btn btn--ghost"
+              hx-post="/admin/branding-guidelines/${id}/discover-branding"
+              hx-vals='{"url":"${safeUrl}","confirmOverwrite":"no"}'
+              hx-target="#toast-container" hx-swap="innerHTML"
+              data-action="confirm-close">
+        No, just discover without linking
+      </button>
     </div>
   </div>
 </div>`);
@@ -1051,23 +1051,21 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         const existing = await storage.branding.getGuidelineForSite(normalizedUrl, orgId);
         if (existing !== null && existing.id !== id && body.confirmOverwrite !== 'yes') {
           const guidelineName = escapeHtml((await storage.branding.getGuideline(id))?.name ?? 'this guideline');
-          const freshCsrf = escapeHtml(reply.generateCsrf());
           return reply
             .code(200)
             .header('content-type', 'text/html')
-            .send(`<meta name="csrf-token" content="${freshCsrf}" hx-swap-oob="outerHTML:meta[name='csrf-token']">
-<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-site-title">
+            .send(`<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-site-title">
   <div class="modal">
     <h2 id="confirm-site-title">Site already linked</h2>
     <p class="mb-md">Site <strong>${escapeHtml(normalizedUrl)}</strong> is currently linked to <strong>${escapeHtml(existing.name)}</strong>.</p>
     <p class="mb-lg">Switch it to <strong>${guidelineName}</strong>? The old link will be removed and scans will be retagged.</p>
     <div class="form-actions">
-      <form hx-post="/admin/branding-guidelines/${id}/sites" hx-swap="none" style="display:inline">
-        <input type="hidden" name="_csrf" value="${freshCsrf}">
-        <input type="hidden" name="siteUrl" value="${escapeHtml(normalizedUrl)}">
-        <input type="hidden" name="confirmOverwrite" value="yes">
-        <button type="submit" class="btn btn--primary">Yes, switch guideline</button>
-      </form>
+      <button class="btn btn--primary"
+              hx-post="/admin/branding-guidelines/${id}/sites"
+              hx-vals='{"siteUrl":"${escapeHtml(normalizedUrl)}","confirmOverwrite":"yes"}'
+              hx-target="#toast-container" hx-swap="innerHTML">
+        Yes, switch guideline
+      </button>
       <button type="button" class="btn btn--ghost close-modal-btn">Cancel</button>
     </div>
   </div>
