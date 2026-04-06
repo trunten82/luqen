@@ -552,14 +552,14 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
     <p class="mb-md">Site <strong>${escapeHtml(normalizedUrl)}</strong> is currently linked to <strong>${escapeHtml(existing.name)}</strong>.</p>
     <p class="mb-lg">Do you want to switch it to <strong>${escapeHtml(guideline.name)}</strong>? The old link will be removed and scans will be retagged with the new guideline.</p>
     <div class="form-actions" data-confirm-actions>
-      <form hx-post="/admin/branding-guidelines/${id}/discover-branding" hx-swap="none" style="display:inline">
+      <form hx-post="/admin/branding-guidelines/${id}/discover-branding" hx-target="#toast-container" hx-swap="innerHTML" style="display:inline">
         <input type="hidden" name="_csrf" value="${freshCsrf}">
         <input type="hidden" name="url" value="${safeUrl}">
         <input type="hidden" name="linkSiteAfterDiscover" value="on">
         <input type="hidden" name="confirmOverwrite" value="yes">
         <button type="submit" class="btn btn--primary" data-action="confirm-close">Yes, switch to this guideline</button>
       </form>
-      <form hx-post="/admin/branding-guidelines/${id}/discover-branding" hx-swap="none" style="display:inline">
+      <form hx-post="/admin/branding-guidelines/${id}/discover-branding" hx-target="#toast-container" hx-swap="innerHTML" style="display:inline">
         <input type="hidden" name="_csrf" value="${freshCsrf}">
         <input type="hidden" name="url" value="${safeUrl}">
         <input type="hidden" name="confirmOverwrite" value="no">

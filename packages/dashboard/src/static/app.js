@@ -69,6 +69,10 @@
         msg.textContent = 'Processing brand discovery\u2026 This may take a moment.';
         tc.textContent = '';
         tc.appendChild(msg);
+        setTimeout(function () {
+          msg.style.opacity = '0'; msg.style.transition = 'opacity 300ms ease';
+          setTimeout(function () { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 300);
+        }, 8000);
       }
     }
   });
