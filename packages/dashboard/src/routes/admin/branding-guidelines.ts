@@ -518,7 +518,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           .send(toastHtml('LLM service is not configured.', 'error'));
       }
 
-      const body = request.body as { url?: string };
+      const body = request.body as { url?: string; linkSiteAfterDiscover?: string };
       const url = body.url?.trim();
 
       if (!url || !/^https?:\/\//i.test(url)) {
@@ -600,11 +600,46 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         if (logoSaved) parts.push('logo');
         const summary = parts.join(', ');
 
+        // Auto-link the scanned site to this guideline (ALD-01, ALD-02).
+        // Default ON: any truthy value or absent field enables the link.
+        // Explicit "false" or "0" disables it (unchecked checkbox sends nothing).
+        const linkValue = body.linkSiteAfterDiscover;
+        const linkEnabled = linkValue !== 'false' && linkValue !== '0';
+
+        let siteLinkMessage = '';
+        if (linkEnabled) {
+          const orgId = guideline.orgId;
+          const normalizedUrl = url.replace(/\/+$/, '');
+          try {
+            // Detect if the site was previously assigned to a DIFFERENT guideline (ALD-02).
+            const existing = await storage.branding.getGuidelineForSite(normalizedUrl, orgId);
+            const isOverwrite = existing !== null && existing.id !== id;
+            const previousName = isOverwrite ? existing.name : null;
+
+            await storage.branding.assignToSite(id, normalizedUrl, orgId);
+
+            if (isOverwrite && previousName !== null) {
+              siteLinkMessage = ` Site "${normalizedUrl}" was linked to "${previousName}" — now linked to this guideline.`;
+            } else {
+              siteLinkMessage = ` Site "${normalizedUrl}" linked to this guideline.`;
+            }
+
+            // Retag scans for the newly linked site (non-blocking).
+            try {
+              await retagScansForSite(storage, normalizedUrl, orgId);
+            } catch {
+              // non-fatal — retag failure should not block the response
+            }
+          } catch {
+            // non-fatal — site linking failure should not block the discovery response
+          }
+        }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
           .header('HX-Refresh', 'true')
-          .send(toastHtml(`Brand discovery complete. Discovered ${summary}. Note: AI-generated results — please validate.`));
+          .send(toastHtml(`Brand discovery complete. Discovered ${summary}. Note: AI-generated results — please validate.${siteLinkMessage}`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Brand discovery failed';
         return reply.code(502).header('content-type', 'text/html').send(toastHtml(message, 'error'));
