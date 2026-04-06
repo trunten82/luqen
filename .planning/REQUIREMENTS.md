@@ -22,14 +22,14 @@
 
 ### CSS Import
 
-- [ ] **CSS-01**: User can upload a CSS file on the branding guideline page to extract brand colors (custom properties, hex values) and fonts (font-family declarations)
-- [ ] **CSS-02**: Extracted values populate the guideline's colors and fonts alongside existing manual/JSON/CSV import methods
+- [x] **CSS-01**: User can upload a CSS file on the branding guideline page to extract brand colors (custom properties, hex values) and fonts (font-family declarations)
+- [x] **CSS-02**: Extracted values populate the guideline's colors and fonts alongside existing manual/JSON/CSV import methods
 
 ### Org API Keys
 
-- [ ] **OAK-01**: Org admins can create and revoke API keys scoped to their organization
-- [ ] **OAK-02**: Org-scoped API keys access only that org's data (scans, reports, trends)
-- [ ] **OAK-03**: Global admin keys retain cross-org access via X-Org-Id header
+- [x] **OAK-01**: Org admins can create and revoke API keys scoped to their organization
+- [x] **OAK-02**: Org-scoped API keys access only that org's data (scans, reports, trends)
+- [x] **OAK-03**: Global admin keys retain cross-org access via X-Org-Id header
 - [ ] **OAK-04**: Key management UI in org settings with rate limits per key
 
 ### LLM Per-Org OAuth

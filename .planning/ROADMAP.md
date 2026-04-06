@@ -41,7 +41,13 @@ Plans:
   2. Org admin can create and revoke API keys scoped to their organization from org settings
   3. Org-scoped API keys access only that organization's data (scans, reports, trends) while global admin keys retain cross-org access
   4. Key management UI shows rate limits per key
-**Plans**: TBD
+**Plans:** 2/3 plans executed
+
+Plans:
+- [x] 10-01-PLAN.md — CSS parser + upload endpoint + guideline detail UI
+- [x] 10-02-PLAN.md — Org API key scoping: auth pipeline, data isolation, global admin routes
+- [ ] 10-03-PLAN.md — Org API key management UI: org settings page, sidebar nav, rate limit display
+
 **UI hint**: yes
 
 ### Phase 11: LLM Per-Org OAuth
@@ -73,6 +79,6 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 9. Branding Pipeline Completion | v2.9.0 | 4/4 | Complete   | 2026-04-06 |
-| 10. CSS Import & Org API Keys | v2.9.0 | 0/? | Not started | - |
+| 10. CSS Import & Org API Keys | v2.9.0 | 2/3 | In Progress|  |
 | 11. LLM Per-Org OAuth | v2.9.0 | 0/? | Not started | - |
 | 12. E2E Testing & Documentation | v2.9.0 | 0/? | Not started | - |
