@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.9.0
 milestone_name: Branding Completeness & Org Isolation
 status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-04-06T12:02:49.685Z"
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-04-06T12:08:52.784Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 10
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-06)
 ## Current Position
 
 Phase: 11 (llm-per-org-oauth) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-06
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10-css-import-org-api-keys P01 | 9m | 3 tasks | 8 files |
 | Phase 10-css-import-org-api-keys P03 | 12m | 2 tasks | 8 files |
 | Phase 11 P01 | 8m | 2 tasks | 7 files |
+| Phase 11 P03 | 8m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 10-css-import-org-api-keys]: revokeKey orgId guard: AND org_id = ? at SQL level when orgId provided — org admins cannot revoke other orgs keys by UUID guessing
 - [Phase 11]: Expose getToken()/baseUrl on LLMClient instead of adding llmTokenManager to registry — avoids duplicating token refresh lifecycle
 - [Phase 11]: Pass getLLMClient getter to organizationRoutes following same getter-per-request pattern as brandingTokenManager
+- [Phase 11]: Use getLLMClient().getToken() in server.ts backfill — LLMClient wraps its own token manager; getToken() accessor added in Plan 11-01 for exactly this purpose
+- [Phase 11]: CLI backfill uses dynamic import of ServiceTokenManager following existing CLI pattern for fast startup
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T12:02:49.682Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-04-06T12:08:52.781Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
