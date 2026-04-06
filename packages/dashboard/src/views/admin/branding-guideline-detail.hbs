@@ -418,13 +418,12 @@
             {{#if ../perm.brandingManage}}
             <td>
               <button hx-post="/admin/branding-guidelines/{{../guideline.id}}/sites/unassign"
+                      hx-vals='{"siteUrl":"{{this.siteUrl}}"}'
                       hx-confirm="{{t "admin.branding.confirmUnassign" url=this.siteUrl}}"
                       hx-target="#site-row-{{@index}}"
                       hx-swap="outerHTML"
                       class="btn btn--sm btn--warning"
                       aria-label="{{t "admin.branding.unassign"}} {{this.siteUrl}}">
-                <input type="hidden" name="_csrf" value="{{csrfToken}}">
-                <input type="hidden" name="siteUrl" value="{{this.siteUrl}}">
                 {{t "admin.branding.unassign"}}
               </button>
             </td>
