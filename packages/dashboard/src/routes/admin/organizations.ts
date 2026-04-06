@@ -3,6 +3,7 @@ import type { StorageAdapter, Organization } from '../../db/index.js';
 import type { ServiceTokenManager } from '../../auth/service-token.js';
 import { deleteOrgData, createComplianceClient } from '../../compliance-client.js';
 import { createBrandingOrgClient } from '../../branding-client.js';
+import { createLLMOrgClient, type LLMClient } from '../../llm-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, toastHtml, escapeHtml } from './helpers.js';
 
@@ -32,6 +33,8 @@ export async function organizationRoutes(
   brandingUrl?: string,
   /** Getter for current branding token manager (runtime reload support). */
   getBrandingTokenManager: () => ServiceTokenManager | null = () => null,
+  /** Getter for current LLM client (runtime reload support). */
+  getLLMClient: () => LLMClient | null = () => null,
 ): Promise<void> {
   // GET /admin/organizations — list all organizations
   server.get(
@@ -118,6 +121,22 @@ export async function organizationRoutes(
             await storage.organizations.updateOrgBrandingClient(created.id, clientId, clientSecret);
           } catch (err) {
             server.log.warn({ err }, 'Failed to create branding client for org');
+          }
+        }
+
+        // Best effort — LLM client creation failure must not block org creation
+        const llmClient = getLLMClient();
+        if (llmClient !== null) {
+          try {
+            const llmToken = await llmClient.getToken();
+            if (llmToken) {
+              const { clientId, clientSecret } = await createLLMOrgClient(
+                llmClient.baseUrl, llmToken, created.id, created.slug,
+              );
+              await storage.organizations.updateOrgLLMClient(created.id, clientId, clientSecret);
+            }
+          } catch (err) {
+            server.log.warn({ err }, 'Failed to create LLM client for org');
           }
         }
 
