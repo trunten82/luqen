@@ -1,0 +1,64 @@
+<section aria-label="Organization API key management">
+  <div class="page-actions">
+    <button class="btn btn--primary"
+            hx-get="/admin/org-api-keys/new"
+            hx-target="#modal-container"
+            hx-swap="innerHTML"
+            aria-haspopup="dialog">
+      {{t "admin.orgApiKeys.createButton"}}
+    </button>
+  </div>
+
+  <div id="new-key-alert"></div>
+
+  {{#if keys.length}}
+  <div class="table-wrapper">
+    <table class="table" aria-label="Organization API keys">
+      <thead>
+        <tr>
+          <th scope="col">{{t "admin.orgApiKeys.label"}}</th>
+          <th scope="col">{{t "admin.orgApiKeys.role"}}</th>
+          <th scope="col">{{t "admin.orgApiKeys.rateLimit"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "admin.orgApiKeys.created"}}</th>
+          <th scope="col">{{t "admin.orgApiKeys.lastUsed"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
+        </tr>
+      </thead>
+      <tbody id="org-api-keys-body">
+        {{#each keys}}
+        <tr id="org-api-key-{{this.id}}">
+          <td data-label="Label">{{this.label}}</td>
+          <td data-label="Role">{{this.role}}</td>
+          <td data-label="Rate Limit">{{this.rateLimit}} req/min</td>
+          <td data-label="Status">
+            {{#if this.active}}
+            <span class="badge badge--success">{{t "common.active"}}</span>
+            {{else}}
+            <span class="badge badge--error">{{t "admin.apiKeys.revoked"}}</span>
+            {{/if}}
+          </td>
+          <td data-label="Created">{{this.createdAt}}</td>
+          <td data-label="Last Used">{{#if this.lastUsedAt}}{{this.lastUsedAt}}{{else}}{{t "admin.apiKeys.never"}}{{/if}}</td>
+          <td>
+            {{#if this.active}}
+            <button hx-post="/admin/org-api-keys/{{this.id}}/revoke"
+                    hx-target="#org-api-key-{{this.id}}"
+                    hx-swap="outerHTML"
+                    hx-confirm="Revoke this API key?"
+                    class="btn btn--sm btn--danger">
+              {{t "common.revoke"}}
+            </button>
+            {{/if}}
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <p class="text-muted">{{t "admin.orgApiKeys.noKeys"}}</p>
+  {{/if}}
+</section>
+
+<div id="modal-container"></div>
