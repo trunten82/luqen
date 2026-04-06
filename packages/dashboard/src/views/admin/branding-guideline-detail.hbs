@@ -475,7 +475,7 @@
       <p class="brd-discover__desc">{{t "admin.branding.discoverDescription"}}</p>
       <form class="brd-discover__form"
             hx-post="/admin/branding-guidelines/{{guideline.id}}/discover-branding"
-            hx-target="#toast-container"
+            hx-target="#modal-container"
             hx-swap="innerHTML"
             hx-disabled-elt="find button[type=submit]">
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
