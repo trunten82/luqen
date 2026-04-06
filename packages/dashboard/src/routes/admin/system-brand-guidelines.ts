@@ -143,6 +143,7 @@ function isHtmxRequest(request: FastifyRequest): boolean {
 export async function systemBrandGuidelineRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  getLLMClient?: () => unknown | null,
 ): Promise<void> {
   // ── GET /admin/system-brand-guidelines ────────────────────────────────────
   server.get(
@@ -292,7 +293,7 @@ export async function systemBrandGuidelineRoutes(
         fonts,
         selectors,
         sites: sites.map((url) => ({ siteUrl: url })),
-        llmEnabled: false,
+        llmEnabled: typeof getLLMClient === 'function' ? getLLMClient() !== null : false,
         scope: 'system',
         backLink: '/admin/system-brand-guidelines',
       };

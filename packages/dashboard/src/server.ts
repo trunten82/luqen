@@ -697,7 +697,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await userRoutes(server, config.complianceUrl);
   await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, getBrandingTokenManager, getLLMClient);
   await registerServiceConnectionsRoutes(server, storage, config);
-  await systemBrandGuidelineRoutes(server, storage);
+  await systemBrandGuidelineRoutes(server, storage, getLLMClient);
   await monitorRoutes(server, config.complianceUrl);
   await systemRoutes(server, {
     complianceUrl: config.complianceUrl,
