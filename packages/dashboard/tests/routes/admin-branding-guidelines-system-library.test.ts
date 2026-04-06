@@ -207,15 +207,15 @@ describe('GET /admin/branding-guidelines (tab-aware)', () => {
     expect(systemSection).not.toContain('hx-post="/admin/branding-guidelines/' + ctx.systemGuidelineIds[0] + '/delete"');
   });
 
-  it('system library rows show the System badge', async () => {
+  it('system library rows link to the system guideline detail page', async () => {
     ctx = await createTestServer();
     const res = await ctx.server.inject({
       method: 'GET',
       url: '/admin/branding-guidelines?tab=system',
     });
     const html = res.payload;
-    // Badge--info labelled "System"
-    expect(html).toMatch(/badge badge--info[^>]*>\s*System\s*</);
+    // Name cell contains a link to /admin/system-brand-guidelines/:id
+    expect(html).toMatch(/href="\/admin\/system-brand-guidelines\/[^"]+"/);
   });
 
   it('default tab does not render the system library table body', async () => {

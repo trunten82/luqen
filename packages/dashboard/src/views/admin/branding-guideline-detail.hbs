@@ -3,7 +3,7 @@
   {{!-- Header --}}
   <div class="admin-header">
     <div class="flex flex-wrap items-center gap-sm mb-sm">
-      <a href="/admin/branding-guidelines" class="btn btn--ghost btn--sm">&larr; {{t "admin.branding.backToList"}}</a>
+      <a href="{{#if backLink}}{{backLink}}{{else}}/admin/branding-guidelines{{/if}}" class="btn btn--ghost btn--sm">&larr; {{t "admin.branding.backToList"}}</a>
     </div>
     <div class="flex flex-wrap items-center gap-md">
       <div id="brand-image-area">
@@ -23,14 +23,46 @@
         {{/if}}
       </div>
       <div>
-        <div class="flex flex-wrap items-center gap-sm">
+        <div id="guideline-header" class="flex flex-wrap items-center gap-sm">
           <h2 class="page-header__title">{{guideline.name}}</h2>
           {{#if guideline.version}}
           <span class="badge badge--info">v{{guideline.version}}</span>
           {{/if}}
+          {{#if perm.brandingManage}}
+          <button type="button" class="btn btn--sm btn--ghost"
+                  data-action="toggle-edit" data-target-show="guideline-edit-form" data-target-hide="guideline-header"
+                  aria-label="{{t "common.edit"}}">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M12.146.854a.5.5 0 0 1 .708 0l2.292 2.292a.5.5 0 0 1 0 .708l-9.5 9.5a.5.5 0 0 1-.168.11l-4 1.5a.5.5 0 0 1-.638-.638l1.5-4a.5.5 0 0 1 .11-.168l9.5-9.5z"/>
+            </svg>
+          </button>
+          {{/if}}
         </div>
+        {{#if perm.brandingManage}}
+        <form id="guideline-edit-form" class="mt-xs" style="display:none;"
+              hx-post="{{currentPath}}/{{guideline.id}}"
+              hx-target="#branding-detail-toast"
+              hx-swap="innerHTML">
+          <input type="hidden" name="_csrf" value="{{csrfToken}}">
+          <div class="form-group mb-xs">
+            <label class="form-label" for="edit-name">{{t "common.name"}}</label>
+            <input id="edit-name" type="text" name="name" class="input" value="{{guideline.name}}" required>
+          </div>
+          <div class="form-group mb-xs">
+            <label class="form-label" for="edit-description">{{t "common.description"}}</label>
+            <input id="edit-description" type="text" name="description" class="input" value="{{guideline.description}}">
+          </div>
+          <div class="flex gap-sm">
+            <button type="submit" class="btn btn--sm btn--primary">{{t "common.save"}}</button>
+            <button type="button" class="btn btn--sm btn--ghost"
+                    data-action="toggle-edit" data-target-show="guideline-header" data-target-hide="guideline-edit-form">
+              {{t "common.cancel"}}
+            </button>
+          </div>
+        </form>
+        {{/if}}
         {{#if guideline.description}}
-        <p class="text-muted mt-xs">{{guideline.description}}</p>
+        <p class="text-muted mt-xs" id="guideline-description-display">{{guideline.description}}</p>
         {{/if}}
         {{#if perm.brandingManage}}
         <form hx-post="/admin/branding-guidelines/{{guideline.id}}/image"
