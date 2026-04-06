@@ -41,7 +41,7 @@
 
 ### E2E Testing
 
-- [ ] **E2E-01**: E2E tests cover the branding retag pipeline: create guideline → assign site → scan → retag → verify updated brand counts on live data
+- [x] **E2E-01**: E2E tests cover the branding retag pipeline: create guideline → assign site → scan → retag → verify updated brand counts on live data
 - [ ] **E2E-02**: E2E tests cover org API key lifecycle: create key → use key to scan → verify scoped access → revoke → verify revocation
 - [x] **E2E-03**: E2E tests cover the system brand guideline flow from org perspective: link system guideline → scan from org → verify guideline resolves → clone → verify independence
 
