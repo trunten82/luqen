@@ -538,6 +538,8 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       if (linkEnabled && body.confirmOverwrite === undefined) {
         const existing = await storage.branding.getGuidelineForSite(normalizedUrl, guideline.orgId);
         if (existing !== null && existing.id !== id) {
+          const csrf = escapeHtml((request.body as Record<string, string>)._csrf ?? '');
+          const safeUrl = escapeHtml(url);
           // Conflict detected — ask user to confirm before proceeding
           return reply
             .code(200)
@@ -547,22 +549,19 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
     <h2 id="confirm-overwrite-title">Site already linked</h2>
     <p class="mb-md">Site <strong>${escapeHtml(normalizedUrl)}</strong> is currently linked to <strong>${escapeHtml(existing.name)}</strong>.</p>
     <p class="mb-lg">Do you want to switch it to <strong>${escapeHtml(guideline.name)}</strong>? The old link will be removed and scans will be retagged with the new guideline.</p>
-    <div class="form-actions">
-      <button class="btn btn--primary"
-              hx-post="/admin/branding-guidelines/${id}/discover-branding"
-              hx-target="#modal-container"
-              hx-swap="innerHTML"
-              hx-vals='${JSON.stringify({ url, linkSiteAfterDiscover: 'on', confirmOverwrite: 'yes', _csrf: (request.body as Record<string, string>)._csrf })}'>
-        Yes, switch to this guideline
-      </button>
-      <button class="btn btn--ghost"
-              hx-post="/admin/branding-guidelines/${id}/discover-branding"
-              hx-target="#modal-container"
-              hx-swap="innerHTML"
-              hx-vals='${JSON.stringify({ url, confirmOverwrite: 'no', _csrf: (request.body as Record<string, string>)._csrf })}'>
-        No, just discover without linking
-      </button>
-    </div>
+    <form method="POST" action="/admin/branding-guidelines/${id}/discover-branding" class="form-actions">
+      <input type="hidden" name="_csrf" value="${csrf}">
+      <input type="hidden" name="url" value="${safeUrl}">
+      <input type="hidden" name="linkSiteAfterDiscover" value="on">
+      <input type="hidden" name="confirmOverwrite" value="yes">
+      <button type="submit" class="btn btn--primary">Yes, switch to this guideline</button>
+    </form>
+    <form method="POST" action="/admin/branding-guidelines/${id}/discover-branding" class="form-actions">
+      <input type="hidden" name="_csrf" value="${csrf}">
+      <input type="hidden" name="url" value="${safeUrl}">
+      <input type="hidden" name="confirmOverwrite" value="no">
+      <button type="submit" class="btn btn--ghost">No, just discover without linking</button>
+    </form>
   </div>
 </div>`);
         }
@@ -1047,6 +1046,8 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Check if the site is linked to a DIFFERENT guideline — prompt before overwriting
         const existing = await storage.branding.getGuidelineForSite(normalizedUrl, orgId);
         if (existing !== null && existing.id !== id && body.confirmOverwrite !== 'yes') {
+          const csrf = escapeHtml((request.body as Record<string, string>)._csrf ?? '');
+          const guidelineName = escapeHtml((await storage.branding.getGuideline(id))?.name ?? 'this guideline');
           return reply
             .code(200)
             .header('content-type', 'text/html')
@@ -1054,17 +1055,14 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
   <div class="modal">
     <h2 id="confirm-site-title">Site already linked</h2>
     <p class="mb-md">Site <strong>${escapeHtml(normalizedUrl)}</strong> is currently linked to <strong>${escapeHtml(existing.name)}</strong>.</p>
-    <p class="mb-lg">Switch it to <strong>${escapeHtml((await storage.branding.getGuideline(id))?.name ?? 'this guideline')}</strong>? The old link will be removed and scans will be retagged.</p>
-    <div class="form-actions">
-      <button class="btn btn--primary"
-              hx-post="/admin/branding-guidelines/${id}/sites"
-              hx-target="#modal-container"
-              hx-swap="innerHTML"
-              hx-vals='${JSON.stringify({ siteUrl: normalizedUrl, confirmOverwrite: 'yes', _csrf: (request.body as Record<string, string>)._csrf })}'>
-        Yes, switch guideline
-      </button>
-      <button type="button" class="btn btn--ghost close-modal-btn">Cancel</button>
-    </div>
+    <p class="mb-lg">Switch it to <strong>${guidelineName}</strong>? The old link will be removed and scans will be retagged.</p>
+    <form method="POST" action="/admin/branding-guidelines/${id}/sites" class="form-actions">
+      <input type="hidden" name="_csrf" value="${csrf}">
+      <input type="hidden" name="siteUrl" value="${escapeHtml(normalizedUrl)}">
+      <input type="hidden" name="confirmOverwrite" value="yes">
+      <button type="submit" class="btn btn--primary">Yes, switch guideline</button>
+    </form>
+    <button type="button" class="btn btn--ghost close-modal-btn">Cancel</button>
   </div>
 </div>`);
         }
