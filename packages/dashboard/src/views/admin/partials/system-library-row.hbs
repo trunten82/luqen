@@ -16,16 +16,26 @@
     {{/if}}
   </td>
   <td data-label="Name">
-    <a href="/admin/system-brand-guidelines/{{id}}">{{name}}</a>
+    <span>{{name}}</span>
     {{#if description}}
     <p class="text-sm text-muted">{{description}}</p>
     {{/if}}
-  </td>
-  <td data-label="Sites">
-    {{#if siteCount}}
-    <span class="badge badge--neutral">{{siteCount}} {{t "admin.branding.sites"}}</span>
-    {{else}}
-    <span class="text-muted">—</span>
+    {{#if sites.length}}
+    <div class="mt-xs">
+      {{#each sites}}
+      <div class="flex items-center gap-xs mb-xs">
+        <span class="text-sm">{{this}}</span>
+        <form hx-post="/admin/branding-guidelines/{{../id}}/sites/unassign?from=system-library"
+              hx-swap="none"
+              style="margin:0;display:inline;">
+          <input type="hidden" name="_csrf" value="{{../../csrfToken}}">
+          <input type="hidden" name="siteUrl" value="{{this}}">
+          <button type="submit" class="btn btn--xs btn--ghost text-danger"
+                  aria-label="Unassign {{this}}">✕</button>
+        </form>
+      </div>
+      {{/each}}
+    </div>
     {{/if}}
   </td>
   <td data-label="Version">
@@ -37,17 +47,27 @@
   </td>
   <td>
     <div style="display:flex;flex-direction:column;gap:var(--space-xs);">
-      <a href="/admin/system-brand-guidelines/{{id}}"
-         class="btn btn--sm btn--secondary"
-         aria-label="{{t "admin.systemBrand.action.linkToSite"}} — {{name}}">
-        {{t "admin.systemBrand.action.linkToSite"}}
-      </a>
+      <details class="inline-details">
+        <summary class="btn btn--sm btn--secondary" style="width:100%;">
+          {{t "admin.systemBrand.action.linkToSite"}}
+        </summary>
+        <form hx-post="/admin/branding-guidelines/{{id}}/sites?from=system-library"
+              hx-swap="none"
+              style="display:flex;flex-direction:column;gap:var(--space-xs);margin-top:var(--space-xs);">
+          <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+          <input type="url" name="siteUrl" class="input input--sm"
+                 placeholder="https://example.com" required
+                 aria-label="{{t "admin.branding.siteUrl"}}">
+          <button type="submit" class="btn btn--sm btn--primary">
+            {{t "admin.branding.assign"}}
+          </button>
+        </form>
+      </details>
       <form hx-post="/admin/branding-guidelines/system/{{id}}/clone"
             hx-swap="none"
             style="margin:0;">
         <input type="hidden" name="_csrf" value="{{../csrfToken}}">
-        <button type="submit" class="btn btn--sm btn--primary" style="width:100%;"
-                aria-label="Clone {{name}} into organization">
+        <button type="submit" class="btn btn--sm btn--primary" style="width:100%;">
           {{t "admin.systemBrand.action.cloneIntoOrg"}}
         </button>
       </form>
