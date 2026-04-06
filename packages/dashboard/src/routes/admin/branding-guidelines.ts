@@ -1009,14 +1009,22 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       }
 
       const orgId = request.user?.currentOrgId ?? 'system';
+      const normalizedUrl = siteUrl.replace(/\/+$/, '');
 
       try {
-        await storage.branding.assignToSite(id, siteUrl, orgId);
+        // Detect if the site was previously assigned to a DIFFERENT guideline (ALD-02).
+        let overwriteMsg = '';
+        const existing = await storage.branding.getGuidelineForSite(normalizedUrl, orgId);
+        if (existing !== null && existing.id !== id) {
+          overwriteMsg = ` Was linked to "${escapeHtml(existing.name)}" — now reassigned.`;
+        }
+
+        await storage.branding.assignToSite(id, normalizedUrl, orgId);
 
         // Retag existing completed scans for this site
         let retagCount = 0;
         try {
-          const { retagged } = await retagScansForSite(storage, siteUrl, orgId);
+          const { retagged } = await retagScansForSite(storage, normalizedUrl, orgId);
           retagCount = retagged;
         } catch { /* non-fatal */ }
 
@@ -1031,7 +1039,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(toastHtml(`Site "${escapeHtml(siteUrl)}" assigned.${retagMsg}`));
+          .send(toastHtml(`Site "${escapeHtml(normalizedUrl)}" assigned.${retagMsg}${overwriteMsg}`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to assign site';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
