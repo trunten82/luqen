@@ -3,6 +3,7 @@
 // Authentication: OAuth2 client_credentials (same pattern as compliance/branding).
 
 import { ServiceTokenManager } from './auth/service-token.js';
+import type { OrgRepository } from './db/interfaces/org-repository.js';
 
 function unwrapList<T>(result: unknown): T[] {
   if (Array.isArray(result)) return result as T[];
@@ -387,6 +388,29 @@ export function createLLMClient(
 ): LLMClient | null {
   if (!llmUrl) return null;
   return new LLMClient(llmUrl, clientId, clientSecret);
+}
+
+/**
+ * Resolve the correct LLMClient for a request.
+ * If the org has per-org LLM credentials, a short-lived per-org client is returned.
+ * Otherwise the system client is returned as fallback.
+ *
+ * IMPORTANT: The caller MUST call `effectiveLlm.destroy()` after use when `isPerOrg` is true
+ * to release the internal ServiceTokenManager timer.
+ */
+export async function resolveOrgLLMClient(
+  systemClient: LLMClient | null,
+  orgRepository: OrgRepository,
+  orgId: string | undefined,
+): Promise<{ client: LLMClient | null; isPerOrg: boolean }> {
+  if (!systemClient) return { client: null, isPerOrg: false };
+  if (!orgId) return { client: systemClient, isPerOrg: false };
+
+  const creds = await orgRepository.getOrgLLMCredentials(orgId);
+  if (!creds) return { client: systemClient, isPerOrg: false };
+
+  const perOrgClient = createLLMClient(systemClient.baseUrl, creds.clientId, creds.clientSecret);
+  return { client: perOrgClient, isPerOrg: true };
 }
 
 /**
