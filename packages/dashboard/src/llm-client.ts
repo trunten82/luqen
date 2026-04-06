@@ -108,17 +108,27 @@ export interface RemoteModel {
 // ── Client class ────────────────────────────────────────────────────────────
 
 export class LLMClient {
-  private readonly baseUrl: string;
+  private readonly _baseUrl: string;
   private readonly tokenManager: ServiceTokenManager;
 
   constructor(baseUrl: string, clientId: string, clientSecret: string) {
-    this.baseUrl = baseUrl.replace(/\/$/, '');
+    this._baseUrl = baseUrl.replace(/\/$/, '');
     this.tokenManager = new ServiceTokenManager(baseUrl, clientId, clientSecret);
   }
 
   /** Destroy the underlying token refresh timer. */
   destroy(): void {
     this.tokenManager.destroy();
+  }
+
+  /** The base URL of the LLM service (for standalone provisioning calls). */
+  get baseUrl(): string {
+    return this._baseUrl;
+  }
+
+  /** Obtain the current admin bearer token (for standalone provisioning calls). */
+  async getToken(): Promise<string | null> {
+    return this.tokenManager.getToken();
   }
 
   private async apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -158,38 +168,38 @@ export class LLMClient {
   // -- Providers ──────────────────────────────────────────────────────────
 
   async listProviders(): Promise<LLMProvider[]> {
-    const result = await this.apiFetch<unknown>(`${this.baseUrl}/api/v1/providers`);
+    const result = await this.apiFetch<unknown>(`${this._baseUrl}/api/v1/providers`);
     return unwrapList<LLMProvider>(result);
   }
 
   async createProvider(data: CreateProviderInput): Promise<LLMProvider> {
-    return this.apiFetch<LLMProvider>(`${this.baseUrl}/api/v1/providers`, {
+    return this.apiFetch<LLMProvider>(`${this._baseUrl}/api/v1/providers`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async updateProvider(id: string, data: UpdateProviderInput): Promise<LLMProvider> {
-    return this.apiFetch<LLMProvider>(`${this.baseUrl}/api/v1/providers/${encodeURIComponent(id)}`, {
+    return this.apiFetch<LLMProvider>(`${this._baseUrl}/api/v1/providers/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
 
   async deleteProvider(id: string): Promise<void> {
-    await this.deleteRequest(`${this.baseUrl}/api/v1/providers/${encodeURIComponent(id)}`);
+    await this.deleteRequest(`${this._baseUrl}/api/v1/providers/${encodeURIComponent(id)}`);
   }
 
   async testProvider(id: string): Promise<{ ok: boolean; status: string }> {
     return this.apiFetch<{ ok: boolean; status: string }>(
-      `${this.baseUrl}/api/v1/providers/${encodeURIComponent(id)}/test`,
+      `${this._baseUrl}/api/v1/providers/${encodeURIComponent(id)}/test`,
       { method: 'POST', body: '{}' },
     );
   }
 
   async listRemoteModels(providerId: string): Promise<RemoteModel[]> {
     const result = await this.apiFetch<unknown>(
-      `${this.baseUrl}/api/v1/providers/${encodeURIComponent(providerId)}/models`,
+      `${this._baseUrl}/api/v1/providers/${encodeURIComponent(providerId)}/models`,
     );
     return unwrapList<RemoteModel>(result);
   }
@@ -197,44 +207,44 @@ export class LLMClient {
   // -- Models ─────────────────────────────────────────────────────────────
 
   async listModels(): Promise<LLMModel[]> {
-    const result = await this.apiFetch<unknown>(`${this.baseUrl}/api/v1/models`);
+    const result = await this.apiFetch<unknown>(`${this._baseUrl}/api/v1/models`);
     return unwrapList<LLMModel>(result);
   }
 
   async createModel(data: CreateModelInput): Promise<LLMModel> {
-    return this.apiFetch<LLMModel>(`${this.baseUrl}/api/v1/models`, {
+    return this.apiFetch<LLMModel>(`${this._baseUrl}/api/v1/models`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async deleteModel(id: string): Promise<void> {
-    await this.deleteRequest(`${this.baseUrl}/api/v1/models/${encodeURIComponent(id)}`);
+    await this.deleteRequest(`${this._baseUrl}/api/v1/models/${encodeURIComponent(id)}`);
   }
 
   // -- Capabilities ───────────────────────────────────────────────────────
 
   async listCapabilities(): Promise<LLMCapability[]> {
-    const result = await this.apiFetch<unknown>(`${this.baseUrl}/api/v1/capabilities`);
+    const result = await this.apiFetch<unknown>(`${this._baseUrl}/api/v1/capabilities`);
     return unwrapList<LLMCapability>(result);
   }
 
   async assignCapability(name: string, data: AssignCapabilityInput): Promise<void> {
     await this.apiFetch<unknown>(
-      `${this.baseUrl}/api/v1/capabilities/${encodeURIComponent(name)}/assign`,
+      `${this._baseUrl}/api/v1/capabilities/${encodeURIComponent(name)}/assign`,
       { method: 'PUT', body: JSON.stringify(data) },
     );
   }
 
   async unassignCapability(name: string, modelId: string): Promise<void> {
     await this.deleteRequest(
-      `${this.baseUrl}/api/v1/capabilities/${encodeURIComponent(name)}/assign/${encodeURIComponent(modelId)}`,
+      `${this._baseUrl}/api/v1/capabilities/${encodeURIComponent(name)}/assign/${encodeURIComponent(modelId)}`,
     );
   }
 
   async updateCapabilityPriority(capability: string, modelId: string, priority: number): Promise<void> {
     await this.apiFetch<unknown>(
-      `${this.baseUrl}/api/v1/capabilities/${encodeURIComponent(capability)}/assign/${encodeURIComponent(modelId)}`,
+      `${this._baseUrl}/api/v1/capabilities/${encodeURIComponent(capability)}/assign/${encodeURIComponent(modelId)}`,
       { method: 'PATCH', body: JSON.stringify({ priority }) },
     );
   }
@@ -242,26 +252,26 @@ export class LLMClient {
   // -- Prompts ────────────────────────────────────────────────────────────
 
   async listPrompts(): Promise<LLMPrompt[]> {
-    const result = await this.apiFetch<unknown>(`${this.baseUrl}/api/v1/prompts`);
+    const result = await this.apiFetch<unknown>(`${this._baseUrl}/api/v1/prompts`);
     return unwrapList<LLMPrompt>(result);
   }
 
   async getPrompt(capability: string): Promise<LLMPrompt> {
     return this.apiFetch<LLMPrompt>(
-      `${this.baseUrl}/api/v1/prompts/${encodeURIComponent(capability)}`,
+      `${this._baseUrl}/api/v1/prompts/${encodeURIComponent(capability)}`,
     );
   }
 
   async setPrompt(capability: string, template: string): Promise<LLMPrompt> {
     return this.apiFetch<LLMPrompt>(
-      `${this.baseUrl}/api/v1/prompts/${encodeURIComponent(capability)}`,
+      `${this._baseUrl}/api/v1/prompts/${encodeURIComponent(capability)}`,
       { method: 'PUT', body: JSON.stringify({ template }) },
     );
   }
 
   async deletePrompt(capability: string): Promise<void> {
     await this.deleteRequest(
-      `${this.baseUrl}/api/v1/prompts/${encodeURIComponent(capability)}`,
+      `${this._baseUrl}/api/v1/prompts/${encodeURIComponent(capability)}`,
     );
   }
 
@@ -275,7 +285,7 @@ export class LLMClient {
     readonly orgId?: string;
   }): Promise<{ fixedHtml: string; explanation: string; effort: string }> {
     return this.apiFetch<{ fixedHtml: string; explanation: string; effort: string }>(
-      `${this.baseUrl}/api/v1/generate-fix`,
+      `${this._baseUrl}/api/v1/generate-fix`,
       { method: 'POST', body: JSON.stringify(input) },
     );
   }
@@ -305,7 +315,7 @@ export class LLMClient {
       keyFindings: string[];
       patterns: string[];
       priorities: string[];
-    }>(`${this.baseUrl}/api/v1/analyse-report`, {
+    }>(`${this._baseUrl}/api/v1/analyse-report`, {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -329,7 +339,7 @@ export class LLMClient {
       logoUrl: string;
       brandName: string;
       description: string;
-    }>(`${this.baseUrl}/api/v1/discover-branding`, {
+    }>(`${this._baseUrl}/api/v1/discover-branding`, {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -338,7 +348,7 @@ export class LLMClient {
   // -- OAuth Clients (admin) ──────────────────────────────────────────────
 
   async listOAuthClients(): Promise<Array<{ id: string; name: string; scopes: string[]; grantTypes: string[]; orgId: string; createdAt: string }>> {
-    const result = await this.apiFetch<unknown>(`${this.baseUrl}/api/v1/clients`);
+    const result = await this.apiFetch<unknown>(`${this._baseUrl}/api/v1/clients`);
     return unwrapList(result);
   }
 
@@ -348,24 +358,24 @@ export class LLMClient {
     grantTypes: string[],
     orgId?: string,
   ): Promise<{ id: string; clientId: string; clientSecret: string; name: string; createdAt: string }> {
-    return this.apiFetch(`${this.baseUrl}/api/v1/clients`, {
+    return this.apiFetch(`${this._baseUrl}/api/v1/clients`, {
       method: 'POST',
       body: JSON.stringify({ name, scopes, grantTypes, orgId }),
     });
   }
 
   async deleteOAuthClient(id: string): Promise<void> {
-    await this.deleteRequest(`${this.baseUrl}/api/v1/clients/${encodeURIComponent(id)}`);
+    await this.deleteRequest(`${this._baseUrl}/api/v1/clients/${encodeURIComponent(id)}`);
   }
 
   // -- Health / Status ────────────────────────────────────────────────────
 
   async health(): Promise<LLMHealth> {
-    return this.apiFetch<LLMHealth>(`${this.baseUrl}/api/v1/health`);
+    return this.apiFetch<LLMHealth>(`${this._baseUrl}/api/v1/health`);
   }
 
   async status(): Promise<LLMStatus> {
-    return this.apiFetch<LLMStatus>(`${this.baseUrl}/api/v1/status`);
+    return this.apiFetch<LLMStatus>(`${this._baseUrl}/api/v1/status`);
   }
 }
 
@@ -377,4 +387,36 @@ export function createLLMClient(
 ): LLMClient | null {
   if (!llmUrl) return null;
   return new LLMClient(llmUrl, clientId, clientSecret);
+}
+
+/**
+ * Create a per-org LLM OAuth client (dashboard-{slug}) on the LLM service.
+ * Follows the same pattern as createBrandingOrgClient in branding-client.ts.
+ */
+export async function createLLMOrgClient(
+  llmUrl: string,
+  adminToken: string,
+  orgId: string,
+  orgSlug: string,
+): Promise<{ clientId: string; clientSecret: string }> {
+  const response = await fetch(`${llmUrl.replace(/\/$/, '')}/api/v1/clients`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${adminToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: `dashboard-${orgSlug}`,
+      scopes: ['read', 'write'],
+      grantTypes: ['client_credentials'],
+      orgId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create LLM client: ${response.status}`);
+  }
+
+  const data = await response.json() as { data: { id: string; secret: string } };
+  return { clientId: data.data.id, clientSecret: data.data.secret };
 }
