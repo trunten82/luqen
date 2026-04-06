@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.9.0
 milestone_name: Branding Completeness & Org Isolation
-status: verifying
-stopped_at: Completed 10-03-PLAN.md
-last_updated: "2026-04-06T11:17:44.703Z"
+status: executing
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-04-06T12:02:49.685Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 10
+  completed_plans: 8
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-06)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 10 — css-import-org-api-keys
+**Current focus:** Phase 11 — llm-per-org-oauth
 
 ## Current Position
 
-Phase: 10 (css-import-org-api-keys) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 11 (llm-per-org-oauth) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-04-06
 
 Progress: [░░░░░░░░░░] 0%
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10 P02 | 4 | 2 tasks | 6 files |
 | Phase 10-css-import-org-api-keys P01 | 9m | 3 tasks | 8 files |
 | Phase 10-css-import-org-api-keys P03 | 12m | 2 tasks | 8 files |
+| Phase 11 P01 | 8m | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,8 @@ Recent decisions affecting current work:
 - [Phase 10]: API_KEY_RATE_LIMITS: admin=200, read-only=100, scan-only=50 for rate limiter middleware
 - [Phase 10-css-import-org-api-keys]: CSS import uses additive merge: skip duplicate colors by uppercase hex, skip duplicate fonts by lowercase family name
 - [Phase 10-css-import-org-api-keys]: revokeKey orgId guard: AND org_id = ? at SQL level when orgId provided — org admins cannot revoke other orgs keys by UUID guessing
+- [Phase 11]: Expose getToken()/baseUrl on LLMClient instead of adding llmTokenManager to registry — avoids duplicating token refresh lifecycle
+- [Phase 11]: Pass getLLMClient getter to organizationRoutes following same getter-per-request pattern as brandingTokenManager
 
 ### Pending Todos
 
@@ -91,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T11:17:44.699Z
-Stopped at: Completed 10-03-PLAN.md
+Last session: 2026-04-06T12:02:49.682Z
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None

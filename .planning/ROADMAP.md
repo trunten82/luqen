@@ -59,7 +59,12 @@ Plans:
   2. New org creation auto-creates a per-org LLM OAuth client (dashboard-{slug}) and stores the credentials
   3. LLM calls route through per-org credentials when available, falling back to system client when not
   4. CLI command can backfill existing orgs with per-org LLM clients
-**Plans**: TBD
+**Plans:** 1/3 plans executed
+
+Plans:
+- [x] 11-01-PLAN.md — DB migration + types + repository + org creation hook (LLM-01, LLM-02)
+- [ ] 11-02-PLAN.md — Per-org LLM call routing with fallback (LLM-03)
+- [ ] 11-03-PLAN.md — CLI backfill command + server startup backfill (LLM-04)
 
 ### Phase 12: E2E Testing & Documentation
 **Goal**: All v2.9.0 features are validated end-to-end on live data and upstream dependencies are documented
@@ -79,6 +84,6 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 9. Branding Pipeline Completion | v2.9.0 | 4/4 | Complete   | 2026-04-06 |
-| 10. CSS Import & Org API Keys | v2.9.0 | 3/3 | Complete   | 2026-04-06 |
-| 11. LLM Per-Org OAuth | v2.9.0 | 0/? | Not started | - |
+| 10. CSS Import & Org API Keys | v2.9.0 | 3/3 | Complete    | 2026-04-06 |
+| 11. LLM Per-Org OAuth | v2.9.0 | 1/3 | In Progress|  |
 | 12. E2E Testing & Documentation | v2.9.0 | 0/? | Not started | - |
