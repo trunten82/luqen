@@ -124,6 +124,20 @@
       </svg>
       {{t "nav.brandGuidelines"}}
     </a>
+    {{#if perm.adminSystem}}
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/system-brand-guidelines')}}is-active{{/if}}"
+       href="/admin/system-brand-guidelines"
+       aria-current="{{#if (startsWith currentPath '/admin/system-brand-guidelines')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="7" cy="7" r="2" fill="currentColor"/>
+        <circle cx="13" cy="7" r="2" fill="currentColor"/>
+        <circle cx="7" cy="13" r="2" fill="currentColor"/>
+        <circle cx="13" cy="13" r="2" fill="currentColor"/>
+      </svg>
+      {{t "admin.systemBrand.title"}}
+    </a>
+    {{/if}}
     {{/if}}
 
     {{!-- Monitoring section — change tracking --}}
@@ -373,22 +387,10 @@
       </svg>
       {{t "nav.serviceConnections"}}
     </a>
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/system-brand-guidelines')}}is-active{{/if}}"
-       href="/admin/system-brand-guidelines"
-       aria-current="{{#if (startsWith currentPath '/admin/system-brand-guidelines')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <circle cx="7" cy="7" r="2" fill="currentColor"/>
-        <circle cx="13" cy="7" r="2" fill="currentColor"/>
-        <circle cx="7" cy="13" r="2" fill="currentColor"/>
-        <circle cx="13" cy="13" r="2" fill="currentColor"/>
-      </svg>
-      {{t "admin.systemBrand.title"}}
-    </a>
     {{/if}}
 
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/system')}}is-active{{/if}}"
+    <a class="sidebar__item {{#if (eq currentPath '/admin/system')}}is-active{{/if}}"
        href="/admin/system">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
         <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/>
