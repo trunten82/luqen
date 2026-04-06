@@ -11,7 +11,6 @@
 
   <div id="new-key-alert"></div>
 
-  {{#if keys.length}}
   <div class="table-wrapper">
     <table class="table" aria-label="Organization API keys">
       <thead>
@@ -56,8 +55,8 @@
       </tbody>
     </table>
   </div>
-  {{else}}
+  {{#unless keys.length}}
   <p class="text-muted">{{t "admin.orgApiKeys.noKeys"}}</p>
-  {{/if}}
+  {{/unless}}
 </section>
 <div id="modal-container"></div>
