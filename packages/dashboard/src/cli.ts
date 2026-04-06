@@ -380,4 +380,74 @@ program
     }
   });
 
+// ── LLM OAuth client backfill ─────────────────────────────────────────────
+
+program
+  .command('backfill-llm-clients')
+  .description('Create per-org LLM OAuth clients for all organizations that lack them')
+  .option('-c, --config <path>', 'Config file path', 'dashboard.config.json')
+  .action(async (options: { config: string }) => {
+    try {
+      const config = loadConfig(options.config);
+
+      if (!config.llmUrl) {
+        console.error('LLM service URL not configured (llmUrl). Nothing to backfill.');
+        process.exit(1);
+      }
+
+      const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath: config.dbPath } });
+
+      // Get admin token via system LLM credentials
+      const { ServiceTokenManager } = await import('./auth/service-token.js');
+      const tokenManager = new ServiceTokenManager(config.llmUrl, config.llmClientId, config.llmClientSecret);
+      const adminToken = await tokenManager.getToken();
+
+      if (!adminToken) {
+        console.error('Failed to obtain LLM admin token. Check llmClientId/llmClientSecret in config.');
+        tokenManager.destroy();
+        await storage.disconnect();
+        process.exit(1);
+      }
+
+      const { createLLMOrgClient } = await import('./llm-client.js');
+      const allOrgs = await storage.organizations.listOrgs();
+
+      let created = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      for (const org of allOrgs) {
+        const existing = await storage.organizations.getOrgLLMCredentials(org.id);
+        if (existing !== null) {
+          skipped++;
+          console.log(`  SKIP ${org.name} (${org.slug}) — already has LLM client`);
+          continue;
+        }
+
+        try {
+          const { clientId, clientSecret } = await createLLMOrgClient(
+            config.llmUrl, adminToken, org.id, org.slug,
+          );
+          await storage.organizations.updateOrgLLMClient(org.id, clientId, clientSecret);
+          created++;
+          console.log(`  OK   ${org.name} (${org.slug}) — created dashboard-${org.slug}`);
+        } catch (err) {
+          failed++;
+          console.error(`  FAIL ${org.name} (${org.slug}): ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
+      console.log('');
+      console.log(`Backfill complete: ${created} created, ${skipped} skipped, ${failed} failed`);
+
+      tokenManager.destroy();
+      await storage.disconnect();
+
+      if (failed > 0) process.exit(1);
+    } catch (err) {
+      console.error('Backfill failed:', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+  });
+
 program.parse(process.argv);
