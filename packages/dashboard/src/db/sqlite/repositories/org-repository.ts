@@ -17,6 +17,8 @@ interface OrgRow {
   compliance_client_secret: string | null;
   branding_client_id: string | null;
   branding_client_secret: string | null;
+  llm_client_id: string | null;
+  llm_client_secret: string | null;
 }
 
 interface OrgMemberRow {
@@ -36,6 +38,8 @@ function rowToOrg(row: OrgRow): Organization {
     ...(row.compliance_client_secret ? { complianceClientSecret: row.compliance_client_secret } : {}),
     ...(row.branding_client_id ? { brandingClientId: row.branding_client_id } : {}),
     ...(row.branding_client_secret ? { brandingClientSecret: row.branding_client_secret } : {}),
+    ...(row.llm_client_id ? { llmClientId: row.llm_client_id } : {}),
+    ...(row.llm_client_secret ? { llmClientSecret: row.llm_client_secret } : {}),
   };
 }
 
@@ -200,6 +204,24 @@ export class SqliteOrgRepository implements OrgRepository {
   async updateOrgBrandingClient(orgId: string, clientId: string, clientSecret: string): Promise<void> {
     this.db.prepare(
       'UPDATE organizations SET branding_client_id = ?, branding_client_secret = ? WHERE id = ?',
+    ).run(clientId, clientSecret, orgId);
+  }
+
+  async getOrgLLMCredentials(orgId: string): Promise<{ clientId: string; clientSecret: string } | null> {
+    const row = this.db.prepare(
+      'SELECT llm_client_id, llm_client_secret FROM organizations WHERE id = ?',
+    ).get(orgId) as { llm_client_id: string | null; llm_client_secret: string | null } | undefined;
+
+    if (row === undefined || !row.llm_client_id || !row.llm_client_secret) {
+      return null;
+    }
+
+    return { clientId: row.llm_client_id, clientSecret: row.llm_client_secret };
+  }
+
+  async updateOrgLLMClient(orgId: string, clientId: string, clientSecret: string): Promise<void> {
+    this.db.prepare(
+      'UPDATE organizations SET llm_client_id = ?, llm_client_secret = ? WHERE id = ?',
     ).run(clientId, clientSecret, orgId);
   }
 

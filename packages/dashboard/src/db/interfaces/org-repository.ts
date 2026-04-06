@@ -16,4 +16,6 @@ export interface OrgRepository {
   updateOrgComplianceClient(orgId: string, clientId: string, clientSecret: string): Promise<void>;
   getOrgBrandingCredentials(orgId: string): Promise<{ clientId: string; clientSecret: string } | null>;
   updateOrgBrandingClient(orgId: string, clientId: string, clientSecret: string): Promise<void>;
+  getOrgLLMCredentials(orgId: string): Promise<{ clientId: string; clientSecret: string } | null>;
+  updateOrgLLMClient(orgId: string, clientId: string, clientSecret: string): Promise<void>;
 }
