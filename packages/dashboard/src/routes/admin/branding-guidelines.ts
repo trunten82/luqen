@@ -600,6 +600,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         if (logoSaved) parts.push('logo');
         const summary = parts.join(', ');
 
+        // Retag assigned sites after discover enriched the guideline
+        if (result.colors.length > 0 || result.fonts.length > 0) {
+          try {
+            await retagAllSitesForGuideline(storage, id, guideline.orgId);
+          } catch { /* non-fatal */ }
+        }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
