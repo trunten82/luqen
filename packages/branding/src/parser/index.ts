@@ -6,6 +6,7 @@ import type { IBrandingLLMProvider, ExtractedBrandData } from '../types.js';
 import { parseCSV, type ParsedCSVResult } from './csv-parser.js';
 import { parseJSON, type ParsedJSONResult } from './json-parser.js';
 import { parsePDF } from './pdf-parser.js';
+import { parseCSS as parseCSSFn, type ParsedCSSResult } from './css-parser.js';
 
 // Template content embedded as constants to avoid runtime file I/O.
 const CSV_TEMPLATE = `type,name,value,usage,context
@@ -51,6 +52,10 @@ export class GuidelineParser {
     return parsePDF(text, options?.llmProvider);
   }
 
+  async parseCSS(cssContent: string): Promise<ParsedCSSResult> {
+    return parseCSSFn(cssContent);
+  }
+
   static generateCSVTemplate(): string {
     return CSV_TEMPLATE;
   }
@@ -63,5 +68,7 @@ export class GuidelineParser {
 export { parseCSV } from './csv-parser.js';
 export { parseJSON } from './json-parser.js';
 export { parsePDF } from './pdf-parser.js';
+export { parseCSS } from './css-parser.js';
 export type { ParsedCSVResult, ParsedColor, ParsedFont, ParsedSelector } from './csv-parser.js';
 export type { ParsedJSONResult } from './json-parser.js';
+export type { ParsedCSSResult } from './css-parser.js';
