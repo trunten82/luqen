@@ -30,7 +30,7 @@
 - [x] **OAK-01**: Org admins can create and revoke API keys scoped to their organization
 - [x] **OAK-02**: Org-scoped API keys access only that org's data (scans, reports, trends)
 - [x] **OAK-03**: Global admin keys retain cross-org access via X-Org-Id header
-- [ ] **OAK-04**: Key management UI in org settings with rate limits per key
+- [x] **OAK-04**: Key management UI in org settings with rate limits per key
 
 ### LLM Per-Org OAuth
 
