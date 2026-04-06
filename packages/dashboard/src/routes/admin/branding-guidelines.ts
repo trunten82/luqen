@@ -519,7 +519,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           .send(toastHtml('LLM service is not configured.', 'error'));
       }
 
-      const body = request.body as { url?: string; linkSiteAfterDiscover?: string };
+      const body = request.body as { url?: string; linkSiteAfterDiscover?: string; confirmOverwrite?: string };
       const url = body.url?.trim();
 
       if (!url || !/^https?:\/\//i.test(url)) {
@@ -528,6 +528,48 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           .header('content-type', 'text/html')
           .send(toastHtml('A valid URL starting with http:// or https:// is required.', 'error'));
       }
+
+      // Pre-flight: if link checkbox is checked, check for existing site conflict
+      // before running the (expensive) LLM discover call.
+      const linkValue = body.linkSiteAfterDiscover;
+      const linkEnabled = linkValue === 'on';
+      const normalizedUrl = url.replace(/\/+$/, '');
+
+      if (linkEnabled && body.confirmOverwrite === undefined) {
+        const existing = await storage.branding.getGuidelineForSite(normalizedUrl, guideline.orgId);
+        if (existing !== null && existing.id !== id) {
+          // Conflict detected — ask user to confirm before proceeding
+          return reply
+            .code(200)
+            .header('content-type', 'text/html')
+            .send(`<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-overwrite-title">
+  <div class="modal">
+    <h2 id="confirm-overwrite-title">Site already linked</h2>
+    <p class="mb-md">Site <strong>${escapeHtml(normalizedUrl)}</strong> is currently linked to <strong>${escapeHtml(existing.name)}</strong>.</p>
+    <p class="mb-lg">Do you want to switch it to <strong>${escapeHtml(guideline.name)}</strong>? The old link will be removed and scans will be retagged with the new guideline.</p>
+    <div class="form-actions">
+      <button class="btn btn--primary"
+              hx-post="/admin/branding-guidelines/${id}/discover-branding"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              hx-vals='${JSON.stringify({ url, linkSiteAfterDiscover: 'on', confirmOverwrite: 'yes', _csrf: (request.body as Record<string, string>)._csrf })}'>
+        Yes, switch to this guideline
+      </button>
+      <button class="btn btn--ghost"
+              hx-post="/admin/branding-guidelines/${id}/discover-branding"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              hx-vals='${JSON.stringify({ url, confirmOverwrite: 'no', _csrf: (request.body as Record<string, string>)._csrf })}'>
+        No, just discover without linking
+      </button>
+    </div>
+  </div>
+</div>`);
+        }
+      }
+
+      // If user explicitly declined linking, disable it
+      const effectiveLinkEnabled = body.confirmOverwrite === 'no' ? false : linkEnabled;
 
       // Resolve per-org LLM client (falls back to system client if no per-org creds)
       const guidelineOrgId = guideline.orgId !== 'system' ? guideline.orgId : undefined;
@@ -607,27 +649,12 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         const summary = parts.join(', ');
 
         // Auto-link the scanned site to this guideline (ALD-01, ALD-02).
-        // Checkbox sends value="on" when checked, absent when unchecked.
-        // Only link when explicitly checked (linkValue === 'on').
-        const linkValue = body.linkSiteAfterDiscover;
-        const linkEnabled = linkValue === 'on';
-
+        // Only link when user confirmed (or no conflict existed).
         let siteLinkMessage = '';
-        if (linkEnabled) {
-          const normalizedUrl = url.replace(/\/+$/, '');
+        if (effectiveLinkEnabled) {
           try {
-            // Detect if the site was previously assigned to a DIFFERENT guideline (ALD-02).
-            const existing = await storage.branding.getGuidelineForSite(normalizedUrl, guideline.orgId);
-            const isOverwrite = existing !== null && existing.id !== id;
-            const previousName = isOverwrite ? existing.name : null;
-
             await storage.branding.assignToSite(id, normalizedUrl, guideline.orgId);
-
-            if (isOverwrite && previousName !== null) {
-              siteLinkMessage = ` Site "${normalizedUrl}" was linked to "${previousName}" — now linked to this guideline.`;
-            } else {
-              siteLinkMessage = ` Site "${normalizedUrl}" linked to this guideline.`;
-            }
+            siteLinkMessage = ` Site "${escapeHtml(normalizedUrl)}" linked to this guideline.`;
           } catch {
             // non-fatal — site linking failure should not block the discovery response
           }
@@ -1003,7 +1030,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
     { preHandler: requirePermission('branding.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const body = request.body as { siteUrl?: string };
+      const body = request.body as { siteUrl?: string; confirmOverwrite?: string };
       const siteUrl = body.siteUrl?.trim();
 
       if (!siteUrl) {
@@ -1017,11 +1044,29 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       const normalizedUrl = siteUrl.replace(/\/+$/, '');
 
       try {
-        // Detect if the site was previously assigned to a DIFFERENT guideline (ALD-02).
-        let overwriteMsg = '';
+        // Check if the site is linked to a DIFFERENT guideline — prompt before overwriting
         const existing = await storage.branding.getGuidelineForSite(normalizedUrl, orgId);
-        if (existing !== null && existing.id !== id) {
-          overwriteMsg = ` Was linked to "${escapeHtml(existing.name)}" — now reassigned.`;
+        if (existing !== null && existing.id !== id && body.confirmOverwrite !== 'yes') {
+          return reply
+            .code(200)
+            .header('content-type', 'text/html')
+            .send(`<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-site-title">
+  <div class="modal">
+    <h2 id="confirm-site-title">Site already linked</h2>
+    <p class="mb-md">Site <strong>${escapeHtml(normalizedUrl)}</strong> is currently linked to <strong>${escapeHtml(existing.name)}</strong>.</p>
+    <p class="mb-lg">Switch it to <strong>${escapeHtml((await storage.branding.getGuideline(id))?.name ?? 'this guideline')}</strong>? The old link will be removed and scans will be retagged.</p>
+    <div class="form-actions">
+      <button class="btn btn--primary"
+              hx-post="/admin/branding-guidelines/${id}/sites"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              hx-vals='${JSON.stringify({ siteUrl: normalizedUrl, confirmOverwrite: 'yes', _csrf: (request.body as Record<string, string>)._csrf })}'>
+        Yes, switch guideline
+      </button>
+      <button type="button" class="btn btn--ghost close-modal-btn">Cancel</button>
+    </div>
+  </div>
+</div>`);
         }
 
         await storage.branding.assignToSite(id, normalizedUrl, orgId);
@@ -1044,7 +1089,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(toastHtml(`Site "${escapeHtml(normalizedUrl)}" assigned.${retagMsg}${overwriteMsg}`));
+          .send(toastHtml(`Site "${escapeHtml(normalizedUrl)}" assigned.${retagMsg}`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to assign site';
         return reply.code(500).header('content-type', 'text/html').send(toastHtml(message, 'error'));
