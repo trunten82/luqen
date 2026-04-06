@@ -32,14 +32,25 @@
     {{/if}}
   </td>
   <td>
-    <button type="button"
-            class="btn btn--sm btn--secondary"
-            hx-get="/admin/branding-guidelines/{{id}}/link-to-site"
-            hx-target="#modal-container"
+    <details class="inline-details">
+      <summary class="btn btn--sm btn--secondary"
+               aria-label="Link to site — {{name}}">
+        {{t "admin.systemBrand.action.linkToSite"}}
+      </summary>
+      <form hx-post="/admin/branding-guidelines/{{id}}/sites"
+            hx-target="#branding-guidelines-alert"
             hx-swap="innerHTML"
-            aria-label="Link to site — {{name}}">
-      {{t "admin.systemBrand.action.linkToSite"}}
-    </button>
+            data-reset-on-success
+            class="flex items-center gap-sm mt-xs">
+        <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+        <input type="url" name="siteUrl" class="input input--sm"
+               placeholder="https://example.com" required
+               aria-label="{{t "admin.branding.siteUrl"}}">
+        <button type="submit" class="btn btn--sm btn--primary">
+          {{t "admin.branding.assign"}}
+        </button>
+      </form>
+    </details>
     <button type="button"
             class="btn btn--sm btn--primary"
             hx-post="/admin/branding-guidelines/system/{{id}}/clone"

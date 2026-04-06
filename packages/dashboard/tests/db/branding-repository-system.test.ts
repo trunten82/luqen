@@ -162,6 +162,18 @@ describe('SqliteBrandingRepository — system brand guideline data foundation', 
       expect(clone.clonedFromSystemGuidelineId).toBe(sourceId);
     });
 
+    it('preserves image_path from the source guideline', async () => {
+      const sourceId = await seedGuidelineWithChildren(repo, 'system', 'Branded System');
+      await repo.updateGuideline(sourceId, { imagePath: '/uploads/logo.png' });
+
+      const clone = await repo.cloneSystemGuideline(sourceId, 'org-a');
+      expect(clone.imagePath).toBe('/uploads/logo.png');
+
+      // Verify round-trip via getGuideline
+      const reloaded = await repo.getGuideline(clone.id);
+      expect(reloaded!.imagePath).toBe('/uploads/logo.png');
+    });
+
     it('throws a descriptive error when the source guideline is not org_id = "system"', async () => {
       const orgSourceId = await seedGuidelineWithChildren(repo, 'org-a', 'Org A Brand');
 
