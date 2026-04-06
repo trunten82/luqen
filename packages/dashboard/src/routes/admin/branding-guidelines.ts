@@ -185,13 +185,9 @@ export async function brandingGuidelineRoutes(
           : undefined,
       }));
 
-      // System Library tab: load system-scoped guidelines only when the
-      // system tab is active. Keeps the default (My guidelines) tab
-      // byte-identical when nothing references systemGuidelines in the
-      // template. (08-P03)
-      const systemGuidelines = systemLibraryActive
-        ? await storage.branding.listSystemGuidelines()
-        : [];
+      // Always fetch system guidelines for the tab counter badge;
+      // full list only used when the system tab is active.
+      const systemGuidelines = await storage.branding.listSystemGuidelines();
 
       return reply.view('admin/branding-guidelines.hbs', {
         pageTitle: 'Branding Guidelines',
@@ -216,7 +212,9 @@ export async function brandingGuidelineRoutes(
     { preHandler: requirePermission('branding.manage') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
+      const body = request.body as { name?: string } | undefined;
       const orgId = request.user?.currentOrgId ?? 'system';
+      const cloneName = body?.name?.trim() || undefined;
 
       // Guard: source must exist and be system-scoped. An org-owned row
       // must never be clonable through this endpoint.
@@ -229,7 +227,7 @@ export async function brandingGuidelineRoutes(
       }
 
       try {
-        const clone = await storage.branding.cloneSystemGuideline(id, orgId);
+        const clone = await storage.branding.cloneSystemGuideline(id, orgId, cloneName ? { name: cloneName } : undefined);
         return reply
           .header('HX-Redirect', `/admin/branding-guidelines/${clone.id}`)
           .code(204)
