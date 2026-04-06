@@ -2,8 +2,8 @@
   <div class="modal">
     <h2 id="modal-title">{{t "admin.branding.createGuideline"}}</h2>
 
-    <form hx-post="/admin/branding-guidelines"
-          hx-target="#branding-guidelines-alert"
+    <form hx-post="{{#if postUrl}}{{postUrl}}{{else}}/admin/branding-guidelines{{/if}}"
+          hx-target="{{#if postUrl}}this{{else}}#branding-guidelines-alert{{/if}}"
           hx-swap="innerHTML"
           novalidate>
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
