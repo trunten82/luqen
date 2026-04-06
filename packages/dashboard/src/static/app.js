@@ -111,6 +111,18 @@
     });
   });
 
+  /* ── Flash toast auto-dismiss on page load ───────────────────────── */
+  (function () {
+    var tc = document.getElementById('toast-container');
+    if (!tc) return;
+    tc.querySelectorAll('.toast').forEach(function (t) {
+      setTimeout(function () {
+        t.style.opacity = '0'; t.style.transition = 'opacity 300ms ease';
+        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
+      }, 5000);
+    });
+  })();
+
   /* ── Picker (searchable multi-select for jurisdictions/regulations) ── */
   var _pickerTab = 'jurisdictions';
   function pickerTab(tab, btn) {
