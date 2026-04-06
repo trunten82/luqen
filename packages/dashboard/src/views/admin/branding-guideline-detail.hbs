@@ -439,6 +439,31 @@
     {{/if}}
   </div>
 
+  {{!-- CSS Import --}}
+  {{#if perm.brandingManage}}
+  <div class="card mt-lg">
+    <div class="card__body">
+      <h3 class="card__title">{{t "admin.branding.cssImportHeading"}}</h3>
+      <p>{{t "admin.branding.cssImportDescription"}}</p>
+      <form hx-post="/admin/branding-guidelines/{{guideline.id}}/upload-css"
+            hx-target="#toast-container"
+            hx-swap="innerHTML"
+            hx-indicator=".brd-css-spinner">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+        <div class="form-group">
+          <label class="form-label" for="css-content">{{t "admin.branding.cssContentLabel"}}</label>
+          <textarea id="css-content" name="cssContent" class="input" rows="8"
+                    placeholder="{{t "admin.branding.cssContentPlaceholder"}}"></textarea>
+        </div>
+        <button type="submit" class="btn btn--primary btn--sm">
+          <span class="brd-css-spinner htmx-indicator spinner"></span>
+          {{t "admin.branding.cssImportButton"}}
+        </button>
+      </form>
+    </div>
+  </div>
+  {{/if}}
+
   {{!-- Discover Brand (LLM-powered, shown only when LLM is configured) --}}
   {{#if llmEnabled}}
   {{#if perm.brandingManage}}

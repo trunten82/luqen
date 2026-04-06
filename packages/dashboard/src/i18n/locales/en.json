@@ -904,6 +904,13 @@
       "discoverEmpty": "No brand signals detected — try a different URL.",
       "discoverError": "Brand discovery failed",
       "linkSiteAfterDiscover": "Automatically link this site to the guideline",
+      "cssImportHeading": "Import from CSS",
+      "cssImportDescription": "Paste CSS content to extract brand colors (custom properties, hex values) and fonts (font-family declarations).",
+      "cssContentLabel": "CSS Content",
+      "cssContentPlaceholder": ":root {\n  --brand-primary: #1E40AF;\n  --brand-secondary: #F59E0B;\n}\nbody { font-family: 'Inter', sans-serif; }",
+      "cssImportButton": "Extract & Import",
+      "cssImportSuccess": "Imported {{colors}} color(s) and {{fonts}} font(s) from CSS.",
+      "cssImportEmpty": "No colors or fonts found in the provided CSS.",
       "tabsLabel": "Brand guideline scope",
       "tabs": {
         "myGuidelines": "My guidelines",
