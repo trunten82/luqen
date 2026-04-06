@@ -423,14 +423,40 @@ export async function createLLMOrgClient(
   orgId: string,
   orgSlug: string,
 ): Promise<{ clientId: string; clientSecret: string }> {
-  const response = await fetch(`${llmUrl.replace(/\/$/, '')}/api/v1/clients`, {
+  const base = llmUrl.replace(/\/$/, '');
+  const expectedName = `dashboard-${orgSlug}`;
+  const headers = {
+    'Authorization': `Bearer ${adminToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  // Check if a client with this name already exists on the LLM service
+  // to avoid creating duplicates on repeated backfill runs.
+  const listRes = await fetch(`${base}/api/v1/clients`, { headers });
+  if (listRes.ok) {
+    const listData = await listRes.json() as { data?: Array<{ id: string; name: string }> };
+    const existing = (listData.data ?? []).find((c) => c.name === expectedName);
+    if (existing) {
+      // Client exists but we don't have the secret — rotate it to get fresh credentials.
+      const rotateRes = await fetch(`${base}/api/v1/clients/${encodeURIComponent(existing.id)}/rotate-secret`, {
+        method: 'POST',
+        headers,
+      });
+      if (rotateRes.ok) {
+        const rotateData = await rotateRes.json() as { data: { secret: string } };
+        return { clientId: existing.id, clientSecret: rotateData.data.secret };
+      }
+      // Rotate not available — return the ID without secret; caller stores what it can.
+      return { clientId: existing.id, clientSecret: '' };
+    }
+  }
+
+  // No existing client — create a new one.
+  const response = await fetch(`${base}/api/v1/clients`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${adminToken}`,
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
-      name: `dashboard-${orgSlug}`,
+      name: expectedName,
       scopes: ['read', 'write'],
       grantTypes: ['client_credentials'],
       orgId,
