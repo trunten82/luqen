@@ -707,6 +707,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   await dashboardUserRoutes(server, storage);
   await apiKeyRoutes(server, storage);
+  const { orgApiKeyRoutes } = await import('./routes/admin/org-api-keys.js');
+  await orgApiKeyRoutes(server, storage);
   await organizationRoutes(server, storage, config.complianceUrl, config.brandingUrl, getBrandingTokenManager);
   await roleRoutes(server, storage);
   await teamRoutes(server, storage);

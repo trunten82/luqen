@@ -111,7 +111,11 @@ export class SqliteApiKeyRepository implements ApiKeyRepository {
     return rows.map(rowToRecord);
   }
 
-  async revokeKey(id: string): Promise<void> {
-    this.db.prepare('UPDATE api_keys SET active = 0 WHERE id = ?').run(id);
+  async revokeKey(id: string, orgId?: string): Promise<void> {
+    if (orgId !== undefined) {
+      this.db.prepare('UPDATE api_keys SET active = 0 WHERE id = ? AND org_id = ?').run(id, orgId);
+    } else {
+      this.db.prepare('UPDATE api_keys SET active = 0 WHERE id = ?').run(id);
+    }
   }
 }
