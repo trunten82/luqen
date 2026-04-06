@@ -32,11 +32,22 @@ export async function enforceApiKeyRole(
   // Only applies to API key authenticated requests
   if (request.user?.id !== 'api-key') return;
 
+  const path = request.url.split('?')[0];
+
+  // Org-scoped keys cannot access admin/org management endpoints
+  if (request.user.currentOrgId !== undefined) {
+    if (path.startsWith('/api/v1/orgs') || path.startsWith('/api/v1/admin')) {
+      await reply.code(403).send({
+        error: 'Forbidden: org-scoped API keys cannot access admin endpoints',
+      });
+      return;
+    }
+  }
+
   const role = (request.user.role ?? 'admin') as ApiKeyRole;
   if (role === 'admin') return;
 
   const method = request.method;
-  const path = request.url.split('?')[0];
 
   // Only enforce on API routes — API keys are only used for /api/ paths
   if (!path.startsWith('/api/')) return;

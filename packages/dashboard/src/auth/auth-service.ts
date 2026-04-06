@@ -152,12 +152,14 @@ export class AuthService {
     if (apiKeyToken !== undefined && apiKeyToken !== '') {
       const result = validateApiKey(this.db, apiKeyToken);
       if (result.valid) {
+        const isOrgScoped = result.orgId !== undefined && result.orgId !== 'system';
         return {
           authenticated: true,
           user: {
             id: 'api-key',
             username: 'api-key',
             role: result.role ?? 'admin',
+            ...(isOrgScoped ? { currentOrgId: result.orgId } : {}),
           },
         };
       }

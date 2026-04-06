@@ -10,6 +10,7 @@ export interface ApiKeyResult {
 export interface ApiKeyValidationResult {
   readonly valid: boolean;
   readonly role?: ApiKeyRole;
+  readonly orgId?: string;
 }
 
 /**
@@ -57,12 +58,12 @@ export function validateApiKey(
 ): ApiKeyValidationResult {
   const keyHash = hashApiKey(key);
   const row = db
-    .prepare('SELECT id, role FROM api_keys WHERE key_hash = @keyHash AND active = 1')
-    .get({ keyHash }) as { id: string; role: string } | undefined;
+    .prepare('SELECT id, role, org_id FROM api_keys WHERE key_hash = @keyHash AND active = 1')
+    .get({ keyHash }) as { id: string; role: string; org_id: string } | undefined;
 
   if (row !== undefined) {
     updateLastUsed(db, keyHash);
-    return { valid: true, role: (row.role ?? 'admin') as ApiKeyRole };
+    return { valid: true, role: (row.role ?? 'admin') as ApiKeyRole, orgId: row.org_id };
   }
 
   return { valid: false };
