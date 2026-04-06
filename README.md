@@ -441,6 +441,75 @@ npm run test:coverage --workspaces
 
 ---
 
+## Built on
+
+Luqen is built on proven open-source components. The table below lists every direct upstream dependency grouped by the role it plays in the platform.
+
+### Accessibility scanning
+
+| Component | Role |
+|-----------|------|
+| [pa11y](https://github.com/pa11y/pa11y) | Core WCAG scanner — Luqen drives pa11y directly, no webservice required |
+| [axe-core](https://github.com/dequelabs/axe-core) | Secondary accessibility rule engine (used via pa11y) |
+| [Puppeteer](https://github.com/puppeteer/puppeteer) | Headless Chrome for page rendering during scans |
+
+### Web framework
+
+| Component | Role |
+|-----------|------|
+| [Fastify](https://fastify.dev) | HTTP server for the dashboard and all microservices |
+| [@fastify/secure-session](https://github.com/fastify/fastify-secure-session) | Encrypted cookie sessions (AES-256-GCM) |
+| [@fastify/csrf-protection](https://github.com/fastify/csrf-protection) | CSRF token generation and verification |
+| [@fastify/helmet](https://github.com/fastify/fastify-helmet) | Security headers (CSP, HSTS, X-Frame-Options) |
+| [@fastify/rate-limit](https://github.com/fastify/fastify-rate-limit) | Per-route rate limiting |
+| [@fastify/multipart](https://github.com/fastify/fastify-multipart) | File upload handling (CSS import, fixtures) |
+| [@fastify/swagger](https://github.com/fastify/fastify-swagger) | OpenAPI spec generation for the LLM service |
+
+### Frontend
+
+| Component | Role |
+|-----------|------|
+| [HTMX](https://htmx.org) | Hypermedia-driven UI — partial page swaps without a JS build step |
+| [Handlebars](https://handlebarsjs.com) | Server-side HTML templating |
+
+### Database
+
+| Component | Role |
+|-----------|------|
+| [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) | Synchronous SQLite driver — primary storage backend |
+| [ioredis](https://github.com/redis/ioredis) | Redis client for job queues and distributed rate limiting |
+
+### Auth & security
+
+| Component | Role |
+|-----------|------|
+| [jose](https://github.com/panva/jose) | RS256 JWT signing and verification for OAuth2 service auth |
+| [bcrypt](https://github.com/kelektiv/node.bcrypt.js) | Password hashing for local user accounts |
+| [Zod](https://zod.dev) | Runtime schema validation for API inputs |
+
+### AI / LLM
+
+| Component | Role |
+|-----------|------|
+| [Ollama](https://ollama.com) | Local LLM inference — default provider for the `@luqen/llm` service |
+| [OpenAI Node SDK](https://github.com/openai/openai-node) | API client for OpenAI and any OpenAI-compatible endpoint |
+
+### Export & reporting
+
+| Component | Role |
+|-----------|------|
+| [PDFKit](https://pdfkit.org) | Server-side PDF report generation (no Chromium dependency) |
+| [ExcelJS](https://github.com/exceljs/exceljs) | Excel export for scan results and trends |
+
+### Testing
+
+| Component | Role |
+|-----------|------|
+| [Vitest](https://vitest.dev) | Unit and integration test runner |
+| [Playwright](https://playwright.dev) | End-to-end browser testing |
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
