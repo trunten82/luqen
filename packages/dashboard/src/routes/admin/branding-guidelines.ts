@@ -538,7 +538,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       if (linkEnabled && body.confirmOverwrite === undefined) {
         const existing = await storage.branding.getGuidelineForSite(normalizedUrl, guideline.orgId);
         if (existing !== null && existing.id !== id) {
-          const csrf = escapeHtml((request.body as Record<string, string>)._csrf ?? '');
+          const csrf = escapeHtml(reply.generateCsrf());
           const safeUrl = escapeHtml(url);
           // Conflict detected — ask user to confirm before proceeding
           return reply
@@ -1046,7 +1046,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Check if the site is linked to a DIFFERENT guideline — prompt before overwriting
         const existing = await storage.branding.getGuidelineForSite(normalizedUrl, orgId);
         if (existing !== null && existing.id !== id && body.confirmOverwrite !== 'yes') {
-          const csrf = escapeHtml((request.body as Record<string, string>)._csrf ?? '');
+          const csrf = escapeHtml(reply.generateCsrf());
           const guidelineName = escapeHtml((await storage.branding.getGuideline(id))?.name ?? 'this guideline');
           return reply
             .code(200)
