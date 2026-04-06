@@ -582,7 +582,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
     const csrfToken = reply.generateCsrf();
     const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined ?? new Set<string>();
-    const session = request.session as { get?(key: string): unknown } | undefined;
+    const session = request.session as { get?(key: string): unknown; set?(key: string, value: unknown): void } | undefined;
     const locale: Locale = (
       typeof session?.get === 'function'
         ? session.get('locale') as Locale | undefined
@@ -590,12 +590,17 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     ) ?? 'en';
     const gitHostConfigs = await storage.gitHosts.listConfigs(request.user?.currentOrgId ?? 'system');
     const hasGitHostConfigs = gitHostConfigs.length > 0;
+    // Flash toast: read once from session, clear after use
+    const flashToast = typeof session?.get === 'function' ? session.get('flashToast') as string | undefined : undefined;
+    if (flashToast && typeof session?.set === 'function') { session.set('flashToast', null); }
+
     const originalView = reply.view.bind(reply) as typeof reply.view;
     const isHtmxRequest = request.headers['hx-request'] === 'true';
     reply.view = (page: string, data?: Record<string, unknown>) => {
       const merged = {
         ...data,
         csrfToken,
+        flashToast,
         locale,
         locales: SUPPORTED_LOCALES,
         localeLabels: LOCALE_LABELS,

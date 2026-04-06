@@ -640,11 +640,16 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           } catch { /* non-fatal */ }
         }
 
+        // Store toast in session flash so it survives the redirect
+        const session = request.session as { set?(key: string, value: unknown): void } | undefined;
+        const toastMsg = `Brand discovery complete. Discovered ${summary}. Note: AI-generated results — please validate.${siteLinkMessage}`;
+        if (typeof session?.set === 'function') { session.set('flashToast', toastMsg); }
+
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .header('HX-Refresh', 'true')
-          .send(toastHtml(`Brand discovery complete. Discovered ${summary}. Note: AI-generated results — please validate.${siteLinkMessage}`));
+          .header('HX-Redirect', `/admin/branding-guidelines/${id}`)
+          .send('');
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Brand discovery failed';
         return reply.code(502).header('content-type', 'text/html').send(toastHtml(message, 'error'));
