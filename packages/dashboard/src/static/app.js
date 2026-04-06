@@ -57,6 +57,20 @@
       closeModal();
       return;
     }
+    /* Confirmation modal — close immediately on choice, show processing toast */
+    var confirmBtn = e.target.closest && e.target.closest('[data-action="confirm-close"]');
+    if (confirmBtn) {
+      closeModal();
+      var tc = document.getElementById('toast-container');
+      if (tc) {
+        var msg = document.createElement('div');
+        msg.className = 'toast toast--success';
+        msg.setAttribute('role', 'alert');
+        msg.textContent = 'Processing brand discovery\u2026 This may take a moment.';
+        tc.textContent = '';
+        tc.appendChild(msg);
+      }
+    }
   });
 
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
