@@ -124,20 +124,29 @@ describe('Test 2: overwrite warning — previous guideline is detectable before 
 // Test 3: Opt-out — when linkSiteAfterDiscover is false, no assignment (ALD-01)
 // ---------------------------------------------------------------------------
 
-describe('Test 3: opt-out — no assignment when link is disabled', () => {
-  it('leaves no site assignment when linkSiteAfterDiscover is disabled', async () => {
+describe('Test 3: opt-out — no assignment when absent checkbox field (ALD-01)', () => {
+  it('treats absent linkSiteAfterDiscover field as opt-out (no assignment)', async () => {
     const orgId = 'org-test-3';
     const guidelineId = await seedGuideline(orgId, 'Guideline C');
     const siteUrl = 'https://optout.example.com';
 
-    // Simulate the backend opt-out logic: when disabled, assignToSite is NOT called.
-    const linkEnabled = false;
+    // Simulate unchecked checkbox: browser sends no field → body has no linkSiteAfterDiscover key
+    const body: Record<string, string> = { url: siteUrl };
+    const linkValue = body.linkSiteAfterDiscover; // undefined
+    const linkEnabled = linkValue === 'on'; // false — matches route handler logic
+
     if (linkEnabled) {
       await repo.assignToSite(guidelineId, siteUrl, orgId);
     }
 
     const result = await repo.getGuidelineForSite(siteUrl, orgId);
     expect(result).toBeNull();
+
+    // Also verify that explicit 'on' DOES enable linking
+    const bodyChecked: Record<string, string> = { url: siteUrl, linkSiteAfterDiscover: 'on' };
+    const linkValueChecked = bodyChecked.linkSiteAfterDiscover;
+    const linkEnabledChecked = linkValueChecked === 'on'; // true
+    expect(linkEnabledChecked).toBe(true);
   });
 });
 

@@ -601,10 +601,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         const summary = parts.join(', ');
 
         // Auto-link the scanned site to this guideline (ALD-01, ALD-02).
-        // Default ON: any truthy value or absent field enables the link.
-        // Explicit "false" or "0" disables it (unchecked checkbox sends nothing).
+        // Checkbox sends value="on" when checked, absent when unchecked.
+        // Only link when explicitly checked (linkValue === 'on').
         const linkValue = body.linkSiteAfterDiscover;
-        const linkEnabled = linkValue !== 'false' && linkValue !== '0';
+        const linkEnabled = linkValue === 'on';
 
         let siteLinkMessage = '';
         if (linkEnabled) {
