@@ -64,6 +64,7 @@ import { SqliteServiceConnectionsRepository } from './db/sqlite/service-connecti
 import { importFromConfigIfEmpty } from './services/service-connections-bootstrap.js';
 import { createComplianceClient } from './compliance-client.js';
 import { createBrandingOrgClient } from './branding-client.js';
+import { createLLMOrgClient } from './llm-client.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { changeHistoryRoutes } from './routes/admin/change-history.js';
@@ -774,13 +775,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
     // ── Backfill missing OAuth clients for existing orgs ──────────────────
     // Orgs created before a service was added won't have stored credentials.
-    // We create them now (best-effort) so every org has both compliance and
-    // branding clients ready.
+    // We create them now (best-effort) so every org has compliance, branding,
+    // and LLM clients ready.
     try {
       const complianceTm = getComplianceTokenManager();
       const brandingTm = getBrandingTokenManager();
+      const llmClient = getLLMClient();
       const complianceToken = complianceTm !== null ? await complianceTm.getToken() : '';
       const brandingToken = brandingTm !== null ? await brandingTm.getToken() : null;
+      const llmToken = llmClient !== null ? await llmClient.getToken() : null;
       const allOrgs = await storage.organizations.listOrgs();
 
       for (const org of allOrgs) {
@@ -812,6 +815,22 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
               server.log.info(`Created branding OAuth client for org "${org.name}"`);
             } catch (err) {
               server.log.warn({ err }, `Failed to backfill branding client for org "${org.name}"`);
+            }
+          }
+        }
+
+        // LLM client
+        if (config.llmUrl && llmToken) {
+          const llmCreds = await storage.organizations.getOrgLLMCredentials(org.id);
+          if (llmCreds === null) {
+            try {
+              const { clientId, clientSecret } = await createLLMOrgClient(
+                config.llmUrl, llmToken, org.id, org.slug,
+              );
+              await storage.organizations.updateOrgLLMClient(org.id, clientId, clientSecret);
+              server.log.info(`Created LLM OAuth client for org "${org.name}"`);
+            } catch (err) {
+              server.log.warn({ err }, `Failed to backfill LLM client for org "${org.name}"`);
             }
           }
         }
