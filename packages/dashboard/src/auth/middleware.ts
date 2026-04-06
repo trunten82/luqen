@@ -28,10 +28,12 @@ export function createAuthGuard(authService: AuthService) {
       return;
     }
 
+    const authUser = result.user! as { id: string; username: string; role?: string; currentOrgId?: string };
     request.user = {
-      id: result.user!.id,
-      username: result.user!.username,
-      role: result.user!.role ?? 'viewer',
+      id: authUser.id,
+      username: authUser.username,
+      role: authUser.role ?? 'viewer',
+      ...(authUser.currentOrgId !== undefined ? { currentOrgId: authUser.currentOrgId } : {}),
     };
   };
 }
