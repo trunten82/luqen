@@ -7,7 +7,7 @@
 
 ## Phases
 
-- [ ] **Phase 09: Branding Pipeline Completion** - Retag scans on guideline changes, auto-link sites on discover, branding service integration tests
+- [x] **Phase 09: Branding Pipeline Completion** - Retag scans on guideline changes, auto-link sites on discover, branding service integration tests (completed 2026-04-06)
 - [ ] **Phase 10: CSS Import & Org API Keys** - CSS file import for brand guidelines and org-scoped API key management
 - [ ] **Phase 11: LLM Per-Org OAuth** - Per-org LLM OAuth client parity with compliance/branding services
 - [ ] **Phase 12: E2E Testing & Documentation** - Cross-feature E2E validation and upstream component documentation
@@ -23,12 +23,12 @@
   2. When discover-branding runs, the scanned site URL is automatically linked to the resulting guideline (with opt-out available)
   3. If a site already has a different guideline linked, the user sees a prompt before the link is overwritten
   4. Integration tests prove the full branding pipeline (create guideline, assign site, scan, verify brand enrichment) against real Aperol data
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 09-01-PLAN.md — Retag completeness: add retag after discover-branding
 - [x] 09-02-PLAN.md — Auto-link site on discover + UI checkbox
-- [ ] 09-03-PLAN.md — Aperol fixture integration tests for full pipeline
+- [x] 09-03-PLAN.md — Aperol fixture integration tests for full pipeline
 
 **UI hint**: yes
 

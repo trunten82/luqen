@@ -12,8 +12,8 @@
 
 ### Branding Service Tests
 
-- [ ] **BST-01**: Integration tests cover the full branding pipeline using real Aperol brand data against aperol.com scan results
-- [ ] **BST-02**: E2E test: create guideline → assign to site → scan → verify brand enrichment produces correct tags
+- [x] **BST-01**: Integration tests cover the full branding pipeline using real Aperol brand data against aperol.com scan results
+- [x] **BST-02**: E2E test: create guideline → assign to site → scan → verify brand enrichment produces correct tags
 
 ### Auto-Link Site on Discover
 
