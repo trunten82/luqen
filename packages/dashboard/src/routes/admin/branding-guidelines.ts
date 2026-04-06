@@ -518,7 +518,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           .send(toastHtml('LLM service is not configured.', 'error'));
       }
 
-      const body = request.body as { url?: string };
+      const body = request.body as { url?: string; linkSiteAfterDiscover?: string };
       const url = body.url?.trim();
 
       if (!url || !/^https?:\/\//i.test(url)) {
@@ -600,7 +600,34 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         if (logoSaved) parts.push('logo');
         const summary = parts.join(', ');
 
-        // Retag assigned sites after discover enriched the guideline
+        // Auto-link the scanned site to this guideline (ALD-01, ALD-02).
+        // Default ON: any truthy value or absent field enables the link.
+        // Explicit "false" or "0" disables it (unchecked checkbox sends nothing).
+        const linkValue = body.linkSiteAfterDiscover;
+        const linkEnabled = linkValue !== 'false' && linkValue !== '0';
+
+        let siteLinkMessage = '';
+        if (linkEnabled) {
+          const normalizedUrl = url.replace(/\/+$/, '');
+          try {
+            // Detect if the site was previously assigned to a DIFFERENT guideline (ALD-02).
+            const existing = await storage.branding.getGuidelineForSite(normalizedUrl, guideline.orgId);
+            const isOverwrite = existing !== null && existing.id !== id;
+            const previousName = isOverwrite ? existing.name : null;
+
+            await storage.branding.assignToSite(id, normalizedUrl, guideline.orgId);
+
+            if (isOverwrite && previousName !== null) {
+              siteLinkMessage = ` Site "${normalizedUrl}" was linked to "${previousName}" — now linked to this guideline.`;
+            } else {
+              siteLinkMessage = ` Site "${normalizedUrl}" linked to this guideline.`;
+            }
+          } catch {
+            // non-fatal — site linking failure should not block the discovery response
+          }
+        }
+
+        // Retag all assigned sites after discover enriched the guideline (BRT-01, BRT-02)
         if (result.colors.length > 0 || result.fonts.length > 0) {
           try {
             await retagAllSitesForGuideline(storage, id, guideline.orgId);
@@ -611,7 +638,7 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           .code(200)
           .header('content-type', 'text/html')
           .header('HX-Refresh', 'true')
-          .send(toastHtml(`Brand discovery complete. Discovered ${summary}. Note: AI-generated results — please validate.`));
+          .send(toastHtml(`Brand discovery complete. Discovered ${summary}. Note: AI-generated results — please validate.${siteLinkMessage}`));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Brand discovery failed';
         return reply.code(502).header('content-type', 'text/html').send(toastHtml(message, 'error'));
