@@ -1137,4 +1137,12 @@ ALTER TABLE scan_records ADD COLUMN regulations TEXT NOT NULL DEFAULT '[]';
 ALTER TABLE branding_guidelines ADD COLUMN cloned_from_system_guideline_id TEXT;
     `,
   },
+  {
+    id: '041',
+    name: 'add-llm-client-to-orgs',
+    sql: `
+ALTER TABLE organizations ADD COLUMN llm_client_id TEXT;
+ALTER TABLE organizations ADD COLUMN llm_client_secret TEXT;
+    `,
+  },
 ];
