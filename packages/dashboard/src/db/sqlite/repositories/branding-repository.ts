@@ -582,24 +582,30 @@ export class SqliteBrandingRepository implements BrandingRepository {
   // -------------------------------------------------------------------------
 
   async assignToSite(guidelineId: string, siteUrl: string, orgId: string): Promise<void> {
+    const normalizedUrl = siteUrl.replace(/\/+$/, '');
     this.db.prepare(`
       INSERT OR REPLACE INTO site_branding (site_url, guideline_id, org_id)
       VALUES (@siteUrl, @guidelineId, @orgId)
-    `).run({ siteUrl, guidelineId, orgId });
+    `).run({ siteUrl: normalizedUrl, guidelineId, orgId });
   }
 
   async unassignFromSite(siteUrl: string, orgId: string): Promise<void> {
+    const normalizedUrl = siteUrl.replace(/\/+$/, '');
     this.db.prepare(
       'DELETE FROM site_branding WHERE site_url = @siteUrl AND org_id = @orgId',
-    ).run({ siteUrl, orgId });
+    ).run({ siteUrl: normalizedUrl, orgId });
   }
 
   async getGuidelineForSite(siteUrl: string, orgId: string): Promise<BrandingGuidelineRecord | null> {
+    const normalizedUrl = siteUrl.replace(/\/+$/, '');
+    // Prefer org-specific assignment; fall back to system-level assignment
     const row = this.db.prepare(`
       SELECT g.* FROM branding_guidelines g
       JOIN site_branding sb ON sb.guideline_id = g.id
-      WHERE sb.site_url = @siteUrl AND sb.org_id = @orgId
-    `).get({ siteUrl, orgId }) as GuidelineRow | undefined;
+      WHERE sb.site_url = @siteUrl AND sb.org_id IN (@orgId, 'system')
+      ORDER BY CASE sb.org_id WHEN @orgId THEN 0 ELSE 1 END
+      LIMIT 1
+    `).get({ siteUrl: normalizedUrl, orgId }) as GuidelineRow | undefined;
 
     if (row === undefined) return null;
 
