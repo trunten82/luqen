@@ -11,5 +11,5 @@ export interface ApiKeyRepository {
   getOrCreateKey(): Promise<{ key: string | null; isNew: boolean }>;
   revokeAllKeys(): Promise<void>;
   listKeys(orgId?: string): Promise<ApiKeyRecord[]>;
-  revokeKey(id: string): Promise<void>;
+  revokeKey(id: string, orgId?: string): Promise<void>;
 }
