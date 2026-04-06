@@ -72,7 +72,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 9. Branding Pipeline Completion | v2.9.0 | 0/3 | Planned | - |
+| 9. Branding Pipeline Completion | v2.9.0 | 4/4 | Complete   | 2026-04-06 |
 | 10. CSS Import & Org API Keys | v2.9.0 | 0/? | Not started | - |
 | 11. LLM Per-Org OAuth | v2.9.0 | 0/? | Not started | - |
 | 12. E2E Testing & Documentation | v2.9.0 | 0/? | Not started | - |
