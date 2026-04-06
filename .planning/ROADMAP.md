@@ -21,7 +21,7 @@
 **Success Criteria** (what must be TRUE):
   1. When a branding guideline is created or updated, existing completed scans for assigned sites show updated brand tags without re-scanning
   2. When discover-branding runs, the scanned site URL is automatically linked to the resulting guideline (with opt-out available)
-  3. If a site already has a different guideline linked, the user sees a prompt before the link is overwritten
+  3. If a site already has a different guideline linked, the user is notified via toast after the reassignment (overwrite-don't-block per design decision)
   4. Integration tests prove the full branding pipeline (create guideline, assign site, scan, verify brand enrichment) against real Aperol data
 **Plans:** 3/3 plans complete
 
