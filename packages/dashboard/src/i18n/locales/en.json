@@ -45,7 +45,8 @@
     "select": "Select",
     "effortLow": "low",
     "effortMedium": "medium",
-    "effortHigh": "high"
+    "effortHigh": "high",
+    "revoke": "Revoke"
   },
   "nav": {
     "overview": "Overview",
@@ -74,6 +75,7 @@
     "teams": "Teams",
     "roles": "Roles",
     "myOrganization": "My Organization",
+    "orgApiKeys": "Org API Keys",
     "apiKeys": "API Keys",
     "oauthClients": "OAuth Clients",
     "apiUsers": "API Users",
@@ -586,6 +588,20 @@
       "generateKey": "Generate Key",
       "labelPlaceholder": "e.g. CI pipeline, monitoring",
       "role": "Role"
+    },
+    "orgApiKeys": {
+      "title": "Organization API Keys",
+      "createButton": "Create API Key",
+      "label": "Label",
+      "role": "Role",
+      "rateLimit": "Rate Limit",
+      "status": "Status",
+      "created": "Created",
+      "lastUsed": "Last Used",
+      "noKeys": "No API keys for this organization. Create one to get started.",
+      "createSuccess": "API key created successfully.",
+      "revokeSuccess": "API key revoked.",
+      "selectOrg": "Select an organization first to manage API keys."
     },
     "serviceConnections": {
       "title": "Service Connections",
