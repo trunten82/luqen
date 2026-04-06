@@ -903,6 +903,7 @@
       "discoverSuccess": "Brand discovery complete",
       "discoverEmpty": "No brand signals detected — try a different URL.",
       "discoverError": "Brand discovery failed",
+      "linkSiteAfterDiscover": "Automatically link this site to the guideline",
       "tabsLabel": "Brand guideline scope",
       "tabs": {
         "myGuidelines": "My guidelines",
