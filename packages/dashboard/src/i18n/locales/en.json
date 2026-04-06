@@ -683,8 +683,10 @@
       },
       "action": {
         "linkToSite": "Link to site",
-        "cloneIntoOrg": "Clone into org"
+        "cloneIntoOrg": "Clone into org",
+        "cloneConfirm": "Clone"
       },
+      "cloneName": "Clone name",
       "confirmClone": "Clone \"{{name}}\" into your organization? You will be able to rename it on the next screen.",
       "cloneSuccess": "Cloned from system guideline — rename to finish.",
       "linkSuccess": "Linked \"{{name}}\" to {{siteUrl}}. Next scan will use the live system template.",
