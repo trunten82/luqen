@@ -317,6 +317,46 @@ export async function brandingGuidelineRoutes(
     },
   );
 
+  // ── Update name/description (detail page) ────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = (request.body ?? {}) as { name?: unknown; description?: unknown };
+
+      const update: { name?: string; description?: string } = {};
+      if (typeof body.name === 'string' && body.name.trim() !== '') {
+        update.name = body.name.trim();
+      }
+      if (typeof body.description === 'string') {
+        update.description = body.description.trim();
+      }
+
+      if (update.name === undefined && update.description === undefined) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Nothing to update.', 'error'));
+      }
+
+      const guideline = await storage.branding.getGuideline(id);
+      if (guideline === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Guideline not found.', 'error'));
+      }
+
+      const updated = await storage.branding.updateGuideline(id, update);
+      return reply
+        .code(200)
+        .header('content-type', 'text/html')
+        .send(toastHtml(`Guideline "${escapeHtml(updated.name)}" saved.`));
+    },
+  );
+
   // ── Toggle active (list page) ────────────────────────────────────────────
 
   server.post(

@@ -82,6 +82,16 @@
       }
     });
 
+    /* Toggle show/hide via data-action="toggle-edit" (CSP-safe) */
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-action="toggle-edit"]');
+      if (!btn) return;
+      var showId = btn.getAttribute('data-target-show');
+      var hideId = btn.getAttribute('data-target-hide');
+      if (showId) { var s = document.getElementById(showId); if (s) s.style.display = ''; }
+      if (hideId) { var h = document.getElementById(hideId); if (h) h.style.display = 'none'; }
+    });
+
     /* Tab switching via data-action="switch-tab" (CSP-safe event delegation)
        Supports space-separated IDs in data-target-hide and data-peer. */
     document.addEventListener('click', function(e) {
