@@ -434,20 +434,19 @@ export async function createLLMOrgClient(
   // to avoid creating duplicates on repeated backfill runs.
   const listRes = await fetch(`${base}/api/v1/clients`, { headers });
   if (listRes.ok) {
-    const listData = await listRes.json() as { data?: Array<{ id: string; name: string }> };
-    const existing = (listData.data ?? []).find((c) => c.name === expectedName);
-    if (existing) {
-      // Client exists but we don't have the secret — rotate it to get fresh credentials.
-      const rotateRes = await fetch(`${base}/api/v1/clients/${encodeURIComponent(existing.id)}/rotate-secret`, {
-        method: 'POST',
-        headers,
-      });
-      if (rotateRes.ok) {
-        const rotateData = await rotateRes.json() as { data: { secret: string } };
-        return { clientId: existing.id, clientSecret: rotateData.data.secret };
+    // LLM service returns array directly (no data wrapper)
+    const clients = await listRes.json() as Array<{ id: string; name: string }>;
+    const duplicates = clients.filter((c) => c.name === expectedName);
+    if (duplicates.length > 0) {
+      // Keep the first, delete the rest
+      for (let i = 1; i < duplicates.length; i++) {
+        await fetch(`${base}/api/v1/clients/${encodeURIComponent(duplicates[i].id)}`, {
+          method: 'DELETE', headers,
+        }).catch(() => {/* best-effort cleanup */});
       }
-      // Rotate not available — return the ID without secret; caller stores what it can.
-      return { clientId: existing.id, clientSecret: '' };
+      // Return the surviving client ID — secret is lost, but we store the ID
+      // so subsequent restarts skip creation entirely.
+      return { clientId: duplicates[0].id, clientSecret: '' };
     }
   }
 
@@ -467,6 +466,7 @@ export async function createLLMOrgClient(
     throw new Error(`Failed to create LLM client: ${response.status}`);
   }
 
-  const data = await response.json() as { data: { id: string; secret: string } };
-  return { clientId: data.data.id, clientSecret: data.data.secret };
+  // LLM service returns { ...client, id: clientId, clientSecret } (no data wrapper)
+  const data = await response.json() as { id: string; clientSecret: string };
+  return { clientId: data.id, clientSecret: data.clientSecret };
 }
