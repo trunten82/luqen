@@ -646,6 +646,113 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
     },
   );
 
+  // ── CSS Import ───────────────────────────────────────────────────────────
+
+  server.post(
+    '/admin/branding-guidelines/:id/upload-css',
+    { preHandler: requirePermission('branding.manage') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { cssContent?: string };
+      const cssContent = body.cssContent?.trim() ?? '';
+
+      const guideline = await storage.branding.getGuideline(id);
+      if (guideline === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Guideline not found.', 'error'));
+      }
+
+      // Verify org ownership
+      const orgId = request.user?.currentOrgId ?? 'system';
+      const isGlobalAdmin = request.user?.role === 'admin';
+      if (!isGlobalAdmin && guideline.orgId !== orgId) {
+        return reply
+          .code(403)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Access denied.', 'error'));
+      }
+
+      try {
+        const { parseCSS } = await import('@luqen/branding');
+        const parsed = parseCSS(cssContent);
+
+        if (parsed.colors.length === 0 && parsed.fonts.length === 0) {
+          return reply
+            .code(200)
+            .header('content-type', 'text/html')
+            .send(toastHtml('No colors or fonts found in the provided CSS.', 'error'));
+        }
+
+        // Get existing colors and fonts to deduplicate
+        const existingColors = await storage.branding.listColors(id);
+        const existingFonts = await storage.branding.listFonts(id);
+
+        const existingHexSet = new Set(
+          existingColors.map((c: { hexValue: string }) => c.hexValue.toUpperCase()),
+        );
+        const existingFamilySet = new Set(
+          existingFonts.map((f: { family: string }) => f.family.toLowerCase()),
+        );
+
+        let addedColors = 0;
+        let addedFonts = 0;
+
+        for (const color of parsed.colors) {
+          const normalizedHex = color.hex.toUpperCase();
+          if (!existingHexSet.has(normalizedHex)) {
+            existingHexSet.add(normalizedHex);
+            await storage.branding.addColor(id, {
+              id: randomUUID(),
+              name: color.name,
+              hexValue: color.hex,
+              context: 'Imported from CSS',
+            });
+            addedColors++;
+          }
+        }
+
+        for (const font of parsed.fonts) {
+          const key = font.family.toLowerCase();
+          if (!existingFamilySet.has(key)) {
+            existingFamilySet.add(key);
+            await storage.branding.addFont(id, {
+              id: randomUUID(),
+              family: font.family,
+              context: 'Imported from CSS',
+            });
+            addedFonts++;
+          }
+        }
+
+        // Retag assigned sites after modifying guideline
+        try {
+          await retagAllSitesForGuideline(storage, id, orgId);
+        } catch { /* non-fatal */ }
+
+        void storage.audit.log({
+          actor: request.user?.username ?? 'unknown',
+          actorId: request.user?.id,
+          action: 'branding_guideline.css_import',
+          resourceType: 'branding_guideline',
+          resourceId: id,
+          details: { addedColors, addedFonts },
+          ipAddress: request.ip,
+        });
+
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .header('HX-Refresh', 'true')
+          .send(toastHtml(`Imported ${addedColors} color(s) and ${addedFonts} font(s) from CSS.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to parse CSS';
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
   // ── Color CRUD ───────────────────────────────────────────────────────────
 
   server.post(
