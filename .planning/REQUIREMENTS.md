@@ -43,11 +43,11 @@
 
 - [ ] **E2E-01**: E2E tests cover the branding retag pipeline: create guideline → assign site → scan → retag → verify updated brand counts on live data
 - [ ] **E2E-02**: E2E tests cover org API key lifecycle: create key → use key to scan → verify scoped access → revoke → verify revocation
-- [ ] **E2E-03**: E2E tests cover the system brand guideline flow from org perspective: link system guideline → scan from org → verify guideline resolves → clone → verify independence
+- [x] **E2E-03**: E2E tests cover the system brand guideline flow from org perspective: link system guideline → scan from org → verify guideline resolves → clone → verify independence
 
 ### Documentation
 
-- [ ] **DOC-01**: README includes a "Built on" section linking all upstream components (pa11y, Fastify, HTMX, better-sqlite3, Ollama, etc.) grouped by role
+- [x] **DOC-01**: README includes a "Built on" section linking all upstream components (pa11y, Fastify, HTMX, better-sqlite3, Ollama, etc.) grouped by role
 
 ## Future Requirements
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.9.0
 milestone_name: Branding Completeness & Org Isolation
 status: executing
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-04-06T12:08:52.784Z"
+stopped_at: Completed 12-03-PLAN.md
+last_updated: "2026-04-06T13:45:46.930Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 14
+  completed_plans: 12
   percent: 0
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-06)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 11 — llm-per-org-oauth
+**Current focus:** Phase 12 — e2e-testing-documentation
 
 ## Current Position
 
-Phase: 11 (llm-per-org-oauth) — EXECUTING
-Plan: 3 of 3
+Phase: 12 (e2e-testing-documentation) — EXECUTING
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-06
 
@@ -61,6 +61,8 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10-css-import-org-api-keys P03 | 12m | 2 tasks | 8 files |
 | Phase 11 P01 | 8m | 2 tasks | 7 files |
 | Phase 11 P03 | 8m | 2 tasks | 2 files |
+| Phase 12-e2e-testing-documentation P04 | 1m | 1 tasks | 1 files |
+| Phase 12-e2e-testing-documentation P03 | 3 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -86,6 +88,7 @@ Recent decisions affecting current work:
 - [Phase 11]: Pass getLLMClient getter to organizationRoutes following same getter-per-request pattern as brandingTokenManager
 - [Phase 11]: Use getLLMClient().getToken() in server.ts backfill — LLMClient wraps its own token manager; getToken() accessor added in Plan 11-01 for exactly this purpose
 - [Phase 11]: CLI backfill uses dynamic import of ServiceTokenManager following existing CLI pattern for fast startup
+- [Phase 12-e2e-testing-documentation]: E2E-03: 5 scenarios as separate describe blocks using real SQLite, no mocks — seedSystemGuideline helper cloned from Phase 08 pipeline test
 
 ### Pending Todos
 
@@ -97,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T12:08:52.781Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-04-06T13:45:46.927Z
+Stopped at: Completed 12-03-PLAN.md
 Resume file: None

@@ -75,13 +75,13 @@ Plans:
   2. E2E test proves org API key lifecycle: create key, use key to scan, verify scoped access, revoke, verify revocation
   3. E2E test proves system brand guideline flow from org perspective: link, scan, verify resolution, clone, verify independence
   4. README includes a "Built on" section linking all upstream components grouped by role
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 Plans:
 - [ ] 12-01-PLAN.md — E2E branding retag pipeline test (E2E-01)
 - [ ] 12-02-PLAN.md — E2E org API key lifecycle test (E2E-02)
-- [ ] 12-03-PLAN.md — E2E system brand guideline org flow test (E2E-03)
-- [ ] 12-04-PLAN.md — README "Built on" upstream component documentation (DOC-01)
+- [x] 12-03-PLAN.md — E2E system brand guideline org flow test (E2E-03)
+- [x] 12-04-PLAN.md — README "Built on" upstream component documentation (DOC-01)
 
 ## Progress
 
@@ -92,4 +92,4 @@ Plans:
 | 9. Branding Pipeline Completion | v2.9.0 | 4/4 | Complete   | 2026-04-06 |
 | 10. CSS Import & Org API Keys | v2.9.0 | 3/3 | Complete    | 2026-04-06 |
 | 11. LLM Per-Org OAuth | v2.9.0 | 3/3 | Complete    | 2026-04-06 |
-| 12. E2E Testing & Documentation | v2.9.0 | 0/4 | Not started | - |
+| 12. E2E Testing & Documentation | v2.9.0 | 2/4 | In Progress|  |
