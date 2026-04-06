@@ -37,7 +37,7 @@
 - [x] **LLM-01**: Migration adds `llm_client_id` and `llm_client_secret` columns to the organizations table
 - [x] **LLM-02**: On new org creation, a per-org LLM OAuth client (`dashboard-{slug}`) is auto-created and stored
 - [ ] **LLM-03**: LLM call routing uses per-org credentials when available, falls back to system client
-- [ ] **LLM-04**: CLI command to backfill existing orgs with per-org LLM clients
+- [x] **LLM-04**: CLI command to backfill existing orgs with per-org LLM clients
 
 ### E2E Testing
 
