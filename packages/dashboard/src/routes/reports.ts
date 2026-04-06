@@ -10,6 +10,7 @@ import { normalizeReportData, inferComponent } from '../services/report-service.
 import type { JsonReportFile } from '../services/report-service.js';
 import { getFixSuggestion } from '../fix-suggestions.js';
 import type { LLMClient } from '../llm-client.js';
+import { resolveOrgLLMClient } from '../llm-client.js';
 import { t } from '../i18n/index.js';
 export { normalizeReportData, inferComponent };
 export type { JsonReportFile };
@@ -429,9 +430,12 @@ export async function reportRoutes(
       // Try LLM first
       let llmFailed = false;
       if (llmClient) {
+        const orgId = request.user?.currentOrgId ?? undefined;
+        const { client: effectiveLlm, isPerOrg } = await resolveOrgLLMClient(
+          llmClient, storage.organizations, orgId,
+        );
         try {
-          const orgId = request.user?.currentOrgId ?? undefined;
-          const result = await llmClient.generateFix({
+          const result = await effectiveLlm!.generateFix({
             wcagCriterion: criterion,
             issueMessage: message,
             htmlContext,
@@ -452,6 +456,8 @@ export async function reportRoutes(
           }
         } catch {
           llmFailed = true;
+        } finally {
+          if (isPerOrg && effectiveLlm) effectiveLlm.destroy();
         }
       }
 
@@ -589,9 +595,13 @@ export async function reportRoutes(
         // Pattern detection is best-effort — continue without it
       }
 
-      // Call LLM
+      // Call LLM — use per-org credentials when available, system client as fallback
+      const effectiveOrgId = orgId !== 'system' ? orgId : undefined;
+      const { client: effectiveLlm, isPerOrg } = await resolveOrgLLMClient(
+        llmClient, storage.organizations, effectiveOrgId,
+      );
       try {
-        const result = await llmClient.analyseReport({
+        const result = await effectiveLlm!.analyseReport({
           siteUrl: scan.siteUrl,
           totalIssues: ((reportData as any).summary?.totalIssues ?? issuesList.reduce((s, i) => s + i.count, 0)) as number,
           issuesList,
@@ -641,6 +651,8 @@ export async function reportRoutes(
         return reply.header('content-type', 'text/html').send(
           `<div class="alert alert--info">${t('reportDetail.aiSummaryUnavailable')}</div>`,
         );
+      } finally {
+        if (isPerOrg && effectiveLlm) effectiveLlm.destroy();
       }
     },
   );

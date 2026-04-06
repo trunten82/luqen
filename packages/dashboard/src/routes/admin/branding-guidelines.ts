@@ -10,6 +10,7 @@ import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { retagScansForSite, retagAllSitesForGuideline } from '../../services/branding-retag.js';
 import type { LLMClient } from '../../llm-client.js';
+import { resolveOrgLLMClient } from '../../llm-client.js';
 
 const pump = promisify(pipeline);
 
@@ -528,8 +529,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           .send(toastHtml('A valid URL starting with http:// or https:// is required.', 'error'));
       }
 
+      // Resolve per-org LLM client (falls back to system client if no per-org creds)
+      const guidelineOrgId = guideline.orgId !== 'system' ? guideline.orgId : undefined;
+      const { client: effectiveLlm, isPerOrg } = await resolveOrgLLMClient(
+        llmClient, storage.organizations, guidelineOrgId,
+      );
       try {
-        const result = await llmClient.discoverBranding({ url, orgId: guideline.orgId });
+        const result = await effectiveLlm!.discoverBranding({ url, orgId: guideline.orgId });
 
         if (result.colors.length === 0 && result.fonts.length === 0 && !result.logoUrl) {
           return reply
@@ -642,6 +648,8 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Brand discovery failed';
         return reply.code(502).header('content-type', 'text/html').send(toastHtml(message, 'error'));
+      } finally {
+        if (isPerOrg && effectiveLlm) effectiveLlm.destroy();
       }
     },
   );
