@@ -512,7 +512,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     // 1. Determine org context
     // API key users can override org via X-Org-Id header (admin keys only)
     const orgHeader = request.headers['x-org-id'] as string | undefined;
-    if (orgHeader !== undefined && request.user.id === 'api-key' && request.user.role === 'admin') {
+    // Org-scoped API keys are locked to their org — no header override
+    if (request.user.id === 'api-key' && request.user.currentOrgId !== undefined) {
+      // currentOrgId already set from key's org_id — skip header override
+    } else if (orgHeader !== undefined && request.user.id === 'api-key' && request.user.role === 'admin') {
       request.user = { ...request.user, currentOrgId: orgHeader };
     } else if (session !== undefined && typeof session.get === 'function') {
       const userOrgs = await storage.organizations.getUserOrgs(request.user.id);
