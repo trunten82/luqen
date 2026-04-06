@@ -23,7 +23,7 @@
   2. When discover-branding runs, the scanned site URL is automatically linked to the resulting guideline (with opt-out available)
   3. If a site already has a different guideline linked, the user is notified via toast after the reassignment (overwrite-don't-block per design decision)
   4. Integration tests prove the full branding pipeline (create guideline, assign site, scan, verify brand enrichment) against real Aperol data
-**Plans:** 3/3 plans complete
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 09-01-PLAN.md — Retag completeness: add retag after discover-branding
