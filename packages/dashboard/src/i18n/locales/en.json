@@ -841,6 +841,7 @@
       "downloadCsvTemplate": "Download CSV Template",
       "downloadJsonTemplate": "Download JSON Template",
       "sites": "Sites",
+      "linkedSites": "Linked sites",
       "version": "Version",
       "noGuidelines": "No branding guidelines configured. Create one to start classifying accessibility findings as brand-related.",
       "importGuidelines": "Import Guidelines",

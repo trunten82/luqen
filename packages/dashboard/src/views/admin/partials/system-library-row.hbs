@@ -20,22 +20,23 @@
     {{#if description}}
     <p class="text-sm text-muted">{{description}}</p>
     {{/if}}
+  </td>
+  <td data-label="Linked sites">
     {{#if sites.length}}
-    <div class="mt-xs">
-      {{#each sites}}
-      <div class="flex items-center gap-xs mb-xs">
-        <span class="text-sm">{{this}}</span>
-        <form hx-post="/admin/branding-guidelines/{{../id}}/sites/unassign?from=system-library"
-              hx-swap="none"
-              style="margin:0;display:inline;">
-          <input type="hidden" name="_csrf" value="{{../../csrfToken}}">
-          <input type="hidden" name="siteUrl" value="{{this}}">
-          <button type="submit" class="btn btn--xs btn--ghost text-danger"
-                  aria-label="Unassign {{this}}">✕</button>
-        </form>
-      </div>
-      {{/each}}
+    {{#each sites}}
+    <div class="flex items-center gap-xs" style="margin-bottom:2px;">
+      <span class="text-sm" style="word-break:break-all;">{{this}}</span>
+      <form hx-post="/admin/branding-guidelines/{{../id}}/sites/unassign?from=system-library"
+            hx-swap="none" style="margin:0;flex-shrink:0;">
+        <input type="hidden" name="_csrf" value="{{../../csrfToken}}">
+        <input type="hidden" name="siteUrl" value="{{this}}">
+        <button type="submit" class="btn btn--xs btn--ghost text-danger"
+                aria-label="Unassign {{this}}">✕</button>
+      </form>
     </div>
+    {{/each}}
+    {{else}}
+    <span class="text-muted text-sm">—</span>
     {{/if}}
   </td>
   <td data-label="Version">
@@ -45,7 +46,7 @@
     <span class="text-muted">—</span>
     {{/if}}
   </td>
-  <td>
+  <td data-label="Actions">
     <div style="display:flex;flex-direction:column;gap:var(--space-xs);">
       <details class="inline-details">
         <summary class="btn btn--sm btn--secondary" style="width:100%;">
@@ -64,8 +65,7 @@
         </form>
       </details>
       <form hx-post="/admin/branding-guidelines/system/{{id}}/clone"
-            hx-swap="none"
-            style="margin:0;">
+            hx-swap="none" style="margin:0;">
         <input type="hidden" name="_csrf" value="{{../csrfToken}}">
         <button type="submit" class="btn btn--sm btn--primary" style="width:100%;">
           {{t "admin.systemBrand.action.cloneIntoOrg"}}
