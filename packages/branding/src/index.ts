@@ -1,6 +1,8 @@
 export type { BrandGuideline, BrandColor, BrandFont, BrandSelector, BrandMatch, NoBrandMatch, BrandMatchResult, MatchStrategy, MatchableIssue, BrandedIssue, ColorUsage, FontUsage, IBrandingStore, IBrandingLLMProvider, ExtractedBrandData, CreateGuidelineInput } from './types.js';
 export { BrandingMatcher } from './matcher/index.js';
 export { GuidelineParser } from './parser/index.js';
+export { parseCSS } from './parser/index.js';
+export type { ParsedCSSResult } from './parser/index.js';
 export { GuidelineStore } from './store.js';
 export { normalizeHex, extractColorsFromContext } from './utils/color-utils.js';
 export { SqliteAdapter } from './db/sqlite-adapter.js';
