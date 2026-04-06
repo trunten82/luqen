@@ -12,6 +12,7 @@ interface ApiKeyRow {
   readonly created_at: string;
   readonly last_used_at: string | null;
   readonly role: string;
+  readonly org_id?: string;
 }
 
 function statusBadge(active: number): string {
@@ -41,6 +42,7 @@ function keyRowHtml(row: ApiKeyRow): string {
   return `<tr id="api-key-${row.id}">
   <td data-label="Label">${escapeHtml(row.label)}</td>
   <td data-label="Role">${roleBadge(row.role ?? 'admin')}</td>
+  <td data-label="Organization">${escapeHtml(row.org_id ?? 'system')}</td>
   <td data-label="Status">${statusBadge(row.active)}</td>
   <td data-label="Created">${formatDate(row.created_at)}</td>
   <td data-label="Last Used">${formatDate(row.last_used_at)}</td>
@@ -58,18 +60,21 @@ export async function apiKeyRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
 ): Promise<void> {
-  // GET /admin/api-keys — list all keys
+  // GET /admin/api-keys — list all keys (supports ?orgId= filter)
   server.get(
     '/admin/api-keys',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const keys = await storage.apiKeys.listKeys() as unknown as readonly ApiKeyRow[];
+      const query = request.query as { orgId?: string };
+      const orgIdFilter = query.orgId?.trim() || undefined;
+      const keys = await storage.apiKeys.listKeys(orgIdFilter) as unknown as readonly ApiKeyRow[];
 
       return reply.view('admin/api-keys.hbs', {
         pageTitle: 'API Keys',
         currentPath: '/admin/api-keys',
         user: request.user,
         keys,
+        orgIdFilter,
       });
     },
   );
@@ -111,11 +116,12 @@ export async function apiKeyRoutes(
     '/admin/api-keys',
     { preHandler: requirePermission('admin.system') },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const body = request.body as { label?: string; role?: string };
+      const body = request.body as { label?: string; role?: string; orgId?: string };
       const label = body.label?.trim() || 'default';
       const role: ApiKeyRole = API_KEY_ROLES.includes(body.role as ApiKeyRole)
         ? (body.role as ApiKeyRole)
         : 'admin';
+      const orgId = body.orgId?.trim() || 'system';
 
       if (label.length > 100) {
         return reply
@@ -126,7 +132,7 @@ export async function apiKeyRoutes(
 
       try {
         const plaintextKey = generateApiKey();
-        const id = await storage.apiKeys.storeKey(plaintextKey, label, undefined, role);
+        const id = await storage.apiKeys.storeKey(plaintextKey, label, orgId, role);
 
         const row: ApiKeyRow = {
           id,
@@ -135,9 +141,10 @@ export async function apiKeyRoutes(
           created_at: new Date().toISOString(),
           last_used_at: null,
           role,
+          org_id: orgId,
         };
 
-        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.create', resourceType: 'api_key', resourceId: id, details: { label, role }, ipAddress: request.ip });
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.create', resourceType: 'api_key', resourceId: id, details: { label, role, orgId }, ipAddress: request.ip });
 
         const newKeyAlert = `<div id="new-key-alert" hx-swap-oob="true" class="alert alert--warning" role="alert" style="margin-bottom:var(--space-md)">
   <div class="alert__body">

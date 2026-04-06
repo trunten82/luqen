@@ -393,6 +393,12 @@ export type ApiKeyRole = 'admin' | 'read-only' | 'scan-only';
 
 export const API_KEY_ROLES: readonly ApiKeyRole[] = ['admin', 'read-only', 'scan-only'] as const;
 
+export const API_KEY_RATE_LIMITS: Record<ApiKeyRole, number> = {
+  'admin': 200,
+  'read-only': 100,
+  'scan-only': 50,
+} as const;
+
 export interface ApiKeyRecord {
   readonly id: string;
   readonly label: string;
