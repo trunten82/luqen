@@ -357,9 +357,9 @@ export async function systemBrandGuidelineRoutes(
 
       if (isHtmxRequest(request)) {
         return reply
-          .code(200)
-          .header('content-type', 'text/html')
-          .send(toastHtml(`System brand guideline "${escapeHtml(updated.name)}" saved.`));
+          .header('HX-Redirect', `/admin/system-brand-guidelines/${id}`)
+          .code(204)
+          .send();
       }
       return reply.code(200).send({ ok: true, guideline: updated });
     },

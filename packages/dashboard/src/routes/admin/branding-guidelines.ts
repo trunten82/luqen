@@ -186,8 +186,14 @@ export async function brandingGuidelineRoutes(
       }));
 
       // Always fetch system guidelines for the tab counter badge;
-      // full list only used when the system tab is active.
-      const systemGuidelines = await storage.branding.listSystemGuidelines();
+      // enrich with site assignments so the row template can show them.
+      const systemGuidelinesRaw = await storage.branding.listSystemGuidelines();
+      const systemGuidelines = await Promise.all(
+        systemGuidelinesRaw.map(async (g) => ({
+          ...g,
+          sites: await storage.branding.getSiteAssignments(g.id),
+        })),
+      );
 
       return reply.view('admin/branding-guidelines.hbs', {
         pageTitle: 'Branding Guidelines',
@@ -349,11 +355,11 @@ export async function brandingGuidelineRoutes(
           .send(toastHtml('Guideline not found.', 'error'));
       }
 
-      const updated = await storage.branding.updateGuideline(id, update);
+      await storage.branding.updateGuideline(id, update);
       return reply
-        .code(200)
-        .header('content-type', 'text/html')
-        .send(toastHtml(`Guideline "${escapeHtml(updated.name)}" saved.`));
+        .header('HX-Redirect', `/admin/branding-guidelines/${id}`)
+        .code(204)
+        .send();
     },
   );
 
@@ -865,7 +871,14 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
           retagCount = retagged;
         } catch { /* non-fatal */ }
 
+        const fromSystemLibrary = (request.query as { from?: string })?.from === 'system-library';
         const retagMsg = retagCount > 0 ? ` ${retagCount} existing scan(s) retagged.` : '';
+        if (fromSystemLibrary) {
+          return reply
+            .header('HX-Redirect', '/admin/branding-guidelines?tab=system')
+            .code(204)
+            .send();
+        }
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -895,6 +908,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
       try {
         await storage.branding.unassignFromSite(siteUrl, orgId);
+        const fromSystemLibrary = (request.query as { from?: string })?.from === 'system-library';
+        if (fromSystemLibrary) {
+          return reply
+            .header('HX-Redirect', '/admin/branding-guidelines?tab=system')
+            .code(204)
+            .send();
+        }
         return reply
           .code(200)
           .header('content-type', 'text/html')
