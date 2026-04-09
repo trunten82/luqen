@@ -60,7 +60,7 @@
             <td data-label="Name">{{name}}</td>
             <td data-label="Type"><span class="badge badge--neutral">{{type}}</span></td>
             <td data-label="Base URL">{{#if baseUrl}}<code style="word-break: break-all">{{baseUrl}}</code>{{else}}&mdash;{{/if}}</td>
-            <td data-label="Status">
+            <td data-label="Status" id="provider-status-{{id}}">
               <span class="badge {{statusClass}}">{{statusLabel}}</span>
             </td>
             <td data-label="Actions">

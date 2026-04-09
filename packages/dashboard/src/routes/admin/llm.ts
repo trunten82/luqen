@@ -181,9 +181,12 @@ export async function llmAdminRoutes(
         const result = await llmClient.testProvider(request.params.id);
         const msg = result.ok ? 'Connection successful' : 'Connection failed';
         const type = result.ok ? 'success' : 'error';
+        const badgeClass = result.ok ? 'badge--success' : 'badge--error';
+        const badgeLabel = result.ok ? 'Active' : 'Error';
+        const oob = `<template><td data-label="Status" id="provider-status-${escapeHtml(request.params.id)}" hx-swap-oob="true"><span class="badge ${badgeClass}">${badgeLabel}</span></td></template>`;
         return reply
           .header('content-type', 'text/html')
-          .send(toastHtml(msg, type));
+          .send(toastHtml(msg, type) + oob);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return reply.code(500).header('content-type', 'text/html').send(
