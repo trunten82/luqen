@@ -1,0 +1,41 @@
+{{!-- Prompt split-region editor partial.
+  Context: { capability, isStale, segments: [{type, name?, content?, index?, value?}] }
+  Stale banner (when isStale): shows warning + Migrate submit button.
+  Locked segments: read-only card with lock icon and section name.
+  Editable segments: textarea with name="segment[IDX]" pre-filled from override or default.
+--}}
+
+{{#if isStale}}
+<div class="alert alert--warning mb-sm" role="alert">
+  <strong>{{t "admin.llm.prompts.staleWarningTitle"}}</strong>
+  <p>{{t "admin.llm.prompts.staleWarning"}}</p>
+  <p>{{t "admin.llm.prompts.staleExplanation"}}</p>
+  <button type="submit" name="_migrate" value="1" class="btn btn--secondary">
+    {{t "admin.llm.prompts.migrate"}}
+  </button>
+</div>
+{{/if}}
+
+{{#each segments}}
+  {{#if (eq type "locked")}}
+  <div class="card card--muted mb-sm" aria-label="{{t "admin.llm.prompts.lockedSection"}}">
+    <div class="card__header" style="gap:0.5rem;align-items:center">
+      <span aria-hidden="true" style="font-size:0.9rem">&#x1F512;</span>
+      <code class="text-sm text-muted">{{name}}</code>
+      <span class="badge badge--neutral text-sm">{{t "admin.llm.prompts.lockedSection"}}</span>
+    </div>
+    <div class="card__body" style="padding-top:0">
+      <pre class="prompt-segment-content" style="background:var(--color-bg-muted,#f5f5f5);padding:0.75rem;border-radius:4px;overflow-x:auto;white-space:pre-wrap;font-size:0.8rem;margin:0">{{content}}</pre>
+    </div>
+  </div>
+  {{else}}
+  <div class="form-group mb-sm">
+    <label for="prompt-seg-{{../capability}}-{{index}}" class="form-label">{{t "admin.llm.prompts.editableSection"}}</label>
+    <textarea
+      id="prompt-seg-{{../capability}}-{{index}}"
+      name="segment[{{index}}]"
+      class="input"
+      rows="6">{{value}}</textarea>
+  </div>
+  {{/if}}
+{{/each}}

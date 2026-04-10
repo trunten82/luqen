@@ -322,61 +322,22 @@
 
     {{#if prompts}}
     {{#each prompts}}
-    <div class="card mt-sm">
+    <div class="card mt-sm" id="prompt-card-{{capability}}">
       <div class="card__header">
         <h2 class="card__title"><code>{{capability}}</code></h2>
-        {{#if isCustom}}
-        <span class="badge badge--info">Custom</span>
-        {{else if template}}
-        <span class="badge badge--neutral">Default</span>
-        {{else}}
-        <span class="badge badge--neutral">Not Available</span>
-        {{/if}}
+        {{#if isCustom}}<span class="badge badge--info">Custom</span>{{else}}<span class="badge badge--neutral">Default</span>{{/if}}
       </div>
-      {{#if template}}
       <form class="card__body"
             hx-put="/admin/llm/prompts/{{capability}}"
             hx-target="#llm-messages"
             hx-swap="innerHTML">
         <input type="hidden" name="_csrf" value="{{../csrfToken}}">
-        <div class="form-group">
-          <label for="prompt-{{capability}}">Prompt Template</label>
-          <textarea id="prompt-{{capability}}" name="template" class="input"
-                    rows="8"
-                    placeholder="Enter prompt template...">{{template}}</textarea>
-          <small class="form-hint">
-            {{#if (eq capability 'generate-fix')}}
-              Use <code>{{"{{"}}wcagCriterion{{"}}"}}</code> for the WCAG criterion, <code>{{"{{"}}issueMessage{{"}}"}}</code> for the issue description, <code>{{"{{"}}htmlContext{{"}}"}}</code> for the flagged HTML, and <code>{{"{{"}}cssContext{{"}}"}}</code> for relevant CSS.
-            {{else if (eq capability 'analyse-report')}}
-              Use <code>{{"{{"}}siteUrl{{"}}"}}</code> for the site URL, <code>{{"{{"}}totalIssues{{"}}"}}</code> for the issue count, <code>{{"{{"}}issuesList{{"}}"}}</code> for the formatted list of issues, <code>{{"{{"}}complianceSummary{{"}}"}}</code> for the compliance status, and <code>{{"{{"}}recurringPatterns{{"}}"}}</code> for patterns from prior scans.
-            {{else if (eq capability 'discover-branding')}}
-              Use <code>{{"{{"}}url{{"}}"}}</code> for the page URL, <code>{{"{{"}}htmlContent{{"}}"}}</code> for the extracted HTML structure, and <code>{{"{{"}}cssContent{{"}}"}}</code> for the extracted CSS styles.
-            {{else}}
-              Use <code>{{"{{"}}content{{"}}"}}</code> to inject the document text.
-            {{/if}}
-          </small>
-        </div>
+        {{> prompt-segments capability=capability isStale=isStale segments=segments }}
         <div class="form-actions">
           <button type="submit" class="btn btn--primary">{{t "admin.llm.saveOverride"}}</button>
         </div>
+        {{!-- Reset button added by plan 13-03 --}}
       </form>
-      {{#if isCustom}}
-      <form class="card__body" style="padding-top:0"
-            hx-delete="/admin/llm/prompts/{{capability}}"
-            hx-confirm="Reset prompt for {{capability}} to the default?"
-            hx-target="#llm-messages"
-            hx-swap="innerHTML">
-        <input type="hidden" name="_csrf" value="{{../csrfToken}}">
-        <div class="form-actions">
-          <button type="submit" class="btn btn--secondary">{{t "admin.llm.resetToDefault"}}</button>
-        </div>
-      </form>
-      {{/if}}
-      {{else}}
-      <div class="card__body">
-        <p class="text-muted">{{t "admin.llm.promptNoTemplate"}}</p>
-      </div>
-      {{/if}}
     </div>
     {{/each}}
     {{else}}

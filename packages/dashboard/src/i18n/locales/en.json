@@ -952,7 +952,25 @@
       "capabilityFallbackFooter": "If the primary model fails or times out, the system automatically tries the next one.",
       "capabilityNoModels": "No models assigned. This capability is not available until a model is assigned.",
       "modelsNoProviders": "No providers configured. Add a provider first.",
-      "promptNoTemplate": "This capability does not have a prompt template yet. It will be available in a future update."
+      "promptNoTemplate": "This capability does not have a prompt template yet. It will be available in a future update.",
+      "prompts": {
+        "lockedSection": "Locked section (cannot be edited)",
+        "lockedSectionLabel": "{name}",
+        "editableSection": "Editable region",
+        "staleWarning": "This custom prompt was saved before protected sections were added.",
+        "staleExplanation": "Click Migrate to automatically insert the current protected sections and keep your edits, then review and Save.",
+        "staleWarningTitle": "Outdated prompt override",
+        "migrate": "Migrate",
+        "lockedSectionViolatedPrefix": "Cannot save: locked section {{sections}} was modified.",
+        "lockedSectionViolatedHint": "This section defines the required output format — the capability engine cannot parse responses without it.",
+        "lockedSectionViolatedResetCta": "Reset to default",
+        "formMismatch": "Form segments don't match the template. Reload the page and try again.",
+        "saved": "Prompt saved",
+        "segmentName": {
+          "output-format": "Response Format (locked)",
+          "variable-injection": "Variable Injection (locked)"
+        }
+      }
     }
   },
   "trends": {
