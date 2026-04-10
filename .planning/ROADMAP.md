@@ -1,17 +1,34 @@
-# Roadmap: Luqen
+# Luqen v2.11.0 Roadmap — Brand Intelligence
 
-## Milestones
-
-- ✅ **v2.7.0 LLM Module** — [archived](milestones/v2.7.0-ROADMAP.md)
-- ✅ **v2.8.0 Admin UX & Compliance Precision** — Phases 06-08 (shipped 2026-04-06) — [archived](milestones/v2.8.0-ROADMAP.md)
-- ✅ **v2.9.0 Branding Completeness & Org Isolation** — Phases 09-12 (shipped 2026-04-06) — [archived](milestones/v2.9.0-ROADMAP.md)
-- ✅ **v2.10.0 Prompt Safety & API Key Polish** — Phases 13-14 (shipped 2026-04-10) — [archived](milestones/v2.10.0-ROADMAP.md)
+**Status:** Active
+**Milestone:** v2.11.0
+**Last Updated:** 2026-04-10
 
 ## Phases
 
-(No active phases — next milestone TBD via `/gsd-new-milestone`)
+- [ ] **Phase 15: Scoring Model & Contract** — Pure calculator, WCAG math utility, locked weights, tagged-union score type
+- [ ] **Phase 16: Persistence Layer** — brand_scores schema + per-org branding mode column + repository APIs
+- [ ] **Phase 17: Branding Orchestrator** — Dual-mode (embedded/remote) orchestrator invoking calculator, returning unified result
+- [ ] **Phase 18: Scanner Wire-Up** — Scanner calls orchestrator, persists scores, preserves backwards compatibility
+- [ ] **Phase 19: Admin UI (Mode Toggle)** — Per-org toggle between embedded and remote branding with calibration check
+- [ ] **Phase 20: Report Panel** — Per-scan brand score panel on scan report
+- [ ] **Phase 21: Dashboard Widget** — Org-level brand intelligence card on dashboard homepage
 
-## Planned
+---
 
-- **v2.11.0 Brand Intelligence** — brand accessibility score + orchestrator dual-mode
-- **v3.0.0 MCP & Agent Companion** — all services as MCP + in-dashboard AI agent
+### Phase 15: Scoring Model & Contract
+**Goal**: Dashboard has a single pure brand score calculator that produces identical output across embedded and remote modes, with an unambiguous "unscorable" distinction from "scored zero"
+**Depends on**: Nothing (first phase of v2.11.0)
+**Requirements**: BSCORE-01, BSCORE-02, BSCORE-03, BSCORE-04, BSCORE-05
+**Success Criteria** (what must be TRUE):
+  1. Developer can call `calculateBrandScore(brandedIssues, guideline)` and receive a tagged-union result `{ kind: 'scored', overall, color, typography, components, coverage } | { kind: 'unscorable', reason }` — no `null → 0` coercion anywhere
+  2. Color contrast sub-score aggregates existing `Guideline1_4_3 / 1_4_6 / 1_4_11` matched issues through a single `wcagContrastPasses(ratio, level, isLargeText)` utility — no literal `4.5 / 3 / 7` thresholds appear anywhere else in the dashboard
+  3. Typography sub-score reflects brand-font availability, body text ≥16px, and line-height ≥1.5 derived from declared CSS values
+  4. Component sub-score returns `unscorable` (not `0`) when the guideline has no component selectors; otherwise computes a pure set-diff between used and brand tokens
+  5. Composite score is computed via locked weights `{color: 0.50, typography: 0.30, components: 0.20}` exported from a single `weights.ts` constants module — not per-org overridable
+**Plans**: 4 plans
+  - [ ] 15-01-PLAN.md — Types + Weights foundation (ScoreResult/SubScore/CoverageProfile/UnscorableReason tagged unions + locked WEIGHTS constant) [Wave 1]
+  - [ ] 15-02-PLAN.md — WCAG math utility (wcagContrastPasses single source of truth + D-18 boundary fixtures + D-07 fs-based enforcement guard) [Wave 2]
+  - [ ] 15-03-PLAN.md — Sub-score calculators (color pass ratio, typography 3-heuristic mean, token set-diff with bounded ReDoS-safe regex) [Wave 3]
+  - [ ] 15-04-PLAN.md — Composite calculator entry point (calculateBrandScore with renormalization, all 6 UnscorableReasons covered, all 4 composite paths tested) [Wave 4]
+
