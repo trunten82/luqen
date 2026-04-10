@@ -6,6 +6,7 @@ import { buildExtractionPrompt } from '../../prompts/extract-requirements.js';
 import { buildGenerateFixPrompt } from '../../prompts/generate-fix.js';
 import { buildAnalyseReportPrompt } from '../../prompts/analyse-report.js';
 import { buildDiscoverBrandingPrompt } from '../../prompts/discover-branding.js';
+import { validateOverride, LOCKED_SECTION_EXPLANATIONS } from '../../prompts/segments.js';
 
 const EXTRACT_DEFAULT_TEMPLATE = buildExtractionPrompt(
   '{content}',
@@ -127,6 +128,26 @@ export async function registerPromptRoutes(
     const orgId = typeof body.orgId === 'string' && body.orgId.length > 0
       ? body.orgId
       : undefined;
+
+    // Validate that the override preserves all locked sections from the default
+    const defaultTemplate = getDefaultTemplate(capabilityName);
+    const validation = validateOverride(body.template, defaultTemplate);
+    if (!validation.ok) {
+      const enriched = validation.violations.map((v) => ({
+        name: v.name,
+        reason: v.reason,
+        explanation: LOCKED_SECTION_EXPLANATIONS[v.name] ?? '',
+      }));
+      const firstViolation = enriched[0];
+      const message = firstViolation != null
+        ? `Cannot save: locked section '${firstViolation.name}' was ${firstViolation.reason}.`
+        : 'Cannot save: one or more locked sections were violated.';
+      return reply.status(422).send({
+        error: message,
+        violations: enriched,
+        statusCode: 422,
+      });
+    }
 
     try {
       const override = await db.setPromptOverride(capabilityName, body.template, orgId);
