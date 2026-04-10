@@ -3,7 +3,7 @@
     <h2 id="modal-title">{{t "admin.orgApiKeys.createButton"}}</h2>
 
     <form hx-post="/admin/org-api-keys"
-          hx-target="#org-api-keys-body"
+          hx-target="#org-api-keys-active-body"
           hx-swap="beforeend"
           novalidate>
       <input type="hidden" name="_csrf" value="{{csrfToken}}">
