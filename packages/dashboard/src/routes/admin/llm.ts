@@ -1,7 +1,10 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requirePermission } from '../../auth/middleware.js';
+import { LLMValidationError } from '../../llm-client.js';
 import type { LLMClient } from '../../llm-client.js';
 import { escapeHtml, toastHtml } from './helpers.js';
+import { parsePromptSegments, assembleTemplate } from '../../services/prompt-segments.js';
+import type { PromptSegment } from '../../services/prompt-segments.js';
 
 export async function llmAdminRoutes(
   server: FastifyInstance,
@@ -82,21 +85,79 @@ export async function llmAdminRoutes(
         }),
       }));
 
-      // Build prompts for all 4 capabilities (getPrompt returns default when no override)
+      // Build prompts for all 4 capabilities with split-region segment data
       const CAPABILITY_NAMES = ['extract-requirements', 'generate-fix', 'analyse-report', 'discover-branding'];
       const promptData = llmConnected
         ? await Promise.all(
             CAPABILITY_NAMES.map(async (cap) => {
               try {
-                const p = await llmClient.getPrompt(cap);
+                const [current, defaultPrompt] = await Promise.all([
+                  llmClient.getPrompt(cap),
+                  llmClient.getDefaultPrompt(cap),
+                ]);
+                const isCustom = current.isCustom ?? false;
+                const defaultSegments = parsePromptSegments(defaultPrompt.template);
+
+                let isStale = false;
+                let segments: Array<{ type: string; name?: string; content?: string; index?: number; value?: string }>;
+
+                if (!isCustom) {
+                  // No override — use default editable segments as initial values
+                  let editableIdx = 0;
+                  segments = defaultSegments.map((seg) => {
+                    if (seg.type === 'locked') {
+                      return { type: 'locked', name: seg.name, content: seg.content };
+                    }
+                    return { type: 'editable', index: editableIdx++, value: seg.content };
+                  });
+                } else {
+                  // Custom override — check for staleness
+                  const overrideSegments = parsePromptSegments(current.template);
+                  const expectedLockedNames = defaultSegments
+                    .filter((s): s is PromptSegment & { type: 'locked'; name: string } => s.type === 'locked' && s.name != null)
+                    .map((s) => s.name);
+                  const overrideLockedNames = overrideSegments
+                    .filter((s) => s.type === 'locked' && s.name != null)
+                    .map((s) => s.name as string);
+                  const missingLockNames = expectedLockedNames.filter((n) => !overrideLockedNames.includes(n));
+
+                  if (missingLockNames.length > 0 && current.template.trim()) {
+                    // Stale override: use whole override as first editable, default locked blocks shown read-only
+                    isStale = true;
+                    let editableIdx = 0;
+                    segments = defaultSegments.map((seg) => {
+                      if (seg.type === 'locked') {
+                        return { type: 'locked', name: seg.name, content: seg.content };
+                      }
+                      // First editable slot gets the whole old override; remaining get default content
+                      const val = editableIdx === 0 ? current.template : seg.content;
+                      return { type: 'editable', index: editableIdx++, value: val };
+                    });
+                  } else {
+                    // Non-stale custom override — extract editable values from override segments
+                    const overrideEditables = overrideSegments
+                      .filter((s) => s.type === 'editable')
+                      .map((s) => s.content);
+                    let editableIdx = 0;
+                    segments = defaultSegments.map((seg) => {
+                      if (seg.type === 'locked') {
+                        return { type: 'locked', name: seg.name, content: seg.content };
+                      }
+                      const val = overrideEditables[editableIdx] ?? seg.content;
+                      return { type: 'editable', index: editableIdx++, value: val };
+                    });
+                  }
+                }
+
                 return {
                   capability: cap,
-                  template: p.template,
-                  isCustom: p.isCustom ?? false,
-                  updatedAt: p.updatedAt ?? null,
+                  isCustom,
+                  isStale,
+                  updatedAt: current.updatedAt ?? null,
+                  segments,
                 };
               } catch {
-                return { capability: cap, template: '', isCustom: false, updatedAt: null };
+                return { capability: cap, isCustom: false, isStale: false, updatedAt: null, segments: [] };
               }
             }),
           )
@@ -468,7 +529,7 @@ export async function llmAdminRoutes(
 
   // ── PUT /admin/llm/prompts/:capability — save prompt override ─────────────
 
-  server.put<{ Params: { capability: string } }>(
+  server.put<{ Params: { capability: string }; Body: Record<string, string> }>(
     '/admin/llm/prompts/:capability',
     { preHandler: requirePermission('admin.system', 'llm.manage') },
     async (request, reply) => {
@@ -479,21 +540,70 @@ export async function llmAdminRoutes(
         );
       }
 
-      const body = request.body as { template?: string };
-
-      if (!body.template?.trim()) {
-        return reply.code(400).header('content-type', 'text/html').send(
-          toastHtml('Template is required', 'error'),
-        );
+      // Collect ordered form values: segment[0], segment[1], ...
+      const body = request.body as Record<string, string>;
+      const editableValues: string[] = [];
+      for (let i = 0; ; i++) {
+        const key = `segment[${i}]`;
+        if (body[key] == null) break;
+        editableValues.push(body[key]);
       }
+      const isMigrate = body['_migrate'] === '1';
 
       try {
-        await llmClient.setPrompt(request.params.capability, body.template.trim());
+        const defaultPrompt = await llmClient.getDefaultPrompt(request.params.capability);
+        const defaultSegments = parsePromptSegments(defaultPrompt.template);
+        const editableCount = defaultSegments.filter((s) => s.type === 'editable').length;
+
+        let finalEditables = editableValues;
+
+        if (isMigrate) {
+          // Stale override migration: pad or trim submitted values to match editable slot count,
+          // using the default's editable contents as filler for any missing slots.
+          const defaultEditables = defaultSegments
+            .filter((s): s is PromptSegment & { type: 'editable' } => s.type === 'editable')
+            .map((s) => s.content);
+          finalEditables = Array.from({ length: editableCount }, (_, i) =>
+            editableValues[i] ?? defaultEditables[i] ?? '',
+          );
+        } else if (editableValues.length !== editableCount) {
+          return reply.code(400).header('content-type', 'text/html').send(
+            toastHtml("Form segments don't match the template. Reload the page and try again.", 'error'),
+          );
+        }
+
+        const fullTemplate = assembleTemplate({ defaultSegments, editableValues: finalEditables });
+        await llmClient.setPrompt(request.params.capability, fullTemplate);
         return reply
           .header('content-type', 'text/html')
           .header('HX-Redirect', '/admin/llm?tab=prompts')
           .send(toastHtml('Prompt saved', 'success'));
       } catch (err) {
+        if (err instanceof LLMValidationError) {
+          const cap = request.params.capability;
+          const names = err.violations.map((v) => `'${escapeHtml(v.name)}'`).join(', ');
+          const prefix = `Cannot save: locked section ${names} was modified.`;
+          // Prefer the per-violation explanation forwarded by the LLM service;
+          // fall back to the generic hint.
+          const firstViolation = err.violations[0];
+          const hint = (firstViolation?.explanation && firstViolation.explanation.length > 0)
+            ? firstViolation.explanation
+            : 'This section defines the required output format — the capability engine cannot parse responses without it.';
+          const resetLabel = 'Reset to default';
+          // Build the toast HTML inline — toastHtml() only accepts a plain string.
+          // NOTE: /reset-confirm endpoint is added by plan 13-03 (same phase, wave 3).
+          // By the time this feature is deployed, the URL will be valid.
+          const toast =
+            `<div id="toast-container" hx-swap-oob="innerHTML" role="region" aria-label="Notifications" aria-live="polite">` +
+            `<div class="toast toast--error" role="alert">` +
+            `<p>${prefix}</p>` +
+            `<p>${escapeHtml(hint)}</p>` +
+            `<button type="button" class="btn btn--link" ` +
+            `hx-get="/admin/llm/prompts/${encodeURIComponent(cap)}/reset-confirm" ` +
+            `hx-target="#modal-container">${escapeHtml(resetLabel)}</button>` +
+            `</div></div>`;
+          return reply.code(422).header('content-type', 'text/html').send(toast);
+        }
         const message = err instanceof Error ? err.message : String(err);
         return reply.code(500).header('content-type', 'text/html').send(
           toastHtml(`Save failed: ${message}`, 'error'),
