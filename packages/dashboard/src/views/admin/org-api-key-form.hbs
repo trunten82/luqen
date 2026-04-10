@@ -24,11 +24,36 @@
         </select>
       </div>
 
+      <div class="form-group">
+        <label for="oak-ttl" class="form-label">{{t "admin.orgApiKeys.ttlLabel"}}</label>
+        <select id="oak-ttl" name="ttl" class="select">
+          <option value="30">{{t "admin.orgApiKeys.ttl30days"}}</option>
+          <option value="90" selected>{{t "admin.orgApiKeys.ttl90days"}}</option>
+          <option value="180">{{t "admin.orgApiKeys.ttl180days"}}</option>
+          <option value="365">{{t "admin.orgApiKeys.ttl365days"}}</option>
+          <option value="0">{{t "admin.orgApiKeys.ttlNever"}}</option>
+        </select>
+        <p id="oak-ttl-warning" class="text-muted" style="color:var(--status-warning)" hidden>
+          {{t "admin.orgApiKeys.neverWarning"}}
+        </p>
+      </div>
+
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">{{t "admin.orgApiKeys.createButton"}}</button>
         <button type="button" class="btn btn--ghost close-modal-btn"
                 aria-label="Cancel and close dialog">{{t "common.cancel"}}</button>
       </div>
     </form>
+
+    <script>
+      (function () {
+        var sel = document.getElementById('oak-ttl');
+        var warn = document.getElementById('oak-ttl-warning');
+        if (!sel || !warn) return;
+        function update() { warn.hidden = sel.value !== '0'; }
+        sel.addEventListener('change', update);
+        update();
+      })();
+    </script>
   </div>
 </div>

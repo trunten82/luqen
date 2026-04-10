@@ -601,7 +601,19 @@
       "noKeys": "No API keys for this organization. Create one to get started.",
       "createSuccess": "API key created successfully.",
       "revokeSuccess": "API key revoked.",
-      "selectOrg": "Select an organization first to manage API keys."
+      "selectOrg": "Select an organization first to manage API keys.",
+      "ttlLabel": "Expires after",
+      "ttl30days": "30 days",
+      "ttl90days": "90 days",
+      "ttl180days": "180 days",
+      "ttl365days": "1 year",
+      "ttlNever": "Never expires",
+      "neverWarning": "Keys without expiry are a security risk. Rotate manually.",
+      "invalidTtl": "Invalid expiry option.",
+      "expiredSuffix": "Expired",
+      "revokedKeysCount": "Revoked keys ({{count}})",
+      "deleteFailed": "Failed to delete API key.",
+      "deleteSuccess": "API key deleted."
     },
     "serviceConnections": {
       "title": "Service Connections",
