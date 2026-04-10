@@ -86,6 +86,22 @@ export interface LLMPrompt {
   readonly updatedAt?: string;
 }
 
+/**
+ * Thrown by LLMClient.setPrompt when the LLM service returns 422.
+ * Each violation includes the locked section name, the reason it was rejected,
+ * and an optional explanation string sourced from LOCKED_SECTION_EXPLANATIONS
+ * in the LLM service.
+ */
+export class LLMValidationError extends Error {
+  readonly violations: ReadonlyArray<{ name: string; reason: string; explanation?: string }>;
+
+  constructor(message: string, violations: ReadonlyArray<{ name: string; reason: string; explanation?: string }> = []) {
+    super(message);
+    this.name = 'LLMValidationError';
+    this.violations = violations;
+  }
+}
+
 // ── Health / Status types ───────────────────────────────────────────────────
 
 export interface LLMHealth {
@@ -264,9 +280,41 @@ export class LLMClient {
   }
 
   async setPrompt(capability: string, template: string): Promise<LLMPrompt> {
-    return this.apiFetch<LLMPrompt>(
+    const token = await this.tokenManager.getToken();
+    const res = await fetch(
       `${this._baseUrl}/api/v1/prompts/${encodeURIComponent(capability)}`,
-      { method: 'PUT', body: JSON.stringify({ template }) },
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ template }),
+      },
+    );
+    if (res.status === 422) {
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      const violations = (body['violations'] as ReadonlyArray<{ name: string; reason: string; explanation?: string }>) ?? [];
+      throw new LLMValidationError(
+        typeof body['error'] === 'string' ? body['error'] : 'Validation failed',
+        violations,
+      );
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    return res.json() as Promise<LLMPrompt>;
+  }
+
+  /**
+   * Fetch the default prompt for a capability (without any org override).
+   * Uses a synthetic orgId that will never match a real override, forcing
+   * the LLM service to return the built-in default template.
+   */
+  async getDefaultPrompt(capability: string): Promise<LLMPrompt> {
+    return this.apiFetch<LLMPrompt>(
+      `${this._baseUrl}/api/v1/prompts/${encodeURIComponent(capability)}?orgId=__force_default__`,
     );
   }
 
