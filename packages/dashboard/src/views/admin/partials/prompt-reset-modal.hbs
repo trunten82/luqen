@@ -1,0 +1,27 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="reset-modal-title">{{t "admin.llm.prompts.resetModalTitle" capability=capability}}</h2>
+      <button class="modal__close close-modal-btn" aria-label="Close dialog" type="button">&times;</button>
+    </div>
+    <div class="modal__body">
+      {{#if isOverride}}
+      <div class="alert alert--warning">{{t "admin.llm.prompts.resetModalWarning"}}</div>
+      {{> prompt-diff-body diffLines=diffLines}}
+      {{else}}
+      <p class="text-muted">{{t "admin.llm.prompts.nothingToReset"}}</p>
+      {{/if}}
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary close-modal-btn">{{t "admin.llm.prompts.cancel"}}</button>
+      {{#if isOverride}}
+      <button type="button" class="btn btn--danger"
+              hx-delete="/admin/llm/prompts/{{capability}}"
+              hx-target="#llm-messages"
+              hx-swap="innerHTML">
+        {{t "admin.llm.prompts.confirmReset"}}
+      </button>
+      {{/if}}
+    </div>
+  </div>
+</div>

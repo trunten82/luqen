@@ -5,6 +5,7 @@ import type { LLMClient } from '../../llm-client.js';
 import { escapeHtml, toastHtml } from './helpers.js';
 import { parsePromptSegments, assembleTemplate } from '../../services/prompt-segments.js';
 import type { PromptSegment } from '../../services/prompt-segments.js';
+import { computePromptDiff } from '../../services/prompt-diff.js';
 
 export async function llmAdminRoutes(
   server: FastifyInstance,
@@ -635,6 +636,86 @@ export async function llmAdminRoutes(
         const message = err instanceof Error ? err.message : String(err);
         return reply.code(500).header('content-type', 'text/html').send(
           toastHtml(`Reset failed: ${message}`, 'error'),
+        );
+      }
+    },
+  );
+
+  // ── GET /admin/llm/prompts/:capability/diff — compare modal ──────────────
+
+  const VALID_CAPABILITIES = ['extract-requirements', 'generate-fix', 'analyse-report', 'discover-branding'];
+
+  server.get<{ Params: { capability: string } }>(
+    '/admin/llm/prompts/:capability/diff',
+    { preHandler: requirePermission('admin.system', 'llm.view') },
+    async (request, reply) => {
+      const llmClient = getLLMClient();
+      if (!llmClient) {
+        return reply.code(503).header('content-type', 'text/html').send(
+          toastHtml('LLM service not configured', 'error'),
+        );
+      }
+      const { capability } = request.params;
+      if (!VALID_CAPABILITIES.includes(capability)) {
+        return reply.code(400).header('content-type', 'text/html').send(
+          toastHtml('Invalid capability', 'error'),
+        );
+      }
+      try {
+        const [current, def] = await Promise.all([
+          llmClient.getPrompt(capability),
+          llmClient.getDefaultPrompt(capability),
+        ]);
+        const diffLines = computePromptDiff(def.template, current.template);
+        return reply.view('admin/partials/prompt-diff-modal.hbs', {
+          capability,
+          diffLines,
+          isOverride: current.isCustom ?? false,
+          layout: false,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.code(500).header('content-type', 'text/html').send(
+          toastHtml(`Diff failed: ${msg}`, 'error'),
+        );
+      }
+    },
+  );
+
+  // ── GET /admin/llm/prompts/:capability/reset-confirm — reset confirmation modal ─
+
+  server.get<{ Params: { capability: string } }>(
+    '/admin/llm/prompts/:capability/reset-confirm',
+    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    async (request, reply) => {
+      const llmClient = getLLMClient();
+      if (!llmClient) {
+        return reply.code(503).header('content-type', 'text/html').send(
+          toastHtml('LLM service not configured', 'error'),
+        );
+      }
+      const { capability } = request.params;
+      if (!VALID_CAPABILITIES.includes(capability)) {
+        return reply.code(400).header('content-type', 'text/html').send(
+          toastHtml('Invalid capability', 'error'),
+        );
+      }
+      try {
+        const [current, def] = await Promise.all([
+          llmClient.getPrompt(capability),
+          llmClient.getDefaultPrompt(capability),
+        ]);
+        const diffLines = computePromptDiff(def.template, current.template);
+        return reply.view('admin/partials/prompt-reset-modal.hbs', {
+          capability,
+          diffLines,
+          isOverride: current.isCustom ?? false,
+          layout: false,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.code(500).header('content-type', 'text/html').send(
+          toastHtml(`Reset confirm failed: ${msg}`, 'error'),
         );
       }
     },
