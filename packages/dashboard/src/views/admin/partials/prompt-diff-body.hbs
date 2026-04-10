@@ -1,0 +1,6 @@
+{{#if diffLines.length}}
+<pre class="prompt-diff" role="region" aria-label="Prompt diff">{{#each diffLines}}<span class="prompt-diff__line prompt-diff__line--{{type}}">{{#if (eq type 'add')}}+ {{else if (eq type 'remove')}}- {{else}}  {{/if}}{{text}}
+</span>{{/each}}</pre>
+{{else}}
+<p class="text-muted">{{t "admin.llm.prompts.noDifferences"}}</p>
+{{/if}}

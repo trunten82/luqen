@@ -1,0 +1,14 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="diff-modal-title">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="diff-modal-title">{{t "admin.llm.prompts.diffModalTitle" capability=capability}}</h2>
+      <button class="modal__close close-modal-btn" aria-label="Close dialog" type="button">&times;</button>
+    </div>
+    <div class="modal__body">
+      {{> prompt-diff-body diffLines=diffLines}}
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn--secondary close-modal-btn">{{t "admin.llm.prompts.close"}}</button>
+    </div>
+  </div>
+</div>

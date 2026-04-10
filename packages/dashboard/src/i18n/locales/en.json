@@ -969,7 +969,16 @@
         "segmentName": {
           "output-format": "Response Format (locked)",
           "variable-injection": "Variable Injection (locked)"
-        }
+        },
+        "compareWithDefault": "Compare with default",
+        "diffModalTitle": "Compare with default — {{{capability}}}",
+        "resetModalTitle": "Reset {{{capability}}} to default?",
+        "resetModalWarning": "This will permanently discard your customizations. The following changes will be lost:",
+        "noDifferences": "This prompt matches the default — nothing to compare.",
+        "nothingToReset": "This prompt is already using the system default.",
+        "close": "Close",
+        "confirmReset": "Yes, reset to default",
+        "cancel": "Cancel"
       }
     }
   },

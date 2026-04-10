@@ -335,8 +335,21 @@
         {{> prompt-segments capability=capability isStale=isStale segments=segments }}
         <div class="form-actions">
           <button type="submit" class="btn btn--primary">{{t "admin.llm.saveOverride"}}</button>
+          <button type="button" class="btn btn--secondary"
+                  hx-get="/admin/llm/prompts/{{capability}}/diff"
+                  hx-target="#modal-container"
+                  hx-swap="innerHTML">
+            {{t "admin.llm.prompts.compareWithDefault"}}
+          </button>
+          {{#if isCustom}}
+          <button type="button" class="btn btn--secondary"
+                  hx-get="/admin/llm/prompts/{{capability}}/reset-confirm"
+                  hx-target="#modal-container"
+                  hx-swap="innerHTML">
+            {{t "admin.llm.resetToDefault"}}
+          </button>
+          {{/if}}
         </div>
-        {{!-- Reset button added by plan 13-03 --}}
       </form>
     </div>
     {{/each}}
