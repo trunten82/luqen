@@ -36,6 +36,7 @@ export function buildAnalyseReportPrompt(input: AnalyseReportPromptInput): strin
 
   return `You are a WCAG accessibility expert auditor. Analyse the following scan results for ${input.siteUrl} and produce an executive summary.
 
+<!-- LOCKED:variable-injection -->
 ## Scan Summary
 - Total issues: ${input.totalIssues}
 - Site: ${input.siteUrl}
@@ -48,10 +49,12 @@ ${compliance}
 
 ## Recurring Patterns Across Previous Scans
 ${patterns}
+<!-- /LOCKED -->
 
 ## Instructions
 Produce a concise executive summary suitable for a non-technical stakeholder. Identify the most critical issues, any recurring patterns, and clear remediation priorities.
 
+<!-- LOCKED:output-format -->
 ## Response Format
 Respond ONLY with valid JSON, no markdown fences:
 {
@@ -62,5 +65,6 @@ Respond ONLY with valid JSON, no markdown fences:
 }
 
 If there are no issues, return:
-{"executiveSummary":"No accessibility issues were found in this scan.","keyFindings":[],"patterns":[],"priorities":[]}`;
+{"executiveSummary":"No accessibility issues were found in this scan.","keyFindings":[],"patterns":[],"priorities":[]}
+<!-- /LOCKED -->`;
 }

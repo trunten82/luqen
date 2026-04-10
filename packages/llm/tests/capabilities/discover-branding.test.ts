@@ -3,6 +3,7 @@ import { unlinkSync, existsSync } from 'node:fs';
 import { SqliteAdapter } from '../../src/db/sqlite-adapter.js';
 import { executeDiscoverBranding, parseDiscoverBrandingResponse } from '../../src/capabilities/discover-branding.js';
 import { buildDiscoverBrandingPrompt } from '../../src/prompts/discover-branding.js';
+import { parsePromptSegments } from '../../src/prompts/segments.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../src/capabilities/types.js';
 import type { LLMProviderAdapter } from '../../src/providers/types.js';
 
@@ -290,5 +291,29 @@ describe('buildDiscoverBrandingPrompt', () => {
     expect(prompt).toContain('Inter');
     expect(prompt).toContain('https://example.com/logo.svg');
     expect(prompt).toContain('example');
+  });
+
+  it('contains output-format and variable-injection fence markers', () => {
+    const prompt = buildDiscoverBrandingPrompt({
+      url: 'https://example.com',
+      htmlContent: '<title>Test</title>',
+      cssContent: '',
+    });
+
+    expect(prompt).toContain('<!-- LOCKED:output-format -->');
+    expect(prompt).toContain('<!-- LOCKED:variable-injection -->');
+    expect(prompt).toContain('<!-- /LOCKED -->');
+  });
+
+  it('has at least 2 locked segments when parsed', () => {
+    const prompt = buildDiscoverBrandingPrompt({
+      url: 'https://example.com',
+      htmlContent: '<title>Test</title>',
+      cssContent: '',
+    });
+
+    const segments = parsePromptSegments(prompt);
+    const lockedCount = segments.filter((s) => s.type === 'locked').length;
+    expect(lockedCount).toBeGreaterThanOrEqual(2);
   });
 });

@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SqliteAdapter } from '../../src/db/sqlite-adapter.js';
 import { executeExtractRequirements } from '../../src/capabilities/extract-requirements.js';
+import { buildExtractionPrompt } from '../../src/prompts/extract-requirements.js';
+import { parsePromptSegments } from '../../src/prompts/segments.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../src/capabilities/types.js';
 import type { LLMProviderAdapter } from '../../src/providers/types.js';
 
@@ -255,5 +257,29 @@ describe('executeExtractRequirements', () => {
     expect(capturedPrompt).toContain('my content here');
     expect(capturedPrompt).toContain('REG-OVERRIDE');
     expect(capturedPrompt).toContain('Override Test');
+  });
+});
+
+describe('buildExtractionPrompt', () => {
+  it('contains output-format and variable-injection fence markers', () => {
+    const prompt = buildExtractionPrompt('sample regulation content', {
+      regulationId: 'REG-001',
+      regulationName: 'Test Regulation',
+    });
+
+    expect(prompt).toContain('<!-- LOCKED:output-format -->');
+    expect(prompt).toContain('<!-- LOCKED:variable-injection -->');
+    expect(prompt).toContain('<!-- /LOCKED -->');
+  });
+
+  it('has at least 2 locked segments when parsed', () => {
+    const prompt = buildExtractionPrompt('sample content', {
+      regulationId: 'REG-001',
+      regulationName: 'Test Regulation',
+    });
+
+    const segments = parsePromptSegments(prompt);
+    const lockedCount = segments.filter((s) => s.type === 'locked').length;
+    expect(lockedCount).toBeGreaterThanOrEqual(2);
   });
 });
