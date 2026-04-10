@@ -12,11 +12,16 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 v2.10.0 shipped 2026-04-10 — LLM prompt system hardened with fence-marker protected sections, diff view, split-region editor, and rich reset modal; org API key UX polished with optional TTL at creation, auto-revoke on expiry, collapsible Revoked section, and hard delete for revoked keys. Previous: v2.9.1 (2026-04-09) hotfixes + provider test OOB, v2.9.0 (2026-04-06) branding pipeline completion and org isolation.
 
-## Next Milestone Goals
+## Current Milestone: v2.11.0 Brand Intelligence
 
-**v2.11.0 — Brand Intelligence** (planned)
-- Brand accessibility score: per-guideline 0-100 scoring across color contrast, typography, and component compliance with trend tracking
-- Orchestrator dual-mode: config toggle to route branding through embedded DB OR branding service REST (enables fully decoupled deployment)
+**Goal:** Give orgs a quantified, trended brand accessibility score and the deployment flexibility to run branding either embedded or via a remote service on a per-org basis.
+
+**Target features:**
+- Brand accessibility score: per-guideline 0-100 across color contrast, typography, and component compliance
+- Trend tracking: persist scores per scan so orgs can see improvement/regression across history
+- Orchestrator dual-mode: per-org DB setting that routes branding through embedded DB OR branding service REST
+- Brand score panel on report detail page (alongside existing a11y score)
+- Org dashboard widget: summary tile showing current brand score + trend arrow
 
 ## Requirements
 
@@ -71,7 +76,7 @@ v2.10.0 shipped 2026-04-10 — LLM prompt system hardened with fence-marker prot
 
 ### Active
 
-(None — next milestone v2.11.0 requirements TBD via `/gsd-new-milestone`)
+(To be populated during REQUIREMENTS.md step of this milestone)
 
 ### Out of Scope
 
@@ -149,4 +154,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after v2.10.0 milestone shipment*
+*Last updated: 2026-04-10 — milestone v2.11.0 Brand Intelligence started*
