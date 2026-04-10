@@ -79,8 +79,10 @@
             <td data-label="Role">{{this.role}}</td>
             <td data-label="Rate Limit">{{this.rateLimit}} req/min</td>
             <td data-label="Status">
-              <span class="badge badge--error">{{t "admin.apiKeys.revoked"}}</span>
-              {{#if this.expired}}<small class="text-muted"> ({{t "admin.orgApiKeys.expiredSuffix"}})</small>{{/if}}
+              <span class="status-cell">
+                <span class="badge badge--error">{{t "admin.apiKeys.revoked"}}</span>
+                {{#if this.expired}}<small class="text-muted">({{t "admin.orgApiKeys.expiredSuffix"}})</small>{{/if}}
+              </span>
             </td>
             <td data-label="Created">{{this.createdAt}}</td>
             <td data-label="Last Used">{{#if this.lastUsedAt}}{{this.lastUsedAt}}{{else}}{{t "admin.apiKeys.never"}}{{/if}}</td>

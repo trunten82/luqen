@@ -861,6 +861,14 @@ th[aria-sort="none"]::after { content: " ↕"; opacity: 0.4; }
 
 .badge__icon { width: 12px; height: 12px; flex-shrink: 0; }
 
+/* Status cell: groups a badge with an optional small suffix like "(Expired)" */
+.status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  white-space: nowrap;
+}
+
 /* ---- Buttons ---- */
 .btn {
   display: inline-flex;
