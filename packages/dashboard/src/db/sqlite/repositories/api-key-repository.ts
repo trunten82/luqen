@@ -28,6 +28,7 @@ interface ApiKeyRow {
   last_used_at: string | null;
   org_id: string;
   role: string;
+  expires_at: string | null;
 }
 
 function rowToRecord(row: ApiKeyRow): ApiKeyRecord {
@@ -39,6 +40,7 @@ function rowToRecord(row: ApiKeyRow): ApiKeyRecord {
     lastUsedAt: row.last_used_at,
     orgId: row.org_id,
     role: (row.role ?? 'admin') as ApiKeyRole,
+    expiresAt: row.expires_at ?? null,
   };
 }
 
@@ -49,15 +51,29 @@ function rowToRecord(row: ApiKeyRow): ApiKeyRecord {
 export class SqliteApiKeyRepository implements ApiKeyRepository {
   constructor(private readonly db: Database.Database) {}
 
-  async storeKey(key: string, label: string, orgId?: string, role?: ApiKeyRole): Promise<string> {
+  async storeKey(
+    key: string,
+    label: string,
+    orgId?: string,
+    role?: ApiKeyRole,
+    expiresAt: string | null = null,
+  ): Promise<string> {
     const id = randomBytes(16).toString('hex');
     const keyHash = hashApiKey(key);
     const createdAt = new Date().toISOString();
 
     this.db.prepare(
-      `INSERT INTO api_keys (id, key_hash, label, active, created_at, org_id, role)
-       VALUES (@id, @keyHash, @label, 1, @createdAt, @orgId, @role)`,
-    ).run({ id, keyHash, label, createdAt, orgId: orgId ?? 'system', role: role ?? 'admin' });
+      `INSERT INTO api_keys (id, key_hash, label, active, created_at, org_id, role, expires_at)
+       VALUES (@id, @keyHash, @label, 1, @createdAt, @orgId, @role, @expiresAt)`,
+    ).run({
+      id,
+      keyHash,
+      label,
+      createdAt,
+      orgId: orgId ?? 'system',
+      role: role ?? 'admin',
+      expiresAt,
+    });
 
     return id;
   }
@@ -117,5 +133,26 @@ export class SqliteApiKeyRepository implements ApiKeyRepository {
     } else {
       this.db.prepare('UPDATE api_keys SET active = 0 WHERE id = ?').run(id);
     }
+  }
+
+  async deleteKey(id: string, orgId: string): Promise<boolean> {
+    const result = this.db
+      .prepare('DELETE FROM api_keys WHERE id = ? AND org_id = ? AND active = 0')
+      .run(id, orgId);
+    return result.changes > 0;
+  }
+
+  async revokeExpiredKeys(): Promise<number> {
+    const now = new Date().toISOString();
+    const result = this.db
+      .prepare(
+        `UPDATE api_keys
+         SET active = 0
+         WHERE active = 1
+           AND expires_at IS NOT NULL
+           AND expires_at < @now`,
+      )
+      .run({ now });
+    return result.changes;
   }
 }
