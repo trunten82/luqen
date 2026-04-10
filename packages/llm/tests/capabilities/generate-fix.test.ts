@@ -3,6 +3,7 @@ import { unlinkSync, existsSync } from 'node:fs';
 import { SqliteAdapter } from '../../src/db/sqlite-adapter.js';
 import { executeGenerateFix, parseGenerateFixResponse } from '../../src/capabilities/generate-fix.js';
 import { buildGenerateFixPrompt } from '../../src/prompts/generate-fix.js';
+import { parsePromptSegments } from '../../src/prompts/segments.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../src/capabilities/types.js';
 import type { LLMProviderAdapter } from '../../src/providers/types.js';
 
@@ -213,5 +214,29 @@ describe('buildGenerateFixPrompt', () => {
     expect(prompt).toContain('1.4.3');
     expect(prompt).toContain('Insufficient color contrast');
     expect(prompt).toContain('<p style="color: #aaa;">Light text</p>');
+  });
+
+  it('contains output-format and variable-injection fence markers', () => {
+    const prompt = buildGenerateFixPrompt({
+      wcagCriterion: '1.1.1',
+      issueMessage: 'Missing alt text',
+      htmlContext: '<img src="test.jpg">',
+    });
+
+    expect(prompt).toContain('<!-- LOCKED:output-format -->');
+    expect(prompt).toContain('<!-- LOCKED:variable-injection -->');
+    expect(prompt).toContain('<!-- /LOCKED -->');
+  });
+
+  it('has at least 2 locked segments when parsed', () => {
+    const prompt = buildGenerateFixPrompt({
+      wcagCriterion: '1.1.1',
+      issueMessage: 'Missing alt text',
+      htmlContext: '<img src="test.jpg">',
+    });
+
+    const segments = parsePromptSegments(prompt);
+    const lockedCount = segments.filter((s) => s.type === 'locked').length;
+    expect(lockedCount).toBeGreaterThanOrEqual(2);
   });
 });

@@ -33,6 +33,7 @@ export function buildDiscoverBrandingPrompt(input: DiscoverBrandingPromptInput):
 
   return `You are a brand identity extractor. I have already parsed the web page and computed the raw data below. Your job is to CURATE, NAME, and STRUCTURE it into a brand profile. Use the brand context (URL/domain) to give colors meaningful brand-specific names.
 
+<!-- LOCKED:variable-injection -->
 ## Brand Context
 - URL: ${input.url}
 - Brand name (from domain): ${brandHint || '(extract from HTML below)'}
@@ -52,6 +53,7 @@ ${logoList}
 \`\`\`html
 ${html}
 \`\`\`
+<!-- /LOCKED -->
 
 ## Your Task
 
@@ -68,6 +70,7 @@ ${html}
 
 5. **description** — Write a one-sentence brand description (max 200 chars) based on the title, meta description, and brand name. This is what the brand is/does. Example: "Campari is an iconic Italian aperitif brand known for its vibrant red color and bitter-sweet taste, produced since 1860."
 
+<!-- LOCKED:output-format -->
 ## Response Format (JSON only, no markdown fences, no prose)
 
 {
@@ -83,5 +86,6 @@ ${html}
   "description": "One-sentence description of the brand."
 }
 
-If a field cannot be extracted, use an empty array/string. Do not invent data that isn't in the pre-extracted lists above.`;
+If a field cannot be extracted, use an empty array/string. Do not invent data that isn't in the pre-extracted lists above.
+<!-- /LOCKED -->`;
 }

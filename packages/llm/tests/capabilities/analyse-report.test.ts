@@ -3,6 +3,7 @@ import { unlinkSync, existsSync } from 'node:fs';
 import { SqliteAdapter } from '../../src/db/sqlite-adapter.js';
 import { executeAnalyseReport, parseAnalyseReportResponse } from '../../src/capabilities/analyse-report.js';
 import { buildAnalyseReportPrompt } from '../../src/prompts/analyse-report.js';
+import { parsePromptSegments } from '../../src/prompts/segments.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../src/capabilities/types.js';
 import type { LLMProviderAdapter } from '../../src/providers/types.js';
 
@@ -266,5 +267,33 @@ describe('buildAnalyseReportPrompt', () => {
     expect(prompt).toContain('additional issues omitted');
     // Should contain the top 30 items (highest count = index 49..20)
     expect(prompt).toContain('Issue 49');
+  });
+
+  it('contains output-format and variable-injection fence markers', () => {
+    const prompt = buildAnalyseReportPrompt({
+      siteUrl: 'https://example.com',
+      totalIssues: 1,
+      issuesList: [{ criterion: '1.1.1', message: 'Missing alt text', count: 1, level: 'error' }],
+      complianceSummary: 'Non-compliant',
+      recurringPatterns: [],
+    });
+
+    expect(prompt).toContain('<!-- LOCKED:output-format -->');
+    expect(prompt).toContain('<!-- LOCKED:variable-injection -->');
+    expect(prompt).toContain('<!-- /LOCKED -->');
+  });
+
+  it('has at least 2 locked segments when parsed', () => {
+    const prompt = buildAnalyseReportPrompt({
+      siteUrl: 'https://example.com',
+      totalIssues: 1,
+      issuesList: [{ criterion: '1.1.1', message: 'Missing alt text', count: 1, level: 'error' }],
+      complianceSummary: 'Non-compliant',
+      recurringPatterns: [],
+    });
+
+    const segments = parsePromptSegments(prompt);
+    const lockedCount = segments.filter((s) => s.type === 'locked').length;
+    expect(lockedCount).toBeGreaterThanOrEqual(2);
   });
 });

@@ -14,6 +14,7 @@ export function buildGenerateFixPrompt(input: {
 
   return `You are a WCAG accessibility expert. Provide a fix for the following accessibility issue.
 
+<!-- LOCKED:variable-injection -->
 ## Issue
 - WCAG Criterion: ${input.wcagCriterion}
 - Issue: ${input.issueMessage}
@@ -23,10 +24,13 @@ export function buildGenerateFixPrompt(input: {
 ${html}
 \`\`\`
 
-${css ? `## Relevant CSS\n\`\`\`css\n${css}\n\`\`\`\n\n` : ''}## Instructions
+${css ? `## Relevant CSS\n\`\`\`css\n${css}\n\`\`\`\n` : ''}<!-- /LOCKED -->
+
+## Instructions
 Provide a minimal fix for the flagged HTML that resolves the WCAG ${input.wcagCriterion} violation.
 Estimate the effort: "low" (change one attribute), "medium" (restructure one element), "high" (significant rework).
 
+<!-- LOCKED:output-format -->
 ## Response Format
 Respond ONLY with valid JSON, no markdown fences:
 {
@@ -36,5 +40,6 @@ Respond ONLY with valid JSON, no markdown fences:
 }
 
 If no fix is possible, return:
-{"fixedHtml":"","explanation":"This issue requires manual remediation.","effort":"high"}`;
+{"fixedHtml":"","explanation":"This issue requires manual remediation.","effort":"high"}
+<!-- /LOCKED -->`;
 }

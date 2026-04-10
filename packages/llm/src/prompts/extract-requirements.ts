@@ -16,10 +16,15 @@ export function buildExtractionPrompt(
 
   return `You are an accessibility regulation analyst. Extract WCAG requirements from the following regulatory page content.
 
+<!-- LOCKED:variable-injection -->
 ## Regulation Context
 - Regulation ID: ${context.regulationId}
 - Regulation Name: ${context.regulationName}
 ${context.currentWcagVersion ? `- Currently references: WCAG ${context.currentWcagVersion} Level ${context.currentWcagLevel ?? 'AA'}` : ''}
+
+## Page Content
+${truncated}
+<!-- /LOCKED -->
 
 ## Instructions
 Analyze the page content and extract:
@@ -33,6 +38,7 @@ For each criterion found, determine if it is:
 - "optional" -- mentioned as good practice
 - "excluded" -- explicitly exempted
 
+<!-- LOCKED:output-format -->
 ## Response Format
 Respond ONLY with valid JSON, no markdown fences:
 {
@@ -46,7 +52,5 @@ Respond ONLY with valid JSON, no markdown fences:
 
 If the page doesn't contain accessibility regulation data, return:
 { "wcagVersion": "unknown", "wcagLevel": "unknown", "criteria": [], "confidence": 0.0 }
-
-## Page Content
-${truncated}`;
+<!-- /LOCKED -->`;
 }
