@@ -1145,4 +1145,12 @@ ALTER TABLE organizations ADD COLUMN llm_client_id TEXT;
 ALTER TABLE organizations ADD COLUMN llm_client_secret TEXT;
     `,
   },
+  {
+    id: '042',
+    name: 'add-api-key-expires-at',
+    sql: `
+ALTER TABLE api_keys ADD COLUMN expires_at TEXT;
+CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at) WHERE expires_at IS NOT NULL;
+    `,
+  },
 ];

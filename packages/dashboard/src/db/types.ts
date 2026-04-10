@@ -409,6 +409,7 @@ export interface ApiKeyRecord {
   readonly lastUsedAt: string | null;
   readonly orgId: string;
   readonly role: ApiKeyRole;
+  readonly expiresAt: string | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -132,3 +132,140 @@ describe('ApiKeyRepository', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// New methods: storeKey with expiresAt, deleteKey, revokeExpiredKeys
+// ---------------------------------------------------------------------------
+
+describe('ApiKeyRepository — storeKey with expiresAt', () => {
+  it('Test 1: stores key with explicit expiresAt and round-trips via listKeys', async () => {
+    const id = await storage.apiKeys.storeKey(
+      'key-with-expiry-long-enough',
+      'expiry-key',
+      'org-1',
+      'admin',
+      '2027-01-01T00:00:00.000Z',
+    );
+
+    const keys = await storage.apiKeys.listKeys('org-1');
+    const record = keys.find((k) => k.id === id);
+    expect(record).toBeDefined();
+    expect(record!.expiresAt).toBe('2027-01-01T00:00:00.000Z');
+  });
+
+  it('Test 2: storeKey without expiresAt param produces expiresAt null', async () => {
+    const id = await storage.apiKeys.storeKey('key-no-expiry-long-enough', 'no-expiry', 'org-1');
+
+    const keys = await storage.apiKeys.listKeys('org-1');
+    const record = keys.find((k) => k.id === id);
+    expect(record).toBeDefined();
+    expect(record!.expiresAt).toBeNull();
+  });
+
+  it('Test 3: storeKey with explicit null expiresAt produces expiresAt null', async () => {
+    const id = await storage.apiKeys.storeKey(
+      'key-explicit-null-long-enough',
+      'explicit-null',
+      'org-1',
+      'admin',
+      null,
+    );
+
+    const keys = await storage.apiKeys.listKeys('org-1');
+    const record = keys.find((k) => k.id === id);
+    expect(record).toBeDefined();
+    expect(record!.expiresAt).toBeNull();
+  });
+});
+
+describe('ApiKeyRepository — deleteKey', () => {
+  it('Test 4: deleteKey returns true after revoke and removes row', async () => {
+    const id = await storage.apiKeys.storeKey('delete-key-a-long-enough', 'delete-a', 'org-1');
+    await storage.apiKeys.revokeKey(id, 'org-1');
+
+    const deleted = await storage.apiKeys.deleteKey(id, 'org-1');
+    expect(deleted).toBe(true);
+
+    const keys = await storage.apiKeys.listKeys('org-1');
+    expect(keys.find((k) => k.id === id)).toBeUndefined();
+  });
+
+  it('Test 5: deleteKey returns false for an active key and leaves it intact', async () => {
+    const id = await storage.apiKeys.storeKey('delete-key-b-long-enough', 'delete-b', 'org-1');
+
+    const deleted = await storage.apiKeys.deleteKey(id, 'org-1');
+    expect(deleted).toBe(false);
+
+    const keys = await storage.apiKeys.listKeys('org-1');
+    expect(keys.find((k) => k.id === id)).toBeDefined();
+  });
+
+  it('Test 6: deleteKey cross-org guard — cannot delete key from another org', async () => {
+    const id = await storage.apiKeys.storeKey('delete-key-c-long-enough', 'delete-c', 'org-1');
+    await storage.apiKeys.revokeKey(id, 'org-1');
+
+    const deleted = await storage.apiKeys.deleteKey(id, 'org-2');
+    expect(deleted).toBe(false);
+
+    // Key still visible in org-1
+    const keys = await storage.apiKeys.listKeys('org-1');
+    expect(keys.find((k) => k.id === id)).toBeDefined();
+  });
+
+  it('Test 7: deleteKey returns false for non-existent id', async () => {
+    const deleted = await storage.apiKeys.deleteKey('non-existent-id-value', 'org-1');
+    expect(deleted).toBe(false);
+  });
+});
+
+describe('ApiKeyRepository — revokeExpiredKeys', () => {
+  it('Test 8: revokes only active+expired keys, leaves others unchanged, returns count 1', async () => {
+    const past = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    // (a) active + expired -> should be revoked
+    const idA = await storage.apiKeys.storeKey('key-a-expired-long', 'a-expired', 'org-1', 'admin', past);
+
+    // (b) active + future -> should remain active
+    const idB = await storage.apiKeys.storeKey('key-b-future-long', 'b-future', 'org-1', 'admin', future);
+
+    // (c) active + no expiry -> should remain active
+    const idC = await storage.apiKeys.storeKey('key-c-null-long', 'c-null', 'org-1');
+
+    // (d) already revoked + expired -> no double-update
+    const idD = await storage.apiKeys.storeKey('key-d-rev-exp-long', 'd-revoked-expired', 'org-1', 'admin', past);
+    await storage.apiKeys.revokeKey(idD, 'org-1');
+
+    const count = await storage.apiKeys.revokeExpiredKeys();
+    expect(count).toBe(1);
+
+    const keys = await storage.apiKeys.listKeys('org-1');
+    const a = keys.find((k) => k.id === idA)!;
+    const b = keys.find((k) => k.id === idB)!;
+    const c = keys.find((k) => k.id === idC)!;
+    const d = keys.find((k) => k.id === idD)!;
+
+    expect(a.active).toBe(false);
+    expect(b.active).toBe(true);
+    expect(c.active).toBe(true);
+    expect(d.active).toBe(false); // was already revoked
+  });
+
+  it('Test 9: returns 0 when no expired keys exist', async () => {
+    await storage.apiKeys.storeKey('key-fresh-long', 'fresh', 'org-1');
+    const count = await storage.apiKeys.revokeExpiredKeys();
+    expect(count).toBe(0);
+  });
+
+  it('Test 10: rowToRecord round-trip — revoked expired key retains expiresAt', async () => {
+    const past = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const id = await storage.apiKeys.storeKey('key-roundtrip-long', 'roundtrip', 'org-1', 'admin', past);
+
+    await storage.apiKeys.revokeExpiredKeys();
+
+    const keys = await storage.apiKeys.listKeys('org-1');
+    const record = keys.find((k) => k.id === id)!;
+    expect(record.active).toBe(false);
+    expect(record.expiresAt).toBe(past);
+  });
+});
