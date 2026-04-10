@@ -11,8 +11,9 @@
 
   <div id="new-key-alert"></div>
 
+  <h2>{{t "admin.orgApiKeys.activeSectionHeading"}}</h2>
   <div class="table-wrapper">
-    <table class="table" aria-label="Organization API keys">
+    <table class="table" aria-label="Active organization API keys">
       <thead>
         <tr>
           <th scope="col">{{t "admin.orgApiKeys.label"}}</th>
@@ -24,23 +25,18 @@
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
-      <tbody id="org-api-keys-body">
-        {{#each keys}}
+      <tbody id="org-api-keys-active-body">
+        {{#each activeKeys}}
         <tr id="org-api-key-{{this.id}}">
           <td data-label="Label">{{this.label}}</td>
           <td data-label="Role">{{this.role}}</td>
           <td data-label="Rate Limit">{{this.rateLimit}} req/min</td>
           <td data-label="Status">
-            {{#if this.active}}
             <span class="badge badge--success">{{t "common.active"}}</span>
-            {{else}}
-            <span class="badge badge--error">{{t "admin.apiKeys.revoked"}}</span>
-            {{/if}}
           </td>
           <td data-label="Created">{{this.createdAt}}</td>
           <td data-label="Last Used">{{#if this.lastUsedAt}}{{this.lastUsedAt}}{{else}}{{t "admin.apiKeys.never"}}{{/if}}</td>
           <td>
-            {{#if this.active}}
             <button hx-post="/admin/org-api-keys/{{this.id}}/revoke"
                     hx-target="#org-api-key-{{this.id}}"
                     hx-swap="outerHTML"
@@ -48,15 +44,61 @@
                     class="btn btn--sm btn--danger">
               {{t "common.revoke"}}
             </button>
-            {{/if}}
           </td>
         </tr>
         {{/each}}
       </tbody>
     </table>
   </div>
-  {{#unless keys.length}}
-  <p class="text-muted">{{t "admin.orgApiKeys.noKeys"}}</p>
+  {{#unless activeKeys.length}}
+  <p class="text-muted">{{t "admin.orgApiKeys.noActiveKeys"}}</p>
   {{/unless}}
+
+  {{#if revokedKeys.length}}
+  <details class="revoked-section">
+    <summary>
+      {{t "admin.orgApiKeys.revokedSectionHeading"}} (<span id="org-api-keys-revoked-count">{{revokedCount}}</span>)
+    </summary>
+    <div class="table-wrapper">
+      <table class="table" aria-label="Revoked organization API keys">
+        <thead>
+          <tr>
+            <th scope="col">{{t "admin.orgApiKeys.label"}}</th>
+            <th scope="col">{{t "admin.orgApiKeys.role"}}</th>
+            <th scope="col">{{t "admin.orgApiKeys.rateLimit"}}</th>
+            <th scope="col">{{t "common.status"}}</th>
+            <th scope="col">{{t "admin.orgApiKeys.created"}}</th>
+            <th scope="col">{{t "admin.orgApiKeys.lastUsed"}}</th>
+            <th scope="col">{{t "common.actions"}}</th>
+          </tr>
+        </thead>
+        <tbody id="org-api-keys-revoked-body">
+          {{#each revokedKeys}}
+          <tr id="org-api-key-{{this.id}}">
+            <td data-label="Label">{{this.label}}</td>
+            <td data-label="Role">{{this.role}}</td>
+            <td data-label="Rate Limit">{{this.rateLimit}} req/min</td>
+            <td data-label="Status">
+              <span class="badge badge--error">{{t "admin.apiKeys.revoked"}}</span>
+              {{#if this.expired}}<small class="text-muted"> ({{t "admin.orgApiKeys.expiredSuffix"}})</small>{{/if}}
+            </td>
+            <td data-label="Created">{{this.createdAt}}</td>
+            <td data-label="Last Used">{{#if this.lastUsedAt}}{{this.lastUsedAt}}{{else}}{{t "admin.apiKeys.never"}}{{/if}}</td>
+            <td>
+              <button hx-delete="/admin/org-api-keys/{{this.id}}"
+                      hx-target="#org-api-key-{{this.id}}"
+                      hx-swap="outerHTML"
+                      hx-confirm="Permanently delete this revoked key?"
+                      class="btn btn--sm btn--danger">
+                {{t "common.delete"}}
+              </button>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </details>
+  {{/if}}
 </section>
 <div id="modal-container"></div>

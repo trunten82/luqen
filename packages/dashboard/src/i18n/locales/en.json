@@ -613,7 +613,10 @@
       "expiredSuffix": "Expired",
       "revokedKeysCount": "Revoked keys ({{count}})",
       "deleteFailed": "Failed to delete API key.",
-      "deleteSuccess": "API key deleted."
+      "deleteSuccess": "API key deleted.",
+      "noActiveKeys": "No active API keys for this organization. Create one to get started.",
+      "activeSectionHeading": "Active keys",
+      "revokedSectionHeading": "Revoked keys"
     },
     "serviceConnections": {
       "title": "Service Connections",
