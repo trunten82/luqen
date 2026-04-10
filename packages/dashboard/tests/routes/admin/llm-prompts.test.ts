@@ -26,7 +26,7 @@ const MULTI_EDITABLE_DEFAULT =
 const makeLLMPrompt = (overrides: Partial<LLMPrompt> = {}): LLMPrompt => ({
   capability: 'generate-fix',
   template: SIMPLE_DEFAULT,
-  isCustom: false,
+  isOverride: false,
   updatedAt: undefined,
   ...overrides,
 });
@@ -49,7 +49,7 @@ function makeMockClient(overrides: {
     listCapabilities: overrides.listCapabilitiesFn ?? vi.fn().mockResolvedValue([]),
     getPrompt: overrides.getPromptFn ?? vi.fn().mockResolvedValue(makeLLMPrompt()),
     getDefaultPrompt: overrides.getDefaultPromptFn ?? vi.fn().mockResolvedValue(makeLLMPrompt()),
-    setPrompt: overrides.setPromptFn ?? vi.fn().mockResolvedValue(makeLLMPrompt({ isCustom: true })),
+    setPrompt: overrides.setPromptFn ?? vi.fn().mockResolvedValue(makeLLMPrompt({ isOverride: true })),
     deletePrompt: vi.fn().mockResolvedValue(undefined),
     listPrompts: vi.fn().mockResolvedValue([]),
     createProvider: vi.fn(),
@@ -148,7 +148,7 @@ describe('GET /admin/llm?tab=prompts — split-region editor render', () => {
 
   it('sets isStale=false for non-custom prompts', async () => {
     const res = await ctx.server.inject({ method: 'GET', url: '/admin/llm?tab=prompts' });
-    const body = res.json() as { data: { prompts: Array<{ isStale: boolean; isCustom: boolean }> } };
+    const body = res.json() as { data: { prompts: Array<{ isStale: boolean; isOverride: boolean }> } };
     for (const prompt of body.data.prompts) {
       expect(prompt.isStale).toBe(false);
     }
@@ -165,7 +165,7 @@ describe('GET /admin/llm?tab=prompts — stale override detection', () => {
     capturedTemplates.length = 0;
     const client = makeMockClient({
       getPromptFn: vi.fn().mockResolvedValue(
-        makeLLMPrompt({ isCustom: true, template: 'plain old override no fences' }),
+        makeLLMPrompt({ isOverride: true, template: 'plain old override no fences' }),
       ),
       getDefaultPromptFn: vi.fn().mockResolvedValue(
         makeLLMPrompt({ template: SIMPLE_DEFAULT }),
@@ -203,7 +203,7 @@ describe('PUT /admin/llm/prompts/:capability — save valid reassembled template
     capturedTemplate = '';
     mockSetPrompt = vi.fn().mockImplementation((_cap: string, tpl: string) => {
       capturedTemplate = tpl;
-      return Promise.resolve(makeLLMPrompt({ isCustom: true, template: tpl }));
+      return Promise.resolve(makeLLMPrompt({ isOverride: true, template: tpl }));
     });
     const client = makeMockClient({
       getDefaultPromptFn: vi.fn().mockResolvedValue(makeLLMPrompt({ template: SIMPLE_DEFAULT })),
@@ -353,7 +353,7 @@ describe('PUT /admin/llm/prompts/:capability — migrate stale override', () => 
     capturedTemplate = '';
     mockSetPrompt = vi.fn().mockImplementation((_cap: string, tpl: string) => {
       capturedTemplate = tpl;
-      return Promise.resolve(makeLLMPrompt({ isCustom: true, template: tpl }));
+      return Promise.resolve(makeLLMPrompt({ isOverride: true, template: tpl }));
     });
     const client = makeMockClient({
       getDefaultPromptFn: vi.fn().mockResolvedValue(
