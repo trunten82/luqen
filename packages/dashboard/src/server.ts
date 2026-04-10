@@ -77,6 +77,7 @@ import mercurius from 'mercurius';
 import { schema as graphqlSchema } from './graphql/schema.js';
 import { resolvers as graphqlResolvers } from './graphql/resolvers.js';
 import type { GraphQLContext } from './graphql/resolvers.js';
+import { runApiKeySweep } from './api-key-sweep.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -142,6 +143,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Auth Service ────────────────────────────────────────────────────────
   const authService = new AuthService(rawDb, pluginManager, storage);
+
+  // ── API key expiry sweep — startup + daily interval ─────────────────────
+  await runApiKeySweep(storage, server.log, 'startup');
+  const apiKeySweepHandle = setInterval(
+    () => { void runApiKeySweep(storage, server.log, 'interval'); },
+    24 * 60 * 60 * 1000,
+  );
+  server.addHook('onClose', () => clearInterval(apiKeySweepHandle));
 
   // ── Solo mode: first-start API key ──────────────────────────────────────
   if (authService.getAuthMode() === 'solo') {
