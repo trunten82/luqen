@@ -5,6 +5,31 @@ import { toastHtml, escapeHtml } from './helpers.js';
 import type { StorageAdapter } from '../../db/index.js';
 import { API_KEY_ROLES, API_KEY_RATE_LIMITS, type ApiKeyRole } from '../../db/types.js';
 
+// ---------------------------------------------------------------------------
+// TTL whitelist
+// ---------------------------------------------------------------------------
+
+export const ALLOWED_TTL_DAYS = [0, 30, 90, 180, 365] as const;
+type AllowedTtl = typeof ALLOWED_TTL_DAYS[number];
+
+function isAllowedTtl(n: number): n is AllowedTtl {
+  return (ALLOWED_TTL_DAYS as readonly number[]).includes(n);
+}
+
+export function parseTtl(raw: string | undefined): { valid: true; ttlDays: AllowedTtl } | { valid: false } {
+  const ttlDays = (raw === undefined || raw === '') ? 90 : Number(raw);
+  if (!Number.isFinite(ttlDays) || !isAllowedTtl(ttlDays)) {
+    return { valid: false };
+  }
+  return { valid: true, ttlDays };
+}
+
+export function computeExpiresAt(ttlDays: number): string | null {
+  return ttlDays > 0
+    ? new Date(Date.now() + ttlDays * 86400 * 1000).toISOString()
+    : null;
+}
+
 interface OrgApiKeyRow {
   readonly id: string;
   readonly label: string;
@@ -14,6 +39,8 @@ interface OrgApiKeyRow {
   readonly role: ApiKeyRole;
   readonly orgId: string;
   readonly rateLimit: number;
+  readonly expiresAt: string | null;
+  readonly expired: boolean;
 }
 
 function statusBadge(active: boolean): string {
@@ -75,6 +102,7 @@ export async function orgApiKeyRoutes(
       }
 
       const records = await storage.apiKeys.listKeys(orgId);
+      const now = new Date();
       const keys: OrgApiKeyRow[] = records.map(k => ({
         id: k.id,
         label: k.label,
@@ -84,6 +112,8 @@ export async function orgApiKeyRoutes(
         role: k.role,
         orgId: k.orgId,
         rateLimit: API_KEY_RATE_LIMITS[k.role],
+        expiresAt: k.expiresAt,
+        expired: k.expiresAt !== null && new Date(k.expiresAt) < now,
       }));
 
       return reply.view('admin/org-api-keys.hbs', {
@@ -119,7 +149,7 @@ export async function orgApiKeyRoutes(
           .send(toastHtml('Select an organization first to manage API keys.', 'error'));
       }
 
-      const body = request.body as { label?: string; role?: string };
+      const body = request.body as { label?: string; role?: string; ttl?: string };
       const label = body.label?.trim() || 'default';
       const role: ApiKeyRole = API_KEY_ROLES.includes(body.role as ApiKeyRole)
         ? (body.role as ApiKeyRole)
@@ -132,9 +162,18 @@ export async function orgApiKeyRoutes(
           .send(toastHtml('Label must be 100 characters or fewer.', 'error'));
       }
 
+      const ttlResult = parseTtl(body.ttl);
+      if (!ttlResult.valid) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Invalid expiry option.', 'error'));
+      }
+      const expiresAt = computeExpiresAt(ttlResult.ttlDays);
+
       try {
         const plaintextKey = generateApiKey();
-        const id = await storage.apiKeys.storeKey(plaintextKey, label, orgId, role);
+        const id = await storage.apiKeys.storeKey(plaintextKey, label, orgId, role, expiresAt);
 
         const row: OrgApiKeyRow = {
           id,
@@ -145,6 +184,8 @@ export async function orgApiKeyRoutes(
           role,
           orgId,
           rateLimit: API_KEY_RATE_LIMITS[role],
+          expiresAt,
+          expired: false,
         };
 
         void storage.audit.log({
@@ -153,7 +194,7 @@ export async function orgApiKeyRoutes(
           action: 'api_key.create',
           resourceType: 'api_key',
           resourceId: id,
-          details: { label, role, orgId },
+          details: { label, role, orgId, expiresAt },
           ipAddress: request.ip,
         });
 
@@ -213,12 +254,13 @@ export async function orgApiKeyRoutes(
         const row: OrgApiKeyRow = {
           ...record,
           rateLimit: API_KEY_RATE_LIMITS[record.role],
+          expired: record.expiresAt !== null && new Date(record.expiresAt) < new Date(),
         };
 
         void storage.audit.log({
           actor: request.user?.username ?? 'unknown',
           actorId: request.user?.id,
-          action: 'api_key.delete',
+          action: 'api_key.revoke',
           resourceType: 'api_key',
           resourceId: id,
           details: { label: record.label, orgId },
@@ -233,6 +275,58 @@ export async function orgApiKeyRoutes(
           );
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to revoke API key';
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(toastHtml(message, 'error'));
+      }
+    },
+  );
+
+  // DELETE /admin/org-api-keys/:id — hard-delete a revoked key (org-scoped)
+  server.delete(
+    '/admin/org-api-keys/:id',
+    { preHandler: requirePermission('admin.org') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const orgId = request.user?.currentOrgId;
+
+      if (orgId === undefined || orgId === null) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Select an organization first to manage API keys.', 'error'));
+      }
+
+      try {
+        // Look up label BEFORE delete for the audit entry
+        const records = await storage.apiKeys.listKeys(orgId);
+        const record = records.find(k => k.id === id);
+
+        const ok = await storage.apiKeys.deleteKey(id, orgId);
+        if (!ok) {
+          return reply
+            .code(404)
+            .header('content-type', 'text/html')
+            .send(toastHtml('API key not found, still active, or not in your organization.', 'error'));
+        }
+
+        void storage.audit.log({
+          actor: request.user?.username ?? 'unknown',
+          actorId: request.user?.id,
+          action: 'api_key.delete',
+          resourceType: 'api_key',
+          resourceId: id,
+          details: { label: record?.label ?? '(unknown)', orgId },
+          ipAddress: request.ip,
+        });
+
+        return reply
+          .code(200)
+          .header('content-type', 'text/html')
+          .send(toastHtml(`API key "${escapeHtml(record?.label ?? '')}" deleted.`));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to delete API key';
         return reply
           .code(500)
           .header('content-type', 'text/html')
