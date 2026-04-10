@@ -4,6 +4,15 @@ import { generateKeyPair, exportPKCS8, exportSPKI } from 'jose';
 import { SqliteAdapter } from '../../src/db/sqlite-adapter.js';
 import { createTokenSigner, createTokenVerifier } from '../../src/auth/oauth.js';
 import { createServer } from '../../src/api/server.js';
+import { buildExtractionPrompt } from '../../src/prompts/extract-requirements.js';
+
+// Build a valid override for extract-requirements: prepend a custom line before the default
+// so locked blocks remain byte-identical while free regions are customised.
+const EXTRACT_DEFAULT = buildExtractionPrompt(
+  '{content}',
+  { regulationId: '{regulationId}', regulationName: '{regulationName}' },
+);
+const VALID_EXTRACT_OVERRIDE = 'My custom template note.\n' + EXTRACT_DEFAULT;
 
 const TEST_DB = '/tmp/llm-prompts-test.db';
 
@@ -68,7 +77,7 @@ describe('Prompt Override API', () => {
       url: '/api/v1/prompts/extract-requirements',
       headers: { authorization: `Bearer ${adminToken}` },
       payload: {
-        template: 'My custom template for {regulationName}: {content}',
+        template: VALID_EXTRACT_OVERRIDE,
         orgId: 'test-org',
       },
     });
@@ -83,7 +92,7 @@ describe('Prompt Override API', () => {
     }>();
     expect(body.capability).toBe('extract-requirements');
     expect(body.orgId).toBe('test-org');
-    expect(body.template).toBe('My custom template for {regulationName}: {content}');
+    expect(body.template).toBe(VALID_EXTRACT_OVERRIDE);
     expect(body.isOverride).toBe(true);
     expect(body.updatedAt).toBeTruthy();
   });
@@ -104,7 +113,7 @@ describe('Prompt Override API', () => {
     }>();
     expect(body.capability).toBe('extract-requirements');
     expect(body.isOverride).toBe(true);
-    expect(body.template).toContain('My custom template');
+    expect(body.template).toContain('My custom template note.');
   });
 
   // 4. Delete override
