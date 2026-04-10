@@ -28,7 +28,7 @@ const OVERRIDE_TEMPLATE =
 const makeLLMPrompt = (overrides: Partial<LLMPrompt> = {}): LLMPrompt => ({
   capability: 'generate-fix',
   template: DEFAULT_TEMPLATE,
-  isCustom: false,
+  isOverride: false,
   updatedAt: undefined,
   ...overrides,
 });
@@ -47,7 +47,7 @@ function makeMockClient(overrides: {
     listCapabilities: vi.fn().mockResolvedValue([]),
     getPrompt: overrides.getPromptFn ?? vi.fn().mockResolvedValue(makeLLMPrompt()),
     getDefaultPrompt: overrides.getDefaultPromptFn ?? vi.fn().mockResolvedValue(makeLLMPrompt()),
-    setPrompt: vi.fn().mockResolvedValue(makeLLMPrompt({ isCustom: true })),
+    setPrompt: vi.fn().mockResolvedValue(makeLLMPrompt({ isOverride: true })),
     deletePrompt: overrides.deletePromptFn ?? vi.fn().mockResolvedValue(undefined),
     listPrompts: vi.fn().mockResolvedValue([]),
     createProvider: vi.fn(),
@@ -115,7 +115,7 @@ describe('GET /admin/llm/prompts/:capability/diff', () => {
   it('renders diff modal with add/remove/context lines when override differs from default', async () => {
     const client = makeMockClient({
       getPromptFn: vi.fn().mockResolvedValue(
-        makeLLMPrompt({ template: OVERRIDE_TEMPLATE, isCustom: true }),
+        makeLLMPrompt({ template: OVERRIDE_TEMPLATE, isOverride: true }),
       ),
       getDefaultPromptFn: vi.fn().mockResolvedValue(
         makeLLMPrompt({ template: DEFAULT_TEMPLATE }),
@@ -144,7 +144,7 @@ describe('GET /admin/llm/prompts/:capability/diff', () => {
 
   it('shows no-differences state when prompt matches the default', async () => {
     const client = makeMockClient({
-      getPromptFn: vi.fn().mockResolvedValue(makeLLMPrompt({ isCustom: false })),
+      getPromptFn: vi.fn().mockResolvedValue(makeLLMPrompt({ isOverride: false })),
       getDefaultPromptFn: vi.fn().mockResolvedValue(makeLLMPrompt()),
     });
     ctx = await createTestServer(client);
@@ -197,7 +197,7 @@ describe('GET /admin/llm/prompts/:capability/reset-confirm', () => {
   it('renders reset modal with destructive button when prompt has override', async () => {
     const client = makeMockClient({
       getPromptFn: vi.fn().mockResolvedValue(
-        makeLLMPrompt({ template: OVERRIDE_TEMPLATE, isCustom: true }),
+        makeLLMPrompt({ template: OVERRIDE_TEMPLATE, isOverride: true }),
       ),
       getDefaultPromptFn: vi.fn().mockResolvedValue(
         makeLLMPrompt({ template: DEFAULT_TEMPLATE }),
@@ -229,7 +229,7 @@ describe('GET /admin/llm/prompts/:capability/reset-confirm', () => {
 
   it('renders nothing-to-reset state when prompt is using the default', async () => {
     const client = makeMockClient({
-      getPromptFn: vi.fn().mockResolvedValue(makeLLMPrompt({ isCustom: false })),
+      getPromptFn: vi.fn().mockResolvedValue(makeLLMPrompt({ isOverride: false })),
       getDefaultPromptFn: vi.fn().mockResolvedValue(makeLLMPrompt()),
     });
     ctx = await createTestServer(client);

@@ -82,7 +82,7 @@ export interface AssignCapabilityInput {
 export interface LLMPrompt {
   readonly capability: string;
   readonly template: string;
-  readonly isCustom: boolean;
+  readonly isOverride: boolean;
   readonly updatedAt?: string;
 }
 

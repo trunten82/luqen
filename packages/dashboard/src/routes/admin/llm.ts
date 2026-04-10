@@ -96,7 +96,7 @@ export async function llmAdminRoutes(
                   llmClient.getPrompt(cap),
                   llmClient.getDefaultPrompt(cap),
                 ]);
-                const isCustom = current.isCustom ?? false;
+                const isCustom = current.isOverride ?? false;
                 const defaultSegments = parsePromptSegments(defaultPrompt.template);
 
                 let isStale = false;
@@ -670,7 +670,7 @@ export async function llmAdminRoutes(
         return reply.view('admin/partials/prompt-diff-modal.hbs', {
           capability,
           diffLines,
-          isOverride: current.isCustom ?? false,
+          isOverride: current.isOverride ?? false,
           layout: false,
         });
       } catch (err) {
@@ -709,7 +709,7 @@ export async function llmAdminRoutes(
         return reply.view('admin/partials/prompt-reset-modal.hbs', {
           capability,
           diffLines,
-          isOverride: current.isCustom ?? false,
+          isOverride: current.isOverride ?? false,
           layout: false,
         });
       } catch (err) {
