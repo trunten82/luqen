@@ -1199,6 +1199,38 @@ select {
   position: relative;
 }
 
+.modal--wide { max-width: min(960px, 95vw); }
+
+/* Locked / muted card: used for read-only prompt segments */
+.card--muted {
+  background-color: var(--bg-tertiary);
+  min-width: 0;
+}
+.card--muted .card__header {
+  flex-wrap: wrap;
+}
+.prompt-segment-content {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+/* Diff view: wraps long lines inside the modal body */
+.prompt-diff {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin: 0;
+}
+.prompt-diff__line { display: block; }
+.prompt-diff__line--add { background-color: rgba(46, 160, 67, 0.15); color: var(--status-success); }
+.prompt-diff__line--remove { background-color: rgba(248, 81, 73, 0.15); color: var(--status-error); }
+.prompt-diff__line--context { color: var(--text-muted); }
+
 .modal__header {
   display: flex;
   align-items: center;
