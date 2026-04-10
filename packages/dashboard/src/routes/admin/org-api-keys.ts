@@ -43,6 +43,20 @@ interface OrgApiKeyRow {
   readonly expired: boolean;
 }
 
+// View model for the GET handler — passed to org-api-keys.hbs
+interface OrgApiKeyView {
+  readonly id: string;
+  readonly label: string;
+  readonly active: boolean;
+  readonly createdAt: string;
+  readonly lastUsedAt: string | null;
+  readonly role: ApiKeyRole;
+  readonly orgId: string;
+  readonly rateLimit: number;
+  readonly expiresAt: string | null;
+  readonly expired: boolean;
+}
+
 function statusBadge(active: boolean): string {
   return active
     ? '<span class="badge badge--completed">Active</span>'
@@ -102,8 +116,9 @@ export async function orgApiKeyRoutes(
       }
 
       const records = await storage.apiKeys.listKeys(orgId);
-      const now = new Date();
-      const keys: OrgApiKeyRow[] = records.map(k => ({
+      const now = Date.now();
+
+      const toView = (k: typeof records[number]): OrgApiKeyView => ({
         id: k.id,
         label: k.label,
         active: k.active,
@@ -113,14 +128,19 @@ export async function orgApiKeyRoutes(
         orgId: k.orgId,
         rateLimit: API_KEY_RATE_LIMITS[k.role],
         expiresAt: k.expiresAt,
-        expired: k.expiresAt !== null && new Date(k.expiresAt) < now,
-      }));
+        expired: k.expiresAt !== null && new Date(k.expiresAt).getTime() < now,
+      });
+
+      const activeKeys = records.filter(k => k.active).map(toView);
+      const revokedKeys = records.filter(k => !k.active).map(toView);
 
       return reply.view('admin/org-api-keys.hbs', {
         pageTitle: 'Organization API Keys',
         currentPath: '/admin/org-api-keys',
         user: request.user,
-        keys,
+        activeKeys,
+        revokedKeys,
+        revokedCount: revokedKeys.length,
         orgId,
       });
     },
