@@ -100,6 +100,30 @@ function keyRowHtml(row: OrgApiKeyRow): string {
 </tr>`;
 }
 
+// ---------------------------------------------------------------------------
+// Revoked-row HTML helper (used by the revoke OOB response)
+// Note: uses hardcoded English to match pre-Phase-14 route helper convention.
+// TODO(future): migrate route helpers to use the i18n helper in a future phase.
+// ---------------------------------------------------------------------------
+function revokedRowInnerHtml(row: OrgApiKeyView): string {
+  // T-14-15: escapeHtml on all user-supplied label content (XSS mitigation)
+  const expiredSuffix = row.expired
+    ? ' <small class="text-muted">(Expired)</small>'
+    : '';
+  const deleteButton = `<button hx-delete="/admin/org-api-keys/${encodeURIComponent(row.id)}"
+          hx-target="#org-api-key-${row.id}"
+          hx-swap="outerHTML"
+          hx-confirm="Permanently delete this revoked key?"
+          class="btn btn--sm btn--danger">Delete</button>`;
+  return `<td data-label="Label">${escapeHtml(row.label)}</td>
+  <td data-label="Role">${roleBadge(row.role)}</td>
+  <td data-label="Rate Limit">${row.rateLimit} req/min</td>
+  <td data-label="Status"><span class="badge badge--error">Revoked</span>${expiredSuffix}</td>
+  <td data-label="Created">${formatDate(row.createdAt)}</td>
+  <td data-label="Last Used">${formatDate(row.lastUsedAt)}</td>
+  <td>${deleteButton}</td>`;
+}
+
 export async function orgApiKeyRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
@@ -258,11 +282,15 @@ export async function orgApiKeyRoutes(
       }
 
       try {
+        // Capture pre-revoke revoked count to detect the "first revoke" edge case.
+        const beforeRecords = await storage.apiKeys.listKeys(orgId);
+        const beforeRevokedCount = beforeRecords.filter(k => !k.active).length;
+
         // org_id guard enforced at DB level: AND org_id = ? prevents cross-org revocation
         await storage.apiKeys.revokeKey(id, orgId);
 
-        const records = await storage.apiKeys.listKeys(orgId);
-        const record = records.find(k => k.id === id);
+        const afterRecords = await storage.apiKeys.listKeys(orgId);
+        const record = afterRecords.find(k => k.id === id);
 
         if (record === undefined) {
           return reply
@@ -270,12 +298,6 @@ export async function orgApiKeyRoutes(
             .header('content-type', 'text/html')
             .send(toastHtml('API key not found.', 'error'));
         }
-
-        const row: OrgApiKeyRow = {
-          ...record,
-          rateLimit: API_KEY_RATE_LIMITS[record.role],
-          expired: record.expiresAt !== null && new Date(record.expiresAt) < new Date(),
-        };
 
         void storage.audit.log({
           actor: request.user?.username ?? 'unknown',
@@ -287,11 +309,44 @@ export async function orgApiKeyRoutes(
           ipAddress: request.ip,
         });
 
+        // Edge case: this is the first revoke — the <details> revoked section
+        // does not exist in the DOM yet, so OOB swaps into #org-api-keys-revoked-body
+        // would silently fail. Trigger a full page refresh instead.
+        if (beforeRevokedCount === 0) {
+          return reply
+            .code(200)
+            .header('HX-Refresh', 'true')
+            .header('content-type', 'text/html')
+            .send('');
+        }
+
+        const newRevokedCount = afterRecords.filter(k => !k.active).length;
+        const row: OrgApiKeyView = {
+          id: record.id,
+          label: record.label,
+          active: record.active,
+          createdAt: record.createdAt,
+          lastUsedAt: record.lastUsedAt,
+          role: record.role,
+          orgId: record.orgId,
+          rateLimit: API_KEY_RATE_LIMITS[record.role],
+          expiresAt: record.expiresAt,
+          expired: record.expiresAt !== null && new Date(record.expiresAt).getTime() < Date.now(),
+        };
+
+        // Main response body: empty string — the revoke button's hx-target is the active
+        // row with hx-swap=outerHTML, so the empty body removes the active row.
+        // OOB 1 (wrapped in <template> per feedback_htmx_oob_in_table.md): appends
+        //   the new revoked row to #org-api-keys-revoked-body.
+        // OOB 2: updates the count span in the <details> summary.
+        // Tail: success toast.
         return reply
           .code(200)
           .header('content-type', 'text/html')
           .send(
-            `${keyRowHtml(row)}\n${toastHtml(`API key "${escapeHtml(record.label)}" revoked.`)}`,
+            `<template><tr id="org-api-key-${row.id}" hx-swap-oob="beforeend:#org-api-keys-revoked-body">${revokedRowInnerHtml(row)}</tr></template>` +
+            `<span id="org-api-keys-revoked-count" hx-swap-oob="true">${newRevokedCount}</span>` +
+            toastHtml(`API key "${escapeHtml(record.label)}" revoked.`),
           );
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to revoke API key';
@@ -341,10 +396,20 @@ export async function orgApiKeyRoutes(
           ipAddress: request.ip,
         });
 
+        const afterDeleteRecords = await storage.apiKeys.listKeys(orgId);
+        const remainingRevoked = afterDeleteRecords.filter(k => !k.active).length;
+
+        // Empty body removes the row via the button's hx-swap=outerHTML.
+        // OOB updates the count span in the <details> summary.
+        // If remainingRevoked === 0 the <details> section will linger with "(0)"
+        // until the next full page load — acceptable v1 trade-off.
         return reply
           .code(200)
           .header('content-type', 'text/html')
-          .send(toastHtml(`API key "${escapeHtml(record?.label ?? '')}" deleted.`));
+          .send(
+            `<span id="org-api-keys-revoked-count" hx-swap-oob="true">${remainingRevoked}</span>` +
+            toastHtml(`API key "${escapeHtml(record?.label ?? '')}" deleted.`),
+          );
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to delete API key';
         return reply
