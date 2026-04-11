@@ -60,6 +60,26 @@
       <p class="text-sm text-muted" style="margin-top:1rem;">
         {{t "admin.org.brandingMode.nextScanNote"}}
       </p>
+
+      {{!-- BMODE-04: test connection button + result-card target. --}}
+      <div class="form-actions" style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;">
+        <h3 class="card__subtitle">{{t "admin.org.brandingMode.test.title"}}</h3>
+        <p class="text-sm text-muted">{{t "admin.org.brandingMode.test.explainer"}}</p>
+
+        {{!-- CSRF: delivered via hx-headers X-CSRF-Token (global CSRF hook
+             in server.ts:711-722 reads the header, not a form field). A nested
+             <input> inside a <button> would be invalid HTML AND dead code — do NOT
+             add one. --}}
+        <button type="button" class="btn btn--secondary"
+                hx-post="/admin/organizations/{{org.id}}/branding-test"
+                hx-target="#branding-test-result"
+                hx-swap="outerHTML"
+                hx-headers='{"X-CSRF-Token":"{{csrfToken}}"}'>
+          {{t "admin.org.brandingMode.test.button"}}
+        </button>
+
+        <div id="branding-test-result"></div>
+      </div>
     {{/if}}
 
     {{#if (eq mode "confirm")}}
@@ -95,3 +115,57 @@
     {{/if}}
   </div>
 </div>
+
+{{#if testResult}}
+<div id="branding-test-result" class="card {{#if testResult.ok}}card--success{{else}}card--error{{/if}}"
+     role="status" aria-live="polite">
+  <div class="card__body">
+    {{#if testResult.ok}}
+      {{#if testResult.details.note}}
+        {{!-- no-guideline branch --}}
+        <p>
+          <span class="status-indicator status--unknown" aria-label="Status: note">NOTE</span>
+          {{t "admin.org.brandingMode.test.result.routedVia"}}
+          <strong>{{testResult.routedVia}}</strong>
+        </p>
+        <p class="text-sm text-muted">{{testResult.details.note}}</p>
+      {{else}}
+        {{!-- matched branch --}}
+        <p>
+          <span class="status-indicator status--ok" aria-label="Status: ok">OK</span>
+          {{t "admin.org.brandingMode.test.result.routedVia"}}
+          <strong>{{testResult.routedVia}}</strong>
+        </p>
+        <dl class="stats-list">
+          <div class="stats-list__item">
+            <dt>{{t "admin.org.brandingMode.test.result.brandRelatedCount"}}</dt>
+            <dd>{{testResult.details.brandRelatedCount}}</dd>
+          </div>
+          <div class="stats-list__item">
+            <dt>{{t "admin.org.brandingMode.test.result.scoreKind"}}</dt>
+            <dd>{{testResult.details.scoreKind}}</dd>
+          </div>
+        </dl>
+      {{/if}}
+    {{else}}
+      {{!-- degraded branch — escaped error rendering. Handlebars default-escapes,
+           so {{testResult.details.error}} is safe; no triple-brace. --}}
+      <p>
+        <span class="status-indicator status--error" aria-label="Status: error">ERROR</span>
+        {{t "admin.org.brandingMode.test.result.routedVia"}}
+        <strong>{{testResult.routedVia}}</strong>
+      </p>
+      <dl class="stats-list">
+        <div class="stats-list__item">
+          <dt>{{t "admin.org.brandingMode.test.result.reason"}}</dt>
+          <dd><code>{{testResult.details.reason}}</code></dd>
+        </div>
+        <div class="stats-list__item">
+          <dt>{{t "admin.org.brandingMode.test.result.error"}}</dt>
+          <dd><code>{{testResult.details.error}}</code></dd>
+        </div>
+      </dl>
+    {{/if}}
+  </div>
+</div>
+{{/if}}
