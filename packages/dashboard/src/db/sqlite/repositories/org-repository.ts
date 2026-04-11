@@ -19,6 +19,30 @@ interface OrgRow {
   branding_client_secret: string | null;
   llm_client_id: string | null;
   llm_client_secret: string | null;
+  branding_mode: string;
+}
+
+/**
+ * Narrow the untyped `branding_mode` TEXT column to the typed literal union.
+ *
+ * The `organizations.branding_mode` column (migration 043) has no SQLite-level
+ * CHECK constraint — unlike `brand_scores.mode` which does. TypeScript's
+ * literal union `'embedded' | 'remote'` is the primary contract; this helper
+ * is the runtime defense against schema drift (a future migration that adds
+ * a third value without updating this helper, a plugin that writes an
+ * unexpected string, or a direct SQL edit via a REPL).
+ *
+ * FAIL-FAST (LOCKED): this throws from every read path (rowToOrg, getBrandingMode).
+ * A single corrupt row will make listOrgs / getOrg / getOrgBySlug / getUserOrgs
+ * die loudly rather than silently degrade. Data-integrity violations MUST
+ * surface, not be swallowed. See Plan 16-03 Task 2 Edit 2 for the full
+ * rationale.
+ */
+function narrowBrandingMode(value: string): 'embedded' | 'remote' {
+  if (value === 'embedded' || value === 'remote') {
+    return value;
+  }
+  throw new Error(`organizations.branding_mode has unexpected value: ${value}`);
 }
 
 interface OrgMemberRow {
@@ -40,6 +64,7 @@ function rowToOrg(row: OrgRow): Organization {
     ...(row.branding_client_secret ? { brandingClientSecret: row.branding_client_secret } : {}),
     ...(row.llm_client_id ? { llmClientId: row.llm_client_id } : {}),
     ...(row.llm_client_secret ? { llmClientSecret: row.llm_client_secret } : {}),
+    brandingMode: narrowBrandingMode(row.branding_mode),
   };
 }
 
@@ -223,6 +248,25 @@ export class SqliteOrgRepository implements OrgRepository {
     this.db.prepare(
       'UPDATE organizations SET llm_client_id = ?, llm_client_secret = ? WHERE id = ?',
     ).run(clientId, clientSecret, orgId);
+  }
+
+  async getBrandingMode(orgId: string): Promise<'embedded' | 'remote'> {
+    const row = this.db
+      .prepare('SELECT branding_mode FROM organizations WHERE id = ?')
+      .get(orgId) as { branding_mode: string } | undefined;
+    if (row === undefined) {
+      throw new Error(`organization not found: ${orgId}`);
+    }
+    return narrowBrandingMode(row.branding_mode);
+  }
+
+  async setBrandingMode(orgId: string, mode: 'embedded' | 'remote'): Promise<void> {
+    const result = this.db
+      .prepare('UPDATE organizations SET branding_mode = ? WHERE id = ?')
+      .run(mode, orgId);
+    if (result.changes === 0) {
+      throw new Error(`organization not found: ${orgId}`);
+    }
   }
 
   async getUserOrgs(userId: string): Promise<Organization[]> {
