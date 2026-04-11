@@ -13,6 +13,7 @@ import { VERSION } from '../version.js';
 import { validatePassword, validateUsername } from '../validation.js';
 import { validateScanUrl, VALID_STANDARDS } from '../services/scan-service.js';
 import { retagScansForSite } from '../services/branding-retag.js';
+import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
 
 // ---------------------------------------------------------------------------
 // Context typing
@@ -23,6 +24,7 @@ export interface GraphQLContext {
   readonly user: { id: string; username: string; role: string } | undefined;
   readonly permissions: Set<string>;
   readonly orgId: string;
+  readonly brandingOrchestrator: BrandingOrchestrator;
 }
 
 // ---------------------------------------------------------------------------
@@ -745,7 +747,15 @@ export const resolvers = {
       requirePerm(ctx, 'branding.manage');
       await ctx.storage.branding.assignToSite(args.guidelineId, args.siteUrl, ctx.orgId);
       // Retag existing scans
-      try { await retagScansForSite(ctx.storage, args.siteUrl, ctx.orgId); } catch { /* non-fatal */ }
+      try {
+        await retagScansForSite(
+          ctx.storage,
+          args.siteUrl,
+          ctx.orgId,
+          ctx.brandingOrchestrator,
+          ctx.storage.brandScores,
+        );
+      } catch { /* non-fatal */ }
       return true;
     },
 
@@ -757,7 +767,13 @@ export const resolvers = {
 
     async retagBrandingScans(_: unknown, args: { siteUrl: string }, ctx: GraphQLContext) {
       requirePerm(ctx, 'branding.manage');
-      return retagScansForSite(ctx.storage, args.siteUrl, ctx.orgId);
+      return retagScansForSite(
+        ctx.storage,
+        args.siteUrl,
+        ctx.orgId,
+        ctx.brandingOrchestrator,
+        ctx.storage.brandScores,
+      );
     },
   },
 };

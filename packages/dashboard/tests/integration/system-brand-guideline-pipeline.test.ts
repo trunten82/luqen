@@ -30,6 +30,7 @@ import { readFileSync, existsSync, rmSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { SqliteBrandingRepository } from '../../src/db/sqlite/repositories/branding-repository.js';
 import { retagScansForSite } from '../../src/services/branding-retag.js';
+import { makeRetagDeps } from './helpers/branding-retag-deps.js';
 
 // ---------------------------------------------------------------------------
 // Harness
@@ -231,7 +232,7 @@ describe('Scenario C — branding-retag resolves via the same single resolver', 
 
     // No scan records seeded — retag should resolve the guideline, find
     // zero completed scans, and return { retagged: 0 } without throwing.
-    const result = await retagScansForSite(storage, siteUrl, orgId);
+    const result = await retagScansForSite(storage, siteUrl, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
 
     expect(result).not.toBeNull();
     expect(result).toBeDefined();
@@ -244,7 +245,7 @@ describe('Scenario C — branding-retag resolves via the same single resolver', 
     const orgId = 'org-a';
     await repo.assignToSite(orgGuidelineId, siteUrl, orgId);
 
-    const result = await retagScansForSite(storage, siteUrl, orgId);
+    const result = await retagScansForSite(storage, siteUrl, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
 
     expect(result).toBeDefined();
     expect(result.retagged).toBe(0);

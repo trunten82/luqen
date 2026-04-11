@@ -17,6 +17,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { SqliteBrandingRepository } from '../../src/db/sqlite/repositories/branding-repository.js';
 import { retagAllSitesForGuideline } from '../../src/services/branding-retag.js';
+import { makeRetagDeps } from './helpers/branding-retag-deps.js';
 
 // ---------------------------------------------------------------------------
 // Inline report helper — no fixtures from disk
@@ -118,7 +119,7 @@ describe('E2E-01 — full pipeline: create guideline → assign site → insert 
     });
 
     // Step 4: Retag
-    const { totalRetagged } = await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    const { totalRetagged } = await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     expect(totalRetagged).toBeGreaterThanOrEqual(1);
 
     // Step 5: Verify scan record updated
@@ -189,7 +190,7 @@ describe('E2E-01 — guideline update retag: add color to guideline → second r
     });
 
     // First retag — only Orange matches
-    await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     const afterFirst = await storage.scans.getScan(scanId1);
     const countAfterFirst = afterFirst!.brandRelatedCount ?? 0;
     expect(countAfterFirst).toBeGreaterThan(0);
@@ -220,7 +221,7 @@ describe('E2E-01 — guideline update retag: add color to guideline → second r
     });
 
     // Second retag — both Orange and Amber now match across two scans
-    const { totalRetagged } = await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    const { totalRetagged } = await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     expect(totalRetagged).toBeGreaterThanOrEqual(1);
 
     // Scan 2 (Amber issue) should now be brand-related
@@ -284,13 +285,13 @@ describe('E2E-01 — idempotency: running retag twice produces the same brandRel
     });
 
     // First retag
-    await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     const afterFirst = await storage.scans.getScan(scanId);
     const countAfterFirst = afterFirst!.brandRelatedCount;
     expect(countAfterFirst).toBeGreaterThan(0);
 
     // Second retag — should produce identical count (idempotent)
-    await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     const afterSecond = await storage.scans.getScan(scanId);
     const countAfterSecond = afterSecond!.brandRelatedCount;
 

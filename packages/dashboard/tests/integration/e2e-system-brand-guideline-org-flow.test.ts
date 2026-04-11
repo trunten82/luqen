@@ -17,6 +17,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { SqliteBrandingRepository } from '../../src/db/sqlite/repositories/branding-repository.js';
 import { retagScansForSite } from '../../src/services/branding-retag.js';
+import { makeRetagDeps } from './helpers/branding-retag-deps.js';
 
 // ---------------------------------------------------------------------------
 // Harness
@@ -104,7 +105,7 @@ describe('Scenario 2 — scan retag works on system-linked site (no throw)', () 
 
     await repo.assignToSite(sysId, siteUrl, orgId);
 
-    const result = await retagScansForSite(storage, siteUrl, orgId);
+    const result = await retagScansForSite(storage, siteUrl, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
 
     expect(result).toBeDefined();
     expect(result.retagged).toBe(0);
@@ -158,7 +159,7 @@ describe('Scenario 3 — scan retag with real scan produces brand enrichment', (
       jsonReport: reportJson,
     });
 
-    const result = await retagScansForSite(storage, siteUrl, orgId);
+    const result = await retagScansForSite(storage, siteUrl, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
 
     expect(result.retagged).toBeGreaterThanOrEqual(1);
 

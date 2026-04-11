@@ -22,6 +22,7 @@ import { readFileSync, existsSync, rmSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { SqliteBrandingRepository } from '../../src/db/sqlite/repositories/branding-repository.js';
 import { retagAllSitesForGuideline } from '../../src/services/branding-retag.js';
+import { makeRetagDeps } from './helpers/branding-retag-deps.js';
 
 // ---------------------------------------------------------------------------
 // Fixture types
@@ -229,7 +230,7 @@ describe('BST-02 — full pipeline: create -> assign -> scan -> retag -> verify 
     const scanId = await seedScanFromFixture(orgId, siteUrl, scanReportFixture);
 
     // Step 4: Retag
-    const { totalRetagged } = await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    const { totalRetagged } = await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     expect(totalRetagged).toBeGreaterThanOrEqual(1);
 
     // Step 5: Verify enrichment
@@ -258,7 +259,7 @@ describe('BST-01 — no false positives: non-brand issues remain untagged', () =
     await repo.assignToSite(guidelineId, siteUrl, orgId);
     const scanId = await seedScanFromFixture(orgId, siteUrl, scanReportFixture);
 
-    await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
 
     const updatedScan = await storage.scans.getScan(scanId);
     const report: ScanReportFixture = JSON.parse(updatedScan!.jsonReport!);
@@ -294,12 +295,12 @@ describe('BST-01 — idempotent retag: running twice produces identical results'
     const scanId = await seedScanFromFixture(orgId, siteUrl, scanReportFixture);
 
     // First retag
-    await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     const afterFirst = await storage.scans.getScan(scanId);
     const countAfterFirst = afterFirst!.brandRelatedCount;
 
     // Second retag (idempotent)
-    await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     const afterSecond = await storage.scans.getScan(scanId);
     const countAfterSecond = afterSecond!.brandRelatedCount;
 
@@ -360,7 +361,7 @@ describe('BST-01 — guideline update retag: adding a new color extends coverage
     const scanId = await seedScanFromFixture(orgId, siteUrl, scanReportFixture);
 
     // First retag with only Aperol Orange
-    await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     const afterOrange = await storage.scans.getScan(scanId);
     const countWithOrangeOnly = afterOrange!.brandRelatedCount ?? 0;
 
@@ -373,7 +374,7 @@ describe('BST-01 — guideline update retag: adding a new color extends coverage
     });
 
     // Retag again with both colors
-    await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     const afterAmber = await storage.scans.getScan(scanId);
     const countWithBothColors = afterAmber!.brandRelatedCount ?? 0;
 

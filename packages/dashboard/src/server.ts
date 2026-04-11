@@ -809,6 +809,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         ((request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined) ??
         new Set<string>(),
       orgId: request.user?.currentOrgId ?? 'system',
+      brandingOrchestrator,
     }),
   });
 

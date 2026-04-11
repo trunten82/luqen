@@ -9,8 +9,19 @@ import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { retagScansForSite, retagAllSitesForGuideline } from '../../services/branding-retag.js';
+import type { BrandingOrchestrator } from '../../services/branding/branding-orchestrator.js';
 import type { LLMClient } from '../../llm-client.js';
 import { resolveOrgLLMClient } from '../../llm-client.js';
+
+// Fastify instance decoration set by server.ts (Phase 17 branding orchestrator
+// wiring). Required by Phase 18-04 retag rewire so admin route handlers can
+// pass brandingOrchestrator + storage.brandScores into retagScansForSite /
+// retagAllSitesForGuideline without reaching around the DI boundary.
+declare module 'fastify' {
+  interface FastifyInstance {
+    brandingOrchestrator: BrandingOrchestrator;
+  }
+}
 
 const pump = promisify(pipeline);
 
@@ -454,7 +465,13 @@ export async function brandingGuidelineRoutes(
         if (updated.active) {
           const orgId = request.user?.currentOrgId ?? 'system';
           try {
-            const { totalRetagged } = await retagAllSitesForGuideline(storage, id, orgId);
+            const { totalRetagged } = await retagAllSitesForGuideline(
+              storage,
+              id,
+              orgId,
+              server.brandingOrchestrator,
+              storage.brandScores,
+            );
             retagCount = totalRetagged;
           } catch { /* non-fatal */ }
         }
@@ -666,7 +683,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Retag all assigned sites after discover enriched the guideline (BRT-01, BRT-02)
         if (result.colors.length > 0 || result.fonts.length > 0) {
           try {
-            await retagAllSitesForGuideline(storage, id, guideline.orgId);
+            await retagAllSitesForGuideline(
+              storage,
+              id,
+              guideline.orgId,
+              server.brandingOrchestrator,
+              storage.brandScores,
+            );
           } catch { /* non-fatal */ }
         }
 
@@ -771,7 +794,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
         // Retag assigned sites after modifying guideline
         try {
-          await retagAllSitesForGuideline(storage, id, orgId);
+          await retagAllSitesForGuideline(
+            storage,
+            id,
+            orgId,
+            server.brandingOrchestrator,
+            storage.brandScores,
+          );
         } catch { /* non-fatal */ }
 
         void storage.audit.log({
@@ -839,7 +868,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Retag assigned sites after modifying guideline
         const orgId = request.user?.currentOrgId ?? 'system';
         try {
-          await retagAllSitesForGuideline(storage, id, orgId);
+          await retagAllSitesForGuideline(
+            storage,
+            id,
+            orgId,
+            server.brandingOrchestrator,
+            storage.brandScores,
+          );
         } catch { /* non-fatal */ }
 
         return reply
@@ -865,7 +900,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Retag assigned sites after modifying guideline
         const orgId = request.user?.currentOrgId ?? 'system';
         try {
-          await retagAllSitesForGuideline(storage, id, orgId);
+          await retagAllSitesForGuideline(
+            storage,
+            id,
+            orgId,
+            server.brandingOrchestrator,
+            storage.brandScores,
+          );
         } catch { /* non-fatal */ }
 
         return reply
@@ -918,7 +959,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Retag assigned sites after modifying guideline
         const orgId = request.user?.currentOrgId ?? 'system';
         try {
-          await retagAllSitesForGuideline(storage, id, orgId);
+          await retagAllSitesForGuideline(
+            storage,
+            id,
+            orgId,
+            server.brandingOrchestrator,
+            storage.brandScores,
+          );
         } catch { /* non-fatal */ }
 
         return reply
@@ -944,7 +991,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Retag assigned sites after modifying guideline
         const orgId = request.user?.currentOrgId ?? 'system';
         try {
-          await retagAllSitesForGuideline(storage, id, orgId);
+          await retagAllSitesForGuideline(
+            storage,
+            id,
+            orgId,
+            server.brandingOrchestrator,
+            storage.brandScores,
+          );
         } catch { /* non-fatal */ }
 
         return reply
@@ -986,7 +1039,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Retag assigned sites after modifying guideline
         const orgId = request.user?.currentOrgId ?? 'system';
         try {
-          await retagAllSitesForGuideline(storage, id, orgId);
+          await retagAllSitesForGuideline(
+            storage,
+            id,
+            orgId,
+            server.brandingOrchestrator,
+            storage.brandScores,
+          );
         } catch { /* non-fatal */ }
 
         return reply
@@ -1012,7 +1071,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Retag assigned sites after modifying guideline
         const orgId = request.user?.currentOrgId ?? 'system';
         try {
-          await retagAllSitesForGuideline(storage, id, orgId);
+          await retagAllSitesForGuideline(
+            storage,
+            id,
+            orgId,
+            server.brandingOrchestrator,
+            storage.brandScores,
+          );
         } catch { /* non-fatal */ }
 
         return reply
@@ -1077,7 +1142,13 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
         // Retag existing completed scans for this site
         let retagCount = 0;
         try {
-          const { retagged } = await retagScansForSite(storage, normalizedUrl, orgId);
+          const { retagged } = await retagScansForSite(
+            storage,
+            normalizedUrl,
+            orgId,
+            server.brandingOrchestrator,
+            storage.brandScores,
+          );
           retagCount = retagged;
         } catch { /* non-fatal */ }
 
