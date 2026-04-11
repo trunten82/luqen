@@ -47,3 +47,14 @@
   - [x] 16-02-PLAN.md — BrandScoreRepository interface + SQLite impl + StorageAdapter wiring + ScoreResult round-trip tests [Wave 2]
   - [x] 16-03-PLAN.md — OrgRepository.getBrandingMode/setBrandingMode extension + Organization.brandingMode domain field + round-trip tests [Wave 2]
 
+### Phase 17: Branding Orchestrator
+**Goal**: Dashboard has a single `BrandingOrchestrator` that, on each request, reads `orgs.branding_mode` (via Phase 16's OrgRepository) and routes "match + score" to either an embedded adapter (refactored in-process matcher) or a remote adapter (instantiates the dormant `BrandingService`), returning a unified scored result — with an explicit no-cross-route fallback policy that marks service-mode outages as `degraded` rather than silently rerouting to embedded mode
+**Depends on**: Phase 15 (`calculateBrandScore`), Phase 16 (`OrgRepository.getBrandingMode`, `ScoreResult` types ready for downstream persistence)
+**Requirements**: BMODE-01, BMODE-02, BMODE-05
+**Success Criteria** (what must be TRUE):
+  1. `BrandingAdapter` interface defines a single typed `matchForSite(input): Promise<BrandedIssue[]>` method (or equivalently shaped contract); both `EmbeddedBrandingAdapter` and `RemoteBrandingAdapter` implement it and return the same `BrandedIssue[]` shape — no shape divergence between modes
+  2. `EmbeddedBrandingAdapter` is a mechanical extraction of the existing in-process branding matcher path (currently inlined in `scanner/orchestrator.ts`) — same matcher, same output, behind the new interface; refactor only, no behavior change
+  3. `RemoteBrandingAdapter` instantiates the dormant `BrandingService` (which uses the existing `ServiceClientRegistry.getBrandingTokenManager()`), calls the remote `POST /api/v1/match`, and returns `BrandedIssue[]` — `ServiceClientRegistry` is **unchanged** (zero new methods, zero modified methods)
+  4. `BrandingOrchestrator.matchAndScore(input)` reads `orgs.branding_mode` per-request via `OrgRepository.getBrandingMode(orgId)`, picks the adapter, calls Phase 15's `calculateBrandScore` on the returned `BrandedIssue[]`, and returns a unified `ScoredMatchResult` consumed by Phase 18 — NO caching, NO module-level state, NO request-scope memoization (grep for `cache` in orchestrator returns 0)
+  5. When the remote adapter throws (service outage, OAuth failure, network error), `BrandingOrchestrator` returns a `degraded` result tagged with the originating mode and an `unscorable_reason` — NEVER falls back to embedded mode silently. An explicit unit test proves a failing remote adapter does NOT invoke the embedded adapter.
+**Plans**: TBD (populated by planner)
