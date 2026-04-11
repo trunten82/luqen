@@ -321,6 +321,7 @@ export interface Organization {
   readonly brandingClientSecret?: string;
   readonly llmClientId?: string;
   readonly llmClientSecret?: string;
+  readonly brandingMode?: 'embedded' | 'remote';
 }
 
 export interface OrgMember {
