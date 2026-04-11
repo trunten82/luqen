@@ -42,5 +42,8 @@
   3. `BrandScoreRepository` exposes typed `insert(scoreResult, scanContext)`, `getLatestForScan(scanId)`, and `getHistoryForSite(orgId, siteUrl, limit)` methods — consumes Phase 15 `ScoreResult` on write and returns `ScoreResult` on read, with no `number | null` leakage across the boundary
   4. `OrgRepository` gains `getBrandingMode(orgId): 'embedded' | 'remote'` and `setBrandingMode(orgId, mode)` — literal types, no caching layer (matches PROJECT.md decision: per-request reads, never cached)
   5. Phase 16 is migration + repository only — no scanner/orchestrator/UI is wired in this phase; the existing dashboard test suite passes unchanged after migration runs
-**Plans**: TBD (populated by planner)
+**Plans**: 3 plans
+  - [ ] 16-01-PLAN.md — Migration 043: brand_scores table + indexes + organizations.branding_mode (atomic) + PRAGMA-introspection test [Wave 1]
+  - [ ] 16-02-PLAN.md — BrandScoreRepository interface + SQLite impl + StorageAdapter wiring + ScoreResult round-trip tests [Wave 2]
+  - [ ] 16-03-PLAN.md — OrgRepository.getBrandingMode/setBrandingMode extension + Organization.brandingMode domain field + round-trip tests [Wave 2]
 
