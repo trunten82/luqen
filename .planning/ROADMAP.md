@@ -79,3 +79,15 @@
   - [x] 18-04-PLAN.md — Retag rewire: branding-retag.ts calls matchAndScore + append-only brandScoreRepository.insert; BSTORE-03 double-retag append-only test [Wave 2]
   - [x] 18-05-PLAN.md — Extract shared brand-score row mapper; extend ScanRecord.brandScore; rewrite getTrendData with LEFT JOIN + latest-per-scan subquery; BSTORE-04 pre-v2.11.0 regression test [Wave 3]
   - [x] 18-06-PLAN.md — Post-rewire latency capture + gate verdict (18-06-POST.md + 18-06-GATE.md); BLOCKING: post grand median within +15% of baseline AND no per-site regression >+25% [Wave 3]
+
+### Phase 19: Admin UI (Mode Toggle)
+**Goal**: Admin users with `organizations.manage` permission can flip per-org branding mode (embedded/remote) via the org edit page with two-step confirmation + "Reset to system default"; a test-connection button exercises the production `BrandingOrchestrator` code path and echoes back which adapter actually ran; the branding service appears in System Health and sidebar navigation with consistent badge/status patterns matching compliance and LLM services
+**Depends on**: Phase 16 (`OrgRepository.getBrandingMode`/`setBrandingMode`), Phase 17 (`BrandingOrchestrator` for test-connection routing), Phase 18 (scanner integration proves the dual-mode path works end-to-end)
+**Requirements**: BMODE-03, BMODE-04, BUI-04
+**Success Criteria** (what must be TRUE):
+  1. Org edit page has a branding mode toggle (radio/select for `embedded | remote`) with a two-step confirmation modal before a mode flip is persisted; modal clearly explains the scan-level implications (next scan uses new mode, existing scan history preserved)
+  2. "Reset to system default" button exists on the toggle and, when clicked, sets `branding_mode = 'embedded'` (the schema default) via the same confirmation flow
+  3. Permission gate: only users with `organizations.manage` can see/use the toggle; other users see a read-only display of the current mode — enforced server-side, not hidden by CSS
+  4. Test-connection button routes through the production `BrandingOrchestrator.matchAndScore()` code path (NOT a shortcut that hits `brandingService.listGuidelines()` directly — per Pitfall #5) using a synthetic issue + guideline fixture, and returns a response envelope containing `routedVia: 'embedded' | 'remote'` + success/failure status + error details — proving the dual-mode routing works end-to-end from the dashboard
+  5. Branding service appears in the System Health admin page, the sidebar navigation, and any newly added admin sections with the SAME status/badge/link patterns already used by the compliance and LLM services (verified by shared partial reuse or CSS class parity)
+**Plans**: TBD (populated by planner)
