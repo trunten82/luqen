@@ -57,4 +57,7 @@
   3. `RemoteBrandingAdapter` instantiates the dormant `BrandingService` (which uses the existing `ServiceClientRegistry.getBrandingTokenManager()`), calls the remote `POST /api/v1/match`, and returns `BrandedIssue[]` — `ServiceClientRegistry` is **unchanged** (zero new methods, zero modified methods)
   4. `BrandingOrchestrator.matchAndScore(input)` reads `orgs.branding_mode` per-request via `OrgRepository.getBrandingMode(orgId)`, picks the adapter, calls Phase 15's `calculateBrandScore` on the returned `BrandedIssue[]`, and returns a unified `ScoredMatchResult` consumed by Phase 18 — NO caching, NO module-level state, NO request-scope memoization (grep for `cache` in orchestrator returns 0)
   5. When the remote adapter throws (service outage, OAuth failure, network error), `BrandingOrchestrator` returns a `degraded` result tagged with the originating mode and an `unscorable_reason` — NEVER falls back to embedded mode silently. An explicit unit test proves a failing remote adapter does NOT invoke the embedded adapter.
-**Plans**: TBD (populated by planner)
+**Plans**: 3 plans
+  - [ ] 17-01-PLAN.md — BrandingAdapter interface + EmbeddedBrandingAdapter (refactor of in-process matcher path) + contract test [Wave 1]
+  - [ ] 17-02-PLAN.md — RemoteBrandingAdapter wrapping dormant BrandingService + type-guard validation + RemoteBrandingMalformedError + 10 request/response/error tests [Wave 2]
+  - [ ] 17-03-PLAN.md — BrandingOrchestrator (per-request mode read, no-cross-route fallback, calculator wiring) + server.ts DI wiring + 10 unit tests + UAT-17-01 branding service liveness checkpoint [Wave 3]
