@@ -59,6 +59,10 @@ import { setupRoutes } from './routes/api/setup.js';
 import { startEmailScheduler } from './email/scheduler.js';
 import { startSourceMonitorScheduler } from './source-monitor-scheduler.js';
 import { ComplianceService } from './services/compliance-service.js';
+import { BrandingService } from './services/branding-service.js';
+import { EmbeddedBrandingAdapter } from './services/branding/embedded-branding-adapter.js';
+import { RemoteBrandingAdapter } from './services/branding/remote-branding-adapter.js';
+import { BrandingOrchestrator } from './services/branding/branding-orchestrator.js';
 import { ServiceClientRegistry } from './services/service-client-registry.js';
 import { SqliteServiceConnectionsRepository } from './db/sqlite/service-connections-sqlite.js';
 import { importFromConfigIfEmpty } from './services/service-connections-bootstrap.js';
@@ -200,6 +204,34 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     serviceClientRegistry.getBrandingTokenManager();
   const getLLMClient = (): ReturnType<typeof serviceClientRegistry.getLLMClient> =>
     serviceClientRegistry.getLLMClient();
+
+  // ── Branding orchestrator (Phase 17) ─────────────────────────────────────
+  // First real consumer of the dormant BrandingService class. Built with the
+  // EXISTING getBrandingTokenManager() getter — ServiceClientRegistry is NOT
+  // modified by Phase 17.
+  //
+  // The orchestrator reads `orgs.branding_mode` per-request via the
+  // OrgRepository (no caching). When mode='remote' it routes through the
+  // BrandingService -> @luqen/branding REST. When mode='embedded' (default)
+  // it runs the in-process BrandingMatcher via EmbeddedBrandingAdapter.
+  // On any failure it returns a `degraded` result and DOES NOT cross-route
+  // to the other adapter (PITFALLS.md #6 / PROJECT.md decision).
+  //
+  // Phase 18 will replace the inline branding block at
+  // scanner/orchestrator.ts:541-594 with one call to
+  // brandingOrchestrator.matchAndScore(...).
+  const brandingService = new BrandingService(config, getBrandingTokenManager);
+  const embeddedBrandingAdapter = new EmbeddedBrandingAdapter();
+  const remoteBrandingAdapter = new RemoteBrandingAdapter(brandingService);
+  const brandingOrchestrator = new BrandingOrchestrator(
+    storage.organizations,
+    embeddedBrandingAdapter,
+    remoteBrandingAdapter,
+  );
+  // Decorated untyped — the Phase 18 scanner will own the Fastify module
+  // augmentation when it actually consumes this decorator. Mirrors the
+  // existing serviceClientRegistry decorate pattern at line 195.
+  server.decorate('brandingOrchestrator', brandingOrchestrator);
 
   // ── Optional Redis ────────────────────────────────────────────────────────
   const redisClient = createRedisClient(config.redisUrl);
