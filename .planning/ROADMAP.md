@@ -72,4 +72,10 @@
   3. Every completed scan writes exactly one `brand_scores` row via `BrandScoreRepository.insert()` — including the `scored`, `degraded`, and `no-guideline` tagged-union variants. Scoring failure is non-blocking: if persistence throws, the scan still completes (v2.9.0 retag pattern).
   4. Trend queries for pre-v2.11.0 scans use `LEFT JOIN brand_scores ON …` with explicit NULL handling — pre-v2.11.0 scans render as empty-state, never as fabricated `0` (BSTORE-04, BSTORE-06). A regression test opens a scan from before migration 043 applied and asserts no `undefined` / `NaN%` / broken shape leaks through.
   5. Scan-completion latency baseline is measured BEFORE the rewire (4 sites × 3 runs each, warm cache) and AFTER the rewire on the same sites; the AFTER median must be within 15% of the BEFORE median. Both numbers and the methodology are captured in the phase SUMMARY.
-**Plans**: TBD (populated by planner)
+**Plans**: 6 plans
+  - [ ] 18-01-PLAN.md — Pre-rewire latency baseline capture (4 sites × warm-1 / measured-3 / maxPages-10) + 18-01-BASELINE.md artifact [Wave 1]
+  - [ ] 18-02-PLAN.md — ScanOrchestrator constructor DI for brandingOrchestrator + brandScoreRepository (plumbing only, inline block unchanged) [Wave 1]
+  - [ ] 18-03-PLAN.md — Scanner rewire: replace inline BrandingMatcher block with brandingOrchestrator.matchAndScore + brandScoreRepository.insert; 7 invariant-pinning tests (one-match-call, matched persist, display enrichment, degraded-still-persists, no-guideline no-persist, persistence-failure non-blocking, no-backfill) [Wave 2]
+  - [ ] 18-04-PLAN.md — Retag rewire: branding-retag.ts calls matchAndScore + append-only brandScoreRepository.insert; BSTORE-03 double-retag append-only test [Wave 2]
+  - [ ] 18-05-PLAN.md — Extract shared brand-score row mapper; extend ScanRecord.brandScore; rewrite getTrendData with LEFT JOIN + latest-per-scan subquery; BSTORE-04 pre-v2.11.0 regression test [Wave 3]
+  - [ ] 18-06-PLAN.md — Post-rewire latency capture + gate verdict (18-06-POST.md + 18-06-GATE.md); BLOCKING: post grand median within +15% of baseline AND no per-site regression >+25% [Wave 3]
