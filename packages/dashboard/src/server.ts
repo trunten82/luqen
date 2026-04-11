@@ -248,6 +248,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     ssePublisher,
     redisQueue: redisScanQueue,
     pluginManager,
+    // Phase 18: constructor-injected branding orchestrator + brand_scores
+    // repository. ScanOrchestrator holds these references for its runScan
+    // method to use — NEVER access via server.brandingOrchestrator from
+    // inside the scanner (coupling to Fastify is an anti-pattern here).
+    // Plan 18-03 flips the inline BrandingMatcher block to call them.
+    brandingOrchestrator,
+    brandScoreRepository: storage.brandScores,
   });
 
   // ── Security Headers (helmet) ────────────────────────────────────────────
