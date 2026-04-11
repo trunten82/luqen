@@ -12,6 +12,11 @@ const {
   mockCheckCompliance,
   mockWriteFile,
   mockMkdir,
+  // Phase 18-02: new constructor deps
+  mockBrandingOrchestratorMatchAndScore,
+  mockBrandScoreRepositoryInsert,
+  mockBrandScoreRepositoryGetLatestForScan,
+  mockBrandScoreRepositoryGetHistoryForSite,
 } = vi.hoisted(() => ({
   mockCreateScanner: vi.fn(),
   mockDiscoverUrls: vi.fn(),
@@ -23,6 +28,11 @@ const {
   mockCheckCompliance: vi.fn(),
   mockWriteFile: vi.fn().mockResolvedValue(undefined),
   mockMkdir: vi.fn().mockResolvedValue(undefined),
+  // Phase 18-02: mocks for the new constructor-injected dependencies
+  mockBrandingOrchestratorMatchAndScore: vi.fn(),
+  mockBrandScoreRepositoryInsert: vi.fn().mockResolvedValue(undefined),
+  mockBrandScoreRepositoryGetLatestForScan: vi.fn().mockResolvedValue(null),
+  mockBrandScoreRepositoryGetHistoryForSite: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@luqen/core', () => ({
@@ -149,6 +159,27 @@ function waitForScan(orchestrator: ScanOrchestrator, scanId: string, timeoutMs =
 // Tests
 // ---------------------------------------------------------------------------
 
+// Phase 18-02: test harness for the new constructor-injected deps.
+// These produce the SHAPE the scanner expects without pulling the real
+// BrandingOrchestrator / SqliteBrandScoreRepository into the test.
+function makeMockBrandingOrchestrator(): {
+  readonly matchAndScore: typeof mockBrandingOrchestratorMatchAndScore;
+} {
+  return { matchAndScore: mockBrandingOrchestratorMatchAndScore };
+}
+
+function makeMockBrandScoreRepository(): {
+  readonly insert: typeof mockBrandScoreRepositoryInsert;
+  readonly getLatestForScan: typeof mockBrandScoreRepositoryGetLatestForScan;
+  readonly getHistoryForSite: typeof mockBrandScoreRepositoryGetHistoryForSite;
+} {
+  return {
+    insert: mockBrandScoreRepositoryInsert,
+    getLatestForScan: mockBrandScoreRepositoryGetLatestForScan,
+    getHistoryForSite: mockBrandScoreRepositoryGetHistoryForSite,
+  };
+}
+
 describe('ScanOrchestrator', () => {
   let storage: StorageAdapter;
   let orchestrator: ScanOrchestrator;
@@ -200,6 +231,22 @@ describe('ScanOrchestrator', () => {
         redisQueue: queue as any,
       });
       expect(orch).toBeInstanceOf(ScanOrchestrator);
+    });
+
+    it('Phase 18-02: constructs with brandingOrchestrator + brandScoreRepository in options', () => {
+      const orch = new ScanOrchestrator(storage, '/tmp/reports', {
+        maxConcurrent: 2,
+        brandingOrchestrator: makeMockBrandingOrchestrator() as unknown as import('../../src/services/branding/branding-orchestrator.js').BrandingOrchestrator,
+        brandScoreRepository: makeMockBrandScoreRepository() as unknown as import('../../src/db/interfaces/brand-score-repository.js').BrandScoreRepository,
+      });
+      expect(orch).toBeInstanceOf(ScanOrchestrator);
+      expect(orch.activeCount).toBe(0);
+    });
+
+    it('Phase 18-02: constructs WITHOUT brandingOrchestrator (backwards compat plumbing-only plan)', () => {
+      const orch = new ScanOrchestrator(storage, '/tmp/reports', 2);
+      expect(orch).toBeInstanceOf(ScanOrchestrator);
+      expect(orch.activeCount).toBe(0);
     });
   });
 
