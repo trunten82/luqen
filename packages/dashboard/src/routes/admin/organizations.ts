@@ -19,6 +19,9 @@ function orgRowHtml(org: Organization): string {
     <a href="/admin/organizations/${encodeURIComponent(org.id)}/members"
        class="btn btn--sm btn--ghost"
        aria-label="Manage members for ${org.name}">Members</a>
+    <a href="/admin/organizations/${encodeURIComponent(org.id)}/branding-mode"
+       class="btn btn--sm btn--ghost"
+       aria-label="Branding mode for ${org.name}">Branding Mode</a>
     <button hx-post="/admin/organizations/${encodeURIComponent(org.id)}/delete"
             hx-confirm="Delete organization ${org.name}? This cannot be undone."
             hx-target="closest tr"
