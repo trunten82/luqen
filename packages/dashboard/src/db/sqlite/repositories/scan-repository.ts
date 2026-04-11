@@ -1,6 +1,8 @@
 import type Database from 'better-sqlite3';
 import type { ScanRepository } from '../../interfaces/scan-repository.js';
 import type { ScanRecord, ScanFilters, ScanUpdateData, CreateScanInput } from '../../types.js';
+import type { ScoreResult } from '../../../services/scoring/types.js';
+import { brandScoreRowToResult, type BrandScoreRowLike } from './brand-score-row-mapper.js';
 
 // ---------------------------------------------------------------------------
 // Private row type and conversion
@@ -238,19 +240,77 @@ export class SqliteScanRepository implements ScanRepository {
   }
 
   async getTrendData(orgId?: string): Promise<ScanRecord[]> {
-    const conditions = ["status = 'completed'"];
+    const conditions: string[] = ["s.status = 'completed'"];
     const params: Record<string, unknown> = {};
 
     if (orgId !== undefined) {
-      conditions.push('org_id = @orgId');
+      conditions.push('s.org_id = @orgId');
       params['orgId'] = orgId;
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const sql = `SELECT * FROM scan_records ${where} ORDER BY created_at ASC`;
+
+    // Phase 18-05: LEFT JOIN brand_scores. Two rules enforced here:
+    //
+    //  1. LEFT JOIN, not INNER JOIN — pre-v2.11.0 scans have zero rows in
+    //     brand_scores (BSTORE-06 no-backfill invariant). INNER JOIN would
+    //     drop them entirely and Phase 21 widget would display "no data" for
+    //     orgs with pre-v2.11.0 history. LEFT JOIN preserves them with NULLs
+    //     across every brand_scores column, which we map to brandScore: null
+    //     (distinct from brandScore: { overall: 0 }).
+    //
+    //  2. Latest-per-scan correlated subquery — a single scan can have N
+    //     brand_scores history rows (retag appends a new row every time,
+    //     Phase 18-04). The trend query wants ONE row per scan carrying the
+    //     latest score. We join against a subquery that picks the row with
+    //     the greatest rowid per scan_id, mirroring the Phase 16-02
+    //     repository rowid tie-breaker.
+    const sql = `
+      SELECT
+        s.*,
+        bs.overall           AS brand_overall,
+        bs.subscore_details  AS brand_subscore_details,
+        bs.unscorable_reason AS brand_unscorable_reason,
+        bs.coverage_profile  AS brand_coverage_profile,
+        bs.rowid             AS brand_row_id
+      FROM scan_records s
+      LEFT JOIN brand_scores bs
+        ON bs.scan_id = s.id
+       AND bs.rowid = (
+         SELECT MAX(rowid) FROM brand_scores
+         WHERE scan_id = s.id
+       )
+      ${where}
+      ORDER BY s.created_at ASC
+    `;
+
     const stmt = this.db.prepare(sql);
-    const rows = stmt.all(params) as ScanRow[];
-    return rows.map(rowToRecord);
+    const rows = stmt.all(params) as Array<ScanRow & {
+      brand_overall: number | null;
+      brand_subscore_details: string | null;
+      brand_unscorable_reason: string | null;
+      brand_coverage_profile: string | null;
+      brand_row_id: number | null;
+    }>;
+
+    return rows.map((row) => {
+      const base = rowToRecord(row);
+      // BSTORE-04: when the LEFT JOIN produced no brand_scores match for
+      // this scan, brand_row_id is NULL. That is the "not measured" case.
+      // The returned brandScore is literally null — not undefined, not
+      // { overall: 0 }, not NaN anywhere.
+      if (row.brand_row_id === null) {
+        return { ...base, brandScore: null };
+      }
+      const like: BrandScoreRowLike = {
+        overall: row.brand_overall,
+        subscore_details: row.brand_subscore_details,
+        unscorable_reason: row.brand_unscorable_reason,
+        coverage_profile: row.brand_coverage_profile,
+      };
+      const brandScore: ScoreResult = brandScoreRowToResult(like);
+      return { ...base, brandScore };
+    });
   }
 
   async getLatestPerSite(orgId: string): Promise<ScanRecord[]> {

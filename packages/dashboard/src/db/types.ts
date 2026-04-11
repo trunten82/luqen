@@ -14,6 +14,12 @@
 export type { PluginRecord, PluginType, PluginStatus } from '../plugins/types.js';
 
 // ---------------------------------------------------------------------------
+// Re-exports from scoring types (needed for ScanRecord.brandScore — Phase 18-05)
+// ---------------------------------------------------------------------------
+
+import type { ScoreResult } from '../services/scoring/types.js';
+
+// ---------------------------------------------------------------------------
 // Re-exports from manual criteria
 // ---------------------------------------------------------------------------
 
@@ -51,6 +57,24 @@ export interface ScanRecord {
   readonly brandingGuidelineId?: string;
   readonly brandingGuidelineVersion?: number;
   readonly brandRelatedCount?: number;
+  /**
+   * Phase 18-05: Latest brand_scores row for this scan, reconstructed as a
+   * Phase 15 ScoreResult tagged union. Populated ONLY by queries that opt
+   * into the brand_scores LEFT JOIN (currently getTrendData); direct
+   * getScan / listScans leave this field undefined.
+   *
+   * Semantics:
+   *   - undefined  → query did not join brand_scores (legacy call site)
+   *   - null       → LEFT JOIN matched no brand_scores row for this scan
+   *                  (pre-v2.11.0 scan, or a scan whose scorer produced
+   *                  nothing because the guideline was never applied).
+   *                  Distinct from `{ kind: 'unscorable' }` — "not measured"
+   *                  vs "measured and unscorable".
+   *   - ScoreResult → reconstructed tagged union (kind 'scored' or 'unscorable').
+   *
+   * Never 0, never NaN. BSTORE-04 regression is pinned on this type.
+   */
+  readonly brandScore?: ScoreResult | null;
 }
 
 export interface ScanFilters {
