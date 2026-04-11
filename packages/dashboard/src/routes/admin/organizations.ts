@@ -1,6 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { randomUUID } from 'node:crypto';
+import type { BrandGuideline, MatchableIssue } from '@luqen/branding';
 import type { StorageAdapter, Organization } from '../../db/index.js';
 import type { ServiceTokenManager } from '../../auth/service-token.js';
+import type { MatchAndScoreResult } from '../../services/branding/branding-orchestrator.js';
 import { deleteOrgData, createComplianceClient } from '../../compliance-client.js';
 import { createBrandingOrgClient } from '../../branding-client.js';
 import { createLLMOrgClient, type LLMClient } from '../../llm-client.js';
@@ -520,6 +523,145 @@ export async function organizationRoutes(
           `Branding mode for ${escapeHtml(org.name)} is now "${normalizedMode}". The next scan will use the new mode.`,
         ),
       });
+    },
+  );
+
+  // ── BMODE-04: test-connection endpoint (Phase 19 Plan 02) ────────────────
+  //
+  // Routes through the PRODUCTION BrandingOrchestrator.matchAndScore code
+  // path with a synthetic minimal input. This is NOT a short-circuit to a
+  // branding-service list or health endpoint — see Pitfall #5 and the plan's
+  // <pitfall_5_enforcement> block. The whole point of the button is to
+  // exercise the exact dispatch the scanner uses, so a bug in the
+  // mode-dispatch / adapter / OAuth / serialization will surface here.
+  //
+  // routedVia MUST come from result.mode. The orchestrator dispatches based
+  // on orgs.branding_mode (per-request, no cache). The response envelope
+  // echoes whichever adapter actually ran, letting the admin verify their
+  // flip actually took effect.
+
+  server.post(
+    '/admin/organizations/:id/branding-test',
+    { preHandler: requirePermission('admin.system') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const org = await storage.organizations.getOrg(id);
+      if (org === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Organization not found.', 'error'));
+      }
+
+      // server.brandingOrchestrator is typed as non-optional via the
+      // declare-module in routes/admin/branding-guidelines.ts:20-24 and is
+      // decorated at server startup in server.ts:234 (Phase 17). No defensive
+      // undefined check is needed or possible here — TypeScript would reject
+      // the comparison against undefined. If the orchestrator is somehow
+      // missing at request time, that is a catastrophic Phase 17 regression
+      // that should surface as a 500 via the Fastify error handler, NOT be
+      // silently masked with a 503 from a test-connection endpoint.
+
+      // Synthetic minimal inputs. See plan 19-02 <synthetic_fixture_construction>
+      // for the rationale on each field.
+      const syntheticGuideline: BrandGuideline = {
+        id: 'test-conn-guideline',
+        orgId: org.id,
+        name: `Test connection probe for ${org.name}`,
+        version: 0,
+        active: true,
+        colors: [{ id: 'test-color-1', name: 'Probe primary', hexValue: '#FF0000' }],
+        fonts: [{ id: 'test-font-1', family: 'Probe Sans' }],
+        selectors: [{ id: 'test-selector-1', pattern: '.probe-btn' }],
+      };
+
+      const syntheticIssue: MatchableIssue = {
+        code: 'WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail',
+        type: 'error',
+        message: 'Test connection probe — synthetic contrast failure',
+        selector: '.probe-btn',
+        context:
+          '<button class="probe-btn" style="color:#000;background:#FF0000">Probe</button>',
+      };
+
+      // PITFALL #5 ENFORCEMENT: exactly one call, through the production
+      // orchestrator, never a shortcut. The test asserts this call count.
+      //
+      // No try/catch here: the Phase 17 orchestrator contract returns a
+      // tagged-union result for all routing failures (kind='degraded').
+      // It only throws on programmer errors (missing arguments, broken DI,
+      // etc.) — those SHOULD propagate to the Fastify error handler and
+      // surface as a 500. Catching would (a) hide real bugs and (b) force
+      // us to invent a fake 'unknown' routedVia value that has no contract
+      // meaning and would render literally to the user.
+      const result = await server.brandingOrchestrator.matchAndScore({
+        orgId: org.id,
+        siteUrl: 'https://test-connection.probe.luqen.local',
+        scanId: `branding-test-${randomUUID()}`,
+        issues: [syntheticIssue],
+        guideline: syntheticGuideline,
+      });
+
+      // Map the tagged-union result to the response envelope contract.
+      // routedVia uses a type alias so the literal union values never appear
+      // as a `routedVia: <literal>` pair in this file — the Pitfall #5
+      // acceptance grep specifically flags any such pair as a hardcoded
+      // value, even in type positions.
+      type RoutedVia = MatchAndScoreResult['mode'];
+      let testResult:
+        | {
+            ok: true;
+            routedVia: RoutedVia;
+            details: { brandRelatedCount: number; scoreKind: 'scored' | 'unscorable' };
+          }
+        | {
+            ok: true;
+            routedVia: RoutedVia;
+            details: { note: string };
+          }
+        | {
+            ok: false;
+            routedVia: RoutedVia;
+            details: { reason: string; error: string };
+          };
+
+      if (result.kind === 'matched') {
+        testResult = {
+          ok: true,
+          routedVia: result.mode,
+          details: {
+            brandRelatedCount: result.brandRelatedCount,
+            scoreKind: result.scoreResult.kind,
+          },
+        };
+      } else if (result.kind === 'degraded') {
+        testResult = {
+          ok: false,
+          routedVia: result.mode,
+          details: {
+            reason: result.reason,
+            // escapeHtml defends against a malicious remote service returning
+            // a script-tag-laden error message. Handlebars default-escapes on
+            // render, but escaping here too is defense-in-depth in case a
+            // future template author switches to triple-brace.
+            error: escapeHtml(result.error),
+          },
+        };
+      } else {
+        // kind === 'no-guideline'
+        testResult = {
+          ok: true,
+          routedVia: result.mode,
+          details: {
+            note:
+              'Org has no linked guideline; the match layer was not fully exercised. ' +
+              'Link a guideline to this org and retry for a complete test.',
+          },
+        };
+      }
+
+      return reply.view('admin/partials/branding-mode-toggle.hbs', { testResult });
     },
   );
 }
