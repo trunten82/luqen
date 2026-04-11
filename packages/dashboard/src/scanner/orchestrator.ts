@@ -9,6 +9,8 @@ import type { PluginManager } from '../plugins/manager.js';
 import type { NotificationPlugin, LuqenEvent } from '../plugins/types.js';
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
 import type { BrandScoreRepository } from '../db/interfaces/brand-score-repository.js';
+import type { ScoreResult } from '../services/scoring/types.js';
+import type { BrandGuideline } from '@luqen/branding';
 
 export interface ScanProgressEvent {
   readonly type: 'discovery' | 'scan_start' | 'scan_complete' | 'scan_error' | 'compliance' | 'complete' | 'failed';
@@ -117,10 +119,9 @@ export interface OrchestratorOptions {
   /** Optional plugin manager for org-scoped plugin hooks on scan events. */
   readonly pluginManager?: PluginManager;
   /**
-   * Phase 18: dual-mode branding orchestrator. When supplied, the scanner will
-   * call its match-and-score entry point instead of the legacy inline
-   * BrandingMatcher block (the inline block is still present in Phase 18-02
-   * and gets replaced in Phase 18-03). Must be constructor-injected; do NOT
+   * Phase 18: dual-mode branding orchestrator. When supplied, the scanner
+   * calls its match-and-score entry point inside runScan to produce brand
+   * enrichment + a scored ScoreResult. Must be constructor-injected; do NOT
    * pull from Fastify decorators inside runScan.
    */
   readonly brandingOrchestrator?: BrandingOrchestrator;
@@ -164,13 +165,6 @@ export class ScanOrchestrator {
     this.pluginManager = opts.pluginManager;
     this.brandingOrchestrator = opts.brandingOrchestrator;
     this.brandScoreRepository = opts.brandScoreRepository;
-    // Plumbing-only refactor (Plan 18-02): these fields are assigned here and
-    // consumed in Plan 18-03 (scanner rewire). Mark as intentionally
-    // assigned-but-not-yet-read so `noUnusedLocals` / `noUnusedParameters`
-    // (if enabled) do not flag them. `void` is the correct escape hatch —
-    // NOT `@ts-expect-error`, which only suppresses errors that WILL fire.
-    void this.brandingOrchestrator;
-    void this.brandScoreRepository;
   }
 
   emit(scanId: string, event: ScanProgressEvent): void {
@@ -569,75 +563,206 @@ export class ScanOrchestrator {
         }
       }
 
-      // ── Branding enrichment (no-op if no guideline assigned) ────────────
+      // ── Branding orchestrator dispatch (Phase 18 rewire) ─────────────────
+      //
+      // Replaces the former inline branding enrichment block. Calls the
+      // Phase 17 BrandingOrchestrator exactly ONCE per scan (Pitfall #10:
+      // one match call, never two), then dispatches on the tagged-union
+      // result:
+      //   - matched: enrich display + persist ScoreResult (BSTORE-02)
+      //   - degraded: persist unscorable row with mode tag (non-blocking)
+      //   - no-guideline: no persistence (absence of row is the signal)
+      //
+      // Scoring persistence failure is non-blocking — inner try/catch ensures
+      // scan completion proceeds even if brandScoreRepository.insert throws.
       let brandRelatedCount = 0;
       let brandingGuidelineId: string | undefined;
       let brandingGuidelineVersion: number | undefined;
 
-      try {
-        const brandGuideline = await this.storage.branding.getGuidelineForSite(
-          config.siteUrl,
-          config.orgId ?? 'system',
-        );
+      if (this.brandingOrchestrator !== undefined && this.brandScoreRepository !== undefined) {
+        try {
+          // Resolve the dashboard's guideline record (same call the inline
+          // block made — storage.branding owns this lookup).
+          const brandGuideline = await this.storage.branding.getGuidelineForSite(
+            config.siteUrl,
+            config.orgId ?? 'system',
+          );
 
-        if (brandGuideline?.active && brandGuideline.colors && brandGuideline.fonts && brandGuideline.selectors) {
-          const { BrandingMatcher } = await import('@luqen/branding');
-          const matcher = new BrandingMatcher();
-          const branded = matcher.match(allIssues as ReadonlyArray<{ readonly code: string; readonly type: 'error' | 'warning' | 'notice'; readonly message: string; readonly selector: string; readonly context: string }>, {
-            id: brandGuideline.id,
-            orgId: brandGuideline.orgId,
-            name: brandGuideline.name,
-            version: brandGuideline.version,
-            active: brandGuideline.active,
-            colors: brandGuideline.colors.map(c => ({
-              id: c.id, name: c.name, hexValue: c.hexValue,
-              ...(c.usage ? { usage: c.usage as any } : {}),
-              ...(c.context ? { context: c.context } : {}),
-            })),
-            fonts: brandGuideline.fonts.map(f => ({
-              id: f.id, family: f.family,
-              ...(f.weights ? { weights: f.weights } : {}),
-              ...(f.usage ? { usage: f.usage as any } : {}),
-              ...(f.context ? { context: f.context } : {}),
-            })),
-            selectors: brandGuideline.selectors.map(s => ({
-              id: s.id, pattern: s.pattern,
-              ...(s.description ? { description: s.description } : {}),
-            })),
-          });
-
-          // Enrich page issues with branding tags
-          for (const page of reportData.pages as Array<{ issues: Array<Record<string, unknown>> }>) {
-            for (let i = 0; i < page.issues.length; i++) {
-              const match = branded.find(
-                (b) => b.issue.code === page.issues[i].code &&
-                       b.issue.selector === page.issues[i].selector &&
-                       b.issue.context === page.issues[i].context,
-              );
-              if (match?.brandMatch.matched) {
-                (page.issues[i] as Record<string, unknown>).brandMatch = match.brandMatch;
-                brandRelatedCount++;
-              }
-            }
+          // Project the dashboard guideline record into the @luqen/branding
+          // BrandGuideline shape. Same projection the inline block did. If
+          // the guideline is inactive or missing colors/fonts/selectors, pass
+          // `null` and let the orchestrator short-circuit to `no-guideline`.
+          //
+          // IMPORTANT: bind the narrowed non-nullable to `liveGuideline`
+          // inside the branch so later references do not need `brandGuideline!`
+          // non-null assertions (WARN-4 in 18-CHECK.md). If a future change
+          // relaxes the narrowing condition, the regression surfaces as a
+          // type error at the binding site rather than a silent runtime NPE.
+          let liveGuideline: NonNullable<typeof brandGuideline> | null = null;
+          let orchestratorGuideline: BrandGuideline | null = null;
+          if (brandGuideline?.active && brandGuideline.colors && brandGuideline.fonts && brandGuideline.selectors) {
+            // Use the locally-narrowed `brandGuideline` inside this block —
+            // TypeScript cannot carry the colors/fonts/selectors narrowings
+            // through a `liveGuideline = brandGuideline` alias, so we capture
+            // the alias ONLY for later use (id / name / version / active,
+            // which are unconditionally non-null) and build the projection
+            // from the original narrowed binding.
+            liveGuideline = brandGuideline;
+            orchestratorGuideline = {
+              id: brandGuideline.id,
+              orgId: brandGuideline.orgId,
+              name: brandGuideline.name,
+              version: brandGuideline.version,
+              active: brandGuideline.active,
+              colors: brandGuideline.colors.map((c) => ({
+                id: c.id,
+                name: c.name,
+                hexValue: c.hexValue,
+                ...(c.usage ? { usage: c.usage as any } : {}),
+                ...(c.context ? { context: c.context } : {}),
+              })),
+              fonts: brandGuideline.fonts.map((f) => ({
+                id: f.id,
+                family: f.family,
+                ...(f.weights ? { weights: f.weights } : {}),
+                ...(f.usage ? { usage: f.usage as any } : {}),
+                ...(f.context ? { context: f.context } : {}),
+              })),
+              selectors: brandGuideline.selectors.map((s) => ({
+                id: s.id,
+                pattern: s.pattern,
+                ...(s.description ? { description: s.description } : {}),
+              })),
+            };
           }
 
-          brandingGuidelineId = brandGuideline.id;
-          brandingGuidelineVersion = brandGuideline.version;
-          reportData.branding = {
-            guidelineId: brandGuideline.id,
-            guidelineName: brandGuideline.name,
-            guidelineVersion: brandGuideline.version,
-            brandRelatedCount,
-          };
+          // INVARIANT: one match call per scan. Never two. Pitfall #10.
+          const result = await this.brandingOrchestrator.matchAndScore({
+            orgId: config.orgId ?? 'system',
+            siteUrl: config.siteUrl,
+            scanId,
+            issues: allIssues as ReadonlyArray<{
+              readonly code: string;
+              readonly type: 'error' | 'warning' | 'notice';
+              readonly message: string;
+              readonly selector: string;
+              readonly context: string;
+            }>,
+            guideline: orchestratorGuideline,
+          });
+
+          if (result.kind === 'matched') {
+            // Enrich page issues with brandMatch (preserves display behavior
+            // from the former inline loop).
+            for (const page of reportData.pages as Array<{ issues: Array<Record<string, unknown>> }>) {
+              for (let i = 0; i < page.issues.length; i++) {
+                const match = result.brandedIssues.find(
+                  (b) =>
+                    b.issue.code === page.issues[i].code &&
+                    b.issue.selector === page.issues[i].selector &&
+                    b.issue.context === page.issues[i].context,
+                );
+                if (match?.brandMatch.matched) {
+                  (page.issues[i] as Record<string, unknown>).brandMatch = match.brandMatch;
+                }
+              }
+            }
+
+            // INVARIANT: if the orchestrator returned a matched result, it
+            // received a non-null guideline, which means `liveGuideline` was
+            // set above. Explicit invariant check rather than a `!` assertion.
+            if (!liveGuideline) {
+              throw new Error('[branding] matched result with null liveGuideline — invariant violation');
+            }
+            brandRelatedCount = result.brandRelatedCount;
+            brandingGuidelineId = liveGuideline.id;
+            brandingGuidelineVersion = liveGuideline.version;
+            reportData.branding = {
+              guidelineId: liveGuideline.id,
+              guidelineName: liveGuideline.name,
+              guidelineVersion: liveGuideline.version,
+              brandRelatedCount,
+            };
+
+            // Persist the ScoreResult via append-only brand_scores. Non-blocking.
+            try {
+              await this.brandScoreRepository.insert(result.scoreResult, {
+                scanId,
+                orgId: config.orgId ?? 'system',
+                siteUrl: config.siteUrl,
+                guidelineId: liveGuideline.id,
+                guidelineVersion: liveGuideline.version,
+                mode: result.mode,
+                brandRelatedCount,
+                totalIssues: allIssues.length,
+              });
+            } catch (scoreErr) {
+              // Non-blocking: scoring persistence failure must never fail the scan.
+              console.error('[branding] brand_scores insert failed:', scoreErr);
+              emit({
+                type: 'scan_error',
+                timestamp: new Date().toISOString(),
+                data: { error: `brand_scores insert failed: ${String(scoreErr)}` },
+              });
+            }
+          } else if (result.kind === 'degraded') {
+            // Degraded result: the orchestrator tried to run (embedded or
+            // remote) and hit a failure. We STILL persist a row so the trend
+            // shows a dashed segment rather than a gap (PITFALLS.md #6 —
+            // no silent cross-route; the failure is recorded, not erased).
+            // Phase 15 UnscorableReason does not currently have a
+            // 'service-degraded' literal; 'no-branded-issues' is the closest
+            // existing variant. Phase 20 UI renders any unscorable row with
+            // an empty-state panel regardless of reason.
+            const degradedScore: ScoreResult = {
+              kind: 'unscorable',
+              reason: 'no-branded-issues',
+            };
+
+            brandingGuidelineId = brandGuideline?.id;
+            brandingGuidelineVersion = brandGuideline?.version;
+
+            emit({
+              type: 'scan_error',
+              timestamp: new Date().toISOString(),
+              data: { error: `Branding degraded (${result.mode}/${result.reason}): ${result.error}` },
+            });
+
+            try {
+              await this.brandScoreRepository.insert(degradedScore, {
+                scanId,
+                orgId: config.orgId ?? 'system',
+                siteUrl: config.siteUrl,
+                ...(brandGuideline?.id !== undefined ? { guidelineId: brandGuideline.id } : {}),
+                ...(brandGuideline?.version !== undefined ? { guidelineVersion: brandGuideline.version } : {}),
+                mode: result.mode,
+                brandRelatedCount: 0,
+                totalIssues: allIssues.length,
+              });
+            } catch (scoreErr) {
+              console.error('[branding] brand_scores insert failed (degraded path):', scoreErr);
+              emit({
+                type: 'scan_error',
+                timestamp: new Date().toISOString(),
+                data: { error: `brand_scores insert failed: ${String(scoreErr)}` },
+              });
+            }
+          } else {
+            // result.kind === 'no-guideline'
+            // Absence of a brand_scores row is the signal for "not measured".
+            // DO NOT insert anything. Pre-v2.11.0 scans fall into the same
+            // bucket so Phase 20 UI renders the same empty-state panel for both.
+          }
+        } catch (brandingErr) {
+          // Outer catch: failure BEFORE matchAndScore returned (e.g. guideline
+          // lookup threw, orchestrator threw a non-tagged error). Non-fatal.
+          console.error('[branding] enrichment failed:', brandingErr);
+          emit({
+            type: 'scan_error',
+            timestamp: new Date().toISOString(),
+            data: { error: `Branding enrichment failed: ${String(brandingErr)}` },
+          });
         }
-      } catch (brandingErr) {
-        // Non-fatal — branding enrichment failure doesn't fail the scan
-        console.error('[branding] enrichment failed:', brandingErr);
-        emit({
-          type: 'scan_error',
-          timestamp: new Date().toISOString(),
-          data: { error: `Branding enrichment failed: ${String(brandingErr)}` },
-        });
       }
 
       const reportJson = JSON.stringify(reportData, null, 2);
