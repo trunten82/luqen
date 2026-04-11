@@ -7,7 +7,7 @@
 ## Phases
 
 - [x] **Phase 15: Scoring Model & Contract** — Pure calculator, WCAG math utility, locked weights, tagged-union score type (completed 2026-04-10)
-- [ ] **Phase 16: Persistence Layer** — brand_scores schema + per-org branding mode column + repository APIs
+- [x] **Phase 16: Persistence Layer** — brand_scores schema + per-org branding mode column + repository APIs (completed 2026-04-11)
 - [ ] **Phase 17: Branding Orchestrator** — Dual-mode (embedded/remote) orchestrator invoking calculator, returning unified result
 - [ ] **Phase 18: Scanner Wire-Up** — Scanner calls orchestrator, persists scores, preserves backwards compatibility
 - [ ] **Phase 19: Admin UI (Mode Toggle)** — Per-org toggle between embedded and remote branding with calibration check
@@ -43,7 +43,7 @@
   4. `OrgRepository` gains `getBrandingMode(orgId): 'embedded' | 'remote'` and `setBrandingMode(orgId, mode)` — literal types, no caching layer (matches PROJECT.md decision: per-request reads, never cached)
   5. Phase 16 is migration + repository only — no scanner/orchestrator/UI is wired in this phase; the existing dashboard test suite passes unchanged after migration runs
 **Plans**: 3 plans
-  - [ ] 16-01-PLAN.md — Migration 043: brand_scores table + indexes + organizations.branding_mode (atomic) + PRAGMA-introspection test [Wave 1]
-  - [ ] 16-02-PLAN.md — BrandScoreRepository interface + SQLite impl + StorageAdapter wiring + ScoreResult round-trip tests [Wave 2]
-  - [ ] 16-03-PLAN.md — OrgRepository.getBrandingMode/setBrandingMode extension + Organization.brandingMode domain field + round-trip tests [Wave 2]
+  - [x] 16-01-PLAN.md — Migration 043: brand_scores table + indexes + organizations.branding_mode (atomic) + PRAGMA-introspection test [Wave 1]
+  - [x] 16-02-PLAN.md — BrandScoreRepository interface + SQLite impl + StorageAdapter wiring + ScoreResult round-trip tests [Wave 2]
+  - [x] 16-03-PLAN.md — OrgRepository.getBrandingMode/setBrandingMode extension + Organization.brandingMode domain field + round-trip tests [Wave 2]
 
