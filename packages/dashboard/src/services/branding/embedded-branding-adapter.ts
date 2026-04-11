@@ -7,10 +7,10 @@
  * captures THAT logic — nothing more — behind the typed interface.
  *
  * Key differences from the inline path:
- *   1. Static import of BrandingMatcher (was dynamic `await import(...)`).
- *      Static import lets the bundler/typechecker see the dependency, makes
- *      tests trivially mockable, and removes the per-scan dynamic-import
- *      overhead.
+ *   1. Static import of BrandingMatcher (was a per-call dynamic import()
+ *      in the inline path). Static import lets the bundler/typechecker
+ *      see the dependency, makes tests trivially mockable, and removes
+ *      the per-scan dynamic-import overhead.
  *   2. Caller (the orchestrator in Plan 17-03) is responsible for resolving
  *      the BrandGuideline. This adapter does NOT call
  *      `storage.branding.getGuidelineForSite` — keeping I/O concerns out of
