@@ -32,3 +32,15 @@
   - [x] 15-03-PLAN.md — Sub-score calculators (color pass ratio, typography 3-heuristic mean, token set-diff with bounded ReDoS-safe regex) [Wave 3]
   - [x] 15-04-PLAN.md — Composite calculator entry point (calculateBrandScore with renormalization, all 6 UnscorableReasons covered, all 4 composite paths tested) [Wave 4]
 
+### Phase 16: Persistence Layer
+**Goal**: Dashboard has a typed `brand_scores` repository persisting append-only score rows plus a per-org `branding_mode` column, both delivered by an atomic migration 043 — preserving the "not measured vs scored zero" distinction at the schema level
+**Depends on**: Phase 15 (consumes `ScoreResult`/`SubScore`/`CoverageProfile`/`UnscorableReason` types)
+**Requirements**: BSTORE-01
+**Success Criteria** (what must be TRUE):
+  1. Migration 043 atomically creates the `brand_scores` table, its two indexes (`idx_brand_scores_scan`, `idx_brand_scores_org_site`), and the `organizations.branding_mode` column (default `'embedded'`) in a single transaction — either all of it lands or none of it does
+  2. `brand_scores` schema preserves "not measured vs scored zero": score columns (`overall`, `color_contrast`, `typography`, `components`) are NULLable INTEGER, `coverage_profile` is non-null TEXT (JSON), `unscorable_reason` is nullable TEXT, plus `mode` ('embedded'|'remote'), `brand_related_count`, `total_issues`, `computed_at`
+  3. `BrandScoreRepository` exposes typed `insert(scoreResult, scanContext)`, `getLatestForScan(scanId)`, and `getHistoryForSite(orgId, siteUrl, limit)` methods — consumes Phase 15 `ScoreResult` on write and returns `ScoreResult` on read, with no `number | null` leakage across the boundary
+  4. `OrgRepository` gains `getBrandingMode(orgId): 'embedded' | 'remote'` and `setBrandingMode(orgId, mode)` — literal types, no caching layer (matches PROJECT.md decision: per-request reads, never cached)
+  5. Phase 16 is migration + repository only — no scanner/orchestrator/UI is wired in this phase; the existing dashboard test suite passes unchanged after migration runs
+**Plans**: TBD (populated by planner)
+
