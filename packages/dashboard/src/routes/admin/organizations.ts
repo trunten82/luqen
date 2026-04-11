@@ -413,4 +413,113 @@ export async function organizationRoutes(
       }
     },
   );
+
+  // ── BMODE-03: per-org branding mode toggle (Phase 19 Plan 01) ─────────────
+  //
+  // GET  → render the mode toggle partial (form view for admin users).
+  // POST → two-step confirmation: without `_confirm=yes` returns the confirm
+  //        modal fragment; with `_confirm=yes` persists via
+  //        OrgRepository.setBrandingMode and re-renders the form partial.
+  //
+  // Permission: see phase 19 plan 01 `<permission_decision>` — admin.system
+  // (same as all other /admin/organizations/* mutations; documented
+  // precedent in service-connections.ts file header).
+  //
+  // CSRF: enforced by the global preHandler hook in server.ts — no opt-out.
+  // No caching anywhere: storage.organizations.getBrandingMode is called on
+  // every GET/POST so a flip takes effect on the next scan with zero
+  // invalidation logic (PROJECT.md decision).
+
+  server.get(
+    '/admin/organizations/:id/branding-mode',
+    { preHandler: requirePermission('admin.system') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const org = await storage.organizations.getOrg(id);
+      if (org === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Organization not found.', 'error'));
+      }
+
+      const currentMode = await storage.organizations.getBrandingMode(id);
+
+      return reply.view('admin/partials/branding-mode-toggle.hbs', {
+        mode: 'form',
+        org,
+        currentMode,
+      });
+    },
+  );
+
+  server.post(
+    '/admin/organizations/:id/branding-mode',
+    { preHandler: requirePermission('admin.system') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { mode?: string; _confirm?: string };
+
+      const org = await storage.organizations.getOrg(id);
+      if (org === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Organization not found.', 'error'));
+      }
+
+      // Normalize: `mode=default` means reset to schema default = 'embedded'.
+      const rawMode = body.mode?.trim() ?? '';
+      const normalizedMode: 'embedded' | 'remote' | null =
+        rawMode === 'default' || rawMode === 'embedded'
+          ? 'embedded'
+          : rawMode === 'remote'
+            ? 'remote'
+            : null;
+
+      if (normalizedMode === null) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Branding mode must be embedded, remote, or default.', 'error'));
+      }
+
+      // Step 1 of two-step confirmation: if _confirm is not present, render
+      // the confirmation modal and STOP. Do not touch the DB.
+      if (body._confirm !== 'yes') {
+        const currentMode = await storage.organizations.getBrandingMode(id);
+        return reply.view('admin/partials/branding-mode-toggle.hbs', {
+          mode: 'confirm',
+          org,
+          pendingMode: normalizedMode,
+          currentMode,
+        });
+      }
+
+      // Step 2: persist + render updated form partial + OOB toast.
+      try {
+        await storage.organizations.setBrandingMode(id, normalizedMode);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to update branding mode';
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(toastHtml(message, 'error'));
+      }
+
+      // Re-render the form partial — client sees the updated radio selection
+      // without a round-trip GET. Append an OOB toast so HTMX shows a success
+      // banner in the toast-container (same pattern as org create/delete).
+      return reply.view('admin/partials/branding-mode-toggle.hbs', {
+        mode: 'form',
+        org,
+        currentMode: normalizedMode,
+        trailingToast: toastHtml(
+          `Branding mode for ${escapeHtml(org.name)} is now "${normalizedMode}". The next scan will use the new mode.`,
+        ),
+      });
+    },
+  );
 }
