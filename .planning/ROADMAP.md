@@ -10,7 +10,7 @@
 - [x] **Phase 16: Persistence Layer** — brand_scores schema + per-org branding mode column + repository APIs (completed 2026-04-11)
 - [x] **Phase 17: Branding Orchestrator** — Dual-mode (embedded/remote) orchestrator invoking calculator, returning unified result (completed 2026-04-11)
 - [x] **Phase 18: Scanner Wire-Up** — Scanner calls orchestrator, persists scores, preserves backwards compatibility (completed 2026-04-11)
-- [ ] **Phase 19: Admin UI (Mode Toggle)** — Per-org toggle between embedded and remote branding with calibration check
+- [x] **Phase 19: Admin UI (Mode Toggle)** — Per-org toggle between embedded and remote branding with calibration check (completed 2026-04-11)
 - [ ] **Phase 20: Report Panel** — Per-scan brand score panel on scan report
 - [ ] **Phase 21: Dashboard Widget** — Org-level brand intelligence card on dashboard homepage
 
