@@ -420,7 +420,13 @@ export async function brandingApiRoutes(
         return reply.code(400).send({ error: 'siteUrl is required' });
       }
 
-      const result = await retagScansForSite(storage, siteUrl.trim(), orgId);
+      const result = await retagScansForSite(
+        storage,
+        siteUrl.trim(),
+        orgId,
+        server.brandingOrchestrator,
+        storage.brandScores,
+      );
       return reply.header('content-type', 'application/json').send({ data: result });
     },
   );

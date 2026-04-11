@@ -21,6 +21,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { SqliteBrandingRepository } from '../../src/db/sqlite/repositories/branding-repository.js';
 import { retagAllSitesForGuideline } from '../../src/services/branding-retag.js';
+import { makeRetagDeps } from './helpers/branding-retag-deps.js';
 
 // ---------------------------------------------------------------------------
 // Harness
@@ -148,7 +149,7 @@ describe('BRT-01 — discover-branding retag pipeline', () => {
     });
 
     // Invoke retag (the call that the discover-branding endpoint must make)
-    const { totalRetagged } = await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    const { totalRetagged } = await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
 
     // Verify retag processed at least the one scan
     expect(totalRetagged).toBeGreaterThanOrEqual(1);
@@ -188,10 +189,10 @@ describe('BRT-01 — discover-branding retag pipeline', () => {
     // retagScansForSite checks active+colors+fonts+selectors and returns 0
     // when any of those are missing. This is the "no signals" fast-exit.
     await expect(
-      retagAllSitesForGuideline(storage, guidelineId, orgId),
+      retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository),
     ).resolves.not.toThrow();
 
-    const result = await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    const result = await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
     expect(result.totalRetagged).toBe(0);
   });
 
@@ -209,7 +210,7 @@ describe('BRT-01 — discover-branding retag pipeline', () => {
       usage: 'brand',
     });
 
-    await retagAllSitesForGuideline(storage, guidelineId, orgId);
+    await retagAllSitesForGuideline(storage, guidelineId, orgId, makeRetagDeps(storage).brandingOrchestrator, makeRetagDeps(storage).brandScoreRepository);
 
     const updatedScan = await storage.scans.getScan(scanId);
     expect(updatedScan).not.toBeNull();
