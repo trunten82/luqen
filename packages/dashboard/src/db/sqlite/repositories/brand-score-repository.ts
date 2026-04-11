@@ -9,8 +9,8 @@ import type {
   ScoreResult,
   SubScore,
   CoverageProfile,
-  UnscorableReason,
 } from '../../../services/scoring/types.js';
+import { brandScoreRowToResult } from './brand-score-row-mapper.js';
 
 // ---------------------------------------------------------------------------
 // Private row type — mirrors brand_scores column layout from migration 043
@@ -48,69 +48,10 @@ const UNSCORABLE_COVERAGE_PROFILE: CoverageProfile = {
 };
 
 // ---------------------------------------------------------------------------
-// UnscorableReason literal whitelist (D-15 — defensive guard against schema
-// drift; the SQLite column is plain TEXT so a bad write would otherwise be
-// silently round-tripped)
+// Row -> ScoreResult mapping is imported from brand-score-row-mapper.ts
+// (Phase 18-05 — extracted so the scan-repository LEFT JOIN trend path uses
+// the exact same reconstruction logic. See that file for D-13 / D-15 notes.)
 // ---------------------------------------------------------------------------
-
-const KNOWN_UNSCORABLE_REASONS: ReadonlySet<UnscorableReason> = new Set<UnscorableReason>([
-  'no-guideline',
-  'empty-guideline',
-  'no-branded-issues',
-  'no-typography-data',
-  'no-component-tokens',
-  'all-subs-unscorable',
-]);
-
-function assertUnscorableReason(value: string | null): UnscorableReason {
-  if (value === null) {
-    throw new Error('brand_scores row has NULL score columns but NULL unscorable_reason');
-  }
-  if (!KNOWN_UNSCORABLE_REASONS.has(value as UnscorableReason)) {
-    throw new Error(`brand_scores row has unknown unscorable_reason: ${value}`);
-  }
-  return value as UnscorableReason;
-}
-
-// ---------------------------------------------------------------------------
-// Row -> ScoreResult mapping
-// ---------------------------------------------------------------------------
-
-function rowToScoreResult(row: BrandScoreRow): ScoreResult {
-  // A row is a top-level "scored" ScoreResult iff `overall` AND `subscore_details`
-  // are both non-null. The per-dimension score columns (color_contrast, typography,
-  // components) are denormalized caches of `subscore_details.*.value` for the
-  // scored-sub case and are legitimately NULL when a nested sub-score is itself
-  // unscorable (Phase 15 D-13 — the discriminated-union `SubScore` allows any
-  // dimension to be unscorable inside an otherwise scored top-level result).
-  // `subscore_details` is the authoritative per-dimension source on read.
-  const isTopLevelScored = row.overall !== null && row.subscore_details !== null;
-
-  if (!isTopLevelScored) {
-    return {
-      kind: 'unscorable',
-      reason: assertUnscorableReason(row.unscorable_reason),
-    };
-  }
-
-  // Type-narrowing assertions (already proven by the conjunction above)
-  const overall = row.overall as number;
-  const subscoreDetails = JSON.parse(row.subscore_details as string) as {
-    color: SubScore;
-    typography: SubScore;
-    components: SubScore;
-  };
-  const coverage = JSON.parse(row.coverage_profile) as CoverageProfile;
-
-  return {
-    kind: 'scored',
-    overall,
-    color: subscoreDetails.color,
-    typography: subscoreDetails.typography,
-    components: subscoreDetails.components,
-    coverage,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // ScoreResult -> row column values mapping
@@ -234,7 +175,7 @@ export class SqliteBrandScoreRepository implements BrandScoreRepository {
     if (row === undefined) {
       return null;
     }
-    return rowToScoreResult(row);
+    return brandScoreRowToResult(row);
   }
 
   async getHistoryForSite(
@@ -247,7 +188,7 @@ export class SqliteBrandScoreRepository implements BrandScoreRepository {
       .all(orgId, siteUrl, limit) as BrandScoreRow[];
     return rows.map((row) => ({
       computedAt: row.computed_at,
-      result: rowToScoreResult(row),
+      result: brandScoreRowToResult(row),
     }));
   }
 }
