@@ -61,3 +61,15 @@
   - [x] 17-01-PLAN.md — BrandingAdapter interface + EmbeddedBrandingAdapter (refactor of in-process matcher path) + contract test [Wave 1]
   - [x] 17-02-PLAN.md — RemoteBrandingAdapter wrapping dormant BrandingService + type-guard validation + RemoteBrandingMalformedError + 10 request/response/error tests [Wave 2]
   - [x] 17-03-PLAN.md — BrandingOrchestrator (per-request mode read, no-cross-route fallback, calculator wiring) + server.ts DI wiring + 10 unit tests + UAT-17-01 branding service liveness checkpoint [Wave 3]
+
+### Phase 18: Scanner Wire-Up
+**Goal**: Scanner and retag pipeline call the Phase 17 `BrandingOrchestrator` exactly once per scan, persist the resulting `ScoreResult` via the Phase 16 `BrandScoreRepository` (append-only, retag produces N+1 rows), preserve backwards-compatibility via LEFT JOIN trend queries for pre-v2.11.0 scans, and hold scan-completion latency within 15% of the current baseline
+**Depends on**: Phase 15 (calculator), Phase 16 (BrandScoreRepository + Organization.brandingMode), Phase 17 (BrandingOrchestrator.matchAndScore)
+**Requirements**: BSTORE-02, BSTORE-03, BSTORE-04, BSTORE-06
+**Success Criteria** (what must be TRUE):
+  1. `scanner/orchestrator.ts` calls `brandingOrchestrator.matchAndScore()` exactly once per scan (replacing the inlined branding matcher path at lines 541-594) — one match call per scan, never two (Pitfall #10)
+  2. `services/branding-retag.ts` calls `brandingOrchestrator.matchAndScore()` the same way; retagging an existing scan produces a NEW `brand_scores` row, never UPDATEs a prior row (append-only contract from Phase 16)
+  3. Every completed scan writes exactly one `brand_scores` row via `BrandScoreRepository.insert()` — including the `scored`, `degraded`, and `no-guideline` tagged-union variants. Scoring failure is non-blocking: if persistence throws, the scan still completes (v2.9.0 retag pattern).
+  4. Trend queries for pre-v2.11.0 scans use `LEFT JOIN brand_scores ON …` with explicit NULL handling — pre-v2.11.0 scans render as empty-state, never as fabricated `0` (BSTORE-04, BSTORE-06). A regression test opens a scan from before migration 043 applied and asserts no `undefined` / `NaN%` / broken shape leaks through.
+  5. Scan-completion latency baseline is measured BEFORE the rewire (4 sites × 3 runs each, warm cache) and AFTER the rewire on the same sites; the AFTER median must be within 15% of the BEFORE median. Both numbers and the methodology are captured in the phase SUMMARY.
+**Plans**: TBD (populated by planner)
