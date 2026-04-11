@@ -1153,4 +1153,34 @@ ALTER TABLE api_keys ADD COLUMN expires_at TEXT;
 CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at) WHERE expires_at IS NOT NULL;
     `,
   },
+  {
+    id: '043',
+    name: 'brand-scores-and-org-branding-mode',
+    sql: `
+CREATE TABLE IF NOT EXISTS brand_scores (
+  id TEXT PRIMARY KEY,
+  scan_id TEXT NOT NULL REFERENCES scan_records(id) ON DELETE CASCADE,
+  org_id TEXT NOT NULL,
+  site_url TEXT NOT NULL,
+  guideline_id TEXT,
+  guideline_version INTEGER,
+  overall INTEGER,
+  color_contrast INTEGER,
+  typography INTEGER,
+  components INTEGER,
+  coverage_profile TEXT NOT NULL,
+  subscore_details TEXT,
+  unscorable_reason TEXT,
+  brand_related_count INTEGER NOT NULL DEFAULT 0,
+  total_issues INTEGER NOT NULL DEFAULT 0,
+  mode TEXT NOT NULL CHECK (mode IN ('embedded','remote')),
+  computed_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_brand_scores_scan ON brand_scores(scan_id);
+CREATE INDEX IF NOT EXISTS idx_brand_scores_org_site ON brand_scores(org_id, site_url, computed_at);
+
+ALTER TABLE organizations
+  ADD COLUMN branding_mode TEXT NOT NULL DEFAULT 'embedded';
+    `,
+  },
 ];
