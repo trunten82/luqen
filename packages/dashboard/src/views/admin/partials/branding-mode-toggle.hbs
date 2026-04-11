@@ -1,0 +1,97 @@
+{{!--
+  branding-mode-toggle.hbs — BMODE-03 per-org branding mode toggle partial.
+
+  Rendered by GET /admin/organizations/:id/branding-mode (mode='form')
+  and as the HTMX response to POST without _confirm (mode='confirm').
+
+  Shapes:
+    - { mode: 'form', org, currentMode, csrfToken }      — admin edit
+    - { mode: 'confirm', org, pendingMode, currentMode, csrfToken }  — step 1 modal
+
+  Non-admins are blocked by requirePermission('admin.system') server-side and
+  never reach this partial. A view-only permission tier is a v2.12.0+ followup.
+
+  CSS classes are ALL reused from existing partials (card/status-indicator/btn) —
+  no new classes introduced. Status badge classes match System Health to support
+  BUI-04 parity.
+--}}
+<div id="branding-mode-toggle" class="card">
+  <div class="card__header">
+    <h2 class="card__title">{{t "admin.org.brandingMode.title"}}</h2>
+  </div>
+
+  <div class="card__body">
+    {{#if (eq mode "form")}}
+      {{!-- Admin: full form. --}}
+      <form hx-post="/admin/organizations/{{org.id}}/branding-mode"
+            hx-target="#branding-mode-toggle"
+            hx-swap="outerHTML"
+            aria-label="Branding mode toggle form">
+        <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+        <fieldset class="fieldset">
+          <legend>{{t "admin.org.brandingMode.selectLegend"}}</legend>
+
+          <label class="radio">
+            <input type="radio" name="mode" value="embedded"
+                   {{#if (eq currentMode 'embedded')}}checked{{/if}}>
+            <span>{{t "admin.org.brandingMode.embedded.label"}}</span>
+            <small class="text-muted">{{t "admin.org.brandingMode.embedded.hint"}}</small>
+          </label>
+
+          <label class="radio">
+            <input type="radio" name="mode" value="remote"
+                   {{#if (eq currentMode 'remote')}}checked{{/if}}>
+            <span>{{t "admin.org.brandingMode.remote.label"}}</span>
+            <small class="text-muted">{{t "admin.org.brandingMode.remote.hint"}}</small>
+          </label>
+        </fieldset>
+
+        <div class="form-actions" style="display:flex;gap:0.75rem;margin-top:1rem;">
+          <button type="submit" class="btn btn--primary">
+            {{t "admin.org.brandingMode.changeButton"}}
+          </button>
+          <button type="submit" name="mode" value="default" class="btn btn--ghost"
+                  formnovalidate>
+            {{t "admin.org.brandingMode.resetButton"}}
+          </button>
+        </div>
+      </form>
+      <p class="text-sm text-muted" style="margin-top:1rem;">
+        {{t "admin.org.brandingMode.nextScanNote"}}
+      </p>
+    {{/if}}
+
+    {{#if (eq mode "confirm")}}
+      {{!-- Step 1 of two-step confirmation: user clicked change, we show the modal
+           explaining semantics and require a second explicit click. --}}
+      <div class="modal-body" role="dialog" aria-labelledby="confirm-title">
+        <h3 id="confirm-title">{{t "admin.org.brandingMode.confirm.title"}}</h3>
+        <p>{{t "admin.org.brandingMode.confirm.bodyLine1"}}</p>
+        <ul>
+          <li>{{t "admin.org.brandingMode.confirm.bullet.nextScan"}} <strong>{{pendingMode}}</strong></li>
+          <li>{{t "admin.org.brandingMode.confirm.bullet.historyPreserved"}}</li>
+          <li>{{t "admin.org.brandingMode.confirm.bullet.trendTagged"}}</li>
+        </ul>
+
+        <form hx-post="/admin/organizations/{{org.id}}/branding-mode"
+              hx-target="#branding-mode-toggle"
+              hx-swap="outerHTML"
+              style="display:flex;gap:0.75rem;margin-top:1rem;">
+          <input type="hidden" name="_csrf" value="{{csrfToken}}">
+          <input type="hidden" name="mode" value="{{pendingMode}}">
+          <input type="hidden" name="_confirm" value="yes">
+          <button type="submit" class="btn btn--primary">
+            {{t "admin.org.brandingMode.confirm.button"}}
+          </button>
+          <button type="button" class="btn btn--ghost"
+                  hx-get="/admin/organizations/{{org.id}}/branding-mode"
+                  hx-target="#branding-mode-toggle"
+                  hx-swap="outerHTML">
+            {{t "common.cancel"}}
+          </button>
+        </form>
+      </div>
+    {{/if}}
+  </div>
+</div>
