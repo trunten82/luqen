@@ -7,6 +7,8 @@ import { checkCompliance, dispatchWebhookEvent } from '../compliance-client.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 import type { PluginManager } from '../plugins/manager.js';
 import type { NotificationPlugin, LuqenEvent } from '../plugins/types.js';
+import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
+import type { BrandScoreRepository } from '../db/interfaces/brand-score-repository.js';
 
 export interface ScanProgressEvent {
   readonly type: 'discovery' | 'scan_start' | 'scan_complete' | 'scan_error' | 'compliance' | 'complete' | 'failed';
@@ -114,6 +116,22 @@ export interface OrchestratorOptions {
   readonly redisQueue?: RedisScanQueue;
   /** Optional plugin manager for org-scoped plugin hooks on scan events. */
   readonly pluginManager?: PluginManager;
+  /**
+   * Phase 18: dual-mode branding orchestrator. When supplied, the scanner will
+   * call its match-and-score entry point instead of the legacy inline
+   * BrandingMatcher block (the inline block is still present in Phase 18-02
+   * and gets replaced in Phase 18-03). Must be constructor-injected; do NOT
+   * pull from Fastify decorators inside runScan.
+   */
+  readonly brandingOrchestrator?: BrandingOrchestrator;
+  /**
+   * Phase 18: brand_scores repository for append-only score persistence.
+   * Required alongside brandingOrchestrator — either both are supplied or
+   * neither is. Plan 18-03 will flip the scanner to assert both are present
+   * at construction time; Plan 18-02 leaves them optional to keep existing
+   * test fixtures green.
+   */
+  readonly brandScoreRepository?: BrandScoreRepository;
 }
 
 export class ScanOrchestrator {
@@ -124,6 +142,10 @@ export class ScanOrchestrator {
   private readonly ssePublisher?: SsePublisher;
   private readonly redisQueue?: RedisScanQueue;
   private readonly pluginManager?: PluginManager;
+  /** Phase 18: constructor-injected. Read by Plan 18-03 inside runScan. */
+  private readonly brandingOrchestrator?: BrandingOrchestrator;
+  /** Phase 18: constructor-injected. Read by Plan 18-03 inside runScan. */
+  private readonly brandScoreRepository?: BrandScoreRepository;
   /** Buffer recent events per scan so late-connecting SSE clients catch up. */
   private readonly eventBuffers = new Map<string, ScanProgressEvent[]>();
 
@@ -140,6 +162,15 @@ export class ScanOrchestrator {
     this.ssePublisher = opts.ssePublisher;
     this.redisQueue = opts.redisQueue;
     this.pluginManager = opts.pluginManager;
+    this.brandingOrchestrator = opts.brandingOrchestrator;
+    this.brandScoreRepository = opts.brandScoreRepository;
+    // Plumbing-only refactor (Plan 18-02): these fields are assigned here and
+    // consumed in Plan 18-03 (scanner rewire). Mark as intentionally
+    // assigned-but-not-yet-read so `noUnusedLocals` / `noUnusedParameters`
+    // (if enabled) do not flag them. `void` is the correct escape hatch —
+    // NOT `@ts-expect-error`, which only suppresses errors that WILL fire.
+    void this.brandingOrchestrator;
+    void this.brandScoreRepository;
   }
 
   emit(scanId: string, event: ScanProgressEvent): void {
