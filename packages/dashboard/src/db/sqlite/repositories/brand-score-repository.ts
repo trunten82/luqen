@@ -77,15 +77,16 @@ function assertUnscorableReason(value: string | null): UnscorableReason {
 // ---------------------------------------------------------------------------
 
 function rowToScoreResult(row: BrandScoreRow): ScoreResult {
-  // A row is "scored" iff all four score columns AND subscore_details are non-null.
-  const allScoreColumnsPresent =
-    row.overall !== null &&
-    row.color_contrast !== null &&
-    row.typography !== null &&
-    row.components !== null &&
-    row.subscore_details !== null;
+  // A row is a top-level "scored" ScoreResult iff `overall` AND `subscore_details`
+  // are both non-null. The per-dimension score columns (color_contrast, typography,
+  // components) are denormalized caches of `subscore_details.*.value` for the
+  // scored-sub case and are legitimately NULL when a nested sub-score is itself
+  // unscorable (Phase 15 D-13 — the discriminated-union `SubScore` allows any
+  // dimension to be unscorable inside an otherwise scored top-level result).
+  // `subscore_details` is the authoritative per-dimension source on read.
+  const isTopLevelScored = row.overall !== null && row.subscore_details !== null;
 
-  if (!allScoreColumnsPresent) {
+  if (!isTopLevelScored) {
     return {
       kind: 'unscorable',
       reason: assertUnscorableReason(row.unscorable_reason),
@@ -205,12 +206,19 @@ INSERT INTO brand_scores (
 )
 `;
 
+// ORDER BY includes `rowid DESC` as a deterministic tie-breaker. SQLite's
+// implicit ROWID is monotonic across inserts on the same table, so when two
+// rows share `computed_at` (millisecond-resolution ISO timestamps can collide
+// on same-millisecond appends — e.g. a retag that fires two insert() calls
+// back-to-back) the most-recently-inserted row is still returned first. This
+// preserves the append-only "latest row wins" contract without requiring
+// sub-millisecond timestamp precision.
 const SELECT_BY_SCAN_SQL = `
-SELECT * FROM brand_scores WHERE scan_id = ? ORDER BY computed_at DESC LIMIT 1
+SELECT * FROM brand_scores WHERE scan_id = ? ORDER BY computed_at DESC, rowid DESC LIMIT 1
 `;
 
 const SELECT_HISTORY_FOR_SITE_SQL = `
-SELECT * FROM brand_scores WHERE org_id = ? AND site_url = ? ORDER BY computed_at DESC LIMIT ?
+SELECT * FROM brand_scores WHERE org_id = ? AND site_url = ? ORDER BY computed_at DESC, rowid DESC LIMIT ?
 `;
 
 export class SqliteBrandScoreRepository implements BrandScoreRepository {
