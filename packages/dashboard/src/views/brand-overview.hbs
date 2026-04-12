@@ -65,11 +65,10 @@
       {{#each sites}}
       <li role="option" aria-selected="{{#if (eq this.siteUrl ../selectedSite)}}true{{else}}false{{/if}}">
         <a class="brand-overview__site-item {{#if (eq this.siteUrl ../selectedSite)}}is-active{{/if}}"
-           href="/brand-overview?site={{this.siteUrlEncoded}}"
-           hx-get="/brand-overview?site={{this.siteUrlEncoded}}"
+           href="/brand-overview?site={{this.siteUrlEncoded}}{{#if ../isGlobalAdmin}}&org={{../selectedOrgId}}{{/if}}"
+           hx-get="/brand-overview?site={{this.siteUrlEncoded}}{{#if ../isGlobalAdmin}}&org={{../selectedOrgId}}{{/if}}"
            hx-target="#brand-overview-content"
-           hx-select="#brand-overview-content"
-           hx-swap="outerHTML"
+           hx-swap="innerHTML"
            hx-push-url="true"
            hx-indicator="#brand-loading">
           <span class="brand-overview__site-name">{{this.siteUrl}}</span>
