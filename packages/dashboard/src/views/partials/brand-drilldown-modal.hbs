@@ -1,0 +1,47 @@
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="drilldown-modal-title">
+  <div class="modal modal--wide">
+    <div class="modal__header">
+      <h2 class="modal__title" id="drilldown-modal-title">
+        {{dimensionLabel}} {{t "reportDetail.brandDrilldownTitle"}}
+      </h2>
+      {{#if dimensionScore}}
+        <span class="badge {{brandScoreBadge dimensionScore}}" style="margin-left:var(--space-sm);">
+          {{dimensionScore}}/100
+        </span>
+      {{/if}}
+      <button class="modal__close close-modal-btn" aria-label="Close dialog" type="button">&times;</button>
+    </div>
+    <div class="modal__body">
+      {{#if issues.length}}
+      <table class="data-table data-table--compact">
+        <thead>
+          <tr>
+            <th>{{t "reportDetail.brandDrilldownElement"}}</th>
+            <th>{{t "reportDetail.brandDrilldownIssue"}}</th>
+            <th>{{t "reportDetail.brandDrilldownDetail"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each issues}}
+          <tr>
+            <td><code class="text-xs" style="word-break:break-all;">{{this.selector}}</code></td>
+            <td style="font-size:var(--font-size-sm);">{{this.message}}</td>
+            <td style="font-size:var(--font-size-xs);" class="text-muted">{{this.matchDetail}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{else}}
+      <p class="text-muted">{{t "reportDetail.brandDrilldownEmpty"}}</p>
+      {{/if}}
+    </div>
+    <div class="modal__footer">
+      <span class="text-muted" style="font-size:var(--font-size-xs);">
+        {{issues.length}} {{t "reportDetail.brandDrilldownCount"}}
+      </span>
+      <button type="button" class="btn btn--secondary close-modal-btn">
+        {{t "reportDetail.brandDrilldownClose"}}
+      </button>
+    </div>
+  </div>
+</div>
