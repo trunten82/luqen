@@ -1490,5 +1490,11 @@
   "brandOverview.date": "Date",
   "brandOverview.score": "Score",
   "brandOverview.organization": "Organization",
+  "brandOverview.sparklineLabel": "Brand score trends over time",
+  "brandOverview.sparklineDesc": "Composite score with color, typography, and component dimension trends",
+  "brandOverview.composite": "Composite",
+  "brandOverview.insufficientColor": "Color: insufficient data for trend",
+  "brandOverview.insufficientTypography": "Typography: insufficient data for trend",
+  "brandOverview.insufficientComponents": "Components: insufficient data for trend",
   "common.loading": "Loading..."
 }
