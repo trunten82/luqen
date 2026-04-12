@@ -117,4 +117,8 @@ Plans:
   3. Widget handles graceful empty states: 0 scores (new org, pre-v2.11.0) → "No brand scores yet" card; 1 score → big number only, no trend arrow, no sparkline; 2+ scores → full widget with sparkline
   4. All new UI strings introduced in Phases 19, 20, and 21 use `{{t}}` helpers — no hardcoded English in any `.hbs` partial from these phases. Translation keys exist in at least `en.json`; other locales (fr/it/pt/de/es) have placeholder entries for all new keys
   5. Mobile responsive: widget renders correctly at ≤768px viewport width without horizontal overflow or clipped sparkline (verified by a render test or CSS media query assertion)
-**Plans**: TBD (populated by planner)
+**Plans**: 3 plans
+Plans:
+- [ ] 21-01-PLAN.md — Brand score widget partial + route data plumbing + sparklinePoints + home.hbs inclusion [Wave 1]
+- [ ] 21-02-PLAN.md — Widget render test suite (9 tests: null/1-score/2+-scores/delta/sr-only/zero-JS/responsive) [Wave 2]
+- [ ] 21-03-PLAN.md — Cross-phase i18n sweep (Phase 19/20/21 hardcoded strings -> {{t}} keys + 6 locale files) [Wave 2]
