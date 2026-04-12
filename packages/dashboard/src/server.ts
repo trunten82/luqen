@@ -557,6 +557,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'prompt-diff-body': 'admin/partials/prompt-diff-body.hbs',
         'rpt-regulation-card': 'partials/rpt-regulation-card.hbs',
         'brand-score-panel': 'partials/brand-score-panel.hbs',
+        'brand-score-widget': 'partials/brand-score-widget.hbs',
       },
     },
   });

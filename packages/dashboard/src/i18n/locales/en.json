@@ -184,7 +184,15 @@
     "viewProgress": "View Progress",
     "viewQueue": "View Queue",
     "noScans": "No scans yet. Start your first scan using the quick scan form above.",
-    "scanDescription": "Run a new accessibility scan with full configuration options — WCAG standard, compliance checking, authentication, and more."
+    "scanDescription": "Run a new accessibility scan with full configuration options — WCAG standard, compliance checking, authentication, and more.",
+    "brandScore": "Brand Score",
+    "brandScoreNoData": "No brand scores yet",
+    "brandScoreNoDataHint": "Brand scores will appear here after your first scan with a linked brand guideline.",
+    "brandScoreFirstScore": "First brand score",
+    "brandScoreDeltaUp": "vs previous",
+    "brandScoreDeltaDown": "vs previous",
+    "brandScoreDeltaFlat": "No change",
+    "brandScoreTrendLabel": "Brand score trend"
   },
   "scans": {
     "newScan": "New Scan",
