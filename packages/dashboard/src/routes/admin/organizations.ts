@@ -438,7 +438,7 @@ export async function organizationRoutes(
 
   server.get(
     '/admin/organizations/:id/branding-mode',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.org') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -448,6 +448,13 @@ export async function organizationRoutes(
           .code(404)
           .header('content-type', 'text/html')
           .send(toastHtml('Organization not found.', 'error'));
+      }
+
+      // Tenant isolation: non-admin users can only manage their own org
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && request.user?.currentOrgId !== id) {
+        return reply.code(403).header('content-type', 'text/html')
+          .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));
       }
 
       const currentMode = await storage.organizations.getBrandingMode(id);
@@ -462,7 +469,7 @@ export async function organizationRoutes(
 
   server.post(
     '/admin/organizations/:id/branding-mode',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.org') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { mode?: string; _confirm?: string };
@@ -473,6 +480,13 @@ export async function organizationRoutes(
           .code(404)
           .header('content-type', 'text/html')
           .send(toastHtml('Organization not found.', 'error'));
+      }
+
+      // Tenant isolation: non-admin users can only manage their own org
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && request.user?.currentOrgId !== id) {
+        return reply.code(403).header('content-type', 'text/html')
+          .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));
       }
 
       // Normalize: `mode=default` means reset to schema default = 'embedded'.
@@ -545,7 +559,7 @@ export async function organizationRoutes(
 
   server.post(
     '/admin/organizations/:id/branding-test',
-    { preHandler: requirePermission('admin.system') },
+    { preHandler: requirePermission('admin.system', 'admin.org') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -555,6 +569,13 @@ export async function organizationRoutes(
           .code(404)
           .header('content-type', 'text/html')
           .send(toastHtml('Organization not found.', 'error'));
+      }
+
+      // Tenant isolation: non-admin users can only manage their own org
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && request.user?.currentOrgId !== id) {
+        return reply.code(403).header('content-type', 'text/html')
+          .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));
       }
 
       // server.brandingOrchestrator is typed as non-optional via the
