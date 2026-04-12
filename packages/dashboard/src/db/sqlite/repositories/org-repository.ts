@@ -269,6 +269,28 @@ export class SqliteOrgRepository implements OrgRepository {
     }
   }
 
+  async getBrandScoreTarget(orgId: string): Promise<number | null> {
+    const row = this.db
+      .prepare('SELECT brand_score_target FROM organizations WHERE id = ?')
+      .get(orgId) as { brand_score_target: number | null } | undefined;
+    if (row === undefined) {
+      throw new Error(`organization not found: ${orgId}`);
+    }
+    return row.brand_score_target;
+  }
+
+  async setBrandScoreTarget(orgId: string, target: number | null): Promise<void> {
+    if (target !== null && (!Number.isInteger(target) || target < 0 || target > 100)) {
+      throw new Error('brand_score_target must be an integer between 0 and 100');
+    }
+    const result = this.db
+      .prepare('UPDATE organizations SET brand_score_target = ? WHERE id = ?')
+      .run(target, orgId);
+    if (result.changes === 0) {
+      throw new Error(`organization not found: ${orgId}`);
+    }
+  }
+
   async getUserOrgs(userId: string): Promise<Organization[]> {
     // Direct membership
     const directRows = this.db.prepare(`
