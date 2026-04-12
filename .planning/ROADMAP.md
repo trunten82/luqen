@@ -91,3 +91,15 @@
   4. Test-connection button routes through the production `BrandingOrchestrator.matchAndScore()` code path (NOT a shortcut that hits `brandingService.listGuidelines()` directly — per Pitfall #5) using a synthetic issue + guideline fixture, and returns a response envelope containing `routedVia: 'embedded' | 'remote'` + success/failure status + error details — proving the dual-mode routing works end-to-end from the dashboard
   5. Branding service appears in the System Health admin page, the sidebar navigation, and any newly added admin sections with the SAME status/badge/link patterns already used by the compliance and LLM services (verified by shared partial reuse or CSS class parity)
 **Plans**: TBD (populated by planner)
+
+### Phase 20: Report Panel
+**Goal**: Report detail page shows a brand score panel with composite overall + 3 sub-score progress bars, delta vs previous scan, "X of Y issues are on brand elements" counter (BSTORE-05), empty-state for pre-v2.11.0 scans (Pitfall #8), and graceful unscorable display — all server-rendered via Handlebars with existing design system classes
+**Depends on**: Phase 15 (ScoreResult/SubScore types), Phase 16 (BrandScoreRepository.getLatestForScan + getHistoryForSite), Phase 18 (LEFT JOIN getTrendData wires brandScore into ScanRecord)
+**Requirements**: BSTORE-05, BUI-01
+**Success Criteria** (what must be TRUE):
+  1. `brand-score-panel.hbs` partial renders on `report-detail.hbs` showing composite overall score + 3 sub-score progress bars (color, typography, components) using existing `style.css` classes — green ≥85, amber 70–84, red <70
+  2. Panel shows delta vs previous scan (↑/↓/= arrow + numeric diff) derived from `BrandScoreRepository.getHistoryForSite` — at least 2 most recent rows compared
+  3. "X of Y issues are on brand elements" counter displayed on the panel, derived from `brand_related_count` and `total_issues` columns in the `brand_scores` row (BSTORE-05)
+  4. Panel guarded by `{{#if brandScore}}` — pre-v2.11.0 scans with `brandScore: null` render an empty-state card ("Brand score not available for this scan"), never `undefined` / `NaN%` / broken layout (Pitfall #8)
+  5. Unscorable results (`brandScore.kind === 'unscorable'`) render the `unscorable_reason` as a human-readable label instead of a progress bar at 0% — no `null → 0` coercion leaks into the UI
+**Plans**: TBD (populated by planner)
