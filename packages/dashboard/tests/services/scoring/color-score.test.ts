@@ -39,18 +39,18 @@ const emptyGuideline: BrandGuideline = {
 };
 
 describe('calculateColorSubScore', () => {
-  it('returns unscorable when there are no issues at all', () => {
+  it('returns scored 100 when there are no issues at all (zero violations = perfect)', () => {
     const result = calculateColorSubScore([], emptyGuideline);
-    expect(result).toEqual({ kind: 'unscorable', reason: 'no-branded-issues' });
+    expect(result).toEqual({ kind: 'scored', value: 100, detail: { dimension: 'color', passes: 0, fails: 0 } });
   });
 
-  it('returns unscorable when there are issues but none are branded contrast', () => {
+  it('returns scored 100 when there are issues but none are branded contrast (no brand violations = perfect)', () => {
     const issues = [
       issue({ code: 'Guideline2_4.2_4_1', context: '#fff on #000', matched: true }),
       issue({ code: 'Guideline1_4.1_4_3', context: '#fff on #000', matched: false }),
     ];
     const result = calculateColorSubScore(issues, emptyGuideline);
-    expect(result).toEqual({ kind: 'unscorable', reason: 'no-branded-issues' });
+    expect(result).toEqual({ kind: 'scored', value: 100, detail: { dimension: 'color', passes: 0, fails: 0 } });
   });
 
   it('scores 100 when all branded contrast issues pass AA', () => {
