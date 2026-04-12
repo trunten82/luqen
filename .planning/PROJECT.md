@@ -12,15 +12,18 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 v2.11.0 shipped 2026-04-12 — Brand Intelligence: per-guideline 0-100 brand accessibility score (color contrast, typography, component coverage) with locked 50/30/20 weights, per-org dual-mode branding orchestrator (embedded/remote with no-cross-route policy), brand_scores persistence (append-only, LEFT JOIN trend queries), admin mode toggle with test-connection button, report detail brand score panel, and home dashboard widget with inline SVG sparkline. 7 phases (15-21), 24 plans, 189 new tests, 20/20 requirements satisfied. Previous: v2.10.0 (2026-04-10) prompt safety + API key UX, v2.9.0 (2026-04-06) branding pipeline + org isolation.
 
-## Next Milestone Goals
+## Current Milestone: v2.12.0 Brand Intelligence Polish
 
-**v2.12.0 — TBD** (planned)
-- Per-dimension trend sparklines (separate for color / typography / components)
-- Score target line (org sets goal, widget shows gap)
-- Drilldown modal from widget to individual failing elements
-- Typography x-height metric (opentype.js feasibility spike)
-- Fine-grained `organizations.*` permissions (replacing global `admin.system`)
-- Optional admin action "Rescore historical scans" (idempotent, resumable)
+**Goal:** Close the branding story — give orgs a dedicated brand overview page with per-site selector, richer trend visualization with per-dimension sparklines, score targets, element-level drilldown, improved typography scoring via x-height metrics, fine-grained org permissions, and an optional historical rescore admin action.
+
+**Target features:**
+- Brand overview page with per-site selector replacing the removed homepage widget — org-level dashboard for brand accessibility KPIs across all branded sites
+- Per-dimension trend sparklines (color / typography / components separately, not just the composite)
+- Score target line: orgs set a goal score, the widget shows the gap between current and target
+- Drilldown modal: click from the brand score widget/panel to see individual failing elements grouped by sub-score dimension
+- Typography x-height metric: opentype.js feasibility spike to derive real x-height from font files, improving the typography sub-score beyond the current CSS-only heuristics
+- Fine-grained `organizations.*` permissions replacing the global `admin.system` gate for org-level operations (branding mode toggle, org settings, member management)
+- Optional "Rescore historical scans" admin action: idempotent, resumable, skip-when-guideline-gone — lets orgs backfill brand scores for pre-v2.11.0 scans on demand
 
 ## Requirements
 
