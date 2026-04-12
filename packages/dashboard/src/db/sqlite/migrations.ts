@@ -1188,4 +1188,13 @@ ALTER TABLE organizations
     name: 'org-brand-score-target',
     sql: `ALTER TABLE organizations ADD COLUMN brand_score_target INTEGER;`,
   },
+  {
+    id: '045',
+    name: 'branding-fonts-metrics',
+    sql: `
+      ALTER TABLE branding_fonts ADD COLUMN x_height INTEGER;
+      ALTER TABLE branding_fonts ADD COLUMN cap_height INTEGER;
+      ALTER TABLE branding_fonts ADD COLUMN units_per_em INTEGER;
+    `,
+  },
 ];
