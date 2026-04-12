@@ -86,7 +86,10 @@ Plans:
   2. If viable: migration adds `x_height`, `cap_height`, `units_per_em` columns to `branding_fonts`; typography scorer uses x-height ratio as 4th heuristic (25% weight each)
   3. If not viable: spike document explains why (e.g., OS/2 table coverage too low, Google Fonts API limitations) and no scorer changes are made
   4. Non-Google-Fonts families gracefully fall back to existing 3-way mean scoring — no regression
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 26-01-PLAN.md — POC spike: install opentype.js, config key, run feasibility script against 10 Google Fonts
+- [ ] 26-02-PLAN.md — Conditional: migration 045 + FontMetricsService + typography scorer 4th heuristic + tests
 
 ### Phase 27: Historical Rescore
 **Goal**: Org admins can backfill brand scores for scans that predate the scoring feature, making trend data complete
@@ -116,5 +119,5 @@ Plans:
 | 23. Brand Overview Page | 2/2 | Complete    | 2026-04-12 |
 | 24. Per-Dimension Trends + Score Target | 2/2 | Complete    | 2026-04-12 |
 | 25. Drilldown Modal | 1/1 | Complete    | 2026-04-12 |
-| 26. Typography x-height Spike | 0/? | Not started | - |
+| 26. Typography x-height Spike | 0/2 | Not started | - |
 | 27. Historical Rescore | 0/? | Not started | - |
