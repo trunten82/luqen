@@ -12,7 +12,7 @@
 - [x] **Phase 18: Scanner Wire-Up** — Scanner calls orchestrator, persists scores, preserves backwards compatibility (completed 2026-04-11)
 - [x] **Phase 19: Admin UI (Mode Toggle)** — Per-org toggle between embedded and remote branding with calibration check (completed 2026-04-11)
 - [x] **Phase 20: Report Panel** — Per-scan brand score panel on scan report (completed 2026-04-12)
-- [ ] **Phase 21: Dashboard Widget** — Org-level brand intelligence card on dashboard homepage
+- [x] **Phase 21: Dashboard Widget** — Org-level brand intelligence card on dashboard homepage (completed 2026-04-12)
 
 ---
 
@@ -119,6 +119,6 @@ Plans:
   5. Mobile responsive: widget renders correctly at ≤768px viewport width without horizontal overflow or clipped sparkline (verified by a render test or CSS media query assertion)
 **Plans**: 3 plans
 Plans:
-- [ ] 21-01-PLAN.md — Brand score widget partial + route data plumbing + sparklinePoints + home.hbs inclusion [Wave 1]
-- [ ] 21-02-PLAN.md — Widget render test suite (9 tests: null/1-score/2+-scores/delta/sr-only/zero-JS/responsive) [Wave 2]
-- [ ] 21-03-PLAN.md — Cross-phase i18n sweep (Phase 19/20/21 hardcoded strings -> {{t}} keys + 6 locale files) [Wave 2]
+- [x] 21-01-PLAN.md — Brand score widget partial + route data plumbing + sparklinePoints + home.hbs inclusion [Wave 1]
+- [x] 21-02-PLAN.md — Widget render test suite (9 tests: null/1-score/2+-scores/delta/sr-only/zero-JS/responsive) [Wave 2]
+- [x] 21-03-PLAN.md — Cross-phase i18n sweep (Phase 19/20/21 hardcoded strings -> {{t}} keys + 6 locale files) [Wave 2]
