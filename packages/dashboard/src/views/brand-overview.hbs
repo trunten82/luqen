@@ -1,5 +1,17 @@
 {{! Brand Overview — org-level brand accessibility KPIs with per-site selector }}
 
+{{#if isGlobalAdmin}}
+<div class="mb-md">
+  <label for="org-picker" class="text-muted">{{t "brandOverview.organization"}}</label>
+  <select id="org-picker" class="form-select form-select--inline"
+          onchange="window.location.href='/brand-overview?org='+this.value">
+    {{#each allOrgs}}
+    <option value="{{this.id}}" {{#if (eq this.id ../selectedOrgId)}}selected{{/if}}>{{this.name}}</option>
+    {{/each}}
+  </select>
+</div>
+{{/if}}
+
 {{#if hasSites}}
 <section aria-labelledby="brand-summary-heading" class="mb-lg">
   <h2 id="brand-summary-heading" class="section-title">{{t "brandOverview.summary"}}</h2>
@@ -40,7 +52,7 @@
            hx-push-url="true"
            hx-indicator="#brand-loading">
           <span class="brand-overview__site-name">{{this.siteUrl}}</span>
-          <span class="brand-overview__site-score {{this.scoreClass}}">{{#if this.score}}{{this.score}}{{else}}&mdash;{{/if}}</span>
+          <span class="badge {{#if (gte this.score 85)}}badge--success{{else}}{{#if (gte this.score 70)}}badge--warning{{else}}badge--error{{/if}}{{/if}}">{{#if this.score}}{{this.score}}{{else}}&mdash;{{/if}}</span>
         </a>
       </li>
       {{/each}}

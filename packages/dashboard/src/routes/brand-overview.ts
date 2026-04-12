@@ -67,13 +67,40 @@ export async function brandOverviewRoutes(
   server.get('/brand-overview', {
     preHandler: requirePermission('branding.view'),
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const orgId = getOrgId(request);
-    if (!orgId) {
-      return reply.redirect('/home');
+    // Org resolution: org-scoped users see their own org. Global admins
+    // (admin.system) can pick any org via ?org= query param, defaulting
+    // to the first org in the system.
+    let orgId = getOrgId(request);
+    const query = request.query as Record<string, string>;
+    const isGlobalAdmin = !orgId;
+    let allOrgs: Array<{ id: string; name: string }> = [];
+
+    if (isGlobalAdmin) {
+      allOrgs = (await storage.organizations.listOrgs()).map(o => ({ id: o.id, name: o.name }));
+      if (allOrgs.length === 0) {
+        return reply.view('brand-overview.hbs', {
+          pageTitle: 'Brand Overview',
+          currentPath: '/brand-overview',
+          user: request.user,
+          sites: [],
+          activeSite: null,
+          selectedSite: null,
+          summary: { avgScore: null, avgScoreClass: '', totalScored: 0, improving: 0, regressing: 0, stable: 0 },
+          hasSites: false,
+          isGlobalAdmin: true,
+          allOrgs: [],
+          selectedOrgId: null,
+        });
+      }
+      orgId = query.org && allOrgs.some(o => o.id === query.org) ? query.org : allOrgs[0].id;
     }
 
+    // After resolution, orgId is guaranteed non-null (org-scoped user
+    // has currentOrgId, global admin resolved above with early return).
+    const effectiveOrgId: string = orgId!;
+
     // 1. Get all sites with latest completed scan for this org
-    const latestScans = await storage.scans.getLatestPerSite(orgId);
+    const latestScans = await storage.scans.getLatestPerSite(effectiveOrgId);
 
     // 2. For each site, load brand score history
     const selectedSite = (request.query as Record<string, string>).site || null;
@@ -81,7 +108,7 @@ export async function brandOverviewRoutes(
     const sites: SiteEntry[] = [];
 
     for (const scan of latestScans) {
-      const history = await storage.brandScores.getHistoryForSite(orgId, scan.siteUrl, 20);
+      const history = await storage.brandScores.getHistoryForSite(effectiveOrgId, scan.siteUrl, 20);
       const scoredEntries = history.filter(h => h.result.kind === 'scored');
 
       if (scoredEntries.length === 0) continue; // skip sites with no brand scores
@@ -104,7 +131,7 @@ export async function brandOverviewRoutes(
       // Guideline name via site assignment lookup (more reliable than scan FK)
       let guidelineName: string | null = null;
       try {
-        const gl = await storage.branding.getGuidelineForSite(scan.siteUrl, orgId);
+        const gl = await storage.branding.getGuidelineForSite(scan.siteUrl, effectiveOrgId);
         guidelineName = gl?.name ?? null;
       } catch { /* non-fatal */ }
 
@@ -152,6 +179,9 @@ export async function brandOverviewRoutes(
       selectedSite: activeSite?.siteUrl ?? null,
       summary,
       hasSites: sites.length > 0,
+      isGlobalAdmin,
+      allOrgs,
+      selectedOrgId: effectiveOrgId,
     };
 
     return reply.view('brand-overview.hbs', viewData);
