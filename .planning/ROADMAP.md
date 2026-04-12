@@ -72,7 +72,9 @@ Plans:
   1. User clicks a sub-score row on the report detail brand score panel and a modal opens showing failing elements for that dimension
   2. Color drilldown shows WCAG 1.4.3/1.4.6/1.4.11 brand-matched issues; typography shows font/size/line-height issues; components shows brand selector mismatches
   3. Modal uses the existing `<dialog>` + `showModal()` pattern — no new JS dependencies added
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 25-01-PLAN.md — Drilldown service + endpoint + modal template + clickable sub-score rows + UAT
 **UI hint**: yes
 
 ### Phase 26: Typography x-height Spike
@@ -113,6 +115,6 @@ Plans:
 | 22. Permissions Audit | 1/1 | Complete    | 2026-04-12 |
 | 23. Brand Overview Page | 2/2 | Complete    | 2026-04-12 |
 | 24. Per-Dimension Trends + Score Target | 2/2 | Complete    | 2026-04-12 |
-| 25. Drilldown Modal | 0/? | Not started | - |
+| 25. Drilldown Modal | 0/1 | Not started | - |
 | 26. Typography x-height Spike | 0/? | Not started | - |
 | 27. Historical Rescore | 0/? | Not started | - |
