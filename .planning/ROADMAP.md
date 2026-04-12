@@ -11,7 +11,7 @@
 - [x] **Phase 17: Branding Orchestrator** — Dual-mode (embedded/remote) orchestrator invoking calculator, returning unified result (completed 2026-04-11)
 - [x] **Phase 18: Scanner Wire-Up** — Scanner calls orchestrator, persists scores, preserves backwards compatibility (completed 2026-04-11)
 - [x] **Phase 19: Admin UI (Mode Toggle)** — Per-org toggle between embedded and remote branding with calibration check (completed 2026-04-11)
-- [ ] **Phase 20: Report Panel** — Per-scan brand score panel on scan report
+- [x] **Phase 20: Report Panel** — Per-scan brand score panel on scan report (completed 2026-04-12)
 - [ ] **Phase 21: Dashboard Widget** — Org-level brand intelligence card on dashboard homepage
 
 ---
@@ -104,5 +104,5 @@
   5. Unscorable results (`brandScore.kind === 'unscorable'`) render the `unscorable_reason` as a human-readable label instead of a progress bar at 0% — no `null → 0` coercion leaks into the UI
 **Plans**: 2 plans
 Plans:
-- [ ] 20-01-PLAN.md — Route data plumbing + Handlebars helpers + brand-score-panel.hbs partial (all 3 variants) + report-detail.hbs inclusion [Wave 1]
-- [ ] 20-02-PLAN.md — Template render test suite (9 tests: null/unscorable/scored variants + delta + counter + color banding + nested unscorable) [Wave 2]
+- [x] 20-01-PLAN.md — Route data plumbing + Handlebars helpers + brand-score-panel.hbs partial (all 3 variants) + report-detail.hbs inclusion [Wave 1]
+- [x] 20-02-PLAN.md — Template render test suite (9 tests: null/unscorable/scored variants + delta + counter + color banding + nested unscorable) [Wave 2]
