@@ -1,0 +1,137 @@
+{{! Brand Score Panel — Phase 20 (BUI-01, BSTORE-05)
+    Three render variants:
+    1. brandScore is null → empty-state card (pre-v2.11.0 scan)
+    2. brandScore.kind === 'unscorable' → reason label, no progress bars
+    3. brandScore.kind === 'scored' → full panel with bars + delta + counter
+
+    Pitfall #8: the outer guard ensures pre-v2.11.0
+    scans never render broken layout (no missing values).
+    D-06: unscorable subs show reason text, NEVER 0% progress bars. }}
+
+{{#if brandScore}}
+  {{! ── Variant 2: Unscorable ──────────────────────────────────── }}
+  {{#if (eq brandScore.kind 'unscorable')}}
+  <section class="card mb-md" aria-labelledby="brand-score-heading">
+    <h2 id="brand-score-heading" class="card__heading">{{t "reportDetail.brandScore"}}</h2>
+    <div class="card__body">
+      <p class="text-muted">
+        {{unscorable-reason-label brandScore.reason}}
+      </p>
+    </div>
+  </section>
+  {{else}}
+  {{! ── Variant 3: Scored ──────────────────────────────────────── }}
+  <section class="card mb-md" aria-labelledby="brand-score-heading">
+    <h2 id="brand-score-heading" class="card__heading">{{t "reportDetail.brandScore"}}</h2>
+    <div class="card__body">
+
+      {{! ── Overall composite score ── }}
+      <div class="brand-panel__overall" style="display:flex;align-items:baseline;gap:var(--space-sm);margin-bottom:var(--space-md);">
+        <span class="brand-panel__big-number" style="font-size:2.5rem;font-weight:700;line-height:1;">
+          {{brandScore.overall}}
+        </span>
+        <span class="text-muted" style="font-size:var(--font-size-base);">/100</span>
+        <span class="badge {{brandScoreBadge brandScore.overall}}" style="margin-left:var(--space-xs);">
+          {{#if (gte brandScore.overall 85)}}Good{{else}}{{#if (gte brandScore.overall 70)}}Fair{{else}}Needs work{{/if}}{{/if}}
+        </span>
+      </div>
+
+      {{! ── Delta vs previous scan ── }}
+      <div class="brand-panel__delta" style="margin-bottom:var(--space-md);font-size:var(--font-size-sm);">
+        {{#if brandIsFirstScore}}
+          <span class="text-muted">First brand score for this site</span>
+        {{else}}
+          {{#if brandDelta}}
+            {{#if (cmpPositive brandDelta)}}
+              <span class="text--success">&#9650; +{{brandDelta}} vs previous scan</span>
+            {{else}}
+              {{#if (cmpNegative brandDelta)}}
+                <span class="text--error">&#9660; {{brandDelta}} vs previous scan</span>
+              {{else}}
+                <span class="text-muted">&#9644; No change vs previous scan</span>
+              {{/if}}
+            {{/if}}
+          {{else}}
+            <span class="text-muted">&#9644; No change vs previous scan</span>
+          {{/if}}
+        {{/if}}
+      </div>
+
+      {{! ── Brand-related issue counter (BSTORE-05) ── }}
+      {{#if (gt totalIssues 0)}}
+      <div class="brand-panel__counter" style="margin-bottom:var(--space-md);font-size:var(--font-size-sm);">
+        <strong>{{brandRelatedCount}}</strong> of <strong>{{totalIssues}}</strong> issues are on brand elements
+      </div>
+      {{/if}}
+
+      {{! ── Sub-score: Color Contrast ── }}
+      <div class="brand-panel__sub" style="margin-bottom:var(--space-sm);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs);">
+          <span style="font-size:var(--font-size-sm);font-weight:500;">Color contrast</span>
+          {{#if (eq brandScore.color.kind 'scored')}}
+            <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.color.value}}/100</span>
+          {{else}}
+            <span class="text-muted" style="font-size:var(--font-size-xs);">{{unscorable-reason-label brandScore.color.reason}}</span>
+          {{/if}}
+        </div>
+        {{#if (eq brandScore.color.kind 'scored')}}
+        <div class="progress-bar" role="progressbar" aria-valuenow="{{brandScore.color.value}}" aria-valuemin="0" aria-valuemax="100" aria-label="Color contrast score">
+          <div class="progress-bar__fill {{brandScoreClass brandScore.color.value}}" style="width:{{brandScore.color.value}}%;"></div>
+        </div>
+        {{/if}}
+      </div>
+
+      {{! ── Sub-score: Typography ── }}
+      <div class="brand-panel__sub" style="margin-bottom:var(--space-sm);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs);">
+          <span style="font-size:var(--font-size-sm);font-weight:500;">Typography</span>
+          {{#if (eq brandScore.typography.kind 'scored')}}
+            <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.typography.value}}/100</span>
+          {{else}}
+            <span class="text-muted" style="font-size:var(--font-size-xs);">{{unscorable-reason-label brandScore.typography.reason}}</span>
+          {{/if}}
+        </div>
+        {{#if (eq brandScore.typography.kind 'scored')}}
+        <div class="progress-bar" role="progressbar" aria-valuenow="{{brandScore.typography.value}}" aria-valuemin="0" aria-valuemax="100" aria-label="Typography score">
+          <div class="progress-bar__fill {{brandScoreClass brandScore.typography.value}}" style="width:{{brandScore.typography.value}}%;"></div>
+        </div>
+        {{/if}}
+      </div>
+
+      {{! ── Sub-score: Components ── }}
+      <div class="brand-panel__sub" style="margin-bottom:var(--space-sm);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs);">
+          <span style="font-size:var(--font-size-sm);font-weight:500;">Components</span>
+          {{#if (eq brandScore.components.kind 'scored')}}
+            <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.components.value}}/100</span>
+          {{else}}
+            <span class="text-muted" style="font-size:var(--font-size-xs);">{{unscorable-reason-label brandScore.components.reason}}</span>
+          {{/if}}
+        </div>
+        {{#if (eq brandScore.components.kind 'scored')}}
+        <div class="progress-bar" role="progressbar" aria-valuenow="{{brandScore.components.value}}" aria-valuemin="0" aria-valuemax="100" aria-label="Components score">
+          <div class="progress-bar__fill {{brandScoreClass brandScore.components.value}}" style="width:{{brandScore.components.value}}%;"></div>
+        </div>
+        {{/if}}
+      </div>
+
+      {{! ── Coverage weight indicator ── }}
+      {{#if brandScore.coverage}}
+      <div style="margin-top:var(--space-sm);font-size:var(--font-size-xs);" class="text-muted">
+        Score based on {{#if (eq brandScore.coverage.contributingWeight 1)}}all 3{{else}}{{#if (gte brandScore.coverage.contributingWeight 0.5)}}2 of 3{{else}}1 of 3{{/if}}{{/if}} dimensions
+      </div>
+      {{/if}}
+
+    </div>
+  </section>
+  {{/if}}
+{{else}}
+  {{! ── Variant 1: Null (pre-v2.11.0 scan) ───────────────────── }}
+  <section class="card mb-md" aria-labelledby="brand-score-heading">
+    <h2 id="brand-score-heading" class="card__heading">{{t "reportDetail.brandScore"}}</h2>
+    <div class="card__body">
+      <p class="text-muted">Brand score not available for this scan</p>
+      <p class="text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-xs);">Brand scoring was introduced in v2.11.0</p>
+    </div>
+  </section>
+{{/if}}

@@ -75,6 +75,59 @@ beforeAll(async () => {
     );
     handlebars.registerPartial('rpt-regulation-card', partialSource);
   }
+
+  // Register the brand-score-panel partial (Phase 20).
+  if (!handlebars.partials['brand-score-panel']) {
+    const bspSource = readFileSync(
+      join(VIEWS_DIR, 'partials', 'brand-score-panel.hbs'),
+      'utf8',
+    );
+    handlebars.registerPartial('brand-score-panel', bspSource);
+  }
+
+  // Brand score helpers needed by brand-score-panel partial (Phase 20).
+  if (!handlebars.helpers['brandScoreClass']) {
+    handlebars.registerHelper('brandScoreClass', (value: unknown) => {
+      const n = Number(value);
+      if (Number.isNaN(n)) return '';
+      if (n >= 85) return 'progress-bar__fill--success';
+      if (n >= 70) return 'progress-bar__fill--warning';
+      return 'progress-bar__fill--error';
+    });
+  }
+  if (!handlebars.helpers['brandScoreBadge']) {
+    handlebars.registerHelper('brandScoreBadge', (value: unknown) => {
+      const n = Number(value);
+      if (Number.isNaN(n)) return 'badge--neutral';
+      if (n >= 85) return 'badge--success';
+      if (n >= 70) return 'badge--warning';
+      return 'badge--error';
+    });
+  }
+  if (!handlebars.helpers['gte']) {
+    handlebars.registerHelper('gte', (a: unknown, b: unknown) =>
+      Number(a) >= Number(b),
+    );
+  }
+  if (!handlebars.helpers['unscorable-reason-label']) {
+    handlebars.registerHelper('unscorable-reason-label', (reason: unknown) => {
+      const labels: Record<string, string> = {
+        'no-guideline': 'No brand guideline linked',
+        'empty-guideline': 'Brand guideline has no rules',
+        'no-branded-issues': 'No branded issues found in this scan',
+        'no-typography-data': 'No typography data available',
+        'no-component-tokens': 'No component token data available',
+        'all-subs-unscorable': 'Insufficient data to compute a score',
+      };
+      return typeof reason === 'string' ? (labels[reason] ?? String(reason)) : 'Score not available';
+    });
+  }
+  if (!handlebars.helpers['cmpPositive']) {
+    handlebars.registerHelper('cmpPositive', (n: number) => typeof n === 'number' && n > 0);
+  }
+  if (!handlebars.helpers['cmpNegative']) {
+    handlebars.registerHelper('cmpNegative', (n: number) => typeof n === 'number' && n < 0);
+  }
 });
 
 function renderReportDetail(reportData: Record<string, unknown>): string {
