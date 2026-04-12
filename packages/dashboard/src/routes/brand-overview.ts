@@ -4,6 +4,61 @@ import { requirePermission } from '../auth/middleware.js';
 import { getOrgId } from './admin/helpers.js';
 import { computeSparklinePoints } from '../services/sparkline.js';
 
+export interface SiteEntry {
+  siteUrl: string;
+  siteUrlEncoded: string;
+  score: number | null;
+  scoreClass: string;
+  sparklinePoints: string;
+  delta: number | null;
+  isFirstScore: boolean;
+  guidelineName: string | null;
+  history: Array<{ computedAt: string; overall: number }>;
+  color: { kind: string; value?: number };
+  typography: { kind: string; value?: number };
+  components: { kind: string; value?: number };
+  brandRelatedCount: number;
+  totalIssues: number;
+}
+
+export interface OrgSummary {
+  avgScore: number | null;
+  avgScoreClass: string;
+  totalScored: number;
+  improving: number;
+  regressing: number;
+  stable: number;
+}
+
+/**
+ * Pure function: computes org-level summary from an array of SiteEntry objects.
+ * Extracted for testability (Plan 23-02, Task 1).
+ */
+export function computeOrgSummary(sites: readonly SiteEntry[]): OrgSummary {
+  const scoredSites = sites.filter(s => s.score !== null);
+  const avgScore = scoredSites.length > 0
+    ? Math.round(scoredSites.reduce((sum, s) => sum + (s.score ?? 0), 0) / scoredSites.length)
+    : null;
+
+  let improvingCount = 0;
+  let regressingCount = 0;
+  for (const s of scoredSites) {
+    if (s.delta !== null && s.delta > 0) improvingCount++;
+    else if (s.delta !== null && s.delta < 0) regressingCount++;
+  }
+
+  return {
+    avgScore,
+    avgScoreClass: avgScore !== null
+      ? (avgScore >= 85 ? 'text--success' : avgScore >= 70 ? 'text--warning' : 'text--error')
+      : '',
+    totalScored: scoredSites.length,
+    improving: improvingCount,
+    regressing: regressingCount,
+    stable: scoredSites.length - improvingCount - regressingCount,
+  };
+}
+
 export async function brandOverviewRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
@@ -22,23 +77,6 @@ export async function brandOverviewRoutes(
 
     // 2. For each site, load brand score history
     const selectedSite = (request.query as Record<string, string>).site || null;
-
-    interface SiteEntry {
-      siteUrl: string;
-      siteUrlEncoded: string;
-      score: number | null;
-      scoreClass: string;
-      sparklinePoints: string;
-      delta: number | null;
-      isFirstScore: boolean;
-      guidelineName: string | null;
-      history: Array<{ computedAt: string; overall: number }>;
-      color: { kind: string; value?: number };
-      typography: { kind: string; value?: number };
-      components: { kind: string; value?: number };
-      brandRelatedCount: number;
-      totalIssues: number;
-    }
 
     const sites: SiteEntry[] = [];
 
@@ -98,17 +136,7 @@ export async function brandOverviewRoutes(
     }
 
     // 3. Org-level summary
-    const scoredSites = sites.filter(s => s.score !== null);
-    const avgScore = scoredSites.length > 0
-      ? Math.round(scoredSites.reduce((sum, s) => sum + (s.score ?? 0), 0) / scoredSites.length)
-      : null;
-
-    let improvingCount = 0;
-    let regressingCount = 0;
-    for (const s of scoredSites) {
-      if (s.delta !== null && s.delta > 0) improvingCount++;
-      else if (s.delta !== null && s.delta < 0) regressingCount++;
-    }
+    const summary = computeOrgSummary(sites);
 
     // 4. Selected site detail (for HTMX partial swap)
     const activeSite = selectedSite
@@ -122,16 +150,7 @@ export async function brandOverviewRoutes(
       sites,
       activeSite,
       selectedSite: activeSite?.siteUrl ?? null,
-      summary: {
-        avgScore,
-        avgScoreClass: avgScore !== null
-          ? (avgScore >= 85 ? 'text--success' : avgScore >= 70 ? 'text--warning' : 'text--error')
-          : '',
-        totalScored: scoredSites.length,
-        improving: improvingCount,
-        regressing: regressingCount,
-        stable: scoredSites.length - improvingCount - regressingCount,
-      },
+      summary,
       hasSites: sites.length > 0,
     };
 
