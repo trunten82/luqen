@@ -86,9 +86,40 @@
             {{/unless}}
           </div>
           {{#if activeSite.sparklinePoints}}
-          <svg class="brand-overview__sparkline" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+          <svg class="brand-overview__sparkline" viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="{{t 'brandOverview.sparklineLabel'}}">
+            <desc>{{t "brandOverview.sparklineDesc"}}</desc>
+            {{#if activeSite.dimensionSparklines.color.hasData}}
+            <polyline points="{{activeSite.dimensionSparklines.color.points}}" fill="none" stroke="var(--status-success)" stroke-width="0.8" opacity="0.6"/>
+            {{/if}}
+            {{#if activeSite.dimensionSparklines.typography.hasData}}
+            <polyline points="{{activeSite.dimensionSparklines.typography.points}}" fill="none" stroke="var(--status-info)" stroke-width="0.8" opacity="0.6"/>
+            {{/if}}
+            {{#if activeSite.dimensionSparklines.components.hasData}}
+            <polyline points="{{activeSite.dimensionSparklines.components.points}}" fill="none" stroke="var(--status-warning)" stroke-width="0.8" opacity="0.6"/>
+            {{/if}}
             <polyline points="{{activeSite.sparklinePoints}}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
           </svg>
+          <div class="brand-overview__legend text-sm text-muted mt-xs">
+            <span style="color: var(--accent)">&#9644;</span> {{t "brandOverview.composite"}}
+            {{#if activeSite.dimensionSparklines.color.hasData}}
+            <span style="color: var(--status-success)">&#9644;</span> {{t "brandOverview.color"}}
+            {{/if}}
+            {{#if activeSite.dimensionSparklines.typography.hasData}}
+            <span style="color: var(--status-info)">&#9644;</span> {{t "brandOverview.typography"}}
+            {{/if}}
+            {{#if activeSite.dimensionSparklines.components.hasData}}
+            <span style="color: var(--status-warning)">&#9644;</span> {{t "brandOverview.components"}}
+            {{/if}}
+          </div>
+          {{#unless activeSite.dimensionSparklines.color.hasData}}
+          <p class="text-muted text-sm">{{t "brandOverview.insufficientColor"}}</p>
+          {{/unless}}
+          {{#unless activeSite.dimensionSparklines.typography.hasData}}
+          <p class="text-muted text-sm">{{t "brandOverview.insufficientTypography"}}</p>
+          {{/unless}}
+          {{#unless activeSite.dimensionSparklines.components.hasData}}
+          <p class="text-muted text-sm">{{t "brandOverview.insufficientComponents"}}</p>
+          {{/unless}}
           {{/if}}
         </div>
 
