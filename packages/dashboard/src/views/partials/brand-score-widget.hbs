@@ -1,0 +1,76 @@
+{{! Brand Score Widget — Phase 21 (BUI-02)
+    Three render variants:
+    1. brandWidget is null/undefined — empty-state card (no brand scores yet)
+    2. brandWidget.scoreCount === 1 — big number only, no trend arrow, no sparkline
+    3. brandWidget.scoreCount >= 2 — full widget with sparkline + delta + arrow
+
+    Zero client-side JS. SVG polyline points pre-computed in routes/home.ts.
+    Accessible: sr-only span describes trend values for screen readers.
+    Reuses Phase 20 helpers: brandScoreClass, brandScoreBadge, gte, cmpPositive, cmpNegative. }}
+
+{{#if brandWidget}}
+  <article class="stat-card brand-score-widget" role="listitem"
+           style="border-left: 3px solid var(--status-warning)">
+    <div class="brand-score-widget__inner">
+      {{! -- Big number with color band -- }}
+      <span class="brand-panel__big-number {{brandWidget.scoreClass}}"
+            aria-label="{{t "home.brandScore"}}: {{brandWidget.score}}">
+        {{brandWidget.score}}
+      </span>
+      <span class="stat-card__label">{{t "home.brandScore"}}</span>
+
+      {{! -- Variant 2: Single score — no arrow, no sparkline -- }}
+      {{#if brandWidget.isFirstScore}}
+        <span class="brand-score-widget__delta text-muted"
+              style="font-size:var(--font-size-xs);margin-top:var(--space-xs);">
+          {{t "home.brandScoreFirstScore"}}
+        </span>
+      {{else}}
+        {{! -- Variant 3: 2+ scores — delta arrow + sparkline -- }}
+        {{! -- Delta vs previous -- }}
+        <span class="brand-score-widget__delta"
+              style="font-size:var(--font-size-sm);margin-top:var(--space-xs);">
+          {{#if (cmpPositive brandWidget.delta)}}
+            <span class="text--success">&#9650; +{{brandWidget.delta}} {{t "home.brandScoreDeltaUp"}}</span>
+          {{else}}
+            {{#if (cmpNegative brandWidget.delta)}}
+              <span class="text--error">&#9660; {{brandWidget.delta}} {{t "home.brandScoreDeltaDown"}}</span>
+            {{else}}
+              <span class="text-muted">&#9644; {{t "home.brandScoreDeltaFlat"}}</span>
+            {{/if}}
+          {{/if}}
+        </span>
+
+        {{! -- SVG sparkline (zero-JS, server-computed polyline) -- }}
+        {{#if brandWidget.sparklinePoints}}
+        <div class="brand-score-widget__sparkline" style="margin-top:var(--space-sm);width:100%;max-width:120px;">
+          <svg viewBox="0 0 100 40" preserveAspectRatio="xMidYMid meet"
+               role="img" aria-label="{{t "home.brandScoreTrendLabel"}}"
+               style="width:100%;height:auto;display:block;">
+            <desc>{{t "home.brandScoreTrendLabel"}}: {{#each brandWidget.sparklineValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</desc>
+            <polyline
+              points="{{brandWidget.sparklinePoints}}"
+              fill="none"
+              stroke="var(--accent)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              vector-effect="non-scaling-stroke" />
+          </svg>
+          <span class="sr-only">{{t "home.brandScoreTrendLabel"}}: {{#each brandWidget.sparklineValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</span>
+        </div>
+        {{/if}}
+      {{/if}}
+    </div>
+  </article>
+{{else}}
+  {{! -- Variant 1: No brand scores yet -- }}
+  <article class="stat-card brand-score-widget brand-score-widget--empty" role="listitem"
+           style="border-left: 3px solid var(--border-color)">
+    <span class="stat-card__value text-muted" style="font-size:var(--font-size-xl);">&mdash;</span>
+    <span class="stat-card__label">{{t "home.brandScore"}}</span>
+    <span class="text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-xs);text-align:center;">
+      {{t "home.brandScoreNoData"}}
+    </span>
+  </article>
+{{/if}}
