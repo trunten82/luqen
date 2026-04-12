@@ -15,7 +15,10 @@ function issue(context: string): BrandedIssue {
   };
 }
 
-function guideline(fontFamilies: readonly string[]): BrandGuideline {
+function guideline(
+  fontFamilies: readonly string[],
+  metrics?: { xHeight?: number; unitsPerEm?: number },
+): BrandGuideline {
   return {
     id: 'g1',
     orgId: 'o1',
@@ -23,7 +26,11 @@ function guideline(fontFamilies: readonly string[]): BrandGuideline {
     version: 1,
     active: true,
     colors: [],
-    fonts: fontFamilies.map((family, i) => ({ id: `f${i}`, family })),
+    fonts: fontFamilies.map((family, i) => ({
+      id: `f${i}`,
+      family,
+      ...(metrics ? { xHeight: metrics.xHeight, unitsPerEm: metrics.unitsPerEm } : {}),
+    })),
     selectors: [],
   };
 }
@@ -158,5 +165,140 @@ describe('calculateTypographySubScore', () => {
     expect(elapsed).toBeLessThan(100);
     // Should still return a result, not hang or throw.
     expect(result.kind).toBe('scored');
+  });
+
+  // ---------------------------------------------------------------------------
+  // x-height 4th heuristic tests
+  // ---------------------------------------------------------------------------
+
+  it('uses 4-way mean when guideline fonts have xHeight metrics (all pass = 100)', () => {
+    const ctx = 'font-family: Inter, sans-serif; font-size: 16px; line-height: 1.5;';
+    const result = calculateTypographySubScore(
+      [issue(ctx)],
+      guideline(['Inter'], { xHeight: 1118, unitsPerEm: 2048 }),
+    );
+    expect(result.kind).toBe('scored');
+    if (result.kind === 'scored') {
+      // 4/4 pass = 100
+      expect(result.value).toBe(100);
+      expect(result.detail).toEqual({
+        dimension: 'typography',
+        fontOk: true,
+        sizeOk: true,
+        lineHeightOk: true,
+        xHeightOk: true,
+      });
+    }
+  });
+
+  it('uses 3-way fallback when NO guideline font has xHeight metrics', () => {
+    const ctx = 'font-family: Inter, sans-serif; font-size: 16px; line-height: 1.5;';
+    // No metrics — should behave identically to original 3-way mean
+    const result = calculateTypographySubScore([issue(ctx)], guideline(['Inter']));
+    expect(result.kind).toBe('scored');
+    if (result.kind === 'scored') {
+      expect(result.value).toBe(100);
+      // xHeightOk should NOT be present in the 3-way fallback detail
+      expect(result.detail).toEqual({
+        dimension: 'typography',
+        fontOk: true,
+        sizeOk: true,
+        lineHeightOk: true,
+      });
+    }
+  });
+
+  it('xHeightOk = true when observed font matches guideline font with metrics', () => {
+    const ctx = 'font-family: Inter; font-size: 14px; line-height: 1.2;';
+    const result = calculateTypographySubScore(
+      [issue(ctx)],
+      guideline(['Inter'], { xHeight: 1118, unitsPerEm: 2048 }),
+    );
+    expect(result.kind).toBe('scored');
+    if (result.kind === 'scored') {
+      // fontOk=true, sizeOk=false, lineHeightOk=false, xHeightOk=true => 2/4 = 50
+      expect(result.value).toBe(50);
+      expect(result.detail).toEqual({
+        dimension: 'typography',
+        fontOk: true,
+        sizeOk: false,
+        lineHeightOk: false,
+        xHeightOk: true,
+      });
+    }
+  });
+
+  it('xHeightOk = false when observed font does NOT match any guideline font with metrics', () => {
+    const ctx = 'font-family: Arial; font-size: 16px; line-height: 1.5;';
+    const result = calculateTypographySubScore(
+      [issue(ctx)],
+      guideline(['Inter'], { xHeight: 1118, unitsPerEm: 2048 }),
+    );
+    expect(result.kind).toBe('scored');
+    if (result.kind === 'scored') {
+      // fontOk=false, sizeOk=true, lineHeightOk=true, xHeightOk=false => 2/4 = 50
+      expect(result.value).toBe(50);
+      expect(result.detail).toEqual({
+        dimension: 'typography',
+        fontOk: false,
+        sizeOk: true,
+        lineHeightOk: true,
+        xHeightOk: false,
+      });
+    }
+  });
+
+  it('4-way mean: 3 of 4 pass = 75', () => {
+    // font matches, size ok, lineHeight ok, but xHeightOk = false (font not in metrics list)
+    const ctx = 'font-family: Arial; font-size: 16px; line-height: 1.5;';
+    // Arial observed but Inter is the guideline font with metrics
+    const g: BrandGuideline = {
+      id: 'g1', orgId: 'o1', name: 'Test', version: 1, active: true, colors: [],
+      fonts: [
+        { id: 'f0', family: 'Arial' },  // no metrics
+        { id: 'f1', family: 'Inter', xHeight: 1118, unitsPerEm: 2048 },  // has metrics
+      ],
+      selectors: [],
+    };
+    const result = calculateTypographySubScore([issue(ctx)], g);
+    expect(result.kind).toBe('scored');
+    if (result.kind === 'scored') {
+      // fontOk=true (Arial matches), sizeOk=true, lineHeightOk=true, xHeightOk=false (Arial has no metrics)
+      expect(result.value).toBe(75);
+      expect(result.detail).toEqual({
+        dimension: 'typography',
+        fontOk: true,
+        sizeOk: true,
+        lineHeightOk: true,
+        xHeightOk: false,
+      });
+    }
+  });
+
+  it('mixed guideline: uses fonts with metrics for xHeightOk check', () => {
+    const ctx = 'font-family: Inter; font-size: 16px; line-height: 1.5;';
+    // Mixed: Inter has metrics, Roboto does not
+    const g: BrandGuideline = {
+      id: 'g1', orgId: 'o1', name: 'Test', version: 1, active: true, colors: [],
+      fonts: [
+        { id: 'f0', family: 'Roboto' },  // no metrics
+        { id: 'f1', family: 'Inter', xHeight: 1118, unitsPerEm: 2048 },  // has metrics
+      ],
+      selectors: [],
+    };
+    const result = calculateTypographySubScore([issue(ctx)], g);
+    expect(result.kind).toBe('scored');
+    if (result.kind === 'scored') {
+      // fontOk=true (Inter matches), sizeOk=true, lineHeightOk=true,
+      // xHeightOk=true (Inter observed AND Inter has metrics)
+      expect(result.value).toBe(100);
+      expect(result.detail).toEqual({
+        dimension: 'typography',
+        fontOk: true,
+        sizeOk: true,
+        lineHeightOk: true,
+        xHeightOk: true,
+      });
+    }
   });
 });
