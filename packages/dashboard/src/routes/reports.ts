@@ -178,6 +178,7 @@ export async function reportRoutes(
           reportData: null,
           pdfAvailable: true,
           llmEnabled: llmClient !== null,
+          brandScore: null,
         });
       }
 
@@ -206,6 +207,7 @@ export async function reportRoutes(
           reportData: null,
           pdfAvailable: true,
           llmEnabled: llmClient !== null,
+          brandScore: null,
         });
       }
 
@@ -245,6 +247,35 @@ export async function reportRoutes(
       ];
 
       const brandFilter = (request.query as Record<string, string>).brandFilter ?? 'all';
+
+      // ── Brand score data (Phase 20) ─────────────────────────────────
+      const brandScore = await storage.brandScores.getLatestForScan(id);
+
+      let previousScore: import('../services/scoring/types.js').ScoreResult | null = null;
+      if (brandScore !== null) {
+        const history = await storage.brandScores.getHistoryForSite(
+          scan.orgId,
+          scan.siteUrl,
+          2,
+        );
+        if (history.length >= 2) {
+          previousScore = history[1].result;
+        }
+      }
+
+      // brandRelatedCount + totalIssues from existing reportData.branding
+      const brandRelatedCount = (reportData as any)?.branding?.brandRelatedCount ?? 0;
+      const totalIssues = (reportData as any)?.summary?.totalIssues ?? 0;
+
+      // Compute delta for the template
+      let brandDelta: number | null = null;
+      if (
+        brandScore !== null && brandScore.kind === 'scored' &&
+        previousScore !== null && previousScore.kind === 'scored'
+      ) {
+        brandDelta = brandScore.overall - previousScore.overall;
+      }
+      const brandIsFirstScore = brandScore !== null && brandScore.kind === 'scored' && previousScore === null;
 
       // Check if the branding guideline used for this scan is still active
       let brandingGuidelineActive = true;
@@ -286,6 +317,12 @@ export async function reportRoutes(
         assignmentActiveCount,
         assignedMap,
         assignees,
+        brandScore,
+        previousScore,
+        brandDelta,
+        brandIsFirstScore,
+        brandRelatedCount,
+        totalIssues,
       });
     },
   );
