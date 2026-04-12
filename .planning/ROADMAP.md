@@ -11,7 +11,7 @@
 ## Phases
 
 - [x] **Phase 22: Permissions Audit** - Migrate org-level routes from `admin.system` to `admin.org`; unblocks correct permission gates for all subsequent phases (completed 2026-04-12)
-- [ ] **Phase 23: Brand Overview Page** - Dedicated `/brand-overview` with per-site selector, org-level KPIs, and shared sparkline utility
+- [x] **Phase 23: Brand Overview Page** - Dedicated `/brand-overview` with per-site selector, org-level KPIs, and shared sparkline utility (completed 2026-04-12)
 - [ ] **Phase 24: Per-Dimension Trends + Score Target** - Three dimension sparklines on one SVG, org-level target line, gap display
 - [ ] **Phase 25: Drilldown Modal** - Click sub-score dimension on report detail to see failing elements grouped by color/typography/components
 - [ ] **Phase 26: Typography x-height Spike** - opentype.js + Google Fonts API feasibility; may conclude "not viable" (acceptable outcome)
@@ -43,8 +43,8 @@ Plans:
   4. Sparkline point computation is extracted into `services/sparkline.ts` and used by both overview page and home widget
 **Plans**: 2 plans
 Plans:
-- [ ] 23-01-PLAN.md — Sparkline utility extraction + brand overview route + template + sidebar link
-- [ ] 23-02-PLAN.md — HTMX site selector + org summary card + tests + UAT
+- [x] 23-01-PLAN.md — Sparkline utility extraction + brand overview route + template + sidebar link
+- [x] 23-02-PLAN.md — HTMX site selector + org summary card + tests + UAT
 **UI hint**: yes
 
 ### Phase 24: Per-Dimension Trends + Score Target
@@ -107,7 +107,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 22. Permissions Audit | 1/1 | Complete    | 2026-04-12 |
-| 23. Brand Overview Page | 0/2 | Not started | - |
+| 23. Brand Overview Page | 2/2 | Complete    | 2026-04-12 |
 | 24. Per-Dimension Trends + Score Target | 0/? | Not started | - |
 | 25. Drilldown Modal | 0/? | Not started | - |
 | 26. Typography x-height Spike | 0/? | Not started | - |
