@@ -1214,7 +1214,16 @@
     "brandScoreDimensions2of3": "2 of 3 dimensions",
     "brandScoreDimensions1of3": "1 of 3 dimensions",
     "brandScoreNotAvailable": "Brand score not available for this scan",
-    "brandScoreIntroduced": "Brand scoring was introduced in v2.11.0"
+    "brandScoreIntroduced": "Brand scoring was introduced in v2.11.0",
+    "brandDrilldownTitle": "Drilldown",
+    "brandDrilldownElement": "Element",
+    "brandDrilldownIssue": "Issue",
+    "brandDrilldownDetail": "Brand Match",
+    "brandDrilldownEmpty": "No failing elements found for this dimension.",
+    "brandDrilldownCount": "failing elements",
+    "brandDrilldownClose": "Close",
+    "brandDrilldownAriaLabel": "View failing elements for",
+    "brandDrilldownClickHint": "Click to see failing elements"
   },
   "reportCompare": {
     "title": "Report Comparison",

@@ -65,11 +65,22 @@
       {{/if}}
 
       {{! ── Sub-score: Color Contrast ── }}
+      {{#if (eq brandScore.color.kind 'scored')}}
+      <div class="brand-panel__sub brand-panel__sub--clickable" style="margin-bottom:var(--space-sm);cursor:pointer;"
+           hx-get="/reports/{{@root.scan.id}}/brand-drilldown?dimension=color"
+           hx-target="#modal-container"
+           hx-swap="innerHTML"
+           role="button"
+           tabindex="0"
+           aria-label="{{t 'reportDetail.brandDrilldownAriaLabel'}} {{t 'reportDetail.brandScoreColorContrast'}}"
+           title="{{t 'reportDetail.brandDrilldownClickHint'}}">
+      {{else}}
       <div class="brand-panel__sub" style="margin-bottom:var(--space-sm);">
+      {{/if}}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs);">
           <span style="font-size:var(--font-size-sm);font-weight:500;">{{t "reportDetail.brandScoreColorContrast"}}</span>
           {{#if (eq brandScore.color.kind 'scored')}}
-            <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.color.value}}/100</span>
+            <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.color.value}}/100 <span class="text-muted" style="font-size:var(--font-size-xs);">&#9656;</span></span>
           {{else}}
             <span class="text-muted" style="font-size:var(--font-size-xs);">{{unscorable-reason-label brandScore.color.reason}}</span>
           {{/if}}
@@ -82,11 +93,22 @@
       </div>
 
       {{! ── Sub-score: Typography ── }}
+      {{#if (eq brandScore.typography.kind 'scored')}}
+      <div class="brand-panel__sub brand-panel__sub--clickable" style="margin-bottom:var(--space-sm);cursor:pointer;"
+           hx-get="/reports/{{@root.scan.id}}/brand-drilldown?dimension=typography"
+           hx-target="#modal-container"
+           hx-swap="innerHTML"
+           role="button"
+           tabindex="0"
+           aria-label="{{t 'reportDetail.brandDrilldownAriaLabel'}} {{t 'reportDetail.brandScoreTypography'}}"
+           title="{{t 'reportDetail.brandDrilldownClickHint'}}">
+      {{else}}
       <div class="brand-panel__sub" style="margin-bottom:var(--space-sm);">
+      {{/if}}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs);">
           <span style="font-size:var(--font-size-sm);font-weight:500;">{{t "reportDetail.brandScoreTypography"}}</span>
           {{#if (eq brandScore.typography.kind 'scored')}}
-            <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.typography.value}}/100</span>
+            <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.typography.value}}/100 <span class="text-muted" style="font-size:var(--font-size-xs);">&#9656;</span></span>
           {{else}}
             <span class="text-muted" style="font-size:var(--font-size-xs);">{{unscorable-reason-label brandScore.typography.reason}}</span>
           {{/if}}
@@ -99,11 +121,22 @@
       </div>
 
       {{! ── Sub-score: Components ── }}
+      {{#if (eq brandScore.components.kind 'scored')}}
+      <div class="brand-panel__sub brand-panel__sub--clickable" style="margin-bottom:var(--space-sm);cursor:pointer;"
+           hx-get="/reports/{{@root.scan.id}}/brand-drilldown?dimension=components"
+           hx-target="#modal-container"
+           hx-swap="innerHTML"
+           role="button"
+           tabindex="0"
+           aria-label="{{t 'reportDetail.brandDrilldownAriaLabel'}} {{t 'reportDetail.brandScoreComponents'}}"
+           title="{{t 'reportDetail.brandDrilldownClickHint'}}">
+      {{else}}
       <div class="brand-panel__sub" style="margin-bottom:var(--space-sm);">
+      {{/if}}
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs);">
           <span style="font-size:var(--font-size-sm);font-weight:500;">{{t "reportDetail.brandScoreComponents"}}</span>
           {{#if (eq brandScore.components.kind 'scored')}}
-            <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.components.value}}/100</span>
+            <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.components.value}}/100 <span class="text-muted" style="font-size:var(--font-size-xs);">&#9656;</span></span>
           {{else}}
             <span class="text-muted" style="font-size:var(--font-size-xs);">{{unscorable-reason-label brandScore.components.reason}}</span>
           {{/if}}

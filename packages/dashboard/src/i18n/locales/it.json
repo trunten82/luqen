@@ -898,7 +898,16 @@
     "brandScoreDimensions2of3": "[IT] 2 of 3 dimensions",
     "brandScoreDimensions1of3": "[IT] 1 of 3 dimensions",
     "brandScoreNotAvailable": "[IT] Brand score not available for this scan",
-    "brandScoreIntroduced": "[IT] Brand scoring was introduced in v2.11.0"
+    "brandScoreIntroduced": "[IT] Brand scoring was introduced in v2.11.0",
+    "brandDrilldownTitle": "[IT] Drilldown",
+    "brandDrilldownElement": "[IT] Element",
+    "brandDrilldownIssue": "[IT] Issue",
+    "brandDrilldownDetail": "[IT] Brand Match",
+    "brandDrilldownEmpty": "[IT] No failing elements found for this dimension.",
+    "brandDrilldownCount": "[IT] failing elements",
+    "brandDrilldownClose": "[IT] Close",
+    "brandDrilldownAriaLabel": "[IT] View failing elements for",
+    "brandDrilldownClickHint": "[IT] Click to see failing elements"
   },
   "reportCompare": {
     "title": "Confronto Report",
