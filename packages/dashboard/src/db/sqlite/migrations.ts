@@ -1183,4 +1183,9 @@ ALTER TABLE organizations
   ADD COLUMN branding_mode TEXT NOT NULL DEFAULT 'embedded';
     `,
   },
+  {
+    id: '044',
+    name: 'org-brand-score-target',
+    sql: `ALTER TABLE organizations ADD COLUMN brand_score_target INTEGER;`,
+  },
 ];

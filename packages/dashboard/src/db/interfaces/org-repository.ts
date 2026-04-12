@@ -42,4 +42,10 @@ export interface OrgRepository {
   setBrandingMode(orgId: string, mode: 'embedded' | 'remote'): Promise<void>;
   getOrgLLMCredentials(orgId: string): Promise<{ clientId: string; clientSecret: string } | null>;
   updateOrgLLMClient(orgId: string, clientId: string, clientSecret: string): Promise<void>;
+  /**
+   * Read/write the org-level brand score target (0-100 integer, or null for
+   * 'no target'). Added in migration 044.
+   */
+  getBrandScoreTarget(orgId: string): Promise<number | null>;
+  setBrandScoreTarget(orgId: string, target: number | null): Promise<void>;
 }

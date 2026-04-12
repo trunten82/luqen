@@ -156,6 +156,43 @@ describe('OrgDb', () => {
     });
   });
 
+  describe('brand score target', () => {
+    it('getBrandScoreTarget returns null by default', async () => {
+      const org = await storage.organizations.createOrg({ name: 'TargetOrg', slug: 'target-org' });
+      const target = await storage.organizations.getBrandScoreTarget(org.id);
+      expect(target).toBeNull();
+    });
+
+    it('setBrandScoreTarget sets and getBrandScoreTarget retrieves the value', async () => {
+      const org = await storage.organizations.createOrg({ name: 'TargetOrg', slug: 'target-org' });
+      await storage.organizations.setBrandScoreTarget(org.id, 85);
+      const target = await storage.organizations.getBrandScoreTarget(org.id);
+      expect(target).toBe(85);
+    });
+
+    it('setBrandScoreTarget with null clears the target', async () => {
+      const org = await storage.organizations.createOrg({ name: 'TargetOrg', slug: 'target-org' });
+      await storage.organizations.setBrandScoreTarget(org.id, 85);
+      await storage.organizations.setBrandScoreTarget(org.id, null);
+      const target = await storage.organizations.getBrandScoreTarget(org.id);
+      expect(target).toBeNull();
+    });
+
+    it('setBrandScoreTarget throws for value > 100', async () => {
+      const org = await storage.organizations.createOrg({ name: 'TargetOrg', slug: 'target-org' });
+      await expect(storage.organizations.setBrandScoreTarget(org.id, 101)).rejects.toThrow();
+    });
+
+    it('setBrandScoreTarget throws for value < 0', async () => {
+      const org = await storage.organizations.createOrg({ name: 'TargetOrg', slug: 'target-org' });
+      await expect(storage.organizations.setBrandScoreTarget(org.id, -1)).rejects.toThrow();
+    });
+
+    it('getBrandScoreTarget throws for nonexistent org', async () => {
+      await expect(storage.organizations.getBrandScoreTarget('nonexistent-org')).rejects.toThrow();
+    });
+  });
+
   describe('compliance credentials', () => {
     it('getOrgComplianceCredentials returns credentials when both fields are set', async () => {
       const org = await storage.organizations.createOrg({ name: 'CompOrg', slug: 'comp-org' });
