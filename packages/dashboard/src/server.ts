@@ -75,6 +75,7 @@ import { changeHistoryRoutes } from './routes/admin/change-history.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { brandingGuidelineRoutes } from './routes/admin/branding-guidelines.js';
 import { llmAdminRoutes } from './routes/admin/llm.js';
+import { brandOverviewRoutes } from './routes/brand-overview.js';
 import { setGitHostPluginManager } from './git-hosts/registry.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
@@ -813,6 +814,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── LLM admin routes ────────────────────────────────────────────────────
   await llmAdminRoutes(server, getLLMClient);
+  await brandOverviewRoutes(server, storage);
 
   // ── Export API routes ────────────────────────────────────────────────────
   await exportRoutes(server, storage);

@@ -1,0 +1,135 @@
+{{! Brand Overview — org-level brand accessibility KPIs with per-site selector }}
+
+{{#if hasSites}}
+<section aria-labelledby="brand-summary-heading" class="mb-lg">
+  <h2 id="brand-summary-heading" class="section-title">{{t "brandOverview.summary"}}</h2>
+  <div class="exec-summary" role="list" aria-label="Brand score summary">
+    <article class="stat-card" role="listitem" style="border-left: 3px solid var(--accent)">
+      <span class="stat-card__value {{summary.avgScoreClass}}">{{#if summary.avgScore}}{{summary.avgScore}}{{else}}&mdash;{{/if}}</span>
+      <span class="stat-card__label">{{t "brandOverview.avgScore"}}</span>
+    </article>
+    <article class="stat-card" role="listitem">
+      <span class="stat-card__value">{{summary.totalScored}}</span>
+      <span class="stat-card__label">{{t "brandOverview.scoredSites"}}</span>
+    </article>
+    <article class="stat-card" role="listitem" style="border-left: 3px solid var(--status-success)">
+      <span class="stat-card__value">{{summary.improving}}</span>
+      <span class="stat-card__label">{{t "brandOverview.improving"}}</span>
+    </article>
+    <article class="stat-card" role="listitem" style="border-left: 3px solid var(--status-error)">
+      <span class="stat-card__value">{{summary.regressing}}</span>
+      <span class="stat-card__label">{{t "brandOverview.regressing"}}</span>
+    </article>
+  </div>
+</section>
+
+<div class="brand-overview__layout" id="brand-overview-content">
+  {{! Site selector }}
+  <aside class="brand-overview__sites" aria-label="{{t "brandOverview.siteSelector"}}">
+    <h3 class="sidebar__section-label">{{t "brandOverview.sites"}}</h3>
+    <ul class="brand-overview__site-list" role="listbox">
+      {{#each sites}}
+      <li role="option" aria-selected="{{#if (eq this.siteUrl ../selectedSite)}}true{{else}}false{{/if}}">
+        <a class="brand-overview__site-item {{#if (eq this.siteUrl ../selectedSite)}}is-active{{/if}}"
+           href="/brand-overview?site={{this.siteUrlEncoded}}"
+           hx-get="/brand-overview?site={{this.siteUrlEncoded}}"
+           hx-target="#brand-overview-content"
+           hx-swap="outerHTML"
+           hx-push-url="true">
+          <span class="brand-overview__site-name">{{this.siteUrl}}</span>
+          <span class="brand-overview__site-score {{this.scoreClass}}">{{#if this.score}}{{this.score}}{{else}}&mdash;{{/if}}</span>
+        </a>
+      </li>
+      {{/each}}
+    </ul>
+  </aside>
+
+  {{! Detail panel for selected site }}
+  <main class="brand-overview__detail">
+    {{#if activeSite}}
+    <div class="card mb-md">
+      <div class="card__header">
+        <h3 class="card__title">{{activeSite.siteUrl}}</h3>
+        {{#if activeSite.guidelineName}}
+        <span class="badge badge--ghost">{{activeSite.guidelineName}}</span>
+        {{/if}}
+      </div>
+      <div class="card__body">
+        {{! Big score + sparkline }}
+        <div class="brand-overview__score-row">
+          <div class="brand-overview__big-score">
+            <span class="brand-panel__big-number {{activeSite.scoreClass}}">{{activeSite.score}}</span>
+            <span class="text-muted">/100</span>
+            {{#unless activeSite.isFirstScore}}
+              {{#if activeSite.delta}}
+                <span class="brand-overview__delta {{#if (gt activeSite.delta 0)}}text--success{{else}}text--error{{/if}}">
+                  {{#if (gt activeSite.delta 0)}}&#x2191;+{{activeSite.delta}}{{else}}&#x2193;{{activeSite.delta}}{{/if}}
+                </span>
+              {{else}}
+                <span class="brand-overview__delta text-muted">=0</span>
+              {{/if}}
+            {{/unless}}
+          </div>
+          {{#if activeSite.sparklinePoints}}
+          <svg class="brand-overview__sparkline" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="{{activeSite.sparklinePoints}}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+          </svg>
+          {{/if}}
+        </div>
+
+        {{! Sub-scores }}
+        <div class="brand-overview__subs mt-md">
+          <div class="mb-sm">
+            <span class="text-muted">{{t "brandOverview.color"}}</span>
+            {{#if (eq activeSite.color.kind "scored")}}
+            <div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--{{brandScoreClass activeSite.color.value}}" style="width:{{activeSite.color.value}}%"></div></div>
+            <span>{{activeSite.color.value}}%</span>
+            {{else}}
+            <span class="text-muted">{{t "brandOverview.unscorable"}}</span>
+            {{/if}}
+          </div>
+          <div class="mb-sm">
+            <span class="text-muted">{{t "brandOverview.typography"}}</span>
+            {{#if (eq activeSite.typography.kind "scored")}}
+            <div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--{{brandScoreClass activeSite.typography.value}}" style="width:{{activeSite.typography.value}}%"></div></div>
+            <span>{{activeSite.typography.value}}%</span>
+            {{else}}
+            <span class="text-muted">{{t "brandOverview.unscorable"}}</span>
+            {{/if}}
+          </div>
+          <div class="mb-sm">
+            <span class="text-muted">{{t "brandOverview.components"}}</span>
+            {{#if (eq activeSite.components.kind "scored")}}
+            <div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--{{brandScoreClass activeSite.components.value}}" style="width:{{activeSite.components.value}}%"></div></div>
+            <span>{{activeSite.components.value}}%</span>
+            {{else}}
+            <span class="text-muted">{{t "brandOverview.unscorable"}}</span>
+            {{/if}}
+          </div>
+        </div>
+
+        {{! Brand issues counter }}
+        <p class="text-muted mt-md">
+          {{activeSite.brandRelatedCount}} {{t "brandOverview.ofIssues"}} {{activeSite.totalIssues}} {{t "brandOverview.areBrandElements"}}
+        </p>
+      </div>
+    </div>
+    {{else}}
+    <div class="card">
+      <div class="card__body text-center">
+        <p class="text-muted">{{t "brandOverview.selectSite"}}</p>
+      </div>
+    </div>
+    {{/if}}
+  </main>
+</div>
+
+{{else}}
+<div class="card">
+  <div class="card__body text-center" style="padding: var(--space-xl)">
+    <h2 class="mb-sm">{{t "brandOverview.noSites"}}</h2>
+    <p class="text-muted mb-md">{{t "brandOverview.noSitesDesc"}}</p>
+    <a href="/admin/branding-guidelines" class="btn btn--primary">{{t "brandOverview.setupGuidelines"}}</a>
+  </div>
+</div>
+{{/if}}
