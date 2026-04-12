@@ -45,6 +45,7 @@ Plans:
 Plans:
 - [x] 23-01-PLAN.md — Sparkline utility extraction + brand overview route + template + sidebar link
 - [x] 23-02-PLAN.md — HTMX site selector + org summary card + tests + UAT
+
 **UI hint**: yes
 
 ### Phase 24: Per-Dimension Trends + Score Target
@@ -57,7 +58,10 @@ Plans:
   3. Admin sets a target score (0-100) on the overview page and a dashed horizontal target line appears on the sparkline
   4. Summary card shows "Current: X / Target: Y (gap: Z)" with green/amber/red color banding
   5. When no target is set (NULL), no target line or gap display renders
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 24-01-PLAN.md — Per-dimension sparkline extraction + gap-aware multi-series SVG polylines
+- [ ] 24-02-PLAN.md — Migration 044 + score target CRUD + dashed SVG line + gap display
 **UI hint**: yes
 
 ### Phase 25: Drilldown Modal
@@ -108,7 +112,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 22. Permissions Audit | 1/1 | Complete    | 2026-04-12 |
 | 23. Brand Overview Page | 2/2 | Complete    | 2026-04-12 |
-| 24. Per-Dimension Trends + Score Target | 0/? | Not started | - |
+| 24. Per-Dimension Trends + Score Target | 0/2 | Not started | - |
 | 25. Drilldown Modal | 0/? | Not started | - |
 | 26. Typography x-height Spike | 0/? | Not started | - |
 | 27. Historical Rescore | 0/? | Not started | - |
