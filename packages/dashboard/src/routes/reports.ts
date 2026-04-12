@@ -12,6 +12,7 @@ import { getFixSuggestion } from '../fix-suggestions.js';
 import type { LLMClient } from '../llm-client.js';
 import { resolveOrgLLMClient } from '../llm-client.js';
 import { t } from '../i18n/index.js';
+import { filterDrilldownIssues, isValidDimension } from '../services/brand-drilldown.js';
 export { normalizeReportData, inferComponent };
 export type { JsonReportFile };
 
@@ -691,6 +692,88 @@ export async function reportRoutes(
       } finally {
         if (isPerOrg && effectiveLlm) effectiveLlm.destroy();
       }
+    },
+  );
+
+  // GET /reports/:id/brand-drilldown — HTMX partial: dimension drilldown modal
+  server.get(
+    '/reports/:id/brand-drilldown',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const query = request.query as { dimension?: string };
+      const dimensionRaw = query.dimension ?? '';
+
+      if (!isValidDimension(dimensionRaw)) {
+        return reply.code(400).header('content-type', 'text/html').send(
+          `<div class="alert alert--warning">Invalid dimension parameter.</div>`,
+        );
+      }
+      const dimension = dimensionRaw;
+
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+
+      if (scan === null || scan.status !== 'completed') {
+        return reply.code(404).header('content-type', 'text/html').send(
+          `<div class="alert alert--warning">Report not found.</div>`,
+        );
+      }
+
+      // Org-scoping: admin sees all, others check orgId match
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.code(404).header('content-type', 'text/html').send(
+          `<div class="alert alert--warning">Report not found.</div>`,
+        );
+      }
+
+      // Load report data
+      let reportData: ReturnType<typeof normalizeReportData> | null = null;
+      try {
+        const dbReport = await storage.scans.getReport(id);
+        if (dbReport !== null) {
+          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+        } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
+          const raw = JSON.parse(
+            await readFile(scan.jsonReportPath, 'utf-8'),
+          ) as JsonReportFile;
+          reportData = normalizeReportData(raw, scan);
+        }
+      } catch {
+        // Fall through
+      }
+
+      const issues = reportData !== null
+        ? filterDrilldownIssues(dimension, reportData)
+        : [];
+
+      // Resolve dimension label via i18n
+      const dimensionLabelMap: Record<string, string> = {
+        color: t('reportDetail.brandScoreColorContrast'),
+        typography: t('reportDetail.brandScoreTypography'),
+        components: t('reportDetail.brandScoreComponents'),
+      };
+      const dimensionLabel = dimensionLabelMap[dimension] ?? dimension;
+
+      // Get dimension sub-score value from brand score
+      let dimensionScore: number | null = null;
+      try {
+        const brandScore = await storage.brandScores.getLatestForScan(id);
+        if (brandScore !== null && brandScore.kind === 'scored') {
+          const sub = brandScore[dimension];
+          if (sub.kind === 'scored') {
+            dimensionScore = sub.value;
+          }
+        }
+      } catch {
+        // Best-effort — score badge is optional
+      }
+
+      return reply.view('partials/brand-drilldown-modal.hbs', {
+        issues,
+        dimension,
+        dimensionLabel,
+        dimensionScore,
+      });
     },
   );
 }
