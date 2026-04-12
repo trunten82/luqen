@@ -106,3 +106,15 @@
 Plans:
 - [x] 20-01-PLAN.md — Route data plumbing + Handlebars helpers + brand-score-panel.hbs partial (all 3 variants) + report-detail.hbs inclusion [Wave 1]
 - [x] 20-02-PLAN.md — Template render test suite (9 tests: null/unscorable/scored variants + delta + counter + color banding + nested unscorable) [Wave 2]
+
+### Phase 21: Dashboard Widget
+**Goal**: Home dashboard shows a brand score widget tile (big number + trend arrow + delta + inline SVG `<polyline>` sparkline rendered server-side with sr-only accessible description + zero client-side JS) plus a cross-phase i18n sweep ensuring all new UI strings from Phases 19/20/21 use `{{t}}` helpers across en/fr/it/pt/de/es
+**Depends on**: Phase 16 (BrandScoreRepository.getHistoryForSite for sparkline data), Phase 18 (scanner writes brand_scores rows), Phase 20 (report panel — per-scan detail; widget delivers org-level summary)
+**Requirements**: BUI-02, BUI-03
+**Success Criteria** (what must be TRUE):
+  1. `brand-score-widget.hbs` partial renders on the home dashboard showing: big composite number (color-banded green/amber/red reusing Phase 20's `brandScoreClass` helper), trend arrow (↑/↓/=), numeric delta vs previous, and an inline SVG `<polyline>` sparkline derived from the N most recent brand_scores for the org — zero client-side JS, no external chart library
+  2. Sparkline has an accessible `sr-only` text description (e.g., "Brand score trend: 72, 75, 68, 80 over last 4 scans") so screen readers get the same information as sighted users
+  3. Widget handles graceful empty states: 0 scores (new org, pre-v2.11.0) → "No brand scores yet" card; 1 score → big number only, no trend arrow, no sparkline; 2+ scores → full widget with sparkline
+  4. All new UI strings introduced in Phases 19, 20, and 21 use `{{t}}` helpers — no hardcoded English in any `.hbs` partial from these phases. Translation keys exist in at least `en.json`; other locales (fr/it/pt/de/es) have placeholder entries for all new keys
+  5. Mobile responsive: widget renders correctly at ≤768px viewport width without horizontal overflow or clipped sparkline (verified by a render test or CSS media query assertion)
+**Plans**: TBD (populated by planner)
