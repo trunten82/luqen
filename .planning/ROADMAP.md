@@ -28,7 +28,9 @@
   2. User with `admin.org` can toggle branding mode for their own org without `admin.system`
   3. User WITHOUT `admin.org` or `admin.system` is denied access to org edit and branding mode toggle
   4. System-wide operations (create org, delete org, list all orgs) still require `admin.system` and reject `admin.org`-only users
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 22-01-PLAN.md — Migrate branding routes to admin.org + permission matrix tests
 
 ### Phase 23: Brand Overview Page
 **Goal**: Users can see all their branded sites' scores, trends, and sub-score breakdowns on a single dedicated page
@@ -101,7 +103,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 22. Permissions Audit | 0/? | Not started | - |
+| 22. Permissions Audit | 0/1 | Planned | - |
 | 23. Brand Overview Page | 0/? | Not started | - |
 | 24. Per-Dimension Trends + Score Target | 0/? | Not started | - |
 | 25. Drilldown Modal | 0/? | Not started | - |
