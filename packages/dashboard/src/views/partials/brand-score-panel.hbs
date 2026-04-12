@@ -32,27 +32,27 @@
         </span>
         <span class="text-muted" style="font-size:var(--font-size-base);">/100</span>
         <span class="badge {{brandScoreBadge brandScore.overall}}" style="margin-left:var(--space-xs);">
-          {{#if (gte brandScore.overall 85)}}Good{{else}}{{#if (gte brandScore.overall 70)}}Fair{{else}}Needs work{{/if}}{{/if}}
+          {{#if (gte brandScore.overall 85)}}{{t "reportDetail.brandScoreGood"}}{{else}}{{#if (gte brandScore.overall 70)}}{{t "reportDetail.brandScoreFair"}}{{else}}{{t "reportDetail.brandScoreNeedsWork"}}{{/if}}{{/if}}
         </span>
       </div>
 
       {{! ── Delta vs previous scan ── }}
       <div class="brand-panel__delta" style="margin-bottom:var(--space-md);font-size:var(--font-size-sm);">
         {{#if brandIsFirstScore}}
-          <span class="text-muted">First brand score for this site</span>
+          <span class="text-muted">{{t "reportDetail.brandScoreFirst"}}</span>
         {{else}}
           {{#if brandDelta}}
             {{#if (cmpPositive brandDelta)}}
-              <span class="text--success">&#9650; +{{brandDelta}} vs previous scan</span>
+              <span class="text--success">&#9650; +{{brandDelta}} {{t "reportDetail.brandScoreDeltaUp"}}</span>
             {{else}}
               {{#if (cmpNegative brandDelta)}}
-                <span class="text--error">&#9660; {{brandDelta}} vs previous scan</span>
+                <span class="text--error">&#9660; {{brandDelta}} {{t "reportDetail.brandScoreDeltaDown"}}</span>
               {{else}}
-                <span class="text-muted">&#9644; No change vs previous scan</span>
+                <span class="text-muted">&#9644; {{t "reportDetail.brandScoreDeltaFlat"}}</span>
               {{/if}}
             {{/if}}
           {{else}}
-            <span class="text-muted">&#9644; No change vs previous scan</span>
+            <span class="text-muted">&#9644; {{t "reportDetail.brandScoreDeltaFlat"}}</span>
           {{/if}}
         {{/if}}
       </div>
@@ -60,14 +60,14 @@
       {{! ── Brand-related issue counter (BSTORE-05) ── }}
       {{#if (gt totalIssues 0)}}
       <div class="brand-panel__counter" style="margin-bottom:var(--space-md);font-size:var(--font-size-sm);">
-        <strong>{{brandRelatedCount}}</strong> of <strong>{{totalIssues}}</strong> issues are on brand elements
+        <strong>{{brandRelatedCount}}</strong> {{t "reportDetail.brandScoreIssueCounterOf"}} <strong>{{totalIssues}}</strong> {{t "reportDetail.brandScoreIssueCounterSuffix"}}
       </div>
       {{/if}}
 
       {{! ── Sub-score: Color Contrast ── }}
       <div class="brand-panel__sub" style="margin-bottom:var(--space-sm);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs);">
-          <span style="font-size:var(--font-size-sm);font-weight:500;">Color contrast</span>
+          <span style="font-size:var(--font-size-sm);font-weight:500;">{{t "reportDetail.brandScoreColorContrast"}}</span>
           {{#if (eq brandScore.color.kind 'scored')}}
             <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.color.value}}/100</span>
           {{else}}
@@ -75,7 +75,7 @@
           {{/if}}
         </div>
         {{#if (eq brandScore.color.kind 'scored')}}
-        <div class="progress-bar" role="progressbar" aria-valuenow="{{brandScore.color.value}}" aria-valuemin="0" aria-valuemax="100" aria-label="Color contrast score">
+        <div class="progress-bar" role="progressbar" aria-valuenow="{{brandScore.color.value}}" aria-valuemin="0" aria-valuemax="100" aria-label="{{t "reportDetail.brandScoreColorContrast"}}">
           <div class="progress-bar__fill {{brandScoreClass brandScore.color.value}}" style="width:{{brandScore.color.value}}%;"></div>
         </div>
         {{/if}}
@@ -84,7 +84,7 @@
       {{! ── Sub-score: Typography ── }}
       <div class="brand-panel__sub" style="margin-bottom:var(--space-sm);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs);">
-          <span style="font-size:var(--font-size-sm);font-weight:500;">Typography</span>
+          <span style="font-size:var(--font-size-sm);font-weight:500;">{{t "reportDetail.brandScoreTypography"}}</span>
           {{#if (eq brandScore.typography.kind 'scored')}}
             <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.typography.value}}/100</span>
           {{else}}
@@ -92,7 +92,7 @@
           {{/if}}
         </div>
         {{#if (eq brandScore.typography.kind 'scored')}}
-        <div class="progress-bar" role="progressbar" aria-valuenow="{{brandScore.typography.value}}" aria-valuemin="0" aria-valuemax="100" aria-label="Typography score">
+        <div class="progress-bar" role="progressbar" aria-valuenow="{{brandScore.typography.value}}" aria-valuemin="0" aria-valuemax="100" aria-label="{{t "reportDetail.brandScoreTypography"}}">
           <div class="progress-bar__fill {{brandScoreClass brandScore.typography.value}}" style="width:{{brandScore.typography.value}}%;"></div>
         </div>
         {{/if}}
@@ -101,7 +101,7 @@
       {{! ── Sub-score: Components ── }}
       <div class="brand-panel__sub" style="margin-bottom:var(--space-sm);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs);">
-          <span style="font-size:var(--font-size-sm);font-weight:500;">Components</span>
+          <span style="font-size:var(--font-size-sm);font-weight:500;">{{t "reportDetail.brandScoreComponents"}}</span>
           {{#if (eq brandScore.components.kind 'scored')}}
             <span style="font-size:var(--font-size-sm);font-weight:600;">{{brandScore.components.value}}/100</span>
           {{else}}
@@ -109,7 +109,7 @@
           {{/if}}
         </div>
         {{#if (eq brandScore.components.kind 'scored')}}
-        <div class="progress-bar" role="progressbar" aria-valuenow="{{brandScore.components.value}}" aria-valuemin="0" aria-valuemax="100" aria-label="Components score">
+        <div class="progress-bar" role="progressbar" aria-valuenow="{{brandScore.components.value}}" aria-valuemin="0" aria-valuemax="100" aria-label="{{t "reportDetail.brandScoreComponents"}}">
           <div class="progress-bar__fill {{brandScoreClass brandScore.components.value}}" style="width:{{brandScore.components.value}}%;"></div>
         </div>
         {{/if}}
@@ -118,7 +118,7 @@
       {{! ── Coverage weight indicator ── }}
       {{#if brandScore.coverage}}
       <div style="margin-top:var(--space-sm);font-size:var(--font-size-xs);" class="text-muted">
-        Score based on {{#if (eq brandScore.coverage.contributingWeight 1)}}all 3{{else}}{{#if (gte brandScore.coverage.contributingWeight 0.5)}}2 of 3{{else}}1 of 3{{/if}}{{/if}} dimensions
+        {{t "reportDetail.brandScoreDimensionsPrefix"}} {{#if (eq brandScore.coverage.contributingWeight 1)}}{{t "reportDetail.brandScoreDimensionsAll"}}{{else}}{{#if (gte brandScore.coverage.contributingWeight 0.5)}}{{t "reportDetail.brandScoreDimensions2of3"}}{{else}}{{t "reportDetail.brandScoreDimensions1of3"}}{{/if}}{{/if}}
       </div>
       {{/if}}
 
@@ -130,8 +130,8 @@
   <section class="card mb-md" aria-labelledby="brand-score-heading">
     <h2 id="brand-score-heading" class="card__heading">{{t "reportDetail.brandScore"}}</h2>
     <div class="card__body">
-      <p class="text-muted">Brand score not available for this scan</p>
-      <p class="text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-xs);">Brand scoring was introduced in v2.11.0</p>
+      <p class="text-muted">{{t "reportDetail.brandScoreNotAvailable"}}</p>
+      <p class="text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-xs);">{{t "reportDetail.brandScoreIntroduced"}}</p>
     </div>
   </section>
 {{/if}}
