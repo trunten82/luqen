@@ -10,7 +10,7 @@
 
 ## Phases
 
-- [ ] **Phase 22: Permissions Audit** - Migrate org-level routes from `admin.system` to `admin.org`; unblocks correct permission gates for all subsequent phases
+- [x] **Phase 22: Permissions Audit** - Migrate org-level routes from `admin.system` to `admin.org`; unblocks correct permission gates for all subsequent phases (completed 2026-04-12)
 - [ ] **Phase 23: Brand Overview Page** - Dedicated `/brand-overview` with per-site selector, org-level KPIs, and shared sparkline utility
 - [ ] **Phase 24: Per-Dimension Trends + Score Target** - Three dimension sparklines on one SVG, org-level target line, gap display
 - [ ] **Phase 25: Drilldown Modal** - Click sub-score dimension on report detail to see failing elements grouped by color/typography/components
@@ -30,7 +30,7 @@
   4. System-wide operations (create org, delete org, list all orgs) still require `admin.system` and reject `admin.org`-only users
 **Plans**: 1 plan
 Plans:
-- [ ] 22-01-PLAN.md — Migrate branding routes to admin.org + permission matrix tests
+- [x] 22-01-PLAN.md — Migrate branding routes to admin.org + permission matrix tests
 
 ### Phase 23: Brand Overview Page
 **Goal**: Users can see all their branded sites' scores, trends, and sub-score breakdowns on a single dedicated page
@@ -103,7 +103,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 22. Permissions Audit | 0/1 | Planned | - |
+| 22. Permissions Audit | 1/1 | Complete    | 2026-04-12 |
 | 23. Brand Overview Page | 0/? | Not started | - |
 | 24. Per-Dimension Trends + Score Target | 0/? | Not started | - |
 | 25. Drilldown Modal | 0/? | Not started | - |
