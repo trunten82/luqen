@@ -559,6 +559,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'rpt-regulation-card': 'partials/rpt-regulation-card.hbs',
         'brand-score-panel': 'partials/brand-score-panel.hbs',
         'brand-score-widget': 'partials/brand-score-widget.hbs',
+        'brand-overview-inner': 'partials/brand-overview-inner.hbs',
       },
     },
   });
