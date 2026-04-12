@@ -31,8 +31,10 @@ interface ExtractedTypography {
   readonly lineHeights: readonly number[];
 }
 
-function extractFromContext(context: string): ExtractedTypography {
-  // Defensive: truncate to 10KB before regex to bound any pathological input.
+function extractFromContext(context: string | null | undefined): ExtractedTypography {
+  // Defensive: null/undefined context yields no typography data (unscorable).
+  if (context == null) return { families: [], pxSizes: [], lineHeights: [] };
+  // Truncate to 10KB before regex to bound any pathological input.
   const safe = context.length > MAX_CONTEXT_LEN ? context.slice(0, MAX_CONTEXT_LEN) : context;
 
   const families: string[] = [];
