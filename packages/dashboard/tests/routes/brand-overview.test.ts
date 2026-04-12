@@ -45,6 +45,10 @@ async function createTestServer(permissions: string[] = ['branding.view']): Prom
     branding: {
       getGuidelineForSite: vi.fn().mockResolvedValue(null),
     },
+    organizations: {
+      getBrandScoreTarget: vi.fn().mockResolvedValue(null),
+      setBrandScoreTarget: vi.fn().mockResolvedValue(undefined),
+    },
   } as unknown as StorageAdapter;
 
   const server = Fastify({ logger: false });
@@ -335,6 +339,65 @@ describe('Brand Overview Routes', () => {
       expect(ds.components.hasData).toBe(true);
     });
 
+    it('GET /brand-overview includes targetScore in view data when set', async () => {
+      (ctx.storage.scans.getLatestPerSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { id: 'scan-1', siteUrl: 'https://example.com', status: 'completed', orgId: 'org-1', brandRelatedCount: 5, totalIssues: 20 },
+      ]);
+      (ctx.storage.brandScores.getHistoryForSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        makeHistoryEntry(85, '2026-04-10T10:00:00Z'),
+        makeHistoryEntry(80, '2026-04-09T10:00:00Z'),
+      ]);
+      ((ctx.storage as unknown as Record<string, unknown>).organizations as Record<string, ReturnType<typeof vi.fn>>).getBrandScoreTarget.mockResolvedValue(90);
+
+      const response = await ctx.server.inject({ method: 'GET', url: '/brand-overview' });
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { data: { targetScore: number | null; targetY: number | null; gapValue: number | null; gapClass: string } };
+      expect(body.data.targetScore).toBe(90);
+      expect(body.data.targetY).toBeTypeOf('number');
+      expect(body.data.gapValue).toBe(-5); // avgScore 85 - target 90
+      expect(body.data.gapClass).toBe('text--warning');
+    });
+
+    it('GET /brand-overview has null targetScore when not set', async () => {
+      const response = await ctx.server.inject({ method: 'GET', url: '/brand-overview' });
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { data: { targetScore: number | null; targetY: number | null; gapValue: number | null; gapClass: string } };
+      expect(body.data.targetScore).toBeNull();
+      expect(body.data.targetY).toBeNull();
+      expect(body.data.gapValue).toBeNull();
+      expect(body.data.gapClass).toBe('');
+    });
+
+    it('gap computation: avgScore=90, target=85 produces positive gap (success)', async () => {
+      (ctx.storage.scans.getLatestPerSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { id: 's1', siteUrl: 'https://a.com', status: 'completed', orgId: 'org-1', brandRelatedCount: 1, totalIssues: 5 },
+      ]);
+      (ctx.storage.brandScores.getHistoryForSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        makeHistoryEntry(90, '2026-04-10'), makeHistoryEntry(88, '2026-04-09'),
+      ]);
+      ((ctx.storage as unknown as Record<string, unknown>).organizations as Record<string, ReturnType<typeof vi.fn>>).getBrandScoreTarget.mockResolvedValue(85);
+
+      const response = await ctx.server.inject({ method: 'GET', url: '/brand-overview' });
+      const body = response.json() as { data: { gapValue: number; gapClass: string } };
+      expect(body.data.gapValue).toBe(5);
+      expect(body.data.gapClass).toBe('text--success');
+    });
+
+    it('gap computation: avgScore=60, target=85 produces large negative gap (error)', async () => {
+      (ctx.storage.scans.getLatestPerSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { id: 's1', siteUrl: 'https://a.com', status: 'completed', orgId: 'org-1', brandRelatedCount: 1, totalIssues: 5 },
+      ]);
+      (ctx.storage.brandScores.getHistoryForSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        makeHistoryEntry(60, '2026-04-10'), makeHistoryEntry(58, '2026-04-09'),
+      ]);
+      ((ctx.storage as unknown as Record<string, unknown>).organizations as Record<string, ReturnType<typeof vi.fn>>).getBrandScoreTarget.mockResolvedValue(85);
+
+      const response = await ctx.server.inject({ method: 'GET', url: '/brand-overview' });
+      const body = response.json() as { data: { gapValue: number; gapClass: string } };
+      expect(body.data.gapValue).toBe(-25);
+      expect(body.data.gapClass).toBe('text--error');
+    });
+
     it('HTMX partial: does NOT return JSON when hx-request present (view stub always returns JSON though)', async () => {
       // NOTE: In the real app, server.ts handles HTMX partial rendering by
       // compiling templates without layout. In tests, reply.view is a JSON stub
@@ -347,6 +410,69 @@ describe('Brand Overview Routes', () => {
       });
       // Route should still respond 200 (auth passes, data is computed)
       expect(response.statusCode).toBe(200);
+    });
+  });
+
+  describe('POST /brand-overview/target', () => {
+    describe('with branding.manage permission', () => {
+      beforeEach(async () => {
+        ctx = await createTestServer(['branding.view', 'branding.manage']);
+      });
+      afterEach(() => ctx.cleanup());
+
+      it('sets target and redirects', async () => {
+        const response = await ctx.server.inject({
+          method: 'POST',
+          url: '/brand-overview/target',
+          payload: 'target=85',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        });
+        expect(response.statusCode).toBe(302);
+        expect(response.headers.location).toBe('/brand-overview');
+        expect(
+          ((ctx.storage as unknown as Record<string, unknown>).organizations as Record<string, ReturnType<typeof vi.fn>>).setBrandScoreTarget,
+        ).toHaveBeenCalledWith('org-1', 85);
+      });
+
+      it('clears target with empty value', async () => {
+        const response = await ctx.server.inject({
+          method: 'POST',
+          url: '/brand-overview/target',
+          payload: 'target=',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        });
+        expect(response.statusCode).toBe(302);
+        expect(
+          ((ctx.storage as unknown as Record<string, unknown>).organizations as Record<string, ReturnType<typeof vi.fn>>).setBrandScoreTarget,
+        ).toHaveBeenCalledWith('org-1', null);
+      });
+
+      it('returns 400 for out-of-range value', async () => {
+        const response = await ctx.server.inject({
+          method: 'POST',
+          url: '/brand-overview/target',
+          payload: 'target=150',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        });
+        expect(response.statusCode).toBe(400);
+      });
+    });
+
+    describe('without branding.manage permission', () => {
+      beforeEach(async () => {
+        ctx = await createTestServer(['branding.view']);
+      });
+      afterEach(() => ctx.cleanup());
+
+      it('returns 403', async () => {
+        const response = await ctx.server.inject({
+          method: 'POST',
+          url: '/brand-overview/target',
+          payload: 'target=85',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        });
+        expect(response.statusCode).toBe(403);
+      });
     });
   });
 });

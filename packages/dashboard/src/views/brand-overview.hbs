@@ -19,6 +19,14 @@
     <article class="stat-card" role="listitem" style="border-left: 3px solid var(--accent)">
       <span class="stat-card__value {{summary.avgScoreClass}}">{{#if summary.avgScore}}{{summary.avgScore}}{{else}}&mdash;{{/if}}</span>
       <span class="stat-card__label">{{t "brandOverview.avgScore"}}</span>
+      {{#if targetScore}}
+      <span class="stat-card__sub text-sm">
+        {{t "brandOverview.target"}}: {{targetScore}}
+        {{#if gapValue}}
+          <span class="{{gapClass}}">({{#if (gte gapValue 0)}}+{{/if}}{{gapValue}})</span>
+        {{/if}}
+      </span>
+      {{/if}}
     </article>
     <article class="stat-card" role="listitem">
       <span class="stat-card__value">{{summary.totalScored}}</span>
@@ -33,6 +41,19 @@
       <span class="stat-card__label">{{t "brandOverview.regressing"}}</span>
     </article>
   </div>
+  {{#if canManageBranding}}
+  <form method="POST" action="/brand-overview/target" class="brand-overview__target-form mt-sm">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <label for="brand-target" class="text-muted text-sm">{{t "brandOverview.setTarget"}}</label>
+    <input type="number" id="brand-target" name="target" min="0" max="100" step="1"
+           value="{{#if targetScore}}{{targetScore}}{{/if}}"
+           placeholder="0-100" class="form-input form-input--sm" style="width: 5rem">
+    <button type="submit" class="btn btn--sm btn--secondary">{{t "brandOverview.saveTarget"}}</button>
+    {{#if targetScore}}
+    <button type="submit" name="target" value="" class="btn btn--sm btn--ghost">{{t "brandOverview.clearTarget"}}</button>
+    {{/if}}
+  </form>
+  {{/if}}
 </section>
 
 <span id="brand-loading" class="htmx-indicator" aria-hidden="true">{{t "common.loading"}}</span>
@@ -96,6 +117,9 @@
             {{/if}}
             {{#if activeSite.dimensionSparklines.components.hasData}}
             <polyline points="{{activeSite.dimensionSparklines.components.points}}" fill="none" stroke="var(--status-warning)" stroke-width="0.8" opacity="0.6"/>
+            {{/if}}
+            {{#if targetY}}
+            <line x1="0" y1="{{targetY}}" x2="100" y2="{{targetY}}" stroke="var(--text-muted)" stroke-width="0.6" stroke-dasharray="3 2" opacity="0.7"/>
             {{/if}}
             <polyline points="{{activeSite.sparklinePoints}}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
           </svg>
