@@ -90,6 +90,84 @@ export async function homeRoutes(
       ? Math.round((compliantSites / latestPerSite.size) * 100)
       : 0;
 
+    // ── Brand score widget data (Phase 21, BUI-02) ───────────────────────────
+    let brandWidget: {
+      score: number | null;
+      delta: number | null;
+      isFirstScore: boolean;
+      sparklinePoints: string;
+      sparklineValues: number[];
+      scoreCount: number;
+      scoreClass: string;
+    } | null = null;
+
+    const primarySite = latestPerSite.size > 0
+      ? [...latestPerSite.keys()][0]
+      : undefined;
+
+    if (primarySite) {
+      const effectiveOrgId = orgId ?? request.user?.currentOrgId ?? '';
+      if (effectiveOrgId) {
+        try {
+          const history = await storage.brandScores.getHistoryForSite(
+            effectiveOrgId,
+            primarySite,
+            20,
+          );
+
+          const scoredEntries = history.filter(
+            (h) => h.result.kind === 'scored',
+          );
+
+          if (scoredEntries.length > 0) {
+            const latest = scoredEntries[0].result;
+            const latestOverall = latest.kind === 'scored' ? latest.overall : 0;
+
+            const chronological = [...scoredEntries].reverse();
+            const values = chronological.map((h) =>
+              h.result.kind === 'scored' ? h.result.overall : 0,
+            );
+
+            const viewBoxW = 100;
+            const viewBoxH = 40;
+            const padding = 2;
+            const effectiveH = viewBoxH - padding * 2;
+            let points = '';
+            if (values.length >= 2) {
+              const step = viewBoxW / (values.length - 1);
+              const minVal = Math.min(...values);
+              const maxVal = Math.max(...values);
+              const range = maxVal - minVal || 1;
+              points = values
+                .map((v, i) => {
+                  const x = Math.round(i * step * 10) / 10;
+                  const y = Math.round((padding + effectiveH - ((v - minVal) / range) * effectiveH) * 10) / 10;
+                  return `${x},${y}`;
+                })
+                .join(' ');
+            }
+
+            const previousOverall = scoredEntries.length >= 2 && scoredEntries[1].result.kind === 'scored'
+              ? scoredEntries[1].result.overall
+              : null;
+            const delta = previousOverall !== null ? latestOverall - previousOverall : null;
+
+            brandWidget = {
+              score: latestOverall,
+              delta,
+              isFirstScore: scoredEntries.length === 1,
+              sparklinePoints: points,
+              sparklineValues: values,
+              scoreCount: scoredEntries.length,
+              scoreClass: latestOverall >= 85 ? 'text--success' : latestOverall >= 70 ? 'text--warning' : 'text--error',
+            };
+          }
+        } catch {
+          // Non-fatal — widget renders empty state
+        }
+      }
+    }
+
     // Load jurisdictions + regulations for quick scan form
     let jurisdictions: Array<{ id: string; name: string }> = [];
     let regulations: Array<{ id: string; name: string; shortName: string; jurisdictionId: string }> = [];
@@ -123,6 +201,7 @@ export async function homeRoutes(
             : 'text--muted',
         complianceRate,
       },
+      brandWidget,
       jurisdictions,
       regulations,
       recentScans: recentScans.map((s) => ({
