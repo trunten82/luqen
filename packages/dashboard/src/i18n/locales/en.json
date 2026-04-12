@@ -1488,5 +1488,7 @@
   "brandOverview.setupGuidelines": "Set up guidelines",
   "brandOverview.history": "Score History",
   "brandOverview.date": "Date",
-  "brandOverview.score": "Score"
+  "brandOverview.score": "Score",
+  "brandOverview.organization": "Organization",
+  "common.loading": "Loading..."
 }

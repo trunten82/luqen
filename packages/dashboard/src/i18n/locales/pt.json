@@ -1167,5 +1167,7 @@
   "brandOverview.setupGuidelines": "[PT] Set up guidelines",
   "brandOverview.history": "[PT] Score History",
   "brandOverview.date": "[PT] Date",
-  "brandOverview.score": "[PT] Score"
+  "brandOverview.score": "[PT] Score",
+  "brandOverview.organization": "[PT] Organization",
+  "common.loading": "[PT] Loading..."
 }

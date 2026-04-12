@@ -1167,5 +1167,7 @@
   "brandOverview.setupGuidelines": "[DE] Set up guidelines",
   "brandOverview.history": "[DE] Score History",
   "brandOverview.date": "[DE] Date",
-  "brandOverview.score": "[DE] Score"
+  "brandOverview.score": "[DE] Score",
+  "brandOverview.organization": "[DE] Organization",
+  "common.loading": "[DE] Loading..."
 }
