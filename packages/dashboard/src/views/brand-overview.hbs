@@ -23,6 +23,7 @@
   </div>
 </section>
 
+<span id="brand-loading" class="htmx-indicator" aria-hidden="true">{{t "common.loading"}}</span>
 <div class="brand-overview__layout" id="brand-overview-content">
   {{! Site selector }}
   <aside class="brand-overview__sites" aria-label="{{t "brandOverview.siteSelector"}}">
@@ -34,8 +35,10 @@
            href="/brand-overview?site={{this.siteUrlEncoded}}"
            hx-get="/brand-overview?site={{this.siteUrlEncoded}}"
            hx-target="#brand-overview-content"
+           hx-select="#brand-overview-content"
            hx-swap="outerHTML"
-           hx-push-url="true">
+           hx-push-url="true"
+           hx-indicator="#brand-loading">
           <span class="brand-overview__site-name">{{this.siteUrl}}</span>
           <span class="brand-overview__site-score {{this.scoreClass}}">{{#if this.score}}{{this.score}}{{else}}&mdash;{{/if}}</span>
         </a>
@@ -114,6 +117,33 @@
         </p>
       </div>
     </div>
+
+    {{! Score history table }}
+    {{#if activeSite.history.length}}
+    <div class="card">
+      <div class="card__header">
+        <h3 class="card__title">{{t "brandOverview.history"}}</h3>
+      </div>
+      <div class="card__body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{t "brandOverview.date"}}</th>
+              <th>{{t "brandOverview.score"}}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each activeSite.history}}
+            <tr>
+              <td data-label="Date">{{this.computedAt}}</td>
+              <td data-label="Score">{{this.overall}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {{/if}}
     {{else}}
     <div class="card">
       <div class="card__body text-center">

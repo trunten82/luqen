@@ -1292,6 +1292,124 @@ select {
   color: var(--text-primary);
 }
 
+/* ── Brand Overview Page (Phase 23) ────────────────────────── */
+.brand-overview__layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.brand-overview__sites {
+  position: sticky;
+  top: var(--space-md);
+}
+
+.brand-overview__site-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.brand-overview__site-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.brand-overview__site-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
+.brand-overview__site-item.is-active {
+  background: var(--accent-muted, var(--bg-hover));
+  border-color: var(--accent);
+  font-weight: var(--fw-medium);
+}
+
+.brand-overview__site-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+  font-size: var(--font-size-sm);
+}
+
+.brand-overview__site-score {
+  font-weight: var(--fw-bold);
+  font-size: var(--font-size-sm);
+  margin-left: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.brand-overview__detail {
+  min-width: 0;
+}
+
+.brand-overview__score-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.brand-overview__big-score {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+
+.brand-overview__delta {
+  font-size: var(--font-size-sm);
+  font-weight: var(--fw-medium);
+}
+
+.brand-overview__sparkline {
+  width: 120px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.brand-overview__subs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.brand-overview__subs > div {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+@media (max-width: 768px) {
+  .brand-overview__layout {
+    grid-template-columns: 1fr;
+  }
+  .brand-overview__sites {
+    position: static;
+  }
+  .brand-overview__score-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .brand-overview__subs > div {
+    grid-template-columns: 80px 1fr auto;
+  }
+}
+
 /* Progress with label */
 .progress-wrapper {
   display: flex;
