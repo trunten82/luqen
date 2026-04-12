@@ -41,7 +41,10 @@ Plans:
   2. User selects a site from the selector and the detail panel swaps via HTMX to show that site's sparkline, sub-scores, and delta
   3. Org-level summary card displays average score, total scored sites, and improving/regressing counts
   4. Sparkline point computation is extracted into `services/sparkline.ts` and used by both overview page and home widget
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 23-01-PLAN.md — Sparkline utility extraction + brand overview route + template + sidebar link
+- [ ] 23-02-PLAN.md — HTMX site selector + org summary card + tests + UAT
 **UI hint**: yes
 
 ### Phase 24: Per-Dimension Trends + Score Target
@@ -104,7 +107,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 22. Permissions Audit | 1/1 | Complete    | 2026-04-12 |
-| 23. Brand Overview Page | 0/? | Not started | - |
+| 23. Brand Overview Page | 0/2 | Not started | - |
 | 24. Per-Dimension Trends + Score Target | 0/? | Not started | - |
 | 25. Drilldown Modal | 0/? | Not started | - |
 | 26. Typography x-height Spike | 0/? | Not started | - |
