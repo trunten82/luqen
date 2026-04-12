@@ -1284,7 +1284,13 @@ select {
 }
 
 .progress-bar__fill--success { background-color: var(--status-success); }
+.progress-bar__fill--warning { background-color: var(--status-warning); }
 .progress-bar__fill--error   { background-color: var(--status-error); }
+
+/* ── Brand Score Panel (Phase 20) ───────────────────────────── */
+.brand-panel__big-number {
+  color: var(--text-primary);
+}
 
 /* Progress with label */
 .progress-wrapper {

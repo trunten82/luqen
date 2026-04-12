@@ -428,6 +428,39 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     Array.isArray(arr) && arr.includes(value),
   );
 
+  // ── Brand score helpers (Phase 20) ────────────────────────────────────────
+  handlebars.registerHelper('brandScoreClass', (value: unknown) => {
+    const n = Number(value);
+    if (Number.isNaN(n)) return '';
+    if (n >= 85) return 'progress-bar__fill--success';
+    if (n >= 70) return 'progress-bar__fill--warning';
+    return 'progress-bar__fill--error';
+  });
+
+  handlebars.registerHelper('brandScoreBadge', (value: unknown) => {
+    const n = Number(value);
+    if (Number.isNaN(n)) return 'badge--neutral';
+    if (n >= 85) return 'badge--success';
+    if (n >= 70) return 'badge--warning';
+    return 'badge--error';
+  });
+
+  handlebars.registerHelper('gte', (a: unknown, b: unknown) =>
+    Number(a) >= Number(b),
+  );
+
+  handlebars.registerHelper('unscorable-reason-label', (reason: unknown) => {
+    const labels: Record<string, string> = {
+      'no-guideline': 'No brand guideline linked',
+      'empty-guideline': 'Brand guideline has no rules',
+      'no-branded-issues': 'No branded issues found in this scan',
+      'no-typography-data': 'No typography data available',
+      'no-component-tokens': 'No component token data available',
+      'all-subs-unscorable': 'Insufficient data to compute a score',
+    };
+    return typeof reason === 'string' ? (labels[reason] ?? String(reason)) : 'Score not available';
+  });
+
   // ── i18n ──────────────────────────────────────────────────────────────────
   loadTranslations();
   handlebars.registerHelper('t', function (key: string, options: { hash?: Record<string, unknown>; data?: { root?: { locale?: string } } }) {
@@ -523,6 +556,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'prompt-segments': 'admin/partials/prompt-segments.hbs',
         'prompt-diff-body': 'admin/partials/prompt-diff-body.hbs',
         'rpt-regulation-card': 'partials/rpt-regulation-card.hbs',
+        'brand-score-panel': 'partials/brand-score-panel.hbs',
       },
     },
   });
