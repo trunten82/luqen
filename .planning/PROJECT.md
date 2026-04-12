@@ -10,18 +10,17 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 ## Current State
 
-v2.10.0 shipped 2026-04-10 — LLM prompt system hardened with fence-marker protected sections, diff view, split-region editor, and rich reset modal; org API key UX polished with optional TTL at creation, auto-revoke on expiry, collapsible Revoked section, and hard delete for revoked keys. Previous: v2.9.1 (2026-04-09) hotfixes + provider test OOB, v2.9.0 (2026-04-06) branding pipeline completion and org isolation.
+v2.11.0 shipped 2026-04-12 — Brand Intelligence: per-guideline 0-100 brand accessibility score (color contrast, typography, component coverage) with locked 50/30/20 weights, per-org dual-mode branding orchestrator (embedded/remote with no-cross-route policy), brand_scores persistence (append-only, LEFT JOIN trend queries), admin mode toggle with test-connection button, report detail brand score panel, and home dashboard widget with inline SVG sparkline. 7 phases (15-21), 24 plans, 189 new tests, 20/20 requirements satisfied. Previous: v2.10.0 (2026-04-10) prompt safety + API key UX, v2.9.0 (2026-04-06) branding pipeline + org isolation.
 
-## Current Milestone: v2.11.0 Brand Intelligence
+## Next Milestone Goals
 
-**Goal:** Give orgs a quantified, trended brand accessibility score and the deployment flexibility to run branding either embedded or via a remote service on a per-org basis.
-
-**Target features:**
-- Brand accessibility score: per-guideline 0-100 across color contrast, typography, and component compliance
-- Trend tracking: persist scores per scan so orgs can see improvement/regression across history
-- Orchestrator dual-mode: per-org DB setting that routes branding through embedded DB OR branding service REST
-- Brand score panel on report detail page (alongside existing a11y score)
-- Org dashboard widget: summary tile showing current brand score + trend arrow
+**v2.12.0 — TBD** (planned)
+- Per-dimension trend sparklines (separate for color / typography / components)
+- Score target line (org sets goal, widget shows gap)
+- Drilldown modal from widget to individual failing elements
+- Typography x-height metric (opentype.js feasibility spike)
+- Fine-grained `organizations.*` permissions (replacing global `admin.system`)
+- Optional admin action "Rescore historical scans" (idempotent, resumable)
 
 ## Requirements
 

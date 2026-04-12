@@ -1,5 +1,31 @@
 # Milestones
 
+## v2.11.0 Brand Intelligence (Shipped: 2026-04-12)
+
+**Phases completed:** 7 phases (15-21), 24 plans, ~50 tasks
+**Tests:** 189 new automated tests (2528 total dashboard, 0 regressions)
+**Commits:** 104 (feat/test/refactor/docs across all 7 phases)
+**Latency gate:** PASS — grand median -1.3% (14951 → 14759 ms) over 3-site benchmark
+**Archive:** [v2.11.0-ROADMAP.md](milestones/v2.11.0-ROADMAP.md) · [v2.11.0-REQUIREMENTS.md](milestones/v2.11.0-REQUIREMENTS.md)
+
+**Key accomplishments:**
+
+- Pure brand score calculator (`packages/dashboard/src/services/scoring/`) with tagged-union `ScoreResult` contract, locked 50/30/20 composite weights, `wcagContrastPasses()` as single WCAG threshold source of truth, and filesystem-based D-07 guard preventing literal threshold drift. 84 scoring unit tests.
+- Migration 043 delivering `brand_scores` table (17 columns, nullable score columns + `coverage_profile` JSON + `subscore_details` JSON for SubScoreDetail round-trip + CHECK constraint on mode) and `organizations.branding_mode` column with default `'embedded'`. Atomic single-transaction migration. 28 DB schema + repository tests.
+- `BrandingOrchestrator` with per-request mode dispatch via `OrgRepository.getBrandingMode()` (zero caching), `EmbeddedBrandingAdapter` (mechanical extraction of inline matcher), `RemoteBrandingAdapter` (wraps dormant `BrandingService` with `isMatchableIssue` type guard + `RemoteBrandingMalformedError`), and the load-bearing no-cross-route invariant: Test 4 asserts `embeddedFn.toHaveBeenCalledTimes(0)` when the remote adapter rejects. 26 adapter + orchestrator tests.
+- Scanner + retag hot-path rewire: `scanner/orchestrator.ts` and `services/branding-retag.ts` now call `brandingOrchestrator.matchAndScore()` exactly once per scan, persist brand_scores rows via the typed repository (scored + degraded variants; no-guideline skips persistence), with non-blocking scoring failure. 13 retag call sites across 3 files updated. Latency gate verified at -1.3% via a 4-site warm-1/measured-3 bench. 18 scanner/retag integration tests.
+- Admin mode toggle at `/admin/organizations/:id/branding-mode` with two-step confirmation (DB-unchanged invariant on no-confirm POST), reset-to-default, and a test-connection button routing through the production `BrandingOrchestrator.matchAndScore()` code path (Pitfall #5 enforced at 3 levels: plan text, grep, test spy). System Health + sidebar branding parity locked via structural `toEqual` assertions. 15 admin route tests.
+- Report detail brand score panel (`views/partials/brand-score-panel.hbs`) with 3 render variants (scored with progress bars + delta + counter, unscorable with reason label, null with empty-state card), color-banded green/amber/red using existing CSS variables, and `{{#if brandScore}}` Pitfall #8 guard for pre-v2.11.0 scans. 9 template render tests.
+- Home dashboard brand score widget (`views/partials/brand-score-widget.hbs`) with inline SVG `<polyline>` sparkline (zero client-side JS), `sr-only` accessible description, 3 empty-state variants (0/1/2+ scores), and cross-phase i18n sweep replacing 18 hardcoded English strings with `{{t}}` keys across 6 locales (en/fr/it/pt/de/es). 9 widget render tests.
+
+**20/20 v2.11.0 requirements satisfied:** BSCORE-01..05, BSTORE-01..06, BMODE-01..05, BUI-01..04.
+
+**Known incidents:**
+- Plan 18-01 executor rate-limited mid-Task-2 during the pre-rewire latency bench (pa11y + sap.com OOM'd at 6 GB heap); orchestrator continued inline site-by-site under OS timeout wrappers. sap.com excluded from both baseline and post-rewire (apples-to-apples); 3-site comparison remained valid.
+- Phase 17 UAT-17-01 branding service liveness checkpoint executed via SSH to lxc-luqen (not human-interactive); branding service confirmed running on port 4100 (plan/doc said 4300 — corrected in UAT report).
+
+---
+
 ## v2.10.0 Prompt Safety & API Key Polish (Shipped: 2026-04-10)
 
 **Phases completed:** 2 phases, 6 plans, ~16 tasks
