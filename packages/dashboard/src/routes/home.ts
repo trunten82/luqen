@@ -3,6 +3,7 @@ import type { StorageAdapter } from '../db/index.js';
 import type { DashboardConfig } from '../config.js';
 import { listJurisdictions, listRegulations } from '../compliance-client.js';
 import { getToken, getOrgId } from './admin/helpers.js';
+import { computeSparklinePoints } from '../services/sparkline.js';
 
 export async function homeRoutes(
   server: FastifyInstance,
@@ -128,24 +129,7 @@ export async function homeRoutes(
               h.result.kind === 'scored' ? h.result.overall : 0,
             );
 
-            const viewBoxW = 100;
-            const viewBoxH = 40;
-            const padding = 2;
-            const effectiveH = viewBoxH - padding * 2;
-            let points = '';
-            if (values.length >= 2) {
-              const step = viewBoxW / (values.length - 1);
-              const minVal = Math.min(...values);
-              const maxVal = Math.max(...values);
-              const range = maxVal - minVal || 1;
-              points = values
-                .map((v, i) => {
-                  const x = Math.round(i * step * 10) / 10;
-                  const y = Math.round((padding + effectiveH - ((v - minVal) / range) * effectiveH) * 10) / 10;
-                  return `${x},${y}`;
-                })
-                .join(' ');
-            }
+            const points = computeSparklinePoints(values);
 
             const previousOverall = scoredEntries.length >= 2 && scoredEntries[1].result.kind === 'scored'
               ? scoredEntries[1].result.overall
