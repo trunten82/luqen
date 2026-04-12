@@ -253,6 +253,88 @@ describe('Brand Overview Routes', () => {
       expect(body.data.summary.totalScored).toBe(3);
     });
 
+    it('populates dimensionSparklines on activeSite with gap handling', async () => {
+      // 4 history entries: entry 1 & 3 have all dimensions scored,
+      // entry 0 & 2 have typography unscorable
+      const makeEntry = (overall: number, computedAt: string, typoUnscorable: boolean): BrandScoreHistoryEntry => ({
+        computedAt,
+        result: {
+          kind: 'scored' as const,
+          overall,
+          color: { kind: 'scored' as const, value: 80, detail: { dimension: 'color' as const, passes: 3, fails: 1 } },
+          typography: typoUnscorable
+            ? { kind: 'unscorable' as const, reason: 'no-typography-data' as const }
+            : { kind: 'scored' as const, value: 70, detail: { dimension: 'typography' as const, fontOk: true, sizeOk: true, lineHeightOk: false } },
+          components: { kind: 'scored' as const, value: 90, detail: { dimension: 'components' as const, matched: 9, total: 10 } },
+          coverage: { color: true, typography: !typoUnscorable, components: true, contributingWeight: typoUnscorable ? 0.67 : 1 },
+        },
+      });
+
+      // History returned newest-first; route reverses to chronological
+      (ctx.storage.scans.getLatestPerSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { id: 'scan-1', siteUrl: 'https://example.com', status: 'completed', orgId: 'org-1', brandRelatedCount: 5, totalIssues: 20 },
+      ]);
+      (ctx.storage.brandScores.getHistoryForSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        makeEntry(85, '2026-04-10', true),   // newest — typo unscorable
+        makeEntry(82, '2026-04-09', false),   // typo scored
+        makeEntry(78, '2026-04-08', true),    // typo unscorable
+        makeEntry(75, '2026-04-07', false),   // oldest — typo scored
+      ]);
+
+      const response = await ctx.server.inject({ method: 'GET', url: '/brand-overview' });
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { data: { activeSite: { dimensionSparklines: { color: { points: string; hasData: boolean }; typography: { points: string; hasData: boolean }; components: { points: string; hasData: boolean } } } } };
+      const ds = body.data.activeSite.dimensionSparklines;
+
+      // Color and components: all 4 entries scored => 4 points
+      expect(ds.color.hasData).toBe(true);
+      expect(ds.color.points.split(' ')).toHaveLength(4);
+      expect(ds.components.hasData).toBe(true);
+      expect(ds.components.points.split(' ')).toHaveLength(4);
+
+      // Typography: 2 of 4 scored (indices 1 and 3 in chronological order) => 2 points
+      expect(ds.typography.hasData).toBe(true);
+      expect(ds.typography.points.split(' ')).toHaveLength(2);
+    });
+
+    it('sets hasData=false for dimension with only 1 scored entry', async () => {
+      const makeEntry = (overall: number, computedAt: string, colorScored: boolean): BrandScoreHistoryEntry => ({
+        computedAt,
+        result: {
+          kind: 'scored' as const,
+          overall,
+          color: colorScored
+            ? { kind: 'scored' as const, value: 80, detail: { dimension: 'color' as const, passes: 3, fails: 1 } }
+            : { kind: 'unscorable' as const, reason: 'no-branded-issues' as const },
+          typography: { kind: 'scored' as const, value: 70, detail: { dimension: 'typography' as const, fontOk: true, sizeOk: true, lineHeightOk: false } },
+          components: { kind: 'scored' as const, value: 90, detail: { dimension: 'components' as const, matched: 9, total: 10 } },
+          coverage: { color: colorScored, typography: true, components: true, contributingWeight: colorScored ? 1 : 0.67 },
+        },
+      });
+
+      (ctx.storage.scans.getLatestPerSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { id: 'scan-1', siteUrl: 'https://example.com', status: 'completed', orgId: 'org-1', brandRelatedCount: 5, totalIssues: 20 },
+      ]);
+      // 3 entries, only 1 has color scored
+      (ctx.storage.brandScores.getHistoryForSite as ReturnType<typeof vi.fn>).mockResolvedValue([
+        makeEntry(85, '2026-04-10', false),
+        makeEntry(82, '2026-04-09', true),  // only scored color entry
+        makeEntry(78, '2026-04-08', false),
+      ]);
+
+      const response = await ctx.server.inject({ method: 'GET', url: '/brand-overview' });
+      const body = response.json() as { data: { activeSite: { dimensionSparklines: { color: { points: string; hasData: boolean }; typography: { points: string; hasData: boolean }; components: { points: string; hasData: boolean } } } } };
+      const ds = body.data.activeSite.dimensionSparklines;
+
+      // Color: only 1 scored entry => hasData=false, empty points
+      expect(ds.color.hasData).toBe(false);
+      expect(ds.color.points).toBe('');
+
+      // Typography & components: all 3 scored => hasData=true
+      expect(ds.typography.hasData).toBe(true);
+      expect(ds.components.hasData).toBe(true);
+    });
+
     it('HTMX partial: does NOT return JSON when hx-request present (view stub always returns JSON though)', async () => {
       // NOTE: In the real app, server.ts handles HTMX partial rendering by
       // compiling templates without layout. In tests, reply.view is a JSON stub

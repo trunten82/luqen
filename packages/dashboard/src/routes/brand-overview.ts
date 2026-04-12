@@ -4,6 +4,17 @@ import { requirePermission } from '../auth/middleware.js';
 import { getOrgId } from './admin/helpers.js';
 import { computeSparklinePoints } from '../services/sparkline.js';
 
+export interface DimensionSparkline {
+  readonly points: string;
+  readonly hasData: boolean;
+}
+
+export interface DimensionSparklines {
+  readonly color: DimensionSparkline;
+  readonly typography: DimensionSparkline;
+  readonly components: DimensionSparkline;
+}
+
 export interface SiteEntry {
   siteUrl: string;
   siteUrlEncoded: string;
@@ -17,6 +28,8 @@ export interface SiteEntry {
   color: { kind: string; value?: number };
   typography: { kind: string; value?: number };
   components: { kind: string; value?: number };
+  dimensionSparklines: DimensionSparklines;
+  compositeValues: readonly number[];
   brandRelatedCount: number;
   totalIssues: number;
 }
@@ -120,6 +133,27 @@ export async function brandOverviewRoutes(
       const values = chronological.map(h => h.result.kind === 'scored' ? h.result.overall : 0);
       const sparklinePoints = computeSparklinePoints(values);
 
+      // Per-dimension sparkline data with gap handling
+      const dimensionNames = ['color', 'typography', 'components'] as const;
+      const dimensionSparklines = {} as Record<string, DimensionSparkline>;
+      for (const dim of dimensionNames) {
+        const dimValues: number[] = [];
+        const gaps = new Set<number>();
+        for (let i = 0; i < chronological.length; i++) {
+          const entry = chronological[i];
+          if (entry.result.kind === 'scored' && entry.result[dim].kind === 'scored') {
+            dimValues.push(entry.result[dim].value);
+          } else {
+            dimValues.push(0); // placeholder — index is in gaps set
+            gaps.add(i);
+          }
+        }
+        const scoredCount = chronological.length - gaps.size;
+        const hasData = scoredCount >= 2;
+        const points = hasData ? computeSparklinePoints(dimValues, 100, 40, gaps) : '';
+        dimensionSparklines[dim] = { points, hasData };
+      }
+
       const previousOverall = scoredEntries.length >= 2 && scoredEntries[1].result.kind === 'scored'
         ? scoredEntries[1].result.overall
         : null;
@@ -157,6 +191,8 @@ export async function brandOverviewRoutes(
         components: scored
           ? { kind: scored.components.kind, value: scored.components.kind === 'scored' ? scored.components.value : undefined }
           : { kind: 'unscorable' },
+        dimensionSparklines: dimensionSparklines as unknown as DimensionSparklines,
+        compositeValues: values,
         brandRelatedCount: scan.brandRelatedCount ?? 0,
         totalIssues: scan.totalIssues ?? 0,
       });
