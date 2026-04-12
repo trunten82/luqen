@@ -39,7 +39,7 @@
 <div class="brand-overview__layout" id="brand-overview-content">
   {{! Site selector }}
   <aside class="brand-overview__sites" aria-label="{{t "brandOverview.siteSelector"}}">
-    <h3 class="sidebar__section-label">{{t "brandOverview.sites"}}</h3>
+    <h3 class="section-title" style="font-size: var(--font-sm)">{{t "brandOverview.sites"}}</h3>
     <ul class="brand-overview__site-list" role="listbox">
       {{#each sites}}
       <li role="option" aria-selected="{{#if (eq this.siteUrl ../selectedSite)}}true{{else}}false{{/if}}">
