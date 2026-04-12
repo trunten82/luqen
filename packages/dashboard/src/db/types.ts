@@ -502,6 +502,9 @@ export interface BrandingFontRecord {
   readonly weights?: readonly string[];
   readonly usage?: string;
   readonly context?: string;
+  readonly xHeight?: number;
+  readonly capHeight?: number;
+  readonly unitsPerEm?: number;
 }
 
 export interface BrandingSelectorRecord {
