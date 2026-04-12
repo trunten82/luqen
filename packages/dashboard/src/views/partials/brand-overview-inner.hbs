@@ -1,0 +1,163 @@
+{{! Inner content of #brand-overview-content — extracted as a partial
+    so HTMX site selector swaps return ONLY this fragment, not the full page. }}
+
+{{! Site selector }}
+<aside class="brand-overview__sites" aria-label="{{t "brandOverview.siteSelector"}}">
+  <h3 class="section-title" style="font-size: var(--font-sm)">{{t "brandOverview.sites"}}</h3>
+  <ul class="brand-overview__site-list" role="listbox">
+    {{#each sites}}
+    <li role="option" aria-selected="{{#if (eq this.siteUrl ../selectedSite)}}true{{else}}false{{/if}}">
+      <a class="brand-overview__site-item {{#if (eq this.siteUrl ../selectedSite)}}is-active{{/if}}"
+         href="/brand-overview?site={{this.siteUrlEncoded}}{{#if ../isGlobalAdmin}}&org={{../selectedOrgId}}{{/if}}"
+         hx-get="/brand-overview/content?site={{this.siteUrlEncoded}}{{#if ../isGlobalAdmin}}&org={{../selectedOrgId}}{{/if}}"
+         hx-target="#brand-overview-content"
+         hx-swap="innerHTML"
+         hx-push-url="/brand-overview?site={{this.siteUrlEncoded}}{{#if ../isGlobalAdmin}}&org={{../selectedOrgId}}{{/if}}"
+         hx-indicator="#brand-loading">
+        <span class="brand-overview__site-name">{{this.siteUrl}}</span>
+        <span class="badge {{#if (gte this.score 85)}}badge--success{{else}}{{#if (gte this.score 70)}}badge--warning{{else}}badge--error{{/if}}{{/if}}">{{#if this.score}}{{this.score}}{{else}}&mdash;{{/if}}</span>
+      </a>
+    </li>
+    {{/each}}
+  </ul>
+</aside>
+
+{{! Detail panel for selected site }}
+<main class="brand-overview__detail">
+  {{#if activeSite}}
+  <div class="card mb-md">
+    <div class="card__header">
+      <h3 class="card__title">{{activeSite.siteUrl}}</h3>
+      {{#if activeSite.guidelineName}}
+      <span class="badge badge--ghost">{{activeSite.guidelineName}}</span>
+      {{/if}}
+    </div>
+    <div class="card__body">
+      {{! Big score + sparkline }}
+      <div class="brand-overview__score-row">
+        <div class="brand-overview__big-score">
+          <span class="brand-panel__big-number {{activeSite.scoreClass}}">{{activeSite.score}}</span>
+          <span class="text-muted">/100</span>
+          {{#unless activeSite.isFirstScore}}
+            {{#if activeSite.delta}}
+              <span class="brand-overview__delta {{#if (gt activeSite.delta 0)}}text--success{{else}}text--error{{/if}}">
+                {{#if (gt activeSite.delta 0)}}&#x2191;+{{activeSite.delta}}{{else}}&#x2193;{{activeSite.delta}}{{/if}}
+              </span>
+            {{else}}
+              <span class="brand-overview__delta text-muted">=0</span>
+            {{/if}}
+          {{/unless}}
+        </div>
+        {{#if activeSite.sparklinePoints}}
+        <svg class="brand-overview__sparkline" viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="{{t 'brandOverview.sparklineLabel'}}">
+          <desc>{{t "brandOverview.sparklineDesc"}}</desc>
+          {{#if activeSite.dimensionSparklines.color.hasData}}
+          <polyline points="{{activeSite.dimensionSparklines.color.points}}" fill="none" stroke="var(--status-success)" stroke-width="0.8" opacity="0.6"/>
+          {{/if}}
+          {{#if activeSite.dimensionSparklines.typography.hasData}}
+          <polyline points="{{activeSite.dimensionSparklines.typography.points}}" fill="none" stroke="var(--status-info)" stroke-width="0.8" opacity="0.6"/>
+          {{/if}}
+          {{#if activeSite.dimensionSparklines.components.hasData}}
+          <polyline points="{{activeSite.dimensionSparklines.components.points}}" fill="none" stroke="var(--status-warning)" stroke-width="0.8" opacity="0.6"/>
+          {{/if}}
+          {{#if targetY}}
+          <line x1="0" y1="{{targetY}}" x2="100" y2="{{targetY}}" stroke="var(--text-muted)" stroke-width="0.6" stroke-dasharray="3 2" opacity="0.7"/>
+          {{/if}}
+          <polyline points="{{activeSite.sparklinePoints}}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+        </svg>
+        <div class="brand-overview__legend text-sm text-muted mt-xs">
+          <span style="color: var(--accent)">&#9644;</span> {{t "brandOverview.composite"}}
+          {{#if activeSite.dimensionSparklines.color.hasData}}
+          <span style="color: var(--status-success)">&#9644;</span> {{t "brandOverview.color"}}
+          {{/if}}
+          {{#if activeSite.dimensionSparklines.typography.hasData}}
+          <span style="color: var(--status-info)">&#9644;</span> {{t "brandOverview.typography"}}
+          {{/if}}
+          {{#if activeSite.dimensionSparklines.components.hasData}}
+          <span style="color: var(--status-warning)">&#9644;</span> {{t "brandOverview.components"}}
+          {{/if}}
+        </div>
+        {{#unless activeSite.dimensionSparklines.color.hasData}}
+        <p class="text-muted text-sm">{{t "brandOverview.insufficientColor"}}</p>
+        {{/unless}}
+        {{#unless activeSite.dimensionSparklines.typography.hasData}}
+        <p class="text-muted text-sm">{{t "brandOverview.insufficientTypography"}}</p>
+        {{/unless}}
+        {{#unless activeSite.dimensionSparklines.components.hasData}}
+        <p class="text-muted text-sm">{{t "brandOverview.insufficientComponents"}}</p>
+        {{/unless}}
+        {{/if}}
+      </div>
+
+      {{! Sub-scores }}
+      <div class="brand-overview__subs mt-md">
+        <div class="mb-sm">
+          <span class="text-muted">{{t "brandOverview.color"}}</span>
+          {{#if (eq activeSite.color.kind "scored")}}
+          <div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--{{brandScoreClass activeSite.color.value}}" style="width:{{activeSite.color.value}}%"></div></div>
+          <span>{{activeSite.color.value}}%</span>
+          {{else}}
+          <span class="text-muted">{{t "brandOverview.unscorable"}}</span>
+          {{/if}}
+        </div>
+        <div class="mb-sm">
+          <span class="text-muted">{{t "brandOverview.typography"}}</span>
+          {{#if (eq activeSite.typography.kind "scored")}}
+          <div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--{{brandScoreClass activeSite.typography.value}}" style="width:{{activeSite.typography.value}}%"></div></div>
+          <span>{{activeSite.typography.value}}%</span>
+          {{else}}
+          <span class="text-muted">{{t "brandOverview.unscorable"}}</span>
+          {{/if}}
+        </div>
+        <div class="mb-sm">
+          <span class="text-muted">{{t "brandOverview.components"}}</span>
+          {{#if (eq activeSite.components.kind "scored")}}
+          <div class="progress-bar"><div class="progress-bar__fill progress-bar__fill--{{brandScoreClass activeSite.components.value}}" style="width:{{activeSite.components.value}}%"></div></div>
+          <span>{{activeSite.components.value}}%</span>
+          {{else}}
+          <span class="text-muted">{{t "brandOverview.unscorable"}}</span>
+          {{/if}}
+        </div>
+      </div>
+
+      {{! Brand issues counter }}
+      <p class="text-muted mt-md">
+        {{activeSite.brandRelatedCount}} {{t "brandOverview.ofIssues"}} {{activeSite.totalIssues}} {{t "brandOverview.areBrandElements"}}
+      </p>
+    </div>
+  </div>
+
+  {{! Score history table }}
+  {{#if activeSite.history.length}}
+  <div class="card">
+    <div class="card__header">
+      <h3 class="card__title">{{t "brandOverview.history"}}</h3>
+    </div>
+    <div class="card__body">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{t "brandOverview.date"}}</th>
+            <th>{{t "brandOverview.score"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each activeSite.history}}
+          <tr>
+            <td data-label="Date">{{this.computedAt}}</td>
+            <td data-label="Score">{{this.overall}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{/if}}
+  {{else}}
+  <div class="card">
+    <div class="card__body text-center">
+      <p class="text-muted">{{t "brandOverview.selectSite"}}</p>
+    </div>
+  </div>
+  {{/if}}
+</main>

@@ -250,6 +250,122 @@ export async function brandOverviewRoutes(
     return reply.view('brand-overview.hbs', viewData);
   });
 
+  // GET /brand-overview/content — HTMX partial: returns only the inner
+  // content (sites list + detail panel) for site-selector swaps without
+  // duplicating the summary/org-picker chrome.
+  server.get('/brand-overview/content', {
+    preHandler: requirePermission('branding.view'),
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    // Reuse the full-page handler's logic by internally redirecting
+    // the data computation. We build the same viewData then render
+    // only the partial template.
+    const query = request.query as Record<string, string>;
+
+    // Resolve org (same logic as GET /brand-overview)
+    let orgId = getOrgId(request);
+    if (!orgId) {
+      const allOrgs = await storage.organizations.listOrgs();
+      orgId = query.org && allOrgs.some(o => o.id === query.org) ? query.org : allOrgs[0]?.id;
+    }
+    if (!orgId) {
+      return reply.type('text/html').send('<p class="text-muted">No organizations found.</p>');
+    }
+    const effectiveOrgId: string = orgId!;
+
+    const selectedSite = query.site || null;
+    const latestScans = await storage.scans.getLatestPerSite(effectiveOrgId);
+    const sites: SiteEntry[] = [];
+
+    for (const scan of latestScans) {
+      const history = await storage.brandScores.getHistoryForSite(effectiveOrgId, scan.siteUrl, 20);
+      const scoredEntries = history.filter(h => h.result.kind === 'scored');
+      if (scoredEntries.length === 0) continue;
+
+      const latest = scoredEntries[0].result;
+      const latestOverall = latest.kind === 'scored' ? latest.overall : 0;
+      const chronological = [...scoredEntries].reverse();
+      const values = chronological.map(h => h.result.kind === 'scored' ? h.result.overall : 0);
+      const sparklinePoints = computeSparklinePoints(values);
+
+      const dimensionNames = ['color', 'typography', 'components'] as const;
+      const dimensionSparklines = {} as Record<string, DimensionSparkline>;
+      for (const dim of dimensionNames) {
+        const dimValues: number[] = [];
+        const gaps = new Set<number>();
+        for (let i = 0; i < chronological.length; i++) {
+          const entry = chronological[i];
+          if (entry.result.kind === 'scored' && entry.result[dim].kind === 'scored') {
+            dimValues.push(entry.result[dim].value);
+          } else {
+            dimValues.push(0);
+            gaps.add(i);
+          }
+        }
+        const scoredCount = chronological.length - gaps.size;
+        const hasData = scoredCount >= 2;
+        const points = hasData ? computeSparklinePoints(dimValues, 100, 40, gaps) : '';
+        dimensionSparklines[dim] = { points, hasData };
+      }
+
+      const previousOverall = scoredEntries.length >= 2 && scoredEntries[1].result.kind === 'scored'
+        ? scoredEntries[1].result.overall : null;
+      const delta = previousOverall !== null ? latestOverall - previousOverall : null;
+      const scored = latest.kind === 'scored' ? latest : null;
+
+      let guidelineName: string | null = null;
+      try {
+        const gl = await storage.branding.getGuidelineForSite(scan.siteUrl, effectiveOrgId);
+        guidelineName = gl?.name ?? null;
+      } catch { /* non-fatal */ }
+
+      sites.push({
+        siteUrl: scan.siteUrl,
+        siteUrlEncoded: encodeURIComponent(scan.siteUrl),
+        score: latestOverall,
+        scoreClass: latestOverall >= 85 ? 'text--success' : latestOverall >= 70 ? 'text--warning' : 'text--error',
+        sparklinePoints, delta,
+        isFirstScore: scoredEntries.length === 1,
+        guidelineName,
+        history: scoredEntries.map(h => ({ computedAt: h.computedAt, overall: h.result.kind === 'scored' ? h.result.overall : 0 })),
+        color: scored ? { kind: scored.color.kind, value: scored.color.kind === 'scored' ? scored.color.value : undefined } : { kind: 'unscorable' },
+        typography: scored ? { kind: scored.typography.kind, value: scored.typography.kind === 'scored' ? scored.typography.value : undefined } : { kind: 'unscorable' },
+        components: scored ? { kind: scored.components.kind, value: scored.components.kind === 'scored' ? scored.components.value : undefined } : { kind: 'unscorable' },
+        dimensionSparklines: dimensionSparklines as unknown as DimensionSparklines,
+        compositeValues: values,
+        brandRelatedCount: scan.brandRelatedCount ?? 0,
+        totalIssues: scan.totalIssues ?? 0,
+      });
+    }
+
+    const activeSite = selectedSite
+      ? sites.find(s => s.siteUrl === selectedSite) ?? sites[0] ?? null
+      : sites[0] ?? null;
+
+    let targetScore: number | null = null;
+    try { targetScore = await storage.organizations.getBrandScoreTarget(effectiveOrgId); } catch { /* */ }
+
+    let targetY: number | null = null;
+    if (targetScore !== null && activeSite !== null && activeSite.compositeValues.length >= 2) {
+      const computed = computeTargetY(targetScore, activeSite.compositeValues);
+      targetY = computed === -1 ? null : Math.round(computed * 10) / 10;
+    }
+
+    const isGlobalAdmin = !getOrgId(request);
+
+    // Render ONLY the inner partial (no layout, no chrome).
+    // reply.view goes through the server's Handlebars instance (with all
+    // helpers registered). The global HTMX hook strips the layout for
+    // hx-request=true, so this returns just the partial content.
+    return reply.view('partials/brand-overview-inner.hbs', {
+        sites,
+        activeSite,
+        selectedSite: activeSite?.siteUrl ?? null,
+        isGlobalAdmin,
+        selectedOrgId: effectiveOrgId,
+        targetY,
+      });
+  });
+
   // POST /brand-overview/target — set or clear the org-level brand score target
   server.post('/brand-overview/target', {
     preHandler: requirePermission('branding.manage'),
