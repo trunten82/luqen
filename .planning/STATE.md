@@ -1,35 +1,35 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.11.0
-milestone_name: milestone
-status: executing
-stopped_at: Roadmap created for v2.11.0 — ready for `/gsd-plan-phase 15`
-last_updated: "2026-04-12T09:41:21.429Z"
-last_activity: 2026-04-12
+milestone: v2.12.0
+milestone_name: Brand Intelligence Polish
+status: planned
+stopped_at: Roadmap and requirements written — ready for Phase 22 planning
+last_updated: "2026-04-12T12:00:00Z"
+last_activity: 2026-04-12 -- v2.12.0 roadmap created (6 phases, 25 requirements)
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 24
-  completed_plans: 24
-  percent: 100
+  total_phases: 6
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-10)
+See: .planning/PROJECT.md (updated 2026-04-12)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 21 — dashboard-widget
+**Current focus:** v2.12.0 Brand Intelligence Polish — permissions audit, brand overview page, per-dimension trends + target, drilldown modal, typography x-height spike, historical rescore
 
 ## Current Position
 
-Phase: 21
-Plan: Not started
-Status: Executing Phase 21
-Progress: 0/7 phases complete (0%)
-Last activity: 2026-04-12
+Phase: 22 of 27 (Permissions Audit) — ready to plan
+Plan: —
+Status: Ready to plan
+Progress: 0/6 phases
+Last activity: 2026-04-12 -- v2.12.0 roadmap created
 
 ## Accumulated Context
 
@@ -37,32 +37,39 @@ Last activity: 2026-04-12
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-Decisions locked during research synthesis (to be logged as phase work begins):
+Carried from v2.11.0:
+- Scoring lives in dashboard, not `@luqen/branding` — single pure calculator
+- Composite weights locked at `{color: 0.50, typography: 0.30, components: 0.20}`
+- Dual-mode fallback policy: service outage → degraded scan, NEVER silent cross-route
+- `BrandingOrchestrator` reads `orgs.branding_mode` per-request, no caching
+- Zero branded contrast violations = 100% color score (post-deploy hotfix)
 
-- Scoring lives in dashboard, not `@luqen/branding` — single pure calculator, identical output across modes
-- Composite weights locked at `{color: 0.50, typography: 0.30, components: 0.20}` — not per-org overridable
-- Dual-mode fallback policy: service outage → scan marked `degraded`, NEVER silent cross-route to embedded
-- `BrandingOrchestrator` reads `orgs.branding_mode` per-request, no caching; `ServiceClientRegistry` unchanged
-- No backfill of historical scans — `0` is never a substitute for "not measured"
-- Migration 043 is atomic (brand_scores table + indexes + organizations.branding_mode in one migration)
-- Nullable score columns + `coverage_profile` + `unscorable_reason` — preserves "not measured" vs "scored zero"
+v2.12.0 planning decisions:
+- `admin.org` already exists — no new permission needed, just route audit
+- Brand overview at `/brand-overview` (not `/admin/`) — org-scoped content visible to all authenticated users with `branding.view`
+- Score target: single org-level integer on `organizations` table, not per-site or per-dimension
+- Typography spike: opentype.js (pure JS, ~180 KB) over fontkit; server-side only; "not viable" is acceptable outcome
+- Historical rescore: always embedded mode, never remote; idempotent by (scan_id, guideline_id)
 
 ### Pending Todos
 
-None. Ready for `/gsd-plan-phase 15`.
+None.
 
 ### Blockers/Concerns
 
-- **Phase 17 research flag**: First real consumer of `BrandingService` — confirm `@luqen/branding` is actually running on lxc-luqen and OAuth works before Phase 17 planning finalizes.
-- **Phase 18 research flag**: Latency baseline methodology (sites, run count, cold/warm protocol) TBD in phase planning.
+- **Typography x-height**: opentype.js OS/2 table version >= 2 required for sxHeight — coverage across Google Fonts catalog unknown until spike
+- **Historical rescore**: large orgs (1,000+ scans) may take ~50s synchronous — progress feedback needed
+- **Migration numbering**: score target (organizations.brand_score_target) and font metrics (branding_fonts.x_height etc.) need separate or combined migration 044/045
 
-### Known Gotchas (carried from v2.10.0)
+### Known Gotchas (carried from v2.11.0)
 
-- **Worktree stale base**: the execute-phase `git reset --soft` safety check doesn't protect against stale working tree content when worktrees are created from an old base. Waves 2 and 3 of Phase 14 ran sequentially on the main tree to avoid this. Consider running phases inline or with `workflow.use_worktrees=false` until the safety check is strengthened.
-- **HTMX OOB inside `<tr>`**: if any Phase 19/20/21 widget updates are ever OOB-swapped from a table row, wrap them in `<template>` tags (v2.9.0 lesson).
+- **HTMX OOB inside `<tr>`**: wrap in `<template>` tags
+- **Small scans score lower**: maxPages=3 may score 0 when full-site scores 2+
+- **Branding service port**: lxc-luqen runs on port 4100 (not 4300)
+- **`issue.context` can be null**: all scorers must null-guard
 
 ## Session Continuity
 
-Last session: 2026-04-10
-Stopped at: Roadmap created for v2.11.0 — ready for `/gsd-plan-phase 15`
+Last session: 2026-04-12
+Stopped at: v2.12.0 roadmap and requirements written — ready for `/gsd-plan-phase 22`
 Resume file: None
