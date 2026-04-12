@@ -12,7 +12,7 @@
 
 - [x] **Phase 22: Permissions Audit** - Migrate org-level routes from `admin.system` to `admin.org`; unblocks correct permission gates for all subsequent phases (completed 2026-04-12)
 - [x] **Phase 23: Brand Overview Page** - Dedicated `/brand-overview` with per-site selector, org-level KPIs, and shared sparkline utility (completed 2026-04-12)
-- [ ] **Phase 24: Per-Dimension Trends + Score Target** - Three dimension sparklines on one SVG, org-level target line, gap display
+- [x] **Phase 24: Per-Dimension Trends + Score Target** - Three dimension sparklines on one SVG, org-level target line, gap display (completed 2026-04-12)
 - [ ] **Phase 25: Drilldown Modal** - Click sub-score dimension on report detail to see failing elements grouped by color/typography/components
 - [ ] **Phase 26: Typography x-height Spike** - opentype.js + Google Fonts API feasibility; may conclude "not viable" (acceptable outcome)
 - [ ] **Phase 27: Historical Rescore** - Admin action: idempotent, resumable, skip-when-guideline-gone batch rescore of pre-v2.11.0 scans
@@ -60,8 +60,8 @@ Plans:
   5. When no target is set (NULL), no target line or gap display renders
 **Plans**: 2 plans
 Plans:
-- [ ] 24-01-PLAN.md — Per-dimension sparkline extraction + gap-aware multi-series SVG polylines
-- [ ] 24-02-PLAN.md — Migration 044 + score target CRUD + dashed SVG line + gap display
+- [x] 24-01-PLAN.md — Per-dimension sparkline extraction + gap-aware multi-series SVG polylines
+- [x] 24-02-PLAN.md — Migration 044 + score target CRUD + dashed SVG line + gap display
 **UI hint**: yes
 
 ### Phase 25: Drilldown Modal
@@ -112,7 +112,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 22. Permissions Audit | 1/1 | Complete    | 2026-04-12 |
 | 23. Brand Overview Page | 2/2 | Complete    | 2026-04-12 |
-| 24. Per-Dimension Trends + Score Target | 0/2 | Not started | - |
+| 24. Per-Dimension Trends + Score Target | 2/2 | Complete    | 2026-04-12 |
 | 25. Drilldown Modal | 0/? | Not started | - |
 | 26. Typography x-height Spike | 0/? | Not started | - |
 | 27. Historical Rescore | 0/? | Not started | - |
