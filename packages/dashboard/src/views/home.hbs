@@ -16,6 +16,13 @@
   </div>
 </section>
 
+<section aria-labelledby="brand-score-widget-heading" class="brand-score-widget-section">
+  <h2 id="brand-score-widget-heading" class="section-title">{{t "home.brandScore"}}</h2>
+  <div class="brand-score-widget-row" role="list" aria-label="Brand score summary">
+    {{> brand-score-widget}}
+  </div>
+</section>
+
 {{#unless isExecutiveView}}
 <section aria-labelledby="stats-heading">
   <h2 id="stats-heading" class="section-title">{{t "home.overview"}}</h2>

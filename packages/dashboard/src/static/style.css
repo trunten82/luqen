@@ -3476,6 +3476,36 @@ details[open] > .mt-examples-toggle::before {
   min-width: 240px;
 }
 
+/* ── Brand Score Widget (Phase 21, BUI-02) ────────────────────── */
+.brand-score-widget-section {
+  margin-bottom: var(--space-lg);
+}
+
+.brand-score-widget-row {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.brand-score-widget {
+  min-width: 0;
+  max-width: 280px;
+}
+
+.brand-score-widget__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.brand-score-widget__sparkline svg {
+  max-height: 40px;
+}
+
+.brand-score-widget--empty {
+  opacity: 0.7;
+}
+
 /* ── LLM admin + brand discovery — mobile responsive ─────────────────── */
 @media (max-width: 640px) {
   .tabs { flex-wrap: wrap; gap: 0; }
@@ -3493,4 +3523,6 @@ details[open] > .mt-examples-toggle::before {
   .brd-discover__form { flex-direction: column; }
   .brd-discover__input-group { min-width: unset; width: 100%; }
   .alert code { word-break: break-all; }
+  .brand-score-widget-row { flex-direction: column; }
+  .brand-score-widget { max-width: 100%; }
 }
