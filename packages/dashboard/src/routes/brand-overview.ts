@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter } from '../db/index.js';
 import { requirePermission } from '../auth/middleware.js';
 import { getOrgId } from './admin/helpers.js';
-import { computeSparklinePoints } from '../services/sparkline.js';
+import { computeSparklinePoints, computeTargetY } from '../services/sparkline.js';
 
 export interface DimensionSparkline {
   readonly points: string;
@@ -206,6 +206,28 @@ export async function brandOverviewRoutes(
       ? sites.find(s => s.siteUrl === selectedSite) ?? sites[0] ?? null
       : sites[0] ?? null;
 
+    // 5. Brand score target
+    let targetScore: number | null = null;
+    try {
+      targetScore = await storage.organizations.getBrandScoreTarget(effectiveOrgId);
+    } catch { /* org may not exist in rare edge cases */ }
+
+    let targetY: number | null = null;
+    if (targetScore !== null && activeSite !== null && activeSite.compositeValues.length >= 2) {
+      const computed = computeTargetY(targetScore, activeSite.compositeValues);
+      targetY = computed === -1 ? null : Math.round(computed * 10) / 10;
+    }
+
+    let gapValue: number | null = null;
+    let gapClass = '';
+    if (targetScore !== null && summary.avgScore !== null) {
+      gapValue = summary.avgScore - targetScore;
+      gapClass = gapValue >= 0 ? 'text--success' : gapValue >= -10 ? 'text--warning' : 'text--error';
+    }
+
+    const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
+    const canManageBranding = perms !== undefined && perms.has('branding.manage');
+
     const viewData = {
       pageTitle: 'Brand Overview',
       currentPath: '/brand-overview',
@@ -218,8 +240,45 @@ export async function brandOverviewRoutes(
       isGlobalAdmin,
       allOrgs,
       selectedOrgId: effectiveOrgId,
+      targetScore,
+      targetY,
+      gapValue,
+      gapClass,
+      canManageBranding,
     };
 
     return reply.view('brand-overview.hbs', viewData);
+  });
+
+  // POST /brand-overview/target — set or clear the org-level brand score target
+  server.post('/brand-overview/target', {
+    preHandler: requirePermission('branding.manage'),
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    let orgId = getOrgId(request);
+    if (!orgId) {
+      // Global admin: resolve org from query or first org
+      const allOrgs = await storage.organizations.listOrgs();
+      const query = request.query as Record<string, string>;
+      orgId = query.org && allOrgs.some(o => o.id === query.org) ? query.org : allOrgs[0]?.id;
+    }
+    if (!orgId) {
+      return reply.code(400).send({ error: 'No organization found' });
+    }
+
+    const body = request.body as Record<string, string> | undefined;
+    const rawTarget = body?.target;
+
+    if (rawTarget === undefined || rawTarget === '') {
+      await storage.organizations.setBrandScoreTarget(orgId, null);
+    } else {
+      const parsed = Number(rawTarget);
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 100) {
+        return reply.code(400).send({ error: 'Target must be an integer between 0 and 100' });
+      }
+      await storage.organizations.setBrandScoreTarget(orgId, parsed);
+    }
+
+    const redirectUrl = getOrgId(request) ? '/brand-overview' : `/brand-overview?org=${orgId}`;
+    return reply.redirect(redirectUrl);
   });
 }

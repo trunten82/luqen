@@ -1496,5 +1496,9 @@
   "brandOverview.insufficientColor": "Color: insufficient data for trend",
   "brandOverview.insufficientTypography": "Typography: insufficient data for trend",
   "brandOverview.insufficientComponents": "Components: insufficient data for trend",
+  "brandOverview.setTarget": "Score target",
+  "brandOverview.saveTarget": "Set",
+  "brandOverview.clearTarget": "Clear",
+  "brandOverview.target": "Target",
   "common.loading": "Loading..."
 }
