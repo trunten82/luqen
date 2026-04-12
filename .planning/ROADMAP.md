@@ -102,4 +102,7 @@
   3. "X of Y issues are on brand elements" counter displayed on the panel, derived from `brand_related_count` and `total_issues` columns in the `brand_scores` row (BSTORE-05)
   4. Panel guarded by `{{#if brandScore}}` — pre-v2.11.0 scans with `brandScore: null` render an empty-state card ("Brand score not available for this scan"), never `undefined` / `NaN%` / broken layout (Pitfall #8)
   5. Unscorable results (`brandScore.kind === 'unscorable'`) render the `unscorable_reason` as a human-readable label instead of a progress bar at 0% — no `null → 0` coercion leaks into the UI
-**Plans**: TBD (populated by planner)
+**Plans**: 2 plans
+Plans:
+- [ ] 20-01-PLAN.md — Route data plumbing + Handlebars helpers + brand-score-panel.hbs partial (all 3 variants) + report-detail.hbs inclusion [Wave 1]
+- [ ] 20-02-PLAN.md — Template render test suite (9 tests: null/unscorable/scored variants + delta + counter + color banding + nested unscorable) [Wave 2]
