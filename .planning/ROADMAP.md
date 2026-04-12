@@ -13,7 +13,7 @@
 - [x] **Phase 22: Permissions Audit** - Migrate org-level routes from `admin.system` to `admin.org`; unblocks correct permission gates for all subsequent phases (completed 2026-04-12)
 - [x] **Phase 23: Brand Overview Page** - Dedicated `/brand-overview` with per-site selector, org-level KPIs, and shared sparkline utility (completed 2026-04-12)
 - [x] **Phase 24: Per-Dimension Trends + Score Target** - Three dimension sparklines on one SVG, org-level target line, gap display (completed 2026-04-12)
-- [ ] **Phase 25: Drilldown Modal** - Click sub-score dimension on report detail to see failing elements grouped by color/typography/components
+- [x] **Phase 25: Drilldown Modal** - Click sub-score dimension on report detail to see failing elements grouped by color/typography/components (completed 2026-04-12)
 - [ ] **Phase 26: Typography x-height Spike** - opentype.js + Google Fonts API feasibility; may conclude "not viable" (acceptable outcome)
 - [ ] **Phase 27: Historical Rescore** - Admin action: idempotent, resumable, skip-when-guideline-gone batch rescore of pre-v2.11.0 scans
 
@@ -74,7 +74,7 @@ Plans:
   3. Modal uses the existing `<dialog>` + `showModal()` pattern — no new JS dependencies added
 **Plans**: 1 plan
 Plans:
-- [ ] 25-01-PLAN.md — Drilldown service + endpoint + modal template + clickable sub-score rows + UAT
+- [x] 25-01-PLAN.md — Drilldown service + endpoint + modal template + clickable sub-score rows + UAT
 **UI hint**: yes
 
 ### Phase 26: Typography x-height Spike
@@ -115,6 +115,6 @@ Plans:
 | 22. Permissions Audit | 1/1 | Complete    | 2026-04-12 |
 | 23. Brand Overview Page | 2/2 | Complete    | 2026-04-12 |
 | 24. Per-Dimension Trends + Score Target | 2/2 | Complete    | 2026-04-12 |
-| 25. Drilldown Modal | 0/1 | Not started | - |
+| 25. Drilldown Modal | 1/1 | Complete    | 2026-04-12 |
 | 26. Typography x-height Spike | 0/? | Not started | - |
 | 27. Historical Rescore | 0/? | Not started | - |
