@@ -60,7 +60,15 @@ export function calculateColorSubScore(
   );
 
   if (brandedContrastIssues.length === 0) {
-    return { kind: 'unscorable', reason: 'no-branded-issues' };
+    // Zero branded contrast violations means the brand colors all pass
+    // WCAG thresholds — that is 100% compliance, NOT "unscorable."
+    // A site with a linked guideline and zero brand-related contrast
+    // issues has perfect color brand accessibility.
+    return {
+      kind: 'scored',
+      value: 100,
+      detail: { dimension: 'color', passes: 0, fails: 0 },
+    };
   }
 
   let passes = 0;

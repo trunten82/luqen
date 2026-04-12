@@ -63,26 +63,31 @@ describe('calculateBrandScore — UnscorableReason coverage (D-19)', () => {
     expect(result).toEqual({ kind: 'unscorable', reason: 'empty-guideline' });
   });
 
-  it('returns unscorable all-subs-unscorable when all three sub-scores are unscorable', () => {
+  it('returns scored (not all-subs-unscorable) when color returns 100 for zero violations', () => {
     // Guideline has only a font (so token-score → unscorable no-component-tokens).
-    // Issues list is empty (so color-score → unscorable no-branded-issues and
-    // typography-score → unscorable no-typography-data).
+    // Issues list is empty → color-score returns scored:100 (zero violations = perfect).
+    // typography-score → unscorable no-typography-data.
+    // With color scored at 100 and the other two unscorable, composite
+    // renormalizes: (0.50 × 100) / 0.50 = 100.
     const result = calculateBrandScore([], guideline({ fonts: [INTER_FONT] }));
-    expect(result).toEqual({ kind: 'unscorable', reason: 'all-subs-unscorable' });
+    expect(result.kind).toBe('scored');
+    if (result.kind === 'scored') {
+      expect(result.overall).toBe(100);
+      expect(result.color).toEqual({ kind: 'scored', value: 100, detail: { dimension: 'color', passes: 0, fails: 0 } });
+    }
   });
 
-  it('surfaces no-branded-issues inside .color when color sub-score is unscorable but others are scored', () => {
-    // No contrast issues, but guideline has colors AND typography data extractable.
+  it('surfaces scored:100 color when no branded contrast issues but others scored', () => {
+    // No branded contrast issues → color = 100 (zero violations = perfect).
+    // Guideline has colors AND typography data extractable.
     const typographyCtx =
       'font-family: Inter; font-size: 16px; line-height: 1.5;';
     const issues = [brandedIssue({ context: typographyCtx, matched: false })];
     const g = guideline({ colors: [BRAND_RED], fonts: [INTER_FONT] });
-    // Note: BRAND_RED won't appear in used tokens (context has no red),
-    // but components is still scored with 0.
     const result = calculateBrandScore(issues, g);
     expect(result.kind).toBe('scored');
     if (result.kind === 'scored') {
-      expect(result.color).toEqual({ kind: 'unscorable', reason: 'no-branded-issues' });
+      expect(result.color).toEqual({ kind: 'scored', value: 100, detail: { dimension: 'color', passes: 0, fails: 0 } });
     }
   });
 
@@ -242,10 +247,20 @@ describe('calculateBrandScore — composite renormalization (D-20, Pitfall #1)',
     }
   });
 
-  it('0 scored (all three unscorable): returns top-level all-subs-unscorable', () => {
-    // Empty issues list + non-empty guideline → all three sub-scores unscorable.
+  it('0 branded issues + non-empty guideline: color returns 100 (no violations = perfect), composite renormalizes over color alone', () => {
+    // Empty issues list + non-empty guideline (font only, no colors/selectors).
+    // Color: scored 100 (zero violations = perfect brand contrast compliance).
+    // Typography: unscorable (no CSS data). Components: unscorable (no tokens).
+    // Composite renormalizes: (0.50 × 100) / 0.50 = 100.
     const result = calculateBrandScore([], guideline({ fonts: [INTER_FONT] }));
-    expect(result).toEqual({ kind: 'unscorable', reason: 'all-subs-unscorable' });
+    expect(result.kind).toBe('scored');
+    if (result.kind === 'scored') {
+      expect(result.overall).toBe(100);
+      expect(result.color).toEqual({ kind: 'scored', value: 100, detail: { dimension: 'color', passes: 0, fails: 0 } });
+      expect(result.typography).toEqual({ kind: 'unscorable', reason: 'no-typography-data' });
+      expect(result.components).toEqual({ kind: 'unscorable', reason: 'no-component-tokens' });
+      expect(result.coverage.contributingWeight).toBe(0.5);
+    }
   });
 });
 
