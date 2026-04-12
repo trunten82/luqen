@@ -1146,5 +1146,23 @@
     "integrationA2a": "Protocole A2A : Pour les pipelines automatisés, utilisez le protocole Agent-à-Agent pour demander des corrections de manière programmatique. Les agents peuvent appeler l'API REST pour proposer et appliquer des corrections.",
     "copiedToClipboard": "Code de correction copié dans le presse-papiers",
     "copyFailed": "Impossible de copier — veuillez sélectionner et copier manuellement"
-  }
+  },
+  "nav.brandOverview": "[FR] Brand Overview",
+  "brandOverview.summary": "[FR] Brand Score Summary",
+  "brandOverview.avgScore": "[FR] Average Score",
+  "brandOverview.scoredSites": "[FR] Scored Sites",
+  "brandOverview.improving": "[FR] Improving",
+  "brandOverview.regressing": "[FR] Regressing",
+  "brandOverview.siteSelector": "[FR] Site selector",
+  "brandOverview.sites": "[FR] Sites",
+  "brandOverview.color": "[FR] Color Contrast",
+  "brandOverview.typography": "[FR] Typography",
+  "brandOverview.components": "[FR] Components",
+  "brandOverview.unscorable": "[FR] Not measurable",
+  "brandOverview.ofIssues": "[FR] of",
+  "brandOverview.areBrandElements": "[FR] issues are on brand elements",
+  "brandOverview.selectSite": "[FR] Select a site to view its brand score",
+  "brandOverview.noSites": "[FR] No brand scores yet",
+  "brandOverview.noSitesDesc": "[FR] Link a brand guideline to a site and run a scan to see scores here.",
+  "brandOverview.setupGuidelines": "[FR] Set up guidelines"
 }

@@ -112,6 +112,16 @@
     {{#if perm.brandingView}}
     <span class="sidebar__section-label">{{t "nav.branding"}}</span>
 
+    <a class="sidebar__item {{#if (eq currentPath '/brand-overview')}}is-active{{/if}}"
+       href="/brand-overview"
+       aria-current="{{#if (eq currentPath '/brand-overview')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M3 17V7l7-5 7 5v10a1 1 0 01-1 1H4a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 11h4v6H8z" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      {{t "nav.brandOverview"}}
+    </a>
+
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/branding-guidelines')}}is-active{{/if}}"
        href="/admin/branding-guidelines"
        aria-current="{{#if (startsWith currentPath '/admin/branding-guidelines')}}page{{/if}}">
