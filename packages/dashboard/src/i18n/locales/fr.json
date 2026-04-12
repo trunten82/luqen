@@ -1164,5 +1164,8 @@
   "brandOverview.selectSite": "[FR] Select a site to view its brand score",
   "brandOverview.noSites": "[FR] No brand scores yet",
   "brandOverview.noSitesDesc": "[FR] Link a brand guideline to a site and run a scan to see scores here.",
-  "brandOverview.setupGuidelines": "[FR] Set up guidelines"
+  "brandOverview.setupGuidelines": "[FR] Set up guidelines",
+  "brandOverview.history": "[FR] Score History",
+  "brandOverview.date": "[FR] Date",
+  "brandOverview.score": "[FR] Score"
 }

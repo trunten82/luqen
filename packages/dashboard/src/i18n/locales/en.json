@@ -1485,5 +1485,8 @@
   "brandOverview.selectSite": "Select a site to view its brand score",
   "brandOverview.noSites": "No brand scores yet",
   "brandOverview.noSitesDesc": "Link a brand guideline to a site and run a scan to see scores here.",
-  "brandOverview.setupGuidelines": "Set up guidelines"
+  "brandOverview.setupGuidelines": "Set up guidelines",
+  "brandOverview.history": "Score History",
+  "brandOverview.date": "Date",
+  "brandOverview.score": "Score"
 }
