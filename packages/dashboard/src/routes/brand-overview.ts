@@ -3,6 +3,7 @@ import type { StorageAdapter } from '../db/index.js';
 import { requirePermission } from '../auth/middleware.js';
 import { getOrgId } from './admin/helpers.js';
 import { computeSparklinePoints, computeTargetY } from '../services/sparkline.js';
+import type { RescoreService } from '../services/rescore/rescore-service.js';
 
 export interface DimensionSparkline {
   readonly points: string;
@@ -75,6 +76,7 @@ export function computeOrgSummary(sites: readonly SiteEntry[]): OrgSummary {
 export async function brandOverviewRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  rescoreService?: RescoreService,
 ): Promise<void> {
 
   server.get('/brand-overview', {
@@ -228,6 +230,28 @@ export async function brandOverviewRoutes(
     const perms = (request as unknown as Record<string, unknown>)['permissions'] as Set<string> | undefined;
     const canManageBranding = perms !== undefined && perms.has('branding.manage');
 
+    // Rescore state for the UI (only computed when user can manage branding)
+    let candidateCount = 0;
+    let rescoreInProgress = false;
+    let rescoreProgressData: Record<string, unknown> = {};
+
+    if (canManageBranding && rescoreService) {
+      const progress = await rescoreService.getProgress(effectiveOrgId);
+      if (progress && progress.status === 'running') {
+        rescoreInProgress = true;
+        const totalBatches = Math.ceil(progress.totalScans / 50);
+        const currentBatch = Math.min(Math.ceil(progress.processedScans / 50) + 1, totalBatches);
+        rescoreProgressData = {
+          processedScans: progress.processedScans,
+          totalScans: progress.totalScans,
+          currentBatch,
+          totalBatches,
+        };
+      } else {
+        candidateCount = await rescoreService.getCandidateCount(effectiveOrgId);
+      }
+    }
+
     const viewData = {
       pageTitle: 'Brand Overview',
       currentPath: '/brand-overview',
@@ -245,6 +269,9 @@ export async function brandOverviewRoutes(
       gapValue,
       gapClass,
       canManageBranding,
+      candidateCount,
+      rescoreInProgress,
+      ...rescoreProgressData,
     };
 
     return reply.view('brand-overview.hbs', viewData);
@@ -396,5 +423,118 @@ export async function brandOverviewRoutes(
 
     const redirectUrl = getOrgId(request) ? '/brand-overview' : `/brand-overview?org=${orgId}`;
     return reply.redirect(redirectUrl);
+  });
+
+  // ── Rescore routes ─────────────────────────────────────────────────────
+  // Only registered when rescoreService is provided (i.e. SQLite adapter)
+
+  if (!rescoreService) return;
+
+  // Helper: resolve effective orgId for global admins (same pattern as POST /target)
+  function resolveOrgId(request: FastifyRequest): string | null {
+    const orgId = getOrgId(request);
+    if (orgId) return orgId;
+    // Global admin — no orgId from session. Cannot resolve without query param
+    // for POST requests (no ?org= on HTMX calls). Fall back to null.
+    return null;
+  }
+
+  // POST /brand-overview/rescore/start — trigger rescore for the org
+  server.post('/brand-overview/rescore/start', {
+    preHandler: requirePermission('branding.manage'),
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    let effectiveOrgId = resolveOrgId(request);
+    if (!effectiveOrgId) {
+      // Global admin: resolve from query or first org
+      const allOrgs = await storage.organizations.listOrgs();
+      const query = request.query as Record<string, string>;
+      effectiveOrgId = query.org && allOrgs.some(o => o.id === query.org) ? query.org : allOrgs[0]?.id ?? null;
+    }
+    if (!effectiveOrgId) {
+      return reply.code(400).type('text/html').send('<div id="rescore-region"><div class="alert alert--error"><p>No organization found.</p></div></div>');
+    }
+
+    const result = await rescoreService.startRescore(effectiveOrgId);
+
+    if (result.status === 'already-running') {
+      const progress = await rescoreService.getProgress(effectiveOrgId);
+      const totalBatches = Math.ceil((progress?.totalScans ?? 0) / 50);
+      const currentBatch = Math.min(Math.ceil((progress?.processedScans ?? 0) / 50) + 1, totalBatches);
+      return reply.type('text/html').send(
+        `<div id="rescore-region"><div class="alert alert--info"><p>Rescore already in progress for this organisation.</p></div></div>`,
+      );
+    }
+
+    if (result.status === 'no-candidates') {
+      return reply.view('partials/rescore-button.hbs', {
+        candidateCount: 0,
+        csrfToken: (request as unknown as Record<string, unknown>)['csrfToken'] ?? '',
+      });
+    }
+
+    // Start background processing — does not block the HTTP response
+    const orgForLoop = effectiveOrgId;
+    const processLoop = async (): Promise<void> => {
+      let progress = await rescoreService.processNextBatch(orgForLoop);
+      while (progress && progress.status === 'running') {
+        progress = await rescoreService.processNextBatch(orgForLoop);
+      }
+    };
+    processLoop().catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[rescore] background processing error:', msg);
+    });
+
+    const progress = await rescoreService.getProgress(effectiveOrgId);
+    const totalBatches = Math.ceil((progress?.totalScans ?? 0) / 50);
+
+    return reply.view('partials/rescore-progress.hbs', {
+      processedScans: progress?.processedScans ?? 0,
+      totalScans: progress?.totalScans ?? 0,
+      currentBatch: 1,
+      totalBatches,
+    });
+  });
+
+  // GET /brand-overview/rescore/progress — HTMX polling endpoint
+  server.get('/brand-overview/rescore/progress', {
+    preHandler: requirePermission('branding.manage'),
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    let effectiveOrgId = resolveOrgId(request);
+    if (!effectiveOrgId) {
+      const allOrgs = await storage.organizations.listOrgs();
+      const query = request.query as Record<string, string>;
+      effectiveOrgId = query.org && allOrgs.some(o => o.id === query.org) ? query.org : allOrgs[0]?.id ?? null;
+    }
+    if (!effectiveOrgId) {
+      return reply.code(400).type('text/html').send('<div id="rescore-region"></div>');
+    }
+
+    const progress = await rescoreService.getProgress(effectiveOrgId);
+
+    if (!progress || progress.status === 'completed') {
+      return reply.view('partials/rescore-complete.hbs', {
+        scoredCount: progress?.scoredCount ?? 0,
+        skippedCount: progress?.skippedCount ?? 0,
+        warningCount: progress?.warningCount ?? 0,
+      });
+    }
+
+    if (progress.status === 'failed') {
+      return reply.view('partials/rescore-error.hbs', {
+        errorReason: progress.error ?? 'Unknown error',
+      });
+    }
+
+    // Still running — return progress partial (continues HTMX polling)
+    const totalBatches = Math.ceil(progress.totalScans / 50);
+    const currentBatch = Math.min(Math.ceil(progress.processedScans / 50) + 1, totalBatches);
+
+    return reply.view('partials/rescore-progress.hbs', {
+      processedScans: progress.processedScans,
+      totalScans: progress.totalScans,
+      currentBatch,
+      totalBatches,
+    });
   });
 }
