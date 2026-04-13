@@ -12,6 +12,16 @@
 </div>
 {{/if}}
 
+{{#if canManageBranding}}
+<section class="mb-md" aria-label="Rescore controls">
+  {{#if rescoreInProgress}}
+    {{> rescore-progress}}
+  {{else}}
+    {{> rescore-button}}
+  {{/if}}
+</section>
+{{/if}}
+
 {{#if hasSites}}
 <section aria-labelledby="brand-summary-heading" class="mb-lg">
   <h2 id="brand-summary-heading" class="section-title">{{t "brandOverview.summary"}}</h2>
@@ -55,16 +65,6 @@
   </form>
   {{/if}}
 </section>
-
-{{#if canManageBranding}}
-<section class="mb-md" aria-label="Rescore controls">
-  {{#if rescoreInProgress}}
-    {{> rescore-progress}}
-  {{else}}
-    {{> rescore-button}}
-  {{/if}}
-</section>
-{{/if}}
 
 <span id="brand-loading" class="htmx-indicator" aria-hidden="true">{{t "common.loading"}}</span>
 <div class="brand-overview__layout" id="brand-overview-content">
