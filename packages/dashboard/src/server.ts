@@ -76,6 +76,8 @@ import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { brandingGuidelineRoutes } from './routes/admin/branding-guidelines.js';
 import { llmAdminRoutes } from './routes/admin/llm.js';
 import { brandOverviewRoutes } from './routes/brand-overview.js';
+import { SqliteRescoreProgressRepository } from './db/sqlite/repositories/rescore-progress-repository.js';
+import { RescoreService } from './services/rescore/rescore-service.js';
 import { setGitHostPluginManager } from './git-hosts/registry.js';
 import { loadTranslations, t, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from './i18n/index.js';
 import mercurius from 'mercurius';
@@ -560,6 +562,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'brand-score-panel': 'partials/brand-score-panel.hbs',
         'brand-score-widget': 'partials/brand-score-widget.hbs',
         'brand-overview-inner': 'partials/brand-overview-inner.hbs',
+        'rescore-button': 'partials/rescore-button.hbs',
+        'rescore-progress': 'partials/rescore-progress.hbs',
+        'rescore-complete': 'partials/rescore-complete.hbs',
+        'rescore-error': 'partials/rescore-error.hbs',
       },
     },
   });
@@ -815,7 +821,15 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── LLM admin routes ────────────────────────────────────────────────────
   await llmAdminRoutes(server, getLLMClient);
-  await brandOverviewRoutes(server, storage);
+  // ── Rescore service (Phase 27) ───────────────────────────────────────────
+  const rescoreProgressRepo = new SqliteRescoreProgressRepository(rawDb);
+  const rescoreService = new RescoreService({
+    scanRepository: storage.scans,
+    brandScoreRepository: storage.brandScores,
+    progressRepository: rescoreProgressRepo,
+    brandingRepository: storage.branding,
+  });
+  await brandOverviewRoutes(server, storage, rescoreService);
 
   // ── Export API routes ────────────────────────────────────────────────────
   await exportRoutes(server, storage);
