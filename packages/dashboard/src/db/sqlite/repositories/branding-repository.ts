@@ -41,9 +41,6 @@ interface FontRow {
   weights: string | null;
   usage: string | null;
   context: string | null;
-  x_height: number | null;
-  cap_height: number | null;
-  units_per_em: number | null;
 }
 
 interface SelectorRow {
@@ -110,9 +107,6 @@ function fontRowToRecord(row: FontRow): BrandingFontRecord {
     ...(weights !== undefined ? { weights } : {}),
     ...(row.usage !== null ? { usage: row.usage } : {}),
     ...(row.context !== null ? { context: row.context } : {}),
-    ...(row.x_height !== null ? { xHeight: row.x_height } : {}),
-    ...(row.cap_height !== null ? { capHeight: row.cap_height } : {}),
-    ...(row.units_per_em !== null ? { unitsPerEm: row.units_per_em } : {}),
   };
 }
 
@@ -481,8 +475,8 @@ export class SqliteBrandingRepository implements BrandingRepository {
 
   async addFont(guidelineId: string, font: Omit<BrandingFontRecord, 'guidelineId'>): Promise<BrandingFontRecord> {
     this.db.prepare(`
-      INSERT INTO branding_fonts (id, guideline_id, family, weights, usage, context, x_height, cap_height, units_per_em)
-      VALUES (@id, @guidelineId, @family, @weights, @usage, @context, @xHeight, @capHeight, @unitsPerEm)
+      INSERT INTO branding_fonts (id, guideline_id, family, weights, usage, context)
+      VALUES (@id, @guidelineId, @family, @weights, @usage, @context)
     `).run({
       id: font.id,
       guidelineId,
@@ -490,9 +484,6 @@ export class SqliteBrandingRepository implements BrandingRepository {
       weights: font.weights !== undefined ? JSON.stringify(font.weights) : null,
       usage: font.usage ?? null,
       context: font.context ?? null,
-      xHeight: font.xHeight ?? null,
-      capHeight: font.capHeight ?? null,
-      unitsPerEm: font.unitsPerEm ?? null,
     });
 
     return { ...font, guidelineId };
@@ -504,9 +495,6 @@ export class SqliteBrandingRepository implements BrandingRepository {
       weights: 'weights',
       usage: 'usage',
       context: 'context',
-      xHeight: 'x_height',
-      capHeight: 'cap_height',
-      unitsPerEm: 'units_per_em',
     };
 
     const setClauses: string[] = [];

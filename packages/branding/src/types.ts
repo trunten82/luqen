@@ -37,9 +37,6 @@ export interface BrandFont {
   readonly weights?: readonly string[];
   readonly usage?: FontUsage;
   readonly context?: string;
-  readonly xHeight?: number;
-  readonly capHeight?: number;
-  readonly unitsPerEm?: number;
 }
 
 export type FontUsage = 'heading' | 'body' | 'accent' | 'monospace';

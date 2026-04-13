@@ -26,7 +26,6 @@ const ConfigSchema = z.object({
   maxPages: z.number().int().min(1).max(1000).default(50),
   runner: z.enum(['htmlcs', 'axe']).optional(),
   webserviceUrls: z.array(z.string().url()).optional(),
-  googleFontsApiKey: z.string().optional(),
 }).strict();
 
 export interface DashboardConfig {
@@ -61,8 +60,6 @@ export interface DashboardConfig {
   readonly runner?: 'htmlcs' | 'axe';
   /** Additional pa11y webservice URLs for horizontal scaling (comma-separated via env). */
   readonly webserviceUrls?: readonly string[];
-  /** Optional Google Fonts Developer API key — enables font metric extraction for typography scoring. */
-  readonly googleFontsApiKey?: string;
 }
 
 const DEFAULTS: DashboardConfig = {
@@ -142,7 +139,6 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
     webserviceUrls: process.env['DASHBOARD_WEBSERVICE_URLS'] !== undefined
       ? process.env['DASHBOARD_WEBSERVICE_URLS'].split(',').map((u) => u.trim()).filter(Boolean)
       : config.webserviceUrls,
-    googleFontsApiKey: process.env['GOOGLE_FONTS_API_KEY'] ?? config.googleFontsApiKey,
   };
 }
 

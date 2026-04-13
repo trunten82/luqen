@@ -1197,4 +1197,25 @@ ALTER TABLE organizations
       ALTER TABLE branding_fonts ADD COLUMN units_per_em INTEGER;
     `,
   },
+  {
+    id: '046',
+    name: 'rescore-progress',
+    sql: `
+CREATE TABLE IF NOT EXISTS rescore_progress (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL CHECK (status IN ('pending','running','completed','failed')),
+  total_scans INTEGER NOT NULL DEFAULT 0,
+  processed_scans INTEGER NOT NULL DEFAULT 0,
+  scored_count INTEGER NOT NULL DEFAULT 0,
+  skipped_count INTEGER NOT NULL DEFAULT 0,
+  warning_count INTEGER NOT NULL DEFAULT 0,
+  last_processed_scan_id TEXT,
+  error TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_rescore_progress_org ON rescore_progress(org_id);
+    `,
+  },
 ];

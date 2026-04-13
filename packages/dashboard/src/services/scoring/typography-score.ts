@@ -1,14 +1,10 @@
 /**
- * Typography sub-score — equal-weight boolean mean over 3 or 4 heuristics:
+ * Typography sub-score — equal-weight boolean mean over 3 heuristics:
  *   (a) brand font family present
  *   (b) body text is at least 16px
  *   (c) line-height is at least 1.5
- *   (d) x-height metric match (optional 4th heuristic, when guideline fonts have metrics)
  *
- * Formula (D-02, extended):
- *   When guideline fonts have x-height metrics: score = 100 * (fontOk + sizeOk + lineHeightOk + xHeightOk) / 4
- *   When no guideline font has metrics: score = 100 * (fontOk + sizeOk + lineHeightOk) / 3 (original)
- *
+ * Formula (D-02): score = 100 * (fontOk + sizeOk + lineHeightOk) / 3
  * Data source (D-08): regex extraction from issue.context — no scanner change.
  * Unscorable (D-06): when issue.context yields no typography declarations.
  *
@@ -109,26 +105,17 @@ export function calculateTypographySubScore(
   // (c) lineHeightOk: at least one observed line-height meets the 1.5 heuristic.
   const lineHeightOk = lineHeights.some((lh) => lh >= 1.5);
 
-  // Check if any guideline font has x-height metrics
-  const guidelineFontsWithMetrics = guideline.fonts.filter(
-    (f) => f.xHeight != null && f.xHeight > 0 && f.unitsPerEm != null && f.unitsPerEm > 0,
-  );
-  const hasXHeightData = guidelineFontsWithMetrics.length > 0;
+  const passes = Number(fontOk) + Number(sizeOk) + Number(lineHeightOk);
+  const value = Math.round((100 * passes) / 3);
 
-  if (!hasXHeightData) {
-    // 3-way mean — original formula, unchanged
-    const passes = Number(fontOk) + Number(sizeOk) + Number(lineHeightOk);
-    const value = Math.round((100 * passes) / 3);
-    return { kind: 'scored', value, detail: { dimension: 'typography', fontOk, sizeOk, lineHeightOk } };
-  }
-
-  // 4-way mean with x-height
-  // xHeightOk: at least one observed font family matches a guideline font that has x-height data
-  const metricsLower = guidelineFontsWithMetrics.map((f) => f.family.trim().toLowerCase());
-  const xHeightOk = families.length > 0 &&
-    families.some((obs) => metricsLower.some((brand) => brand !== '' && obs.includes(brand)));
-
-  const passes = Number(fontOk) + Number(sizeOk) + Number(lineHeightOk) + Number(xHeightOk);
-  const value = Math.round((100 * passes) / 4);
-  return { kind: 'scored', value, detail: { dimension: 'typography', fontOk, sizeOk, lineHeightOk, xHeightOk } };
+  return {
+    kind: 'scored',
+    value,
+    detail: {
+      dimension: 'typography',
+      fontOk,
+      sizeOk,
+      lineHeightOk,
+    },
+  };
 }
