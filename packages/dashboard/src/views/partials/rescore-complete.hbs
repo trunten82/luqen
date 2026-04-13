@@ -1,0 +1,8 @@
+{{! Completion banner — no hx-trigger, polling stops }}
+<div id="rescore-region">
+  <div class="alert alert--success">
+    <strong>{{t "rescore.completeHeading"}}</strong>
+    <p>{{t "rescore.completeBody" scored=scoredCount skipped=skippedCount warnings=warningCount}}</p>
+  </div>
+  <div hx-get="/brand-overview/content" hx-trigger="load delay:3s" hx-target="#brand-overview-content" hx-swap="innerHTML"></div>
+</div>

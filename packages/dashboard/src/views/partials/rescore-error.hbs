@@ -1,0 +1,9 @@
+{{! Error banner — no hx-trigger, polling stops }}
+<div id="rescore-region">
+  <div class="alert alert--error">
+    <p>{{t "rescore.errorMessage" reason=errorReason}}</p>
+    <a href="/brand-overview" class="btn btn--sm btn--ghost" style="margin-top: var(--space-xs)">
+      {{t "rescore.triggerButton"}}
+    </a>
+  </div>
+</div>

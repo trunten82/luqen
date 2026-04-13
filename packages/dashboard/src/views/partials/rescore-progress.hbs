@@ -1,0 +1,24 @@
+{{! HTMX polling progress region — replaces rescore-region }}
+<div id="rescore-region" role="status" aria-live="polite"
+     hx-get="/brand-overview/rescore/progress"
+     hx-trigger="every 2s"
+     hx-target="#rescore-region"
+     hx-swap="outerHTML">
+  <div class="alert alert--info" style="display: flex; align-items: center; gap: var(--space-sm)">
+    <div style="flex: 1">
+      <progress
+        value="{{processedScans}}"
+        max="{{totalScans}}"
+        aria-label="Rescore progress"
+        aria-valuemin="0"
+        aria-valuemax="{{totalScans}}"
+        aria-valuenow="{{processedScans}}"
+        class="progress-bar"
+        style="width: 100%; height: 8px">
+      </progress>
+      <span class="text-sm text-muted" style="margin-top: var(--space-xs); display: block">
+        {{t "rescore.progressLabel" current=currentBatch total=totalBatches}}
+      </span>
+    </div>
+  </div>
+</div>

@@ -56,6 +56,16 @@
   {{/if}}
 </section>
 
+{{#if canManageBranding}}
+<section class="mb-md" aria-label="Rescore controls">
+  {{#if rescoreInProgress}}
+    {{> rescore-progress}}
+  {{else}}
+    {{> rescore-button}}
+  {{/if}}
+</section>
+{{/if}}
+
 <span id="brand-loading" class="htmx-indicator" aria-hidden="true">{{t "common.loading"}}</span>
 <div class="brand-overview__layout" id="brand-overview-content">
   {{> brand-overview-inner}}
