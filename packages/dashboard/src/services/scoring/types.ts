@@ -37,7 +37,6 @@ export interface TypographySubScoreDetail {
   readonly fontOk: boolean;
   readonly sizeOk: boolean;
   readonly lineHeightOk: boolean;
-  readonly xHeightOk?: boolean;
 }
 
 export interface ComponentsSubScoreDetail {
