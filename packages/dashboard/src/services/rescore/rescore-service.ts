@@ -15,7 +15,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { BrandingMatcher } from '@luqen/branding';
-import type { BrandGuideline, BrandedIssue, MatchableIssue } from '@luqen/branding';
+import type { BrandGuideline, BrandedIssue, MatchableIssue, ColorUsage, FontUsage } from '@luqen/branding';
 import { calculateBrandScore } from '../scoring/brand-score-calculator.js';
 import type { RescoreProgress } from './rescore-types.js';
 import type { RescoreProgressRepository } from '../../db/interfaces/rescore-progress-repository.js';
@@ -178,13 +178,13 @@ export class RescoreService {
             id: c.id,
             name: c.name,
             hexValue: c.hexValue,
-            ...(c.usage ? { usage: c.usage as 'primary' | 'secondary' | 'accent' | 'neutral' } : {}),
+            ...(c.usage ? { usage: c.usage as ColorUsage } : {}),
           })),
           fonts: guideline.fonts.map((f) => ({
             id: f.id,
             family: f.family,
             ...(f.weights ? { weights: f.weights } : {}),
-            ...(f.usage ? { usage: f.usage as 'heading' | 'body' | 'mono' } : {}),
+            ...(f.usage ? { usage: f.usage as FontUsage } : {}),
           })),
           selectors: guideline.selectors.map((s) => ({
             id: s.id,
