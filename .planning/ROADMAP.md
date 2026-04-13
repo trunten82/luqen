@@ -88,8 +88,8 @@ Plans:
   4. Non-Google-Fonts families gracefully fall back to existing 3-way mean scoring — no regression
 **Plans**: 2 plans
 Plans:
-- [ ] 26-01-PLAN.md — POC spike: install opentype.js, config key, run feasibility script against 10 Google Fonts
-- [ ] 26-02-PLAN.md — Conditional: migration 045 + FontMetricsService + typography scorer 4th heuristic + tests
+- [x] 26-01-PLAN.md — POC spike: install opentype.js, config key, run feasibility script against 10 Google Fonts
+- [x] 26-02-PLAN.md — Conditional: migration 045 + FontMetricsService + typography scorer 4th heuristic + tests
 
 ### Phase 27: Historical Rescore
 **Goal**: Org admins can backfill brand scores for scans that predate the scoring feature, making trend data complete
@@ -101,7 +101,10 @@ Plans:
   3. Scans whose linked guideline no longer exists are skipped with a warning count — no unscorable rows created
   4. Rescore processes in batches of 50 and can resume from the last processed scan if interrupted
   5. Rescore always uses embedded mode (in-process calculator) regardless of org branding_mode
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 27-01-PLAN.md — Migration 046 + RescoreProgressRepository + RescoreService batch engine
+- [ ] 27-02-PLAN.md — Rescore routes + HTMX partials + confirmation dialog + polling + UAT
 **UI hint**: yes
 
 ## Planned
@@ -120,4 +123,4 @@ Plans:
 | 24. Per-Dimension Trends + Score Target | 2/2 | Complete    | 2026-04-12 |
 | 25. Drilldown Modal | 1/1 | Complete    | 2026-04-12 |
 | 26. Typography x-height Spike | 0/2 | Not started | - |
-| 27. Historical Rescore | 0/? | Not started | - |
+| 27. Historical Rescore | 0/2 | Not started | - |
