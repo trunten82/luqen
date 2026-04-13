@@ -124,6 +124,7 @@ export async function roleRoutes(
             systemBadge: r.isSystem,
             canDelete: !DEFAULT_ORG_ROLE_NAMES.has(r.name),
             canEdit: true,
+            orgName: org.name,
           }));
           orgRoles = orgRoles.concat(mapped);
         }
@@ -224,6 +225,7 @@ export async function roleRoutes(
             systemBadge: r.isSystem,
             canDelete: !DEFAULT_ORG_ROLE_NAMES.has(r.name),
             canEdit: true,
+            orgName: org.name,
           }));
           orgRoles = orgRoles.concat(mapped);
         }
