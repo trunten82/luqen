@@ -1509,5 +1509,16 @@
   "brandOverview.saveTarget": "Set",
   "brandOverview.clearTarget": "Clear",
   "brandOverview.target": "Target",
-  "common.loading": "Loading..."
+  "common.loading": "Loading...",
+  "rescore.triggerButton": "Rescore historical scans",
+  "rescore.confirmHeading": "Rescore historical scans?",
+  "rescore.confirmBody": "This will score {{count}} completed scans that have no brand score yet. Already-scored scans will be skipped.",
+  "rescore.confirmStart": "Start rescore",
+  "rescore.confirmCancel": "Don't rescore",
+  "rescore.progressLabel": "Rescoring -- batch {{current}} of {{total}}...",
+  "rescore.completeHeading": "Rescore complete",
+  "rescore.completeBody": "{{scored}} scans scored. {{skipped}} already scored (skipped). {{warnings}} skipped -- guideline deleted.",
+  "rescore.alreadyRunning": "Rescore already in progress for this organisation.",
+  "rescore.errorMessage": "Rescore failed. {{reason}} -- try again from the button above.",
+  "rescore.noCandidates": "No historical scans to rescore."
 }

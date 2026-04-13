@@ -1,0 +1,37 @@
+{{! Rescore trigger button — only rendered when canManageBranding is true }}
+<div id="rescore-region">
+  <button type="button" class="btn btn--secondary btn--sm" style="min-height: 44px"
+          onclick="document.getElementById('rescore-confirm-dialog').showModal()">
+    {{t "rescore.triggerButton"}}
+  </button>
+
+  <dialog id="rescore-confirm-dialog" class="modal-overlay">
+    <div class="modal">
+      <div class="modal__header">
+        <h3>{{t "rescore.confirmHeading"}}</h3>
+      </div>
+      <div class="modal__body">
+        {{#if (eq candidateCount 0)}}
+          <p>{{t "rescore.noCandidates"}}</p>
+        {{else}}
+          <p>{{t "rescore.confirmBody" count=candidateCount}}</p>
+        {{/if}}
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secondary" autofocus
+                {{#if (eq candidateCount 0)}}disabled{{/if}}
+                hx-post="/brand-overview/rescore/start"
+                hx-target="#rescore-region"
+                hx-swap="outerHTML"
+                hx-vals='{"_csrf": "{{csrfToken}}"}'
+                onclick="this.closest('dialog').close()">
+          {{t "rescore.confirmStart"}}
+        </button>
+        <button type="button" class="btn btn--ghost"
+                onclick="this.closest('dialog').close()">
+          {{t "rescore.confirmCancel"}}
+        </button>
+      </div>
+    </div>
+  </dialog>
+</div>
