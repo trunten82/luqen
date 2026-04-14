@@ -243,6 +243,13 @@ export async function dashboardUserRoutes(
         const isAdmin = request.user?.role === 'admin';
         const orgId = request.user?.currentOrgId;
         if (!isAdmin && orgId && orgId !== 'system') {
+          // Add to org_members so getUserOrgs resolves the org for permission resolution
+          try {
+            await storage.organizations.addMember(orgId, created.id, 'member');
+          } catch {
+            // Ignore duplicate — user may already be an org member
+          }
+
           const orgTeams = await storage.teams.listTeamsByOrgId(orgId);
           // Prefer a "Members" team, fall back to any team in the org
           const memberTeam = orgTeams.find((t: { name: string }) => t.name === 'Direct Members' || t.name === 'Members')
