@@ -537,4 +537,19 @@ export async function brandOverviewRoutes(
       totalBatches,
     });
   });
+
+  // GET /brand-overview/rescore/button — returns the rescore button partial
+  // Used by rescore-complete.hbs to restore the button after success banner
+  server.get('/brand-overview/rescore/button', {
+    preHandler: requirePermission('branding.manage'),
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    let effectiveOrgId = resolveOrgId(request);
+    if (!effectiveOrgId) {
+      const allOrgs = await storage.organizations.listOrgs();
+      const query = request.query as Record<string, string>;
+      effectiveOrgId = query.org && allOrgs.some(o => o.id === query.org) ? query.org : allOrgs[0]?.id ?? null;
+    }
+    const candidateCount = effectiveOrgId ? await rescoreService.getCandidateCount(effectiveOrgId) : 0;
+    return reply.view('partials/rescore-button.hbs', { candidateCount });
+  });
 }

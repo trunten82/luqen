@@ -1211,6 +1211,10 @@ dialog {
   max-width: 560px;
   width: 90vw;
   padding: var(--space-xl);
+  margin: auto;
+  position: fixed;
+  inset: 0;
+  height: fit-content;
 }
 dialog::backdrop {
   background-color: rgba(0, 0, 0, 0.6);
