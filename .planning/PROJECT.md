@@ -10,20 +10,11 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 ## Current State
 
-v2.11.0 shipped 2026-04-12 — Brand Intelligence: per-guideline 0-100 brand accessibility score (color contrast, typography, component coverage) with locked 50/30/20 weights, per-org dual-mode branding orchestrator (embedded/remote with no-cross-route policy), brand_scores persistence (append-only, LEFT JOIN trend queries), admin mode toggle with test-connection button, report detail brand score panel, and home dashboard widget with inline SVG sparkline. 7 phases (15-21), 24 plans, 189 new tests, 20/20 requirements satisfied. Previous: v2.10.0 (2026-04-10) prompt safety + API key UX, v2.9.0 (2026-04-06) branding pipeline + org isolation.
+v2.12.0 shipped 2026-04-14 — Brand Intelligence Polish: dedicated brand overview page with per-site selector, per-dimension trend sparklines (color/typography/components), org-level score targets with gap display, drilldown modal for failing elements, typography x-height metrics via opentype.js (4th scoring heuristic), fine-grained org permissions (admin.org replacing admin.system), and historical rescore admin action (batch-of-50, idempotent, resumable). 6 phases (22-27), 10 plans, 25/25 requirements satisfied. Previous: v2.11.0 (2026-04-12) brand scoring engine, v2.10.0 (2026-04-10) prompt safety + API key UX.
 
-## Current Milestone: v2.12.0 Brand Intelligence Polish
+## Current Milestone
 
-**Goal:** Close the branding story — give orgs a dedicated brand overview page with per-site selector, richer trend visualization with per-dimension sparklines, score targets, element-level drilldown, improved typography scoring via x-height metrics, fine-grained org permissions, and an optional historical rescore admin action.
-
-**Target features:**
-- Brand overview page with per-site selector replacing the removed homepage widget — org-level dashboard for brand accessibility KPIs across all branded sites
-- Per-dimension trend sparklines (color / typography / components separately, not just the composite)
-- Score target line: orgs set a goal score, the widget shows the gap between current and target
-- Drilldown modal: click from the brand score widget/panel to see individual failing elements grouped by sub-score dimension
-- Typography x-height metric: opentype.js feasibility spike to derive real x-height from font files, improving the typography sub-score beyond the current CSS-only heuristics
-- Fine-grained `organizations.*` permissions replacing the global `admin.system` gate for org-level operations (branding mode toggle, org settings, member management)
-- Optional "Rescore historical scans" admin action: idempotent, resumable, skip-when-guideline-gone — lets orgs backfill brand scores for pre-v2.11.0 scans on demand
+v2.12.0 Brand Intelligence Polish shipped 2026-04-14. Next milestone not yet planned — run `/gsd-new-milestone` to start.
 
 ## Requirements
 
@@ -76,9 +67,31 @@ v2.11.0 shipped 2026-04-12 — Brand Intelligence: per-guideline 0-100 brand acc
 - ✓ Collapsible Revoked keys section via native `<details>` element — v2.10.0
 - ✓ Expired key label distinguishing auto-revoked from manually revoked — v2.10.0
 
+- ✓ Org admin with admin.org can manage org settings without admin.system — v2.12.0
+- ✓ Branding mode toggle migrated to admin.org permission — v2.12.0
+- ✓ System-wide ops (create/delete org) still require admin.system — v2.12.0
+- ✓ Brand overview page at /brand-overview with per-site selector — v2.12.0
+- ✓ Org-level summary card (avg score, improving/regressing counts) — v2.12.0
+- ✓ Sparkline utility extracted to shared services/sparkline.ts — v2.12.0
+- ✓ Per-dimension trend polylines (color/typography/components) on SVG — v2.12.0
+- ✓ Gap-aware dimension lines with insufficient-data fallback — v2.12.0
+- ✓ Org-level brand score target (0-100) with dashed SVG line — v2.12.0
+- ✓ Score vs target gap display with color banding — v2.12.0
+- ✓ Drilldown modal for sub-score dimensions with failing elements — v2.12.0
+- ✓ Native dialog+showModal pattern, no new JS dependencies — v2.12.0
+- ✓ Typography x-height metrics via opentype.js + Google Fonts API — v2.12.0
+- ✓ Font metrics cached in branding_fonts columns (migration 045) — v2.12.0
+- ✓ Typography scorer 4th heuristic (x-height ratio, 25% weight) — v2.12.0
+- ✓ Non-Google-Fonts graceful fallback to 3-way mean — v2.12.0
+- ✓ Historical rescore: admin-triggered batch-of-50 processing — v2.12.0
+- ✓ Rescore idempotent (skip already-scored scans) — v2.12.0
+- ✓ Rescore resumable with progress tracking — v2.12.0
+- ✓ Rescore skips deleted guidelines with warning count — v2.12.0
+- ✓ Rescore always embedded mode, never remote — v2.12.0
+
 ### Active
 
-(To be populated during REQUIREMENTS.md step of this milestone)
+(Next milestone — run /gsd-new-milestone)
 
 ### Out of Scope
 
@@ -137,6 +150,12 @@ v2.11.0 shipped 2026-04-12 — Brand Intelligence: per-guideline 0-100 brand acc
 | Hard delete with SQL active=0 guard | Two-step (revoke → delete) matches user mental model; DB-level defense-in-depth | ✓ Good — v2.10.0 |
 | TTL whitelist `[0,30,90,180,365]` with 90d default | Matches industry norms for CI tokens; server-side rejection prevents injection | ✓ Good — v2.10.0 |
 | Worktree executor isolation disabled mid-phase after stale-base incident | `git reset --soft` safety check doesn't recover stale working tree; sequential main-tree runs safer for polish phases | ⚠️ Revisit — v2.10.0 |
+| Brand overview at /brand-overview, not /admin/ | Org-scoped content visible to all users with branding.view | ✓ Good — v2.12.0 |
+| Score target: single org-level integer on organizations table | Per-site/per-dimension targets deferred — simple UX first | ✓ Good — v2.12.0 |
+| opentype.js over fontkit for font metrics | Pure JS (~180KB), server-side only, 100% OS/2 v3+ coverage | ✓ Good — v2.12.0 |
+| Historical rescore always embedded, never remote | Avoids branding service dependency; consistent scoring | ✓ Good — v2.12.0 |
+| Native `<dialog>` for rescore confirmation | Consistent with drilldown modal pattern; no custom JS | ✓ Good — v2.12.0 |
+| RescoreService via getRawDatabase() escape hatch | Avoids modifying StorageAdapter interface for single-use repo | ✓ Good — v2.12.0 |
 
 ## Evolution
 
@@ -156,4 +175,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 — milestone v2.11.0 Brand Intelligence started*
+*Last updated: 2026-04-14 after v2.12.0 Brand Intelligence Polish milestone*

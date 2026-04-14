@@ -1,5 +1,17 @@
 # Milestones
 
+## v2.12.0 Brand Intelligence Polish (Shipped: 2026-04-14)
+
+**Phases completed:** 6 phases, 8 plans, 10 tasks
+
+**Key accomplishments:**
+
+- Migrated 3 branding routes to dual admin.system/admin.org permission with tenant isolation, plus 13 permission matrix tests
+- Org-level brand score target with dashed SVG line, target input form, and color-coded gap display on summary card
+- 1. [Rule 2] No-candidates returns button partial instead of inline HTML
+
+---
+
 ## v2.11.0 Brand Intelligence (Shipped: 2026-04-12)
 
 **Phases completed:** 7 phases (15-21), 24 plans, ~50 tasks
@@ -21,6 +33,7 @@
 **20/20 v2.11.0 requirements satisfied:** BSCORE-01..05, BSTORE-01..06, BMODE-01..05, BUI-01..04.
 
 **Known incidents:**
+
 - Plan 18-01 executor rate-limited mid-Task-2 during the pre-rewire latency bench (pa11y + sap.com OOM'd at 6 GB heap); orchestrator continued inline site-by-site under OS timeout wrappers. sap.com excluded from both baseline and post-rewire (apples-to-apples); 3-site comparison remained valid.
 - Phase 17 UAT-17-01 branding service liveness checkpoint executed via SSH to lxc-luqen (not human-interactive); branding service confirmed running on port 4100 (plan/doc said 4300 — corrected in UAT report).
 
@@ -47,6 +60,7 @@
 - Phase 13 isOverride field rename: `LLMPrompt.isCustom` renamed to `isOverride` to match the LLM service response field; the Reset button would otherwise never render because `apiFetch` returns raw JSON without field mapping. Caught during verifier pass, fixed in `9687aa6`.
 
 **Known incidents:**
+
 - Wave 1 of Phase 14 initially ran in a worktree created from a stale base snapshot, and its commits inadvertently reverted all of phase 13. Detected at merge time via massive deletions in the merge log. Recovery: `git reset --hard 9687aa6` then surgical `git checkout c554074 -- <5 phase-14 files>` to preserve backend work. Waves 2 and 3 ran sequentially on the main tree without worktree isolation to avoid the stale-base issue.
 - Post-deploy UX fixes found during UAT: status cell stacked badge + `(Expired)` on two lines (fixed with `.status-cell` inline-flex wrapper); phase 13 locked segments overflowed the card and diff modal wasn't responsive to screen size (fixed with `.modal--wide` + `overflow-wrap: anywhere`).
 
