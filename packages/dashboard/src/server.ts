@@ -85,6 +85,10 @@ import { schema as graphqlSchema } from './graphql/schema.js';
 import { resolvers as graphqlResolvers } from './graphql/resolvers.js';
 import type { GraphQLContext } from './graphql/resolvers.js';
 import { runApiKeySweep } from './api-key-sweep.js';
+import { registerMcpRoutes } from './routes/api/mcp.js';
+import { createDashboardJwtVerifier } from './mcp/verifier.js';
+import type { McpTokenVerifier } from './mcp/middleware.js';
+import { isBearerOnlyPath } from './mcp/paths.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -590,6 +594,17 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     if (isPublicPath(request.url.split('?')[0])) {
       return;
     }
+    // PITFALLS.md #9: MCP endpoint uses Bearer-only auth — session guard is
+    // bypassed when a Bearer token is present. The scoped Bearer preHandler on
+    // the MCP route enforces authentication. Requests to /api/v1/mcp without
+    // Bearer will 401 there (session fallthrough forbidden).
+    if (
+      isBearerOnlyPath(request.url.split('?')[0]) &&
+      typeof request.headers.authorization === 'string' &&
+      request.headers.authorization.startsWith('Bearer ')
+    ) {
+      return;
+    }
     await authGuard(request, reply);
   });
 
@@ -599,6 +614,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Org context + permission loading ──────────────────────────────────────
   // Must run BEFORE the CSRF/perm/i18n hook so perm flags are available.
   server.addHook('preHandler', async (request: FastifyRequest) => {
+    // Bearer-only MCP bypasses cookie-session org resolution — the scoped
+    // MCP preHandler populates request.orgId / request.permissions from the
+    // verified JWT instead.
+    if (isBearerOnlyPath(request.url.split('?')[0])) return;
     if (request.user === undefined) return;
 
     const session = request.session as { get(key: string): unknown } | undefined;
@@ -652,6 +671,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   server.addHook('onClose', () => { complianceService.destroyOrgTokenManagers(); });
 
   server.addHook('preHandler', async (request: FastifyRequest) => {
+    // Bearer-only MCP bypasses the per-org service-token injector —
+    // the MCP endpoint does not call compliance on behalf of a cookie-session user.
+    if (isBearerOnlyPath(request.url.split('?')[0])) return;
     const session = request.session as { token?: string };
     if (!session.token) {
       const reqExt = request as unknown as Record<string, unknown>;
@@ -848,6 +870,19 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Source intelligence API routes ─────────────────────────────────────
   await sourceApiRoutes(server, config.complianceUrl, pluginManager, getComplianceTokenManager);
+
+  // ── MCP endpoint (Phase 28) — Bearer-only, RS256 JWT ────────────────────
+  // PITFALLS.md #9: cookie sessions are REJECTED on /api/v1/mcp (CSRF risk).
+  // Fail-fast at startup if DASHBOARD_JWT_PUBLIC_KEY is missing — no silent
+  // fallback to unsigned verification.
+  if (config.jwtPublicKey === undefined || config.jwtPublicKey.trim() === '') {
+    throw new Error(
+      'DASHBOARD_JWT_PUBLIC_KEY must be set to enable the dashboard MCP endpoint (RS256). ' +
+        'Set it to a PEM-encoded RSA public key. See packages/dashboard/src/config.ts.',
+    );
+  }
+  const mcpVerifier: McpTokenVerifier = await createDashboardJwtVerifier(config.jwtPublicKey);
+  await registerMcpRoutes(server, { verifyToken: mcpVerifier, storage });
 
   // ── GraphQL API (mercurius) ──────────────────────────────────────────────
   await server.register(mercurius, {

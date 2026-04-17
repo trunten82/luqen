@@ -27,5 +27,11 @@ export async function createDashboardMcpServer(): Promise<{
     name: 'luqen-dashboard',
     version: VERSION,
   });
+  // The SDK only auto-registers the 'tools' capability when registerTool is
+  // invoked at least once. Phase 28 ships with ZERO tools (Phase 30 populates),
+  // so we must declare the capability explicitly — otherwise
+  // createMcpHttpPlugin's setRequestHandler(ListToolsRequestSchema, ...)
+  // override throws "Server does not support tools".
+  server.server.registerCapabilities({ tools: { listChanged: false } });
   return { server, toolNames: [], metadata: DASHBOARD_TOOL_METADATA };
 }
