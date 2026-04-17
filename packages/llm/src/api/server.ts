@@ -134,7 +134,7 @@ export async function createServer(options: ServerOptions) {
   await registerCapabilityRoutes(app, db);
   await registerCapabilityExecRoutes(app, db);
   await registerPromptRoutes(app, db);
-  await registerMcpRoutes(app);
+  await registerMcpRoutes(app, { db });
 
   return app;
 }
