@@ -5,9 +5,10 @@
  * existing capability executors (generate-fix, analyse-report,
  * discover-branding, extract-requirements). Every tool is a thin protocol
  * adapter — no new fallback logic, no new validation, no new error
- * envelopes (D-09). Every handler carries an explicit
- * '// orgId: N/A (global — inputs supplied by caller; orgId used only for
- * per-org prompt overrides)' classification comment.
+ * envelopes (D-09). Every handler carries an explicit one-line
+ * classification marker immediately above the async handler body stating
+ * the orgId disposition for that tool (all 4 are GLOBAL — see the block
+ * comment below the imports for the full rationale).
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
