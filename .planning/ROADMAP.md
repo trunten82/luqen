@@ -13,7 +13,7 @@
 
 ### Phases
 
-- [ ] **Phase 28: MCP Foundation** - Streamable HTTP MCP endpoints with OAuth2 JWT validation, RBAC tool filtering, and org-aware tool scoping across all services
+- [x] **Phase 28: MCP Foundation** - Streamable HTTP MCP endpoints with OAuth2 JWT validation, RBAC tool filtering, and org-aware tool scoping across all services (completed 2026-04-17)
 - [ ] **Phase 29: Service MCP Tools** - Compliance, branding, and LLM tools plus MCP Resources and Prompts primitives
 - [ ] **Phase 30: Dashboard MCP + External Clients** - Dashboard admin operations exposed as MCP tools; external client (Claude Desktop, IDE) connectivity verified
 - [ ] **Phase 31: Conversation Persistence** - SQLite schema for conversation history with rolling-window design and per-invocation audit log
@@ -36,29 +36,36 @@
 **Plans**: 3 plans
 Plans:
 - [x] 28-01-PLAN.md — Shared createMcpHttpPlugin() factory + RBAC tool filter + ToolContext types in @luqen/core
-- [ ] 28-02-PLAN.md — Wire MCP endpoint into compliance (upgrade 11 tool handlers) + branding/LLM stubs
-- [ ] 28-03-PLAN.md — Dashboard MCP endpoint with Bearer-only auth (CSRF defense) + resolveEffectivePermissions RBAC
+- [x] 28-02-PLAN.md — Wire MCP endpoint into compliance (upgrade 11 tool handlers) + branding/LLM stubs
+- [x] 28-03-PLAN.md — Dashboard MCP endpoint with Bearer-only auth (CSRF defense) + resolveEffectivePermissions RBAC
 
 ### Phase 29: Service MCP Tools
-**Goal**: Users can perform all key compliance, branding, and LLM operations through MCP tools, and MCP clients have read-only resource context and workflow shortcut prompts
+**Goal**: Users can list and match brand guidelines via branding MCP tools, and can request fix suggestions, report analysis, brand discovery, and regulation-requirement extraction via LLM MCP tools
 **Depends on**: Phase 28
-**Requirements**: MCPT-01, MCPT-02, MCPT-03, MCPI-05, MCPI-06
+**Requirements**: MCPT-02 (partial — guidelines + match + discover), MCPT-03
 **Success Criteria** (what must be TRUE):
-  1. An MCP client can trigger a site scan, list reports, and query issues via compliance MCP tools and receive structured results
-  2. An MCP client can list brand guidelines, retrieve brand scores, and invoke discover-branding via branding MCP tools
-  3. An MCP client can request fix suggestions and report analysis via LLM MCP tools
-  4. An MCP client can read scan reports and brand scores as MCP Resources (read-only, no side effects)
-  5. An MCP client can invoke predefined prompt shortcuts (`/scan`, `/report`, `/fix`) that pre-fill tool arguments with workflow-appropriate defaults
-**Plans**: TBD
+  1. An MCP client can list brand guidelines, get a single guideline, list site assignments, and match pa11y issues against a brand guideline via branding MCP tools (4 tools, all branding.view, all org-scoped with cross-org guards)
+  2. An MCP client can generate WCAG fix suggestions, generate executive summaries for scan reports, auto-detect brand signals from a URL, and extract requirements from regulation text via LLM MCP tools (4 tools, all llm.view, all global)
+  3. No tool accepts `orgId` in its inputSchema — every handler sources orgId from the ToolContext populated by the OAuth2 JWT at request time (D-13 invariant, enforced by runtime iteration test per service)
+**Plans**: 3 plans
+Plans:
+- [x] 29-01-PLAN.md — Branding MCP tools (4 tools: list_guidelines, get_guideline, list_sites, match)
+- [x] 29-02-PLAN.md — LLM MCP tools (4 tools: generate_fix, analyse_report, discover_branding, extract_requirements)
+- [x] 29-03-PLAN.md — REQUIREMENTS.md + ROADMAP.md rescope (move MCPT-01, MCPT-02 brand-score half, MCPI-05, MCPI-06 to Phase 30)
 **UI hint**: no
+**Rescope note**: The original Phase 29 wording included scan/report/issue tools (MCPT-01), brand score retrieval (MCPT-02 second half), MCP Resources (MCPI-05), and MCP Prompts (MCPI-06). These moved to Phase 30 during context gathering (see `.planning/phases/29-service-mcp-tools/29-CONTEXT.md` D-14) because their natural data lives in `packages/dashboard`, not in compliance/branding/llm.
 
 ### Phase 30: Dashboard MCP + External Clients
-**Goal**: Dashboard admin operations are accessible via MCP and external clients such as Claude Desktop can connect and operate with valid credentials
-**Depends on**: Phase 28
-**Requirements**: MCPT-04, MCPT-05
+**Goal**: Dashboard admin operations AND dashboard-owned read data (scans, reports, brand scores) are accessible via MCP as tools, resources, and prompts; external clients such as Claude Desktop can connect with valid credentials
+**Depends on**: Phase 28, Phase 29
+**Requirements**: MCPT-01, MCPT-02 (brand score retrieval half), MCPT-04, MCPT-05, MCPI-05, MCPI-06
 **Success Criteria** (what must be TRUE):
-  1. An authenticated MCP client can manage users, orgs, and service connections via dashboard MCP tools, with RBAC-gated tool manifest (org-member callers see only their permitted subset)
-  2. A developer can connect Claude Desktop or an IDE MCP extension to a Luqen service endpoint using standard OAuth2 credentials and successfully call tools — verified via MCP Inspector or Claude Desktop tool list
+  1. An MCP client can trigger a site scan, list reports, and query issues via dashboard MCP tools (absorbed from Phase 29 — MCPT-01)
+  2. An MCP client can retrieve brand scores via dashboard MCP tools (absorbed from Phase 29 — MCPT-02 brand-score half)
+  3. An authenticated MCP client can manage users, orgs, and service connections via dashboard MCP tools, with RBAC-gated tool manifest (org-member callers see only their permitted subset) — MCPT-04
+  4. A developer can connect Claude Desktop or an IDE MCP extension to a Luqen service endpoint using standard OAuth2 credentials and successfully call tools — verified via MCP Inspector or Claude Desktop tool list — MCPT-05
+  5. An MCP client can read scan reports and brand scores as MCP Resources (read-only URIs like `scan://report/{id}` and `brand://score/{siteUrl}`) — MCPI-05 (absorbed from Phase 29)
+  6. An MCP client can invoke predefined MCP Prompts (`/scan`, `/report`, `/fix`) that return **chat-message templates** (system+user messages with placeholders) that the client feeds to its own LLM, which then chooses which cross-service tools to invoke — MCPI-06 (absorbed from Phase 29; shape locked in 29-CONTEXT.md D-12 — NOT tool-call pre-fills)
 **Plans**: TBD
 
 ### Phase 31: Conversation Persistence
@@ -101,8 +108,8 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 28. MCP Foundation | 1/3 | In Progress|  |
-| 29. Service MCP Tools | 0/? | Not started | - |
+| 28. MCP Foundation | 3/3 | Complete   | 2026-04-17 |
+| 29. Service MCP Tools | 3/3 | Complete   | 2026-04-17 |
 | 30. Dashboard MCP + External Clients | 0/? | Not started | - |
 | 31. Conversation Persistence | 0/? | Not started | - |
 | 32. Agent Service + Chat UI | 0/? | Not started | - |
