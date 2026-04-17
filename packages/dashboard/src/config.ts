@@ -26,6 +26,7 @@ const ConfigSchema = z.object({
   maxPages: z.number().int().min(1).max(1000).default(50),
   runner: z.enum(['htmlcs', 'axe']).optional(),
   webserviceUrls: z.array(z.string().url()).optional(),
+  jwtPublicKey: z.string().optional(),
 }).strict();
 
 export interface DashboardConfig {
@@ -60,6 +61,12 @@ export interface DashboardConfig {
   readonly runner?: 'htmlcs' | 'axe';
   /** Additional pa11y webservice URLs for horizontal scaling (comma-separated via env). */
   readonly webserviceUrls?: readonly string[];
+  /**
+   * PEM-encoded RS256 public key. Required when MCP endpoint is enabled
+   * (Phase 28+). Loaded from DASHBOARD_JWT_PUBLIC_KEY env var; literal
+   * "\n" sequences are converted to real newlines for single-line env form.
+   */
+  readonly jwtPublicKey?: string;
 }
 
 const DEFAULTS: DashboardConfig = {
@@ -139,6 +146,9 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
     webserviceUrls: process.env['DASHBOARD_WEBSERVICE_URLS'] !== undefined
       ? process.env['DASHBOARD_WEBSERVICE_URLS'].split(',').map((u) => u.trim()).filter(Boolean)
       : config.webserviceUrls,
+    jwtPublicKey: process.env['DASHBOARD_JWT_PUBLIC_KEY'] !== undefined
+      ? process.env['DASHBOARD_JWT_PUBLIC_KEY'].replace(/\\n/g, '\n')
+      : config.jwtPublicKey,
   };
 }
 
