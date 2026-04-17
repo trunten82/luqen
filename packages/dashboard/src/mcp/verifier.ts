@@ -6,10 +6,10 @@
  * JWTs verified against DASHBOARD_JWT_PUBLIC_KEY (PEM public key).
  * No HS256, no unsigned tokens (alg:none), no shared-secret fallback.
  *
- * The dashboard currently uses `decodeJwt` (unsigned decode) only during
- * the OAuth login flow in routes/auth.ts — that is NOT sufficient for
- * MCP and is NOT reused here. The MCP endpoint uses real signature
- * verification via jose.jwtVerify with an RS256-only algorithm allowlist.
+ * The dashboard's existing OAuth login flow (routes/auth.ts) uses an
+ * unsigned JWT decode helper — that helper is NOT sufficient for MCP and
+ * is NOT reused here. The MCP endpoint uses real signature verification
+ * via jose.jwtVerify with an RS256-only algorithm allowlist.
  */
 
 import { importSPKI, jwtVerify } from 'jose';
