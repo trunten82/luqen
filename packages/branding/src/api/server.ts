@@ -547,7 +547,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     });
   });
 
-  await registerMcpRoutes(app);
+  await registerMcpRoutes(app, { db });
 
   return app;
 }
