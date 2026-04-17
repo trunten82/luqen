@@ -22,6 +22,7 @@ import { registerClientRoutes } from './routes/clients.js';
 import { registerSeedRoutes } from './routes/seed.js';
 import { registerOrgRoutes } from './routes/orgs.js';
 import { registerWcagCriteriaRoutes } from './routes/wcag-criteria.js';
+import { registerMcpRoutes } from './routes/mcp.js';
 import { VERSION } from '../version.js';
 
 export interface ServerOptions {
@@ -169,6 +170,7 @@ export async function createServer(options: ServerOptions) {
   await registerSeedRoutes(app, db);
   await registerOrgRoutes(app, db);
   await registerWcagCriteriaRoutes(app, db);
+  await registerMcpRoutes(app, { db });
 
   // Startup seed: runs once after server is ready
   app.addHook('onReady', async () => {
