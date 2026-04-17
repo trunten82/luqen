@@ -10,7 +10,8 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./cli": "./dist/cli.js"
+    "./cli": "./dist/cli.js",
+    "./mcp": "./dist/mcp/index.js"
   },
   "scripts": {
     "build": "tsc && cp src/reporter/report.hbs dist/reporter/report.hbs",
