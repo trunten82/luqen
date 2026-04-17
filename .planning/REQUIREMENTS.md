@@ -1,111 +1,106 @@
-# Requirements — v2.12.0 Brand Intelligence Polish
+# Requirements: Luqen v3.0.0
 
-**Milestone:** v2.12.0 Brand Intelligence Polish
-**Goal:** Close the branding story — dedicated brand overview page, per-dimension trends, score targets, element-level drilldown, typography x-height spike, fine-grained org permissions, and historical rescore.
+**Defined:** 2026-04-16
+**Core Value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control of the whole stack through the dashboard, not config files.
 
----
+## v3.0.0 Requirements
 
-## v1 Requirements
+Requirements for the MCP Servers & Agent Companion milestone. Each maps to roadmap phases.
 
-### Permissions Audit (BPERM)
+### MCP Infrastructure
 
-- [ ] **BPERM-01**: Org admin with `admin.org` permission can edit their own organization settings without requiring global `admin.system`
-- [ ] **BPERM-02**: Org admin with `admin.org` permission can toggle branding mode for their own org (migrated from `admin.system` gate)
-- [ ] **BPERM-03**: System-wide operations (create org, delete org, list all orgs) remain gated by `admin.system` only — no permission downgrade
+- [x] **MCPI-01**: User can connect to any Luqen service via Streamable HTTP MCP transport
+- [x] **MCPI-02**: MCP endpoints validate OAuth2 RS256 JWT on every request
+- [x] **MCPI-03**: MCP tool manifest is dynamically filtered by caller's RBAC permissions
+- [x] **MCPI-04**: All MCP tool calls are pre-scoped to the caller's org from JWT claims
+- [ ] **MCPI-05**: MCP Resources expose scan reports and brand scores as read-only context
+- [ ] **MCPI-06**: MCP Prompts expose predefined workflow shortcuts (scan, report, fix)
 
-### Brand Overview Page (BOVW)
+### MCP Service Tools
 
-- [ ] **BOVW-01**: User with `branding.view` can access `/brand-overview` showing all branded sites for their org with latest brand score per site
-- [ ] **BOVW-02**: User can select a site from a dropdown/tab row to view that site's detail panel (sparkline, sub-scores, delta) via HTMX swap
-- [ ] **BOVW-03**: User can see an org-level summary card showing average score, total scored sites, and count of improving vs regressing sites
-- [ ] **BOVW-04**: System extracts sparkline point computation from `home.ts` into a shared `services/sparkline.ts` utility reused by overview and any future sparkline consumers
+- [ ] **MCPT-01**: User can scan sites, list reports, and check issues via compliance MCP tools
+- [ ] **MCPT-02**: User can list guidelines, get brand scores, and run discover-branding via branding MCP tools
+- [ ] **MCPT-03**: User can generate fixes and analyse reports via LLM MCP tools
+- [ ] **MCPT-04**: User can manage users, orgs, and service connections via dashboard MCP tools
+- [ ] **MCPT-05**: External MCP clients (Claude Desktop, IDEs) can connect and use tools with valid credentials
 
-### Per-Dimension Trends (BTREND)
+### Agent Companion
 
-- [ ] **BTREND-01**: User can see three per-dimension trend polylines (color, typography, components) on a single SVG alongside the composite sparkline on the brand overview page
-- [ ] **BTREND-02**: System skips dimension polyline points for entries where that dimension is unscorable, producing a natural gap in the line
-- [ ] **BTREND-03**: Dimension with fewer than 2 scored entries across history does not render its polyline — shows "insufficient data" text instead
-- [ ] **BTREND-04**: User with `branding.manage` can set an org-level brand score target (0-100 integer) via the brand overview page
-- [ ] **BTREND-05**: System renders a horizontal dashed target line on the sparkline SVG when a target is set; no line when target is NULL
-- [ ] **BTREND-06**: User can see current score vs target gap on the summary card, color-banded green (met) or amber/red (below)
+- [ ] **AGENT-01**: User can interact with the agent via a text chat side panel in the dashboard
+- [ ] **AGENT-02**: Agent routes all LLM calls through the existing capability engine (provider fallback, per-org overrides)
+- [ ] **AGENT-03**: User can use speech input via Web Speech API with text fallback for unsupported browsers
+- [ ] **AGENT-04**: Agent references recent scans, active guidelines, and regulations in responses
+- [ ] **AGENT-05**: Agent manages token budget with sliding window and summary compaction for long conversations
 
-### Drilldown Modal (BDRILL)
+### Agent Persistence
 
-- [ ] **BDRILL-01**: User can click a sub-score dimension on the report detail brand score panel to open a drilldown modal showing failing elements for that dimension
-- [ ] **BDRILL-02**: Drilldown modal groups failing elements by dimension (color: WCAG 1.4.3/1.4.6/1.4.11 brand-matched issues; typography: font/size/line-height issues; components: brand selector mismatches)
-- [ ] **BDRILL-03**: Drilldown modal uses existing `<dialog>` + `showModal()` pattern from v2.10.0 prompt diff modal — no new JS framework
+- [ ] **APER-01**: User's conversation history persists across sessions in SQLite
+- [ ] **APER-02**: State-changing tool calls require explicit user confirmation via native dialog
+- [ ] **APER-03**: Every tool invocation is logged with user, org, tool, args, outcome, and latency
+- [ ] **APER-04**: Admin can browse and filter agent audit logs in the dashboard
 
-### Typography x-height (BTYPO)
+## Future Requirements
 
-- [ ] **BTYPO-01**: System can resolve Google Fonts family names to .ttf file URLs via Google Fonts API and extract x-height, cap-height, and unitsPerEm via opentype.js (server-side only)
-- [ ] **BTYPO-02**: System caches extracted font metrics in `branding_fonts.x_height`, `branding_fonts.cap_height`, `branding_fonts.units_per_em` columns (migration 044 or 045)
-- [ ] **BTYPO-03**: Typography scorer incorporates x-height ratio (sxHeight / unitsPerEm) as a 4th heuristic, reweighting to 25% each across all four heuristics — only when metrics are available; falls back to 3-way mean otherwise
-- [ ] **BTYPO-04**: Spike phase may conclude "not viable" if Google Fonts coverage is too low or opentype.js OS/2 table support is unreliable — that outcome is acceptable and documented
+Deferred to v3.1+. Tracked but not in current roadmap.
 
-### Historical Rescore (BRESCORE)
+### MCP Ecosystem
 
-- [ ] **BRESCORE-01**: Admin with `branding.manage` can trigger "Rescore historical scans" from the brand overview page, processing all completed scans for the org
-- [ ] **BRESCORE-02**: Rescore is idempotent — skips scans that already have a `brand_scores` row for the current guideline (checked by scan_id + guideline_id)
-- [ ] **BRESCORE-03**: Rescore is resumable — processes in batches of 50, tracks lastProcessedScanId, user can resume from where it stopped
-- [ ] **BRESCORE-04**: Rescore skips scans whose linked guideline no longer exists with a logged warning — never creates unscorable rows for deleted guidelines
-- [ ] **BRESCORE-05**: Rescore always uses embedded mode (in-process calculator), never remote branding service, regardless of org branding_mode setting
+- **MCPE-01**: Server Card at `.well-known/mcp.json` for external registry discovery
+- **MCPE-02**: External client auth via API key or device code flow (beyond OAuth2 browser sessions)
+- **MCPE-03**: A2A peer registration for agent-to-agent workflows
 
----
+### Agent Enhancements
 
-## Future Requirements (deferred, not in v2.12.0)
+- **AGEN-01**: Manual "read aloud" button using browser SpeechSynthesis (opt-in TTS)
+- **AGEN-02**: Agent proactively suggests actions based on org activity patterns
 
-- **BTYPO-f01**: User font file upload for custom/commercial fonts not on Google Fonts — requires file upload UI, storage, security scanning
-- **BTYPO-f02**: Letter-spacing and word-spacing metrics as additional typography heuristics
-- **BTREND-f01**: Per-site score targets (separate target per site, not just org-level)
-- **BTREND-f02**: Per-dimension targets (separate target per color/typography/components)
-- **BRESCORE-f01**: Retention policy for `brand_scores` table when row count exceeds threshold
-- **BMODE-f01**: Per-org branding OAuth credentials (not just routing) — only if a real need emerges
+## Out of Scope
 
----
+Explicitly excluded. Documented to prevent scope creep.
 
-## Out of Scope (v2.12.0)
-
-- **Chart.js / D3 for sparklines** — inline SVG polyline is sufficient; zero client-side JS dependency
-- **Real-time WebSocket sparkline updates** — server-rendered SVG refreshed on page load
-- **Cross-org brand score comparison** — violates org isolation rule
-- **Automatic background rescore** — hidden processing; admin-triggered only
-- **Font file upload** — deferred to future; Google Fonts API covers Tier 1
-- **Per-site or per-dimension targets** — single org-level target is sufficient UX
-- **Custom sub-score dimensions** — breaks weight-lock invariant from v2.11.0
-
----
+| Feature | Reason |
+|---------|--------|
+| Real-time streaming LLM responses | Batch responses sufficient; adds SSE/WebSocket complexity |
+| Per-org custom agent system prompts | Prompt injection surface; agent personality name configurable only |
+| Server-side Whisper for speech transcription | Privacy concerns + infrastructure cost; Web Speech API for MVP |
+| TTS auto-play on agent responses | WCAG 1.4.2 violation (unexpected audio); manual "read aloud" button deferred to v3.1 |
+| Cross-org queries through agent | Violates org isolation guarantee; global admin uses dashboard analytics |
+| MCP as standalone service (new port) | Thin protocol adapter — embed as Fastify plugin in each existing service |
+| Full conversation history in LLM context | Quadratic token cost; sliding window + summary compaction instead |
+| A2A peer registration | v3.1 consideration after MCP tools are stable |
 
 ## Traceability
 
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| BPERM-01 | 22 | Pending |
-| BPERM-02 | 22 | Pending |
-| BPERM-03 | 22 | Pending |
-| BOVW-01 | 23 | Pending |
-| BOVW-02 | 23 | Pending |
-| BOVW-03 | 23 | Pending |
-| BOVW-04 | 23 | Pending |
-| BTREND-01 | 24 | Pending |
-| BTREND-02 | 24 | Pending |
-| BTREND-03 | 24 | Pending |
-| BTREND-04 | 24 | Pending |
-| BTREND-05 | 24 | Pending |
-| BTREND-06 | 24 | Pending |
-| BDRILL-01 | 25 | Pending |
-| BDRILL-02 | 25 | Pending |
-| BDRILL-03 | 25 | Pending |
-| BTYPO-01 | 26 | Pending |
-| BTYPO-02 | 26 | Pending |
-| BTYPO-03 | 26 | Pending |
-| BTYPO-04 | 26 | Pending |
-| BRESCORE-01 | 27 | Pending |
-| BRESCORE-02 | 27 | Pending |
-| BRESCORE-03 | 27 | Pending |
-| BRESCORE-04 | 27 | Pending |
-| BRESCORE-05 | 27 | Pending |
+Which phases cover which requirements. Updated during roadmap creation.
 
-**Coverage:** 25/25 v1 requirements mapped -- no orphans, no duplicates.
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| MCPI-01 | Phase 28 | Complete |
+| MCPI-02 | Phase 28 | Complete |
+| MCPI-03 | Phase 28 | Complete |
+| MCPI-04 | Phase 28 | Complete |
+| MCPI-05 | Phase 29 | Pending |
+| MCPI-06 | Phase 29 | Pending |
+| MCPT-01 | Phase 29 | Pending |
+| MCPT-02 | Phase 29 | Pending |
+| MCPT-03 | Phase 29 | Pending |
+| MCPT-04 | Phase 30 | Pending |
+| MCPT-05 | Phase 30 | Pending |
+| AGENT-01 | Phase 32 | Pending |
+| AGENT-02 | Phase 32 | Pending |
+| AGENT-03 | Phase 32 | Pending |
+| AGENT-04 | Phase 33 | Pending |
+| AGENT-05 | Phase 33 | Pending |
+| APER-01 | Phase 31 | Pending |
+| APER-02 | Phase 32 | Pending |
+| APER-03 | Phase 31 | Pending |
+| APER-04 | Phase 33 | Pending |
+
+**Coverage:**
+- v3.0.0 requirements: 20 total
+- Mapped to phases: 20
+- Unmapped: 0 ✓
 
 ---
-*Last updated: 2026-04-12 -- requirements defined by gsd-roadmapper*
+*Requirements defined: 2026-04-16*
+*Last updated: 2026-04-16 — traceability populated after roadmap creation*
