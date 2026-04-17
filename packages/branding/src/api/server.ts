@@ -12,6 +12,7 @@ import { BrandingMatcher } from '../matcher/index.js';
 import { GuidelineParser } from '../parser/index.js';
 import { VERSION } from '../version.js';
 import type { MatchableIssue, BrandColor, BrandFont, BrandSelector } from '../types.js';
+import { registerMcpRoutes } from './routes/mcp.js';
 
 export interface ServerOptions {
   readonly db: SqliteAdapter;
@@ -545,6 +546,8 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       },
     });
   });
+
+  await registerMcpRoutes(app);
 
   return app;
 }

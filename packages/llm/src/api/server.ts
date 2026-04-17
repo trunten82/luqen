@@ -14,6 +14,7 @@ import { registerModelRoutes } from './routes/models.js';
 import { registerCapabilityRoutes } from './routes/capabilities.js';
 import { registerCapabilityExecRoutes } from './routes/capabilities-exec.js';
 import { registerPromptRoutes } from './routes/prompts.js';
+import { registerMcpRoutes } from './routes/mcp.js';
 import { VERSION } from '../version.js';
 
 export interface ServerOptions {
@@ -133,6 +134,7 @@ export async function createServer(options: ServerOptions) {
   await registerCapabilityRoutes(app, db);
   await registerCapabilityExecRoutes(app, db);
   await registerPromptRoutes(app, db);
+  await registerMcpRoutes(app);
 
   return app;
 }
