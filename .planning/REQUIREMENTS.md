@@ -79,10 +79,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MCPI-02 | Phase 28 | Complete |
 | MCPI-03 | Phase 28 | Complete |
 | MCPI-04 | Phase 28 | Complete |
-| MCPI-05 | Phase 29 | Pending |
-| MCPI-06 | Phase 29 | Pending |
-| MCPT-01 | Phase 29 | Pending |
-| MCPT-02 | Phase 29 | Pending |
+| MCPI-05 | Phase 30 | Pending |
+| MCPI-06 | Phase 30 | Pending |
+| MCPT-01 | Phase 30 | Pending |
+| MCPT-02 | Phase 29 (guidelines + match + discover), Phase 30 (brand score retrieval) | Pending |
 | MCPT-03 | Phase 29 | Pending |
 | MCPT-04 | Phase 30 | Pending |
 | MCPT-05 | Phase 30 | Pending |
@@ -101,6 +101,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 20
 - Unmapped: 0 ✓
 
+## Phase 29 Scope Rescope
+
+Per `.planning/phases/29-service-mcp-tools/29-CONTEXT.md` D-14, the following
+requirements moved from Phase 29 to Phase 30 because their natural data lives
+in `packages/dashboard`, not in compliance/branding/llm:
+- **MCPT-01** (scan/report/issue tools) — dashboard owns ScanRepository + scan orchestrator
+- **MCPT-02** partial — "retrieve brand scores" half; dashboard owns BrandScoreRepository
+- **MCPI-05** (MCP Resources) — resources expose dashboard-owned scan reports + brand scores
+- **MCPI-06** (MCP Prompts) — prompts orchestrate cross-service workflows
+
+Phase 29 delivered: MCPT-02 guidelines + match + discover-branding (via LLM MCP per D-08), MCPT-03 complete (4 LLM tools).
+
 ---
 *Requirements defined: 2026-04-16*
-*Last updated: 2026-04-16 — traceability populated after roadmap creation*
+*Last updated: 2026-04-17 — Phase 29 rescope (D-14): MCPT-01, MCPT-02 brand-score half, MCPI-05, MCPI-06 moved to Phase 30*
