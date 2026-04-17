@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Completed 28-01-PLAN.md
-last_updated: "2026-04-17T08:09:47.465Z"
+stopped_at: Completed 29-03-PLAN.md
+last_updated: "2026-04-17T12:16:48.779Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_phases: 2
+  total_plans: 6
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 28 — mcp-foundation
+**Current focus:** Phase 29 — Service MCP Tools
 
 ## Current Position
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
   Next
 ```
 
-Phase: 28 (mcp-foundation) — EXECUTING
+Phase: 29 (Service MCP Tools) — EXECUTING
 Plan: 2 of 3
 Status: Ready to execute
 Last activity: 2026-04-17
@@ -46,6 +46,7 @@ Last activity: 2026-04-17
 | Coverage | 100% |
 | Plans complete | 0/? |
 | Phase 28-mcp-foundation P01 | 7min | 2 tasks | 11 files |
+| Phase 29 P03 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,7 @@ v3.0.0 architecture decisions (from research):
 - [Phase 28-mcp-foundation]: AsyncLocalStorage<ToolContext> — module-scope ALS lets setRequestHandler (registered once) read per-request context without SDK argument plumbing
 - [Phase 28-mcp-foundation]: tools/list filter via mcpServer.server.setRequestHandler(ListToolsRequestSchema, ...) — single committed mechanism registered ONCE at plugin construction; overwrites SDK default in protocol's _requestHandlers map
 - [Phase 28-mcp-foundation]: McpServer._registeredTools private-field read preserves per-tool description/inputSchema in filtered tools/list response; fallback registeredTools option documented but not needed at SDK 1.27.1
+- [Phase 29]: Phase 29 rescope (D-14/D-15): MCPT-01, MCPT-02 brand-score half, MCPI-05, MCPI-06 reassigned to Phase 30; MCPT-02 split-annotated; Phase 30 Depends-on upgraded to Phase 28+29; D-12 chat-message-template prompt shape locked into Phase 30 success criterion
 
 ### Architecture Notes
 
@@ -124,7 +126,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-17T08:09:47.461Z
-Stopped at: Completed 28-01-PLAN.md
+Last session: 2026-04-17T12:16:48.776Z
+Stopped at: Completed 29-03-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 28`

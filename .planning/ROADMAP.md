@@ -14,7 +14,7 @@
 ### Phases
 
 - [x] **Phase 28: MCP Foundation** - Streamable HTTP MCP endpoints with OAuth2 JWT validation, RBAC tool filtering, and org-aware tool scoping across all services (completed 2026-04-17)
-- [ ] **Phase 29: Service MCP Tools** - Compliance, branding, and LLM tools plus MCP Resources and Prompts primitives
+- [x] **Phase 29: Service MCP Tools** - Compliance, branding, and LLM tools plus MCP Resources and Prompts primitives (completed 2026-04-17)
 - [ ] **Phase 30: Dashboard MCP + External Clients** - Dashboard admin operations exposed as MCP tools; external client (Claude Desktop, IDE) connectivity verified
 - [ ] **Phase 31: Conversation Persistence** - SQLite schema for conversation history with rolling-window design and per-invocation audit log
 - [ ] **Phase 32: Agent Service + Chat UI** - AgentService orchestration, text and speech chat side panel, and confirmation dialog for destructive tools
