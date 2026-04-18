@@ -26,6 +26,10 @@ import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware
 import { createDashboardJwtVerifier } from '../../src/mcp/verifier.js';
 import type { StorageAdapter } from '../../src/db/index.js';
 import type { ScanService } from '../../src/services/scan-service.js';
+import type {
+  ServiceConnection,
+  ServiceConnectionsRepository,
+} from '../../src/db/service-connections-repository.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -80,16 +84,36 @@ function makeStubScanService(): ScanService {
   } as unknown as ScanService;
 }
 
+function makeStubServiceConnections(): ServiceConnectionsRepository {
+  return {
+    list: async () => [],
+    get: async () => null,
+    upsert: async (input) => ({
+      serviceId: input.serviceId,
+      url: input.url,
+      clientId: input.clientId,
+      clientSecret: input.clientSecret ?? '',
+      hasSecret: input.clientSecret != null && input.clientSecret !== '',
+      updatedAt: '1970-01-01T00:00:00.000Z',
+      updatedBy: input.updatedBy,
+      source: 'db',
+    }) as unknown as ServiceConnection,
+    clearSecret: async () => {},
+  };
+}
+
 async function buildApp(options: {
   readonly verifyToken: McpTokenVerifier;
   readonly storage: StorageAdapter;
   readonly scanService?: ScanService;
+  readonly serviceConnections?: ServiceConnectionsRepository;
 }): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
   await registerMcpRoutes(app, {
     verifyToken: options.verifyToken,
     storage: options.storage,
     scanService: options.scanService ?? makeStubScanService(),
+    serviceConnections: options.serviceConnections ?? makeStubServiceConnections(),
   });
   await app.ready();
   return app;

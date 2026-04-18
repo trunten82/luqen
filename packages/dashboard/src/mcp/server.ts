@@ -22,6 +22,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanService } from '../services/scan-service.js';
+import type { ServiceConnectionsRepository } from '../db/service-connections-repository.js';
 import { VERSION } from '../version.js';
 import { DASHBOARD_TOOL_METADATA } from './metadata.js';
 import { registerDataTools, DATA_TOOL_NAMES } from './tools/data.js';
@@ -35,6 +36,7 @@ export { DASHBOARD_RESOURCE_METADATA } from './resources.js';
 export interface DashboardMcpServerOptions {
   readonly storage: StorageAdapter;
   readonly scanService: ScanService;
+  readonly serviceConnections: ServiceConnectionsRepository;
 }
 
 export async function createDashboardMcpServer(
@@ -44,7 +46,7 @@ export async function createDashboardMcpServer(
   readonly toolNames: readonly string[];
   readonly metadata: readonly ToolMetadata[];
 }> {
-  const { storage, scanService } = options;
+  const { storage, scanService, serviceConnections } = options;
 
   const server = new McpServer(
     { name: 'luqen-dashboard', version: VERSION },
@@ -52,7 +54,7 @@ export async function createDashboardMcpServer(
   );
 
   registerDataTools(server, { storage, scanService });
-  registerAdminTools(server, { storage });
+  registerAdminTools(server, { storage, serviceConnections });
   registerResources(server, { storage });
   registerPrompts(server);
 
