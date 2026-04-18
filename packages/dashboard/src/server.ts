@@ -45,6 +45,7 @@ import { SqliteStorageAdapter } from './db/sqlite/index.js';
 import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
+import { ScanService } from './services/scan-service.js';
 import { createRedisClient, RedisScanQueue, SsePublisher } from './cache/redis.js';
 import { dashboardUserRoutes } from './routes/admin/dashboard-users.js';
 import { apiKeyRoutes } from './routes/admin/api-keys.js';
@@ -882,7 +883,18 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     );
   }
   const mcpVerifier: McpTokenVerifier = await createDashboardJwtVerifier(config.jwtPublicKey);
-  await registerMcpRoutes(server, { verifyToken: mcpVerifier, storage });
+  // Phase 30-02: build a ScanService instance for the MCP data tools (the
+  // route-level scanRoutes constructs its own ScanService for HTTP handlers;
+  // having a second instance here is safe because ScanService is stateless
+  // other than through its injected storage + orchestrator + config). The
+  // dashboard_scan_site tool invokes initiateScan; dashboard_get_report and
+  // dashboard_query_issues call getScanForOrg for the cross-org guard.
+  const mcpScanService = new ScanService(storage, orchestrator, config);
+  await registerMcpRoutes(server, {
+    verifyToken: mcpVerifier,
+    storage,
+    scanService: mcpScanService,
+  });
 
   // ── GraphQL API (mercurius) ──────────────────────────────────────────────
   await server.register(mercurius, {
