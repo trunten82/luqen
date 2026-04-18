@@ -60,10 +60,12 @@ describe('filterResourcesByScope', () => {
     ]);
   });
 
-  it('write scope sees read-tier resources AND admin.system resource (write+ covers it)', () => {
-    // admin.system requires write+, so write scope covers it.
+  it('write scope sees read-tier + public but NOT admin.system (Phase 30.1 — admin.system is admin-only)', () => {
+    // Phase 30.1 contract: admin.system is admin-only — never granted below `admin` scope.
+    // Locked in .planning/phases/30.1-mcp-oauth-scope-gate/30.1-CONTEXT.md (OQ-1 resolution).
     const result = filterResourcesByScope(FIXTURES, ['write']);
-    expect(result).toEqual(['scan', 'brand', 'audit', 'public']);
+    expect(result).toEqual(['scan', 'brand', 'public']);
+    expect(result).not.toContain('audit');
   });
 
   it('read scope sees read-tier + public but NOT admin.system', () => {
