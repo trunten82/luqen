@@ -20,4 +20,5 @@ export type {
   ApiKeyRepository,
   PageHashRepository,
   ManualTestRepository,
+  ConversationRepository,
 } from './interfaces/index.js';

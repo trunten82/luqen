@@ -19,6 +19,7 @@ import {
   SqliteGitHostRepository,
   SqliteBrandingRepository,
   SqliteBrandScoreRepository,
+  SqliteConversationRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -43,6 +44,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly gitHosts: SqliteGitHostRepository;
   readonly branding: SqliteBrandingRepository;
   readonly brandScores: SqliteBrandScoreRepository;
+  readonly conversations: SqliteConversationRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -63,6 +65,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.gitHosts = new SqliteGitHostRepository(this.db);
     this.branding = new SqliteBrandingRepository(this.db);
     this.brandScores = new SqliteBrandScoreRepository(this.db);
+    this.conversations = new SqliteConversationRepository(this.db);
   }
 
   async connect(): Promise<void> {

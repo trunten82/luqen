@@ -15,6 +15,7 @@ import type { ManualTestRepository } from './interfaces/manual-test-repository.j
 import type { GitHostRepository } from './interfaces/git-host-repository.js';
 import type { BrandingRepository } from './interfaces/branding-repository.js';
 import type { BrandScoreRepository } from './interfaces/brand-score-repository.js';
+import type { ConversationRepository } from './interfaces/conversation-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -40,4 +41,5 @@ export interface StorageAdapter {
   readonly gitHosts: GitHostRepository;
   readonly branding: BrandingRepository;
   readonly brandScores: BrandScoreRepository;
+  readonly conversations: ConversationRepository;
 }
