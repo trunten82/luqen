@@ -39,20 +39,33 @@ export function filterToolsByScope(
 
   return allTools
     .filter((t) => {
-      if (t.requiredPermission == null) return true;
-      if (hasAdmin) return true;
+      if (t.requiredPermission == null) return true; // D-04: unannotated always visible
+      if (hasAdmin) return true;                     // admin scope: all tools
       const perm = t.requiredPermission;
-      // *.manage / *.delete / admin.system / admin.org require write+ scope.
-      // All other permissions (e.g. *.view, reports.view) require read+ scope.
+
+      // Phase 30.1 (OQ-1 resolution — suffix-rule rewrite).
+      // Admin-only permission: never granted below `admin` scope.
+      if (perm === 'admin.system') return false;
+
+      // Write-tier permissions: .create / .update / .manage / .delete / admin.users / admin.org.
       if (
+        perm.endsWith('.create') ||
+        perm.endsWith('.update') ||
         perm.endsWith('.manage') ||
-        perm.includes('.delete') ||
-        perm === 'admin.system' ||
+        perm.endsWith('.delete') ||
+        perm === 'admin.users' ||
         perm === 'admin.org'
       ) {
         return hasWrite;
       }
-      return hasRead;
+
+      // Read-tier: `.view` (and any other explicitly read-shaped permission).
+      if (perm.endsWith('.view')) return hasRead;
+
+      // Default: unknown permission shape → treat as write-tier (fail safe —
+      // a new permission MUST be explicitly classified, not fall through to
+      // the most permissive tier).
+      return hasWrite;
     })
     .map((t) => t.name);
 }
@@ -86,20 +99,31 @@ export function filterResourcesByScope(
 
   return allResources
     .filter((r) => {
-      if (r.requiredPermission == null) return true;
-      if (hasAdmin) return true;
+      if (r.requiredPermission == null) return true; // D-04: unannotated always visible
+      if (hasAdmin) return true;                     // admin scope: all resources
       const perm = r.requiredPermission;
-      // *.manage / *.delete / admin.system / admin.org require write+ scope.
-      // All other permissions (e.g. *.view, reports.view) require read+ scope.
+
+      // Phase 30.1 (OQ-1 resolution — suffix-rule rewrite; mirrors filterToolsByScope).
+      // Admin-only permission: never granted below `admin` scope.
+      if (perm === 'admin.system') return false;
+
+      // Write-tier permissions: .create / .update / .manage / .delete / admin.users / admin.org.
       if (
+        perm.endsWith('.create') ||
+        perm.endsWith('.update') ||
         perm.endsWith('.manage') ||
-        perm.includes('.delete') ||
-        perm === 'admin.system' ||
+        perm.endsWith('.delete') ||
+        perm === 'admin.users' ||
         perm === 'admin.org'
       ) {
         return hasWrite;
       }
-      return hasRead;
+
+      // Read-tier: `.view` (and any other explicitly read-shaped permission).
+      if (perm.endsWith('.view')) return hasRead;
+
+      // Default: unknown permission shape → treat as write-tier (fail safe).
+      return hasWrite;
     })
     .map((r) => r.uriScheme);
 }
