@@ -17,6 +17,10 @@
  * confirmation modals (APER-02) alongside delete_user / delete_org /
  * delete_service_connection. Phase 30 stays stateless: no two-phase
  * confirmation tokens.
+ *
+ * Coercion note: numeric inputSchema fields use z.coerce.number() so that
+ * LLM-produced string numerics are accepted without a type-validation error
+ * (fix: mcp-limit-string-coercion).
  */
 
 import { z } from 'zod';
@@ -356,6 +360,7 @@ export function registerAdminTools(
           .optional()
           .describe('Branding routing mode'),
         brandScoreTarget: z
+          .coerce
           .number()
           .int()
           .min(0)

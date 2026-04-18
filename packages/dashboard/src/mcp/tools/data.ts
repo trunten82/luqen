@@ -20,6 +20,10 @@
  * its draft; that would have been an unconditional miss against stored
  * rows. The tool surface below uses the real enum value `'completed'`
  * everywhere (Rule 1 bug fix recorded in 30-02-SUMMARY.md).
+ *
+ * Coercion note: all numeric inputSchema fields use z.coerce.number() so
+ * that LLM-produced string numerics (e.g. "10" from mcp-remote bridges)
+ * are accepted without a type-validation error (fix: mcp-limit-string-coercion).
  */
 
 import { z } from 'zod';
@@ -116,6 +120,7 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
           .optional()
           .describe('Filter by scan status'),
         limit: z
+          .coerce
           .number()
           .int()
           .min(1)
@@ -123,6 +128,7 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
           .optional()
           .describe('Page size (default 50)'),
         offset: z
+          .coerce
           .number()
           .int()
           .min(0)
@@ -219,6 +225,7 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
           .optional()
           .describe('Filter by pa11y code prefix, e.g. WCAG2AA.Principle1'),
         limit: z
+          .coerce
           .number()
           .int()
           .min(1)
@@ -287,6 +294,7 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
         'List the most recent brand score for every site assigned in the current org. Use before dashboard_get_brand_score when the user asks "show me our brand scores".',
       inputSchema: z.object({
         limit: z
+          .coerce
           .number()
           .int()
           .min(1)
