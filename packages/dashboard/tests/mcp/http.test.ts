@@ -24,6 +24,8 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { registerMcpRoutes } from '../../src/routes/api/mcp.js';
 import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware.js';
 import { createDashboardJwtVerifier } from '../../src/mcp/verifier.js';
+import type { StorageAdapter } from '../../src/db/index.js';
+import type { ScanService } from '../../src/services/scan-service.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -36,24 +38,59 @@ function makeFakeVerifier(validPayload: McpTokenPayload, acceptedToken = 'valid-
   };
 }
 
-function makeStubStorage(perms: readonly string[] = []) {
+function makeStubStorage(perms: readonly string[] = []): StorageAdapter {
+  const empty = {} as unknown;
   return {
+    // Only `roles.getEffectivePermissions` is touched on the Phase 28 flows
+    // exercised by this file (initialize / tools/list RBAC filter). Phase 30
+    // data tools would hit scans + brandScores but those code paths are
+    // covered in the dedicated data-tools.test.ts — here we only need a
+    // shape-compatible stub that satisfies TypeScript for registerMcpRoutes.
+    scans: empty as StorageAdapter['scans'],
+    users: empty as StorageAdapter['users'],
+    organizations: empty as StorageAdapter['organizations'],
+    schedules: empty as StorageAdapter['schedules'],
+    assignments: empty as StorageAdapter['assignments'],
+    repos: empty as StorageAdapter['repos'],
     roles: {
       getEffectivePermissions: async (): Promise<Set<string>> => new Set(perms),
-    },
+    } as unknown as StorageAdapter['roles'],
+    teams: empty as StorageAdapter['teams'],
+    email: empty as StorageAdapter['email'],
+    audit: empty as StorageAdapter['audit'],
+    plugins: empty as StorageAdapter['plugins'],
+    apiKeys: empty as StorageAdapter['apiKeys'],
+    pageHashes: empty as StorageAdapter['pageHashes'],
+    manualTests: empty as StorageAdapter['manualTests'],
+    gitHosts: empty as StorageAdapter['gitHosts'],
+    branding: empty as StorageAdapter['branding'],
+    brandScores: empty as StorageAdapter['brandScores'],
+    connect: async (): Promise<void> => {},
+    disconnect: async (): Promise<void> => {},
+    migrate: async (): Promise<void> => {},
+    healthCheck: async (): Promise<boolean> => true,
+    name: 'stub',
   };
+}
+
+function makeStubScanService(): ScanService {
+  return {
+    initiateScan: async () => ({ ok: true, scanId: 'stub-scan' }),
+    getScanForOrg: async () => ({ ok: false, error: 'Scan not found' }),
+  } as unknown as ScanService;
 }
 
 async function buildApp(options: {
   readonly verifyToken: McpTokenVerifier;
-  readonly storage: {
-    readonly roles: {
-      getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>>;
-    };
-  };
+  readonly storage: StorageAdapter;
+  readonly scanService?: ScanService;
 }): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
-  await registerMcpRoutes(app, options);
+  await registerMcpRoutes(app, {
+    verifyToken: options.verifyToken,
+    storage: options.storage,
+    scanService: options.scanService ?? makeStubScanService(),
+  });
   await app.ready();
   return app;
 }
@@ -182,7 +219,14 @@ describe('POST /api/v1/mcp (dashboard)', () => {
     expect(serverInfo?.name).toBe('luqen-dashboard');
   });
 
-  it('Case 4: valid Bearer + tools/list returns empty tools: [] (Phase 28 scope)', async () => {
+  it('Case 4: valid Bearer + tools/list returns the 6 dashboard data tools (Phase 30 scope)', async () => {
+    // Phase 30-02 populates the dashboard MCP with six data tools covering
+    // MCPT-01 (scan/report/issue) + the MCPT-02 brand-score retrieval half.
+    // A caller with scans.create + reports.view + branding.view sees all six.
+    // Admin scope on its own does NOT expose the data tools because the
+    // manifest filter is permission-driven (filterToolsByPermissions) when
+    // the caller has any resolved permissions — the stub below grants the
+    // three permissions that match DASHBOARD_DATA_TOOL_METADATA.
     const verify = makeFakeVerifier({
       sub: 'user-4',
       scopes: ['read'],
@@ -191,7 +235,7 @@ describe('POST /api/v1/mcp (dashboard)', () => {
     });
     app = await buildApp({
       verifyToken: verify,
-      storage: makeStubStorage(['admin.system']),
+      storage: makeStubStorage(['scans.create', 'reports.view', 'branding.view']),
     });
 
     const response = await app.inject({
@@ -207,12 +251,18 @@ describe('POST /api/v1/mcp (dashboard)', () => {
 
     expect(response.statusCode).toBe(200);
     const parsed = parseSseOrJson(response.body);
-    const result = parsed['result'] as { tools?: unknown } | undefined;
+    const result = parsed['result'] as { tools?: Array<{ name: string }> } | undefined;
     expect(result).toBeDefined();
-    // Phase 30 (MCPT-04) will populate the dashboard's tool catalogue. Phase 28
-    // registers ZERO tools to prove the Bearer-only transport works with no
-    // tool-name leakage. tools: []
-    expect(result?.tools).toEqual([]);
+    const tools = result?.tools ?? [];
+    const names = tools.map((t) => t.name);
+    expect(names).toContain('dashboard_scan_site');
+    expect(names).toContain('dashboard_list_reports');
+    expect(names).toContain('dashboard_get_report');
+    expect(names).toContain('dashboard_query_issues');
+    expect(names).toContain('dashboard_list_brand_scores');
+    expect(names).toContain('dashboard_get_brand_score');
+    // Admin tools (plan 30-03) are still empty stubs here, so the count is 6.
+    expect(names.length).toBe(6);
   });
 
   it('Case 5: cookie-only request (no Bearer) is rejected with 401', async () => {
