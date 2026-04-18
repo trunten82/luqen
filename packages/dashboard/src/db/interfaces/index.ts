@@ -15,3 +15,4 @@ export type { ManualTestRepository } from './manual-test-repository.js';
 export type { GitHostRepository } from './git-host-repository.js';
 export type { BrandingRepository } from './branding-repository.js';
 export type { ConversationRepository } from './conversation-repository.js';
+export type { AgentAuditRepository } from './agent-audit-repository.js';
