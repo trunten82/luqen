@@ -15,5 +15,10 @@
 export { createMcpHttpPlugin, getCurrentToolContext } from './http-plugin.js';
 export type { McpHttpPluginOptions } from './http-plugin.js';
 export { extractToolContext } from './auth.js';
-export { filterToolsByPermissions, filterToolsByScope } from './tool-filter.js';
-export type { ToolContext, ToolMetadata } from './types.js';
+export {
+  filterToolsByPermissions,
+  filterToolsByScope,
+  filterResourcesByPermissions,
+  filterResourcesByScope,
+} from './tool-filter.js';
+export type { ResourceMetadata, ToolContext, ToolMetadata } from './types.js';

@@ -18,7 +18,7 @@
  * visible to authenticated callers — both filters short-circuit on undefined.
  */
 
-import type { ToolMetadata } from './types.js';
+import type { ResourceMetadata, ToolMetadata } from './types.js';
 
 export function filterToolsByPermissions(
   allTools: readonly ToolMetadata[],
@@ -55,4 +55,51 @@ export function filterToolsByScope(
       return hasRead;
     })
     .map((t) => t.name);
+}
+
+/**
+ * Resource equivalent of filterToolsByPermissions — returns the URI schemes
+ * the caller's effective permissions allow. Used by createMcpHttpPlugin's
+ * ListResourcesRequestSchema override (Phase 30 D-12).
+ */
+export function filterResourcesByPermissions(
+  allResources: readonly ResourceMetadata[],
+  effectivePerms: ReadonlySet<string>,
+): readonly string[] {
+  return allResources
+    .filter((r) => r.requiredPermission == null || effectivePerms.has(r.requiredPermission))
+    .map((r) => r.uriScheme);
+}
+
+/**
+ * Resource equivalent of filterToolsByScope — scope-hierarchy fallback for
+ * service-to-service callers whose JWTs carry scopes but no RBAC permissions.
+ * Mirrors filterToolsByScope's rules exactly (Phase 30 D-12).
+ */
+export function filterResourcesByScope(
+  allResources: readonly ResourceMetadata[],
+  tokenScopes: readonly string[],
+): readonly string[] {
+  const hasAdmin = tokenScopes.includes('admin');
+  const hasWrite = tokenScopes.includes('write') || hasAdmin;
+  const hasRead = tokenScopes.includes('read') || hasWrite;
+
+  return allResources
+    .filter((r) => {
+      if (r.requiredPermission == null) return true;
+      if (hasAdmin) return true;
+      const perm = r.requiredPermission;
+      // *.manage / *.delete / admin.system / admin.org require write+ scope.
+      // All other permissions (e.g. *.view, reports.view) require read+ scope.
+      if (
+        perm.endsWith('.manage') ||
+        perm.includes('.delete') ||
+        perm === 'admin.system' ||
+        perm === 'admin.org'
+      ) {
+        return hasWrite;
+      }
+      return hasRead;
+    })
+    .map((r) => r.uriScheme);
 }
