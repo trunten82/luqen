@@ -39,14 +39,33 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+  McpError,
+  ErrorCode,
+} from '@modelcontextprotocol/sdk/types.js';
 import { extractToolContext } from './auth.js';
-import { filterToolsByPermissions, filterToolsByScope } from './tool-filter.js';
-import type { ToolContext, ToolMetadata } from './types.js';
+import {
+  filterToolsByPermissions,
+  filterToolsByScope,
+  filterResourcesByPermissions,
+  filterResourcesByScope,
+} from './tool-filter.js';
+import type { ResourceMetadata, ToolContext, ToolMetadata } from './types.js';
 
 export interface McpHttpPluginOptions {
   readonly mcpServer: McpServer;
   readonly toolMetadata: readonly ToolMetadata[];
+  /**
+   * Phase 30 D-12: metadata-driven RBAC filter for MCP Resources. When provided
+   * and non-empty, the plugin installs ListResourcesRequestSchema +
+   * ReadResourceRequestSchema overrides that gate resource visibility and read
+   * access by URI scheme. When omitted or empty, resources/list and
+   * resources/read fall through to the SDK defaults (Phase 28 backwards-compat).
+   */
+  readonly resourceMetadata?: readonly ResourceMetadata[];
   readonly requiredScope?: 'read' | 'write' | 'admin';
   readonly path?: string;
 }
@@ -138,6 +157,137 @@ export async function createMcpHttpPlugin(
 
     return { tools };
   });
+
+  // ------- Phase 30 D-12: Resources RBAC overrides.
+  //
+  // When `resourceMetadata` is non-empty, install two SDK request-handler
+  // overrides that gate Resources per caller:
+  //
+  //   1. ListResourcesRequestSchema — filters both static resources and
+  //      template-list results to URI schemes the caller's perms/scopes allow.
+  //   2. ReadResourceRequestSchema — re-checks the RBAC gate on every direct
+  //      read (does NOT trust the list filter to have excluded the URI) and
+  //      throws McpError InvalidParams 'Forbidden' when the scheme is denied.
+  //
+  // When `resourceMetadata` is undefined/empty, these overrides are NOT
+  // installed — the SDK's default resource dispatch remains authoritative
+  // (backwards-compat with Phase 28 call sites that don't opt in).
+  const resourceMetadata = options.resourceMetadata ?? [];
+  if (resourceMetadata.length > 0) {
+    // Private-field access to SDK's internal resource registries. Mirrors the
+    // _registeredTools access pattern used above for the tools override.
+    const serverForResources = mcpServer as unknown as {
+      _registeredResources?: Record<
+        string,
+        {
+          enabled: boolean;
+          name: string;
+          metadata?: Record<string, unknown>;
+          readCallback: (uri: URL, extra: unknown) => unknown | Promise<unknown>;
+        }
+      >;
+      _registeredResourceTemplates?: Record<
+        string,
+        {
+          resourceTemplate: {
+            uriTemplate: {
+              toString(): string;
+              match(uri: string): Record<string, string> | null;
+            };
+            listCallback?: (
+              extra: unknown,
+            ) =>
+              | { resources: Array<Record<string, unknown>> }
+              | Promise<{ resources: Array<Record<string, unknown>> }>;
+          };
+          metadata?: Record<string, unknown>;
+          readCallback: (
+            uri: URL,
+            variables: Record<string, string>,
+            extra: unknown,
+          ) => unknown | Promise<unknown>;
+        }
+      >;
+    };
+
+    function computeAllowedSchemes(ctx: ToolContext | undefined): readonly string[] {
+      if (ctx == null) return [];
+      return ctx.permissions.size > 0
+        ? filterResourcesByPermissions(resourceMetadata, ctx.permissions)
+        : filterResourcesByScope(resourceMetadata, ctx.scopes);
+    }
+
+    function uriScheme(uri: string): string {
+      const idx = uri.indexOf('://');
+      return idx < 0 ? '' : uri.slice(0, idx);
+    }
+
+    mcpServer.server.setRequestHandler(ListResourcesRequestSchema, async (_request, extra) => {
+      const ctx = getCurrentToolContext();
+      // No context = defense-in-depth empty response. Route handler already
+      // rejects unauthenticated requests with 401 before dispatch.
+      if (ctx == null) return { resources: [] };
+
+      const allowedSet = new Set(computeAllowedSchemes(ctx));
+
+      // Merge static resources + template list results (mirrors SDK default
+      // dispatch in @modelcontextprotocol/sdk/server/mcp.js setResourceRequestHandlers).
+      const staticEntries = Object.entries(serverForResources._registeredResources ?? {})
+        .filter(([, r]) => r.enabled !== false)
+        .map(([uri, r]) => ({ uri, name: r.name, ...(r.metadata ?? {}) }));
+
+      const templateEntries: Array<Record<string, unknown>> = [];
+      for (const t of Object.values(serverForResources._registeredResourceTemplates ?? {})) {
+        if (t.resourceTemplate.listCallback == null) continue;
+        const listed = await t.resourceTemplate.listCallback(extra);
+        for (const entry of listed.resources ?? []) {
+          // Spread template metadata first, then entry — entry fields win.
+          templateEntries.push({ ...(t.metadata ?? {}), ...entry });
+        }
+      }
+
+      const all = [...staticEntries, ...templateEntries];
+      const filtered = all.filter((r) => {
+        const uri = typeof r['uri'] === 'string' ? (r['uri'] as string) : '';
+        return allowedSet.has(uriScheme(uri));
+      });
+
+      return { resources: filtered };
+    });
+
+    mcpServer.server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
+      const ctx = getCurrentToolContext();
+      if (ctx == null) {
+        throw new McpError(ErrorCode.InvalidParams, 'Not authenticated');
+      }
+      const uri = String(request.params.uri);
+      const scheme = uriScheme(uri);
+      const allowedSchemes = computeAllowedSchemes(ctx);
+      if (!allowedSchemes.includes(scheme)) {
+        // Exact string 'Forbidden' per threat model T-30-01-03 — no URI echo,
+        // no row data, no internal state leaked.
+        throw new McpError(ErrorCode.InvalidParams, 'Forbidden');
+      }
+
+      // Exact-match static resource first (mirrors SDK default).
+      const exact = serverForResources._registeredResources?.[uri];
+      if (exact != null && exact.enabled !== false) {
+        const parsed = new URL(uri);
+        return (await exact.readCallback(parsed, extra)) as never;
+      }
+
+      // Otherwise walk templates, invoke the first matching readCallback.
+      for (const t of Object.values(serverForResources._registeredResourceTemplates ?? {})) {
+        const vars = t.resourceTemplate.uriTemplate.match(uri);
+        if (vars != null) {
+          const parsed = new URL(uri);
+          return (await t.readCallback(parsed, vars, extra)) as never;
+        }
+      }
+
+      throw new McpError(ErrorCode.InvalidParams, `Resource ${uri} not found`);
+    });
+  }
 
   // ------- Fastify plugin: POST {path} route.
   return async function mcpHttpPlugin(app: FastifyInstance): Promise<void> {
