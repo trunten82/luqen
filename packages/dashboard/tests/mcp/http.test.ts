@@ -340,6 +340,36 @@ describe('POST /api/v1/mcp (dashboard)', () => {
 
     expect(response.statusCode).toBe(200);
   });
+
+  it('prompts/list returns exactly ["scan", "report", "fix"] — MCPI-06 enforcement', async () => {
+    // Belt-and-braces alongside the dedicated prompts.test.ts file: the
+    // dashboard MCP must always surface exactly the three prompts locked by
+    // 30-CONTEXT.md D-13. Permissions don't gate prompts (they're global
+    // templates), so an empty-permission caller should still see all three.
+    const verify = makeFakeVerifier({
+      sub: 'user-prompts',
+      scopes: ['read'],
+      orgId: 'org-prompts',
+      role: 'member',
+    });
+    app = await buildApp({ verifyToken: verify, storage: makeStubStorage([]) });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/mcp',
+      headers: {
+        authorization: 'Bearer valid-jwt',
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      payload: { jsonrpc: '2.0', id: 99, method: 'prompts/list', params: {} },
+    });
+    const result = parseSseOrJson(response.body)['result'] as {
+      prompts: Array<{ name: string }>;
+    };
+    const names = result.prompts.map((p) => p.name).sort();
+    expect(names).toEqual(['fix', 'report', 'scan']);
+    expect(result.prompts.length).toBe(3);
+  });
 });
 
 // ---------------------------------------------------------------------------
