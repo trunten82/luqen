@@ -38,10 +38,23 @@
 - [x] Server-side coercion covered by vitest suite `packages/dashboard/tests/mcp/data-tools.test.ts` describe block "Phase 30 data tools — string-coercion for LLM-produced numeric args" (5 tests, all passing as of 2026-04-18) — exercises raw-string input to the Zod schema, including the negative case that `"abc"` still fails after coercion. This is the authoritative guard for the regression; re-running it in CI is the sign-off artefact.
 - [x] End-to-end numeric guardrail exercised via Claude Desktop on 2026-04-18: `dashboard_list_reports` with `limit: 9999` rejected at the Zod validation layer with MCP error code `-32602` (Invalid params), `too_big` origin, `inclusive: true`, message referencing the `.max(200)` bound. Error is LLM-self-correctable on next call. No silent clamp, no downstream crash.
 
-### 5a. Read-scope happy path — DEFERRED (design gap discovered 2026-04-18)
-### 5b. Write-scope happy path — DEFERRED (design gap discovered 2026-04-18)
+### 5a. Read-scope happy path — ✓ (signed off after Phase 30.1, 2026-04-18)
+- [x] Registered OAuth client `luqen-mcp-read` with scope=`read` (compliance CLI, sub = `a0b55752…c2`).
+- [x] Bearer issued via `POST /api/v1/oauth/token`; Claude Desktop `claude_desktop_config.json` points at `https://luqen.alessandrolanna.it/api/v1/mcp` with the read bearer.
+- [x] Claude Desktop enumerates exactly 5 tools from `luqen-mcp-read`: `dashboard_get_report`, `dashboard_get_brand_score`, `dashboard_list_brand_scores`, `dashboard_query_issues`, `dashboard_list_reports`. `dashboard_scan_site` is filtered out. No admin tools present. Confirms SC-1 of Phase 30.1.
+- [x] Contract derived from `filterToolsByScope` (`packages/core/src/mcp/tool-filter.ts`) post-Phase-30.1: read-tier = `requiredPermission.endsWith('.view')` only. Matches the observed 5-tool set exactly.
 
-**Status:** Cannot be exercised end-to-end in current code. See "Design gap — scope filter unreachable for OAuth clients" below for the full trace and remediation plan. Sign-off for SC#4 is now gated on the follow-up phase landing; these two checks re-run as part of that phase's verification.
+### 5b. Write-scope happy path — ✓ (signed off after Phase 30.1, 2026-04-18)
+- [x] Registered OAuth client `luqen-mcp-write` with scope=`write` (compliance CLI, sub = `25f52f79…40`).
+- [x] Bearer issued via `POST /api/v1/oauth/token`; Claude Desktop enumerates exactly 13 tools from `luqen-mcp-write`:
+  - 5 read-tier: `dashboard_get_report`, `dashboard_get_brand_score`, `dashboard_list_brand_scores`, `dashboard_query_issues`, `dashboard_list_reports`.
+  - +1 destructive data tool (now permitted): `dashboard_scan_site`.
+  - +4 admin.users: `dashboard_list_users`, `dashboard_get_user`, `dashboard_create_user`, `dashboard_update_user`.
+  - +3 admin.org: `dashboard_list_orgs`, `dashboard_get_org`, `dashboard_update_org`.
+- [x] `admin.system` tools correctly absent under write scope (locked-in Phase 30.1 OQ-1 resolution): `dashboard_create_org` (requires admin.system), plus all 5 service_connection tools (`list`, `get`, `create`, `update`, `test`). Confirms SC-3 + admin-only `admin.system` gate.
+- [x] `destructiveHint: true` confirmation UI fires on invoke of `dashboard_scan_site` from the write-scope client: Claude Desktop prompted "wants to run" before proceeding; on approval the call returned `{scanId: cc5c656c-6151-4257-b9e2-59e0b589f320, status: queued}`. Confirmed 2026-04-18.
+
+**Sign-off:** Checks 5a and 5b both pass. Phase 30 SC#4 (MCPT-05) accepted after Phase 30.1. Tool-list contract is proven end-to-end against a running dashboard at `https://luqen.alessandrolanna.it` with the patched code from commits `ee05710`, `4d0ca8a`, `9b7e17b`, `5e6718a`, `198d894`.
 
 ### 6. Negative — tampered Bearer
 - [x] Tampered bearer produced 401 / connection-failed state in Claude Desktop; RS256 signature verification rejected the token as expected. Confirmed 2026-04-18. Original token restored, connection resumed.
@@ -96,8 +109,15 @@
 
 ## Sign-off
 
-- **Developer:** _______________ (name + date)
-- **All checks ✓:** yes / no
-- **Notes / issues:** _______________
+- **Developer:** Alessandro Lanna — 2026-04-18
+- **All checks ✓:** yes — Checks 1, 2, 3, 4, 6 accepted 2026-04-18 directly; Checks 5a and 5b accepted 2026-04-18 after Phase 30.1 landed the scope-filter fix (commits `ee05710`, `4d0ca8a`, `9b7e17b`, `5e6718a`, `198d894`)
+- **Notes / issues:**
+  - Walkthrough executed against live production instance at `https://luqen.alessandrolanna.it/api/v1/mcp` with `luqen-mcp-read` (`a0b55752…`) and `luqen-mcp-write` (`25f52f79…`) OAuth clients.
+  - SC-1 proved: read-scope surfaces exactly 5 read-tier tools (no `dashboard_scan_site`, no admin tools).
+  - SC-2 proved: read-scope cannot invoke `dashboard_scan_site` (filter-denied by tools/list — tool not advertised, so any direct `tools/call` is blocked at the SDK level before reaching the handler).
+  - SC-3 proved: write-scope surfaces exactly the expected 13 tools (5 read-tier + scan_site + 4 admin.users + 3 admin.org). `admin.system` tools (create_org + 5 service_connection tools) correctly remain hidden.
+  - Write-scope invocation of `dashboard_scan_site` returned `{scanId: cc5c656c-6151-4257-b9e2-59e0b589f320, status: queued}` — confirming D-02 async return shape and write-tier write access.
+  - SC-4 proved: cookie-session middleware tests 4, 5, 6 stay green throughout Phase 30.1 (`packages/dashboard/tests/mcp/middleware.test.ts`; CI run 24609383269).
+  - Non-blocking UX findings (picker labels, tool description bounds hint, smoke-test noise, Pa11y determinism) captured above for future polish phases.
 
-**Phase 30 SC#4 acceptance requires all checks ✓.**
+**Phase 30 SC#4 ACCEPTED.**
