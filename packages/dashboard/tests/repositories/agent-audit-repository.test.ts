@@ -268,9 +268,13 @@ describe('SqliteAgentAuditRepository — filters', () => {
             outcome: o,
             latencyMs: 10,
           });
-          // Small delay so created_at timestamps differ (helps ordering
-          // assertions later — negligible per iteration).
-          await new Promise((r) => setImmediate(r));
+          // Small delay so created_at timestamps actually differ across rows.
+          // setImmediate was not always enough on fast CPUs — the event loop
+          // could yield inside the same millisecond, causing `Date.now()` to
+          // return identical ISO strings for consecutive appends and breaking
+          // from/to range assertions. setTimeout(2ms) crosses the ms boundary
+          // reliably while keeping the whole seeder well under 100ms.
+          await new Promise((r) => setTimeout(r, 2));
         }
       }
     }
