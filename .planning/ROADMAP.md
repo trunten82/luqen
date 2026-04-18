@@ -17,7 +17,7 @@
 - [x] **Phase 29: Service MCP Tools** - Compliance, branding, and LLM tools plus MCP Resources and Prompts primitives (completed 2026-04-17)
 - [x] **Phase 30: Dashboard MCP + External Clients** - Dashboard admin operations exposed as MCP tools; external client (Claude Desktop, IDE) connectivity verified. SC#4 accepted 2026-04-18 after Phase 30.1 landed the scope-filter fix.
 - [x] **Phase 30.1: MCP OAuth scope-filter gate (INSERTED)** - Fixed scope-filter bypass for OAuth client-credentials tokens. `getUserPermissions` now returns an empty Set for unknown subs (no user-role fallback), and `filterToolsByScope`/`filterResourcesByScope` rules were rewritten per-permission-suffix (read=.view only; write adds .create/.update/.manage/.delete/admin.users/admin.org; admin.system is admin-only). Verified end-to-end against Claude Desktop (completed 2026-04-18).
-- [ ] **Phase 31: Conversation Persistence** - SQLite schema for conversation history with rolling-window design and per-invocation audit log
+- [x] **Phase 31: Conversation Persistence** - Migrations 047 (agent_conversations + agent_messages with in_window flag) and 048 (agent_audit_log), ConversationRepository (rolling 20-turn window maintained at write time, pending_confirmation + streaming always in_window), AgentAuditRepository (append-only, distinct from pre-existing storage.audit). Verified 2026-04-18 — 49/49 repo tests green.
 - [ ] **Phase 32: Agent Service + Chat UI** - AgentService orchestration, text and speech chat side panel, and confirmation dialog for destructive tools
 - [ ] **Phase 33: Agent Intelligence + Audit Viewer** - Context-aware org suggestions, token budget with compaction, and admin audit log viewer
 
@@ -93,7 +93,10 @@ Plans:
   2. The system retains at most the last 20 turns of a conversation in the LLM context window — turns beyond the window are stored in DB but excluded from active context automatically
   3. Every tool invocation (tool name, args, outcome, latency, user, org) is written to the audit log before the response is returned to the caller
   4. A `pending_confirmation` message status survives a page refresh — a pending destructive tool call is recoverable from DB, not from JavaScript memory
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 31-01-PLAN.md — Migrations 047 + 048 + ConversationRepository (rolling window + pending_confirmation durability)
+- [ ] 31-02-PLAN.md — AgentAuditRepository (append-only, org-scoped, immutability-surface contract)
 
 ### Phase 32: Agent Service + Chat UI
 **Goal**: Users can converse with the dashboard agent companion via text or speech, and state-changing tool calls require explicit confirmation before execution
