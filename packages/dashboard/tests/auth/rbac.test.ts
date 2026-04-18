@@ -180,31 +180,25 @@ describe('RBAC Permission Matrix', () => {
   });
 
   describe('fallback behavior', () => {
-    it('unknown user falls back to user role permissions', async () => {
+    // Phase 30.1: getUserPermissions returns an empty Set for unknown users or
+    // users whose `role` column does not match a seeded role. The legacy
+    // `user`-role fallback was removed because it silently granted write-tier
+    // permissions to OAuth client-credentials subs (not real users), which
+    // defeated the scope-filter safety net. See
+    // .planning/phases/30.1-mcp-oauth-scope-gate/30.1-CONTEXT.md.
+    it('unknown user returns an empty permission set (no user-role fallback)', async () => {
       const perms = await storage.roles.getUserPermissions('non-existent-user-id');
-      const userRole = await storage.roles.getRoleByName('user');
-
       expect(perms).toBeInstanceOf(Set);
-      expect(userRole).not.toBeNull();
-      expect(perms.size).toBe(userRole!.permissions.length);
-      for (const p of userRole!.permissions) {
-        expect(perms.has(p)).toBe(true);
-      }
+      expect(perms.size).toBe(0);
     });
 
-    it('user with non-existent role falls back to user permissions', async () => {
+    it('user with non-existent role returns an empty permission set (no user-role fallback)', async () => {
       // Create user with a non-existent role name directly via createUser
       // (createUser accepts any string as role)
       const ghost = await storage.users.createUser(`ghost-${randomUUID()}`, 'pass', 'ghost');
       const perms = await storage.roles.getUserPermissions(ghost.id);
-      const userRole = await storage.roles.getRoleByName('user');
-
       expect(perms).toBeInstanceOf(Set);
-      expect(userRole).not.toBeNull();
-      expect(perms.size).toBe(userRole!.permissions.length);
-      for (const p of userRole!.permissions) {
-        expect(perms.has(p)).toBe(true);
-      }
+      expect(perms.size).toBe(0);
     });
   });
 });
