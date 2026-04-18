@@ -11,6 +11,8 @@
  *      no TODO deferrals, no console.log, no orgId in zod schema
  *   5. Handler happy paths via tools/call for scan_site, get_report polling,
  *      and get_brand_score exactly-one-of validation
+ *   6. String-coercion: LLM-produced string numerics ("10") accepted without
+ *      error (bug: z.number() rejects strings; fix: z.coerce.number())
  */
 
 import { describe, it, expect, afterEach } from 'vitest';
@@ -529,5 +531,161 @@ describe('Phase 30 data tools — handler behaviour via tools/call', () => {
     );
     const r = resp['result'] as { isError?: boolean; content: Array<{ text: string }> };
     expect(r.isError).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// String-coercion: LLM-produced string numerics accepted (mcp-limit-string-coercion)
+// ---------------------------------------------------------------------------
+
+describe('Phase 30 data tools — string-coercion for LLM-produced numeric args', () => {
+  let app: FastifyInstance | null = null;
+  afterEach(async () => {
+    if (app !== null) {
+      await app.close();
+      app = null;
+    }
+  });
+
+  async function callTool(
+    name: string,
+    args: Record<string, unknown>,
+    activeApp: FastifyInstance,
+  ): Promise<Record<string, unknown>> {
+    const response = await activeApp.inject({
+      method: 'POST',
+      url: '/api/v1/mcp',
+      headers: {
+        authorization: 'Bearer valid-jwt',
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      payload: rpc('tools/call', { name, arguments: args }),
+    });
+    return parseSseOrJson(response.body);
+  }
+
+  it('dashboard_list_reports — accepts string limit "10" without validation error', async () => {
+    // This test reproduces the bug: LLMs (via mcp-remote) send limit as a
+    // JSON string "10" instead of number 10. z.number() rejects this;
+    // z.coerce.number() accepts it. Expect isError to be falsy after fix.
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const rows = [
+      {
+        id: 'scan-1',
+        siteUrl: 'https://example.com',
+        status: 'completed',
+        standard: 'WCAG2AA',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        orgId: 'org-1',
+      },
+    ];
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+      listScans: async () => rows as unknown as Awaited<ReturnType<StorageAdapter['scans']['listScans']>>,
+    });
+    app = await buildApp({ verifier, storage });
+    const resp = await callTool('dashboard_list_reports', { limit: '10' }, app);
+    const r = resp['result'] as { isError?: boolean; content?: Array<{ text?: string }> };
+    // Must NOT be an error — string "10" should coerce to number 10
+    expect(r.isError, 'string limit "10" should not cause a validation error').toBeFalsy();
+    const text = r.content?.[0]?.text ?? '{}';
+    const data = JSON.parse(text) as { data?: unknown[]; meta?: { count: number } };
+    expect(Array.isArray(data.data)).toBe(true);
+  });
+
+  it('dashboard_list_reports — accepts string offset "0" without validation error', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+      listScans: async () => [],
+    });
+    app = await buildApp({ verifier, storage });
+    const resp = await callTool('dashboard_list_reports', { limit: '5', offset: '0' }, app);
+    const r = resp['result'] as { isError?: boolean };
+    expect(r.isError, 'string offset "0" should not cause a validation error').toBeFalsy();
+  });
+
+  it('dashboard_query_issues — accepts string limit "50" without validation error', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const completedScan: ScanRecord = {
+      id: 'scan-q',
+      siteUrl: 'https://example.com',
+      status: 'completed',
+      standard: 'WCAG2AA',
+      jurisdictions: [],
+      regulations: [],
+      createdBy: 'tester',
+      createdAt: new Date().toISOString(),
+      orgId: 'org-1',
+    };
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+      getReport: async () => ({ issues: [] }),
+    });
+    const scanService = makeStubScanService({
+      getScanForOrg: async () => ({ ok: true, scan: completedScan }),
+    });
+    app = await buildApp({ verifier, storage, scanService });
+    const resp = await callTool(
+      'dashboard_query_issues',
+      { scanId: 'scan-q', limit: '50' },
+      app,
+    );
+    const r = resp['result'] as { isError?: boolean };
+    expect(r.isError, 'string limit "50" should not cause a validation error').toBeFalsy();
+  });
+
+  it('dashboard_list_brand_scores — accepts string limit "20" without validation error', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['branding.view']),
+      getLatestPerSite: async () => [],
+    });
+    app = await buildApp({ verifier, storage });
+    const resp = await callTool('dashboard_list_brand_scores', { limit: '20' }, app);
+    const r = resp['result'] as { isError?: boolean };
+    expect(r.isError, 'string limit "20" should not cause a validation error').toBeFalsy();
+  });
+
+  it('dashboard_list_reports — rejects non-numeric string "abc" with validation error', async () => {
+    // After fix, coerce.number() on "abc" still fails — correct behavior preserved.
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+    });
+    app = await buildApp({ verifier, storage });
+    const resp = await callTool('dashboard_list_reports', { limit: 'abc' }, app);
+    // The MCP SDK should return an error result or an error JSON-RPC response
+    // for truly invalid input (non-parseable as number).
+    const r = resp['result'] as { isError?: boolean } | undefined;
+    const err = resp['error'] as { code?: number } | undefined;
+    const isValidationError = r?.isError === true || err !== undefined;
+    expect(isValidationError, '"abc" should still fail — coercion cannot produce a number').toBe(true);
   });
 });
