@@ -44,3 +44,23 @@ export interface ToolMetadata {
   readonly requiredPermission?: string;
   readonly destructive?: boolean;
 }
+
+/**
+ * Per-resource metadata annotated by each service when registering MCP Resources.
+ *
+ * Phase 30 D-12: resources/list is RBAC-filtered by URI scheme, identically to
+ * how tools/list is filtered by tool name. `requiredPermission` gates visibility
+ * both at `resources/list` and at direct `resources/read`. A caller without the
+ * permission:
+ *   - sees zero entries for this URI family in `resources/list`
+ *   - receives an McpError InvalidParams 'Forbidden' on direct read
+ *
+ * D-04 (carry-forward): A resource with `requiredPermission` unset (undefined)
+ * is visible to all authenticated callers.
+ */
+export interface ResourceMetadata {
+  /** URI scheme WITHOUT the '://' separator. Example: 'scan' for 'scan://report/{id}'. */
+  readonly uriScheme: string;
+  /** Effective-permissions key that must be present in the caller's permission set. */
+  readonly requiredPermission?: string;
+}
