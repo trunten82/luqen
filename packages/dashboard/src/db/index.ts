@@ -21,4 +21,5 @@ export type {
   PageHashRepository,
   ManualTestRepository,
   ConversationRepository,
+  AgentAuditRepository,
 } from './interfaces/index.js';
