@@ -30,7 +30,84 @@ import { z } from 'zod';
 import { getCurrentToolContext } from '@luqen/core/mcp';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { StorageAdapter } from '../../db/index.js';
+import type { ScanRecord } from '../../db/types.js';
 import type { ScanService } from '../../services/scan-service.js';
+
+/**
+ * Slim projection of ScanRecord for list responses. Explicitly OMITS the
+ * fields that blow the 1MB MCP tool-result cap when several rows are
+ * returned:
+ *
+ *   - `jsonReport`       — stringified pa11y result, ~200KB per scan with
+ *                          200+ issues. Belongs in dashboard_get_report.
+ *   - `jsonReportPath`   — server filesystem path; MCP clients cannot
+ *                          consume it and it leaks infrastructure detail.
+ *   - `brandScore`       — ScanRecord type permits this field, but
+ *                          listScans() never populates it (see
+ *                          db/types.ts:60-77 — only getTrendData joins
+ *                          brand_scores). Drop defensively.
+ *
+ * Everything else needed to pick a report is retained (id, siteUrl,
+ * status, standard, createdAt, completedAt, counts). Discovered during
+ * Phase 30 live Claude Desktop walkthrough.
+ */
+interface SlimScanReport {
+  readonly id: string;
+  readonly siteUrl: string;
+  readonly status: 'queued' | 'running' | 'completed' | 'failed';
+  readonly standard: string;
+  readonly jurisdictions: string[];
+  readonly regulations: string[];
+  readonly createdBy: string;
+  readonly createdAt: string;
+  readonly completedAt?: string;
+  readonly pagesScanned?: number;
+  readonly totalIssues?: number;
+  readonly errors?: number;
+  readonly warnings?: number;
+  readonly notices?: number;
+  readonly confirmedViolations?: number;
+  readonly orgId: string;
+  readonly brandingGuidelineId?: string;
+  readonly brandingGuidelineVersion?: number;
+  readonly brandRelatedCount?: number;
+}
+
+function toSlimScanReport(scan: ScanRecord): SlimScanReport {
+  // Immutable projection — build a fresh object, never mutate `scan`.
+  // Spread then drop would still carry hidden fields through JSON.stringify
+  // (e.g. `jsonReport` as enumerable string). Allowlist explicitly.
+  const slim: SlimScanReport = {
+    id: scan.id,
+    siteUrl: scan.siteUrl,
+    status: scan.status,
+    standard: scan.standard,
+    jurisdictions: scan.jurisdictions,
+    regulations: scan.regulations,
+    createdBy: scan.createdBy,
+    createdAt: scan.createdAt,
+    orgId: scan.orgId,
+    ...(scan.completedAt !== undefined ? { completedAt: scan.completedAt } : {}),
+    ...(scan.pagesScanned !== undefined ? { pagesScanned: scan.pagesScanned } : {}),
+    ...(scan.totalIssues !== undefined ? { totalIssues: scan.totalIssues } : {}),
+    ...(scan.errors !== undefined ? { errors: scan.errors } : {}),
+    ...(scan.warnings !== undefined ? { warnings: scan.warnings } : {}),
+    ...(scan.notices !== undefined ? { notices: scan.notices } : {}),
+    ...(scan.confirmedViolations !== undefined
+      ? { confirmedViolations: scan.confirmedViolations }
+      : {}),
+    ...(scan.brandingGuidelineId !== undefined
+      ? { brandingGuidelineId: scan.brandingGuidelineId }
+      : {}),
+    ...(scan.brandingGuidelineVersion !== undefined
+      ? { brandingGuidelineVersion: scan.brandingGuidelineVersion }
+      : {}),
+    ...(scan.brandRelatedCount !== undefined
+      ? { brandRelatedCount: scan.brandRelatedCount }
+      : {}),
+  };
+  return slim;
+}
 
 export const DATA_TOOL_NAMES = [
   'dashboard_scan_site',
@@ -145,11 +222,12 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
         limit: args.limit ?? 50,
         offset: args.offset ?? 0,
       });
+      const data = rows.map(toSlimScanReport);
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({ data: rows, meta: { count: rows.length } }, null, 2),
+            text: JSON.stringify({ data, meta: { count: data.length } }, null, 2),
           },
         ],
       };
