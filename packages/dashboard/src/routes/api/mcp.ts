@@ -36,11 +36,13 @@ import {
 import { createMcpAuthPreHandler, type McpTokenVerifier } from '../../mcp/middleware.js';
 import type { StorageAdapter } from '../../db/index.js';
 import type { ScanService } from '../../services/scan-service.js';
+import type { ServiceConnectionsRepository } from '../../db/service-connections-repository.js';
 
 export interface McpRouteOptions {
   readonly verifyToken: McpTokenVerifier;
   readonly storage: StorageAdapter;
   readonly scanService: ScanService;
+  readonly serviceConnections: ServiceConnectionsRepository;
 }
 
 export async function registerMcpRoutes(
@@ -50,6 +52,7 @@ export async function registerMcpRoutes(
   const { server: mcpServer } = await createDashboardMcpServer({
     storage: opts.storage,
     scanService: opts.scanService,
+    serviceConnections: opts.serviceConnections,
   });
 
   // Phase 30-01 (Wave 1, parallel) extends McpHttpPluginOptions with a

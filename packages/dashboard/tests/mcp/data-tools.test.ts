@@ -26,6 +26,10 @@ import type { McpTokenPayload, McpTokenVerifier } from '../../src/mcp/middleware
 import type { StorageAdapter } from '../../src/db/index.js';
 import type { ScanService } from '../../src/services/scan-service.js';
 import type { ScanRecord } from '../../src/db/types.js';
+import type {
+  ServiceConnection,
+  ServiceConnectionsRepository,
+} from '../../src/db/service-connections-repository.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -99,6 +103,24 @@ function makeStubScanService(o: StubOverrides = {}): ScanService {
     initiateScan: o.initiateScan ?? (async () => ({ ok: true, scanId: 'stub-scan' })),
     getScanForOrg: o.getScanForOrg ?? (async () => ({ ok: false, error: 'Scan not found' })),
   } as unknown as ScanService;
+}
+
+function makeStubServiceConnections(): ServiceConnectionsRepository {
+  return {
+    list: async () => [],
+    get: async () => null,
+    upsert: async (input) => ({
+      serviceId: input.serviceId,
+      url: input.url,
+      clientId: input.clientId,
+      clientSecret: input.clientSecret ?? '',
+      hasSecret: input.clientSecret != null && input.clientSecret !== '',
+      updatedAt: '1970-01-01T00:00:00.000Z',
+      updatedBy: input.updatedBy,
+      source: 'db',
+    }) as unknown as ServiceConnection,
+    clearSecret: async () => {},
+  };
 }
 
 function makeFakeVerifier(payload: McpTokenPayload, acceptedToken = 'valid-jwt'): McpTokenVerifier {
@@ -289,12 +311,15 @@ describe('Phase 30 data tools — D-17 invariant + destructive annotation + clas
     const { server, toolNames, metadata } = await createDashboardMcpServer({
       storage: makeStubStorage(),
       scanService: makeStubScanService(),
+      serviceConnections: makeStubServiceConnections(),
     });
 
-    // Plan 30-02: admin tools + resources + prompts are still stubs →
-    // toolNames length equals DATA_TOOL_NAMES length = 6.
+    // Plan 30-03: admin.ts now registers 13 admin tools, so the combined
+    // toolNames is 6 (data) + 13 (admin) = 19. The data-tool subset still
+    // has length 6; this test continues to assert the data-tool count via
+    // DATA_TOOL_NAMES while accepting the larger combined surface.
     expect(DATA_TOOL_NAMES.length).toBe(6);
-    expect(toolNames.length).toBe(6);
+    expect(toolNames.length).toBe(19);
     expect(DASHBOARD_DATA_TOOL_METADATA.length).toBe(6);
     expect(metadata.length).toBeGreaterThanOrEqual(6);
 
@@ -350,6 +375,7 @@ describe('Phase 30 data tools — D-17 invariant + destructive annotation + clas
     const { server } = await createDashboardMcpServer({
       storage: makeStubStorage(),
       scanService: makeStubScanService(),
+      serviceConnections: makeStubServiceConnections(),
     });
     const registered =
       (

@@ -894,6 +894,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     verifyToken: mcpVerifier,
     storage,
     scanService: mcpScanService,
+    serviceConnections: serviceConnectionsRepo,
   });
 
   // ── GraphQL API (mercurius) ──────────────────────────────────────────────
