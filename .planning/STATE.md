@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Completed 29-03-PLAN.md
-last_updated: "2026-04-17T12:16:48.779Z"
-last_activity: 2026-04-17
+stopped_at: Phase 30 walkthrough complete — scope-filter gap discovered, Phase 30.1 inserted
+last_updated: "2026-04-18T16:00:00.000Z"
+last_activity: 2026-04-18 -- Phase 30 external-client walkthrough: Checks 1,2,3,4,6 ✓; 5a/5b deferred to Phase 30.1 (INSERTED)
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 2
-  total_plans: 6
+  total_plans: 13
   completed_plans: 6
-  percent: 100
+  percent: 46
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 29 — Service MCP Tools
+**Current focus:** Phase 30 — dashboard-mcp-external-clients
 
 ## Current Position
 
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-04-16)
   Next
 ```
 
-Phase: 29 (Service MCP Tools) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
-Last activity: 2026-04-17
+Phase: 30 (dashboard-mcp-external-clients) — WALKTHROUGH DONE (SC#4 deferred to 30.1)
+Plan: Phase 30.1 planned (1 plan, 5 tasks, verified 0 blockers / 3 warnings) — ready for `/gsd-execute-phase 30.1`
+Status: Phase 30.1 plan ready; quick task 260418-mqc (locked-prompt CSS fix) completed
+Last activity: 2026-04-18 -- Completed quick task 260418-mqc: white-on-white text on locked prompt segments; earlier this session planned Phase 30.1 (scope-filter gap fix) and completed Phase 30 walkthrough Checks 1-4 and 6.
 
 ## Performance Metrics
 
@@ -104,6 +104,10 @@ New MCP servers:
 - LLM service — `POST /api/v1/mcp`
 - Dashboard — `POST /mcp` (external client access)
 
+### Roadmap Evolution
+
+- Phase 30.1 inserted after Phase 30 on 2026-04-18: Fix scope-filter bypass for OAuth client-credentials tokens — permission fallback on unknown sub currently overrides scope path, letting read-scope clients invoke destructive tools (URGENT — blocks Phase 30 SC#4 sign-off)
+
 ### Pending Todos
 
 None.
@@ -114,6 +118,13 @@ None.
 - `agent-conversation` capability registration in LLM engine — inspect `packages/llm/src/capabilities/` during Phase 32 planning
 - Token counting approach — confirm character-count approximation vs `tiktoken` during Phase 33 planning
 - Web Speech API EU data residency — confirm whether org users have constraints before Phase 32; if so, defer speech to post-MVP
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260418-lg8 | Strip jsonReport from dashboard_list_reports MCP tool response | 2026-04-18 | 910a3de | [260418-lg8-strip-jsonreport-from-dashboard-list-rep](./quick/260418-lg8-strip-jsonreport-from-dashboard-list-rep/) |
+| 260418-mqc | Fix white-on-white text in locked prompt segments on /admin/llm?tab=prompts | 2026-04-18 | _pending_ | [260418-mqc-fix-white-on-white-text-in-locked-prompt](./quick/260418-mqc-fix-white-on-white-text-in-locked-prompt/) |
 
 ### Known Gotchas (carried from v2.12.0)
 
@@ -126,7 +137,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-17T12:16:48.776Z
-Stopped at: Completed 29-03-PLAN.md
-Resume file: None
+Last session: 2026-04-17T12:55:22.054Z
+Stopped at: Phase 30 context gathered
+Resume file: .planning/phases/30-dashboard-mcp-external-clients/30-CONTEXT.md
 Next action: `/gsd:plan-phase 28`

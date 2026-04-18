@@ -15,7 +15,8 @@
 
 - [x] **Phase 28: MCP Foundation** - Streamable HTTP MCP endpoints with OAuth2 JWT validation, RBAC tool filtering, and org-aware tool scoping across all services (completed 2026-04-17)
 - [x] **Phase 29: Service MCP Tools** - Compliance, branding, and LLM tools plus MCP Resources and Prompts primitives (completed 2026-04-17)
-- [ ] **Phase 30: Dashboard MCP + External Clients** - Dashboard admin operations exposed as MCP tools; external client (Claude Desktop, IDE) connectivity verified
+- [x] **Phase 30: Dashboard MCP + External Clients** - Dashboard admin operations exposed as MCP tools; external client (Claude Desktop, IDE) connectivity verified (completed 2026-04-18; **SC#4 acceptance deferred to Phase 30.1** — scope-filter gap discovered during walkthrough)
+- [ ] **Phase 30.1: MCP OAuth scope-filter gate (INSERTED)** - Fix scope-filter bypass for OAuth client-credentials tokens: permission fallback on unknown sub in `role-repository.ts` currently overrides the scope path, letting `scope=read` clients invoke destructive tools. Must land before Phase 30 SC#4 can sign off.
 - [ ] **Phase 31: Conversation Persistence** - SQLite schema for conversation history with rolling-window design and per-invocation audit log
 - [ ] **Phase 32: Agent Service + Chat UI** - AgentService orchestration, text and speech chat side panel, and confirmation dialog for destructive tools
 - [ ] **Phase 33: Agent Intelligence + Audit Viewer** - Context-aware org suggestions, token budget with compaction, and admin audit log viewer
@@ -68,6 +69,21 @@ Plans:
   6. An MCP client can invoke predefined MCP Prompts (`/scan`, `/report`, `/fix`) that return **chat-message templates** (system+user messages with placeholders) that the client feeds to its own LLM, which then chooses which cross-service tools to invoke — MCPI-06 (absorbed from Phase 29; shape locked in 29-CONTEXT.md D-12 — NOT tool-call pre-fills)
 **Plans**: TBD
 
+### Phase 30.1: MCP OAuth scope-filter gate (INSERTED — urgent)
+**Goal**: Close the scope-filter bypass discovered during Phase 30 SC#4 walkthrough on 2026-04-18: an OAuth client-credentials token signed with `scope=read` currently surfaces destructive tools (`dashboard_scan_site`) because the permission path overrides the scope path for unknown subs.
+**Depends on**: Phase 30 (the walkthrough that surfaced the gap + all Phase 30 code to patch)
+**Requirements**: MCPT-05 (re-opens SC#4 acceptance for Phase 30)
+**Success Criteria** (what must be TRUE):
+  1. A `scope=read` OAuth client (no matching `dashboard_users` row) sees only read-tier tools — `dashboard_scan_site` is filtered out of `tools/list`.
+  2. A direct `tools/call` for `dashboard_scan_site` with a read-scope bearer returns HTTP 403 (filter-denied), not 200.
+  3. A `scope=write` OAuth client surfaces `dashboard_scan_site` and invoking it triggers Claude Desktop's `destructiveHint: true` confirmation UI.
+  4. Existing cookie-session auth flows continue to receive the correct permission set (middleware.test.ts Tests 4, 5, 6 still green).
+  5. Checks 5a and 5b of `.planning/phases/30-dashboard-mcp-external-clients/30-VERIFICATION.md` re-run successfully against the patched code and are marked ✓.
+**Design decision (locked in `30.1-CONTEXT.md`):** Option (b) — empty-set on unknown sub in `role-repository.ts:176-178` (+ rewrite `filterToolsByScope` scope-tier rules in `tool-filter.ts`, co-fix `filterResourcesByScope`).
+**Plans**: 1 plan
+Plans:
+- [ ] 30.1-01-PLAN.md — Drop user-role fallback for unknown sub + rewrite scope-filter rules + regression tests + UAT re-run
+
 ### Phase 31: Conversation Persistence
 **Goal**: Every conversation turn is durably stored with a rolling-window design that prevents unbounded context growth, and every tool invocation is permanently audited
 **Depends on**: Phase 28 (audit entries reference tool calls from MCP layer)
@@ -82,7 +98,8 @@ Plans:
 ### Phase 32: Agent Service + Chat UI
 **Goal**: Users can converse with the dashboard agent companion via text or speech, and state-changing tool calls require explicit confirmation before execution
 **Depends on**: Phase 29 (tools must be callable), Phase 31 (ConversationRepository must exist)
-**Requirements**: AGENT-01, AGENT-02, AGENT-03, APER-02
+**Requirements**: AGENT-01, AGENT-02, AGENT-03, APER-02, MCPAUTH-01, MCPAUTH-02, MCPAUTH-03
+**Cross-cutting requirement (added 2026-04-18 during Phase 30 walkthrough)**: MCP external-client auth must upgrade from bootstrap `client_credentials` + static Bearer to MCP Authorization spec (2025-06-18) compliance before AgentService goes live — OAuth 2.1 Authorization Code + PKCE, refresh tokens, Dynamic Client Registration (RFC 7591), and `.well-known/oauth-protected-resource` + `.well-known/oauth-authorization-server` metadata discovery. Tokens must be tied to user identity, not an admin-registered OAuth client, so per-user RBAC (`resolveEffectivePermissions`) applies naturally. See Task #2 for backlog capture. Candidate new requirement IDs: **MCPAUTH-01** (metadata discovery), **MCPAUTH-02** (PKCE + refresh), **MCPAUTH-03** (DCR).
 **Success Criteria** (what must be TRUE):
   1. A user can open the agent side panel in the dashboard, type a message, and receive a streamed response without a full page reload
   2. The agent routes all LLM calls through the existing capability engine — provider fallback and per-org overrides apply exactly as they do for scan-based AI features
@@ -109,8 +126,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 28. MCP Foundation | 3/3 | Complete   | 2026-04-17 |
-| 29. Service MCP Tools | 3/3 | Complete   | 2026-04-17 |
-| 30. Dashboard MCP + External Clients | 0/? | Not started | - |
+| 29. Service MCP Tools | 3/3 | Complete    | 2026-04-17 |
+| 30. Dashboard MCP + External Clients | 6/6 | Complete   | 2026-04-18 |
 | 31. Conversation Persistence | 0/? | Not started | - |
 | 32. Agent Service + Chat UI | 0/? | Not started | - |
 | 33. Agent Intelligence + Audit Viewer | 0/? | Not started | - |
