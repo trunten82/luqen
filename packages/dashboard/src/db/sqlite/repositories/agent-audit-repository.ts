@@ -1,0 +1,169 @@
+import type Database from 'better-sqlite3';
+import { randomUUID } from 'node:crypto';
+import type {
+  AgentAuditEntry,
+  AgentAuditFilters,
+  AgentAuditRepository,
+  AppendAuditInput,
+  PaginationOptions,
+  ToolOutcome,
+} from '../../interfaces/agent-audit-repository.js';
+
+// ---------------------------------------------------------------------------
+// Private row type — matches agent_audit_log columns (snake_case) verbatim.
+// ---------------------------------------------------------------------------
+
+interface AgentAuditRow {
+  id: string;
+  user_id: string;
+  org_id: string;
+  conversation_id: string | null;
+  tool_name: string;
+  args_json: string;
+  outcome: string;
+  outcome_detail: string | null;
+  latency_ms: number;
+  created_at: string;
+}
+
+function rowToEntry(row: AgentAuditRow): AgentAuditEntry {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    orgId: row.org_id,
+    conversationId: row.conversation_id,
+    toolName: row.tool_name,
+    argsJson: row.args_json,
+    // Safe cast: migration 048 adds `CHECK (outcome IN ('success','error','denied','timeout'))`
+    // which rejects any other value at write time.
+    outcome: row.outcome as ToolOutcome,
+    outcomeDetail: row.outcome_detail,
+    latencyMs: row.latency_ms,
+    createdAt: row.created_at,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Shared filter builder — org_id is always required; other filters optional.
+// Mirrors the shape of scan-repository.ts:buildFilterQuery().
+// ---------------------------------------------------------------------------
+
+function buildFilterQuery(
+  orgId: string,
+  filters: AgentAuditFilters,
+): { where: string; params: Record<string, unknown> } {
+  const conditions: string[] = ['org_id = @orgId'];
+  const params: Record<string, unknown> = { orgId };
+
+  if (filters.userId !== undefined) {
+    conditions.push('user_id = @userId');
+    params['userId'] = filters.userId;
+  }
+  if (filters.toolName !== undefined) {
+    conditions.push('tool_name = @toolName');
+    params['toolName'] = filters.toolName;
+  }
+  if (filters.outcome !== undefined) {
+    conditions.push('outcome = @outcome');
+    params['outcome'] = filters.outcome;
+  }
+  if (filters.from !== undefined) {
+    conditions.push('created_at >= @from');
+    params['from'] = filters.from;
+  }
+  if (filters.to !== undefined) {
+    conditions.push('created_at <= @to');
+    params['to'] = filters.to;
+  }
+
+  return { where: `WHERE ${conditions.join(' AND ')}`, params };
+}
+
+// ---------------------------------------------------------------------------
+// SqliteAgentAuditRepository
+//
+// IMPORTANT — IMMUTABILITY CONTRACT (31-CONTEXT.md line 117):
+// This class deliberately implements only `append`, `getEntry`, `listForOrg`,
+// `countForOrg`. It must NEVER grow update/delete/remove/clear methods — a
+// Group F runtime test in tests/repositories/agent-audit-repository.test.ts
+// pins this via `expect(repo).not.toHaveProperty(...)` assertions.
+// ---------------------------------------------------------------------------
+
+const DEFAULT_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 200;
+
+export class SqliteAgentAuditRepository implements AgentAuditRepository {
+  constructor(private readonly db: Database.Database) {}
+
+  async append(input: AppendAuditInput): Promise<AgentAuditEntry> {
+    const id = randomUUID();
+    const createdAt = new Date().toISOString();
+
+    this.db
+      .prepare(
+        `INSERT INTO agent_audit_log
+           (id, user_id, org_id, conversation_id, tool_name, args_json, outcome, outcome_detail, latency_ms, created_at)
+         VALUES
+           (@id, @userId, @orgId, @conversationId, @toolName, @argsJson, @outcome, @outcomeDetail, @latencyMs, @createdAt)`,
+      )
+      .run({
+        id,
+        userId: input.userId,
+        orgId: input.orgId,
+        conversationId: input.conversationId ?? null,
+        toolName: input.toolName,
+        argsJson: input.argsJson,
+        outcome: input.outcome,
+        outcomeDetail: input.outcomeDetail ?? null,
+        latencyMs: input.latencyMs,
+        createdAt,
+      });
+
+    const row = this.db
+      .prepare('SELECT * FROM agent_audit_log WHERE id = ?')
+      .get(id) as AgentAuditRow;
+    return rowToEntry(row);
+  }
+
+  async getEntry(id: string, orgId: string): Promise<AgentAuditEntry | null> {
+    const row = this.db
+      .prepare(
+        'SELECT * FROM agent_audit_log WHERE id = @id AND org_id = @orgId',
+      )
+      .get({ id, orgId }) as AgentAuditRow | undefined;
+    return row !== undefined ? rowToEntry(row) : null;
+  }
+
+  async listForOrg(
+    orgId: string,
+    filters: AgentAuditFilters,
+    pagination: PaginationOptions,
+  ): Promise<AgentAuditEntry[]> {
+    const { where, params } = buildFilterQuery(orgId, filters);
+    // Cap mitigates T-31-10 (unbounded query DOS). Mirrors the existing
+    // audit-repository.ts pattern: default 50, hard max 200.
+    const limit = Math.min(pagination.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+    const offset = pagination.offset ?? 0;
+
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM agent_audit_log ${where}
+         ORDER BY created_at DESC
+         LIMIT @limit OFFSET @offset`,
+      )
+      .all({ ...params, limit, offset }) as AgentAuditRow[];
+
+    return rows.map(rowToEntry);
+  }
+
+  async countForOrg(
+    orgId: string,
+    filters: AgentAuditFilters,
+  ): Promise<number> {
+    const { where, params } = buildFilterQuery(orgId, filters);
+    const row = this.db
+      .prepare(`SELECT COUNT(*) as count FROM agent_audit_log ${where}`)
+      .get(params) as { count: number };
+    return row.count;
+  }
+}

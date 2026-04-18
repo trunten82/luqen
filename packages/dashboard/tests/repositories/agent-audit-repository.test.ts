@@ -427,12 +427,14 @@ describe('SqliteAgentAuditRepository — pagination + ordering', () => {
 
   it('default ordering is created_at DESC (newest first)', async () => {
     const list = await storage.agentAudit.listForOrg(orgA, {}, {});
-    expect(list.length).toBeGreaterThan(1);
+    expect(list.length).toBe(15);
+    // Strict monotonic DESC on created_at. (When multiple rows share a
+    // created_at millisecond — possible on fast machines — SQLite ties
+    // on the tied column; we only assert the DESC ordering of the sort
+    // key, not the tiebreaker behaviour.)
     for (let i = 1; i < list.length; i++) {
       expect(list[i - 1]!.createdAt >= list[i]!.createdAt).toBe(true);
     }
-    // Newest first — the 15th inserted (latencyMs=14) should be at index 0.
-    expect(list[0]!.latencyMs).toBe(14);
   });
 
   it('limit + offset returns the requested slice', async () => {
