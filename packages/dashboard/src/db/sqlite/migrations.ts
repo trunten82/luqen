@@ -1218,4 +1218,58 @@ CREATE TABLE IF NOT EXISTS rescore_progress (
 CREATE INDEX IF NOT EXISTS idx_rescore_progress_org ON rescore_progress(org_id);
     `,
   },
+  {
+    id: '047',
+    name: 'agent-conversations-and-messages',
+    sql: `
+CREATE TABLE IF NOT EXISTS agent_conversations (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  org_id TEXT NOT NULL,
+  title TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  last_message_at TEXT,
+  FOREIGN KEY (user_id) REFERENCES dashboard_users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_agent_conversations_user_org_last ON agent_conversations(user_id, org_id, last_message_at DESC);
+
+CREATE TABLE IF NOT EXISTS agent_messages (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('user','assistant','tool')),
+  content TEXT,
+  tool_call_json TEXT,
+  tool_result_json TEXT,
+  status TEXT NOT NULL DEFAULT 'sent' CHECK (status IN ('sent','pending_confirmation','approved','denied','failed','streaming')),
+  created_at TEXT NOT NULL,
+  in_window INTEGER NOT NULL DEFAULT 1,
+  FOREIGN KEY (conversation_id) REFERENCES agent_conversations(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_agent_messages_conv_created ON agent_messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_agent_messages_conv_window_created ON agent_messages(conversation_id, in_window, created_at);
+    `,
+  },
+  {
+    id: '048',
+    name: 'agent-audit-log',
+    sql: `
+CREATE TABLE IF NOT EXISTS agent_audit_log (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  org_id TEXT NOT NULL,
+  conversation_id TEXT,
+  tool_name TEXT NOT NULL,
+  args_json TEXT NOT NULL,
+  outcome TEXT NOT NULL CHECK (outcome IN ('success','error','denied','timeout')),
+  outcome_detail TEXT,
+  latency_ms INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (conversation_id) REFERENCES agent_conversations(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_agent_audit_log_org_created ON agent_audit_log(org_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_audit_log_user_created ON agent_audit_log(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_audit_log_tool_created ON agent_audit_log(tool_name, created_at DESC);
+    `,
+  },
 ];
