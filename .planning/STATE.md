@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Phase 30 + 30.1 complete — ready for Phase 31 (Conversation Persistence)
-last_updated: "2026-04-18T19:15:00.000Z"
-last_activity: 2026-04-18 -- Phase 30 SC#4 ACCEPTED after Phase 30.1 shipped. Full UAT against live https://luqen.alessandrolanna.it with read+write OAuth clients, destructive-confirm dialog confirmed.
+stopped_at: Phase 31 complete — ready for Phase 32 (Agent Service + Chat UI)
+last_updated: "2026-04-18T21:00:00.000Z"
+last_activity: 2026-04-18 -- Phase 31 (Conversation Persistence) VERIFICATION PASSED. Migrations 047+048 + ConversationRepository + AgentAuditRepository shipped; 49/49 repo tests green; 8/8 must-haves verified.
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
-  percent: 57
+  completed_phases: 5
+  total_plans: 15
+  completed_plans: 15
+  percent: 71
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 31 — Conversation Persistence (next)
+**Current focus:** Phase 32 — Agent Service + Chat UI (next)
 
 ## Current Position
 
 ```
 [Phase 28] [Phase 29] [Phase 30] [Phase 30.1] [Phase 31] [Phase 32] [Phase 33]
-                                    ✓             ^
-                                                  |
-                                                Next
+                                    ✓            ✓           ^
+                                                             |
+                                                           Next
 ```
 
-Phase: 30 ✓ + 30.1 ✓ complete (SC#4 ACCEPTED 2026-04-18)
-Plan: All Phase 30 plans + 30.1-01 shipped; full UAT passed against live https://luqen.alessandrolanna.it
-Status: Ready for `/gsd-plan-phase 31` (Conversation Persistence)
-Last activity: 2026-04-18 -- Phase 30.1 UAT complete. Verified end-to-end: read-scope surfaces 5 tools only; write-scope surfaces 13 (no admin.system); destructive-confirm dialog fires on dashboard_scan_site; scanId cc5c656c-… queued successfully. CI green (24609383269).
+Phase: 30 ✓, 30.1 ✓, 31 ✓ all complete (5 of 7 milestone phases)
+Plan: 2 plans in 2 waves — 31-01 (migrations 047+048 + ConversationRepository), 31-02 (AgentAuditRepository). Both shipped. Verification PASSED 8/8.
+Status: Ready for `/gsd-plan-phase 32` (Agent Service + Chat UI) — consumes storage.conversations + storage.agentAudit from Phase 31.
+Last activity: 2026-04-18 -- Phase 31 verification PASSED. 49/49 repo tests green. Rolling-window math (LIMIT 1 OFFSET 19) corrected against plan text; DOS cap (DEFAULT_PAGE_LIMIT=200) added as mitigation. Test harness for audit filters hardened with setTimeout(2ms) to avoid ms-collision flake.
 
 ## Performance Metrics
 
