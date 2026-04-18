@@ -689,3 +689,116 @@ describe('Phase 30 data tools — string-coercion for LLM-produced numeric args'
     expect(isValidationError, '"abc" should still fail — coercion cannot produce a number').toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// jsonReport / jsonReportPath stripped from list response (quick 260418-lg8)
+// ---------------------------------------------------------------------------
+
+describe('Phase 30 data tools — dashboard_list_reports strips jsonReport (260418-lg8)', () => {
+  let app: FastifyInstance | null = null;
+  afterEach(async () => {
+    if (app !== null) {
+      await app.close();
+      app = null;
+    }
+  });
+
+  async function callTool(
+    name: string,
+    args: Record<string, unknown>,
+    activeApp: FastifyInstance,
+  ): Promise<Record<string, unknown>> {
+    const response = await activeApp.inject({
+      method: 'POST',
+      url: '/api/v1/mcp',
+      headers: {
+        authorization: 'Bearer valid-jwt',
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      payload: rpc('tools/call', { name, arguments: args }),
+    });
+    return parseSseOrJson(response.body);
+  }
+
+  it('omits jsonReport and jsonReportPath from every returned row', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    // Construct a ScanRecord that INCLUDES the bloat fields — the whole
+    // point of this test is proving the handler strips them out. Two rows
+    // so we can assert the behaviour applies to every element of data[].
+    const bloatedRows: ScanRecord[] = [
+      {
+        id: 'scan-a',
+        siteUrl: 'https://www.sky.it',
+        status: 'completed',
+        standard: 'WCAG2AA',
+        jurisdictions: [],
+        regulations: [],
+        createdBy: 'tester',
+        createdAt: '2026-04-18T10:00:00.000Z',
+        completedAt: '2026-04-18T10:05:00.000Z',
+        totalIssues: 205,
+        errors: 200,
+        warnings: 3,
+        notices: 2,
+        jsonReport: '{"issues":[' + '{"code":"x"},'.repeat(205).replace(/,$/, '') + ']}',
+        jsonReportPath: '/var/lib/luqen/reports/scan-a.json',
+        orgId: 'org-1',
+      },
+      {
+        id: 'scan-b',
+        siteUrl: 'https://example.com',
+        status: 'completed',
+        standard: 'WCAG2AA',
+        jurisdictions: [],
+        regulations: [],
+        createdBy: 'tester',
+        createdAt: '2026-04-18T11:00:00.000Z',
+        completedAt: '2026-04-18T11:05:00.000Z',
+        jsonReport: '{"issues":[]}',
+        jsonReportPath: '/var/lib/luqen/reports/scan-b.json',
+        orgId: 'org-1',
+      },
+    ];
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+      listScans: async () => bloatedRows,
+    });
+    app = await buildApp({ verifier, storage });
+    const resp = await callTool('dashboard_list_reports', {}, app);
+    const r = resp['result'] as { isError?: boolean; content: Array<{ text: string }> };
+    expect(r.isError).toBeFalsy();
+    const raw = r.content[0]?.text ?? '{}';
+
+    // Belt-and-braces: the serialised payload must not mention either field
+    // under ANY path (including nested).
+    expect(raw).not.toContain('jsonReport');
+    expect(raw).not.toContain('jsonReportPath');
+
+    const parsed = JSON.parse(raw) as {
+      data: Array<Record<string, unknown>>;
+      meta: { count: number };
+    };
+    expect(parsed.meta.count).toBe(2);
+    expect(parsed.data.length).toBe(2);
+
+    for (const row of parsed.data) {
+      expect(row).not.toHaveProperty('jsonReport');
+      expect(row).not.toHaveProperty('jsonReportPath');
+      // Sanity — fields callers actually need ARE preserved
+      expect(row).toHaveProperty('id');
+      expect(row).toHaveProperty('siteUrl');
+      expect(row).toHaveProperty('status');
+      expect(row).toHaveProperty('createdAt');
+    }
+    // Specific-row sanity
+    const scanA = parsed.data.find((r) => r['id'] === 'scan-a');
+    expect(scanA?.['totalIssues']).toBe(205);
+    expect(scanA?.['siteUrl']).toBe('https://www.sky.it');
+  });
+});
