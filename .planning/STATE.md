@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Phase 30 walkthrough complete — scope-filter gap discovered, Phase 30.1 inserted
-last_updated: "2026-04-18T16:00:00.000Z"
-last_activity: 2026-04-18 -- Phase 30 external-client walkthrough: Checks 1,2,3,4,6 ✓; 5a/5b deferred to Phase 30.1 (INSERTED)
+stopped_at: Phase 30 + 30.1 complete — ready for Phase 31 (Conversation Persistence)
+last_updated: "2026-04-18T19:15:00.000Z"
+last_activity: 2026-04-18 -- Phase 30 SC#4 ACCEPTED after Phase 30.1 shipped. Full UAT against live https://luqen.alessandrolanna.it with read+write OAuth clients, destructive-confirm dialog confirmed.
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 6
-  percent: 46
+  completed_plans: 13
+  percent: 57
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 30 — dashboard-mcp-external-clients
+**Current focus:** Phase 31 — Conversation Persistence (next)
 
 ## Current Position
 
 ```
-[Phase 28] [Phase 29] [Phase 30] [Phase 31] [Phase 32] [Phase 33]
-    ^
-    |
-  Next
+[Phase 28] [Phase 29] [Phase 30] [Phase 30.1] [Phase 31] [Phase 32] [Phase 33]
+                                    ✓             ^
+                                                  |
+                                                Next
 ```
 
-Phase: 30 (dashboard-mcp-external-clients) — WALKTHROUGH DONE (SC#4 deferred to 30.1)
-Plan: Phase 30.1 planned (1 plan, 5 tasks, verified 0 blockers / 3 warnings) — ready for `/gsd-execute-phase 30.1`
-Status: Phase 30.1 plan ready; quick task 260418-mqc (locked-prompt CSS fix) completed
-Last activity: 2026-04-18 -- Completed quick task 260418-mqc: white-on-white text on locked prompt segments; earlier this session planned Phase 30.1 (scope-filter gap fix) and completed Phase 30 walkthrough Checks 1-4 and 6.
+Phase: 30 ✓ + 30.1 ✓ complete (SC#4 ACCEPTED 2026-04-18)
+Plan: All Phase 30 plans + 30.1-01 shipped; full UAT passed against live https://luqen.alessandrolanna.it
+Status: Ready for `/gsd-plan-phase 31` (Conversation Persistence)
+Last activity: 2026-04-18 -- Phase 30.1 UAT complete. Verified end-to-end: read-scope surfaces 5 tools only; write-scope surfaces 13 (no admin.system); destructive-confirm dialog fires on dashboard_scan_site; scanId cc5c656c-… queued successfully. CI green (24609383269).
 
 ## Performance Metrics
 
@@ -124,7 +124,7 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260418-lg8 | Strip jsonReport from dashboard_list_reports MCP tool response | 2026-04-18 | 910a3de | [260418-lg8-strip-jsonreport-from-dashboard-list-rep](./quick/260418-lg8-strip-jsonreport-from-dashboard-list-rep/) |
-| 260418-mqc | Fix white-on-white text in locked prompt segments on /admin/llm?tab=prompts | 2026-04-18 | _pending_ | [260418-mqc-fix-white-on-white-text-in-locked-prompt](./quick/260418-mqc-fix-white-on-white-text-in-locked-prompt/) |
+| 260418-mqc | Fix white-on-white text in locked prompt segments on /admin/llm?tab=prompts | 2026-04-18 | 12f3549 | [260418-mqc-fix-white-on-white-text-in-locked-prompt](./quick/260418-mqc-fix-white-on-white-text-in-locked-prompt/) |
 
 ### Known Gotchas (carried from v2.12.0)
 

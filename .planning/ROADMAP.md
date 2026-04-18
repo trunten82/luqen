@@ -15,8 +15,8 @@
 
 - [x] **Phase 28: MCP Foundation** - Streamable HTTP MCP endpoints with OAuth2 JWT validation, RBAC tool filtering, and org-aware tool scoping across all services (completed 2026-04-17)
 - [x] **Phase 29: Service MCP Tools** - Compliance, branding, and LLM tools plus MCP Resources and Prompts primitives (completed 2026-04-17)
-- [x] **Phase 30: Dashboard MCP + External Clients** - Dashboard admin operations exposed as MCP tools; external client (Claude Desktop, IDE) connectivity verified (completed 2026-04-18; **SC#4 acceptance deferred to Phase 30.1** — scope-filter gap discovered during walkthrough)
-- [ ] **Phase 30.1: MCP OAuth scope-filter gate (INSERTED)** - Fix scope-filter bypass for OAuth client-credentials tokens: permission fallback on unknown sub in `role-repository.ts` currently overrides the scope path, letting `scope=read` clients invoke destructive tools. Must land before Phase 30 SC#4 can sign off.
+- [x] **Phase 30: Dashboard MCP + External Clients** - Dashboard admin operations exposed as MCP tools; external client (Claude Desktop, IDE) connectivity verified. SC#4 accepted 2026-04-18 after Phase 30.1 landed the scope-filter fix.
+- [x] **Phase 30.1: MCP OAuth scope-filter gate (INSERTED)** - Fixed scope-filter bypass for OAuth client-credentials tokens. `getUserPermissions` now returns an empty Set for unknown subs (no user-role fallback), and `filterToolsByScope`/`filterResourcesByScope` rules were rewritten per-permission-suffix (read=.view only; write adds .create/.update/.manage/.delete/admin.users/admin.org; admin.system is admin-only). Verified end-to-end against Claude Desktop (completed 2026-04-18).
 - [ ] **Phase 31: Conversation Persistence** - SQLite schema for conversation history with rolling-window design and per-invocation audit log
 - [ ] **Phase 32: Agent Service + Chat UI** - AgentService orchestration, text and speech chat side panel, and confirmation dialog for destructive tools
 - [ ] **Phase 33: Agent Intelligence + Audit Viewer** - Context-aware org suggestions, token budget with compaction, and admin audit log viewer
