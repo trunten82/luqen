@@ -174,14 +174,18 @@ export class SqliteRoleRepository implements RoleRepository {
     ).get(userId) as { role: string } | undefined;
 
     if (userRow === undefined) {
-      const fallbackRole = await this.getRoleByName('user');
-      return new Set(fallbackRole?.permissions ?? []);
+      // OAuth client-credentials / unknown sub: no user-role fallback.
+      // The scope filter (filterToolsByScope in @luqen/core) becomes authoritative
+      // via http-plugin.ts:139-141 when ctx.permissions.size === 0.
+      // See .planning/phases/30.1-mcp-oauth-scope-gate/30.1-CONTEXT.md for locked decision (Option b).
+      return new Set<string>();
     }
 
     const role = await this.getRoleByName(userRow.role);
     if (role === null) {
-      const fallbackRole = await this.getRoleByName('user');
-      return new Set(fallbackRole?.permissions ?? []);
+      // Unknown role name on an existing user row — defensive empty set rather
+      // than silent `user`-role fallback. Consistent with unknown-sub behaviour.
+      return new Set<string>();
     }
 
     if (role.name === 'admin') {

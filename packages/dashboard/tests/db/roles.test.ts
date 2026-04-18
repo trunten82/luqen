@@ -278,23 +278,26 @@ describe('RoleRepository', () => {
       expect(perms.size).toBe(4);
     });
 
-    it('unknown user falls back to user permissions', async () => {
+    it('unknown user returns empty Set (Phase 30.1 — no user-role fallback)', async () => {
+      // Post-Phase-30.1 contract: an unknown sub (e.g. an OAuth
+      // client-credentials clientId) resolves to an empty permission set so
+      // the scope filter in @luqen/core becomes authoritative. See
+      // .planning/phases/30.1-mcp-oauth-scope-gate/30.1-CONTEXT.md.
       const perms = await storage.roles.getUserPermissions('unknown-user-id');
 
-      // Should fall back to 'user' role (10 permissions)
-      const userRole = await storage.roles.getRoleByName('user');
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(userRole!.permissions.length);
+      expect(perms.size).toBe(0);
     });
 
-    it('user with non-existent role falls back to user permissions', async () => {
-      // Create a user with a role name that doesn't exist in the roles table
+    it('user with non-existent role name returns empty Set (Phase 30.1 — no user-role fallback)', async () => {
+      // Post-Phase-30.1 contract: an existing user row whose role column
+      // points at a role that's been deleted also returns empty — consistent
+      // with unknown-sub behaviour (defensive fail-closed).
       const ghostRoleUser = await storage.users.createUser('ghost-role-user', 'pass123', 'ghost-role');
       const perms = await storage.roles.getUserPermissions(ghostRoleUser.id);
 
-      const userRole = await storage.roles.getRoleByName('user');
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(userRole!.permissions.length);
+      expect(perms.size).toBe(0);
     });
   });
 });
