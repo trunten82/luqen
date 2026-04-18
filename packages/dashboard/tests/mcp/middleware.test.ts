@@ -195,4 +195,42 @@ describe('createMcpAuthPreHandler', () => {
     // Admin shortcut bypasses the roles repository entirely.
     expect(storage.roles.getEffectivePermissions).not.toHaveBeenCalled();
   });
+
+  it('Test 7: OAuth unknown-sub (client-credentials) token yields permissions.size === 0 — scope-filter path engages downstream', async () => {
+    // Simulates an OAuth2 client-credentials token where `sub` is a clientId, NOT a dashboard_users row.
+    // Post-Phase-30.1 contract: getEffectivePermissions returns an empty set; the caller's
+    // tool-list access is then determined entirely by scope claims in @luqen/core's filterToolsByScope
+    // (http-plugin.ts:137-141 — ctx.permissions.size === 0 branch).
+    const payload: McpTokenPayload = {
+      sub: 'oauth-client-abc',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member', // always 'member' for client-credentials per middleware.ts:71 default
+    };
+    const verify: McpTokenVerifier = vi.fn(async () => payload);
+    const storage = makeStubStorage([]); // empty perms — matches post-fix role-repository behaviour
+    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage });
+    const request = makeMockRequest({
+      headers: { authorization: 'Bearer oauth-read-token' },
+    });
+    const { reply } = makeMockReply();
+
+    await handler(request, reply);
+
+    expect(reply.status).not.toHaveBeenCalled();
+    const r = request as unknown as {
+      tokenPayload?: McpTokenPayload;
+      authType?: string;
+      orgId?: string;
+      permissions?: Set<string>;
+    };
+    expect(r.tokenPayload).toEqual(payload);
+    expect(r.tokenPayload?.scopes).toEqual(['read']);
+    expect(r.authType).toBe('jwt');
+    expect(r.orgId).toBe('org-1');
+    expect(r.permissions).toBeInstanceOf(Set);
+    expect(r.permissions!.size).toBe(0);
+    // Confirm resolveEffectivePermissions was invoked with the clientId sub:
+    expect(storage.roles.getEffectivePermissions).toHaveBeenCalledWith('oauth-client-abc', 'org-1');
+  });
 });
