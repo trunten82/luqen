@@ -1,10 +1,10 @@
 <main id="main-content" class="content-narrow" role="main">
-  <section class="card" aria-labelledby="consent-heading">
+  <section class="card consent" aria-labelledby="consent-heading">
     <h1 id="consent-heading">Authorize {{client.clientName}}</h1>
     <p class="muted">This application is requesting access to your Luqen account.</p>
 
     {{#if adminScopeBlocked}}
-      <div class="alert alert-danger" role="alert" aria-live="polite">
+      <div class="alert alert--error" role="alert" aria-live="polite">
         <strong>This client requests admin access you don't have</strong>
         <p>
           The client asked for the scope <code>admin.system</code>, which requires
@@ -14,25 +14,25 @@
         </p>
       </div>
     {{else}}
-      <dl class="kv">
+      <dl class="consent__kv">
         <dt>Signed in as</dt>
-        <dd>{{user.username}} ({{user.role}})</dd>
+        <dd>{{user.username}} <span class="muted">({{user.role}})</span></dd>
 
         <dt>Active org</dt>
         <dd>{{orgName}}</dd>
 
         <dt>Requested scopes</dt>
         <dd>
-          <ul>
+          <ul class="consent__scopes">
             {{#each scopeDescriptions}}
-              <li><code>{{this.scope}}</code> &mdash; {{this.description}}</li>
+              <li><code>{{this.scope}}</code><span class="consent__scope-desc">{{this.description}}</span></li>
             {{/each}}
           </ul>
         </dd>
 
         <dt>Can reach services</dt>
         <dd>
-          <ul>
+          <ul class="consent__resources">
             {{#each resources}}
               <li><code>{{this}}</code></li>
             {{/each}}
@@ -40,10 +40,10 @@
         </dd>
 
         <dt>Will redirect to</dt>
-        <dd><code>{{redirectUri}}</code></dd>
+        <dd><code class="consent__redirect">{{redirectUri}}</code></dd>
       </dl>
 
-      <form method="POST" action="/oauth/authorize/consent" class="actions" aria-labelledby="consent-heading">
+      <form method="POST" action="/oauth/authorize/consent" class="consent__actions" aria-labelledby="consent-heading">
         <input type="hidden" name="_csrf"                 value="{{csrfToken}}" aria-label="CSRF token" />
         <input type="hidden" name="client_id"             value="{{clientId}}" aria-label="OAuth client id" />
         <input type="hidden" name="redirect_uri"          value="{{redirectUri}}" aria-label="Redirect URI" />
@@ -53,8 +53,8 @@
         <input type="hidden" name="code_challenge"        value="{{codeChallenge}}" aria-label="PKCE code challenge" />
         <input type="hidden" name="code_challenge_method" value="S256" aria-label="PKCE method" />
 
-        <button type="submit" name="approved" value="true"  class="btn btn-primary">Allow</button>
-        <button type="submit" name="approved" value="false" class="btn btn-secondary">Deny</button>
+        <button type="submit" name="approved" value="true"  class="btn btn--primary">Allow</button>
+        <button type="submit" name="approved" value="false" class="btn btn--secondary">Deny</button>
       </form>
     {{/if}}
   </section>
