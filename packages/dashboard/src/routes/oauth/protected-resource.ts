@@ -34,7 +34,11 @@ export async function registerProtectedResourceMetadata(
   server: FastifyInstance,
 ): Promise<void> {
   const issuer = process.env['DASHBOARD_PUBLIC_URL'] ?? 'https://dashboard.luqen.local';
-  const mcpUrl = `${issuer}/mcp`;
+  // Dashboard MCP endpoint lives at /api/v1/mcp (see mcp/paths.ts MCP_PATH).
+  // Verifier's expectedAudience is ${issuer}/api/v1/mcp (server.ts:911), so
+  // this metadata MUST match or external clients' token aud won't validate.
+  // Smoke-surfaced gap 2026-04-19.
+  const mcpUrl = `${issuer}/api/v1/mcp`;
 
   server.get('/.well-known/oauth-protected-resource', async (_req, reply) => {
     reply.header('Cache-Control', 'public, max-age=3600');

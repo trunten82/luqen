@@ -39,7 +39,7 @@ describe('GET /.well-known/oauth-protected-resource — dashboard (Phase 31.1 Pl
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toContain('application/json');
     const body = res.json() as Record<string, unknown>;
-    expect(body['resource']).toBe(`${DASHBOARD_URL}/mcp`);
+    expect(body['resource']).toBe(`${DASHBOARD_URL}/api/v1/mcp`);
     expect(body['authorization_servers']).toEqual([DASHBOARD_URL]);
     expect(body['scopes_supported']).toEqual(['read', 'write', 'admin.system', 'admin.org', 'admin.users']);
     expect(body['bearer_methods_supported']).toEqual(['header']);
