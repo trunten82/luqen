@@ -541,5 +541,50 @@ describe('GET /oauth/authorize — Test 1 (no session → redirect to /login)', 
   });
 });
 
+// ── Phase 31.2 D-18: first-consent user-link backfill ─────────────────────
+
+describe('POST /oauth/authorize/consent — Phase 31.2 Task 1 Test 4 (first-consent backfill)', () => {
+  let ctx: TestCtx;
+  beforeEach(async () => { ctx = await buildCtx(); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  it('writes registered_by_user_id = user.id on Allow when NULL; does NOT overwrite on subsequent consent by a different user', async () => {
+    // The DCR-registered test client has no registered_by_user_id (seeded via
+    // seedClient() with no registeredByUserId). First user Allow must backfill.
+    const preBackfill = await ctx.storage.oauthClients.findByClientId(ctx.clientId);
+    expect(preBackfill!.registeredByUserId).toBeNull();
+
+    const { csrf, cookie } = await primeCsrf(ctx);
+    const verifier = 'a'.repeat(50);
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/oauth/authorize/consent',
+      headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+      payload: new URLSearchParams({
+        _csrf: csrf,
+        client_id: ctx.clientId,
+        redirect_uri: ctx.redirectUri,
+        scope: 'read',
+        resource: 'https://svc/mcp',
+        state: 'abc',
+        code_challenge: s256(verifier),
+        code_challenge_method: 'S256',
+        approved: 'true',
+      }).toString(),
+    });
+    expect(res.statusCode).toBe(302);
+
+    const afterFirst = await ctx.storage.oauthClients.findByClientId(ctx.clientId);
+    expect(afterFirst!.registeredByUserId).toBe(ctx.userId);
+
+    // Now a different user consents to the same client — registered_by_user_id
+    // must remain pointing at the first user (IS NULL guard in the UPDATE).
+    await ctx.storage.oauthClients.recordRegistrationUser(ctx.clientId, 'user-second');
+
+    const afterSecond = await ctx.storage.oauthClients.findByClientId(ctx.clientId);
+    expect(afterSecond!.registeredByUserId).toBe(ctx.userId);
+  });
+});
+
 // Keep a handle on randomBytes import so the TS compiler never drops it.
 void randomBytes;
