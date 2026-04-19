@@ -21,6 +21,11 @@
  * Coercion note: numeric inputSchema fields use z.coerce.number() so that
  * LLM-produced string numerics are accepted without a type-validation error
  * (fix: mcp-limit-string-coercion).
+ *
+ * Phase 31.2 D-09 drift guard: every entry in DASHBOARD_ADMIN_TOOL_METADATA
+ * MUST declare a valid requiredPermission. Enforced by
+ * tests/mcp/tool-metadata-drift.test.ts — any future admin tool added
+ * without a permission (or with a typo'd permission id) breaks CI.
  */
 
 import { z } from 'zod';

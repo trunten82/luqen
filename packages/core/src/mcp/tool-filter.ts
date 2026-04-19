@@ -29,6 +29,34 @@ export function filterToolsByPermissions(
     .map((t) => t.name);
 }
 
+/**
+ * Phase 31.2 D-07 — RBAC filter composed with `filterToolsByScope` in
+ * http-plugin.ts. Semantics are identical to `filterToolsByPermissions`
+ * — the distinct name makes call-site intent explicit ("this is the
+ * RBAC half of defense-in-depth"). The two filters are intersected at
+ * the http-plugin list-tools handler:
+ *
+ *   visible = filterToolsByScope(tools, ctx.scopes)
+ *               ∩ filterToolsByRbac(tools, ctx.permissions)
+ *
+ * Unannotated tools (requiredPermission == null) pass through unchanged
+ * so informational tools (health/version) remain visible to any
+ * authenticated caller (D-04 carry-forward).
+ *
+ * Rationale for not renaming filterToolsByPermissions: legacy call sites
+ * (tool registries outside http-plugin) keep the old name. Two names
+ * share the same implementation — the call-site label carries the
+ * semantic intent.
+ */
+export function filterToolsByRbac(
+  allTools: readonly ToolMetadata[],
+  effectivePerms: ReadonlySet<string>,
+): readonly string[] {
+  return allTools
+    .filter((t) => t.requiredPermission == null || effectivePerms.has(t.requiredPermission))
+    .map((t) => t.name);
+}
+
 export function filterToolsByScope(
   allTools: readonly ToolMetadata[],
   tokenScopes: readonly string[],
@@ -43,8 +71,13 @@ export function filterToolsByScope(
       if (hasAdmin) return true;                     // admin scope: all tools
       const perm = t.requiredPermission;
 
-      // Phase 30.1 (OQ-1 resolution — suffix-rule rewrite).
-      // Admin-only permission: never granted below `admin` scope.
+      // Phase 30.1 → 31.2 D-14: admin.system scope values cannot be newly
+      // minted post-31.2 (scopes_supported narrows to ['read','write']).
+      // This branch still executes for pre-31.2 tokens carrying admin.* —
+      // that's why it survives — but RBAC (filterToolsByRbac) is the
+      // authoritative gate at the http-plugin composition. Returning false
+      // here keeps the legacy admin.system scope value a no-op (cannot
+      // privilege-escalate a pre-31.2 token into admin.system-gated tools).
       if (perm === 'admin.system') return false;
 
       // Write-tier permissions: .create / .update / .manage / .delete / admin.users / admin.org.
