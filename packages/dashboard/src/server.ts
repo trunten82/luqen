@@ -891,17 +891,36 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Source intelligence API routes ─────────────────────────────────────
   await sourceApiRoutes(server, config.complianceUrl, pluginManager, getComplianceTokenManager);
 
-  // ── MCP endpoint (Phase 28) — Bearer-only, RS256 JWT ────────────────────
+  // ── MCP endpoint (Phase 28, 31.1 Plan 03) — Bearer-only, RS256 JWT ──────
   // PITFALLS.md #9: cookie sessions are REJECTED on /api/v1/mcp (CSRF risk).
-  // Fail-fast at startup if DASHBOARD_JWT_PUBLIC_KEY is missing — no silent
-  // fallback to unsigned verification.
-  if (config.jwtPublicKey === undefined || config.jwtPublicKey.trim() === '') {
+  //
+  // Phase 31.1 Plan 03 (D-33, D-04): dashboard is both AS and RS (D-02). The
+  // MCP verifier pulls signing keys from the dashboard's own JWKS endpoint
+  // (/oauth/jwks.json) with built-in jose TTL caching and kid-miss refresh,
+  // and enforces `aud` contains this dashboard's MCP URL (cross-service
+  // audience substitution defense). Legacy DASHBOARD_JWT_PUBLIC_KEY path is
+  // honored with a one-shot console.warn deprecation notice (D-27) so
+  // rolling deploys don't break mid-transition — callers should set
+  // DASHBOARD_JWKS_URI + drop DASHBOARD_JWT_PUBLIC_KEY.
+  const dashboardPublicUrl =
+    process.env['DASHBOARD_PUBLIC_URL'] ?? 'https://dashboard.luqen.local';
+  const dashboardMcpAudience = `${dashboardPublicUrl}/api/v1/mcp`;
+  const dashboardJwksUri =
+    process.env['DASHBOARD_JWKS_URI'] ?? `${dashboardPublicUrl}/oauth/jwks.json`;
+  if (
+    (dashboardJwksUri === undefined || dashboardJwksUri.trim() === '') &&
+    (config.jwtPublicKey === undefined || config.jwtPublicKey.trim() === '')
+  ) {
     throw new Error(
-      'DASHBOARD_JWT_PUBLIC_KEY must be set to enable the dashboard MCP endpoint (RS256). ' +
-        'Set it to a PEM-encoded RSA public key. See packages/dashboard/src/config.ts.',
+      'Dashboard MCP verifier requires either DASHBOARD_JWKS_URI (preferred) ' +
+        'or DASHBOARD_JWT_PUBLIC_KEY (deprecated). See packages/dashboard/src/config.ts.',
     );
   }
-  const mcpVerifier: McpTokenVerifier = await createDashboardJwtVerifier(config.jwtPublicKey);
+  const mcpVerifier: McpTokenVerifier = await createDashboardJwtVerifier({
+    jwksUri: dashboardJwksUri,
+    expectedAudience: dashboardMcpAudience,
+    legacyPem: config.jwtPublicKey,
+  });
   // Phase 30-02: build a ScanService instance for the MCP data tools (the
   // route-level scanRoutes constructs its own ScanService for HTTP handlers;
   // having a second instance here is safe because ScanService is stateless
