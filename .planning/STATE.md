@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Completed 31.1-02-PLAN.md
-last_updated: "2026-04-19T07:38:26.609Z"
+stopped_at: Completed 31.1-03-PLAN.md (JWKS verifier swap + RFC 9728 RS metadata)
+last_updated: "2026-04-19T10:37:40.766Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 19
-  completed_plans: 17
-  percent: 89
+  completed_plans: 18
+  percent: 95
 ---
 
 # Project State
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ```
 
 Phase: 31.1 (MCP Authorization Spec Upgrade) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-04-19
 
@@ -49,6 +49,7 @@ Last activity: 2026-04-19
 | Phase 29 P03 | 3min | 2 tasks | 2 files |
 | Phase 31.1 P01 | 14m | 3 tasks | 21 files |
 | Phase 31.1 P02 | 1115 | 3 tasks | 19 files |
+| Phase 31.1 P03 | 200 | 3 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ v3.0.0 architecture decisions (from research):
 - [Phase 31.1]: CSRF validated at preHandler (not onRequest) so @fastify/csrf-protection reads req.body._csrf after the form body is parsed
 - [Phase 31.1]: Constant-time compare (timingSafeEqual) added to verifyS256Challenge to remove a stored-challenge timing side channel
 - [Phase 31.1]: pa11y accessibility evidence captured against a standalone Handlebars-rendered HTML fixture (scripts/render-consent-for-pa11y.mts) — zero WCAG 2.1 AA errors on both consent variants
+- [Phase 31.1]: D-27 chose deprecation path (a): DASHBOARD_JWT_PUBLIC_KEY still works through one-shot console.warn; full removal deferred to Plan 04+
+- [Phase 31.1]: MCP auth moved to a scoped route preHandler in each service (dashboard/compliance/branding/llm); /api/v1/mcp added to PUBLIC_PATHS of the global middleware so the scoped handler is the sole auth gate and RFC 8707 aud is enforced before tool dispatch
+- [Phase 31.1]: D-34 NOT extracted: services' createJwksTokenVerifier kept as three byte-identical factories rather than a shared @luqen/core abstraction — per-package TokenPayload narrowing would force a generic parameter that erases more than it unifies
 
 ### Architecture Notes
 
@@ -145,7 +149,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-19T07:38:17.201Z
-Stopped at: Completed 31.1-02-PLAN.md
+Last session: 2026-04-19T10:37:27.216Z
+Stopped at: Completed 31.1-03-PLAN.md (JWKS verifier swap + RFC 9728 RS metadata)
 Resume file: None
 Next action: `/gsd:plan-phase 28`

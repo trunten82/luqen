@@ -114,7 +114,7 @@ Plans:
 Plans:
 - [x] 31.1-01-PLAN.md — Migrations 049-053 + OAuth repositories (clients_v2, auth codes, refresh tokens, consents, signing keys) + StorageAdapter wiring
 - [x] 31.1-02-PLAN.md — Dashboard OAuth AS endpoints (/authorize + consent UI, /token 3 grants, /register DCR, /jwks, /.well-known/oauth-authorization-server) + signer bootstrap
-- [ ] 31.1-03-PLAN.md — JWKS-backed RS256 verifier swap across 4 services (dashboard/compliance/branding/llm) + .well-known/oauth-protected-resource per service + audience enforcement
+- [x] 31.1-03-PLAN.md — JWKS-backed RS256 verifier swap across 4 services (dashboard/compliance/branding/llm) + .well-known/oauth-protected-resource per service + audience enforcement
 - [ ] 31.1-04-PLAN.md — /admin/oauth-keys rotation UI + /admin/clients DCR extension + scheduler housekeeping + refresh-reuse audit + E2E Claude Desktop smoke checklist
 **UI hint**: yes (consent screen + DCR admin-gate UI if chosen)
 
@@ -152,6 +152,6 @@ Plans:
 | 29. Service MCP Tools | 3/3 | Complete    | 2026-04-17 |
 | 30. Dashboard MCP + External Clients | 6/6 | Complete   | 2026-04-18 |
 | 31. Conversation Persistence | 2/2 | Complete | 2026-04-18 |
-| 31.1. MCP Authorization Spec Upgrade (INSERTED) | 2/4 | In Progress|  |
+| 31.1. MCP Authorization Spec Upgrade (INSERTED) | 3/4 | In Progress|  |
 | 32. Agent Service + Chat UI | 0/? | Not started | - |
 | 33. Agent Intelligence + Audit Viewer | 0/? | Not started | - |
