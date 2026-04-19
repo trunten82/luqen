@@ -48,8 +48,8 @@ describe('ensureInitialSigningKey — Test 1 (idempotent bootstrap)', () => {
   });
 });
 
-describe('createDashboardSigner — Test 2 (mintAccessToken RS256 + kid)', () => {
-  it('mints an RS256 JWT with kid header and proper payload claims', async () => {
+describe('createDashboardSigner — Test 2 (mintAccessToken RS256 + kid + client_id claim)', () => {
+  it('mints an RS256 JWT with kid header and payload claims including client_id', async () => {
     await ensureInitialSigningKey(storage, ENC_KEY);
     const signer = await createDashboardSigner(storage, ENC_KEY);
     const token = await signer.mintAccessToken({
@@ -58,6 +58,7 @@ describe('createDashboardSigner — Test 2 (mintAccessToken RS256 + kid)', () =>
       scopes: ['read', 'write'],
       aud: ['https://mcp.example.com/mcp'],
       expiresInSeconds: 3600,
+      clientId: 'dcr_abc123',
     });
 
     const header = decodeProtectedHeader(token);
@@ -72,6 +73,10 @@ describe('createDashboardSigner — Test 2 (mintAccessToken RS256 + kid)', () =>
     expect(payload.orgId).toBe('org-xyz');
     expect(payload.aud).toEqual(['https://mcp.example.com/mcp']);
     expect((payload as { scopes?: unknown }).scopes).toEqual(['read', 'write']);
+    // Phase 31.2 D-20 bullet 3: every dashboard-minted access token carries
+    // a `client_id` claim so the RS verifier (Plan 04 mcp/middleware.ts) can
+    // run a post-JWT revoked-client check.
+    expect((payload as { client_id?: unknown }).client_id).toBe('dcr_abc123');
     expect(typeof payload.iat).toBe('number');
     expect(typeof payload.exp).toBe('number');
   });
@@ -88,10 +93,33 @@ describe('createDashboardSigner — Test 3 (verifies against active key SPKI)', 
       scopes: ['read'],
       aud: ['https://svc.local/mcp'],
       expiresInSeconds: 3600,
+      clientId: 'dcr_test',
     });
 
     const active = (await storage.oauthSigningKeys.listActiveKeys())[0]!;
     const pubKey = await importSPKI(active.publicKeyPem, 'RS256');
     await expect(jwtVerify(token, pubKey, { algorithms: ['RS256'] })).resolves.toBeDefined();
+  });
+});
+
+describe('createDashboardSigner — Test 4 (Phase 31.2 D-20: clientId is a required field)', () => {
+  it('omitting clientId is a TypeScript compile error (guards against call-site drift)', async () => {
+    await ensureInitialSigningKey(storage, ENC_KEY);
+    const signer = await createDashboardSigner(storage, ENC_KEY);
+
+    // The @ts-expect-error directive asserts that the following call is a
+    // TypeScript type error. If clientId is ever made optional, the
+    // directive becomes a dangling expectation and the compiler fails the
+    // build — forcing the author to re-justify the optional-ness.
+    await expect(async () =>
+      signer.mintAccessToken({
+        sub: 'u-1',
+        orgId: 'o-1',
+        scopes: ['read'],
+        aud: ['https://svc.local/mcp'],
+        expiresInSeconds: 3600,
+        // @ts-expect-error — clientId is REQUIRED per 31.2 D-20 bullet 3.
+      }),
+    ).rejects.toBeDefined();
   });
 });
