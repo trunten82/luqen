@@ -209,12 +209,19 @@ describe('GET /oauth/authorize — Test 4 (redirect_uri mismatch)', () => {
   });
 });
 
-describe('GET /oauth/authorize — Test 5 (admin.system without admin.system permission)', () => {
+// ── Phase 31.2 D-10: admin.* scopes retired at the OAuth layer ─────────────
+// Pre-31.2 (Phase 31.1) this test asserted adminScopeBlocked rendering for a
+// user lacking admin.system. Post-31.2, admin.* scopes return 400 invalid_scope
+// BEFORE any RBAC branching — no view is rendered at all. The adminScopeBlocked
+// branch is no longer reachable from real traffic because admin.* scopes cannot
+// be requested.
+
+describe('GET /oauth/authorize — Test 5 (Phase 31.2 D-10: admin.* scope returns 400 invalid_scope)', () => {
   let ctx: TestCtx;
   beforeEach(async () => { ctx = await buildCtx({ role: 'viewer', adminPermissions: false }); });
   afterEach(async () => { await ctx.cleanup(); });
 
-  it('renders adminScopeBlocked card', async () => {
+  it('returns 400 invalid_scope when admin.system is requested (admin.* retired from OAuth)', async () => {
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
       method: 'GET',
@@ -222,10 +229,8 @@ describe('GET /oauth/authorize — Test 5 (admin.system without admin.system per
         ctx.redirectUri,
       )}&scope=${encodeURIComponent('read admin.system')}&resource=${encodeURIComponent('https://svc/mcp')}&code_challenge=${s256(verifier)}&code_challenge_method=S256&state=x`,
     });
-    expect(res.statusCode).toBe(200);
-    const body = res.json() as { template: string; data: { adminScopeBlocked: boolean } };
-    expect(body.template).toBe('oauth-consent');
-    expect(body.data.adminScopeBlocked).toBe(true);
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'invalid_scope' });
   });
 });
 
@@ -414,12 +419,15 @@ describe('POST /oauth/authorize/consent — Test 10 (missing CSRF returns 403)',
   });
 });
 
-describe('POST /oauth/authorize/consent — Test 11 (non-admin user cannot grant admin.system)', () => {
+// Phase 31.2 D-10: admin.* scopes are rejected with 400 invalid_scope on BOTH
+// GET and POST (scope validation runs before any RBAC check). No authorization
+// code is written.
+describe('POST /oauth/authorize/consent — Test 11 (Phase 31.2 D-10: admin.* scope POST rejected with 400)', () => {
   let ctx: TestCtx;
   beforeEach(async () => { ctx = await buildCtx({ role: 'viewer', adminPermissions: false }); });
   afterEach(async () => { await ctx.cleanup(); });
 
-  it('returns 403 when a non-admin forges admin.system in consent POST', async () => {
+  it('returns 400 invalid_scope when admin.system appears in consent POST body (admin.* retired)', async () => {
     const { csrf, cookie } = await primeCsrf(ctx);
     const verifier = 'a'.repeat(50);
     const res = await ctx.server.inject({
@@ -438,7 +446,8 @@ describe('POST /oauth/authorize/consent — Test 11 (non-admin user cannot grant
         approved: 'true',
       }).toString(),
     });
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'invalid_scope' });
 
     const db = ctx.storage.getRawDatabase();
     const n = (db.prepare('SELECT COUNT(*) AS n FROM oauth_authorization_codes').get() as { n: number }).n;
@@ -538,6 +547,179 @@ describe('GET /oauth/authorize — Test 1 (no session → redirect to /login)', 
     const loc = res.headers.location as string;
     expect(loc.startsWith('/login?redirect=')).toBe(true);
     expect(decodeURIComponent(loc.slice('/login?redirect='.length))).toBe(originalUrl);
+  });
+});
+
+// ── Phase 31.2 Task 2: mcp.use gate on GET + POST, switch-org view, scope narrowing ──
+
+describe('GET /oauth/authorize — Phase 31.2 D-06 Test A (mcp.use holder renders normal consent)', () => {
+  let ctx: TestCtx;
+  beforeEach(async () => { ctx = await buildCtx(); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  it('admin user (role=admin bypass) with scope=read+write → normal consent screen', async () => {
+    const verifier = 'a'.repeat(50);
+    const res = await ctx.server.inject({
+      method: 'GET',
+      url: `/oauth/authorize?response_type=code&client_id=${ctx.clientId}&redirect_uri=${encodeURIComponent(
+        ctx.redirectUri,
+      )}&scope=${encodeURIComponent('read write')}&resource=${encodeURIComponent('https://svc/mcp')}&code_challenge=${s256(verifier)}&code_challenge_method=S256&state=z`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { template: string; data: { noMcpUse?: boolean; adminScopeBlocked: boolean } };
+    expect(body.template).toBe('oauth-consent');
+    expect(body.data.noMcpUse).not.toBe(true);
+    expect(body.data.adminScopeBlocked).toBe(false);
+  });
+});
+
+describe('GET /oauth/authorize — Phase 31.2 D-06 Test B (no mcp.use renders switch-org view)', () => {
+  let ctx: TestCtx;
+  beforeEach(async () => { ctx = await buildCtx({ role: 'viewer', adminPermissions: false }); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  it('user lacking mcp.use in active org AND lacking admin.system → switch-org view (noMcpUse=true)', async () => {
+    const verifier = 'a'.repeat(50);
+    const res = await ctx.server.inject({
+      method: 'GET',
+      url: `/oauth/authorize?response_type=code&client_id=${ctx.clientId}&redirect_uri=${encodeURIComponent(
+        ctx.redirectUri,
+      )}&scope=${encodeURIComponent('read write')}&resource=${encodeURIComponent('https://svc/mcp')}&code_challenge=${s256(verifier)}&code_challenge_method=S256&state=z`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as {
+      template: string;
+      data: {
+        noMcpUse?: boolean;
+        switchableOrgs?: ReadonlyArray<{ id: string; name: string }>;
+        activeOrgId?: string;
+        returnTo?: string;
+      };
+    };
+    expect(body.template).toBe('oauth-consent');
+    expect(body.data.noMcpUse).toBe(true);
+    expect(body.data.activeOrgId).toBe('org-test');
+    // No other orgs with mcp.use (user has no team memberships elsewhere).
+    expect(body.data.switchableOrgs).toEqual([]);
+    expect(typeof body.data.returnTo).toBe('string');
+    expect(body.data.returnTo).toContain('/oauth/authorize');
+  });
+});
+
+describe('GET /oauth/authorize — Phase 31.2 D-02 Test C (admin.system bypass without mcp.use row)', () => {
+  let ctx: TestCtx;
+  // adminPermissions: default (ALL_PERMISSION_IDS); role='admin' → bypass in resolveEffectivePermissions
+  beforeEach(async () => { ctx = await buildCtx({ role: 'admin' }); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  it('user.role === admin → bypasses the mcp.use gate and renders normal consent', async () => {
+    const verifier = 'a'.repeat(50);
+    const res = await ctx.server.inject({
+      method: 'GET',
+      url: `/oauth/authorize?response_type=code&client_id=${ctx.clientId}&redirect_uri=${encodeURIComponent(
+        ctx.redirectUri,
+      )}&scope=${encodeURIComponent('read')}&resource=${encodeURIComponent('https://svc/mcp')}&code_challenge=${s256(verifier)}&code_challenge_method=S256&state=z`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { template: string; data: { noMcpUse?: boolean; adminScopeBlocked: boolean } };
+    expect(body.template).toBe('oauth-consent');
+    expect(body.data.noMcpUse).not.toBe(true);
+    expect(body.data.adminScopeBlocked).toBe(false);
+  });
+});
+
+describe('POST /oauth/authorize/consent — Phase 31.2 D-06 Test D (mcp.use gate re-enforced on POST)', () => {
+  let ctx: TestCtx;
+  beforeEach(async () => { ctx = await buildCtx({ role: 'viewer', adminPermissions: false }); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  it('non-admin without mcp.use submitting Allow POST → 403 access_denied', async () => {
+    const { csrf, cookie } = await primeCsrf(ctx);
+    const verifier = 'a'.repeat(50);
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/oauth/authorize/consent',
+      headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+      payload: new URLSearchParams({
+        _csrf: csrf,
+        client_id: ctx.clientId,
+        redirect_uri: ctx.redirectUri,
+        scope: 'read',
+        resource: 'https://svc/mcp',
+        state: 'abc',
+        code_challenge: s256(verifier),
+        code_challenge_method: 'S256',
+        approved: 'true',
+      }).toString(),
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toMatchObject({ error: 'access_denied' });
+
+    // No code row should have been inserted.
+    const db = ctx.storage.getRawDatabase();
+    const n = (db.prepare('SELECT COUNT(*) AS n FROM oauth_authorization_codes').get() as { n: number }).n;
+    expect(n).toBe(0);
+  });
+});
+
+describe('GET /oauth/authorize — Phase 31.2 D-12 Test F (read+write normal flow, partitionScopes simplified)', () => {
+  let ctx: TestCtx;
+  beforeEach(async () => { ctx = await buildCtx(); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  it('scope=read write → 200 consent with granted=read+write, skipped=[]', async () => {
+    const verifier = 'a'.repeat(50);
+    const res = await ctx.server.inject({
+      method: 'GET',
+      url: `/oauth/authorize?response_type=code&client_id=${ctx.clientId}&redirect_uri=${encodeURIComponent(
+        ctx.redirectUri,
+      )}&scope=${encodeURIComponent('read write')}&resource=${encodeURIComponent('https://svc/mcp')}&code_challenge=${s256(verifier)}&code_challenge_method=S256&state=z`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as {
+      template: string;
+      data: {
+        adminScopeBlocked: boolean;
+        scopeDescriptions: Array<{ scope: string }>;
+        skippedScopeDescriptions?: Array<{ scope: string }>;
+        requestedScope: string;
+      };
+    };
+    expect(body.data.adminScopeBlocked).toBe(false);
+    expect(body.data.scopeDescriptions.map((s) => s.scope)).toEqual(['read', 'write']);
+    expect(body.data.skippedScopeDescriptions ?? []).toEqual([]);
+    expect(body.data.requestedScope).toBe('read write');
+  });
+});
+
+describe('POST /oauth/authorize/consent — Phase 31.2 Test G (31.1 SMOKE step 3 non-regression)', () => {
+  let ctx: TestCtx;
+  beforeEach(async () => { ctx = await buildCtx(); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  it('admin + scope=read+write + DCR client → consent Allow → 302 redirect with ?code=&state=', async () => {
+    const { csrf, cookie } = await primeCsrf(ctx);
+    const verifier = 'a'.repeat(50);
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/oauth/authorize/consent',
+      headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+      payload: new URLSearchParams({
+        _csrf: csrf,
+        client_id: ctx.clientId,
+        redirect_uri: ctx.redirectUri,
+        scope: 'read write',
+        resource: 'https://svc/mcp',
+        state: 'smoke-state',
+        code_challenge: s256(verifier),
+        code_challenge_method: 'S256',
+        approved: 'true',
+      }).toString(),
+    });
+    expect(res.statusCode).toBe(302);
+    const loc = res.headers.location as string;
+    expect(loc.startsWith(`${ctx.redirectUri}?code=`)).toBe(true);
+    expect(loc).toContain('&state=smoke-state');
   });
 });
 
