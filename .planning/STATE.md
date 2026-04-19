@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Phase 31.2 context gathered
-last_updated: "2026-04-19T15:25:57.939Z"
-last_activity: 2026-04-19 -- Phase 31.2 planning complete
+stopped_at: Phase 31.2 complete — ready to advance
+last_updated: "2026-04-19T20:45:00.000Z"
+last_activity: 2026-04-19 -- Phase 31.2 complete (5/5 plans)
 progress:
   total_phases: 9
-  completed_phases: 6
-  total_plans: 24
-  completed_plans: 20
-  percent: 83
+  completed_phases: 7
+  total_plans: 29
+  completed_plans: 25
+  percent: 86
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 31.1 — MCP Authorization Spec Upgrade
+**Current focus:** Phase 32 — Agent Service + Chat UI (next)
 
 ## Current Position
 
 ```
-[Phase 28] [Phase 29] [Phase 30] [Phase 30.1] [Phase 31] [Phase 32] [Phase 33]
-                                    ✓            ✓           ^
-                                                             |
-                                                           Next
+[Phase 28] [Phase 29] [Phase 30] [Phase 30.1] [Phase 31.1] [Phase 31.2] [Phase 32] [Phase 33]
+                                    ✓            ✓            ✓            ^
+                                                                            |
+                                                                          Next
 ```
 
-Phase: 31.1 (MCP Authorization Spec Upgrade) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-04-19 -- Phase 31.2 planning complete
+Phase: 31.2 (MCP Access Control Refinement) — COMPLETE
+Plans: 5 of 5
+Status: Ready to advance — Phase 32 next (or Phase 31 for conversation persistence if not yet executed)
+Last activity: 2026-04-19 -- Phase 31.2 execution complete (5/5 plans, 3 waves)
 
 ## Performance Metrics
 
@@ -50,6 +50,11 @@ Last activity: 2026-04-19 -- Phase 31.2 planning complete
 | Phase 31.1 P01 | 14m | 3 tasks | 21 files |
 | Phase 31.1 P02 | 1115 | 3 tasks | 19 files |
 | Phase 31.1 P03 | 200 | 3 tasks | 23 files |
+| Phase 31.2 P01 | 22m | 2 tasks | 6 files |
+| Phase 31.2 P02 | ~32m | 4 tasks | 10 files |
+| Phase 31.2 P03 | 23m | 3 tasks | 8 files |
+| Phase 31.2 P04 | ~50m | 2 tasks | 7 files | partial worktree + inline completion |
+| Phase 31.2 P05 | 15m | 3 tasks | 9 files |
 
 ## Accumulated Context
 
