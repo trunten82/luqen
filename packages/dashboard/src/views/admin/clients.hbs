@@ -27,7 +27,11 @@
           <th scope="col">{{t "common.service"}}</th>
           <th scope="col">Kind</th>
           <th scope="col">{{t "common.owner"}}</th>
+          {{#if showOrgColumn}}
+          <th scope="col">Org</th>
+          {{/if}}
           <th scope="col">{{t "admin.clients.created"}}</th>
+          <th scope="col">Revoked</th>
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
@@ -52,34 +56,48 @@
             <span class="badge badge--info">{{orgDisplayName}}</span>
             {{/if}}
           </td>
+          {{#if @root.showOrgColumn}}
+          <td data-label="Org">{{orgDisplayName}}</td>
+          {{/if}}
           <td data-label="Created">{{createdAtDisplay}}</td>
+          <td data-label="Revoked">
+            {{#if revokedAtDisplay}}
+            <span class="badge badge--danger">{{revokedAtDisplay}}</span>
+            {{else}}
+            —
+            {{/if}}
+          </td>
           <td>
-            {{#if canRevoke}}
-            {{#if (eq kind 'DCR')}}
-            <button hx-post="/admin/clients/dcr/{{clientId}}/revoke"
-                    hx-confirm="Revoke DCR client {{name}}? MCP clients with this registration will lose access."
-                    hx-target="closest tr"
-                    hx-swap="outerHTML swap:500ms"
-                    hx-headers='{"X-CSRF-Token": "{{@root.csrfToken}}"}'
-                    class="btn btn--sm btn--danger"
-                    aria-label="Revoke DCR client {{name}}">{{t "admin.clients.revoke"}}</button>
+            {{#unless revokedAtDisplay}}
+              {{#if canRevoke}}
+              {{#if (eq kind 'DCR')}}
+              <button hx-post="/admin/clients/dcr/{{clientId}}/revoke"
+                      hx-confirm="Revoke DCR client {{name}}? MCP sessions are blocked immediately on the next tool call."
+                      hx-target="closest tr"
+                      hx-swap="outerHTML swap:500ms"
+                      hx-headers='{"X-CSRF-Token": "{{@root.csrfToken}}"}'
+                      class="btn btn--sm btn--danger"
+                      aria-label="Revoke DCR client {{name}}">{{t "admin.clients.revoke"}}</button>
+              {{else}}
+              <button hx-post="/admin/clients/{{clientId}}/{{#if (eq service 'Branding')}}revoke-branding{{else if (eq service 'LLM')}}revoke-llm{{else}}revoke{{/if}}"
+                      hx-confirm="Revoke client {{name}}? This cannot be undone."
+                      hx-target="closest tr"
+                      hx-swap="outerHTML swap:500ms"
+                      class="btn btn--sm btn--danger"
+                      aria-label="Revoke {{name}}">{{t "admin.clients.revoke"}}</button>
+              <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+              {{/if}}
+              {{else}}
+              <span class="text-xs text-muted">{{t "admin.clients.protected"}}</span>
+              {{/if}}
             {{else}}
-            <button hx-post="/admin/clients/{{clientId}}/{{#if (eq service 'Branding')}}revoke-branding{{else if (eq service 'LLM')}}revoke-llm{{else}}revoke{{/if}}"
-                    hx-confirm="Revoke client {{name}}? This cannot be undone."
-                    hx-target="closest tr"
-                    hx-swap="outerHTML swap:500ms"
-                    class="btn btn--sm btn--danger"
-                    aria-label="Revoke {{name}}">{{t "admin.clients.revoke"}}</button>
-            <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
-            {{/if}}
-            {{else}}
-            <span class="text-xs text-muted">{{t "admin.clients.protected"}}</span>
-            {{/if}}
+            <span class="text-xs text-muted">—</span>
+            {{/unless}}
           </td>
         </tr>
         {{else}}
         <tr>
-          <td colspan="8" class="table__empty">{{t "admin.clients.noClients"}}</td>
+          <td colspan="{{#if showOrgColumn}}10{{else}}9{{/if}}" class="table__empty">{{t "admin.clients.noClients"}}</td>
         </tr>
         {{/each}}
       </tbody>

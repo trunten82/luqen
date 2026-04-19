@@ -182,8 +182,8 @@ describe('SqliteOauthClientRepository — listByUserId', () => {
   });
 });
 
-describe('SqliteOauthClientRepository — revoke', () => {
-  it('deletes the client row', async () => {
+describe('SqliteOauthClientRepository — revoke (Phase 31.2 D-20 soft revoke)', () => {
+  it('sets revoked_at and preserves the row (soft revoke)', async () => {
     const reg = await storage.oauthClients.register({
       clientName: 'Doomed',
       redirectUris: ['https://x/cb'],
@@ -192,11 +192,38 @@ describe('SqliteOauthClientRepository — revoke', () => {
       scope: 'read',
     });
 
-    expect(await storage.oauthClients.findByClientId(reg.clientId)).not.toBeNull();
+    const before = await storage.oauthClients.findByClientId(reg.clientId);
+    expect(before).not.toBeNull();
+    expect(before?.revokedAt).toBeNull();
 
     await storage.oauthClients.revoke(reg.clientId);
 
-    expect(await storage.oauthClients.findByClientId(reg.clientId)).toBeNull();
+    // Phase 31.2 D-20: row is preserved; revokedAt is stamped so the admin
+    // UI can render the Revoked badge and middleware can block in-flight
+    // access tokens whose owning client is revoked.
+    const after = await storage.oauthClients.findByClientId(reg.clientId);
+    expect(after).not.toBeNull();
+    expect(after?.revokedAt).not.toBeNull();
+  });
+
+  it('is idempotent — second revoke does not bump revoked_at', async () => {
+    const reg = await storage.oauthClients.register({
+      clientName: 'Doomed2',
+      redirectUris: ['https://x/cb'],
+      grantTypes: ['authorization_code'],
+      tokenEndpointAuthMethod: 'none',
+      scope: 'read',
+    });
+
+    await storage.oauthClients.revoke(reg.clientId);
+    const first = await storage.oauthClients.findByClientId(reg.clientId);
+    const firstRevokedAt = first?.revokedAt;
+
+    await new Promise((r) => setTimeout(r, 10));
+    await storage.oauthClients.revoke(reg.clientId);
+    const second = await storage.oauthClients.findByClientId(reg.clientId);
+
+    expect(second?.revokedAt).toBe(firstRevokedAt);
   });
 });
 
