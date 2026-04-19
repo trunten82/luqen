@@ -86,8 +86,16 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     uiConfig: { docExpansion: 'list' },
   });
 
-  // Auth middleware
-  const authMiddleware = createAuthMiddleware(verifyToken);
+  // Auth middleware. Phase 31.2 Plan 05 D-22: advertise this resource server's
+  // well-known URL in the WWW-Authenticate header on 401s so external MCP
+  // clients (Phase 32 agent path, Claude Desktop) can discover the
+  // authorization server per RFC 6750 §3.1 + MCP Authorization spec
+  // 2025-06-18. Matches the URL served by registerBrandingProtectedResourceMetadata
+  // so the two endpoints always agree.
+  const brandingPublicUrl = process.env['BRANDING_PUBLIC_URL'] ?? 'http://localhost:4100';
+  const authMiddleware = createAuthMiddleware(verifyToken, {
+    resourceMetadataUrl: `${brandingPublicUrl}/.well-known/oauth-protected-resource`,
+  });
   app.addHook('preHandler', authMiddleware);
 
   // Decorate request with orgId + authType
