@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Phase 31 complete — ready for Phase 32 (Agent Service + Chat UI)
-last_updated: "2026-04-18T21:00:00.000Z"
-last_activity: 2026-04-18 -- Phase 31 (Conversation Persistence) VERIFICATION PASSED. Migrations 047+048 + ConversationRepository + AgentAuditRepository shipped; 49/49 repo tests green; 8/8 must-haves verified.
+stopped_at: Completed 31.1-01-PLAN.md
+last_updated: "2026-04-19T07:10:46.778Z"
+last_activity: 2026-04-19
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 5
-  total_plans: 15
-  completed_plans: 15
-  percent: 71
+  total_plans: 19
+  completed_plans: 16
+  percent: 84
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 32 — Agent Service + Chat UI (next)
+**Current focus:** Phase 31.1 — MCP Authorization Spec Upgrade
 
 ## Current Position
 
@@ -32,10 +32,10 @@ See: .planning/PROJECT.md (updated 2026-04-16)
                                                            Next
 ```
 
-Phase: 30 ✓, 30.1 ✓, 31 ✓ all complete (5 of 7 milestone phases)
-Plan: 2 plans in 2 waves — 31-01 (migrations 047+048 + ConversationRepository), 31-02 (AgentAuditRepository). Both shipped. Verification PASSED 8/8.
-Status: Ready for `/gsd-plan-phase 32` (Agent Service + Chat UI) — consumes storage.conversations + storage.agentAudit from Phase 31.
-Last activity: 2026-04-18 -- Phase 31 verification PASSED. 49/49 repo tests green. Rolling-window math (LIMIT 1 OFFSET 19) corrected against plan text; DOS cap (DEFAULT_PAGE_LIMIT=200) added as mitigation. Test harness for audit filters hardened with setTimeout(2ms) to avoid ms-collision flake.
+Phase: 31.1 (MCP Authorization Spec Upgrade) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-19
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Last activity: 2026-04-18 -- Phase 31 verification PASSED. 49/49 repo tests gree
 | Plans complete | 0/? |
 | Phase 28-mcp-foundation P01 | 7min | 2 tasks | 11 files |
 | Phase 29 P03 | 3min | 2 tasks | 2 files |
+| Phase 31.1 P01 | 14m | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ v3.0.0 architecture decisions (from research):
 - [Phase 28-mcp-foundation]: tools/list filter via mcpServer.server.setRequestHandler(ListToolsRequestSchema, ...) — single committed mechanism registered ONCE at plugin construction; overwrites SDK default in protocol's _requestHandlers map
 - [Phase 28-mcp-foundation]: McpServer._registeredTools private-field read preserves per-tool description/inputSchema in filtered tools/list response; fallback registeredTools option documented but not needed at SDK 1.27.1
 - [Phase 29]: Phase 29 rescope (D-14/D-15): MCPT-01, MCPT-02 brand-score half, MCPI-05, MCPI-06 reassigned to Phase 30; MCPT-02 split-annotated; Phase 30 Depends-on upgraded to Phase 28+29; D-12 chat-message-template prompt shape locked into Phase 30 success criterion
+- [Phase 31.1]: Tests live under packages/dashboard/tests/repositories/ to match vitest.config.ts (plan's test/ path was not scanned)
+- [Phase 31.1]: Encrypted-at-rest private keys: OauthSigningKeyRepository stores ciphertext only; Plan 02 token-signer encrypts/decrypts via plugins/crypto
 
 ### Architecture Notes
 
@@ -107,6 +110,7 @@ New MCP servers:
 ### Roadmap Evolution
 
 - Phase 30.1 inserted after Phase 30 on 2026-04-18: Fix scope-filter bypass for OAuth client-credentials tokens — permission fallback on unknown sub currently overrides scope path, letting read-scope clients invoke destructive tools (URGENT — blocks Phase 30 SC#4 sign-off)
+- Phase 31.1 inserted after Phase 31 on 2026-04-19: MCP Authorization Spec Upgrade (OAuth 2.1 + PKCE + refresh + DCR + `.well-known` metadata). Scope decision came out of `/gsd-discuss-phase 32` — MCPAUTH-01/02/03 relocated from Phase 32 to 31.1 so Phase 32 stays focused on agent runtime + UI. Phase 32 depends on 31.1 for the external-client auth story; Phase 32's internal dashboard-to-MCP path uses cookie-session + server-minted JWT and is independent.
 
 ### Pending Todos
 
@@ -137,7 +141,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-17T12:55:22.054Z
-Stopped at: Phase 30 context gathered
-Resume file: .planning/phases/30-dashboard-mcp-external-clients/30-CONTEXT.md
+Last session: 2026-04-19T07:10:39.643Z
+Stopped at: Completed 31.1-01-PLAN.md
+Resume file: None
 Next action: `/gsd:plan-phase 28`
