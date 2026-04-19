@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Completed 31.1-01-PLAN.md
-last_updated: "2026-04-19T07:10:46.778Z"
+stopped_at: Completed 31.1-02-PLAN.md
+last_updated: "2026-04-19T07:38:26.609Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 19
-  completed_plans: 16
-  percent: 84
+  completed_plans: 17
+  percent: 89
 ---
 
 # Project State
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ```
 
 Phase: 31.1 (MCP Authorization Spec Upgrade) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-19
 
@@ -48,6 +48,7 @@ Last activity: 2026-04-19
 | Phase 28-mcp-foundation P01 | 7min | 2 tasks | 11 files |
 | Phase 29 P03 | 3min | 2 tasks | 2 files |
 | Phase 31.1 P01 | 14m | 3 tasks | 21 files |
+| Phase 31.1 P02 | 1115 | 3 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ v3.0.0 architecture decisions (from research):
 - [Phase 29]: Phase 29 rescope (D-14/D-15): MCPT-01, MCPT-02 brand-score half, MCPI-05, MCPI-06 reassigned to Phase 30; MCPT-02 split-annotated; Phase 30 Depends-on upgraded to Phase 28+29; D-12 chat-message-template prompt shape locked into Phase 30 success criterion
 - [Phase 31.1]: Tests live under packages/dashboard/tests/repositories/ to match vitest.config.ts (plan's test/ path was not scanned)
 - [Phase 31.1]: Encrypted-at-rest private keys: OauthSigningKeyRepository stores ciphertext only; Plan 02 token-signer encrypts/decrypts via plugins/crypto
+- [Phase 31.1]: CSRF validated at preHandler (not onRequest) so @fastify/csrf-protection reads req.body._csrf after the form body is parsed
+- [Phase 31.1]: Constant-time compare (timingSafeEqual) added to verifyS256Challenge to remove a stored-challenge timing side channel
+- [Phase 31.1]: pa11y accessibility evidence captured against a standalone Handlebars-rendered HTML fixture (scripts/render-consent-for-pa11y.mts) — zero WCAG 2.1 AA errors on both consent variants
 
 ### Architecture Notes
 
@@ -141,7 +145,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-19T07:10:39.643Z
-Stopped at: Completed 31.1-01-PLAN.md
+Last session: 2026-04-19T07:38:17.201Z
+Stopped at: Completed 31.1-02-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 28`
