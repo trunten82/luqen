@@ -2,7 +2,11 @@ import { timingSafeEqual } from 'node:crypto';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { TokenVerifier, TokenPayload } from './oauth.js';
 
-// Paths that skip authentication entirely
+// Paths that skip authentication entirely. /api/v1/mcp is in this list as
+// of Phase 31.1 Plan 03 — the MCP route installs its OWN scoped preHandler
+// that verifies dashboard-issued JWKS-signed Bearer tokens with RFC 8707
+// audience enforcement. The /.well-known/oauth-protected-resource endpoint
+// is also public per RFC 9728.
 const PUBLIC_PATHS = [
   '/api/v1/health',
   '/api/v1/openapi.json',
@@ -10,11 +14,14 @@ const PUBLIC_PATHS = [
   '/api/v1/oauth/token',
   '/api/v1/templates/csv',
   '/api/v1/templates/json',
+  '/api/v1/mcp',
+  '/.well-known/oauth-protected-resource',
 ];
 
 function isPublicPath(path: string): boolean {
   if (PUBLIC_PATHS.includes(path)) return true;
   if (path.startsWith('/api/v1/docs')) return true;
+  if (path.startsWith('/.well-known/')) return true;
   return false;
 }
 

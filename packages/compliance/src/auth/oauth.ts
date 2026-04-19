@@ -1,4 +1,5 @@
 import {
+  createRemoteJWKSet,
   importPKCS8,
   importSPKI,
   SignJWT,
@@ -64,6 +65,48 @@ export async function createTokenVerifier(
     return {
       sub: payload.sub!,
       scopes: raw.scopes as string[],
+      ...(raw.orgId != null ? { orgId: raw.orgId as string } : {}),
+      iat: payload.iat,
+      exp: payload.exp,
+    };
+  };
+}
+
+/**
+ * Phase 31.1 Plan 03 (D-33 / D-34): JWKS-backed RS256 verifier for the
+ * compliance MCP endpoint. Pulls signing keys from the dashboard AS
+ * /oauth/jwks.json with built-in jose TTL caching and kid-miss refresh.
+ * Enforces `aud` claim contains this service's MCP URL (RFC 8707) —
+ * tokens minted for another service (e.g. branding) are rejected when
+ * presented here.
+ *
+ * This function is DISTINCT from createTokenVerifier above:
+ *   - createTokenVerifier validates local-signed tokens minted by this
+ *     service's own /api/v1/oauth/token endpoint (D-10 internal path
+ *     preserved — ServiceTokenManager bootstrap).
+ *   - createJwksTokenVerifier validates dashboard-issued tokens for
+ *     the external MCP endpoint (/api/v1/mcp).
+ */
+export async function createJwksTokenVerifier(
+  jwksUri: string,
+  expectedAudience: string,
+): Promise<TokenVerifier> {
+  if (jwksUri.trim().length === 0) {
+    throw new Error('createJwksTokenVerifier: jwksUri is required');
+  }
+  if (expectedAudience.trim().length === 0) {
+    throw new Error('createJwksTokenVerifier: expectedAudience is required');
+  }
+  const jwks = createRemoteJWKSet(new URL(jwksUri));
+  return async (token: string): Promise<TokenPayload> => {
+    const { payload } = await jwtVerify(token, jwks, {
+      algorithms: ['RS256'],
+      audience: expectedAudience,
+    });
+    const raw = payload as Record<string, unknown>;
+    return {
+      sub: payload.sub!,
+      scopes: (raw.scopes as string[]) ?? [],
       ...(raw.orgId != null ? { orgId: raw.orgId as string } : {}),
       iat: payload.iat,
       exp: payload.exp,
