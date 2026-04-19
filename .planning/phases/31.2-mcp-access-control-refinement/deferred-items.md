@@ -23,18 +23,9 @@ test assertions were not updated.
 **Disposition:** Defer to Phase 31.1 smoke/verification follow-up or a dedicated
 housekeeping commit. Not related to 31.2 scope.
 
-### `tests/routes/oauth/authorize.test.ts` — 2 failures
-- Test 5 `GET /oauth/authorize — renders adminScopeBlocked card` — expects
-  `body.data.adminScopeBlocked === true`; got `false`.
-- Test 11 `POST /oauth/authorize/consent — returns 403 when a non-admin forges
-  admin.system in consent POST` — expects 403; got 302.
+### `tests/routes/oauth/authorize.test.ts` — RESOLVED by Plan 31.2-02
 
-**Root cause (likely):** Commit `33177ef` "fix(31.1): login returnTo, graceful
-scope gate, alert markup (smoke gaps)" (master history) changed the
-admin-scope gate to render inline alerts rather than blocking with a separate
-consent-view flag. The test still asserts the pre-graceful contract.
-
-**Disposition:** Defer to Phase 31.1 smoke/verification follow-up. Plan 31.2-02
-(`mcp.use` gate on /oauth/authorize) will touch the same handler and may
-incidentally update the assertions; if not, a dedicated docs commit should
-follow 31.2 completion.
+Plan 31.2-02's rewrite of `authorize.ts` (mcp.use gate + switch-org CTA +
+scope narrowing) included a 245-line test-file rewrite that incidentally
+fixed the two pre-existing failures. All 30 tests in this file now pass
+as of commit 68a4b4d (post-Wave-2 merge).
