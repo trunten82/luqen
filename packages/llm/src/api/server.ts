@@ -100,8 +100,16 @@ export async function createServer(options: ServerOptions) {
     },
   });
 
-  // Global auth middleware
-  const authMiddleware = createAuthMiddleware(verifyToken);
+  // Global auth middleware. Phase 31.2 Plan 05 D-22: advertise this resource
+  // server's well-known URL in the WWW-Authenticate header on 401s so
+  // external MCP clients (Phase 32 agent path, Claude Desktop) can discover
+  // the authorization server per RFC 6750 §3.1 + MCP Authorization spec
+  // 2025-06-18. Matches the URL served by registerLlmProtectedResourceMetadata
+  // so the two endpoints always agree.
+  const llmPublicUrl = process.env['LLM_PUBLIC_URL'] ?? 'http://localhost:5100';
+  const authMiddleware = createAuthMiddleware(verifyToken, {
+    resourceMetadataUrl: `${llmPublicUrl}/.well-known/oauth-protected-resource`,
+  });
   app.addHook('preHandler', authMiddleware);
 
   // Decorate request with orgId and authType defaults
