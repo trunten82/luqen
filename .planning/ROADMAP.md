@@ -18,6 +18,7 @@
 - [x] **Phase 30: Dashboard MCP + External Clients** - Dashboard admin operations exposed as MCP tools; external client (Claude Desktop, IDE) connectivity verified. SC#4 accepted 2026-04-18 after Phase 30.1 landed the scope-filter fix.
 - [x] **Phase 30.1: MCP OAuth scope-filter gate (INSERTED)** - Fixed scope-filter bypass for OAuth client-credentials tokens. `getUserPermissions` now returns an empty Set for unknown subs (no user-role fallback), and `filterToolsByScope`/`filterResourcesByScope` rules were rewritten per-permission-suffix (read=.view only; write adds .create/.update/.manage/.delete/admin.users/admin.org; admin.system is admin-only). Verified end-to-end against Claude Desktop (completed 2026-04-18).
 - [x] **Phase 31: Conversation Persistence** - Migrations 047 (agent_conversations + agent_messages with in_window flag) and 048 (agent_audit_log), ConversationRepository (rolling 20-turn window maintained at write time, pending_confirmation + streaming always in_window), AgentAuditRepository (append-only, distinct from pre-existing storage.audit). Verified 2026-04-18 — 49/49 repo tests green.
+- [ ] **Phase 31.1: MCP Authorization Spec Upgrade (INSERTED)** - Upgrade external-client MCP auth from bootstrap `client_credentials` + static Bearer to MCP Authorization spec (2025-06-18) compliance: OAuth 2.1 Authorization Code + PKCE, refresh tokens, Dynamic Client Registration (RFC 7591), and `.well-known/oauth-protected-resource` + `.well-known/oauth-authorization-server` metadata discovery. Must ship before Phase 32 external-client story goes live.
 - [ ] **Phase 32: Agent Service + Chat UI** - AgentService orchestration, text and speech chat side panel, and confirmation dialog for destructive tools
 - [ ] **Phase 33: Agent Intelligence + Audit Viewer** - Context-aware org suggestions, token budget with compaction, and admin audit log viewer
 
@@ -98,11 +99,30 @@ Plans:
 - [ ] 31-01-PLAN.md — Migrations 047 + 048 + ConversationRepository (rolling window + pending_confirmation durability)
 - [ ] 31-02-PLAN.md — AgentAuditRepository (append-only, org-scoped, immutability-surface contract)
 
+### Phase 31.1: MCP Authorization Spec Upgrade (INSERTED — urgent)
+**Goal**: External MCP clients (Claude Desktop, IDEs, future agent-to-agent peers) authenticate to Luqen services using MCP Authorization spec (2025-06-18) compliance — OAuth 2.1 Authorization Code + PKCE with refresh tokens, Dynamic Client Registration (RFC 7591), and `.well-known/oauth-protected-resource` + `.well-known/oauth-authorization-server` metadata discovery. Tokens must carry user identity so `resolveEffectivePermissions` (per-user RBAC) applies naturally instead of service-client fallback.
+**Depends on**: Phase 30 (external-client MCP endpoints live), Phase 30.1 (scope-filter rules locked)
+**Requirements**: MCPAUTH-01, MCPAUTH-02, MCPAUTH-03
+**Rationale for insertion**: Discovered during Phase 30 SC#4 walkthrough (2026-04-18) that bootstrap `client_credentials` + static Bearer does not meet the MCP Authorization spec for external clients and ties tokens to admin-registered OAuth clients rather than user identity. Phase 32 (Agent Service + Chat UI) depends on per-user identity tokens reaching the MCP layer — routed here so Phase 32 stays focused on agent runtime + UI. Phase 32's internal dashboard-to-MCP path (cookie-session + server-minted JWT) is unaffected by this phase.
+**Success Criteria** (what must be TRUE):
+  1. Each Luqen service (compliance, branding, LLM, dashboard) publishes `.well-known/oauth-protected-resource` pointing to its authorization server, and the dashboard publishes `.well-known/oauth-authorization-server` with Authorization Code + PKCE + refresh metadata — MCPAUTH-01
+  2. An external MCP client (Claude Desktop, MCP Inspector) can complete the OAuth 2.1 Authorization Code + PKCE flow against the dashboard, receive an access token tied to a real `dashboard_users.id`, and have that token's per-user permissions flow through `resolveEffectivePermissions` when calling any Luqen MCP tool — MCPAUTH-02
+  3. A refresh token issued during the initial flow can be exchanged for a new short-lived access token without user re-consent, and refresh tokens respect rotation + revocation — MCPAUTH-02
+  4. An MCP client can register itself via Dynamic Client Registration (RFC 7591) at the dashboard's DCR endpoint (decision on open vs admin-gated captured during `/gsd-discuss-phase 31.1`), receive a `client_id`, and complete the Authorization Code + PKCE flow with that new registration — MCPAUTH-03
+  5. Existing `client_credentials` bootstrap path continues to work for service-to-service calls (dashboard → compliance/branding/LLM), with scope-filter rules from Phase 30.1 still applied — no regression to internal service auth
+**Plans**: 4 plans
+Plans:
+- [x] 31.1-01-PLAN.md — Migrations 049-053 + OAuth repositories (clients_v2, auth codes, refresh tokens, consents, signing keys) + StorageAdapter wiring
+- [ ] 31.1-02-PLAN.md — Dashboard OAuth AS endpoints (/authorize + consent UI, /token 3 grants, /register DCR, /jwks, /.well-known/oauth-authorization-server) + signer bootstrap
+- [ ] 31.1-03-PLAN.md — JWKS-backed RS256 verifier swap across 4 services (dashboard/compliance/branding/llm) + .well-known/oauth-protected-resource per service + audience enforcement
+- [ ] 31.1-04-PLAN.md — /admin/oauth-keys rotation UI + /admin/clients DCR extension + scheduler housekeeping + refresh-reuse audit + E2E Claude Desktop smoke checklist
+**UI hint**: yes (consent screen + DCR admin-gate UI if chosen)
+
 ### Phase 32: Agent Service + Chat UI
 **Goal**: Users can converse with the dashboard agent companion via text or speech, and state-changing tool calls require explicit confirmation before execution
-**Depends on**: Phase 29 (tools must be callable), Phase 31 (ConversationRepository must exist)
-**Requirements**: AGENT-01, AGENT-02, AGENT-03, APER-02, MCPAUTH-01, MCPAUTH-02, MCPAUTH-03
-**Cross-cutting requirement (added 2026-04-18 during Phase 30 walkthrough)**: MCP external-client auth must upgrade from bootstrap `client_credentials` + static Bearer to MCP Authorization spec (2025-06-18) compliance before AgentService goes live — OAuth 2.1 Authorization Code + PKCE, refresh tokens, Dynamic Client Registration (RFC 7591), and `.well-known/oauth-protected-resource` + `.well-known/oauth-authorization-server` metadata discovery. Tokens must be tied to user identity, not an admin-registered OAuth client, so per-user RBAC (`resolveEffectivePermissions`) applies naturally. See Task #2 for backlog capture. Candidate new requirement IDs: **MCPAUTH-01** (metadata discovery), **MCPAUTH-02** (PKCE + refresh), **MCPAUTH-03** (DCR).
+**Depends on**: Phase 29 (tools must be callable), Phase 31 (ConversationRepository must exist), Phase 31.1 (external-client MCP auth spec-compliant — external clients cannot connect to the agent pipeline until 31.1 lands)
+**Requirements**: AGENT-01, AGENT-02, AGENT-03, APER-02
+**Cross-phase note** (updated 2026-04-19 via `/gsd-discuss-phase 32`): MCP Authorization spec upgrade (MCPAUTH-01/02/03) relocated from this phase to the inserted Phase 31.1. Phase 32's internal dashboard agent uses cookie-session + server-minted per-user RS256 JWT for MCP dispatch, which is independent of 31.1's external-client OAuth flow. Phase 32's planning decisions are captured in `.planning/phases/32-agent-service-chat-ui/32-CONTEXT.md`.
 **Success Criteria** (what must be TRUE):
   1. A user can open the agent side panel in the dashboard, type a message, and receive a streamed response without a full page reload
   2. The agent routes all LLM calls through the existing capability engine — provider fallback and per-org overrides apply exactly as they do for scan-based AI features
@@ -131,6 +151,7 @@ Plans:
 | 28. MCP Foundation | 3/3 | Complete   | 2026-04-17 |
 | 29. Service MCP Tools | 3/3 | Complete    | 2026-04-17 |
 | 30. Dashboard MCP + External Clients | 6/6 | Complete   | 2026-04-18 |
-| 31. Conversation Persistence | 0/? | Not started | - |
+| 31. Conversation Persistence | 2/2 | Complete | 2026-04-18 |
+| 31.1. MCP Authorization Spec Upgrade (INSERTED) | 1/4 | In Progress|  |
 | 32. Agent Service + Chat UI | 0/? | Not started | - |
 | 33. Agent Intelligence + Audit Viewer | 0/? | Not started | - |
