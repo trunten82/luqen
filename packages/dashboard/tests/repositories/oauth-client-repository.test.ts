@@ -416,6 +416,60 @@ describe('SqliteOauthClientRepository — findByOrg (Phase 31.2 D-19)', () => {
   });
 });
 
+describe('SqliteOauthClientRepository — recordRegistrationUser (Phase 31.2 D-18)', () => {
+  it('sets registered_by_user_id when NULL — first consent wins', async () => {
+    const user = await storage.users.createUser(`u-${randomUUID()}`, 'pw', 'user');
+
+    const reg = await storage.oauthClients.register({
+      clientName: 'Orphan',
+      redirectUris: ['http://localhost/cb'],
+      grantTypes: ['authorization_code'],
+      tokenEndpointAuthMethod: 'none',
+      scope: 'read',
+      // No registeredByUserId — simulates DCR pre-consent row.
+    });
+    expect((await storage.oauthClients.findByClientId(reg.clientId))!.registeredByUserId).toBeNull();
+
+    await storage.oauthClients.recordRegistrationUser(reg.clientId, user.id);
+
+    const after = await storage.oauthClients.findByClientId(reg.clientId);
+    expect(after!.registeredByUserId).toBe(user.id);
+  });
+
+  it('does NOT overwrite a non-null registered_by_user_id — first-consent-wins IS NULL guard', async () => {
+    const firstUser = await storage.users.createUser(`u-${randomUUID()}`, 'pw', 'user');
+    const secondUser = await storage.users.createUser(`u-${randomUUID()}`, 'pw', 'user');
+
+    const reg = await storage.oauthClients.register({
+      clientName: 'Seeded',
+      redirectUris: ['http://localhost/cb'],
+      grantTypes: ['authorization_code'],
+      tokenEndpointAuthMethod: 'none',
+      scope: 'read',
+      registeredByUserId: firstUser.id,
+    });
+    expect((await storage.oauthClients.findByClientId(reg.clientId))!.registeredByUserId).toBe(firstUser.id);
+
+    await storage.oauthClients.recordRegistrationUser(reg.clientId, secondUser.id);
+
+    const after = await storage.oauthClients.findByClientId(reg.clientId);
+    // Later consents from OTHER users do not overwrite.
+    expect(after!.registeredByUserId).toBe(firstUser.id);
+  });
+
+  it('is a no-op for a non-existent client_id', async () => {
+    const user = await storage.users.createUser(`u-${randomUUID()}`, 'pw', 'user');
+
+    // Should not throw, should not insert anything.
+    await expect(
+      storage.oauthClients.recordRegistrationUser('dcr_nonexistent_xxxx', user.id),
+    ).resolves.toBeUndefined();
+
+    const missing = await storage.oauthClients.findByClientId('dcr_nonexistent_xxxx');
+    expect(missing).toBeNull();
+  });
+});
+
 describe('SqliteOauthClientRepository — redirect_uris + grant_types JSON round-trip', () => {
   it('persists redirect_uris as a JSON array and grant_types as a JSON array; round-trip preserved', async () => {
     const redirects = [

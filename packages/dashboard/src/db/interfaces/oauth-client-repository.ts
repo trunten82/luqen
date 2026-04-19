@@ -76,5 +76,15 @@ export interface OauthClientRepository {
    * render the Revoked badge per D-24.
    */
   findByOrg(orgId: string): Promise<readonly OauthClient[]>;
+  /**
+   * 31.2 D-18: first-consent-wins backfill of the user-link column.
+   * Only updates rows where `registered_by_user_id IS NULL`. Subsequent
+   * consents from other users do NOT overwrite. DCR is pre-auth per
+   * RFC 7591 §3 — user identity first appears at consent time, and the
+   * user who grants it is the natural "owner" for /admin/clients scoping.
+   *
+   * No-op if the client_id is unknown (does not throw, does not insert).
+   */
+  recordRegistrationUser(clientId: string, userId: string): Promise<void>;
   revoke(clientId: string): Promise<void>;
 }
