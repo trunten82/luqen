@@ -24,6 +24,7 @@ import { sourceRoutes } from './routes/admin/sources.js';
 import { webhookRoutes } from './routes/admin/webhooks.js';
 import { userRoutes } from './routes/admin/users.js';
 import { clientRoutes } from './routes/admin/clients.js';
+import { registerOauthKeysRoutes } from './routes/admin/oauth-keys.js';
 import { registerServiceConnectionsRoutes } from './routes/admin/service-connections.js';
 import { systemBrandGuidelineRoutes } from './routes/admin/system-brand-guidelines.js';
 import { systemRoutes } from './routes/admin/system.js';
@@ -837,6 +838,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);
   await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, getBrandingTokenManager, getLLMClient);
+  // Phase 31.1 Plan 04 Task 2: admin surface for OAuth signing-key lifecycle.
+  await registerOauthKeysRoutes(server, storage, config.sessionSecret);
   await registerServiceConnectionsRoutes(server, storage, config);
   await systemBrandGuidelineRoutes(server, storage, getLLMClient);
   await monitorRoutes(server, config.complianceUrl);

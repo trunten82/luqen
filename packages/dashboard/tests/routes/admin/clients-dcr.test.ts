@@ -19,6 +19,7 @@ import { readFileSync, rmSync, existsSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../../src/db/sqlite/index.js';
 import { setEncryptionSalt } from '../../../src/plugins/crypto.js';
 import { clientRoutes } from '../../../src/routes/admin/clients.js';
+import { registerSession } from '../../../src/auth/session.js';
 
 vi.mock('../../../src/compliance-client.js', () => ({
   listClients: vi.fn().mockResolvedValue([]),
@@ -82,6 +83,7 @@ async function buildCtx(role: 'admin' | 'viewer' = 'admin', userIdOverride?: str
 
   const server = Fastify({ logger: false });
   await server.register(import('@fastify/formbody'));
+  await registerSession(server, ENC_KEY);
 
   server.decorateReply(
     'view',
@@ -214,26 +216,32 @@ describe('Sidebar partial — Test 9 (/admin/oauth-keys link gated on admin.syst
     const content = readFileSync(sidebarPath, 'utf-8');
     // The link must exist.
     expect(content).toContain('/admin/oauth-keys');
-    // It must be inside a perm.adminSystem guard — we assert that the nearest
-    // opening conditional before the link is `{{#if perm.adminSystem}}` (i.e.
-    // no non-admin branch has bypassed the link).
-    const linkIdx = content.indexOf('/admin/oauth-keys');
-    expect(linkIdx).toBeGreaterThan(0);
-    const prefix = content.slice(0, linkIdx);
-    // Look for the most recent `{{#if ...}}` before the link.
-    const ifMatches = [...prefix.matchAll(/\{\{#if\s+([a-zA-Z0-9_.]+)\s*\}\}/g)];
-    const closeMatches = [...prefix.matchAll(/\{\{\/if\}\}/g)];
-    // Count open - close to find currently-open guards at link position.
-    // The innermost open guard must be perm.adminSystem.
-    const openStack: string[] = [];
+    // It must be inside a perm.adminSystem guard — we find the href-URL match
+    // of `/admin/oauth-keys` used as an actual `href="…"` attribute (not the
+    // one embedded in `startsWith` path-comparison helpers — the sidebar
+    // uses that pattern for `is-active` styling which would otherwise match
+    // first). Then we walk the open/close stack of every `{{#if …}}` /
+    // `{{#unless …}}` ahead of it.
+    const hrefIdx = content.indexOf('href="/admin/oauth-keys"');
+    expect(hrefIdx).toBeGreaterThan(0);
+    const prefix = content.slice(0, hrefIdx);
+    // Match ALL `{{#if …}}` (bare identifier OR helper-expression-with-parens)
+    // and `{{#unless …}}` as opens. Each of those has a matching `{{/if}}`
+    // (both forms close with /if in Handlebars for the #if family; #unless
+    // closes with /unless). Our sidebar doesn't use #unless near this link
+    // but we handle both for safety.
+    const opens = [...prefix.matchAll(/\{\{#(if|unless)\s+([^}]+?)\s*\}\}/g)];
+    const closes = [...prefix.matchAll(/\{\{\/(if|unless)\}\}/g)];
     const combined = [
-      ...ifMatches.map((m) => ({ kind: 'open' as const, expr: m[1]!, idx: m.index! })),
-      ...closeMatches.map((m) => ({ kind: 'close' as const, expr: '', idx: m.index! })),
+      ...opens.map((m) => ({ kind: 'open' as const, name: m[1]!, expr: m[2]!.trim(), idx: m.index! })),
+      ...closes.map((m) => ({ kind: 'close' as const, name: m[1]!, expr: '', idx: m.index! })),
     ].sort((a, b) => a.idx - b.idx);
+    const openStack: string[] = [];
     for (const ev of combined) {
       if (ev.kind === 'open') openStack.push(ev.expr);
       else openStack.pop();
     }
+    // The innermost-or-outer stack must include `perm.adminSystem`.
     expect(openStack).toContain('perm.adminSystem');
   });
 });
