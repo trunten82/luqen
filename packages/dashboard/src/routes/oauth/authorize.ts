@@ -361,6 +361,13 @@ export async function registerAuthorizeRoutes(
       });
     }
 
+    // Phase 31.2 D-18 — first-consent user-link backfill. DCR registrations
+    // are pre-auth per RFC 7591 §3; the first user who consents to the client
+    // is recorded as the owner for /admin/clients org-scoped visibility
+    // (Plan 04 D-19). Later consenting users do NOT overwrite (IS NULL guard
+    // inside the repository UPDATE).
+    await storage.oauthClients.recordRegistrationUser(client.clientId, user.id);
+
     await storage.oauthConsents.recordConsent({
       userId: user.id,
       clientId: client.clientId,
