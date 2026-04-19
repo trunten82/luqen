@@ -617,14 +617,14 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       return;
     }
     // PITFALLS.md #9: MCP endpoint uses Bearer-only auth — session guard is
-    // bypassed when a Bearer token is present. The scoped Bearer preHandler on
-    // the MCP route enforces authentication. Requests to /api/v1/mcp without
-    // Bearer will 401 there (session fallthrough forbidden).
-    if (
-      isBearerOnlyPath(request.url.split('?')[0]) &&
-      typeof request.headers.authorization === 'string' &&
-      request.headers.authorization.startsWith('Bearer ')
-    ) {
+    // ALWAYS bypassed on this path. The scoped Bearer preHandler in
+    // routes/api/mcp.ts enforces authentication and emits the WWW-Authenticate
+    // header on 401 per MCP Authorization spec 2025-06-18. Bypassing
+    // unconditionally (not only when Authorization header present) is required
+    // because MCP clients probe the endpoint without credentials first to
+    // discover the AS via WWW-Authenticate; the old conditional swallowed that
+    // probe with a /login redirect. Smoke-surfaced gap 2026-04-19.
+    if (isBearerOnlyPath(request.url.split('?')[0])) {
       return;
     }
     await authGuard(request, reply);
