@@ -24,6 +24,7 @@ import { registerSeedRoutes } from './routes/seed.js';
 import { registerOrgRoutes } from './routes/orgs.js';
 import { registerWcagCriteriaRoutes } from './routes/wcag-criteria.js';
 import { registerMcpRoutes } from './routes/mcp.js';
+import { registerComplianceProtectedResourceMetadata } from './routes/well-known.js';
 import { VERSION } from '../version.js';
 
 export interface ServerOptions {
@@ -158,6 +159,8 @@ export async function createServer(options: ServerOptions) {
 
   // Register all route groups
   await registerHealthRoutes(app);
+  // Phase 31.1 Plan 03 Task 3: RFC 9728 Resource Server metadata (public).
+  await registerComplianceProtectedResourceMetadata(app);
   await registerOAuthRoutes(app, { db, signToken, tokenExpiry });
   await registerJurisdictionRoutes(app, db);
   await registerRegulationRoutes(app, db);

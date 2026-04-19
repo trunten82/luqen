@@ -116,6 +116,7 @@ function isPublicPath(path: string): boolean {
   // user session. The consent gate lives on /oauth/authorize (which is NOT
   // listed here — it keeps the session-auth gate).
   if (path === '/.well-known/oauth-authorization-server') return true;
+  if (path === '/.well-known/oauth-protected-resource') return true;
   if (path === '/.well-known/jwks.json') return true;
   if (path === '/oauth/jwks.json') return true;
   if (path === '/oauth/register') return true;

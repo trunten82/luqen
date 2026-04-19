@@ -21,6 +21,7 @@ import { registerJwksRoutes } from './jwks.js';
 import { registerAuthorizeRoutes } from './authorize.js';
 import { registerTokenRoutes } from './token.js';
 import { registerRegisterRoutes } from './register.js';
+import { registerProtectedResourceMetadata } from './protected-resource.js';
 
 export async function registerOauthRoutes(
   server: FastifyInstance,
@@ -28,6 +29,7 @@ export async function registerOauthRoutes(
   signer: DashboardSigner,
 ): Promise<void> {
   await registerWellKnownRoutes(server);
+  await registerProtectedResourceMetadata(server);
   await registerJwksRoutes(server, storage);
   await registerAuthorizeRoutes(server, storage);
   await registerTokenRoutes(server, storage, signer);
