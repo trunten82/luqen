@@ -1296,4 +1296,52 @@ CREATE INDEX IF NOT EXISTS idx_oauth_clients_v2_client_id ON oauth_clients_v2(cl
 CREATE INDEX IF NOT EXISTS idx_oauth_clients_v2_user_created ON oauth_clients_v2(registered_by_user_id, created_at DESC);
     `,
   },
+  {
+    id: '050',
+    name: 'oauth-authorization-codes',
+    sql: `
+CREATE TABLE IF NOT EXISTS oauth_authorization_codes (
+  code TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  redirect_uri TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  resource TEXT NOT NULL,
+  code_challenge TEXT NOT NULL,
+  code_challenge_method TEXT NOT NULL CHECK (code_challenge_method = 'S256'),
+  org_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  FOREIGN KEY (client_id) REFERENCES oauth_clients_v2(client_id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES dashboard_users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_codes_expires ON oauth_authorization_codes(expires_at);
+    `,
+  },
+  {
+    id: '051',
+    name: 'oauth-refresh-tokens',
+    sql: `
+CREATE TABLE IF NOT EXISTS oauth_refresh_tokens (
+  id TEXT PRIMARY KEY,
+  token_hash TEXT NOT NULL UNIQUE,
+  chain_id TEXT NOT NULL,
+  parent_id TEXT,
+  client_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  org_id TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  resource TEXT NOT NULL,
+  rotated INTEGER NOT NULL DEFAULT 0 CHECK (rotated IN (0,1)),
+  created_at TEXT NOT NULL,
+  absolute_expires_at TEXT NOT NULL,
+  FOREIGN KEY (client_id) REFERENCES oauth_clients_v2(client_id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES dashboard_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (parent_id) REFERENCES oauth_refresh_tokens(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_refresh_token_hash ON oauth_refresh_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_oauth_refresh_chain ON oauth_refresh_tokens(chain_id);
+CREATE INDEX IF NOT EXISTS idx_oauth_refresh_absolute_expires ON oauth_refresh_tokens(absolute_expires_at);
+    `,
+  },
 ];
