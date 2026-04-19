@@ -14,7 +14,7 @@ import { reportRoutes } from './routes/reports.js';
 import { compareRoutes } from './routes/compare.js';
 import { trendRoutes } from './routes/trends.js';
 import { scheduleRoutes } from './routes/schedules.js';
-import { startScheduler } from './scheduler.js';
+import { startScheduler, startKeyHousekeeping } from './scheduler.js';
 import { manualTestRoutes } from './routes/manual-tests.js';
 import { assignmentRoutes } from './routes/assignments.js';
 import { jurisdictionRoutes } from './routes/admin/jurisdictions.js';
@@ -976,10 +976,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     const timer = startScheduler(storage, orchestrator, config);
     const emailTimer = startEmailScheduler(storage, pluginManager);
     const sourceMonitorTimer = startSourceMonitorScheduler(config, getComplianceTokenManager);
+    // Phase 31.1 Plan 04 Task 1: nightly OAuth key housekeeping + auto-rotation.
+    const keyHousekeepingTimer = startKeyHousekeeping(storage, config.sessionSecret);
     server.addHook('onClose', () => {
       clearInterval(timer);
       clearInterval(emailTimer);
       clearInterval(sourceMonitorTimer);
+      clearInterval(keyHousekeepingTimer);
     });
 
     // ── Backfill missing OAuth clients for existing orgs ──────────────────
