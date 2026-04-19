@@ -22,6 +22,8 @@ import {
   SqliteConversationRepository,
   SqliteAgentAuditRepository,
   SqliteOauthClientRepository,
+  SqliteOauthCodeRepository,
+  SqliteOauthRefreshRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -49,6 +51,8 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly conversations: SqliteConversationRepository;
   readonly agentAudit: SqliteAgentAuditRepository;
   readonly oauthClients: SqliteOauthClientRepository;
+  readonly oauthCodes: SqliteOauthCodeRepository;
+  readonly oauthRefresh: SqliteOauthRefreshRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -72,6 +76,8 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.conversations = new SqliteConversationRepository(this.db);
     this.agentAudit = new SqliteAgentAuditRepository(this.db);
     this.oauthClients = new SqliteOauthClientRepository(this.db);
+    this.oauthCodes = new SqliteOauthCodeRepository(this.db);
+    this.oauthRefresh = new SqliteOauthRefreshRepository(this.db);
   }
 
   async connect(): Promise<void> {
