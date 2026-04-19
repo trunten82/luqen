@@ -46,15 +46,24 @@ export interface McpAuthPreHandlerOptions {
       getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>>;
     };
   };
+  /**
+   * Absolute URL of this resource server's `/.well-known/oauth-protected-resource`
+   * endpoint. Emitted in the `WWW-Authenticate` header on 401 responses per RFC 6750
+   * + MCP Authorization spec 2025-06-18 so external MCP clients can discover the
+   * authorization server. Smoke-surfaced gap 2026-04-19.
+   */
+  readonly resourceMetadataUrl: string;
 }
 
 export function createMcpAuthPreHandler(opts: McpAuthPreHandlerOptions) {
+  const wwwAuthenticate = `Bearer resource_metadata="${opts.resourceMetadataUrl}"`;
   return async function mcpAuthPreHandler(
     request: FastifyRequest,
     reply: FastifyReply,
   ): Promise<void> {
     const authHeader = request.headers.authorization;
     if (authHeader === undefined || !authHeader.startsWith('Bearer ')) {
+      reply.header('WWW-Authenticate', wwwAuthenticate);
       await reply.status(401).send({ error: 'Bearer token required', statusCode: 401 });
       return;
     }
@@ -64,6 +73,7 @@ export function createMcpAuthPreHandler(opts: McpAuthPreHandlerOptions) {
     try {
       payload = await opts.verifyToken(token);
     } catch {
+      reply.header('WWW-Authenticate', `${wwwAuthenticate}, error="invalid_token"`);
       await reply.status(401).send({ error: 'Invalid or expired token', statusCode: 401 });
       return;
     }

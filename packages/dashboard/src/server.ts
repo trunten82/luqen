@@ -937,6 +937,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     storage,
     scanService: mcpScanService,
     serviceConnections: serviceConnectionsRepo,
+    resourceMetadataUrl: `${dashboardPublicUrl}/.well-known/oauth-protected-resource`,
   });
 
   // ── OAuth 2.1 Authorization Server (Phase 31.1 Plan 02) ──────────────────
