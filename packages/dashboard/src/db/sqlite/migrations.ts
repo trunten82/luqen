@@ -1272,4 +1272,28 @@ CREATE INDEX IF NOT EXISTS idx_agent_audit_log_user_created ON agent_audit_log(u
 CREATE INDEX IF NOT EXISTS idx_agent_audit_log_tool_created ON agent_audit_log(tool_name, created_at DESC);
     `,
   },
+  {
+    id: '049',
+    name: 'oauth-clients-v2',
+    sql: `
+CREATE TABLE IF NOT EXISTS oauth_clients_v2 (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL UNIQUE,
+  client_secret_hash TEXT,
+  client_name TEXT NOT NULL,
+  redirect_uris TEXT NOT NULL,
+  grant_types TEXT NOT NULL DEFAULT '["authorization_code","refresh_token"]',
+  token_endpoint_auth_method TEXT NOT NULL CHECK (token_endpoint_auth_method IN ('none','client_secret_basic')),
+  scope TEXT NOT NULL DEFAULT 'read',
+  software_id TEXT,
+  software_version TEXT,
+  registered_by_user_id TEXT,
+  created_at TEXT NOT NULL,
+  revoked_at TEXT,
+  FOREIGN KEY (registered_by_user_id) REFERENCES dashboard_users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_clients_v2_client_id ON oauth_clients_v2(client_id);
+CREATE INDEX IF NOT EXISTS idx_oauth_clients_v2_user_created ON oauth_clients_v2(registered_by_user_id, created_at DESC);
+    `,
+  },
 ];
