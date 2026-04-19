@@ -24,6 +24,12 @@ export async function createTestApp(): Promise<TestContext> {
   const testApiKey = 'test-compliance-api-key';
   process.env['COMPLIANCE_API_KEY'] = testApiKey;
 
+  // Phase 31.1 Plan 03: explicitly clear DASHBOARD_JWKS_URL so server.ts
+  // reuses the local PEM verifier for MCP auth in tests — lets existing
+  // locally-signed tokens continue to authenticate /api/v1/mcp without
+  // standing up a JWKS HTTP server per test.
+  process.env['DASHBOARD_JWKS_URL'] = '';
+
   // Create in-memory SQLite adapter
   const db = new SqliteAdapter(':memory:');
 

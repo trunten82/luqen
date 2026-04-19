@@ -5,6 +5,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import rateLimit from '@fastify/rate-limit';
 import type { DbAdapter } from '../db/adapter.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
+import { createJwksTokenVerifier } from '../auth/oauth.js';
 import { createAuthMiddleware, requireScope } from '../auth/middleware.js';
 import type { ComplianceCache } from '../cache/redis.js';
 import { registerHealthRoutes } from './routes/health.js';
@@ -170,7 +171,29 @@ export async function createServer(options: ServerOptions) {
   await registerSeedRoutes(app, db);
   await registerOrgRoutes(app, db);
   await registerWcagCriteriaRoutes(app, db);
-  await registerMcpRoutes(app, { db });
+
+  // Phase 31.1 Plan 03 (D-33/D-04): construct the MCP-facing verifier from
+  // the dashboard JWKS with audience enforcement. The env vars read here:
+  //   - DASHBOARD_JWKS_URL: URL of the dashboard's /oauth/jwks.json
+  //     (fallback: http://dashboard.luqen.local/oauth/jwks.json)
+  //   - COMPLIANCE_PUBLIC_URL: this service's externally-reachable base URL
+  //     used to derive the expectedAudience (fallback: http://localhost:4000)
+  //
+  // If DASHBOARD_JWKS_URL is explicitly '' (empty) we skip the JWKS
+  // verifier and reuse the existing local-signed `verifyToken` for the
+  // MCP scoped preHandler — preserves the test harness path where tokens
+  // are minted by the same in-memory keypair that validates them. The
+  // scoped preHandler is STILL installed; /api/v1/mcp remains in
+  // PUBLIC_PATHS of the global middleware and the scoped handler is the
+  // sole auth gate either way.
+  const dashboardJwksUrl =
+    process.env['DASHBOARD_JWKS_URL'] ?? 'http://dashboard.luqen.local/oauth/jwks.json';
+  const complianceMcpUrl = `${process.env['COMPLIANCE_PUBLIC_URL'] ?? 'http://localhost:4000'}/api/v1/mcp`;
+  const verifyMcpToken: TokenVerifier =
+    dashboardJwksUrl.trim().length > 0
+      ? await createJwksTokenVerifier(dashboardJwksUrl, complianceMcpUrl)
+      : verifyToken;
+  await registerMcpRoutes(app, { db, verifyMcpToken });
 
   // Startup seed: runs once after server is ready
   app.addHook('onReady', async () => {

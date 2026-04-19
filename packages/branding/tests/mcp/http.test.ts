@@ -60,6 +60,12 @@ describe('POST /api/v1/mcp — branding', () => {
   let adminToken: string;
 
   beforeAll(async () => {
+    // Phase 31.1 Plan 03: force the MCP-facing preHandler to reuse the
+    // local-signed `verifyToken` instead of fetching the dashboard JWKS —
+    // the test mints tokens with the in-memory keypair created just below,
+    // so there's no dashboard to stand up. See server.ts fallback branch.
+    process.env['DASHBOARD_JWKS_URL'] = '';
+
     const db = new SqliteAdapter(':memory:');
     const { privateKey, publicKey } = await generateKeyPair('RS256', { extractable: true });
     const privateKeyPem = await exportPKCS8(privateKey);

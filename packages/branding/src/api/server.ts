@@ -7,7 +7,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { SqliteAdapter } from '../db/sqlite-adapter.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
 import { createAuthMiddleware, requireScope } from '../auth/middleware.js';
-import { verifyClientSecret } from '../auth/oauth.js';
+import { createJwksTokenVerifier, verifyClientSecret } from '../auth/oauth.js';
 import { BrandingMatcher } from '../matcher/index.js';
 import { GuidelineParser } from '../parser/index.js';
 import { VERSION } from '../version.js';
@@ -547,7 +547,23 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     });
   });
 
-  await registerMcpRoutes(app, { db });
+  // Phase 31.1 Plan 03 (D-33/D-04): MCP-facing JWKS verifier with audience
+  // enforcement. See compliance/src/api/server.ts for the same pattern.
+  //
+  // If DASHBOARD_JWKS_URL is explicitly '' (empty) we skip the JWKS verifier
+  // and reuse the existing local-signed `verifyToken` for the MCP scoped
+  // preHandler — preserves the test harness path where tokens are minted by
+  // the same in-memory keypair that validates them. The scoped preHandler is
+  // STILL installed; /api/v1/mcp remains in PUBLIC_PATHS of the global
+  // middleware and the scoped handler is the sole auth gate either way.
+  const dashboardJwksUrl =
+    process.env['DASHBOARD_JWKS_URL'] ?? 'http://dashboard.luqen.local/oauth/jwks.json';
+  const brandingMcpUrl = `${process.env['BRANDING_PUBLIC_URL'] ?? 'http://localhost:4100'}/api/v1/mcp`;
+  const verifyMcpToken: TokenVerifier =
+    dashboardJwksUrl.trim().length > 0
+      ? await createJwksTokenVerifier(dashboardJwksUrl, brandingMcpUrl)
+      : verifyToken;
+  await registerMcpRoutes(app, { db, verifyMcpToken });
 
   return app;
 }
