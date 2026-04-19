@@ -3,6 +3,41 @@ import type { StorageAdapter } from './db/index.js';
 import type { ScanOrchestrator } from './scanner/orchestrator.js';
 import type { DashboardConfig } from './config.js';
 import { computeNextRunAt } from './routes/schedules.js';
+import { runKeyHousekeeping } from './auth/oauth-key-rotation.js';
+
+/**
+ * Start the OAuth key-housekeeping sweep.
+ *
+ * Phase 31.1 Plan 04 Task 1. Runs nightly (24h interval) — sweeps expired
+ * refresh tokens, marks retired keys past the D-25 overlap window as removed
+ * from JWKS, and auto-rotates the current signing key if it's older than
+ * `OAUTH_KEY_MAX_AGE_DAYS` (default 90 days).
+ *
+ * Uses `.unref()` so a running housekeeping timer does not prevent process
+ * exit (mirrors the existing scheduler pattern).
+ */
+const KEY_HOUSEKEEPING_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+export function startKeyHousekeeping(
+  storage: StorageAdapter,
+  encryptionKey: string,
+  intervalMs: number = KEY_HOUSEKEEPING_INTERVAL_MS,
+): NodeJS.Timeout {
+  const timer = setInterval(async () => {
+    try {
+      await runKeyHousekeeping(storage, encryptionKey);
+    } catch (err) {
+      // Log but don't crash — housekeeping failures must not crash the dashboard.
+      // eslint-disable-next-line no-console
+      console.error(
+        '[scheduler] OAuth key housekeeping failed:',
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }, intervalMs);
+  timer.unref();
+  return timer;
+}
 
 export function startScheduler(
   storage: StorageAdapter,

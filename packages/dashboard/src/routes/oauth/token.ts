@@ -194,11 +194,35 @@ async function handleRefresh(
   const newRaw = randomBytes(32).toString('base64url');
   const newHash = hashToken(newRaw);
 
+  const startedAt = Date.now();
   const result = await storage.oauthRefresh.rotate(presentedHash, newHash);
 
+  if (result.kind === 'reuse_detected') {
+    // Phase 31.1 Plan 04 Task 1 — Specific Ideas / D-29.
+    // Write an agent_audit_log entry so operators can alert on stolen-token
+    // replay attempts. user_id='system' because at reuse-detection time we
+    // cannot trust WHICH party (legit owner or attacker) presented the
+    // token — the outcome_detail carries clientId + chain context for
+    // forensic follow-up. See T-31.1-04-07 for the accept-disposition
+    // rationale on the spoofing-attribution risk.
+    await storage.agentAudit.append({
+      userId: 'system',
+      orgId: 'system',
+      toolName: 'oauth.refresh_reuse_detected',
+      argsJson: JSON.stringify({
+        clientId: client.clientId,
+        revokedChainId: result.revokedChainId,
+      }),
+      outcome: 'error',
+      outcomeDetail: `chain_revoked client_id=${client.clientId}`,
+      latencyMs: Date.now() - startedAt,
+    });
+    return reply.status(400).send({ error: 'invalid_grant' });
+  }
+
   if (result.kind !== 'success') {
-    // expired / reuse_detected / not_found → invalid_grant.
-    // Plan 04 will emit an agent_audit_log entry on 'reuse_detected'.
+    // expired / not_found → invalid_grant (same OAuth error so clients
+    // cannot distinguish the two — oracle-attack defense).
     return reply.status(400).send({ error: 'invalid_grant' });
   }
 
