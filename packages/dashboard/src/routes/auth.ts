@@ -11,6 +11,19 @@ interface LoginBody {
   username?: string;
   password?: string;
   apiKey?: string;
+  returnTo?: string;
+}
+
+/**
+ * Resolve a login returnTo input to a safe post-login redirect target.
+ * Only same-origin absolute paths (starting with "/" but NOT "//") are
+ * honored — protects against open-redirect abuse via returnTo=https://evil.
+ * Fallback is "/". Smoke-surfaced gap 2026-04-19.
+ */
+function safeReturnTo(raw: unknown): string {
+  if (typeof raw !== 'string' || raw.length === 0) return '/';
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/';
+  return raw;
 }
 
 interface SsoParams {
@@ -41,10 +54,12 @@ export async function authRoutes(
     // Show session expired message if redirected from expiry hook
     const query = request.query as Record<string, string | undefined>;
     const sessionExpired = query['expired'] === '1';
+    const returnTo = safeReturnTo(query['returnTo']);
 
     return reply.view('login.hbs', {
       mode,
       loginMethods,
+      returnTo,
       ...(sessionExpired ? { error: 'Your session has expired. Please log in again.' } : {}),
     });
   });
@@ -78,7 +93,7 @@ export async function authRoutes(
         session.set('bootId', authService.getBootId());
 
         void storage?.audit.log({ actor: 'admin', actorId: 'api-key', action: 'login.success', resourceType: 'session', details: 'API key login', ipAddress: request.ip });
-        await reply.redirect('/');
+        await reply.redirect(safeReturnTo(body.returnTo));
         return;
       }
 
@@ -147,7 +162,7 @@ export async function authRoutes(
           session.set('bootId', authService.getBootId());
 
           void storage?.audit.log({ actor: displayUsername, actorId: userId, action: 'login.success', resourceType: 'session', details: 'OAuth login', ipAddress: request.ip });
-          await reply.redirect('/');
+          await reply.redirect(safeReturnTo(body.returnTo));
           return;
         } catch {
           // Fall through to local password login
@@ -175,7 +190,7 @@ export async function authRoutes(
       session.set('bootId', authService.getBootId());
 
       void storage?.audit.log({ actor: result.user!.username, actorId: result.user!.id, action: 'login.success', resourceType: 'session', details: 'Password login', ipAddress: request.ip });
-      await reply.redirect('/');
+      await reply.redirect(safeReturnTo(body.returnTo));
     },
   );
 

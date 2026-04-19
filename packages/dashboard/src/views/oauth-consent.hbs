@@ -5,13 +5,23 @@
 
     {{#if adminScopeBlocked}}
       <div class="alert alert--error" role="alert" aria-live="polite">
-        <strong>This client requests admin access you don't have</strong>
-        <p>
-          The client asked for the scope <code>admin.system</code>, which requires
-          system-admin permission in your active org. You don't currently have that
-          permission. Ask your org admin to authorize this client, or have the client
-          request narrower scopes.
-        </p>
+        <div class="alert__body">
+          <div class="alert__title">No scopes you can grant</div>
+          <p>
+            The client asked for scopes that all require permissions you
+            don't currently have in your active org. Ask your org admin to
+            authorize this client, or reconfigure the client to request
+            narrower scopes.
+          </p>
+          {{#if skippedScopes.length}}
+            <p class="muted">Requested scopes you lack:</p>
+            <ul class="consent__scopes">
+              {{#each skippedScopes}}
+                <li><code>{{this}}</code></li>
+              {{/each}}
+            </ul>
+          {{/if}}
+        </div>
       </div>
     {{else}}
       <dl class="consent__kv">
@@ -21,7 +31,7 @@
         <dt>Active org</dt>
         <dd>{{orgName}}</dd>
 
-        <dt>Requested scopes</dt>
+        <dt>Scopes to grant</dt>
         <dd>
           <ul class="consent__scopes">
             {{#each scopeDescriptions}}
@@ -29,6 +39,18 @@
             {{/each}}
           </ul>
         </dd>
+
+        {{#if skippedScopeDescriptions.length}}
+          <dt>Scopes skipped</dt>
+          <dd>
+            <p class="muted" style="margin-top:0;">These scopes the client asked for will NOT be granted because you don't have the matching permission:</p>
+            <ul class="consent__scopes consent__scopes--skipped">
+              {{#each skippedScopeDescriptions}}
+                <li><code>{{this.scope}}</code><span class="consent__scope-desc">{{this.description}}</span></li>
+              {{/each}}
+            </ul>
+          </dd>
+        {{/if}}
 
         <dt>Can reach services</dt>
         <dd>
