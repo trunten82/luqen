@@ -9,10 +9,12 @@
  * Tokens carry:
  *   - alg: 'RS256' (D-24)
  *   - kid: <active key id>  (so /.well-known/jwks.json consumers route to the right key)
- *   - sub: userId (or clientId for client_credentials flows)
+ *   - sub: userId (user-flow grants only — Phase 31.2 D-15 retired client_credentials)
  *   - scopes: [string]   (flows directly into Phase 30.1 filterToolsByScope)
  *   - orgId: user's active session org at /oauth/authorize time (D-12)
  *   - aud: [resource URIs]  (RFC 8707; enforced by Plan 03 verifier)
+ *   - client_id: owning OAuth client id (31.2 D-20 bullet 3 — enables
+ *                post-JWT revoked-client check in mcp/middleware.ts)
  *   - iat + exp            (D-28: 3600s default)
  *   - iss:  DASHBOARD_PUBLIC_URL (fallback: https://dashboard.luqen.local)
  *
@@ -34,6 +36,17 @@ export interface MintAccessTokenInput {
   readonly aud: readonly string[];
   readonly role?: string;
   readonly expiresInSeconds: number;
+  /**
+   * 31.2 D-20 bullet 3: the OAuth client that minted this access token.
+   * Embedded in the JWT payload as `client_id` so the RS verifier's post-JWT
+   * client-status check (packages/dashboard/src/mcp/middleware.ts, Plan 04)
+   * can reject access tokens whose owning client has been revoked.
+   *
+   * REQUIRED — making this optional would let a call site silently skip the
+   * claim and defeat the revoke cascade. The TypeScript compiler will refuse
+   * to compile if any mint call site omits it.
+   */
+  readonly clientId: string;
 }
 
 export interface DashboardSigner {
@@ -74,6 +87,9 @@ export async function createDashboardSigner(
         scopes: [...input.scopes],
         orgId: input.orgId,
         aud: [...input.aud],
+        // Phase 31.2 D-20 bullet 3 — snake_case `client_id` per RFC 8693 /
+        // OAuth 2.1; the verifier reads payload.client_id.
+        client_id: input.clientId,
         ...(input.role !== undefined ? { role: input.role } : {}),
       };
       return new SignJWT(claims)

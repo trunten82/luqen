@@ -103,23 +103,26 @@ describe('createDashboardSigner — Test 3 (verifies against active key SPKI)', 
 });
 
 describe('createDashboardSigner — Test 4 (Phase 31.2 D-20: clientId is a required field)', () => {
-  it('omitting clientId is a TypeScript compile error (guards against call-site drift)', async () => {
+  it('omitting clientId is a TypeScript compile error (typecheck-level guard)', async () => {
     await ensureInitialSigningKey(storage, ENC_KEY);
     const signer = await createDashboardSigner(storage, ENC_KEY);
 
-    // The @ts-expect-error directive asserts that the following call is a
-    // TypeScript type error. If clientId is ever made optional, the
-    // directive becomes a dangling expectation and the compiler fails the
-    // build — forcing the author to re-justify the optional-ness.
-    await expect(async () =>
-      signer.mintAccessToken({
-        sub: 'u-1',
-        orgId: 'o-1',
-        scopes: ['read'],
-        aud: ['https://svc.local/mcp'],
-        expiresInSeconds: 3600,
-        // @ts-expect-error — clientId is REQUIRED per 31.2 D-20 bullet 3.
-      }),
-    ).rejects.toBeDefined();
+    // The @ts-expect-error directive below asserts that the following call
+    // is a TypeScript type error. If clientId is ever made optional, the
+    // directive becomes a dangling expectation and `pnpm typecheck` fails,
+    // forcing the author to re-justify the optional-ness.
+    //
+    // At RUNTIME the call still resolves (TS is type-level, not runtime
+    // enforcement) — so we do NOT assert rejects here. The type-level
+    // assertion IS the test; runtime resolution is documentation.
+    const token = await signer.mintAccessToken({
+      sub: 'u-1',
+      orgId: 'o-1',
+      scopes: ['read'],
+      aud: ['https://svc.local/mcp'],
+      expiresInSeconds: 3600,
+      // @ts-expect-error — clientId is REQUIRED per 31.2 D-20 bullet 3.
+    });
+    expect(typeof token).toBe('string');
   });
 });

@@ -1,16 +1,23 @@
 /**
  * OAuth 2.1 /oauth/token endpoint — Phase 31.1 Plan 02 Task 2.
  *
- * Supports three grants (D-11):
+ * Supports two grants (Phase 31.2 D-15 retired client_credentials):
  *   - authorization_code: PKCE S256 verified + single-use code consumption
  *     + RS256 JWT mint + refresh rotation chain root insertion.
  *   - refresh_token:      rotate-on-use with reuse-detection revocation
  *     (D-29 / T-31.1-02-07). Returns a fresh access_token + fresh refresh_token.
  *     A cross-client refresh is blocked (parent.clientId must match the
  *     presented client).
- *   - client_credentials: confidential-client flow — sub = clientId,
- *     orgId = 'system'. Scopes + resources come from the request body (or
- *     fall back to the client's registered scope).
+ *
+ * Phase 31.2 D-15: client_credentials removed — dashboard /oauth/token is now
+ * exclusively for user flows. Service-to-service bootstrap continues via
+ * per-service /api/v1/oauth/token on compliance/branding/llm (31.1 D-10
+ * invariant preserved). Requests carrying grant_type=client_credentials
+ * receive 400 unsupported_grant_type (OAuth 2.1 §5.2).
+ *
+ * Phase 31.2 D-20 bullet 3: every minted access token carries a `client_id`
+ * claim so the MCP middleware's verifier can reject tokens whose owning
+ * client has been revoked.
  *
  * Client authentication:
  *   token_endpoint_auth_method='none' (public)        — no secret; PKCE proof.
@@ -109,14 +116,14 @@ export async function registerTokenRoutes(
       }
     }
 
-    // 3. Branch on grant_type.
+    // 3. Branch on grant_type. Phase 31.2 D-15: client_credentials retired —
+    // any grant other than authorization_code / refresh_token hits the default
+    // arm and returns 400 unsupported_grant_type per OAuth 2.1 §5.2.
     switch (body.grant_type) {
       case 'authorization_code':
         return handleAuthCode(storage, signer, client, body, reply);
       case 'refresh_token':
         return handleRefresh(storage, signer, client, body, reply);
-      case 'client_credentials':
-        return handleClientCredentials(signer, client, body, reply);
       default:
         return reply.status(400).send({ error: 'unsupported_grant_type' });
     }
@@ -153,6 +160,10 @@ async function handleAuthCode(
     orgId: row.orgId,
     aud: resources,
     expiresInSeconds: ACCESS_TOKEN_TTL_SECONDS,
+    // Phase 31.2 D-20 bullet 3: thread clientId so the MCP middleware can
+    // run a post-JWT revoked-client check. Row.clientId is the client that
+    // the authorization code was bound to at /oauth/authorize/consent time.
+    clientId: row.clientId,
   });
 
   // Mint root of a new refresh-rotation chain.
@@ -240,6 +251,11 @@ async function handleRefresh(
     orgId: result.child.orgId,
     aud: resources,
     expiresInSeconds: ACCESS_TOKEN_TTL_SECONDS,
+    // Phase 31.2 D-20 bullet 3: client_id comes from the authenticated client
+    // (result.parent.clientId === client.clientId by the cross-client refresh
+    // guard above). Using client.clientId keeps the claim source symmetric
+    // with handleAuthCode (both threaded from the server-verified client).
+    clientId: client.clientId,
   });
 
   return reply.send({
@@ -248,32 +264,5 @@ async function handleRefresh(
     expires_in: ACCESS_TOKEN_TTL_SECONDS,
     refresh_token: newRaw,
     scope: result.child.scope,
-  });
-}
-
-// ── grant_type=client_credentials ──────────────────────────────────────────
-
-async function handleClientCredentials(
-  signer: DashboardSigner,
-  client: OauthClient,
-  body: TokenBody,
-  reply: FastifyReply,
-): Promise<FastifyReply> {
-  const scopes = splitSpace(body.scope ?? client.scope);
-  const resources = splitSpace(body.resource);
-
-  const accessToken = await signer.mintAccessToken({
-    sub: client.clientId,
-    scopes,
-    orgId: 'system',
-    aud: resources,
-    expiresInSeconds: ACCESS_TOKEN_TTL_SECONDS,
-  });
-
-  return reply.send({
-    access_token: accessToken,
-    token_type: 'Bearer',
-    expires_in: ACCESS_TOKEN_TTL_SECONDS,
-    scope: scopes.join(' '),
   });
 }
