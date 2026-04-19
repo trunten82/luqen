@@ -33,7 +33,10 @@ describe('RBAC Permission Matrix', () => {
       }
     });
 
-    it('developer has exactly 14 permissions', async () => {
+    // Phase 31.2 D-04: migration 054 back-fills `mcp.use` onto every existing
+    // role (day-1 MCP continuity for the Claude Desktop clients live from
+    // Phase 31.1 smoke). Permission counts below are +1 vs pre-31.2.
+    it('developer has exactly 15 permissions (14 pre-31.2 + mcp.use)', async () => {
       const user = await storage.users.createUser(`dev-${randomUUID()}`, 'pass', 'developer');
       const perms = await storage.roles.getUserPermissions(user.id);
 
@@ -52,16 +55,17 @@ describe('RBAC Permission Matrix', () => {
         'trends.view',
         'branding.view',
         'branding.manage',
+        'mcp.use',
       ]);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(14);
+      expect(perms.size).toBe(15);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
     });
 
-    it('user has exactly 10 permissions', async () => {
+    it('user has exactly 11 permissions (10 pre-31.2 + mcp.use)', async () => {
       const user = await storage.users.createUser(`user-${randomUUID()}`, 'pass', 'user');
       const perms = await storage.roles.getUserPermissions(user.id);
 
@@ -76,23 +80,30 @@ describe('RBAC Permission Matrix', () => {
         'manual_testing',
         'trends.view',
         'branding.view',
+        'mcp.use',
       ]);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(10);
+      expect(perms.size).toBe(11);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
     });
 
-    it('executive has exactly 4 permissions', async () => {
+    it('executive has exactly 5 permissions (4 pre-31.2 + mcp.use)', async () => {
       const user = await storage.users.createUser(`exec-${randomUUID()}`, 'pass', 'executive');
       const perms = await storage.roles.getUserPermissions(user.id);
 
-      const expected = new Set(['reports.view', 'reports.export', 'trends.view', 'branding.view']);
+      const expected = new Set([
+        'reports.view',
+        'reports.export',
+        'trends.view',
+        'branding.view',
+        'mcp.use',
+      ]);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(4);
+      expect(perms.size).toBe(5);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
@@ -120,6 +131,7 @@ describe('RBAC Permission Matrix', () => {
   });
 
   describe('permission boundary checks', () => {
+    // Phase 31.2 D-04: migration 054 adds `mcp.use` to every existing role.
     const adminPermissions = new Set([
       'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
       'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
@@ -128,6 +140,7 @@ describe('RBAC Permission Matrix', () => {
       'admin.teams', 'admin.plugins', 'admin.org', 'admin.system', 'audit.view',
       'compliance.view', 'compliance.manage', 'branding.view', 'branding.manage',
       'llm.view', 'llm.manage',
+      'mcp.use',
     ]);
 
     const developerPermissions = new Set([
@@ -135,15 +148,18 @@ describe('RBAC Permission Matrix', () => {
       'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
       'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
       'branding.view', 'branding.manage',
+      'mcp.use',
     ]);
 
     const userPermissions = new Set([
       'scans.create', 'scans.schedule', 'reports.view', 'reports.export', 'reports.delete',
       'reports.compare', 'issues.assign', 'manual_testing', 'trends.view', 'branding.view',
+      'mcp.use',
     ]);
 
     const executivePermissions = new Set([
       'reports.view', 'reports.export', 'trends.view', 'branding.view',
+      'mcp.use',
     ]);
 
     for (const permission of ALL_PERMISSION_IDS) {
