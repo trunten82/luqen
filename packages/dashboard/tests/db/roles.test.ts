@@ -111,12 +111,14 @@ describe('RoleRepository', () => {
 
   describe('getRolePermissions', () => {
     it('returns sorted permission list for a role', async () => {
+      // Phase 31.2 D-04: migration 054 adds `mcp.use` to every existing role
+      // (14 developer pre-31.2 + mcp.use = 15).
       const devRole = await storage.roles.getRoleByName('developer');
       expect(devRole).not.toBeNull();
 
       const perms = await storage.roles.getRolePermissions(devRole!.id);
       expect(Array.isArray(perms)).toBe(true);
-      expect(perms.length).toBe(14);
+      expect(perms.length).toBe(15);
       // Verify sorted
       expect(perms).toEqual([...perms].sort());
     });
@@ -254,28 +256,33 @@ describe('RoleRepository', () => {
       }
     });
 
-    it('developer gets 14 permissions', async () => {
+    // Phase 31.2 D-04: migration 054 back-fills `mcp.use` onto every
+    // existing role — counts are +1 vs pre-31.2.
+    it('developer gets 15 permissions (14 pre-31.2 + mcp.use)', async () => {
       const devUser = await storage.users.createUser('dev-user', 'pass123', 'developer');
       const perms = await storage.roles.getUserPermissions(devUser.id);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(14);
+      expect(perms.size).toBe(15);
+      expect(perms.has('mcp.use')).toBe(true);
     });
 
-    it('user gets 10 permissions', async () => {
+    it('user gets 11 permissions (10 pre-31.2 + mcp.use)', async () => {
       const normalUser = await storage.users.createUser('normal-user', 'pass123', 'user');
       const perms = await storage.roles.getUserPermissions(normalUser.id);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(10);
+      expect(perms.size).toBe(11);
+      expect(perms.has('mcp.use')).toBe(true);
     });
 
-    it('executive gets 4 permissions', async () => {
+    it('executive gets 5 permissions (4 pre-31.2 + mcp.use)', async () => {
       const execUser = await storage.users.createUser('exec-user', 'pass123', 'executive');
       const perms = await storage.roles.getUserPermissions(execUser.id);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(4);
+      expect(perms.size).toBe(5);
+      expect(perms.has('mcp.use')).toBe(true);
     });
 
     it('unknown user returns empty Set (Phase 30.1 — no user-role fallback)', async () => {

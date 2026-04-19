@@ -116,8 +116,8 @@ describe('getEffectivePermissions', () => {
 
     const perms = await storage.roles.getEffectivePermissions(user.id, org.id);
 
-    // Only global executive perms (4)
-    expect(perms.size).toBe(4);
+    // Only global executive perms (5 = 4 pre-31.2 + mcp.use from migration 054 D-04)
+    expect(perms.size).toBe(5);
   });
 
   it('ignores teams with no role_id', async () => {
@@ -132,8 +132,8 @@ describe('getEffectivePermissions', () => {
 
     const perms = await storage.roles.getEffectivePermissions(user.id, org.id);
 
-    // Only global executive perms, no org additions
-    expect(perms.size).toBe(4);
+    // Only global executive perms, no org additions (5 = 4 pre-31.2 + mcp.use from migration 054)
+    expect(perms.size).toBe(5);
   });
 });
 

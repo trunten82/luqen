@@ -1380,4 +1380,19 @@ CREATE INDEX IF NOT EXISTS idx_oauth_signing_keys_active ON oauth_signing_keys(r
 CREATE INDEX IF NOT EXISTS idx_oauth_signing_keys_removed ON oauth_signing_keys(removed_at);
     `,
   },
+  {
+    id: '054',
+    name: 'backfill-mcp-use-permission',
+    sql: `
+-- Phase 31.2 D-04: back-fill mcp.use onto every existing role so every
+-- live user x org pair keeps MCP access on deploy (zero forced re-auth,
+-- critical for the Claude Desktop clients from Phase 31.1 smoke).
+-- Runs exactly once (schema_migrations); idempotent via INSERT OR IGNORE
+-- so a manual re-run is a no-op. Roles created AFTER this migration do
+-- NOT get mcp.use automatically -- explicit grant required via
+-- /admin/roles (D-04 second sentence).
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+  SELECT id, 'mcp.use' FROM roles;
+    `,
+  },
 ];

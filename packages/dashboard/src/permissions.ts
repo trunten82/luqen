@@ -37,6 +37,8 @@ export const ALL_PERMISSIONS = [
   { id: 'branding.manage', label: 'Manage branding guidelines', group: 'Branding' },
   { id: 'llm.view', label: 'View LLM providers and configuration', group: 'LLM' },
   { id: 'llm.manage', label: 'Manage LLM providers, models, and capabilities', group: 'LLM' },
+  // D-01/D-02 (31.2): per-org grant with admin.system bypass; evaluated via resolveEffectivePermissions on /oauth/authorize.
+  { id: 'mcp.use', label: 'Connect via MCP', group: 'Administration' },
 ] as const;
 
 export type PermissionId = typeof ALL_PERMISSIONS[number]['id'];
