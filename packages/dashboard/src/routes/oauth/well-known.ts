@@ -43,10 +43,16 @@ export async function registerWellKnownRoutes(server: FastifyInstance): Promise<
         registration_endpoint: `${issuer}/oauth/register`,
         jwks_uri: `${issuer}/oauth/jwks.json`,
         response_types_supported: ['code'],
-        grant_types_supported: ['authorization_code', 'refresh_token', 'client_credentials'],
+        // Phase 31.2 D-15: dashboard /oauth/token is now exclusively user flows.
+        // Service-to-service bootstrap continues via each service's own
+        // /api/v1/oauth/token (31.1 D-10 invariant preserved).
+        grant_types_supported: ['authorization_code', 'refresh_token'],
         code_challenge_methods_supported: ['S256'],
         token_endpoint_auth_methods_supported: ['none', 'client_secret_basic'],
-        scopes_supported: ['read', 'write', 'admin.system', 'admin.org', 'admin.users'],
+        // Phase 31.2 D-10: admin.* scopes retired at the OAuth layer. Admin
+        // tool visibility now comes from the user's real RBAC (Plan 03
+        // filterToolsByRbac) — NOT from a broad scope bundle.
+        scopes_supported: ['read', 'write'],
         response_modes_supported: ['query'],
         subject_types_supported: ['public'],
         id_token_signing_alg_values_supported: ['RS256'],
