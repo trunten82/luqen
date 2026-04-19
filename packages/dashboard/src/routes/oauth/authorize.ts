@@ -23,14 +23,17 @@ import { randomBytes } from 'node:crypto';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { resolveEffectivePermissions } from '../../permissions.js';
 
-const VALID_SCOPES = new Set(['read', 'write', 'admin.system', 'admin.org', 'admin.users']);
+// Phase 31.2 D-10: admin.* scopes retired from OAuth. Admin tool visibility
+// now comes exclusively from the user's real RBAC via filterToolsByRbac
+// (Plan 03), not from a broad scope bundle. Clients requesting admin.*
+// scopes receive invalid_scope 400. Existing tokens carrying admin.*
+// scopes continue to verify (no forced re-auth) — RS verifier unchanged,
+// scope-filter admin.* rule becomes a no-op (Plan 03 D-14).
+const VALID_SCOPES = new Set(['read', 'write']);
 
 const SCOPE_DESCRIPTIONS: Record<string, string> = {
   read: 'Read scan reports, brand scores, and similar view-only data',
   write: 'Trigger scans and make writes such as creating guidelines or running rescans',
-  'admin.system': 'Administer the Luqen system globally',
-  'admin.org': "Administer your active org's settings and users",
-  'admin.users': 'Manage users within your active org',
 };
 
 interface AuthorizeQuery {
@@ -66,30 +69,16 @@ function validScopes(scopes: readonly string[]): boolean {
 }
 
 /**
- * Narrow requested scopes to the subset the authenticated user has
- * permission to grant. Admin scopes (admin.system, admin.org, admin.users)
- * require matching RBAC; read/write are always grantable to any logged-in
- * user. Returns { granted, skipped } — the caller decides how to surface
- * skipped scopes (consent note) vs block (nothing left to grant).
- * Smoke-surfaced gap 2026-04-19: previous gate blocked the whole flow on
- * any admin.* scope the user lacked, which broke the Claude Desktop bundle
- * request (read+write+admin.*) for non-system-admin users.
+ * Phase 31.2 D-12: post-admin.* retirement, every valid scope is grantable
+ * to any mcp.use-holding user. partitionScopes is retained only so the
+ * existing call sites stay simple; `skipped` is always empty. The gate that
+ * blocks unauthorised MCP connections now lives above this function — in
+ * the mcp.use check (D-06) — rather than inside scope partitioning.
  */
 function partitionScopes(
   requested: readonly string[],
-  userPermissions: Set<string>,
 ): { granted: readonly string[]; skipped: readonly string[] } {
-  const granted: string[] = [];
-  const skipped: string[] = [];
-  for (const scope of requested) {
-    if (scope.startsWith('admin.')) {
-      if (userPermissions.has(scope)) granted.push(scope);
-      else skipped.push(scope);
-    } else {
-      granted.push(scope);
-    }
-  }
-  return { granted, skipped };
+  return { granted: requested, skipped: [] };
 }
 
 function sessionOrgId(request: FastifyRequest): string {
@@ -166,26 +155,40 @@ export async function registerAuthorizeRoutes(
       });
     }
 
-    // 8. RBAC scope filter (D-09 — relaxed 2026-04-19): admin.* scopes require
-    // matching permission. Scopes the user lacks are SILENTLY DROPPED from the
-    // grant; only if after filtering NO scopes remain do we block the flow.
-    // Previous behavior blocked on any missing admin.* scope, which prevented
-    // non-system-admin users from completing consent for Claude Desktop's
-    // default bundled-scope request (read+write+admin.*).
+    // 8. Phase 31.2 D-06: mcp.use gate — opening an MCP connection requires
+    // mcp.use in the active org, with admin.system (user.role === 'admin')
+    // as a global bypass (D-02). The gate lands immediately after the session
+    // + scope validation checks and BEFORE any consent-screen rendering, so
+    // a user without mcp.use NEVER sees a live consent form for an MCP client.
     const user = request.user;
     const orgId = sessionOrgId(request);
     const perms = await resolveEffectivePermissions(storage.roles, user.id, user.role, orgId);
-    const { granted: grantedScopes, skipped: skippedScopes } = partitionScopes(requestedScopes, perms);
-    if (grantedScopes.length === 0) {
+
+    const isSystemAdmin = user.role === 'admin';
+    if (!isSystemAdmin && !perms.has('mcp.use')) {
+      // D-05: if the user has mcp.use in SOME other org, offer a Switch CTA.
+      // Empty array → the hbs template renders the "ask your admin" card.
+      const switchableOrgs = await listOrgsWithMcpUse(storage, user.id, orgId);
       return reply.view('oauth-consent', {
-        adminScopeBlocked: true,
+        noMcpUse: true,
+        switchableOrgs,
+        activeOrgId: orgId,
         client,
         user,
-        skippedScopes,
+        // Preserve the original URL so the switch-org POST can redirect back.
+        returnTo: request.url,
+        // Carry a CSRF token so the Switch form can POST to /session/switch-org.
+        csrfToken: reply.generateCsrf(),
       });
     }
 
-    // 9. Consent coverage (D-20) — auto-approve if already consented.
+    // 9. Phase 31.2 D-12: with admin.* retired, partitionScopes just forwards
+    // the requested scopes. Retained for symmetry with the POST handler and
+    // so the view contract (scopeDescriptions/skippedScopeDescriptions) is
+    // preserved byte-identically for the mcp.use-holding path.
+    const { granted: grantedScopes, skipped: skippedScopes } = partitionScopes(requestedScopes);
+
+    // 10. Consent coverage (D-20) — auto-approve if already consented.
     const coverage = await storage.oauthConsents.checkCoverage({
       userId: user.id,
       clientId: client.clientId,
@@ -214,7 +217,7 @@ export async function registerAuthorizeRoutes(
       return reply.redirect(redirectUrl.toString(), 302);
     }
 
-    // 10. Render consent screen.
+    // 11. Render consent screen.
     // Override the global CSP's `form-action 'self'` for THIS response so the
     // browser permits the consent form POST handler's 302 redirect to the
     // client's registered redirect_uri. CSP form-action applies to the
@@ -251,7 +254,9 @@ export async function registerAuthorizeRoutes(
       orgName: orgId,
       clientId: client.clientId,
       redirectUri: q.redirect_uri,
-      // Form submits the NARROWED scope set (admin.* dropped where user lacks perms)
+      // Phase 31.2 D-12: grantedScopes === requestedScopes (partitionScopes
+      // is a pass-through after admin.* retirement). Field name retained so
+      // the hidden form input contract with POST /consent stays byte-stable.
       requestedScope: grantedScopes.join(' '),
       requestedResource: requestedResources.join(' '),
       resources: requestedResources,
@@ -329,18 +334,26 @@ export async function registerAuthorizeRoutes(
       });
     }
 
-    // 5. RBAC scope filter (D-09 — relaxed 2026-04-19) re-enforced on POST
-    //    (T-31.1-02-04): server-side drop of admin.* scopes the user lacks.
-    //    If GET-time validation was bypassed by tampering with the scope
-    //    hidden input, server still refuses to grant a scope the user does
-    //    not have. If after filtering NO scopes remain, respond 403.
+    // 5. Phase 31.2 D-06 defense-in-depth: re-enforce the mcp.use gate server-
+    //    side on POST (T-31.1-02-04). Even if a tampered form bypassed the
+    //    GET-time check, the server re-resolves perms for the user's active
+    //    org and rejects with 403 if mcp.use is missing (admin.system bypass
+    //    preserved via user.role === 'admin'). No code row is written.
     const user = request.user;
     const orgId = sessionOrgId(request);
     const perms = await resolveEffectivePermissions(storage.roles, user.id, user.role, orgId);
-    const { granted: grantedScopes } = partitionScopes(requestedScopes, perms);
-    if (grantedScopes.length === 0) {
-      return reply.status(403).send({ error: 'access_denied', error_description: 'no grantable scopes' });
+    if (user.role !== 'admin' && !perms.has('mcp.use')) {
+      return reply.status(403).send({
+        error: 'access_denied',
+        error_description: 'mcp.use permission required in active org',
+      });
     }
+
+    // 6. Phase 31.2 D-12: partitionScopes is now a no-op forwarder — every
+    //    whitelisted scope is grantable to any mcp.use holder. Kept so the
+    //    call site's `grantedScopes` variable still tracks what is about to
+    //    be written to the consent + code rows.
+    const { granted: grantedScopes } = partitionScopes(requestedScopes);
 
     const requestedResources = splitSpace(body.resource);
     const state = body.state ?? '';
@@ -395,4 +408,31 @@ export async function registerAuthorizeRoutes(
     if (state.length > 0) redirectUrl.searchParams.set('state', state);
     return reply.redirect(redirectUrl.toString(), 302);
   });
+}
+
+/**
+ * Phase 31.2 D-05 helper: list orgs (excluding the active one and 'system')
+ * where the authenticated user holds `mcp.use`. Used to render the
+ * switch-org CTA on the consent screen. Empty array → render "ask your
+ * admin" card with no switch button.
+ *
+ * Information-disclosure note (T-31.2-02-02): the returned list is bounded
+ * to orgs where the user has mcp.use. Org names/ids are not leaked for
+ * orgs the user is not a member of — getEffectivePermissions for a non-
+ * member returns an empty set, which filters the org out before any name
+ * is projected.
+ */
+async function listOrgsWithMcpUse(
+  storage: StorageAdapter,
+  userId: string,
+  activeOrgId: string,
+): Promise<ReadonlyArray<{ readonly id: string; readonly name: string }>> {
+  const orgs = await storage.organizations.listOrgs();
+  const matches: Array<{ id: string; name: string }> = [];
+  for (const org of orgs) {
+    if (org.id === activeOrgId || org.id === 'system') continue;
+    const perms = await storage.roles.getEffectivePermissions(userId, org.id);
+    if (perms.has('mcp.use')) matches.push({ id: org.id, name: org.name });
+  }
+  return matches;
 }
