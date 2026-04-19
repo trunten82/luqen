@@ -56,7 +56,7 @@ export class SqliteOauthRefreshRepository implements OauthRefreshRepository {
 
     // New chain ⟹ chain_id = this row's id.
     // Rotation  ⟹ inherit chain_id from the parent row.
-    let chainId = id;
+    let chainId: string = id;
     const parentId = input.parentId ?? null;
     if (parentId !== null) {
       const parent = this.db

@@ -20,6 +20,8 @@ import type { AgentAuditRepository } from './interfaces/agent-audit-repository.j
 import type { OauthClientRepository } from './interfaces/oauth-client-repository.js';
 import type { OauthCodeRepository } from './interfaces/oauth-code-repository.js';
 import type { OauthRefreshRepository } from './interfaces/oauth-refresh-repository.js';
+import type { OauthConsentRepository } from './interfaces/oauth-consent-repository.js';
+import type { OauthSigningKeyRepository } from './interfaces/oauth-signing-key-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -50,4 +52,6 @@ export interface StorageAdapter {
   readonly oauthClients: OauthClientRepository;
   readonly oauthCodes: OauthCodeRepository;
   readonly oauthRefresh: OauthRefreshRepository;
+  readonly oauthConsents: OauthConsentRepository;
+  readonly oauthSigningKeys: OauthSigningKeyRepository;
 }
