@@ -17,6 +17,14 @@ describe('Auth Middleware', () => {
 
   beforeAll(async () => {
     cleanup();
+    // Phase 31.1 Plan 03: force MCP-facing preHandler to reuse the
+    // local-signed verifier instead of fetching the dashboard JWKS — this
+    // harness doesn't stand up a dashboard. Leave LLM_PUBLIC_URL unset so
+    // middleware falls back to the default http://localhost:5100 advertised
+    // by the well-known route (matches must_have #7).
+    process.env['DASHBOARD_JWKS_URL'] = '';
+    delete process.env['LLM_PUBLIC_URL'];
+
     const db = new SqliteAdapter(TEST_DB);
     const { privateKey, publicKey } = await generateKeyPair('RS256', { extractable: true });
     const privateKeyPem = await exportPKCS8(privateKey);
@@ -192,6 +200,61 @@ describe('Auth Middleware', () => {
       });
       // API key has admin scope, so should reach the route handler
       expect(res.statusCode).toBe(201);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase 31.2 Plan 05 (G9 closure) — WWW-Authenticate parity with the
+  // dashboard fix from commit e0637ac. External MCP clients discover the
+  // authorization server via the resource_metadata hint on 401 per RFC 6750
+  // §3.1 + MCP Authorization spec 2025-06-18.
+  // -------------------------------------------------------------------------
+
+  describe('WWW-Authenticate header (Phase 31.2 Plan 05)', () => {
+    const EXPECTED_BASE =
+      'Bearer resource_metadata="http://localhost:5100/.well-known/oauth-protected-resource"';
+    const EXPECTED_INVALID = `${EXPECTED_BASE}, error="invalid_token"`;
+
+    it('missing Authorization on protected route emits base WWW-Authenticate header', async () => {
+      const res = await app.inject({ method: 'GET', url: '/api/v1/providers' });
+      expect(res.statusCode).toBe(401);
+      expect(res.headers['www-authenticate']).toBe(EXPECTED_BASE);
+    });
+
+    it('invalid Bearer token emits WWW-Authenticate with error="invalid_token"', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/providers',
+        headers: { authorization: 'Bearer totally_invalid_token_garbage' },
+      });
+      expect(res.statusCode).toBe(401);
+      expect(res.headers['www-authenticate']).toBe(EXPECTED_INVALID);
+    });
+
+    it('valid JWT request does not emit WWW-Authenticate header', async () => {
+      const token = await signToken({
+        sub: 'ok-client',
+        scopes: ['read'],
+        expiresIn: '1h',
+      });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/providers',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['www-authenticate']).toBeUndefined();
+    });
+
+    it('valid LLM_API_KEY request does not emit WWW-Authenticate header', async () => {
+      process.env['LLM_API_KEY'] = 'www-auth-api-key';
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/providers',
+        headers: { authorization: 'Bearer www-auth-api-key' },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['www-authenticate']).toBeUndefined();
     });
   });
 });
