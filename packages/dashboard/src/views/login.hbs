@@ -22,7 +22,7 @@
 
       {{!-- Solo mode: API key only --}}
       {{#if (eq mode "solo")}}
-      {{> login-form showApiKey=true apiKeyId="apiKey" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error}}
+      {{> login-form showApiKey=true apiKeyId="apiKey" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken returnTo=returnTo error=error}}
       {{/if}}
 
       {{!-- Enterprise mode: SSO + password fallback + API key fallback --}}
@@ -39,32 +39,32 @@
 
       <details class="login-password-fallback">
         <summary class="login-details-summary" style="margin-bottom: var(--space-md, 1rem);">{{t "auth.signInWithPassword"}}</summary>
-        {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
+        {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken returnTo=returnTo error=error username=username}}
       </details>
 
       <details class="login-apikey-fallback" style="margin-top: var(--space-md, 1rem)">
         <summary class="login-details-summary">{{t "auth.signInWithApiKey"}}</summary>
         <div style="margin-top: var(--space-md, 1rem)">
-          {{> login-form showApiKey=true apiKeyId="apiKeyEnterprise" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken error=error}}
+          {{> login-form showApiKey=true apiKeyId="apiKeyEnterprise" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken returnTo=returnTo error=error}}
         </div>
       </details>
       {{/if}}
 
       {{!-- Team mode: username/password + API key fallback --}}
       {{#if (eq mode "team")}}
-      {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
+      {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken returnTo=returnTo error=error username=username}}
 
       <details class="login-apikey-fallback" style="margin-top: var(--space-lg, 1.5rem)">
         <summary class="login-details-summary">{{t "auth.signInWithApiKey"}}</summary>
         <div style="margin-top: var(--space-md, 1rem)">
-          {{> login-form showApiKey=true apiKeyId="apiKeyTeam" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken error=error}}
+          {{> login-form showApiKey=true apiKeyId="apiKeyTeam" buttonLabel=(t "auth.signInWithApiKey") csrfToken=csrfToken returnTo=returnTo error=error}}
         </div>
       </details>
       {{/if}}
 
       {{!-- Fallback when mode is not set (backward compat) --}}
       {{#unless mode}}
-      {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken error=error username=username}}
+      {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken returnTo=returnTo error=error username=username}}
       {{/unless}}
     </div>
     <p class="app-version">{{appVersion}}</p>
