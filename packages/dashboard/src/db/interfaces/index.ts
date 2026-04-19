@@ -19,3 +19,5 @@ export type { AgentAuditRepository } from './agent-audit-repository.js';
 export type { OauthClientRepository } from './oauth-client-repository.js';
 export type { OauthCodeRepository } from './oauth-code-repository.js';
 export type { OauthRefreshRepository } from './oauth-refresh-repository.js';
+export type { OauthConsentRepository } from './oauth-consent-repository.js';
+export type { OauthSigningKeyRepository } from './oauth-signing-key-repository.js';

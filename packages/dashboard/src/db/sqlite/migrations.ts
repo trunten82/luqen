@@ -1344,4 +1344,40 @@ CREATE INDEX IF NOT EXISTS idx_oauth_refresh_chain ON oauth_refresh_tokens(chain
 CREATE INDEX IF NOT EXISTS idx_oauth_refresh_absolute_expires ON oauth_refresh_tokens(absolute_expires_at);
     `,
   },
+  {
+    id: '052',
+    name: 'oauth-user-consents',
+    sql: `
+CREATE TABLE IF NOT EXISTS oauth_user_consents (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  scopes TEXT NOT NULL,
+  resources TEXT NOT NULL,
+  consented_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(user_id, client_id),
+  FOREIGN KEY (user_id) REFERENCES dashboard_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (client_id) REFERENCES oauth_clients_v2(client_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_consents_user ON oauth_user_consents(user_id, consented_at DESC);
+    `,
+  },
+  {
+    id: '053',
+    name: 'oauth-signing-keys',
+    sql: `
+CREATE TABLE IF NOT EXISTS oauth_signing_keys (
+  kid TEXT PRIMARY KEY,
+  public_key_pem TEXT NOT NULL,
+  encrypted_private_key_pem TEXT NOT NULL,
+  algorithm TEXT NOT NULL DEFAULT 'RS256' CHECK (algorithm = 'RS256'),
+  created_at TEXT NOT NULL,
+  retired_at TEXT,
+  removed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_signing_keys_active ON oauth_signing_keys(retired_at);
+CREATE INDEX IF NOT EXISTS idx_oauth_signing_keys_removed ON oauth_signing_keys(removed_at);
+    `,
+  },
 ];
