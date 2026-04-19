@@ -18,7 +18,8 @@
 - [x] **Phase 30: Dashboard MCP + External Clients** - Dashboard admin operations exposed as MCP tools; external client (Claude Desktop, IDE) connectivity verified. SC#4 accepted 2026-04-18 after Phase 30.1 landed the scope-filter fix.
 - [x] **Phase 30.1: MCP OAuth scope-filter gate (INSERTED)** - Fixed scope-filter bypass for OAuth client-credentials tokens. `getUserPermissions` now returns an empty Set for unknown subs (no user-role fallback), and `filterToolsByScope`/`filterResourcesByScope` rules were rewritten per-permission-suffix (read=.view only; write adds .create/.update/.manage/.delete/admin.users/admin.org; admin.system is admin-only). Verified end-to-end against Claude Desktop (completed 2026-04-18).
 - [x] **Phase 31: Conversation Persistence** - Migrations 047 (agent_conversations + agent_messages with in_window flag) and 048 (agent_audit_log), ConversationRepository (rolling 20-turn window maintained at write time, pending_confirmation + streaming always in_window), AgentAuditRepository (append-only, distinct from pre-existing storage.audit). Verified 2026-04-18 — 49/49 repo tests green.
-- [ ] **Phase 31.1: MCP Authorization Spec Upgrade (INSERTED)** - Upgrade external-client MCP auth from bootstrap `client_credentials` + static Bearer to MCP Authorization spec (2025-06-18) compliance: OAuth 2.1 Authorization Code + PKCE, refresh tokens, Dynamic Client Registration (RFC 7591), and `.well-known/oauth-protected-resource` + `.well-known/oauth-authorization-server` metadata discovery. Must ship before Phase 32 external-client story goes live.
+- [x] **Phase 31.1: MCP Authorization Spec Upgrade (INSERTED)** - OAuth 2.1 AS on the dashboard (Authorization Code + PKCE + refresh + DCR + `.well-known` metadata + JWKS rotation). Services swapped to JWKS-backed RS256 verifiers with RFC 8707 audience enforcement. Admin `/admin/clients` DCR surface + `/admin/oauth-keys` rotate UI. E2E smoke-verified against Claude Desktop on lxc-luqen 2026-04-19 (10/10 steps pass). 3/3 requirements met (MCPAUTH-01/02/03).
+- [ ] **Phase 31.2: MCP Access Control Refinement (INSERTED)** - Introduce `mcp.use` per-org RBAC permission gate, bind tool visibility to user's real RBAC (not broad OAuth scope bundles), org-scoped DCR client revoke, service-side WWW-Authenticate parity. Closes G1/G9/G10 from Phase 31.1 smoke.
 - [ ] **Phase 32: Agent Service + Chat UI** - AgentService orchestration, text and speech chat side panel, and confirmation dialog for destructive tools
 - [ ] **Phase 33: Agent Intelligence + Audit Viewer** - Context-aware org suggestions, token budget with compaction, and admin audit log viewer
 
@@ -99,6 +100,27 @@ Plans:
 - [ ] 31-01-PLAN.md — Migrations 047 + 048 + ConversationRepository (rolling window + pending_confirmation durability)
 - [ ] 31-02-PLAN.md — AgentAuditRepository (append-only, org-scoped, immutability-surface contract)
 
+### Phase 31.2: MCP Access Control Refinement (INSERTED)
+**Goal:** Refine MCP access control so (a) any dashboard user connecting via MCP requires an explicit `mcp.use` RBAC permission per-org, (b) tool visibility follows the user's real org-scoped RBAC rather than broad OAuth scope bundles, (c) org admins can revoke DCR'd OAuth clients registered within their own org without needing system-admin. Surface three smoke-found gaps from Phase 31.1 as a cohesive refinement rather than scattered patches.
+**Depends on:** Phase 31.1 (OAuth AS + DCR + verifier swap live)
+**Requirements:** MCPAUTH-04, MCPAUTH-05
+**Rationale for insertion:** Phase 31.1 E2E smoke (2026-04-19) surfaced real access-control gaps: (G1) `/admin/clients` revoke gated only on `admin.system`, blocking org admins from managing their own org's DCR clients; (G9) service-side middlewares (compliance/branding/llm) still emit 401 without `WWW-Authenticate` header — load-bearing for Phase 32's per-service agent token path; (G10) no `mcp.use` permission gate — today any authenticated dashboard user can open an MCP connection. User explicitly requested a specific org-scoped MCP permission enabling developers to wire MCP to perform only actions they are individually allowed to perform in the dashboard.
+**Success Criteria** (what must be TRUE):
+  1. A dashboard user lacking `mcp.use` in their active org cannot complete `/oauth/authorize` — sees a clear "you don't have MCP access in this org" screen rather than a silent flow completion
+  2. `mcp.use` is grantable per-user-per-org via the dashboard admin UI; default-ON for admin roles, default-OFF for new user roles; migration back-fills existing admin users only
+  3. An org admin (admin.org, without admin.system) can revoke DCR'd OAuth clients that belong to their org via `/admin/clients` — cross-org revocation is forbidden and tested
+  4. Compliance, branding, and LLM service MCP 401 responses include `WWW-Authenticate: Bearer resource_metadata="..."` header pointing at each service's `.well-known/oauth-protected-resource` — external MCP clients can discover the AS through any service, not only the dashboard
+  5. An external MCP client's token — whether issued directly to Claude Desktop or minted per-request by Phase 32's agent — scopes tool visibility via the user's real RBAC (not the broad OAuth scope bundle), so a developer token gets exactly the tools the developer could invoke in the dashboard UI
+  6. All Phase 31.1 E2E smoke steps still pass after Phase 31.2 ships — this phase REFINES access control without regressing any of the 10 smoke-verified behaviors
+**Plans:** 5 plans
+Plans:
+- [ ] 31.2-01-PLAN.md — RBAC foundation: add mcp.use to ALL_PERMISSIONS + migration 054 back-fill + findByOrg repo method
+- [ ] 31.2-02-PLAN.md — OAuth AS updates: mcp.use gate on /oauth/authorize + switch-org CTA + client_credentials removal + scopes narrow + first-consent registrant backfill
+- [ ] 31.2-03-PLAN.md — Tool-filter RBAC layer: filterToolsByRbac + http-plugin composition + per-tool runtime guard + metadata drift test
+- [ ] 31.2-04-PLAN.md — Admin UI: org-scoped /admin/clients visibility + Revoked/Org columns + cross-org revoke 403+audit defense (G1 closure)
+- [ ] 31.2-05-PLAN.md — Service-side WWW-Authenticate parity across compliance/branding/llm middlewares (G9 closure)
+**UI hint**: yes (admin knob for mcp.use + org-scoped /admin/clients filters)
+
 ### Phase 31.1: MCP Authorization Spec Upgrade (INSERTED — urgent)
 **Goal**: External MCP clients (Claude Desktop, IDEs, future agent-to-agent peers) authenticate to Luqen services using MCP Authorization spec (2025-06-18) compliance — OAuth 2.1 Authorization Code + PKCE with refresh tokens, Dynamic Client Registration (RFC 7591), and `.well-known/oauth-protected-resource` + `.well-known/oauth-authorization-server` metadata discovery. Tokens must carry user identity so `resolveEffectivePermissions` (per-user RBAC) applies naturally instead of service-client fallback.
 **Depends on**: Phase 30 (external-client MCP endpoints live), Phase 30.1 (scope-filter rules locked)
@@ -152,6 +174,7 @@ Plans:
 | 29. Service MCP Tools | 3/3 | Complete    | 2026-04-17 |
 | 30. Dashboard MCP + External Clients | 6/6 | Complete   | 2026-04-18 |
 | 31. Conversation Persistence | 2/2 | Complete | 2026-04-18 |
-| 31.1. MCP Authorization Spec Upgrade (INSERTED) | 3/4 | In Progress|  |
+| 31.1. MCP Authorization Spec Upgrade (INSERTED) | 4/4 | Complete | 2026-04-19 |
+| 31.2. MCP Access Control Refinement (INSERTED) | 0/? | Not started | - |
 | 32. Agent Service + Chat UI | 0/? | Not started | - |
 | 33. Agent Intelligence + Audit Viewer | 0/? | Not started | - |

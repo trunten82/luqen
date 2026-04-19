@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Completed 31.1-03-PLAN.md (JWKS verifier swap + RFC 9728 RS metadata)
-last_updated: "2026-04-19T10:37:40.766Z"
-last_activity: 2026-04-19
+stopped_at: Phase 31.2 context gathered
+last_updated: "2026-04-19T15:25:57.939Z"
+last_activity: 2026-04-19 -- Phase 31.2 planning complete
 progress:
-  total_phases: 8
-  completed_phases: 5
-  total_plans: 19
-  completed_plans: 18
-  percent: 95
+  total_phases: 9
+  completed_phases: 6
+  total_plans: 24
+  completed_plans: 20
+  percent: 83
 ---
 
 # Project State
@@ -35,7 +35,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 Phase: 31.1 (MCP Authorization Spec Upgrade) — EXECUTING
 Plan: 4 of 4
 Status: Ready to execute
-Last activity: 2026-04-19
+Last activity: 2026-04-19 -- Phase 31.2 planning complete
 
 ## Performance Metrics
 
@@ -119,6 +119,8 @@ New MCP servers:
 
 - Phase 30.1 inserted after Phase 30 on 2026-04-18: Fix scope-filter bypass for OAuth client-credentials tokens — permission fallback on unknown sub currently overrides scope path, letting read-scope clients invoke destructive tools (URGENT — blocks Phase 30 SC#4 sign-off)
 - Phase 31.1 inserted after Phase 31 on 2026-04-19: MCP Authorization Spec Upgrade (OAuth 2.1 + PKCE + refresh + DCR + `.well-known` metadata). Scope decision came out of `/gsd-discuss-phase 32` — MCPAUTH-01/02/03 relocated from Phase 32 to 31.1 so Phase 32 stays focused on agent runtime + UI. Phase 32 depends on 31.1 for the external-client auth story; Phase 32's internal dashboard-to-MCP path uses cookie-session + server-minted JWT and is independent.
+- Phase 31.1 SHIPPED 2026-04-19: 4 plans, 26 plan commits + 8 inline smoke-gap fixes, 2869/2869 dashboard tests passing, E2E Claude Desktop smoke 10/10 pass on lxc-luqen. VERIFICATION PASSED (5/5 SC + 3/3 REQ-IDs).
+- Phase 31.2 inserted after Phase 31.1 on 2026-04-19: MCP Access Control Refinement. Consolidates three gaps surfaced during 31.1 smoke — G1 org-scoped DCR client revoke (not `admin.system`-only), G9 service-side `WWW-Authenticate` header parity, G10 new `mcp.use` per-org RBAC permission with tool visibility driven by user's real RBAC rather than broad OAuth scope bundles. User's explicit ask during smoke; routed to a dedicated phase to keep the refinement cohesive instead of patches.
 
 ### Pending Todos
 
@@ -149,7 +151,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-19T10:37:27.216Z
-Stopped at: Completed 31.1-03-PLAN.md (JWKS verifier swap + RFC 9728 RS metadata)
-Resume file: None
+Last session: 2026-04-19T14:46:01.577Z
+Stopped at: Phase 31.2 context gathered
+Resume file: .planning/phases/31.2-mcp-access-control-refinement/31.2-CONTEXT.md
 Next action: `/gsd:plan-phase 28`
