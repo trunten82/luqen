@@ -200,6 +200,222 @@ describe('SqliteOauthClientRepository — revoke', () => {
   });
 });
 
+describe('SqliteOauthClientRepository — findByOrg (Phase 31.2 D-19)', () => {
+  // Setup shared by every test in this block:
+  //   - org-A + org-B
+  //   - userA (member of team-A in org-A), userB (member of team-B in org-B)
+  //   - clientAlpha registered by userA
+  //   - clientBeta  registered by userB
+  //   - clientOrphan registered by NO user (simulates pre-D-18 backfill rows)
+  async function setupOrgFixture(): Promise<{
+    userAId: string;
+    userBId: string;
+    teamAId: string;
+    teamBId: string;
+    clientAlphaId: string;
+    clientBetaId: string;
+    clientOrphanId: string;
+  }> {
+    const orgA = await storage.organizations.createOrg({
+      name: 'Org A', slug: `org-a-${randomUUID()}`,
+    });
+    const orgB = await storage.organizations.createOrg({
+      name: 'Org B', slug: `org-b-${randomUUID()}`,
+    });
+
+    const userA = await storage.users.createUser(`userA-${randomUUID()}`, 'pw', 'user');
+    const userB = await storage.users.createUser(`userB-${randomUUID()}`, 'pw', 'user');
+
+    const teamA = await storage.teams.createTeam({
+      name: 'Team A', description: '', orgId: orgA.id,
+    });
+    const teamB = await storage.teams.createTeam({
+      name: 'Team B', description: '', orgId: orgB.id,
+    });
+    await storage.teams.addTeamMember(teamA.id, userA.id);
+    await storage.teams.addTeamMember(teamB.id, userB.id);
+
+    const alpha = await storage.oauthClients.register({
+      clientName: 'Alpha (userA)',
+      redirectUris: ['http://localhost/cb'],
+      grantTypes: ['authorization_code', 'refresh_token'],
+      tokenEndpointAuthMethod: 'none',
+      scope: 'read write',
+      registeredByUserId: userA.id,
+    });
+
+    const beta = await storage.oauthClients.register({
+      clientName: 'Beta (userB)',
+      redirectUris: ['http://localhost/cb'],
+      grantTypes: ['authorization_code', 'refresh_token'],
+      tokenEndpointAuthMethod: 'none',
+      scope: 'read write',
+      registeredByUserId: userB.id,
+    });
+
+    const orphan = await storage.oauthClients.register({
+      clientName: 'Orphan (pre-D-18, no user)',
+      redirectUris: ['http://localhost/cb'],
+      grantTypes: ['authorization_code', 'refresh_token'],
+      tokenEndpointAuthMethod: 'none',
+      scope: 'read write',
+      // No registeredByUserId — simulates pre-backfill row.
+    });
+
+    return {
+      userAId: userA.id,
+      userBId: userB.id,
+      teamAId: teamA.id,
+      teamBId: teamB.id,
+      // orgA.id + orgB.id are re-derivable via teams, but the tests pass them
+      // directly from the returned objects as captured closures.
+      clientAlphaId: alpha.clientId,
+      clientBetaId: beta.clientId,
+      clientOrphanId: orphan.clientId,
+    };
+  }
+
+  it('returns a client whose registrant is a member of a team in that org', async () => {
+    const orgA = await storage.organizations.createOrg({
+      name: 'Org A', slug: `org-a-${randomUUID()}`,
+    });
+    const userA = await storage.users.createUser(`userA-${randomUUID()}`, 'pw', 'user');
+    const teamA = await storage.teams.createTeam({
+      name: 'Team A', description: '', orgId: orgA.id,
+    });
+    await storage.teams.addTeamMember(teamA.id, userA.id);
+
+    const alpha = await storage.oauthClients.register({
+      clientName: 'Alpha',
+      redirectUris: ['http://localhost/cb'],
+      grantTypes: ['authorization_code'],
+      tokenEndpointAuthMethod: 'none',
+      scope: 'read',
+      registeredByUserId: userA.id,
+    });
+
+    const rows = await storage.oauthClients.findByOrg(orgA.id);
+    expect(rows.map((r) => r.clientId)).toEqual([alpha.clientId]);
+  });
+
+  it('enforces cross-org isolation — a client registered in org-B is NOT returned for org-A', async () => {
+    const fx = await setupOrgFixture();
+    // Derive orgA id via the team created above; simpler: query it back.
+    const teamA = await storage.teams.getTeam(fx.teamAId);
+    const teamB = await storage.teams.getTeam(fx.teamBId);
+    expect(teamA).not.toBeNull();
+    expect(teamB).not.toBeNull();
+
+    const rowsForA = await storage.oauthClients.findByOrg(teamA!.orgId);
+    const clientIdsForA = rowsForA.map((r) => r.clientId);
+    expect(clientIdsForA).toContain(fx.clientAlphaId);
+    expect(clientIdsForA).not.toContain(fx.clientBetaId);
+
+    const rowsForB = await storage.oauthClients.findByOrg(teamB!.orgId);
+    const clientIdsForB = rowsForB.map((r) => r.clientId);
+    expect(clientIdsForB).toContain(fx.clientBetaId);
+    expect(clientIdsForB).not.toContain(fx.clientAlphaId);
+  });
+
+  it('excludes rows where registered_by_user_id IS NULL (pre-D-18 backfill rows — admin.system only via listAll)', async () => {
+    const fx = await setupOrgFixture();
+    const teamA = await storage.teams.getTeam(fx.teamAId);
+    const teamB = await storage.teams.getTeam(fx.teamBId);
+
+    const rowsForA = await storage.oauthClients.findByOrg(teamA!.orgId);
+    const rowsForB = await storage.oauthClients.findByOrg(teamB!.orgId);
+
+    expect(rowsForA.map((r) => r.clientId)).not.toContain(fx.clientOrphanId);
+    expect(rowsForB.map((r) => r.clientId)).not.toContain(fx.clientOrphanId);
+
+    // But listAll (admin.system) MUST still see the orphan row.
+    const allRows = await storage.oauthClients.listAll();
+    expect(allRows.map((r) => r.clientId)).toContain(fx.clientOrphanId);
+  });
+
+  it('returns an empty array for orgId="system" (admin.system uses listAll)', async () => {
+    // Seed some clients so we prove emptiness is a filter, not an empty DB.
+    await setupOrgFixture();
+
+    const rows = await storage.oauthClients.findByOrg('system');
+    expect(rows).toEqual([]);
+  });
+
+  it('returns a client only once even when the registrant is a member of multiple teams in the same org (DISTINCT)', async () => {
+    const orgA = await storage.organizations.createOrg({
+      name: 'Org A', slug: `org-a-${randomUUID()}`,
+    });
+    const userA = await storage.users.createUser(`userA-${randomUUID()}`, 'pw', 'user');
+    const teamA1 = await storage.teams.createTeam({
+      name: 'Team A1', description: '', orgId: orgA.id,
+    });
+    const teamA2 = await storage.teams.createTeam({
+      name: 'Team A2', description: '', orgId: orgA.id,
+    });
+    await storage.teams.addTeamMember(teamA1.id, userA.id);
+    await storage.teams.addTeamMember(teamA2.id, userA.id);
+
+    const alpha = await storage.oauthClients.register({
+      clientName: 'Alpha',
+      redirectUris: ['http://localhost/cb'],
+      grantTypes: ['authorization_code'],
+      tokenEndpointAuthMethod: 'none',
+      scope: 'read',
+      registeredByUserId: userA.id,
+    });
+
+    const rows = await storage.oauthClients.findByOrg(orgA.id);
+    // Naive JOIN without DISTINCT would return the client twice (one row per
+    // team membership). DISTINCT collapses that to a single row.
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.clientId).toBe(alpha.clientId);
+  });
+
+  it('returns revoked rows — forward-compat for Plan 04 soft-revoke (Revoked badge rendering per D-24)', async () => {
+    // Wave 1 note: repo.revoke() still performs DELETE here; Plan 04 (Wave 3)
+    // will switch it to `UPDATE revoked_at`. This fixture simulates what a
+    // Plan-04-soft-revoked row will look like, and asserts findByOrg's SELECT
+    // does not filter on revoked_at — so that once Plan 04 lands, revoked
+    // rows remain visible to the admin UI for the Revoked-badge rendering
+    // (D-24). If you ever add `WHERE revoked_at IS NULL` to findByOrg, this
+    // test will fail — that is by design.
+    const orgA = await storage.organizations.createOrg({
+      name: 'Org A', slug: `org-a-${randomUUID()}`,
+    });
+    const userA = await storage.users.createUser(`userA-${randomUUID()}`, 'pw', 'user');
+    const teamA = await storage.teams.createTeam({
+      name: 'Team A', description: '', orgId: orgA.id,
+    });
+    await storage.teams.addTeamMember(teamA.id, userA.id);
+
+    const db = storage.getRawDatabase();
+    db.prepare(
+      `INSERT INTO oauth_clients_v2 (
+         id, client_id, client_name, client_secret_hash, scope, grant_types,
+         redirect_uris, token_endpoint_auth_method, software_id, software_version,
+         registered_by_user_id, created_at, revoked_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      'row-revoked',
+      'client-revoked-fixture',
+      'Pre-revoked fixture',
+      null,
+      'read write',
+      JSON.stringify(['authorization_code', 'refresh_token']),
+      JSON.stringify(['http://localhost/cb']),
+      'none',
+      null,
+      null,
+      userA.id,
+      new Date().toISOString(),
+      '2024-01-01T00:00:00Z', // non-null revoked_at — the key of this test
+    );
+
+    const rows = await storage.oauthClients.findByOrg(orgA.id);
+    expect(rows.map((r) => r.clientId)).toContain('client-revoked-fixture');
+  });
+});
+
 describe('SqliteOauthClientRepository — redirect_uris + grant_types JSON round-trip', () => {
   it('persists redirect_uris as a JSON array and grant_types as a JSON array; round-trip preserved', async () => {
     const redirects = [
