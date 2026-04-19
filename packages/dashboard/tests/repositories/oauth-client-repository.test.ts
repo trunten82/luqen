@@ -414,6 +414,37 @@ describe('SqliteOauthClientRepository — findByOrg (Phase 31.2 D-19)', () => {
     const rows = await storage.oauthClients.findByOrg(orgA.id);
     expect(rows.map((r) => r.clientId)).toContain('client-revoked-fixture');
   });
+
+  // Phase 31.2 Plan 04 Task 1 — Test 7: findByOrg rows carry registrantOrgName.
+  //
+  // The admin UI (/admin/clients Org column per D-24) displays the registrant's
+  // org NAME, not a userId. findByOrg's SELECT must project the org name via
+  // JOIN so the caller doesn't need to make N additional lookups.
+  it('returns rows with registrantOrgName set to the seeded org name (Plan 04 D-24)', async () => {
+    const orgA = await storage.organizations.createOrg({
+      name: 'Acme Inc.', slug: `acme-${randomUUID()}`,
+    });
+    const userA = await storage.users.createUser(`userA-${randomUUID()}`, 'pw', 'user');
+    const teamA = await storage.teams.createTeam({
+      name: 'Team A', description: '', orgId: orgA.id,
+    });
+    await storage.teams.addTeamMember(teamA.id, userA.id);
+
+    const alpha = await storage.oauthClients.register({
+      clientName: 'Alpha',
+      redirectUris: ['http://localhost/cb'],
+      grantTypes: ['authorization_code'],
+      tokenEndpointAuthMethod: 'none',
+      scope: 'read',
+      registeredByUserId: userA.id,
+    });
+
+    const rows = await storage.oauthClients.findByOrg(orgA.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.clientId).toBe(alpha.clientId);
+    // The NEW field from Plan 04: org NAME, not userId, not orgId.
+    expect(rows[0]!.registrantOrgName).toBe('Acme Inc.');
+  });
 });
 
 describe('SqliteOauthClientRepository — recordRegistrationUser (Phase 31.2 D-18)', () => {
