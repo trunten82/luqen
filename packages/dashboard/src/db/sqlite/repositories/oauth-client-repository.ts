@@ -132,7 +132,7 @@ export class SqliteOauthClientRepository implements OauthClientRepository {
   }
 
   /**
-   * Phase 31.2 D-19: DCR clients registered by any user who is a
+   * Phase 31.2 D-19 + D-24: DCR clients registered by any user who is a
    * team_member of at least one team in `orgId`.
    *
    *   - `registered_by_user_id IS NULL` rows (pre-D-18) are excluded —
@@ -140,25 +140,25 @@ export class SqliteOauthClientRepository implements OauthClientRepository {
    *   - orgId='system' returns an empty array (admin.system uses listAll).
    *   - SELECT DISTINCT: a user can be in multiple teams in the same org.
    *   - No `WHERE revoked_at IS NULL` — revoked rows MUST remain visible
-   *     so Plan 04's soft-revoke can render the Revoked badge (D-24).
-   *     Plan 04 will extend this SELECT to project the registrant's org
-   *     name via an additional JOIN; that extension is intentionally out
-   *     of scope for Plan 01.
+   *     so /admin/clients can render the Revoked badge (D-24).
+   *   - D-24 (Plan 04 extension): projects `organizations.name` as
+   *     `registrant_org_name` for the Org column on /admin/clients.
    */
   async findByOrg(orgId: string): Promise<readonly OauthClient[]> {
     if (orgId === 'system') return [];
     const rows = this.db
       .prepare(
-        `SELECT DISTINCT c.*
+        `SELECT DISTINCT c.*, o.name AS registrant_org_name
            FROM oauth_clients_v2 c
            JOIN team_members tm ON tm.user_id = c.registered_by_user_id
            JOIN teams t          ON t.id       = tm.team_id
+           JOIN organizations o  ON o.id       = t.org_id
           WHERE c.registered_by_user_id IS NOT NULL
             AND t.org_id = ?
           ORDER BY c.created_at DESC`,
       )
-      .all(orgId) as OauthClientRow[];
-    return rows.map(rowToClient);
+      .all(orgId) as (OauthClientRow & { registrant_org_name: string })[];
+    return rows.map((r) => ({ ...rowToClient(r), registrantOrgName: r.registrant_org_name }));
   }
 
   /**
@@ -184,9 +184,40 @@ export class SqliteOauthClientRepository implements OauthClientRepository {
       .run(userId, clientId);
   }
 
+  /**
+   * Phase 31.2 D-20: soft revoke — sets `revoked_at` (idempotent via
+   * `AND revoked_at IS NULL` guard) and cascade-rotates every live refresh
+   * token for this client. Access tokens remain cryptographically valid
+   * until their TTL, but the Plan 04 `mcp/middleware.ts` post-JWT
+   * client-status check (D-20 bullet 3) rejects them on next call.
+   *
+   * The DELETE-based semantic from Plan 01 is gone — callers that
+   * previously expected `findByClientId` to return `null` post-revoke
+   * must now expect `revokedAt !== null`.
+   */
   async revoke(clientId: string): Promise<void> {
-    this.db
-      .prepare('DELETE FROM oauth_clients_v2 WHERE client_id = ?')
-      .run(clientId);
+    const now = new Date().toISOString();
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `UPDATE oauth_clients_v2
+              SET revoked_at = ?
+            WHERE client_id = ?
+              AND revoked_at IS NULL`,
+        )
+        .run(now, clientId);
+      // D-20 bullets 1+2 cascade: revoke every live refresh chain on this
+      // client. token.ts:handleRefresh already rejects rotated=1 tokens with
+      // invalid_grant, killing re-issuance instantly.
+      this.db
+        .prepare(
+          `UPDATE oauth_refresh_tokens
+              SET rotated = 1
+            WHERE client_id = ?
+              AND rotated = 0`,
+        )
+        .run(clientId);
+    });
+    tx();
   }
 }

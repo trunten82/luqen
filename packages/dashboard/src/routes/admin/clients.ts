@@ -26,9 +26,12 @@ export async function clientRoutes(
   getLLMClient: () => LLMClient | null = () => null,
 ): Promise<void> {
   // GET /admin/clients — list OAuth clients
+  // Phase 31.2 D-19: admin.system sees all DCR rows; admin.org sees only
+  // own-org rows (via findByOrg); regular users are blocked. `compliance.view`
+  // (too permissive, granted to many roles) is removed.
   server.get(
     '/admin/clients',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    { preHandler: requirePermission('admin.system', 'admin.org') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const brandingTokenManager = getBrandingTokenManager();
       const llmClient = getLLMClient();
@@ -83,27 +86,45 @@ export async function clientRoutes(
         isSystem: boolean;
         orgDisplayName: string;
         canRevoke: boolean;
+        revokedAtDisplay: string | null;
         kind: 'DCR';
       }> = [];
       if (storage != null) {
+        // Phase 31.2 D-19: admin.system sees all; admin.org sees own-org only.
+        // Rows with registered_by_user_id IS NULL are admin.system-only
+        // (pre-D-18 orphans).
         const allDcr = isGlobalAdmin
           ? await storage.oauthClients.listAll()
-          : (request.user != null ? await storage.oauthClients.listByUserId(request.user.id) : []);
-        dcrClients = allDcr.map((c) => ({
-          service: 'Dashboard (DCR)',
-          id: c.id,
-          name: c.clientName,
-          clientId: c.clientId,
-          orgId: c.registeredByUserId ?? 'system',
-          createdAtDisplay: new Date(c.createdAt).toLocaleString(),
-          scopesDisplay: c.scope,
-          grantTypesDisplay: c.grantTypes.join(', '),
-          isSystem: false,
-          orgDisplayName: c.registeredByUserId !== null
-            ? `user:${c.registeredByUserId}`
-            : 'Open registration',
-          canRevoke: isGlobalAdmin || c.registeredByUserId === request.user?.id,
-          kind: 'DCR' as const,
+          : await storage.oauthClients.findByOrg(currentOrgId);
+
+        dcrClients = await Promise.all(allDcr.map(async (c) => {
+          // D-24: resolve Org column display. findByOrg rows already carry
+          // registrantOrgName via the JOIN; listAll rows don't — fall back
+          // to getUserOrgs lookup, then '—' for NULL-registrant orphans.
+          let orgDisplay: string;
+          if (c.registrantOrgName !== undefined) {
+            orgDisplay = c.registrantOrgName;
+          } else if (c.registeredByUserId !== null) {
+            const orgs = await storage.organizations.getUserOrgs(c.registeredByUserId);
+            orgDisplay = orgs[0]?.name ?? '—';
+          } else {
+            orgDisplay = '—';
+          }
+          return {
+            service: 'Dashboard (DCR)',
+            id: c.id,
+            name: c.clientName,
+            clientId: c.clientId,
+            orgId: c.registeredByUserId ?? 'system',
+            createdAtDisplay: new Date(c.createdAt).toLocaleString(),
+            scopesDisplay: c.scope,
+            grantTypesDisplay: c.grantTypes.join(', '),
+            isSystem: false,
+            orgDisplayName: orgDisplay,
+            canRevoke: c.revokedAt === null && (isGlobalAdmin || c.registeredByUserId !== null),
+            revokedAtDisplay: c.revokedAt !== null ? new Date(c.revokedAt).toLocaleString() : null,
+            kind: 'DCR' as const,
+          };
         }));
       }
 
@@ -162,6 +183,9 @@ export async function clientRoutes(
         user: request.user,
         clients: formatted,
         isGlobalAdmin,
+        // Phase 31.2 D-24: Org column is shown to admin.system only
+        // (admin.org viewers are implicitly org-scoped, so redundant).
+        showOrgColumn: isGlobalAdmin,
         hasBranding: brandingUrl != null,
         hasLlm: llmClient != null,
         error,
@@ -355,13 +379,14 @@ export async function clientRoutes(
   );
 
   // POST /admin/clients/dcr/:clientId/revoke — revoke DCR-registered OAuth client.
-  // Phase 31.1 Plan 04 Task 2 / D-15. Admins can revoke any DCR client; non-admin
-  // users can only revoke clients they personally registered
-  // (registered_by_user_id === request.user.id). Owner-or-admin enforcement
-  // guards against cross-user revocation (T-31.1-04-02).
+  // Phase 31.2 D-20/D-21: admin.system may revoke any DCR client; admin.org
+  // may revoke only clients whose registrant is in their active org.
+  // Rows with registered_by_user_id IS NULL are admin.system-only. Cross-org
+  // attempts 403 and write `agent_audit_log` entry tool_name =
+  // 'admin.clients.cross_org_revoke_attempt' for forensic tracking.
   server.post(
     '/admin/clients/dcr/:clientId/revoke',
-    { preHandler: requirePermission('admin.system', 'admin.org', 'compliance.view') },
+    { preHandler: requirePermission('admin.system', 'admin.org') },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { clientId } = request.params as { clientId: string };
       if (storage == null) {
@@ -377,13 +402,42 @@ export async function clientRoutes(
           .header('content-type', 'text/html')
           .send(toastHtml('DCR client not found.', 'error'));
       }
-      const isAdmin = request.user?.role === 'admin';
-      if (!isAdmin && client.registeredByUserId !== request.user?.id) {
+
+      const viewer = request.user;
+      const viewerOrgId = getOrgId(request) ?? 'system';
+      const isSystemAdmin = viewer?.role === 'admin';
+
+      // Phase 31.2 D-20/D-21: admin.system revokes anything; admin.org
+      // must be in the same org as the registrant. NULL-registrant rows
+      // are admin.system-only (treated as cross-org for admin.org).
+      let authorised = false;
+      if (isSystemAdmin) {
+        authorised = true;
+      } else if (client.registeredByUserId !== null) {
+        const orgClients = await storage.oauthClients.findByOrg(viewerOrgId);
+        authorised = orgClients.some((c) => c.clientId === clientId);
+      }
+
+      if (!authorised) {
+        // D-21: forensic log of cross-org revoke attempts (no de-dup).
+        await storage.agentAudit.append({
+          userId: viewer?.id ?? 'unknown',
+          orgId: viewerOrgId,
+          toolName: 'admin.clients.cross_org_revoke_attempt',
+          argsJson: JSON.stringify({
+            clientId,
+            registeredByUserId: client.registeredByUserId,
+          }),
+          outcome: 'denied',
+          outcomeDetail: `${clientId}:${viewer?.id ?? 'unknown'}:${viewerOrgId}:${client.registeredByUserId ?? 'null'}`,
+          latencyMs: 0,
+        });
         return reply
           .code(403)
           .header('content-type', 'text/html')
-          .send(toastHtml('Forbidden — you can only revoke DCR clients you registered.', 'error'));
+          .send(toastHtml('Forbidden — you can only revoke DCR clients registered in your org.', 'error'));
       }
+
       await storage.oauthClients.revoke(clientId);
       return reply.redirect(
         `/admin/clients?toast=${encodeURIComponent('DCR client revoked')}`,

@@ -38,6 +38,13 @@ export interface OauthClient {
   readonly registeredByUserId: string | null;
   readonly createdAt: string;
   readonly revokedAt: string | null;
+  /**
+   * 31.2 D-24: display-label for the Org column on /admin/clients.
+   * Populated ONLY by `findByOrg` (via SELECT JOIN on organizations.name).
+   * `listAll` / `listByUserId` leave this undefined — callers resolve via
+   * `organizations.getUserOrgs` when rendering admin.system views.
+   */
+  readonly registrantOrgName?: string;
 }
 
 export interface RegisterClientInput {
@@ -86,5 +93,16 @@ export interface OauthClientRepository {
    * No-op if the client_id is unknown (does not throw, does not insert).
    */
   recordRegistrationUser(clientId: string, userId: string): Promise<void>;
+  /**
+   * 31.2 D-20: soft revoke — sets `revoked_at` (idempotent via IS NULL
+   * guard) and cascade-rotates every live refresh token for this client.
+   * Access tokens remain cryptographically valid until their TTL, but the
+   * Plan 04 `mcp/middleware.ts` post-JWT client-status check rejects them
+   * on next call (D-20 bullet 3).
+   *
+   * The DELETE-based semantic is gone — callers that previously expected
+   * `findByClientId` to return `null` post-revoke must now expect
+   * `revokedAt !== null`.
+   */
   revoke(clientId: string): Promise<void>;
 }
