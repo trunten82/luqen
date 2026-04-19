@@ -181,6 +181,34 @@ export async function registerAuthorizeRoutes(
     }
 
     // 10. Render consent screen.
+    // Override the global CSP's `form-action 'self'` for THIS response so the
+    // browser permits the consent form POST handler's 302 redirect to the
+    // client's registered redirect_uri. CSP form-action applies to the
+    // redirect chain from form submissions, not just the direct target —
+    // without this override, clicking Allow silently fails when the browser
+    // blocks the Location header to a cross-origin URI (e.g. claude.ai).
+    // Smoke-surfaced gap 2026-04-19.
+    try {
+      const redirectOrigin = new URL(q.redirect_uri).origin;
+      const consentCsp = [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net static.cloudflareinsights.com",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "font-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        `form-action 'self' ${redirectOrigin}`,
+        "frame-ancestors 'none'",
+        'upgrade-insecure-requests',
+      ].join(';');
+      reply.header('Content-Security-Policy', consentCsp);
+    } catch {
+      // Invalid URL — redirect_uri validation above should have caught this,
+      // but if it didn't, leave the default CSP in place.
+    }
+
     const csrfToken = reply.generateCsrf();
     return reply.view('oauth-consent', {
       adminScopeBlocked: false,
