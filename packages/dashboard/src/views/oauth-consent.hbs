@@ -1,0 +1,61 @@
+<main id="main-content" class="content-narrow" role="main">
+  <section class="card" aria-labelledby="consent-heading">
+    <h1 id="consent-heading">Authorize {{client.clientName}}</h1>
+    <p class="muted">This application is requesting access to your Luqen account.</p>
+
+    {{#if adminScopeBlocked}}
+      <div class="alert alert-danger" role="alert" aria-live="polite">
+        <strong>This client requests admin access you don't have</strong>
+        <p>
+          The client asked for the scope <code>admin.system</code>, which requires
+          system-admin permission in your active org. You don't currently have that
+          permission. Ask your org admin to authorize this client, or have the client
+          request narrower scopes.
+        </p>
+      </div>
+    {{else}}
+      <dl class="kv">
+        <dt>Signed in as</dt>
+        <dd>{{user.username}} ({{user.role}})</dd>
+
+        <dt>Active org</dt>
+        <dd>{{orgName}}</dd>
+
+        <dt>Requested scopes</dt>
+        <dd>
+          <ul>
+            {{#each scopeDescriptions}}
+              <li><code>{{this.scope}}</code> &mdash; {{this.description}}</li>
+            {{/each}}
+          </ul>
+        </dd>
+
+        <dt>Can reach services</dt>
+        <dd>
+          <ul>
+            {{#each resources}}
+              <li><code>{{this}}</code></li>
+            {{/each}}
+          </ul>
+        </dd>
+
+        <dt>Will redirect to</dt>
+        <dd><code>{{redirectUri}}</code></dd>
+      </dl>
+
+      <form method="POST" action="/oauth/authorize/consent" class="actions" aria-labelledby="consent-heading">
+        <input type="hidden" name="_csrf"                 value="{{csrfToken}}" aria-label="CSRF token" />
+        <input type="hidden" name="client_id"             value="{{clientId}}" aria-label="OAuth client id" />
+        <input type="hidden" name="redirect_uri"          value="{{redirectUri}}" aria-label="Redirect URI" />
+        <input type="hidden" name="scope"                 value="{{requestedScope}}" aria-label="Requested scope" />
+        <input type="hidden" name="resource"              value="{{requestedResource}}" aria-label="Requested resource" />
+        <input type="hidden" name="state"                 value="{{state}}" aria-label="OAuth state parameter" />
+        <input type="hidden" name="code_challenge"        value="{{codeChallenge}}" aria-label="PKCE code challenge" />
+        <input type="hidden" name="code_challenge_method" value="S256" aria-label="PKCE method" />
+
+        <button type="submit" name="approved" value="true"  class="btn btn-primary">Allow</button>
+        <button type="submit" name="approved" value="false" class="btn btn-secondary">Deny</button>
+      </form>
+    {{/if}}
+  </section>
+</main>

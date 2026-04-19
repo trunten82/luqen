@@ -131,15 +131,23 @@ async function buildCtx(opts: {
 }
 
 // Utility to get a fresh csrf token from a GET and carry over the session cookie.
+// Note: Fastify's `res.cookies[0].value` is the raw (unencoded) cookie value.
+// secure-session cookies must be URL-encoded when round-tripping through a
+// `Cookie:` header, otherwise the session fails to decode and the stored CSRF
+// secret appears missing.
 async function primeCsrf(ctx: TestCtx): Promise<{ csrf: string; cookie: string }> {
   const verifier = 'a'.repeat(50);
   const url = `/oauth/authorize?response_type=code&client_id=${ctx.clientId}&redirect_uri=${encodeURIComponent(
     ctx.redirectUri,
   )}&scope=read&resource=${encodeURIComponent('https://svc/mcp')}&code_challenge=${s256(verifier)}&code_challenge_method=S256&state=abc`;
   const res = await ctx.server.inject({ method: 'GET', url });
-  const cookie = res.cookies[0]!.value;
+  // Pull the full Set-Cookie header and reuse the same name=value pair
+  // (pre-encoded) on the POST's Cookie header.
+  const rawSetCookie = res.headers['set-cookie'];
+  const setCookie = Array.isArray(rawSetCookie) ? rawSetCookie[0] : (rawSetCookie ?? '');
+  const cookie = setCookie.split(';')[0] ?? '';
   const body = JSON.parse(res.body) as { data: { csrfToken: string } };
-  return { csrf: body.data.csrfToken, cookie: `session=${cookie}` };
+  return { csrf: body.data.csrfToken, cookie };
 }
 
 // ── GET /oauth/authorize ────────────────────────────────────────────────────
