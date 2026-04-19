@@ -371,4 +371,61 @@ export async function authRoutes(
     request.session.delete();
     await reply.redirect('/login');
   });
+
+  // ── POST /session/switch-org ────────────────────────────────────────────
+  // Phase 31.2 D-05 — switch active org for the OAuth consent flow and
+  // redirect to the original /oauth/authorize?... URL.
+  //
+  // Semantically equivalent to POST /orgs/switch (routes/orgs.ts) but accepts
+  // the returnTo target in the POST body (open-redirect-safe via
+  // safeReturnTo) rather than sniffing the referer header, because the OAuth
+  // consent view supplies the exact `/oauth/authorize?...` URL it wants to
+  // resume. The two routes coexist by design:
+  //   - /orgs/switch        — nav-dropdown flow (referer-based redirect).
+  //   - /session/switch-org — OAuth consent flow (body-based returnTo).
+  //
+  // CSRF is enforced by the dashboard-wide @fastify/csrf-protection
+  // preHandler bound globally in server.ts (line 797-808) — missing or
+  // invalid tokens are rejected with 403 BEFORE this handler runs.
+  server.post('/session/switch-org', async (request: FastifyRequest, reply: FastifyReply) => {
+    const user = request.user;
+    if (user === undefined) {
+      await reply.code(401).send({ error: 'Authentication required' });
+      return;
+    }
+    if (storage === undefined) {
+      await reply.code(503).send({ error: 'Storage adapter not available' });
+      return;
+    }
+
+    const body = (request.body ?? {}) as { orgId?: string; returnTo?: string };
+    const orgId = typeof body.orgId === 'string' ? body.orgId.trim() : '';
+    if (orgId === '') {
+      // D-05 always carries an orgId from the consent form; empty body is
+      // either a bug or an attempted direct-API call. Either way, 400.
+      await reply
+        .code(400)
+        .send({ error: 'invalid_request', error_description: 'orgId is required' });
+      return;
+    }
+
+    // T-31.2-02-04: membership validation BEFORE any session mutation.
+    // Mirrors POST /orgs/switch (orgs.ts line 39).
+    const userOrgs = await storage.organizations.getUserOrgs(user.id);
+    const belongsToOrg = userOrgs.some((org) => org.id === orgId);
+    if (!belongsToOrg) {
+      await reply
+        .code(403)
+        .send({ error: 'You do not have access to this organization' });
+      return;
+    }
+
+    // Membership valid → mutate session and redirect.
+    const session = request.session as { set(key: string, value: unknown): void };
+    session.set('currentOrgId', orgId);
+
+    // T-31.2-02-09: open-redirect-safe — safeReturnTo rejects cross-origin
+    // and protocol-relative targets, falling back to '/'.
+    await reply.redirect(safeReturnTo(body.returnTo));
+  });
 }
