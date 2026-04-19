@@ -64,5 +64,17 @@ export interface OauthClientRepository {
   verifyClientSecret(clientId: string, presentedSecret: string): Promise<boolean>;
   listByUserId(userId: string): Promise<readonly OauthClient[]>;
   listAll(): Promise<readonly OauthClient[]>;
+  /**
+   * 31.2 D-19: list DCR clients whose `registered_by_user_id` maps to any
+   * user who is a team_member of at least one team in this org. Rows with
+   * `registered_by_user_id IS NULL` are deliberately excluded — those are
+   * pre-backfill (pre-D-18) rows, visible only to admin.system via listAll.
+   * Caller should NOT pass orgId='system'; admin.system branch uses listAll.
+   *
+   * Revoked rows (`revoked_at IS NOT NULL`) are INCLUDED — forward-compat for
+   * Plan 04's soft-revoke (DELETE -> UPDATE revoked_at) so the admin UI can
+   * render the Revoked badge per D-24.
+   */
+  findByOrg(orgId: string): Promise<readonly OauthClient[]>;
   revoke(clientId: string): Promise<void>;
 }
