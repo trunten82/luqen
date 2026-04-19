@@ -25,6 +25,7 @@
           <th scope="col">{{t "admin.clients.clientId"}}</th>
           <th scope="col">{{t "admin.clients.scope"}}</th>
           <th scope="col">{{t "common.service"}}</th>
+          <th scope="col">Kind</th>
           <th scope="col">{{t "common.owner"}}</th>
           <th scope="col">{{t "admin.clients.created"}}</th>
           <th scope="col">{{t "common.actions"}}</th>
@@ -37,6 +38,13 @@
           <td data-label="Client ID"><code>{{clientId}}</code></td>
           <td data-label="Scope">{{scopesDisplay}}</td>
           <td data-label="Service"><span class="badge badge--neutral">{{service}}</span></td>
+          <td data-label="Kind">
+            {{#if (eq kind 'DCR')}}
+            <span class="badge badge--warning" title="Dynamically-registered via RFC 7591">DCR</span>
+            {{else}}
+            <span class="badge badge--info">Admin</span>
+            {{/if}}
+          </td>
           <td data-label="Owner">
             {{#if isSystem}}
             <span class="badge badge--neutral">{{t "admin.clients.systemOwner"}}</span>
@@ -47,13 +55,23 @@
           <td data-label="Created">{{createdAtDisplay}}</td>
           <td>
             {{#if canRevoke}}
-            <button hx-post="/admin/clients/{{clientId}}/{{#if (eq service 'Branding')}}revoke-branding{{else}}revoke{{/if}}"
+            {{#if (eq kind 'DCR')}}
+            <button hx-post="/admin/clients/dcr/{{clientId}}/revoke"
+                    hx-confirm="Revoke DCR client {{name}}? MCP clients with this registration will lose access."
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:500ms"
+                    hx-headers='{"X-CSRF-Token": "{{@root.csrfToken}}"}'
+                    class="btn btn--sm btn--danger"
+                    aria-label="Revoke DCR client {{name}}">{{t "admin.clients.revoke"}}</button>
+            {{else}}
+            <button hx-post="/admin/clients/{{clientId}}/{{#if (eq service 'Branding')}}revoke-branding{{else if (eq service 'LLM')}}revoke-llm{{else}}revoke{{/if}}"
                     hx-confirm="Revoke client {{name}}? This cannot be undone."
                     hx-target="closest tr"
                     hx-swap="outerHTML swap:500ms"
                     class="btn btn--sm btn--danger"
                     aria-label="Revoke {{name}}">{{t "admin.clients.revoke"}}</button>
             <input type="hidden" name="_csrf" value="{{@root.csrfToken}}">
+            {{/if}}
             {{else}}
             <span class="text-xs text-muted">{{t "admin.clients.protected"}}</span>
             {{/if}}
@@ -61,7 +79,7 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="7" class="table__empty">{{t "admin.clients.noClients"}}</td>
+          <td colspan="8" class="table__empty">{{t "admin.clients.noClients"}}</td>
         </tr>
         {{/each}}
       </tbody>

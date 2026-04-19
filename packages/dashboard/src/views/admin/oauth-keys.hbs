@@ -1,0 +1,51 @@
+<section aria-label="OAuth signing keys management">
+  <div class="page-actions">
+    <form method="POST" action="/admin/oauth-keys/rotate" class="inline">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <button type="submit" class="btn btn--primary"
+              onclick="return confirm('Rotate the OAuth signing key now? The current key will move to the retiring set and remain in JWKS for 30 days + 1 hour.');"
+              aria-label="Rotate signing key now">Rotate now</button>
+    </form>
+  </div>
+
+  <p class="text-muted mb-md">
+    OAuth 2.1 signing keys used to mint RS256 JWT access + refresh tokens.
+    Active keys sign new tokens; retiring keys stay in JWKS for the 30d+1h
+    overlap window (D-25) so in-flight tokens remain valid.
+  </p>
+
+  <div class="table-wrapper" aria-live="polite" aria-atomic="false">
+    <table class="table" aria-label="OAuth Signing Keys">
+      <thead>
+        <tr>
+          <th scope="col">Key ID</th>
+          <th scope="col">Created</th>
+          <th scope="col">Retired</th>
+          <th scope="col">Removed</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each keys}}
+        <tr id="key-{{this.kid}}">
+          <td data-label="Key ID"><code>{{this.kid}}</code></td>
+          <td data-label="Created">{{this.createdAtDisplay}}</td>
+          <td data-label="Retired">{{this.retiredAtDisplay}}</td>
+          <td data-label="Removed">{{this.removedAtDisplay}}</td>
+          <td data-label="Status">
+            {{#if this.isCurrent}}
+            <span class="badge badge--success">Current</span>
+            {{else}}
+            <span class="badge badge--warning">Retiring</span>
+            {{/if}}
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="5" class="table__empty">No signing keys registered.</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>
