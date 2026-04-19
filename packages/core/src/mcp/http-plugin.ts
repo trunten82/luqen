@@ -40,6 +40,7 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
+  CallToolRequestSchema,
   ListToolsRequestSchema,
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
@@ -48,7 +49,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { extractToolContext } from './auth.js';
 import {
-  filterToolsByPermissions,
+  filterToolsByRbac,
   filterToolsByScope,
   filterResourcesByPermissions,
   filterResourcesByScope,
@@ -134,11 +135,33 @@ export async function createMcpHttpPlugin(
     // No context = pre-auth/tool-probe; return empty to prevent tool-name
     // leakage (defense in depth — the route handler also enforces 401/403
     // before any dispatch reaches this handler).
-    const allowedNames: readonly string[] = ctx == null
-      ? []
-      : ctx.permissions.size > 0
-        ? filterToolsByPermissions(toolMetadata, ctx.permissions)
-        : filterToolsByScope(toolMetadata, ctx.scopes);
+    //
+    // Phase 31.2 D-07: defense-in-depth composition — `visible tools` is
+    // the INTERSECTION of scope-filter and RBAC-filter when the caller is
+    // an authenticated end user (ctx.permissions.size > 0).
+    //
+    // Two regimes:
+    //   (a) End user with RBAC (permissions.size > 0): intersect the two
+    //       filters. Pre-31.2 tokens carrying legacy admin.* scope values
+    //       see no extra tools via the scope path because the scope-filter
+    //       admin.system rule is a no-op (D-14); intersection reduces to
+    //       RBAC in practice — tool visibility tracks the user's real
+    //       permissions exactly.
+    //   (b) Legacy service-client token (permissions.size === 0, Phase
+    //       30.1 invariant): scope-filter alone. Intersecting with
+    //       filterToolsByRbac would yield only unannotated tools (since
+    //       the empty perm set fails every .has() check), breaking S2S
+    //       callers. Fall through to scope-only to preserve 30.1.
+    let allowedNames: readonly string[];
+    if (ctx == null) {
+      allowedNames = [];
+    } else if (ctx.permissions.size > 0) {
+      const byScope = new Set(filterToolsByScope(toolMetadata, ctx.scopes));
+      const byRbac = new Set(filterToolsByRbac(toolMetadata, ctx.permissions));
+      allowedNames = [...byScope].filter((name) => byRbac.has(name));
+    } else {
+      allowedNames = filterToolsByScope(toolMetadata, ctx.scopes);
+    }
     const allowedSet = new Set(allowedNames);
 
     const registered = serverAsAny._registeredTools ?? {};
@@ -156,6 +179,75 @@ export async function createMcpHttpPlugin(
       }));
 
     return { tools };
+  });
+
+  // ------- Phase 31.2 D-08: per-tool runtime RBAC guard on tools/call.
+  //
+  // Defense-in-depth last-line — even if the tools/list filter above drifts
+  // (new tool added without ToolMetadata), a client guessing a tool name
+  // cannot invoke a write operation without the required permission. The
+  // guard runs ONLY for authenticated end users (ctx.permissions.size > 0);
+  // S2S callers (empty perms) are governed by scope-filter only, preserving
+  // the Phase 30.1 invariant.
+  //
+  // Implementation: capture the SDK's default CallToolRequestSchema handler
+  // (installed by setToolRequestHandlers on first registerTool call) from
+  // the protocol's _requestHandlers map, then override it with a guard that
+  // delegates to the original handler on success. This preserves every
+  // SDK-native path (input validation, output schema, task handling,
+  // error wrapping) instead of reinventing tool dispatch.
+  const protocolAsAny = mcpServer.server as unknown as {
+    _requestHandlers?: Map<
+      string,
+      (request: unknown, extra: unknown) => Promise<unknown>
+    >;
+  };
+  const callToolMethod = 'tools/call';
+  const sdkCallToolHandler = protocolAsAny._requestHandlers?.get(callToolMethod);
+
+  mcpServer.server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+    const ctx = getCurrentToolContext();
+    const toolName = request.params.name;
+    const meta = toolMetadata.find((t) => t.name === toolName);
+
+    if (
+      ctx != null &&
+      ctx.permissions.size > 0 &&
+      meta?.requiredPermission != null &&
+      !ctx.permissions.has(meta.requiredPermission)
+    ) {
+      // T-31.2-03-04: returning the missing permission name is accepted risk —
+      // it helps legitimate clients self-diagnose and the permission name is
+      // not itself privileged.
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify({
+              error: 'Forbidden',
+              message: `Tool "${toolName}" requires permission "${meta.requiredPermission}"`,
+              requiredPermission: meta.requiredPermission,
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    // Delegate to the SDK-installed handler (captured before our override).
+    // When `sdkCallToolHandler` is absent (no tools registered, or the SDK
+    // evolves the internal wiring), fall back to an explicit error — safer
+    // than silently dispatching with no validation.
+    if (sdkCallToolHandler == null) {
+      throw new McpError(
+        ErrorCode.MethodNotFound,
+        'tools/call handler not initialised on this McpServer',
+      );
+    }
+    // The captured handler was wrapped by `setRequestHandler` with a
+    // parseWithCompat call, so pass the raw request (not the parsed one)
+    // to match the shape expected at the protocol layer.
+    return (await sdkCallToolHandler(request, extra)) as never;
   });
 
   // ------- Phase 30 D-12: Resources RBAC overrides.

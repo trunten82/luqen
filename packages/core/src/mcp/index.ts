@@ -17,6 +17,7 @@ export type { McpHttpPluginOptions } from './http-plugin.js';
 export { extractToolContext } from './auth.js';
 export {
   filterToolsByPermissions,
+  filterToolsByRbac,
   filterToolsByScope,
   filterResourcesByPermissions,
   filterResourcesByScope,
