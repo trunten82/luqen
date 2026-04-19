@@ -13,6 +13,7 @@ import { GuidelineParser } from '../parser/index.js';
 import { VERSION } from '../version.js';
 import type { MatchableIssue, BrandColor, BrandFont, BrandSelector } from '../types.js';
 import { registerMcpRoutes } from './routes/mcp.js';
+import { registerBrandingProtectedResourceMetadata } from './routes/well-known.js';
 
 export interface ServerOptions {
   readonly db: SqliteAdapter;
@@ -133,6 +134,9 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       timestamp: new Date().toISOString(),
     });
   });
+
+  // Phase 31.1 Plan 03 Task 3: RFC 9728 Resource Server metadata (public).
+  await registerBrandingProtectedResourceMetadata(app);
 
   // ---------------------------------------------------------------------------
   // OAuth token endpoint

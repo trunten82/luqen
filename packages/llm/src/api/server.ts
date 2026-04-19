@@ -16,6 +16,7 @@ import { registerCapabilityRoutes } from './routes/capabilities.js';
 import { registerCapabilityExecRoutes } from './routes/capabilities-exec.js';
 import { registerPromptRoutes } from './routes/prompts.js';
 import { registerMcpRoutes } from './routes/mcp.js';
+import { registerLlmProtectedResourceMetadata } from './routes/well-known.js';
 import { VERSION } from '../version.js';
 
 export interface ServerOptions {
@@ -128,6 +129,8 @@ export async function createServer(options: ServerOptions) {
 
   // Register all route groups
   await registerHealthRoutes(app);
+  // Phase 31.1 Plan 03 Task 3: RFC 9728 Resource Server metadata (public).
+  await registerLlmProtectedResourceMetadata(app);
   await registerOAuthRoutes(app, { db, signToken, tokenExpiry });
   await registerClientRoutes(app, db);
   await registerProviderRoutes(app, db);
