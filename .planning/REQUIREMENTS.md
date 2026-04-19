@@ -41,7 +41,7 @@ Requirements for the MCP Servers & Agent Companion milestone. Each maps to roadm
 
 ### MCP Authorization Spec Compliance (added 2026-04-19)
 
-- [ ] **MCPAUTH-01**: Each service publishes `.well-known/oauth-protected-resource` and `.well-known/oauth-authorization-server` metadata for MCP clients to discover authorization configuration automatically (per MCP spec 2025-06-18)
+- [x] **MCPAUTH-01**: Each service publishes `.well-known/oauth-protected-resource` and `.well-known/oauth-authorization-server` metadata for MCP clients to discover authorization configuration automatically (per MCP spec 2025-06-18)
 - [x] **MCPAUTH-02**: External MCP clients authenticate via OAuth 2.1 Authorization Code + PKCE with refresh tokens, and the resulting access tokens carry user identity (not service-client identity) so per-user RBAC via `resolveEffectivePermissions` applies
 - [x] **MCPAUTH-03**: External MCP clients can self-register via Dynamic Client Registration (RFC 7591) at a Luqen DCR endpoint, subject to admin policy (open vs allowlist — decided during `/gsd-discuss-phase 31.1`)
 
@@ -101,7 +101,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APER-02 | Phase 32 | Pending |
 | APER-03 | Phase 31 | Pending |
 | APER-04 | Phase 33 | Pending |
-| MCPAUTH-01 | Phase 31.1 | Pending |
+| MCPAUTH-01 | Phase 31.1 | Complete |
 | MCPAUTH-02 | Phase 31.1 | Complete |
 | MCPAUTH-03 | Phase 31.1 | Complete |
 
