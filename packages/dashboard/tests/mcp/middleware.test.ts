@@ -21,12 +21,17 @@ function makeMockReply(): {
   const send = vi.fn(async (b: unknown) => {
     body = b;
   });
+  const headers: Record<string, string> = {};
   const reply = {
+    header: vi.fn((name: string, value: string) => {
+      headers[name] = value;
+      return reply;
+    }),
     status: vi.fn((s: number) => {
       status = s;
       return { send } as unknown as FastifyReply;
     }),
-  } as unknown as FastifyReply;
+  } as unknown as FastifyReply & { header: (n: string, v: string) => FastifyReply };
   return {
     reply,
     getStatus: () => status,
@@ -59,7 +64,7 @@ describe('createMcpAuthPreHandler', () => {
   it('Test 1: returns 401 when Authorization header is missing', async () => {
     const verify: McpTokenVerifier = vi.fn();
     const storage = makeStubStorage();
-    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage });
+    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     const request = makeMockRequest({ headers: {} });
     const { reply, getStatus, getBody } = makeMockReply();
 
@@ -73,7 +78,7 @@ describe('createMcpAuthPreHandler', () => {
   it('Test 2: returns 401 when Authorization header is Basic (not Bearer)', async () => {
     const verify: McpTokenVerifier = vi.fn();
     const storage = makeStubStorage();
-    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage });
+    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     const request = makeMockRequest({
       headers: { authorization: 'Basic dXNlcjpwYXNz' },
     });
@@ -91,7 +96,7 @@ describe('createMcpAuthPreHandler', () => {
       throw new Error('bad signature');
     });
     const storage = makeStubStorage();
-    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage });
+    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     const request = makeMockRequest({
       headers: { authorization: 'Bearer bad' },
     });
@@ -113,7 +118,7 @@ describe('createMcpAuthPreHandler', () => {
     };
     const verify: McpTokenVerifier = vi.fn(async () => payload);
     const storage = makeStubStorage(['reports.view']);
-    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage });
+    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     const request = makeMockRequest({
       headers: { authorization: 'Bearer good-token' },
     });
@@ -145,7 +150,7 @@ describe('createMcpAuthPreHandler', () => {
     };
     const verify: McpTokenVerifier = vi.fn(async () => payload);
     const storage = makeStubStorage([]);
-    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage });
+    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     // Simulate a request that ALSO has a cookie session in place (user already logged in).
     // The middleware MUST ignore session and use Bearer only (PITFALLS.md #9).
     const request = makeMockRequest({
@@ -177,7 +182,7 @@ describe('createMcpAuthPreHandler', () => {
     // Stub roles repo returns an empty set — the admin shortcut in
     // resolveEffectivePermissions should bypass this and return ALL permissions.
     const storage = makeStubStorage([]);
-    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage });
+    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     const request = makeMockRequest({
       headers: { authorization: 'Bearer admin-token' },
     });
@@ -209,7 +214,7 @@ describe('createMcpAuthPreHandler', () => {
     };
     const verify: McpTokenVerifier = vi.fn(async () => payload);
     const storage = makeStubStorage([]); // empty perms — matches post-fix role-repository behaviour
-    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage });
+    const handler = createMcpAuthPreHandler({ verifyToken: verify, storage, resourceMetadataUrl: 'https://test/.well-known/oauth-protected-resource' });
     const request = makeMockRequest({
       headers: { authorization: 'Bearer oauth-read-token' },
     });

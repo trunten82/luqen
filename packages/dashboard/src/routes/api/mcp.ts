@@ -43,6 +43,12 @@ export interface McpRouteOptions {
   readonly storage: StorageAdapter;
   readonly scanService: ScanService;
   readonly serviceConnections: ServiceConnectionsRepository;
+  /**
+   * Absolute URL of this RS's `/.well-known/oauth-protected-resource`.
+   * Surfaced in the `WWW-Authenticate` header on 401 so MCP clients can
+   * discover the AS per RFC 6750 + MCP Authorization spec 2025-06-18.
+   */
+  readonly resourceMetadataUrl: string;
 }
 
 export async function registerMcpRoutes(
@@ -73,7 +79,14 @@ export async function registerMcpRoutes(
     pluginOptions as unknown as McpHttpPluginOptions,
   );
   await app.register(async (scoped) => {
-    scoped.addHook('preHandler', createMcpAuthPreHandler(opts));
+    scoped.addHook(
+      'preHandler',
+      createMcpAuthPreHandler({
+        verifyToken: opts.verifyToken,
+        storage: opts.storage,
+        resourceMetadataUrl: opts.resourceMetadataUrl,
+      }),
+    );
     await plugin(scoped, {});
   });
 }
