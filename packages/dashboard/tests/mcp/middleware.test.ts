@@ -46,12 +46,18 @@ function makeMockRequest(overrides: Record<string, unknown> = {}): FastifyReques
   } as unknown as FastifyRequest;
 }
 
-function makeStubStorage(perms: readonly string[] = []) {
+function makeStubStorage(
+  perms: readonly string[] = [],
+  oauthClientRow: { readonly revokedAt: Date | string | null } | null = null,
+) {
   return {
     roles: {
       getEffectivePermissions: vi.fn(async (_userId: string, _orgId?: string): Promise<Set<string>> => {
         return new Set(perms);
       }),
+    },
+    oauthClients: {
+      findByClientId: vi.fn(async (_clientId: string) => oauthClientRow),
     },
   };
 }

@@ -35,6 +35,12 @@ export interface McpTokenPayload {
   readonly role?: string;
   readonly iat?: number;
   readonly exp?: number;
+  /**
+   * Phase 31.2 D-20 bullet 3 — the OAuth client that issued this token.
+   * Optional because pre-31.2 tokens lack it; the middleware silently skips
+   * the revoked-client check when absent (no forced re-auth on deploy).
+   */
+  readonly client_id?: string;
 }
 
 export type McpTokenVerifier = (token: string) => Promise<McpTokenPayload>;
@@ -44,6 +50,13 @@ export interface McpAuthPreHandlerOptions {
   readonly storage: {
     readonly roles: {
       getEffectivePermissions(userId: string, orgId?: string): Promise<Set<string>>;
+    };
+    /**
+     * Phase 31.2 D-20 bullet 3 — post-verifyToken client-status check.
+     * Only `revokedAt` is read; other fields are irrelevant to the middleware.
+     */
+    readonly oauthClients: {
+      findByClientId(clientId: string): Promise<{ readonly revokedAt: Date | string | null } | null>;
     };
   };
   /**
@@ -76,6 +89,23 @@ export function createMcpAuthPreHandler(opts: McpAuthPreHandlerOptions) {
       reply.header('WWW-Authenticate', `${wwwAuthenticate}, error="invalid_token"`);
       await reply.status(401).send({ error: 'Invalid or expired token', statusCode: 401 });
       return;
+    }
+
+    // Phase 31.2 D-20 bullet 3: post-JWT client-status check. A cryptographically
+    // valid token whose owning OAuth client has been revoked (via /admin/clients
+    // soft-revoke) must be rejected on next use — otherwise the ≤1h access-token
+    // TTL delays the revoke UX in ways the D-20 toast copy does not permit.
+    // Pre-31.2 tokens lack `client_id` and silent-skip here (back-compat).
+    if (payload.client_id !== undefined) {
+      const clientRow = await opts.storage.oauthClients.findByClientId(payload.client_id);
+      if (clientRow !== null && clientRow.revokedAt !== null) {
+        reply.header(
+          'WWW-Authenticate',
+          `${wwwAuthenticate}, error="invalid_token", error_description="client_revoked"`,
+        );
+        await reply.status(401).send({ error: 'Client revoked', statusCode: 401 });
+        return;
+      }
     }
 
     const userRole = payload.role ?? 'member';
