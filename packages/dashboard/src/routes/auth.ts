@@ -38,12 +38,17 @@ export async function authRoutes(
 ): Promise<void> {
   // GET /login — render login page with mode-aware UI
   server.get('/login', async (request: FastifyRequest, reply: FastifyReply) => {
-    // If already authenticated, redirect home
     const session = request.session as { get(key: string): unknown };
+    const query = request.query as Record<string, string | undefined>;
+    const returnTo = safeReturnTo(query['returnTo']);
+
+    // If already authenticated, honor returnTo (so /oauth/authorize?...
+    // survives the "am I logged in?" shortcut — the user pasted an OAuth
+    // consent URL while already signed in on the dashboard).
     if (typeof session.get === 'function') {
       const userId = session.get('userId') as string | undefined;
       if (userId !== undefined) {
-        await reply.redirect('/');
+        await reply.redirect(returnTo);
         return;
       }
     }
@@ -52,9 +57,7 @@ export async function authRoutes(
     const loginMethods = authService.getLoginMethods();
 
     // Show session expired message if redirected from expiry hook
-    const query = request.query as Record<string, string | undefined>;
     const sessionExpired = query['expired'] === '1';
-    const returnTo = safeReturnTo(query['returnTo']);
 
     return reply.view('login.hbs', {
       mode,

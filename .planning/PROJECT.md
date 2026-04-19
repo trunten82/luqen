@@ -12,9 +12,18 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 v2.12.0 shipped 2026-04-14 — Brand Intelligence Polish: dedicated brand overview page with per-site selector, per-dimension trend sparklines (color/typography/components), org-level score targets with gap display, drilldown modal for failing elements, typography x-height metrics via opentype.js (4th scoring heuristic), fine-grained org permissions (admin.org replacing admin.system), and historical rescore admin action (batch-of-50, idempotent, resumable). 6 phases (22-27), 10 plans, 25/25 requirements satisfied. Previous: v2.11.0 (2026-04-12) brand scoring engine, v2.10.0 (2026-04-10) prompt safety + API key UX.
 
-## Current Milestone
+## Current Milestone: v3.0.0 MCP Servers & Agent Companion
 
-v2.12.0 Brand Intelligence Polish shipped 2026-04-14. Next milestone not yet planned — run `/gsd-new-milestone` to start.
+**Goal:** Expose all Luqen services as MCP servers and add a full multimodal AI agent companion to the dashboard — turning Luqen from a tool-you-operate into an assistant-you-converse-with.
+
+**Target features:**
+- MCP servers for all services (compliance, branding, LLM, scanner, dashboard) via standard MCP transport (stdio/SSE)
+- Dashboard agent companion — org-aware side panel with text + speech input (Web Speech API)
+- Per-user persistent conversation history stored in DB
+- RBAC-scoped tool access mirroring user permissions
+- Explicit confirmation UI for state-changing operations
+- Audit logging for every tool invocation
+- External MCP client support (Claude Desktop, IDEs)
 
 ## Requirements
 
@@ -91,7 +100,7 @@ v2.12.0 Brand Intelligence Polish shipped 2026-04-14. Next milestone not yet pla
 
 ### Active
 
-(Next milestone — run /gsd-new-milestone)
+(Defining requirements for v3.0.0 — see REQUIREMENTS.md)
 
 ### Out of Scope
 
@@ -175,4 +184,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after v2.12.0 Brand Intelligence Polish milestone*
+*Last updated: 2026-04-16 — v3.0.0 MCP Servers & Agent Companion milestone started*
