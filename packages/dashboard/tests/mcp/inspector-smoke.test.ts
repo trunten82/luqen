@@ -161,10 +161,15 @@ beforeAll(async () => {
   });
   const publicKeyPem = await exportSPKI(publicKey);
 
+  // Phase 31.1 Plan 03: verifier now requires aud claim matching the
+  // expectedAudience configured below. Legacy PEM path is used here for
+  // backwards-compat since this test doesn't stand up a JWKS server.
+  const INSPECTOR_AUD = 'https://dashboard.luqen.local/api/v1/mcp';
   validToken = await new SignJWT({
     scopes: ['read', 'write', 'admin'],
     orgId: 'test-org',
     role: 'admin',
+    aud: [INSPECTOR_AUD],
   })
     .setProtectedHeader({ alg: 'RS256' })
     .setSubject('test-user')
@@ -172,7 +177,10 @@ beforeAll(async () => {
     .setExpirationTime('1h')
     .sign(privateKey);
 
-  const verifyToken = await createDashboardJwtVerifier(publicKeyPem);
+  const verifyToken = await createDashboardJwtVerifier({
+    expectedAudience: INSPECTOR_AUD,
+    legacyPem: publicKeyPem,
+  });
 
   const storage = makeStubStorage([
     'reports.view',

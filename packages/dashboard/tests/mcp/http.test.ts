@@ -377,11 +377,22 @@ describe('POST /api/v1/mcp (dashboard)', () => {
 // ---------------------------------------------------------------------------
 
 describe('createDashboardJwtVerifier startup behaviour', () => {
-  it('throws with DASHBOARD_JWT_PUBLIC_KEY in the error when PEM is missing', async () => {
-    await expect(createDashboardJwtVerifier('')).rejects.toThrow(/DASHBOARD_JWT_PUBLIC_KEY/);
+  // Phase 31.1 Plan 03: verifier signature now requires an options object.
+  // The legacy single-arg signature is gone — callers must pass either
+  // `jwksUri` (preferred) or `legacyPem` (deprecated) alongside `expectedAudience`.
+  it('throws with DASHBOARD_JWT_PUBLIC_KEY in the error when both jwksUri and legacyPem are missing', async () => {
+    await expect(
+      createDashboardJwtVerifier({ expectedAudience: 'https://test/mcp' }),
+    ).rejects.toThrow(/DASHBOARD_JWT_PUBLIC_KEY/);
   });
 
-  it('throws with DASHBOARD_JWT_PUBLIC_KEY when PEM is only whitespace', async () => {
-    await expect(createDashboardJwtVerifier('    \n   ')).rejects.toThrow(/DASHBOARD_JWT_PUBLIC_KEY/);
+  it('throws with DASHBOARD_JWT_PUBLIC_KEY when legacyPem is only whitespace and jwksUri is blank', async () => {
+    await expect(
+      createDashboardJwtVerifier({
+        expectedAudience: 'https://test/mcp',
+        legacyPem: '    \n   ',
+        jwksUri: '',
+      }),
+    ).rejects.toThrow(/DASHBOARD_JWT_PUBLIC_KEY/);
   });
 });
