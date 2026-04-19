@@ -27,16 +27,17 @@ describe('GET /.well-known/oauth-authorization-server — Test 8 (RFC 8414 field
     expect(typeof body['registration_endpoint']).toBe('string');
     expect(typeof body['jwks_uri']).toBe('string');
     expect(body['response_types_supported']).toEqual(['code']);
-    expect(body['grant_types_supported']).toEqual(
-      expect.arrayContaining(['authorization_code', 'refresh_token', 'client_credentials']),
-    );
+    // Phase 31.2 D-15: client_credentials retired from dashboard AS — only
+    // user flows (authorization_code + refresh_token) advertised.
+    expect(body['grant_types_supported']).toEqual(['authorization_code', 'refresh_token']);
     expect(body['code_challenge_methods_supported']).toEqual(['S256']);
     expect(body['token_endpoint_auth_methods_supported']).toEqual(
       expect.arrayContaining(['none', 'client_secret_basic']),
     );
-    expect(body['scopes_supported']).toEqual(
-      expect.arrayContaining(['read', 'write', 'admin.system', 'admin.org', 'admin.users']),
-    );
+    // Phase 31.2 D-10: admin.* scopes retired at the OAuth layer; the well-known
+    // document now advertises ['read','write'] exactly. Tool visibility for
+    // admin tooling is driven by user RBAC, not a broad scope bundle.
+    expect(body['scopes_supported']).toEqual(['read', 'write']);
     expect(body['response_modes_supported']).toEqual(['query']);
   });
 });

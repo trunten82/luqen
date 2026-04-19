@@ -161,6 +161,29 @@ export class SqliteOauthClientRepository implements OauthClientRepository {
     return rows.map(rowToClient);
   }
 
+  /**
+   * Phase 31.2 D-18: first-consent-wins backfill of `registered_by_user_id`.
+   *
+   * DCR (RFC 7591 §3) registers clients pre-auth, so the column is NULL at
+   * creation time. The first user to complete `/oauth/authorize/consent` on
+   * an otherwise-orphan client becomes its recorded owner — later consents
+   * from other users must NOT overwrite (the `WHERE registered_by_user_id
+   * IS NULL` guard makes the UPDATE atomic and idempotent at the SQL layer,
+   * so a concurrent second consenter's UPDATE simply affects 0 rows).
+   *
+   * Non-existent `clientId` is a silent no-op (zero rows affected).
+   */
+  async recordRegistrationUser(clientId: string, userId: string): Promise<void> {
+    this.db
+      .prepare(
+        `UPDATE oauth_clients_v2
+            SET registered_by_user_id = ?
+          WHERE client_id = ?
+            AND registered_by_user_id IS NULL`,
+      )
+      .run(userId, clientId);
+  }
+
   async revoke(clientId: string): Promise<void> {
     this.db
       .prepare('DELETE FROM oauth_clients_v2 WHERE client_id = ?')

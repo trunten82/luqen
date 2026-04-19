@@ -147,11 +147,15 @@ describe('POST /oauth/token — Test 12 (authorization_code with valid PKCE)', (
     expect(typeof body.refresh_token).toBe('string');
 
     const payload = decodeJwt(body.access_token) as {
-      sub: string; aud: string[] | string; orgId: string; scopes: string[];
+      sub: string; aud: string[] | string; orgId: string; scopes: string[]; client_id: string;
     };
     expect(payload.sub).toBe(ctx.userId);
     expect(payload.orgId).toBe('org-test');
     expect(payload.scopes).toEqual(['read', 'write']);
+    // Phase 31.2 D-20 bullet 3: client_id claim threaded through from the
+    // authorization_code row. Plan 04 mcp/middleware.ts consumes it for the
+    // post-JWT revoked-client check.
+    expect(payload.client_id).toBe(ctx.publicClientId);
     // aud could be serialised as a single string by jose when length=1; accept both.
     const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
     expect(aud).toEqual(['https://svc/mcp']);
@@ -252,6 +256,10 @@ describe('POST /oauth/token — Test 15 (refresh rotates)', () => {
     expect(rotated.refresh_token).toBeTruthy();
     expect(rotated.refresh_token).not.toBe(rawA);
 
+    // Phase 31.2 D-20 bullet 3: rotated access_token must also carry client_id.
+    const rotatedPayload = decodeJwt(rotated.access_token) as { client_id?: string };
+    expect(rotatedPayload.client_id).toBe(ctx.publicClientId);
+
     // Old refresh (rawA) should now be rotated=true.
     const hashA = createHash('sha256').update(rawA).digest('hex');
     const row = await ctx.storage.oauthRefresh.findByTokenHash(hashA);
@@ -322,12 +330,16 @@ describe('POST /oauth/token — Test 16 (refresh reuse detection revokes chain)'
 
 // ── Test 17 ─────────────────────────────────────────────────────────────────
 
-describe('POST /oauth/token — Test 17 (client_credentials grant)', () => {
+// Phase 31.2 D-15: dashboard /oauth/token retires client_credentials.
+// Dashboard AS is now exclusively for user flows. Service-to-service bootstrap
+// continues via per-service /api/v1/oauth/token on compliance/branding/llm
+// (31.1 D-10 invariant preserved).
+describe('POST /oauth/token — Test 17 (Phase 31.2 D-15: client_credentials retired → 400)', () => {
   let ctx: Ctx;
   beforeEach(async () => { ctx = await buildCtx(); });
   afterEach(async () => { await ctx.cleanup(); });
 
-  it('confidential client with matching secret returns access_token (sub=clientId)', async () => {
+  it('returns 400 {error:"unsupported_grant_type"} on grant_type=client_credentials', async () => {
     const res = await ctx.server.inject({
       method: 'POST',
       url: '/oauth/token',
@@ -338,12 +350,8 @@ describe('POST /oauth/token — Test 17 (client_credentials grant)', () => {
         client_secret: ctx.confidentialClientSecret,
       }).toString(),
     });
-    expect(res.statusCode).toBe(200);
-    const body = res.json() as { access_token: string; token_type: string };
-    expect(body.token_type).toBe('Bearer');
-    const payload = decodeJwt(body.access_token) as { sub: string; scopes: string[] };
-    expect(payload.sub).toBe(ctx.confidentialClientId);
-    expect(payload.scopes).toContain('read');
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'unsupported_grant_type' });
   });
 });
 
@@ -354,14 +362,21 @@ describe('POST /oauth/token — Test 18 (unknown client_id)', () => {
   beforeEach(async () => { ctx = await buildCtx(); });
   afterEach(async () => { await ctx.cleanup(); });
 
-  it('returns 400 invalid_client when client_id is unknown', async () => {
+  it('returns 400 invalid_client when client_id is unknown (authorization_code grant)', async () => {
+    // Phase 31.2: client_credentials retired; use authorization_code to exercise
+    // the invalid-client path. The handler verifies the client BEFORE branching
+    // on grant_type, so any non-existent id trips 400 invalid_client regardless
+    // of grant.
     const res = await ctx.server.inject({
       method: 'POST',
       url: '/oauth/token',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       payload: new URLSearchParams({
-        grant_type: 'client_credentials',
+        grant_type: 'authorization_code',
         client_id: 'nonexistent_xxxxx',
+        code: 'ignored',
+        code_verifier: 'ignored',
+        redirect_uri: 'https://app.test/cb',
       }).toString(),
     });
     expect(res.statusCode).toBe(400);
@@ -402,22 +417,27 @@ describe('POST /oauth/token — Test 20 (confidential client: wrong secret → i
   beforeEach(async () => { ctx = await buildCtx(); });
   afterEach(async () => { await ctx.cleanup(); });
 
-  it('rejects wrong secret with 400 invalid_client', async () => {
+  it('rejects wrong secret with 400 invalid_client (via authorization_code grant)', async () => {
+    // Phase 31.2: client_credentials retired; exercise the wrong-secret path
+    // on the authorization_code grant, which still authenticates the client.
     const res = await ctx.server.inject({
       method: 'POST',
       url: '/oauth/token',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       payload: new URLSearchParams({
-        grant_type: 'client_credentials',
+        grant_type: 'authorization_code',
         client_id: ctx.confidentialClientId,
         client_secret: 'wrong-secret-value',
+        code: 'ignored',
+        code_verifier: 'ignored',
+        redirect_uri: 'https://app.test/cb',
       }).toString(),
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: 'invalid_client' });
   });
 
-  it('accepts matching secret via HTTP Basic auth', async () => {
+  it('Basic auth with matching secret on client_credentials STILL returns 400 unsupported_grant_type (D-15)', async () => {
     const creds = Buffer.from(`${ctx.confidentialClientId}:${ctx.confidentialClientSecret}`).toString('base64');
     const res = await ctx.server.inject({
       method: 'POST',
@@ -428,6 +448,9 @@ describe('POST /oauth/token — Test 20 (confidential client: wrong secret → i
       },
       payload: new URLSearchParams({ grant_type: 'client_credentials' }).toString(),
     });
-    expect(res.statusCode).toBe(200);
+    // Client auth succeeds (secret matches), but grant_type=client_credentials
+    // is no longer supported on the dashboard AS — 400 unsupported_grant_type.
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'unsupported_grant_type' });
   });
 });

@@ -3,7 +3,48 @@
     <h1 id="consent-heading">Authorize {{client.clientName}}</h1>
     <p class="muted">This application is requesting access to your Luqen account.</p>
 
-    {{#if adminScopeBlocked}}
+    {{#if noMcpUse}}
+      {{!-- Phase 31.2 D-05/D-06: user lacks mcp.use in the active org.
+            Offer a switch CTA to any other org where they DO hold mcp.use,
+            or render the ask-your-admin card if switchableOrgs is empty. --}}
+      <div class="alert alert--warning" role="alert" aria-live="polite">
+        <div class="alert__body">
+          <div class="alert__title">MCP access required</div>
+          <p>
+            You don't have permission to connect via MCP in your active
+            organisation (<strong>{{activeOrgId}}</strong>).
+          </p>
+          {{#if switchableOrgs.length}}
+            <p>You do have MCP access in:</p>
+            <ul class="org-list">
+              {{#each switchableOrgs}}
+                <li>
+                  <form method="POST" action="/session/switch-org">
+                    <input type="hidden" name="_csrf" value="{{../csrfToken}}" aria-label="CSRF token" />
+                    <input type="hidden" name="orgId" value="{{this.id}}" aria-label="Target organisation id" />
+                    <input type="hidden" name="returnTo" value="{{../returnTo}}" aria-label="Return URL" />
+                    <button type="submit" class="btn btn--primary">
+                      Switch to {{this.name}} and retry
+                    </button>
+                  </form>
+                </li>
+              {{/each}}
+            </ul>
+          {{else}}
+            <p>
+              Ask your organisation admin to grant you the
+              <strong>Connect via MCP</strong> permission on your role in
+              <code>/admin/roles</code>.
+            </p>
+          {{/if}}
+        </div>
+      </div>
+    {{else if adminScopeBlocked}}
+      {{!-- Deprecated variant (Phase 31.2 D-10): admin.* scopes are now
+            rejected with 400 invalid_scope before this view is rendered, so
+            this branch is unreachable from real traffic. Kept only for
+            back-compat with any test harness that constructs this view
+            shape directly. --}}
       <div class="alert alert--error" role="alert" aria-live="polite">
         <div class="alert__body">
           <div class="alert__title">No scopes you can grant</div>
