@@ -18,6 +18,8 @@ import type { BrandScoreRepository } from './interfaces/brand-score-repository.j
 import type { ConversationRepository } from './interfaces/conversation-repository.js';
 import type { AgentAuditRepository } from './interfaces/agent-audit-repository.js';
 import type { OauthClientRepository } from './interfaces/oauth-client-repository.js';
+import type { OauthCodeRepository } from './interfaces/oauth-code-repository.js';
+import type { OauthRefreshRepository } from './interfaces/oauth-refresh-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -46,4 +48,6 @@ export interface StorageAdapter {
   readonly conversations: ConversationRepository;
   readonly agentAudit: AgentAuditRepository;
   readonly oauthClients: OauthClientRepository;
+  readonly oauthCodes: OauthCodeRepository;
+  readonly oauthRefresh: OauthRefreshRepository;
 }
