@@ -131,6 +131,36 @@ export class SqliteOauthClientRepository implements OauthClientRepository {
     return rows.map(rowToClient);
   }
 
+  /**
+   * Phase 31.2 D-19: DCR clients registered by any user who is a
+   * team_member of at least one team in `orgId`.
+   *
+   *   - `registered_by_user_id IS NULL` rows (pre-D-18) are excluded —
+   *     admin.system sees them via `listAll()` only.
+   *   - orgId='system' returns an empty array (admin.system uses listAll).
+   *   - SELECT DISTINCT: a user can be in multiple teams in the same org.
+   *   - No `WHERE revoked_at IS NULL` — revoked rows MUST remain visible
+   *     so Plan 04's soft-revoke can render the Revoked badge (D-24).
+   *     Plan 04 will extend this SELECT to project the registrant's org
+   *     name via an additional JOIN; that extension is intentionally out
+   *     of scope for Plan 01.
+   */
+  async findByOrg(orgId: string): Promise<readonly OauthClient[]> {
+    if (orgId === 'system') return [];
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT c.*
+           FROM oauth_clients_v2 c
+           JOIN team_members tm ON tm.user_id = c.registered_by_user_id
+           JOIN teams t          ON t.id       = tm.team_id
+          WHERE c.registered_by_user_id IS NOT NULL
+            AND t.org_id = ?
+          ORDER BY c.created_at DESC`,
+      )
+      .all(orgId) as OauthClientRow[];
+    return rows.map(rowToClient);
+  }
+
   async revoke(clientId: string): Promise<void> {
     this.db
       .prepare('DELETE FROM oauth_clients_v2 WHERE client_id = ?')
