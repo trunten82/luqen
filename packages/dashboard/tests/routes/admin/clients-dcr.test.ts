@@ -156,39 +156,34 @@ describe('POST /admin/clients/dcr/:clientId/revoke — Test 7 (admin revokes DCR
   beforeEach(async () => { ctx = await buildCtx('admin'); });
   afterEach(async () => { await ctx.cleanup(); });
 
-  it('deletes the row and redirects with a toast', async () => {
+  it('soft-revokes the row and redirects with a toast (31.2 D-20)', async () => {
     const res = await ctx.server.inject({
       method: 'POST',
       url: `/admin/clients/dcr/${encodeURIComponent(ctx.otherClientId)}/revoke`,
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       payload: '',
     });
-    // Admin-page standard is 302 redirect with toast query; 200 HTML toast is
-    // also acceptable if the implementation picks that style. Either way the
-    // row must be gone.
     expect([200, 302]).toContain(res.statusCode);
+    // Phase 31.2 D-20: soft revoke — row persists, revokedAt stamped.
     const row = await ctx.storage.oauthClients.findByClientId(ctx.otherClientId);
-    expect(row).toBeNull();
+    expect(row).not.toBeNull();
+    expect(row?.revokedAt).not.toBeNull();
   });
 });
 
 // ── Test 8 ────────────────────────────────────────────────────────────────────
 
-describe('GET /admin/clients + revoke — Test 8 (non-admin sees only own; cannot revoke others)', () => {
+describe('GET /admin/clients + revoke — Test 8 (31.2 D-19: non-admin blocked; only admin.system/admin.org)', () => {
   let ctx: Ctx;
   beforeEach(async () => { ctx = await buildCtx('viewer'); });
   afterEach(async () => { await ctx.cleanup(); });
 
-  it('non-admin list returns only their own DCR clients', async () => {
+  it('non-admin (compliance.view only) cannot load /admin/clients (403 per 31.2 D-19)', async () => {
+    // Phase 31.2 D-19: preHandler dropped `compliance.view` (too permissive) —
+    // /admin/clients now requires admin.system OR admin.org. Viewers with
+    // only compliance.view are blocked.
     const res = await ctx.server.inject({ method: 'GET', url: '/admin/clients' });
-    // A viewer has compliance.view so can load the page.
-    expect(res.statusCode).toBe(200);
-    const body = res.json() as {
-      data: { clients: Array<{ clientId: string; kind: string }> };
-    };
-    const dcrRows = body.data.clients.filter((c) => c.kind === 'DCR');
-    // Viewer owns only otherClientId (seeded with registeredByUserId=otherUserId).
-    expect(dcrRows.map((r) => r.clientId)).toEqual([ctx.otherClientId]);
+    expect(res.statusCode).toBe(403);
   });
 
   it('non-admin cannot revoke someone else\'s DCR client (returns 403 and row persists)', async () => {
@@ -199,9 +194,11 @@ describe('GET /admin/clients + revoke — Test 8 (non-admin sees only own; canno
       payload: '',
     });
     expect(res.statusCode).toBe(403);
-    // Row should still exist.
+    // Phase 31.2 D-20: soft revoke — row persists with revokedAt stamped.
+    // In this case revoke never ran (403 pre-empted), so revokedAt is null.
     const row = await ctx.storage.oauthClients.findByClientId(ctx.ownedClientId);
     expect(row).not.toBeNull();
+    expect(row?.revokedAt).toBeNull();
   });
 });
 
