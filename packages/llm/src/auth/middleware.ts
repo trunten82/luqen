@@ -26,12 +26,30 @@ function isPublicPath(path: string): boolean {
   return false;
 }
 
-export function createAuthMiddleware(verifier: TokenVerifier) {
+/**
+ * Phase 31.2 Plan 05 D-22: options for the service-global auth middleware.
+ *
+ * `resourceMetadataUrl` is advertised in the `WWW-Authenticate` response
+ * header on 401s so external MCP clients can discover the authorization
+ * server per RFC 6750 §3.1 + MCP Authorization spec 2025-06-18. Mirrors
+ * the dashboard fix shipped in Phase 31.1 commit e0637ac.
+ */
+export interface AuthMiddlewareOptions {
+  readonly resourceMetadataUrl: string;
+}
+
+export function createAuthMiddleware(
+  verifier: TokenVerifier,
+  options: AuthMiddlewareOptions,
+) {
+  const wwwAuthBase = `Bearer resource_metadata="${options.resourceMetadataUrl}"`;
+
   return async function authMiddleware(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     if (isPublicPath(request.url)) return;
 
     const authHeader = request.headers.authorization;
     if (authHeader == null || !authHeader.startsWith('Bearer ')) {
+      reply.header('WWW-Authenticate', wwwAuthBase);
       await reply.status(401).send({ error: 'Missing or invalid Authorization header', statusCode: 401 });
       return;
     }
@@ -71,6 +89,7 @@ export function createAuthMiddleware(verifier: TokenVerifier) {
       }
       (request as FastifyRequest & { orgId: string }).orgId = jwtOrgId;
     } catch {
+      reply.header('WWW-Authenticate', `${wwwAuthBase}, error="invalid_token"`);
       await reply.status(401).send({ error: 'Invalid or expired token', statusCode: 401 });
     }
   };
