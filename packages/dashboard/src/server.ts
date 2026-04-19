@@ -90,6 +90,11 @@ import { registerMcpRoutes } from './routes/api/mcp.js';
 import { createDashboardJwtVerifier } from './mcp/verifier.js';
 import type { McpTokenVerifier } from './mcp/middleware.js';
 import { isBearerOnlyPath } from './mcp/paths.js';
+// Phase 31.1 Plan 02: dashboard-as-AS route bundle (well-known + jwks +
+// authorize + token + register) plus the RS256 signing-key bootstrap/signer.
+import { registerOauthRoutes } from './routes/oauth/index.js';
+import { ensureInitialSigningKey } from './auth/oauth-key-bootstrap.js';
+import { createDashboardSigner } from './auth/oauth-signer.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -107,6 +112,14 @@ function isPublicPath(path: string): boolean {
   if (path.startsWith('/static/')) return true;
   if (path.startsWith('/auth/callback/')) return true;
   if (path.startsWith('/auth/sso/')) return true;
+  // Phase 31.1 Plan 02: external MCP clients hit these BEFORE they have a
+  // user session. The consent gate lives on /oauth/authorize (which is NOT
+  // listed here — it keeps the session-auth gate).
+  if (path === '/.well-known/oauth-authorization-server') return true;
+  if (path === '/.well-known/jwks.json') return true;
+  if (path === '/oauth/jwks.json') return true;
+  if (path === '/oauth/register') return true;
+  if (path === '/oauth/token') return true;
   return false;
 }
 
@@ -120,6 +133,12 @@ function isCsrfExempt(path: string): boolean {
   if (path.startsWith('/auth/sso/')) return true;
   if (path === '/graphql') return true;
   if (path === '/health') return true;
+  // Phase 31.1 Plan 02: /oauth/token + /oauth/register are machine-to-machine
+  // endpoints that don't participate in browser CSRF. /oauth/authorize/consent
+  // is the only OAuth POST that runs under a cookie session and that one DOES
+  // enforce CSRF at the route level via the route's own preHandler.
+  if (path === '/oauth/token') return true;
+  if (path === '/oauth/register') return true;
   return false;
 }
 
@@ -896,6 +915,20 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     scanService: mcpScanService,
     serviceConnections: serviceConnectionsRepo,
   });
+
+  // ── OAuth 2.1 Authorization Server (Phase 31.1 Plan 02) ──────────────────
+  // Dashboard acts as the single AS for external MCP clients. On first boot,
+  // generate an RSA 2048 signing keypair (encrypted at rest via plugins/crypto).
+  // On every boot, mint the signer against the current active key. Registers
+  // five endpoint groups: /.well-known/oauth-authorization-server, /oauth/jwks.json
+  // (+ /.well-known/jwks.json mirror), /oauth/authorize (+ consent POST),
+  // /oauth/token (all three grants per D-11), and /oauth/register (rate-limited
+  // DCR per D-16/D-17). These endpoints are orthogonal to the existing MCP
+  // verifier swap — Plan 03 wires the JWKS-backed verifier; this plan ships
+  // the AS side only so clients can complete end-to-end token exchange.
+  await ensureInitialSigningKey(storage, config.sessionSecret);
+  const dashboardSigner = await createDashboardSigner(storage, config.sessionSecret);
+  await registerOauthRoutes(server, storage, dashboardSigner);
 
   // ── GraphQL API (mercurius) ──────────────────────────────────────────────
   await server.register(mercurius, {
