@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   filterToolsByPermissions,
+  filterToolsByRbac,
   filterToolsByScope,
   filterResourcesByPermissions,
   filterResourcesByScope,
@@ -142,6 +143,86 @@ describe('filterToolsByScope — Phase 30.1 rewritten rules', () => {
     expect(read).not.toContain('dashboard_update_org');
     const write = filterToolsByScope(PHASE_30_1_TOOLS, ['write']);
     expect(write).toContain('dashboard_update_org');
+  });
+
+  // ---- Phase 31.2 D-14 lock-in: admin.* scope values are a no-op post-31.2 ----
+
+  it('Test 6 (D-14 lock-in): admin.* scope values are no-ops alongside read/write', () => {
+    // Pre-31.2 tokens may still carry legacy admin.* scope values. Post-31.2
+    // scopes_supported narrows to ['read','write'], but the scope-filter must
+    // treat legacy admin.* strings as no-ops — tool visibility tracks RBAC
+    // (filterToolsByRbac is authoritative at the http-plugin composition).
+    // Invariant: visible tools for ['admin.system','admin.org','admin.users',
+    // 'read','write'] == visible tools for ['read','write'].
+    const legacy = filterToolsByScope(TOOLS, [
+      'admin.system',
+      'admin.org',
+      'admin.users',
+      'read',
+      'write',
+    ]);
+    const baseline = filterToolsByScope(TOOLS, ['read', 'write']);
+    expect([...legacy].sort()).toEqual([...baseline].sort());
+    // admin.system-gated tools MUST NOT surface just because the legacy
+    // admin.system scope value was present — RBAC is authoritative now.
+    expect(legacy).not.toContain('admin_system');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 31.2 D-07: filterToolsByRbac — the RBAC half of defense-in-depth
+// ---------------------------------------------------------------------------
+
+const RBAC_TOOLS: readonly ToolMetadata[] = [
+  { name: 'a', requiredPermission: 'x' },
+  { name: 'b', requiredPermission: 'y' },
+  { name: 'c' }, // requiredPermission field missing — unannotated
+  { name: 'd', requiredPermission: undefined }, // explicit undefined
+];
+
+describe('filterToolsByRbac — Phase 31.2 D-07', () => {
+  it('Test 1: tool whose requiredPermission is present passes through', () => {
+    const result = filterToolsByRbac(
+      [{ name: 'a', requiredPermission: 'x' }],
+      new Set<string>(['x']),
+    );
+    expect(result).toEqual(['a']);
+  });
+
+  it('Test 2: tool whose requiredPermission is missing from perms is filtered out', () => {
+    const result = filterToolsByRbac(
+      [{ name: 'a', requiredPermission: 'x' }],
+      new Set<string>(['y']),
+    );
+    expect(result).toEqual([]);
+  });
+
+  it('Test 3: explicit undefined requiredPermission passes through (mirrors filterToolsByPermissions)', () => {
+    const result = filterToolsByRbac(
+      [{ name: 'a', requiredPermission: undefined }],
+      new Set<string>(),
+    );
+    expect(result).toEqual(['a']);
+  });
+
+  it('Test 4: missing requiredPermission field is equivalent to undefined — passes through', () => {
+    const result = filterToolsByRbac([{ name: 'a' }], new Set<string>());
+    expect(result).toEqual(['a']);
+  });
+
+  it('Test 5: mirrors filterToolsByPermissions on identical inputs (sanity)', () => {
+    const permSets: readonly ReadonlySet<string>[] = [
+      new Set<string>(),
+      new Set<string>(['x']),
+      new Set<string>(['y']),
+      new Set<string>(['x', 'y']),
+      new Set<string>(['z']),
+    ];
+    for (const perms of permSets) {
+      expect(filterToolsByRbac(RBAC_TOOLS, perms)).toEqual(
+        filterToolsByPermissions(RBAC_TOOLS, perms),
+      );
+    }
   });
 });
 

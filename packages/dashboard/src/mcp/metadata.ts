@@ -1,7 +1,8 @@
 /**
  * DASHBOARD_TOOL_METADATA — per-tool RBAC annotations for the Phase 30
  * dashboard MCP tools. Consumed by the shared @luqen/core/mcp HTTP plugin
- * to filter tools/list by the caller's effective permissions (D-07).
+ * to filter tools/list by the caller's effective permissions (D-07) and
+ * by the Phase 31.2 per-tool runtime guard on tools/call (D-08).
  *
  * Combines two sub-metadata arrays:
  *   - DASHBOARD_DATA_TOOL_METADATA — 6 data tools (owned by plan 30-02)
@@ -13,6 +14,10 @@
  * packages/dashboard/src/permissions.ts. `destructive: true` is a UI hint
  * consumed by MCP clients that surface confirmation prompts (e.g. Claude
  * Desktop) — the HTTP plugin itself does not act on it.
+ *
+ * Phase 31.2 D-09 drift guard: every entry MUST declare requiredPermission.
+ * Enforced by tests/mcp/tool-metadata-drift.test.ts — adding a tool without
+ * a permission (or with a typo'd permission id) breaks CI.
  */
 
 import type { ToolMetadata } from '@luqen/core/mcp';
