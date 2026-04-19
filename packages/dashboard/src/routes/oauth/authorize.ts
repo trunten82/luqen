@@ -65,6 +65,33 @@ function validScopes(scopes: readonly string[]): boolean {
   return scopes.every((s) => VALID_SCOPES.has(s));
 }
 
+/**
+ * Narrow requested scopes to the subset the authenticated user has
+ * permission to grant. Admin scopes (admin.system, admin.org, admin.users)
+ * require matching RBAC; read/write are always grantable to any logged-in
+ * user. Returns { granted, skipped } — the caller decides how to surface
+ * skipped scopes (consent note) vs block (nothing left to grant).
+ * Smoke-surfaced gap 2026-04-19: previous gate blocked the whole flow on
+ * any admin.* scope the user lacked, which broke the Claude Desktop bundle
+ * request (read+write+admin.*) for non-system-admin users.
+ */
+function partitionScopes(
+  requested: readonly string[],
+  userPermissions: Set<string>,
+): { granted: readonly string[]; skipped: readonly string[] } {
+  const granted: string[] = [];
+  const skipped: string[] = [];
+  for (const scope of requested) {
+    if (scope.startsWith('admin.')) {
+      if (userPermissions.has(scope)) granted.push(scope);
+      else skipped.push(scope);
+    } else {
+      granted.push(scope);
+    }
+  }
+  return { granted, skipped };
+}
+
 function sessionOrgId(request: FastifyRequest): string {
   const session = request.session as { get?: (k: string) => unknown } | undefined;
   if (session === undefined || typeof session.get !== 'function') return 'system';
@@ -139,15 +166,22 @@ export async function registerAuthorizeRoutes(
       });
     }
 
-    // 8. admin.system RBAC gate (D-09 / T-31.1-02-04).
+    // 8. RBAC scope filter (D-09 — relaxed 2026-04-19): admin.* scopes require
+    // matching permission. Scopes the user lacks are SILENTLY DROPPED from the
+    // grant; only if after filtering NO scopes remain do we block the flow.
+    // Previous behavior blocked on any missing admin.* scope, which prevented
+    // non-system-admin users from completing consent for Claude Desktop's
+    // default bundled-scope request (read+write+admin.*).
     const user = request.user;
     const orgId = sessionOrgId(request);
     const perms = await resolveEffectivePermissions(storage.roles, user.id, user.role, orgId);
-    if (requestedScopes.includes('admin.system') && !perms.has('admin.system')) {
+    const { granted: grantedScopes, skipped: skippedScopes } = partitionScopes(requestedScopes, perms);
+    if (grantedScopes.length === 0) {
       return reply.view('oauth-consent', {
         adminScopeBlocked: true,
         client,
         user,
+        skippedScopes,
       });
     }
 
@@ -155,7 +189,7 @@ export async function registerAuthorizeRoutes(
     const coverage = await storage.oauthConsents.checkCoverage({
       userId: user.id,
       clientId: client.clientId,
-      requestedScopes,
+      requestedScopes: grantedScopes,
       requestedResources,
     });
 
@@ -167,7 +201,7 @@ export async function registerAuthorizeRoutes(
         clientId: client.clientId,
         userId: user.id,
         redirectUri: q.redirect_uri,
-        scope: requestedScopes.join(' '),
+        scope: grantedScopes.join(' '),
         resource: requestedResources.join(' '),
         codeChallenge: q.code_challenge,
         codeChallengeMethod: 'S256',
@@ -217,10 +251,15 @@ export async function registerAuthorizeRoutes(
       orgName: orgId,
       clientId: client.clientId,
       redirectUri: q.redirect_uri,
-      requestedScope: requestedScopes.join(' '),
+      // Form submits the NARROWED scope set (admin.* dropped where user lacks perms)
+      requestedScope: grantedScopes.join(' '),
       requestedResource: requestedResources.join(' '),
       resources: requestedResources,
-      scopeDescriptions: requestedScopes.map((s) => ({
+      scopeDescriptions: grantedScopes.map((s) => ({
+        scope: s,
+        description: SCOPE_DESCRIPTIONS[s] ?? s,
+      })),
+      skippedScopeDescriptions: skippedScopes.map((s) => ({
         scope: s,
         description: SCOPE_DESCRIPTIONS[s] ?? s,
       })),
@@ -290,12 +329,17 @@ export async function registerAuthorizeRoutes(
       });
     }
 
-    // 5. admin.system RBAC gate (D-09 / T-31.1-02-04).
+    // 5. RBAC scope filter (D-09 — relaxed 2026-04-19) re-enforced on POST
+    //    (T-31.1-02-04): server-side drop of admin.* scopes the user lacks.
+    //    If GET-time validation was bypassed by tampering with the scope
+    //    hidden input, server still refuses to grant a scope the user does
+    //    not have. If after filtering NO scopes remain, respond 403.
     const user = request.user;
     const orgId = sessionOrgId(request);
     const perms = await resolveEffectivePermissions(storage.roles, user.id, user.role, orgId);
-    if (requestedScopes.includes('admin.system') && !perms.has('admin.system')) {
-      return reply.status(403).send({ error: 'access_denied', error_description: 'admin.system permission required' });
+    const { granted: grantedScopes } = partitionScopes(requestedScopes, perms);
+    if (grantedScopes.length === 0) {
+      return reply.status(403).send({ error: 'access_denied', error_description: 'no grantable scopes' });
     }
 
     const requestedResources = splitSpace(body.resource);
@@ -320,7 +364,7 @@ export async function registerAuthorizeRoutes(
     await storage.oauthConsents.recordConsent({
       userId: user.id,
       clientId: client.clientId,
-      scopes: requestedScopes,
+      scopes: grantedScopes,
       resources: requestedResources,
     });
 
@@ -331,7 +375,7 @@ export async function registerAuthorizeRoutes(
       clientId: client.clientId,
       userId: user.id,
       redirectUri: body.redirect_uri,
-      scope: requestedScopes.join(' '),
+      scope: grantedScopes.join(' '),
       resource: requestedResources.join(' '),
       codeChallenge: body.code_challenge,
       codeChallengeMethod: 'S256',

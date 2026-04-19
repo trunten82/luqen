@@ -1178,6 +1178,8 @@ select {
   text-align: left;
 }
 .consent__scope-desc { color: var(--text-secondary, inherit); }
+.consent__scopes--skipped code { opacity: 0.6; text-decoration: line-through; }
+.consent__scopes--skipped .consent__scope-desc { opacity: 0.6; }
 .consent__resources code, .consent__redirect {
   padding: 2px 6px;
   background: var(--surface-muted, rgba(0,0,0,0.05));

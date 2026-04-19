@@ -1,6 +1,7 @@
 {{! Login form partial — reusable across solo/team/enterprise modes }}
 <form method="POST" action="/login" novalidate>
   <input type="hidden" name="_csrf" value="{{csrfToken}}">
+  {{#if ../returnTo}}<input type="hidden" name="returnTo" value="{{../returnTo}}">{{/if}}
   {{#if showUsername}}
   <div class="form-group">
     <label for="{{usernameId}}">

@@ -24,6 +24,15 @@ export function createAuthGuard(authService: AuthService) {
         await reply.code(401).send({ error: result.error ?? 'Authentication required' });
         return;
       }
+      // Preserve the original URL so post-login can return here — needed for
+      // the OAuth consent flow (hitting /oauth/authorize?... unauth'd must
+      // resume at the same URL after login). GET-only: POSTs/forms should
+      // not carry a returnTo (replay risk). Smoke-surfaced gap 2026-04-19.
+      if (request.method === 'GET' && request.url !== '/login' && request.url !== '/') {
+        const returnTo = encodeURIComponent(request.url);
+        await reply.redirect(`/login?returnTo=${returnTo}`);
+        return;
+      }
       await reply.redirect('/login');
       return;
     }
