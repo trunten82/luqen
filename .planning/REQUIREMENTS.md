@@ -44,6 +44,8 @@ Requirements for the MCP Servers & Agent Companion milestone. Each maps to roadm
 - [x] **MCPAUTH-01**: Each service publishes `.well-known/oauth-protected-resource` and `.well-known/oauth-authorization-server` metadata for MCP clients to discover authorization configuration automatically (per MCP spec 2025-06-18)
 - [x] **MCPAUTH-02**: External MCP clients authenticate via OAuth 2.1 Authorization Code + PKCE with refresh tokens, and the resulting access tokens carry user identity (not service-client identity) so per-user RBAC via `resolveEffectivePermissions` applies
 - [x] **MCPAUTH-03**: External MCP clients can self-register via Dynamic Client Registration (RFC 7591) at a Luqen DCR endpoint, subject to admin policy (open vs allowlist — decided during `/gsd-discuss-phase 31.1`)
+- [ ] **MCPAUTH-04**: Opening an MCP connection requires the `mcp.use` RBAC permission in the user's active org (or `admin.system` globally). Tool visibility is RBAC ∩ scope defense-in-depth; admin.* OAuth scopes retired from `scopes_supported`; pre-existing tokens continue to work via silent admin.*-scope ignore (migration back-fills `mcp.use` onto all existing users per-org)
+- [ ] **MCPAUTH-05**: Org admins (`admin.org`) can view and revoke DCR-registered OAuth clients belonging to users within their own org via `/admin/clients`; cross-org operations return 403 + audit entry; `registered_by_user_id` is populated at first consent (RFC 7591 DCR pre-auth intent preserved)
 
 ## Future Requirements
 
@@ -104,10 +106,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MCPAUTH-01 | Phase 31.1 | Complete |
 | MCPAUTH-02 | Phase 31.1 | Complete |
 | MCPAUTH-03 | Phase 31.1 | Complete |
+| MCPAUTH-04 | Phase 31.2 | Pending |
+| MCPAUTH-05 | Phase 31.2 | Pending |
 
 **Coverage:**
-- v3.0.0 requirements: 23 total (20 original + 3 MCPAUTH added 2026-04-19)
-- Mapped to phases: 23
+- v3.0.0 requirements: 25 total (20 original + 3 MCPAUTH-01/02/03 + 2 MCPAUTH-04/05 added 2026-04-19)
+- Mapped to phases: 25
 - Unmapped: 0 ✓
 
 ## Phase 29 Scope Rescope
