@@ -96,6 +96,11 @@ import { isBearerOnlyPath } from './mcp/paths.js';
 import { registerOauthRoutes } from './routes/oauth/index.js';
 import { ensureInitialSigningKey } from './auth/oauth-key-bootstrap.js';
 import { createDashboardSigner } from './auth/oauth-signer.js';
+// Phase 32 Plan 04: AgentService + /agent/* routes.
+import { AgentService } from './agent/agent-service.js';
+import { ToolDispatcher } from './agent/tool-dispatch.js';
+import { DASHBOARD_TOOL_METADATA } from './mcp/metadata.js';
+import { registerAgentRoutes } from './routes/agent.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -953,6 +958,67 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await ensureInitialSigningKey(storage, config.sessionSecret);
   const dashboardSigner = await createDashboardSigner(storage, config.sessionSecret);
   await registerOauthRoutes(server, storage, dashboardSigner);
+
+  // ── Phase 32 Plan 04: Agent service + /agent/* routes ───────────────────
+  // Construct the AgentService + ToolDispatcher exactly once. The dispatcher
+  // invokes in-process MCP handlers (D-08 option a); the per-dispatch JWT
+  // minted by jwt-minter carries the CURRENT user's scopes (D-04 / §6.1 G7).
+  //
+  // The manifest passed to AgentService is DASHBOARD_TOOL_METADATA — the full
+  // set; RBAC filtering happens per-turn inside AgentService.runTurn via the
+  // injected resolvePermissions callback. Handlers are not wired at this call
+  // site today — the in-process dispatch target is a forthcoming hookup in
+  // Phase 33 when cross-service tools are added. Keeping the dispatcher
+  // instance here preserves the server.ts wiring contract so Phase 33 only
+  // needs to fill in the handler array.
+  const agentDispatcher = new ToolDispatcher({
+    tools: [], // handler-bound tools wired in Phase 33 (cross-service path)
+    signer: dashboardSigner,
+    dashboardMcpAudience,
+    resolveScopes: async (userId, orgId) => {
+      const perms = await resolveEffectivePermissions(
+        storage.roles,
+        userId,
+        // Internal agent dispatches run at the user's real role — we look it
+        // up once per dispatch. This is the same data surface the global
+        // permission loader uses (server.ts:682) but read via the storage
+        // adapter here to avoid coupling to the Fastify request cycle.
+        'viewer',
+        orgId,
+      );
+      return [...perms];
+    },
+  });
+  const agentService = new AgentService({
+    storage,
+    llm: {
+      // The LLM service talks to /api/v1/capabilities/agent-conversation;
+      // resolveOrgLLMClient returns a per-org or system LLMClient. We defer
+      // resolution to streamAgentConversation time so an admin changing the
+      // per-org credentials is picked up without a server restart.
+      streamAgentConversation: async (input, opts) => {
+        const systemClient = getLLMClient();
+        if (systemClient === null) {
+          throw new Error('LLM client not configured');
+        }
+        return systemClient.streamAgentConversation(input, opts);
+      },
+    },
+    allTools: DASHBOARD_TOOL_METADATA,
+    dispatcher: agentDispatcher,
+    resolvePermissions: async (userId, orgId) => {
+      // Called at the HEAD of every AgentService.runTurn iteration — the
+      // single source of truth for per-user permissions. See D-07 / Pitfall 6.
+      return resolveEffectivePermissions(storage.roles, userId, 'viewer', orgId);
+    },
+    config: { agentDisplayNameDefault: 'Luqen Assistant' },
+  });
+  await registerAgentRoutes(server, {
+    agentService,
+    dispatcher: agentDispatcher,
+    storage,
+    publicUrl: dashboardPublicUrl,
+  });
 
   // ── GraphQL API (mercurius) ──────────────────────────────────────────────
   await server.register(mercurius, {

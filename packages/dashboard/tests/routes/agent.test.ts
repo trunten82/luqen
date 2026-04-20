@@ -83,10 +83,10 @@ async function buildCtx(
   await server.register(import('@fastify/formbody'));
 
   // Inject authenticated user for every request (test substitute for the
-  // production authGuard + session preHandler).
-  let authed = true;
+  // production authGuard + session preHandler). Individual tests can send
+  // `x-test-unauth: 1` to simulate an unauthenticated request.
   server.addHook('preHandler', async (request, reply) => {
-    if (!authed) {
+    if (request.headers['x-test-unauth'] === '1') {
       await reply.code(401).send({ error: 'unauth' });
       return;
     }
@@ -96,13 +96,6 @@ async function buildCtx(
       role: 'viewer',
       currentOrgId: org.id,
     };
-  });
-
-  // Toggle auth on the fly by reading a header — individual tests can send
-  // `x-test-unauth: 1` to trigger the 401 path.
-  server.addHook('preHandler', async (request) => {
-    if (request.headers['x-test-unauth'] === '1') authed = false;
-    else authed = true;
   });
 
   await registerAgentRoutes(server, {

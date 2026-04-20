@@ -7,3 +7,7 @@ These 6 tests fail on master BEFORE any Plan 32-04 changes. Logged per Plan 32-0
 - tests/mcp/http.test.ts (1 failure): 'Case 4: valid Bearer + tools/list returns the 6 dashboard data tools'. Same root cause.
 
 These tests are unrelated to Plan 32-04 changes and affect pre-existing MCP tool-list gating logic, not agent-service code. Recommend follow-up plan to update scope expectations (admin.users/admin.system are already classified as write-tier, but .view perms need read; the 'read' scope alone may be too restrictive for mixed-permission tests).
+
+- tests/e2e/auth-flow-e2e.test.ts (2 failures): 'GET /home without auth redirects to /login' and 'session is invalid after logout'. Tests assert `location === '/login'` but the auth middleware now emits `'/login?returnTo=%2Fhome'` (GET-only returnTo preservation added in Phase 31.1 Plan 02 Task 3). Tests need updating to match current behavior, not a Plan 32-04 regression.
+
+Total pre-existing failures confirmed on clean master (before Plan 32-04 edits): 8.
