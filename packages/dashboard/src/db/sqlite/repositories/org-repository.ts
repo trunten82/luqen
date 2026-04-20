@@ -20,6 +20,7 @@ interface OrgRow {
   llm_client_id: string | null;
   llm_client_secret: string | null;
   branding_mode: string;
+  agent_display_name: string | null;
 }
 
 /**
@@ -65,6 +66,13 @@ function rowToOrg(row: OrgRow): Organization {
     ...(row.llm_client_id ? { llmClientId: row.llm_client_id } : {}),
     ...(row.llm_client_secret ? { llmClientSecret: row.llm_client_secret } : {}),
     brandingMode: narrowBrandingMode(row.branding_mode),
+    // Phase 32 Plan 03 (D-14): surfaces the per-org agent display name.
+    // Migration 055 column is nullable TEXT; pre-055 orgs read null from
+    // the ALTER TABLE default. Nullish-coalesce (?? null) only maps
+    // null/undefined → null and leaves an explicit empty string `''`
+    // intact — the type contract distinguishes `null` (unset) from `''`
+    // (explicitly blank) even though the UI fallback treats them the same.
+    agentDisplayName: row.agent_display_name ?? null,
   };
 }
 
@@ -289,6 +297,28 @@ export class SqliteOrgRepository implements OrgRepository {
     if (result.changes === 0) {
       throw new Error(`organization not found: ${orgId}`);
     }
+  }
+
+  // --------------------------------------------------------------------------
+  // Phase 32 Plan 03 (D-14) — agent display name (migration 055)
+  // --------------------------------------------------------------------------
+
+  async updateOrgAgentDisplayName(orgId: string, displayName: string | null): Promise<void> {
+    // T-32-03-01 mitigation: parameterised query — the displayName string
+    // is bound as a value, not concatenated. A SQL-injection payload
+    // ("'; DROP TABLE organizations; --") is stored verbatim, never
+    // executed. Regression test in
+    // tests/repositories/org-repository-agent-display-name.test.ts.
+    //
+    // Nonexistent orgId is a silent no-op (0 rows affected, no throw) —
+    // matches the shape of updateOrgComplianceClient /
+    // updateOrgBrandingClient / updateOrgLLMClient above. Unlike
+    // setBrandingMode / setBrandScoreTarget this method is expected to
+    // be called by route handlers that have already resolved the org;
+    // the write-site validator (Plan 08) is the primary guard.
+    this.db
+      .prepare('UPDATE organizations SET agent_display_name = ? WHERE id = ?')
+      .run(displayName, orgId);
   }
 
   async getUserOrgs(userId: string): Promise<Organization[]> {

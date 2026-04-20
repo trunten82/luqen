@@ -1395,4 +1395,20 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission)
   SELECT id, 'mcp.use' FROM roles;
     `,
   },
+  {
+    id: '055',
+    name: 'agent-display-name',
+    sql: `
+-- Phase 32 Plan 03 (D-14): add nullable agent_display_name column to
+-- organizations. The ONLY per-org agent knob — per-org system-prompt
+-- override is permanently out of scope (prompt-injection surface).
+-- Null fallback is the project-wide default "Luqen Assistant" (D-19),
+-- handled in UI/system-prompt layer. The migration runner tracks applied
+-- ids in schema_migrations (migrations.ts run() line ~50); a re-run
+-- therefore skips this entry entirely — SQLite has no 'ADD COLUMN IF
+-- NOT EXISTS', but we do not need it because the runner guarantees
+-- one-shot application.
+ALTER TABLE organizations ADD COLUMN agent_display_name TEXT;
+    `,
+  },
 ];
