@@ -24,7 +24,20 @@ import type { ToolMetadata } from '@luqen/core/mcp';
 import { DASHBOARD_ADMIN_TOOL_METADATA } from './tools/admin.js';
 
 export const DASHBOARD_DATA_TOOL_METADATA: readonly ToolMetadata[] = [
-  { name: 'dashboard_scan_site',         requiredPermission: 'scans.create',  destructive: true },
+  {
+    name: 'dashboard_scan_site',
+    requiredPermission: 'scans.create',
+    destructive: true,
+    // Phase 32 D-28: rendered in the APER-02 confirmation dialog. Kept ≤ 80 chars
+    // per UI-SPEC Surface 2. args.siteUrl is the only relevant field; fallback
+    // when absent keeps the template usable even for malformed LLM tool calls.
+    confirmationTemplate: (args) => {
+      const raw = typeof args['siteUrl'] === 'string' ? args['siteUrl'].trim() : '';
+      return raw.length > 0
+        ? `Start a WCAG scan of ${raw}`
+        : 'Start a WCAG scan of the provided URL';
+    },
+  },
   { name: 'dashboard_list_reports',      requiredPermission: 'reports.view' },
   { name: 'dashboard_get_report',        requiredPermission: 'reports.view' },
   { name: 'dashboard_query_issues',      requiredPermission: 'reports.view' },

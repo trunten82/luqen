@@ -38,11 +38,17 @@ export interface ToolContext {
  *
  * `destructive` (PITFALLS.md #10) is a UI hint for confirmation dialogs in
  * wave-2 dashboards; the plugin does not act on it directly.
+ *
+ * Phase 32 D-28: `confirmationTemplate` renders a human-readable summary of
+ * the pending tool call for the APER-02 confirmation dialog. Populated on
+ * every dashboard tool whose `destructive === true`; optional elsewhere so
+ * non-destructive tools are not forced to carry an unused closure.
  */
 export interface ToolMetadata {
   readonly name: string;
   readonly requiredPermission?: string;
   readonly destructive?: boolean;
+  readonly confirmationTemplate?: (args: Record<string, unknown>) => string;
 }
 
 /**
