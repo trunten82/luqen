@@ -152,7 +152,7 @@ Plans:
   4. When the agent proposes a state-changing tool call (user deletion, org setting change), a native confirmation dialog appears before execution; declining returns a cancellation message without executing the tool
 **Plans**: 8 plans
 Plans:
-- [ ] 32-01-PLAN.md — LLM streaming adapters (ollama/openai extended with completeStream, new Anthropic adapter) + registry + package.json pin
+- [x] 32-01-PLAN.md — LLM streaming adapters (ollama/openai extended with completeStream, new Anthropic adapter) + registry + package.json pin
 - [ ] 32-02-PLAN.md — agent-conversation capability + agent-system prompt template (3 locked fences) + PUT orgId guard
 - [ ] 32-03-PLAN.md — Migration 050 adds agent_display_name column on organizations + OrganizationsRepository roundtrip
 - [ ] 32-04-PLAN.md — AgentService + ToolDispatcher + jwt-minter + SSE frames + /agent/* routes + server.ts wiring (destructive pause, iteration cap, RBAC rebuild, audit writes, ToolMetadata.confirmationTemplate)
@@ -185,5 +185,5 @@ Plans:
 | 31. Conversation Persistence | 2/2 | Complete | 2026-04-18 |
 | 31.1. MCP Authorization Spec Upgrade (INSERTED) | 4/4 | Complete | 2026-04-19 |
 | 31.2. MCP Access Control Refinement (INSERTED) | 5/5 | Complete | 2026-04-19 |
-| 32. Agent Service + Chat UI | 0/8 | Not started | - |
+| 32. Agent Service + Chat UI | 1/8 | In Progress|  |
 | 33. Agent Intelligence + Audit Viewer | 0/? | Not started | - |
