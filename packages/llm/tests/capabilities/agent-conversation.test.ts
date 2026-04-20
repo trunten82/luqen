@@ -498,6 +498,39 @@ describe('executeAgentConversation', () => {
     expect(call).toBe(1); // second provider never invoked
   });
 
+  // T-32-02-03 defence-in-depth — display name sanitisation
+  it('sanitises agentDisplayName containing < or > to the safe fallback before interpolation (T-32-02-03)', async () => {
+    const seedOrgId = 'xss-defense-org';
+    await db.assignCapability({
+      capability: 'agent-conversation',
+      modelId,
+      priority: 1,
+      orgId: seedOrgId,
+    });
+
+    const capture: CaptureHook = {};
+    const adapter = makeStreamingAdapter(
+      [{ type: 'done', finishReason: 'stop' }],
+      capture,
+    );
+    const factory = vi.fn().mockReturnValue(adapter);
+
+    await collect(
+      executeAgentConversation(db, factory, {
+        orgId: seedOrgId,
+        userId: 'user-1',
+        messages: [{ role: 'user', content: 'hi' }],
+        tools: [],
+        agentDisplayName: '<script>alert(1)</script>',
+      }),
+    );
+
+    const sysContent = capture.messages?.[0]?.content ?? '';
+    expect(sysContent).not.toContain('<script>');
+    expect(sysContent).not.toContain('</script>');
+    expect(sysContent).toContain('Luqen Assistant');
+  });
+
   it('throws CapabilityNotConfiguredError when no model assigned to agent-conversation for the org', async () => {
     const factory = vi.fn();
     await expect(
