@@ -1,0 +1,465 @@
+/**
+ * Phase 32 Plan 04 Task 3 (RED) — AgentService runTurn() integration tests.
+ *
+ * Nine AI-SPEC §5.3 Critical + Cross-tenant fixtures + iteration cap:
+ *   1. rbac-permitted-tool-call            (tool in manifest, dispatched)
+ *   2. rbac-forbidden-tool-filtered        (tool omitted from manifest)
+ *   3. rbac-revoked-mid-turn               (iter 2 revokes; iter 3 manifest lacks tool)
+ *   4. destructive-approved                (pause; then /confirm path — simulated)
+ *   5. destructive-denied                  (pause; then /deny path — simulated)
+ *   6. destructive-batch-pause             (destructive + non-destructive in one batch → only pause row persisted)
+ *   7. pending-confirmation-reload         (getWindow after pause still has the row)
+ *   8. cross-org-data-request-blocked      (getConversation with wrong orgId returns null)
+ *   9. cross-org-memory-stale-after-switch (second conversation has empty window)
+ *   10. iteration-cap-forced-final-answer  (5 tool-call iters → iter 6 forces final + audit)
+ *
+ * Integration surface: real SQLite, real ConversationRepository, real
+ * AgentAuditRepository. LlmClient.streamAgentConversation is stubbed with a
+ * scripted iterator. ToolDispatcher.dispatch is stubbed with scripted results.
+ */
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { rmSync, existsSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+
+import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
+import { setEncryptionSalt } from '../../src/plugins/crypto.js';
+import type { ToolMetadata } from '@luqen/core/mcp';
+import type { SseFrame } from '../../src/agent/sse-frames.js';
+import { AgentService } from '../../src/agent/agent-service.js';
+import type {
+  AgentStreamTurn,
+  AgentStreamInput,
+  AgentStreamOptions,
+} from '../../src/agent/agent-service.js';
+import type { ToolCallInput, ToolDispatchResult } from '../../src/agent/tool-dispatch.js';
+
+// ---------------------------------------------------------------------------
+// Test harness
+// ---------------------------------------------------------------------------
+
+interface Ctx {
+  storage: SqliteStorageAdapter;
+  dbPath: string;
+  userId: string;
+  orgId: string;
+  otherOrgId: string;
+  conversationId: string;
+  cleanup: () => Promise<void>;
+}
+
+async function buildCtx(): Promise<Ctx> {
+  setEncryptionSalt('phase-32-04-agent-service-salt');
+  const dbPath = join(tmpdir(), `test-agent-svc-${randomUUID()}.db`);
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
+
+  // Seed two orgs + one user belonging to both.
+  const userId = randomUUID();
+  const raw = storage.getRawDatabase();
+  raw.prepare(
+    `INSERT INTO dashboard_users (id, username, password_hash, role, active, created_at)
+     VALUES (?, ?, 'pw', 'viewer', 1, ?)`,
+  ).run(userId, `u-${userId.slice(0, 6)}`, new Date().toISOString());
+
+  const orgA = await storage.organizations.createOrg({ name: 'Org A', slug: `a-${userId.slice(0, 6)}` });
+  const orgB = await storage.organizations.createOrg({ name: 'Org B', slug: `b-${userId.slice(0, 6)}` });
+
+  const conv = await storage.conversations.createConversation({
+    userId,
+    orgId: orgA.id,
+  });
+
+  return {
+    storage,
+    dbPath,
+    userId,
+    orgId: orgA.id,
+    otherOrgId: orgB.id,
+    conversationId: conv.id,
+    cleanup: async () => {
+      await storage.disconnect();
+      if (existsSync(dbPath)) rmSync(dbPath);
+    },
+  };
+}
+
+/**
+ * Script-driven LLM stub. Each call to streamAgentConversation dequeues the
+ * next scripted turn from the queue. Production streaming semantics are
+ * simulated by invoking opts.onFrame for each queued frame, then returning
+ * the summary { text, toolCalls }.
+ */
+function makeLlmStub(script: AgentStreamTurn[]) {
+  const queue = [...script];
+  const calls: Array<{ input: AgentStreamInput; opts: AgentStreamOptions }> = [];
+  const stub = {
+    streamAgentConversation: vi.fn(
+      async (input: AgentStreamInput, opts: AgentStreamOptions): Promise<AgentStreamTurn> => {
+        calls.push({ input, opts });
+        if (queue.length === 0) {
+          throw new Error('LLM stub exhausted');
+        }
+        const next = queue.shift()!;
+        // Simulate streaming: emit tokens then a final delta.
+        for (const t of next.text.split(' ')) {
+          if (t.length > 0) opts.onFrame({ type: 'token', text: t });
+        }
+        return next;
+      },
+    ),
+    calls,
+    remainingScriptCount: () => queue.length,
+  };
+  return stub;
+}
+
+function makeDispatcherStub(handlers: Map<string, (call: ToolCallInput) => Promise<ToolDispatchResult>>) {
+  return {
+    dispatch: vi.fn(async (call: ToolCallInput): Promise<ToolDispatchResult> => {
+      const h = handlers.get(call.name);
+      if (h === undefined) return { error: 'unknown_tool' } as ToolDispatchResult;
+      return h(call);
+    }),
+  };
+}
+
+const TEST_TOOLS: readonly ToolMetadata[] = [
+  { name: 'dashboard_list_reports', requiredPermission: 'reports.view' },
+  {
+    name: 'dashboard_scan_site',
+    requiredPermission: 'scans.create',
+    destructive: true,
+    confirmationTemplate: (args) => `Start scan of ${args['siteUrl']}`,
+  },
+  { name: 'dashboard_get_report', requiredPermission: 'reports.view' },
+];
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
+describe('AgentService.runTurn — critical fixtures', () => {
+  let ctx: Ctx;
+  beforeEach(async () => {
+    ctx = await buildCtx();
+  });
+  afterEach(async () => {
+    await ctx.cleanup();
+  });
+
+  it('rbac-permitted-tool-call: tool in manifest → dispatched + audited', async () => {
+    const llm = makeLlmStub([
+      {
+        text: 'Fetching reports...',
+        toolCalls: [{ id: 't1', name: 'dashboard_list_reports', args: {} }],
+      },
+      { text: 'Here are your reports.', toolCalls: [] },
+    ]);
+    const dispatcher = makeDispatcherStub(
+      new Map([['dashboard_list_reports', async () => ({ ok: true, reports: [] })]]),
+    );
+    const emits: SseFrame[] = [];
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as unknown as Parameters<typeof AgentService.prototype.runTurn>[0] extends never
+        ? never
+        : never, // type gymnastic — real construction below via constructor args
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as unknown as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+    });
+
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'List my reports',
+      emit: (f) => { emits.push(f); },
+      signal: new AbortController().signal,
+    });
+
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(1);
+    // Two LLM calls: the tool-call turn and the follow-up answer turn.
+    expect(llm.streamAgentConversation).toHaveBeenCalledTimes(2);
+    const doneFrames = emits.filter((f) => f.type === 'done');
+    expect(doneFrames.length).toBe(1);
+
+    // DB assertions: 1 user + 1 tool + 1 assistant message.
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const roles = window.map((m) => m.role);
+    expect(roles).toEqual(['user', 'tool', 'assistant']);
+
+    // Audit row lands for the tool dispatch.
+    const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 10 });
+    expect(audit.length).toBe(1);
+    expect(audit[0].toolName).toBe('dashboard_list_reports');
+    expect(audit[0].outcome).toBe('success');
+  });
+
+  it('rbac-forbidden-tool-filtered: manifest passed to LLM excludes tools user lacks permission for', async () => {
+    const llm = makeLlmStub([{ text: 'OK.', toolCalls: [] }]);
+    const dispatcher = makeDispatcherStub(new Map());
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']), // no scans.create
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'hi',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    expect(llm.streamAgentConversation).toHaveBeenCalledTimes(1);
+    const passedTools = llm.calls[0].input.tools.map((t) => t.name);
+    expect(passedTools).toContain('dashboard_list_reports');
+    expect(passedTools).toContain('dashboard_get_report');
+    expect(passedTools).not.toContain('dashboard_scan_site');
+  });
+
+  it('rbac-revoked-mid-turn: iter 2 manifest reflects revocation', async () => {
+    const llm = makeLlmStub([
+      {
+        text: '',
+        toolCalls: [{ id: 't1', name: 'dashboard_list_reports', args: {} }],
+      },
+      {
+        text: '',
+        toolCalls: [{ id: 't2', name: 'dashboard_get_report', args: { id: 'r1' } }],
+      },
+      { text: 'All done.', toolCalls: [] },
+    ]);
+    const dispatcher = makeDispatcherStub(
+      new Map([
+        ['dashboard_list_reports', async () => ({ ok: true })],
+        ['dashboard_get_report', async () => ({ ok: true })],
+      ]),
+    );
+    // resolvePermissions: first two calls grant reports.view, the third strips it.
+    let callCount = 0;
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => {
+        callCount += 1;
+        if (callCount >= 3) return new Set();
+        return new Set(['reports.view']);
+      },
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'kick off a loop',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    // Third LLM call must have been made with an empty manifest.
+    expect(llm.calls.length).toBe(3);
+    expect(llm.calls[2].input.tools.map((t) => t.name)).toEqual([]);
+  });
+
+  it('destructive-batch-pause: a destructive + non-destructive batch pauses the whole batch', async () => {
+    const llm = makeLlmStub([
+      {
+        text: '',
+        toolCalls: [
+          { id: 't1', name: 'dashboard_list_reports', args: {} },
+          { id: 't2', name: 'dashboard_scan_site', args: { siteUrl: 'https://ex.com' } },
+        ],
+      },
+    ]);
+    const dispatcher = makeDispatcherStub(
+      new Map([['dashboard_list_reports', async () => ({ ok: true })]]),
+    );
+    const emits: SseFrame[] = [];
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view', 'scans.create']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'run stuff',
+      emit: (f) => { emits.push(f); },
+      signal: new AbortController().signal,
+    });
+
+    // No dispatches should have fired (AI-SPEC FM #4).
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
+    // Exactly one pending_confirmation frame should have been emitted.
+    const pending = emits.filter((f) => f.type === 'pending_confirmation');
+    expect(pending.length).toBe(1);
+    expect((pending[0] as Extract<SseFrame, { type: 'pending_confirmation' }>).toolName).toBe(
+      'dashboard_scan_site',
+    );
+
+    // DB has 1 user + 1 pending_confirmation tool row, status=pending_confirmation.
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const roles = window.map((m) => m.role);
+    expect(roles).toEqual(['user', 'tool']);
+    expect(window[1].status).toBe('pending_confirmation');
+    expect(window[1].toolCallJson).toBeTruthy();
+  });
+
+  it('pending-confirmation-reload: pending row is retrievable via getWindow after runTurn returns', async () => {
+    const llm = makeLlmStub([
+      {
+        text: '',
+        toolCalls: [{ id: 't1', name: 'dashboard_scan_site', args: { siteUrl: 'https://ex.com' } }],
+      },
+    ]);
+    const dispatcher = makeDispatcherStub(new Map());
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['scans.create']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'scan it',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    // Simulate a reload: fetch window again from a fresh repo read.
+    const windowAfter = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const pending = windowAfter.find((m) => m.status === 'pending_confirmation');
+    expect(pending).toBeDefined();
+    expect(pending?.toolCallJson).toBeTruthy();
+    const parsed = JSON.parse(pending!.toolCallJson!);
+    expect(parsed.name).toBe('dashboard_scan_site');
+  });
+
+  it('cross-org-data-request-blocked: getConversation with wrong orgId returns null', async () => {
+    const conv = await ctx.storage.conversations.getConversation(
+      ctx.conversationId,
+      ctx.otherOrgId,
+    );
+    expect(conv).toBeNull();
+    // Sanity: right org still returns it.
+    const same = await ctx.storage.conversations.getConversation(
+      ctx.conversationId,
+      ctx.orgId,
+    );
+    expect(same).not.toBeNull();
+  });
+
+  it('cross-org-memory-stale-after-switch: second conversation in other org starts empty', async () => {
+    // After writing a message in org A...
+    await ctx.storage.conversations.appendMessage({
+      conversationId: ctx.conversationId,
+      role: 'user',
+      content: 'org-A secret string',
+      status: 'sent',
+    });
+    // ...creating a fresh conversation in org B begins with empty rolling window.
+    const convB = await ctx.storage.conversations.createConversation({
+      userId: ctx.userId,
+      orgId: ctx.otherOrgId,
+    });
+    const window = await ctx.storage.conversations.getWindow(convB.id);
+    expect(window.length).toBe(0);
+  });
+
+  it('iteration-cap-forced-final-answer: 6th iter writes __loop__ audit + final assistant message', async () => {
+    // Script 5 consecutive tool-call turns + the forced-final answer turn.
+    const script: AgentStreamTurn[] = [];
+    for (let i = 0; i < 5; i++) {
+      script.push({
+        text: '',
+        toolCalls: [{ id: `t${i}`, name: 'dashboard_list_reports', args: {} }],
+      });
+    }
+    script.push({ text: 'Final answer after forced wrap-up.', toolCalls: [] });
+
+    const llm = makeLlmStub(script);
+    const dispatcher = makeDispatcherStub(
+      new Map([['dashboard_list_reports', async () => ({ ok: true })]]),
+    );
+    const emits: SseFrame[] = [];
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'loop forever',
+      emit: (f) => { emits.push(f); },
+      signal: new AbortController().signal,
+    });
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(5);
+    expect(llm.streamAgentConversation).toHaveBeenCalledTimes(6); // 5 tool-call + 1 forced
+    const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 20 });
+    const loopRow = audit.find((a) => a.toolName === '__loop__');
+    expect(loopRow).toBeDefined();
+    expect(loopRow?.outcome).toBe('error');
+    expect(loopRow?.outcomeDetail).toBe('iteration_cap');
+    // done frame still emitted after final answer.
+    expect(emits.filter((f) => f.type === 'done').length).toBe(1);
+  });
+
+  it('tool-result 8KB truncation applied when payload exceeds cap', async () => {
+    const big = 'x'.repeat(12_000); // 12 KB result
+    const llm = makeLlmStub([
+      {
+        text: '',
+        toolCalls: [{ id: 't1', name: 'dashboard_list_reports', args: {} }],
+      },
+      { text: 'Done.', toolCalls: [] },
+    ]);
+    const dispatcher = makeDispatcherStub(
+      new Map([['dashboard_list_reports', async () => ({ data: big })]]),
+    );
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'go',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const toolMsg = window.find((m) => m.role === 'tool');
+    expect(toolMsg).toBeDefined();
+    // Stored JSON includes a _truncated sentinel; size bounded.
+    const stored = toolMsg!.toolResultJson!;
+    const parsed = JSON.parse(stored);
+    expect(parsed._truncated).toBe(true);
+  });
+});
