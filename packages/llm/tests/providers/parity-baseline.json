@@ -1,0 +1,37 @@
+{
+  "parity-plain-text": {
+    "description": "Same prompt → identical StreamFrame[] shape across all adapters. id+usage vary, ignored in parity check.",
+    "frames": [
+      { "type": "token", "text": "OK" },
+      { "type": "done", "finishReason": "stop" }
+    ]
+  },
+  "parity-single-tool-call": {
+    "description": "Single tool_call to scan_site({url:'https://example.com'}). id is provider-specific; parity check compares name+args only.",
+    "frames": [
+      {
+        "type": "tool_calls",
+        "calls": [
+          { "name": "scan_site", "args": { "url": "https://example.com" } }
+        ]
+      },
+      { "type": "done", "finishReason": "tool_calls" }
+    ]
+  },
+  "parity-invalid-json-tool-args": {
+    "description": "Malformed tool_call args JSON (truncated). Baseline behavior per adapter: OpenAI/Anthropic/Ollama each emit either (a) an error frame with code='invalid_response' and retryable=true, OR (b) a tool_calls frame with best-effort-parsed args (empty object fallback). Parity CI checks that ALL three adapters pick the same branch for the same truncated input.",
+    "accepted_outcomes": [
+      {
+        "kind": "error_frame",
+        "frame": { "type": "error", "code": "invalid_response", "retryable": true }
+      },
+      {
+        "kind": "best_effort_parse",
+        "frame": {
+          "type": "tool_calls",
+          "calls": [{ "name": "scan_site", "args": {} }]
+        }
+      }
+    ]
+  }
+}
