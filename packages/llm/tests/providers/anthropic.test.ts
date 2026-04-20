@@ -7,17 +7,15 @@ const messagesCreateSpy = vi.fn();
 const messagesStreamSpy = vi.fn();
 
 vi.mock('@anthropic-ai/sdk', () => {
-  return {
-    default: vi.fn().mockImplementation((cfg: unknown) => {
+  // Use a regular function so `new Anthropic(cfg)` works. Arrow functions
+  // (produced by vi.fn().mockImplementation(...)) can't be used as constructors.
+  class MockAnthropic {
+    messages = { create: messagesCreateSpy, stream: messagesStreamSpy };
+    constructor(cfg: unknown) {
       anthropicCtorSpy(cfg);
-      return {
-        messages: {
-          create: messagesCreateSpy,
-          stream: messagesStreamSpy,
-        },
-      };
-    }),
-  };
+    }
+  }
+  return { default: MockAnthropic };
 });
 
 // Import after mock registration.
