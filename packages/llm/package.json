@@ -5,7 +5,9 @@
   "type": "module",
   "main": "dist/cli.js",
   "types": "dist/cli.d.ts",
-  "bin": { "luqen-llm": "dist/cli.js" },
+  "bin": {
+    "luqen-llm": "dist/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -14,8 +16,11 @@
     "lint": "tsc --noEmit",
     "start": "node dist/cli.js serve"
   },
-  "engines": { "node": ">=22.0.0" },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.90.0",
     "@fastify/cors": "^10.0.0",
     "@fastify/rate-limit": "^10.0.0",
     "@fastify/swagger": "^9.0.0",
