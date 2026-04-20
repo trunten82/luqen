@@ -4,6 +4,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import rateLimit from '@fastify/rate-limit';
 import type { DbAdapter } from '../db/adapter.js';
+import type { Model } from '../types.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
 import { createJwksTokenVerifier } from '../auth/oauth.js';
 import { createAuthMiddleware } from '../auth/middleware.js';
@@ -28,6 +29,70 @@ export interface ServerOptions {
   readonly rateLimitRead?: number;
   readonly rateLimitWindowMs?: number;
   readonly logger?: boolean;
+}
+
+/**
+ * Phase 32-02 Task 4 (AI-SPEC §4c.1 row #5) — default capability
+ * assignment seed for `agent-conversation`. Ensures fresh installs have a
+ * working agent out of the box without any admin UI interaction.
+ *
+ * Semantics:
+ *  - No-op when ANY agent-conversation assignment already exists
+ *    (respects admin intent — never overwrites).
+ *  - Prefers `claude-haiku-4-5-20251001` (Anthropic) → `gpt-4o-mini`
+ *    (OpenAI) → first model from `listModels()` (e.g. the local Ollama
+ *    path), so on-prem installs without paid API keys still bootstrap.
+ *  - When no models are registered at all, emits a warning via the
+ *    provided pino-shaped logger and returns (does NOT throw — startup
+ *    must proceed; admin can seed models later via /admin/llm).
+ *  - Seeds with `orgId: undefined` which the SQLite adapter stores as
+ *    the empty string — the conventional global/system scope (see
+ *    sqlite-adapter.ts:316).
+ */
+type BootstrapLogger = Pick<ReturnType<typeof Fastify>['log'], 'info' | 'warn' | 'error'>;
+
+export async function bootstrapAgentConversation(
+  db: DbAdapter,
+  log: BootstrapLogger,
+): Promise<void> {
+  // Step 1: no-op when any assignment already exists
+  const existing = await db.listCapabilityAssignments();
+  const hasAgentAssignment = existing.some((a) => a.capability === 'agent-conversation');
+  if (hasAgentAssignment) {
+    return;
+  }
+
+  // Step 2: pick the preferred seed model
+  const models = await db.listModels();
+  if (models.length === 0) {
+    log.warn(
+      { capability: 'agent-conversation' },
+      'agent-conversation: no models available to seed — admin must assign manually via /admin/llm?tab=capabilities',
+    );
+    return;
+  }
+
+  const byModelId = (id: string): Model | undefined => models.find((m) => m.modelId === id);
+  const picked: Model =
+    byModelId('claude-haiku-4-5-20251001') ??
+    byModelId('gpt-4o-mini') ??
+    // First model with supportsTools: true — the current Model type has
+    // no such flag, so this step naturally collapses to the next, keeping
+    // the 4-branch decision documented and future-proof if the flag lands.
+    models[0]!;
+
+  // Step 3: create the assignment at priority 1 at the global/system scope
+  await db.assignCapability({
+    capability: 'agent-conversation',
+    modelId: picked.id,
+    priority: 1,
+    // omit orgId — system scope per sqlite-adapter convention
+  });
+
+  log.info(
+    { capability: 'agent-conversation', modelId: picked.modelId, priority: 1 },
+    'agent-conversation: bootstrap seed assignment applied',
+  );
 }
 
 export async function createServer(options: ServerOptions) {
@@ -129,6 +194,12 @@ export async function createServer(options: ServerOptions) {
 
   // Initialize DB
   await db.initialize();
+
+  // Phase 32-02 Task 4 (AI-SPEC §4c.1 row #5): seed the default
+  // agent-conversation capability assignment if none exists. Runs AFTER
+  // db.initialize() so schema is ready, BEFORE routes are registered so
+  // the very first /api/v1/capabilities call reflects the seeded state.
+  await bootstrapAgentConversation(db, app.log);
 
   // OpenAPI JSON alias
   app.get('/api/v1/openapi.json', async (_request, reply) => {
