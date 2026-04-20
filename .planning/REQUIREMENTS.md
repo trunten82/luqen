@@ -35,7 +35,7 @@ Requirements for the MCP Servers & Agent Companion milestone. Each maps to roadm
 ### Agent Persistence
 
 - [ ] **APER-01**: User's conversation history persists across sessions in SQLite
-- [ ] **APER-02**: State-changing tool calls require explicit user confirmation via native dialog
+- [x] **APER-02**: State-changing tool calls require explicit user confirmation via native dialog
 - [ ] **APER-03**: Every tool invocation is logged with user, org, tool, args, outcome, and latency
 - [ ] **APER-04**: Admin can browse and filter agent audit logs in the dashboard
 
@@ -100,7 +100,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGENT-04 | Phase 33 | Pending |
 | AGENT-05 | Phase 33 | Pending |
 | APER-01 | Phase 31 | Pending |
-| APER-02 | Phase 32 | Pending |
+| APER-02 | Phase 32 | Complete |
 | APER-03 | Phase 31 | Pending |
 | APER-04 | Phase 33 | Pending |
 | MCPAUTH-01 | Phase 31.1 | Complete |

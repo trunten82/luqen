@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Completed 32-02-PLAN.md
-last_updated: "2026-04-20T08:08:56.361Z"
+stopped_at: Completed 32-03-PLAN.md
+last_updated: "2026-04-20T08:25:51.685Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 32
-  completed_plans: 27
-  percent: 84
+  completed_plans: 28
+  percent: 88
 ---
 
 # Project State
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ```
 
 Phase: 32 (agent-service-chat-ui) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Plans: 5 of 5
 Status: Ready to execute
 Last activity: 2026-04-20
@@ -58,6 +58,7 @@ Last activity: 2026-04-20
 | Phase 31.2 P05 | 15m | 3 tasks | 9 files |
 | Phase 32 P01 | 10min | 3 tasks | 13 files |
 | Phase 32-agent-service-chat-ui P02 | ~12m | 4 tasks | 11 files |
+| Phase 32-agent-service-chat-ui P03 | 11m | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ v3.0.0 architecture decisions (from research):
 - [Phase 32-agent-service-chat-ui]: D-23 committed-provider semantics: first iterator step is the stream-open gate; after it yields, forward frames verbatim and terminate on error without retry
 - [Phase 32-agent-service-chat-ui]: Bootstrap seed four-tier preference (Haiku -> gpt-4o-mini -> supportsTools -> first) ensures Ollama-only on-prem installs bootstrap without paid API keys
 - [Phase 32-agent-service-chat-ui]: T-32-02-03 sanitiser placed at interpolation call site as defence-in-depth; Plan 08 write-time validator is the primary defense
+- [Phase 32-agent-service-chat-ui]: [32-03]: Migration id bumped 050 -> 055 (050-054 occupied by Phase 31.1/31.2 OAuth + mcp.use backfill); column name agent_display_name unchanged
+- [Phase 32-agent-service-chat-ui]: [32-03]: Repo layer does NOT enforce Zod length/format — Plan 08's route handler owns write-site validation; repo's sole threat mitigation is parameterised UPDATE for T-32-03-01 SQL-injection
 
 ### Architecture Notes
 
@@ -168,7 +171,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-20T08:08:56.357Z
-Stopped at: Completed 32-02-PLAN.md
+Last session: 2026-04-20T08:25:51.680Z
+Stopped at: Completed 32-03-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 28`
