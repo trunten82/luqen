@@ -35,6 +35,7 @@ import type {
 } from '../providers/types.js';
 import { CapabilityExhaustedError, CapabilityNotConfiguredError } from './types.js';
 import { buildAgentSystemPrompt } from '../prompts/agent-system.js';
+import { interpolateTemplate } from '../prompts/helpers.js';
 
 export interface AgentConversationInput {
   readonly orgId: string;
@@ -43,11 +44,6 @@ export interface AgentConversationInput {
   readonly tools: ReadonlyArray<ToolDef>;
   readonly agentDisplayName: string;
   readonly signal?: AbortSignal;
-}
-
-function interpolate(template: string, displayName: string): string {
-  // Inline replacement — extracted to a helper file in REFACTOR (Task 3).
-  return template.split('{agentDisplayName}').join(displayName);
 }
 
 export async function* executeAgentConversation(
@@ -67,7 +63,9 @@ export async function* executeAgentConversation(
     input.orgId,
   );
   const rawTemplate = override != null ? override.template : buildAgentSystemPrompt();
-  const systemContent = interpolate(rawTemplate, input.agentDisplayName);
+  const systemContent = interpolateTemplate(rawTemplate, {
+    agentDisplayName: input.agentDisplayName,
+  });
 
   const fullMessages: ChatMessage[] = [
     { role: 'system', content: systemContent },
