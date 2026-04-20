@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Phase 31.2 context gathered
-last_updated: "2026-04-20T05:35:25.362Z"
-last_activity: 2026-04-20 -- Phase 32 execution started
+stopped_at: Completed 32-01-PLAN.md
+last_updated: "2026-04-20T07:46:16.990Z"
+last_activity: 2026-04-20
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 32
-  completed_plans: 25
-  percent: 78
+  completed_plans: 26
+  percent: 81
 ---
 
 # Project State
@@ -33,10 +33,10 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ```
 
 Phase: 32 (agent-service-chat-ui) — EXECUTING
-Plan: 1 of 8
+Plan: 2 of 8
 Plans: 5 of 5
-Status: Executing Phase 32
-Last activity: 2026-04-20 -- Phase 32 execution started
+Status: Ready to execute
+Last activity: 2026-04-20
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Last activity: 2026-04-20 -- Phase 32 execution started
 | Phase 31.2 P03 | 23m | 3 tasks | 8 files |
 | Phase 31.2 P04 | ~50m | 2 tasks | 7 files | partial worktree + inline completion |
 | Phase 31.2 P05 | 15m | 3 tasks | 9 files |
+| Phase 32 P01 | 10min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,11 @@ v3.0.0 architecture decisions (from research):
 - [Phase 31.1]: D-27 chose deprecation path (a): DASHBOARD_JWT_PUBLIC_KEY still works through one-shot console.warn; full removal deferred to Plan 04+
 - [Phase 31.1]: MCP auth moved to a scoped route preHandler in each service (dashboard/compliance/branding/llm); /api/v1/mcp added to PUBLIC_PATHS of the global middleware so the scoped handler is the sole auth gate and RFC 8707 aud is enforced before tool dispatch
 - [Phase 31.1]: D-34 NOT extracted: services' createJwksTokenVerifier kept as three byte-identical factories rather than a shared @luqen/core abstraction — per-package TokenPayload narrowing would force a generic parameter that erases more than it unifies
+- [Phase 32]: [32-01]: @anthropic-ai/sdk pinned at EXACT 0.90.0 (no caret) — supply-chain posture per threat_model T-32-01-06; caret ranges disallowed for runtime SDKs
+- [Phase 32]: [32-01]: LLMProviderAdapter.completeStream is OPTIONAL — the 4 existing capabilities (extract-requirements, generate-fix, analyse-report, discover-branding) stay byte-compatible; only agent-conversation (Plan 02) asserts presence
+- [Phase 32]: [32-01]: Anthropic adapter uses client.messages.stream({...}).finalMessage() SDK helper — never rolls its own input_json_delta.partial_json parser (AI-SPEC §3 Pitfall 2)
+- [Phase 32]: [32-01]: Ollama tool-call ids minted client-side as toolu_ollama_<uuid> — Ollama's NDJSON response shape omits ids; audit/consumer layers need stable keys for tool_result correlation
+- [Phase 32]: [32-01]: D-11 ordering invariant pinned at adapter level via Anthropic Test 14 — every token frame index < the single tool_calls frame index; parity-baseline.json (3 fixtures) is the seed for AI-SPEC §5.4 CI parity gate
 
 ### Architecture Notes
 
@@ -157,7 +163,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-19T14:46:01.577Z
-Stopped at: Phase 31.2 context gathered
-Resume file: .planning/phases/31.2-mcp-access-control-refinement/31.2-CONTEXT.md
+Last session: 2026-04-20T07:46:16.986Z
+Stopped at: Completed 32-01-PLAN.md
+Resume file: None
 Next action: `/gsd:plan-phase 28`
