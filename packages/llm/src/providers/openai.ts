@@ -8,6 +8,7 @@ import type {
   ToolCall,
   ToolDef,
 } from './types.js';
+import { anySignal, readSsePayloads } from './streaming-helpers.js';
 
 export class OpenAIAdapter implements LLMProviderAdapter {
   readonly type = 'openai';
@@ -178,12 +179,8 @@ export class OpenAIAdapter implements LLMProviderAdapter {
     let finishReason: 'stop' | 'length' | 'tool_calls' | 'error' = 'stop';
     let usage: { inputTokens: number; outputTokens: number } | undefined;
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
     try {
-      while (true) {
+      for await (const data of readSsePayloads(res.body)) {
         if (signal?.aborted) {
           yield {
             type: 'error',
@@ -193,77 +190,61 @@ export class OpenAIAdapter implements LLMProviderAdapter {
           };
           return;
         }
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
 
-        // SSE frames are separated by blank lines (\n\n).
-        let sepIdx: number;
-        while ((sepIdx = buf.indexOf('\n\n')) !== -1) {
-          const rawFrame = buf.slice(0, sepIdx);
-          buf = buf.slice(sepIdx + 2);
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(data);
+        } catch {
+          // Skip malformed JSON lines — stream may have an incomplete frame.
+          continue;
+        }
 
-          for (const line of rawFrame.split('\n')) {
-            if (!line.startsWith('data:')) continue;
-            const data = line.slice(5).trim();
-            if (data === '' || data === '[DONE]') continue;
-
-            let parsed: unknown;
-            try {
-              parsed = JSON.parse(data);
-            } catch {
-              // Skip malformed JSON lines — stream may have an incomplete frame.
-              continue;
-            }
-
-            const chunk = parsed as {
-              choices?: Array<{
-                delta?: {
-                  content?: string;
-                  tool_calls?: Array<{
-                    index?: number;
-                    id?: string;
-                    function?: { name?: string; arguments?: string };
-                  }>;
-                };
-                finish_reason?: 'stop' | 'length' | 'tool_calls' | null;
+        const chunk = parsed as {
+          choices?: Array<{
+            delta?: {
+              content?: string;
+              tool_calls?: Array<{
+                index?: number;
+                id?: string;
+                function?: { name?: string; arguments?: string };
               }>;
-              usage?: { prompt_tokens?: number; completion_tokens?: number };
             };
+            finish_reason?: 'stop' | 'length' | 'tool_calls' | null;
+          }>;
+          usage?: { prompt_tokens?: number; completion_tokens?: number };
+        };
 
-            if (chunk.usage) {
-              usage = {
-                inputTokens: chunk.usage.prompt_tokens ?? 0,
-                outputTokens: chunk.usage.completion_tokens ?? 0,
-              };
-            }
+        if (chunk.usage) {
+          usage = {
+            inputTokens: chunk.usage.prompt_tokens ?? 0,
+            outputTokens: chunk.usage.completion_tokens ?? 0,
+          };
+        }
 
-            const choice = chunk.choices?.[0];
-            if (!choice) continue;
+        const choice = chunk.choices?.[0];
+        if (!choice) continue;
 
-            const delta = choice.delta ?? {};
+        const delta = choice.delta ?? {};
 
-            if (typeof delta.content === 'string' && delta.content.length > 0) {
-              yield { type: 'token', text: delta.content };
-            }
+        if (typeof delta.content === 'string' && delta.content.length > 0) {
+          yield { type: 'token', text: delta.content };
+        }
 
-            if (Array.isArray(delta.tool_calls)) {
-              for (const tc of delta.tool_calls) {
-                const idx = typeof tc.index === 'number' ? tc.index : 0;
-                const existing = toolBuffer.get(idx) ?? { id: '', name: '', argsText: '' };
-                const next = {
-                  id: tc.id ?? existing.id,
-                  name: tc.function?.name ?? existing.name,
-                  argsText: existing.argsText + (tc.function?.arguments ?? ''),
-                };
-                toolBuffer.set(idx, next);
-              }
-            }
-
-            if (choice.finish_reason) {
-              finishReason = choice.finish_reason;
-            }
+        if (Array.isArray(delta.tool_calls)) {
+          for (const tc of delta.tool_calls) {
+            const idx = typeof tc.index === 'number' ? tc.index : 0;
+            const existing = toolBuffer.get(idx) ?? { id: '', name: '', argsText: '' };
+            const next = {
+              id: tc.id ?? existing.id,
+              name: tc.function?.name ?? existing.name,
+              argsText: existing.argsText + (tc.function?.arguments ?? ''),
+            };
+            toolBuffer.set(idx, next);
           }
+        }
+
+        if (choice.finish_reason) {
+          finishReason = choice.finish_reason;
         }
       }
     } catch (err) {
@@ -335,20 +316,3 @@ function toOpenAITool(tool: ToolDef): Record<string, unknown> {
   };
 }
 
-/**
- * Minimal polyfill for AbortSignal.any — Node 22+ supports it natively but we
- * fall back to a manual implementation to keep Node 20 support in reach.
- */
-function anySignal(signals: readonly AbortSignal[]): AbortSignal {
-  const anyFn = (AbortSignal as unknown as { any?: (s: readonly AbortSignal[]) => AbortSignal }).any;
-  if (typeof anyFn === 'function') return anyFn(signals);
-  const ctrl = new AbortController();
-  for (const s of signals) {
-    if (s.aborted) {
-      ctrl.abort(s.reason);
-      break;
-    }
-    s.addEventListener('abort', () => ctrl.abort(s.reason), { once: true });
-  }
-  return ctrl.signal;
-}

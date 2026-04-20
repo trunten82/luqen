@@ -9,6 +9,7 @@ import type {
   ToolCall,
   ToolDef,
 } from './types.js';
+import { anySignal, readNdjsonLines } from './streaming-helpers.js';
 
 export class OllamaAdapter implements LLMProviderAdapter {
   readonly type = 'ollama';
@@ -166,14 +167,11 @@ export class OllamaAdapter implements LLMProviderAdapter {
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
     let finalToolCalls: ToolCall[] | undefined;
     let usage: { inputTokens: number; outputTokens: number } | undefined;
 
     try {
-      while (true) {
+      for await (const line of readNdjsonLines(res.body)) {
         if (signal?.aborted) {
           yield {
             type: 'error',
@@ -183,63 +181,53 @@ export class OllamaAdapter implements LLMProviderAdapter {
           };
           return;
         }
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
 
-        let nlIdx: number;
-        while ((nlIdx = buf.indexOf('\n')) !== -1) {
-          const line = buf.slice(0, nlIdx).trim();
-          buf = buf.slice(nlIdx + 1);
-          if (line === '') continue;
-
-          let chunk: {
-            message?: {
-              content?: string;
-              tool_calls?: Array<{ function: { name: string; arguments: Record<string, unknown> | string } }>;
-            };
-            done?: boolean;
-            prompt_eval_count?: number;
-            eval_count?: number;
+        let chunk: {
+          message?: {
+            content?: string;
+            tool_calls?: Array<{ function: { name: string; arguments: Record<string, unknown> | string } }>;
           };
-          try {
-            chunk = JSON.parse(line);
-          } catch {
-            continue;
-          }
+          done?: boolean;
+          prompt_eval_count?: number;
+          eval_count?: number;
+        };
+        try {
+          chunk = JSON.parse(line);
+        } catch {
+          continue;
+        }
 
-          const content = chunk.message?.content;
-          if (typeof content === 'string' && content.length > 0) {
-            yield { type: 'token', text: content };
-          }
+        const content = chunk.message?.content;
+        if (typeof content === 'string' && content.length > 0) {
+          yield { type: 'token', text: content };
+        }
 
-          if (chunk.done === true) {
-            if (Array.isArray(chunk.message?.tool_calls) && chunk.message!.tool_calls!.length > 0) {
-              finalToolCalls = chunk.message!.tool_calls!.map((tc) => {
-                const rawArgs = tc.function.arguments;
-                let args: Record<string, unknown>;
-                if (typeof rawArgs === 'string') {
-                  try {
-                    args = JSON.parse(rawArgs) as Record<string, unknown>;
-                  } catch {
-                    args = {};
-                  }
-                } else {
-                  args = rawArgs ?? {};
+        if (chunk.done === true) {
+          if (Array.isArray(chunk.message?.tool_calls) && chunk.message!.tool_calls!.length > 0) {
+            finalToolCalls = chunk.message!.tool_calls!.map((tc) => {
+              const rawArgs = tc.function.arguments;
+              let args: Record<string, unknown>;
+              if (typeof rawArgs === 'string') {
+                try {
+                  args = JSON.parse(rawArgs) as Record<string, unknown>;
+                } catch {
+                  args = {};
                 }
-                return {
-                  id: `toolu_ollama_${randomUUID()}`,
-                  name: tc.function.name,
-                  args,
-                };
-              });
-            }
-            if (typeof chunk.prompt_eval_count === 'number' || typeof chunk.eval_count === 'number') {
-              usage = {
-                inputTokens: chunk.prompt_eval_count ?? 0,
-                outputTokens: chunk.eval_count ?? 0,
+              } else {
+                args = rawArgs ?? {};
+              }
+              return {
+                id: `toolu_ollama_${randomUUID()}`,
+                name: tc.function.name,
+                args,
               };
-            }
+            });
+          }
+          if (typeof chunk.prompt_eval_count === 'number' || typeof chunk.eval_count === 'number') {
+            usage = {
+              inputTokens: chunk.prompt_eval_count ?? 0,
+              outputTokens: chunk.eval_count ?? 0,
+            };
           }
         }
       }
@@ -296,16 +284,3 @@ function toOllamaTool(tool: ToolDef): Record<string, unknown> {
   };
 }
 
-function anySignal(signals: readonly AbortSignal[]): AbortSignal {
-  const anyFn = (AbortSignal as unknown as { any?: (s: readonly AbortSignal[]) => AbortSignal }).any;
-  if (typeof anyFn === 'function') return anyFn(signals);
-  const ctrl = new AbortController();
-  for (const s of signals) {
-    if (s.aborted) {
-      ctrl.abort(s.reason);
-      break;
-    }
-    s.addEventListener('abort', () => ctrl.abort(s.reason), { once: true });
-  }
-  return ctrl.signal;
-}
