@@ -6,12 +6,35 @@ import { escapeHtml, toastHtml } from './helpers.js';
 import { parsePromptSegments, assembleTemplate } from '../../services/prompt-segments.js';
 import type { PromptSegment } from '../../services/prompt-segments.js';
 import { computePromptDiff } from '../../services/prompt-diff.js';
+import { filterToolsByRbac } from '@luqen/core/mcp';
+import { DASHBOARD_TOOL_METADATA } from '../../mcp/metadata.js';
+import { resolveEffectivePermissions } from '../../permissions.js';
+import type { RoleRepository } from '../../db/interfaces/role-repository.js';
+
+// Phase 32 D-13 + AI-SPEC §4c.2.B — the three fixed locked fences surfaced
+// by the `agent-system` prompt. Passed to the prompts-tab template so the
+// view can render a variant card per fence with distinct border colors.
+const AGENT_SYSTEM_LOCKED_FENCES: readonly {
+  readonly name: 'rbac' | 'confirmation' | 'honesty';
+  readonly tooltipKey: string;
+}[] = [
+  { name: 'rbac',         tooltipKey: 'admin.llm.prompts.lockedRbacTooltip' },
+  { name: 'confirmation', tooltipKey: 'admin.llm.prompts.lockedConfirmTooltip' },
+  { name: 'honesty',      tooltipKey: 'admin.llm.prompts.lockedHonestyTooltip' },
+];
+
+export interface LlmAdminRoutesOptions {
+  /** Role repository for per-request permission resolution (manifest-size + destructive-count). */
+  readonly roleRepository?: RoleRepository;
+}
 
 export async function llmAdminRoutes(
   server: FastifyInstance,
   /** Getter for current LLM client (runtime reload support). */
   getLLMClient: () => LLMClient | null,
+  options: LlmAdminRoutesOptions = {},
 ): Promise<void> {
+  const { roleRepository } = options;
   // ── GET /admin/llm — main page ────────────────────────────────────────────
 
   server.get(
@@ -31,6 +54,7 @@ export async function llmAdminRoutes(
           user: request.user,
           llmConnected: false,
           activeTab,
+          agentSystemLockedFences: AGENT_SYSTEM_LOCKED_FENCES,
         });
       }
 
@@ -86,8 +110,24 @@ export async function llmAdminRoutes(
         }),
       }));
 
-      // Build prompts for all 4 capabilities with split-region segment data
-      const CAPABILITY_NAMES = ['extract-requirements', 'generate-fix', 'analyse-report', 'discover-branding'];
+      // Build prompts for all 5 capabilities (+ 'agent-system' prompt id) with split-region segment data.
+      //
+      // TODO(phase-33): import CAPABILITY_NAMES from '@luqen/llm/types' once the module's
+      // ambient declaration is wired in dashboard package — see
+      // .planning/phases/32-agent-service-chat-ui/32-PATTERNS.md "Resolved Ambiguities:
+      // Capability-name list duplication".
+      //
+      // Phase 32-02 D-14: 'agent-system' is a PROMPT id (not a capability). It rides
+      // the same prompt-editor surface as the 5 capability prompts so admins can
+      // tune tone without touching RBAC/confirmation/honesty fences.
+      const CAPABILITY_NAMES = [
+        'extract-requirements',
+        'generate-fix',
+        'analyse-report',
+        'discover-branding',
+        'agent-conversation',
+        'agent-system',
+      ];
       const promptData = llmConnected
         ? await Promise.all(
             CAPABILITY_NAMES.map(async (cap) => {
@@ -164,6 +204,52 @@ export async function llmAdminRoutes(
           )
         : [];
 
+      // Phase 32 D-13 + AI-SPEC §4c.2.A — agent-conversation capability metadata.
+      // `manifestSize` + `destructiveCount` are computed per-request against the
+      // current admin's effective permissions, so the badge reflects THIS org's
+      // visible tool manifest (UI-SPEC Surface 3 decision gate: per-org answer).
+      const userId = (request.user as { id?: string } | undefined)?.id;
+      const userRole = (request.user as { role?: string } | undefined)?.role ?? 'viewer';
+      const orgId = (request.user as { currentOrgId?: string } | undefined)?.currentOrgId;
+
+      let agentConvMetadata: {
+        supportsToolsRequired: boolean;
+        iterationCap: number;
+        manifestSize: number;
+        destructiveCount: number;
+        destructiveTools: readonly string[];
+      } = {
+        supportsToolsRequired: true,
+        iterationCap: 5,
+        manifestSize: 0,
+        destructiveCount: 0,
+        destructiveTools: [],
+      };
+
+      if (roleRepository && userId) {
+        try {
+          const permissions = await resolveEffectivePermissions(
+            roleRepository,
+            userId,
+            userRole,
+            orgId,
+          );
+          const allowedNames = new Set(filterToolsByRbac(DASHBOARD_TOOL_METADATA, permissions));
+          const manifest = DASHBOARD_TOOL_METADATA.filter((t) => allowedNames.has(t.name));
+          const destructiveTools = manifest.filter((t) => t.destructive === true).map((t) => t.name);
+          agentConvMetadata = {
+            supportsToolsRequired: true,
+            iterationCap: 5,
+            manifestSize: manifest.length,
+            destructiveCount: destructiveTools.length,
+            destructiveTools,
+          };
+        } catch {
+          // Fall through to default (empty manifest) on permission-resolution failure —
+          // admin UI must still render even if role repository is unavailable.
+        }
+      }
+
       return reply.view('admin/llm.hbs', {
         pageTitle: 'LLM Configuration',
         currentPath: '/admin/llm',
@@ -176,6 +262,8 @@ export async function llmAdminRoutes(
         modelsByProvider,
         capabilities: capabilitiesWithModels,
         prompts: promptData,
+        agentConvMetadata,
+        agentSystemLockedFences: AGENT_SYSTEM_LOCKED_FENCES,
       });
     },
   );

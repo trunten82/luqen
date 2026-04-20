@@ -871,7 +871,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await pluginAdminRoutes(server, pluginManager, registryEntries, storage);
 
   // ── LLM admin routes ────────────────────────────────────────────────────
-  await llmAdminRoutes(server, getLLMClient);
+  await llmAdminRoutes(server, getLLMClient, { roleRepository: storage.roles });
   // ── Rescore service (Phase 27) ───────────────────────────────────────────
   const rescoreProgressRepo = new SqliteRescoreProgressRepository(rawDb);
   const rescoreService = new RescoreService({

@@ -125,16 +125,19 @@ describe('GET /admin/llm?tab=prompts — split-region editor render', () => {
 
   afterEach(() => ctx.cleanup());
 
-  it('renders 4 capability prompt cards in the view data', async () => {
+  it('renders 6 capability prompt cards in the view data (includes Phase 32 agent-conversation + agent-system)', async () => {
     const res = await ctx.server.inject({ method: 'GET', url: '/admin/llm?tab=prompts' });
     expect(res.statusCode).toBe(200);
     const body = res.json() as { data: { prompts: Array<{ capability: string; segments: unknown[] }> } };
-    expect(body.data.prompts).toHaveLength(4);
+    // Phase 32-05: extended from 4 → 6 (agent-conversation + agent-system prompt-id)
+    expect(body.data.prompts).toHaveLength(6);
     const caps = body.data.prompts.map((p) => p.capability);
     expect(caps).toContain('generate-fix');
     expect(caps).toContain('analyse-report');
     expect(caps).toContain('discover-branding');
     expect(caps).toContain('extract-requirements');
+    expect(caps).toContain('agent-conversation');
+    expect(caps).toContain('agent-system');
   });
 
   it('includes segment data with at least one editable segment per capability', async () => {
