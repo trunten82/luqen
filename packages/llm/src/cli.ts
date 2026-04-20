@@ -239,7 +239,7 @@ export function createProgram(): Command {
   capabilities
     .command('assign')
     .description('Assign a model to a capability')
-    .requiredOption('--capability <name>', 'Capability name (extract-requirements | generate-fix | analyse-report | discover-branding)')
+    .requiredOption('--capability <name>', 'Capability name (extract-requirements | generate-fix | analyse-report | discover-branding | agent-conversation)')
     .requiredOption('--model-id <id>', 'Model ID to assign')
     .option('--priority <n>', 'Assignment priority (lower = higher priority)', '10')
     .option('--org <orgId>', 'Organisation ID (default: system)', 'system')

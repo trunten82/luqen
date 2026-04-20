@@ -6,15 +6,33 @@ import { buildExtractionPrompt } from '../../prompts/extract-requirements.js';
 import { buildGenerateFixPrompt } from '../../prompts/generate-fix.js';
 import { buildAnalyseReportPrompt } from '../../prompts/analyse-report.js';
 import { buildDiscoverBrandingPrompt } from '../../prompts/discover-branding.js';
+import { buildAgentSystemPrompt } from '../../prompts/agent-system.js';
 import { validateOverride, LOCKED_SECTION_EXPLANATIONS } from '../../prompts/segments.js';
+
+// Phase 32-02: 'agent-system' is a PROMPT id that is managed by the same
+// prompt routes but is NOT a CapabilityName (the capability it backs is
+// 'agent-conversation'). Widen the route's accepted-ids list to include it
+// without polluting CAPABILITY_NAMES (which gates other surfaces e.g.
+// model capability assignment UI). Per D-14 + AI-SPEC §6.1 Guardrail 5 the
+// PUT handler also rejects orgId writes for this prompt id.
+const AGENT_SYSTEM_PROMPT_ID = 'agent-system' as const;
+type PromptId = CapabilityName | typeof AGENT_SYSTEM_PROMPT_ID;
+const VALID_PROMPT_IDS: readonly PromptId[] = [
+  ...CAPABILITY_NAMES,
+  AGENT_SYSTEM_PROMPT_ID,
+];
+
+function isValidPromptId(id: string): id is PromptId {
+  return (VALID_PROMPT_IDS as readonly string[]).includes(id);
+}
 
 const EXTRACT_DEFAULT_TEMPLATE = buildExtractionPrompt(
   '{content}',
   { regulationId: '{regulationId}', regulationName: '{regulationName}' },
 );
 
-function getDefaultTemplate(capability: CapabilityName): string {
-  switch (capability) {
+function getDefaultTemplate(promptId: PromptId): string {
+  switch (promptId) {
     case 'extract-requirements':
       return EXTRACT_DEFAULT_TEMPLATE;
     case 'generate-fix':
@@ -38,8 +56,18 @@ function getDefaultTemplate(capability: CapabilityName): string {
         htmlContent: '{{htmlContent}}',
         cssContent: '{{cssContent}}',
       });
-    default:
-      return `Capability: ${capability}\nContent: {content}`;
+    case 'agent-conversation':
+      // agent-conversation capability has no default prompt template — the
+      // prompt it consumes is 'agent-system' (see above). Return a stub so
+      // prompt-browser UIs don't blow up, but this code path is not the
+      // primary surface for agent prompts.
+      return 'Capability: agent-conversation (see agent-system prompt for the system template)';
+    case AGENT_SYSTEM_PROMPT_ID:
+      return buildAgentSystemPrompt();
+    default: {
+      const _exhaustive: never = promptId;
+      return `Prompt: ${String(_exhaustive)}`;
+    }
   }
 }
 
@@ -65,20 +93,23 @@ export async function registerPromptRoutes(
   }, async (request, reply) => {
     const { capability } = request.params as { capability: string };
 
-    if (!(CAPABILITY_NAMES as readonly string[]).includes(capability)) {
+    if (!isValidPromptId(capability)) {
       await reply.status(400).send({
-        error: `Invalid capability. Valid names: ${CAPABILITY_NAMES.join(', ')}`,
+        error: `Invalid capability. Valid names: ${VALID_PROMPT_IDS.join(', ')}`,
         statusCode: 400,
       });
       return;
     }
 
-    const capabilityName = capability as CapabilityName;
+    const promptId = capability;
     const query = request.query as Record<string, unknown>;
     const orgId = typeof query.orgId === 'string' ? query.orgId : undefined;
 
     try {
-      const override = await db.getPromptOverride(capabilityName, orgId);
+      const override = await db.getPromptOverride(
+        promptId as unknown as CapabilityName,
+        orgId,
+      );
 
       if (override != null) {
         await reply.send({
@@ -92,9 +123,9 @@ export async function registerPromptRoutes(
       }
 
       await reply.send({
-        capability: capabilityName,
+        capability: promptId,
         orgId: orgId ?? 'system',
-        template: getDefaultTemplate(capabilityName),
+        template: getDefaultTemplate(promptId),
         isOverride: false,
         updatedAt: null,
       });
@@ -109,15 +140,15 @@ export async function registerPromptRoutes(
   }, async (request, reply) => {
     const { capability } = request.params as { capability: string };
 
-    if (!(CAPABILITY_NAMES as readonly string[]).includes(capability)) {
+    if (!isValidPromptId(capability)) {
       await reply.status(400).send({
-        error: `Invalid capability. Valid names: ${CAPABILITY_NAMES.join(', ')}`,
+        error: `Invalid capability. Valid names: ${VALID_PROMPT_IDS.join(', ')}`,
         statusCode: 400,
       });
       return;
     }
 
-    const capabilityName = capability as CapabilityName;
+    const promptId = capability;
     const body = request.body as Record<string, unknown>;
 
     if (!body.template || typeof body.template !== 'string') {
@@ -129,8 +160,22 @@ export async function registerPromptRoutes(
       ? body.orgId
       : undefined;
 
+    // Phase 32-02 (D-14 + AI-SPEC §6.1 Guardrail 5): the `agent-system`
+    // prompt has NO per-org override — prompt-injection surface. This is
+    // defence-in-depth; Plan 05's UI also hides the org selector for this
+    // prompt. Placed AFTER the validity check so invalid ids still report
+    // the standard error.
+    if (promptId === AGENT_SYSTEM_PROMPT_ID && orgId !== undefined) {
+      await reply.status(400).send({
+        error: 'agent-system does not support per-org overrides',
+        capability: AGENT_SYSTEM_PROMPT_ID,
+        statusCode: 400,
+      });
+      return;
+    }
+
     // Validate that the override preserves all locked sections from the default
-    const defaultTemplate = getDefaultTemplate(capabilityName);
+    const defaultTemplate = getDefaultTemplate(promptId);
     const validation = validateOverride(body.template, defaultTemplate);
     if (!validation.ok) {
       const enriched = validation.violations.map((v) => ({
@@ -150,7 +195,11 @@ export async function registerPromptRoutes(
     }
 
     try {
-      const override = await db.setPromptOverride(capabilityName, body.template, orgId);
+      const override = await db.setPromptOverride(
+        promptId as unknown as CapabilityName,
+        body.template,
+        orgId,
+      );
       await reply.send({
         capability: override.capability,
         orgId: override.orgId,
@@ -169,20 +218,23 @@ export async function registerPromptRoutes(
   }, async (request, reply) => {
     const { capability } = request.params as { capability: string };
 
-    if (!(CAPABILITY_NAMES as readonly string[]).includes(capability)) {
+    if (!isValidPromptId(capability)) {
       await reply.status(400).send({
-        error: `Invalid capability. Valid names: ${CAPABILITY_NAMES.join(', ')}`,
+        error: `Invalid capability. Valid names: ${VALID_PROMPT_IDS.join(', ')}`,
         statusCode: 400,
       });
       return;
     }
 
-    const capabilityName = capability as CapabilityName;
+    const promptId = capability;
     const query = request.query as Record<string, unknown>;
     const orgId = typeof query.orgId === 'string' ? query.orgId : undefined;
 
     try {
-      const deleted = await db.deletePromptOverride(capabilityName, orgId);
+      const deleted = await db.deletePromptOverride(
+        promptId as unknown as CapabilityName,
+        orgId,
+      );
       if (!deleted) {
         await reply.status(404).send({ error: 'Prompt override not found', statusCode: 404 });
         return;
