@@ -4,6 +4,12 @@
 
 import { ServiceTokenManager } from './auth/service-token.js';
 import type { OrgRepository } from './db/interfaces/org-repository.js';
+import { SseFrameSchema, type SseFrame } from './agent/sse-frames.js';
+import type {
+  AgentStreamInput,
+  AgentStreamOptions,
+  AgentStreamTurn,
+} from './agent/agent-service.js';
 
 function unwrapList<T>(result: unknown): T[] {
   if (Array.isArray(result)) return result as T[];
@@ -11,6 +17,29 @@ function unwrapList<T>(result: unknown): T[] {
     return (result as { data: T[] }).data;
   }
   return [];
+}
+
+/**
+ * Parse a single SSE frame (block of lines separated from the next by \n\n).
+ * Validates via SseFrameSchema so downstream code gets a typed frame — a
+ * malformed chunk from the wire is treated as "skip unknown" rather than a
+ * hard error (defence-in-depth against transport corruption).
+ */
+function parseSseFrame(block: string): SseFrame | null {
+  const dataLine = block
+    .split('\n')
+    .map((l) => l.trim())
+    .find((l) => l.startsWith('data:'));
+  if (dataLine === undefined) return null;
+  const json = dataLine.slice('data:'.length).trim();
+  if (json.length === 0) return null;
+  try {
+    const parsed: unknown = JSON.parse(json);
+    const result = SseFrameSchema.safeParse(parsed);
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Provider types ──────────────────────────────────────────────────────────
@@ -415,6 +444,96 @@ export class LLMClient {
 
   async deleteOAuthClient(id: string): Promise<void> {
     await this.deleteRequest(`${this._baseUrl}/api/v1/clients/${encodeURIComponent(id)}`);
+  }
+
+  // -- Agent Conversation (streaming) ─────────────────────────────────────
+
+  /**
+   * Phase 32 Plan 04 — streaming bridge to @luqen/llm's agent-conversation
+   * capability. Used by the dashboard's AgentService to drive one model turn
+   * of the tool-calling loop.
+   *
+   * POSTs to `/api/v1/capabilities/agent-conversation` with
+   * `Accept: text/event-stream`, parses the SSE body frame-by-frame, forwards
+   * `token` frames via `opts.onFrame`, and resolves with a summary
+   * `{ text, toolCalls }` once the stream ends (on a `done` or `tool_calls`
+   * terminator). Honors `opts.signal` for user-abort propagation.
+   *
+   * NOTE — the HTTP route is being introduced in a follow-on LLM-module plan;
+   * this client-side implementation is the dashboard half of that contract.
+   * Until the route lands on @luqen/llm, this method is only exercised via
+   * the `LlmAgentTransport` structural-typing interface (tests stub the whole
+   * client).
+   */
+  async streamAgentConversation(
+    input: AgentStreamInput,
+    opts: AgentStreamOptions,
+  ): Promise<AgentStreamTurn> {
+    const token = await this.tokenManager.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(
+      `${this._baseUrl}/api/v1/capabilities/agent-conversation`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          messages: input.messages,
+          tools: input.tools,
+          orgId: input.orgId,
+          userId: input.userId,
+          agentDisplayName: input.agentDisplayName,
+        }),
+        signal: opts.signal,
+      },
+    );
+
+    if (!response.ok || response.body === null) {
+      const body = await response.text().catch(() => '');
+      throw new Error(`agent-conversation HTTP ${response.status}: ${body}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let accumulatedText = '';
+    let toolCalls: ReadonlyArray<{ id: string; name: string; args: Record<string, unknown> }> = [];
+
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        // SSE frame delimiter is a blank line (\n\n). Pull complete frames off
+        // the head of the buffer; leave any partial tail for the next chunk.
+        let sepIdx = buffer.indexOf('\n\n');
+        while (sepIdx !== -1) {
+          const rawFrame = buffer.slice(0, sepIdx);
+          buffer = buffer.slice(sepIdx + 2);
+          const parsed = parseSseFrame(rawFrame);
+          if (parsed !== null) {
+            if (parsed.type === 'token') {
+              accumulatedText += parsed.text;
+              opts.onFrame(parsed);
+            } else if (parsed.type === 'tool_calls') {
+              toolCalls = parsed.calls;
+              opts.onFrame(parsed);
+            } else if (parsed.type === 'done' || parsed.type === 'error') {
+              opts.onFrame(parsed);
+            }
+          }
+          sepIdx = buffer.indexOf('\n\n');
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return { text: accumulatedText, toolCalls };
   }
 
   // -- Health / Status ────────────────────────────────────────────────────
