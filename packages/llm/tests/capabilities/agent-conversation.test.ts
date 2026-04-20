@@ -63,6 +63,15 @@ describe('CAPABILITY_NAMES includes agent-conversation', () => {
   it("includes 'agent-conversation' in the CAPABILITY_NAMES array", () => {
     expect((CAPABILITY_NAMES as readonly string[]).includes('agent-conversation')).toBe(true);
   });
+
+  // REFACTOR smoke — capability-discovery: the capability is surfaced via
+  // CAPABILITY_NAMES which GET /api/v1/capabilities iterates (see
+  // api/routes/capabilities.ts), so admins see 'agent-conversation' as a
+  // valid assignment target without new admin UI work (AI-SPEC §4c.1 #1).
+  it('is the EXPECTED trailing entry (array order preserved, append-only)', () => {
+    const names = [...CAPABILITY_NAMES];
+    expect(names[names.length - 1]).toBe('agent-conversation');
+  });
 });
 
 describe('buildAgentSystemPrompt', () => {
