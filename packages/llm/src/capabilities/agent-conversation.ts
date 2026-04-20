@@ -46,6 +46,22 @@ export interface AgentConversationInput {
   readonly signal?: AbortSignal;
 }
 
+/**
+ * Defence-in-depth sanitisation for agentDisplayName (threat T-32-02-03).
+ * Plan 08 validates the display name at write time (zod, no HTML, no URLs);
+ * this capability treats incoming values as "already validated" but still
+ * strips `<` / `>` to the safe fallback before interpolation so a bypass
+ * in Plan 08's validator cannot escape into the system prompt unescaped.
+ */
+const SAFE_DISPLAY_NAME_FALLBACK = 'Luqen Assistant';
+
+function sanitiseDisplayName(raw: string): string {
+  if (raw.includes('<') || raw.includes('>')) {
+    return SAFE_DISPLAY_NAME_FALLBACK;
+  }
+  return raw;
+}
+
 export async function* executeAgentConversation(
   db: DbAdapter,
   adapterFactory: (type: string) => LLMProviderAdapter,
@@ -63,8 +79,9 @@ export async function* executeAgentConversation(
     input.orgId,
   );
   const rawTemplate = override != null ? override.template : buildAgentSystemPrompt();
+  const safeDisplayName = sanitiseDisplayName(input.agentDisplayName);
   const systemContent = interpolateTemplate(rawTemplate, {
-    agentDisplayName: input.agentDisplayName,
+    agentDisplayName: safeDisplayName,
   });
 
   const fullMessages: ChatMessage[] = [
