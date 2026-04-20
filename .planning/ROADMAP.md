@@ -155,7 +155,7 @@ Plans:
 - [x] 32-01-PLAN.md — LLM streaming adapters (ollama/openai extended with completeStream, new Anthropic adapter) + registry + package.json pin
 - [x] 32-02-PLAN.md — agent-conversation capability + agent-system prompt template (3 locked fences) + PUT orgId guard
 - [x] 32-03-PLAN.md — Migration 050 adds agent_display_name column on organizations + OrganizationsRepository roundtrip
-- [ ] 32-04-PLAN.md — AgentService + ToolDispatcher + jwt-minter + SSE frames + /agent/* routes + server.ts wiring (destructive pause, iteration cap, RBAC rebuild, audit writes, ToolMetadata.confirmationTemplate)
+- [x] 32-04-PLAN.md — AgentService + ToolDispatcher + jwt-minter + SSE frames + /agent/* routes + server.ts wiring (destructive pause, iteration cap, RBAC rebuild, audit writes, ToolMetadata.confirmationTemplate)
 - [ ] 32-05-PLAN.md — Admin-UI extensions A/B/C: /admin/llm capabilities tab agent-conversation row + prompts tab agent-system locked fences + hidden per-org override + Anthropic models tab rendering + i18n
 - [ ] 32-06-PLAN.md — Chat drawer + floating entry button + agent.js EventSource client + localStorage persistence + style.css ≤200 LOC banner + i18n + E2E axe-core
 - [ ] 32-07-PLAN.md — Native <dialog> confirmation flow (DB recovery on reload = SC#4) + Approve/Cancel idempotency + Web Speech API feature-detect + E2E + i18n
@@ -185,5 +185,5 @@ Plans:
 | 31. Conversation Persistence | 2/2 | Complete | 2026-04-18 |
 | 31.1. MCP Authorization Spec Upgrade (INSERTED) | 4/4 | Complete | 2026-04-19 |
 | 31.2. MCP Access Control Refinement (INSERTED) | 5/5 | Complete | 2026-04-19 |
-| 32. Agent Service + Chat UI | 3/8 | In Progress|  |
+| 32. Agent Service + Chat UI | 4/8 | In Progress|  |
 | 33. Agent Intelligence + Audit Viewer | 0/? | Not started | - |
