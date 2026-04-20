@@ -48,4 +48,14 @@ export interface OrgRepository {
    */
   getBrandScoreTarget(orgId: string): Promise<number | null>;
   setBrandScoreTarget(orgId: string, target: number | null): Promise<void>;
+  /**
+   * Update the per-org agent display name (D-14). Pass `null` to clear;
+   * pass `''` to store an explicit empty string. A nonexistent orgId is
+   * a silent no-op (0 rows affected, no throw) — matches the existing
+   * updateOrg* pattern (updateOrgComplianceClient / updateOrgBrandingClient
+   * / updateOrgLLMClient).
+   *
+   * Added in migration 055 (Phase 32 Plan 03).
+   */
+  updateOrgAgentDisplayName(orgId: string, displayName: string | null): Promise<void>;
 }

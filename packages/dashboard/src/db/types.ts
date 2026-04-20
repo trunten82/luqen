@@ -346,6 +346,17 @@ export interface Organization {
   readonly llmClientId?: string;
   readonly llmClientSecret?: string;
   readonly brandingMode?: 'embedded' | 'remote';
+  /**
+   * Per-org agent display name (D-14 — the ONLY per-org agent knob;
+   * per-org system-prompt override is permanently out of scope). Nullable;
+   * when null, callers fall back to the project-wide default ("Luqen
+   * Assistant") per D-19. Populated by migration 055 (Phase 32 Plan 03).
+   *
+   * Contract: `null` = unset, `''` (empty string) = explicitly blank
+   * (which the fallback UI treats the same as null). Repo writes preserve
+   * the caller's intent — pass `null` to clear, `''` to record blank.
+   */
+  readonly agentDisplayName?: string | null;
 }
 
 export interface OrgMember {
