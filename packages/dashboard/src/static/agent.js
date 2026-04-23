@@ -12,6 +12,7 @@
   'use strict';
 
   var LS_KEY = 'luqen.agent.panel';
+  var LS_CONV_KEY = 'luqen.agent.conversationId';
   var DRAWER_ID = 'agent-drawer', BACKDROP_ID = 'agent-backdrop', LAUNCH_ID = 'agent-launch';
   var INPUT_ID = 'agent-input', FORM_ID = 'agent-form', MESSAGES_ID = 'agent-messages';
   var STATUS_ID = 'agent-aria-status', STREAM_STATUS_ID = 'agent-stream-status';
@@ -62,6 +63,14 @@
     if (!cid || cid.length === 0) return;
     var form = byId(FORM_ID); if (form) form.setAttribute('data-conversation-id', cid);
     var hidden = byId('agent-conversation-id-field'); if (hidden) hidden.value = cid;
+    try { localStorage.setItem(LS_CONV_KEY, cid); } catch (_e) { /* ignore */ }
+  }
+
+  function restoreConversationId() {
+    try {
+      var cid = localStorage.getItem(LS_CONV_KEY);
+      if (cid && cid.length > 0) { setConversationId(cid); }
+    } catch (_e) { /* ignore */ }
   }
 
   function replaceMessagesFromHtml(html) {
@@ -413,8 +422,12 @@
   // See also agent-speech.js for the form-hint + onresult/onerror behaviour.
 
   function init() {
+    restoreConversationId();
     applyInitialPanelState();
     wireDialogCloseTrap();
+    // Repopulate the messages region from the server window so the
+    // conversation survives page reloads (not just drawer open/close state).
+    if (getConversationId().length > 0) { loadPanel(); }
   }
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
