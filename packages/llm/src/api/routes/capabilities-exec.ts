@@ -427,6 +427,7 @@ export async function registerCapabilityExecRoutes(
       reply.raw.write(`data: ${JSON.stringify(frame)}\n\n`);
     };
 
+    let frameCount = 0;
     try {
       const iter = executeAgentConversation(
         db,
@@ -440,15 +441,18 @@ export async function registerCapabilityExecRoutes(
         },
       );
       for await (const frame of iter) {
+        frameCount++;
         write(frame);
       }
+      request.log.info({ frameCount, orgId, userId }, 'agent-conversation stream ended cleanly');
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'upstream_error';
+      request.log.error({ err, frameCount, orgId, userId }, 'agent-conversation stream error');
       if (err instanceof CapabilityNotConfiguredError) {
         write({ type: 'error', code: 'not_configured', message: err.message });
       } else if (err instanceof CapabilityExhaustedError) {
         write({ type: 'error', code: 'exhausted', message: err.message });
       } else {
-        const message = err instanceof Error ? err.message : 'upstream_error';
         write({ type: 'error', code: 'internal', message });
       }
     } finally {
