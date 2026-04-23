@@ -647,7 +647,8 @@
         "agentDisplayNameTooLong": "Der Name darf maximal 40 Zeichen lang sein.",
         "agentDisplayNameHtml": "Der Name darf keine HTML-Tags oder URLs enthalten.",
         "agentDisplayNameSaved": "Anzeigename des Assistenten aktualisiert.",
-        "agentDisplayNameError": "Speichern des Anzeigenamens fehlgeschlagen. Bitte erneut versuchen."
+        "agentDisplayNameError": "Speichern des Anzeigenamens fehlgeschlagen. Bitte erneut versuchen.",
+        "navLabel": "Agent-Einstellungen"
       }
     },
     "system": {
@@ -1254,5 +1255,7 @@
   "agent.confirm.cancelledStatus": "[DE] Tool cancelled — no changes made.",
   "agent.confirm.approveFailedTitle": "[DE] Approval failed",
   "agent.confirm.approveFailedBody": "[DE] The server could not confirm this action. Try again, or cancel to abort.",
-  "agent.confirm.approveRetry": "[DE] Retry approval"
+  "agent.confirm.approveRetry": "[DE] Retry approval",
+  "agent.newChat.label": "Neues Gespräch starten",
+  "agent.newChat.button": "Neuer Chat"
 }

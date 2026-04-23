@@ -809,7 +809,8 @@
         "agentDisplayNameTooLong": "Name must be 40 characters or fewer.",
         "agentDisplayNameHtml": "Name cannot contain HTML tags or URLs.",
         "agentDisplayNameSaved": "Agent display name updated.",
-        "agentDisplayNameError": "Couldn't save display name. Try again."
+        "agentDisplayNameError": "Couldn't save display name. Try again.",
+        "navLabel": "Agent settings"
       }
     },
     "system": {
@@ -1599,5 +1600,7 @@
   "agent.confirm.cancelledStatus": "Tool cancelled — no changes made.",
   "agent.confirm.approveFailedTitle": "Approval failed",
   "agent.confirm.approveFailedBody": "The server could not confirm this action. Try again, or cancel to abort.",
-  "agent.confirm.approveRetry": "Retry approval"
+  "agent.confirm.approveRetry": "Retry approval",
+  "agent.newChat.label": "Start a new conversation",
+  "agent.newChat.button": "New chat"
 }

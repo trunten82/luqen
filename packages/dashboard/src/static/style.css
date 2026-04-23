@@ -3739,6 +3739,21 @@ details[open] > .mt-examples-toggle::before {
 .card--locked-confirmation { border-left: 4px solid var(--status-warning); }
 .card--locked-honesty { border-left: 4px solid var(--status-success); }
 #agent-conv-non-tool-alert[hidden] { display: none; }
+/* Phase 32.1-05: wrap badge rows + long card copy so the agent-conversation
+   row on /admin/llm?tab=capabilities and the agent-system locked-prompt
+   panels don't overflow on narrow viewports. */
+.capabilities-list .badge-row,
+.capabilities-list .capability-meta,
+.prompts-list .prompt-segment-content {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.card--locked-rbac,
+.card--locked-confirmation,
+.card--locked-honesty {
+  overflow-wrap: anywhere;
+}
 
 /* ---- Agent Drawer (Phase 32) ---- */
 /* Surface 1 of the Phase 32 chat UI. All values reuse existing design-token

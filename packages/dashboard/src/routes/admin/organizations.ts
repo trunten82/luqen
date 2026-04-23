@@ -820,6 +820,16 @@ export async function organizationRoutes(
       const updatedOrg = await storage.organizations.getOrg(id);
       const successText = t('admin.organizations.settings.agentDisplayNameSaved', locale);
 
+      // Plan 32.1-04: fire an HTMX trigger so the chat drawer's display-name
+      // span updates without a full page reload. agent.js listens on
+      // htmx:afterOnLoad for `agent-display-name-updated`.
+      const newDisplayName =
+        normalizedValue.length > 0 ? normalizedValue : 'Luqen Assistant';
+      void reply.header(
+        'HX-Trigger',
+        JSON.stringify({ 'agent-display-name-updated': { name: newDisplayName } }),
+      );
+
       return reply.view('admin/organization-settings.hbs', {
         org: updatedOrg ?? org,
         trailingToast: toastHtml(successText, 'success'),

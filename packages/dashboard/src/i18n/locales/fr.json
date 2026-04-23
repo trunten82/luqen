@@ -647,7 +647,8 @@
         "agentDisplayNameTooLong": "Le nom doit comporter au maximum 40 caractères.",
         "agentDisplayNameHtml": "Le nom ne peut pas contenir de balises HTML ni d'URL.",
         "agentDisplayNameSaved": "Nom d'affichage de l'agent mis à jour.",
-        "agentDisplayNameError": "Impossible d'enregistrer le nom d'affichage. Veuillez réessayer."
+        "agentDisplayNameError": "Impossible d'enregistrer le nom d'affichage. Veuillez réessayer.",
+        "navLabel": "Paramètres de l'agent"
       }
     },
     "system": {
@@ -1254,5 +1255,7 @@
   "agent.confirm.cancelledStatus": "[FR] Tool cancelled — no changes made.",
   "agent.confirm.approveFailedTitle": "[FR] Approval failed",
   "agent.confirm.approveFailedBody": "[FR] The server could not confirm this action. Try again, or cancel to abort.",
-  "agent.confirm.approveRetry": "[FR] Retry approval"
+  "agent.confirm.approveRetry": "[FR] Retry approval",
+  "agent.newChat.label": "Démarrer une nouvelle conversation",
+  "agent.newChat.button": "Nouveau chat"
 }

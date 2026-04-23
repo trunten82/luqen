@@ -24,7 +24,11 @@
        aria-label="{{t "agent.drawer.title" name=agentDisplayName}}"
        hidden>
   <header class="agent-drawer__header">
-    <h2 class="agent-drawer__title">{{agentDisplayName}}</h2>
+    <h2 class="agent-drawer__title"><span id="agent-display-name">{{agentDisplayName}}</span></h2>
+    <button type="button" class="agent-drawer__new-chat btn btn--ghost btn--sm"
+            aria-label="{{t "agent.newChat.label"}}"
+            title="{{t "agent.newChat.label"}}"
+            data-action="newChat">{{t "agent.newChat.button"}}</button>
     <button type="button" class="agent-drawer__close"
             aria-label="{{t "agent.drawer.close"}}"
             data-action="closeAgentDrawer">&times;</button>

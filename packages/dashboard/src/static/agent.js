@@ -73,6 +73,111 @@
     } catch (_e) { /* ignore */ }
   }
 
+  /**
+   * Minimal safe markdown renderer. Supported subset:
+   *   **bold** / __bold__       → <strong>
+   *   *italic* / _italic_       → <em>
+   *   `code`                    → <code>
+   *   leading "- " or "* "      → <ul><li>
+   *   leading "N. "             → <ol><li>
+   *   blank-line separated      → paragraphs
+   * All literal content enters DOM via textContent; no innerHTML.
+   */
+  function renderInlineMd(target, text) {
+    var i = 0; var len = text.length;
+    function pushText(s) { if (s.length > 0) target.appendChild(document.createTextNode(s)); }
+    while (i < len) {
+      var ch = text[i];
+      // **bold** / __bold__
+      if ((ch === '*' && text[i + 1] === '*') || (ch === '_' && text[i + 1] === '_')) {
+        var delim2 = ch + ch;
+        var end2 = text.indexOf(delim2, i + 2);
+        if (end2 > i + 2) {
+          var s = document.createElement('strong');
+          renderInlineMd(s, text.slice(i + 2, end2));
+          target.appendChild(s);
+          i = end2 + 2;
+          continue;
+        }
+      }
+      // *italic* / _italic_
+      if ((ch === '*' || ch === '_') && text[i + 1] !== ch) {
+        var end1 = text.indexOf(ch, i + 1);
+        if (end1 > i + 1 && text[end1 - 1] !== ' ') {
+          var em = document.createElement('em');
+          renderInlineMd(em, text.slice(i + 1, end1));
+          target.appendChild(em);
+          i = end1 + 1;
+          continue;
+        }
+      }
+      // `code`
+      if (ch === '`') {
+        var endc = text.indexOf('`', i + 1);
+        if (endc > i + 1) {
+          var c = document.createElement('code');
+          c.textContent = text.slice(i + 1, endc);
+          target.appendChild(c);
+          i = endc + 1;
+          continue;
+        }
+      }
+      // literal char: accumulate until next marker
+      var next = len;
+      for (var j = i; j < len; j++) {
+        var cj = text[j];
+        if (cj === '*' || cj === '_' || cj === '`') { next = j; break; }
+      }
+      pushText(text.slice(i, next));
+      i = next;
+    }
+  }
+
+  function renderMarkdownInto(target, text) {
+    while (target.firstChild) { target.removeChild(target.firstChild); }
+    if (!text || text.length === 0) return;
+    var blocks = text.split(/\n{2,}/);
+    for (var b = 0; b < blocks.length; b++) {
+      var block = blocks[b];
+      if (block.length === 0) continue;
+      var lines = block.split('\n');
+      // Unordered list: every line starts with "- " or "* "
+      var isUl = lines.every(function (l) { return /^[-*]\s+/.test(l); });
+      var isOl = !isUl && lines.every(function (l) { return /^\d+\.\s+/.test(l); });
+      if (isUl || isOl) {
+        var list = document.createElement(isUl ? 'ul' : 'ol');
+        for (var k = 0; k < lines.length; k++) {
+          var item = document.createElement('li');
+          var content = lines[k].replace(/^(?:[-*]|\d+\.)\s+/, '');
+          renderInlineMd(item, content);
+          list.appendChild(item);
+        }
+        target.appendChild(list);
+        continue;
+      }
+      // Paragraph — preserve single newlines as <br>
+      var p = document.createElement('p');
+      for (var m = 0; m < lines.length; m++) {
+        if (m > 0) p.appendChild(document.createElement('br'));
+        renderInlineMd(p, lines[m]);
+      }
+      target.appendChild(p);
+    }
+  }
+
+  function startNewConversation() {
+    try { localStorage.removeItem(LS_CONV_KEY); } catch (_e) { /* ignore */ }
+    var form = byId(FORM_ID);
+    if (form) { form.setAttribute('data-conversation-id', ''); }
+    var hidden = byId('agent-conversation-id-field');
+    if (hidden) { hidden.value = ''; }
+    if (activeStream) { try { activeStream.close(); } catch (_e) { /* ignore */ } activeStream = null; }
+    var msgs = byId(MESSAGES_ID);
+    if (msgs) { while (msgs.firstChild) { msgs.removeChild(msgs.firstChild); } }
+    var input = byId(INPUT_ID); if (input) { input.value = ''; input.focus(); }
+    setStatus('');
+  }
+
   function replaceMessagesFromHtml(html) {
     var msgs = byId(MESSAGES_ID); if (!msgs) return;
     while (msgs.firstChild) { msgs.removeChild(msgs.firstChild); }
@@ -314,7 +419,23 @@
     es.addEventListener('done', function () {
       es.close(); activeStream = null;
       var msgs = byId(MESSAGES_ID);
-      if (msgs) { var last = msgs.querySelector('.agent-msg--assistant[aria-busy="true"]'); if (last) last.setAttribute('aria-busy', 'false'); }
+      if (msgs) {
+        var last = msgs.querySelector('.agent-msg--assistant[aria-busy="true"]');
+        if (last) {
+          last.setAttribute('aria-busy', 'false');
+          // Plan 32.1-06: safe markdown render on stream completion. The
+          // streaming path appends plain text via createTextNode; on done
+          // we re-parse the accumulated text and rebuild the bubble body
+          // with strong / em / list / paragraph nodes. No innerHTML — all
+          // user-visible text still enters via textContent, so the escape
+          // properties of the token path are preserved.
+          var body = last.querySelector('.agent-msg__body');
+          if (body) {
+            var rawText = body.textContent || '';
+            renderMarkdownInto(body, rawText);
+          }
+        }
+      }
       if (statusEl) statusEl.setAttribute('hidden', '');
       setStatus('Response complete');
     });
@@ -354,6 +475,7 @@
     if (!e.target || !e.target.closest) return;
     if (e.target.closest('[data-action="toggleAgentDrawer"]')) { e.preventDefault(); if (isOpen()) closeDrawer(); else openDrawer(true); return; }
     if (e.target.closest('[data-action="closeAgentDrawer"]')) { e.preventDefault(); closeDrawer(); return; }
+    if (e.target.closest('[data-action="newChat"]')) { e.preventDefault(); startNewConversation(); return; }
     var approveEl = e.target.closest('[data-action="agentConfirmApprove"]');
     if (approveEl) {
       e.preventDefault(); e.stopPropagation();
@@ -426,9 +548,23 @@
     restoreConversationId();
     applyInitialPanelState();
     wireDialogCloseTrap();
+    wireDisplayNameUpdates();
     // Repopulate the messages region from the server window so the
     // conversation survives page reloads (not just drawer open/close state).
     if (getConversationId().length > 0) { loadPanel(); }
+  }
+
+  function wireDisplayNameUpdates() {
+    // Phase 32.1-04: org-settings POST responds with HX-Trigger so the
+    // drawer header updates in-place when an admin saves a new display
+    // name. HTMX dispatches a CustomEvent on the body.
+    document.body.addEventListener('agent-display-name-updated', function (e) {
+      var detail = (e && e.detail) ? e.detail : {};
+      var name = detail && typeof detail.name === 'string' ? detail.name : '';
+      if (name.length === 0) return;
+      var el = byId('agent-display-name');
+      if (el) { el.textContent = name; }
+    });
   }
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
