@@ -308,4 +308,148 @@ describe('/agent/* routes', () => {
     expect(String(res.headers['content-type'])).toMatch(/text\/html/);
     expect(res.body.length).toBeGreaterThan(0);
   });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Plan 07 additions — idempotency, 404, 403, DB-recovery via /agent/panel.
+  // ────────────────────────────────────────────────────────────────────────
+
+  it('Plan07-A: POST /agent/confirm twice on same id — second call is no-op (idempotent)', async () => {
+    const pending = await ctx.storage.conversations.appendMessage({
+      conversationId: ctx.conversationId,
+      role: 'tool',
+      status: 'pending_confirmation',
+      toolCallJson: JSON.stringify({
+        id: 't2',
+        name: 'dashboard_scan_site',
+        args: { siteUrl: 'https://ex.com' },
+      }),
+    });
+    const first = await ctx.server.inject({
+      method: 'POST',
+      url: `/agent/confirm/${pending.id}`,
+      headers: { 'content-type': 'application/json' },
+      payload: {},
+    });
+    expect([200, 202, 204]).toContain(first.statusCode);
+    expect(ctx.dispatch).toHaveBeenCalledTimes(1);
+
+    const second = await ctx.server.inject({
+      method: 'POST',
+      url: `/agent/confirm/${pending.id}`,
+      headers: { 'content-type': 'application/json' },
+      payload: {},
+    });
+    // 409 for not-pending (replay). Dispatch MUST NOT fire a second time
+    // (T-32-07-01 server-side idempotency).
+    expect([204, 409]).toContain(second.statusCode);
+    expect(ctx.dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('Plan07-B: POST /agent/deny transitions to denied + writes user_denied tool result (regression)', async () => {
+    const pending = await ctx.storage.conversations.appendMessage({
+      conversationId: ctx.conversationId,
+      role: 'tool',
+      status: 'pending_confirmation',
+      toolCallJson: JSON.stringify({
+        id: 't3',
+        name: 'dashboard_rotate_api_key',
+        args: { orgId: ctx.orgId },
+      }),
+    });
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: `/agent/deny/${pending.id}`,
+      headers: { 'content-type': 'application/json' },
+      payload: {},
+    });
+    expect([200, 202, 204]).toContain(res.statusCode);
+    const history = await ctx.storage.conversations.getFullHistory(ctx.conversationId);
+    const rowAfter = history.find((m) => m.id === pending.id);
+    expect(rowAfter?.status).toBe('denied');
+    const denial = history.find(
+      (m) =>
+        m.role === 'tool' &&
+        m.id !== pending.id &&
+        typeof m.toolResultJson === 'string' &&
+        m.toolResultJson.includes('user_denied'),
+    );
+    expect(denial).toBeDefined();
+  });
+
+  it('Plan07-D: GET /agent/panel renders pending tool bubble with data-pending="true" (SC#4 DOM-recovery)', async () => {
+    // Seed a pending_confirmation row directly.
+    await ctx.storage.conversations.appendMessage({
+      conversationId: ctx.conversationId,
+      role: 'tool',
+      status: 'pending_confirmation',
+      toolCallJson: JSON.stringify({
+        id: 't4',
+        name: 'dashboard_delete_report',
+        args: { reportId: 'r1' },
+      }),
+    });
+    const res = await ctx.server.inject({
+      method: 'GET',
+      url: `/agent/panel?conversationId=${ctx.conversationId}`,
+      headers: { accept: 'text/html' },
+    });
+    expect(res.statusCode).toBe(200);
+    // The client-side DOM-recovery code in agent.js looks for this marker.
+    expect(res.body).toContain('data-pending="true"');
+    // The tool_call_json must also round-trip so the client can reconstruct
+    // the dialog payload without a server call.
+    expect(res.body).toContain('dashboard_delete_report');
+  });
+
+  it('Plan07-E: POST /agent/confirm/:messageId on unknown id returns 404', async () => {
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/confirm/00000000-0000-0000-0000-000000000000',
+      headers: { 'content-type': 'application/json' },
+      payload: {},
+    });
+    expect(res.statusCode).toBe(404);
+    const body = res.json() as { error: string };
+    expect(body.error).toBe('pending_not_found');
+  });
+
+  it('Plan07-F: POST /agent/confirm on another org\'s message returns 404 (cross-org isolation)', async () => {
+    // Create a SECOND org + conversation + pending row. The authenticated
+    // user (ctx.orgId) should not be able to confirm it. findPendingMessage
+    // filters by c.org_id = ?, so a foreign org returns "not found" (same
+    // response as unknown id — defence-in-depth against cross-user approval).
+    const otherOrg = await ctx.storage.organizations.createOrg({
+      name: 'OtherOrg',
+      slug: `o-other-${randomUUID().slice(0, 6)}`,
+    });
+    const otherUserId = randomUUID();
+    ctx.storage.getRawDatabase().prepare(
+      `INSERT INTO dashboard_users (id, username, password_hash, role, active, created_at)
+       VALUES (?, ?, 'pw', 'viewer', 1, ?)`,
+    ).run(otherUserId, `u-${otherUserId.slice(0, 6)}`, new Date().toISOString());
+    const otherConv = await ctx.storage.conversations.createConversation({
+      userId: otherUserId,
+      orgId: otherOrg.id,
+    });
+    const foreignPending = await ctx.storage.conversations.appendMessage({
+      conversationId: otherConv.id,
+      role: 'tool',
+      status: 'pending_confirmation',
+      toolCallJson: JSON.stringify({
+        id: 'tF',
+        name: 'dashboard_rotate_api_key',
+        args: { orgId: otherOrg.id },
+      }),
+    });
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: `/agent/confirm/${foreignPending.id}`,
+      headers: { 'content-type': 'application/json' },
+      payload: {},
+    });
+    // Cross-org → treated as pending_not_found (404). The dispatcher must
+    // never fire against a foreign pending row (T-32-07-03).
+    expect(res.statusCode).toBe(404);
+    expect(ctx.dispatch).not.toHaveBeenCalled();
+  });
 });

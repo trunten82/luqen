@@ -1236,5 +1236,18 @@
   "agent.error.rateLimitBody": "[IT] You're sending messages too quickly. Try again in {{seconds}} seconds.",
   "agent.error.iterationCapTitle": "[IT] I stopped to avoid a loop",
   "agent.error.iterationCapBody": "[IT] I tried several tools but couldn't complete this in one go. Try rephrasing, or split the request.",
-  "agent.confirm.pendingBadge": "[IT] Awaiting confirmation"
+  "agent.confirm.pendingBadge": "[IT] Awaiting confirmation",
+  "agent.confirm.title": "[IT] Confirm destructive action",
+  "agent.confirm.intro": "[IT] {{name}} wants to make a change that can't be undone automatically. Review the details before approving.",
+  "agent.confirm.toolLabel": "[IT] Tool",
+  "agent.confirm.fallbackIntro": "[IT] {{name}} wants to run {{toolName}}.",
+  "agent.confirm.rawJsonLabel": "[IT] Show raw tool arguments",
+  "agent.confirm.rawJsonLabelOpen": "[IT] Hide raw tool arguments",
+  "agent.confirm.approve": "[IT] Approve and run",
+  "agent.confirm.cancel": "[IT] Cancel",
+  "agent.confirm.approvedStatus": "[IT] Tool approved — running now.",
+  "agent.confirm.cancelledStatus": "[IT] Tool cancelled — no changes made.",
+  "agent.confirm.approveFailedTitle": "[IT] Approval failed",
+  "agent.confirm.approveFailedBody": "[IT] The server could not confirm this action. Try again, or cancel to abort.",
+  "agent.confirm.approveRetry": "[IT] Retry approval"
 }
