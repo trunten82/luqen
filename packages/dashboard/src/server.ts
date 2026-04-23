@@ -100,6 +100,8 @@ import { createDashboardSigner } from './auth/oauth-signer.js';
 import { AgentService } from './agent/agent-service.js';
 import { ToolDispatcher } from './agent/tool-dispatch.js';
 import { DASHBOARD_TOOL_METADATA } from './mcp/metadata.js';
+import { createDashboardMcpServer } from './mcp/server.js';
+import { bridgeMcpToolsForAgent } from './agent/mcp-bridge.js';
 import { registerAgentRoutes } from './routes/agent.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -997,8 +999,20 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // Phase 33 when cross-service tools are added. Keeping the dispatcher
   // instance here preserves the server.ts wiring contract so Phase 33 only
   // needs to fill in the handler array.
+  // Build an in-process MCP server so the agent dispatcher can call the
+  // same tool handlers that the /api/v1/mcp HTTP route exposes. `_registeredTools`
+  // carries the zod inputSchema + description; mcp-bridge turns them into
+  // ToolManifestEntry[] for ToolDispatcher and AgentToolCatalogEntry for the LLM.
+  const agentMcpServer = (await createDashboardMcpServer({
+    storage,
+    scanService: mcpScanService,
+    serviceConnections: serviceConnectionsRepo,
+  })).server;
+  const { catalog: agentToolCatalog, manifest: agentToolManifest } =
+    bridgeMcpToolsForAgent(agentMcpServer, DASHBOARD_TOOL_METADATA);
+
   const agentDispatcher = new ToolDispatcher({
-    tools: [], // handler-bound tools wired in Phase 33 (cross-service path)
+    tools: agentToolManifest,
     signer: dashboardSigner,
     dashboardMcpAudience,
     resolveScopes: async (userId, orgId) => {
@@ -1031,6 +1045,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
       },
     },
     allTools: DASHBOARD_TOOL_METADATA,
+    toolCatalog: agentToolCatalog,
     dispatcher: agentDispatcher,
     resolvePermissions: async (userId, orgId) => {
       // Called at the HEAD of every AgentService.runTurn iteration — the

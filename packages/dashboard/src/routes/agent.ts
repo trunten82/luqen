@@ -88,6 +88,34 @@ function normaliseUrl(url: string): string {
   return url.endsWith('/') ? url.slice(0, -1) : url;
 }
 
+/**
+ * Resolve the conversation-scoping orgId for the authenticated user.
+ *
+ * Global dashboard admins (admin.system permission, no org membership) have
+ * `user.currentOrgId === undefined` — the ordinary org-scoped code path 400s
+ * on that. To keep the agent usable for them without leaking conversations
+ * between admins, mint a synthetic per-admin namespace: `__admin__:{userId}`.
+ *
+ * Returns undefined ONLY if the user has neither an org nor admin.system.
+ */
+function resolveAgentOrgId(
+  user: { id: string; currentOrgId?: string },
+  permissions: ReadonlySet<string>,
+): string | undefined {
+  if (user.currentOrgId !== undefined && user.currentOrgId.length > 0) {
+    return user.currentOrgId;
+  }
+  if (permissions.has('admin.system')) {
+    return `__admin__:${user.id}`;
+  }
+  return undefined;
+}
+
+function getPermissions(request: FastifyRequest): ReadonlySet<string> {
+  const perms = (request as unknown as Record<string, unknown>)['permissions'];
+  return perms instanceof Set ? (perms as Set<string>) : new Set<string>();
+}
+
 // ---------------------------------------------------------------------------
 // registerAgentRoutes
 // ---------------------------------------------------------------------------
@@ -153,7 +181,7 @@ export async function registerAgentRoutes(
         return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
       }
       // Verify the conversation belongs to the authenticated org.
-      const orgId = user.currentOrgId;
+      const orgId = resolveAgentOrgId(user, getPermissions(request));
       if (orgId === undefined) {
         return reply.code(400).send({ error: 'no_org_context' });
       }
@@ -213,7 +241,7 @@ export async function registerAgentRoutes(
         }
 
         const { conversationId } = request.params as { conversationId: string };
-        const orgId = user.currentOrgId;
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
         if (orgId === undefined) {
           return reply.code(400).send({ error: 'no_org_context' });
         }
@@ -287,7 +315,7 @@ export async function registerAgentRoutes(
           return reply.code(401).send({ error: 'unauthenticated' });
         }
         const { messageId } = request.params as { messageId: string };
-        const orgId = user.currentOrgId;
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
         if (orgId === undefined) {
           return reply.code(400).send({ error: 'no_org_context' });
         }
@@ -332,7 +360,7 @@ export async function registerAgentRoutes(
           return reply.code(401).send({ error: 'unauthenticated' });
         }
         const { messageId } = request.params as { messageId: string };
-        const orgId = user.currentOrgId;
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
         if (orgId === undefined) {
           return reply.code(400).send({ error: 'no_org_context' });
         }
@@ -375,7 +403,7 @@ export async function registerAgentRoutes(
       if (user === undefined) {
         return reply.code(401).send({ error: 'unauthenticated' });
       }
-      const orgId = user.currentOrgId;
+      const orgId = resolveAgentOrgId(user, getPermissions(request));
       if (orgId === undefined) {
         return reply.code(400).send({ error: 'no_org_context' });
       }
