@@ -156,8 +156,8 @@ Plans:
 - [x] 32-02-PLAN.md — agent-conversation capability + agent-system prompt template (3 locked fences) + PUT orgId guard
 - [x] 32-03-PLAN.md — Migration 050 adds agent_display_name column on organizations + OrganizationsRepository roundtrip
 - [x] 32-04-PLAN.md — AgentService + ToolDispatcher + jwt-minter + SSE frames + /agent/* routes + server.ts wiring (destructive pause, iteration cap, RBAC rebuild, audit writes, ToolMetadata.confirmationTemplate)
-- [ ] 32-05-PLAN.md — Admin-UI extensions A/B/C: /admin/llm capabilities tab agent-conversation row + prompts tab agent-system locked fences + hidden per-org override + Anthropic models tab rendering + i18n
-- [ ] 32-06-PLAN.md — Chat drawer + floating entry button + agent.js EventSource client + localStorage persistence + style.css ≤200 LOC banner + i18n + E2E axe-core
+- [x] 32-05-PLAN.md — Admin-UI extensions A/B/C: /admin/llm capabilities tab agent-conversation row + prompts tab agent-system locked fences + hidden per-org override + Anthropic models tab rendering + i18n
+- [x] 32-06-PLAN.md — Chat drawer + floating entry button + agent.js EventSource client + localStorage persistence + style.css ≤200 LOC banner + i18n + E2E axe-core
 - [ ] 32-07-PLAN.md — Native <dialog> confirmation flow (DB recovery on reload = SC#4) + Approve/Cancel idempotency + Web Speech API feature-detect + E2E + i18n
 - [ ] 32-08-PLAN.md — Admin-UI extension D: /admin/organizations/:id/settings form + zod validation (no HTML/URLs, ≤40 chars) + organization-settings.hbs + i18n + integration tests
 **UI hint**: yes

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Completed 32-04-PLAN.md
-last_updated: "2026-04-20T09:00:35.251Z"
-last_activity: 2026-04-20
+stopped_at: Completed 32-05-PLAN.md
+last_updated: "2026-04-23T19:27:42.972Z"
+last_activity: 2026-04-23
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 32
-  completed_plans: 29
-  percent: 91
+  completed_plans: 31
+  percent: 97
 ---
 
 # Project State
@@ -33,10 +33,10 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ```
 
 Phase: 32 (agent-service-chat-ui) — EXECUTING
-Plan: 5 of 8
+Plan: 7 of 8
 Plans: 5 of 5
 Status: Ready to execute
-Last activity: 2026-04-20
+Last activity: 2026-04-23
 
 ## Performance Metrics
 
@@ -60,6 +60,8 @@ Last activity: 2026-04-20
 | Phase 32-agent-service-chat-ui P02 | ~12m | 4 tasks | 11 files |
 | Phase 32-agent-service-chat-ui P03 | 11m | 2 tasks | 6 files |
 | Phase 32-agent-service-chat-ui P04 | 28m | 4 tasks | 16 files |
+| Phase 32-agent-service-chat-ui P05 | 45m | 4 tasks | 11 files |
+| Phase 32-agent-service-chat-ui P06 | ~60m | 4 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -115,6 +117,11 @@ v3.0.0 architecture decisions (from research):
 - [Phase 32-agent-service-chat-ui]: [32-04]: Per-dispatch JWT mint via existing DashboardSigner (no new secret material); TTL 300s; client_id=__agent-internal__ for the 31.2 D-20 revoke-check carve-out
 - [Phase 32-agent-service-chat-ui]: [32-04]: Rate-limit 429 JSON rewrite via onSend hook — NOT the plugin's built-in error-response override (feedback_rate_limiter.md)
 - [Phase 32-agent-service-chat-ui]: [32-04]: Origin check on /agent/stream only rejects mismatched Origin; missing Origin passes (same-origin EventSource does not always send Origin)
+- [Phase 32-agent-service-chat-ui]: agent-system per-org override disabled at TWO layers — UI template gate (plan 05) + server-side orgId guard (plan 02) — defence-in-depth against prompt-injection via org settings (D-14)
+- [Phase 32-agent-service-chat-ui]: agentConvMetadata.manifestSize reflects THIS admin's org manifest (not a global max) so destructive-count badges match what the org's agent actually exposes
+- [Phase 32-agent-service-chat-ui]: [32-06]: request.user.orgAgentDisplayName populated in server.ts preHandler (the currentOrg resolution site) rather than auth/session.ts — session.ts owns cookie config only. user exposed in the global reply.view merge so the shared layout renders {{#if user}} on every page.
+- [Phase 32-agent-service-chat-ui]: [32-06]: loadPanel adopts trusted same-origin Handlebars fragment via DOMParser + document.importNode (NOT innerHTML) — defence-in-depth for T-32-06-01/02 keeps agent.js free of the XSS sink surface.
+- [Phase 32-agent-service-chat-ui]: [32-06]: Vitest-based E2E spec over Playwright — the dashboard package has no Playwright install and existing E2E tests are vitest-based; Playwright + @axe-core accessibility gate deferred to a follow-up infra plan.
 
 ### Architecture Notes
 
@@ -176,7 +183,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-20T09:00:35.246Z
-Stopped at: Completed 32-04-PLAN.md
+Last session: 2026-04-23T18:56:04.334Z
+Stopped at: Completed 32-05-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 28`
