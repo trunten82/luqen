@@ -26,6 +26,8 @@
 
   {{> sidebar}}
 
+  {{> agent-drawer agentDisplayName=(or user.orgAgentDisplayName "Luqen Assistant") csrfToken=csrfToken locale=locale conversationId=agentConversationId messages=agentMessages}}
+
   <!-- Top bar with burger menu (all screen sizes) -->
   <header class="app-header" role="banner">
     <button class="menu-toggle"
@@ -59,6 +61,7 @@
 
   <div id="toast-container" role="region" aria-label="Notifications" aria-live="polite">{{#if flashToast}}<div class="toast toast--success" role="alert" aria-live="assertive">{{flashToast}}</div>{{/if}}</div>
   <div id="modal-container"></div>
+  <div id="agent-aria-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
   <script src="/static/htmx.min.js?v=1.0.0"></script>
   <script src="/static/htmx-sse.js?v=1.0.0"></script>
@@ -118,5 +121,6 @@
     });
   </script>
   <script src="/static/app.js?v=1.2.1"></script>
+  <script src="/static/agent.js?v=1.0.0" defer></script>
 </body>
 </html>

@@ -1,0 +1,23 @@
+{{#if (eq role "user")}}
+  <div class="agent-msg agent-msg--user" data-message-id="{{id}}">
+    <span class="agent-msg__role">{{t "agent.role.user"}}</span>
+    <div class="agent-msg__body">{{content}}</div>
+  </div>
+{{else if (eq role "assistant")}}
+  <div class="agent-msg agent-msg--assistant" data-message-id="{{id}}" lang="{{../locale}}"{{#if (eq status "streaming")}} aria-busy="true"{{/if}}>
+    <span class="agent-msg__role">{{../agentDisplayName}}</span>
+    <div class="agent-msg__body">{{content}}</div>
+  </div>
+{{else if (eq role "tool")}}
+  <div class="agent-msg agent-msg--tool card card--muted" data-message-id="{{id}}"{{#if (eq status "pending_confirmation")}} data-pending="true"{{/if}}>
+    <span class="agent-msg__role">{{t "agent.role.tool"}}</span>
+    {{#if (eq status "pending_confirmation")}}
+      <span class="badge badge--warning">{{t "agent.confirm.pendingBadge"}}</span>
+    {{/if}}
+    <details>
+      <summary>{{t "agent.tool.expand"}}</summary>
+      {{#if toolCallJson}}<pre class="prompt-segment-content" aria-label="Tool call details">{{toolCallJson}}</pre>{{/if}}
+      {{#if toolResultJson}}<pre class="prompt-segment-content" aria-label="Tool result details">{{toolResultJson}}</pre>{{/if}}
+    </details>
+  </div>
+{{/if}}

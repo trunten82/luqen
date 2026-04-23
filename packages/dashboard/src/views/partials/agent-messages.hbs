@@ -1,0 +1,8 @@
+{{#if messages.length}}
+  {{#each messages}}{{> agent-message this agentDisplayName=../agentDisplayName locale=../locale}}{{/each}}
+{{else}}
+  <div class="empty-state">
+    <p>{{t "agent.firstOpen.greeting" name=agentDisplayName}}</p>
+    <p class="form-hint">{{t "agent.emptyThread.hint"}}</p>
+  </div>
+{{/if}}

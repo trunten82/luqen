@@ -6,6 +6,13 @@ export interface AuthUser {
   readonly username: string;
   readonly role: string;
   readonly currentOrgId?: string;
+  /**
+   * Phase 32 Plan 06 — per-org chat companion display name. Populated by the
+   * org-context preHandler in server.ts after resolving the user's current
+   * org. Omitted when the org has no custom name set (layout falls back to
+   * the default "Luqen Assistant" via the `or` Handlebars helper).
+   */
+  readonly orgAgentDisplayName?: string;
 }
 
 declare module 'fastify' {
