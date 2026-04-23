@@ -18,11 +18,22 @@
 
 {{#each segments}}
   {{#if (eq type "locked")}}
-  <div class="card card--muted mb-sm" aria-label="{{t "admin.llm.prompts.lockedSection"}}">
+  {{!-- Phase 32 D-13: agent-system fences (rbac/confirmation/honesty) get distinct
+       left-border colors via .card--locked-<variant>. Non-agent-system locked
+       sections (e.g. output-format) pass no variant and render unchanged. --}}
+  {{!-- When parent invocation sets agentSystem=true, derive the border-color variant
+       from the fence name (rbac/confirmation/honesty). Other prompts pass no flag
+       and render the existing muted card unchanged. --}}
+  <div class="card card--muted{{#if ../agentSystem}} card--locked-{{name}}{{/if}} mb-sm" aria-label="{{t "admin.llm.prompts.lockedSection"}}">
     <div class="card__header" style="gap:0.5rem;align-items:center">
       <span aria-hidden="true" style="font-size:0.9rem">&#x1F512;</span>
       <code class="text-sm text-muted">{{name}}</code>
       <span class="badge badge--neutral text-sm">{{t "admin.llm.prompts.lockedSection"}}</span>
+      {{#if ../agentSystem}}
+        {{#if (eq name "rbac")}}<span class="sr-only">{{t "admin.llm.prompts.lockedRbacTooltip"}}</span>{{/if}}
+        {{#if (eq name "confirmation")}}<span class="sr-only">{{t "admin.llm.prompts.lockedConfirmTooltip"}}</span>{{/if}}
+        {{#if (eq name "honesty")}}<span class="sr-only">{{t "admin.llm.prompts.lockedHonestyTooltip"}}</span>{{/if}}
+      {{/if}}
     </div>
     <div class="card__body" style="padding-top:0">
       <pre class="prompt-segment-content" style="background:var(--color-bg-muted,#f5f5f5);color:var(--color-text,#222);padding:0.75rem;border-radius:4px;overflow-x:auto;white-space:pre-wrap;font-size:0.8rem;margin:0">{{content}}</pre>
