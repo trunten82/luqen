@@ -818,6 +818,9 @@ export class SqliteAdapter implements DbAdapter {
     if (data.status != null) { fields.push('status = ?'); params.push(data.status); }
     if (data.reviewedBy != null) { fields.push('reviewedBy = ?'); params.push(data.reviewedBy); }
     if (data.reviewedAt != null) { fields.push('reviewedAt = ?'); params.push(data.reviewedAt); }
+    if (data.acknowledgedBy != null) { fields.push('acknowledgedBy = ?'); params.push(data.acknowledgedBy); }
+    if (data.acknowledgedAt != null) { fields.push('acknowledgedAt = ?'); params.push(data.acknowledgedAt); }
+    if (data.notes != null) { fields.push('notes = ?'); params.push(data.notes); }
     if (data.summary != null) { fields.push('summary = ?'); params.push(data.summary); }
     if (data.proposedChanges != null) { fields.push('proposedChanges = ?'); params.push(JSON.stringify(data.proposedChanges)); }
     params.push(id);

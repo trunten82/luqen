@@ -18,10 +18,13 @@ export async function proposeUpdate(
 /** Apply change only if proposedChanges contain real entity data (not just contentHash metadata). */
 async function safeApplyChange(db: DbAdapter, change: ProposedChange): Promise<void> {
   const { after } = change;
-  const isContentHashOnly = after != null
-    && 'contentHash' in after
-    && Object.keys(after).length === 1;
-  if (isContentHashOnly) return;
+  // Source-tracker proposals carry {contentHash} or {contentHash, diff} where diff is a
+  // free-form text summary (added/removed/modified lines), not an entity-column diff. Apply
+  // would route to updateRegulation/updateRequirement with an entityId that points at a
+  // sources row, not a regulation row → SELECT returns undefined → toRegulation throws
+  // "Cannot read properties of undefined (reading 'id')".
+  const isContentHashMeta = after != null && 'contentHash' in after;
+  if (isContentHashMeta) return;
 
   // Handle LLM requirement diff proposals (batch of added/removed/changed)
   if (after != null && 'diff' in after && change.entityType === 'requirement') {
