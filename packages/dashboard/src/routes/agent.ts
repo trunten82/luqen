@@ -167,14 +167,12 @@ export async function registerAgentRoutes(
         const existing = await storage.conversations.getConversation(convId, orgId);
         if (existing === null) { convId = undefined; }
       }
-      if (convId === undefined) {
-        server.log.info({ userId: user.id, orgId }, 'agent.create-conversation attempt');
+      if (convId === undefined || convId.length === 0) {
         const created = await storage.conversations.createConversation({
           userId: user.id,
           orgId,
         });
         convId = created.id;
-        server.log.info({ convId, userId: user.id, orgId }, 'agent.create-conversation result');
       }
       // Persist the user message; the SSE stream picks it up on next runTurn.
       const msg = await storage.conversations.appendMessage({
