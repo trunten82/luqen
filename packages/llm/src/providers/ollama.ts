@@ -198,33 +198,36 @@ export class OllamaAdapter implements LLMProviderAdapter {
           continue;
         }
 
-        console.error('[ollama-debug] chunk:', JSON.stringify(chunk).slice(0, 400));
         const content = chunk.message?.content;
         if (typeof content === 'string' && content.length > 0) {
           yield { type: 'token', text: content };
         }
 
-        if (chunk.done === true) {
-          if (Array.isArray(chunk.message?.tool_calls) && chunk.message!.tool_calls!.length > 0) {
-            finalToolCalls = chunk.message!.tool_calls!.map((tc) => {
-              const rawArgs = tc.function.arguments;
-              let args: Record<string, unknown>;
-              if (typeof rawArgs === 'string') {
-                try {
-                  args = JSON.parse(rawArgs) as Record<string, unknown>;
-                } catch {
-                  args = {};
-                }
-              } else {
-                args = rawArgs ?? {};
+        // Ollama cloud models may emit tool_calls in any chunk (not only the
+        // done=true one). Capture them whenever they appear — the final emit
+        // happens once after the stream ends.
+        if (Array.isArray(chunk.message?.tool_calls) && chunk.message!.tool_calls!.length > 0) {
+          finalToolCalls = chunk.message!.tool_calls!.map((tc) => {
+            const rawArgs = tc.function.arguments;
+            let args: Record<string, unknown>;
+            if (typeof rawArgs === 'string') {
+              try {
+                args = JSON.parse(rawArgs) as Record<string, unknown>;
+              } catch {
+                args = {};
               }
-              return {
-                id: `toolu_ollama_${randomUUID()}`,
-                name: tc.function.name,
-                args,
-              };
-            });
-          }
+            } else {
+              args = rawArgs ?? {};
+            }
+            return {
+              id: `toolu_ollama_${randomUUID()}`,
+              name: tc.function.name,
+              args,
+            };
+          });
+        }
+
+        if (chunk.done === true) {
           if (typeof chunk.prompt_eval_count === 'number' || typeof chunk.eval_count === 'number') {
             usage = {
               inputTokens: chunk.prompt_eval_count ?? 0,
