@@ -406,6 +406,7 @@
     if (xhr.status === 202) {
       var headerCid = xhr.getResponseHeader('x-conversation-id');
       if (headerCid && headerCid.length > 0) { setConversationId(headerCid); }
+      var input = byId(INPUT_ID); if (input) { input.value = ''; }
       openStream(getConversationId());
     }
     else if (xhr.status === 429) {
