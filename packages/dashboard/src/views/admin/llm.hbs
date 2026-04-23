@@ -252,9 +252,29 @@
       <div class="card">
         <div class="card__header">
           <h2 class="card__title"><code>{{name}}</code></h2>
+          {{#if (eq name "agent-conversation")}}
+          <span class="badge badge--warning" aria-label="{{t "admin.llm.agentConv.requiresToolUse"}}">{{t "admin.llm.agentConv.requiresToolUse"}}</span>
+          {{#if (eq ../agentConvMetadata.manifestSize 0)}}
+          <span class="badge badge--error" aria-label="{{t "admin.llm.agentConv.manifestSize" count=../agentConvMetadata.manifestSize}}">{{t "admin.llm.agentConv.manifestSize" count=../agentConvMetadata.manifestSize}}</span>
+          {{else}}
+          <span class="badge badge--info" aria-label="{{t "admin.llm.agentConv.manifestSize" count=../agentConvMetadata.manifestSize}}">{{t "admin.llm.agentConv.manifestSize" count=../agentConvMetadata.manifestSize}}</span>
+          {{/if}}
+          {{#if (eq ../agentConvMetadata.destructiveCount 0)}}
+          <span class="badge badge--neutral">{{t "admin.llm.agentConv.destructiveZero"}}</span>
+          {{else}}
+          {{#if (eq ../agentConvMetadata.destructiveCount 1)}}
+          <span class="badge badge--warning" aria-describedby="agent-conv-destructive-list">{{t "admin.llm.agentConv.destructiveOne"}}</span>
+          {{else}}
+          <span class="badge badge--warning" aria-describedby="agent-conv-destructive-list">{{t "admin.llm.agentConv.destructiveMany" count=../agentConvMetadata.destructiveCount}}</span>
+          {{/if}}
+          {{/if}}
+          {{/if}}
         </div>
         <div class="card__body">
           <p class="form-hint text-sm">{{t "admin.llm.capabilityFallbackIntro"}}</p>
+          {{#if (eq name "agent-conversation")}}
+          <p class="form-hint text-sm">{{t "admin.llm.agentConv.iterationCap"}}</p>
+          {{/if}}
           {{#if assignedModels.length}}
           <p class="form-hint">{{t "admin.llm.capabilityFallbackLabel"}}</p>
           <ol class="fallback-chain" style="margin: 0 0 var(--space-sm) 0; padding-left: var(--space-md); list-style: decimal;">
@@ -306,6 +326,24 @@
             </div>
           </form>
           {{/if}}
+
+          {{#if (eq name "agent-conversation")}}
+          {{!-- Non-tool-use assignment guard: JS populates this placeholder with an inline
+               .alert--error when admin selects a non-tool-use model (UI-SPEC Surface 3). --}}
+          <div id="agent-conv-non-tool-alert" role="alert" hidden
+               data-non-tool-block-text="{{t "admin.llm.agentConv.nonToolBlock"}}"></div>
+
+          {{#if (gt ../agentConvMetadata.destructiveCount 0)}}
+          <details class="mt-sm" id="agent-conv-destructive-list">
+            <summary>{{t "admin.llm.agentConv.destructiveExpand"}}</summary>
+            <ul>
+              {{#each ../agentConvMetadata.destructiveTools}}
+              <li><code>{{this}}</code></li>
+              {{/each}}
+            </ul>
+          </details>
+          {{/if}}
+          {{/if}}
         </div>
       </div>
       {{/each}}
@@ -326,13 +364,25 @@
       <div class="card__header">
         <h2 class="card__title"><code>{{capability}}</code></h2>
         {{#if isCustom}}<span class="badge badge--info">Custom</span>{{else}}<span class="badge badge--neutral">Default</span>{{/if}}
+        {{#if (eq capability "agent-system")}}
+        {{!-- Phase 32 D-14: per-org override is disabled server-side (Plan 02 guard).
+             This info pill is the UI-level defence-in-depth gate — makes it visible
+             to admins that tenant-scoped overrides are intentionally blocked. --}}
+        <span class="badge badge--info"
+              aria-describedby="agent-system-override-explain-{{capability}}">{{t "admin.llm.prompts.agentSystemGlobalOnly"}}</span>
+        <span id="agent-system-override-explain-{{capability}}" class="sr-only">{{t "admin.llm.prompts.agentSystemGlobalOnlyTooltip"}}</span>
+        {{/if}}
       </div>
       <form class="card__body"
             hx-put="/admin/llm/prompts/{{capability}}"
             hx-target="#llm-messages"
             hx-swap="innerHTML">
         <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+        {{#if (eq capability "agent-system")}}
+        {{> prompt-segments capability=capability isStale=isStale segments=segments agentSystem=true}}
+        {{else}}
         {{> prompt-segments capability=capability isStale=isStale segments=segments }}
+        {{/if}}
         <div class="form-actions">
           <button type="submit" class="btn btn--primary">{{t "admin.llm.saveOverride"}}</button>
           <button type="button" class="btn btn--secondary"

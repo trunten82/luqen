@@ -3730,3 +3730,12 @@ details[open] > .mt-examples-toggle::before {
   .brand-score-widget-row { flex-direction: column; }
   .brand-score-widget { max-width: 100%; }
 }
+
+/* ---- Agent Admin (Phase 32) ---- */
+/* D-13 locked-fence border colors for the agent-system prompt editor
+   (rbac=info/blue, confirmation=warning/amber, honesty=success/green).
+   Each variant lays atop the existing .card--muted base. */
+.card--locked-rbac { border-left: 4px solid var(--status-info); }
+.card--locked-confirmation { border-left: 4px solid var(--status-warning); }
+.card--locked-honesty { border-left: 4px solid var(--status-success); }
+#agent-conv-non-tool-alert[hidden] { display: none; }
