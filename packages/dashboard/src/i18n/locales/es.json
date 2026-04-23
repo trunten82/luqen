@@ -647,7 +647,8 @@
         "agentDisplayNameTooLong": "El nombre debe tener 40 caracteres o menos.",
         "agentDisplayNameHtml": "El nombre no puede contener etiquetas HTML ni URL.",
         "agentDisplayNameSaved": "Nombre visible del asistente actualizado.",
-        "agentDisplayNameError": "No se pudo guardar el nombre visible. Inténtalo de nuevo."
+        "agentDisplayNameError": "No se pudo guardar el nombre visible. Inténtalo de nuevo.",
+        "navLabel": "Configuración del agente"
       }
     },
     "system": {
@@ -1254,5 +1255,7 @@
   "agent.confirm.cancelledStatus": "[ES] Tool cancelled — no changes made.",
   "agent.confirm.approveFailedTitle": "[ES] Approval failed",
   "agent.confirm.approveFailedBody": "[ES] The server could not confirm this action. Try again, or cancel to abort.",
-  "agent.confirm.approveRetry": "[ES] Retry approval"
+  "agent.confirm.approveRetry": "[ES] Retry approval",
+  "agent.newChat.label": "Iniciar nueva conversación",
+  "agent.newChat.button": "Nuevo chat"
 }
