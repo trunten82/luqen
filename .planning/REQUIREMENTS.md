@@ -28,7 +28,7 @@ Requirements for the MCP Servers & Agent Companion milestone. Each maps to roadm
 
 - [x] **AGENT-01**: User can interact with the agent via a text chat side panel in the dashboard
 - [x] **AGENT-02**: Agent routes all LLM calls through the existing capability engine (provider fallback, per-org overrides)
-- [ ] **AGENT-03**: User can use speech input via Web Speech API with text fallback for unsupported browsers
+- [x] **AGENT-03**: User can use speech input via Web Speech API with text fallback for unsupported browsers
 - [ ] **AGENT-04**: Agent references recent scans, active guidelines, and regulations in responses
 - [ ] **AGENT-05**: Agent manages token budget with sliding window and summary compaction for long conversations
 
@@ -96,7 +96,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MCPT-05 | Phase 30 | Pending |
 | AGENT-01 | Phase 32 | Complete |
 | AGENT-02 | Phase 32 | Complete |
-| AGENT-03 | Phase 32 | Pending |
+| AGENT-03 | Phase 32 | Complete |
 | AGENT-04 | Phase 33 | Pending |
 | AGENT-05 | Phase 33 | Pending |
 | APER-01 | Phase 31 | Pending |

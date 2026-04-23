@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
 status: executing
-stopped_at: Completed 32-05-PLAN.md
-last_updated: "2026-04-23T19:27:42.972Z"
+stopped_at: Completed 32-07-PLAN.md
+last_updated: "2026-04-23T19:47:23.668Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 32
-  completed_plans: 31
-  percent: 97
+  completed_plans: 32
+  percent: 100
 ---
 
 # Project State
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ```
 
 Phase: 32 (agent-service-chat-ui) — EXECUTING
-Plan: 7 of 8
+Plan: 8 of 8
 Plans: 5 of 5
 Status: Ready to execute
 Last activity: 2026-04-23
@@ -62,6 +62,7 @@ Last activity: 2026-04-23
 | Phase 32-agent-service-chat-ui P04 | 28m | 4 tasks | 16 files |
 | Phase 32-agent-service-chat-ui P05 | 45m | 4 tasks | 11 files |
 | Phase 32-agent-service-chat-ui P06 | ~60m | 4 tasks | 12 files |
+| Phase 32-agent-service-chat-ui P07 | ~55m | 4 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,10 @@ v3.0.0 architecture decisions (from research):
 - [Phase 32-agent-service-chat-ui]: [32-06]: request.user.orgAgentDisplayName populated in server.ts preHandler (the currentOrg resolution site) rather than auth/session.ts — session.ts owns cookie config only. user exposed in the global reply.view merge so the shared layout renders {{#if user}} on every page.
 - [Phase 32-agent-service-chat-ui]: [32-06]: loadPanel adopts trusted same-origin Handlebars fragment via DOMParser + document.importNode (NOT innerHTML) — defence-in-depth for T-32-06-01/02 keeps agent.js free of the XSS sink surface.
 - [Phase 32-agent-service-chat-ui]: [32-06]: Vitest-based E2E spec over Playwright — the dashboard package has no Playwright install and existing E2E tests are vitest-based; Playwright + @axe-core accessibility gate deferred to a follow-up infra plan.
+- [Phase 32-agent-service-chat-ui]: [32-07]: DOM-recovery reads tool_call_json from server-rendered <pre> inside pending tool bubble — no new recovery endpoint; SC#4 survives reload with zero network chatter
+- [Phase 32-agent-service-chat-ui]: [32-07]: Speech wiring extracted to agent-speech.js to keep agent.js under 450 LOC UI-SPEC ceiling; window.__luqenAgentSpeech.toggle bridge keeps click-delegation in agent.js
+- [Phase 32-agent-service-chat-ui]: [32-07]: data-dialog-resolution attribute round-trip distinguishes button-close from Esc-close inside native <dialog> close-event trap — Esc path fires POST /agent/deny (T-32-07-07)
+- [Phase 32-agent-service-chat-ui]: [32-07]: Web Speech unsupported path HIDES the button + surfaces form-hint (not disabled) — WCAG dead-affordance guard
 
 ### Architecture Notes
 
@@ -183,7 +188,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T18:56:04.334Z
-Stopped at: Completed 32-05-PLAN.md
+Last session: 2026-04-23T19:47:11.796Z
+Stopped at: Completed 32-07-PLAN.md
 Resume file: None
 Next action: `/gsd:plan-phase 28`
