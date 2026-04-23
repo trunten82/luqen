@@ -119,11 +119,12 @@ describe('Proposal routes', () => {
       expect(body.template).toBe('admin/proposals.hbs');
     });
 
-    it('lists mocked proposals as officialProposals (no orgId = official)', async () => {
+    it('lists mocked proposals split into officialPending/officialResolved (no orgId = official)', async () => {
       const response = await ctx.server.inject({ method: 'GET', url: '/admin/proposals' });
-      const body = response.json() as { data: { officialProposals: Array<{ id: string }> } };
-      expect(Array.isArray(body.data.officialProposals)).toBe(true);
-      expect(body.data.officialProposals.length).toBeGreaterThan(0);
+      const body = response.json() as { data: { officialPending: Array<{ id: string }>; officialResolved: Array<{ id: string }> } };
+      expect(Array.isArray(body.data.officialPending)).toBe(true);
+      expect(Array.isArray(body.data.officialResolved)).toBe(true);
+      expect(body.data.officialPending.length + body.data.officialResolved.length).toBeGreaterThan(0);
     });
 
     it('passes status filter to compliance client when provided', async () => {
@@ -139,9 +140,10 @@ describe('Proposal routes', () => {
 
     it('includes detectedAtDisplay and isPending fields on each proposal', async () => {
       const response = await ctx.server.inject({ method: 'GET', url: '/admin/proposals' });
-      const body = response.json() as { data: { officialProposals: Array<{ isPending: boolean; detectedAtDisplay: string }> } };
-      expect(body.data.officialProposals[0]).toHaveProperty('isPending');
-      expect(body.data.officialProposals[0]).toHaveProperty('detectedAtDisplay');
+      const body = response.json() as { data: { officialPending: Array<{ isPending: boolean; detectedAtDisplay: string }>; officialResolved: Array<{ isPending: boolean; detectedAtDisplay: string }> } };
+      const first = body.data.officialPending[0] ?? body.data.officialResolved[0];
+      expect(first).toHaveProperty('isPending');
+      expect(first).toHaveProperty('detectedAtDisplay');
     });
 
     it('returns 403 without admin.system permission', async () => {
@@ -155,10 +157,12 @@ describe('Proposal routes', () => {
       vi.mocked(complianceClient.listUpdateProposals).mockRejectedValueOnce(new Error('Service unavailable'));
       const response = await ctx.server.inject({ method: 'GET', url: '/admin/proposals' });
       expect(response.statusCode).toBe(200);
-      const body = response.json() as { data: { error: string; officialProposals: unknown[]; customProposals: unknown[] } };
+      const body = response.json() as { data: { error: string; officialPending: unknown[]; officialResolved: unknown[]; customPending: unknown[]; customResolved: unknown[] } };
       expect(body.data.error).toBeTruthy();
-      expect(body.data.officialProposals).toHaveLength(0);
-      expect(body.data.customProposals).toHaveLength(0);
+      expect(body.data.officialPending).toHaveLength(0);
+      expect(body.data.officialResolved).toHaveLength(0);
+      expect(body.data.customPending).toHaveLength(0);
+      expect(body.data.customResolved).toHaveLength(0);
     });
   });
 
