@@ -3902,3 +3902,22 @@ details[open] > .mt-examples-toggle::before {
   body:has(.agent-drawer--open) .agent-launch { display: none; }
 }
 
+/* ---- Agent confirmation dialog (Phase 32 Plan 07 — Surface 2) ---- */
+/* Destructive-action gate. Uses native <dialog>.showModal() — browser handles
+   focus trap, Esc, modal backdrop. Summary card uses existing status-error
+   tokens so the warning affordance is consistent with other alerts. */
+.agent-confirm__summary {
+  border-left: 3px solid var(--status-error);
+  background: var(--status-error-bg);
+  padding: var(--space-md);
+  margin: 0.75rem 0;
+}
+.agent-confirm__raw summary { cursor: pointer; font-weight: 600; }
+.agent-confirm__raw pre {
+  margin-top: 0.5rem;
+  max-height: 200px;
+  overflow: auto;
+  font-size: 0.8125rem;
+}
+#agent-confirm-dialog .modal__footer { gap: 0.5rem; justify-content: flex-end; }
+
