@@ -442,6 +442,8 @@ export async function registerCapabilityExecRoutes(
       );
       for await (const frame of iter) {
         frameCount++;
+        const f = frame as { type?: string; code?: string; message?: string };
+        request.log.info({ frameNum: frameCount, frameType: f.type, frameCode: f.code, msg: f.message?.slice?.(0, 200) }, 'agent-conversation frame');
         write(frame);
       }
       request.log.info({ frameCount, orgId, userId }, 'agent-conversation stream ended cleanly');
