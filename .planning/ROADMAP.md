@@ -20,7 +20,7 @@
 - [x] **Phase 31: Conversation Persistence** - Migrations 047 (agent_conversations + agent_messages with in_window flag) and 048 (agent_audit_log), ConversationRepository (rolling 20-turn window maintained at write time, pending_confirmation + streaming always in_window), AgentAuditRepository (append-only, distinct from pre-existing storage.audit). Verified 2026-04-18 — 49/49 repo tests green.
 - [x] **Phase 31.1: MCP Authorization Spec Upgrade (INSERTED)** - OAuth 2.1 AS on the dashboard (Authorization Code + PKCE + refresh + DCR + `.well-known` metadata + JWKS rotation). Services swapped to JWKS-backed RS256 verifiers with RFC 8707 audience enforcement. Admin `/admin/clients` DCR surface + `/admin/oauth-keys` rotate UI. E2E smoke-verified against Claude Desktop on lxc-luqen 2026-04-19 (10/10 steps pass). 3/3 requirements met (MCPAUTH-01/02/03).
 - [x] **Phase 31.2: MCP Access Control Refinement (INSERTED)** - Introduce `mcp.use` per-org RBAC permission gate, bind tool visibility to user's real RBAC (not broad OAuth scope bundles), org-scoped DCR client revoke, service-side WWW-Authenticate parity. Closes G1/G9/G10 from Phase 31.1 smoke. — 2026-04-19
-- [ ] **Phase 32: Agent Service + Chat UI** - AgentService orchestration, text and speech chat side panel, and confirmation dialog for destructive tools
+- [x] **Phase 32: Agent Service + Chat UI** - AgentService orchestration, text and speech chat side panel, and confirmation dialog for destructive tools (completed 2026-04-23)
 - [ ] **Phase 33: Agent Intelligence + Audit Viewer** - Context-aware org suggestions, token budget with compaction, and admin audit log viewer
 
 ---
@@ -159,7 +159,7 @@ Plans:
 - [x] 32-05-PLAN.md — Admin-UI extensions A/B/C: /admin/llm capabilities tab agent-conversation row + prompts tab agent-system locked fences + hidden per-org override + Anthropic models tab rendering + i18n
 - [x] 32-06-PLAN.md — Chat drawer + floating entry button + agent.js EventSource client + localStorage persistence + style.css ≤200 LOC banner + i18n + E2E axe-core
 - [x] 32-07-PLAN.md — Native <dialog> confirmation flow (DB recovery on reload = SC#4) + Approve/Cancel idempotency + Web Speech API feature-detect + E2E + i18n
-- [ ] 32-08-PLAN.md — Admin-UI extension D: /admin/organizations/:id/settings form + zod validation (no HTML/URLs, ≤40 chars) + organization-settings.hbs + i18n + integration tests
+- [x] 32-08-PLAN.md — Admin-UI extension D: /admin/organizations/:id/settings form + zod validation (no HTML/URLs, ≤40 chars) + organization-settings.hbs + i18n + integration tests
 **UI hint**: yes
 
 ### Phase 33: Agent Intelligence + Audit Viewer
@@ -185,5 +185,5 @@ Plans:
 | 31. Conversation Persistence | 2/2 | Complete | 2026-04-18 |
 | 31.1. MCP Authorization Spec Upgrade (INSERTED) | 4/4 | Complete | 2026-04-19 |
 | 31.2. MCP Access Control Refinement (INSERTED) | 5/5 | Complete | 2026-04-19 |
-| 32. Agent Service + Chat UI | 7/8 | In Progress|  |
+| 32. Agent Service + Chat UI | 8/8 | Complete   | 2026-04-23 |
 | 33. Agent Intelligence + Audit Viewer | 0/? | Not started | - |
