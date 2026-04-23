@@ -415,6 +415,7 @@ export async function registerCapabilityExecRoutes(
       return;
     }
 
+    reply.hijack();
     reply.raw.writeHead(200, {
       'content-type': 'text/event-stream',
       'cache-control': 'no-cache, no-transform',
