@@ -5,6 +5,7 @@ import {
   proposeUpdate,
   approveUpdate,
   rejectUpdate,
+  acknowledgeUpdate,
   listPendingUpdates,
 } from '../../src/engine/proposals.js';
 
@@ -420,6 +421,34 @@ describe('proposals', () => {
       // Entity should NOT have been created
       const zz = await db.getJurisdiction('ZZ');
       expect(zz).toBeNull();
+    });
+  });
+
+  describe('acknowledgeUpdate', () => {
+    it('skips apply when proposedChanges.after is source-tracker metadata (contentHash + diff)', async () => {
+      // Regression: source-change proposals carry {contentHash, diff} with entityId pointing
+      // at a source row, not a regulation. Earlier versions only skipped when after had a
+      // single contentHash key, so {contentHash, diff} fell through to updateRegulation and
+      // blew up with "Cannot read properties of undefined (reading 'id')".
+      const proposal = await proposeUpdate(db, {
+        source: 'monitor-bot',
+        type: 'amendment',
+        summary: 'Source content changed',
+        proposedChanges: {
+          action: 'update',
+          entityType: 'regulation',
+          entityId: 'not-a-real-regulation-id',
+          before: { contentHash: 'abc' },
+          after: {
+            contentHash: 'def',
+            diff: { added: ['line1'], removed: [], modified: [] },
+          },
+        },
+      });
+
+      const acked = await acknowledgeUpdate(db, proposal.id, 'reviewer');
+      expect(acked.status).toBe('acknowledged');
+      expect(acked.acknowledgedBy).toBe('reviewer');
     });
   });
 });
