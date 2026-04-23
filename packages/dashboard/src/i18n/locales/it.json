@@ -389,7 +389,11 @@
       "showChanges": "Mostra modifiche",
       "diffAdded": "Aggiunto:",
       "diffRemoved": "Rimosso:",
-      "diffModified": "Modificato:"
+      "diffModified": "Modificato:",
+      "noPendingUpdates": "Nessun aggiornamento normativo in attesa di conferma.",
+      "noPendingCustom": "Nessuna proposta personalizzata in attesa di revisione.",
+      "pendingHeading": "In attesa di azione",
+      "resolvedHeading": "Già risolte"
     },
     "changeHistory": {
       "pageTitle": "Cronologia Modifiche",

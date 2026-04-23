@@ -23,6 +23,7 @@
 
   {{!-- Regulatory Updates tab --}}
   {{#if (eq tab 'updates')}}
+  <h2 class="section-title mt-md">{{t "admin.proposals.pendingHeading"}}{{#if officialCount}} <span class="badge badge--warning badge--sm">{{officialCount}}</span>{{/if}}</h2>
   <div class="bulk-bar">
     <label class="bulk-bar__select-all">
       <input type="checkbox" data-action="bulkSelectAll" data-tab="updates" aria-label="{{t 'admin.proposals.selectAll'}}">
@@ -52,7 +53,7 @@
         </tr>
       </thead>
       <tbody>
-        {{#each officialProposals}}
+        {{#each officialPending}}
         <tr id="proposal-{{id}}">
           <td class="col--check">{{#if isPending}}<input type="checkbox" class="bulk-check" data-tab="updates" data-id="{{id}}" data-action="bulkToggle">{{/if}}</td>
           <td data-label="Source" class="cell--wrap">{{source}}</td>
@@ -125,16 +126,52 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="7" class="table__empty">{{t "admin.proposals.noUpdates"}}</td>
+          <td colspan="7" class="table__empty">{{t "admin.proposals.noPendingUpdates"}}</td>
         </tr>
         {{/each}}
       </tbody>
     </table>
   </div>
+
+  {{#if officialResolvedCount}}
+  <details class="mt-lg proposals-resolved">
+    <summary class="section-title">{{t "admin.proposals.resolvedHeading"}} <span class="badge badge--sm">{{officialResolvedCount}}</span></summary>
+    <div class="table-wrapper mt-sm">
+      <table class="data-table" aria-label="{{t 'admin.proposals.resolvedHeading'}}">
+        <thead>
+          <tr>
+            <th scope="col">{{t "admin.proposals.colSource"}}</th>
+            <th scope="col">{{t "admin.proposals.colType"}}</th>
+            <th scope="col">{{t "admin.proposals.colSummary"}}</th>
+            <th scope="col">{{t "admin.proposals.colDetected"}}</th>
+            <th scope="col">{{t "common.status"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each officialResolved}}
+          <tr id="proposal-{{id}}">
+            <td data-label="Source" class="cell--wrap">{{source}}</td>
+            <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
+            <td data-label="Summary" class="cell--wrap">{{summary}}</td>
+            <td data-label="Detected">{{detectedAtDisplay}}</td>
+            <td data-label="Status">
+              {{#if isAcknowledged}}<span class="badge badge--success">{{t "admin.proposals.statusAcknowledged"}}</span>
+              {{else if isReviewed}}<span class="badge badge--success">{{t "admin.proposals.statusReviewed"}}</span>
+              {{else if isDismissed}}<span class="badge badge--error">{{t "admin.proposals.statusDismissed"}}</span>
+              {{else}}<span class="badge">{{status}}</span>{{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </details>
+  {{/if}}
   {{/if}}
 
   {{!-- Custom Proposals tab --}}
   {{#if (eq tab 'custom')}}
+  <h2 class="section-title mt-md">{{t "admin.proposals.pendingHeading"}}{{#if customCount}} <span class="badge badge--warning badge--sm">{{customCount}}</span>{{/if}}</h2>
   <div class="bulk-bar">
     <label class="bulk-bar__select-all">
       <input type="checkbox" data-action="bulkSelectAll" data-tab="custom" aria-label="{{t 'admin.proposals.selectAll'}}">
@@ -167,7 +204,7 @@
         </tr>
       </thead>
       <tbody>
-        {{#each customProposals}}
+        {{#each customPending}}
         <tr id="proposal-{{id}}">
           <td class="col--check">{{#if isPending}}<input type="checkbox" class="bulk-check" data-tab="custom" data-id="{{id}}" data-action="bulkToggle">{{/if}}</td>
           <td data-label="Source" class="cell--wrap">{{source}}</td>
@@ -235,11 +272,46 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="7" class="table__empty">{{t "admin.proposals.noCustom"}}</td>
+          <td colspan="7" class="table__empty">{{t "admin.proposals.noPendingCustom"}}</td>
         </tr>
         {{/each}}
       </tbody>
     </table>
   </div>
+
+  {{#if customResolvedCount}}
+  <details class="mt-lg proposals-resolved">
+    <summary class="section-title">{{t "admin.proposals.resolvedHeading"}} <span class="badge badge--sm">{{customResolvedCount}}</span></summary>
+    <div class="table-wrapper mt-sm">
+      <table class="data-table" aria-label="{{t 'admin.proposals.resolvedHeading'}}">
+        <thead>
+          <tr>
+            <th scope="col">{{t "admin.proposals.colSource"}}</th>
+            <th scope="col">{{t "admin.proposals.colType"}}</th>
+            <th scope="col">{{t "admin.proposals.colSummary"}}</th>
+            <th scope="col">{{t "admin.proposals.colDetected"}}</th>
+            <th scope="col">{{t "common.status"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each customResolved}}
+          <tr id="proposal-{{id}}">
+            <td data-label="Source" class="cell--wrap">{{source}}</td>
+            <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
+            <td data-label="Summary" class="cell--wrap">{{summary}}</td>
+            <td data-label="Detected">{{detectedAtDisplay}}</td>
+            <td data-label="Status">
+              {{#if isAcknowledged}}<span class="badge badge--success">{{t "admin.proposals.statusAcknowledged"}}</span>
+              {{else if isReviewed}}<span class="badge badge--success">{{t "admin.proposals.statusReviewed"}}</span>
+              {{else if isDismissed}}<span class="badge badge--error">{{t "admin.proposals.statusDismissed"}}</span>
+              {{else}}<span class="badge">{{status}}</span>{{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </details>
+  {{/if}}
   {{/if}}
 </section>

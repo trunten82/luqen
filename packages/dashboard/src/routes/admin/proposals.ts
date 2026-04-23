@@ -68,15 +68,26 @@ export async function proposalRoutes(
         };
       };
 
+      const officialFormatted = officialProposals.map(formatProposal);
+      const customFormatted = customProposals.map(formatProposal);
+      const officialPending = officialFormatted.filter((p) => p.isPending);
+      const officialResolved = officialFormatted.filter((p) => !p.isPending);
+      const customPending = customFormatted.filter((p) => p.isPending);
+      const customResolved = customFormatted.filter((p) => !p.isPending);
+
       return reply.view('admin/proposals.hbs', {
         pageTitle: tab === 'updates' ? 'Regulatory Updates' : 'Custom Proposals',
         currentPath: '/admin/proposals',
         user: request.user,
         tab,
-        officialProposals: officialProposals.map(formatProposal),
-        customProposals: customProposals.map(formatProposal),
-        officialCount: officialProposals.filter((p) => p.status === 'pending').length,
-        customCount: customProposals.filter((p) => p.status === 'pending').length,
+        officialPending,
+        officialResolved,
+        customPending,
+        customResolved,
+        officialResolvedCount: officialResolved.length,
+        customResolvedCount: customResolved.length,
+        officialCount: officialPending.length,
+        customCount: customPending.length,
         statusFilter: statusFilter ?? '',
         error,
       });

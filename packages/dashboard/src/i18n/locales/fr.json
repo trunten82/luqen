@@ -389,7 +389,11 @@
       "showChanges": "Afficher les modifications",
       "diffAdded": "Ajouté :",
       "diffRemoved": "Supprimé :",
-      "diffModified": "Modifié :"
+      "diffModified": "Modifié :",
+      "noPendingUpdates": "Aucune mise à jour réglementaire en attente d'accusé de réception.",
+      "noPendingCustom": "Aucune proposition personnalisée en attente d'examen.",
+      "pendingHeading": "En attente d'action",
+      "resolvedHeading": "Déjà résolues"
     },
     "changeHistory": {
       "pageTitle": "Historique des Modifications",
