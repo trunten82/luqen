@@ -607,6 +607,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'agent-drawer': 'partials/agent-drawer.hbs',
         'agent-messages': 'partials/agent-messages.hbs',
         'agent-message': 'partials/agent-message.hbs',
+        'agent-confirm-dialog': 'partials/agent-confirm-dialog.hbs',
       },
     },
   });
