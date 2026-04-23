@@ -1,0 +1,38 @@
+{{!-- Phase 32 Plan 07 — Destructive-action confirmation dialog (UI-SPEC Surface 2).
+     Native <dialog>.showModal() (browser-built-in focus trap, a11y, Esc). Populated
+     client-side by agent.js on SSE 'pending_confirmation' frame OR on drawer-mount
+     DOM-recovery when the panel partial renders a tool bubble with data-pending="true".
+     Autofocus on Cancel so Enter never defaults to the destructive action (T-32-07-08).
+     All text via {{t}} keys. No inline handlers — CSP-safe, data-action
+     dispatched by agent.js click-delegation. --}}
+<dialog id="agent-confirm-dialog" aria-labelledby="agent-confirm-title">
+  <form method="dialog">
+    <div class="modal__header">
+      <h3 class="modal__title" id="agent-confirm-title">{{t "agent.confirm.title"}}</h3>
+    </div>
+    <div class="modal__body">
+      <p>{{t "agent.confirm.intro" name=agentDisplayName}}</p>
+      <div class="agent-confirm__summary"
+           id="agent-confirm-summary"
+           role="status"
+           aria-live="polite"></div>
+      <details class="agent-confirm__raw">
+        <summary>{{t "agent.confirm.rawJsonLabel"}}</summary>
+        <pre id="agent-confirm-json" aria-label="Raw tool arguments"></pre>
+      </details>
+    </div>
+    <div class="modal__footer">
+      <button type="button"
+              class="btn btn--ghost"
+              autofocus
+              data-action="agentConfirmCancel">
+        {{t "agent.confirm.cancel"}}
+      </button>
+      <button type="button"
+              class="btn btn--danger"
+              data-action="agentConfirmApprove">
+        {{t "agent.confirm.approve"}}
+      </button>
+    </div>
+  </form>
+</dialog>
