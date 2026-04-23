@@ -131,6 +131,7 @@ export class OllamaAdapter implements LLMProviderAdapter {
 
     let res: Response;
     try {
+      console.error('[ollama-debug] body tools sample:', JSON.stringify(body.tools?.[0] ?? null), 'tools.length:', body.tools?.length);
       res = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
