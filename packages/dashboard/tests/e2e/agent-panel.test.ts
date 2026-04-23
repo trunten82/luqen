@@ -171,9 +171,11 @@ describe('Phase 32 Plan 06 — agent-panel E2E smoke', () => {
     expect(src).not.toMatch(/console\.log\(/);
     // No eval / no Function constructor (CSP + security)
     expect(src).not.toMatch(/\beval\(/);
-    // LOC ceiling per plan
+    // LOC ceiling per plan (Plan 06: ≤250 initial IIFE; Plan 07 raises to
+    // ≤450 for the added dialog + confirm flow. Speech wiring was split
+    // into agent-speech.js to keep agent.js under 450).
     const loc = src.split('\n').length;
-    expect(loc).toBeLessThanOrEqual(250);
+    expect(loc).toBeLessThanOrEqual(450);
   });
 
   it('Test 4 — agent-drawer partial exposes the DOM ids agent.js targets', () => {
