@@ -148,10 +148,11 @@ export class OllamaAdapter implements LLMProviderAdapter {
     }
 
     if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
       yield {
         type: 'error',
         code: 'provider_failed',
-        message: `Ollama returned ${res.status} ${res.statusText ?? ''}`.trim(),
+        message: `Ollama returned ${res.status} ${res.statusText ?? ''}: ${errBody.slice(0, 500)}`.trim(),
         retryable: true,
       };
       return;
