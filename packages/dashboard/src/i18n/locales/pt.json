@@ -634,7 +634,17 @@
       "noOrgRoles": "Nenhum papel organizacional encontrado. Eles são criados automaticamente ao criar uma organização.",
       "manageViaTeamsTitle": "Gerenciar via equipes:",
       "manageViaTeamsDesc": "A associação à organização é gerenciada por equipes. Adicione usuários a uma equipe vinculada a esta organização para conceder acesso.",
-      "goToTeams": "Ir para equipes"
+      "goToTeams": "Ir para equipes",
+      "settings": {
+        "title": "Configurações da organização",
+        "agentDisplayName": "Nome de exibição do assistente",
+        "agentDisplayNamePlaceholder": "Luqen Assistant",
+        "agentDisplayNameHint": "Mostrado aos usuários como nome do assistente de chat. Deixe em branco para usar o valor padrão (\"Luqen Assistant\"). Máximo de 40 caracteres.",
+        "agentDisplayNameTooLong": "O nome deve ter no máximo 40 caracteres.",
+        "agentDisplayNameHtml": "O nome não pode conter tags HTML ou URLs.",
+        "agentDisplayNameSaved": "Nome de exibição do assistente atualizado.",
+        "agentDisplayNameError": "Não foi possível salvar o nome de exibição. Tente novamente."
+      }
     },
     "system": {
       "database": "Banco de Dados",

@@ -634,7 +634,17 @@
       "noOrgRoles": "Keine organisationsspezifischen Rollen gefunden. Sie werden automatisch bei der Erstellung einer Organisation erstellt.",
       "manageViaTeamsTitle": "Über Teams verwalten:",
       "manageViaTeamsDesc": "Die Organisationsmitgliedschaft wird über Teams verwaltet. Füge Benutzer einem Team hinzu, das mit dieser Organisation verknüpft ist, um Zugang zu gewähren.",
-      "goToTeams": "Zu Teams"
+      "goToTeams": "Zu Teams",
+      "settings": {
+        "title": "Organisationseinstellungen",
+        "agentDisplayName": "Anzeigename des Assistenten",
+        "agentDisplayNamePlaceholder": "Luqen Assistant",
+        "agentDisplayNameHint": "Wird Nutzern als Name des Chat-Assistenten angezeigt. Leer lassen, um den Standard (\"Luqen Assistant\") zu verwenden. Maximal 40 Zeichen.",
+        "agentDisplayNameTooLong": "Der Name darf maximal 40 Zeichen lang sein.",
+        "agentDisplayNameHtml": "Der Name darf keine HTML-Tags oder URLs enthalten.",
+        "agentDisplayNameSaved": "Anzeigename des Assistenten aktualisiert.",
+        "agentDisplayNameError": "Speichern des Anzeigenamens fehlgeschlagen. Bitte erneut versuchen."
+      }
     },
     "system": {
       "database": "Datenbank",

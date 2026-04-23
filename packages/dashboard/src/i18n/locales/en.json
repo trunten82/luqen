@@ -796,7 +796,17 @@
       "noOrgRoles": "No org-scoped roles found. They are created automatically when an organization is created.",
       "manageViaTeamsTitle": "Manage via Teams:",
       "manageViaTeamsDesc": "Organization membership is managed through teams. Add users to a team linked to this organization to grant access.",
-      "goToTeams": "Go to Teams"
+      "goToTeams": "Go to Teams",
+      "settings": {
+        "title": "Organization Settings",
+        "agentDisplayName": "Agent display name",
+        "agentDisplayNamePlaceholder": "Luqen Assistant",
+        "agentDisplayNameHint": "Shown to users as the chat companion's name. Leave blank to use the default (\"Luqen Assistant\"). 40 characters max.",
+        "agentDisplayNameTooLong": "Name must be 40 characters or fewer.",
+        "agentDisplayNameHtml": "Name cannot contain HTML tags or URLs.",
+        "agentDisplayNameSaved": "Agent display name updated.",
+        "agentDisplayNameError": "Couldn't save display name. Try again."
+      }
     },
     "system": {
       "database": "Database",

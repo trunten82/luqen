@@ -1,0 +1,62 @@
+{{!--
+  organization-settings.hbs — Phase 32 Plan 08 (D-14, D-19, APER-02)
+
+  Rendered by GET /admin/organizations/:id/settings and by POST on validation
+  failure (`error` populated with an i18n-translated message).
+
+  Shapes:
+    - Happy path:    { org, csrfToken, locale }
+    - Validation err: { org, csrfToken, locale, error, submittedValue }
+
+  Design-system: reuses existing form-group / form-hint / form-error / btn /
+  card classes from style.css. No new CSS.
+
+  XSS guard: {{org.agentDisplayName}} and {{submittedValue}} are Handlebars-
+  default-escaped (no triple-braces). The Zod validator at the route blocks
+  HTML tags and URLs as defence-in-depth, but the render path is the primary
+  guarantee against stored-XSS even if a malicious value ever landed in the
+  DB via a bypass.
+--}}
+<div id="organization-settings" class="card">
+  <div class="card__header">
+    <h2 class="card__title">{{t "admin.organizations.settings.title"}}</h2>
+  </div>
+
+  <div class="card__body">
+    <form hx-post="/admin/organizations/{{org.id}}/settings"
+          hx-target="#organization-settings"
+          hx-swap="outerHTML"
+          aria-label="Organization settings form"
+          novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label for="agent-display-name" class="form-label">
+          {{t "admin.organizations.settings.agentDisplayName"}}
+        </label>
+        <input id="agent-display-name"
+               name="agent_display_name"
+               type="text"
+               class="input"
+               value="{{#if (or error submittedValue)}}{{submittedValue}}{{else}}{{org.agentDisplayName}}{{/if}}"
+               placeholder="{{t "admin.organizations.settings.agentDisplayNamePlaceholder"}}"
+               maxlength="40"
+               aria-describedby="agent-display-name-hint agent-display-name-error">
+        <p id="agent-display-name-hint" class="form-hint">
+          {{t "admin.organizations.settings.agentDisplayNameHint"}}
+        </p>
+        <p id="agent-display-name-error" class="form-error" role="alert"{{#unless error}} hidden{{/unless}}>
+          {{error}}
+        </p>
+      </div>
+
+      <div class="form-actions" style="display:flex;gap:0.75rem;margin-top:1rem;">
+        <button type="submit" class="btn btn--primary">{{t "common.save"}}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{#if trailingToast}}
+{{{trailingToast}}}
+{{/if}}

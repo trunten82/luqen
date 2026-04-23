@@ -634,7 +634,17 @@
       "noOrgRoles": "Aucun rôle organisationnel trouvé. Ils sont créés automatiquement lors de la création d'une organisation.",
       "manageViaTeamsTitle": "Gérer via les équipes :",
       "manageViaTeamsDesc": "L'appartenance à l'organisation est gérée via les équipes. Ajoutez des utilisateurs à une équipe liée à cette organisation pour accorder l'accès.",
-      "goToTeams": "Aller aux équipes"
+      "goToTeams": "Aller aux équipes",
+      "settings": {
+        "title": "Paramètres de l'organisation",
+        "agentDisplayName": "Nom d'affichage de l'agent",
+        "agentDisplayNamePlaceholder": "Luqen Assistant",
+        "agentDisplayNameHint": "Affiché aux utilisateurs comme nom du compagnon de chat. Laissez vide pour utiliser la valeur par défaut (\"Luqen Assistant\"). 40 caractères maximum.",
+        "agentDisplayNameTooLong": "Le nom doit comporter au maximum 40 caractères.",
+        "agentDisplayNameHtml": "Le nom ne peut pas contenir de balises HTML ni d'URL.",
+        "agentDisplayNameSaved": "Nom d'affichage de l'agent mis à jour.",
+        "agentDisplayNameError": "Impossible d'enregistrer le nom d'affichage. Veuillez réessayer."
+      }
     },
     "system": {
       "database": "Base de Données",
