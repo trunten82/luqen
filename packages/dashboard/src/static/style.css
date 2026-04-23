@@ -3739,3 +3739,166 @@ details[open] > .mt-examples-toggle::before {
 .card--locked-confirmation { border-left: 4px solid var(--status-warning); }
 .card--locked-honesty { border-left: 4px solid var(--status-success); }
 #agent-conv-non-tool-alert[hidden] { display: none; }
+
+/* ---- Agent Drawer (Phase 32) ---- */
+/* Surface 1 of the Phase 32 chat UI. All values reuse existing design-token
+   custom properties — no new --var declarations. Mobile < 900px → drawer
+   slides over full width; desktop ≥ 900px → 400px right-anchored panel.
+   Reduced-motion honoured by the global rule at line 149. */
+
+.agent-launch {
+  position: fixed;
+  right: var(--space-md);
+  bottom: var(--space-md);
+  width: 56px;
+  height: 56px;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: background-color var(--transition-base), box-shadow var(--transition-base);
+}
+.agent-launch:hover { background: var(--accent-hover); box-shadow: var(--shadow-lg); }
+.agent-launch:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.agent-launch svg { color: #fff; }
+
+.agent-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 105;
+}
+.agent-backdrop[hidden] { display: none; }
+
+.agent-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 400px;
+  max-width: 100vw;
+  height: 100dvh;
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--transition-base);
+  z-index: 110;
+}
+.agent-drawer--open { transform: translateX(0); }
+.agent-drawer[hidden] { display: none; }
+
+.agent-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border-color);
+}
+.agent-drawer__title { margin: 0; font-size: 1.125rem; color: var(--text-primary); }
+.agent-drawer__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  min-width: 44px;
+  min-height: 44px;
+}
+.agent-drawer__close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.agent-drawer__messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.agent-drawer__stream-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem var(--space-md);
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.agent-drawer__stream-status[hidden] { display: none; }
+.agent-drawer__stream-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: agent-pulse 1.2s ease-in-out infinite;
+}
+@keyframes agent-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-drawer__stream-indicator { animation: none; }
+  .agent-drawer { transition: none; }
+}
+
+.agent-drawer__input {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: var(--space-md);
+  border-top: 1px solid var(--border-color);
+}
+.agent-drawer__input textarea {
+  flex: 1 1 auto;
+  min-height: 44px;
+  max-height: 160px;
+  resize: vertical;
+}
+
+.chat-btn--icon {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+}
+.chat-btn--icon[hidden] { display: none; }
+
+.agent-msg {
+  padding: 0.625rem 0.75rem;
+  border-radius: 6px;
+  word-wrap: break-word;
+}
+.agent-msg__role {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+.agent-msg__body { color: var(--text-primary); white-space: pre-wrap; }
+.agent-msg--user {
+  background: var(--bg-primary);
+  border-left: 3px solid var(--accent);
+}
+.agent-msg--assistant { background: var(--bg-secondary); }
+.agent-msg--tool { background: var(--bg-tertiary); }
+.agent-msg--tool[data-pending="true"] { border-left: 3px solid var(--status-warning); }
+
+@media (max-width: 899px) {
+  .agent-drawer { width: 100vw; }
+  body:has(.agent-drawer--open) .agent-launch { display: none; }
+}
+
