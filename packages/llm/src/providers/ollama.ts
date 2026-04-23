@@ -198,6 +198,7 @@ export class OllamaAdapter implements LLMProviderAdapter {
           continue;
         }
 
+        console.error('[ollama-debug] chunk:', JSON.stringify(chunk).slice(0, 400));
         const content = chunk.message?.content;
         if (typeof content === 'string' && content.length > 0) {
           yield { type: 'token', text: content };
