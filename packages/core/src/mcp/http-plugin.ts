@@ -96,6 +96,16 @@ export function getCurrentToolContext(): ToolContext | undefined {
   return toolContextStore.getStore();
 }
 
+/**
+ * Run `fn` with a ToolContext installed in the ALS. Used by in-process
+ * dispatchers that bypass the HTTP route (e.g. the Phase 32 AgentService
+ * tool bridge) so tool handlers that read `getCurrentToolContext()` find
+ * the caller's identity + permissions without an HTTP request.
+ */
+export function runInToolContext<T>(context: ToolContext, fn: () => T | Promise<T>): Promise<T> {
+  return Promise.resolve(toolContextStore.run(context, fn));
+}
+
 export async function createMcpHttpPlugin(
   options: McpHttpPluginOptions,
 ): Promise<FastifyPluginAsync> {

@@ -12,7 +12,7 @@
  *   await app.register(mcpPlugin);
  */
 
-export { createMcpHttpPlugin, getCurrentToolContext } from './http-plugin.js';
+export { createMcpHttpPlugin, getCurrentToolContext, runInToolContext } from './http-plugin.js';
 export type { McpHttpPluginOptions } from './http-plugin.js';
 export { extractToolContext } from './auth.js';
 export {
