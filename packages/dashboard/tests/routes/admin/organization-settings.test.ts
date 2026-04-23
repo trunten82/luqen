@@ -24,6 +24,10 @@ import { SqliteStorageAdapter } from '../../../src/db/sqlite/index.js';
 import { setEncryptionSalt } from '../../../src/plugins/crypto.js';
 import { organizationRoutes } from '../../../src/routes/admin/organizations.js';
 import { registerSession } from '../../../src/auth/session.js';
+import { loadTranslations } from '../../../src/i18n/index.js';
+
+// i18n must be loaded before routes emit translated error/success copy.
+loadTranslations();
 
 const ENC_KEY = 'test-session-secret-at-least-32b';
 
@@ -105,10 +109,11 @@ async function buildCtx(opts: {
   }
 
   // Stub view — returns template + data as JSON so tests can assert on payload.
+  // Preserves the status code set by the handler (e.g. reply.code(400).view(...)).
   server.decorateReply(
     'view',
     function (this: FastifyReply, template: string, data: unknown) {
-      return this.code(200)
+      return this
         .header('content-type', 'application/json')
         .send(JSON.stringify({ template, data }));
     },

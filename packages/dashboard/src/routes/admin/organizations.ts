@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import type { BrandGuideline, MatchableIssue } from '@luqen/branding';
 import type { StorageAdapter, Organization } from '../../db/index.js';
 import type { ServiceTokenManager } from '../../auth/service-token.js';
@@ -9,6 +10,41 @@ import { createBrandingOrgClient } from '../../branding-client.js';
 import { createLLMOrgClient, type LLMClient } from '../../llm-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, toastHtml, escapeHtml } from './helpers.js';
+import { t } from '../../i18n/index.js';
+import type { Locale } from '../../i18n/index.js';
+
+// ── Phase 32 Plan 08 — agent_display_name Zod schema ───────────────────────
+//
+// Single per-org knob (D-14): admin editable display name shown in the chat
+// drawer header + greeting. Validation blocks HTML tags and URLs as defence-
+// in-depth against prompt-injection (Plan 04 interpolates this into the
+// system prompt) and stored-XSS (Plan 06 renders this in HTML). Zod's
+// discrimination of the failure reason lets us map to user-friendly i18n.
+//
+// The regex rejects any string containing `<`, `>`, `http://`, `https://`,
+// or the protocol-relative `//`. Empty string is explicitly allowed —
+// clearing the name falls back to the project-wide default at render time
+// (D-19). Whitespace is trimmed.
+
+const HTML_OR_URL_RE = /[<>]|https?:\/\/|\/\//;
+
+const AgentDisplayNameSchema = z.object({
+  agent_display_name: z
+    .string()
+    .trim()
+    .max(40, { message: 'TOO_LONG' })
+    .refine((v) => v === '' || !HTML_OR_URL_RE.test(v), { message: 'HTML_OR_URL' }),
+});
+
+function resolveLocale(request: FastifyRequest): Locale {
+  const sessionLocale = (request.session as { locale?: string } | undefined)?.locale;
+  const candidate = sessionLocale ?? 'en';
+  if (candidate === 'en' || candidate === 'de' || candidate === 'es'
+      || candidate === 'fr' || candidate === 'it' || candidate === 'pt') {
+    return candidate;
+  }
+  return 'en';
+}
 
 function orgRowHtml(org: Organization): string {
   return `<tr id="org-${org.id}">
@@ -686,6 +722,108 @@ export async function organizationRoutes(
       }
 
       return reply.view('admin/partials/branding-mode-toggle.hbs', { testResult });
+    },
+  );
+
+  // ── Phase 32 Plan 08: per-org agent_display_name settings (D-14, D-19) ──
+  //
+  // GET  → render organization-settings.hbs with the agent_display_name input
+  //        pre-filled from DB. 404 on missing org, 403 on cross-org access.
+  // POST → Zod-validate body.agent_display_name (trim, max 40, no HTML/URL);
+  //        on success persist via storage.organizations.updateOrgAgentDisplayName
+  //        and re-render the form partial with a trailing success toast; on
+  //        validation failure re-render with error + submittedValue preserved.
+  //
+  // Permissions: admin.system OR admin.org of the same org (tenant isolation
+  // mirrors the /branding-mode handler above).
+
+  server.get(
+    '/admin/organizations/:id/settings',
+    { preHandler: requirePermission('admin.system', 'admin.org') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+
+      const org = await storage.organizations.getOrg(id);
+      if (org === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Organization not found.', 'error'));
+      }
+
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && request.user?.currentOrgId !== id) {
+        return reply.code(403).header('content-type', 'text/html')
+          .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));
+      }
+
+      return reply.view('admin/organization-settings.hbs', { org });
+    },
+  );
+
+  server.post(
+    '/admin/organizations/:id/settings',
+    { preHandler: requirePermission('admin.system', 'admin.org') },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = (request.body as { agent_display_name?: unknown } | undefined) ?? {};
+
+      const org = await storage.organizations.getOrg(id);
+      if (org === null) {
+        return reply
+          .code(404)
+          .header('content-type', 'text/html')
+          .send(toastHtml('Organization not found.', 'error'));
+      }
+
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && request.user?.currentOrgId !== id) {
+        return reply.code(403).header('content-type', 'text/html')
+          .send(toastHtml('Forbidden: you can only manage your own organization.', 'error'));
+      }
+
+      const locale = resolveLocale(request);
+      const rawValue = typeof body.agent_display_name === 'string' ? body.agent_display_name : '';
+      const parsed = AgentDisplayNameSchema.safeParse({ agent_display_name: rawValue });
+
+      if (!parsed.success) {
+        // Map the first Zod issue message to a user-friendly i18n key. The
+        // schema emits one of two codes: TOO_LONG (max length) or HTML_OR_URL
+        // (regex refinement). Anything else falls back to a generic error.
+        const firstIssueMessage = parsed.error.issues[0]?.message ?? 'HTML_OR_URL';
+        const errorKey =
+          firstIssueMessage === 'TOO_LONG'
+            ? 'admin.organizations.settings.agentDisplayNameTooLong'
+            : 'admin.organizations.settings.agentDisplayNameHtml';
+        const errorText = t(errorKey, locale);
+
+        return reply.code(400).view('admin/organization-settings.hbs', {
+          org,
+          error: errorText,
+          submittedValue: rawValue,
+        });
+      }
+
+      const normalizedValue = parsed.data.agent_display_name;
+
+      try {
+        await storage.organizations.updateOrgAgentDisplayName(id, normalizedValue);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to update display name';
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(toastHtml(message, 'error'));
+      }
+
+      // Re-read the org so the re-rendered form reflects the persisted value.
+      const updatedOrg = await storage.organizations.getOrg(id);
+      const successText = t('admin.organizations.settings.agentDisplayNameSaved', locale);
+
+      return reply.view('admin/organization-settings.hbs', {
+        org: updatedOrg ?? org,
+        trailingToast: toastHtml(successText, 'success'),
+      });
     },
   );
 }
