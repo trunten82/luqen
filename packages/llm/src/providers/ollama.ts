@@ -131,7 +131,6 @@ export class OllamaAdapter implements LLMProviderAdapter {
 
     let res: Response;
     try {
-      console.error('[ollama-debug] body tools sample:', JSON.stringify(body.tools?.[0] ?? null), 'tools.length:', body.tools?.length);
       res = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -285,18 +284,27 @@ function toOllamaMessages(messages: readonly ChatMessage[]): Array<Record<string
 }
 
 function toOllamaTool(tool: ToolDef): Record<string, unknown> {
-  // Ollama rejects tools whose `parameters` is null/undefined with
-  // "Invalid tool schema: None is not of type 'object'". Normalise to an
-  // empty object schema when the tool takes no arguments.
-  const parameters =
+  // Ollama's cloud tool-calling validator requires parameters to be a JSON
+  // Schema *object* with at minimum `type: 'object'` AND `properties: {}`.
+  // Callers often pass `{type:'object'}` with no properties — Ollama then
+  // fails "Invalid tool schema: None is not of type 'object'".
+  const raw =
     tool.inputSchema != null && typeof tool.inputSchema === 'object'
-      ? tool.inputSchema
-      : { type: 'object', properties: {} };
+      ? (tool.inputSchema as Record<string, unknown>)
+      : {};
+  const parameters: Record<string, unknown> = {
+    type: 'object',
+    properties: {},
+    ...raw,
+  };
+  if (parameters['properties'] == null || typeof parameters['properties'] !== 'object') {
+    parameters['properties'] = {};
+  }
   return {
     type: 'function',
     function: {
       name: tool.name,
-      description: tool.description,
+      description: tool.description.length > 0 ? tool.description : tool.name,
       parameters,
     },
   };
