@@ -420,17 +420,35 @@ function buildManifest(
 }
 
 function windowToChatMessages(window: readonly Message[]): AgentChatMessage[] {
-  return window.map((m) => {
+  const out: AgentChatMessage[] = [];
+  for (const m of window) {
     const role = m.role;
     if (role === 'tool') {
+      // Providers (Ollama, OpenAI, Anthropic) require a preceding assistant
+      // message with matching tool_calls before a tool-result message. Each
+      // persisted tool row carries its originating call in toolCallJson;
+      // synthesise the assistant tool_calls shim here.
+      if (m.toolCallJson != null && m.toolCallJson.length > 0) {
+        try {
+          const call = JSON.parse(m.toolCallJson) as { id: string; name: string; args: Record<string, unknown> };
+          out.push({
+            role: 'assistant' as const,
+            content: '',
+            toolCalls: [{ id: call.id, name: call.name, args: call.args }],
+          });
+        } catch { /* fall through — invalid JSON shouldn't happen but don't abort */ }
+      }
       const content = m.toolResultJson ?? '';
-      return { role: 'tool' as const, content };
+      out.push({ role: 'tool' as const, content });
+      continue;
     }
     if (role === 'assistant') {
-      return { role: 'assistant' as const, content: m.content ?? '' };
+      out.push({ role: 'assistant' as const, content: m.content ?? '' });
+      continue;
     }
-    return { role: 'user' as const, content: m.content ?? '' };
-  });
+    out.push({ role: 'user' as const, content: m.content ?? '' });
+  }
+  return out;
 }
 
 /**
