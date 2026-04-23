@@ -178,7 +178,7 @@ describe('Phase 30 data tools — tools/list RBAC filtering', () => {
   it('caller with all three required permissions sees the 6 data tools (admin tools empty in 30-02)', async () => {
     const verifier = makeFakeVerifier({
       sub: 'u',
-      scopes: ['read'],
+      scopes: ['read', 'write'],
       orgId: 'org-1',
       role: 'member',
     });
@@ -279,7 +279,7 @@ describe('Phase 30 data tools — tools/list RBAC filtering', () => {
   it('caller with only scans.create sees dashboard_scan_site', async () => {
     const verifier = makeFakeVerifier({
       sub: 'u',
-      scopes: ['read'],
+      scopes: ['read', 'write'],
       orgId: 'org-1',
       role: 'member',
     });

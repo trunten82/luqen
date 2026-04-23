@@ -253,7 +253,11 @@ describe('POST /api/v1/mcp (dashboard)', () => {
     // three permissions that match DASHBOARD_DATA_TOOL_METADATA.
     const verify = makeFakeVerifier({
       sub: 'user-4',
-      scopes: ['read'],
+      // scans.create is a write-tier permission; the scope-filter admits the
+      // write-tier dashboard_scan_site tool only when the caller carries the
+      // matching scope. Phase 31.2 made scope ∩ RBAC the default for end-user
+      // callers — grant both tiers so this Phase 30 data-tool assertion holds.
+      scopes: ['read', 'write'],
       orgId: 'org-4',
       role: 'member',
     });
