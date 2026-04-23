@@ -398,6 +398,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // Register helpers on Handlebars instance directly (required by @fastify/view v10)
   handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
   handlebars.registerHelper('gt', (a: unknown, b: unknown) => Number(a) > Number(b));
+  // `or` helper used by the Phase 32 agent-drawer partial for a default-fallback
+  // on `user.orgAgentDisplayName`. Returns the first truthy argument; final
+  // argument is the Handlebars options object and is ignored.
+  handlebars.registerHelper('or', (...args: unknown[]) => {
+    const values = args.slice(0, -1);
+    return values.find((v) => Boolean(v)) ?? '';
+  });
   // Legacy role helpers kept for backward compatibility — they still work if
   // templates reference them, but the canonical approach is the `perm.*` flags.
   handlebars.registerHelper('canScan', (role: string) => role === 'user' || role === 'admin' || role === 'developer');
@@ -597,6 +604,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'rescore-progress': 'partials/rescore-progress.hbs',
         'rescore-complete': 'partials/rescore-complete.hbs',
         'rescore-error': 'partials/rescore-error.hbs',
+        'agent-drawer': 'partials/agent-drawer.hbs',
+        'agent-messages': 'partials/agent-messages.hbs',
+        'agent-message': 'partials/agent-message.hbs',
       },
     },
   });
@@ -676,6 +686,17 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         ? await storage.organizations.getOrg(currentOrgId)
         : null;
 
+      // Phase 32 Plan 06 — expose org agent display name on request.user so
+      // the shared layout can render the drawer header without every route
+      // having to re-fetch the org.
+      const agentDisplayName = currentOrg?.agentDisplayName;
+      if (agentDisplayName !== undefined && agentDisplayName !== null && agentDisplayName !== '') {
+        request.user = {
+          ...request.user,
+          orgAgentDisplayName: agentDisplayName,
+        };
+      }
+
       (request as FastifyRequest & { orgContext?: unknown }).orgContext = {
         userOrgs,
         currentOrg,
@@ -741,6 +762,10 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     reply.view = (page: string, data?: Record<string, unknown>) => {
       const merged = {
         ...data,
+        // Expose `user` to the shared layout so {{#if user}} in main.hbs can
+        // render the Phase 32 agent-drawer partial on every authenticated
+        // page. Routes may override by passing their own `user` in `data`.
+        user: (data && 'user' in data ? data.user : request.user) ?? undefined,
         csrfToken,
         flashToast,
         locale,
