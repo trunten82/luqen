@@ -6,6 +6,7 @@ import { executeExtractRequirements } from '../../capabilities/extract-requireme
 import { executeGenerateFix } from '../../capabilities/generate-fix.js';
 import { executeAnalyseReport } from '../../capabilities/analyse-report.js';
 import { executeDiscoverBranding } from '../../capabilities/discover-branding.js';
+import { executeAgentConversation } from '../../capabilities/agent-conversation.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../capabilities/types.js';
 
 export async function registerCapabilityExecRoutes(
@@ -389,6 +390,68 @@ export async function registerCapabilityExecRoutes(
         return;
       }
       await reply.status(502).send({ error: 'Upstream LLM error', statusCode: 502 });
+    }
+  });
+
+  // POST /api/v1/capabilities/agent-conversation — SSE token-level streaming
+  app.post('/api/v1/capabilities/agent-conversation', {
+    preHandler: [requireScope('read')],
+  }, async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+    const orgId = typeof body['orgId'] === 'string' ? body['orgId'] : '';
+    const userId = typeof body['userId'] === 'string' ? body['userId'] : '';
+    const messages = Array.isArray(body['messages']) ? body['messages'] : [];
+    const tools = Array.isArray(body['tools']) ? body['tools'] : [];
+    const agentDisplayName = typeof body['agentDisplayName'] === 'string'
+      ? body['agentDisplayName']
+      : 'Luqen Assistant';
+
+    if (orgId.length === 0) {
+      await reply.status(400).send({ error: 'orgId is required', statusCode: 400 });
+      return;
+    }
+    if (userId.length === 0) {
+      await reply.status(400).send({ error: 'userId is required', statusCode: 400 });
+      return;
+    }
+
+    reply.raw.writeHead(200, {
+      'content-type': 'text/event-stream',
+      'cache-control': 'no-cache, no-transform',
+      'connection': 'keep-alive',
+      'x-accel-buffering': 'no',
+    });
+
+    const write = (frame: unknown): void => {
+      reply.raw.write(`data: ${JSON.stringify(frame)}\n\n`);
+    };
+
+    try {
+      const iter = executeAgentConversation(
+        db,
+        (type) => createAdapter(type as import('../../types.js').ProviderType),
+        {
+          orgId,
+          userId,
+          messages: messages as Parameters<typeof executeAgentConversation>[2]['messages'],
+          tools: tools as Parameters<typeof executeAgentConversation>[2]['tools'],
+          agentDisplayName,
+        },
+      );
+      for await (const frame of iter) {
+        write(frame);
+      }
+    } catch (err) {
+      if (err instanceof CapabilityNotConfiguredError) {
+        write({ type: 'error', code: 'not_configured', message: err.message });
+      } else if (err instanceof CapabilityExhaustedError) {
+        write({ type: 'error', code: 'exhausted', message: err.message });
+      } else {
+        const message = err instanceof Error ? err.message : 'upstream_error';
+        write({ type: 'error', code: 'internal', message });
+      }
+    } finally {
+      reply.raw.end();
     }
   });
 }
