@@ -253,34 +253,50 @@ export class OllamaAdapter implements LLMProviderAdapter {
 }
 
 function toOllamaMessages(messages: readonly ChatMessage[]): Array<Record<string, unknown>> {
-  return messages.map((m) => {
+  const out: Array<Record<string, unknown>> = [];
+  for (const m of messages) {
     if (m.role === 'tool') {
-      return {
+      out.push({
         role: 'tool',
         content: m.content,
         ...(m.toolName ? { tool_name: m.toolName } : {}),
-      };
+      });
+      continue;
     }
     if (m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0) {
-      return {
+      out.push({
         role: 'assistant',
-        content: m.content,
+        content: m.content ?? '',
         tool_calls: m.toolCalls.map((tc) => ({
           function: { name: tc.name, arguments: tc.args },
         })),
-      };
+      });
+      continue;
     }
-    return { role: m.role, content: m.content };
-  });
+    // Ollama 400s on assistant messages with neither content nor tool_calls.
+    // Skip them — they can appear in conversation history after a failed turn.
+    if (m.role === 'assistant' && (m.content == null || m.content.length === 0)) {
+      continue;
+    }
+    out.push({ role: m.role, content: m.content });
+  }
+  return out;
 }
 
 function toOllamaTool(tool: ToolDef): Record<string, unknown> {
+  // Ollama rejects tools whose `parameters` is null/undefined with
+  // "Invalid tool schema: None is not of type 'object'". Normalise to an
+  // empty object schema when the tool takes no arguments.
+  const parameters =
+    tool.inputSchema != null && typeof tool.inputSchema === 'object'
+      ? tool.inputSchema
+      : { type: 'object', properties: {} };
   return {
     type: 'function',
     function: {
       name: tool.name,
       description: tool.description,
-      parameters: tool.inputSchema,
+      parameters,
     },
   };
 }
