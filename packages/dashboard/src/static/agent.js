@@ -55,12 +55,13 @@
   function getConversationId() {
     var form = byId(FORM_ID); if (!form) return '';
     var cid = form.getAttribute('data-conversation-id');
-    if (cid && cid.length > 0) return cid;
-    var gen = (window.crypto && typeof window.crypto.randomUUID === 'function')
-      ? window.crypto.randomUUID() : 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-    form.setAttribute('data-conversation-id', gen);
-    var hidden = byId('agent-conversation-id-field'); if (hidden) hidden.value = gen;
-    return gen;
+    return cid && cid.length > 0 ? cid : '';
+  }
+
+  function setConversationId(cid) {
+    if (!cid || cid.length === 0) return;
+    var form = byId(FORM_ID); if (form) form.setAttribute('data-conversation-id', cid);
+    var hidden = byId('agent-conversation-id-field'); if (hidden) hidden.value = cid;
   }
 
   function replaceMessagesFromHtml(html) {
@@ -76,6 +77,7 @@
 
   function loadPanel() {
     var cid = getConversationId();
+    if (!cid || cid.length === 0) { return; }
     var url = '/agent/panel?conversationId=' + encodeURIComponent(cid);
     fetch(url, { credentials: 'same-origin', headers: { 'x-csrf-token': csrfToken() } })
       .then(function (r) { return r.ok ? r.text() : ''; })
@@ -392,7 +394,11 @@
     if (!cfg || typeof cfg.path !== 'string') return;
     if (cfg.path.indexOf('/agent/message') !== 0) return;
     var xhr = e.detail.xhr; if (!xhr) return;
-    if (xhr.status === 202) { openStream(getConversationId()); }
+    if (xhr.status === 202) {
+      var headerCid = xhr.getResponseHeader('x-conversation-id');
+      if (headerCid && headerCid.length > 0) { setConversationId(headerCid); }
+      openStream(getConversationId());
+    }
     else if (xhr.status === 429) {
       var retryMs = 60000;
       try { var body = JSON.parse(xhr.responseText); if (body && typeof body.retry_after_ms === 'number') retryMs = body.retry_after_ms; }

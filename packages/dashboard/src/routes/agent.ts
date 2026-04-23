@@ -67,7 +67,7 @@ export interface RegisterAgentRoutesOptions {
 // ---------------------------------------------------------------------------
 
 const MessageBodySchema = z.object({
-  conversationId: z.string().min(1),
+  conversationId: z.string().optional(),
   content: z.string().min(1).max(8000),
 });
 
@@ -157,13 +157,26 @@ export async function registerAgentRoutes(
       if (orgId === undefined) {
         return reply.code(400).send({ error: 'no_org_context' });
       }
-      const conv = await storage.conversations.getConversation(parsed.data.conversationId, orgId);
-      if (conv === null) {
-        return reply.code(404).send({ error: 'conversation_not_found' });
+      // Auto-create the conversation on first message. The client-minted id
+      // is advisory — createConversation generates its own UUID, so we look
+      // up the client's id first and fall through to create when absent or
+      // not found. Returns the resolved id via x-conversation-id so the
+      // client can store it for subsequent messages + the SSE stream.
+      let convId = parsed.data.conversationId;
+      if (convId !== undefined && convId.length > 0) {
+        const existing = await storage.conversations.getConversation(convId, orgId);
+        if (existing === null) { convId = undefined; }
+      }
+      if (convId === undefined) {
+        const created = await storage.conversations.createConversation({
+          userId: user.id,
+          orgId,
+        });
+        convId = created.id;
       }
       // Persist the user message; the SSE stream picks it up on next runTurn.
       const msg = await storage.conversations.appendMessage({
-        conversationId: parsed.data.conversationId,
+        conversationId: convId,
         role: 'user',
         content: parsed.data.content,
         status: 'sent',
@@ -171,6 +184,7 @@ export async function registerAgentRoutes(
       // Return a minimal HTMX partial so the drawer can optimistically render
       // the user row. Plan 06 replaces this with the handlebars partial.
       void reply.type('text/html');
+      void reply.header('x-conversation-id', convId);
       return reply.code(202).send(
         `<div class="agent-msg agent-msg--user" data-message-id="${escapeHtml(msg.id)}">` +
           escapeHtml(parsed.data.content) +
