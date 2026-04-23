@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
-status: executing
-stopped_at: Completed 32-07-PLAN.md
-last_updated: "2026-04-23T19:47:23.668Z"
+status: verifying
+stopped_at: Completed 32-08-PLAN.md (Phase 32 DONE — 8/8 plans)
+last_updated: "2026-04-23T20:02:33.788Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 9
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 32
-  completed_plans: 32
+  completed_plans: 33
   percent: 100
 ---
 
@@ -35,7 +35,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 Phase: 32 (agent-service-chat-ui) — EXECUTING
 Plan: 8 of 8
 Plans: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-23
 
 ## Performance Metrics
@@ -63,6 +63,7 @@ Last activity: 2026-04-23
 | Phase 32-agent-service-chat-ui P05 | 45m | 4 tasks | 11 files |
 | Phase 32-agent-service-chat-ui P06 | ~60m | 4 tasks | 12 files |
 | Phase 32-agent-service-chat-ui P07 | ~55m | 4 tasks | 15 files |
+| Phase 32-agent-service-chat-ui P08 | 10m | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,9 @@ v3.0.0 architecture decisions (from research):
 - [Phase 32-agent-service-chat-ui]: [32-07]: Speech wiring extracted to agent-speech.js to keep agent.js under 450 LOC UI-SPEC ceiling; window.__luqenAgentSpeech.toggle bridge keeps click-delegation in agent.js
 - [Phase 32-agent-service-chat-ui]: [32-07]: data-dialog-resolution attribute round-trip distinguishes button-close from Esc-close inside native <dialog> close-event trap — Esc path fires POST /agent/deny (T-32-07-07)
 - [Phase 32-agent-service-chat-ui]: [32-07]: Web Speech unsupported path HIDES the button + surfaces form-hint (not disabled) — WCAG dead-affordance guard
+- [Phase 32-agent-service-chat-ui]: [32-08]: i18n namespace corrected from admin.orgs.settings.* to admin.organizations.settings.* — matches existing 39-key admin.organizations root; zero call-site breakage
+- [Phase 32-agent-service-chat-ui]: [32-08]: Zod message codes (TOO_LONG, HTML_OR_URL) as stable machine tags — i18n resolves user-facing copy per-request-locale; decouples validation logic from translation text across 6 locales
+- [Phase 32-agent-service-chat-ui]: [32-08]: View-stub status-preservation — removed hard-coded .code(200) from test reply.view stub so handler's reply.code(400).view(...) is honoured; pattern fixed for all future admin-form test harnesses
 
 ### Architecture Notes
 
@@ -188,7 +192,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T19:47:11.796Z
-Stopped at: Completed 32-07-PLAN.md
+Last session: 2026-04-23T20:02:23.043Z
+Stopped at: Completed 32-08-PLAN.md (Phase 32 DONE — 8/8 plans)
 Resume file: None
 Next action: `/gsd:plan-phase 28`
