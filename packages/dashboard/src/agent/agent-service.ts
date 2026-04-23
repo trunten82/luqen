@@ -108,10 +108,22 @@ export interface AgentTurnInput {
   readonly signal: AbortSignal;
 }
 
+export interface AgentToolCatalogEntry {
+  readonly description?: string;
+  readonly inputSchema?: unknown;
+}
+
 export interface AgentServiceOptions {
   readonly storage: StorageAdapter;
   readonly llm: LlmAgentTransport;
   readonly allTools: readonly ToolMetadata[];
+  /**
+   * Optional catalog of tool descriptions + inputSchemas keyed by tool name.
+   * Sourced from the MCP server's `_registeredTools` map so the LLM receives
+   * the same descriptions + JSON Schemas that MCP clients see. Without this
+   * the model gets names only and often refuses to call tools.
+   */
+  readonly toolCatalog?: Record<string, AgentToolCatalogEntry>;
   readonly dispatcher: Pick<ToolDispatcher, 'dispatch'>;
   /**
    * Per-iteration permission resolver. Called at the TOP of every loop
@@ -140,6 +152,7 @@ export class AgentService {
   private readonly storage: StorageAdapter;
   private readonly llm: LlmAgentTransport;
   private readonly allTools: readonly ToolMetadata[];
+  private readonly toolCatalog: Record<string, AgentToolCatalogEntry>;
   private readonly dispatcher: Pick<ToolDispatcher, 'dispatch'>;
   private readonly resolvePermissions: (
     userId: string,
@@ -152,6 +165,7 @@ export class AgentService {
     this.storage = options.storage;
     this.llm = options.llm;
     this.allTools = options.allTools;
+    this.toolCatalog = options.toolCatalog ?? {};
     this.dispatcher = options.dispatcher;
     this.resolvePermissions = options.resolvePermissions;
     this.config = options.config;
@@ -197,7 +211,7 @@ export class AgentService {
       for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
         // (1) Re-resolve permissions every iteration (D-07, Guardrail 1).
         const perms = await this.resolvePermissions(userId, orgId);
-        const manifest = buildManifest(this.allTools, perms);
+        const manifest = buildManifest(this.allTools, perms, this.toolCatalog);
 
         // (2) Fresh rolling-window read — the previous iteration's tool row
         //     is already visible because appendMessage flipped `in_window=1`
@@ -405,18 +419,19 @@ export class AgentService {
 function buildManifest(
   allTools: readonly ToolMetadata[],
   perms: ReadonlySet<string>,
+  catalog: Record<string, AgentToolCatalogEntry> = {},
 ): readonly AgentToolDef[] {
   return allTools
     .filter((t) => t.requiredPermission === undefined || perms.has(t.requiredPermission))
-    .map((t) => ({
-      name: t.name,
-      // ToolMetadata does not carry description/inputSchema today; the
-      // capability layer (@luqen/llm) is the source of truth for the full
-      // manifest. Phase 32 AgentService forwards names + permissions only;
-      // the capability resolves descriptions from its own registry.
-      description: '',
-      inputSchema: { type: 'object' },
-    }));
+    .map((t) => {
+      const entry = catalog[t.name];
+      const description = entry?.description ?? '';
+      const inputSchema =
+        entry?.inputSchema != null && typeof entry.inputSchema === 'object'
+          ? (entry.inputSchema as Record<string, unknown>)
+          : { type: 'object' };
+      return { name: t.name, description, inputSchema };
+    });
 }
 
 function windowToChatMessages(window: readonly Message[]): AgentChatMessage[] {
