@@ -718,6 +718,35 @@
       "remove": "Eliminar",
       "removeConfirm": "¿Eliminar este host Git? Las credenciales de desarrollador también serán eliminadas.",
       "noHosts": "No hay hosts Git configurados. Añade uno abajo para habilitar la integración de repositorios."
+    },
+    "llm": {
+      "prompts": {
+        "agentSystemName": "Agent system prompt",
+        "lockedRbacTooltip": "This section enforces per-user role-based access control. It cannot be edited to keep tenant isolation safe.",
+        "lockedConfirmTooltip": "This section ensures destructive actions always request confirmation. It cannot be edited to keep user consent safe.",
+        "lockedHonestyTooltip": "This section prevents the agent from fabricating tool results. It cannot be edited to keep audit trails accurate.",
+        "editableToneLabel": "Tone and personality (editable)",
+        "agentSystemGlobalOnly": "Global only — per-org override disabled (prompt-injection defence)",
+        "agentSystemGlobalOnlyTooltip": "Per-org system prompts are disabled for the agent to prevent prompt-injection attacks via org settings.",
+        "lockedSection": "Locked section (cannot be edited)",
+        "editableSection": "Editable region"
+      },
+      "agentConv": {
+        "requiresToolUse": "Requires tool-use model",
+        "nonToolBlock": "This model doesn't support tool calls. Assign a tool-use model (e.g. Claude, GPT-4o, Llama 3.2 ≥ 3B).",
+        "iterationCap": "Max 5 tool calls per user turn — enforced in AgentService, not configurable.",
+        "manifestSize": "{{count}} MCP tools exposed to this org",
+        "destructiveZero": "No destructive tools in this manifest",
+        "destructiveOne": "1 destructive tool requires confirmation",
+        "destructiveMany": "{{count}} destructive tools require confirmation",
+        "destructiveExpand": "Show tools"
+      },
+      "models": {
+        "providerAnthropic": "Anthropic",
+        "supportsTools": "Supports tools",
+        "costHeader": "Cost / 1M tokens",
+        "costCell": "${{input}} in / ${{output}} out"
+      }
     }
   },
   "trends": {
