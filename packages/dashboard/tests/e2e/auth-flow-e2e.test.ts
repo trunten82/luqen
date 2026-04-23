@@ -182,7 +182,9 @@ describe('Auth Flow E2E', () => {
       });
 
       expect(response.statusCode).toBe(302);
-      expect(response.headers['location']).toBe('/login');
+      // Phase 31.1 Plan 02 added returnTo preservation for GET redirects so the
+      // user lands back on the original page after login.
+      expect(response.headers['location']).toBe('/login?returnTo=%2Fhome');
     });
   });
 
@@ -394,7 +396,7 @@ describe('Auth Flow E2E', () => {
       });
 
       expect(response.statusCode).toBe(302);
-      expect(response.headers['location']).toBe('/login');
+      expect(response.headers['location']).toBe('/login?returnTo=%2Fhome');
     });
   });
 });

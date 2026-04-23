@@ -192,7 +192,9 @@ async function buildApp(o: {
   await registerMcpRoutes(app, {
     verifyToken: makeFakeVerifier({
       sub: 'tester',
-      scopes: ['read'],
+      // Grant all tiers so the scope-filter is a no-op and these tests focus
+      // purely on the RBAC-filter behaviour they were written to cover.
+      scopes: ['read', 'write', 'admin'],
       orgId: 'org-1',
       role: 'member',
     }),
