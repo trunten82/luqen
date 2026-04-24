@@ -171,6 +171,12 @@ describe('AgentService.runTurn — critical fixtures', () => {
       dispatcher: dispatcher as unknown as never,
       resolvePermissions: async () => new Set(['reports.view']),
       config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      // Phase 35 Plan 03 — isolate these tests from the new post-first-assistant
+      // title hook. Rejecting the generator hits the service's catch block
+      // (swallow-with-comment), so no rename is written and the conversation
+      // stays title=null, preserving these tests' row/count assertions.
+      // Hook behaviour itself is covered by tests/agent/agent-service-title-hook.test.ts.
+      titleGenerator: async () => { throw new Error('noop in regression suite'); },
     });
 
     await svc.runTurn({
@@ -213,6 +219,12 @@ describe('AgentService.runTurn — critical fixtures', () => {
       dispatcher: dispatcher as never,
       resolvePermissions: async () => new Set(['reports.view']), // no scans.create
       config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      // Phase 35 Plan 03 — isolate these tests from the new post-first-assistant
+      // title hook. Rejecting the generator hits the service's catch block
+      // (swallow-with-comment), so no rename is written and the conversation
+      // stays title=null, preserving these tests' row/count assertions.
+      // Hook behaviour itself is covered by tests/agent/agent-service-title-hook.test.ts.
+      titleGenerator: async () => { throw new Error('noop in regression suite'); },
     });
     await svc.runTurn({
       conversationId: ctx.conversationId,
@@ -260,6 +272,12 @@ describe('AgentService.runTurn — critical fixtures', () => {
         return new Set(['reports.view']);
       },
       config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      // Phase 35 Plan 03 — isolate these tests from the new post-first-assistant
+      // title hook. Rejecting the generator hits the service's catch block
+      // (swallow-with-comment), so no rename is written and the conversation
+      // stays title=null, preserving these tests' row/count assertions.
+      // Hook behaviour itself is covered by tests/agent/agent-service-title-hook.test.ts.
+      titleGenerator: async () => { throw new Error('noop in regression suite'); },
     });
     await svc.runTurn({
       conversationId: ctx.conversationId,
@@ -295,6 +313,12 @@ describe('AgentService.runTurn — critical fixtures', () => {
       dispatcher: dispatcher as never,
       resolvePermissions: async () => new Set(['reports.view', 'scans.create']),
       config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      // Phase 35 Plan 03 — isolate these tests from the new post-first-assistant
+      // title hook. Rejecting the generator hits the service's catch block
+      // (swallow-with-comment), so no rename is written and the conversation
+      // stays title=null, preserving these tests' row/count assertions.
+      // Hook behaviour itself is covered by tests/agent/agent-service-title-hook.test.ts.
+      titleGenerator: async () => { throw new Error('noop in regression suite'); },
     });
     await svc.runTurn({
       conversationId: ctx.conversationId,
@@ -337,6 +361,12 @@ describe('AgentService.runTurn — critical fixtures', () => {
       dispatcher: dispatcher as never,
       resolvePermissions: async () => new Set(['scans.create']),
       config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      // Phase 35 Plan 03 — isolate these tests from the new post-first-assistant
+      // title hook. Rejecting the generator hits the service's catch block
+      // (swallow-with-comment), so no rename is written and the conversation
+      // stays title=null, preserving these tests' row/count assertions.
+      // Hook behaviour itself is covered by tests/agent/agent-service-title-hook.test.ts.
+      titleGenerator: async () => { throw new Error('noop in regression suite'); },
     });
     await svc.runTurn({
       conversationId: ctx.conversationId,
@@ -409,6 +439,12 @@ describe('AgentService.runTurn — critical fixtures', () => {
       dispatcher: dispatcher as never,
       resolvePermissions: async () => new Set(['reports.view']),
       config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      // Phase 35 Plan 03 — isolate these tests from the new post-first-assistant
+      // title hook. Rejecting the generator hits the service's catch block
+      // (swallow-with-comment), so no rename is written and the conversation
+      // stays title=null, preserving these tests' row/count assertions.
+      // Hook behaviour itself is covered by tests/agent/agent-service-title-hook.test.ts.
+      titleGenerator: async () => { throw new Error('noop in regression suite'); },
     });
     await svc.runTurn({
       conversationId: ctx.conversationId,
@@ -448,6 +484,12 @@ describe('AgentService.runTurn — critical fixtures', () => {
       dispatcher: dispatcher as never,
       resolvePermissions: async () => new Set(['reports.view']),
       config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      // Phase 35 Plan 03 — isolate these tests from the new post-first-assistant
+      // title hook. Rejecting the generator hits the service's catch block
+      // (swallow-with-comment), so no rename is written and the conversation
+      // stays title=null, preserving these tests' row/count assertions.
+      // Hook behaviour itself is covered by tests/agent/agent-service-title-hook.test.ts.
+      titleGenerator: async () => { throw new Error('noop in regression suite'); },
     });
     await svc.runTurn({
       conversationId: ctx.conversationId,
