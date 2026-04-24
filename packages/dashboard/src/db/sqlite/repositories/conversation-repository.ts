@@ -4,11 +4,13 @@ import type {
   AppendMessageInput,
   Conversation,
   ConversationRepository,
+  ConversationSearchHit,
   CreateConversationInput,
   ListConversationsOptions,
   Message,
   MessageRole,
   MessageStatus,
+  SearchConversationsOptions,
 } from '../../interfaces/conversation-repository.js';
 
 // ---------------------------------------------------------------------------
@@ -23,6 +25,8 @@ interface ConversationRow {
   created_at: string;
   updated_at: string;
   last_message_at: string | null;
+  is_deleted?: number;
+  deleted_at?: string | null;
 }
 
 interface MessageRow {
@@ -42,6 +46,22 @@ interface MessageRow {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_PAGE_LIMIT = 200;
+
+/**
+ * Extract a 60–120 char window around the first case-insensitive match
+ * of `needle` in `haystack`. Used by searchForUser when matchField = 'content'.
+ * Pure function (no mutation) per CLAUDE.md coding-style rules.
+ */
+function extractSnippet(haystack: string, needle: string): string {
+  if (haystack.length === 0 || needle.length === 0) return haystack;
+  const idx = haystack.toLowerCase().indexOf(needle);
+  if (idx === -1) return haystack.slice(0, 120);
+  const start = Math.max(0, idx - 60);
+  const end = Math.min(haystack.length, idx + needle.length + 60);
+  const prefix = start > 0 ? '...' : '';
+  const suffix = end < haystack.length ? '...' : '';
+  return `${prefix}${haystack.slice(start, end)}${suffix}`;
+}
 
 export class SqliteConversationRepository implements ConversationRepository {
   constructor(private readonly db: Database.Database) {}
@@ -90,7 +110,7 @@ export class SqliteConversationRepository implements ConversationRepository {
     const rows = this.db
       .prepare(
         `SELECT * FROM agent_conversations
-         WHERE user_id = @userId AND org_id = @orgId
+         WHERE user_id = @userId AND org_id = @orgId AND is_deleted = 0
          ORDER BY COALESCE(last_message_at, created_at) DESC
          LIMIT @limit OFFSET @offset`,
       )
@@ -252,6 +272,116 @@ export class SqliteConversationRepository implements ConversationRepository {
       .run({ conversationId, boundary: beforeCreatedAt });
   }
 
+  // ── Phase 35 Plan 01 — search + rename + soft-delete ────────────────
+
+  async searchForUser(
+    userId: string,
+    orgId: string,
+    options: SearchConversationsOptions,
+  ): Promise<ConversationSearchHit[]> {
+    // Input validation (CLAUDE.md boundary check): empty/whitespace query => []
+    const rawQuery = options.query ?? '';
+    const trimmed = rawQuery.trim();
+    if (trimmed.length === 0) return [];
+
+    const limit = Math.min(options.limit ?? 20, 50);
+    const offset = Math.max(options.offset ?? 0, 0);
+
+    // T-35-01 mitigation: escape LIKE metacharacters before binding, then
+    // declare the escape char in the SQL via ESCAPE '\\'. The `%escaped%`
+    // substring is bound via prepared statement parameter (@q), never
+    // string-concatenated into SQL.
+    const escaped = trimmed.replace(/[\\%_]/g, (c) => '\\' + c);
+    const q = `%${escaped}%`;
+
+    // T-35-02 mitigation: WHERE clause always carries user_id + org_id +
+    // is_deleted = 0. Cross-org / soft-deleted rows never reach the JS layer.
+    const rows = this.db
+      .prepare(
+        `SELECT c.* FROM agent_conversations c
+         WHERE c.user_id = @userId AND c.org_id = @orgId AND c.is_deleted = 0
+           AND (
+             LOWER(COALESCE(c.title, '')) LIKE LOWER(@q) ESCAPE '\\'
+             OR EXISTS (
+               SELECT 1 FROM agent_messages m
+               WHERE m.conversation_id = c.id
+                 AND LOWER(COALESCE(m.content, '')) LIKE LOWER(@q) ESCAPE '\\'
+             )
+           )
+         ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
+         LIMIT @limit OFFSET @offset`,
+      )
+      .all({ userId, orgId, q, limit, offset }) as ConversationRow[];
+
+    const findContentMatch = this.db.prepare(
+      `SELECT content FROM agent_messages
+       WHERE conversation_id = @conversationId
+         AND LOWER(COALESCE(content, '')) LIKE LOWER(@q) ESCAPE '\\'
+       ORDER BY created_at ASC
+       LIMIT 1`,
+    );
+
+    const needle = trimmed.toLowerCase();
+
+    return rows.map((r) => {
+      const conversation = this.rowToConversation(r);
+
+      // Prefer title match if present.
+      const title = r.title ?? '';
+      if (title.length > 0 && title.toLowerCase().includes(needle)) {
+        return {
+          conversation,
+          snippet: title,
+          matchField: 'title' as const,
+        };
+      }
+
+      // Fallback: content match — pull first matching message, extract a
+      // bounded window (±60 chars) around the match.
+      const msg = findContentMatch.get({
+        conversationId: r.id,
+        q,
+      }) as { content: string | null } | undefined;
+
+      const content = msg?.content ?? '';
+      return {
+        conversation,
+        snippet: extractSnippet(content, needle),
+        matchField: 'content' as const,
+      };
+    });
+  }
+
+  async renameConversation(
+    id: string,
+    orgId: string,
+    title: string,
+  ): Promise<Conversation | null> {
+    const now = new Date().toISOString();
+    const result = this.db
+      .prepare(
+        `UPDATE agent_conversations
+         SET title = @title, updated_at = @now
+         WHERE id = @id AND org_id = @orgId AND is_deleted = 0`,
+      )
+      .run({ id, orgId, title, now });
+
+    if (result.changes === 0) return null;
+    return this.getConversation(id, orgId);
+  }
+
+  async softDeleteConversation(id: string, orgId: string): Promise<boolean> {
+    const now = new Date().toISOString();
+    const result = this.db
+      .prepare(
+        `UPDATE agent_conversations
+         SET is_deleted = 1, deleted_at = @now, updated_at = @now
+         WHERE id = @id AND org_id = @orgId AND is_deleted = 0`,
+      )
+      .run({ id, orgId, now });
+    return result.changes > 0;
+  }
+
   // ── Private mappers ─────────────────────────────────────────────────
 
   private rowToConversation(row: ConversationRow): Conversation {
@@ -263,6 +393,8 @@ export class SqliteConversationRepository implements ConversationRepository {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       lastMessageAt: row.last_message_at,
+      isDeleted: row.is_deleted === 1,
+      deletedAt: row.deleted_at ?? null,
     };
   }
 
