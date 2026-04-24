@@ -188,10 +188,13 @@ describe('AgentService.runTurn — critical fixtures', () => {
     const doneFrames = emits.filter((f) => f.type === 'done');
     expect(doneFrames.length).toBe(1);
 
-    // DB assertions: 1 user + 1 tool + 1 assistant message.
+    // DB assertions: Plan 32.1-08 persists an assistant(tool_calls) row
+    // BEFORE the tool-result row so the conversation history reflects the
+    // provider-required order (user → assistant(tool_calls) → tool →
+    // assistant(final)). Pre-32.1-08 this was user → tool → assistant.
     const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
     const roles = window.map((m) => m.role);
-    expect(roles).toEqual(['user', 'tool', 'assistant']);
+    expect(roles).toEqual(['user', 'assistant', 'tool', 'assistant']);
 
     // Audit row lands for the tool dispatch.
     const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 10 });
