@@ -3754,23 +3754,107 @@ details[open] > .mt-examples-toggle::before {
 .card--locked-honesty {
   overflow-wrap: anywhere;
 }
-/* Phase 32.1-06: agent markdown table rendering inside the chat drawer. */
+/* Phase 32.1-06: agent markdown rendering — tables, code blocks, headings
+   inside the chat drawer. Selectors target both marked's default <table>
+   output and the fallback renderer's .agent-md-table class. Override the
+   mobile data-table card layout (line 710) so markdown tables stay tabular.
+   Wrap in a horizontal scroller so wide tables don't crush columns. */
+.agent-msg__body table,
 .agent-md-table {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
   margin: var(--space-xs, 0.5rem) 0;
   font-size: 0.9em;
+  white-space: nowrap;
 }
+.agent-msg__body table thead,
+.agent-msg__body table tbody,
+.agent-msg__body table tr {
+  display: table-row-group;
+}
+.agent-msg__body table thead { display: table-header-group; }
+.agent-msg__body table tr { display: table-row; }
+.agent-msg__body table th,
+.agent-msg__body table td,
 .agent-md-table th,
 .agent-md-table td {
+  display: table-cell;
   border: 1px solid var(--border-muted, #e5e7eb);
   padding: var(--space-xxs, 0.25rem) var(--space-xs, 0.5rem);
   text-align: left;
   overflow-wrap: anywhere;
+  background: transparent;
+  box-shadow: none;
+  position: static;
+  width: auto;
+  height: auto;
+  clip: auto;
+  margin: 0;
+  border-radius: 0;
+  justify-content: flex-start;
+  align-items: baseline;
+  font-size: inherit;
 }
+.agent-msg__body table th,
 .agent-md-table th {
   background: var(--surface-muted, #f3f4f6);
   font-weight: 600;
+}
+.agent-msg__body pre {
+  background: var(--surface-muted, #f3f4f6);
+  padding: var(--space-xs, 0.5rem);
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+.agent-msg__body code {
+  background: var(--surface-muted, #f3f4f6);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.agent-msg__body pre code {
+  background: transparent;
+  padding: 0;
+}
+.agent-msg__body h1,
+.agent-msg__body h2,
+.agent-msg__body h3,
+.agent-msg__body h4,
+.agent-msg__body h5,
+.agent-msg__body h6 {
+  margin: var(--space-sm, 0.75rem) 0 var(--space-xs, 0.5rem);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.agent-msg__body h1 { font-size: 1.25em; }
+.agent-msg__body h2 { font-size: 1.15em; }
+.agent-msg__body h3 { font-size: 1.05em; }
+.agent-msg__body h4,
+.agent-msg__body h5,
+.agent-msg__body h6 { font-size: 1em; }
+.agent-msg__body ul,
+.agent-msg__body ol {
+  margin: var(--space-xs, 0.5rem) 0;
+  padding-left: var(--space-lg, 1.5rem);
+}
+.agent-msg__body p { margin: var(--space-xs, 0.5rem) 0; }
+.agent-msg__body p:first-child { margin-top: 0; }
+.agent-msg__body p:last-child { margin-bottom: 0; }
+.agent-msg__body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: var(--space-xs, 0.5rem) 0;
+  border-radius: 4px;
+}
+.agent-msg__body a {
+  color: var(--link-color, #2563eb);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
 }
 
 /* ---- Agent Drawer (Phase 32) ---- */
