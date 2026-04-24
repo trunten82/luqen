@@ -74,14 +74,66 @@
   }
 
   /**
-   * Minimal safe markdown renderer. Supported subset:
-   *   **bold** / __bold__       → <strong>
-   *   *italic* / _italic_       → <em>
-   *   `code`                    → <code>
-   *   leading "- " or "* "      → <ul><li>
-   *   leading "N. "             → <ol><li>
-   *   blank-line separated      → paragraphs
-   * All literal content enters DOM via textContent; no innerHTML.
+   * Primary markdown renderer — uses vendored `marked` for full CommonMark
+   * + GFM coverage and DOMPurify to strip any disallowed tags / attrs. Falls
+   * back to the hand-rolled subset renderer below if either library is absent.
+   *
+   * DOMPurify config allows common text + block elements + GFM tables + safe
+   * image/link attrs (http/https/mailto). All dangerous protocols (javascript:,
+   * data:image/svg+xml+script, file:) are stripped. target="_blank" gets
+   * rel="noopener" automatically.
+   */
+  function renderMarkdownPrimary(target, text) {
+    if (typeof window === 'undefined') return false;
+    var marked = window.marked;
+    var DOMPurify = window.DOMPurify;
+    if (!marked || !DOMPurify) return false;
+    try {
+      if (typeof marked.setOptions === 'function') {
+        marked.setOptions({ gfm: true, breaks: true, headerIds: false, mangle: false });
+      }
+      var render = typeof marked.parse === 'function' ? marked.parse : marked;
+      var rawHtml = render(text);
+      var cleanHtml = DOMPurify.sanitize(rawHtml, {
+        USE_PROFILES: { html: true },
+        ALLOWED_TAGS: [
+          'p', 'br', 'strong', 'em', 'code', 'pre', 'blockquote',
+          'ul', 'ol', 'li',
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'a', 'img',
+          'table', 'thead', 'tbody', 'tr', 'th', 'td',
+          'hr', 'del', 'ins', 'sup', 'sub',
+          'span', 'div',
+        ],
+        ALLOWED_ATTR: ['href', 'title', 'alt', 'src', 'target', 'rel', 'class', 'aria-label'],
+        ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^:]*$)/i,
+      });
+      // Parse via DOMParser so we don't use innerHTML with untrusted input
+      // directly on a live node — even though sanitize already cleaned it,
+      // this adds defence-in-depth against CSP / future regressions.
+      var doc = new DOMParser().parseFromString('<div>' + cleanHtml + '</div>', 'text/html');
+      var src = doc.body.firstChild;
+      while (target.firstChild) target.removeChild(target.firstChild);
+      if (src) {
+        while (src.firstChild) {
+          target.appendChild(document.importNode(src.firstChild, true));
+          src.removeChild(src.firstChild);
+        }
+      }
+      // Anchors: force safe rel on target=_blank.
+      var anchors = target.querySelectorAll('a[target="_blank"]');
+      for (var ai = 0; ai < anchors.length; ai++) {
+        anchors[ai].setAttribute('rel', 'noopener noreferrer');
+      }
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  /**
+   * Fallback renderer (subset) — used only when marked / DOMPurify fail to
+   * load. Supports bold/italic/code/lists/paragraphs.
    */
   function renderInlineMd(target, text) {
     var i = 0; var len = text.length;
@@ -168,8 +220,12 @@
   }
 
   function renderMarkdownInto(target, text) {
+    if (!text || text.length === 0) {
+      while (target.firstChild) { target.removeChild(target.firstChild); }
+      return;
+    }
+    if (renderMarkdownPrimary(target, text)) return;
     while (target.firstChild) { target.removeChild(target.firstChild); }
-    if (!text || text.length === 0) return;
     var blocks = text.split(/\n{2,}/);
     for (var b = 0; b < blocks.length; b++) {
       var block = blocks[b];
