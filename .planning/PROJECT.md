@@ -10,20 +10,11 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 ## Current State
 
-v2.12.0 shipped 2026-04-14 — Brand Intelligence Polish: dedicated brand overview page with per-site selector, per-dimension trend sparklines (color/typography/components), org-level score targets with gap display, drilldown modal for failing elements, typography x-height metrics via opentype.js (4th scoring heuristic), fine-grained org permissions (admin.org replacing admin.system), and historical rescore admin action (batch-of-50, idempotent, resumable). 6 phases (22-27), 10 plans, 25/25 requirements satisfied. Previous: v2.11.0 (2026-04-12) brand scoring engine, v2.10.0 (2026-04-10) prompt safety + API key UX.
+v3.0.0 shipped 2026-04-24 — MCP Servers & Agent Companion. All Luqen services (compliance, branding, LLM, dashboard) expose Streamable HTTP MCP endpoints with OAuth 2.1 Authorization Code + PKCE + DCR for external clients (Claude Desktop, IDEs). Dashboard gains a conversational agent companion with text + speech input, SSE streaming, native-dialog confirmation for destructive tools, context-hints (recent scans + active guidelines injected per turn), token-budget compaction at 85% of model max, and an admin audit log viewer at /admin/audit. 10 phases (28-33 including inserted 30.1, 31.1, 31.2, 32.1), 36 plans, 22/22 requirements satisfied. Previous: v2.12.0 (2026-04-14) Brand Intelligence Polish.
 
-## Current Milestone: v3.0.0 MCP Servers & Agent Companion
+## Next Milestone
 
-**Goal:** Expose all Luqen services as MCP servers and add a full multimodal AI agent companion to the dashboard — turning Luqen from a tool-you-operate into an assistant-you-converse-with.
-
-**Target features:**
-- MCP servers for all services (compliance, branding, LLM, scanner, dashboard) via standard MCP transport (stdio/SSE)
-- Dashboard agent companion — org-aware side panel with text + speech input (Web Speech API)
-- Per-user persistent conversation history stored in DB
-- RBAC-scoped tool access mirroring user permissions
-- Explicit confirmation UI for state-changing operations
-- Audit logging for every tool invocation
-- External MCP client support (Claude Desktop, IDEs)
+Not yet planned. Use `/gsd-new-milestone` to scope v3.1.0.
 
 ## Requirements
 
@@ -98,9 +89,20 @@ v2.12.0 shipped 2026-04-14 — Brand Intelligence Polish: dedicated brand overvi
 - ✓ Rescore skips deleted guidelines with warning count — v2.12.0
 - ✓ Rescore always embedded mode, never remote — v2.12.0
 
+- ✓ Streamable HTTP MCP endpoints on all services with OAuth2 JWT + RBAC tool filtering + org scoping (MCPI-01..04) — v3.0.0
+- ✓ MCP Resources expose scan reports + brand scores (MCPI-05) and MCP Prompts /scan, /report, /fix (MCPI-06) — v3.0.0
+- ✓ Compliance/branding/LLM/dashboard MCP tool catalogues (MCPT-01..04) — v3.0.0
+- ✓ External MCP clients (Claude Desktop, IDEs) connect via OAuth 2.1 + PKCE + DCR (MCPT-05, MCPAUTH-01..03) — v3.0.0
+- ✓ mcp.use RBAC permission per-org gate + tool visibility = RBAC ∩ scope (MCPAUTH-04..05) — v3.0.0
+- ✓ Text + speech chat side panel with SSE streaming (AGENT-01..03) — v3.0.0
+- ✓ Context-aware agent (recent scans + active guidelines injected per turn) + token-budget compaction at 85% (AGENT-04..05) — v3.0.0
+- ✓ Persistent conversation history with rolling 20-turn window (APER-01) — v3.0.0
+- ✓ Native-dialog confirmation for destructive tool calls with DB recovery (APER-02) — v3.0.0
+- ✓ Agent audit log (APER-03) + /admin/audit viewer with filter bar + CSV export (APER-04) — v3.0.0
+
 ### Active
 
-(Defining requirements for v3.0.0 — see REQUIREMENTS.md)
+(Defining requirements for next milestone — see REQUIREMENTS.md after `/gsd-new-milestone`)
 
 ### Out of Scope
 
@@ -184,4 +186,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 — v3.0.0 MCP Servers & Agent Companion milestone started*
+*Last updated: 2026-04-24 after v3.0.0 milestone*

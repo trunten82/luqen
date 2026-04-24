@@ -1,5 +1,41 @@
 # Milestones
 
+## v3.0.0 MCP Servers & Agent Companion (Shipped: 2026-04-24)
+
+**Phases completed:** 10 phases (28-33 including inserted 30.1, 31.1, 31.2, 32.1), 36 plans
+**Files changed:** 294 (+48142/-4484 LOC)
+**Timeline:** 2026-04-14 → 2026-04-24 (10 days)
+**Commits:** 206
+**Archive:** [v3.0.0-ROADMAP.md](milestones/v3.0.0-ROADMAP.md) · [v3.0.0-REQUIREMENTS.md](milestones/v3.0.0-REQUIREMENTS.md) · [v3.0.0-MILESTONE-AUDIT.md](v3.0.0-MILESTONE-AUDIT.md)
+
+**Key accomplishments:**
+
+- Every Luqen service (compliance, branding, LLM, dashboard) exposes a secured Streamable HTTP MCP endpoint at `POST /api/v1/mcp` with OAuth2 JWT validation, RBAC tool filtering, and per-request org scoping. `@luqen/core/mcp` shared plugin provides the factory, ALS-backed tool context, and filter primitives; tool catalogues total 33 tools (compliance 11 + branding 4 + LLM 4 + dashboard 14).
+- OAuth 2.1 Authorization Server on the dashboard: Authorization Code + PKCE + refresh rotation + Dynamic Client Registration (RFC 7591) + `.well-known/oauth-authorization-server` + `.well-known/oauth-protected-resource` per service + JWKS rotation UI + `/admin/oauth-keys`. JWKS-backed RS256 verifier swap across all 4 services with RFC 8707 audience enforcement. Claude Desktop and MCP Inspector verified end-to-end.
+- `mcp.use` per-org RBAC permission gate on `/oauth/authorize`, tool visibility = RBAC ∩ scope (no more broad scope bundles), org-scoped DCR client revoke via `/admin/clients`, service-side `WWW-Authenticate: Bearer resource_metadata=...` parity. All three G1/G9/G10 gaps from 31.1 smoke closed.
+- Dashboard agent companion: Fastify AgentService + ToolDispatcher + per-dispatch RS256 JWT minter; SSE token streaming via EventSource; floating entry button + side drawer chat UI with localStorage persistence; Ollama/OpenAI/Anthropic streaming adapters (Anthropic SDK pinned at exact 0.90.0); Web Speech API with Firefox text fallback; destructive tool calls require native `<dialog>` confirmation with DB-recovery on page reload.
+- Conversation persistence: migrations 047 (`agent_conversations` + `agent_messages` with rolling-20-turn `in_window` flag + `pending_confirmation` durability) and 048 (`agent_audit_log` append-only distinct from pre-existing `storage.audit`); ConversationRepository maintains the window at write time; 49/49 repo tests green.
+- Context-aware responses: recent scans + active brand guidelines + applicable regulations injected into the system prompt every `runTurn`. Token-budget estimator (char/4) + sliding-window summary compaction triggered at 85% of model max — agent stays coherent on long conversations. Admin audit log viewer at `/admin/audit` with filter bar (date range / user / tool) + CSV export + `orgId=null` cross-org read for `admin.system`.
+
+**22/22 v3.0.0 requirements satisfied:** MCPI-01..06, MCPT-01..05, AGENT-01..05, APER-01..04, MCPAUTH-01..05.
+
+**Tech debt (documented in v3.0.0-MILESTONE-AUDIT.md):**
+
+- Phases 30.1, 31.2, 32, 32.1, 33 produced no formal VERIFICATION.md — coverage via plan SUMMARYs + UAT walkthroughs + live dashboard testing
+- Token estimator uses char/4 heuristic; precise tokenizer deferred
+- Nyquist validation not run for any v3.0.0 phase
+- `deferred-items.md` files in Phase 31.2 and Phase 32 — review for v3.1
+
+**Inserted phases:**
+
+- Phase 30.1 (scope-filter gate) — inserted 2026-04-18 after Phase 30 SC#4 walkthrough revealed OAuth client-credentials tokens could invoke destructive tools
+- Phase 31.1 (MCP Authorization Spec Upgrade) — inserted 2026-04-19 when bootstrap `client_credentials` + static Bearer was found to fail MCP Authorization spec for external clients; relocated MCPAUTH-01/02/03 out of Phase 32
+- Phase 31.2 (Access Control Refinement) — inserted 2026-04-19 to close G1/G9/G10 gaps from 31.1 smoke
+- Phase 32.1 (Agent Chat Fixes) — inserted 2026-04-23/24 for in-session fixes: global-admin org-agnostic handling, MCP bridge hardening, markdown/table rendering, mobile layout, multimodal output (Mermaid + DOMPurify-sanitized SVG)
+
+---
+
+
 ## v2.12.0 Brand Intelligence Polish (Shipped: 2026-04-14)
 
 **Phases completed:** 6 phases, 8 plans, 10 tasks

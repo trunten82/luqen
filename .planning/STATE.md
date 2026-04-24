@@ -2,199 +2,62 @@
 gsd_state_version: 1.0
 milestone: v3.0.0
 milestone_name: MCP Servers & Agent Companion
-status: verifying
-stopped_at: Completed 32-08-PLAN.md (Phase 32 DONE — 8/8 plans)
-last_updated: "2026-04-24T06:30:20.147Z"
-last_activity: 2026-04-23
+status: shipped
+stopped_at: v3.0.0 milestone archived 2026-04-24
+last_updated: "2026-04-24T07:30:00.000Z"
+last_activity: 2026-04-24
 progress:
-  total_phases: 9
-  completed_phases: 8
-  total_plans: 35
-  completed_plans: 33
-  percent: 94
+  total_phases: 10
+  completed_phases: 10
+  total_plans: 36
+  completed_plans: 36
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-16)
+See: .planning/PROJECT.md (updated 2026-04-24 after v3.0.0 milestone)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 32 — agent-service-chat-ui
+**Current focus:** Planning next milestone — run `/gsd-new-milestone`
 
 ## Current Position
 
-```
-[Phase 28] [Phase 29] [Phase 30] [Phase 30.1] [Phase 31.1] [Phase 31.2] [Phase 32] [Phase 33]
-                                    ✓            ✓            ✓            ^
-                                                                            |
-                                                                          Next
-```
-
-Phase: 32 (agent-service-chat-ui) — EXECUTING
-Plan: 8 of 8
-Plans: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-04-23
-
-## Performance Metrics
-
-| Metric | Value |
-|--------|-------|
-| Phases planned | 6 |
-| Requirements mapped | 20/20 |
-| Coverage | 100% |
-| Plans complete | 0/? |
-| Phase 28-mcp-foundation P01 | 7min | 2 tasks | 11 files |
-| Phase 29 P03 | 3min | 2 tasks | 2 files |
-| Phase 31.1 P01 | 14m | 3 tasks | 21 files |
-| Phase 31.1 P02 | 1115 | 3 tasks | 19 files |
-| Phase 31.1 P03 | 200 | 3 tasks | 23 files |
-| Phase 31.2 P01 | 22m | 2 tasks | 6 files |
-| Phase 31.2 P02 | ~32m | 4 tasks | 10 files |
-| Phase 31.2 P03 | 23m | 3 tasks | 8 files |
-| Phase 31.2 P04 | ~50m | 2 tasks | 7 files | partial worktree + inline completion |
-| Phase 31.2 P05 | 15m | 3 tasks | 9 files |
-| Phase 32 P01 | 10min | 3 tasks | 13 files |
-| Phase 32-agent-service-chat-ui P02 | ~12m | 4 tasks | 11 files |
-| Phase 32-agent-service-chat-ui P03 | 11m | 2 tasks | 6 files |
-| Phase 32-agent-service-chat-ui P04 | 28m | 4 tasks | 16 files |
-| Phase 32-agent-service-chat-ui P05 | 45m | 4 tasks | 11 files |
-| Phase 32-agent-service-chat-ui P06 | ~60m | 4 tasks | 12 files |
-| Phase 32-agent-service-chat-ui P07 | ~55m | 4 tasks | 15 files |
-| Phase 32-agent-service-chat-ui P08 | 10m | 2 tasks | 9 files |
+v3.0.0 shipped 2026-04-24. All 10 phases (28-33 including inserted 30.1, 31.1, 31.2, 32.1) complete; 36/36 plans; 22/22 requirements satisfied.
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
+Full decision log archived in `.planning/milestones/v3.0.0-ROADMAP.md` (Milestone Summary section). Carried forward highlights:
 
-Carried from v2.12.0:
-
-- Scoring lives in dashboard, not `@luqen/branding` — single pure calculator
-- Composite weights locked at `{color: 0.50, typography: 0.30, components: 0.20}`
-- Dual-mode fallback policy: service outage → degraded scan, NEVER silent cross-route
-- `BrandingOrchestrator` reads `orgs.branding_mode` per-request, no caching
-- Zero branded contrast violations = 100% color score (post-deploy hotfix)
-
-v3.0.0 architecture decisions (from research):
-
-- MCP embedded as Fastify plugin in each service (`fastify-mcp@^2.1.0`) — not a standalone port
-- Streamable HTTP transport only — SSE-only deprecated June 2025
-- AgentService always calls service `/mcp` endpoints over HTTP — never direct module imports
-- All LLM calls route through existing capability engine at `llm:4200` — no separate provider client
-- Conversation history: SQLite in `dashboard.db` — no Redis, no new infrastructure
-- Rolling window: last 20 turns in LLM context; full history stored in DB
-- `pending_confirmation` status in DB — confirmation state survives page refresh
-- Agent UI: HTMX POST for message submission + plain JS `EventSource` for streaming — never `hx-sse`
-- Speech input: Web Speech API with feature detection; text fallback for Firefox
-- RBAC tool list built from `resolveEffectivePermissions(userId, orgId)` before LLM sees any tools
-- [Phase 28-mcp-foundation]: Inline scope hierarchy in http-plugin.ts rather than importing from @luqen/compliance — keeps @luqen/core leaf-of-graph and dep-free
-- [Phase 28-mcp-foundation]: AsyncLocalStorage<ToolContext> — module-scope ALS lets setRequestHandler (registered once) read per-request context without SDK argument plumbing
-- [Phase 28-mcp-foundation]: tools/list filter via mcpServer.server.setRequestHandler(ListToolsRequestSchema, ...) — single committed mechanism registered ONCE at plugin construction; overwrites SDK default in protocol's _requestHandlers map
-- [Phase 28-mcp-foundation]: McpServer._registeredTools private-field read preserves per-tool description/inputSchema in filtered tools/list response; fallback registeredTools option documented but not needed at SDK 1.27.1
-- [Phase 29]: Phase 29 rescope (D-14/D-15): MCPT-01, MCPT-02 brand-score half, MCPI-05, MCPI-06 reassigned to Phase 30; MCPT-02 split-annotated; Phase 30 Depends-on upgraded to Phase 28+29; D-12 chat-message-template prompt shape locked into Phase 30 success criterion
-- [Phase 31.1]: Tests live under packages/dashboard/tests/repositories/ to match vitest.config.ts (plan's test/ path was not scanned)
-- [Phase 31.1]: Encrypted-at-rest private keys: OauthSigningKeyRepository stores ciphertext only; Plan 02 token-signer encrypts/decrypts via plugins/crypto
-- [Phase 31.1]: CSRF validated at preHandler (not onRequest) so @fastify/csrf-protection reads req.body._csrf after the form body is parsed
-- [Phase 31.1]: Constant-time compare (timingSafeEqual) added to verifyS256Challenge to remove a stored-challenge timing side channel
-- [Phase 31.1]: pa11y accessibility evidence captured against a standalone Handlebars-rendered HTML fixture (scripts/render-consent-for-pa11y.mts) — zero WCAG 2.1 AA errors on both consent variants
-- [Phase 31.1]: D-27 chose deprecation path (a): DASHBOARD_JWT_PUBLIC_KEY still works through one-shot console.warn; full removal deferred to Plan 04+
-- [Phase 31.1]: MCP auth moved to a scoped route preHandler in each service (dashboard/compliance/branding/llm); /api/v1/mcp added to PUBLIC_PATHS of the global middleware so the scoped handler is the sole auth gate and RFC 8707 aud is enforced before tool dispatch
-- [Phase 31.1]: D-34 NOT extracted: services' createJwksTokenVerifier kept as three byte-identical factories rather than a shared @luqen/core abstraction — per-package TokenPayload narrowing would force a generic parameter that erases more than it unifies
-- [Phase 32]: [32-01]: @anthropic-ai/sdk pinned at EXACT 0.90.0 (no caret) — supply-chain posture per threat_model T-32-01-06; caret ranges disallowed for runtime SDKs
-- [Phase 32]: [32-01]: LLMProviderAdapter.completeStream is OPTIONAL — the 4 existing capabilities (extract-requirements, generate-fix, analyse-report, discover-branding) stay byte-compatible; only agent-conversation (Plan 02) asserts presence
-- [Phase 32]: [32-01]: Anthropic adapter uses client.messages.stream({...}).finalMessage() SDK helper — never rolls its own input_json_delta.partial_json parser (AI-SPEC §3 Pitfall 2)
-- [Phase 32]: [32-01]: Ollama tool-call ids minted client-side as toolu_ollama_<uuid> — Ollama's NDJSON response shape omits ids; audit/consumer layers need stable keys for tool_result correlation
-- [Phase 32]: [32-01]: D-11 ordering invariant pinned at adapter level via Anthropic Test 14 — every token frame index < the single tool_calls frame index; parity-baseline.json (3 fixtures) is the seed for AI-SPEC §5.4 CI parity gate
-- [Phase 32-agent-service-chat-ui]: PromptId union (CapabilityName + 'agent-system') keeps prompt-route surface separate from capability-assignment surfaces
-- [Phase 32-agent-service-chat-ui]: D-23 committed-provider semantics: first iterator step is the stream-open gate; after it yields, forward frames verbatim and terminate on error without retry
-- [Phase 32-agent-service-chat-ui]: Bootstrap seed four-tier preference (Haiku -> gpt-4o-mini -> supportsTools -> first) ensures Ollama-only on-prem installs bootstrap without paid API keys
-- [Phase 32-agent-service-chat-ui]: T-32-02-03 sanitiser placed at interpolation call site as defence-in-depth; Plan 08 write-time validator is the primary defense
-- [Phase 32-agent-service-chat-ui]: [32-03]: Migration id bumped 050 -> 055 (050-054 occupied by Phase 31.1/31.2 OAuth + mcp.use backfill); column name agent_display_name unchanged
-- [Phase 32-agent-service-chat-ui]: [32-03]: Repo layer does NOT enforce Zod length/format — Plan 08's route handler owns write-site validation; repo's sole threat mitigation is parameterised UPDATE for T-32-03-01 SQL-injection
-- [Phase 32-agent-service-chat-ui]: [32-04]: AgentService re-resolves permissions at HEAD of every loop iter — never cached (D-07 + Pitfall 6)
-- [Phase 32-agent-service-chat-ui]: [32-04]: Per-dispatch JWT mint via existing DashboardSigner (no new secret material); TTL 300s; client_id=__agent-internal__ for the 31.2 D-20 revoke-check carve-out
-- [Phase 32-agent-service-chat-ui]: [32-04]: Rate-limit 429 JSON rewrite via onSend hook — NOT the plugin's built-in error-response override (feedback_rate_limiter.md)
-- [Phase 32-agent-service-chat-ui]: [32-04]: Origin check on /agent/stream only rejects mismatched Origin; missing Origin passes (same-origin EventSource does not always send Origin)
-- [Phase 32-agent-service-chat-ui]: agent-system per-org override disabled at TWO layers — UI template gate (plan 05) + server-side orgId guard (plan 02) — defence-in-depth against prompt-injection via org settings (D-14)
-- [Phase 32-agent-service-chat-ui]: agentConvMetadata.manifestSize reflects THIS admin's org manifest (not a global max) so destructive-count badges match what the org's agent actually exposes
-- [Phase 32-agent-service-chat-ui]: [32-06]: request.user.orgAgentDisplayName populated in server.ts preHandler (the currentOrg resolution site) rather than auth/session.ts — session.ts owns cookie config only. user exposed in the global reply.view merge so the shared layout renders {{#if user}} on every page.
-- [Phase 32-agent-service-chat-ui]: [32-06]: loadPanel adopts trusted same-origin Handlebars fragment via DOMParser + document.importNode (NOT innerHTML) — defence-in-depth for T-32-06-01/02 keeps agent.js free of the XSS sink surface.
-- [Phase 32-agent-service-chat-ui]: [32-06]: Vitest-based E2E spec over Playwright — the dashboard package has no Playwright install and existing E2E tests are vitest-based; Playwright + @axe-core accessibility gate deferred to a follow-up infra plan.
-- [Phase 32-agent-service-chat-ui]: [32-07]: DOM-recovery reads tool_call_json from server-rendered <pre> inside pending tool bubble — no new recovery endpoint; SC#4 survives reload with zero network chatter
-- [Phase 32-agent-service-chat-ui]: [32-07]: Speech wiring extracted to agent-speech.js to keep agent.js under 450 LOC UI-SPEC ceiling; window.__luqenAgentSpeech.toggle bridge keeps click-delegation in agent.js
-- [Phase 32-agent-service-chat-ui]: [32-07]: data-dialog-resolution attribute round-trip distinguishes button-close from Esc-close inside native <dialog> close-event trap — Esc path fires POST /agent/deny (T-32-07-07)
-- [Phase 32-agent-service-chat-ui]: [32-07]: Web Speech unsupported path HIDES the button + surfaces form-hint (not disabled) — WCAG dead-affordance guard
-- [Phase 32-agent-service-chat-ui]: [32-08]: i18n namespace corrected from admin.orgs.settings.* to admin.organizations.settings.* — matches existing 39-key admin.organizations root; zero call-site breakage
-- [Phase 32-agent-service-chat-ui]: [32-08]: Zod message codes (TOO_LONG, HTML_OR_URL) as stable machine tags — i18n resolves user-facing copy per-request-locale; decouples validation logic from translation text across 6 locales
-- [Phase 32-agent-service-chat-ui]: [32-08]: View-stub status-preservation — removed hard-coded .code(200) from test reply.view stub so handler's reply.code(400).view(...) is honoured; pattern fixed for all future admin-form test harnesses
-
-### Architecture Notes
-
-New packages required:
-
-- `@modelcontextprotocol/sdk@^1.29.0` — MCP server + client runtime
-- `fastify-mcp@^2.1.0` — Streamable HTTP transport + session management
-
-New DB tables (dashboard.db):
-
-- Migration 046: `agent_conversations` + `agent_messages` (rolling window, `pending_confirmation` status)
-- Migration 047: `agent_audit_log` (user, org, tool, args, outcome, latency)
-
-Existing MCP servers to upgrade (HTTP transport):
-
-- `packages/compliance/src/mcp/server.ts` — stdio → add Streamable HTTP
-- `packages/core/src/mcp.ts` — stdio → add Streamable HTTP
-- `packages/monitor/src/mcp/server.ts` — stdio → add Streamable HTTP
-
-New MCP servers:
-
-- Branding service — `POST /api/v1/mcp`
-- LLM service — `POST /api/v1/mcp`
-- Dashboard — `POST /mcp` (external client access)
-
-### Roadmap Evolution
-
-- Phase 30.1 inserted after Phase 30 on 2026-04-18: Fix scope-filter bypass for OAuth client-credentials tokens — permission fallback on unknown sub currently overrides scope path, letting read-scope clients invoke destructive tools (URGENT — blocks Phase 30 SC#4 sign-off)
-- Phase 31.1 inserted after Phase 31 on 2026-04-19: MCP Authorization Spec Upgrade (OAuth 2.1 + PKCE + refresh + DCR + `.well-known` metadata). Scope decision came out of `/gsd-discuss-phase 32` — MCPAUTH-01/02/03 relocated from Phase 32 to 31.1 so Phase 32 stays focused on agent runtime + UI. Phase 32 depends on 31.1 for the external-client auth story; Phase 32's internal dashboard-to-MCP path uses cookie-session + server-minted JWT and is independent.
-- Phase 31.1 SHIPPED 2026-04-19: 4 plans, 26 plan commits + 8 inline smoke-gap fixes, 2869/2869 dashboard tests passing, E2E Claude Desktop smoke 10/10 pass on lxc-luqen. VERIFICATION PASSED (5/5 SC + 3/3 REQ-IDs).
-- Phase 31.2 inserted after Phase 31.1 on 2026-04-19: MCP Access Control Refinement. Consolidates three gaps surfaced during 31.1 smoke — G1 org-scoped DCR client revoke (not `admin.system`-only), G9 service-side `WWW-Authenticate` header parity, G10 new `mcp.use` per-org RBAC permission with tool visibility driven by user's real RBAC rather than broad OAuth scope bundles. User's explicit ask during smoke; routed to a dedicated phase to keep the refinement cohesive instead of patches.
-
-### Pending Todos
-
-None.
+- MCP embedded as Fastify plugin per service, never standalone port
+- Streamable HTTP transport only (SSE-only deprecated June 2025)
+- AgentService calls service `/mcp` endpoints over HTTP — never direct module imports
+- All LLM calls route through existing capability engine at `llm:4200`
+- Rolling 20-turn window maintained at write time (not read time)
+- char/4 token estimator sufficient for 85% compaction threshold
 
 ### Blockers/Concerns
 
-- `fastify-mcp` maintenance status flagged MEDIUM confidence — validate plugin is actively maintained during Phase 28 planning; fallback is `NodeStreamableHTTPServerTransport` from SDK directly
-- `agent-conversation` capability registration in LLM engine — inspect `packages/llm/src/capabilities/` during Phase 32 planning
-- Token counting approach — confirm character-count approximation vs `tiktoken` during Phase 33 planning
-- Web Speech API EU data residency — confirm whether org users have constraints before Phase 32; if so, defer speech to post-MVP
+None carried forward. Review `v3.0.0-MILESTONE-AUDIT.md` tech_debt section if spinning up a cleanup phase.
 
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260418-lg8 | Strip jsonReport from dashboard_list_reports MCP tool response | 2026-04-18 | 910a3de | [260418-lg8-strip-jsonreport-from-dashboard-list-rep](./quick/260418-lg8-strip-jsonreport-from-dashboard-list-rep/) |
-| 260418-mqc | Fix white-on-white text in locked prompt segments on /admin/llm?tab=prompts | 2026-04-18 | 12f3549 | [260418-mqc-fix-white-on-white-text-in-locked-prompt](./quick/260418-mqc-fix-white-on-white-text-in-locked-prompt/) |
-
-### Known Gotchas (carried from v2.12.0)
+### Known Gotchas (carried forward)
 
 - **HTMX OOB inside `<tr>`**: wrap in `<template>` tags
 - **HTMX 2.0 `hx-select` inheritance**: use plain JS `EventSource` for streaming, never `hx-sse`
-- **`@fastify/rate-limit` 429 bypass**: add `onSend` hook on agent SSE path
+- **`@fastify/rate-limit` 429 bypass**: add `onSend` hook
 - **Small scans score lower**: maxPages=3 may score 0 when full-site scores 2+
 - **Branding service port**: lxc-luqen runs on port 4100 (not 4300)
 - **`issue.context` can be null**: all scorers must null-guard
+- **MCP tool schemas must never include orgId** — sourced from ToolContext populated by JWT preHandler (D-05/D-13 invariant; enforced by runtime iteration test per service)
+- **MCP prompts use chat-message templates, not tool-call pre-fills** (D-12 / MCPI-06)
 
 ## Session Continuity
 
-Last session: 2026-04-23T20:02:23.043Z
-Stopped at: Completed 32-08-PLAN.md (Phase 32 DONE — 8/8 plans)
+Last session: 2026-04-24T07:30:00.000Z
+Stopped at: v3.0.0 milestone archived
 Resume file: None
-Next action: `/gsd:plan-phase 28`
-
-**Planned Phase:** 33 (Agent Intelligence + Audit Viewer) — 3 plans — 2026-04-24T06:30:20.134Z
+Next action: `/gsd-new-milestone`
