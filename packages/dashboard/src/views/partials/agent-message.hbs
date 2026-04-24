@@ -9,15 +9,19 @@
     <div class="agent-msg__body">{{content}}</div>
   </div>
 {{else if (eq role "tool")}}
-  <div class="agent-msg agent-msg--tool card card--muted" data-message-id="{{id}}"{{#if (eq status "pending_confirmation")}} data-pending="true"{{/if}}>
-    <span class="agent-msg__role">{{t "agent.role.tool"}}</span>
-    {{#if (eq status "pending_confirmation")}}
+  {{#if (eq status "pending_confirmation")}}
+    {{! Pending rows must stay in the DOM so agent.js can recover the dialog
+        after a page reload (D-29 / SC#4). Everything else — resolved tool
+        calls and their results — is hidden from the rehydrated panel: the
+        user only cares about the assistant's final answer, and the
+        streaming path never shows resolved tool bubbles either. }}
+    <div class="agent-msg agent-msg--tool card card--muted" data-message-id="{{id}}" data-pending="true">
+      <span class="agent-msg__role">{{t "agent.role.tool"}}</span>
       <span class="badge badge--warning">{{t "agent.confirm.pendingBadge"}}</span>
-    {{/if}}
-    <details>
-      <summary>{{t "agent.tool.expand"}}</summary>
-      {{#if toolCallJson}}<pre class="prompt-segment-content" aria-label="Tool call details">{{toolCallJson}}</pre>{{/if}}
-      {{#if toolResultJson}}<pre class="prompt-segment-content" aria-label="Tool result details">{{toolResultJson}}</pre>{{/if}}
-    </details>
-  </div>
+      <details>
+        <summary>{{t "agent.tool.expand"}}</summary>
+        {{#if toolCallJson}}<pre class="prompt-segment-content" aria-label="Tool call details">{{toolCallJson}}</pre>{{/if}}
+      </details>
+    </div>
+  {{/if}}
 {{/if}}

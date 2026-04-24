@@ -236,13 +236,23 @@ export class AgentService {
     const { conversationId, userId, orgId, userMessage, emit, signal } = input;
 
     // Persist the user message BEFORE entering the loop so a mid-stream
-    // abort does not silently drop the prompt.
-    await this.storage.conversations.appendMessage({
-      conversationId,
-      role: 'user',
-      content: userMessage,
-      status: 'sent',
-    });
+    // abort does not silently drop the prompt. Idempotent: POST /agent/message
+    // already persists the user row before opening the SSE stream, so skip
+    // the append when the latest window row is the same user content.
+    const preWindow = await this.storage.conversations.getWindow(conversationId);
+    const lastRow = preWindow[preWindow.length - 1];
+    const alreadyPersisted =
+      lastRow !== undefined &&
+      lastRow.role === 'user' &&
+      (lastRow.content ?? '') === userMessage;
+    if (!alreadyPersisted) {
+      await this.storage.conversations.appendMessage({
+        conversationId,
+        role: 'user',
+        content: userMessage,
+        status: 'sent',
+      });
+    }
 
     const agentDisplayName = await this.resolveDisplayName(orgId);
 
