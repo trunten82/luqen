@@ -101,11 +101,20 @@ export function bridgeMcpToolsForAgent(
       handler: async (args, ctx) => {
         // Re-enter the MCP ALS context so handlers that call
         // `getCurrentToolContext()` see the dispatching user's identity.
+        //
+        // Global admins (ctx.orgId starts with `__admin__:`) are not bound
+        // to a specific org — tools must run cross-org. Substitute the
+        // synthetic namespace with an empty orgId and stamp admin.system
+        // in permissions so the dashboard's admin-scoped handlers pick the
+        // cross-org branch.
+        const isGlobalAdmin = ctx.orgId.startsWith('__admin__:');
         const toolContext: ToolContext = {
           userId: ctx.userId,
-          orgId: ctx.orgId,
+          orgId: isGlobalAdmin ? '' : ctx.orgId,
           scopes: ['read', 'write', 'admin'],
-          permissions: new Set<string>(),
+          permissions: isGlobalAdmin
+            ? new Set<string>(['admin.system', 'admin.users', 'admin.org', 'scans.create', 'reports.view', 'branding.view'])
+            : new Set<string>(),
           authType: 'jwt',
         };
         return runInToolContext(toolContext, async () => {

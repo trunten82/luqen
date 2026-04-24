@@ -3754,6 +3754,24 @@ details[open] > .mt-examples-toggle::before {
 .card--locked-honesty {
   overflow-wrap: anywhere;
 }
+/* Phase 32.1-06: agent markdown table rendering inside the chat drawer. */
+.agent-md-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-xs, 0.5rem) 0;
+  font-size: 0.9em;
+}
+.agent-md-table th,
+.agent-md-table td {
+  border: 1px solid var(--border-muted, #e5e7eb);
+  padding: var(--space-xxs, 0.25rem) var(--space-xs, 0.5rem);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.agent-md-table th {
+  background: var(--surface-muted, #f3f4f6);
+  font-weight: 600;
+}
 
 /* ---- Agent Drawer (Phase 32) ---- */
 /* Surface 1 of the Phase 32 chat UI. All values reuse existing design-token
