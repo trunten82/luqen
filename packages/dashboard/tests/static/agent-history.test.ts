@@ -1,27 +1,25 @@
-// @vitest-environment jsdom
 /*
  * Phase 35 Plan 05 — client history-panel behaviour tests.
  *
- * Loads the real src/static/agent.js into jsdom, seeds the drawer markup
- * (matching agent-drawer.hbs + agent-history-panel.hbs output), stubs fetch,
- * csrf-meta, and IntersectionObserver, then exercises the delegated listener,
- * debounced search, <mark> highlighting, rename/delete flows, and keyboard
- * contract from UI-SPEC.
+ * Loads the real src/static/agent.js into a FRESH JSDOM instance per test
+ * (via the jsdom package directly — NOT the vitest jsdom env, which reuses
+ * one document across tests and causes the IIFE's document-level listeners
+ * to pile up). Exercises fetch+csrf, debounced search, <mark> XSS safety,
+ * IntersectionObserver, rename/delete/resume flows, and the keyboard contract
+ * from UI-SPEC.
  *
  * Ground rules:
  *  - CSP-strict: agent.js must mutate the DOM via createElement/textContent;
  *    test 7 proves a script tag in a snippet is never executed.
  *  - All fetches MUST carry the csrf header we seed.
  *  - IntersectionObserver is stubbed with a manually-triggerable observe().
- *  - Test fixture HTML is parsed via DOMParser then imported node-by-node so
- *    the test itself never assigns to innerHTML on a live node (mirrors the
- *    production XSS-safety contract).
  */
 
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { JSDOM } from 'jsdom';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AGENT_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent.js');
@@ -124,6 +122,11 @@ function installIntersectionObserverStub(win: Window): StubbedIO {
   }
   // @ts-expect-error — attach to jsdom window
   win.IntersectionObserver = FakeIO;
+  // Also expose on the Node globalThis because `new win.Function(...)` created
+  // functions resolve bare identifiers against the Node-level global scope,
+  // not jsdom's window. This is a jsdom+Function quirk.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).IntersectionObserver = FakeIO;
   return state;
 }
 
@@ -159,20 +162,40 @@ function importFixtureInto(doc: Document, html: string): void {
   }
 }
 
-function setupHarness(): Harness {
-  importFixtureInto(document, buildDrawerHtml());
+let currentDom: JSDOM | null = null;
 
-  const fetchStub = vi.fn(async () => {
-    return new Response('{}', {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    });
+function setupHarness(): Harness {
+  const dom = new JSDOM(`<!DOCTYPE html><html><head></head><body></body></html>`, {
+    url: 'http://localhost/',
+    pretendToBeVisual: true,
   });
+  currentDom = dom;
+  const win = dom.window as unknown as Window & typeof globalThis;
+  const doc = win.document;
+  // Bridge DOM globals for the test body (which uses `document`, `window`, etc.).
+  (globalThis as { document: Document }).document = doc;
+  (globalThis as { window: Window }).window = win;
+  (globalThis as { HTMLElement: typeof HTMLElement }).HTMLElement = win.HTMLElement;
+  (globalThis as { HTMLInputElement: typeof HTMLInputElement }).HTMLInputElement = win.HTMLInputElement;
+  (globalThis as { Event: typeof Event }).Event = win.Event;
+  (globalThis as { KeyboardEvent: typeof KeyboardEvent }).KeyboardEvent = win.KeyboardEvent;
+  (globalThis as { DOMParser: typeof DOMParser }).DOMParser = win.DOMParser;
+
+  importFixtureInto(doc, buildDrawerHtml());
+
+  const fetchStub = vi.fn(async () => jsonResponse({}));
   // @ts-expect-error attach to window
-  window.fetch = fetchStub;
-  const io = installIntersectionObserverStub(window);
-  loadAgentJs(document, window);
-  return { win: window, doc: document, fetchStub, io };
+  win.fetch = fetchStub;
+  const io = installIntersectionObserverStub(win);
+  loadAgentJs(doc, win);
+  return { win, doc, fetchStub, io };
+}
+
+function teardownHarness(): void {
+  if (currentDom) {
+    try { currentDom.window.close(); } catch (_e) { /* ignore */ }
+  }
+  currentDom = null;
 }
 
 function fetchCalls(stub: ReturnType<typeof vi.fn>): FetchArgs[] {
@@ -184,10 +207,17 @@ function findCall(stub: ReturnType<typeof vi.fn>, prefix: string): FetchArgs | u
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
+  // Node 22 ships a global Response (undici) — jsdom doesn't expose one, but
+  // since fetch is stubbed we can return a minimal shape that exposes `ok`
+  // and `json()` + `text()` the way the production agent.js consumes it.
+  const payload = JSON.stringify(body);
+  return {
+    ok: status >= 200 && status < 300,
     status,
-    headers: { 'content-type': 'application/json' },
-  });
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: async () => JSON.parse(payload) as unknown,
+    text: async () => payload,
+  } as unknown as Response;
 }
 
 function openHistoryPanel(): void {
@@ -196,10 +226,9 @@ function openHistoryPanel(): void {
 }
 
 async function flush(): Promise<void> {
-  await Promise.resolve();
-  await Promise.resolve();
-  await Promise.resolve();
-  await Promise.resolve();
+  for (let i = 0; i < 10; i++) {
+    await Promise.resolve();
+  }
 }
 
 describe('agent-history client (Plan 35-05)', () => {
@@ -208,8 +237,7 @@ describe('agent-history client (Plan 35-05)', () => {
   });
   afterEach(() => {
     vi.useRealTimers();
-    while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
-    while (document.head.firstChild) document.head.removeChild(document.head.firstChild);
+    teardownHarness();
   });
 
   it('1. Clicking History button fetches /agent/conversations?limit=20&offset=0 with csrf + same-origin', async () => {
