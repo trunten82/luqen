@@ -340,6 +340,16 @@
       msgs.appendChild(document.importNode(src.firstChild, true));
       src.removeChild(src.firstChild);
     }
+    // Rehydrated assistant bubbles carry raw markdown in textContent (the
+    // server partial escapes via {{content}}). Re-run the same sanitize +
+    // markdown pass the streaming path uses on 'done' so table / chart /
+    // list output looks identical after a page reload.
+    var bodies = msgs.querySelectorAll('.agent-msg--assistant .agent-msg__body');
+    for (var i = 0; i < bodies.length; i++) {
+      var body = bodies[i];
+      var rawText = body.textContent || '';
+      if (rawText.length > 0) { renderMarkdownInto(body, rawText); }
+    }
   }
 
   function loadPanel() {
