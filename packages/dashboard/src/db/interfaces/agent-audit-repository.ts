@@ -83,11 +83,27 @@ export interface AgentAuditRepository {
    * rows to mitigate T-31-10 (unbounded query DOS).
    */
   listForOrg(
-    orgId: string,
+    orgId: string | null,
     filters: AgentAuditFilters,
     pagination: PaginationOptions,
   ): Promise<AgentAuditEntry[]>;
 
-  /** Row count matching the same org + filters as `listForOrg`. */
-  countForOrg(orgId: string, filters: AgentAuditFilters): Promise<number>;
+  /**
+   * Row count matching the same org + filters as `listForOrg`. `orgId: null`
+   * signifies a cross-org query (admin.system only — enforced upstream).
+   */
+  countForOrg(orgId: string | null, filters: AgentAuditFilters): Promise<number>;
+
+  /**
+   * Distinct user_id values present in the audit log for the given org
+   * scope (used for the filter dropdown on `/admin/audit`). `orgId: null`
+   * returns distinct users across all orgs — admin.system only.
+   */
+  distinctUsers(orgId: string | null): Promise<string[]>;
+
+  /**
+   * Distinct tool_name values for the filter dropdown. Same org-scope
+   * contract as distinctUsers.
+   */
+  distinctToolNames(orgId: string | null): Promise<string[]>;
 }

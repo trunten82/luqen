@@ -1,0 +1,108 @@
+<section aria-label="{{t 'admin.audit.title'}}">
+  <div class="admin-header">
+    <h1 class="page-title">{{t "admin.audit.title"}}</h1>
+    <div class="admin-header__actions">
+      <a href="/admin/audit.csv{{#if filters}}?{{#each filters}}{{@key}}={{this}}&{{/each}}{{/if}}"
+         class="btn btn--ghost">
+        {{t "admin.audit.downloadCsv"}}
+      </a>
+    </div>
+  </div>
+
+  <form class="filter-bar card mt-md" method="get" action="/admin/audit" aria-label="{{t 'admin.audit.title'}} filters">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="audit-from">{{t "admin.audit.filterFrom"}}</label>
+        <input type="date" id="audit-from" name="from" value="{{filters.from}}">
+      </div>
+      <div class="form-group">
+        <label for="audit-to">{{t "admin.audit.filterTo"}}</label>
+        <input type="date" id="audit-to" name="to" value="{{filters.to}}">
+      </div>
+      <div class="form-group">
+        <label for="audit-user">{{t "admin.audit.filterUser"}}</label>
+        <select id="audit-user" name="userId">
+          <option value="">—</option>
+          {{#each users}}
+          <option value="{{this}}"{{#if (eq this ../filters.userId)}} selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="audit-tool">{{t "admin.audit.filterTool"}}</label>
+        <select id="audit-tool" name="toolName">
+          <option value="">—</option>
+          {{#each toolNames}}
+          <option value="{{this}}"{{#if (eq this ../filters.toolName)}} selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="audit-outcome">{{t "admin.audit.filterOutcome"}}</label>
+        <select id="audit-outcome" name="outcome">
+          <option value="">—</option>
+          {{#each outcomeValues}}
+          <option value="{{this}}"{{#if (eq this ../filters.outcome)}} selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary">{{t "admin.audit.applyFilters"}}</button>
+      <a href="/admin/audit" class="btn btn--ghost">{{t "admin.audit.reset"}}</a>
+    </div>
+  </form>
+
+  <p class="text-muted mt-sm">{{total}} {{t "admin.audit.totalRows"}}</p>
+
+  <div class="table-wrapper mt-md">
+    <table class="data-table" aria-label="{{t 'admin.audit.title'}}">
+      <thead>
+        <tr>
+          <th scope="col">{{t "admin.audit.colTimestamp"}}</th>
+          <th scope="col">{{t "admin.audit.colUser"}}</th>
+          {{#if isDashboardAdmin}}<th scope="col">{{t "admin.audit.colOrg"}}</th>{{/if}}
+          <th scope="col">{{t "admin.audit.colTool"}}</th>
+          <th scope="col">{{t "admin.audit.colOutcome"}}</th>
+          <th scope="col">{{t "admin.audit.colLatency"}}</th>
+          <th scope="col">{{t "admin.audit.colArgs"}}</th>
+          <th scope="col">{{t "admin.audit.colDetail"}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each rows}}
+        <tr>
+          <td data-label="Timestamp">{{timestamp}}</td>
+          <td data-label="User">{{userId}}</td>
+          {{#if ../isDashboardAdmin}}<td data-label="Org">{{orgId}}</td>{{/if}}
+          <td data-label="Tool"><code>{{toolName}}</code></td>
+          <td data-label="Outcome">
+            {{#if (eq outcome "success")}}<span class="badge badge--success">{{outcome}}</span>
+            {{else if (eq outcome "error")}}<span class="badge badge--error">{{outcome}}</span>
+            {{else if (eq outcome "timeout")}}<span class="badge badge--warning">{{outcome}}</span>
+            {{else if (eq outcome "denied")}}<span class="badge badge--warning">{{outcome}}</span>
+            {{else}}<span class="badge">{{outcome}}</span>{{/if}}
+          </td>
+          <td data-label="Latency">{{latencyMs}} ms</td>
+          <td data-label="Args" class="cell--wrap"><code>{{argsPreview}}</code></td>
+          <td data-label="Detail" class="cell--wrap">{{outcomeDetail}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="8" class="table__empty">{{t "admin.audit.noRows"}}</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  {{#if (gt pagination.totalPages 1)}}
+  <nav class="pagination mt-md" aria-label="Pagination">
+    {{#if pagination.prev}}
+    <a href="?offset={{pagination.prev}}&limit={{pagination.limit}}{{#if filters.from}}&from={{filters.from}}{{/if}}{{#if filters.to}}&to={{filters.to}}{{/if}}{{#if filters.userId}}&userId={{filters.userId}}{{/if}}{{#if filters.toolName}}&toolName={{filters.toolName}}{{/if}}{{#if filters.outcome}}&outcome={{filters.outcome}}{{/if}}" class="btn btn--ghost">← {{t "common.previous"}}</a>
+    {{/if}}
+    <span class="pagination__info">{{pagination.currentPage}} / {{pagination.totalPages}}</span>
+    {{#if pagination.next}}
+    <a href="?offset={{pagination.next}}&limit={{pagination.limit}}{{#if filters.from}}&from={{filters.from}}{{/if}}{{#if filters.to}}&to={{filters.to}}{{/if}}{{#if filters.userId}}&userId={{filters.userId}}{{/if}}{{#if filters.toolName}}&toolName={{filters.toolName}}{{/if}}{{#if filters.outcome}}&outcome={{filters.outcome}}{{/if}}" class="btn btn--ghost">{{t "common.next"}} →</a>
+    {{/if}}
+  </nav>
+  {{/if}}
+</section>

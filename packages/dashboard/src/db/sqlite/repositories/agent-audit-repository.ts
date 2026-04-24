@@ -49,11 +49,16 @@ function rowToEntry(row: AgentAuditRow): AgentAuditEntry {
 // ---------------------------------------------------------------------------
 
 function buildFilterQuery(
-  orgId: string,
+  orgId: string | null,
   filters: AgentAuditFilters,
 ): { where: string; params: Record<string, unknown> } {
-  const conditions: string[] = ['org_id = @orgId'];
-  const params: Record<string, unknown> = { orgId };
+  const conditions: string[] = [];
+  const params: Record<string, unknown> = {};
+
+  if (orgId !== null) {
+    conditions.push('org_id = @orgId');
+    params['orgId'] = orgId;
+  }
 
   if (filters.userId !== undefined) {
     conditions.push('user_id = @userId');
@@ -76,7 +81,10 @@ function buildFilterQuery(
     params['to'] = filters.to;
   }
 
-  return { where: `WHERE ${conditions.join(' AND ')}`, params };
+  return {
+    where: conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '',
+    params,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -135,7 +143,7 @@ export class SqliteAgentAuditRepository implements AgentAuditRepository {
   }
 
   async listForOrg(
-    orgId: string,
+    orgId: string | null,
     filters: AgentAuditFilters,
     pagination: PaginationOptions,
   ): Promise<AgentAuditEntry[]> {
@@ -157,7 +165,7 @@ export class SqliteAgentAuditRepository implements AgentAuditRepository {
   }
 
   async countForOrg(
-    orgId: string,
+    orgId: string | null,
     filters: AgentAuditFilters,
   ): Promise<number> {
     const { where, params } = buildFilterQuery(orgId, filters);
@@ -165,5 +173,25 @@ export class SqliteAgentAuditRepository implements AgentAuditRepository {
       .prepare(`SELECT COUNT(*) as count FROM agent_audit_log ${where}`)
       .get(params) as { count: number };
     return row.count;
+  }
+
+  async distinctUsers(orgId: string | null): Promise<string[]> {
+    const sql = orgId === null
+      ? 'SELECT DISTINCT user_id FROM agent_audit_log ORDER BY user_id'
+      : 'SELECT DISTINCT user_id FROM agent_audit_log WHERE org_id = @orgId ORDER BY user_id';
+    const rows = (orgId === null
+      ? this.db.prepare(sql).all()
+      : this.db.prepare(sql).all({ orgId })) as Array<{ user_id: string }>;
+    return rows.map((r) => r.user_id);
+  }
+
+  async distinctToolNames(orgId: string | null): Promise<string[]> {
+    const sql = orgId === null
+      ? 'SELECT DISTINCT tool_name FROM agent_audit_log ORDER BY tool_name'
+      : 'SELECT DISTINCT tool_name FROM agent_audit_log WHERE org_id = @orgId ORDER BY tool_name';
+    const rows = (orgId === null
+      ? this.db.prepare(sql).all()
+      : this.db.prepare(sql).all({ orgId })) as Array<{ tool_name: string }>;
+    return rows.map((r) => r.tool_name);
   }
 }

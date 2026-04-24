@@ -79,7 +79,8 @@
     "monitoring": "Monitoramento",
     "changeHistory": "Histórico de Alterações",
     "branding": "Branding",
-    "brandGuidelines": "Diretrizes de Marca"
+    "brandGuidelines": "Diretrizes de Marca",
+    "agentAudit": "Auditoria do agente"
   },
   "auth": {
     "signInTitle": "Entrar",
@@ -762,6 +763,28 @@
         "costHeader": "Cost / 1M tokens",
         "costCell": "${{input}} in / ${{output}} out"
       }
+    },
+    "audit": {
+      "title": "Registro de auditoria do agente",
+      "navLabel": "Auditoria do agente",
+      "colTimestamp": "Carimbo",
+      "colUser": "Usuário",
+      "colOrg": "Org",
+      "colTool": "Ferramenta",
+      "colOutcome": "Resultado",
+      "colLatency": "Latência",
+      "colArgs": "Argumentos",
+      "colDetail": "Detalhe",
+      "filterFrom": "De",
+      "filterTo": "Até",
+      "filterUser": "Usuário",
+      "filterTool": "Ferramenta",
+      "filterOutcome": "Resultado",
+      "applyFilters": "Aplicar filtros",
+      "reset": "Redefinir",
+      "downloadCsv": "Baixar CSV",
+      "noRows": "Nenhum registro corresponde.",
+      "totalRows": "linhas no total"
     }
   },
   "trends": {

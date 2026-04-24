@@ -79,7 +79,8 @@
     "monitoring": "Monitoraggio",
     "changeHistory": "Cronologia Modifiche",
     "branding": "Branding",
-    "brandGuidelines": "Linee Guida Brand"
+    "brandGuidelines": "Linee Guida Brand",
+    "agentAudit": "Audit dell'agente"
   },
   "auth": {
     "signInTitle": "Accedi",
@@ -762,6 +763,28 @@
         "costHeader": "Cost / 1M tokens",
         "costCell": "${{input}} in / ${{output}} out"
       }
+    },
+    "audit": {
+      "title": "Registro di audit dell'agente",
+      "navLabel": "Audit dell'agente",
+      "colTimestamp": "Marca temporale",
+      "colUser": "Utente",
+      "colOrg": "Org",
+      "colTool": "Strumento",
+      "colOutcome": "Esito",
+      "colLatency": "Latenza",
+      "colArgs": "Argomenti",
+      "colDetail": "Dettaglio",
+      "filterFrom": "Da",
+      "filterTo": "A",
+      "filterUser": "Utente",
+      "filterTool": "Strumento",
+      "filterOutcome": "Esito",
+      "applyFilters": "Applica filtri",
+      "reset": "Reimposta",
+      "downloadCsv": "Scarica CSV",
+      "noRows": "Nessuna riga corrisponde.",
+      "totalRows": "righe totali"
     }
   },
   "trends": {
