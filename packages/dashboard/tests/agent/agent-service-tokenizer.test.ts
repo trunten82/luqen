@@ -208,6 +208,10 @@ describe('AgentService — Phase 34-02 tokenizer threading', () => {
         modelId: 'gpt-4o',
         modelMaxTokens: 50,
       },
+      // Phase 35 Plan 03: isolate from the post-first-assistant title hook,
+      // which would otherwise fire an extra fire-and-forget LLM call. The
+      // hook's own behaviour is covered by agent-service-title-hook.test.ts.
+      titleGenerator: async () => { throw new Error('noop'); },
     });
 
     await svc.runTurn({

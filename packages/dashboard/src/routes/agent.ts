@@ -71,6 +71,22 @@ const MessageBodySchema = z.object({
   content: z.string().min(1).max(8000),
 });
 
+// Phase 35 Plan 03 — conversation history schemas.
+const RenameBodySchema = z.object({
+  title: z.string().trim().min(1).max(120),
+});
+
+const SearchQuerySchema = z.object({
+  q: z.string().trim().min(1).max(200),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+const ListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -452,7 +468,233 @@ export async function registerAgentRoutes(
       void reply.type('text/html');
       return reply.code(200).send(fragment);
     });
+
+    // ── Phase 35 Plan 03 — Conversation history HTTP surface ──────────
+    //
+    // All 5 handlers share the same auth-guard + org-resolve pattern used
+    // by /message above. Rate-limit + 429 onSend rewrite are inherited
+    // from this scope; no re-registration.
+    //
+    // Security notes:
+    //   - request.user === undefined → 401 (T-35-08)
+    //   - resolveAgentOrgId re-derives org from JWT; never trusts client orgId
+    //   - Repository WHERE clauses enforce user_id + org_id + is_deleted=0
+    //   - CSRF on POST /rename + POST /delete is enforced globally by the
+    //     server-level @fastify/csrf-protection preHandler (see server.ts
+    //     line 833). This route file does NOT re-register CSRF.
+
+    // GET /agent/conversations ─── paginated list (AHIST-01)
+    scope.get('/conversations', async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = request.user;
+      if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+      const orgId = resolveAgentOrgId(user, getPermissions(request));
+      if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+
+      const parsed = ListQuerySchema.safeParse(request.query ?? {});
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'invalid_query', issues: parsed.error.issues });
+      }
+      const limit = parsed.data.limit ?? 20;
+      const offset = parsed.data.offset ?? 0;
+
+      const items = await storage.conversations.listForUser(user.id, orgId, { limit, offset });
+      const counts = await fetchMessageCounts(storage, items.map((c) => c.id));
+      const withCounts = items.map((c) => ({
+        id: c.id,
+        title: c.title,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        lastMessageAt: c.lastMessageAt,
+        messageCount: counts.get(c.id) ?? 0,
+      }));
+      const nextOffset = items.length === limit ? offset + limit : null;
+      void reply.type('application/json');
+      return reply.code(200).send({ items: withCounts, nextOffset });
+    });
+
+    // GET /agent/conversations/search ─── debounced search (AHIST-02)
+    scope.get('/conversations/search', async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = request.user;
+      if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+      const orgId = resolveAgentOrgId(user, getPermissions(request));
+      if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+
+      const parsed = SearchQuerySchema.safeParse(request.query ?? {});
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'invalid_query', issues: parsed.error.issues });
+      }
+      const { q } = parsed.data;
+      const limit = parsed.data.limit ?? 20;
+      const offset = parsed.data.offset ?? 0;
+
+      const hits = await storage.conversations.searchForUser(user.id, orgId, {
+        query: q,
+        limit,
+        offset,
+      });
+      const counts = await fetchMessageCounts(storage, hits.map((h) => h.conversation.id));
+      const items = hits.map((h) => ({
+        id: h.conversation.id,
+        title: h.conversation.title,
+        snippet: h.snippet,
+        matchField: h.matchField,
+        lastMessageAt: h.conversation.lastMessageAt,
+        messageCount: counts.get(h.conversation.id) ?? 0,
+      }));
+      void reply.type('application/json');
+      return reply.code(200).send({ items });
+    });
+
+    // GET /agent/conversations/:id ─── full history for resume (AHIST-03)
+    scope.get('/conversations/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = request.user;
+      if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+      const orgId = resolveAgentOrgId(user, getPermissions(request));
+      if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+
+      const { id } = request.params as { id: string };
+      const conv = await storage.conversations.getConversation(id, orgId);
+      if (conv === null || conv.isDeleted) {
+        return reply.code(404).send({ error: 'conversation_not_found' });
+      }
+      const messages = await storage.conversations.getFullHistory(id);
+      void reply.type('application/json');
+      return reply.code(200).send({
+        conversation: {
+          id: conv.id,
+          title: conv.title,
+          createdAt: conv.createdAt,
+          updatedAt: conv.updatedAt,
+          lastMessageAt: conv.lastMessageAt,
+        },
+        messages: messages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          createdAt: m.createdAt,
+          status: m.status,
+        })),
+      });
+    });
+
+    // POST /agent/conversations/:id/rename ─── title update (D-02/D-03)
+    scope.post(
+      '/conversations/:id/rename',
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        const user = request.user;
+        if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+
+        const parsed = RenameBodySchema.safeParse(request.body);
+        if (!parsed.success) {
+          return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
+        }
+        const { id } = request.params as { id: string };
+
+        // Capture old title for audit meta before the update.
+        const before = await storage.conversations.getConversation(id, orgId);
+        if (before === null || before.isDeleted) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        const updated = await storage.conversations.renameConversation(
+          id,
+          orgId,
+          parsed.data.title,
+        );
+        if (updated === null) {
+          // Race: soft-deleted between read and write.
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        await storage.agentAudit.append({
+          userId: user.id,
+          orgId,
+          conversationId: id,
+          toolName: 'conversation_renamed',
+          argsJson: JSON.stringify({
+            oldTitle: before.title,
+            newTitle: parsed.data.title,
+          }),
+          outcome: 'success',
+          latencyMs: 0,
+        });
+        void reply.type('application/json');
+        return reply.code(200).send({
+          conversation: {
+            id: updated.id,
+            title: updated.title,
+            createdAt: updated.createdAt,
+            updatedAt: updated.updatedAt,
+            lastMessageAt: updated.lastMessageAt,
+          },
+        });
+      },
+    );
+
+    // POST /agent/conversations/:id/delete ─── soft-delete + audit (AHIST-04)
+    scope.post(
+      '/conversations/:id/delete',
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        const user = request.user;
+        if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+
+        const { id } = request.params as { id: string };
+        const deleted = await storage.conversations.softDeleteConversation(id, orgId);
+        if (!deleted) {
+          // Idempotent: second call + wrong org + unknown id all map to 404.
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        await storage.agentAudit.append({
+          userId: user.id,
+          orgId,
+          conversationId: id,
+          toolName: 'conversation_soft_deleted',
+          argsJson: '{}',
+          outcome: 'success',
+          latencyMs: 0,
+        });
+        void reply.type('application/json');
+        return reply.code(200).send({ success: true });
+      },
+    );
   }, { prefix: '/agent' });
+}
+
+/**
+ * Batch message-count lookup for a list of conversation IDs. Returns a Map
+ * keyed by conversation_id. Uses a single IN-clause query so the route does
+ * not issue N+1 queries for the list endpoint.
+ *
+ * Falls back to an empty Map when getRawDatabase is unavailable (non-SQLite
+ * adapters) — callers treat missing entries as count=0.
+ */
+async function fetchMessageCounts(
+  storage: StorageAdapter,
+  conversationIds: readonly string[],
+): Promise<Map<string, number>> {
+  if (conversationIds.length === 0) return new Map();
+  const raw = (storage as unknown as {
+    getRawDatabase?: () => {
+      prepare(sql: string): {
+        all(...args: unknown[]): ReadonlyArray<{ conversation_id: string; cnt: number }>;
+      };
+    };
+  }).getRawDatabase?.();
+  if (raw === undefined) return new Map();
+  const placeholders = conversationIds.map(() => '?').join(', ');
+  const rows = raw
+    .prepare(
+      `SELECT conversation_id, COUNT(*) AS cnt
+         FROM agent_messages
+         WHERE conversation_id IN (${placeholders})
+         GROUP BY conversation_id`,
+    )
+    .all(...conversationIds);
+  const out = new Map<string, number>();
+  for (const r of rows) out.set(r.conversation_id, Number(r.cnt));
+  return out;
 }
 
 // ---------------------------------------------------------------------------
