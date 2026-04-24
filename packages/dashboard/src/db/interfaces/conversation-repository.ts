@@ -38,6 +38,25 @@ export interface Conversation {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly lastMessageAt: string | null;
+  readonly isDeleted: boolean;
+  readonly deletedAt: string | null;
+}
+
+/**
+ * Phase 35 Plan 01 (AHIST-02): search conversations by title + message content.
+ * Always scoped to `user_id = current_user AND org_id = current_org AND is_deleted = 0`.
+ * The `query` is bound via prepared statement; `%`, `_`, `\` are escaped before binding.
+ */
+export interface SearchConversationsOptions {
+  readonly query: string;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
+export interface ConversationSearchHit {
+  readonly conversation: Conversation;
+  readonly snippet: string;
+  readonly matchField: 'title' | 'content';
 }
 
 export interface Message {
@@ -132,4 +151,33 @@ export interface ConversationRepository {
     conversationId: string,
     beforeCreatedAt: string,
   ): Promise<void>;
+
+  /**
+   * Phase 35 Plan 01 (AHIST-02): Search user's non-deleted conversations by
+   * title or message content. Case-insensitive. Always applies
+   * `user_id = @userId AND org_id = @orgId AND is_deleted = 0`.
+   */
+  searchForUser(
+    userId: string,
+    orgId: string,
+    options: SearchConversationsOptions,
+  ): Promise<ConversationSearchHit[]>;
+
+  /**
+   * Phase 35 Plan 01 (AHIST-03): Update conversation title. Org-guarded:
+   * mismatched orgId returns null and does not write. Soft-deleted
+   * conversations cannot be renamed.
+   */
+  renameConversation(
+    id: string,
+    orgId: string,
+    title: string,
+  ): Promise<Conversation | null>;
+
+  /**
+   * Phase 35 Plan 01 (AHIST-04): Soft-delete a conversation. Sets
+   * is_deleted=1, deleted_at=now(). Returns true on success, false if
+   * already deleted, not found, or wrong org.
+   */
+  softDeleteConversation(id: string, orgId: string): Promise<boolean>;
 }
