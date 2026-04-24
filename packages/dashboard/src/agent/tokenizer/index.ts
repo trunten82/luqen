@@ -9,9 +9,12 @@
 export {
   countMessageTokens,
   resolve,
+  prewarmTokenizer,
   PER_MESSAGE_OVERHEAD_TOKENS,
   _resetWarnedForTest,
 } from './registry.js';
+
+export { configureOllamaTokenizer } from './ollama-tokenizer.js';
 
 export type {
   TokenizerMessage,
@@ -19,11 +22,3 @@ export type {
   TokenizerRegistry,
   TokenizerRegistryEntry,
 } from './types.js';
-
-/**
- * Pre-warm an encoder for a given model. Task 1 stub — real warming lands in
- * Task 3 once the three backends exist.
- */
-export async function prewarmTokenizer(_model: string): Promise<void> {
-  return Promise.resolve();
-}
