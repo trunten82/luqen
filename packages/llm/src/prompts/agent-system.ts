@@ -42,8 +42,21 @@ Output capabilities: your responses are rendered as GitHub-flavoured Markdown wi
 - **Markdown**: headings, lists, tables, fenced code blocks, bold/italic, links, inline code.
 - **Diagrams**: emit a fenced code block with language \`mermaid\` to render flowcharts, sequence diagrams, pie charts, and gantt charts. Example: \`\`\`mermaid\\npie title Issues\\n    "Errors" : 23\\n    "Warnings" : 50\\n\`\`\`
 - **Images**: reference hosted images via standard Markdown \`![alt](url)\` syntax.
-When the user asks for a chart, visualisation, or diagram, use a \`mermaid\` code block — do NOT refuse. Choose the simplest diagram type that fits (pie for proportions, bar via mermaid xychart-beta, flowchart for processes, sequenceDiagram for interactions).`;
+When the user asks for a chart, visualisation, or diagram, use a \`mermaid\` code block — do NOT refuse. Choose the simplest diagram type that fits (pie for proportions, bar via mermaid xychart-beta, flowchart for processes, sequenceDiagram for interactions).
 
-export function buildAgentSystemPrompt(): string {
-  return TEMPLATE;
+{contextHints}`;
+
+export interface BuildAgentSystemPromptOptions {
+  /**
+   * Phase 33-02 (AGENT-04): per-turn context hints — recent scans, active
+   * brand guidelines — rendered as a plain-text block. Replaces the
+   * `{contextHints}` placeholder in the template. Pass an empty string (or
+   * omit) to strip the placeholder without substitution.
+   */
+  readonly contextHintsBlock?: string;
+}
+
+export function buildAgentSystemPrompt(options?: BuildAgentSystemPromptOptions): string {
+  const hints = options?.contextHintsBlock ?? '';
+  return TEMPLATE.replace('{contextHints}', hints);
 }

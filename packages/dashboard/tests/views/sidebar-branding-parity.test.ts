@@ -15,6 +15,16 @@ hbs.registerHelper('startsWith', function (path: unknown, prefix: unknown) {
 hbs.registerHelper('lookup', function (obj: Record<string, unknown>, key: string) {
   return obj?.[key];
 });
+// `or` helper used by the sidebar audit-log entry (Phase 33.1) — mirrors the
+// production registration in server.ts. Accepts any number of args plus the
+// trailing Handlebars options object; returns the first truthy value.
+hbs.registerHelper('or', function (...args: unknown[]) {
+  // Drop the trailing Handlebars options object.
+  for (let i = 0; i < args.length - 1; i++) {
+    if (args[i]) return args[i];
+  }
+  return false;
+});
 // Simple {{t "key"}} stub — returns the key itself so assertions can match.
 hbs.registerHelper('t', function (key: string) { return key; });
 

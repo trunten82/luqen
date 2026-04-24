@@ -79,7 +79,8 @@
     "monitoring": "Überwachung",
     "changeHistory": "Änderungsverlauf",
     "branding": "Branding",
-    "brandGuidelines": "Markenrichtlinien"
+    "brandGuidelines": "Markenrichtlinien",
+    "agentAudit": "Agent-Audit"
   },
   "auth": {
     "signInTitle": "Anmelden",
@@ -762,6 +763,28 @@
         "costHeader": "Cost / 1M tokens",
         "costCell": "${{input}} in / ${{output}} out"
       }
+    },
+    "audit": {
+      "title": "Agent-Audit-Log",
+      "navLabel": "Agent-Audit",
+      "colTimestamp": "Zeitstempel",
+      "colUser": "Benutzer",
+      "colOrg": "Organisation",
+      "colTool": "Tool",
+      "colOutcome": "Ergebnis",
+      "colLatency": "Latenz",
+      "colArgs": "Argumente",
+      "colDetail": "Details",
+      "filterFrom": "Von",
+      "filterTo": "Bis",
+      "filterUser": "Benutzer",
+      "filterTool": "Tool",
+      "filterOutcome": "Ergebnis",
+      "applyFilters": "Filter anwenden",
+      "reset": "Zurücksetzen",
+      "downloadCsv": "CSV herunterladen",
+      "noRows": "Keine Audit-Einträge entsprechen diesen Filtern.",
+      "totalRows": "Einträge insgesamt"
     }
   },
   "trends": {

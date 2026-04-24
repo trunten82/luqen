@@ -43,6 +43,13 @@ export interface AgentConversationInput {
   readonly messages: ReadonlyArray<ChatMessage>;
   readonly tools: ReadonlyArray<ToolDef>;
   readonly agentDisplayName: string;
+  /**
+   * Phase 33-02 (AGENT-04): per-turn context hints — recent scans, active
+   * brand guidelines — rendered as a plain-text block by the caller and
+   * spliced into the system prompt. Optional; empty string suppresses the
+   * `{contextHints}` placeholder.
+   */
+  readonly contextHintsBlock?: string;
   readonly signal?: AbortSignal;
 }
 
@@ -78,7 +85,10 @@ export async function* executeAgentConversation(
     'agent-system' as unknown as Parameters<typeof db.getPromptOverride>[0],
     input.orgId,
   );
-  const rawTemplate = override != null ? override.template : buildAgentSystemPrompt();
+  const contextHintsBlock = input.contextHintsBlock ?? '';
+  const rawTemplate = override != null
+    ? override.template.replace('{contextHints}', contextHintsBlock)
+    : buildAgentSystemPrompt({ contextHintsBlock });
   const safeDisplayName = sanitiseDisplayName(input.agentDisplayName);
   const systemContent = interpolateTemplate(rawTemplate, {
     agentDisplayName: safeDisplayName,

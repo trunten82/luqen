@@ -86,7 +86,8 @@
     "myProfile": "My Profile",
     "branding": "Branding",
     "brandGuidelines": "Brand Guidelines",
-    "serviceConnections": "Service Connections"
+    "serviceConnections": "Service Connections",
+    "agentAudit": "Agent audit"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -1039,6 +1040,28 @@
         "costHeader": "Cost / 1M tokens",
         "costCell": "${{input}} in / ${{output}} out"
       }
+    },
+    "audit": {
+      "title": "Agent Audit Log",
+      "navLabel": "Agent audit",
+      "colTimestamp": "Timestamp",
+      "colUser": "User",
+      "colOrg": "Org",
+      "colTool": "Tool",
+      "colOutcome": "Outcome",
+      "colLatency": "Latency",
+      "colArgs": "Args",
+      "colDetail": "Detail",
+      "filterFrom": "From",
+      "filterTo": "To",
+      "filterUser": "User",
+      "filterTool": "Tool",
+      "filterOutcome": "Outcome",
+      "applyFilters": "Apply filters",
+      "reset": "Reset",
+      "downloadCsv": "Download CSV",
+      "noRows": "No audit rows match these filters.",
+      "totalRows": "rows total"
     }
   },
   "trends": {

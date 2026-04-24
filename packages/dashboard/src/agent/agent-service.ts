@@ -36,6 +36,13 @@ import type { StorageAdapter } from '../db/index.js';
 import type { Message } from '../db/interfaces/conversation-repository.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
 import type { SseFrame } from './sse-frames.js';
+import { collectContextHints, formatContextHints } from './context-hints.js';
+import {
+  estimateTokens,
+  shouldCompact,
+  MIN_KEEP_TURNS,
+  DEFAULT_MODEL_MAX_TOKENS,
+} from './token-budget.js';
 import type {
   ToolDispatcher,
   ToolCallInput,
@@ -80,6 +87,12 @@ export interface AgentStreamInput {
   readonly orgId: string;
   readonly userId: string;
   readonly agentDisplayName: string;
+  /**
+   * Phase 33-02 (AGENT-04): per-turn context hints block — recent scans +
+   * active brand guidelines rendered as plain-text. Empty string suppresses
+   * the `{contextHints}` placeholder in the system prompt.
+   */
+  readonly contextHintsBlock?: string;
 }
 
 export interface AgentStreamOptions {
@@ -135,7 +148,13 @@ export interface AgentServiceOptions {
     userId: string,
     orgId: string,
   ) => Promise<ReadonlySet<string>>;
-  readonly config: { readonly agentDisplayNameDefault: string };
+  readonly config: {
+    readonly agentDisplayNameDefault: string;
+    /** Phase 33-03 — opt-out flag. Default: true. */
+    readonly agent_compaction?: boolean;
+    /** Phase 33-03 — override the assumed per-provider token max. Default: 8192. */
+    readonly modelMaxTokens?: number;
+  };
   /**
    * Optional: override where to read the agent display name from. Defaults
    * to `storage.organizations.getOrg(orgId).agentDisplayName`. Tests can
@@ -207,6 +226,20 @@ export class AgentService {
 
     const agentDisplayName = await this.resolveDisplayName(orgId);
 
+    // Plan 33-02 (AGENT-04): collect context hints once per runTurn so every
+    // iteration shares the same snapshot. orgId may be a synthetic admin
+    // namespace (__admin__:<userId>) — unwrap to '' (cross-org) for the
+    // hints read so dashboard admins get meaningful data, not zero rows
+    // under their synthetic org.
+    const hintsOrgId = orgId.startsWith('__admin__:') ? '' : orgId;
+    let contextHintsBlock = '';
+    try {
+      const hints = await collectContextHints(this.storage, { userId, orgId: hintsOrgId });
+      contextHintsBlock = formatContextHints(hints);
+    } catch {
+      contextHintsBlock = '';
+    }
+
     try {
       for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
         // (1) Re-resolve permissions every iteration (D-07, Guardrail 1).
@@ -216,12 +249,29 @@ export class AgentService {
         // (2) Fresh rolling-window read — the previous iteration's tool row
         //     is already visible because appendMessage flipped `in_window=1`
         //     inside the same transaction.
-        const window = await this.storage.conversations.getWindow(conversationId);
-        const messages = windowToChatMessages(window);
+        let window = await this.storage.conversations.getWindow(conversationId);
+        let messages = windowToChatMessages(window);
+
+        // Phase 33-03: compact if the turn would exceed the token budget.
+        const estimate = estimateTokens([
+          { role: 'system', content: contextHintsBlock },
+          ...messages,
+        ]);
+        if (this.config.agent_compaction !== false && shouldCompact(estimate, this.config.modelMaxTokens)) {
+          await this.compactOldestTurns({
+            conversationId,
+            orgId,
+            userId,
+            agentDisplayName,
+            signal,
+          });
+          window = await this.storage.conversations.getWindow(conversationId);
+          messages = windowToChatMessages(window);
+        }
 
         // (3) Stream the LLM turn; onFrame forwards tokens straight through.
         const turn = await this.llm.streamAgentConversation(
-          { messages, tools: manifest, orgId, userId, agentDisplayName },
+          { messages, tools: manifest, orgId, userId, agentDisplayName, contextHintsBlock },
           {
             signal,
             onFrame: (f) => {
@@ -337,6 +387,101 @@ export class AgentService {
   // -----------------------------------------------------------------------
   // Helpers
   // -----------------------------------------------------------------------
+
+  /**
+   * Phase 33-03 — when the prompt budget is exceeded, summarise every row
+   * older than the last MIN_KEEP_TURNS user-anchored turns into a single
+   * [summary] assistant row, then flip those older rows out of the window.
+   *
+   * The summarisation call reuses the agent-conversation capability itself
+   * with an empty tool manifest — the same model that drives the turn is
+   * asked to produce a terse summary via a synthetic user message. No new
+   * LLM capability registration required.
+   */
+  private async compactOldestTurns(args: {
+    readonly conversationId: string;
+    readonly orgId: string;
+    readonly userId: string;
+    readonly agentDisplayName: string;
+    readonly signal: AbortSignal;
+  }): Promise<void> {
+    const { conversationId, orgId, userId, agentDisplayName, signal } = args;
+
+    const window = await this.storage.conversations.getWindow(conversationId);
+    // Identify user-anchored turn boundaries.
+    const userIndices: number[] = [];
+    window.forEach((m, i) => {
+      if (m.role === 'user') userIndices.push(i);
+    });
+    // Need MIN_KEEP_TURNS + 1 user messages to have something older to summarise.
+    if (userIndices.length <= MIN_KEEP_TURNS) return;
+
+    const tailStartIdx = userIndices[userIndices.length - MIN_KEEP_TURNS];
+    if (tailStartIdx === undefined || tailStartIdx === 0) return;
+
+    const olderRows = window.slice(0, tailStartIdx);
+    const boundaryCreatedAt = window[tailStartIdx].createdAt;
+
+    // Build the summarisation prompt as a window for the model.
+    const olderMessages = windowToChatMessages(olderRows);
+    const summariseRequest: AgentChatMessage = {
+      role: 'user' as const,
+      content:
+        'Summarise the conversation above in at most 8 bullet points. Capture: decisions made, facts learned, open questions, and any pending tool outcomes. Begin with the word "[summary]".',
+    };
+
+    let summaryText = '';
+    try {
+      const turn = await this.llm.streamAgentConversation(
+        {
+          messages: [...olderMessages, summariseRequest],
+          tools: [],
+          orgId,
+          userId,
+          agentDisplayName,
+          contextHintsBlock: '',
+        },
+        {
+          signal,
+          // Swallow the summarisation tokens — we only persist the final text,
+          // not stream to the client. The caller's emit is unused here.
+          onFrame: () => { /* noop */ },
+        },
+      );
+      summaryText = turn.text;
+    } catch {
+      // If summarisation fails, abort compaction — do NOT drop rows out of
+      // the window without a replacement summary (that would lose context).
+      return;
+    }
+
+    if (summaryText.length === 0) return;
+    const prefixed = summaryText.startsWith('[summary]')
+      ? summaryText
+      : `[summary] ${summaryText}`;
+
+    // Persist the summary FIRST so the new row's created_at > boundary.
+    await this.storage.conversations.appendMessage({
+      conversationId,
+      role: 'assistant',
+      content: prefixed,
+      status: 'sent',
+    });
+
+    // Flip the older rows out of the window.
+    await this.storage.conversations.markOutOfWindowBefore(conversationId, boundaryCreatedAt);
+
+    // Audit trail.
+    await this.storage.agentAudit.append({
+      userId,
+      orgId,
+      conversationId,
+      toolName: '__compaction__',
+      argsJson: JSON.stringify({ summarisedRows: olderRows.length, boundaryCreatedAt }),
+      outcome: 'success',
+      latencyMs: 0,
+    });
+  }
 
   private async dispatchAndPersist(args: {
     readonly call: ToolCallInput;

@@ -121,4 +121,15 @@ export interface ConversationRepository {
     conversationId: string,
     options?: ListConversationsOptions,
   ): Promise<Message[]>;
+
+  /**
+   * Phase 33-03: flip every message row older than `beforeCreatedAt` to
+   * `in_window = 0` EXCEPT rows whose status is 'pending_confirmation' or
+   * 'streaming' (those are pinned in-window by the same rule enforced in
+   * appendMessage's rolling-window maintenance).
+   */
+  markOutOfWindowBefore(
+    conversationId: string,
+    beforeCreatedAt: string,
+  ): Promise<void>;
 }

@@ -237,6 +237,21 @@ export class SqliteConversationRepository implements ConversationRepository {
     return rows.map((r) => this.rowToMessage(r));
   }
 
+  async markOutOfWindowBefore(
+    conversationId: string,
+    beforeCreatedAt: string,
+  ): Promise<void> {
+    this.db
+      .prepare(
+        `UPDATE agent_messages
+         SET in_window = 0
+         WHERE conversation_id = @conversationId
+           AND created_at < @boundary
+           AND status NOT IN ('pending_confirmation', 'streaming')`,
+      )
+      .run({ conversationId, boundary: beforeCreatedAt });
+  }
+
   // ── Private mappers ─────────────────────────────────────────────────
 
   private rowToConversation(row: ConversationRow): Conversation {

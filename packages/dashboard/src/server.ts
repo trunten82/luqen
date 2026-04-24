@@ -74,6 +74,7 @@ import { createLLMOrgClient } from './llm-client.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { changeHistoryRoutes } from './routes/admin/change-history.js';
+import { agentAuditRoutes } from './routes/admin/agent-audit.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { brandingGuidelineRoutes } from './routes/admin/branding-guidelines.js';
 import { llmAdminRoutes } from './routes/admin/llm.js';
@@ -867,6 +868,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await regulationRoutes(server, config.complianceUrl);
   await proposalRoutes(server, config.complianceUrl, storage);
   await changeHistoryRoutes(server, config.complianceUrl);
+  await agentAuditRoutes(server, storage);
   await sourceRoutes(server, config.complianceUrl, pluginManager, getLLMClient);
   await webhookRoutes(server, config.complianceUrl);
   await userRoutes(server, config.complianceUrl);

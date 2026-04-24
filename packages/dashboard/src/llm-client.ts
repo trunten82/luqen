@@ -487,6 +487,7 @@ export class LLMClient {
           orgId: input.orgId,
           userId: input.userId,
           agentDisplayName: input.agentDisplayName,
+          contextHintsBlock: input.contextHintsBlock ?? '',
         }),
         signal: opts.signal,
       },

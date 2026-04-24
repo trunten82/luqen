@@ -405,6 +405,9 @@ export async function registerCapabilityExecRoutes(
     const agentDisplayName = typeof body['agentDisplayName'] === 'string'
       ? body['agentDisplayName']
       : 'Luqen Assistant';
+    const contextHintsBlock = typeof body['contextHintsBlock'] === 'string'
+      ? body['contextHintsBlock']
+      : '';
 
     if (orgId.length === 0) {
       await reply.status(400).send({ error: 'orgId is required', statusCode: 400 });
@@ -438,6 +441,7 @@ export async function registerCapabilityExecRoutes(
           messages: messages as Parameters<typeof executeAgentConversation>[2]['messages'],
           tools: tools as Parameters<typeof executeAgentConversation>[2]['tools'],
           agentDisplayName,
+          contextHintsBlock,
         },
       );
       for await (const frame of iter) {
