@@ -73,6 +73,48 @@
     } catch (_e) { /* ignore */ }
   }
 
+  var mermaidInitialised = false;
+  function ensureMermaidInit() {
+    if (mermaidInitialised) return;
+    if (!window.mermaid || typeof window.mermaid.initialize !== 'function') return;
+    try {
+      window.mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+      mermaidInitialised = true;
+    } catch (_e) { /* leave flag false — retry on next render */ }
+  }
+
+  function renderMermaidBlocks(root) {
+    if (!window.mermaid || typeof window.mermaid.render !== 'function') return;
+    ensureMermaidInit();
+    var blocks = root.querySelectorAll('code.language-mermaid, pre > code.language-mermaid');
+    for (var i = 0; i < blocks.length; i++) {
+      var code = blocks[i];
+      var pre = code.parentNode && code.parentNode.tagName === 'PRE' ? code.parentNode : null;
+      var host = pre || code;
+      var source = code.textContent || '';
+      var container = document.createElement('div');
+      container.className = 'agent-mermaid';
+      host.parentNode.replaceChild(container, host);
+      var id = 'mermaid-' + Date.now() + '-' + i;
+      (function (c, src, svgId) {
+        window.mermaid.render(svgId, src).then(function (out) {
+          while (c.firstChild) c.removeChild(c.firstChild);
+          // Import mermaid's own-renderer SVG via DOMParser — keeps the
+          // no-innerHTML-on-live-node invariant.
+          var doc = new DOMParser().parseFromString(out.svg, 'image/svg+xml');
+          var svg = doc.documentElement;
+          if (svg && svg.tagName && svg.tagName.toLowerCase() === 'svg') {
+            c.appendChild(document.importNode(svg, true));
+          } else {
+            c.textContent = src;
+          }
+        }).catch(function (err) {
+          c.textContent = 'Mermaid render error: ' + (err && err.message ? err.message : 'unknown');
+        });
+      })(container, source, id);
+    }
+  }
+
   /**
    * Primary markdown renderer — uses vendored `marked` for full CommonMark
    * + GFM coverage and DOMPurify to strip any disallowed tags / attrs. Falls
@@ -95,18 +137,11 @@
       var render = typeof marked.parse === 'function' ? marked.parse : marked;
       var rawHtml = render(text);
       var cleanHtml = DOMPurify.sanitize(rawHtml, {
-        USE_PROFILES: { html: true },
-        ALLOWED_TAGS: [
-          'p', 'br', 'strong', 'em', 'code', 'pre', 'blockquote',
-          'ul', 'ol', 'li',
-          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-          'a', 'img',
-          'table', 'thead', 'tbody', 'tr', 'th', 'td',
-          'hr', 'del', 'ins', 'sup', 'sub',
-          'span', 'div',
-        ],
-        ALLOWED_ATTR: ['href', 'title', 'alt', 'src', 'target', 'rel', 'class', 'aria-label'],
-        ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^:]*$)/i,
+        USE_PROFILES: { html: true, svg: true, svgFilters: true },
+        ADD_TAGS: ['mermaid'],
+        FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form'],
+        FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+        ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|data:image\/(?:png|jpeg|gif|webp|svg\+xml)):|[^:]*$)/i,
       });
       // Parse via DOMParser so we don't use innerHTML with untrusted input
       // directly on a live node — even though sanitize already cleaned it,
@@ -125,6 +160,8 @@
       for (var ai = 0; ai < anchors.length; ai++) {
         anchors[ai].setAttribute('rel', 'noopener noreferrer');
       }
+      // Mermaid diagrams: render any <code class="language-mermaid"> block.
+      renderMermaidBlocks(target);
       return true;
     } catch (_e) {
       return false;

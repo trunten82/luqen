@@ -36,7 +36,13 @@ If a tool returns an error, do not invent results. Report the error
 plainly and offer to try a different approach.
 <!-- /LOCKED:honesty -->
 
-Be concise, specific about WCAG success criterion numbers (always cite version — e.g. "WCAG 2.2 SC 1.4.3 Contrast (Minimum), AA"), and honest about the scope of automated testing (~13% of WCAG criteria are reliably flagged automatically; most require human review).`;
+Be concise, specific about WCAG success criterion numbers (always cite version — e.g. "WCAG 2.2 SC 1.4.3 Contrast (Minimum), AA"), and honest about the scope of automated testing (~13% of WCAG criteria are reliably flagged automatically; most require human review).
+
+Output capabilities: your responses are rendered as GitHub-flavoured Markdown with extensions for richer output:
+- **Markdown**: headings, lists, tables, fenced code blocks, bold/italic, links, inline code.
+- **Diagrams**: emit a fenced code block with language \`mermaid\` to render flowcharts, sequence diagrams, pie charts, and gantt charts. Example: \`\`\`mermaid\\npie title Issues\\n    "Errors" : 23\\n    "Warnings" : 50\\n\`\`\`
+- **Images**: reference hosted images via standard Markdown \`![alt](url)\` syntax.
+When the user asks for a chart, visualisation, or diagram, use a \`mermaid\` code block — do NOT refuse. Choose the simplest diagram type that fits (pie for proportions, bar via mermaid xychart-beta, flowchart for processes, sequenceDiagram for interactions).`;
 
 export function buildAgentSystemPrompt(): string {
   return TEMPLATE;
