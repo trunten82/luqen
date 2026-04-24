@@ -271,9 +271,19 @@ export class AgentService {
           return;
         }
 
-        // (5) Non-destructive batch — dispatch each tool, persist the
-        //     result, write audit. Loop continues on next iteration so the
-        //     new tool messages feed into the next LLM call.
+        // (5) Non-destructive batch — persist ONE assistant(tool_calls) row
+        //     for the whole batch, then dispatch each tool and persist its
+        //     result row. windowToChatMessages preserves the
+        //     user → assistant(tool_calls) → tool (per call) order that
+        //     Ollama / OpenAI / Anthropic all require for conversation
+        //     history. See Plan 32.1-08.
+        await this.storage.conversations.appendMessage({
+          conversationId,
+          role: 'assistant',
+          content: turn.text ?? '',
+          status: 'sent',
+          toolCallJson: JSON.stringify(turn.toolCalls),
+        });
         for (const call of turn.toolCalls) {
           await this.dispatchAndPersist({
             call,
@@ -436,14 +446,17 @@ function buildManifest(
 
 function windowToChatMessages(window: readonly Message[]): AgentChatMessage[] {
   const out: AgentChatMessage[] = [];
+  // Track whether the last emitted assistant row already carried tool_calls
+  // for the batch — if so, we skip the per-tool synthetic shim to avoid
+  // duplicating the assistant preamble (post-32.1-08 conversations).
+  let lastAssistantHasToolCalls = false;
+
   for (const m of window) {
     const role = m.role;
     if (role === 'tool') {
-      // Providers (Ollama, OpenAI, Anthropic) require a preceding assistant
-      // message with matching tool_calls before a tool-result message. Each
-      // persisted tool row carries its originating call in toolCallJson;
-      // synthesise the assistant tool_calls shim here.
-      if (m.toolCallJson != null && m.toolCallJson.length > 0) {
+      if (!lastAssistantHasToolCalls && m.toolCallJson != null && m.toolCallJson.length > 0) {
+        // Legacy pre-32.1-08 shim — only synthesise when the preceding
+        // assistant row did not already carry tool_calls.
         try {
           const call = JSON.parse(m.toolCallJson) as { id: string; name: string; args: Record<string, unknown> };
           out.push({
@@ -458,9 +471,29 @@ function windowToChatMessages(window: readonly Message[]): AgentChatMessage[] {
       continue;
     }
     if (role === 'assistant') {
+      lastAssistantHasToolCalls = false;
+      // Plan 32.1-08: post-this-change, assistant rows that preceded a tool
+      // batch carry toolCallJson with the full batch array — re-emit them
+      // with the toolCalls field so the provider sees a proper
+      // assistant(tool_calls) → tool pair.
+      if (m.toolCallJson != null && m.toolCallJson.length > 0) {
+        try {
+          const calls = JSON.parse(m.toolCallJson) as Array<{ id: string; name: string; args: Record<string, unknown> }>;
+          if (Array.isArray(calls) && calls.length > 0) {
+            out.push({
+              role: 'assistant' as const,
+              content: m.content ?? '',
+              toolCalls: calls.map((c) => ({ id: c.id, name: c.name, args: c.args })),
+            });
+            lastAssistantHasToolCalls = true;
+            continue;
+          }
+        } catch { /* fall through to plain assistant */ }
+      }
       out.push({ role: 'assistant' as const, content: m.content ?? '' });
       continue;
     }
+    lastAssistantHasToolCalls = false;
     out.push({ role: 'user' as const, content: m.content ?? '' });
   }
   return out;
