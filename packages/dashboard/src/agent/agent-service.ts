@@ -177,7 +177,11 @@ export class AgentService {
     userId: string,
     orgId: string,
   ) => Promise<ReadonlySet<string>>;
-  private readonly config: { readonly agentDisplayNameDefault: string };
+  private readonly config: {
+    readonly agentDisplayNameDefault: string;
+    readonly agent_compaction?: boolean;
+    readonly modelMaxTokens?: number;
+  };
   private readonly resolveDisplayName: (orgId: string) => Promise<string>;
 
   constructor(options: AgentServiceOptions) {
