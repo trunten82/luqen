@@ -29,6 +29,19 @@
             aria-label="{{t "agent.newChat.label"}}"
             title="{{t "agent.newChat.label"}}"
             data-action="newChat">{{t "agent.newChat.button"}}</button>
+    <button type="button" class="agent-drawer__history-open btn btn--ghost btn--sm"
+            aria-label="{{t "agent.history.openAria"}}"
+            title="{{t "agent.history.open"}}"
+            aria-expanded="false"
+            aria-controls="agent-history-panel"
+            data-action="openAgentHistory">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/>
+        <path d="M3 3v5h5"/>
+        <path d="M12 7v5l3 2"/>
+      </svg>
+      <span class="sr-only">{{t "agent.history.open"}}</span>
+    </button>
     <button type="button" class="agent-drawer__close"
             aria-label="{{t "agent.drawer.close"}}"
             data-action="closeAgentDrawer">&times;</button>
@@ -43,6 +56,8 @@
        tabindex="0">
     {{> agent-messages messages=messages agentDisplayName=agentDisplayName locale=locale}}
   </div>
+
+  {{> agent-history-panel items=historyItems agentDisplayName=agentDisplayName}}
 
   <div class="agent-drawer__stream-status" id="agent-stream-status" role="status" aria-live="polite" hidden>
     <span class="agent-drawer__stream-indicator" aria-hidden="true"></span>
