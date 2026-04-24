@@ -1411,4 +1411,15 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission)
 ALTER TABLE organizations ADD COLUMN agent_display_name TEXT;
     `,
   },
+  {
+    id: '056',
+    name: 'agent-conversations-soft-delete',
+    sql: `
+ALTER TABLE agent_conversations ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE agent_conversations ADD COLUMN deleted_at TEXT;
+CREATE INDEX IF NOT EXISTS idx_agent_conversations_user_org_active_last
+  ON agent_conversations(user_id, org_id, last_message_at DESC)
+  WHERE is_deleted = 0;
+    `,
+  },
 ];
