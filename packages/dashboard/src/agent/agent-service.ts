@@ -43,6 +43,7 @@ import {
   MIN_KEEP_TURNS,
   DEFAULT_MODEL_MAX_TOKENS,
 } from './token-budget.js';
+import { prewarmTokenizer } from './tokenizer/index.js';
 import type {
   ToolDispatcher,
   ToolCallInput,
@@ -154,6 +155,10 @@ export interface AgentServiceOptions {
     readonly agent_compaction?: boolean;
     /** Phase 33-03 — override the assumed per-provider token max. Default: 8192. */
     readonly modelMaxTokens?: number;
+    /** Phase 34 — model identifier for precise tokenization. Server-config only;
+     *  NEVER populate from request-scoped input (would enable Ollama SSRF-via-warm
+     *  and prototype-pollution in registry lookups). */
+    readonly modelId?: string;
   };
   /**
    * Optional: override where to read the agent display name from. Defaults
@@ -181,6 +186,10 @@ export class AgentService {
     readonly agentDisplayNameDefault: string;
     readonly agent_compaction?: boolean;
     readonly modelMaxTokens?: number;
+    /** Phase 34 — model identifier for precise tokenization. Server-config only;
+     *  NEVER populate from request-scoped input (would enable Ollama SSRF-via-warm
+     *  and prototype-pollution in registry lookups). */
+    readonly modelId?: string;
   };
   private readonly resolveDisplayName: (orgId: string) => Promise<string>;
 
@@ -192,6 +201,13 @@ export class AgentService {
     this.dispatcher = options.dispatcher;
     this.resolvePermissions = options.resolvePermissions;
     this.config = options.config;
+    // Phase 34-02 — fire-and-forget tokenizer warm-up (D-05). `void` marks
+    // the discarded promise explicitly for no-floating-promises lints.
+    // Errors inside prewarm are swallowed by the tokenizer module so this
+    // cannot throw at construction time.
+    if (this.config.modelId) {
+      void prewarmTokenizer(this.config.modelId);
+    }
     const injected = options.resolveAgentDisplayName;
     this.resolveDisplayName = async (orgId: string): Promise<string> => {
       if (injected !== undefined) {
@@ -256,11 +272,15 @@ export class AgentService {
         let window = await this.storage.conversations.getWindow(conversationId);
         let messages = windowToChatMessages(window);
 
-        // Phase 33-03: compact if the turn would exceed the token budget.
-        const estimate = estimateTokens([
-          { role: 'system', content: contextHintsBlock },
-          ...messages,
-        ]);
+        // Phase 33-03 / 34-02: compact if the turn would exceed the token
+        // budget. modelId (when configured) drives the precise per-provider
+        // tokenizer; system message stays in the input array because
+        // countMessageTokens excludes it per D-10 — keeping a single code
+        // path leaves the tokenizer module authoritative for what-to-exclude.
+        const estimate = estimateTokens(
+          [{ role: 'system', content: contextHintsBlock }, ...messages],
+          this.config.modelId,
+        );
         if (this.config.agent_compaction !== false && shouldCompact(estimate, this.config.modelMaxTokens)) {
           await this.compactOldestTurns({
             conversationId,
