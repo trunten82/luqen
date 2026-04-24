@@ -1,0 +1,29 @@
+{{!-- Phase 35 Plan 04 — Conversation history list row.
+     Data contract: { id, title, snippet?, lastMessageAtLabel, messageCount }.
+     Renders as a roving-focus button-row. Snippet is plain text (double-brace);
+     Plan 05 wraps match tokens in <mark> client-side via createElement. --}}
+<li class="agent-drawer__history-item"
+    data-conversation-id="{{id}}"
+    role="button"
+    tabindex="-1"
+    data-action="resumeConversation"
+    title="{{title}}">
+  <div class="agent-drawer__history-item-title">{{#if title}}{{title}}{{else}}{{t "agent.history.untitled"}}{{/if}}</div>
+  {{#if snippet}}
+    <div class="agent-drawer__history-item-snippet">{{snippet}}</div>
+  {{else}}
+    <div class="agent-drawer__history-item-meta">{{t "agent.history.item.meta" timestamp=lastMessageAtLabel count=messageCount}}</div>
+  {{/if}}
+  <button type="button"
+          class="agent-drawer__history-item-menu btn btn--ghost"
+          aria-haspopup="menu"
+          aria-expanded="false"
+          aria-label="{{t "agent.history.item.menuLabel" title=title}}"
+          data-action="openHistoryItemMenu">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <circle cx="12" cy="5" r="1.5"/>
+      <circle cx="12" cy="12" r="1.5"/>
+      <circle cx="12" cy="19" r="1.5"/>
+    </svg>
+  </button>
+</li>

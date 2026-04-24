@@ -1,0 +1,61 @@
+{{!-- Phase 35 Plan 04 — Stacked history panel inside #agent-drawer.
+     Static markup only; Plan 05 hydrates via fetch + IntersectionObserver.
+     ARIA contract per UI-SPEC §Keyboard & Screen-Reader Contract. --}}
+<section id="agent-history-panel"
+         class="agent-drawer__history"
+         role="region"
+         aria-label="{{t "agent.history.panelLabel"}}"
+         aria-hidden="true"
+         hidden>
+  <header class="agent-drawer__history-head">
+    <button type="button"
+            class="agent-drawer__history-back btn btn--ghost btn--sm"
+            data-action="closeAgentHistory"
+            aria-label="{{t "agent.history.back"}}">{{t "agent.history.back"}}</button>
+    <h3>{{t "agent.history.panelTitle"}}</h3>
+  </header>
+
+  <div class="agent-drawer__history-search">
+    <input type="search"
+           id="agent-history-search-input"
+           role="searchbox"
+           aria-controls="agent-history-list"
+           aria-describedby="agent-history-search-hint"
+           placeholder="{{t "agent.history.search.placeholder"}}"
+           autocomplete="off">
+    <button type="button"
+            class="agent-drawer__history-search-clear btn btn--ghost"
+            data-action="clearAgentHistorySearch"
+            aria-label="{{t "agent.history.search.clearAria"}}"
+            hidden>&times;</button>
+  </div>
+
+  <div role="status" aria-live="polite" class="sr-only" id="agent-history-live"></div>
+
+  <div class="agent-drawer__history-skeleton" hidden aria-hidden="true">
+    <div class="agent-drawer__history-skeleton-row"></div>
+    <div class="agent-drawer__history-skeleton-row"></div>
+    <div class="agent-drawer__history-skeleton-row"></div>
+    <div class="agent-drawer__history-skeleton-row"></div>
+    <div class="agent-drawer__history-skeleton-row"></div>
+  </div>
+
+  <ul id="agent-history-list" class="agent-drawer__history-list" role="list">
+    {{#if items.length}}
+      {{#each items}}{{> agent-history-item this}}{{/each}}
+    {{else}}
+      <li class="agent-drawer__history-empty">
+        <h4>{{t "agent.history.empty.title"}}</h4>
+        <p class="form-hint">{{t "agent.history.empty.body"}}</p>
+      </li>
+    {{/if}}
+  </ul>
+
+  <div class="agent-drawer__history-sentinel" data-action="historySentinel" role="presentation"></div>
+
+  <div class="agent-drawer__history-error" hidden role="alert">
+    <h4>{{t "agent.history.error.loadTitle"}}</h4>
+    <p class="form-hint">{{t "agent.history.error.loadBody"}}</p>
+    <button type="button" class="btn btn--ghost btn--sm" data-action="retryHistory">{{t "agent.history.error.retry"}}</button>
+  </div>
+</section>
