@@ -37,6 +37,7 @@ import type { Message } from '../db/interfaces/conversation-repository.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
 import type { SseFrame } from './sse-frames.js';
 import { collectContextHints, formatContextHints } from './context-hints.js';
+import { generateConversationTitle } from './conversation-title-generator.js';
 import {
   estimateTokens,
   shouldCompact,
@@ -127,10 +128,32 @@ export interface AgentToolCatalogEntry {
   readonly inputSchema?: unknown;
 }
 
+/**
+ * Phase 35 Plan 03 — title generator callable signature. Injected into
+ * AgentService so tests can substitute a stub; default wiring binds to
+ * `generateConversationTitle` with AgentService's own `llm` field.
+ */
+export interface TitleGeneratorFn {
+  (args: {
+    readonly orgId: string;
+    readonly userId: string;
+    readonly agentDisplayName: string;
+    readonly userMessage: string;
+    readonly assistantReply: string;
+    readonly signal?: AbortSignal;
+  }): Promise<string>;
+}
+
 export interface AgentServiceOptions {
   readonly storage: StorageAdapter;
   readonly llm: LlmAgentTransport;
   readonly allTools: readonly ToolMetadata[];
+  /**
+   * Phase 35 Plan 03 — override the post-first-assistant title generator.
+   * Defaults to `generateConversationTitle` bound to this service's llm.
+   * Tests inject `vi.fn()` to assert call count + args without LLM calls.
+   */
+  readonly titleGenerator?: TitleGeneratorFn;
   /**
    * Optional catalog of tool descriptions + inputSchemas keyed by tool name.
    * Sourced from the MCP server's `_registeredTools` map so the LLM receives
@@ -192,6 +215,7 @@ export class AgentService {
     readonly modelId?: string;
   };
   private readonly resolveDisplayName: (orgId: string) => Promise<string>;
+  private readonly titleGenerator: TitleGeneratorFn;
 
   constructor(options: AgentServiceOptions) {
     this.storage = options.storage;
@@ -201,6 +225,22 @@ export class AgentService {
     this.dispatcher = options.dispatcher;
     this.resolvePermissions = options.resolvePermissions;
     this.config = options.config;
+    // Phase 35 Plan 03 — title hook. Default binds to the shared generator
+    // with this service's `llm` field; tests inject a stub to count calls.
+    const injectedTitleGen = options.titleGenerator;
+    if (injectedTitleGen !== undefined) {
+      this.titleGenerator = injectedTitleGen;
+    } else {
+      this.titleGenerator = (args) => generateConversationTitle({
+        llm: this.llm,
+        orgId: args.orgId,
+        userId: args.userId,
+        agentDisplayName: args.agentDisplayName,
+        userMessage: args.userMessage,
+        assistantReply: args.assistantReply,
+        ...(args.signal !== undefined ? { signal: args.signal } : {}),
+      });
+    }
     // Phase 34-02 — fire-and-forget tokenizer warm-up (D-05). `void` marks
     // the discarded promise explicitly for no-floating-promises lints.
     // Errors inside prewarm are swallowed by the tokenizer module so this
@@ -324,6 +364,23 @@ export class AgentService {
             role: 'assistant',
             content: turn.text,
             status: 'sent',
+          });
+          // Phase 35 Plan 03 — post-first-assistant-turn title hook (D-02/D-03).
+          // Fire-and-forget so SSE `done` latency is unaffected. Only triggers
+          // when the conversation has no title yet (first assistant turn).
+          // Errors are swallowed: the generator's own fallback guarantees a
+          // safe title is written; any exception here means the stubbed test
+          // generator rejected without fallback — correct behaviour is to do
+          // nothing and let the conversation stay untitled rather than crash
+          // the user-visible turn that already completed.
+          await this.maybeGenerateTitle({
+            conversationId,
+            orgId,
+            userId,
+            agentDisplayName,
+            userMessage,
+            assistantReply: turn.text,
+            signal,
           });
           emit({ type: 'done' });
           return;
@@ -515,6 +572,53 @@ export class AgentService {
       outcome: 'success',
       latencyMs: 0,
     });
+  }
+
+  /**
+   * Phase 35 Plan 03 — fire-and-forget post-first-assistant title hook.
+   *
+   * Reads the conversation row; if title is still null, dispatches the
+   * title generator in the background and writes the result via
+   * renameConversation. The outer runTurn emits its SSE `done` frame BEFORE
+   * awaiting the background promise so user-visible latency is unaffected.
+   *
+   * Swallow-with-comment is explicit here: the production generator's own
+   * fallback (Plan 02) guarantees a safe title always resolves, so a
+   * rejection in this code path comes only from stubbed tests or a
+   * catastrophic bug — either way, the right move is leaving the
+   * conversation untitled rather than crashing the already-completed turn.
+   */
+  private async maybeGenerateTitle(args: {
+    readonly conversationId: string;
+    readonly orgId: string;
+    readonly userId: string;
+    readonly agentDisplayName: string;
+    readonly userMessage: string;
+    readonly assistantReply: string;
+    readonly signal: AbortSignal;
+  }): Promise<void> {
+    const conv = await this.storage.conversations.getConversation(
+      args.conversationId,
+      args.orgId,
+    );
+    if (conv === null || conv.title !== null) return;
+    // Fire-and-forget — intentional `void` to keep runTurn non-blocking.
+    void this.titleGenerator({
+      orgId: args.orgId,
+      userId: args.userId,
+      agentDisplayName: args.agentDisplayName,
+      userMessage: args.userMessage,
+      assistantReply: args.assistantReply,
+      signal: args.signal,
+    })
+      .then((title) => this.storage.conversations.renameConversation(
+        args.conversationId,
+        args.orgId,
+        title,
+      ))
+      .catch(() => {
+        // See JSDoc above — generator's own fallback normally prevents this.
+      });
   }
 
   private async dispatchAndPersist(args: {
