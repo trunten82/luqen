@@ -54,10 +54,12 @@ export function configureOllamaTokenizer(next: OllamaTokenizerConfig): void {
 }
 
 function evictOldestIfFull(): void {
-  if (cache.size < MAX_CACHE_ENTRIES) return;
-  const firstKey = cache.keys().next().value;
-  if (typeof firstKey === 'string') {
-    cache.delete(firstKey);
+  // Hard cap at MAX_CACHE_ENTRIES (=32) — oldest-first eviction (T-34-04).
+  if (cache.size >= MAX_CACHE_ENTRIES) {
+    const firstKey = cache.keys().next().value;
+    if (typeof firstKey === 'string') {
+      cache.delete(firstKey);
+    }
   }
 }
 
