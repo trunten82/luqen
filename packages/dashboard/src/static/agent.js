@@ -133,6 +133,40 @@
     }
   }
 
+  function splitTableRow(line) {
+    var trimmed = line.replace(/^\||\|$/g, '');
+    return trimmed.split('|').map(function (c) { return c.trim(); });
+  }
+
+  function renderTable(target, lines) {
+    // lines = [header, separator, ...rows]
+    var table = document.createElement('table');
+    table.className = 'agent-md-table';
+    var thead = document.createElement('thead');
+    var headerRow = document.createElement('tr');
+    var headers = splitTableRow(lines[0]);
+    for (var hi = 0; hi < headers.length; hi++) {
+      var th = document.createElement('th');
+      renderInlineMd(th, headers[hi]);
+      headerRow.appendChild(th);
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    var tbody = document.createElement('tbody');
+    for (var ri = 2; ri < lines.length; ri++) {
+      var cells = splitTableRow(lines[ri]);
+      var tr = document.createElement('tr');
+      for (var ci = 0; ci < cells.length; ci++) {
+        var td = document.createElement('td');
+        renderInlineMd(td, cells[ci]);
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    target.appendChild(table);
+  }
+
   function renderMarkdownInto(target, text) {
     while (target.firstChild) { target.removeChild(target.firstChild); }
     if (!text || text.length === 0) return;
@@ -141,6 +175,21 @@
       var block = blocks[b];
       if (block.length === 0) continue;
       var lines = block.split('\n');
+      // Markdown table: header row contains '|', second row is the separator
+      // (all dashes/colons/spaces/pipes).
+      if (lines.length >= 2 && lines[0].indexOf('|') !== -1 && /^[\s:|-]+$/.test(lines[1]) && lines[1].indexOf('-') !== -1) {
+        renderTable(target, lines);
+        continue;
+      }
+      // ATX heading: "# ", "## ", "### "… up to level 6
+      var headingMatch = lines[0].match(/^(#{1,6})\s+(.+)$/);
+      if (lines.length === 1 && headingMatch) {
+        var level = headingMatch[1].length;
+        var h = document.createElement('h' + Math.min(level + 2, 6));
+        renderInlineMd(h, headingMatch[2]);
+        target.appendChild(h);
+        continue;
+      }
       // Unordered list: every line starts with "- " or "* "
       var isUl = lines.every(function (l) { return /^[-*]\s+/.test(l); });
       var isOl = !isUl && lines.every(function (l) { return /^\d+\.\s+/.test(l); });
@@ -155,13 +204,24 @@
         target.appendChild(list);
         continue;
       }
-      // Paragraph — preserve single newlines as <br>
+      // Paragraph — preserve single newlines as <br>. Lines inside a single
+      // block may individually match a heading marker; render those inline
+      // as headings too so mixed blocks (heading + description) don't drop
+      // the heading.
       var p = document.createElement('p');
       for (var m = 0; m < lines.length; m++) {
-        if (m > 0) p.appendChild(document.createElement('br'));
+        var hm = lines[m].match(/^(#{1,6})\s+(.+)$/);
+        if (hm) {
+          if (p.firstChild) { target.appendChild(p); p = document.createElement('p'); }
+          var h2 = document.createElement('h' + Math.min(hm[1].length + 2, 6));
+          renderInlineMd(h2, hm[2]);
+          target.appendChild(h2);
+          continue;
+        }
+        if (p.firstChild) p.appendChild(document.createElement('br'));
         renderInlineMd(p, lines[m]);
       }
-      target.appendChild(p);
+      if (p.firstChild) target.appendChild(p);
     }
   }
 
