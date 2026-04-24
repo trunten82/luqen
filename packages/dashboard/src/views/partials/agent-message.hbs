@@ -4,10 +4,16 @@
     <div class="agent-msg__body">{{content}}</div>
   </div>
 {{else if (eq role "assistant")}}
-  <div class="agent-msg agent-msg--assistant" data-message-id="{{id}}" lang="{{../locale}}"{{#if (eq status "streaming")}} aria-busy="true"{{/if}}>
-    <span class="agent-msg__role">{{../agentDisplayName}}</span>
-    <div class="agent-msg__body">{{content}}</div>
-  </div>
+  {{#if content}}
+    {{! Skip empty assistant rows — the assistant(tool_calls) rows from
+        Plan 32.1-08 have null/empty content and would render as a blank
+        grey bubble on reload. Only assistant rows with user-visible text
+        belong in the rehydrated panel. }}
+    <div class="agent-msg agent-msg--assistant" data-message-id="{{id}}" lang="{{../locale}}"{{#if (eq status "streaming")}} aria-busy="true"{{/if}}>
+      <span class="agent-msg__role">{{../agentDisplayName}}</span>
+      <div class="agent-msg__body">{{content}}</div>
+    </div>
+  {{/if}}
 {{else if (eq role "tool")}}
   {{#if (eq status "pending_confirmation")}}
     {{! Pending rows must stay in the DOM so agent.js can recover the dialog
