@@ -731,10 +731,20 @@
     var li = document.createElement('li');
     li.className = 'agent-drawer__history-item';
     li.setAttribute('data-conversation-id', String(item.id || ''));
-    li.setAttribute('role', 'button');
+    // Do NOT set role="button" here: axe's nested-interactive rule (WCAG
+    // 4.1.2) flags role=button containers that wrap another focusable
+    // element (the kebab menu trigger inside). Instead we keep <li> as a
+    // non-interactive list item, rely on tabindex for the roving focus
+    // pattern, and expose the accessible name via aria-label so screen
+    // readers announce "Resume <title>" when the row receives focus.
     li.setAttribute('tabindex', '-1');
     li.setAttribute('data-action', 'resumeConversation');
-    if (item.title) { li.setAttribute('title', String(item.title)); }
+    if (item.title) {
+      li.setAttribute('title', String(item.title));
+      li.setAttribute('aria-label', 'Resume ' + String(item.title));
+    } else {
+      li.setAttribute('aria-label', 'Resume conversation');
+    }
 
     var titleDiv = document.createElement('div');
     titleDiv.className = 'agent-drawer__history-item-title';
@@ -962,6 +972,10 @@
     menu.appendChild(rename); menu.appendChild(del);
     itemEl.appendChild(menu);
     trigger.setAttribute('aria-expanded', 'true');
+    // UI-SPEC §Keyboard & Screen-Reader Contract: when the menu opens,
+    // focus must move INTO the menu so screen-reader users can operate
+    // the menuitems. First menuitem (Rename) is the safe default.
+    try { rename.focus(); } catch (_e) { /* ignore */ }
     historyActiveMenu = { trigger: trigger, menuEl: menu };
   }
 
@@ -1279,9 +1293,9 @@
           }
           if ((e.key === 'F10' && e.shiftKey) || e.key === 'ContextMenu') {
             e.preventDefault();
+            // toggleItemMenu() moves focus into the menu's first menuitem
+            // (UI-SPEC keyboard contract) — do not refocus the kebab trigger.
             toggleItemMenu(activeItem);
-            var trig = activeItem.querySelector('.agent-drawer__history-item-menu');
-            if (trig) { try { trig.focus(); } catch (_e) { /* ignore */ } }
             return;
           }
         }
