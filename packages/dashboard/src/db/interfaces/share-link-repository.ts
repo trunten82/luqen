@@ -21,6 +21,8 @@ export interface ShareLink {
   readonly createdByUserId: string;
   readonly createdAt: string;
   readonly revokedAt: string | null;
+  /** ISO timestamp at which this link stops resolving (410 Gone). */
+  readonly expiresAt: string | null;
 }
 
 export interface CreateShareLinkInput {

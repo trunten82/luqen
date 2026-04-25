@@ -1646,9 +1646,13 @@
     var cid = getConversationId();
     if (!mid || !cid) return;
     btn.disabled = true;
-    var url = '/agent/conversations/' + encodeURIComponent(cid)
+    var endpoint = '/agent/conversations/' + encodeURIComponent(cid)
       + '/messages/' + encodeURIComponent(mid) + '/share';
-    fetch(url, {
+
+    // Build the URL Promise that resolves with a text/plain Blob carrying the
+    // share URL. We start the POST inline so the click's user-gesture is still
+    // active when navigator.clipboard.write([ClipboardItem]) is called.
+    var sharePromise = fetch(endpoint, {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'x-csrf-token': csrfToken(), 'Content-Type': 'application/json' },
@@ -1657,12 +1661,39 @@
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('share_failed')); })
       .then(function (payload) {
         var path = payload && typeof payload.url === 'string' ? payload.url : '';
-        var fullUrl = window.location.origin + path;
+        return window.location.origin + path;
+      });
+
+    // Fire the Clipboard API SYNCHRONOUSLY inside the click handler. Modern
+    // browsers (Chrome 76+, Safari 13.1+, Firefox 87+) support a ClipboardItem
+    // whose value is a Promise — the write() call itself happens during the
+    // user-gesture window, and the browser awaits the Promise to resolve the
+    // bytes. This is the only reliable way to copy fetched data on click.
+    var clipboardWrite = null;
+    try {
+      if (window.isSecureContext && window.navigator && window.navigator.clipboard
+          && typeof window.ClipboardItem === 'function'
+          && typeof window.navigator.clipboard.write === 'function') {
+        var item = new ClipboardItem({
+          'text/plain': sharePromise.then(function (u) {
+            return new Blob([u], { type: 'text/plain' });
+          }),
+        });
+        clipboardWrite = window.navigator.clipboard.write([item]);
+      }
+    } catch (_e) { /* unsupported — fall back to inline link only */ }
+
+    sharePromise
+      .then(function (fullUrl) {
         renderShareUrlChip(btn, fullUrl);
         flashActionResult(btn, true);
-        // Best-effort clipboard write; toast wording reflects the actual result
-        // so the user knows whether they need to grab the inline link manually.
-        writeToClipboard(fullUrl).then(function (ok) {
+        // Resolve the clipboard outcome (write() returns Promise<void>):
+        //   resolved → copied successfully
+        //   rejected (or no clipboardWrite) → user uses the inline link
+        var clipboardOutcome = clipboardWrite
+          ? clipboardWrite.then(function () { return true; }, function () { return false; })
+          : Promise.resolve(false);
+        clipboardOutcome.then(function (ok) {
           var msg = ok ? 'Share link copied to clipboard' : 'Share link ready — click to open';
           showShareToast(msg);
           announce(msg);
