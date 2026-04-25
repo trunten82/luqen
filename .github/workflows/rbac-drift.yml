@@ -1,0 +1,37 @@
+name: rbac-drift
+
+on:
+  pull_request:
+  push:
+    branches: [master, develop]
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all workspaces
+        run: npm run build --workspaces
+
+      - name: Regenerate RBAC matrix
+        run: npm run docs:rbac
+
+      - name: Fail on matrix drift
+        run: |
+          if ! git diff --exit-code docs/reference/rbac-matrix.md; then
+            echo "::error::RBAC matrix out of date. Run npm run docs:rbac locally and commit."
+            exit 1
+          fi
+
+      - name: Run RBAC coverage tests
+        run: npm test --workspace packages/dashboard -- tests/rbac/
