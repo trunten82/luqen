@@ -230,7 +230,7 @@ function Read-Secret {
 function Read-YesNo {
     param([string]$Prompt, [bool]$Default = $true)
     $hint = if ($Default) { "[Y/n]" } else { "[y/N]" }
-    Write-Host "  $Prompt $hint: " -NoNewline
+    Write-Host "  $Prompt ${hint}: " -NoNewline
     $input = Read-Host
     if ([string]::IsNullOrWhiteSpace($input)) { return $Default }
     return $input -match "^[yY]"
