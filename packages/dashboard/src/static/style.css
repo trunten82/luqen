@@ -4603,3 +4603,49 @@ details[open] > .mt-examples-toggle::before {
     margin-bottom: var(--space-md);
   }
 }
+
+/* Phase 38 Plan 02 — Org switcher in drawer header (AORG-01, AORG-04 UI side). */
+.agent-drawer__org-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0 var(--space-sm);
+  position: relative;
+}
+.agent-drawer__org-switcher-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+.agent-drawer__org-switcher-select {
+  font-size: var(--font-size-sm);
+  padding: 2px var(--space-xs);
+}
+/* Org-switch toast modifier — anchored to the switcher (not the drawer footer). */
+.agent-drawer__toast--org {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  bottom: auto;
+  transform: translateY(-4px);
+  margin-top: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color, var(--bg-tertiary));
+  border-radius: var(--border-radius-md, 4px);
+  opacity: 0;
+  transition: opacity 200ms ease, transform 200ms ease;
+  pointer-events: none;
+  animation: none;
+  max-width: none;
+  text-align: left;
+}
+.agent-drawer__toast--org.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.agent-drawer__toast--org.is-error {
+  color: var(--status-error);
+  border-color: var(--status-error);
+}

@@ -1,0 +1,16 @@
+{{!-- Phase 38 Plan 02 — Org switcher in the drawer header (AORG-01, AORG-04 UI side).
+     Auto-discovered partial. Renders only when `showOrgSwitcher` is truthy
+     (set by the route in Plan 38-03 for users with admin.system permission).
+     CSP-strict (no inline JS) — Plan 38-04 wires data-action="agentOrgSwitch"
+     via a delegated change/submit listener in agent.js. --}}
+{{#if showOrgSwitcher}}
+<form class="agent-drawer__org-switcher" data-action="agentOrgSwitch" autocomplete="off">
+  <label class="agent-drawer__org-switcher-label" for="agent-org-select">{{t "agent.org.label"}}</label>
+  <select id="agent-org-select" name="orgId" class="agent-drawer__org-switcher-select" aria-label="{{t "agent.org.label"}}">
+    {{#each orgOptions}}
+      <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+    {{/each}}
+  </select>
+  <output class="agent-drawer__toast agent-drawer__toast--org" data-role="orgToast" aria-live="polite"></output>
+</form>
+{{/if}}
