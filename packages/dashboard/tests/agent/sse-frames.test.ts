@@ -17,6 +17,8 @@ import {
   PendingConfirmationFrameSchema,
   DoneFrameSchema,
   ErrorFrameSchema,
+  ToolStartedFrameSchema,
+  ToolCompletedFrameSchema,
   writeFrame,
   type SseFrame,
 } from '../../src/agent/sse-frames.js';
@@ -76,5 +78,96 @@ describe('writeFrame — validates before writing', () => {
     expect(write).toHaveBeenCalledWith(
       `event: token\ndata: ${JSON.stringify({ type: 'token', text: 'hi' })}\n\n`,
     );
+  });
+});
+
+describe('Tool lifecycle frames', () => {
+  it('Test 1: tool_started parses with toolCallId + toolName', () => {
+    const frame = SseFrameSchema.parse({
+      type: 'tool_started',
+      toolCallId: 't1',
+      toolName: 'dashboard_list_reports',
+    });
+    expect(frame).toEqual({
+      type: 'tool_started',
+      toolCallId: 't1',
+      toolName: 'dashboard_list_reports',
+    });
+    // exposed schema export usable too
+    expect(ToolStartedFrameSchema.parse(frame)).toEqual(frame);
+  });
+
+  it('Test 2: tool_completed parses with status success and status error', () => {
+    const success = SseFrameSchema.parse({
+      type: 'tool_completed',
+      toolCallId: 't1',
+      toolName: 'foo',
+      status: 'success',
+    });
+    expect(success).toMatchObject({ type: 'tool_completed', status: 'success' });
+
+    const errored = SseFrameSchema.parse({
+      type: 'tool_completed',
+      toolCallId: 't1',
+      toolName: 'foo',
+      status: 'error',
+    });
+    expect(errored).toMatchObject({ type: 'tool_completed', status: 'error' });
+    expect(ToolCompletedFrameSchema).toBeDefined();
+  });
+
+  it('Test 3: tool_completed with status:error accepts optional errorMessage', () => {
+    const frame = SseFrameSchema.parse({
+      type: 'tool_completed',
+      toolCallId: 't1',
+      toolName: 'foo',
+      status: 'error',
+      errorMessage: 'handler exploded',
+    });
+    expect(frame).toEqual({
+      type: 'tool_completed',
+      toolCallId: 't1',
+      toolName: 'foo',
+      status: 'error',
+      errorMessage: 'handler exploded',
+    });
+  });
+
+  it('Test 4: tool_completed with invalid status enum throws', () => {
+    expect(() =>
+      SseFrameSchema.parse({
+        type: 'tool_completed',
+        toolCallId: 't1',
+        toolName: 'foo',
+        status: 'foo',
+      }),
+    ).toThrow(z.ZodError);
+  });
+
+  it('Test 5: writeFrame emits tool_started event with serialized data', () => {
+    const write = vi.fn().mockReturnValue(true);
+    const reply = { raw: { write } } as unknown as Parameters<typeof writeFrame>[0];
+    const ok = writeFrame(reply, {
+      type: 'tool_started',
+      toolCallId: 't1',
+      toolName: 'foo',
+    });
+    expect(ok).toBe(true);
+    expect(write).toHaveBeenCalledWith(
+      `event: tool_started\ndata: ${JSON.stringify({
+        type: 'tool_started',
+        toolCallId: 't1',
+        toolName: 'foo',
+      })}\n\n`,
+    );
+  });
+
+  it('Test 6: writeFrame on malformed tool_started throws synchronously, no bytes', () => {
+    const write = vi.fn().mockReturnValue(true);
+    const reply = { raw: { write } } as unknown as Parameters<typeof writeFrame>[0];
+    expect(() =>
+      writeFrame(reply, { type: 'tool_started' } as unknown as SseFrame),
+    ).toThrow();
+    expect(write).not.toHaveBeenCalled();
   });
 });
