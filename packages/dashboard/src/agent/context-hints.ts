@@ -113,9 +113,17 @@ export function formatContextHints(h: ContextHints): string {
   ];
 
   if (h.orgIdentity !== null) {
-    lines.push(`Active org: ${h.orgIdentity.name} (id=${h.orgIdentity.id})`);
+    lines.push(
+      `The user's currently active organization is "${h.orgIdentity.name}" ` +
+      `(org_id=${h.orgIdentity.id}). When the user asks which org they are in, ` +
+      `answer with this organization name. "Luqen" is the platform name, NOT the org.`,
+    );
   } else {
-    lines.push('Active org: (cross-org admin context — no specific org selected)');
+    lines.push(
+      'No specific organization is currently active (cross-org admin context). ' +
+      'When asked which org the user is in, say no org is currently selected and ' +
+      'offer to list available orgs.',
+    );
   }
 
   lines.push('Recent scans:');
