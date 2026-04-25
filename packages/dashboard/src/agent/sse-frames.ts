@@ -57,12 +57,35 @@ export const ErrorFrameSchema = z.object({
   retryable: z.boolean(),
 });
 
+/**
+ * Phase 36 ATOOL-01 — per-tool lifecycle frames emitted around each tool
+ * call dispatched within an iteration. Wired into the chip strip in 36-04.
+ * Errors during a single tool call are surfaced via tool_completed
+ * { status: 'error' }, NOT via the global ErrorFrame (which remains
+ * reserved for turn-fatal conditions).
+ */
+export const ToolStartedFrameSchema = z.object({
+  type: z.literal('tool_started'),
+  toolCallId: z.string(),
+  toolName: z.string(),
+});
+
+export const ToolCompletedFrameSchema = z.object({
+  type: z.literal('tool_completed'),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  status: z.enum(['success', 'error']),
+  errorMessage: z.string().optional(),
+});
+
 export const SseFrameSchema = z.discriminatedUnion('type', [
   TokenFrameSchema,
   ToolCallsFrameSchema,
   PendingConfirmationFrameSchema,
   DoneFrameSchema,
   ErrorFrameSchema,
+  ToolStartedFrameSchema,
+  ToolCompletedFrameSchema,
 ]);
 
 export type SseFrame = z.infer<typeof SseFrameSchema>;
@@ -71,6 +94,8 @@ export type ToolCallsFrame = z.infer<typeof ToolCallsFrameSchema>;
 export type PendingConfirmationFrame = z.infer<typeof PendingConfirmationFrameSchema>;
 export type DoneFrame = z.infer<typeof DoneFrameSchema>;
 export type ErrorFrame = z.infer<typeof ErrorFrameSchema>;
+export type ToolStartedFrame = z.infer<typeof ToolStartedFrameSchema>;
+export type ToolCompletedFrame = z.infer<typeof ToolCompletedFrameSchema>;
 
 /**
  * Minimal FastifyReply shape writeFrame depends on. Avoids importing the
