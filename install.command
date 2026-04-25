@@ -140,6 +140,31 @@ if [ -z "${INSTALL_SH}" ]; then
 fi
 
 # ──────────────────────────────────────────────
+# Detect --uninstall and unload macOS launchd agents BEFORE delegating to
+# install.sh, since install.sh handles systemd but not launchd.
+# ──────────────────────────────────────────────
+WANT_UNINSTALL=0
+for arg in "$@"; do
+    case "$arg" in
+        --uninstall) WANT_UNINSTALL=1 ;;
+    esac
+done
+
+if [ "${WANT_UNINSTALL}" = "1" ] && [ "$(uname -s)" = "Darwin" ]; then
+    echo ""
+    echo "  Unloading launchd agents..."
+    LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
+    for label in io.luqen.compliance io.luqen.branding io.luqen.llm io.luqen.dashboard; do
+        plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
+        if [ -f "${plist}" ]; then
+            launchctl unload "${plist}" 2>/dev/null || true
+            rm -f "${plist}"
+            echo "    + removed ${label}"
+        fi
+    done
+fi
+
+# ──────────────────────────────────────────────
 # Run the installer, passing through all arguments
 # ──────────────────────────────────────────────
 bash "${INSTALL_SH}" "$@"
@@ -147,6 +172,11 @@ INSTALL_RC=$?
 
 if [ "${INSTALL_RC}" -ne 0 ]; then
     exit "${INSTALL_RC}"
+fi
+
+# Uninstall path exits early — skip the launchd registration block below.
+if [ "${WANT_UNINSTALL}" = "1" ]; then
+    exit 0
 fi
 
 # ──────────────────────────────────────────────
@@ -157,7 +187,17 @@ fi
 # plists under ~/Library/LaunchAgents. MCP is embedded in the dashboard
 # (CLAUDE.md: "MCP embedded as Fastify plugin per service, never standalone
 # port") — do NOT register a separate luqen-mcp agent.
+#
+# This block is gated to macOS only. install.command may also run on Linux
+# (e.g. test harness, curl|bash on a non-macOS box) — there install.sh
+# already handled systemd registration and the launchd block must skip.
 # ──────────────────────────────────────────────
+
+if [ "$(uname -s)" != "Darwin" ]; then
+    echo ""
+    echo "  (skipping launchd registration — not running on macOS; install.sh handled systemd setup)"
+    exit 0
+fi
 
 NODE_PATH="$(command -v node 2>/dev/null || true)"
 INSTALL_DIR_DEFAULT="${HOME}/luqen"

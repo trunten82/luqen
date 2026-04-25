@@ -199,10 +199,33 @@ Open `http://localhost:5000` in your browser.
 
 ## Uninstall
 
-### Local
+The installer scripts ship a parallel `--uninstall` flow that stops
+the four daemons, removes the platform's service registration
+(systemd / launchd / NSSM / Task Scheduler), and backs up
+`dashboard.config.json` + `dashboard.db` + `compliance.db` to
+`~/.luqen-uninstall-<timestamp>/` before deleting the install
+dir. Add `--purge` (`-Purge` on PowerShell) to skip the backup
+and drop data + `~/.luqen` too.
+
+### Linux
 
 ```bash
-rm -rf ~/luqen
+sudo bash install.sh --uninstall              # keep data (default)
+sudo bash install.sh --uninstall --purge      # also drop DB / config / ~/.luqen
+```
+
+### macOS
+
+```bash
+bash install.command --uninstall
+bash install.command --uninstall --purge
+```
+
+### Windows (PowerShell, admin)
+
+```powershell
+.\install.ps1 -Uninstall
+.\install.ps1 -Uninstall -Purge
 ```
 
 ### Docker
@@ -211,6 +234,10 @@ rm -rf ~/luqen
 cd ~/luqen && docker compose down -v
 rm -rf ~/luqen
 ```
+
+For a fully manual uninstall (when the install scripts are
+unavailable), `rm -rf ~/luqen` after stopping the systemd / launchd /
+Windows services is the equivalent.
 
 ### pa11y Docker (if created separately)
 

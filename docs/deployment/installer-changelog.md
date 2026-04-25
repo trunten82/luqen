@@ -36,6 +36,36 @@ v3.0.0 set explicitly (see "v3.0.0" below).
 **MCP** continues to run **embedded in the dashboard** as a Fastify
 plugin. There is no `LuqenMcp` daemon; do not add one.
 
+**Uninstall:** All three installers gain a parallel `--uninstall`
+(`-Uninstall` on PowerShell) flag. Default behaviour stops the four
+daemons, removes the platform's service registration (systemd units /
+launchd plists / NSSM services / Task Scheduler tasks), and copies
+`dashboard.config.json` + `dashboard.db` + `compliance.db` to a
+`~/.luqen-uninstall-<timestamp>/` backup before deleting the install
+dir. Pass `--purge` (`-Purge`) to skip the backup and drop everything
+including `~/.luqen`. `--keep-data` (`-KeepData`) is the explicit form
+of the default. Caught and added during the Phase 40 / Plan 40-07
+fresh-container dry-run on a stock Ubuntu 22.04 LXC.
+
+**Installer hardening:** Same dry-run surfaced and fixed several
+non-interactive defects in `install.sh`:
+1. Re-exec block triggered on `[ ! -t 0 ]` and hard-coded
+   `< /dev/tty` redirect, breaking `curl|bash --non-interactive`,
+   `ssh host 'bash install.sh ...'`, and CI runners. Now uses
+   `BASH_SOURCE[0]` to detect actually-piped vs file invocation,
+   and skips the `/dev/tty` redirect when `--non-interactive` is
+   present or no tty exists.
+2. `info`/`success`/`warn`/`error`/`header`/`step` helpers all wrote
+   to `/dev/tty` directly. Replaced with an `OUT` selector that
+   picks `/dev/tty` if writable, else stdout.
+3. Service summary block at end of install missed `luqen-branding`.
+4. `install.command` Terminal.app re-exec fired on `curl|bash` when
+   `TERM_PROGRAM` was unset; now skipped under `--non-interactive`.
+5. `install.command` macOS-specific launchd block ran on Linux too
+   (`launchctl: command not found`); now gated by `uname -s = Darwin`.
+6. `install.ps1` `Read-YesNo` had a `$hint:` parser error
+   (`$var:` is a scoped variable reference); fixed with `${hint}:`.
+
 **Admin pages:** No new pages. Installer summary now prints the
 v3.0.0-introduced surface.
 
