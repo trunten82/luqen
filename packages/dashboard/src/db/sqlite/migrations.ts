@@ -1441,19 +1441,54 @@ ALTER TABLE agent_audit_log ADD COLUMN rationale TEXT;
     id: '058',
     name: 'agent-messages-supersede',
     sql: `
--- Phase 37 Plan 01 (AUX-01..03): widen the agent_messages.status
--- discriminator semantics to include 'stopped' (user pressed stop, partial
--- text persisted) and 'superseded' (turn replaced by a retry / edit-resend).
+-- Phase 37 Plan 01 (AUX-01..03): widen agent_messages.status to include
+-- 'final' (Phase 31 baseline, never enforced in CHECK), 'stopped'
+-- (AUX-01: user pressed stop, partial text persisted), and 'superseded'
+-- (AUX-02/03: turn replaced by retry / edit-resend).
 --
--- The status column already exists with a CHECK constraint from migration
--- 047; SQLite cannot ALTER an existing CHECK in place, so the CHECK is
--- enforced at the application layer (ConversationRepository) until a
--- future schema-rebuild migration. This entry adds:
---   1. superseded_at TEXT (nullable) — audit timestamp of the supersede.
---   2. Partial covering index on (conversation_id, created_at) WHERE the
---      row is in an "active" status — fast hot-path read for the drawer.
-ALTER TABLE agent_messages ADD COLUMN superseded_at TEXT;
+-- The original CHECK constraint from migration 047 only permits
+-- ('sent','pending_confirmation','approved','denied','failed','streaming')
+-- and would reject inserts/updates of the new statuses. SQLite cannot
+-- ALTER a CHECK in-place, so we rebuild the table via the standard
+-- copy-rename pattern (see migration 021 for prior art). All rows,
+-- indexes, and the FK to agent_conversations are preserved.
+--
+-- Also adds:
+--   1. superseded_at TEXT (nullable) — audit timestamp of supersede.
+--   2. Partial covering index on (conversation_id, created_at) WHERE
+--      status IN ('streaming','final','stopped') — drawer hot path.
 
+CREATE TABLE agent_messages_new (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('user','assistant','tool')),
+  content TEXT,
+  tool_call_json TEXT,
+  tool_result_json TEXT,
+  status TEXT NOT NULL DEFAULT 'sent' CHECK (status IN (
+    'sent','pending_confirmation','approved','denied','failed',
+    'streaming','final','stopped','superseded'
+  )),
+  created_at TEXT NOT NULL,
+  in_window INTEGER NOT NULL DEFAULT 1,
+  superseded_at TEXT,
+  FOREIGN KEY (conversation_id) REFERENCES agent_conversations(id) ON DELETE CASCADE
+);
+
+INSERT INTO agent_messages_new
+  (id, conversation_id, role, content, tool_call_json, tool_result_json,
+   status, created_at, in_window, superseded_at)
+  SELECT id, conversation_id, role, content, tool_call_json, tool_result_json,
+         status, created_at, in_window, NULL
+  FROM agent_messages;
+
+DROP TABLE agent_messages;
+ALTER TABLE agent_messages_new RENAME TO agent_messages;
+
+CREATE INDEX IF NOT EXISTS idx_agent_messages_conv_created
+  ON agent_messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_agent_messages_conv_window_created
+  ON agent_messages(conversation_id, in_window, created_at);
 CREATE INDEX IF NOT EXISTS idx_agent_messages_conv_active_created
   ON agent_messages(conversation_id, created_at)
   WHERE status IN ('streaming','final','stopped');
