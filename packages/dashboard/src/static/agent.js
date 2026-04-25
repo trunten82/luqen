@@ -835,6 +835,12 @@
       streamingMessageId = null;
       if (statusEl) statusEl.setAttribute('hidden', '');
       setStatus('Response complete');
+      // Phase 37-04 fix: streamed bubbles built by ensureAssistantBubble carry no
+      // data-message-id and no action toolbar — copy/share/retry have nothing to
+      // click. Refetch the panel from the server which renders every row with a
+      // data-message-id and the agent-msg-actions partial. Same text, adds the
+      // IDs + buttons.
+      loadPanel();
     });
     es.addEventListener('error', function (ev) {
       es.close(); activeStream = null;
