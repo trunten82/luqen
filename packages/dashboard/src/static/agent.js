@@ -1864,7 +1864,20 @@
         });
         clipboardWrite = window.navigator.clipboard.write([item]);
       }
-    } catch (_e) { /* unsupported — fall back to inline link only */ }
+    } catch (_e) { /* unsupported — fall through to writeText fallback */ }
+
+    // Fallback: when ClipboardItem isn't available (older browsers, JSDOM in
+    // tests), try writeText after the fetch resolves. The Clipboard API may
+    // still allow it depending on the browser's gesture-grace policy.
+    if (clipboardWrite === null) {
+      clipboardWrite = sharePromise.then(function (u) {
+        return writeToClipboard(u);
+      });
+    }
+    // Swallow unhandled rejection — the outer catch already reports failure.
+    if (clipboardWrite && typeof clipboardWrite.catch === 'function') {
+      clipboardWrite.catch(function () {});
+    }
 
     sharePromise
       .then(function (_fullUrl) {

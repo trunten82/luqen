@@ -199,6 +199,10 @@ describe('Phase 36 Plan 06 — chip strip e2e (E1..E3)', () => {
   let h: ChipHarness;
   beforeEach(() => {
     h = setupChipHarness();
+    // Phase 37 cross-cutting: agent.js calls loadPanel() on stream `done`,
+    // which fetches /agent/panel. Stub fetch so the test environment doesn't
+    // ReferenceError on jsdom's missing global.
+    stubFetchOk(h.win);
   });
 
   async function openStream(): Promise<FakeESControl> {

@@ -126,6 +126,7 @@ describe('migration 059 — agent-share-links', () => {
         'created_by_user_id',
         'created_at',
         'revoked_at',
+        'expires_at',
       ].sort(),
     );
 
