@@ -19,7 +19,20 @@ if [ ! -t 0 ] && [ -z "${LUQEN_INSTALL_REEXEC:-}" ]; then
   TMPSCRIPT="$(mktemp /tmp/luqen-install.XXXXXX.sh)"
   cat > "${TMPSCRIPT}"
   export LUQEN_INSTALL_REEXEC=1
-  exec bash "${TMPSCRIPT}" "$@" < /dev/tty
+  # Only redirect to /dev/tty if we have one (interactive use). Non-interactive
+  # callers (CI, ssh host 'curl|bash --non-interactive ...') have no tty and
+  # must run without the redirect or the script aborts on line 22.
+  REEXEC_NONINTERACTIVE=0
+  for arg in "$@"; do
+    case "$arg" in
+      --non-interactive) REEXEC_NONINTERACTIVE=1 ;;
+    esac
+  done
+  if [ "${REEXEC_NONINTERACTIVE}" = "1" ] || [ ! -e /dev/tty ]; then
+    exec bash "${TMPSCRIPT}" "$@"
+  else
+    exec bash "${TMPSCRIPT}" "$@" < /dev/tty
+  fi
 fi
 
 # ──────────────────────────────────────────────
@@ -32,12 +45,16 @@ else
   BOLD="" GREEN="" YELLOW="" RED="" CYAN="" DIM="" RESET=""
 fi
 
-info()    { printf "%s  %s%s\n"   "${CYAN}*${RESET}"  "$*"          "${RESET}" >/dev/tty; }
-success() { printf "%s  %s%s\n"   "${GREEN}+${RESET}" "${GREEN}$*"  "${RESET}" >/dev/tty; }
-warn()    { printf "%s  %s%s\n"   "${YELLOW}!${RESET}" "${YELLOW}$*" "${RESET}" >/dev/tty; }
-error()   { printf "%s  %s%s\n"   "${RED}x${RESET}"   "${RED}$*"    "${RESET}" >/dev/tty; }
-header()  { printf "\n%s%s%s\n\n" "${BOLD}${CYAN}"     "$*"          "${RESET}" >/dev/tty; }
-step()    { printf "\n%s[%s/%s]%s %s%s%s\n" "${DIM}" "$1" "$2" "${RESET}" "${BOLD}" "$3" "${RESET}" >/dev/tty; }
+# OUT picks /dev/tty if available (interactive), else stdout (non-interactive,
+# CI, piped). Without this, every helper printf would fail under set -e when
+# no controlling terminal exists.
+if [ -e /dev/tty ] && { : >/dev/tty; } 2>/dev/null; then OUT=/dev/tty; else OUT=/dev/stdout; fi
+info()    { printf "%s  %s%s\n"   "${CYAN}*${RESET}"  "$*"          "${RESET}" >"$OUT"; }
+success() { printf "%s  %s%s\n"   "${GREEN}+${RESET}" "${GREEN}$*"  "${RESET}" >"$OUT"; }
+warn()    { printf "%s  %s%s\n"   "${YELLOW}!${RESET}" "${YELLOW}$*" "${RESET}" >"$OUT"; }
+error()   { printf "%s  %s%s\n"   "${RED}x${RESET}"   "${RED}$*"    "${RESET}" >"$OUT"; }
+header()  { printf "\n%s%s%s\n\n" "${BOLD}${CYAN}"     "$*"          "${RESET}" >"$OUT"; }
+step()    { printf "\n%s[%s/%s]%s %s%s%s\n" "${DIM}" "$1" "$2" "${RESET}" "${BOLD}" "$3" "${RESET}" >"$OUT"; }
 
 run_quiet() {
   local label="$1"; shift
