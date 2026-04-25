@@ -28,7 +28,7 @@ import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { setEncryptionSalt } from '../../src/plugins/crypto.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
 import type { SseFrame } from '../../src/agent/sse-frames.js';
-import { AgentService } from '../../src/agent/agent-service.js';
+import { AgentService, extractRationale, buildRetryGuidance } from '../../src/agent/agent-service.js';
 import type {
   AgentStreamTurn,
   AgentStreamInput,
@@ -506,5 +506,51 @@ describe('AgentService.runTurn — critical fixtures', () => {
     const stored = toolMsg!.toolResultJson!;
     const parsed = JSON.parse(stored);
     expect(parsed._truncated).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 36-03 Task 1 — pure helpers
+// ---------------------------------------------------------------------------
+
+describe('extractRationale + buildRetryGuidance', () => {
+  it('extractRationale: thinking precedes text', () => {
+    expect(extractRationale({ text: 'foo', thinking: 'bar' })).toBe('bar\n\nfoo');
+  });
+
+  it('extractRationale: text only', () => {
+    expect(extractRationale({ text: 'foo' })).toBe('foo');
+  });
+
+  it('extractRationale: empty string returns null', () => {
+    expect(extractRationale({ text: '' })).toBeNull();
+  });
+
+  it('extractRationale: whitespace-only returns null', () => {
+    expect(extractRationale({ text: '   ' })).toBeNull();
+  });
+
+  it('extractRationale: empty text + thinking returns thinking', () => {
+    expect(extractRationale({ text: '', thinking: 'b' })).toBe('b');
+  });
+
+  it('buildRetryGuidance: failure with budget remaining mentions error and budget', () => {
+    const out = buildRetryGuidance({ error: 'timeout' }, 2);
+    expect(out).not.toBeNull();
+    expect(out!).toContain('timeout');
+    expect(out!).toContain('2');
+    expect(out!.toLowerCase()).toMatch(/retry/);
+  });
+
+  it('buildRetryGuidance: failure with budget=0 omits retry-permission language', () => {
+    const out = buildRetryGuidance({ error: 'timeout' }, 0);
+    expect(out).not.toBeNull();
+    expect(out!).toContain('timeout');
+    // Must not invite a retry — must not say "you may retry" / "retry attempt(s) remaining"
+    expect(out!.toLowerCase()).not.toMatch(/you may retry|retry attempt\(s\) remaining/);
+  });
+
+  it('buildRetryGuidance: success path returns null', () => {
+    expect(buildRetryGuidance({ ok: true, value: 42 } as ToolDispatchResult, 3)).toBeNull();
   });
 });
