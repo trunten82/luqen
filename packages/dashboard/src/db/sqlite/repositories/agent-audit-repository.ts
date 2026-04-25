@@ -22,6 +22,9 @@ interface AgentAuditRow {
   args_json: string;
   outcome: string;
   outcome_detail: string | null;
+  // Phase 36 (ATOOL-04): nullable rationale column added by migration 057.
+  // Older rows persisted before 057 read back as NULL.
+  rationale: string | null;
   latency_ms: number;
   created_at: string;
 }
@@ -38,6 +41,9 @@ function rowToEntry(row: AgentAuditRow): AgentAuditEntry {
     // which rejects any other value at write time.
     outcome: row.outcome as ToolOutcome,
     outcomeDetail: row.outcome_detail,
+    // Coalesce defensively: SQLite returns null for rows inserted before
+    // migration 057, and `?? null` collapses any unexpected undefined.
+    rationale: row.rationale ?? null,
     latencyMs: row.latency_ms,
     createdAt: row.created_at,
   };
