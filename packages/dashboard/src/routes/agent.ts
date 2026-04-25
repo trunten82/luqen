@@ -680,6 +680,80 @@ export async function registerAgentRoutes(
     // returns 200 with the new conversation/message ids and the client
     // takes over.
 
+    // ── Phase 37 Plan 04 — single-message + edit-form GET routes ──────
+    //
+    // GET /agent/conversations/:cid/messages/:mid
+    //   Returns { id, role, content, status } for the active-branch row.
+    //   Used by agent.js getMarkdownSource() fallback when the streamed
+    //   markdown was not captured locally (e.g. after page reload).
+    //
+    // GET /agent/conversations/:cid/messages/:mid/edit-form
+    //   Returns the rendered agent-msg-edit partial as text/html. The
+    //   server is the trust boundary for the textarea pre-fill: Handlebars
+    //   {{content}} double-brace escaping mitigates T-37-06 / T-37-16
+    //   (stored-XSS via prior message body).
+    scope.get(
+      '/conversations/:cid/messages/:mid',
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        const user = request.user;
+        if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+        const { cid, mid } = request.params as { cid: string; mid: string };
+        const conv = await storage.conversations.getConversation(cid, orgId);
+        if (conv === null || conv.isDeleted) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        const active = await storage.conversations.getFullHistory(cid);
+        const target = active.find((m) => m.id === mid);
+        if (target === undefined) {
+          return reply.code(404).send({ error: 'message_not_found' });
+        }
+        void reply.type('application/json');
+        return reply.code(200).send({
+          id: target.id,
+          role: target.role,
+          content: target.content ?? '',
+          status: target.status,
+        });
+      },
+    );
+
+    scope.get(
+      '/conversations/:cid/messages/:mid/edit-form',
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        const user = request.user;
+        if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+        const { cid, mid } = request.params as { cid: string; mid: string };
+        const conv = await storage.conversations.getConversation(cid, orgId);
+        if (conv === null || conv.isDeleted) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        const active = await storage.conversations.getFullHistory(cid);
+        const target = active.find((m) => m.id === mid);
+        if (target === undefined) {
+          return reply.code(404).send({ error: 'message_not_found' });
+        }
+        // Most-recent-user-message guard: client UI is convenience, server
+        // is the security boundary (T-37-19).
+        if (target.role !== 'user') {
+          return reply.code(400).send({ error: 'not_user_message' });
+        }
+        const lastUser = [...active].reverse().find((m) => m.role === 'user');
+        if (lastUser === undefined || lastUser.id !== mid) {
+          return reply.code(400).send({ error: 'not_most_recent_user' });
+        }
+        const html = renderAgentMsgEditPartial({
+          id: target.id,
+          content: target.content ?? '',
+        });
+        void reply.type('text/html');
+        return reply.code(200).send(html);
+      },
+    );
+
     // POST /agent/conversations/:cid/messages/:mid/retry
     scope.post(
       '/conversations/:cid/messages/:mid/retry',
@@ -1037,11 +1111,47 @@ function renderAgentMessagesFragment(args: {
   readonly locale: string;
 }): string {
   const tpl = compileAgentMessagesTemplate();
+  // Phase 37 Plan 04 — compute isMostRecentUserMessage so agent-msg-actions
+  // can render the edit pencil on the right row. Plan 02's partial already
+  // expects this flag; the cross-plan note in 02-SUMMARY assigned it to
+  // Plan 03/04. Computed here at render time (cheap; messages array is
+  // small — capped at the conversation window).
+  const lastUserId = (() => {
+    for (let i = args.messages.length - 1; i >= 0; i--) {
+      const m = args.messages[i];
+      if (m && m.role === 'user') return m.id;
+    }
+    return null;
+  })();
+  const enriched = args.messages.map((m) => ({
+    ...m,
+    isMostRecentUserMessage: m.role === 'user' && m.id === lastUserId,
+  }));
   return tpl({
-    messages: args.messages,
+    messages: enriched,
     agentDisplayName: args.agentDisplayName,
     locale: args.locale,
   });
+}
+
+// Phase 37 Plan 04 — agent-msg-edit partial renderer used by
+// GET /agent/conversations/:cid/messages/:mid/edit-form.
+let cachedAgentMsgEditTemplate: HandlebarsTemplateDelegate | null = null;
+function compileAgentMsgEditTemplate(): HandlebarsTemplateDelegate {
+  if (cachedAgentMsgEditTemplate !== null) return cachedAgentMsgEditTemplate;
+  compileAgentMessagesTemplate(); // ensure eq + t helpers are registered
+  const viewsDir = resolveViewsDir();
+  const src = readFileSync(join(viewsDir, 'partials', 'agent-msg-edit.hbs'), 'utf-8');
+  cachedAgentMsgEditTemplate = Handlebars.compile(src);
+  return cachedAgentMsgEditTemplate;
+}
+
+function renderAgentMsgEditPartial(args: {
+  readonly id: string;
+  readonly content: string;
+}): string {
+  const tpl = compileAgentMsgEditTemplate();
+  return tpl({ id: args.id, content: args.content });
 }
 
 // ---------------------------------------------------------------------------
