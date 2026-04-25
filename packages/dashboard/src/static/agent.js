@@ -53,23 +53,9 @@
     return markdownSourceById[messageId];
   }
 
-  function getMarkdownSource(messageId, conversationId) {
-    var cached = readMarkdownSource(messageId);
-    if (typeof cached === 'string') return Promise.resolve(cached);
-    if (!conversationId || conversationId.length === 0) return Promise.resolve('');
-    var url = '/agent/conversations/' + encodeURIComponent(conversationId)
-      + '/messages/' + encodeURIComponent(messageId);
-    return fetch(url, {
-      credentials: 'same-origin',
-      headers: { 'x-csrf-token': csrfToken(), 'accept': 'application/json' },
-    })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('msg_load_failed')); })
-      .then(function (payload) {
-        var content = payload && typeof payload.content === 'string' ? payload.content : '';
-        recordMarkdownSource(messageId, content);
-        return content;
-      });
-  }
+  // getMarkdownSource extracted to agent-actions.js (39.1-02). The cache map
+  // (markdownSourceById) lives here because the streaming `done` handler
+  // populates it; agent-actions.js reads it via __luqenAgent.readMarkdownSource.
 
   function writeToClipboard(text) {
     var s = String(text == null ? '' : text);
@@ -121,36 +107,8 @@
     }
   }
 
-  // Visible feedback for copy/share: temporarily replace the icon with a
-  // check or cross glyph for ~1.5s, then restore the original SVG. Avoids
-  // toasts and innerHTML — clones the original child node and swaps it back.
-  function flashActionResult(btn, ok) {
-    if (!btn) return;
-    var children = [];
-    for (var i = 0; i < btn.childNodes.length; i++) {
-      children.push(btn.childNodes[i].cloneNode(true));
-    }
-    while (btn.firstChild) btn.removeChild(btn.firstChild);
-    btn.appendChild(document.createTextNode(ok ? '\u2713' : '\u2715'));
-    btn.classList.add(ok ? 'agent-msg__action--ok' : 'agent-msg__action--err');
-    setTimeout(function () {
-      btn.classList.remove('agent-msg__action--ok');
-      btn.classList.remove('agent-msg__action--err');
-      while (btn.firstChild) btn.removeChild(btn.firstChild);
-      for (var j = 0; j < children.length; j++) btn.appendChild(children[j]);
-    }, 1500);
-  }
-
-  // i18n lookup for action strings: reuses the agent-tools-i18n JSON-script-block.
-  // The block stores nested keys like "actions.copied". Falls back to the key
-  // string itself when the dictionary is absent (matches Phase 36-04 pattern).
-  function actionT(key) {
-    try {
-      var dict = readToolI18n();
-      if (dict && typeof dict[key] === 'string' && dict[key].length > 0) return dict[key];
-    } catch (_e) { /* ignore */ }
-    return key;
-  }
+  // flashActionResult + actionT extracted to agent-actions.js (39.1-02).
+  // agent.js's own announce() routes through __luqenAgent for tests.
 
   function byId(id) { return document.getElementById(id); }
   function setStatus(t) { var el = byId(STATUS_ID); if (el) el.textContent = t; }
@@ -1521,51 +1479,14 @@
       return;
     }
 
-    // ── Phase 37 Plan 04 — per-message action delegated handlers ────────
+    // ── Phase 37 Plan 04 — agent-stop click stays here (activeStream is
+    // module-private to agent.js). retry/copy/share/edit handlers + their
+    // submit listener moved to agent-actions.js in 39.1-02.
     if (e.target.id === 'agent-stop' || e.target.closest('#agent-stop')) {
       e.preventDefault();
       handleStopClick();
       return;
     }
-    var retryAssistantEl = e.target.closest('[data-action="retryAssistant"]');
-    if (retryAssistantEl) {
-      e.preventDefault();
-      handleRetryAssistantClick(retryAssistantEl);
-      return;
-    }
-    var copyAssistantEl = e.target.closest('[data-action="copyAssistant"]');
-    if (copyAssistantEl) {
-      e.preventDefault();
-      handleCopyAssistantClick(copyAssistantEl);
-      return;
-    }
-    var shareAssistantEl = e.target.closest('[data-action="shareAssistant"]');
-    if (shareAssistantEl) {
-      e.preventDefault();
-      handleShareAssistantClick(shareAssistantEl);
-      return;
-    }
-    var editUserEl = e.target.closest('[data-action="editUserMessage"]');
-    if (editUserEl) {
-      e.preventDefault();
-      handleEditUserMessageClick(editUserEl);
-      return;
-    }
-    var cancelEditEl = e.target.closest('[data-action="cancelEditUserMessage"]');
-    if (cancelEditEl) {
-      e.preventDefault();
-      handleCancelEditUserMessageClick(cancelEditEl);
-      return;
-    }
-  });
-
-  // Delegated submit listener for the inline edit form (Phase 37 Plan 04 Task 3).
-  document.addEventListener('submit', function (e) {
-    if (!e.target || !e.target.closest) return;
-    var form = e.target.closest('form[data-action="submitEditUserMessage"]');
-    if (!form) return;
-    e.preventDefault();
-    handleSubmitEditUserMessage(form);
   });
 
   // ── Phase 37 Plan 04 — handler implementations ────────────────────────
@@ -1577,297 +1498,21 @@
     }
     var statusEl = byId(STREAM_STATUS_ID);
     if (statusEl) statusEl.setAttribute('hidden', '');
-    announce(actionT('actions.stopped'));
+    // actionT moved to agent-actions.js; inline minimal lookup here for the
+    // single string this handler still uses.
+    var stoppedDict = readToolI18n();
+    var stoppedMsg = (stoppedDict && typeof stoppedDict['actions.stopped'] === 'string'
+      && stoppedDict['actions.stopped'].length > 0)
+      ? stoppedDict['actions.stopped']
+      : 'actions.stopped';
+    announce(stoppedMsg);
   }
 
-  function removeMessageFromDom(messageId) {
-    if (!messageId) return;
-    var sel;
-    if (window.CSS && typeof window.CSS.escape === 'function') {
-      sel = '[data-message-id="' + window.CSS.escape(messageId) + '"]';
-    } else {
-      sel = '[data-message-id="' + String(messageId).replace(/"/g, '\\"') + '"]';
-    }
-    var els = document.querySelectorAll(sel);
-    for (var i = 0; i < els.length; i++) {
-      if (els[i].parentNode) els[i].parentNode.removeChild(els[i]);
-    }
-  }
+  // removeMessageFromDom + handleRetry/Copy/Share/Edit/Cancel/Submit + their
+  // helpers (showShareToast, renderShareUrlChip, restoreEditBody, getMarkdownSource)
+  // extracted to agent-actions.js (39.1-02). agent.js retains handleStopClick
+  // because activeStream is module-private here.
 
-  function handleRetryAssistantClick(btn) {
-    var mid = btn.getAttribute('data-message-id');
-    var cid = getConversationId();
-    if (!mid || !cid) return;
-    btn.disabled = true;
-    var url = '/agent/conversations/' + encodeURIComponent(cid)
-      + '/messages/' + encodeURIComponent(mid) + '/retry';
-    fetch(url, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'x-csrf-token': csrfToken(), 'Content-Type': 'application/json' },
-      body: '{}',
-    })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('retry_failed')); })
-      .then(function () {
-        removeMessageFromDom(mid);
-        clearToolChips();
-        openStream(cid);
-      })
-      .catch(function () {
-        btn.disabled = false;
-        announce(actionT('actions.retryFailed'));
-      });
-  }
-
-  function handleCopyAssistantClick(btn) {
-    var mid = btn.getAttribute('data-message-id');
-    var cid = getConversationId();
-    if (!mid) return;
-    // Prefer the synchronous cache path so the user-gesture context is preserved
-    // for navigator.clipboard.writeText. Async fetch breaks the gesture and the
-    // Clipboard API silently rejects. Cache is seeded by replaceMessagesFromHtml.
-    var cached = readMarkdownSource(mid);
-    if (typeof cached === 'string') {
-      writeToClipboard(cached).then(function (ok) {
-        flashActionResult(btn, ok);
-        announce(ok ? actionT('actions.copied') : actionT('actions.copyFailed'));
-      });
-      return;
-    }
-    getMarkdownSource(mid, cid)
-      .then(function (text) { return writeToClipboard(text); })
-      .then(function (ok) {
-        flashActionResult(btn, ok);
-        announce(ok ? actionT('actions.copied') : actionT('actions.copyFailed'));
-      })
-      .catch(function () {
-        flashActionResult(btn, false);
-        announce(actionT('actions.copyFailed'));
-      });
-  }
-
-  function handleShareAssistantClick(btn) {
-    var mid = btn.getAttribute('data-message-id');
-    var cid = getConversationId();
-    if (!mid || !cid) return;
-    btn.disabled = true;
-    var endpoint = '/agent/conversations/' + encodeURIComponent(cid)
-      + '/messages/' + encodeURIComponent(mid) + '/share';
-
-    // Build the URL Promise that resolves with a text/plain Blob carrying the
-    // share URL. We start the POST inline so the click's user-gesture is still
-    // active when navigator.clipboard.write([ClipboardItem]) is called.
-    var sharePromise = fetch(endpoint, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'x-csrf-token': csrfToken(), 'Content-Type': 'application/json' },
-      body: '{}',
-    })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('share_failed')); })
-      .then(function (payload) {
-        var path = payload && typeof payload.url === 'string' ? payload.url : '';
-        return window.location.origin + path;
-      });
-
-    // Fire the Clipboard API SYNCHRONOUSLY inside the click handler. Modern
-    // browsers (Chrome 76+, Safari 13.1+, Firefox 87+) support a ClipboardItem
-    // whose value is a Promise — the write() call itself happens during the
-    // user-gesture window, and the browser awaits the Promise to resolve the
-    // bytes. This is the only reliable way to copy fetched data on click.
-    var clipboardWrite = null;
-    try {
-      if (window.isSecureContext && window.navigator && window.navigator.clipboard
-          && typeof window.ClipboardItem === 'function'
-          && typeof window.navigator.clipboard.write === 'function') {
-        var item = new ClipboardItem({
-          'text/plain': sharePromise.then(function (u) {
-            return new Blob([u], { type: 'text/plain' });
-          }),
-        });
-        clipboardWrite = window.navigator.clipboard.write([item]);
-      }
-    } catch (_e) { /* unsupported — fall through to writeText fallback */ }
-
-    // Fallback: when ClipboardItem isn't available (older browsers, JSDOM in
-    // tests), try writeText after the fetch resolves. The Clipboard API may
-    // still allow it depending on the browser's gesture-grace policy.
-    if (clipboardWrite === null) {
-      clipboardWrite = sharePromise.then(function (u) {
-        return writeToClipboard(u);
-      });
-    }
-    // Swallow unhandled rejection — the outer catch already reports failure.
-    if (clipboardWrite && typeof clipboardWrite.catch === 'function') {
-      clipboardWrite.catch(function () {});
-    }
-
-    sharePromise
-      .then(function (_fullUrl) {
-        flashActionResult(btn, true);
-        // Resolve the clipboard outcome (write() returns Promise<void>):
-        //   resolved → copied successfully
-        //   rejected (or no clipboardWrite) → user uses the inline link
-        var clipboardOutcome = clipboardWrite
-          ? clipboardWrite.then(function () { return true; }, function () { return false; })
-          : Promise.resolve(false);
-        clipboardOutcome.then(function (ok) {
-          var msg = ok ? 'Share link copied to clipboard' : 'Share link ready — click to open';
-          showShareToast(msg);
-          announce(msg);
-        });
-      })
-      .catch(function () {
-        flashActionResult(btn, false);
-        showShareToast('Share failed');
-        announce(actionT('actions.shareFailed'));
-      })
-      .then(function () { btn.disabled = false; });
-  }
-
-  // Lightweight toast specifically for share feedback. Renders inside the
-  // drawer for ~2.5s. Requested by UAT 2026-04-25 to make share outcome
-  // visible without relying on aria-live (which is silent for sighted users).
-  function showShareToast(message) {
-    if (!message) return;
-    var drawer = document.getElementById(DRAWER_ID) || document.body;
-    var existing = drawer.querySelector('.agent-drawer__toast');
-    if (existing) existing.parentNode.removeChild(existing);
-    var toast = document.createElement('div');
-    toast.className = 'agent-drawer__toast';
-    toast.setAttribute('role', 'status');
-    toast.textContent = message;
-    drawer.appendChild(toast);
-    setTimeout(function () {
-      if (toast.parentNode) toast.parentNode.removeChild(toast);
-    }, 2500);
-  }
-
-  // Render a small inline chip with the share URL near the share button.
-  // The chip contains an <a> with the URL as both href and visible text;
-  // user can click it (opens in new tab) or right-click → "Copy link address".
-  function renderShareUrlChip(shareBtn, url) {
-    if (!shareBtn || !url) return;
-    var actions = shareBtn.parentNode;
-    if (!actions) return;
-    var existing = actions.querySelector('.agent-msg__share-link');
-    if (existing) existing.parentNode.removeChild(existing);
-    var link = document.createElement('a');
-    link.className = 'agent-msg__share-link';
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.textContent = url;
-    actions.appendChild(link);
-  }
-
-  // Edit/cancel/submit support — captures the original body text so cancel
-  // can restore it without a server round-trip.
-  var activeEdit = null; // { messageId, originalChildren: Node[] }
-
-  function handleEditUserMessageClick(btn) {
-    var mid = btn.getAttribute('data-message-id');
-    var cid = getConversationId();
-    if (!mid || !cid) return;
-    var bubble = btn.closest('.agent-msg');
-    if (!bubble) return;
-    var body = bubble.querySelector('.agent-msg__body');
-    if (!body) return;
-    // Snapshot the original body children so cancel can restore them.
-    var originalChildren = [];
-    for (var i = 0; i < body.childNodes.length; i++) {
-      originalChildren.push(body.childNodes[i].cloneNode(true));
-    }
-    activeEdit = { messageId: mid, originalChildren: originalChildren, bubble: bubble };
-    var url = '/agent/conversations/' + encodeURIComponent(cid)
-      + '/messages/' + encodeURIComponent(mid) + '/edit-form';
-    fetch(url, {
-      credentials: 'same-origin',
-      headers: { 'x-csrf-token': csrfToken(), 'accept': 'text/html' },
-    })
-      .then(function (r) { return r.ok ? r.text() : Promise.reject(new Error('edit_form_failed')); })
-      .then(function (html) {
-        // Replace body content with parsed form (DOMParser is CSP-safe;
-        // server-rendered partial is escaped via Handlebars {{content}}).
-        while (body.firstChild) body.removeChild(body.firstChild);
-        var parsed = new DOMParser().parseFromString(
-          '<!DOCTYPE html><html><body>' + html + '</body></html>', 'text/html');
-        var src = parsed.body;
-        while (src.firstChild) {
-          body.appendChild(document.importNode(src.firstChild, true));
-          src.removeChild(src.firstChild);
-        }
-        // Hide the action row while editing (avoid re-clicking the pencil).
-        var actions = bubble.querySelector('.agent-msg__actions');
-        if (actions) actions.setAttribute('hidden', '');
-        var ta = body.querySelector('textarea');
-        if (ta) {
-          try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
-          catch (_e) { /* ignore */ }
-        }
-      })
-      .catch(function () {
-        // Restore body and emit announcement.
-        restoreEditBody();
-        announce(actionT('actions.editFailed'));
-      });
-  }
-
-  function restoreEditBody() {
-    if (!activeEdit) return;
-    var bubble = activeEdit.bubble;
-    if (!bubble) { activeEdit = null; return; }
-    var body = bubble.querySelector('.agent-msg__body');
-    if (body) {
-      while (body.firstChild) body.removeChild(body.firstChild);
-      for (var i = 0; i < activeEdit.originalChildren.length; i++) {
-        body.appendChild(activeEdit.originalChildren[i]);
-      }
-    }
-    var actions = bubble.querySelector('.agent-msg__actions');
-    if (actions) actions.removeAttribute('hidden');
-    activeEdit = null;
-  }
-
-  function handleCancelEditUserMessageClick(_btn) {
-    restoreEditBody();
-  }
-
-  function handleSubmitEditUserMessage(form) {
-    var mid = form.getAttribute('data-message-id');
-    var cid = getConversationId();
-    if (!mid || !cid) return;
-    var ta = form.querySelector('textarea[name="content"]');
-    var raw = ta ? String(ta.value || '') : '';
-    var content = raw.trim();
-    if (content.length === 0) {
-      announce(actionT('actions.editEmpty'));
-      return;
-    }
-    var saveBtn = form.querySelector('button[type="submit"]');
-    if (saveBtn) saveBtn.disabled = true;
-    var url = '/agent/conversations/' + encodeURIComponent(cid)
-      + '/messages/' + encodeURIComponent(mid) + '/edit-resend';
-    fetch(url, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'x-csrf-token': csrfToken(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content }),
-    })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('edit_resend_failed')); })
-      .then(function () {
-        // Clear the active-edit snapshot — we don't restore on success.
-        activeEdit = null;
-        // Re-fetch the panel so the supersede + new user message render
-        // is canonical, then open the stream for the new assistant turn.
-        loadPanel();
-        clearToolChips();
-        openStream(cid);
-      })
-      .catch(function () {
-        if (saveBtn) saveBtn.disabled = false;
-        announce(actionT('actions.editFailed'));
-      });
-  }
 
   document.addEventListener('keydown', function (e) {
     // History-panel keyboard contract (UI-SPEC §Keyboard & Screen-Reader).
@@ -2003,7 +1648,8 @@
     window.__agentTestExports = {
       writeToClipboard: writeToClipboard,
       announce: announce,
-      getMarkdownSource: getMarkdownSource,
+      // getMarkdownSource moved to agent-actions.js (39.1-02); the actions
+      // module augments window.__agentTestExports with it post-load.
       recordMarkdownSource: recordMarkdownSource,
       readMarkdownSource: readMarkdownSource,
       // handleAgentOrgSwitch + autoSwitchOrgIfNeeded are exported by agent-org.js,
@@ -2041,6 +1687,8 @@
   window.__luqenAgent.recordMarkdownSource = recordMarkdownSource;
   window.__luqenAgent.readMarkdownSource = readMarkdownSource;
   window.__luqenAgent.writeToClipboard = writeToClipboard;
+  window.__luqenAgent.openStream = openStream;
+  window.__luqenAgent.loadPanel = loadPanel;
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
   else { init(); }

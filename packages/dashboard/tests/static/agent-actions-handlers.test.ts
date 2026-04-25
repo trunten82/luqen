@@ -24,6 +24,11 @@ import { JSDOM } from 'jsdom';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AGENT_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent.js');
 const AGENT_JS_SOURCE = readFileSync(AGENT_JS_PATH, 'utf8');
+// Phase 39.1-02 — action handlers moved to agent-actions.js. The test harness
+// loads it after agent.js so the delegated click+submit listeners and the
+// test export shim (handleRetry/Copy/Share/Edit, getMarkdownSource) are wired.
+const AGENT_ACTIONS_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-actions.js');
+const AGENT_ACTIONS_JS_SOURCE = readFileSync(AGENT_ACTIONS_JS_PATH, 'utf8');
 
 interface AgentTestExports {
   writeToClipboard(text: string): Promise<boolean>;
@@ -204,6 +209,14 @@ function setupHarness(opts?: {
     AGENT_JS_SOURCE,
   );
   fn.call(win, win, doc, win.localStorage, win.fetch);
+
+  // Load agent-actions.js in the same JSDOM realm so the delegated click+submit
+  // listeners + the test export shim (39.1-02) are wired up.
+  const fnActions = new win.Function(
+    'window', 'document', 'localStorage', 'fetch',
+    AGENT_ACTIONS_JS_SOURCE,
+  );
+  fnActions.call(win, win, doc, win.localStorage, win.fetch);
 
   return {
     win,
