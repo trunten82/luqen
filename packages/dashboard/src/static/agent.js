@@ -119,25 +119,26 @@
       el.textContent = '';
       setTimeout(function () { el.textContent = msg; }, 10);
     }
-    showToast(msg);
   }
 
-  // Phase 37 — visible toast for action feedback. aria-live alone is silent for
-  // sighted users, so copy/share appear to do nothing. Toast renders inside the
-  // drawer, fades after ~2.5s. CSP-strict (no inline JS, BEM class only).
-  function showToast(message) {
-    if (!message) return;
-    var drawer = document.getElementById(DRAWER_ID) || document.body;
-    var existing = drawer.querySelector('.agent-drawer__toast');
-    if (existing) existing.parentNode.removeChild(existing);
-    var toast = document.createElement('div');
-    toast.className = 'agent-drawer__toast';
-    toast.setAttribute('role', 'status');
-    toast.textContent = message;
-    drawer.appendChild(toast);
+  // Visible feedback for copy/share: temporarily replace the icon with a
+  // check or cross glyph for ~1.5s, then restore the original SVG. Avoids
+  // toasts and innerHTML — clones the original child node and swaps it back.
+  function flashActionResult(btn, ok) {
+    if (!btn) return;
+    var children = [];
+    for (var i = 0; i < btn.childNodes.length; i++) {
+      children.push(btn.childNodes[i].cloneNode(true));
+    }
+    while (btn.firstChild) btn.removeChild(btn.firstChild);
+    btn.appendChild(document.createTextNode(ok ? '\u2713' : '\u2715'));
+    btn.classList.add(ok ? 'agent-msg__action--ok' : 'agent-msg__action--err');
     setTimeout(function () {
-      if (toast.parentNode) toast.parentNode.removeChild(toast);
-    }, 2500);
+      btn.classList.remove('agent-msg__action--ok');
+      btn.classList.remove('agent-msg__action--err');
+      while (btn.firstChild) btn.removeChild(btn.firstChild);
+      for (var j = 0; j < children.length; j++) btn.appendChild(children[j]);
+    }, 1500);
   }
 
   // i18n lookup for action strings: reuses the agent-tools-i18n JSON-script-block.
@@ -1623,18 +1624,21 @@
     var cached = readMarkdownSource(mid);
     if (typeof cached === 'string') {
       writeToClipboard(cached).then(function (ok) {
+        flashActionResult(btn, ok);
         announce(ok ? actionT('actions.copied') : actionT('actions.copyFailed'));
       });
       return;
     }
-    // Cache miss — fetch then copy. Most browsers allow execCommand fallback
-    // even after async, but writeText may fail. Inform the user either way.
     getMarkdownSource(mid, cid)
       .then(function (text) { return writeToClipboard(text); })
       .then(function (ok) {
+        flashActionResult(btn, ok);
         announce(ok ? actionT('actions.copied') : actionT('actions.copyFailed'));
       })
-      .catch(function () { announce(actionT('actions.copyFailed')); });
+      .catch(function () {
+        flashActionResult(btn, false);
+        announce(actionT('actions.copyFailed'));
+      });
   }
 
   function handleShareAssistantClick(btn) {
@@ -1654,11 +1658,20 @@
       .then(function (payload) {
         var path = payload && typeof payload.url === 'string' ? payload.url : '';
         var fullUrl = window.location.origin + path;
-        return writeToClipboard(fullUrl).then(function (ok) {
-          announce(ok ? actionT('actions.shareCreated') : actionT('actions.shareFailed'));
-        });
+        // Try to copy the URL — best-effort. The clipboard API often rejects
+        // after async work loses the user-gesture context, but the share LINK
+        // itself was created server-side, so success is independent of clipboard.
+        writeToClipboard(fullUrl);
+        // Open the share URL in a new tab so the user has the link in front of
+        // them whether or not the clipboard write succeeded.
+        try { window.open(fullUrl, '_blank', 'noopener'); } catch (_e) { /* ignore */ }
+        flashActionResult(btn, true);
+        announce(actionT('actions.shareCreated'));
       })
-      .catch(function () { announce(actionT('actions.shareFailed')); })
+      .catch(function () {
+        flashActionResult(btn, false);
+        announce(actionT('actions.shareFailed'));
+      })
       .then(function () { btn.disabled = false; });
   }
 
