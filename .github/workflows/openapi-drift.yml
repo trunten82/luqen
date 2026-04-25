@@ -1,0 +1,56 @@
+# Phase 40-01 DOC-02 — OpenAPI snapshot drift gate.
+#
+# Re-runs `npm run docs:openapi` on every PR/push. If the regenerated JSON
+# under docs/reference/openapi/ differs from what's committed, the job fails
+# with an actionable error message. Also re-runs the per-service route-vs-spec
+# coverage tests (added as Task 4 of this plan) so a route added without a
+# schema is caught before it lands.
+#
+# Security: this workflow does NOT consume any untrusted event payload data
+# (issue titles, PR bodies, commit messages, etc.) inside `run:` blocks. All
+# steps execute fixed npm scripts on the checked-out source.
+
+name: openapi-drift
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - develop
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm run build --workspaces --if-present
+
+      - name: regenerate OpenAPI snapshots
+        run: npm run docs:openapi
+
+      - name: fail on snapshot drift
+        run: |
+          if ! git diff --exit-code docs/reference/openapi/; then
+            echo "::error::OpenAPI snapshots out of date. Run 'npm run docs:openapi' locally and commit the regenerated docs/reference/openapi/*.json files."
+            exit 1
+          fi
+
+      - name: route-vs-spec coverage — compliance
+        run: npm test --workspace packages/compliance -- tests/openapi/
+
+      - name: route-vs-spec coverage — branding
+        run: npm test --workspace packages/branding -- tests/openapi/
+
+      - name: route-vs-spec coverage — llm
+        run: npm test --workspace packages/llm -- tests/openapi/
+
+      - name: route-vs-spec coverage — dashboard (incl. MCP)
+        run: npm test --workspace packages/dashboard -- tests/openapi/
