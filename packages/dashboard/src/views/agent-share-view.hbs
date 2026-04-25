@@ -1,0 +1,32 @@
+{{!-- Phase 37 Plan 03 Task 3 — Read-only conversation share view.
+
+     Renders a snapshot of an agent conversation. No composer, no
+     action buttons. Wrapped in a minimal HTML document so the route
+     handler can return it directly without going through the global
+     layout (the layout includes the drawer + composer which we want
+     to suppress for share viewers).
+
+     The agent-message partial is reused with `readOnly=true` so the
+     {{#unless readOnly}} guard inside agent-msg-actions.hbs suppresses
+     all per-message action buttons.
+--}}
+<!DOCTYPE html>
+<html lang="{{locale}}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{conversationTitle}}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="agent-share">
+  <header class="agent-share__head">
+    <h1>{{conversationTitle}}</h1>
+    <p class="form-hint">{{t "agent.share.shared_by" name=createdByDisplayName at=createdAt}}</p>
+  </header>
+  <section class="agent-share__thread" id="agent-messages">
+    {{#each messages}}{{> agent-message this readOnly=true isMostRecentUserMessage=false agentDisplayName=../agentDisplayName locale=../locale}}{{/each}}
+  </section>
+</main>
+</body>
+</html>

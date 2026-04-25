@@ -1,7 +1,10 @@
 {{!-- Phase 37 Plan 02 — Per-message action row.
      Static UI scaffolding only. Plan 04 wires the data-action handlers
      in agent.js (delegated listener pattern, same as 36-04).
-     Hover-revealed on desktop, always-visible on touch via CSS. --}}
+     Hover-revealed on desktop, always-visible on touch via CSS.
+     Phase 37 Plan 03 Task 3: wrapped in {{#unless readOnly}} so the
+     read-only share-view template can suppress all action buttons. --}}
+{{#unless readOnly}}
 {{#if (eq role "assistant")}}
   <div class="agent-msg__actions" role="group" aria-label="{{t "agent.actions.assistantGroupLabel"}}">
     <button type="button" class="agent-msg__action agent-msg__action--retry"
@@ -41,3 +44,4 @@
     {{/if}}
   {{/if}}
 {{/if}}
+{{/unless}}
