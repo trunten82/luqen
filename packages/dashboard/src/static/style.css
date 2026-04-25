@@ -3931,6 +3931,8 @@ details[open] > .mt-examples-toggle::before {
   justify-content: space-between;
   padding: var(--space-md);
   border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  row-gap: var(--space-xs);
 }
 .agent-drawer__title { margin: 0; font-size: 1.125rem; color: var(--text-primary); }
 .agent-drawer__close {
@@ -4625,14 +4627,33 @@ details[open] > .mt-examples-toggle::before {
   gap: var(--space-xs);
   margin: 0 var(--space-sm);
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .agent-drawer__org-switcher-label {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 .agent-drawer__org-switcher-select {
   font-size: var(--font-size-sm);
-  padding: 2px var(--space-xs);
+  padding: 4px var(--space-xs);
+  flex: 1 1 auto;
+  min-height: 36px;
+  min-width: 0;
+  max-width: 100%;
+}
+/* Mobile: switcher occupies its own full-width row below the title */
+@media (max-width: 600px) {
+  .agent-drawer__org-switcher {
+    order: 99;
+    flex-basis: 100%;
+    margin: 0;
+  }
+  .agent-drawer__org-switcher-select {
+    min-height: 44px;
+    font-size: 1rem;
+  }
 }
 /* Org-switch toast modifier — anchored to the switcher (not the drawer footer). */
 .agent-drawer__toast--org {
