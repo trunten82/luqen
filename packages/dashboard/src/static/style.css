@@ -4324,3 +4324,54 @@ details[open] > .mt-examples-toggle::before {
 @media (prefers-reduced-motion: reduce) {
   .agent-drawer__tool-chip--running .agent-drawer__tool-chip-icon { animation: none; }
 }
+
+/* Phase 36 — admin audit rationale cell */
+.audit-rationale__toggle {
+  display: block;
+  text-align: left;
+  white-space: normal;
+  max-width: 32ch;
+  padding: var(--space-xs) var(--space-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  border-radius: var(--border-radius-sm);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.audit-rationale__toggle:hover,
+.audit-rationale__toggle:focus-visible {
+  background: var(--bg-secondary);
+  border-color: var(--bg-tertiary);
+  outline: none;
+}
+.audit-rationale__toggle[aria-expanded="true"] {
+  background: var(--bg-tertiary);
+}
+.audit-rationale__preview {
+  color: inherit;
+  font-size: var(--font-size-sm);
+}
+.audit-rationale__full {
+  padding: var(--space-sm);
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  margin-top: var(--space-xs);
+  max-width: 60ch;
+  transition: opacity 0.15s ease;
+}
+.audit-rationale__text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+.audit-rationale__meta {
+  margin: var(--space-xs) 0 0 0;
+  font-size: var(--font-size-xs);
+  color: inherit;
+}
+@media (prefers-reduced-motion: reduce) {
+  .audit-rationale__toggle,
+  .audit-rationale__full { transition: none; }
+}
