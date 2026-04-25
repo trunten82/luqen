@@ -165,10 +165,10 @@ export function registerAdminTools(
     'dashboard_list_users',
     {
       description:
-        "List dashboard users. Each returned user carries `orgs: [{id, name}, ...]` listing every org they belong to (empty array means no org membership — common for global admins).\n\n" +
+        "List dashboard users. The top-level `role` field is the user's GLOBAL/system role (e.g. admin, user, viewer). Each user also carries `orgs: [{id, name, orgRole}, ...]` — `orgRole` is the user's role WITHIN that specific org (typically 'admin' for org owners) and is the authoritative answer for 'what role does X have in org Y'. Empty orgs[] means no org membership (common for global admins).\n\n" +
         "USAGE PATTERNS:\n" +
         "- 'Users in MY org' (caller-scoped, default): omit orgScope. Returns members of the caller's own org. Global admins (no caller org) get an error directing them to use orgScope='all'.\n" +
-        "- 'Users in a SPECIFIC org by name or ID' (e.g. Concorsando): pass orgScope='all' AND filter the results client-side by user.orgs[].name or user.orgs[].id. Do NOT pass an orgId in orgScope — the only legal values are 'caller-org' and 'all'.\n" +
+        "- 'Users in a SPECIFIC org by name or ID' (e.g. Concorsando): pass orgScope='all' AND filter the results client-side by user.orgs[].name or user.orgs[].id. When reporting the user's role in that org, use user.orgs[].orgRole (NOT the top-level user.role). Do NOT pass an orgId in orgScope — the only legal values are 'caller-org' and 'all'.\n" +
         "- 'All users in the system': pass orgScope='all'.\n\n" +
         "The response always echoes the resolved scope ('caller-org:<orgId>' or 'all'). When scope='all', meta.notice reminds you to derive org membership from user.orgs[]. Password hashes are never returned.",
       inputSchema: z.object({
@@ -200,18 +200,35 @@ export function registerAdminTools(
       // "users in org X" questions without inventing memberships. Without this,
       // models given a flat user list have historically relabeled scope='all'
       // results as a single specific org's users.
-      const enriched = await Promise.all(
-        rows.map(async (u) => {
-          const safe = stripPasswordHash(u as unknown as Record<string, unknown>);
-          const orgs = await storage.organizations.getUserOrgs(
-            (u as unknown as { id: string }).id,
-          );
-          return {
-            ...safe,
-            orgs: orgs.map((o) => ({ id: o.id, name: o.name })),
-          };
-        }),
-      );
+      // Pre-build a {orgId → {userId → orgRole}} map. dashboard_users.role is
+      // the global/system role; org_members.role is the org-scoped role and is
+      // what callers care about when answering "what role does X have in org Y".
+      const userOrgs: Record<string, Array<{ id: string; name: string }>> = {};
+      const orgIdsTouched = new Set<string>();
+      for (const u of rows) {
+        const uid = (u as unknown as { id: string }).id;
+        const orgs = await storage.organizations.getUserOrgs(uid);
+        userOrgs[uid] = orgs.map((o) => ({ id: o.id, name: o.name }));
+        for (const o of orgs) orgIdsTouched.add(o.id);
+      }
+      const orgRoleMap: Record<string, Record<string, string>> = {};
+      for (const oid of orgIdsTouched) {
+        const members = await storage.organizations.listMembers(oid);
+        const byUser: Record<string, string> = {};
+        for (const m of members) byUser[m.userId] = m.role;
+        orgRoleMap[oid] = byUser;
+      }
+      const enriched = rows.map((u) => {
+        const safe = stripPasswordHash(u as unknown as Record<string, unknown>);
+        const uid = (u as unknown as { id: string }).id;
+        const orgsForUser = userOrgs[uid] ?? [];
+        const orgsWithRole = orgsForUser.map((o) => ({
+          id: o.id,
+          name: o.name,
+          orgRole: orgRoleMap[o.id]?.[uid] ?? null,
+        }));
+        return { ...safe, orgs: orgsWithRole };
+      });
       return okEnvelope({
         data: enriched,
         meta: {
