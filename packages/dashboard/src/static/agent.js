@@ -1658,13 +1658,11 @@
       .then(function (payload) {
         var path = payload && typeof payload.url === 'string' ? payload.url : '';
         var fullUrl = window.location.origin + path;
-        // Try to copy the URL — best-effort. The clipboard API often rejects
-        // after async work loses the user-gesture context, but the share LINK
-        // itself was created server-side, so success is independent of clipboard.
-        writeToClipboard(fullUrl);
-        // Open the share URL in a new tab so the user has the link in front of
-        // them whether or not the clipboard write succeeded.
-        try { window.open(fullUrl, '_blank', 'noopener'); } catch (_e) { /* ignore */ }
+        // Render the URL inline next to the share button so the user can
+        // select+copy or click it. Clipboard automation after async fetch is
+        // unreliable across browsers (loses the user-gesture context), so we
+        // don't rely on it — the user always has a visible, clickable link.
+        renderShareUrlChip(btn, fullUrl);
         flashActionResult(btn, true);
         announce(actionT('actions.shareCreated'));
       })
@@ -1673,6 +1671,24 @@
         announce(actionT('actions.shareFailed'));
       })
       .then(function () { btn.disabled = false; });
+  }
+
+  // Render a small inline chip with the share URL near the share button.
+  // The chip contains an <a> with the URL as both href and visible text;
+  // user can click it (opens in new tab) or right-click → "Copy link address".
+  function renderShareUrlChip(shareBtn, url) {
+    if (!shareBtn || !url) return;
+    var actions = shareBtn.parentNode;
+    if (!actions) return;
+    var existing = actions.querySelector('.agent-msg__share-link');
+    if (existing) existing.parentNode.removeChild(existing);
+    var link = document.createElement('a');
+    link.className = 'agent-msg__share-link';
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = url;
+    actions.appendChild(link);
   }
 
   // Edit/cancel/submit support — captures the original body text so cancel
