@@ -18,7 +18,11 @@ interface ShareLinkRow {
   created_by_user_id: string;
   created_at: string;
   revoked_at: string | null;
+  expires_at: string | null;
 }
+
+const SHARE_LINK_TTL_DAYS = 30;
+const MS_PER_DAY = 86_400_000;
 
 // ---------------------------------------------------------------------------
 // Token generator
@@ -42,16 +46,18 @@ export class SqliteShareLinkRepository implements ShareLinkRepository {
 
   async createShareLink(input: CreateShareLinkInput): Promise<ShareLink> {
     const id = generateToken();
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const expiresIso = new Date(now.getTime() + SHARE_LINK_TTL_DAYS * MS_PER_DAY).toISOString();
 
     this.db
       .prepare(
         `INSERT INTO agent_share_links
            (id, conversation_id, org_id, anchor_message_id,
-            created_by_user_id, created_at, revoked_at)
+            created_by_user_id, created_at, revoked_at, expires_at)
          VALUES
            (@id, @conversationId, @orgId, @anchorMessageId,
-            @createdByUserId, @createdAt, NULL)`,
+            @createdByUserId, @createdAt, NULL, @expiresAt)`,
       )
       .run({
         id,
@@ -59,7 +65,8 @@ export class SqliteShareLinkRepository implements ShareLinkRepository {
         orgId: input.orgId,
         anchorMessageId: input.anchorMessageId,
         createdByUserId: input.createdByUserId,
-        createdAt: now,
+        createdAt: nowIso,
+        expiresAt: expiresIso,
       });
 
     const row = this.db
@@ -72,9 +79,11 @@ export class SqliteShareLinkRepository implements ShareLinkRepository {
     const row = this.db
       .prepare(
         `SELECT * FROM agent_share_links
-         WHERE id = ? AND revoked_at IS NULL`,
+         WHERE id = @id
+           AND revoked_at IS NULL
+           AND (expires_at IS NULL OR expires_at > @now)`,
       )
-      .get(id) as ShareLinkRow | undefined;
+      .get({ id, now: new Date().toISOString() }) as ShareLinkRow | undefined;
     return row !== undefined ? this.rowToShareLink(row) : null;
   }
 
@@ -119,6 +128,7 @@ export class SqliteShareLinkRepository implements ShareLinkRepository {
       createdByUserId: row.created_by_user_id,
       createdAt: row.created_at,
       revokedAt: row.revoked_at,
+      expiresAt: row.expires_at,
     };
   }
 }

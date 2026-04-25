@@ -1518,4 +1518,18 @@ CREATE INDEX IF NOT EXISTS idx_agent_share_links_org ON agent_share_links(org_id
 CREATE INDEX IF NOT EXISTS idx_agent_share_links_conv ON agent_share_links(conversation_id);
     `,
   },
+  {
+    id: '060',
+    name: 'agent-share-links-expiry',
+    sql: `
+-- Phase 37 — TTL for share links. Default 30 days from creation. Existing
+-- rows get a 30-day window from migration time. The route handler treats
+-- any link past expires_at as 410 Gone.
+ALTER TABLE agent_share_links ADD COLUMN expires_at TEXT;
+UPDATE agent_share_links
+   SET expires_at = datetime(created_at, '+30 days')
+ WHERE expires_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_agent_share_links_expires ON agent_share_links(expires_at);
+    `,
+  },
 ];
