@@ -1683,5 +1683,10 @@
   "agent.tools.chip.successAria": "Tool {{name}} completed successfully",
   "agent.tools.chip.errorAria": "Tool {{name}} failed: {{error}}",
   "agent.tools.cap.label": "Reached tool limit — producing answer with what we have",
-  "agent.tools.cap.aria": "Tool iteration limit reached"
+  "agent.tools.cap.aria": "Tool iteration limit reached",
+  "agent.org.label": "Active org",
+  "agent.org.switching": "Switching…",
+  "agent.org.switched": "Switched to {{orgName}}",
+  "agent.org.error": "Couldn't switch org",
+  "agent.org.forbidden": "Not allowed"
 }
