@@ -514,3 +514,104 @@ describe('SqliteAgentAuditRepository — immutability contract', () => {
     expect(storage.agentAudit).not.toHaveProperty('query');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Group G — rationale + outcomeDetail filter (Phase 36 / ATOOL-04)
+// ---------------------------------------------------------------------------
+
+describe('SqliteAgentAuditRepository — rationale + outcomeDetail filter (ATOOL-04)', () => {
+  it('G1: append with rationale persists and getEntry returns the same string', async () => {
+    const entry = await storage.agentAudit.append({
+      userId: 'u1',
+      orgId: orgA,
+      toolName: 'dashboard_scan_site',
+      argsJson: '{}',
+      outcome: 'success',
+      latencyMs: 10,
+      rationale: 'sample reasoning',
+    });
+    expect(entry.rationale).toBe('sample reasoning');
+
+    const fetched = await storage.agentAudit.getEntry(entry.id, orgA);
+    expect(fetched).not.toBeNull();
+    expect(fetched!.rationale).toBe('sample reasoning');
+  });
+
+  it('G2: append without rationale stores null and reads back null', async () => {
+    const entry = await storage.agentAudit.append({
+      userId: 'u1',
+      orgId: orgA,
+      toolName: 't',
+      argsJson: '{}',
+      outcome: 'success',
+      latencyMs: 10,
+    });
+    expect(entry.rationale).toBeNull();
+
+    const fetched = await storage.agentAudit.getEntry(entry.id, orgA);
+    expect(fetched!.rationale).toBeNull();
+  });
+
+  it('G2b: append with rationale: null explicitly stores null', async () => {
+    const entry = await storage.agentAudit.append({
+      userId: 'u1',
+      orgId: orgA,
+      toolName: 't',
+      argsJson: '{}',
+      outcome: 'success',
+      latencyMs: 10,
+      rationale: null,
+    });
+    expect(entry.rationale).toBeNull();
+
+    const fetched = await storage.agentAudit.getEntry(entry.id, orgA);
+    expect(fetched!.rationale).toBeNull();
+  });
+
+  it('G3: outcomeDetail filter returns only matching rows; countForOrg agrees', async () => {
+    const details = ['iteration_cap', 'timeout_500', 'iteration_cap'];
+    for (const detail of details) {
+      await storage.agentAudit.append({
+        userId: 'u1',
+        orgId: orgA,
+        toolName: '__loop__',
+        argsJson: '{}',
+        outcome: 'error',
+        outcomeDetail: detail,
+        latencyMs: 10,
+      });
+    }
+
+    const list = await storage.agentAudit.listForOrg(
+      orgA,
+      { outcomeDetail: 'iteration_cap' },
+      {},
+    );
+    expect(list).toHaveLength(2);
+    expect(list.every((e) => e.outcomeDetail === 'iteration_cap')).toBe(true);
+
+    const count = await storage.agentAudit.countForOrg(orgA, {
+      outcomeDetail: 'iteration_cap',
+    });
+    expect(count).toBe(2);
+  });
+
+  it('G4: no outcomeDetail filter returns all rows (filter is opt-in)', async () => {
+    const details = ['iteration_cap', 'timeout_500', 'iteration_cap'];
+    for (const detail of details) {
+      await storage.agentAudit.append({
+        userId: 'u1',
+        orgId: orgA,
+        toolName: '__loop__',
+        argsJson: '{}',
+        outcome: 'error',
+        outcomeDetail: detail,
+        latencyMs: 10,
+      });
+    }
+
+    const list = await storage.agentAudit.listForOrg(orgA, {}, {});
+    expect(list).toHaveLength(3);
+    expect(await storage.agentAudit.countForOrg(orgA, {})).toBe(3);
+  });
+});
