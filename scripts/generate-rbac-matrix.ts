@@ -168,11 +168,13 @@ function extractDashboardRoutes(): MatrixRow[] {
 
   // Match `server.METHOD('path', { ... requirePermission(...) ... }, ...);`.
   // Multiline: route options can span many lines. Capture method, path, and
-  // the args inside the *first* requirePermission call in the route's option
-  // block. We scan each METHOD call and look ahead until the closing `);`.
-  // Sufficient for the patterns used in this codebase (no nested route defs).
+  // the option-block tail. We then scan ALL `requirePermission(...)` calls in
+  // that tail (a single route option block can chain multiple calls — see
+  // routes/fix-pr.ts:202 for an `[requirePermission('a'), requirePermission('b')]`
+  // construction). Sufficient for the patterns used in this codebase (no
+  // nested route defs).
   const routeRe = /server\.(get|post|put|patch|delete)\s*\(\s*['"]([^'"]+)['"]([\s\S]*?)\)\s*;/g;
-  const permCallRe = /requirePermission\(([^)]*)\)/;
+  const permCallRe = /requirePermission\(([^)]*)\)/g;
 
   for (const file of files) {
     const src = readFileSync(file, 'utf8');
@@ -182,14 +184,16 @@ function extractDashboardRoutes(): MatrixRow[] {
       const method = m[1]!.toUpperCase();
       const path = m[2]!;
       const tail = m[3]!;
-      const permMatch = permCallRe.exec(tail);
-      if (!permMatch) continue;
-      const perms = parsePermissionList(permMatch[1]!);
-      if (perms.length === 0) continue;
       const surfaceType = classifyDashboardSurface(path);
       const surface = `${method} ${path}`;
-      for (const perm of perms) {
-        rows.push({ permission: perm, surface, surfaceType, source: rel });
+      // Collect every requirePermission call in this option block.
+      const localRe = new RegExp(permCallRe.source, 'g');
+      let pm: RegExpExecArray | null;
+      while ((pm = localRe.exec(tail)) !== null) {
+        const perms = parsePermissionList(pm[1]!);
+        for (const perm of perms) {
+          rows.push({ permission: perm, surface, surfaceType, source: rel });
+        }
       }
     }
   }
