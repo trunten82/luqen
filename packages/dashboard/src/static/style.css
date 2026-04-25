@@ -4353,6 +4353,18 @@ details[open] > .mt-examples-toggle::before {
   color: inherit;
   font-size: var(--font-size-sm);
 }
+/* When expanded, hide the truncated preview so the full panel below isn't a duplicate.
+   The button stays in place (collapsed state's accessible label kicks in via JS) — only
+   the body of the button is empty so the user clicks the same target to collapse. */
+.audit-rationale__toggle[aria-expanded="true"] .audit-rationale__preview {
+  display: none;
+}
+.audit-rationale__toggle[aria-expanded="true"]::before {
+  content: "▾ ";
+}
+.audit-rationale__toggle[aria-expanded="false"]::before {
+  content: "▸ ";
+}
 .audit-rationale__full {
   padding: var(--space-sm);
   background: var(--bg-secondary);
