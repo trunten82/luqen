@@ -178,6 +178,9 @@ describe('Phase 30 data tools — tools/list RBAC filtering', () => {
   it('caller with all three required permissions sees the 6 data tools (admin tools empty in 30-02)', async () => {
     const verifier = makeFakeVerifier({
       sub: 'u',
+      // requires write tier — dashboard_scan_site is gated by scope-filter in
+      // src/mcp/middleware.ts (scans.create => write); read-only callers would
+      // fail the assertion below that includes dashboard_scan_site.
       scopes: ['read', 'write'],
       orgId: 'org-1',
       role: 'member',
@@ -279,6 +282,8 @@ describe('Phase 30 data tools — tools/list RBAC filtering', () => {
   it('caller with only scans.create sees dashboard_scan_site', async () => {
     const verifier = makeFakeVerifier({
       sub: 'u',
+      // requires write tier per src/mcp/middleware.ts scope-filter rule
+      // (scans.create maps to write tier).
       scopes: ['read', 'write'],
       orgId: 'org-1',
       role: 'member',
