@@ -1688,5 +1688,6 @@
   "agent.org.switching": "Switching…",
   "agent.org.switched": "Switched to {{orgName}}",
   "agent.org.error": "Couldn't switch org",
-  "agent.org.forbidden": "Not allowed"
+  "agent.org.forbidden": "Not allowed",
+  "agent.history.orgChip": "Org: {{orgName}}"
 }
