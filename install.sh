@@ -69,11 +69,17 @@ step()    { printf "\n%s[%s/%s]%s %s%s%s\n" "${DIM}" "$1" "$2" "${RESET}" "${BOL
 
 run_quiet() {
   local label="$1"; shift
+  local logfile
+  logfile="$(mktemp -t luqen-install-step.XXXXXX.log 2>/dev/null || echo "/tmp/luqen-install-step-$$.log")"
   printf "  %-40s" "$label"
-  if "$@" >/dev/null 2>&1; then
+  if "$@" >"${logfile}" 2>&1; then
     printf "${GREEN}+${RESET}\n"
+    rm -f "${logfile}"
   else
     printf "${RED}x${RESET}\n"
+    printf "  %sFailing step output (last 20 lines):%s\n" "${DIM}" "${RESET}" >"$OUT"
+    tail -n 20 "${logfile}" | sed 's/^/    /' >"$OUT"
+    printf "  %sFull log: %s%s\n" "${DIM}" "${logfile}" "${RESET}" >"$OUT"
     return 1
   fi
 }
@@ -1636,16 +1642,24 @@ ENVFILE
   step 4 $TOTAL_STEPS_DOCKER "Building and starting containers"
 
   cd "${INSTALL_DIR}"
-  run_quiet "Building images" ${COMPOSE_CMD} build
-  run_quiet "Starting containers" ${COMPOSE_CMD} up -d
+  if ! run_quiet "Building images" ${COMPOSE_CMD} build; then
+    error "docker compose build failed — see step output above. Aborting."
+    exit 1
+  fi
+  if ! run_quiet "Starting containers" ${COMPOSE_CMD} up -d; then
+    error "docker compose up failed — see step output above. Aborting."
+    exit 1
+  fi
 
   info "Waiting for services to become healthy..."
   local attempts=0
   until curl -sf "http://localhost:${DASHBOARD_PORT}/health" >/dev/null 2>&1; do
     attempts=$(( attempts + 1 ))
     if [ "${attempts}" -ge 30 ]; then
-      error "Services did not start. Check: ${COMPOSE_CMD} logs"
-      return
+      error "Services did not become healthy after $((attempts * 2))s. Recent compose logs:"
+      ${COMPOSE_CMD} logs --tail 30 2>&1 | sed 's/^/    /' >"$OUT" || true
+      error "For full logs: cd ${INSTALL_DIR} && ${COMPOSE_CMD} logs"
+      exit 1
     fi
     sleep 2
   done
