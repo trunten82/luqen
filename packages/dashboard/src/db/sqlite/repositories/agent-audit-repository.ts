@@ -78,6 +78,14 @@ function buildFilterQuery(
     conditions.push('outcome = @outcome');
     params['outcome'] = filters.outcome;
   }
+  if (filters.outcomeDetail !== undefined) {
+    // Phase 36 (ATOOL-04): exact-match on outcome_detail. Primary use case
+    // is the /admin/audit cap-hit chip filter (outcomeDetail='iteration_cap').
+    // Filter pushdown is acceptable: idx_agent_audit_log_org_created already
+    // narrows by org_id; the LIMIT 200 cap on listForOrg bounds the scan.
+    conditions.push('outcome_detail = @outcomeDetail');
+    params['outcomeDetail'] = filters.outcomeDetail;
+  }
   if (filters.from !== undefined) {
     conditions.push('created_at >= @from');
     params['from'] = filters.from;
@@ -116,9 +124,9 @@ export class SqliteAgentAuditRepository implements AgentAuditRepository {
     this.db
       .prepare(
         `INSERT INTO agent_audit_log
-           (id, user_id, org_id, conversation_id, tool_name, args_json, outcome, outcome_detail, latency_ms, created_at)
+           (id, user_id, org_id, conversation_id, tool_name, args_json, outcome, outcome_detail, rationale, latency_ms, created_at)
          VALUES
-           (@id, @userId, @orgId, @conversationId, @toolName, @argsJson, @outcome, @outcomeDetail, @latencyMs, @createdAt)`,
+           (@id, @userId, @orgId, @conversationId, @toolName, @argsJson, @outcome, @outcomeDetail, @rationale, @latencyMs, @createdAt)`,
       )
       .run({
         id,
@@ -129,6 +137,9 @@ export class SqliteAgentAuditRepository implements AgentAuditRepository {
         argsJson: input.argsJson,
         outcome: input.outcome,
         outcomeDetail: input.outcomeDetail ?? null,
+        // Phase 36 (ATOOL-04): undefined or null both persist as NULL.
+        // Bound parameter — no string concat (mitigates T-36-01 tampering).
+        rationale: input.rationale ?? null,
         latencyMs: input.latencyMs,
         createdAt,
       });
