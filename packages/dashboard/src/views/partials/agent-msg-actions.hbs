@@ -1,0 +1,43 @@
+{{!-- Phase 37 Plan 02 — Per-message action row.
+     Static UI scaffolding only. Plan 04 wires the data-action handlers
+     in agent.js (delegated listener pattern, same as 36-04).
+     Hover-revealed on desktop, always-visible on touch via CSS. --}}
+{{#if (eq role "assistant")}}
+  <div class="agent-msg__actions" role="group" aria-label="{{t "agent.actions.assistantGroupLabel"}}">
+    <button type="button" class="agent-msg__action agent-msg__action--retry"
+            data-action="retryAssistant"
+            data-message-id="{{id}}"
+            aria-label="{{t "agent.actions.retry"}}"
+            title="{{t "agent.actions.retry"}}">
+      <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/></svg>
+    </button>
+    <button type="button" class="agent-msg__action agent-msg__action--copy"
+            data-action="copyAssistant"
+            data-message-id="{{id}}"
+            aria-label="{{t "agent.actions.copy"}}"
+            title="{{t "agent.actions.copy"}}">
+      <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z" fill="currentColor"/></svg>
+    </button>
+    <button type="button" class="agent-msg__action agent-msg__action--share"
+            data-action="shareAssistant"
+            data-message-id="{{id}}"
+            aria-label="{{t "agent.actions.share"}}"
+            title="{{t "agent.actions.share"}}">
+      <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 1 0 2.92-2.92z" fill="currentColor"/></svg>
+    </button>
+  </div>
+{{else}}
+  {{#if (eq role "user")}}
+    {{#if isMostRecentUserMessage}}
+      <div class="agent-msg__actions agent-msg__actions--user">
+        <button type="button" class="agent-msg__action agent-msg__action--edit"
+                data-action="editUserMessage"
+                data-message-id="{{id}}"
+                aria-label="{{t "agent.actions.edit"}}"
+                title="{{t "agent.actions.edit"}}">
+          <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    {{/if}}
+  {{/if}}
+{{/if}}

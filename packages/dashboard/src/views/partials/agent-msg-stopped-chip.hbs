@@ -1,0 +1,8 @@
+{{!-- Phase 37 Plan 02 — "Stopped by user" chip, rendered beneath an
+     assistant bubble when message.status === 'stopped'. Visual reference:
+     36-04 .agent-drawer__tool-chip. role/aria-live announces the state
+     change to screen readers. --}}
+<div class="agent-msg__stopped-chip" role="status" aria-live="polite">
+  <svg aria-hidden="true" focusable="false" width="12" height="12" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor"/></svg>
+  <span>{{t "agent.actions.stoppedByUser"}}</span>
+</div>
