@@ -55,9 +55,12 @@
        aria-relevant="additions"
        tabindex="0">
     {{> agent-messages messages=messages agentDisplayName=agentDisplayName locale=locale}}
-    <div class="agent-drawer__tool-chips" id="agent-tool-chips"
-         role="status" aria-live="polite" aria-atomic="false"></div>
   </div>
+
+  {{!-- Phase 36-04 fix: chip strip lives OUTSIDE the scrolling messages container so
+       streaming text doesn't push chips off-screen on mobile. Sticks above stream-status. --}}
+  <div class="agent-drawer__tool-chips" id="agent-tool-chips"
+       role="status" aria-live="polite" aria-atomic="false"></div>
 
   {{!-- Phase 36-04: tool chip i18n strings (CSP-strict; inert JSON, no executable script).
        Read once on load by agent.js for chip ARIA labels + cap-hit text. Templated with
