@@ -124,7 +124,7 @@ export async function createServer(options: ServerOptions) {
   });
 
   await app.register(swaggerUi, {
-    routePrefix: '/api/v1/docs',
+    routePrefix: '/docs',
     uiConfig: {
       docExpansion: 'list',
     },
@@ -161,9 +161,9 @@ export async function createServer(options: ServerOptions) {
   // Initialize DB
   await db.initialize();
 
-  // OpenAPI JSON alias
+  // OpenAPI JSON alias — Phase 40-01 DOC-02: swagger moved to /docs.
   app.get('/api/v1/openapi.json', async (_request, reply) => {
-    await reply.redirect('/api/v1/docs/json');
+    await reply.redirect('/docs/json');
   });
 
   // Register all route groups

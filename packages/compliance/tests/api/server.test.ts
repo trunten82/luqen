@@ -22,7 +22,8 @@ describe('Server setup', () => {
   });
 
   it('has OpenAPI JSON route registered', async () => {
-    const response = await app.inject({ method: 'GET', url: '/api/v1/docs/json' });
+    // Phase 40-01 DOC-02: swagger UI moved to /docs (was /api/v1/docs).
+    const response = await app.inject({ method: 'GET', url: '/docs/json' });
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body) as Record<string, unknown>;
     expect(body.openapi).toBeDefined();
