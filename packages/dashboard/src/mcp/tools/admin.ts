@@ -191,10 +191,33 @@ export function registerAdminTools(
           ? await storage.users.listUsers()
           : await storage.users.listUsersForOrg(orgId);
       const resolvedScope = scope === 'all' ? 'all' : `caller-org:${orgId}`;
-      const safe = rows.map((u) =>
-        stripPasswordHash(u as unknown as Record<string, unknown>),
+      // Annotate each user with their org memberships so callers can answer
+      // "users in org X" questions without inventing memberships. Without this,
+      // models given a flat user list have historically relabeled scope='all'
+      // results as a single specific org's users.
+      const enriched = await Promise.all(
+        rows.map(async (u) => {
+          const safe = stripPasswordHash(u as unknown as Record<string, unknown>);
+          const orgs = await storage.organizations.getUserOrgs(
+            (u as unknown as { id: string }).id,
+          );
+          return {
+            ...safe,
+            orgs: orgs.map((o) => ({ id: o.id, name: o.name })),
+          };
+        }),
       );
-      return okEnvelope({ data: safe, meta: { count: safe.length, scope: resolvedScope } });
+      return okEnvelope({
+        data: enriched,
+        meta: {
+          count: enriched.length,
+          scope: resolvedScope,
+          notice:
+            scope === 'all'
+              ? 'scope=all returned every user in the system; check each user.orgs[] to determine org membership before claiming a user belongs to a specific org'
+              : undefined,
+        },
+      });
     },
   );
 
