@@ -1532,4 +1532,20 @@ UPDATE agent_share_links
 CREATE INDEX IF NOT EXISTS idx_agent_share_links_expires ON agent_share_links(expires_at);
     `,
   },
+  {
+    id: '061',
+    name: 'agent-active-org',
+    sql: `
+-- Phase 38 Plan 01 (AORG-03) — per-user active org persistence.
+-- Stores the org id a global admin has selected as their active context;
+-- NULL means "use the default" (resolved at read-time as the first org
+-- alphabetically — see resolveAgentOrgId in routes/agent.ts). The column
+-- is updated by POST /agent/active-org in a single UPDATE; survives
+-- logout because it lives on the user row.
+--
+-- No index — single-user lookups are already keyed on dashboard_users.id
+-- (PK), and cardinality on active_org_id itself is tiny (3 orgs in prod).
+ALTER TABLE dashboard_users ADD COLUMN active_org_id TEXT;
+    `,
+  },
 ];
