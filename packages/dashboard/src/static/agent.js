@@ -554,6 +554,111 @@
     });
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Phase 36-04 — tool chip strip (ATOOL-01 / ATOOL-03)
+  // CSP-strict: no inline handlers, no innerHTML for tool data. Strings
+  // come from #agent-tools-i18n JSON-script-block (no in-page t() helper
+  // exists in agent.js — see Phase 35-05 SUMMARY).
+  // ──────────────────────────────────────────────────────────────────────
+
+  var TOOL_CHIPS_ID = 'agent-tool-chips';
+  var TOOL_I18N_ID = 'agent-tools-i18n';
+  var toolI18nCache = null;
+
+  function readToolI18n() {
+    if (toolI18nCache) return toolI18nCache;
+    var node = byId(TOOL_I18N_ID);
+    if (!node || !node.textContent) {
+      toolI18nCache = {};
+      return toolI18nCache;
+    }
+    try { toolI18nCache = JSON.parse(node.textContent); }
+    catch (_e) { toolI18nCache = {}; }
+    return toolI18nCache;
+  }
+
+  function formatToolI18n(key, params) {
+    var dict = readToolI18n();
+    var raw = (dict && typeof dict[key] === 'string') ? dict[key] : '';
+    if (!raw) return '';
+    if (!params) return raw;
+    if (typeof params.name === 'string') {
+      raw = raw.split('__NAME__').join(params.name);
+    }
+    if (typeof params.error === 'string') {
+      raw = raw.split('__ERROR__').join(params.error);
+    }
+    return raw;
+  }
+
+  function toolChipsEl() { return byId(TOOL_CHIPS_ID); }
+
+  function clearToolChips() {
+    var strip = toolChipsEl();
+    if (!strip) return;
+    while (strip.firstChild) strip.removeChild(strip.firstChild);
+  }
+
+  function escapeAttrSelector(s) {
+    if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(s);
+    return String(s).replace(/[^a-zA-Z0-9_-]/g, '_');
+  }
+
+  function makeToolChip(toolCallId, toolName) {
+    var chip = document.createElement('span');
+    chip.className = 'agent-drawer__tool-chip agent-drawer__tool-chip--running';
+    chip.setAttribute('data-tool-call-id', toolCallId);
+    chip.setAttribute('role', 'status');
+    var icon = document.createElement('span');
+    icon.className = 'agent-drawer__tool-chip-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    chip.appendChild(icon);
+    var label = document.createElement('span');
+    label.className = 'agent-drawer__tool-chip-label';
+    label.textContent = toolName;
+    chip.appendChild(label);
+    return chip;
+  }
+
+  function handleToolStarted(data) {
+    if (typeof data.toolCallId !== 'string' || typeof data.toolName !== 'string') return;
+    var strip = toolChipsEl(); if (!strip) return;
+    var existing = strip.querySelector('[data-tool-call-id="' + escapeAttrSelector(data.toolCallId) + '"]');
+    if (existing) return; // dedupe race
+    var chip = makeToolChip(data.toolCallId, data.toolName);
+    chip.setAttribute('aria-label', formatToolI18n('chip.runningAria', { name: data.toolName }));
+    strip.appendChild(chip);
+  }
+
+  function handleToolCompleted(data) {
+    if (typeof data.toolCallId !== 'string' || typeof data.toolName !== 'string') return;
+    var strip = toolChipsEl(); if (!strip) return;
+    if (data.toolCallId === '__loop__') {
+      var capChip = document.createElement('span');
+      capChip.className = 'agent-drawer__tool-chip agent-drawer__tool-chip--cap';
+      capChip.setAttribute('role', 'status');
+      capChip.textContent = formatToolI18n('cap.label');
+      capChip.setAttribute('aria-label', formatToolI18n('cap.aria'));
+      strip.appendChild(capChip);
+      return;
+    }
+    var chip = strip.querySelector('[data-tool-call-id="' + escapeAttrSelector(data.toolCallId) + '"]');
+    if (!chip) return;
+    chip.classList.remove('agent-drawer__tool-chip--running');
+    if (data.status === 'success') {
+      chip.classList.add('agent-drawer__tool-chip--success');
+      chip.setAttribute('aria-label', formatToolI18n('chip.successAria', { name: data.toolName }));
+    } else {
+      chip.classList.add('agent-drawer__tool-chip--error');
+      var errMsg = (typeof data.errorMessage === 'string') ? data.errorMessage : '';
+      chip.setAttribute('aria-label', formatToolI18n('chip.errorAria', { name: data.toolName, error: errMsg }));
+      if (errMsg) {
+        var lbl = chip.querySelector('.agent-drawer__tool-chip-label');
+        if (lbl) lbl.textContent = data.toolName + ': ' + errMsg;
+      }
+    }
+  }
+
   function openStream(conversationId) {
     if (activeStream) { try { activeStream.close(); } catch (_e) { /* ignore */ } }
     var url = '/agent/stream/' + encodeURIComponent(conversationId);
@@ -561,6 +666,13 @@
     activeStream = es;
     var statusEl = byId(STREAM_STATUS_ID);
     if (statusEl) statusEl.removeAttribute('hidden');
+
+    es.addEventListener('tool_started', function (ev) {
+      try { handleToolStarted(JSON.parse(ev.data)); } catch (_e) { /* ignore malformed */ }
+    });
+    es.addEventListener('tool_completed', function (ev) {
+      try { handleToolCompleted(JSON.parse(ev.data)); } catch (_e) { /* ignore malformed */ }
+    });
 
     es.addEventListener('token', function (ev) {
       try {
@@ -1319,6 +1431,8 @@
       var headerCid = xhr.getResponseHeader('x-conversation-id');
       if (headerCid && headerCid.length > 0) { setConversationId(headerCid); }
       var input = byId(INPUT_ID); if (input) { input.value = ''; }
+      // Phase 36-04: clear previous turn's tool chips before opening the new stream.
+      clearToolChips();
       openStream(getConversationId());
     }
     else if (xhr.status === 429) {
