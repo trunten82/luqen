@@ -840,6 +840,59 @@ export async function registerAgentRoutes(
         });
       },
     );
+
+    // ── GET /agent/share/:shareId — Phase 37 Plan 03 Task 3 ───────────
+    //
+    // Read-only conversation snapshot. Auth required + same-org gate
+    // (T-37-12). Three failure modes:
+    //   401 unauthenticated, 400 no_org, 404 unknown/revoked, 403
+    //   foreign-org, 404 conversation soft-deleted.
+    scope.get(
+      '/share/:shareId',
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        const user = request.user;
+        if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+
+        const { shareId } = request.params as { shareId: string };
+        const link = await storage.shareLinks.getShareLink(shareId);
+        if (link === null) {
+          return reply.code(404).send({ error: 'share_not_found' });
+        }
+        if (link.orgId !== orgId) {
+          return reply.code(403).send({ error: 'forbidden_org_mismatch' });
+        }
+        const conv = await storage.conversations.getConversation(link.conversationId, link.orgId);
+        if (conv === null || conv.isDeleted) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        // Active branch only — superseded rows excluded by default.
+        const messages = await storage.conversations.getFullHistory(link.conversationId);
+        const creator = await storage.users.getUserById(link.createdByUserId);
+        const createdByDisplayName = creator?.username ?? 'unknown';
+        const org = await storage.organizations.getOrg(link.orgId);
+        const agentDisplayName =
+          org?.agentDisplayName !== undefined && org?.agentDisplayName !== null && org.agentDisplayName.length > 0
+            ? org.agentDisplayName
+            : 'Luqen Assistant';
+        const locale =
+          (typeof (request as unknown as { session?: { get(k: string): unknown } }).session?.get === 'function'
+            ? (request as unknown as { session: { get(k: string): unknown } }).session.get('locale') as string | undefined
+            : undefined) ?? 'en';
+
+        const html = renderAgentShareView({
+          conversationTitle: conv.title ?? 'Shared conversation',
+          messages,
+          agentDisplayName,
+          locale,
+          createdByDisplayName,
+          createdAt: link.createdAt,
+        });
+        void reply.type('text/html');
+        return reply.code(200).send(html);
+      },
+    );
   }, { prefix: '/agent' });
 }
 
@@ -988,6 +1041,62 @@ function renderAgentMessagesFragment(args: {
     messages: args.messages,
     agentDisplayName: args.agentDisplayName,
     locale: args.locale,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Phase 37 Plan 03 Task 3 — read-only share-view template renderer.
+// ---------------------------------------------------------------------------
+
+let cachedShareViewTemplate: HandlebarsTemplateDelegate | null = null;
+let cachedShareViewPartialsRegistered = false;
+
+function compileAgentShareViewTemplate(): HandlebarsTemplateDelegate {
+  if (cachedShareViewTemplate !== null) return cachedShareViewTemplate;
+  // Reuse the message-fragment helper bootstrap (eq, t fallback) and the
+  // agent-message partial registration. compileAgentMessagesTemplate is
+  // idempotent and registers `agent-message`.
+  compileAgentMessagesTemplate();
+  if (!cachedShareViewPartialsRegistered) {
+    const viewsDir = resolveViewsDir();
+    // Register the per-message child partials referenced by agent-message
+    // (agent-msg-actions, agent-msg-stopped-chip). The {{#unless readOnly}}
+    // guard inside agent-msg-actions.hbs is the read-only suppression.
+    const actionsSrc = readFileSync(
+      join(viewsDir, 'partials', 'agent-msg-actions.hbs'),
+      'utf-8',
+    );
+    const stoppedSrc = readFileSync(
+      join(viewsDir, 'partials', 'agent-msg-stopped-chip.hbs'),
+      'utf-8',
+    );
+    Handlebars.registerPartial('agent-msg-actions', actionsSrc);
+    Handlebars.registerPartial('agent-msg-stopped-chip', stoppedSrc);
+    cachedShareViewPartialsRegistered = true;
+  }
+  const viewsDir = resolveViewsDir();
+  const viewSrc = readFileSync(join(viewsDir, 'agent-share-view.hbs'), 'utf-8');
+  cachedShareViewTemplate = Handlebars.compile(viewSrc);
+  return cachedShareViewTemplate;
+}
+
+function renderAgentShareView(args: {
+  readonly conversationTitle: string;
+  readonly messages: ReadonlyArray<PanelMessage>;
+  readonly agentDisplayName: string;
+  readonly locale: string;
+  readonly createdByDisplayName: string;
+  readonly createdAt: string;
+}): string {
+  const tpl = compileAgentShareViewTemplate();
+  return tpl({
+    conversationTitle: args.conversationTitle,
+    messages: args.messages,
+    agentDisplayName: args.agentDisplayName,
+    locale: args.locale,
+    createdByDisplayName: args.createdByDisplayName,
+    createdAt: args.createdAt,
+    readOnly: true,
   });
 }
 

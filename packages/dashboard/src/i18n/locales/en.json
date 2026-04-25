@@ -1631,6 +1631,8 @@
   "agent.actions.stopped": "Stopped by user",
   "agent.actions.stoppedByUser": "Stopped by user",
   "agent.actions.stopFailed": "Could not stop the response cleanly",
+  "agent.share.shared_by": "Shared by {{name}} on {{at}}",
+  "agent.share.title_fallback": "Shared conversation",
   "agent.confirm.pendingBadge": "Awaiting confirmation",
   "agent.confirm.title": "Confirm destructive action",
   "agent.confirm.intro": "{{name}} wants to make a change that can't be undone automatically. Review the details before approving.",
