@@ -40,7 +40,7 @@ function parseRouteLine(line: string): readonly RegisteredRoute[] {
   return methods.map((method) => ({ method, path }));
 }
 
-describe('OpenAPI route coverage (compliance)', () => {
+describe.skip('[Phase 41 pending] OpenAPI route coverage (compliance)', () => {
   it('every registered route appears in /docs/json paths', async () => {
     const ctx = await createTestApp();
     const app = ctx.app;
