@@ -34,6 +34,7 @@ export interface ContextBrandHint {
 export interface ContextHints {
   readonly recentScans: readonly ContextScanHint[];
   readonly activeBrands: readonly ContextBrandHint[];
+  readonly orgIdentity: { readonly id: string; readonly name: string } | null;
 }
 
 export interface CollectHintsInput {
@@ -85,17 +86,37 @@ export async function collectContextHints(
   storage: StorageAdapter,
   input: CollectHintsInput,
 ): Promise<ContextHints> {
-  const [recentScans, activeBrands] = await Promise.all([
+  const [recentScans, activeBrands, orgIdentity] = await Promise.all([
     fetchRecentScans(storage, input.orgId),
     fetchActiveBrands(storage, input.orgId),
+    fetchOrgIdentity(storage, input.orgId),
   ]);
-  return { recentScans, activeBrands };
+  return { recentScans, activeBrands, orgIdentity };
+}
+
+async function fetchOrgIdentity(
+  storage: StorageAdapter,
+  orgId: string,
+): Promise<{ id: string; name: string } | null> {
+  if (orgId.length === 0) return null;
+  try {
+    const org = await storage.organizations.getOrg(orgId);
+    return org !== null ? { id: org.id, name: org.name } : null;
+  } catch {
+    return null;
+  }
 }
 
 export function formatContextHints(h: ContextHints): string {
   const lines: string[] = [
     'Context (read-only — reference only when relevant to the user\'s question):',
   ];
+
+  if (h.orgIdentity !== null) {
+    lines.push(`Active org: ${h.orgIdentity.name} (id=${h.orgIdentity.id})`);
+  } else {
+    lines.push('Active org: (cross-org admin context — no specific org selected)');
+  }
 
   lines.push('Recent scans:');
   if (h.recentScans.length === 0) {
