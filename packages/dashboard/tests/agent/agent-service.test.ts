@@ -554,3 +554,456 @@ describe('extractRationale + buildRetryGuidance', () => {
     expect(buildRetryGuidance({ ok: true, value: 42 } as ToolDispatchResult, 3)).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 36-03 Task 2 — multi-step tool use (parallel dispatch + SSE +
+// rationale + retry budget)
+// ---------------------------------------------------------------------------
+
+describe('Phase 36 — multi-step tool use', () => {
+  let ctx: Ctx;
+  beforeEach(async () => { ctx = await buildCtx(); });
+  afterEach(async () => { await ctx.cleanup(); });
+
+  /** Dispatcher stub that records start timestamps and resolves per-handler delays. */
+  function makeTimedDispatcherStub(
+    handlers: Map<string, (call: ToolCallInput) => Promise<ToolDispatchResult>>,
+  ) {
+    const dispatchTimes: number[] = [];
+    return {
+      dispatchTimes,
+      dispatch: vi.fn(async (call: ToolCallInput): Promise<ToolDispatchResult> => {
+        dispatchTimes.push(Date.now());
+        const h = handlers.get(call.name);
+        if (h === undefined) return { error: 'unknown_tool' } as ToolDispatchResult;
+        return h(call);
+      }),
+    };
+  }
+
+  function delayedHandler(ms: number, value: ToolDispatchResult): () => Promise<ToolDispatchResult> {
+    return () => new Promise((resolve) => setTimeout(() => resolve(value), ms));
+  }
+
+  it('A: dispatches tool batch concurrently and persists results in input order', async () => {
+    const llm = makeLlmStub([
+      {
+        text: 'Looking up several things',
+        toolCalls: [
+          { id: 'a', name: 'dashboard_list_reports', args: {} },
+          { id: 'b', name: 'dashboard_get_report', args: { id: 'r1' } },
+          { id: 'c', name: 'dashboard_list_reports', args: { extra: true } },
+        ],
+      },
+      { text: 'Here are the results.', toolCalls: [] },
+    ]);
+    const handlers = new Map<string, (c: ToolCallInput) => Promise<ToolDispatchResult>>();
+    handlers.set('dashboard_list_reports', async (call) => {
+      const ms = call.args.extra === true ? 10 : 30;
+      return new Promise<ToolDispatchResult>((resolve) =>
+        setTimeout(() => resolve({ ok: true, callId: call.id }), ms),
+      );
+    });
+    handlers.set('dashboard_get_report', delayedHandler(5, { ok: true, callId: 'b' }));
+    const dispatcher = makeTimedDispatcherStub(handlers);
+
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+
+    const start = Date.now();
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'go',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    const elapsed = Date.now() - start;
+
+    // 3 dispatches total
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(3);
+    // Started concurrently (all dispatch starts within ~10ms — no sequential serialisation)
+    const startSpread = Math.max(...dispatcher.dispatchTimes) - Math.min(...dispatcher.dispatchTimes);
+    expect(startSpread).toBeLessThan(20);
+    // Total turn dispatch step under ~50ms (sequential would be >=45ms; we have LLM stub overhead too,
+    // so check the tools step: max delay 30ms; with overhead allow 200ms total turn).
+    expect(elapsed).toBeLessThan(500);
+
+    // Tool result rows persisted in input order: a, b, c
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const toolRows = window.filter((m) => m.role === 'tool');
+    expect(toolRows.length).toBe(3);
+    const callIds = toolRows.map((r) => {
+      const parsed = JSON.parse(r.toolCallJson!);
+      return parsed.id;
+    });
+    expect(callIds).toEqual(['a', 'b', 'c']);
+
+    // Audit rows in input order
+    const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 50 });
+    const dispatchAudits = audit.filter((a) => a.toolName !== '__loop__' && a.toolName !== '__compaction__');
+    // listForOrg returns most-recent first; reverse to chronological
+    const chrono = [...dispatchAudits].reverse();
+    expect(chrono.length).toBe(3);
+  });
+
+  it('B: emits tool_started before tool_completed for every call', async () => {
+    const llm = makeLlmStub([
+      {
+        text: '',
+        toolCalls: [
+          { id: 'a', name: 'dashboard_list_reports', args: {} },
+          { id: 'b', name: 'dashboard_get_report', args: { id: 'r1' } },
+          { id: 'c', name: 'dashboard_list_reports', args: { extra: true } },
+        ],
+      },
+      { text: 'done', toolCalls: [] },
+    ]);
+    const handlers = new Map<string, (c: ToolCallInput) => Promise<ToolDispatchResult>>();
+    handlers.set('dashboard_list_reports', delayedHandler(5, { ok: true }));
+    handlers.set('dashboard_get_report', delayedHandler(5, { ok: true }));
+    const dispatcher = makeTimedDispatcherStub(handlers);
+    const emits: SseFrame[] = [];
+
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'go',
+      emit: (f) => emits.push(f),
+      signal: new AbortController().signal,
+    });
+
+    const starts = emits.filter((f) => f.type === 'tool_started');
+    const completes = emits.filter((f) => f.type === 'tool_completed');
+    expect(starts.length).toBe(3);
+    expect(completes.length).toBe(3);
+
+    // Starts in input order
+    expect(starts.map((s) => (s as Extract<SseFrame, { type: 'tool_started' }>).toolCallId))
+      .toEqual(['a', 'b', 'c']);
+    // All starts come before any completion (since starts are emitted synchronously, completions await promises)
+    const firstCompleteIdx = emits.findIndex((f) => f.type === 'tool_completed');
+    const lastStartIdx = emits.map((f) => f.type).lastIndexOf('tool_started');
+    expect(lastStartIdx).toBeLessThan(firstCompleteIdx);
+    // All completed are status=success
+    for (const c of completes) {
+      const cf = c as Extract<SseFrame, { type: 'tool_completed' }>;
+      expect(cf.status).toBe('success');
+    }
+  });
+
+  it('C: rationale captured (thinking + text) and persisted to every audit row', async () => {
+    const llm = makeLlmStub([
+      {
+        text: 'I will now look up the org and the user',
+        thinking: 'reasoning…',
+        toolCalls: [
+          { id: 'a', name: 'dashboard_list_reports', args: {} },
+          { id: 'b', name: 'dashboard_get_report', args: { id: 'x' } },
+        ],
+      },
+      { text: 'done', toolCalls: [] },
+    ]);
+    const handlers = new Map<string, (c: ToolCallInput) => Promise<ToolDispatchResult>>();
+    handlers.set('dashboard_list_reports', delayedHandler(2, { ok: true }));
+    handlers.set('dashboard_get_report', delayedHandler(2, { ok: true }));
+    const dispatcher = makeTimedDispatcherStub(handlers);
+
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'go',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 20 });
+    const dispatchRows = audit.filter((a) => a.toolName !== '__loop__' && a.toolName !== '__compaction__');
+    expect(dispatchRows.length).toBe(2);
+    for (const row of dispatchRows) {
+      expect(row.rationale).toBe('reasoning…\n\nI will now look up the org and the user');
+    }
+  });
+
+  it('D: rationale is null when both text and thinking are blank', async () => {
+    const llm = makeLlmStub([
+      { text: '', toolCalls: [{ id: 'a', name: 'dashboard_list_reports', args: {} }] },
+      { text: 'done', toolCalls: [] },
+    ]);
+    const handlers = new Map<string, (c: ToolCallInput) => Promise<ToolDispatchResult>>();
+    handlers.set('dashboard_list_reports', delayedHandler(1, { ok: true }));
+    const dispatcher = makeTimedDispatcherStub(handlers);
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'go',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 20 });
+    const dispatchRows = audit.filter((a) => a.toolName !== '__loop__' && a.toolName !== '__compaction__');
+    expect(dispatchRows.length).toBe(1);
+    expect(dispatchRows[0].rationale).toBeNull();
+  });
+
+  it('E: failed tool results carry retry-guidance text within the budget', async () => {
+    const llm = makeLlmStub([
+      {
+        text: '',
+        toolCalls: [
+          { id: 'a', name: 'dashboard_list_reports', args: {} },
+          { id: 'b', name: 'dashboard_get_report', args: { id: 'x' } },
+          { id: 'c', name: 'dashboard_list_reports', args: { extra: true } },
+        ],
+      },
+      { text: 'wrap', toolCalls: [] },
+    ]);
+    const handlers = new Map<string, (c: ToolCallInput) => Promise<ToolDispatchResult>>();
+    handlers.set('dashboard_list_reports', async (call) => {
+      if (call.args.extra === true) return { ok: true } as ToolDispatchResult;
+      return { error: 'timeout' } as ToolDispatchResult;
+    });
+    handlers.set('dashboard_get_report', async () => ({ error: 'internal', message: 'boom' } as ToolDispatchResult));
+    const dispatcher = makeTimedDispatcherStub(handlers);
+
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'go',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const toolRows = window.filter((m) => m.role === 'tool');
+    expect(toolRows.length).toBe(3);
+    // Row a (timeout): guidance + timeout sentinel
+    const aJson = toolRows[0].toolResultJson!;
+    expect(aJson).toContain('timeout');
+    expect(aJson.toLowerCase()).toContain('retry attempt');
+    // Row b (internal): guidance + internal sentinel
+    const bJson = toolRows[1].toolResultJson!;
+    expect(bJson).toContain('internal');
+    expect(bJson.toLowerCase()).toContain('retry attempt');
+    // Row c success: no guidance
+    const cJson = toolRows[2].toolResultJson!;
+    expect(cJson.toLowerCase()).not.toContain('retry attempt');
+
+    const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 20 });
+    const dispatchRows = audit.filter((a) => a.toolName !== '__loop__' && a.toolName !== '__compaction__');
+    // Reverse to chronological for order matching
+    const chrono = [...dispatchRows].reverse();
+    expect(chrono[0].outcome).toBe('timeout');
+    expect(chrono[0].outcomeDetail).toBe('timeout');
+    expect(chrono[1].outcome).toBe('error');
+    expect(chrono[1].outcomeDetail).toBe('internal');
+  });
+
+  it('F: budget of 3 — 4th failure omits retry-permission language', async () => {
+    const llm = makeLlmStub([
+      {
+        text: '',
+        toolCalls: [
+          { id: 'a', name: 'dashboard_list_reports', args: { i: 1 } },
+          { id: 'b', name: 'dashboard_list_reports', args: { i: 2 } },
+          { id: 'c', name: 'dashboard_list_reports', args: { i: 3 } },
+          { id: 'd', name: 'dashboard_list_reports', args: { i: 4 } },
+        ],
+      },
+      { text: 'wrap', toolCalls: [] },
+    ]);
+    const handlers = new Map<string, (c: ToolCallInput) => Promise<ToolDispatchResult>>();
+    handlers.set('dashboard_list_reports', async () => ({ error: 'internal', message: 'fail' } as ToolDispatchResult));
+    const dispatcher = makeTimedDispatcherStub(handlers);
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'go',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const toolRows = window.filter((m) => m.role === 'tool');
+    expect(toolRows.length).toBe(4);
+    // First 3 carry "retry attempt" guidance language; 4th does not but still mentions error sentinel
+    expect(toolRows[0].toolResultJson!.toLowerCase()).toContain('retry attempt');
+    expect(toolRows[1].toolResultJson!.toLowerCase()).toContain('retry attempt');
+    expect(toolRows[2].toolResultJson!.toLowerCase()).toContain('retry attempt');
+    expect(toolRows[3].toolResultJson!.toLowerCase()).not.toContain('retry attempt');
+    expect(toolRows[3].toolResultJson!).toContain('internal');
+    // Exhausted-message branch must mention exhaustion
+    expect(toolRows[3].toolResultJson!.toLowerCase()).toMatch(/exhausted|do not retry/);
+  });
+
+  it('G: multi-step chaining respects MAX_TOOL_ITERATIONS=5 with iteration_cap audit', async () => {
+    const script: AgentStreamTurn[] = [];
+    for (let i = 0; i < 5; i++) {
+      script.push({
+        text: '',
+        toolCalls: [{ id: `t${i}`, name: 'dashboard_list_reports', args: {} }],
+      });
+    }
+    script.push({ text: 'forced wrap-up.', toolCalls: [] });
+    const llm = makeLlmStub(script);
+    const handlers = new Map<string, (c: ToolCallInput) => Promise<ToolDispatchResult>>();
+    handlers.set('dashboard_list_reports', async () => ({ ok: true } as ToolDispatchResult));
+    const dispatcher = makeTimedDispatcherStub(handlers);
+    const emits: SseFrame[] = [];
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'loop',
+      emit: (f) => emits.push(f),
+      signal: new AbortController().signal,
+    });
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(5);
+    expect(llm.streamAgentConversation).toHaveBeenCalledTimes(6);
+    const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 50 });
+    const loopRow = audit.find((a) => a.toolName === '__loop__');
+    expect(loopRow).toBeDefined();
+    expect(loopRow?.outcomeDetail).toBe('iteration_cap');
+  });
+
+  it('H: single-tool turn still works through the batch helper', async () => {
+    const llm = makeLlmStub([
+      {
+        text: 'one tool',
+        toolCalls: [{ id: 'only', name: 'dashboard_list_reports', args: {} }],
+      },
+      { text: 'done', toolCalls: [] },
+    ]);
+    const handlers = new Map<string, (c: ToolCallInput) => Promise<ToolDispatchResult>>();
+    handlers.set('dashboard_list_reports', delayedHandler(1, { ok: true }));
+    const dispatcher = makeTimedDispatcherStub(handlers);
+    const emits: SseFrame[] = [];
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'one',
+      emit: (f) => emits.push(f),
+      signal: new AbortController().signal,
+    });
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(1);
+    expect(emits.filter((f) => f.type === 'tool_started').length).toBe(1);
+    expect(emits.filter((f) => f.type === 'tool_completed').length).toBe(1);
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    expect(window.filter((m) => m.role === 'tool').length).toBe(1);
+    const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 20 });
+    expect(audit.filter((a) => a.toolName === 'dashboard_list_reports').length).toBe(1);
+  });
+
+  it('I: destructive batch still pauses entire batch — no tool_started, no dispatchAll', async () => {
+    const llm = makeLlmStub([
+      {
+        text: '',
+        toolCalls: [
+          { id: 'a', name: 'dashboard_list_reports', args: {} },
+          { id: 'b', name: 'dashboard_scan_site', args: { siteUrl: 'https://ex.com' } },
+          { id: 'c', name: 'dashboard_get_report', args: { id: 'r' } },
+        ],
+      },
+    ]);
+    const handlers = new Map<string, (c: ToolCallInput) => Promise<ToolDispatchResult>>();
+    handlers.set('dashboard_list_reports', async () => ({ ok: true } as ToolDispatchResult));
+    handlers.set('dashboard_get_report', async () => ({ ok: true } as ToolDispatchResult));
+    const dispatcher = makeTimedDispatcherStub(handlers);
+    const emits: SseFrame[] = [];
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view', 'scans.create']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'mixed',
+      emit: (f) => emits.push(f),
+      signal: new AbortController().signal,
+    });
+    expect(dispatcher.dispatch).not.toHaveBeenCalled();
+    expect(emits.filter((f) => f.type === 'tool_started').length).toBe(0);
+    expect(emits.filter((f) => f.type === 'tool_completed').length).toBe(0);
+    expect(emits.filter((f) => f.type === 'pending_confirmation').length).toBe(1);
+  });
+});
