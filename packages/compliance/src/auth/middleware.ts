@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   '/api/v1/health',
   '/api/v1/openapi.json',
   '/api/v1/docs',
+  '/docs',
   '/api/v1/oauth/token',
   '/api/v1/oauth/revoke',
   '/api/v1/mcp',
@@ -24,6 +25,10 @@ const PUBLIC_PATHS = [
 
 function isPublicPath(path: string): boolean {
   if (PUBLIC_PATHS.includes(path)) return true;
+  // Phase 40-01 DOC-02: /docs is the canonical Swagger UI mount; /api/v1/docs
+  // remains in PUBLIC_PATHS for back-compat with any external consumers that
+  // bookmarked the old path.
+  if (path.startsWith('/docs')) return true;
   if (path.startsWith('/api/v1/docs')) return true;
   if (path.startsWith('/.well-known/')) return true;
   return false;

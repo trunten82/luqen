@@ -33,6 +33,7 @@
     "dev:all": "bash start.sh",
     "start": "bash start.sh",
     "docs:rbac": "tsx scripts/generate-rbac-matrix.ts",
+    "docs:openapi": "tsx scripts/snapshot-openapi.ts",
     "clean": "rm -rf packages/*/dist"
   },
   "engines": {
@@ -40,6 +41,8 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "jose": "^6.0.0",
+    "tsx": "^4.21.0"
   }
 }
