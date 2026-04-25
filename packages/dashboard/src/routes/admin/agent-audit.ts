@@ -19,12 +19,23 @@ const PAGE_SIZE = 50;
 
 const OUTCOME_VALUES = ['success', 'error', 'timeout', 'denied'] as const;
 
+const OUTCOME_DETAIL_HINTS = ['iteration_cap', 'timeout', 'unknown_tool', 'invalid_args'] as const;
+
+const RATIONALE_PREVIEW_LEN = 80;
+
 const AuditQuerySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   userId: z.string().optional(),
   toolName: z.string().optional(),
   outcome: z.enum(OUTCOME_VALUES).optional(),
+  // Phase 36-05: filter on outcome_detail (e.g. iteration_cap). Blank string
+  // is normalised to undefined via preprocess so empty form submits don't
+  // fail validation.
+  outcomeDetail: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim().length === 0 ? undefined : v),
+    z.string().trim().min(1).max(64).optional(),
+  ),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   orgId: z.string().optional(),
@@ -78,6 +89,7 @@ function resolveScope(
     ...(query.userId !== undefined ? { userId: query.userId } : {}),
     ...(query.toolName !== undefined ? { toolName: query.toolName } : {}),
     ...(query.outcome !== undefined ? { outcome: query.outcome } : {}),
+    ...(query.outcomeDetail !== undefined ? { outcomeDetail: query.outcomeDetail } : {}),
   };
 
   const limit = query.limit ?? PAGE_SIZE;
@@ -131,17 +143,30 @@ export async function agentAuditRoutes(
       ]);
 
       // Display rows — format created_at, shorten args preview.
-      const displayRows = rows.map((r) => ({
-        id: r.id,
-        timestamp: new Date(r.createdAt).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'medium' }),
-        userId: r.userId,
-        orgId: r.orgId,
-        toolName: r.toolName,
-        outcome: r.outcome,
-        latencyMs: r.latencyMs,
-        argsPreview: r.argsJson.length > 120 ? r.argsJson.slice(0, 120) + '…' : r.argsJson,
-        outcomeDetail: r.outcomeDetail ?? '',
-      }));
+      const displayRows = rows.map((r) => {
+        const rationale = r.rationale ?? null;
+        const hasRationale = typeof rationale === 'string' && rationale.length > 0;
+        const rationalePreview = hasRationale
+          ? (rationale.length > RATIONALE_PREVIEW_LEN
+              ? rationale.slice(0, RATIONALE_PREVIEW_LEN) + '…'
+              : rationale)
+          : '';
+        return {
+          id: r.id,
+          timestamp: new Date(r.createdAt).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'medium' }),
+          userId: r.userId,
+          orgId: r.orgId,
+          toolName: r.toolName,
+          outcome: r.outcome,
+          latencyMs: r.latencyMs,
+          argsPreview: r.argsJson.length > 120 ? r.argsJson.slice(0, 120) + '…' : r.argsJson,
+          outcomeDetail: r.outcomeDetail ?? '',
+          hasRationale,
+          rationalePreview,
+          rationaleFull: hasRationale ? rationale : '',
+          rationalePanelId: `audit-rationale-${r.id}`,
+        };
+      });
 
       const currentPage = Math.floor(scope.offset / scope.limit) + 1;
       const totalPages = Math.max(1, Math.ceil(total / scope.limit));
@@ -156,6 +181,7 @@ export async function agentAuditRoutes(
         users,
         toolNames,
         outcomeValues: OUTCOME_VALUES,
+        outcomeDetailHints: OUTCOME_DETAIL_HINTS,
         filters: parsed.data,
         pagination: {
           limit: scope.limit,
@@ -206,6 +232,7 @@ export async function agentAuditRoutes(
         'latency_ms',
         'args',
         'outcome_detail',
+        'rationale',
       ]);
       const body = rows
         .map((r) => toCsvRow([
@@ -217,6 +244,9 @@ export async function agentAuditRoutes(
           String(r.latencyMs),
           r.argsJson,
           r.outcomeDetail ?? '',
+          // Phase 36-05: rationale appended last; flatten newlines so CSV
+          // readers don't split a single row across multiple lines.
+          (r.rationale ?? '').replace(/[\r\n]+/g, ' '),
         ]))
         .join('\n');
 

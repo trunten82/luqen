@@ -46,6 +46,18 @@
           {{/each}}
         </select>
       </div>
+      <div class="form-group">
+        <label for="audit-outcome-detail">{{t "admin.audit.filterOutcomeDetail"}}</label>
+        <input type="text" id="audit-outcome-detail" name="outcomeDetail"
+               value="{{filters.outcomeDetail}}" maxlength="64"
+               list="audit-outcome-detail-hints"
+               autocomplete="off">
+        <datalist id="audit-outcome-detail-hints">
+          {{#each outcomeDetailHints}}
+          <option value="{{this}}"></option>
+          {{/each}}
+        </datalist>
+      </div>
     </div>
     <div class="form-actions">
       <button type="submit" class="btn btn--primary">{{t "admin.audit.applyFilters"}}</button>
@@ -67,6 +79,7 @@
           <th scope="col">{{t "admin.audit.colLatency"}}</th>
           <th scope="col">{{t "admin.audit.colArgs"}}</th>
           <th scope="col">{{t "admin.audit.colDetail"}}</th>
+          <th scope="col">{{t "admin.audit.rationaleHeader"}}</th>
         </tr>
       </thead>
       <tbody>
@@ -86,9 +99,31 @@
           <td data-label="Latency">{{latencyMs}} ms</td>
           <td data-label="Args" class="cell--wrap"><code>{{argsPreview}}</code></td>
           <td data-label="Detail" class="cell--wrap">{{outcomeDetail}}</td>
+          <td data-label="Rationale" class="cell--wrap">
+            {{#if hasRationale}}
+              <button type="button"
+                      class="audit-rationale__toggle"
+                      data-action="toggleRationale"
+                      aria-expanded="false"
+                      aria-controls="{{rationalePanelId}}"
+                      data-label-expand="{{t 'admin.audit.rationaleExpand'}}"
+                      data-label-collapse="{{t 'admin.audit.rationaleCollapse'}}"
+                      aria-label="{{t 'admin.audit.rationaleExpand'}}">
+                <span class="audit-rationale__preview">{{rationalePreview}}</span>
+              </button>
+              <div id="{{rationalePanelId}}" class="audit-rationale__full" hidden>
+                <p class="audit-rationale__text">{{rationaleFull}}</p>
+                {{#if outcomeDetail}}
+                  <p class="audit-rationale__meta"><strong>{{t "admin.audit.outcomeDetailLabel"}}:</strong> <code>{{outcomeDetail}}</code></p>
+                {{/if}}
+              </div>
+            {{else}}
+              <span aria-label="{{t 'admin.audit.noRationale'}}">—</span>
+            {{/if}}
+          </td>
         </tr>
         {{else}}
-        <tr><td colspan="8" class="table__empty">{{t "admin.audit.noRows"}}</td></tr>
+        <tr><td colspan="9" class="table__empty">{{t "admin.audit.noRows"}}</td></tr>
         {{/each}}
       </tbody>
     </table>
@@ -97,12 +132,13 @@
   {{#if (gt pagination.totalPages 1)}}
   <nav class="pagination mt-md" aria-label="Pagination">
     {{#if pagination.prev}}
-    <a href="?offset={{pagination.prev}}&limit={{pagination.limit}}{{#if filters.from}}&from={{filters.from}}{{/if}}{{#if filters.to}}&to={{filters.to}}{{/if}}{{#if filters.userId}}&userId={{filters.userId}}{{/if}}{{#if filters.toolName}}&toolName={{filters.toolName}}{{/if}}{{#if filters.outcome}}&outcome={{filters.outcome}}{{/if}}" class="btn btn--ghost">← {{t "common.previous"}}</a>
+    <a href="?offset={{pagination.prev}}&limit={{pagination.limit}}{{#if filters.from}}&from={{filters.from}}{{/if}}{{#if filters.to}}&to={{filters.to}}{{/if}}{{#if filters.userId}}&userId={{filters.userId}}{{/if}}{{#if filters.toolName}}&toolName={{filters.toolName}}{{/if}}{{#if filters.outcome}}&outcome={{filters.outcome}}{{/if}}{{#if filters.outcomeDetail}}&outcomeDetail={{filters.outcomeDetail}}{{/if}}" class="btn btn--ghost">← {{t "common.previous"}}</a>
     {{/if}}
     <span class="pagination__info">{{pagination.currentPage}} / {{pagination.totalPages}}</span>
     {{#if pagination.next}}
-    <a href="?offset={{pagination.next}}&limit={{pagination.limit}}{{#if filters.from}}&from={{filters.from}}{{/if}}{{#if filters.to}}&to={{filters.to}}{{/if}}{{#if filters.userId}}&userId={{filters.userId}}{{/if}}{{#if filters.toolName}}&toolName={{filters.toolName}}{{/if}}{{#if filters.outcome}}&outcome={{filters.outcome}}{{/if}}" class="btn btn--ghost">{{t "common.next"}} →</a>
+    <a href="?offset={{pagination.next}}&limit={{pagination.limit}}{{#if filters.from}}&from={{filters.from}}{{/if}}{{#if filters.to}}&to={{filters.to}}{{/if}}{{#if filters.userId}}&userId={{filters.userId}}{{/if}}{{#if filters.toolName}}&toolName={{filters.toolName}}{{/if}}{{#if filters.outcome}}&outcome={{filters.outcome}}{{/if}}{{#if filters.outcomeDetail}}&outcomeDetail={{filters.outcomeDetail}}{{/if}}" class="btn btn--ghost">{{t "common.next"}} →</a>
     {{/if}}
   </nav>
   {{/if}}
 </section>
+<script src="/static/agent-audit.js" defer></script>
