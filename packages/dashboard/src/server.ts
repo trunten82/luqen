@@ -611,6 +611,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         'agent-messages': 'partials/agent-messages.hbs',
         'agent-message': 'partials/agent-message.hbs',
         'agent-confirm-dialog': 'partials/agent-confirm-dialog.hbs',
+        'agent-history-panel': 'partials/agent-history-panel.hbs',
+        'agent-history-item': 'partials/agent-history-item.hbs',
       },
     },
   });
