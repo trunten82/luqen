@@ -2205,6 +2205,20 @@
     });
   }
 
+  // Phase 39.1-02 — shared utility namespace for split modules.
+  window.__luqenAgent = window.__luqenAgent || {};
+  window.__luqenAgent.csrfToken = csrfToken;
+  window.__luqenAgent.byId = byId;
+  window.__luqenAgent.announce = announce;
+  window.__luqenAgent.getConversationId = getConversationId;
+  window.__luqenAgent.setConversationId = setConversationId;
+  window.__luqenAgent.formatToolI18n = formatToolI18n;
+  window.__luqenAgent.readToolI18n = readToolI18n;
+  window.__luqenAgent.renderMarkdownInto = renderMarkdownInto;
+  window.__luqenAgent.recordMarkdownSource = recordMarkdownSource;
+  window.__luqenAgent.readMarkdownSource = readMarkdownSource;
+  window.__luqenAgent.writeToClipboard = writeToClipboard;
+
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
   else { init(); }
 })();
