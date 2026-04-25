@@ -182,11 +182,26 @@ describe('Phase 32 Plan 06 — agent-panel E2E smoke', () => {
     // rename/delete/resume/keyboard flows (~500 LOC). Plan 35-05's
     // `files_modified` frontmatter explicitly scopes changes to agent.js
     // (no new submodule), so the ceiling moved to 1400 for that milestone.
-    // Plan 36-04 (chip strip), Phase 37 (per-message actions, ClipboardItem,
-    // share, edit-resend), Phase 38 (org switcher) cumulatively grew agent.js.
-    // Ceiling raised to 2300 to clear current state. Phase 39.1 owns the split
-    // into agent-history.js + agent-tools.js + agent-actions.js + agent-org.js.
-    expect(loc).toBeLessThanOrEqual(2300);
+    // Phase 39.1-02 — agent.js split into 4 feature modules
+    // (agent-history.js, agent-tools.js, agent-actions.js, agent-org.js).
+    // agent.js retains the entry shell: drawer toggle, openStream, markdown
+    // rendering (marked/DOMPurify wrapper + fallback subset renderer ~200
+    // LOC), confirm-dialog flow, and __luqenAgent namespace exposure. Per
+    // CONTEXT, agent.js ceiling is 1100 (markdown + dialog blocks block
+    // the ~700 LOC stretch goal — extracting those is future work). Each
+    // split module ≤800 per the plan front-matter.
+    expect(loc).toBeLessThanOrEqual(1100);
+    const splitFiles = [
+      'src/static/agent-history.js',
+      'src/static/agent-tools.js',
+      'src/static/agent-actions.js',
+      'src/static/agent-org.js',
+    ];
+    for (const rel of splitFiles) {
+      const partSrc = readFileSync(join(DASHBOARD_ROOT, rel), 'utf-8');
+      const partLoc = partSrc.split('\n').length;
+      expect(partLoc, `${rel} exceeds 800 LOC ceiling (${partLoc})`).toBeLessThanOrEqual(800);
+    }
   });
 
   it('Test 4 — agent-drawer partial exposes the DOM ids agent.js targets', () => {

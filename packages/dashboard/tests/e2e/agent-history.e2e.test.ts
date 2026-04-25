@@ -43,6 +43,12 @@ import type { ToolDispatcher } from '../../src/agent/tool-dispatch.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AGENT_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent.js');
 const AGENT_JS_SOURCE = readFileSync(AGENT_JS_PATH, 'utf8');
+// Phase 39.1-02 — history panel + org switcher live in their own modules.
+// e2e harness must load all three so the JSDOM realm matches production.
+const AGENT_ORG_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-org.js');
+const AGENT_ORG_JS_SOURCE = readFileSync(AGENT_ORG_JS_PATH, 'utf8');
+const AGENT_HISTORY_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-history.js');
+const AGENT_HISTORY_JS_SOURCE = readFileSync(AGENT_HISTORY_JS_PATH, 'utf8');
 
 const UNIQUE_TOKEN = 'uniqueSeedToken123';
 const SEEDED = 21 as const;
@@ -261,6 +267,13 @@ function loadAgentJs(win: Window, doc: Document): void {
   const fn = new (win as unknown as { Function: new (...args: string[]) => (...args: unknown[]) => void })
     .Function('window', 'document', 'localStorage', 'fetch', AGENT_JS_SOURCE);
   fn.call(win, win, doc, win.localStorage, (win as unknown as { fetch: unknown }).fetch);
+  // Phase 39.1-02 — load split modules in dependency order.
+  const fnOrg = new (win as unknown as { Function: new (...args: string[]) => (...args: unknown[]) => void })
+    .Function('window', 'document', 'localStorage', 'fetch', AGENT_ORG_JS_SOURCE);
+  fnOrg.call(win, win, doc, win.localStorage, (win as unknown as { fetch: unknown }).fetch);
+  const fnHist = new (win as unknown as { Function: new (...args: string[]) => (...args: unknown[]) => void })
+    .Function('window', 'document', 'localStorage', 'fetch', AGENT_HISTORY_JS_SOURCE);
+  fnHist.call(win, win, doc, win.localStorage, (win as unknown as { fetch: unknown }).fetch);
 }
 
 function clearNode(n: Node): void {
