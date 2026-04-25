@@ -161,10 +161,18 @@ function setupChipHarness(): ChipHarness {
   (globalThis as { Event: typeof Event }).Event = win.Event;
   (globalThis as { CustomEvent: typeof CustomEvent }).CustomEvent = win.CustomEvent;
 
-  // Load agent.js into the jsdom realm so its IIFE binds to win/doc.
+  // Pre-stub fetch on the jsdom window BEFORE the IIFE runs. Phase 37
+  // cross-cutting: agent.js calls loadPanel() on stream `done`, which fetches
+  // /agent/panel. Threading fetch through the IIFE matches the canonical
+  // loader signature in tests/e2e/agent-history.e2e.test.ts:262 so the fix
+  // survives future refactors and DOES NOT depend on a beforeEach setup.
+  installFetchStub(win);
+
+  // Load agent.js into the jsdom realm. IIFE signature mirrors
+  // agent-history.e2e.test.ts:262 — (window, document, localStorage, fetch).
   const fn = new (win as unknown as { Function: new (...args: string[]) => (...args: unknown[]) => void })
-    .Function('window', 'document', 'localStorage', AGENT_JS);
-  fn.call(win, win, doc, win.localStorage);
+    .Function('window', 'document', 'localStorage', 'fetch', AGENT_JS);
+  fn.call(win, win, doc, win.localStorage, (win as unknown as { fetch: unknown }).fetch);
 
   return { dom, win, doc, esSources: sources };
 }
@@ -174,7 +182,7 @@ function setupChipHarness(): ChipHarness {
 // stay deterministic we trigger the stream by directly invoking the same
 // path agent.js uses — submitting the form. Because the form submit also
 // performs a fetch, we stub fetch to return a 204-equivalent shape.
-function stubFetchOk(win: Window, body: unknown = {}): void {
+function installFetchStub(win: Window, body: unknown = {}): void {
   // @ts-expect-error override jsdom's fetch
   win.fetch = async () => ({
     ok: true,
@@ -199,10 +207,9 @@ describe('Phase 36 Plan 06 — chip strip e2e (E1..E3)', () => {
   let h: ChipHarness;
   beforeEach(() => {
     h = setupChipHarness();
-    // Phase 37 cross-cutting: agent.js calls loadPanel() on stream `done`,
-    // which fetches /agent/panel. Stub fetch so the test environment doesn't
-    // ReferenceError on jsdom's missing global.
-    stubFetchOk(h.win);
+    // fetch is now threaded through the IIFE in setupChipHarness via
+    // installFetchStub, matching agent-history.e2e.test.ts:262 — no
+    // additional beforeEach wiring needed (DI-37-01).
   });
 
   async function openStream(): Promise<FakeESControl> {
