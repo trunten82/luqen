@@ -92,6 +92,11 @@ const ListQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
+// Phase 38 Plan 03 (AORG-01/03/04) — POST /agent/active-org body.
+const ActiveOrgBodySchema = z.object({
+  orgId: z.string().min(1).max(64),
+});
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -112,29 +117,108 @@ function normaliseUrl(url: string): string {
 /**
  * Resolve the conversation-scoping orgId for the authenticated user.
  *
- * Global dashboard admins (admin.system permission, no org membership) have
- * `user.currentOrgId === undefined` — the ordinary org-scoped code path 400s
- * on that. To keep the agent usable for them without leaking conversations
- * between admins, mint a synthetic per-admin namespace: `__admin__:{userId}`.
+ * Phase 38 (AORG-01..04): admin.system without an org-membership currentOrgId
+ * resolves to `user.activeOrgId` if set, else the first org alphabetically by
+ * name from `orgList` (deterministic default). The pre-Phase-38 synthetic
+ * `__admin__:{userId}` namespace is REMOVED — admins now operate against a
+ * real org id at all times. Switching active org is the supported way to
+ * access another org's data.
  *
- * Returns undefined ONLY if the user has neither an org nor admin.system.
+ * Non-admin users keep returning `user.currentOrgId` unchanged. Returns
+ * undefined only if the user has neither an org nor admin.system (existing
+ * 400 `no_org_context` path is preserved).
  */
-function resolveAgentOrgId(
+export function resolveAgentOrgId(
   user: { id: string; currentOrgId?: string },
   permissions: ReadonlySet<string>,
+  activeOrgId: string | null | undefined,
+  orgList: ReadonlyArray<{ id: string; name: string }>,
 ): string | undefined {
   if (user.currentOrgId !== undefined && user.currentOrgId.length > 0) {
     return user.currentOrgId;
   }
   if (permissions.has('admin.system')) {
-    return `__admin__:${user.id}`;
+    if (activeOrgId !== undefined && activeOrgId !== null && activeOrgId.length > 0) {
+      // Honour the persisted choice, even if it currently isn't in orgList
+      // (e.g. org was deleted). Caller validates before mutating.
+      const exists = orgList.some((o) => o.id === activeOrgId);
+      if (exists) return activeOrgId;
+    }
+    return defaultOrgAlphabetical(orgList);
   }
   return undefined;
+}
+
+/**
+ * Phase 38 — first org alphabetically by name from `orgList`. Stable,
+ * deterministic default for admin.system users with no `active_org_id` set.
+ * Returns undefined when the list is empty.
+ */
+export function defaultOrgAlphabetical(
+  orgList: ReadonlyArray<{ id: string; name: string }>,
+): string | undefined {
+  if (orgList.length === 0) return undefined;
+  const sorted = [...orgList].sort((a, b) => a.name.localeCompare(b.name));
+  return sorted[0]?.id;
+}
+
+/**
+ * Phase 38 — build the drawer org-switcher context passed to the layout
+ * renderer. `showOrgSwitcher` is the admin.system flag; `orgOptions` is the
+ * full alphabetically-sorted org list with `selected` flagged on the
+ * currently-resolved orgId. `resolvedOrgId` is the actual orgId the agent
+ * binds to for the request (the value `resolveAgentOrgId` returned).
+ */
+export interface DrawerOrgContext {
+  readonly showOrgSwitcher: boolean;
+  readonly orgOptions: ReadonlyArray<{ id: string; name: string; selected: boolean }>;
+  readonly resolvedOrgId: string | undefined;
+}
+
+export async function buildDrawerOrgContext(args: {
+  readonly user: { id: string; currentOrgId?: string };
+  readonly permissions: ReadonlySet<string>;
+  readonly storage: Pick<StorageAdapter, 'organizations' | 'users'>;
+}): Promise<DrawerOrgContext> {
+  const { user, permissions, storage } = args;
+  const orgList = await storage.organizations.listOrgs();
+  const dbUser = await storage.users.getUserById(user.id);
+  const activeOrgId = dbUser?.activeOrgId ?? null;
+  const resolvedOrgId = resolveAgentOrgId(user, permissions, activeOrgId, orgList);
+  const showOrgSwitcher = permissions.has('admin.system');
+  const orgOptions = [...orgList]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((o) => ({ id: o.id, name: o.name, selected: o.id === resolvedOrgId }));
+  return { showOrgSwitcher, orgOptions, resolvedOrgId };
 }
 
 function getPermissions(request: FastifyRequest): ReadonlySet<string> {
   const perms = (request as unknown as Record<string, unknown>)['permissions'];
   return perms instanceof Set ? (perms as Set<string>) : new Set<string>();
+}
+
+/**
+ * Phase 38 — per-request resolveAgentOrgId wrapper. Hoists `listOrgs()` +
+ * `users.getUserById()` reads to a single point so call sites can stay a
+ * one-liner. Each route handler invokes this once at the top.
+ */
+async function resolveAgentOrgIdAsync(
+  storage: StorageAdapter,
+  user: { id: string; currentOrgId?: string },
+  permissions: ReadonlySet<string>,
+): Promise<string | undefined> {
+  // Fast-path: non-admin with currentOrgId — no need to hit DB at all.
+  if (
+    user.currentOrgId !== undefined &&
+    user.currentOrgId.length > 0 &&
+    !permissions.has('admin.system')
+  ) {
+    return user.currentOrgId;
+  }
+  const orgList = await storage.organizations.listOrgs();
+  const dbUser = await storage.users.getUserById(user.id);
+  const activeOrgId = dbUser?.activeOrgId ?? null;
+  return resolveAgentOrgId(user, permissions, activeOrgId, orgList);
 }
 
 // ---------------------------------------------------------------------------
@@ -202,7 +286,7 @@ export async function registerAgentRoutes(
         return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
       }
       // Verify the conversation belongs to the authenticated org.
-      const orgId = resolveAgentOrgId(user, getPermissions(request));
+      const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
       if (orgId === undefined) {
         return reply.code(400).send({ error: 'no_org_context' });
       }
@@ -262,7 +346,7 @@ export async function registerAgentRoutes(
         }
 
         const { conversationId } = request.params as { conversationId: string };
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) {
           return reply.code(400).send({ error: 'no_org_context' });
         }
@@ -336,7 +420,7 @@ export async function registerAgentRoutes(
           return reply.code(401).send({ error: 'unauthenticated' });
         }
         const { messageId } = request.params as { messageId: string };
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) {
           return reply.code(400).send({ error: 'no_org_context' });
         }
@@ -381,7 +465,7 @@ export async function registerAgentRoutes(
           return reply.code(401).send({ error: 'unauthenticated' });
         }
         const { messageId } = request.params as { messageId: string };
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) {
           return reply.code(400).send({ error: 'no_org_context' });
         }
@@ -410,6 +494,77 @@ export async function registerAgentRoutes(
       },
     );
 
+    // ── POST /agent/active-org ─────────────────────────────────────────
+    // Phase 38 Plan 03 (AORG-01/03/04). Set the caller's `active_org_id`.
+    //
+    // Authoritative server-side enforcement of admin.system gating: 403 with
+    // an audit row when the caller lacks the permission (T-38-11). Body's
+    // `orgId` is validated against `listOrgs()` — unknown ids → 400 with
+    // audit. CSRF is enforced by the global preHandler in server.ts.
+    //
+    // Audit shape (T-38-08): toolName='org_switched',
+    // argsJson={fromOrgId,toOrgId}, outcome ∈ {success,denied}. fromOrgId
+    // is the resolved orgId BEFORE the switch (or null if the user had no
+    // active org yet).
+    scope.post('/active-org', async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = request.user;
+      if (user === undefined) {
+        return reply.code(401).send({ error: 'unauthenticated' });
+      }
+      const parsed = ActiveOrgBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
+      }
+      const toOrgId = parsed.data.orgId;
+      const permissions = getPermissions(request);
+      // Resolve fromOrgId for audit. Null if no current binding.
+      const fromOrgId = (await resolveAgentOrgIdAsync(storage, user, permissions)) ?? null;
+
+      // Permission gate (AORG-04). Audit before returning 403.
+      if (!permissions.has('admin.system')) {
+        await storage.agentAudit.append({
+          userId: user.id,
+          orgId: fromOrgId ?? '',
+          toolName: 'org_switched',
+          argsJson: JSON.stringify({ fromOrgId, toOrgId }),
+          outcome: 'denied',
+          outcomeDetail: 'not_admin_system',
+          latencyMs: 0,
+        });
+        return reply.code(403).send({ error: 'forbidden' });
+      }
+
+      const orgList = await storage.organizations.listOrgs();
+      const target = orgList.find((o) => o.id === toOrgId);
+      if (target === undefined) {
+        await storage.agentAudit.append({
+          userId: user.id,
+          orgId: fromOrgId ?? '',
+          toolName: 'org_switched',
+          argsJson: JSON.stringify({ fromOrgId, toOrgId }),
+          outcome: 'denied',
+          outcomeDetail: 'unknown_org',
+          latencyMs: 0,
+        });
+        return reply.code(400).send({ error: 'unknown_org' });
+      }
+
+      await storage.users.setActiveOrgId(user.id, toOrgId);
+      await storage.agentAudit.append({
+        userId: user.id,
+        orgId: toOrgId,
+        toolName: 'org_switched',
+        argsJson: JSON.stringify({ fromOrgId, toOrgId }),
+        outcome: 'success',
+        latencyMs: 0,
+      });
+      void reply.type('application/json');
+      return reply.code(200).send({
+        activeOrgId: target.id,
+        activeOrgName: target.name,
+      });
+    });
+
     // ── GET /agent/panel ───────────────────────────────────────────────
     // Plan 06 Task 2: real server-side rolling-window render via
     // ConversationRepository.getWindow + agent-messages partial. Returns an
@@ -424,7 +579,7 @@ export async function registerAgentRoutes(
       if (user === undefined) {
         return reply.code(401).send({ error: 'unauthenticated' });
       }
-      const orgId = resolveAgentOrgId(user, getPermissions(request));
+      const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
       if (orgId === undefined) {
         return reply.code(400).send({ error: 'no_org_context' });
       }
@@ -492,7 +647,7 @@ export async function registerAgentRoutes(
     scope.get('/conversations', async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.user;
       if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-      const orgId = resolveAgentOrgId(user, getPermissions(request));
+      const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
       if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
       const parsed = ListQuerySchema.safeParse(request.query ?? {});
@@ -521,7 +676,7 @@ export async function registerAgentRoutes(
     scope.get('/conversations/search', async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.user;
       if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-      const orgId = resolveAgentOrgId(user, getPermissions(request));
+      const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
       if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
       const parsed = SearchQuerySchema.safeParse(request.query ?? {});
@@ -554,11 +709,18 @@ export async function registerAgentRoutes(
     scope.get('/conversations/:id', async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.user;
       if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-      const orgId = resolveAgentOrgId(user, getPermissions(request));
+      const permissions = getPermissions(request);
+      const orgId = await resolveAgentOrgIdAsync(storage, user, permissions);
       if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
       const { id } = request.params as { id: string };
-      const conv = await storage.conversations.getConversation(id, orgId);
+      // Phase 38 (AORG-04): admin.system bypasses the org-scope check so
+      // global admins can open any conversation cross-org. Non-admins keep
+      // the org-scoped lookup.
+      let conv = await storage.conversations.getConversation(id, orgId);
+      if (conv === null && permissions.has('admin.system')) {
+        conv = await loadConversationAnyOrg(storage, id);
+      }
       if (conv === null || conv.isDeleted) {
         return reply.code(404).send({ error: 'conversation_not_found' });
       }
@@ -588,7 +750,7 @@ export async function registerAgentRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         const user = request.user;
         if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
         const parsed = RenameBodySchema.safeParse(request.body);
@@ -642,7 +804,7 @@ export async function registerAgentRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         const user = request.user;
         if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
         const { id } = request.params as { id: string };
@@ -697,7 +859,7 @@ export async function registerAgentRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         const user = request.user;
         if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
         const conv = await storage.conversations.getConversation(cid, orgId);
@@ -724,7 +886,7 @@ export async function registerAgentRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         const user = request.user;
         if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
         const conv = await storage.conversations.getConversation(cid, orgId);
@@ -760,7 +922,7 @@ export async function registerAgentRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         const user = request.user;
         if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
 
@@ -809,7 +971,7 @@ export async function registerAgentRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         const user = request.user;
         if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
         const parsed = EditResendBodySchema.safeParse(request.body);
@@ -874,7 +1036,7 @@ export async function registerAgentRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         const user = request.user;
         if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
         const { cid, mid } = request.params as { cid: string; mid: string };
 
@@ -926,7 +1088,7 @@ export async function registerAgentRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         const user = request.user;
         if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
         const { shareId } = request.params as { shareId: string };
@@ -1008,6 +1170,55 @@ async function fetchMessageCounts(
 // ---------------------------------------------------------------------------
 // Private helpers — message-level lookup + safe-parse.
 // ---------------------------------------------------------------------------
+
+/**
+ * Phase 38 — load a conversation row by id ignoring org-scope. Used by
+ * GET /agent/conversations/:id when the caller has admin.system, so global
+ * admins can open any conversation cross-org. Falls back to null when the
+ * raw-database hatch is unavailable (non-SQLite adapters).
+ */
+async function loadConversationAnyOrg(
+  storage: StorageAdapter,
+  id: string,
+): Promise<import('../db/interfaces/conversation-repository.js').Conversation | null> {
+  const raw = (storage as unknown as {
+    getRawDatabase?: () => {
+      prepare(sql: string): { get(...args: unknown[]): unknown };
+    };
+  }).getRawDatabase?.();
+  if (raw === undefined) return null;
+  const row = raw
+    .prepare(
+      `SELECT id, user_id, org_id, title, created_at, updated_at, last_message_at, is_deleted, deleted_at
+         FROM agent_conversations
+         WHERE id = ?`,
+    )
+    .get(id) as
+      | {
+          id: string;
+          user_id: string;
+          org_id: string;
+          title: string | null;
+          created_at: string;
+          updated_at: string;
+          last_message_at: string | null;
+          is_deleted: number;
+          deleted_at: string | null;
+        }
+      | undefined;
+  if (row === undefined) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    orgId: row.org_id,
+    title: row.title,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    lastMessageAt: row.last_message_at,
+    isDeleted: row.is_deleted === 1,
+    deletedAt: row.deleted_at,
+  };
+}
 
 async function findPendingMessage(
   storage: StorageAdapter,
