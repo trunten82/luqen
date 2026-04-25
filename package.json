@@ -32,6 +32,7 @@
     "dev:dashboard": "npm run build -w packages/dashboard && npm run start -w packages/dashboard",
     "dev:all": "bash start.sh",
     "start": "bash start.sh",
+    "docs:rbac": "tsx scripts/generate-rbac-matrix.ts",
     "clean": "rm -rf packages/*/dist"
   },
   "engines": {
