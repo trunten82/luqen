@@ -26,6 +26,10 @@ const AGENT_JS_SOURCE = readFileSync(AGENT_JS_PATH, 'utf8');
 // are wired up in the JSDOM realm.
 const AGENT_ORG_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-org.js');
 const AGENT_ORG_JS_SOURCE = readFileSync(AGENT_ORG_JS_PATH, 'utf8');
+// Phase 39.1-02 — renderHistoryItem moved to agent-history.js. Load it here
+// so the renderHistoryItem assertions in this file keep working.
+const AGENT_HISTORY_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-history.js');
+const AGENT_HISTORY_JS_SOURCE = readFileSync(AGENT_HISTORY_JS_PATH, 'utf8');
 
 interface AgentTestExports {
   handleAgentOrgSwitch(form: HTMLFormElement): void;
@@ -179,6 +183,12 @@ function setupHarness(opts: { admin: boolean; activeOrgId?: string; conversation
     AGENT_ORG_JS_SOURCE,
   );
   fnOrg.call(win, win, doc, win.localStorage, win.fetch);
+
+  const fnHist = new win.Function(
+    'window', 'document', 'localStorage', 'fetch',
+    AGENT_HISTORY_JS_SOURCE,
+  );
+  fnHist.call(win, win, doc, win.localStorage, win.fetch);
 
   return {
     win,

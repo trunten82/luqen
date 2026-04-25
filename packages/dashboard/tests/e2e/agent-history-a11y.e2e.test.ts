@@ -47,6 +47,11 @@ const AGENT_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent.js'
 const STYLE_CSS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'style.css');
 const AGENT_JS_SOURCE = readFileSync(AGENT_JS_PATH, 'utf8');
 const STYLE_CSS_SOURCE = readFileSync(STYLE_CSS_PATH, 'utf8');
+// Phase 39.1-02 — load split modules in addition to agent.js.
+const AGENT_ORG_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-org.js');
+const AGENT_ORG_JS_SOURCE = readFileSync(AGENT_ORG_JS_PATH, 'utf8');
+const AGENT_HISTORY_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-history.js');
+const AGENT_HISTORY_JS_SOURCE = readFileSync(AGENT_HISTORY_JS_PATH, 'utf8');
 
 const UNIQUE_TOKEN = 'accessibilityPanelSeed';
 
@@ -261,6 +266,13 @@ function loadAgentJs(win: Window, doc: Document): void {
   const fn = new (win as unknown as { Function: new (...args: string[]) => (...args: unknown[]) => void })
     .Function('window', 'document', 'localStorage', 'fetch', AGENT_JS_SOURCE);
   fn.call(win, win, doc, win.localStorage, (win as unknown as { fetch: unknown }).fetch);
+  // Phase 39.1-02 — load org + history modules so the JSDOM realm matches prod.
+  const fnOrg = new (win as unknown as { Function: new (...args: string[]) => (...args: unknown[]) => void })
+    .Function('window', 'document', 'localStorage', 'fetch', AGENT_ORG_JS_SOURCE);
+  fnOrg.call(win, win, doc, win.localStorage, (win as unknown as { fetch: unknown }).fetch);
+  const fnHist = new (win as unknown as { Function: new (...args: string[]) => (...args: unknown[]) => void })
+    .Function('window', 'document', 'localStorage', 'fetch', AGENT_HISTORY_JS_SOURCE);
+  fnHist.call(win, win, doc, win.localStorage, (win as unknown as { fetch: unknown }).fetch);
 }
 
 function setupHarness(ctx: Ctx): Harness {

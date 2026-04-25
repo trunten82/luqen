@@ -24,6 +24,15 @@ import { JSDOM } from 'jsdom';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AGENT_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent.js');
 const AGENT_JS_SOURCE = readFileSync(AGENT_JS_PATH, 'utf8');
+// Phase 39.1-02 — history panel moved to agent-history.js. The harness must
+// load it after agent.js so delegated click+keydown listeners and the test
+// export shim (renderHistoryItem, openHistoryPanel, fetchHistoryPage, etc.)
+// are wired up in the JSDOM realm. agent-org.js is loaded too because the
+// resume flow calls into autoSwitchOrgIfNeeded.
+const AGENT_ORG_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-org.js');
+const AGENT_ORG_JS_SOURCE = readFileSync(AGENT_ORG_JS_PATH, 'utf8');
+const AGENT_HISTORY_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-history.js');
+const AGENT_HISTORY_JS_SOURCE = readFileSync(AGENT_HISTORY_JS_PATH, 'utf8');
 
 type FetchArgs = readonly [string, RequestInit | undefined];
 
@@ -144,6 +153,18 @@ function loadAgentJs(doc: Document, win: Window): void {
     AGENT_JS_SOURCE,
   );
   fn.call(win, win, doc, win.localStorage, win.fetch);
+  // Phase 39.1-02 — load agent-org.js + agent-history.js after agent.js so
+  // their delegated listeners + test export shims are wired.
+  const fnOrg = new win.Function(
+    'window', 'document', 'localStorage', 'fetch',
+    AGENT_ORG_JS_SOURCE,
+  );
+  fnOrg.call(win, win, doc, win.localStorage, win.fetch);
+  const fnHist = new win.Function(
+    'window', 'document', 'localStorage', 'fetch',
+    AGENT_HISTORY_JS_SOURCE,
+  );
+  fnHist.call(win, win, doc, win.localStorage, win.fetch);
 }
 
 function importFixtureInto(doc: Document, html: string): void {
