@@ -1,9 +1,14 @@
 {{!-- Phase 35 Plan 04 — Conversation history list row.
-     Data contract: { id, title, snippet?, lastMessageAtLabel, messageCount }.
+     Phase 38 Plan 04 — exposes data-org-id / data-org-name for admin
+     cross-org auto-switch (handled in agent.js); renders an org-name chip
+     when `showOrgChip` is truthy (admin.system viewers only).
+     Data contract: { id, title, snippet?, lastMessageAtLabel, messageCount, orgId?, orgName? }.
      Renders as a roving-focus button-row. Snippet is plain text (double-brace);
      Plan 05 wraps match tokens in <mark> client-side via createElement. --}}
 <li class="agent-drawer__history-item"
     data-conversation-id="{{id}}"
+    {{#if orgId}}data-org-id="{{orgId}}"{{/if}}
+    {{#if orgName}}data-org-name="{{orgName}}"{{/if}}
     role="button"
     tabindex="-1"
     data-action="resumeConversation"
@@ -14,6 +19,9 @@
   {{else}}
     <div class="agent-drawer__history-item-meta">{{t "agent.history.item.meta" timestamp=lastMessageAtLabel count=messageCount}}</div>
   {{/if}}
+  {{#if showOrgChip}}{{#if orgName}}
+    <span class="agent-drawer__history-item-org-chip" aria-label="{{t "agent.history.orgChip" orgName=orgName}}">{{orgName}}</span>
+  {{/if}}{{/if}}
   <button type="button"
           class="agent-drawer__history-item-menu btn btn--ghost"
           aria-haspopup="menu"
