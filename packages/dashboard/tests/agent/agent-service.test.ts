@@ -1015,3 +1015,160 @@ describe('Phase 36 — multi-step tool use', () => {
     expect(emits.filter((f) => f.type === 'pending_confirmation').length).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 38 Plan 03 — multi-org per-turn binding (AORG-02)
+// ---------------------------------------------------------------------------
+//
+// runTurn must read the caller-supplied orgId at the start of every call
+// and pass it into ctx.orgId for tool dispatch + context-hints injection.
+// Switching orgId between consecutive runTurn calls on the same AgentService
+// instance must produce two distinct ctx.orgId values seen by the dispatcher
+// — no leakage from the prior turn.
+
+describe('Phase 38 multi-org per-turn binding', () => {
+  let ctx: Ctx;
+  beforeEach(async () => {
+    ctx = await buildCtx();
+  });
+  afterEach(async () => {
+    await ctx.cleanup();
+  });
+
+  it('Test A: runTurn with orgId=A → dispatcher sees ctx.orgId=A', async () => {
+    const llm = makeLlmStub([
+      {
+        text: '',
+        toolCalls: [{ id: 't1', name: 'dashboard_list_reports', args: {} }],
+      },
+      { text: 'done', toolCalls: [] },
+    ]);
+    const dispatcher = makeDispatcherStub(
+      new Map([['dashboard_list_reports', async () => ({ ok: true })]]),
+    );
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'list',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    expect(dispatcher.dispatch).toHaveBeenCalled();
+    // Every dispatch call must carry orgId=A.
+    for (const call of dispatcher.dispatch.mock.calls) {
+      const ctxArg = call[1] as { orgId: string } | undefined;
+      expect(ctxArg?.orgId).toBe(ctx.orgId);
+    }
+    // LLM input.orgId must also be A on every call this turn.
+    for (const c of llm.calls) {
+      expect(c.input.orgId).toBe(ctx.orgId);
+    }
+  });
+
+  it('Test B: second runTurn with orgId=B on same instance → dispatcher sees ctx.orgId=B (no leakage)', async () => {
+    // Seed a SECOND conversation owned by orgB so the second turn has a
+    // valid persistence target. (Conversations are org-scoped — we cannot
+    // reuse ctx.conversationId, which lives in orgA.)
+    const convB = await ctx.storage.conversations.createConversation({
+      userId: ctx.userId,
+      orgId: ctx.otherOrgId,
+    });
+
+    const llm = makeLlmStub([
+      // Turn 1 (orgA) — single tool call then a final answer.
+      { text: '', toolCalls: [{ id: 't1', name: 'dashboard_list_reports', args: {} }] },
+      { text: 'a-done', toolCalls: [] },
+      // Turn 2 (orgB) — single tool call then a final answer.
+      { text: '', toolCalls: [{ id: 't2', name: 'dashboard_list_reports', args: {} }] },
+      { text: 'b-done', toolCalls: [] },
+    ]);
+    const dispatcher = makeDispatcherStub(
+      new Map([['dashboard_list_reports', async () => ({ ok: true })]]),
+    );
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'org-A',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    await svc.runTurn({
+      conversationId: convB.id,
+      userId: ctx.userId,
+      orgId: ctx.otherOrgId,
+      userMessage: 'org-B',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(2);
+    const firstCtx = dispatcher.dispatch.mock.calls[0][1] as { orgId: string };
+    const secondCtx = dispatcher.dispatch.mock.calls[1][1] as { orgId: string };
+    expect(firstCtx.orgId).toBe(ctx.orgId);
+    expect(secondCtx.orgId).toBe(ctx.otherOrgId);
+    expect(firstCtx.orgId).not.toBe(secondCtx.orgId);
+  });
+
+  it('Test C: context-hints injection uses the per-turn orgId (LLM input.orgId mirrors runTurn arg)', async () => {
+    const convB = await ctx.storage.conversations.createConversation({
+      userId: ctx.userId,
+      orgId: ctx.otherOrgId,
+    });
+    const llm = makeLlmStub([
+      { text: 'a-final', toolCalls: [] },
+      { text: 'b-final', toolCalls: [] },
+    ]);
+    const dispatcher = makeDispatcherStub(new Map());
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'turn-A',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    await svc.runTurn({
+      conversationId: convB.id,
+      userId: ctx.userId,
+      orgId: ctx.otherOrgId,
+      userMessage: 'turn-B',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    // The LLM transport sees one call per turn (no tools, so no extra iter).
+    expect(llm.calls.length).toBe(2);
+    // Each call carries the orgId argued at runTurn time — which is what
+    // the route's resolveAgentOrgId returned for that user at that moment.
+    expect(llm.calls[0].input.orgId).toBe(ctx.orgId);
+    expect(llm.calls[1].input.orgId).toBe(ctx.otherOrgId);
+  });
+});
