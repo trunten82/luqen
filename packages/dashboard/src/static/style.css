@@ -4277,8 +4277,11 @@ details[open] > .mt-examples-toggle::before {
   flex-wrap: wrap;
   gap: var(--space-xs);
   padding: var(--space-xs) var(--space-sm);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  flex: 0 0 auto;
 }
-.agent-drawer__tool-chips:empty { display: none; }
+.agent-drawer__tool-chips:empty { display: none; border-top: 0; }
 .agent-drawer__tool-chip {
   display: inline-flex;
   align-items: center;
