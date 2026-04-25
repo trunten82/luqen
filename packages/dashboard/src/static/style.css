@@ -3995,33 +3995,9 @@ details[open] > .mt-examples-toggle::before {
   overflow-y: auto;
 }
 
-/* Phase 37 — visible toast for copy/share action feedback. */
-.agent-drawer__toast {
-  position: absolute;
-  bottom: calc(var(--space-md) + 60px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border-radius: var(--border-radius-md, 8px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  font-size: var(--font-size-sm);
-  z-index: 1000;
-  pointer-events: none;
-  animation: agent-toast-fade 2.5s ease forwards;
-  max-width: 80%;
-  text-align: center;
-}
-@keyframes agent-toast-fade {
-  0% { opacity: 0; transform: translate(-50%, 8px); }
-  10% { opacity: 1; transform: translate(-50%, 0); }
-  85% { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, -4px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .agent-drawer__toast { animation: none; }
-}
+/* Phase 37 — copy/share success/error glyph flip. */
+.agent-msg__action--ok { color: var(--status-success); }
+.agent-msg__action--err { color: var(--status-error); }
 
 .chat-btn--icon {
   min-width: 44px;
