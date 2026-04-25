@@ -112,6 +112,26 @@ export class ToolDispatcher {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
+  /**
+   * Phase 36 ATOOL-01 — dispatch a batch of tool calls concurrently.
+   * Returns results in input order (NOT completion order) so the caller
+   * can pair each result back to the originating tool_use block by index.
+   * Each call is dispatched via the existing per-call `dispatch()` so
+   * the timeout, JWT mint, scope resolution, and error sentinels all
+   * apply unchanged per-call.
+   *
+   * Concurrency is unbounded by design (D-CONTEXT): the per-call timeout
+   * (DEFAULT_TIMEOUT_MS) bounds runtime and the iteration cap upstream
+   * bounds the size of any single batch.
+   */
+  async dispatchAll(
+    calls: readonly ToolCallInput[],
+    ctx: Omit<ToolDispatchContext, 'authToken'>,
+  ): Promise<readonly ToolDispatchResult[]> {
+    if (calls.length === 0) return [];
+    return Promise.all(calls.map((c) => this.dispatch(c, ctx)));
+  }
+
   async dispatch(
     call: ToolCallInput,
     ctx: Omit<ToolDispatchContext, 'authToken'>,
