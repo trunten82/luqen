@@ -28,7 +28,11 @@ export type MessageStatus =
   | 'approved'
   | 'denied'
   | 'failed'
-  | 'streaming';
+  | 'streaming'
+  // Phase 37 Plan 01 (AUX-01..03):
+  | 'final'
+  | 'stopped'
+  | 'superseded';
 
 export interface Conversation {
   readonly id: string;
@@ -69,6 +73,11 @@ export interface Message {
   readonly status: MessageStatus;
   readonly createdAt: string;
   readonly inWindow: boolean;
+  /**
+   * Phase 37 Plan 01 (AUX-02/03): ISO timestamp when this row was marked
+   * superseded by a retry/edit-resend. Null for non-superseded rows.
+   */
+  readonly supersededAt: string | null;
 }
 
 export interface CreateConversationInput {
@@ -180,4 +189,47 @@ export interface ConversationRepository {
    * already deleted, not found, or wrong org.
    */
   softDeleteConversation(id: string, orgId: string): Promise<boolean>;
+
+  /**
+   * Phase 37 Plan 01 (AUX-01): Mark an in-flight message as stopped by
+   * the user. Persists `finalContent` (the partial text streamed so far)
+   * and flips `status` to 'stopped'. `superseded_at` remains null —
+   * stopped rows stay visible in the UI.
+   *
+   * Org-guarded: the message must belong to a conversation in `orgId`.
+   * Returns true on update, false on miss / wrong org.
+   */
+  markMessageStopped(
+    messageId: string,
+    conversationId: string,
+    orgId: string,
+    finalContent: string,
+  ): Promise<boolean>;
+
+  /**
+   * Phase 37 Plan 01 (AUX-02/03): Bulk-supersede a set of messages
+   * belonging to `conversationId`. Sets `status='superseded'` and
+   * `superseded_at=now()` for rows currently in
+   * ('streaming','final','stopped','sent','pending_confirmation','approved','denied','failed').
+   * Already-superseded rows are skipped (idempotent).
+   *
+   * Org-guarded: only rows whose parent conversation is in `orgId` are
+   * touched. Returns the number of rows actually updated.
+   */
+  markMessagesSuperseded(
+    messageIds: readonly string[],
+    conversationId: string,
+    orgId: string,
+  ): Promise<number>;
+
+  /**
+   * Phase 37 Plan 01 audit read: the full message log including
+   * superseded rows, scoped to `orgId`. Default reads (`getWindow`,
+   * `getFullHistory`) exclude superseded rows; this method exposes them
+   * for `/admin/audit` and supersede-aware UIs.
+   */
+  getMessagesIncludingSuperseded(
+    conversationId: string,
+    orgId: string,
+  ): Promise<Message[]>;
 }

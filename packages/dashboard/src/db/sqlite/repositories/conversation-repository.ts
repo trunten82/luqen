@@ -39,6 +39,7 @@ interface MessageRow {
   status: MessageStatus;
   created_at: string;
   in_window: number;
+  superseded_at?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -229,10 +230,13 @@ export class SqliteConversationRepository implements ConversationRepository {
   }
 
   async getWindow(conversationId: string): Promise<Message[]> {
+    // Phase 37 Plan 01: default reads exclude superseded rows so retried /
+    // edited turns disappear from the visible thread while staying in DB.
     const rows = this.db
       .prepare(
         `SELECT * FROM agent_messages
          WHERE conversation_id = ? AND in_window = 1
+           AND status != 'superseded'
          ORDER BY created_at ASC`,
       )
       .all(conversationId) as MessageRow[];
@@ -246,10 +250,13 @@ export class SqliteConversationRepository implements ConversationRepository {
     const limit = Math.min(options?.limit ?? DEFAULT_PAGE_LIMIT, DEFAULT_PAGE_LIMIT);
     const offset = options?.offset ?? 0;
 
+    // Phase 37 Plan 01: default reads exclude superseded rows. Audit
+    // callers should use getMessagesIncludingSuperseded.
     const rows = this.db
       .prepare(
         `SELECT * FROM agent_messages
          WHERE conversation_id = @conversationId
+           AND status != 'superseded'
          ORDER BY created_at ASC
          LIMIT @limit OFFSET @offset`,
       )
@@ -382,6 +389,77 @@ export class SqliteConversationRepository implements ConversationRepository {
     return result.changes > 0;
   }
 
+  // ── Phase 37 Plan 01 — stopped / superseded operations ──────────────
+
+  async markMessageStopped(
+    messageId: string,
+    conversationId: string,
+    orgId: string,
+    finalContent: string,
+  ): Promise<boolean> {
+    // Org-guarded via JOIN-style EXISTS subquery on agent_conversations.org_id.
+    const result = this.db
+      .prepare(
+        `UPDATE agent_messages
+         SET status = 'stopped',
+             content = @finalContent
+         WHERE id = @messageId
+           AND conversation_id = @conversationId
+           AND EXISTS (
+             SELECT 1 FROM agent_conversations c
+             WHERE c.id = agent_messages.conversation_id
+               AND c.org_id = @orgId
+           )`,
+      )
+      .run({ messageId, conversationId, orgId, finalContent });
+    return result.changes > 0;
+  }
+
+  async markMessagesSuperseded(
+    messageIds: readonly string[],
+    conversationId: string,
+    orgId: string,
+  ): Promise<number> {
+    if (messageIds.length === 0) return 0;
+
+    const now = new Date().toISOString();
+    // Build IN-list of placeholders. better-sqlite3 binds positional args.
+    const placeholders = messageIds.map(() => '?').join(',');
+    const sql = `
+      UPDATE agent_messages
+      SET status = 'superseded',
+          superseded_at = ?
+      WHERE id IN (${placeholders})
+        AND conversation_id = ?
+        AND status != 'superseded'
+        AND EXISTS (
+          SELECT 1 FROM agent_conversations c
+          WHERE c.id = agent_messages.conversation_id
+            AND c.org_id = ?
+        )
+    `;
+    const params: unknown[] = [now, ...messageIds, conversationId, orgId];
+    const result = this.db.prepare(sql).run(...params);
+    return result.changes;
+  }
+
+  async getMessagesIncludingSuperseded(
+    conversationId: string,
+    orgId: string,
+  ): Promise<Message[]> {
+    // Org-guarded via JOIN. Foreign-org callers see [].
+    const rows = this.db
+      .prepare(
+        `SELECT m.* FROM agent_messages m
+         JOIN agent_conversations c ON c.id = m.conversation_id
+         WHERE m.conversation_id = @conversationId
+           AND c.org_id = @orgId
+         ORDER BY m.created_at ASC`,
+      )
+      .all({ conversationId, orgId }) as MessageRow[];
+    return rows.map((r) => this.rowToMessage(r));
+  }
+
   // ── Private mappers ─────────────────────────────────────────────────
 
   private rowToConversation(row: ConversationRow): Conversation {
@@ -409,6 +487,7 @@ export class SqliteConversationRepository implements ConversationRepository {
       status: row.status,
       createdAt: row.created_at,
       inWindow: row.in_window === 1,
+      supersededAt: row.superseded_at ?? null,
     };
   }
 }
