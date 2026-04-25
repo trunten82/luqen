@@ -386,6 +386,43 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     return payload;
   });
 
+  // ── OpenAPI / Swagger (Phase 40-01 DOC-02) ───────────────────────────────
+  // Registered BEFORE any application routes so that subsequent route
+  // declarations are picked up by the Fastify swagger plugin's onRoute hook.
+  // The dashboard hosts both the HTML admin/UI surface AND the MCP Streamable
+  // HTTP endpoint (mounted under /api/v1/mcp by registerMcpRoutes). A single
+  // swagger spec covers both — the snapshot generator (scripts/snapshot-openapi.ts)
+  // filters paths by prefix to produce dashboard.json vs mcp.json.
+  await server.register(import('@fastify/swagger'), {
+    openapi: {
+      openapi: '3.1.0',
+      info: {
+        title: 'Luqen Dashboard',
+        description: 'Web dashboard, admin surface, and MCP Streamable HTTP endpoint for the Luqen WCAG accessibility platform',
+        version: VERSION,
+      },
+      servers: [{ url: 'http://localhost:4000' }],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+          sessionCookie: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: 'session',
+          },
+        },
+      },
+    },
+  });
+  await server.register(import('@fastify/swagger-ui'), {
+    routePrefix: '/docs',
+    uiConfig: { docExpansion: 'list' },
+  });
+
   // ── Plugins ──────────────────────────────────────────────────────────────
   await server.register(import('@fastify/multipart'), { limits: { fileSize: 5 * 1024 * 1024 } });
 
