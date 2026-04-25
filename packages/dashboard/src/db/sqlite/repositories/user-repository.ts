@@ -95,11 +95,12 @@ export class SqliteUserRepository implements UserRepository {
   async listUsersForOrg(orgId: string): Promise<DashboardUser[]> {
     const rows = this.db.prepare(`
       SELECT DISTINCT du.* FROM dashboard_users du
-      WHERE du.id IN (
-        SELECT tm.user_id FROM team_members tm
-        JOIN teams t ON t.id = tm.team_id
-        WHERE t.org_id = ?
-      )
+      WHERE du.active = 1
+        AND du.id IN (
+          SELECT tm.user_id FROM team_members tm
+          JOIN teams t ON t.id = tm.team_id
+          WHERE t.org_id = ?
+        )
       ORDER BY du.username
     `).all(orgId) as UserRow[];
     return rows.map(rowToUser);
