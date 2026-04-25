@@ -32,6 +32,14 @@ export interface AgentAuditEntry {
   readonly argsJson: string;
   readonly outcome: ToolOutcome;
   readonly outcomeDetail: string | null;
+  /**
+   * Phase 36 (ATOOL-04): captured rationale from the model's adjacent
+   * text/thinking blocks for this tool dispatch. Null when the provider
+   * emitted no rationale text (e.g. Ollama models that go straight to
+   * tool_call without pre-tool content). Mandatory field on read — the
+   * repo always returns either a string or null, never undefined.
+   */
+  readonly rationale: string | null;
   readonly latencyMs: number;
   readonly createdAt: string;
 }
@@ -44,6 +52,11 @@ export interface AppendAuditInput {
   readonly argsJson: string;
   readonly outcome: ToolOutcome;
   readonly outcomeDetail?: string;
+  /**
+   * Phase 36 (ATOOL-04): optional rationale string. Omit / pass undefined
+   * or null when no rationale was captured — both are persisted as NULL.
+   */
+  readonly rationale?: string | null;
   readonly latencyMs: number;
 }
 
@@ -51,6 +64,13 @@ export interface AgentAuditFilters {
   readonly userId?: string;
   readonly toolName?: string;
   readonly outcome?: ToolOutcome;
+  /**
+   * Phase 36 (ATOOL-04): exact-match filter on outcome_detail. Primary
+   * use case is the `/admin/audit` cap-hit chip filter
+   * (`outcomeDetail: 'iteration_cap'`). Opt-in — when undefined the
+   * filter is omitted entirely.
+   */
+  readonly outcomeDetail?: string;
   /** ISO-8601 inclusive lower bound on created_at. */
   readonly from?: string;
   /** ISO-8601 inclusive upper bound on created_at. */

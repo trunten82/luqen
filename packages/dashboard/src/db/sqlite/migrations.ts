@@ -1422,4 +1422,19 @@ CREATE INDEX IF NOT EXISTS idx_agent_conversations_user_org_active_last
   WHERE is_deleted = 0;
     `,
   },
+  {
+    id: '057',
+    name: 'agent-audit-log-rationale',
+    sql: `
+-- Phase 36 Plan 01 (ATOOL-04): durable rationale capture for tool dispatch.
+-- Rationale text comes from the model's adjacent text/thinking blocks
+-- (per 36-CONTEXT.md "Rationale capture") and is normalised across
+-- providers (Anthropic thinking+text, OpenAI assistant.content, Ollama
+-- pre-tool content). Nullable — Ollama may emit empty strings which we
+-- store as NULL rather than treat as an error. The column is read by
+-- /admin/audit (existing route, admin.system OR admin.org guarded) so
+-- existing org-scope guards continue to apply.
+ALTER TABLE agent_audit_log ADD COLUMN rationale TEXT;
+    `,
+  },
 ];
