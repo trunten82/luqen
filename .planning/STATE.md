@@ -1,63 +1,79 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0.0
-milestone_name: MCP Servers & Agent Companion
-status: shipped
-stopped_at: v3.0.0 milestone archived 2026-04-24
-last_updated: "2026-04-24T07:30:00.000Z"
-last_activity: 2026-04-24
+milestone: v3.1.0
+milestone_name: Agent Companion v2 + Tech Debt & Docs
+status: ready_to_plan
+stopped_at: Phase 34 context gathered
+last_updated: "2026-04-25T18:25:27.637Z"
+last_activity: 2026-04-25 -- Phase 39.1 execution started
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 36
-  completed_plans: 36
-  percent: 100
+  total_phases: 8
+  completed_phases: 7
+  total_plans: 29
+  completed_plans: 27
+  percent: 88
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24 after v3.0.0 milestone)
+See: .planning/PROJECT.md (updated 2026-04-24 — v3.1.0 milestone started)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Planning next milestone — run `/gsd-new-milestone`
+**Current focus:** Phase 39.1 — deferred-item-resolution
 
 ## Current Position
 
-v3.0.0 shipped 2026-04-24. All 10 phases (28-33 including inserted 30.1, 31.1, 31.2, 32.1) complete; 36/36 plans; 22/22 requirements satisfied.
+Phase: 40
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-04-25
+
+## Phase Map (v3.1.0)
+
+| # | Phase | Requirements | Depends on |
+|---|-------|--------------|------------|
+| 34 | Tokenizer Precision | TOK-01..05 | — |
+| 35 | Agent Conversation History | AHIST-01..05 | 34 |
+| 36 | Multi-Step Tool Use | ATOOL-01..04 | 35 |
+| 37 | Streaming UX Polish | AUX-01..05 | 35 |
+| 38 | Multi-Org Context Switching | AORG-01..04 | 35, 36 |
+| 39 | Verification Backfill & Deferred-Items Triage | VER-01..03 | — |
+| 40 | Documentation Sweep | DOC-01..07 | 34-39 |
 
 ## Accumulated Context
 
-### Decisions
-
-Full decision log archived in `.planning/milestones/v3.0.0-ROADMAP.md` (Milestone Summary section). Carried forward highlights:
+### Decisions (carried forward from v3.0.0)
 
 - MCP embedded as Fastify plugin per service, never standalone port
 - Streamable HTTP transport only (SSE-only deprecated June 2025)
 - AgentService calls service `/mcp` endpoints over HTTP — never direct module imports
 - All LLM calls route through existing capability engine at `llm:4200`
 - Rolling 20-turn window maintained at write time (not read time)
-- char/4 token estimator sufficient for 85% compaction threshold
+- char/4 token estimator — being replaced in Phase 34 with precise tokenizer
 
-### Blockers/Concerns
+### Constraints (v3.1.0)
 
-None carried forward. Review `v3.0.0-MILESTONE-AUDIT.md` tech_debt section if spinning up a cleanup phase.
+- No new heavy dependencies (tokenizer must stay light, no native binaries, <5 MB bundle impact)
+- External MCP clients must keep working unchanged
+- Existing conversation rows use legacy token counts; only new conversations get precise counts (per Out of Scope)
 
 ### Known Gotchas (carried forward)
 
 - **HTMX OOB inside `<tr>`**: wrap in `<template>` tags
 - **HTMX 2.0 `hx-select` inheritance**: use plain JS `EventSource` for streaming, never `hx-sse`
 - **`@fastify/rate-limit` 429 bypass**: add `onSend` hook
-- **Small scans score lower**: maxPages=3 may score 0 when full-site scores 2+
 - **Branding service port**: lxc-luqen runs on port 4100 (not 4300)
 - **`issue.context` can be null**: all scorers must null-guard
-- **MCP tool schemas must never include orgId** — sourced from ToolContext populated by JWT preHandler (D-05/D-13 invariant; enforced by runtime iteration test per service)
-- **MCP prompts use chat-message templates, not tool-call pre-fills** (D-12 / MCPI-06)
+- **MCP tool schemas must never include orgId** — sourced from ToolContext populated by JWT preHandler
+- **MCP prompts use chat-message templates, not tool-call pre-fills**
 
 ## Session Continuity
 
-Last session: 2026-04-24T07:30:00.000Z
-Stopped at: v3.0.0 milestone archived
-Resume file: None
-Next action: `/gsd-new-milestone`
+Last session: --stopped-at
+Stopped at: Phase 34 context gathered
+Resume file: --resume-file
+Next action: `/gsd-plan-phase 34` (Tokenizer Precision)
+
+**Planned Phase:** 34 (Tokenizer Precision) — 3 plans — 2026-04-24T13:34:40.743Z
