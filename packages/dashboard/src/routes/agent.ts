@@ -76,6 +76,11 @@ const RenameBodySchema = z.object({
   title: z.string().trim().min(1).max(120),
 });
 
+// Phase 37 Plan 03 Task 2 — edit-resend body schema.
+const EditResendBodySchema = z.object({
+  content: z.string().trim().min(1).max(8000),
+});
+
 const SearchQuerySchema = z.object({
   q: z.string().trim().min(1).max(200),
   limit: z.coerce.number().int().min(1).max(50).optional(),
@@ -657,6 +662,182 @@ export async function registerAgentRoutes(
         });
         void reply.type('application/json');
         return reply.code(200).send({ success: true });
+      },
+    );
+    // ── Phase 37 Plan 03 Task 2 — retry / edit-resend / share ─────────
+    //
+    // All three endpoints share the same auth + org-resolve + conversation
+    // -guard preamble used above. Pattern:
+    //   1. resolveAgentOrgId or 401/400
+    //   2. getConversation or 404
+    //   3. Load active-branch messages (excludes superseded by default)
+    //   4. Validate the target is the most-recent of its role
+    //   5. Apply markMessagesSuperseded / appendMessage / createShareLink
+    //   6. Audit row (toolName per behaviour block)
+    //
+    // Streaming kick-off for retry / edit-resend is delegated to the client
+    // re-opening GET /agent/stream/:cid (see SSE handler above) — the route
+    // returns 200 with the new conversation/message ids and the client
+    // takes over.
+
+    // POST /agent/conversations/:cid/messages/:mid/retry
+    scope.post(
+      '/conversations/:cid/messages/:mid/retry',
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        const user = request.user;
+        if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+        const { cid, mid } = request.params as { cid: string; mid: string };
+
+        const conv = await storage.conversations.getConversation(cid, orgId);
+        if (conv === null || conv.isDeleted) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        // Active-branch read excludes superseded rows (Plan 01 contract).
+        // If mid is not present in the active branch (unknown id, foreign,
+        // or already-superseded) treat as 404. If it's present but not
+        // the latest assistant, return 400 not_most_recent_assistant.
+        const active = await storage.conversations.getFullHistory(cid);
+        const present = active.some((m) => m.id === mid);
+        if (!present) {
+          return reply.code(404).send({ error: 'message_not_found' });
+        }
+        const lastAssistant = [...active].reverse().find((m) => m.role === 'assistant');
+        if (lastAssistant === undefined || lastAssistant.id !== mid) {
+          return reply.code(400).send({ error: 'not_most_recent_assistant' });
+        }
+        const updated = await storage.conversations.markMessagesSuperseded(
+          [mid],
+          cid,
+          orgId,
+        );
+        if (updated === 0) {
+          return reply.code(404).send({ error: 'message_not_found' });
+        }
+        await storage.agentAudit.append({
+          userId: user.id,
+          orgId,
+          conversationId: cid,
+          toolName: 'message_retried',
+          argsJson: JSON.stringify({ originalMessageId: mid }),
+          outcome: 'success',
+          latencyMs: 0,
+        });
+        void reply.type('application/json');
+        return reply.code(200).send({ conversationId: cid, retried: true });
+      },
+    );
+
+    // POST /agent/conversations/:cid/messages/:mid/edit-resend
+    scope.post(
+      '/conversations/:cid/messages/:mid/edit-resend',
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        const user = request.user;
+        if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+
+        const parsed = EditResendBodySchema.safeParse(request.body);
+        if (!parsed.success) {
+          return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
+        }
+        const { cid, mid } = request.params as { cid: string; mid: string };
+
+        const conv = await storage.conversations.getConversation(cid, orgId);
+        if (conv === null || conv.isDeleted) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        const active = await storage.conversations.getFullHistory(cid);
+        const lastUser = [...active].reverse().find((m) => m.role === 'user');
+        if (lastUser === undefined || lastUser.id !== mid) {
+          return reply.code(400).send({ error: 'not_most_recent_user' });
+        }
+        // Identify the assistant reply that immediately followed :mid (if any).
+        const userIdx = active.findIndex((m) => m.id === mid);
+        const followingAssistant = active
+          .slice(userIdx + 1)
+          .find((m) => m.role === 'assistant');
+        const toSupersede = followingAssistant !== undefined
+          ? [mid, followingAssistant.id]
+          : [mid];
+        await storage.conversations.markMessagesSuperseded(toSupersede, cid, orgId);
+
+        // Persist the new edited user message.
+        const newUser = await storage.conversations.appendMessage({
+          conversationId: cid,
+          role: 'user',
+          content: parsed.data.content,
+          status: 'sent',
+        });
+
+        await storage.agentAudit.append({
+          userId: user.id,
+          orgId,
+          conversationId: cid,
+          toolName: 'message_edit_resend',
+          argsJson: JSON.stringify({
+            originalUserMessageId: mid,
+            newUserMessageId: newUser.id,
+            ...(followingAssistant !== undefined
+              ? { supersededAssistantId: followingAssistant.id }
+              : {}),
+          }),
+          outcome: 'success',
+          latencyMs: 0,
+        });
+        void reply.type('application/json');
+        return reply.code(200).send({
+          conversationId: cid,
+          newUserMessageId: newUser.id,
+        });
+      },
+    );
+
+    // POST /agent/conversations/:cid/messages/:mid/share
+    scope.post(
+      '/conversations/:cid/messages/:mid/share',
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        const user = request.user;
+        if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
+        const orgId = resolveAgentOrgId(user, getPermissions(request));
+        if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
+        const { cid, mid } = request.params as { cid: string; mid: string };
+
+        const conv = await storage.conversations.getConversation(cid, orgId);
+        if (conv === null || conv.isDeleted) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        // Default getFullHistory excludes superseded — superseded targets
+        // resolve to "not found" without a separate branch.
+        const active = await storage.conversations.getFullHistory(cid);
+        const target = active.find((m) => m.id === mid);
+        if (target === undefined) {
+          return reply.code(404).send({ error: 'message_not_found' });
+        }
+        if (target.role !== 'assistant') {
+          return reply.code(400).send({ error: 'not_assistant_message' });
+        }
+        const link = await storage.shareLinks.createShareLink({
+          conversationId: cid,
+          orgId,
+          anchorMessageId: mid,
+          createdByUserId: user.id,
+        });
+        await storage.agentAudit.append({
+          userId: user.id,
+          orgId,
+          conversationId: cid,
+          toolName: 'share_created',
+          argsJson: JSON.stringify({ shareId: link.id, anchorMessageId: mid }),
+          outcome: 'success',
+          latencyMs: 0,
+        });
+        void reply.type('application/json');
+        return reply.code(201).send({
+          shareId: link.id,
+          url: `/agent/share/${link.id}`,
+        });
       },
     );
   }, { prefix: '/agent' });
