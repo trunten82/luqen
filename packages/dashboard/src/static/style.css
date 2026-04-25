@@ -10,6 +10,8 @@
   --bg-primary: #ffffff;
   --bg-secondary: #fafafa;
   --bg-tertiary: #f8f9fa;
+  --surface-muted: #f3f4f6;
+  --border-muted: #e5e7eb;
   --bg-sidebar: #14532d;
   --bg-sidebar-hover: #166534;
   --bg-sidebar-active: #15803d;
@@ -102,6 +104,8 @@
   --bg-primary: #1f2937;
   --bg-secondary: #111827;
   --bg-tertiary: #374151;
+  --surface-muted: #374151;
+  --border-muted: #4b5563;
   --bg-sidebar: #052e16;
   --bg-sidebar-hover: #14532d;
   --bg-sidebar-active: #166534;
@@ -3811,7 +3815,8 @@ details[open] > .mt-examples-toggle::before {
 }
 .agent-msg__body table th,
 .agent-md-table th {
-  background: var(--surface-muted, #f3f4f6);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
   font-weight: 600;
 }
 .agent-msg__body pre {
