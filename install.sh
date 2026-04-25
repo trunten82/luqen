@@ -15,13 +15,23 @@ cd "$HOME" 2>/dev/null || cd /root 2>/dev/null || cd /tmp
 # Re-exec from temp file when piped (curl | bash)
 # so that stdin is the terminal for interactive prompts
 # ──────────────────────────────────────────────
-if [ ! -t 0 ] && [ -z "${LUQEN_INSTALL_REEXEC:-}" ]; then
+# Detect "actually piped" vs "stdin happens to not be a tty".
+#   - curl | bash       → BASH_SOURCE[0] is empty/main, $0 is "bash" (or "-bash")
+#   - bash install.sh   → BASH_SOURCE[0] is the file path, $0 is the file path
+#   - ssh host 'bash install.sh' → same as above; stdin is closed but script is real
+# Only the first case needs the cat>tmpfile re-exec to capture script + free stdin
+# for prompts. Using BASH_SOURCE distinguishes them reliably.
+__luqen_piped=0
+if [ -z "${BASH_SOURCE[0]:-}" ] || [ "${BASH_SOURCE[0]}" = "main" ] || [ "${BASH_SOURCE[0]}" = "bash" ]; then
+  __luqen_piped=1
+fi
+if [ "${__luqen_piped}" = "1" ] && [ -z "${LUQEN_INSTALL_REEXEC:-}" ]; then
   TMPSCRIPT="$(mktemp /tmp/luqen-install.XXXXXX.sh)"
   cat > "${TMPSCRIPT}"
   export LUQEN_INSTALL_REEXEC=1
   # Only redirect to /dev/tty if we have one (interactive use). Non-interactive
   # callers (CI, ssh host 'curl|bash --non-interactive ...') have no tty and
-  # must run without the redirect or the script aborts on line 22.
+  # must run without the redirect or the script aborts on the redirect line.
   REEXEC_NONINTERACTIVE=0
   for arg in "$@"; do
     case "$arg" in
@@ -34,6 +44,7 @@ if [ ! -t 0 ] && [ -z "${LUQEN_INSTALL_REEXEC:-}" ]; then
     exec bash "${TMPSCRIPT}" "$@" < /dev/tty
   fi
 fi
+unset __luqen_piped
 
 # ──────────────────────────────────────────────
 # Color helpers
