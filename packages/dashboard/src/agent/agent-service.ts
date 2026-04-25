@@ -322,6 +322,14 @@ export class AgentService {
     // tool outcome, clamped at 0. Reset per runTurn invocation.
     const retryBudget = { remaining: 3 };
 
+    // Phase 37 Plan 03 (AUX-01) — stop-persistence state. We accumulate
+    // streamed token text per LLM call so an AbortSignal mid-stream can
+    // persist whatever arrived before the user clicked stop. The
+    // assistant DB row is created lazily inside handleStreamAbort —
+    // pre-creating would double assistant rows on natural completion.
+    let accumulatedText = '';
+    const turnStart = Date.now();
+
     try {
       for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
         // (1) Re-resolve permissions every iteration (D-07, Guardrail 1).
@@ -355,6 +363,10 @@ export class AgentService {
           messages = windowToChatMessages(window);
         }
 
+        // Phase 37 Plan 03 (AUX-01) — reset accumulator before each LLM
+        // call so abort-persistence captures only the in-flight stream.
+        accumulatedText = '';
+
         // (3) Stream the LLM turn; onFrame forwards tokens straight through.
         const turn = await this.llm.streamAgentConversation(
           { messages, tools: manifest, orgId, userId, agentDisplayName, contextHintsBlock },
@@ -363,14 +375,22 @@ export class AgentService {
             onFrame: (f) => {
               // Only forward token frames from the LLM layer — the outer
               // route is the sole authority for control frames (tool_calls,
-              // pending_confirmation, done, error).
-              if (f.type === 'token') emit(f);
+              // pending_confirmation, done, error). Phase 37 Plan 03: also
+              // accumulate token text for stop-persistence.
+              if (f.type === 'token') {
+                accumulatedText += f.text;
+                emit(f);
+              }
             },
           },
         );
 
         if (turn.toolCalls.length === 0) {
-          // Plain final answer path.
+          // Plain final answer path. Phase 37 Plan 03: clear the abort
+          // tracker — the LLM returned successfully so any later
+          // exception is NOT a stream abort and must follow the existing
+          // error path.
+          accumulatedText = '';
           await this.storage.conversations.appendMessage({
             conversationId,
             role: 'assistant',
@@ -483,6 +503,23 @@ export class AgentService {
         latencyMs: 0,
       });
     } catch (err) {
+      // Phase 37 Plan 03 (AUX-01) — distinguish abort-by-user from
+      // genuine errors. When the route's AbortController fires (user
+      // hit the stop button or closed the SSE), persist the partial
+      // assistant text with status='stopped' and emit no further
+      // frames — the consumer is gone. An audit row records the stop
+      // for /admin/audit visibility. Provider/internal errors fall
+      // through to the original error path below.
+      if (signal.aborted) {
+        await this.handleStreamAbort({
+          conversationId,
+          orgId,
+          userId,
+          accumulatedText,
+          turnStartMs: turnStart,
+        });
+        return;
+      }
       // Catch-all: emit an error frame + persist failed status on any
       // lingering in-flight assistant row. Never rethrow to caller.
       const message = err instanceof Error ? err.message : String(err);
@@ -499,6 +536,51 @@ export class AgentService {
         status: 'failed',
       });
     }
+  }
+
+  /**
+   * Phase 37 Plan 03 (AUX-01) — persist a stopped streaming turn.
+   *
+   * Appends an assistant row with the partial text and immediately
+   * flips it to status='stopped' via markMessageStopped. The two-step
+   * dance keeps the stop primitive (markMessageStopped) authoritative
+   * for the status flag while this method owns the row creation —
+   * consistent with Plan 01's contract.
+   *
+   * Audit row: toolName='message_stopped', outcome='success',
+   * outcomeDetail='stopped_by_user'. latencyMs is the turn-start →
+   * abort delta so /admin/audit can show how long the user waited
+   * before hitting stop.
+   */
+  private async handleStreamAbort(args: {
+    readonly conversationId: string;
+    readonly orgId: string;
+    readonly userId: string;
+    readonly accumulatedText: string;
+    readonly turnStartMs: number;
+  }): Promise<void> {
+    const row = await this.storage.conversations.appendMessage({
+      conversationId: args.conversationId,
+      role: 'assistant',
+      content: args.accumulatedText,
+      status: 'streaming',
+    });
+    await this.storage.conversations.markMessageStopped(
+      row.id,
+      args.conversationId,
+      args.orgId,
+      args.accumulatedText,
+    );
+    await this.storage.agentAudit.append({
+      userId: args.userId,
+      orgId: args.orgId,
+      conversationId: args.conversationId,
+      toolName: 'message_stopped',
+      argsJson: '{}',
+      outcome: 'success',
+      outcomeDetail: 'stopped_by_user',
+      latencyMs: Math.max(0, Date.now() - args.turnStartMs),
+    });
   }
 
   // -----------------------------------------------------------------------
