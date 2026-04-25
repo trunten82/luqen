@@ -224,6 +224,9 @@ function teardownHarness(): void {
     try { currentDom.window.close(); } catch (_e) { /* ignore */ }
   }
   currentDom = null;
+  // Clear any test-installed global ClipboardItem (Test 12a sets it; Test 12b
+  // and others must not see it leak across cases).
+  delete (globalThis as { ClipboardItem?: unknown }).ClipboardItem;
 }
 
 async function flush(): Promise<void> {
@@ -384,8 +387,37 @@ describe('agent.js delegated action handlers — Task 2', () => {
     expect(live?.textContent ?? '').toMatch(/Could not copy|copyFailed/i);
   });
 
-  it('12. shareAssistant POSTs /share, copies returned URL, announces success', async () => {
+  // Path A: agent.js prefers navigator.clipboard.write([new ClipboardItem({...})])
+  // when ClipboardItem is supported (Chrome 76+, Safari 13.1+, Firefox 87+).
+  // The ClipboardItem accepts a Promise<Blob> so the bytes resolve after the
+  // POST /share response — this is the production happy path.
+  it('12a. shareAssistant — uses ClipboardItem(Promise) + clipboard.write when supported', async () => {
     const h = setupHarness({ initialMessages: makeAssistantBubble('a1') });
+
+    // Install ClipboardItem + clipboard.write on the jsdom window. The default
+    // setupHarness only stubs navigator.clipboard.writeText (the fallback path).
+    const clipboardWriteStub = vi.fn(async (_items: unknown[]) => undefined);
+    class FakeClipboardItem {
+      readonly types: string[];
+      readonly data: Record<string, unknown>;
+      constructor(parts: Record<string, unknown>) {
+        this.data = parts;
+        this.types = Object.keys(parts);
+      }
+    }
+    // @ts-expect-error attach test double on the jsdom window so the
+    // `typeof window.ClipboardItem === 'function'` guard in agent.js passes.
+    h.win.ClipboardItem = FakeClipboardItem;
+    // agent.js loaded via `new win.Function` references bare `ClipboardItem`
+    // inside its try-block (line ~1860). In jsdom the bare lookup falls
+    // through to globalThis — bridge it so the production `new ClipboardItem`
+    // call resolves to our test double.
+    (globalThis as { ClipboardItem?: unknown }).ClipboardItem = FakeClipboardItem;
+    Object.defineProperty(h.win.navigator, 'clipboard', {
+      configurable: true,
+      value: { write: clipboardWriteStub, writeText: h.clipboardStub },
+    });
+
     h.fetchStub.mockResolvedValueOnce(jsonResponse({ shareId: 'sh1', url: '/agent/share/sh1' }, 201));
     const btn = h.doc.querySelector('[data-action="shareAssistant"]') as HTMLElement;
     btn.click();
@@ -393,6 +425,34 @@ describe('agent.js delegated action handlers — Task 2', () => {
     const call = findCall(h.fetchStub, (u) => u.includes('/agent/conversations/c1/messages/a1/share'));
     expect(call).toBeDefined();
     expect(call![1]?.method).toBe('POST');
+    // Production path: clipboard.write was invoked with a ClipboardItem.
+    expect(clipboardWriteStub).toHaveBeenCalledTimes(1);
+    const items = clipboardWriteStub.mock.calls[0]![0] as unknown[];
+    expect(items.length).toBe(1);
+    expect(items[0]).toBeInstanceOf(FakeClipboardItem);
+    // writeText fallback should NOT be invoked when ClipboardItem path succeeds.
+    expect(h.clipboardStub).not.toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 30));
+    const live = h.doc.getElementById('agent-aria-live');
+    expect(live?.textContent ?? '').toMatch(/Share link|shareCreated/i);
+  });
+
+  // Path B: agent.js falls through to writeToClipboard(url) → writeText when
+  // ClipboardItem is unavailable (older browsers, JSDOM defaults). This is
+  // the case the CI patch (commit 77d011f) explicitly added a fallback for.
+  it('12b. shareAssistant — falls back to writeText when ClipboardItem unavailable', async () => {
+    const h = setupHarness({ initialMessages: makeAssistantBubble('a1') });
+    // Default setupHarness leaves window.ClipboardItem undefined.
+    expect((h.win as unknown as { ClipboardItem?: unknown }).ClipboardItem).toBeUndefined();
+
+    h.fetchStub.mockResolvedValueOnce(jsonResponse({ shareId: 'sh1', url: '/agent/share/sh1' }, 201));
+    const btn = h.doc.querySelector('[data-action="shareAssistant"]') as HTMLElement;
+    btn.click();
+    await flush();
+    const call = findCall(h.fetchStub, (u) => u.includes('/agent/conversations/c1/messages/a1/share'));
+    expect(call).toBeDefined();
+    expect(call![1]?.method).toBe('POST');
+    // Fallback path: writeText is called with the absolute share URL.
     expect(h.clipboardStub).toHaveBeenCalledWith('http://localhost/agent/share/sh1');
     await new Promise((r) => setTimeout(r, 30));
     const live = h.doc.getElementById('agent-aria-live');
