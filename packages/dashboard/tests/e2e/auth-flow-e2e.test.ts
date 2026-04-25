@@ -183,8 +183,9 @@ describe('Auth Flow E2E', () => {
 
       expect(response.statusCode).toBe(302);
       // Phase 31.1 Plan 02 added returnTo preservation for GET redirects so the
-      // user lands back on the original page after login.
-      expect(response.headers['location']).toBe('/login?returnTo=%2Fhome');
+      // user lands back on the original page after login. Match via regex so
+      // future query-string additions (e.g. extra hints) don't re-break the test.
+      expect(response.headers['location']).toMatch(/^\/login\?returnTo=%2Fhome(?:&.*)?$/);
     });
   });
 
@@ -396,7 +397,10 @@ describe('Auth Flow E2E', () => {
       });
 
       expect(response.statusCode).toBe(302);
-      expect(response.headers['location']).toBe('/login?returnTo=%2Fhome');
+      // Same returnTo preservation as the unauth-redirect case above (Phase 31.1
+      // commit 4337c8d). Use regex tolerance so query-string evolution doesn't
+      // re-break the assertion.
+      expect(response.headers['location']).toMatch(/^\/login\?returnTo=%2Fhome(?:&.*)?$/);
     });
   });
 });
