@@ -88,6 +88,8 @@ PA11Y_URL=""
 PA11Y_MODE="builtin"         # builtin | external
 SEED=true
 INTERACTIVE=true
+UNINSTALL=false
+UNINSTALL_PURGE=false
 REPO_URL="https://github.com/trunten82/luqen.git"
 INSTALL_DIR="${HOME}/luqen"
 
@@ -213,7 +215,63 @@ Notifications (non-interactive):
 Admin user (non-interactive):
   --admin-user USER           Admin username
   --admin-pass PASS           Admin password (min 8 chars)
+
+Uninstall:
+  --uninstall                 Stop services, remove systemd units, delete install dir.
+                              Combine with --purge to also delete data (DB, configs, logs).
+                              Combine with --keep-data to be explicit about preserving data
+                              (the default — same effect as bare --uninstall).
+  --purge                     With --uninstall: also delete dashboard.config.json,
+                              dashboard.db, packages/compliance/compliance.db, ~/.luqen.
+  --keep-data                 With --uninstall: preserve data files (default).
 EOF
+  exit 0
+}
+
+uninstall_luqen() {
+  local purge="${1:-no}"
+  header "Uninstalling Luqen"
+
+  if command -v systemctl &>/dev/null; then
+    info "Stopping and disabling systemd units..."
+    for unit in luqen-compliance luqen-branding luqen-llm luqen-dashboard; do
+      systemctl stop "${unit}" 2>/dev/null || true
+      systemctl disable "${unit}" 2>/dev/null || true
+      rm -f "/etc/systemd/system/${unit}.service"
+    done
+    systemctl daemon-reload 2>/dev/null || true
+    success "systemd units removed."
+  fi
+
+  if [ -d "${INSTALL_DIR}" ]; then
+    if [ "${purge}" = "yes" ]; then
+      info "Purging install directory and all data: ${INSTALL_DIR}"
+      rm -rf "${INSTALL_DIR}"
+    else
+      info "Removing install directory (keeping ${INSTALL_DIR}/dashboard.db, ${INSTALL_DIR}/packages/compliance/compliance.db, ${INSTALL_DIR}/dashboard.config.json)"
+      local backup_dir="${HOME}/.luqen-uninstall-$(date +%s)"
+      mkdir -p "${backup_dir}"
+      [ -f "${INSTALL_DIR}/dashboard.config.json" ] && cp "${INSTALL_DIR}/dashboard.config.json" "${backup_dir}/" 2>/dev/null || true
+      [ -f "${INSTALL_DIR}/dashboard.db" ] && cp "${INSTALL_DIR}/dashboard.db" "${backup_dir}/" 2>/dev/null || true
+      [ -f "${INSTALL_DIR}/packages/compliance/compliance.db" ] && cp "${INSTALL_DIR}/packages/compliance/compliance.db" "${backup_dir}/" 2>/dev/null || true
+      rm -rf "${INSTALL_DIR}"
+      success "Install dir removed. Data preserved at: ${backup_dir}"
+    fi
+  else
+    info "No install dir found at ${INSTALL_DIR}"
+  fi
+
+  if [ "${purge}" = "yes" ] && [ -d "${HOME}/.luqen" ]; then
+    rm -rf "${HOME}/.luqen"
+    success "Removed ${HOME}/.luqen"
+  fi
+
+  echo ""
+  success "Luqen uninstalled."
+  if [ "${purge}" != "yes" ]; then
+    echo ""
+    info "Re-run with --purge to also drop preserved data."
+  fi
   exit 0
 }
 
@@ -251,10 +309,17 @@ while [[ $# -gt 0 ]]; do
     --llm-public-url)        LLM_PUBLIC_URL="$2"; shift 2 ;;
     --oauth-key-max-age-days) OAUTH_KEY_MAX_AGE_DAYS="$2"; shift 2 ;;
     --ollama-base-url)  OLLAMA_BASE_URL="$2"; shift 2 ;;
+    --uninstall)        UNINSTALL=true; shift ;;
+    --purge)            UNINSTALL_PURGE=true; shift ;;
+    --keep-data)        UNINSTALL_PURGE=false; shift ;;
     --help|-h) show_help ;;
     *) error "Unknown option: $1"; show_help ;;
   esac
 done
+
+if [ "${UNINSTALL:-false}" = "true" ]; then
+  uninstall_luqen "$([ "${UNINSTALL_PURGE:-false}" = "true" ] && echo yes || echo no)"
+fi
 
 resolve_public_url_defaults() {
   # Called after port parsing / wizard so defaults track the real ports.

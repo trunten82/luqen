@@ -46,7 +46,10 @@ param(
     [string]$SmtpPass = "",
     [string]$SmtpFrom = "",
     [string]$AdminUser = "",
-    [string]$AdminPass = ""
+    [string]$AdminPass = "",
+    [switch]$Uninstall,
+    [switch]$Purge,
+    [switch]$KeepData
 )
 
 $ErrorActionPreference = "Stop"
@@ -151,6 +154,78 @@ if ($SmtpPass)         { $script:SmtpPassVal = $SmtpPass }
 if ($SmtpFrom)         { $script:SmtpFromVal = $SmtpFrom }
 if ($AdminUser)        { $script:AdminUsername = $AdminUser }
 if ($AdminPass)        { $script:AdminPassword = $AdminPass }
+
+# ──────────────────────────────────────────────
+# Uninstall handler — runs before normal install flow.
+# Mirrors install.sh --uninstall + install.command launchd cleanup.
+# ──────────────────────────────────────────────
+function Invoke-LuqenUninstall {
+    param([bool]$DoPurge)
+    Write-Header "Uninstalling Luqen"
+
+    # Stop + remove NSSM services if present.
+    $nssm = Get-Command nssm -ErrorAction SilentlyContinue
+    foreach ($svc in @("LuqenCompliance","LuqenBranding","LuqenLlm","LuqenDashboard")) {
+        if ($nssm) {
+            try { & nssm stop $svc 2>$null | Out-Null } catch {}
+            try { & nssm remove $svc confirm 2>$null | Out-Null } catch {}
+        }
+        try { Stop-Service -Name $svc -Force -ErrorAction SilentlyContinue } catch {}
+    }
+    Write-Ok "NSSM services stopped/removed (if present)."
+
+    # Unregister Task Scheduler tasks (used when NSSM not installed).
+    foreach ($task in @("LuqenCompliance","LuqenBranding","LuqenLlm","LuqenDashboard")) {
+        try { Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue } catch {}
+    }
+    Write-Ok "Scheduled tasks unregistered (if present)."
+
+    $installRoot = if ($script:InstallDirVal) { $script:InstallDirVal } else { Join-Path $env:USERPROFILE "luqen" }
+    if (Test-Path $installRoot) {
+        if ($DoPurge) {
+            Write-Info "Purging install directory and all data: $installRoot"
+            Remove-Item -Recurse -Force $installRoot
+        }
+        else {
+            $backup = Join-Path $env:USERPROFILE (".luqen-uninstall-" + [DateTimeOffset]::Now.ToUnixTimeSeconds())
+            New-Item -ItemType Directory -Path $backup -Force | Out-Null
+            foreach ($preserve in @(
+                "dashboard.config.json",
+                "dashboard.db",
+                "packages\compliance\compliance.db"
+            )) {
+                $src = Join-Path $installRoot $preserve
+                if (Test-Path $src) { Copy-Item -Force -Path $src -Destination $backup }
+            }
+            Remove-Item -Recurse -Force $installRoot
+            Write-Ok "Install dir removed. Data preserved at: $backup"
+        }
+    }
+    else {
+        Write-Info "No install dir found at $installRoot"
+    }
+
+    if ($DoPurge) {
+        $luqenHome = Join-Path $env:USERPROFILE ".luqen"
+        if (Test-Path $luqenHome) { Remove-Item -Recurse -Force $luqenHome; Write-Ok "Removed $luqenHome" }
+    }
+
+    Write-Host ""
+    Write-Ok "Luqen uninstalled."
+    if (-not $DoPurge) {
+        Write-Host ""
+        Write-Info "Re-run with -Purge to also drop preserved data."
+    }
+    exit 0
+}
+
+if ($Uninstall) {
+    if ($KeepData -and $Purge) {
+        Write-Err "-Purge and -KeepData are mutually exclusive."
+        exit 1
+    }
+    Invoke-LuqenUninstall -DoPurge:$Purge.IsPresent
+}
 
 # Resolve *_PUBLIC_URL defaults after port fields are finalised.
 function Resolve-PublicUrlDefaults {

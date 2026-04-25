@@ -165,6 +165,50 @@ End-to-end fresh-container dry-run is owned by Phase 40 Plan 40-07.
 
 ---
 
+## Uninstalling
+
+All three installers expose a parallel uninstall flow: stop the four
+daemons, remove the platform's service registration (systemd / launchd /
+NSSM / Task Scheduler), and either preserve or purge data files.
+
+### Linux
+
+```bash
+# Default: stop services, remove systemd units, back up DB + config
+# to ~/.luqen-uninstall-<timestamp>/ then delete the install dir.
+sudo bash install.sh --uninstall
+
+# Drop everything including DB, config, ~/.luqen.
+sudo bash install.sh --uninstall --purge
+```
+
+### macOS
+
+```bash
+# install.command unloads ~/Library/LaunchAgents/io.luqen.*.plist
+# and forwards the rest to install.sh's uninstall path.
+bash install.command --uninstall
+bash install.command --uninstall --purge
+```
+
+### Windows (PowerShell, admin)
+
+```powershell
+# Removes NSSM services if present, otherwise unregisters the
+# Task Scheduler tasks. Backs up DB + config to %USERPROFILE%\.luqen-uninstall-<ts>\.
+.\install.ps1 -Uninstall
+.\install.ps1 -Uninstall -Purge
+```
+
+`--keep-data` / `-KeepData` is the explicit form of the default
+(no-purge) behaviour. Pass `--purge` / `-Purge` only when you want
+the database, config, and `~/.luqen` cache wiped.
+
+After uninstall, you can re-run the installer cleanly to start fresh,
+or restore from the backup directory printed by the uninstall flow.
+
+---
+
 ## Related documentation
 
 - [Installer env vars](../deployment/installer-env-vars.md) —
