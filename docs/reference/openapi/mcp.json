@@ -1,0 +1,39 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Luqen MCP (Streamable HTTP)",
+    "description": "Model Context Protocol Streamable HTTP endpoint hosted on the dashboard service",
+    "version": "2.11.0"
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session"
+      }
+    },
+    "schemas": {}
+  },
+  "paths": {
+    "/api/v1/mcp": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "<replaced-at-runtime>"
+    }
+  ]
+}
