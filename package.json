@@ -32,13 +32,16 @@
     "dev:dashboard": "npm run build -w packages/dashboard && npm run start -w packages/dashboard",
     "dev:all": "bash start.sh",
     "start": "bash start.sh",
-    "clean": "rm -rf packages/*/dist"
+    "clean": "rm -rf packages/*/dist",
+    "docs:openapi": "tsx scripts/snapshot-openapi.ts"
   },
   "engines": {
     "node": ">=22.0.0"
   },
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "jose": "^6.0.0",
+    "tsx": "^4.21.0"
   }
 }
