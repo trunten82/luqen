@@ -20,6 +20,7 @@ import {
   SqliteBrandingRepository,
   SqliteBrandScoreRepository,
   SqliteConversationRepository,
+  SqliteShareLinkRepository,
   SqliteAgentAuditRepository,
   SqliteOauthClientRepository,
   SqliteOauthCodeRepository,
@@ -51,6 +52,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly branding: SqliteBrandingRepository;
   readonly brandScores: SqliteBrandScoreRepository;
   readonly conversations: SqliteConversationRepository;
+  readonly shareLinks: SqliteShareLinkRepository;
   readonly agentAudit: SqliteAgentAuditRepository;
   readonly oauthClients: SqliteOauthClientRepository;
   readonly oauthCodes: SqliteOauthCodeRepository;
@@ -78,6 +80,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.branding = new SqliteBrandingRepository(this.db);
     this.brandScores = new SqliteBrandScoreRepository(this.db);
     this.conversations = new SqliteConversationRepository(this.db);
+    this.shareLinks = new SqliteShareLinkRepository(this.db);
     this.agentAudit = new SqliteAgentAuditRepository(this.db);
     this.oauthClients = new SqliteOauthClientRepository(this.db);
     this.oauthCodes = new SqliteOauthCodeRepository(this.db);

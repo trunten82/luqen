@@ -16,6 +16,7 @@ export { SqliteGitHostRepository } from './git-host-repository.js';
 export { SqliteBrandingRepository } from './branding-repository.js';
 export { SqliteBrandScoreRepository } from './brand-score-repository.js';
 export { SqliteConversationRepository } from './conversation-repository.js';
+export { SqliteShareLinkRepository } from './share-link-repository.js';
 export { SqliteAgentAuditRepository } from './agent-audit-repository.js';
 export { SqliteOauthClientRepository } from './oauth-client-repository.js';
 export { SqliteOauthCodeRepository } from './oauth-code-repository.js';
