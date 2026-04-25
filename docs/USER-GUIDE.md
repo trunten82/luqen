@@ -147,6 +147,22 @@ docker compose up -d
 
 Open `http://localhost:5000` and log in with a Dashboard User account (or an API key in solo mode).
 
+### Agent companion (v3.0+)
+
+The dashboard ships an in-dashboard conversational agent. Open the side drawer to chat with text or speech input; replies stream over SSE; tool calls run on your behalf with native-dialog confirmation for destructive operations.
+
+The companion exposes four v3.0/v3.1 surfaces, each with its own dedicated guide:
+
+| Surface | Description | Guide |
+|---------|-------------|-------|
+| Agent companion (overall) | Drawer UX, streaming, tool transparency, context hints, RBAC gating | [guides/agent-companion.md](guides/agent-companion.md) |
+| Agent history | Stacked AI-titled conversation list with search, resume, soft-delete | [guides/agent-history.md](guides/agent-history.md) |
+| Multi-step tool use | Parallel-dispatch tool calls, shared 3-retry budget, chip-strip transparency UI | [guides/multi-step-tools.md](guides/multi-step-tools.md) |
+| Streaming UX + share permalinks | Stop / retry / edit-and-resend on the most-recent turn, copy-as-markdown, `/agent/share/:shareId` permalinks | [guides/streaming-share-links.md](guides/streaming-share-links.md) |
+| Multi-org switching | Native `<select>` org switcher (admin.system only), force-new-conversation, JWT-driven `ToolContext.orgId` | [guides/multi-org-switching.md](guides/multi-org-switching.md) |
+
+Connecting **external** MCP clients (Claude Desktop, Cursor, Windsurf, custom) over OAuth 2.1 + PKCE + DCR is covered in [guides/mcp-integration.md](guides/mcp-integration.md).
+
 ### Scan scheduling
 
 The dashboard supports recurring scans. From the scan form, enable **Schedule** and choose a frequency:

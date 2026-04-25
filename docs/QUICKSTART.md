@@ -126,7 +126,9 @@ For detailed setup instructions, see the [installation guides](getting-started/)
 
 ## IDE Integration
 
-Luqen works as an MCP server inside any IDE that supports the Model Context Protocol. This gives your AI coding assistant 20 accessibility tools — scan sites, check compliance, propose fixes — all from your editor.
+> **Connecting from external MCP clients (v3.0+).** Luqen v3.0 added Streamable HTTP MCP endpoints on every service (compliance, branding, llm, dashboard) at `/api/v1/mcp`, with OAuth 2.1 + PKCE + Dynamic Client Registration. Claude Desktop, Cursor, Windsurf, and custom clients should follow [guides/mcp-integration.md](guides/mcp-integration.md). The stdio recipes below are the legacy `@luqen/core`-only path for purely local scanning.
+
+Luqen also ships a stdio MCP server in `@luqen/core`. This gives your AI coding assistant accessibility tools — scan sites, check compliance, propose fixes — directly from your editor.
 
 ### VS Code (with Claude Code extension)
 
@@ -213,8 +215,10 @@ For the full 20-tool reference, see [compliance/integrations/claude-code.md](com
 | I want to... | Go to |
 |--------------|-------|
 | Understand the results | [USER-GUIDE.md](USER-GUIDE.md) |
+| Use the in-dashboard agent companion | [guides/agent-companion.md](guides/agent-companion.md) |
+| Connect an external MCP client (Claude Desktop, Cursor, Windsurf, custom) | [guides/mcp-integration.md](guides/mcp-integration.md) |
+| Switch organisations as a global admin | [guides/multi-org-switching.md](guides/multi-org-switching.md) |
 | Configure scanning options | [reference/core-config.md](reference/core-config.md) |
-| Use with Claude Code | [compliance/integrations/claude-code.md](compliance/integrations/claude-code.md) |
 | Set up in CI/CD | [guides/ci-cd.md](guides/ci-cd.md) |
 | Run the dashboard | [guides/dashboard-admin.md](guides/dashboard-admin.md) |
 
@@ -263,18 +267,18 @@ curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh |
 
 ---
 
-## New in v2.6.0
+## What's new in v3.1.0
 
-- **@luqen/llm service** — new standalone microservice (port 4200) replacing the former LLM dashboard plugins; manages providers (Anthropic, OpenAI, Ollama, OpenAI-compatible) with full CRUD and OAuth2 authentication
-- **LLM pipeline** — upload regulation documents from the dashboard Sources page; the LLM service extracts regulations into structured proposals
-- **Trust levels** — proposals from W3C/WCAG sources are auto-acknowledged; LLM-extracted proposals require human review
-- **Wildcard requirement matching** — regulations that mandate "all WCAG AA" now match any criterion violation
-- **Async source scanning** — background execution prevents gateway timeouts on large source sets
-- **Sources page Parser badges** — visual indicators showing which parser (LLM/W3C/WCAG/Generic) handles each source
+- **Agent history** — stacked AI-titled conversation list with debounced search, infinite-scroll, resume, soft-delete + audit. See [guides/agent-history.md](guides/agent-history.md).
+- **Multi-step tool use** — parallel-dispatch tool calls with shared 3-retry budget, 5-step iteration cap, chip-strip transparency UI. See [guides/multi-step-tools.md](guides/multi-step-tools.md).
+- **Streaming UX + share permalinks** — stop / retry / edit-and-resend on the most-recent turn, copy-as-markdown, `/agent/share/:shareId` permalinks. See [guides/streaming-share-links.md](guides/streaming-share-links.md).
+- **Multi-org switching** — native `<select>` switcher in the drawer header (admin.system only); JWT-driven `ToolContext.orgId`. See [guides/multi-org-switching.md](guides/multi-org-switching.md).
+
+v3.0.0 (2026-04-24) shipped Streamable HTTP MCP endpoints + OAuth 2.1 + PKCE + DCR on every service plus the in-dashboard agent companion (text + speech, SSE streaming, native-dialog tool confirmation, persistent history, audit log).
+
+For the per-version installer changelog see [deployment/installer-changelog.md](deployment/installer-changelog.md). For the full history see [CHANGELOG.md](../CHANGELOG.md).
 
 > **Note:** Chromium is only required for the pa11y scanner (installed automatically by pa11y). The dashboard itself does not require Chromium.
-
-See [CHANGELOG.md](../CHANGELOG.md) for the full history.
 
 ---
 
