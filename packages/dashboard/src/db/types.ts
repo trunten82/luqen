@@ -328,6 +328,13 @@ export interface DashboardUser {
   readonly role: 'admin' | 'developer' | 'editor' | 'user' | 'viewer' | 'executive';
   readonly active: boolean;
   readonly createdAt: string;
+  /**
+   * Phase 38 Plan 01 (AORG-03). Global admins persist a chosen "active org"
+   * across sessions; resolveAgentOrgId reads this and falls back to a
+   * computed default when null. Always null for non-admin.system users in
+   * practice — the route gate prevents writes without that permission.
+   */
+  readonly activeOrgId: string | null;
 }
 
 // ---------------------------------------------------------------------------

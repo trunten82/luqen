@@ -15,6 +15,7 @@ interface UserRow {
   role: string;
   active: number;
   created_at: string;
+  active_org_id: string | null;
 }
 
 const BCRYPT_ROUNDS = 10;
@@ -26,6 +27,7 @@ function rowToUser(row: UserRow): DashboardUser {
     role: row.role as DashboardUser['role'],
     active: row.active === 1,
     createdAt: row.created_at,
+    activeOrgId: row.active_org_id ?? null,
   };
 }
 
@@ -57,7 +59,7 @@ export class SqliteUserRepository implements UserRepository {
 
   async getUserByUsername(username: string): Promise<DashboardUser | null> {
     const stmt = this.db.prepare(
-      'SELECT id, username, role, active, created_at FROM dashboard_users WHERE username = ?',
+      'SELECT id, username, role, active, created_at, active_org_id FROM dashboard_users WHERE username = ?',
     );
     const row = stmt.get(username) as UserRow | undefined;
     return row !== undefined ? rowToUser(row) : null;
@@ -65,7 +67,7 @@ export class SqliteUserRepository implements UserRepository {
 
   async getUserById(id: string): Promise<DashboardUser | null> {
     const stmt = this.db.prepare(
-      'SELECT id, username, role, active, created_at FROM dashboard_users WHERE id = ?',
+      'SELECT id, username, role, active, created_at, active_org_id FROM dashboard_users WHERE id = ?',
     );
     const row = stmt.get(id) as UserRow | undefined;
     return row !== undefined ? rowToUser(row) : null;
@@ -86,7 +88,7 @@ export class SqliteUserRepository implements UserRepository {
 
   async listUsers(): Promise<DashboardUser[]> {
     const stmt = this.db.prepare(
-      'SELECT id, username, role, active, created_at FROM dashboard_users ORDER BY created_at ASC',
+      'SELECT id, username, role, active, created_at, active_org_id FROM dashboard_users ORDER BY created_at ASC',
     );
     const rows = stmt.all() as UserRow[];
     return rows.map(rowToUser);
@@ -104,6 +106,16 @@ export class SqliteUserRepository implements UserRepository {
       ORDER BY du.username
     `).all(orgId) as UserRow[];
     return rows.map(rowToUser);
+  }
+
+  async setActiveOrgId(userId: string, orgId: string | null): Promise<boolean> {
+    // Single parameterised UPDATE — see threat-register T-38-01. The route
+    // layer (Plan 38-03) is responsible for admin.system gating and org
+    // membership validation; this repo intentionally trusts its inputs.
+    const info = this.db.prepare(
+      'UPDATE dashboard_users SET active_org_id = @orgId WHERE id = @userId',
+    ).run({ userId, orgId });
+    return info.changes > 0;
   }
 
   async updateUserRole(id: string, role: string): Promise<void> {
