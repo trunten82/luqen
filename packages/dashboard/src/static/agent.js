@@ -473,11 +473,18 @@
     // server partial escapes via {{content}}). Re-run the same sanitize +
     // markdown pass the streaming path uses on 'done' so table / chart /
     // list output looks identical after a page reload.
-    var bodies = msgs.querySelectorAll('.agent-msg--assistant .agent-msg__body');
-    for (var i = 0; i < bodies.length; i++) {
-      var body = bodies[i];
+    var bubbles = msgs.querySelectorAll('.agent-msg--assistant');
+    for (var i = 0; i < bubbles.length; i++) {
+      var bubble = bubbles[i];
+      var body = bubble.querySelector('.agent-msg__body');
+      if (!body) continue;
       var rawText = body.textContent || '';
-      if (rawText.length > 0) { renderMarkdownInto(body, rawText); }
+      // Seed the markdown cache BEFORE rendering so copy is synchronous
+      // (user-gesture context preserved). Without this, copy must fetch
+      // and the async work breaks navigator.clipboard.writeText silently.
+      var bid = bubble.getAttribute('data-message-id');
+      if (bid && rawText.length > 0) recordMarkdownSource(bid, rawText);
+      if (rawText.length > 0) renderMarkdownInto(body, rawText);
     }
   }
 
@@ -1610,6 +1617,18 @@
     var mid = btn.getAttribute('data-message-id');
     var cid = getConversationId();
     if (!mid) return;
+    // Prefer the synchronous cache path so the user-gesture context is preserved
+    // for navigator.clipboard.writeText. Async fetch breaks the gesture and the
+    // Clipboard API silently rejects. Cache is seeded by replaceMessagesFromHtml.
+    var cached = readMarkdownSource(mid);
+    if (typeof cached === 'string') {
+      writeToClipboard(cached).then(function (ok) {
+        announce(ok ? actionT('actions.copied') : actionT('actions.copyFailed'));
+      });
+      return;
+    }
+    // Cache miss — fetch then copy. Most browsers allow execCommand fallback
+    // even after async, but writeText may fail. Inform the user either way.
     getMarkdownSource(mid, cid)
       .then(function (text) { return writeToClipboard(text); })
       .then(function (ok) {
