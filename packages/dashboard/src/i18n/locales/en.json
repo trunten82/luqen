@@ -1655,5 +1655,10 @@
   "agent.history.error.loadBody": "Check your connection and try again.",
   "agent.history.error.retry": "Retry",
   "agent.history.error.more": "Couldn't load more. Retry.",
-  "agent.history.untitled": "Untitled conversation"
+  "agent.history.untitled": "Untitled conversation",
+  "agent.tools.chip.runningAria": "Tool {{name}} is running",
+  "agent.tools.chip.successAria": "Tool {{name}} completed successfully",
+  "agent.tools.chip.errorAria": "Tool {{name}} failed: {{error}}",
+  "agent.tools.cap.label": "Reached tool limit — producing answer with what we have",
+  "agent.tools.cap.aria": "Tool iteration limit reached"
 }
