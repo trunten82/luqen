@@ -317,6 +317,11 @@ export class AgentService {
       contextHintsBlock = '';
     }
 
+    // Phase 36 ATOOL-02 — shared per-turn retry budget. Closure-scoped so the
+    // LLM cannot influence it (T-36-08); decremented for every non-success
+    // tool outcome, clamped at 0. Reset per runTurn invocation.
+    const retryBudget = { remaining: 3 };
+
     try {
       for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
         // (1) Re-resolve permissions every iteration (D-07, Guardrail 1).
@@ -432,19 +437,33 @@ export class AgentService {
           status: 'sent',
           toolCallJson: JSON.stringify(turn.toolCalls),
         });
-        for (const call of turn.toolCalls) {
-          await this.dispatchAndPersist({
-            call,
-            conversationId,
-            userId,
-            orgId,
-            signal,
-          });
-        }
+        // Phase 36 ATOOL-01/02/04 — parallel dispatch with rationale capture,
+        // retry budget management, and per-tool SSE lifecycle frames.
+        await this.dispatchBatchAndPersist({
+          turn,
+          conversationId,
+          userId,
+          orgId,
+          signal,
+          emit,
+          retryBudget,
+        });
         // Fall through to next iteration.
       }
 
       // (6) Iteration cap — force a final-answer turn with EMPTY tools.
+      // Phase 36-03 — emit a synthetic tool_completed frame ahead of the
+      // forced wrap-up so the chip strip in 36-04 can render the
+      // "iteration_cap" notice. Re-uses the existing tool_completed schema
+      // with toolCallId='__loop__' (no DOM injection — frontend uses
+      // textContent only; T-36-10 mitigation).
+      emit({
+        type: 'tool_completed',
+        toolCallId: '__loop__',
+        toolName: '__loop__',
+        status: 'error',
+        errorMessage: 'iteration_cap',
+      });
       await this.forceFinalAnswer({
         conversationId,
         userId,
@@ -628,51 +647,131 @@ export class AgentService {
       });
   }
 
-  private async dispatchAndPersist(args: {
-    readonly call: ToolCallInput;
+  /**
+   * Phase 36 ATOOL-01/02/04 — dispatch a batch of tool calls concurrently,
+   * stream per-tool lifecycle frames, manage the shared retry budget, and
+   * persist results + audit rows in input order.
+   *
+   * Design choice (per 36-03 plan): we call `dispatcher.dispatch(...)` per
+   * call inside `Promise.all` (NOT `dispatchAll`) so each `tool_completed`
+   * frame fires the moment its own promise resolves — preserving accurate
+   * event ordering in the chip strip. `dispatchAll` from 36-02 remains the
+   * public batch API for callers that don't need streaming events.
+   */
+  private async dispatchBatchAndPersist(args: {
+    readonly turn: AgentStreamTurn;
     readonly conversationId: string;
     readonly userId: string;
     readonly orgId: string;
     readonly signal: AbortSignal;
+    readonly emit: (frame: SseFrame) => void;
+    readonly retryBudget: { remaining: number };
   }): Promise<void> {
-    const { call, conversationId, userId, orgId, signal } = args;
-    const started = Date.now();
-    let outcome: 'success' | 'error' | 'timeout' | 'denied' = 'success';
-    let outcomeDetail: string | undefined;
-    let resultToStore: unknown;
-    try {
-      const result = await this.dispatcher.dispatch(call, { userId, orgId, signal });
-      resultToStore = result;
-      if (result !== null && typeof result === 'object' && 'error' in result) {
-        const err = (result as { error: string }).error;
-        if (err === 'timeout') outcome = 'timeout';
-        else if (err === 'denied') outcome = 'denied';
-        else outcome = 'error';
-        outcomeDetail = err;
-      }
-    } catch (err) {
-      outcome = 'error';
-      outcomeDetail = err instanceof Error ? err.message : String(err);
-      resultToStore = { error: outcomeDetail };
+    const { turn, conversationId, userId, orgId, signal, emit, retryBudget } = args;
+    const calls = turn.toolCalls;
+
+    // (a) Capture rationale BEFORE dispatching — same string applied to every
+    //     audit row in this batch (D-CONTEXT: rationale is per assistant turn).
+    const rationale = extractRationale(turn);
+
+    // (b) Emit tool_started frames in input order, synchronously, before any
+    //     dispatch promise has a chance to resolve.
+    for (const call of calls) {
+      emit({ type: 'tool_started', toolCallId: call.id, toolName: call.name });
     }
-    const stored = truncateResultForStorage(resultToStore);
-    await this.storage.conversations.appendMessage({
-      conversationId,
-      role: 'tool',
-      toolCallJson: JSON.stringify(call),
-      toolResultJson: stored,
-      status: outcome === 'success' ? 'sent' : 'failed',
-    });
-    await this.storage.agentAudit.append({
-      userId,
-      orgId,
-      conversationId,
-      toolName: call.name,
-      argsJson: JSON.stringify(call.args),
-      outcome,
-      ...(outcomeDetail !== undefined ? { outcomeDetail } : {}),
-      latencyMs: Date.now() - started,
-    });
+
+    // (c) Dispatch all calls concurrently. Per-call .then(emit) wraps each
+    //     promise so tool_completed fires the instant its own dispatch
+    //     settles — accurate event ordering vs awaiting Promise.all in bulk.
+    const startTimes = calls.map(() => Date.now());
+    type SettledResult = {
+      readonly call: ToolCallInput;
+      readonly result: unknown;
+      readonly outcome: 'success' | 'error' | 'timeout' | 'denied';
+      readonly outcomeDetail: string | undefined;
+      readonly latencyMs: number;
+    };
+    const settled = await Promise.all(
+      calls.map(async (call, idx): Promise<SettledResult> => {
+        const started = startTimes[idx];
+        let outcome: 'success' | 'error' | 'timeout' | 'denied' = 'success';
+        let outcomeDetail: string | undefined;
+        let resultToStore: unknown;
+        try {
+          const result = await this.dispatcher.dispatch(call, { userId, orgId, signal });
+          resultToStore = result;
+          if (result !== null && typeof result === 'object' && 'error' in result) {
+            const err = (result as { error: string }).error;
+            if (err === 'timeout') outcome = 'timeout';
+            else if (err === 'denied') outcome = 'denied';
+            else outcome = 'error';
+            outcomeDetail = err;
+          }
+        } catch (err) {
+          outcome = 'error';
+          outcomeDetail = err instanceof Error ? err.message : String(err);
+          resultToStore = { error: outcomeDetail };
+        }
+        // Emit tool_completed at the moment this individual call settles.
+        emit({
+          type: 'tool_completed',
+          toolCallId: call.id,
+          toolName: call.name,
+          status: outcome === 'success' ? 'success' : 'error',
+          ...(outcome !== 'success' && outcomeDetail !== undefined
+            ? { errorMessage: outcomeDetail }
+            : {}),
+        });
+        return {
+          call,
+          result: resultToStore,
+          outcome,
+          outcomeDetail,
+          latencyMs: Date.now() - started,
+        };
+      }),
+    );
+
+    // (d) Persist results + audit rows in input order. Apply retry guidance
+    //     from the shared budget; decrement per non-success outcome.
+    for (const s of settled) {
+      // buildRetryGuidance treats anything without an `error` sentinel as
+      // success → null. Failed handler-thrown sentinels (resultToStore =
+      // { error: ... }) and dispatcher error sentinels both flow through
+      // the same path.
+      const guidance = buildRetryGuidance(
+        s.result as ToolDispatchResult,
+        retryBudget.remaining,
+      );
+      if (guidance !== null) {
+        retryBudget.remaining = Math.max(0, retryBudget.remaining - 1);
+      }
+      // Immutable: build a fresh wrapper object — never mutate s.result.
+      const persistedShape = guidance === null
+        ? s.result
+        : (typeof s.result === 'object' && s.result !== null
+            ? { ...(s.result as Record<string, unknown>), _guidance: guidance }
+            : { value: s.result, _guidance: guidance });
+      const stored = truncateResultForStorage(persistedShape);
+      await this.storage.conversations.appendMessage({
+        conversationId,
+        role: 'tool',
+        toolCallJson: JSON.stringify(s.call),
+        toolResultJson: stored,
+        status: s.outcome === 'success' ? 'sent' : 'failed',
+      });
+      await this.storage.agentAudit.append({
+        userId,
+        orgId,
+        conversationId,
+        toolName: s.call.name,
+        argsJson: JSON.stringify(s.call.args),
+        outcome: s.outcome,
+        ...(s.outcomeDetail !== undefined ? { outcomeDetail: s.outcomeDetail } : {}),
+        rationale,
+        latencyMs: s.latencyMs,
+      });
+    }
   }
 
   private async forceFinalAnswer(args: {
