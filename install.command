@@ -30,7 +30,16 @@ fi
 # If launched by double-click (Finder / Login shell),
 # open a real Terminal.app window and re-exec
 # ──────────────────────────────────────────────
-if [ -z "${LUQEN_INSTALL_REEXEC:-}" ] && [ "${TERM_PROGRAM:-}" != "Apple_Terminal" ] && [ "${TERM_PROGRAM:-}" != "iTerm.app" ] && [ "${TERM_PROGRAM:-}" != "vscode" ] && [ -z "${SSH_TTY:-}" ]; then
+# Skip Terminal.app re-exec when called non-interactively (curl|bash, CI, ssh).
+# Without this guard, piped use with no TERM_PROGRAM tries to launch
+# Terminal.app and exits before the installer runs.
+REEXEC_NONINTERACTIVE=0
+for arg in "$@"; do
+    case "$arg" in
+        --non-interactive) REEXEC_NONINTERACTIVE=1 ;;
+    esac
+done
+if [ "${REEXEC_NONINTERACTIVE}" = "0" ] && [ -z "${LUQEN_INSTALL_REEXEC:-}" ] && [ "${TERM_PROGRAM:-}" != "Apple_Terminal" ] && [ "${TERM_PROGRAM:-}" != "iTerm.app" ] && [ "${TERM_PROGRAM:-}" != "vscode" ] && [ -z "${SSH_TTY:-}" ] && [ -t 0 ]; then
     SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
     if [ -f "${SELF}" ]; then
         export LUQEN_INSTALL_REEXEC=1
