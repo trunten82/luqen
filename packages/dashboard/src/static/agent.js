@@ -693,6 +693,11 @@
     });
     es.addEventListener('done', function () {
       es.close(); activeStream = null;
+      // Clear tool-progress chips on stream completion. Chips are transient progress
+      // indicators — once the assistant turn settles, the assistant text already
+      // describes what tools did, so leaving chips on screen is clutter (per UAT
+      // feedback 2026-04-25).
+      clearToolChips();
       var msgs = byId(MESSAGES_ID);
       if (msgs) {
         var last = msgs.querySelector('.agent-msg--assistant[aria-busy="true"]');

@@ -1,6 +1,6 @@
 import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { join, resolve } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { DashboardConfig } from './config.js';
@@ -106,6 +106,37 @@ import { bridgeMcpToolsForAgent } from './agent/mcp-bridge.js';
 import { registerAgentRoutes } from './routes/agent.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
+/**
+ * Walks views/partials/ and views/admin/partials/ and returns a `{ name → path }`
+ * map keyed by file basename. Drop a .hbs into either directory and it registers
+ * automatically — eliminates the recurring "partial X not found" bug from forgetting
+ * to update the manual partials map after adding a new partial file.
+ *
+ * Exported so tests can assert that every `{{> name}}` reference in views resolves
+ * to a real file on disk.
+ */
+export function collectPartials(viewsDir: string): Record<string, string> {
+  const map: Record<string, string> = {};
+  const dirs: ReadonlyArray<{ readonly fsPath: string; readonly relPath: string }> = [
+    { fsPath: join(viewsDir, 'partials'), relPath: 'partials' },
+    { fsPath: join(viewsDir, 'admin', 'partials'), relPath: 'admin/partials' },
+  ];
+  for (const { fsPath, relPath } of dirs) {
+    let entries: ReadonlyArray<string>;
+    try {
+      entries = readdirSync(fsPath);
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.endsWith('.hbs')) continue;
+      const name = entry.slice(0, -'.hbs'.length);
+      map[name] = `${relPath}/${entry}`;
+    }
+  }
+  return map;
+}
 
 function wantsHtml(request: FastifyRequest): boolean {
   const accept = request.headers.accept || '';
@@ -575,46 +606,17 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     );
   });
 
+  // Auto-discover Handlebars partials. Drop a .hbs into views/partials/ or
+  // views/admin/partials/ and it registers automatically — basename becomes
+  // the partial name. This prevents the recurring "partial X not found" bug
+  // where a partial file is created but the manual map isn't updated.
+  const partials: Record<string, string> = collectPartials(viewsDir);
+
   await server.register(import('@fastify/view'), {
     engine: { handlebars },
     root: viewsDir,
     layout: 'layouts/main.hbs',
-    options: {
-      partials: {
-        sidebar: 'partials/sidebar.hbs',
-        'reports-table': 'partials/reports-table.hbs',
-        'page-header': 'partials/page-header.hbs',
-        'data-table': 'partials/data-table.hbs',
-        'form-group': 'partials/form-group.hbs',
-        'stat-card': 'partials/stat-card.hbs',
-        'empty-state': 'partials/empty-state.hbs',
-        'modal-confirm': 'partials/modal.hbs',
-        'badge': 'partials/badge.hbs',
-        'login-form': 'partials/login-form.hbs',
-        'pagination': 'partials/pagination.hbs',
-        'alert': 'partials/alert.hbs',
-        'service-connection-row': 'admin/partials/service-connection-row.hbs',
-        'service-connection-edit-row': 'admin/partials/service-connection-edit-row.hbs',
-        'system-brand-guideline-row': 'admin/partials/system-brand-guideline-row.hbs',
-        'system-library-row': 'admin/partials/system-library-row.hbs',
-        'prompt-segments': 'admin/partials/prompt-segments.hbs',
-        'prompt-diff-body': 'admin/partials/prompt-diff-body.hbs',
-        'rpt-regulation-card': 'partials/rpt-regulation-card.hbs',
-        'brand-score-panel': 'partials/brand-score-panel.hbs',
-        'brand-score-widget': 'partials/brand-score-widget.hbs',
-        'brand-overview-inner': 'partials/brand-overview-inner.hbs',
-        'rescore-button': 'partials/rescore-button.hbs',
-        'rescore-progress': 'partials/rescore-progress.hbs',
-        'rescore-complete': 'partials/rescore-complete.hbs',
-        'rescore-error': 'partials/rescore-error.hbs',
-        'agent-drawer': 'partials/agent-drawer.hbs',
-        'agent-messages': 'partials/agent-messages.hbs',
-        'agent-message': 'partials/agent-message.hbs',
-        'agent-confirm-dialog': 'partials/agent-confirm-dialog.hbs',
-        'agent-history-panel': 'partials/agent-history-panel.hbs',
-        'agent-history-item': 'partials/agent-history-item.hbs',
-      },
-    },
+    options: { partials },
   });
 
   // ── Prevent browser caching of HTML pages (locale/permission-sensitive) ──
