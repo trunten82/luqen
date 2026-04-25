@@ -698,7 +698,6 @@
   // exists in agent.js — see Phase 35-05 SUMMARY).
   // ──────────────────────────────────────────────────────────────────────
 
-  var TOOL_CHIPS_ID = 'agent-tool-chips';
   var TOOL_I18N_ID = 'agent-tools-i18n';
   var toolI18nCache = null;
 
@@ -731,72 +730,14 @@
     return raw;
   }
 
-  function toolChipsEl() { return byId(TOOL_CHIPS_ID); }
-
+  // Phase 39.1-02: chip-strip rendering + tool_started/tool_completed SSE
+  // listener wiring lives in agent-tools.js. agent.js dispatches the
+  // `agent:stream-opened` CustomEvent below so that module can attach its
+  // listeners; chip-clearing at turn boundaries goes through
+  // `window.__luqenAgent.clearToolChips`.
   function clearToolChips() {
-    var strip = toolChipsEl();
-    if (!strip) return;
-    while (strip.firstChild) strip.removeChild(strip.firstChild);
-  }
-
-  function escapeAttrSelector(s) {
-    if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(s);
-    return String(s).replace(/[^a-zA-Z0-9_-]/g, '_');
-  }
-
-  function makeToolChip(toolCallId, toolName) {
-    var chip = document.createElement('span');
-    chip.className = 'agent-drawer__tool-chip agent-drawer__tool-chip--running';
-    chip.setAttribute('data-tool-call-id', toolCallId);
-    chip.setAttribute('role', 'status');
-    var icon = document.createElement('span');
-    icon.className = 'agent-drawer__tool-chip-icon';
-    icon.setAttribute('aria-hidden', 'true');
-    chip.appendChild(icon);
-    var label = document.createElement('span');
-    label.className = 'agent-drawer__tool-chip-label';
-    label.textContent = toolName;
-    chip.appendChild(label);
-    return chip;
-  }
-
-  function handleToolStarted(data) {
-    if (typeof data.toolCallId !== 'string' || typeof data.toolName !== 'string') return;
-    var strip = toolChipsEl(); if (!strip) return;
-    var existing = strip.querySelector('[data-tool-call-id="' + escapeAttrSelector(data.toolCallId) + '"]');
-    if (existing) return; // dedupe race
-    var chip = makeToolChip(data.toolCallId, data.toolName);
-    chip.setAttribute('aria-label', formatToolI18n('chip.runningAria', { name: data.toolName }));
-    strip.appendChild(chip);
-  }
-
-  function handleToolCompleted(data) {
-    if (typeof data.toolCallId !== 'string' || typeof data.toolName !== 'string') return;
-    var strip = toolChipsEl(); if (!strip) return;
-    if (data.toolCallId === '__loop__') {
-      var capChip = document.createElement('span');
-      capChip.className = 'agent-drawer__tool-chip agent-drawer__tool-chip--cap';
-      capChip.setAttribute('role', 'status');
-      capChip.textContent = formatToolI18n('cap.label');
-      capChip.setAttribute('aria-label', formatToolI18n('cap.aria'));
-      strip.appendChild(capChip);
-      return;
-    }
-    var chip = strip.querySelector('[data-tool-call-id="' + escapeAttrSelector(data.toolCallId) + '"]');
-    if (!chip) return;
-    chip.classList.remove('agent-drawer__tool-chip--running');
-    if (data.status === 'success') {
-      chip.classList.add('agent-drawer__tool-chip--success');
-      chip.setAttribute('aria-label', formatToolI18n('chip.successAria', { name: data.toolName }));
-    } else {
-      chip.classList.add('agent-drawer__tool-chip--error');
-      var errMsg = (typeof data.errorMessage === 'string') ? data.errorMessage : '';
-      chip.setAttribute('aria-label', formatToolI18n('chip.errorAria', { name: data.toolName, error: errMsg }));
-      if (errMsg) {
-        var lbl = chip.querySelector('.agent-drawer__tool-chip-label');
-        if (lbl) lbl.textContent = data.toolName + ': ' + errMsg;
-      }
-    }
+    var fn = (window.__luqenAgent && window.__luqenAgent.clearToolChips);
+    if (typeof fn === 'function') fn();
   }
 
   function openStream(conversationId) {
@@ -807,12 +748,13 @@
     var statusEl = byId(STREAM_STATUS_ID);
     if (statusEl) statusEl.removeAttribute('hidden');
 
-    es.addEventListener('tool_started', function (ev) {
-      try { handleToolStarted(JSON.parse(ev.data)); } catch (_e) { /* ignore malformed */ }
-    });
-    es.addEventListener('tool_completed', function (ev) {
-      try { handleToolCompleted(JSON.parse(ev.data)); } catch (_e) { /* ignore malformed */ }
-    });
+    // Phase 39.1-02: notify agent-tools.js so it can attach the chip-strip
+    // listeners (tool_started / tool_completed) on this EventSource. Keeping
+    // wiring in the receiving module avoids leaking chip-DOM concerns into
+    // the stream-open code path here.
+    try {
+      document.dispatchEvent(new CustomEvent('agent:stream-opened', { detail: { stream: es } }));
+    } catch (_e) { /* ignore */ }
 
     es.addEventListener('token', function (ev) {
       try {
