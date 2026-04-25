@@ -55,7 +55,22 @@
        aria-relevant="additions"
        tabindex="0">
     {{> agent-messages messages=messages agentDisplayName=agentDisplayName locale=locale}}
+    <div class="agent-drawer__tool-chips" id="agent-tool-chips"
+         role="status" aria-live="polite" aria-atomic="false"></div>
   </div>
+
+  {{!-- Phase 36-04: tool chip i18n strings (CSP-strict; inert JSON, no executable script).
+       Read once on load by agent.js for chip ARIA labels + cap-hit text. Templated with
+       __NAME__ / __ERROR__ placeholders that the client substitutes per chip. --}}
+  <script type="application/json" id="agent-tools-i18n">
+  {
+    "chip.runningAria": "{{t "agent.tools.chip.runningAria" name="__NAME__"}}",
+    "chip.successAria": "{{t "agent.tools.chip.successAria" name="__NAME__"}}",
+    "chip.errorAria":   "{{t "agent.tools.chip.errorAria" name="__NAME__" error="__ERROR__"}}",
+    "cap.label":        "{{t "agent.tools.cap.label"}}",
+    "cap.aria":         "{{t "agent.tools.cap.aria"}}"
+  }
+  </script>
 
   {{> agent-history-panel items=historyItems agentDisplayName=agentDisplayName}}
 

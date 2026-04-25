@@ -4269,3 +4269,55 @@ details[open] > .mt-examples-toggle::before {
   .agent-drawer__history-skeleton-row { animation: none; }
   .agent-drawer__history-menu { transition: none; }
 }
+
+/* Phase 36 — agent tool chip strip (ATOOL-01 / ATOOL-03).
+   BEM block .agent-drawer__tool-chips. Tokens-only — no new custom properties. */
+.agent-drawer__tool-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+}
+.agent-drawer__tool-chips:empty { display: none; }
+.agent-drawer__tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+}
+.agent-drawer__tool-chip-icon {
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+}
+.agent-drawer__tool-chip--running .agent-drawer__tool-chip-icon {
+  animation: agent-tool-chip-spin 0.8s linear infinite;
+}
+.agent-drawer__tool-chip--success { color: var(--status-success); }
+.agent-drawer__tool-chip--success .agent-drawer__tool-chip-icon {
+  border-color: var(--status-success);
+  border-top-color: var(--status-success);
+}
+.agent-drawer__tool-chip--error   { color: var(--status-error); }
+.agent-drawer__tool-chip--error .agent-drawer__tool-chip-icon {
+  border-color: var(--status-error);
+  border-top-color: var(--status-error);
+}
+.agent-drawer__tool-chip--cap {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+  width: 100%;
+  justify-content: center;
+}
+@keyframes agent-tool-chip-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-drawer__tool-chip--running .agent-drawer__tool-chip-icon { animation: none; }
+}
