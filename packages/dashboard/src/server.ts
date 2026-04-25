@@ -103,7 +103,7 @@ import { ToolDispatcher } from './agent/tool-dispatch.js';
 import { DASHBOARD_TOOL_METADATA } from './mcp/metadata.js';
 import { createDashboardMcpServer } from './mcp/server.js';
 import { bridgeMcpToolsForAgent } from './agent/mcp-bridge.js';
-import { registerAgentRoutes } from './routes/agent.js';
+import { registerAgentRoutes, buildDrawerOrgContext } from './routes/agent.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -761,6 +761,24 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     ) ?? 'en';
     const gitHostConfigs = await storage.gitHosts.listConfigs(request.user?.currentOrgId ?? 'system');
     const hasGitHostConfigs = gitHostConfigs.length > 0;
+    // Phase 38 Plan 04 — drawer org-switcher context for the agent drawer partial.
+    // Renders only when `showOrgSwitcher` is truthy (admin.system); options sourced
+    // from listOrgs() with `selected` flagged on the resolved active org id.
+    let showOrgSwitcher = false;
+    let orgOptions: ReadonlyArray<{ id: string; name: string; selected: boolean }> = [];
+    if (request.user) {
+      try {
+        const drawerOrgCtx = await buildDrawerOrgContext({
+          user: request.user,
+          permissions: perms,
+          storage,
+        });
+        showOrgSwitcher = drawerOrgCtx.showOrgSwitcher;
+        orgOptions = drawerOrgCtx.orgOptions;
+      } catch {
+        // Fall through with switcher hidden — never block page render on this.
+      }
+    }
     // Flash toast: read once from session, clear after use
     const flashToast = typeof session?.get === 'function' ? session.get('flashToast') as string | undefined : undefined;
     if (flashToast && typeof session?.set === 'function') { session.set('flashToast', null); }
@@ -817,6 +835,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         pluginAdminPages: pluginManager.getActiveAdminPages().filter((p) => perms.has(p.permission)),
         emailPluginActive: pluginManager.getActiveInstanceByPackageName?.('@luqen/plugin-notify-email') != null,
         hasGitHostConfigs,
+        showOrgSwitcher,
+        orgOptions,
         orgContext: (request as unknown as Record<string, unknown>).orgContext,
         appVersion: `v${VERSION}`,
       };

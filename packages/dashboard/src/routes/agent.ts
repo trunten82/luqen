@@ -659,6 +659,12 @@ export async function registerAgentRoutes(
 
       const items = await storage.conversations.listForUser(user.id, orgId, { limit, offset });
       const counts = await fetchMessageCounts(storage, items.map((c) => c.id));
+      // Phase 38 Plan 04 — expose orgId + orgName so admin clients can render
+      // an org chip and detect cross-org clicks before opening a conversation.
+      const permissions = getPermissions(request);
+      const showOrgChip = permissions.has('admin.system');
+      const orgList = await storage.organizations.listOrgs();
+      const orgNameById = new Map(orgList.map((o) => [o.id, o.name]));
       const withCounts = items.map((c) => ({
         id: c.id,
         title: c.title,
@@ -666,10 +672,12 @@ export async function registerAgentRoutes(
         updatedAt: c.updatedAt,
         lastMessageAt: c.lastMessageAt,
         messageCount: counts.get(c.id) ?? 0,
+        orgId: c.orgId,
+        orgName: orgNameById.get(c.orgId) ?? '',
       }));
       const nextOffset = items.length === limit ? offset + limit : null;
       void reply.type('application/json');
-      return reply.code(200).send({ items: withCounts, nextOffset });
+      return reply.code(200).send({ items: withCounts, nextOffset, showOrgChip });
     });
 
     // GET /agent/conversations/search ─── debounced search (AHIST-02)
@@ -693,6 +701,12 @@ export async function registerAgentRoutes(
         offset,
       });
       const counts = await fetchMessageCounts(storage, hits.map((h) => h.conversation.id));
+      // Phase 38 Plan 04 — expose orgId + orgName for parity with the list
+      // endpoint (admin chip + cross-org auto-switch detection).
+      const permissions = getPermissions(request);
+      const showOrgChip = permissions.has('admin.system');
+      const orgList = await storage.organizations.listOrgs();
+      const orgNameById = new Map(orgList.map((o) => [o.id, o.name]));
       const items = hits.map((h) => ({
         id: h.conversation.id,
         title: h.conversation.title,
@@ -700,9 +714,11 @@ export async function registerAgentRoutes(
         matchField: h.matchField,
         lastMessageAt: h.conversation.lastMessageAt,
         messageCount: counts.get(h.conversation.id) ?? 0,
+        orgId: h.conversation.orgId,
+        orgName: orgNameById.get(h.conversation.orgId) ?? '',
       }));
       void reply.type('application/json');
-      return reply.code(200).send({ items });
+      return reply.code(200).send({ items, showOrgChip });
     });
 
     // GET /agent/conversations/:id ─── full history for resume (AHIST-03)

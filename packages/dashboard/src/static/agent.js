@@ -725,6 +725,9 @@
     if (typeof params.error === 'string') {
       raw = raw.split('__ERROR__').join(params.error);
     }
+    if (typeof params.orgName === 'string') {
+      raw = raw.split('__ORG_NAME__').join(params.orgName);
+    }
     return raw;
   }
 
@@ -996,10 +999,16 @@
     list.appendChild(li);
   }
 
-  function renderHistoryItem(item, query) {
+  function renderHistoryItem(item, query, opts) {
     var li = document.createElement('li');
     li.className = 'agent-drawer__history-item';
     li.setAttribute('data-conversation-id', String(item.id || ''));
+    if (item && typeof item.orgId === 'string' && item.orgId.length > 0) {
+      li.setAttribute('data-org-id', String(item.orgId));
+    }
+    if (item && typeof item.orgName === 'string' && item.orgName.length > 0) {
+      li.setAttribute('data-org-name', String(item.orgName));
+    }
     // Do NOT set role="button" here: axe's nested-interactive rule (WCAG
     // 4.1.2) flags role=button containers that wrap another focusable
     // element (the kebab menu trigger inside). Instead we keep <li> as a
@@ -1032,6 +1041,15 @@
       var cnt = typeof item.messageCount === 'number' ? item.messageCount : 0;
       metaDiv.textContent = ts + ' · ' + cnt + ' message' + (cnt === 1 ? '' : 's');
       li.appendChild(metaDiv);
+    }
+
+    var showOrgChip = !!(opts && opts.showOrgChip);
+    if (showOrgChip && item && typeof item.orgName === 'string' && item.orgName.length > 0) {
+      var chip = document.createElement('span');
+      chip.className = 'agent-drawer__history-item-org-chip';
+      chip.textContent = String(item.orgName);
+      chip.setAttribute('aria-label', 'Org: ' + String(item.orgName));
+      li.appendChild(chip);
     }
 
     var menuBtn = document.createElement('button');
@@ -1069,6 +1087,11 @@
     return frag;
   }
 
+  // Phase 38 Plan 04 — admin-only org chip on history cards. The flag comes
+  // from the server (showOrgChip on /agent/conversations and /search) and is
+  // cached on the module so re-renders preserve it across pagination.
+  var historyShowOrgChip = false;
+
   function replaceListWithItems(items, query) {
     var list = historyListEl(); if (!list) return;
     clearHistoryList();
@@ -1078,14 +1101,14 @@
       return;
     }
     for (var i = 0; i < items.length; i++) {
-      list.appendChild(renderHistoryItem(items[i], query));
+      list.appendChild(renderHistoryItem(items[i], query, { showOrgChip: historyShowOrgChip }));
     }
   }
 
   function appendItems(items, query) {
     var list = historyListEl(); if (!list) return;
     for (var i = 0; i < items.length; i++) {
-      list.appendChild(renderHistoryItem(items[i], query));
+      list.appendChild(renderHistoryItem(items[i], query, { showOrgChip: historyShowOrgChip }));
     }
   }
 
@@ -1099,6 +1122,9 @@
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('load_failed')); })
       .then(function (payload) {
         var items = (payload && payload.items) || [];
+        if (payload && typeof payload.showOrgChip === 'boolean') {
+          historyShowOrgChip = payload.showOrgChip;
+        }
         if (replace) {
           replaceListWithItems(items, '');
           historyCachedPage = items.slice();
@@ -1142,6 +1168,9 @@
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('search_failed')); })
       .then(function (payload) {
         var items = (payload && payload.items) || [];
+        if (payload && typeof payload.showOrgChip === 'boolean') {
+          historyShowOrgChip = payload.showOrgChip;
+        }
         replaceListWithItems(items, trimmed);
         var n = items.length;
         setHistoryLive(n + ' conversation' + (n === 1 ? '' : 's') + ' match');
@@ -1451,6 +1480,147 @@
     try { rows[nextIdx].focus(); } catch (_e) { /* ignore */ }
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Phase 38 Plan 04 — Org switcher (AORG-01, AORG-02, AORG-03).
+  //
+  // Delegated `change` handler on the drawer header's <select> POSTs the
+  // chosen orgId to /agent/active-org. On success, conversationId is
+  // reset (force-new-conversation) and the panel is reloaded so the next
+  // user message lands under the new org. On failure (403, 500), the
+  // toast surfaces an error and the select rolls back to the previous
+  // value. All toast text is set via textContent (T-38-12). The
+  // dataset.previousOrgId attribute on the select tracks the last
+  // confirmed value across rerenders.
+  // ──────────────────────────────────────────────────────────────────────
+
+  var ORG_SELECT_SELECTOR = '.agent-drawer__org-switcher-select';
+  var ORG_TOAST_SELECTOR = '[data-role="orgToast"]';
+
+  function showOrgToast(toast, text, opts) {
+    if (!toast) return;
+    var state = (opts && typeof opts.state === 'string') ? opts.state : '';
+    toast.textContent = String(text == null ? '' : text);
+    toast.classList.add('is-visible');
+    if (state === 'error') {
+      toast.classList.add('is-error');
+    } else {
+      toast.classList.remove('is-error');
+    }
+  }
+
+  function hideOrgToast(toast) {
+    if (!toast) return;
+    toast.classList.remove('is-visible');
+    toast.classList.remove('is-error');
+    toast.textContent = '';
+  }
+
+  function rememberPreviousOrgId(select) {
+    if (!select) return;
+    if (!select.dataset.previousOrgId) {
+      select.dataset.previousOrgId = select.value;
+    }
+  }
+
+  function findOrgSelect(root) {
+    return (root || document).querySelector(ORG_SELECT_SELECTOR);
+  }
+
+  function postActiveOrg(orgId) {
+    return fetch('/agent/active-org', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-csrf-token': csrfToken(),
+        'accept': 'application/json',
+      },
+      body: JSON.stringify({ orgId: String(orgId) }),
+    });
+  }
+
+  function handleAgentOrgSwitch(form) {
+    if (!form) return;
+    var select = form.querySelector(ORG_SELECT_SELECTOR);
+    if (!select) return;
+    var toast = form.querySelector(ORG_TOAST_SELECTOR);
+    var orgId = String(select.value || '');
+    var orgName = '';
+    var optEl = select.options[select.selectedIndex];
+    if (optEl) orgName = String(optEl.textContent || '');
+    var previousOrgId = select.dataset.previousOrgId || '';
+    if (previousOrgId && previousOrgId === orgId) return; // no-op
+    showOrgToast(toast, formatToolI18n('org.switching') || 'Switching…', { state: 'loading' });
+    postActiveOrg(orgId).then(function (res) {
+      if (!res.ok) {
+        var msg = res.status === 403
+          ? (formatToolI18n('org.forbidden') || 'Not allowed')
+          : (formatToolI18n('org.error') || "Couldn't switch org");
+        showOrgToast(toast, msg, { state: 'error' });
+        if (previousOrgId) select.value = previousOrgId;
+        return;
+      }
+      return res.json().then(function (body) {
+        var resolvedId = body && typeof body.activeOrgId === 'string' ? body.activeOrgId : orgId;
+        var resolvedName = body && typeof body.activeOrgName === 'string' ? body.activeOrgName : orgName;
+        select.dataset.previousOrgId = resolvedId;
+        // Force-new-conversation: drop the active conversationId so the next
+        // user message creates a fresh conversation under the new org.
+        try { localStorage.removeItem(LS_CONV_KEY); } catch (_e) { /* ignore */ }
+        var formEl = byId(FORM_ID);
+        if (formEl) { formEl.setAttribute('data-conversation-id', ''); }
+        var hiddenEl = byId('agent-conversation-id-field');
+        if (hiddenEl) { hiddenEl.value = ''; }
+        var msgsEl = byId(MESSAGES_ID);
+        if (msgsEl) { while (msgsEl.firstChild) msgsEl.removeChild(msgsEl.firstChild); }
+        var switchedText = formatToolI18n('org.switched', { orgName: resolvedName }) || ('Switched to ' + resolvedName);
+        showOrgToast(toast, switchedText, { state: 'ok' });
+        announce(switchedText);
+        setTimeout(function () { hideOrgToast(toast); }, 2000);
+      });
+    }).catch(function () {
+      showOrgToast(toast, formatToolI18n('org.error') || "Couldn't switch org", { state: 'error' });
+      if (previousOrgId) select.value = previousOrgId;
+    });
+  }
+
+  function autoSwitchOrgIfNeeded(targetOrgId, targetOrgName) {
+    var select = findOrgSelect();
+    if (!select) return Promise.resolve(true); // no switcher → non-admin
+    if (!targetOrgId) return Promise.resolve(true);
+    if (select.value === String(targetOrgId)) return Promise.resolve(true);
+    var toast = document.querySelector(ORG_TOAST_SELECTOR);
+    showOrgToast(toast, formatToolI18n('org.switching') || 'Switching…', { state: 'loading' });
+    return postActiveOrg(targetOrgId).then(function (res) {
+      if (!res.ok) {
+        showOrgToast(toast, formatToolI18n('org.error') || "Couldn't switch org", { state: 'error' });
+        return false;
+      }
+      return res.json().then(function (body) {
+        var resolvedId = body && typeof body.activeOrgId === 'string' ? body.activeOrgId : String(targetOrgId);
+        var resolvedName = body && typeof body.activeOrgName === 'string' ? body.activeOrgName : String(targetOrgName || '');
+        select.value = resolvedId;
+        select.dataset.previousOrgId = resolvedId;
+        var switchedText = formatToolI18n('org.switched', { orgName: resolvedName }) || ('Switched to ' + resolvedName);
+        showOrgToast(toast, switchedText, { state: 'ok' });
+        announce(switchedText);
+        setTimeout(function () { hideOrgToast(toast); }, 2000);
+        return true;
+      });
+    }, function () {
+      showOrgToast(toast, formatToolI18n('org.error') || "Couldn't switch org", { state: 'error' });
+      return false;
+    });
+  }
+
+  document.addEventListener('change', function (e) {
+    if (!e.target || !e.target.closest) return;
+    var form = e.target.closest('form[data-action="agentOrgSwitch"]');
+    if (!form) return;
+    rememberPreviousOrgId(form.querySelector(ORG_SELECT_SELECTOR));
+    handleAgentOrgSwitch(form);
+  });
+
   document.addEventListener('click', function (e) {
     if (!e.target || !e.target.closest) return;
     if (e.target.closest('[data-action="toggleAgentDrawer"]')) { e.preventDefault(); if (isOpen()) closeDrawer(); else openDrawer(true); return; }
@@ -1480,7 +1650,16 @@
     if (resumeEl && !e.target.closest('[data-action="openHistoryItemMenu"]')) {
       e.preventDefault();
       var cid = resumeEl.getAttribute('data-conversation-id');
-      if (cid) resumeConversation(cid);
+      if (!cid) return;
+      // Phase 38 Plan 04 — admin viewers may resume a conversation in a
+      // different org than the currently-active one. Auto-switch first;
+      // resumeConversation only fires after the switch succeeds (or there
+      // is no switcher, i.e. non-admin viewer with no cross-org capability).
+      var targetOrgId = resumeEl.getAttribute('data-org-id') || '';
+      var targetOrgName = resumeEl.getAttribute('data-org-name') || '';
+      autoSwitchOrgIfNeeded(targetOrgId, targetOrgName).then(function (ok) {
+        if (ok) resumeConversation(cid);
+      });
       return;
     }
     var approveEl = e.target.closest('[data-action="agentConfirmApprove"]');
@@ -1987,6 +2166,11 @@
       getMarkdownSource: getMarkdownSource,
       recordMarkdownSource: recordMarkdownSource,
       readMarkdownSource: readMarkdownSource,
+      handleAgentOrgSwitch: handleAgentOrgSwitch,
+      autoSwitchOrgIfNeeded: autoSwitchOrgIfNeeded,
+      getConversationId: getConversationId,
+      setHistoryShowOrgChip: function (v) { historyShowOrgChip = !!v; },
+      renderHistoryItem: renderHistoryItem,
     };
   }
 
