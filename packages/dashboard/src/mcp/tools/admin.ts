@@ -165,7 +165,12 @@ export function registerAdminTools(
     'dashboard_list_users',
     {
       description:
-        "List dashboard users. Defaults to the caller's org members. Global admins (no caller org) MUST pass orgScope='all' — a system-wide list. The response always echoes the resolved scope ('caller-org:<orgId>' or 'all') so results cannot be mislabeled. Password hashes are never returned.",
+        "List dashboard users. Each returned user carries `orgs: [{id, name}, ...]` listing every org they belong to (empty array means no org membership — common for global admins).\n\n" +
+        "USAGE PATTERNS:\n" +
+        "- 'Users in MY org' (caller-scoped, default): omit orgScope. Returns members of the caller's own org. Global admins (no caller org) get an error directing them to use orgScope='all'.\n" +
+        "- 'Users in a SPECIFIC org by name or ID' (e.g. Concorsando): pass orgScope='all' AND filter the results client-side by user.orgs[].name or user.orgs[].id. Do NOT pass an orgId in orgScope — the only legal values are 'caller-org' and 'all'.\n" +
+        "- 'All users in the system': pass orgScope='all'.\n\n" +
+        "The response always echoes the resolved scope ('caller-org:<orgId>' or 'all'). When scope='all', meta.notice reminds you to derive org membership from user.orgs[]. Password hashes are never returned.",
       inputSchema: z.object({
         orgScope: z
           .enum(['caller-org', 'all'])
