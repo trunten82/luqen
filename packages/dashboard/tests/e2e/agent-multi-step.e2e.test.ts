@@ -40,6 +40,12 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DASHBOARD_ROOT = resolve(__dirname, '..', '..');
 const AGENT_JS = readFileSync(join(DASHBOARD_ROOT, 'src/static/agent.js'), 'utf8');
+// Phase 39.1-02 — chip-strip handlers extracted into agent-tools.js. Tests
+// must load both modules in the same defer order as views/layouts/main.hbs
+// (agent.js first, agent-tools.js second) so the `agent:stream-opened`
+// CustomEvent dispatched by agent.js is observed by agent-tools.js's
+// listener registration.
+const AGENT_TOOLS_JS = readFileSync(join(DASHBOARD_ROOT, 'src/static/agent-tools.js'), 'utf8');
 const AGENT_AUDIT_JS = readFileSync(join(DASHBOARD_ROOT, 'src/static/agent-audit.js'), 'utf8');
 
 // ---------------------------------------------------------------------------
@@ -173,6 +179,12 @@ function setupChipHarness(): ChipHarness {
   const fn = new (win as unknown as { Function: new (...args: string[]) => (...args: unknown[]) => void })
     .Function('window', 'document', 'localStorage', 'fetch', AGENT_JS);
   fn.call(win, win, doc, win.localStorage, (win as unknown as { fetch: unknown }).fetch);
+
+  // Phase 39.1-02 — load agent-tools.js after agent.js so __luqenAgent (set
+  // up by agent.js) is populated before this module's IIFE binds its helpers.
+  const fnTools = new (win as unknown as { Function: new (...args: string[]) => (...args: unknown[]) => void })
+    .Function('window', 'document', AGENT_TOOLS_JS);
+  fnTools.call(win, win, doc);
 
   return { dom, win, doc, esSources: sources };
 }
