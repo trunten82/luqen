@@ -105,6 +105,13 @@ export interface AgentStreamOptions {
 export interface AgentStreamTurn {
   readonly text: string;
   readonly toolCalls: ReadonlyArray<ToolCallInput>;
+  /**
+   * Phase 36 ATOOL-04 — optional thinking/reasoning text from providers that
+   * surface chain-of-thought blocks (e.g. Anthropic). When present it is
+   * captured into the rationale alongside `text`. Provider adapters opt in
+   * by populating this field; defaults to undefined.
+   */
+  readonly thinking?: string;
 }
 
 export interface LlmAgentTransport {
@@ -708,6 +715,48 @@ export class AgentService {
 // ---------------------------------------------------------------------------
 // Pure helpers (extracted so tests + future admin tools can exercise them).
 // ---------------------------------------------------------------------------
+
+/**
+ * Phase 36 ATOOL-04 — extract rationale from an assistant turn for audit
+ * persistence. Combines `thinking` (when present, e.g. Anthropic) with
+ * `text` (any provider). Whitespace-only inputs collapse to null.
+ *
+ * Order: thinking precedes text — matches the order the model emits them
+ * (chain-of-thought, then user-visible preamble before the tool_use block).
+ */
+export function extractRationale(
+  turn: { readonly text: string; readonly thinking?: string },
+): string | null {
+  const parts: string[] = [];
+  const t = (turn.thinking ?? '').trim();
+  if (t.length > 0) parts.push(t);
+  const x = turn.text.trim();
+  if (x.length > 0) parts.push(x);
+  return parts.length === 0 ? null : parts.join('\n\n');
+}
+
+/**
+ * Phase 36 ATOOL-02 — build the retry-guidance string appended to a failed
+ * tool result before the model sees it. When `retriesRemaining > 0` the
+ * model is told it may retry; when `0` it is told the budget is exhausted.
+ * Successful results return null (no guidance needed).
+ *
+ * The shared per-turn budget starts at 3 (D-CONTEXT) and is decremented for
+ * every non-success outcome until it reaches zero.
+ */
+export function buildRetryGuidance(
+  result: ToolDispatchResult,
+  retriesRemaining: number,
+): string | null {
+  if (typeof result !== 'object' || result === null || !('error' in result)) {
+    return null;
+  }
+  const sentinel = (result as { error: string }).error;
+  if (retriesRemaining > 0) {
+    return `Tool call failed: ${sentinel}. You have ${retriesRemaining} retry attempt(s) remaining for this turn — you may retry with different arguments, switch to another tool, or proceed with what you have.`;
+  }
+  return `Tool call failed: ${sentinel}. The retry budget for this turn is exhausted; do not retry this tool. Proceed with the information you have.`;
+}
 
 function buildManifest(
   allTools: readonly ToolMetadata[],
