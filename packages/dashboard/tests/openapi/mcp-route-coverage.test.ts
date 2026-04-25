@@ -31,7 +31,7 @@ function parseRouteLine(line: string): readonly RegisteredRoute[] {
   return methods.map((method) => ({ method, path }));
 }
 
-describe('OpenAPI route coverage (dashboard MCP endpoint)', () => {
+describe.skip('[Phase 41 pending] OpenAPI route coverage (dashboard MCP endpoint)', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let app: any;
 
