@@ -1,0 +1,12 @@
+{{!-- Phase 37 Plan 02 — Inline edit form for the most-recent user message.
+     Plan 04 toggles its visibility (replacing the bubble body) when the user
+     clicks the pencil icon. {{content}} uses double-brace escaping to
+     mitigate T-37-06 (stored-XSS via prior message body). --}}
+<form class="agent-msg__edit-form" data-action="submitEditUserMessage" data-message-id="{{id}}">
+  <label class="sr-only" for="agent-msg-edit-{{id}}">{{t "agent.actions.editLabel"}}</label>
+  <textarea id="agent-msg-edit-{{id}}" class="agent-msg__edit-textarea" name="content" rows="3" required>{{content}}</textarea>
+  <div class="agent-msg__edit-buttons">
+    <button type="submit" class="btn btn--primary btn--sm">{{t "agent.actions.save"}}</button>
+    <button type="button" class="btn btn--ghost btn--sm" data-action="cancelEditUserMessage" data-message-id="{{id}}">{{t "agent.actions.cancel"}}</button>
+  </div>
+</form>

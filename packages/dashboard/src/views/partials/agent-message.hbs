@@ -1,7 +1,9 @@
 {{#if (eq role "user")}}
-  <div class="agent-msg agent-msg--user" data-message-id="{{id}}">
+  <div class="agent-msg agent-msg--user{{#if (eq status "stopped")}} agent-msg--stopped{{/if}}{{#if (eq status "superseded")}} agent-msg--superseded{{/if}}" data-message-id="{{id}}" data-status="{{status}}">
     <span class="agent-msg__role">{{t "agent.role.user"}}</span>
     <div class="agent-msg__body">{{content}}</div>
+    {{#if (eq status "stopped")}}{{> agent-msg-stopped-chip}}{{/if}}
+    {{> agent-msg-actions id=id role=role isMostRecentUserMessage=isMostRecentUserMessage}}
   </div>
 {{else if (eq role "assistant")}}
   {{#if content}}
@@ -9,9 +11,11 @@
         Plan 32.1-08 have null/empty content and would render as a blank
         grey bubble on reload. Only assistant rows with user-visible text
         belong in the rehydrated panel. }}
-    <div class="agent-msg agent-msg--assistant" data-message-id="{{id}}" lang="{{../locale}}"{{#if (eq status "streaming")}} aria-busy="true"{{/if}}>
+    <div class="agent-msg agent-msg--assistant{{#if (eq status "stopped")}} agent-msg--stopped{{/if}}{{#if (eq status "superseded")}} agent-msg--superseded{{/if}}" data-message-id="{{id}}" data-status="{{status}}" lang="{{../locale}}"{{#if (eq status "streaming")}} aria-busy="true"{{/if}}>
       <span class="agent-msg__role">{{../agentDisplayName}}</span>
       <div class="agent-msg__body">{{content}}</div>
+      {{#if (eq status "stopped")}}{{> agent-msg-stopped-chip}}{{/if}}
+      {{> agent-msg-actions id=id role=role isMostRecentUserMessage=isMostRecentUserMessage}}
     </div>
   {{/if}}
 {{else if (eq role "tool")}}
