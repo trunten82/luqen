@@ -941,7 +941,7 @@ Base URL: `http://localhost:4100/api/v1` (branding service). Auth: Bearer JWT to
 
 Full interactive docs: `http://localhost:4100/docs` (Swagger UI).
 
-OpenAPI spec: [`docs/reference/openapi-branding.yaml`](openapi-branding.yaml).
+OpenAPI snapshot: [`docs/reference/openapi/branding.json`](openapi/branding.json) (auto-generated; see [`scripts/snapshot-openapi.ts`](../../scripts/snapshot-openapi.ts)).
 
 For full module documentation including architecture, matching strategies, template format, and dashboard integration, see [`docs/branding/README.md`](../branding/README.md).
 
