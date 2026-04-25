@@ -1435,137 +1435,17 @@
   // confirmed value across rerenders.
   // ──────────────────────────────────────────────────────────────────────
 
-  var ORG_SELECT_SELECTOR = '.agent-drawer__org-switcher-select';
-  var ORG_TOAST_SELECTOR = '[data-role="orgToast"]';
-
-  function showOrgToast(toast, text, opts) {
-    if (!toast) return;
-    var state = (opts && typeof opts.state === 'string') ? opts.state : '';
-    toast.textContent = String(text == null ? '' : text);
-    toast.classList.add('is-visible');
-    if (state === 'error') {
-      toast.classList.add('is-error');
-    } else {
-      toast.classList.remove('is-error');
-    }
-  }
-
-  function hideOrgToast(toast) {
-    if (!toast) return;
-    toast.classList.remove('is-visible');
-    toast.classList.remove('is-error');
-    toast.textContent = '';
-  }
-
-  // Snapshot select.value BEFORE the user can change it, so the change
-  // handler can tell new-vs-previous. Without this, dataset.previousOrgId
-  // was being set in the change handler AFTER select.value already updated,
-  // which made previousOrgId === orgId and short-circuited the POST.
-  function initOrgSelectPreviousOrgId() {
-    var select = document.querySelector(ORG_SELECT_SELECTOR);
-    if (!select) return;
-    if (!select.dataset.previousOrgId) {
-      select.dataset.previousOrgId = select.value;
-    }
-  }
-
-  function findOrgSelect(root) {
-    return (root || document).querySelector(ORG_SELECT_SELECTOR);
-  }
-
-  function postActiveOrg(orgId) {
-    return fetch('/agent/active-org', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-csrf-token': csrfToken(),
-        'accept': 'application/json',
-      },
-      body: JSON.stringify({ orgId: String(orgId) }),
-    });
-  }
-
-  function handleAgentOrgSwitch(form) {
-    if (!form) return;
-    var select = form.querySelector(ORG_SELECT_SELECTOR);
-    if (!select) return;
-    var toast = form.querySelector(ORG_TOAST_SELECTOR);
-    var orgId = String(select.value || '');
-    var orgName = '';
-    var optEl = select.options[select.selectedIndex];
-    if (optEl) orgName = String(optEl.textContent || '');
-    var previousOrgId = select.dataset.previousOrgId || '';
-    if (previousOrgId && previousOrgId === orgId) return; // no-op
-    showOrgToast(toast, formatToolI18n('org.switching') || 'Switching…', { state: 'loading' });
-    postActiveOrg(orgId).then(function (res) {
-      if (!res.ok) {
-        var msg = res.status === 403
-          ? (formatToolI18n('org.forbidden') || 'Not allowed')
-          : (formatToolI18n('org.error') || "Couldn't switch org");
-        showOrgToast(toast, msg, { state: 'error' });
-        if (previousOrgId) select.value = previousOrgId;
-        return;
-      }
-      return res.json().then(function (body) {
-        var resolvedId = body && typeof body.activeOrgId === 'string' ? body.activeOrgId : orgId;
-        var resolvedName = body && typeof body.activeOrgName === 'string' ? body.activeOrgName : orgName;
-        select.dataset.previousOrgId = resolvedId;
-        // Force-new-conversation: drop the active conversationId so the next
-        // user message creates a fresh conversation under the new org.
-        try { localStorage.removeItem(LS_CONV_KEY); } catch (_e) { /* ignore */ }
-        var formEl = byId(FORM_ID);
-        if (formEl) { formEl.setAttribute('data-conversation-id', ''); }
-        var hiddenEl = byId('agent-conversation-id-field');
-        if (hiddenEl) { hiddenEl.value = ''; }
-        var msgsEl = byId(MESSAGES_ID);
-        if (msgsEl) { while (msgsEl.firstChild) msgsEl.removeChild(msgsEl.firstChild); }
-        var switchedText = formatToolI18n('org.switched', { orgName: resolvedName }) || ('Switched to ' + resolvedName);
-        showOrgToast(toast, switchedText, { state: 'ok' });
-        announce(switchedText);
-        setTimeout(function () { hideOrgToast(toast); }, 2000);
-      });
-    }).catch(function () {
-      showOrgToast(toast, formatToolI18n('org.error') || "Couldn't switch org", { state: 'error' });
-      if (previousOrgId) select.value = previousOrgId;
-    });
-  }
-
+  // Org switcher (constants, helpers, delegated change handler, and the
+  // dataset.previousOrgId bootstrap) lives in agent-org.js since 39.1-02.
+  // autoSwitchOrgIfNeeded is published on window.__luqenAgent so the
+  // history-panel logic below can call into the extracted module.
   function autoSwitchOrgIfNeeded(targetOrgId, targetOrgName) {
-    var select = findOrgSelect();
-    if (!select) return Promise.resolve(true); // no switcher → non-admin
-    if (!targetOrgId) return Promise.resolve(true);
-    if (select.value === String(targetOrgId)) return Promise.resolve(true);
-    var toast = document.querySelector(ORG_TOAST_SELECTOR);
-    showOrgToast(toast, formatToolI18n('org.switching') || 'Switching…', { state: 'loading' });
-    return postActiveOrg(targetOrgId).then(function (res) {
-      if (!res.ok) {
-        showOrgToast(toast, formatToolI18n('org.error') || "Couldn't switch org", { state: 'error' });
-        return false;
-      }
-      return res.json().then(function (body) {
-        var resolvedId = body && typeof body.activeOrgId === 'string' ? body.activeOrgId : String(targetOrgId);
-        var resolvedName = body && typeof body.activeOrgName === 'string' ? body.activeOrgName : String(targetOrgName || '');
-        select.value = resolvedId;
-        select.dataset.previousOrgId = resolvedId;
-        var switchedText = formatToolI18n('org.switched', { orgName: resolvedName }) || ('Switched to ' + resolvedName);
-        showOrgToast(toast, switchedText, { state: 'ok' });
-        announce(switchedText);
-        setTimeout(function () { hideOrgToast(toast); }, 2000);
-        return true;
-      });
-    }, function () {
-      showOrgToast(toast, formatToolI18n('org.error') || "Couldn't switch org", { state: 'error' });
-      return false;
-    });
+    var fn = (window.__luqenAgent && window.__luqenAgent.autoSwitchOrgIfNeeded);
+    if (typeof fn === 'function') return fn(targetOrgId, targetOrgName);
+    // agent-org.js failed to load: degrade to "no switcher" semantics so
+    // history cards still open, just without the cross-org switch.
+    return Promise.resolve(true);
   }
-
-  document.addEventListener('change', function (e) {
-    if (!e.target || !e.target.closest) return;
-    var form = e.target.closest('form[data-action="agentOrgSwitch"]');
-    if (!form) return;
-    handleAgentOrgSwitch(form);
-  });
 
   document.addEventListener('click', function (e) {
     if (!e.target || !e.target.closest) return;
@@ -2084,7 +1964,7 @@
     wireDisplayNameUpdates();
     ensureAriaLive();
     wireInputAutoResize();
-    initOrgSelectPreviousOrgId();
+    // initOrgSelectPreviousOrgId moved to agent-org.js (self-bootstraps on DOMContentLoaded).
     // Share view (read-only): render markdown on assistant bodies that were
     // server-rendered as raw text. No SSE, no loadPanel.
     if (document.querySelector('.agent-share')) {
@@ -2126,7 +2006,8 @@
       getMarkdownSource: getMarkdownSource,
       recordMarkdownSource: recordMarkdownSource,
       readMarkdownSource: readMarkdownSource,
-      handleAgentOrgSwitch: handleAgentOrgSwitch,
+      // handleAgentOrgSwitch + autoSwitchOrgIfNeeded are exported by agent-org.js,
+      // which augments window.__agentTestExports after agent.js finishes.
       autoSwitchOrgIfNeeded: autoSwitchOrgIfNeeded,
       getConversationId: getConversationId,
       setHistoryShowOrgChip: function (v) { historyShowOrgChip = !!v; },
