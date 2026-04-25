@@ -25,6 +25,7 @@
        hidden>
   <header class="agent-drawer__header">
     <h2 class="agent-drawer__title"><span id="agent-display-name">{{agentDisplayName}}</span></h2>
+    {{> agent-drawer-org-switcher}}
     <button type="button" class="agent-drawer__new-chat btn btn--ghost btn--sm"
             aria-label="{{t "agent.newChat.label"}}"
             title="{{t "agent.newChat.label"}}"
