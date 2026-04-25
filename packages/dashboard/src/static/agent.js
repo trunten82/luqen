@@ -1684,8 +1684,7 @@
     } catch (_e) { /* unsupported — fall back to inline link only */ }
 
     sharePromise
-      .then(function (fullUrl) {
-        renderShareUrlChip(btn, fullUrl);
+      .then(function (_fullUrl) {
         flashActionResult(btn, true);
         // Resolve the clipboard outcome (write() returns Promise<void>):
         //   resolved → copied successfully
@@ -1947,6 +1946,16 @@
     wireDisplayNameUpdates();
     ensureAriaLive();
     wireInputAutoResize();
+    // Share view (read-only): render markdown on assistant bodies that were
+    // server-rendered as raw text. No SSE, no loadPanel.
+    if (document.querySelector('.agent-share')) {
+      var bodies = document.querySelectorAll('.agent-msg--assistant .agent-msg__body');
+      for (var i = 0; i < bodies.length; i++) {
+        var b = bodies[i]; var raw = b.textContent || '';
+        if (raw.length > 0) renderMarkdownInto(b, raw);
+      }
+      return;
+    }
     // Repopulate the messages region from the server window so the
     // conversation survives page reloads (not just drawer open/close state).
     if (getConversationId().length > 0) { loadPanel(); }
