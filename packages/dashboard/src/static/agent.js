@@ -1658,19 +1658,40 @@
       .then(function (payload) {
         var path = payload && typeof payload.url === 'string' ? payload.url : '';
         var fullUrl = window.location.origin + path;
-        // Render the URL inline next to the share button so the user can
-        // select+copy or click it. Clipboard automation after async fetch is
-        // unreliable across browsers (loses the user-gesture context), so we
-        // don't rely on it — the user always has a visible, clickable link.
         renderShareUrlChip(btn, fullUrl);
         flashActionResult(btn, true);
-        announce(actionT('actions.shareCreated'));
+        // Best-effort clipboard write; toast wording reflects the actual result
+        // so the user knows whether they need to grab the inline link manually.
+        writeToClipboard(fullUrl).then(function (ok) {
+          var msg = ok ? 'Share link copied to clipboard' : 'Share link ready — click to open';
+          showShareToast(msg);
+          announce(msg);
+        });
       })
       .catch(function () {
         flashActionResult(btn, false);
+        showShareToast('Share failed');
         announce(actionT('actions.shareFailed'));
       })
       .then(function () { btn.disabled = false; });
+  }
+
+  // Lightweight toast specifically for share feedback. Renders inside the
+  // drawer for ~2.5s. Requested by UAT 2026-04-25 to make share outcome
+  // visible without relying on aria-live (which is silent for sighted users).
+  function showShareToast(message) {
+    if (!message) return;
+    var drawer = document.getElementById(DRAWER_ID) || document.body;
+    var existing = drawer.querySelector('.agent-drawer__toast');
+    if (existing) existing.parentNode.removeChild(existing);
+    var toast = document.createElement('div');
+    toast.className = 'agent-drawer__toast';
+    toast.setAttribute('role', 'status');
+    toast.textContent = message;
+    drawer.appendChild(toast);
+    setTimeout(function () {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 2500);
   }
 
   // Render a small inline chip with the share URL near the share button.
