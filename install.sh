@@ -1457,15 +1457,17 @@ show_summary_bare_metal() {
 
   if command -v systemctl &>/dev/null; then
     printf "  %sService management:%s\n" "${BOLD}" "${RESET}"
-    printf "    systemctl status  luqen-compliance luqen-llm luqen-dashboard\n"
-    printf "    systemctl restart luqen-compliance luqen-llm luqen-dashboard\n"
-    printf "    systemctl stop    luqen-compliance luqen-llm luqen-dashboard\n"
+    printf "    systemctl status  luqen-compliance luqen-branding luqen-llm luqen-dashboard\n"
+    printf "    systemctl restart luqen-compliance luqen-branding luqen-llm luqen-dashboard\n"
+    printf "    systemctl stop    luqen-compliance luqen-branding luqen-llm luqen-dashboard\n"
     printf "    journalctl -fu    luqen-dashboard\n"
+    printf "    journalctl -fu    luqen-branding\n"
     printf "    journalctl -fu    luqen-llm\n"
     printf "\n"
 
     printf "  %sCurrent status:%s\n" "${BOLD}" "${RESET}"
     systemctl --no-pager status luqen-compliance.service 2>/dev/null | head -3 | sed 's/^/    /' || true
+    systemctl --no-pager status luqen-branding.service 2>/dev/null | head -3 | sed 's/^/    /' || true
     systemctl --no-pager status luqen-llm.service 2>/dev/null | head -3 | sed 's/^/    /' || true
     systemctl --no-pager status luqen-dashboard.service 2>/dev/null | head -3 | sed 's/^/    /' || true
     printf "\n"
