@@ -157,3 +157,158 @@ describe('ToolDispatcher.dispatch', () => {
     expect(firstCallArgs.expiresInSeconds).toBe(300);
   });
 });
+
+describe('ToolDispatcher.dispatchAll', () => {
+  it('Test 1: dispatchAll([]) returns [] without calling signer or resolveScopes', async () => {
+    const signer = makeSigner();
+    const resolveScopes = vi.fn().mockResolvedValue(['reports.view']);
+    const dispatcher = new ToolDispatcher({
+      tools: [],
+      signer,
+      dashboardMcpAudience: 'https://dashboard/mcp',
+      resolveScopes,
+    });
+
+    const results = await dispatcher.dispatchAll([], { userId: 'u1', orgId: 'o1' });
+    expect(results).toEqual([]);
+    expect(resolveScopes).not.toHaveBeenCalled();
+    expect(signer.mintAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('Test 2: returns results in INPUT order, not completion order', async () => {
+    const handlerA = vi.fn().mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ tag: 'A' }), 50)),
+    );
+    const handlerB = vi.fn().mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ tag: 'B' }), 10)),
+    );
+    const handlerC = vi.fn().mockResolvedValue({ tag: 'C' });
+
+    const dispatcher = new ToolDispatcher({
+      tools: [
+        makeTool('toolA', z.object({}).strict(), handlerA),
+        makeTool('toolB', z.object({}).strict(), handlerB),
+        makeTool('toolC', z.object({}).strict(), handlerC),
+      ],
+      signer: makeSigner(),
+      dashboardMcpAudience: 'https://dashboard/mcp',
+      resolveScopes: async () => ['reports.view'],
+    });
+
+    const results = await dispatcher.dispatchAll(
+      [
+        { id: 'a', name: 'toolA', args: {} },
+        { id: 'b', name: 'toolB', args: {} },
+        { id: 'c', name: 'toolC', args: {} },
+      ],
+      { userId: 'u1', orgId: 'o1' },
+    );
+
+    expect(results).toEqual([{ tag: 'A' }, { tag: 'B' }, { tag: 'C' }]);
+  });
+
+  it('Test 3: runs handlers concurrently — wall-clock < 90ms for two 50ms handlers', async () => {
+    const slow = () => new Promise((resolve) => setTimeout(() => resolve({ ok: true }), 50));
+    const dispatcher = new ToolDispatcher({
+      tools: [
+        makeTool('s1', z.object({}).strict(), slow),
+        makeTool('s2', z.object({}).strict(), slow),
+      ],
+      signer: makeSigner(),
+      dashboardMcpAudience: 'https://dashboard/mcp',
+      resolveScopes: async () => ['reports.view'],
+    });
+
+    const start = performance.now();
+    const results = await dispatcher.dispatchAll(
+      [
+        { id: '1', name: 's1', args: {} },
+        { id: '2', name: 's2', args: {} },
+      ],
+      { userId: 'u1', orgId: 'o1' },
+    );
+    const elapsed = performance.now() - start;
+    expect(results).toHaveLength(2);
+    expect(elapsed).toBeLessThan(90);
+  });
+
+  it('Test 4: per-call timeout sentinel does not abort siblings', async () => {
+    const fast = vi.fn().mockResolvedValue({ tag: 'fast' });
+    const hang = vi.fn().mockImplementation(() => new Promise<unknown>(() => {}));
+    const dispatcher = new ToolDispatcher({
+      tools: [
+        makeTool('fast', z.object({}).strict(), fast),
+        makeTool('hang', z.object({}).strict(), hang),
+        makeTool('fast2', z.object({}).strict(), fast),
+      ],
+      signer: makeSigner(),
+      dashboardMcpAudience: 'https://dashboard/mcp',
+      resolveScopes: async () => ['reports.view'],
+      timeoutMs: 20,
+    });
+
+    const results = await dispatcher.dispatchAll(
+      [
+        { id: '1', name: 'fast', args: {} },
+        { id: '2', name: 'hang', args: {} },
+        { id: '3', name: 'fast2', args: {} },
+      ],
+      { userId: 'u1', orgId: 'o1' },
+    );
+
+    expect(results[0]).toEqual({ tag: 'fast' });
+    expect(results[1]).toEqual({ error: 'timeout' });
+    expect(results[2]).toEqual({ tag: 'fast' });
+  });
+
+  it('Test 5: unknown_tool sentinel in middle slot does not propagate to siblings', async () => {
+    const ok = vi.fn().mockResolvedValue({ ok: true, value: 1 });
+    const dispatcher = new ToolDispatcher({
+      tools: [makeTool('known', z.object({}).strict(), ok)],
+      signer: makeSigner(),
+      dashboardMcpAudience: 'https://dashboard/mcp',
+      resolveScopes: async () => ['reports.view'],
+    });
+
+    const results = await dispatcher.dispatchAll(
+      [
+        { id: '1', name: 'known', args: {} },
+        { id: '2', name: 'mystery', args: {} },
+        { id: '3', name: 'known', args: {} },
+      ],
+      { userId: 'u1', orgId: 'o1' },
+    );
+
+    expect(results[0]).toEqual({ ok: true, value: 1 });
+    expect(results[1]).toEqual({ error: 'unknown_tool' });
+    expect(results[2]).toEqual({ ok: true, value: 1 });
+  });
+
+  it('Test 6: pre-aborted ctx.signal — dispatchAll resolves with per-handler outcomes, does not throw', async () => {
+    const handler = vi.fn().mockImplementation(() => new Promise<unknown>(() => {}));
+    const dispatcher = new ToolDispatcher({
+      tools: [makeTool('hang', z.object({}).strict(), handler)],
+      signer: makeSigner(),
+      dashboardMcpAudience: 'https://dashboard/mcp',
+      resolveScopes: async () => ['reports.view'],
+      timeoutMs: 20,
+    });
+
+    const ac = new AbortController();
+    ac.abort();
+
+    const results = await dispatcher.dispatchAll(
+      [
+        { id: '1', name: 'hang', args: {} },
+        { id: '2', name: 'hang', args: {} },
+      ],
+      { userId: 'u1', orgId: 'o1', signal: ac.signal },
+    );
+
+    expect(results).toHaveLength(2);
+    for (const r of results) {
+      expect(r).toHaveProperty('error');
+      expect(['timeout', 'internal']).toContain((r as { error: string }).error);
+    }
+  });
+});
