@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # install.sh — interactive installer for Luqen
+# Last reviewed for v3.1.0 (Phase 40 / DOC-03) — head migration 061
 # Usage:  curl -fsSL https://raw.githubusercontent.com/trunten82/luqen/master/install.sh | bash
 # Flags:  --non-interactive, --mode bare-metal|docker, --port PORT, --help
 
@@ -90,6 +91,32 @@ SMTP_FROM=""
 INCLUDE_COMPLIANCE=false
 INCLUDE_BRANDING=false
 BRANDING_PORT=4100
+LLM_PORT=4200
+
+# ──────────────────────────────────────────────
+# Public URLs / OAuth issuer (v3.x)
+#
+# Phase 30/31.1 introduced OAuth 2.1 + PKCE + DCR + JWKS discovery and
+# Streamable HTTP MCP endpoints. The dashboard advertises itself as the
+# OAuth issuer, so it MUST know its own externally-reachable URL.
+# Operators can override these for production installs (real hostnames).
+# Each defaults to the local-loopback URL for development.
+# ──────────────────────────────────────────────
+DASHBOARD_PUBLIC_URL=""        # default resolved post-port-parsing
+COMPLIANCE_PUBLIC_URL=""
+BRANDING_PUBLIC_URL=""
+LLM_PUBLIC_URL=""
+
+# ──────────────────────────────────────────────
+# OAuth signing-key rotation (Phase 31.1)
+# ──────────────────────────────────────────────
+OAUTH_KEY_MAX_AGE_DAYS="90"
+
+# ──────────────────────────────────────────────
+# Ollama (LLM provider)
+# Optional — defaults to LLM-service-side default
+# ──────────────────────────────────────────────
+OLLAMA_BASE_URL=""
 
 # Storage plugins
 STORAGE_S3=false
@@ -190,10 +217,24 @@ while [[ $# -gt 0 ]]; do
     --smtp-from)        SMTP_FROM="$2"; shift 2 ;;
     --admin-user)       ADMIN_USERNAME="$2"; shift 2 ;;
     --admin-pass)       ADMIN_PASSWORD="$2"; shift 2 ;;
+    --dashboard-public-url)  DASHBOARD_PUBLIC_URL="$2"; shift 2 ;;
+    --compliance-public-url) COMPLIANCE_PUBLIC_URL="$2"; shift 2 ;;
+    --branding-public-url)   BRANDING_PUBLIC_URL="$2"; shift 2 ;;
+    --llm-public-url)        LLM_PUBLIC_URL="$2"; shift 2 ;;
+    --oauth-key-max-age-days) OAUTH_KEY_MAX_AGE_DAYS="$2"; shift 2 ;;
+    --ollama-base-url)  OLLAMA_BASE_URL="$2"; shift 2 ;;
     --help|-h) show_help ;;
     *) error "Unknown option: $1"; show_help ;;
   esac
 done
+
+resolve_public_url_defaults() {
+  # Called after port parsing / wizard so defaults track the real ports.
+  [ -z "${DASHBOARD_PUBLIC_URL}" ]  && DASHBOARD_PUBLIC_URL="http://localhost:${DASHBOARD_PORT}"
+  [ -z "${COMPLIANCE_PUBLIC_URL}" ] && COMPLIANCE_PUBLIC_URL="http://localhost:${COMPLIANCE_PORT}"
+  [ -z "${BRANDING_PUBLIC_URL}" ]   && BRANDING_PUBLIC_URL="http://localhost:${BRANDING_PORT}"
+  [ -z "${LLM_PUBLIC_URL}" ]        && LLM_PUBLIC_URL="http://localhost:${LLM_PORT}"
+}
 
 # ──────────────────────────────────────────────
 # Validation helpers
@@ -1015,7 +1056,8 @@ User=root
 WorkingDirectory=${INSTALL_DIR}/packages/compliance
 Environment=NODE_ENV=production
 Environment=COMPLIANCE_PORT=${COMPLIANCE_PORT}
-Environment=COMPLIANCE_LLM_URL=http://localhost:4200
+Environment=COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
+Environment=COMPLIANCE_LLM_URL=${LLM_PUBLIC_URL}
 Environment=COMPLIANCE_LLM_CLIENT_ID=${COMPLIANCE_LLM_CLIENT_ID:-}
 Environment=COMPLIANCE_LLM_CLIENT_SECRET=${COMPLIANCE_LLM_CLIENT_SECRET:-}
 ExecStart=${node_path} ${INSTALL_DIR}/packages/compliance/dist/cli.js serve --port ${COMPLIANCE_PORT}
@@ -1038,6 +1080,7 @@ User=root
 WorkingDirectory=${INSTALL_DIR}/packages/branding
 Environment=NODE_ENV=production
 Environment=BRANDING_PORT=${BRANDING_PORT}
+Environment=BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
 ExecStart=${node_path} ${INSTALL_DIR}/packages/branding/dist/cli.js serve --port ${BRANDING_PORT}
 Restart=always
 RestartSec=5
@@ -1047,6 +1090,11 @@ WantedBy=multi-user.target
 UNIT
 
   # LLM service
+  local llm_ollama_env=""
+  if [ -n "${OLLAMA_BASE_URL}" ]; then
+    llm_ollama_env="Environment=OLLAMA_BASE_URL=${OLLAMA_BASE_URL}"
+  fi
+
   cat > /etc/systemd/system/luqen-llm.service <<UNIT
 [Unit]
 Description=Luqen LLM Service
@@ -1057,8 +1105,10 @@ Type=simple
 User=root
 WorkingDirectory=${INSTALL_DIR}/packages/llm
 Environment=NODE_ENV=production
-Environment=LLM_PORT=4200
-ExecStart=${node_path} ${INSTALL_DIR}/packages/llm/dist/cli.js serve --port 4200
+Environment=LLM_PORT=${LLM_PORT}
+Environment=LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
+${llm_ollama_env}
+ExecStart=${node_path} ${INSTALL_DIR}/packages/llm/dist/cli.js serve --port ${LLM_PORT}
 Restart=always
 RestartSec=5
 
@@ -1083,6 +1133,13 @@ Type=simple
 User=root
 WorkingDirectory=${INSTALL_DIR}
 Environment=NODE_ENV=production
+Environment=DASHBOARD_PUBLIC_URL=${DASHBOARD_PUBLIC_URL}
+Environment=DASHBOARD_JWKS_URI=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
+Environment=DASHBOARD_JWKS_URL=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
+Environment=OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
+Environment=COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
+Environment=BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
+Environment=LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
 ExecStart=${node_path} ${INSTALL_DIR}/packages/dashboard/dist/cli.js serve --config ${CONFIG_FILE}
 Restart=always
 RestartSec=5
@@ -1135,7 +1192,7 @@ start_services_and_post_install() {
     systemctl start luqen-llm.service >/dev/null 2>&1
     info "Waiting for LLM service..."
     attempts=0
-    until curl -sf "http://localhost:4200/api/v1/health" >/dev/null 2>&1; do
+    until curl -sf "http://localhost:${LLM_PORT}/api/v1/health" >/dev/null 2>&1; do
       attempts=$(( attempts + 1 ))
       if [ "${attempts}" -ge 15 ]; then
         error "LLM service did not start. Check: journalctl -u luqen-llm"
@@ -1196,7 +1253,7 @@ start_services_and_post_install() {
     LLM_PID=$!
     info "Waiting for LLM service..."
     attempts=0
-    until curl -sf "http://localhost:4200/api/v1/health" >/dev/null 2>&1; do
+    until curl -sf "http://localhost:${LLM_PORT}/api/v1/health" >/dev/null 2>&1; do
       attempts=$(( attempts + 1 ))
       if [ "${attempts}" -ge 15 ]; then
         error "LLM service did not start. Check: /tmp/luqen-llm-install.log"
@@ -1451,10 +1508,31 @@ run_docker_install() {
   cat > "${ENV_FILE}" <<ENVFILE
 # Luqen Docker Compose configuration
 # Generated by install.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+# Last reviewed for v3.1.0 (Phase 40 / DOC-03) — head migration 061
 COMPLIANCE_PORT=${COMPLIANCE_PORT}
 DASHBOARD_PORT=${DASHBOARD_PORT}
 DASHBOARD_SESSION_SECRET=${SESSION_SECRET}
 LUQEN_WEBSERVICE_URL=
+
+# ── Public URLs (Phase 30/31.1) ──
+# Override these with real hostnames for production installs.
+DASHBOARD_PUBLIC_URL=${DASHBOARD_PUBLIC_URL}
+COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
+BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
+LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
+
+# ── OAuth signing key rotation (Phase 31.1) ──
+OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
+
+# ── JWKS discovery (Phase 31.1) ──
+# Either set DASHBOARD_JWKS_URI / DASHBOARD_JWKS_URL (preferred) or
+# DASHBOARD_JWT_PUBLIC_KEY (PEM, "\n" allowed for single-line env form).
+DASHBOARD_JWKS_URI=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
+DASHBOARD_JWKS_URL=${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json
+# DASHBOARD_JWT_PUBLIC_KEY=
+
+# ── Optional: Ollama provider for the LLM service ──
+# OLLAMA_BASE_URL=http://localhost:11434
 ENVFILE
   chmod 600 "${ENV_FILE}"
   success ".env written at ${ENV_FILE}"
@@ -1536,6 +1614,40 @@ ENVFILE
 }
 
 # ══════════════════════════════════════════════
+#  WHAT'S NEW SINCE v2.12.0  (printed at end of every install)
+# ══════════════════════════════════════════════
+
+show_v3_whats_new() {
+  printf "\n"
+  printf "  %s%sWhat's new since v2.12.0%s\n" "${BOLD}" "${CYAN}" "${RESET}"
+  printf "  %s========================%s\n\n" "${DIM}" "${RESET}"
+
+  printf "  %sNew admin pages:%s\n" "${BOLD}" "${RESET}"
+  printf "    %s/admin/audit%s         Agent audit log viewer (filter + CSV export) — %saudit.view%s\n" \
+    "${CYAN}" "${RESET}" "${YELLOW}" "${RESET}"
+  printf "    %s/admin/oauth-keys%s    OAuth signing-key inventory + manual rotate — %sadmin.system%s\n\n" \
+    "${CYAN}" "${RESET}" "${YELLOW}" "${RESET}"
+
+  printf "  %sNew end-user surface:%s\n" "${BOLD}" "${RESET}"
+  printf "    %s/agent%s               Agent companion side panel (text + speech)\n" "${CYAN}" "${RESET}"
+  printf "    %s/agent/share/<id>%s    Read-only conversation share-link permalinks\n" "${CYAN}" "${RESET}"
+  printf "    %s/api/mcp%s             Streamable HTTP MCP endpoint (Claude Desktop, IDEs)\n" "${CYAN}" "${RESET}"
+  printf "    %s/oauth/.well-known/*%s Authorization-server / JWKS / protected-resource discovery\n\n" \
+    "${CYAN}" "${RESET}"
+
+  printf "  %sNew RBAC permission:%s\n" "${BOLD}" "${RESET}"
+  printf "    %smcp.use%s              Gate for calling MCP tools (back-filled onto every existing role by migration 054)\n\n" \
+    "${YELLOW}" "${RESET}"
+
+  printf "  %sFor production deployments, set these env vars on the dashboard unit:%s\n" "${BOLD}" "${RESET}"
+  printf "    DASHBOARD_PUBLIC_URL    External URL the dashboard advertises (OAuth issuer / MCP discovery)\n"
+  printf "    DASHBOARD_JWKS_URI      JWKS endpoint (defaults to \${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json)\n"
+  printf "    OAUTH_KEY_MAX_AGE_DAYS  Signing-key rotation budget (default 90)\n\n"
+
+  printf "  %sMore detail:%s docs/deployment/installer-changelog.md\n\n" "${BOLD}" "${RESET}"
+}
+
+# ══════════════════════════════════════════════
 #  ENTRY POINT
 # ══════════════════════════════════════════════
 
@@ -1547,7 +1659,9 @@ fi
 # Route to the correct installation path
 case "${DEPLOY_MODE}" in
   docker)
+    resolve_public_url_defaults
     run_docker_install
+    show_v3_whats_new
     ;;
   cli-only)
     # Developer tools — CLI scanner + optional compliance
@@ -1606,6 +1720,7 @@ case "${DEPLOY_MODE}" in
     ;;
   *)
     # Full bare metal installation
+    resolve_public_url_defaults  # Pre-step: fill in *_PUBLIC_URL defaults
     check_prerequisites          # Step 1
     clone_or_pull                # Step 2
     install_and_build            # Step 3
@@ -1616,5 +1731,6 @@ case "${DEPLOY_MODE}" in
     create_systemd_services      # Step 8
     start_services_and_post_install  # Step 9
     show_summary_bare_metal      # Step 10
+    show_v3_whats_new            # Post: print v3.x changes summary
     ;;
 esac
