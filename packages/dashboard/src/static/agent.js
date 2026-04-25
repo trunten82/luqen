@@ -1515,7 +1515,12 @@
     toast.textContent = '';
   }
 
-  function rememberPreviousOrgId(select) {
+  // Snapshot select.value BEFORE the user can change it, so the change
+  // handler can tell new-vs-previous. Without this, dataset.previousOrgId
+  // was being set in the change handler AFTER select.value already updated,
+  // which made previousOrgId === orgId and short-circuited the POST.
+  function initOrgSelectPreviousOrgId() {
+    var select = document.querySelector(ORG_SELECT_SELECTOR);
     if (!select) return;
     if (!select.dataset.previousOrgId) {
       select.dataset.previousOrgId = select.value;
@@ -1617,7 +1622,6 @@
     if (!e.target || !e.target.closest) return;
     var form = e.target.closest('form[data-action="agentOrgSwitch"]');
     if (!form) return;
-    rememberPreviousOrgId(form.querySelector(ORG_SELECT_SELECTOR));
     handleAgentOrgSwitch(form);
   });
 
@@ -2125,6 +2129,7 @@
     wireDisplayNameUpdates();
     ensureAriaLive();
     wireInputAutoResize();
+    initOrgSelectPreviousOrgId();
     // Share view (read-only): render markdown on assistant bodies that were
     // server-rendered as raw text. No SSE, no loadPanel.
     if (document.querySelector('.agent-share')) {
