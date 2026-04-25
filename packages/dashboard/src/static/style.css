@@ -4025,6 +4025,127 @@ details[open] > .mt-examples-toggle::before {
 .agent-msg--tool { background: var(--bg-tertiary); }
 .agent-msg--tool[data-pending="true"] { border-left: 3px solid var(--status-warning); }
 
+/* ---- Phase 37 Plan 02 — per-message action row + stopped chip + edit form ---- */
+/* Hover-revealed on desktop, always-visible on touch. Uses only existing
+   tokens (--space-*, --text-*, --bg-*, --border-color, --border-radius-sm,
+   --focus-outline, --transition-base, --font-size-xs). Token substitutions
+   from plan: --space-1→--space-xs, --space-2→--space-sm,
+   --bg-hover→--bg-tertiary, --radius-sm→--border-radius-sm,
+   --border-default→--border-color. Documented in 37-02-SUMMARY.md. */
+
+/* Establish positioning context for the desktop floating action row. */
+.agent-msg { position: relative; }
+
+/* Defensive: superseded rows should never reach the DOM (server filter
+   in Plan 01), but if one slips through, hide it. */
+.agent-msg--superseded { display: none; }
+
+/* Stopped marker — partial response is the final state of that turn,
+   so no italic styling per CONTEXT decision. */
+.agent-msg--stopped .agent-msg__body { font-style: normal; }
+
+.agent-msg__actions {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+  margin-top: var(--space-sm);
+}
+
+.agent-msg__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base);
+}
+.agent-msg__action:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.agent-msg__action:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
+}
+
+/* Stopped chip — visual reference is 36-04 .agent-drawer__tool-chip. */
+.agent-msg__stopped-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+.agent-msg__stopped-chip svg { flex-shrink: 0; }
+
+/* Inline edit form (Plan 04 toggles its visibility). */
+.agent-msg__edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+}
+.agent-msg__edit-textarea {
+  width: 100%;
+  min-height: calc(var(--space-sm) * 6);
+  font: inherit;
+  padding: var(--space-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  resize: vertical;
+}
+.agent-msg__edit-textarea:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
+}
+.agent-msg__edit-buttons {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+/* Desktop: action row floats inside the bubble, fades in on hover/focus. */
+@media (hover: hover) {
+  .agent-msg__actions {
+    position: absolute;
+    bottom: var(--space-xs);
+    right: var(--space-sm);
+    margin-top: 0;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+  }
+  .agent-msg:hover .agent-msg__actions,
+  .agent-msg:focus-within .agent-msg__actions,
+  .agent-msg__actions:focus-within { opacity: 1; }
+}
+
+/* Touch: action row sits below the bubble body, always visible. */
+@media (hover: none) {
+  .agent-msg__actions {
+    position: static;
+    opacity: 1;
+    margin-top: var(--space-sm);
+  }
+}
+
+/* Reduced-motion: no opacity transition. */
+@media (prefers-reduced-motion: reduce) {
+  .agent-msg__action,
+  .agent-msg__actions { transition: none; }
+}
+
+/* Mobile reflow — larger touch targets matches existing 480px-class
+   breakpoints elsewhere in the file. */
+@media (max-width: 480px) {
+  .agent-msg__action { min-width: 36px; min-height: 36px; width: 36px; height: 36px; }
+}
+
 @media (max-width: 899px) {
   .agent-drawer { width: 100vw; }
   body:has(.agent-drawer--open) .agent-launch { display: none; }
