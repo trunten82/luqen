@@ -837,12 +837,20 @@ describe('Phase 36 — multi-step tool use', () => {
 
     const audit = await ctx.storage.agentAudit.listForOrg(ctx.orgId, {}, { limit: 20 });
     const dispatchRows = audit.filter((a) => a.toolName !== '__loop__' && a.toolName !== '__compaction__');
-    // Reverse to chronological for order matching
-    const chrono = [...dispatchRows].reverse();
-    expect(chrono[0].outcome).toBe('timeout');
-    expect(chrono[0].outcomeDetail).toBe('timeout');
-    expect(chrono[1].outcome).toBe('error');
-    expect(chrono[1].outcomeDetail).toBe('internal');
+    // Order by argsJson for stability (created_at can collide on parallel writes).
+    // Identify the timeout (list_reports w/o extra) and internal (get_report) rows.
+    const timeoutRow = dispatchRows.find(
+      (r) => r.toolName === 'dashboard_list_reports' && !r.argsJson.includes('extra'),
+    );
+    const internalRow = dispatchRows.find((r) => r.toolName === 'dashboard_get_report');
+    const successRow = dispatchRows.find(
+      (r) => r.toolName === 'dashboard_list_reports' && r.argsJson.includes('extra'),
+    );
+    expect(timeoutRow?.outcome).toBe('timeout');
+    expect(timeoutRow?.outcomeDetail).toBe('timeout');
+    expect(internalRow?.outcome).toBe('error');
+    expect(internalRow?.outcomeDetail).toBe('internal');
+    expect(successRow?.outcome).toBe('success');
   });
 
   it('F: budget of 3 — 4th failure omits retry-permission language', async () => {
