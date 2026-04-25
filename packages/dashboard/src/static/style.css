@@ -3999,6 +3999,23 @@ details[open] > .mt-examples-toggle::before {
 .agent-msg__action--ok { color: var(--status-success); }
 .agent-msg__action--err { color: var(--status-error); }
 
+/* Share URL inline chip: rendered next to the share button after success. */
+.agent-msg__share-link {
+  display: inline-block;
+  margin-left: var(--space-xs);
+  padding: 2px var(--space-xs);
+  font-size: var(--font-size-xs, 12px);
+  color: var(--text-link, var(--status-info, #0066cc));
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-sm);
+  text-decoration: underline;
+  word-break: break-all;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
 .chat-btn--icon {
   min-width: 44px;
   min-height: 44px;
