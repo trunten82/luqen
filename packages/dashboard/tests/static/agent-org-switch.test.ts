@@ -21,6 +21,11 @@ import { JSDOM } from 'jsdom';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const AGENT_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent.js');
 const AGENT_JS_SOURCE = readFileSync(AGENT_JS_PATH, 'utf8');
+// Phase 39.1-02 — org switcher lives in agent-org.js. The test harness must
+// load it after agent.js so the delegated change handler + test export shim
+// are wired up in the JSDOM realm.
+const AGENT_ORG_JS_PATH = resolve(__dirname, '..', '..', 'src', 'static', 'agent-org.js');
+const AGENT_ORG_JS_SOURCE = readFileSync(AGENT_ORG_JS_PATH, 'utf8');
 
 interface AgentTestExports {
   handleAgentOrgSwitch(form: HTMLFormElement): void;
@@ -165,6 +170,15 @@ function setupHarness(opts: { admin: boolean; activeOrgId?: string; conversation
     AGENT_JS_SOURCE,
   );
   fn.call(win, win, doc, win.localStorage, win.fetch);
+
+  // Load agent-org.js in the same JSDOM realm so the org switcher (extracted
+  // in 39.1-02) wires its delegated change listener and augments
+  // window.__agentTestExports.
+  const fnOrg = new win.Function(
+    'window', 'document', 'localStorage', 'fetch',
+    AGENT_ORG_JS_SOURCE,
+  );
+  fnOrg.call(win, win, doc, win.localStorage, win.fetch);
 
   return {
     win,
