@@ -4558,3 +4558,48 @@ details[open] > .mt-examples-toggle::before {
   .audit-rationale__toggle,
   .audit-rationale__full { transition: none; }
 }
+
+/* ----------------------------------------------------------------------------
+ * Phase 37 Plan 05 Task 2 — Share view polish.
+ *
+ * The share view is a standalone read-only page (no drawer, no composer).
+ * The .agent-share BEM block constrains the thread to a comfortable reading
+ * width on desktop and pads down gracefully on mobile (375px). Markdown
+ * code blocks already get overflow-x: auto from the .agent-msg__body pre
+ * rules above; this block adds the page-level container chrome only.
+ * ------------------------------------------------------------------------- */
+.agent-share {
+  max-width: 720px;
+  margin-inline: auto;
+  padding: var(--space-xl) var(--space-md);
+  background: var(--bg-primary);
+  color: var(--text-primary, #111827);
+}
+.agent-share__head {
+  margin-bottom: var(--space-lg);
+}
+.agent-share__head h1 {
+  font-size: var(--font-size-xl);
+  margin: 0 0 var(--space-xs);
+  line-height: 1.25;
+}
+.agent-share__head .form-hint {
+  /* form-hint already routes through --text-secondary in the existing
+   * design system — this rule is a no-op refinement that documents the
+   * contrast contract: WCAG 2.2 AA against --bg-primary. */
+  color: var(--text-secondary, #4b5563);
+  margin: 0;
+}
+.agent-share__thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+@media (max-width: 480px) {
+  .agent-share {
+    padding: var(--space-md) var(--space-sm);
+  }
+  .agent-share__head {
+    margin-bottom: var(--space-md);
+  }
+}
