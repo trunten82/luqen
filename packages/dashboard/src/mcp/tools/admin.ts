@@ -165,26 +165,36 @@ export function registerAdminTools(
     'dashboard_list_users',
     {
       description:
-        "List dashboard users. Defaults to the caller's org members; pass orgScope=\"all\" for a system-wide list. Password hashes are never returned.",
+        "List dashboard users. Defaults to the caller's org members. Global admins (no caller org) MUST pass orgScope='all' — a system-wide list. The response always echoes the resolved scope ('caller-org:<orgId>' or 'all') so results cannot be mislabeled. Password hashes are never returned.",
       inputSchema: z.object({
         orgScope: z
           .enum(['caller-org', 'all'])
           .optional()
-          .describe('Defaults to caller-org'),
+          .describe(
+            "Defaults to caller-org. Global admins (no caller org context) MUST pass 'all'.",
+          ),
       }),
     },
     // orgId: ctx.orgId (org-scoped — caller-org scope hits listUsersForOrg(ctx.orgId); all scope still requires admin.users permission)
     async (args) => {
       const orgId = resolveOrgId();
       const scope = args.orgScope ?? 'caller-org';
+      // Global admins have empty orgId — caller-org would silently return [] which the
+      // model has historically misinterpreted. Force explicit 'all' selection instead.
+      if (scope === 'caller-org' && orgId === '') {
+        return errorEnvelope(
+          "No caller org context (global admin). Pass orgScope='all' for a system-wide list.",
+        );
+      }
       const rows =
         scope === 'all'
           ? await storage.users.listUsers()
           : await storage.users.listUsersForOrg(orgId);
+      const resolvedScope = scope === 'all' ? 'all' : `caller-org:${orgId}`;
       const safe = rows.map((u) =>
         stripPasswordHash(u as unknown as Record<string, unknown>),
       );
-      return okEnvelope({ data: safe, meta: { count: safe.length } });
+      return okEnvelope({ data: safe, meta: { count: safe.length, scope: resolvedScope } });
     },
   );
 
