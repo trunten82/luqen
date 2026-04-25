@@ -113,10 +113,31 @@
   }
 
   function announce(message) {
+    var msg = String(message == null ? '' : message);
     var el = ensureAriaLive();
-    if (!el) return;
-    el.textContent = '';
-    setTimeout(function () { el.textContent = String(message == null ? '' : message); }, 10);
+    if (el) {
+      el.textContent = '';
+      setTimeout(function () { el.textContent = msg; }, 10);
+    }
+    showToast(msg);
+  }
+
+  // Phase 37 — visible toast for action feedback. aria-live alone is silent for
+  // sighted users, so copy/share appear to do nothing. Toast renders inside the
+  // drawer, fades after ~2.5s. CSP-strict (no inline JS, BEM class only).
+  function showToast(message) {
+    if (!message) return;
+    var drawer = document.getElementById(DRAWER_ID) || document.body;
+    var existing = drawer.querySelector('.agent-drawer__toast');
+    if (existing) existing.parentNode.removeChild(existing);
+    var toast = document.createElement('div');
+    toast.className = 'agent-drawer__toast';
+    toast.setAttribute('role', 'status');
+    toast.textContent = message;
+    drawer.appendChild(toast);
+    setTimeout(function () {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 2500);
   }
 
   // i18n lookup for action strings: reuses the agent-tools-i18n JSON-script-block.
