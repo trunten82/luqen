@@ -22,6 +22,114 @@
   var SPEECH_BTN_ID = 'agent-speech';
   var activeStream = null;
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Phase 37 Plan 04 — per-message action primitives.
+  //
+  // markdownSourceById captures raw assistant markdown so the copy action
+  // can read it without round-tripping the server. The streaming handler
+  // populates the entry on the `done` frame; the rehydration path
+  // (loadPanel → replaceMessagesFromHtml) leaves the map untouched and
+  // copyAssistant falls back to GET /agent/conversations/:cid/messages/:mid
+  // when there's no entry.
+  //
+  // writeToClipboard prefers navigator.clipboard.writeText (secure context)
+  // and falls back to a hidden <textarea> + execCommand('copy').
+  //
+  // announce() routes status text to a single hidden #agent-aria-live
+  // region (role="status" aria-live="polite"). The clear-then-set pattern
+  // forces SR re-announcement when the same string is announced twice.
+  // ──────────────────────────────────────────────────────────────────────
+
+  var ARIA_LIVE_ID = 'agent-aria-live';
+  var markdownSourceById = Object.create(null);
+  var streamingMessageId = null; // current in-flight assistant message id, if known
+
+  function recordMarkdownSource(messageId, text) {
+    if (typeof messageId !== 'string' || messageId.length === 0) return;
+    markdownSourceById[messageId] = String(text == null ? '' : text);
+  }
+  function readMarkdownSource(messageId) {
+    if (typeof messageId !== 'string' || messageId.length === 0) return undefined;
+    return markdownSourceById[messageId];
+  }
+
+  function getMarkdownSource(messageId, conversationId) {
+    var cached = readMarkdownSource(messageId);
+    if (typeof cached === 'string') return Promise.resolve(cached);
+    if (!conversationId || conversationId.length === 0) return Promise.resolve('');
+    var url = '/agent/conversations/' + encodeURIComponent(conversationId)
+      + '/messages/' + encodeURIComponent(messageId);
+    return fetch(url, {
+      credentials: 'same-origin',
+      headers: { 'x-csrf-token': csrfToken(), 'accept': 'application/json' },
+    })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('msg_load_failed')); })
+      .then(function (payload) {
+        var content = payload && typeof payload.content === 'string' ? payload.content : '';
+        recordMarkdownSource(messageId, content);
+        return content;
+      });
+  }
+
+  function writeToClipboard(text) {
+    var s = String(text == null ? '' : text);
+    var primary = (function () {
+      try {
+        if (window.isSecureContext && window.navigator && window.navigator.clipboard
+            && typeof window.navigator.clipboard.writeText === 'function') {
+          return window.navigator.clipboard.writeText(s).then(function () { return true; }, function () { return false; });
+        }
+      } catch (_e) { /* fall through */ }
+      return Promise.resolve(false);
+    })();
+    return primary.then(function (ok) {
+      if (ok) return true;
+      // Fallback: hidden textarea + execCommand('copy')
+      var ta = document.createElement('textarea');
+      ta.value = s;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      try { ta.select(); } catch (_e) { /* ignore */ }
+      var ok2 = false;
+      try { ok2 = !!document.execCommand('copy'); } catch (_e) { ok2 = false; }
+      try { document.body.removeChild(ta); } catch (_e) { /* ignore */ }
+      return ok2;
+    });
+  }
+
+  function ensureAriaLive() {
+    var el = document.getElementById(ARIA_LIVE_ID);
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = ARIA_LIVE_ID;
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.className = 'sr-only';
+    var drawer = document.getElementById(DRAWER_ID) || document.body;
+    drawer.appendChild(el);
+    return el;
+  }
+
+  function announce(message) {
+    var el = ensureAriaLive();
+    if (!el) return;
+    el.textContent = '';
+    setTimeout(function () { el.textContent = String(message == null ? '' : message); }, 10);
+  }
+
+  // i18n lookup for action strings: reuses the agent-tools-i18n JSON-script-block.
+  // The block stores nested keys like "actions.copied". Falls back to the key
+  // string itself when the dictionary is absent (matches Phase 36-04 pattern).
+  function actionT(key) {
+    try {
+      var dict = readToolI18n();
+      if (dict && typeof dict[key] === 'string' && dict[key].length > 0) return dict[key];
+    } catch (_e) { /* ignore */ }
+    return key;
+  }
+
   function byId(id) { return document.getElementById(id); }
   function setStatus(t) { var el = byId(STATUS_ID); if (el) el.textContent = t; }
   function csrfToken() { var m = document.querySelector('meta[name="csrf-token"]'); return m ? m.getAttribute('content') : ''; }
@@ -712,10 +820,19 @@
           var body = last.querySelector('.agent-msg__body');
           if (body) {
             var rawText = body.textContent || '';
+            // Phase 37-04: capture raw markdown for the copy action BEFORE
+            // we rebuild the body with HTML nodes. The bubble may not yet
+            // carry data-message-id (the streaming path doesn't have it),
+            // so we also stash under a sentinel keyed by streamingMessageId
+            // when available.
+            var lastMid = last.getAttribute('data-message-id');
+            if (lastMid && lastMid.length > 0) recordMarkdownSource(lastMid, rawText);
+            else if (streamingMessageId) recordMarkdownSource(streamingMessageId, rawText);
             renderMarkdownInto(body, rawText);
           }
         }
       }
+      streamingMessageId = null;
       if (statusEl) statusEl.setAttribute('hidden', '');
       setStatus('Response complete');
     });
@@ -1363,7 +1480,250 @@
       }
       return;
     }
+
+    // ── Phase 37 Plan 04 — per-message action delegated handlers ────────
+    if (e.target.id === 'agent-stop' || e.target.closest('#agent-stop')) {
+      e.preventDefault();
+      handleStopClick();
+      return;
+    }
+    var retryAssistantEl = e.target.closest('[data-action="retryAssistant"]');
+    if (retryAssistantEl) {
+      e.preventDefault();
+      handleRetryAssistantClick(retryAssistantEl);
+      return;
+    }
+    var copyAssistantEl = e.target.closest('[data-action="copyAssistant"]');
+    if (copyAssistantEl) {
+      e.preventDefault();
+      handleCopyAssistantClick(copyAssistantEl);
+      return;
+    }
+    var shareAssistantEl = e.target.closest('[data-action="shareAssistant"]');
+    if (shareAssistantEl) {
+      e.preventDefault();
+      handleShareAssistantClick(shareAssistantEl);
+      return;
+    }
+    var editUserEl = e.target.closest('[data-action="editUserMessage"]');
+    if (editUserEl) {
+      e.preventDefault();
+      handleEditUserMessageClick(editUserEl);
+      return;
+    }
+    var cancelEditEl = e.target.closest('[data-action="cancelEditUserMessage"]');
+    if (cancelEditEl) {
+      e.preventDefault();
+      handleCancelEditUserMessageClick(cancelEditEl);
+      return;
+    }
   });
+
+  // Delegated submit listener for the inline edit form (Phase 37 Plan 04 Task 3).
+  document.addEventListener('submit', function (e) {
+    if (!e.target || !e.target.closest) return;
+    var form = e.target.closest('form[data-action="submitEditUserMessage"]');
+    if (!form) return;
+    e.preventDefault();
+    handleSubmitEditUserMessage(form);
+  });
+
+  // ── Phase 37 Plan 04 — handler implementations ────────────────────────
+
+  function handleStopClick() {
+    if (activeStream) {
+      try { activeStream.close(); } catch (_e) { /* ignore */ }
+      activeStream = null;
+    }
+    var statusEl = byId(STREAM_STATUS_ID);
+    if (statusEl) statusEl.setAttribute('hidden', '');
+    announce(actionT('actions.stopped'));
+  }
+
+  function removeMessageFromDom(messageId) {
+    if (!messageId) return;
+    var sel;
+    if (window.CSS && typeof window.CSS.escape === 'function') {
+      sel = '[data-message-id="' + window.CSS.escape(messageId) + '"]';
+    } else {
+      sel = '[data-message-id="' + String(messageId).replace(/"/g, '\\"') + '"]';
+    }
+    var els = document.querySelectorAll(sel);
+    for (var i = 0; i < els.length; i++) {
+      if (els[i].parentNode) els[i].parentNode.removeChild(els[i]);
+    }
+  }
+
+  function handleRetryAssistantClick(btn) {
+    var mid = btn.getAttribute('data-message-id');
+    var cid = getConversationId();
+    if (!mid || !cid) return;
+    btn.disabled = true;
+    var url = '/agent/conversations/' + encodeURIComponent(cid)
+      + '/messages/' + encodeURIComponent(mid) + '/retry';
+    fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'x-csrf-token': csrfToken(), 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('retry_failed')); })
+      .then(function () {
+        removeMessageFromDom(mid);
+        clearToolChips();
+        openStream(cid);
+      })
+      .catch(function () {
+        btn.disabled = false;
+        announce(actionT('actions.retryFailed'));
+      });
+  }
+
+  function handleCopyAssistantClick(btn) {
+    var mid = btn.getAttribute('data-message-id');
+    var cid = getConversationId();
+    if (!mid) return;
+    getMarkdownSource(mid, cid)
+      .then(function (text) { return writeToClipboard(text); })
+      .then(function (ok) {
+        announce(ok ? actionT('actions.copied') : actionT('actions.copyFailed'));
+      })
+      .catch(function () { announce(actionT('actions.copyFailed')); });
+  }
+
+  function handleShareAssistantClick(btn) {
+    var mid = btn.getAttribute('data-message-id');
+    var cid = getConversationId();
+    if (!mid || !cid) return;
+    btn.disabled = true;
+    var url = '/agent/conversations/' + encodeURIComponent(cid)
+      + '/messages/' + encodeURIComponent(mid) + '/share';
+    fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'x-csrf-token': csrfToken(), 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('share_failed')); })
+      .then(function (payload) {
+        var path = payload && typeof payload.url === 'string' ? payload.url : '';
+        var fullUrl = window.location.origin + path;
+        return writeToClipboard(fullUrl).then(function (ok) {
+          announce(ok ? actionT('actions.shareCreated') : actionT('actions.shareFailed'));
+        });
+      })
+      .catch(function () { announce(actionT('actions.shareFailed')); })
+      .then(function () { btn.disabled = false; });
+  }
+
+  // Edit/cancel/submit support — captures the original body text so cancel
+  // can restore it without a server round-trip.
+  var activeEdit = null; // { messageId, originalChildren: Node[] }
+
+  function handleEditUserMessageClick(btn) {
+    var mid = btn.getAttribute('data-message-id');
+    var cid = getConversationId();
+    if (!mid || !cid) return;
+    var bubble = btn.closest('.agent-msg');
+    if (!bubble) return;
+    var body = bubble.querySelector('.agent-msg__body');
+    if (!body) return;
+    // Snapshot the original body children so cancel can restore them.
+    var originalChildren = [];
+    for (var i = 0; i < body.childNodes.length; i++) {
+      originalChildren.push(body.childNodes[i].cloneNode(true));
+    }
+    activeEdit = { messageId: mid, originalChildren: originalChildren, bubble: bubble };
+    var url = '/agent/conversations/' + encodeURIComponent(cid)
+      + '/messages/' + encodeURIComponent(mid) + '/edit-form';
+    fetch(url, {
+      credentials: 'same-origin',
+      headers: { 'x-csrf-token': csrfToken(), 'accept': 'text/html' },
+    })
+      .then(function (r) { return r.ok ? r.text() : Promise.reject(new Error('edit_form_failed')); })
+      .then(function (html) {
+        // Replace body content with parsed form (DOMParser is CSP-safe;
+        // server-rendered partial is escaped via Handlebars {{content}}).
+        while (body.firstChild) body.removeChild(body.firstChild);
+        var parsed = new DOMParser().parseFromString(
+          '<!DOCTYPE html><html><body>' + html + '</body></html>', 'text/html');
+        var src = parsed.body;
+        while (src.firstChild) {
+          body.appendChild(document.importNode(src.firstChild, true));
+          src.removeChild(src.firstChild);
+        }
+        // Hide the action row while editing (avoid re-clicking the pencil).
+        var actions = bubble.querySelector('.agent-msg__actions');
+        if (actions) actions.setAttribute('hidden', '');
+        var ta = body.querySelector('textarea');
+        if (ta) {
+          try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+          catch (_e) { /* ignore */ }
+        }
+      })
+      .catch(function () {
+        // Restore body and emit announcement.
+        restoreEditBody();
+        announce(actionT('actions.editFailed'));
+      });
+  }
+
+  function restoreEditBody() {
+    if (!activeEdit) return;
+    var bubble = activeEdit.bubble;
+    if (!bubble) { activeEdit = null; return; }
+    var body = bubble.querySelector('.agent-msg__body');
+    if (body) {
+      while (body.firstChild) body.removeChild(body.firstChild);
+      for (var i = 0; i < activeEdit.originalChildren.length; i++) {
+        body.appendChild(activeEdit.originalChildren[i]);
+      }
+    }
+    var actions = bubble.querySelector('.agent-msg__actions');
+    if (actions) actions.removeAttribute('hidden');
+    activeEdit = null;
+  }
+
+  function handleCancelEditUserMessageClick(_btn) {
+    restoreEditBody();
+  }
+
+  function handleSubmitEditUserMessage(form) {
+    var mid = form.getAttribute('data-message-id');
+    var cid = getConversationId();
+    if (!mid || !cid) return;
+    var ta = form.querySelector('textarea[name="content"]');
+    var raw = ta ? String(ta.value || '') : '';
+    var content = raw.trim();
+    if (content.length === 0) {
+      announce(actionT('actions.editEmpty'));
+      return;
+    }
+    var saveBtn = form.querySelector('button[type="submit"]');
+    if (saveBtn) saveBtn.disabled = true;
+    var url = '/agent/conversations/' + encodeURIComponent(cid)
+      + '/messages/' + encodeURIComponent(mid) + '/edit-resend';
+    fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'x-csrf-token': csrfToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content }),
+    })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('edit_resend_failed')); })
+      .then(function () {
+        // Clear the active-edit snapshot — we don't restore on success.
+        activeEdit = null;
+        // Re-fetch the panel so the supersede + new user message render
+        // is canonical, then open the stream for the new assistant turn.
+        loadPanel();
+        clearToolChips();
+        openStream(cid);
+      })
+      .catch(function () {
+        if (saveBtn) saveBtn.disabled = false;
+        announce(actionT('actions.editFailed'));
+      });
+  }
 
   document.addEventListener('keydown', function (e) {
     // History-panel keyboard contract (UI-SPEC §Keyboard & Screen-Reader).
@@ -1458,9 +1818,23 @@
     applyInitialPanelState();
     wireDialogCloseTrap();
     wireDisplayNameUpdates();
+    ensureAriaLive();
     // Repopulate the messages region from the server window so the
     // conversation survives page reloads (not just drawer open/close state).
     if (getConversationId().length > 0) { loadPanel(); }
+  }
+
+  // Phase 37 Plan 04 — test-export shim (dead code in production).
+  // Tests opt in by setting window.__agentTestMode = true BEFORE loading
+  // agent.js. The shim exposes the helpers the JSDOM test harness needs.
+  if (typeof window !== 'undefined' && window.__agentTestMode === true) {
+    window.__agentTestExports = {
+      writeToClipboard: writeToClipboard,
+      announce: announce,
+      getMarkdownSource: getMarkdownSource,
+      recordMarkdownSource: recordMarkdownSource,
+      readMarkdownSource: readMarkdownSource,
+    };
   }
 
   function wireDisplayNameUpdates() {

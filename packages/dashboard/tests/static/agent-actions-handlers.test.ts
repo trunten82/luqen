@@ -147,7 +147,11 @@ function setupHarness(opts?: {
     appendParsed(msgs, opts.initialMessages);
   }
 
-  const fetchStub = vi.fn(async () => jsonResponse({}));
+  // Default fetch response is an empty HTML body so init's loadPanel call
+  // doesn't wipe the seeded fixture (replaceMessagesFromHtml only replaces
+  // when the response text length > 0). Tests then mockResolvedValueOnce
+  // to override per-test responses.
+  const fetchStub = vi.fn(async () => htmlResponse(''));
   // @ts-expect-error attach to window
   win.fetch = fetchStub;
 
@@ -423,6 +427,7 @@ describe('agent.js delegated action handlers — Task 2', () => {
 
   it('15. retryAssistant ignores click when no message-id present', async () => {
     const h = setupHarness();
+    await flush();
     const msgs = h.doc.getElementById('agent-messages')!;
     appendParsed(msgs, `<button data-action="retryAssistant" id="bad-btn">x</button>`);
     h.fetchStub.mockClear();
@@ -451,6 +456,7 @@ describe('agent.js edit-and-resend handlers — Task 3', () => {
 
   it('16. editUserMessage GETs edit-form partial and swaps body', async () => {
     const h = setupHarness({ initialMessages: makeUserBubble('u1', 'original text') });
+    await flush();
     h.fetchStub.mockResolvedValueOnce(htmlResponse(editFormHtml('u1', 'original text')));
     (h.doc.querySelector('[data-action="editUserMessage"]') as HTMLElement).click();
     await flush();
@@ -463,6 +469,7 @@ describe('agent.js edit-and-resend handlers — Task 3', () => {
 
   it('17. submit with valid content POSTs /edit-resend then re-opens stream', async () => {
     const h = setupHarness({ initialMessages: makeUserBubble('u1', 'orig') });
+    await flush();
     h.fetchStub.mockResolvedValueOnce(htmlResponse(editFormHtml('u1', 'orig')));
     (h.doc.querySelector('[data-action="editUserMessage"]') as HTMLElement).click();
     await flush();
@@ -484,6 +491,7 @@ describe('agent.js edit-and-resend handlers — Task 3', () => {
 
   it('18. submit with empty content does not POST and announces error', async () => {
     const h = setupHarness({ initialMessages: makeUserBubble('u1', 'orig') });
+    await flush();
     h.fetchStub.mockResolvedValueOnce(htmlResponse(editFormHtml('u1', 'orig')));
     (h.doc.querySelector('[data-action="editUserMessage"]') as HTMLElement).click();
     await flush();
@@ -501,6 +509,7 @@ describe('agent.js edit-and-resend handlers — Task 3', () => {
 
   it('19. submit failure (400) keeps form open and announces error', async () => {
     const h = setupHarness({ initialMessages: makeUserBubble('u1', 'orig') });
+    await flush();
     h.fetchStub.mockResolvedValueOnce(htmlResponse(editFormHtml('u1', 'orig')));
     (h.doc.querySelector('[data-action="editUserMessage"]') as HTMLElement).click();
     await flush();
@@ -518,6 +527,7 @@ describe('agent.js edit-and-resend handlers — Task 3', () => {
 
   it('20. cancel restores original body text', async () => {
     const h = setupHarness({ initialMessages: makeUserBubble('u1', 'pristine value') });
+    await flush();
     h.fetchStub.mockResolvedValueOnce(htmlResponse(editFormHtml('u1', 'pristine value')));
     (h.doc.querySelector('[data-action="editUserMessage"]') as HTMLElement).click();
     await flush();
@@ -531,6 +541,7 @@ describe('agent.js edit-and-resend handlers — Task 3', () => {
 
   it('21. edit-form GET failure announces error and leaves bubble intact', async () => {
     const h = setupHarness({ initialMessages: makeUserBubble('u1', 'orig text') });
+    await flush();
     h.fetchStub.mockResolvedValueOnce(jsonResponse({ error: 'not_most_recent_user' }, 400));
     (h.doc.querySelector('[data-action="editUserMessage"]') as HTMLElement).click();
     await flush();
