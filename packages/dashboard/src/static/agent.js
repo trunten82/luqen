@@ -1825,9 +1825,26 @@
     wireDialogCloseTrap();
     wireDisplayNameUpdates();
     ensureAriaLive();
+    wireInputAutoResize();
     // Repopulate the messages region from the server window so the
     // conversation survives page reloads (not just drawer open/close state).
     if (getConversationId().length > 0) { loadPanel(); }
+  }
+
+  // Phase 37 — auto-grow the composer textarea as the user types. Capped by the
+  // CSS max-height (160px) so the drawer's message area is preserved.
+  function wireInputAutoResize() {
+    var input = byId(INPUT_ID);
+    if (!input) return;
+    function resize() {
+      input.style.height = 'auto';
+      input.style.height = input.scrollHeight + 'px';
+    }
+    input.addEventListener('input', resize);
+    // Also resize after submit (when value clears) and on initial focus.
+    var form = byId(FORM_ID);
+    if (form) form.addEventListener('htmx:afterRequest', function () { resize(); });
+    resize();
   }
 
   // Phase 37 Plan 04 — test-export shim (dead code in production).
