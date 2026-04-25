@@ -1,4 +1,5 @@
 #Requires -Version 5.1
+# Last reviewed for v3.1.0 (Phase 40 / DOC-03) -- head migration 061
 <#
 .SYNOPSIS
     Luqen Installer for Windows (PowerShell)
@@ -79,6 +80,16 @@ function Invoke-Quiet {
 $script:DeployMode       = "bare-metal"
 $script:CompliancePort   = 4000
 $script:DashboardPort    = 5000
+$script:BrandingPort     = 4100
+$script:LlmPort          = 4200
+
+# v3.1.0 public URLs (Phase 30/31.1) -- override for production via env vars
+$script:DashboardPublicUrl  = $env:DASHBOARD_PUBLIC_URL
+$script:CompliancePublicUrl = $env:COMPLIANCE_PUBLIC_URL
+$script:BrandingPublicUrl   = $env:BRANDING_PUBLIC_URL
+$script:LlmPublicUrl        = $env:LLM_PUBLIC_URL
+$script:OAuthKeyMaxAgeDays  = if ($env:OAUTH_KEY_MAX_AGE_DAYS) { $env:OAUTH_KEY_MAX_AGE_DAYS } else { "90" }
+$script:OllamaBaseUrl       = $env:OLLAMA_BASE_URL
 $script:Pa11yUrlVal      = ""
 $script:Pa11yMode        = "builtin"   # builtin | external
 $script:Seed             = $true
@@ -140,6 +151,15 @@ if ($SmtpPass)         { $script:SmtpPassVal = $SmtpPass }
 if ($SmtpFrom)         { $script:SmtpFromVal = $SmtpFrom }
 if ($AdminUser)        { $script:AdminUsername = $AdminUser }
 if ($AdminPass)        { $script:AdminPassword = $AdminPass }
+
+# Resolve *_PUBLIC_URL defaults after port fields are finalised.
+function Resolve-PublicUrlDefaults {
+    if (-not $script:DashboardPublicUrl)  { $script:DashboardPublicUrl  = "http://localhost:$($script:DashboardPort)" }
+    if (-not $script:CompliancePublicUrl) { $script:CompliancePublicUrl = "http://localhost:$($script:CompliancePort)" }
+    if (-not $script:BrandingPublicUrl)   { $script:BrandingPublicUrl   = "http://localhost:$($script:BrandingPort)" }
+    if (-not $script:LlmPublicUrl)        { $script:LlmPublicUrl        = "http://localhost:$($script:LlmPort)" }
+}
+Resolve-PublicUrlDefaults
 
 # ──────────────────────────────────────────────
 # Validation helpers
@@ -677,59 +697,147 @@ function Write-Config {
 function New-WindowsServices {
     Write-Step 8 $script:TotalStepsBM "Creating Windows services"
 
+    Resolve-PublicUrlDefaults
+
     $nodePath = (Get-Command node).Source
     $nssmPath = Get-Command nssm -ErrorAction SilentlyContinue
+
+    # MCP runs embedded in the dashboard (Fastify plugin). DO NOT register a
+    # separate LuqenMcp service. Daemons: compliance, branding, llm, dashboard.
+
+    $complianceEnv = @(
+        "NODE_ENV=production",
+        "COMPLIANCE_PORT=$($script:CompliancePort)",
+        "COMPLIANCE_PUBLIC_URL=$($script:CompliancePublicUrl)",
+        "COMPLIANCE_LLM_URL=$($script:LlmPublicUrl)"
+    )
+    $brandingEnv = @(
+        "NODE_ENV=production",
+        "BRANDING_PORT=$($script:BrandingPort)",
+        "BRANDING_PUBLIC_URL=$($script:BrandingPublicUrl)"
+    )
+    $llmEnv = @(
+        "NODE_ENV=production",
+        "LLM_PORT=$($script:LlmPort)",
+        "LLM_PUBLIC_URL=$($script:LlmPublicUrl)"
+    )
+    if ($script:OllamaBaseUrl) { $llmEnv += "OLLAMA_BASE_URL=$($script:OllamaBaseUrl)" }
+
+    $dashEnv = @(
+        "NODE_ENV=production",
+        "DASHBOARD_SESSION_SECRET=$($script:SessionSecret)",
+        "DASHBOARD_PUBLIC_URL=$($script:DashboardPublicUrl)",
+        "DASHBOARD_JWKS_URI=$($script:DashboardPublicUrl)/oauth/.well-known/jwks.json",
+        "DASHBOARD_JWKS_URL=$($script:DashboardPublicUrl)/oauth/.well-known/jwks.json",
+        "OAUTH_KEY_MAX_AGE_DAYS=$($script:OAuthKeyMaxAgeDays)",
+        "DASHBOARD_COMPLIANCE_URL=$($script:CompliancePublicUrl)",
+        "DASHBOARD_COMPLIANCE_CLIENT_ID=$($script:ClientId)",
+        "DASHBOARD_COMPLIANCE_CLIENT_SECRET=$($script:ClientSecret)",
+        "COMPLIANCE_PUBLIC_URL=$($script:CompliancePublicUrl)",
+        "BRANDING_PUBLIC_URL=$($script:BrandingPublicUrl)",
+        "LLM_PUBLIC_URL=$($script:LlmPublicUrl)"
+    )
+    if ($script:Pa11yMode -eq "external" -and $script:Pa11yUrlVal) {
+        $dashEnv += "DASHBOARD_WEBSERVICE_URL=$($script:Pa11yUrlVal)"
+    }
 
     if ($nssmPath) {
         Write-Info "Using NSSM to create services..."
 
+        # Compliance
         & nssm install "LuqenCompliance" "$nodePath" "$($script:InstallDirVal)\packages\compliance\dist\cli.js serve --port $($script:CompliancePort)" 2>$null | Out-Null
         & nssm set "LuqenCompliance" AppDirectory (Join-Path $script:InstallDirVal "packages\compliance") 2>$null | Out-Null
         & nssm set "LuqenCompliance" Description "Luqen Compliance Service" 2>$null | Out-Null
         & nssm set "LuqenCompliance" Start SERVICE_AUTO_START 2>$null | Out-Null
-        & nssm set "LuqenCompliance" AppEnvironmentExtra "NODE_ENV=production" "COMPLIANCE_PORT=$($script:CompliancePort)" 2>$null | Out-Null
+        & nssm set "LuqenCompliance" AppEnvironmentExtra $complianceEnv 2>$null | Out-Null
 
+        # Branding
+        & nssm install "LuqenBranding" "$nodePath" "$($script:InstallDirVal)\packages\branding\dist\cli.js serve --port $($script:BrandingPort)" 2>$null | Out-Null
+        & nssm set "LuqenBranding" AppDirectory (Join-Path $script:InstallDirVal "packages\branding") 2>$null | Out-Null
+        & nssm set "LuqenBranding" Description "Luqen Branding Service" 2>$null | Out-Null
+        & nssm set "LuqenBranding" Start SERVICE_AUTO_START 2>$null | Out-Null
+        & nssm set "LuqenBranding" AppEnvironmentExtra $brandingEnv 2>$null | Out-Null
+
+        # LLM
+        & nssm install "LuqenLlm" "$nodePath" "$($script:InstallDirVal)\packages\llm\dist\cli.js serve --port $($script:LlmPort)" 2>$null | Out-Null
+        & nssm set "LuqenLlm" AppDirectory (Join-Path $script:InstallDirVal "packages\llm") 2>$null | Out-Null
+        & nssm set "LuqenLlm" Description "Luqen LLM Service" 2>$null | Out-Null
+        & nssm set "LuqenLlm" Start SERVICE_AUTO_START 2>$null | Out-Null
+        & nssm set "LuqenLlm" AppEnvironmentExtra $llmEnv 2>$null | Out-Null
+
+        # Dashboard
         $dashArgs = "$($script:InstallDirVal)\packages\dashboard\dist\cli.js serve --config $($script:ConfigFile)"
         & nssm install "LuqenDashboard" "$nodePath" $dashArgs 2>$null | Out-Null
         & nssm set "LuqenDashboard" AppDirectory $script:InstallDirVal 2>$null | Out-Null
         & nssm set "LuqenDashboard" Description "Luqen Dashboard" 2>$null | Out-Null
         & nssm set "LuqenDashboard" Start SERVICE_AUTO_START 2>$null | Out-Null
-        & nssm set "LuqenDashboard" DependOnService "LuqenCompliance" 2>$null | Out-Null
+        & nssm set "LuqenDashboard" DependOnService "LuqenCompliance" "LuqenBranding" "LuqenLlm" 2>$null | Out-Null
+        & nssm set "LuqenDashboard" AppEnvironmentExtra $dashEnv 2>$null | Out-Null
 
-        $envExtra = @(
-            "NODE_ENV=production",
-            "DASHBOARD_SESSION_SECRET=$($script:SessionSecret)",
-            "DASHBOARD_COMPLIANCE_URL=http://localhost:$($script:CompliancePort)",
-            "DASHBOARD_COMPLIANCE_CLIENT_ID=$($script:ClientId)",
-            "DASHBOARD_COMPLIANCE_CLIENT_SECRET=$($script:ClientSecret)"
-        )
-        if ($script:Pa11yMode -eq "external" -and $script:Pa11yUrlVal) {
-            $envExtra += "DASHBOARD_WEBSERVICE_URL=$($script:Pa11yUrlVal)"
-        }
-        & nssm set "LuqenDashboard" AppEnvironmentExtra $envExtra 2>$null | Out-Null
-
-        Write-Ok "NSSM services created (LuqenCompliance, LuqenDashboard)"
+        Write-Ok "NSSM services created (LuqenCompliance, LuqenBranding, LuqenLlm, LuqenDashboard)"
     } else {
         Write-Info "NSSM not found -- using Task Scheduler..."
 
+        $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+        $taskTrigger = New-ScheduledTaskTrigger -AtStartup
+
+        # Compliance
         $compArgs = "$($script:InstallDirVal)\packages\compliance\dist\cli.js serve --port $($script:CompliancePort)"
         $compAction = New-ScheduledTaskAction -Execute $nodePath -Argument $compArgs `
             -WorkingDirectory (Join-Path $script:InstallDirVal "packages\compliance")
-        $compTrigger = New-ScheduledTaskTrigger -AtStartup
-        $compSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-        Register-ScheduledTask -TaskName "LuqenCompliance" -Action $compAction -Trigger $compTrigger `
-            -Settings $compSettings -Description "Luqen Compliance Service" -User "SYSTEM" -Force 2>$null | Out-Null
+        Register-ScheduledTask -TaskName "LuqenCompliance" -Action $compAction -Trigger $taskTrigger `
+            -Settings $taskSettings -Description "Luqen Compliance Service" -User "SYSTEM" -Force 2>$null | Out-Null
 
+        # Branding
+        $brandArgs = "$($script:InstallDirVal)\packages\branding\dist\cli.js serve --port $($script:BrandingPort)"
+        $brandAction = New-ScheduledTaskAction -Execute $nodePath -Argument $brandArgs `
+            -WorkingDirectory (Join-Path $script:InstallDirVal "packages\branding")
+        Register-ScheduledTask -TaskName "LuqenBranding" -Action $brandAction -Trigger $taskTrigger `
+            -Settings $taskSettings -Description "Luqen Branding Service" -User "SYSTEM" -Force 2>$null | Out-Null
+
+        # LLM
+        $llmArgs = "$($script:InstallDirVal)\packages\llm\dist\cli.js serve --port $($script:LlmPort)"
+        $llmAction = New-ScheduledTaskAction -Execute $nodePath -Argument $llmArgs `
+            -WorkingDirectory (Join-Path $script:InstallDirVal "packages\llm")
+        Register-ScheduledTask -TaskName "LuqenLlm" -Action $llmAction -Trigger $taskTrigger `
+            -Settings $taskSettings -Description "Luqen LLM Service" -User "SYSTEM" -Force 2>$null | Out-Null
+
+        # Dashboard
         $dashArgs = "$($script:InstallDirVal)\packages\dashboard\dist\cli.js serve --config $($script:ConfigFile)"
         $dashAction = New-ScheduledTaskAction -Execute $nodePath -Argument $dashArgs `
             -WorkingDirectory $script:InstallDirVal
-        $dashTrigger = New-ScheduledTaskTrigger -AtStartup
-        $dashSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-        Register-ScheduledTask -TaskName "LuqenDashboard" -Action $dashAction -Trigger $dashTrigger `
-            -Settings $dashSettings -Description "Luqen Dashboard" -User "SYSTEM" -Force 2>$null | Out-Null
+        Register-ScheduledTask -TaskName "LuqenDashboard" -Action $dashAction -Trigger $taskTrigger `
+            -Settings $taskSettings -Description "Luqen Dashboard" -User "SYSTEM" -Force 2>$null | Out-Null
 
-        Write-Ok "Scheduled tasks created (LuqenCompliance, LuqenDashboard)"
+        Write-Warn "Task Scheduler tasks do not carry env vars set above."
+        Write-Warn "For env-aware service hosting on Windows, install NSSM and re-run."
+        Write-Ok "Scheduled tasks created (LuqenCompliance, LuqenBranding, LuqenLlm, LuqenDashboard)"
     }
+}
+
+function Show-V3WhatsNew {
+    Write-Host ""
+    Write-Host "  What's new since v2.12.0" -ForegroundColor Cyan
+    Write-Host "  ========================" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "  New admin pages:"
+    Write-Host "    /admin/audit         Agent audit log viewer (filter + CSV export) -- audit.view"
+    Write-Host "    /admin/oauth-keys    OAuth signing-key inventory + manual rotate -- admin.system"
+    Write-Host ""
+    Write-Host "  New end-user surface:"
+    Write-Host "    /agent               Agent companion side panel (text + speech)"
+    Write-Host "    /agent/share/<id>    Read-only conversation share-link permalinks"
+    Write-Host "    /api/mcp             Streamable HTTP MCP endpoint"
+    Write-Host "    /oauth/.well-known/* Authorization-server / JWKS / protected-resource discovery"
+    Write-Host ""
+    Write-Host "  New RBAC permission:"
+    Write-Host "    mcp.use              Gate for calling MCP tools (back-filled by migration 054)"
+    Write-Host ""
+    Write-Host "  For production set DASHBOARD_PUBLIC_URL / DASHBOARD_JWKS_URI before re-running"
+    Write-Host "  this installer; the dashboard service will pick the new values on next start."
+    Write-Host ""
+    Write-Host "  More detail: docs/deployment/installer-changelog.md"
+    Write-Host ""
 }
 
 # ──────────────────────────────────────────────
@@ -1026,10 +1134,28 @@ function Invoke-DockerInstall {
     $envContent = @"
 # Luqen Docker Compose configuration
 # Generated by install.ps1 on $(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+# Last reviewed for v3.1.0 (Phase 40 / DOC-03) -- head migration 061
 COMPLIANCE_PORT=$($script:CompliancePort)
 DASHBOARD_PORT=$($script:DashboardPort)
 DASHBOARD_SESSION_SECRET=$($script:SessionSecret)
 LUQEN_WEBSERVICE_URL=
+
+# Public URLs (Phase 30/31.1) -- override for production
+DASHBOARD_PUBLIC_URL=$($script:DashboardPublicUrl)
+COMPLIANCE_PUBLIC_URL=$($script:CompliancePublicUrl)
+BRANDING_PUBLIC_URL=$($script:BrandingPublicUrl)
+LLM_PUBLIC_URL=$($script:LlmPublicUrl)
+
+# OAuth signing-key rotation (Phase 31.1)
+OAUTH_KEY_MAX_AGE_DAYS=$($script:OAuthKeyMaxAgeDays)
+
+# JWKS discovery (Phase 31.1) -- prefer JWKS_URI over inline JWT_PUBLIC_KEY
+DASHBOARD_JWKS_URI=$($script:DashboardPublicUrl)/oauth/.well-known/jwks.json
+DASHBOARD_JWKS_URL=$($script:DashboardPublicUrl)/oauth/.well-known/jwks.json
+# DASHBOARD_JWT_PUBLIC_KEY=
+
+# Optional: Ollama provider for the LLM service
+# OLLAMA_BASE_URL=http://localhost:11434
 "@
     Set-Content -Path $envFile -Value $envContent -Encoding UTF8
     Write-Ok ".env written at $envFile"
@@ -1124,8 +1250,11 @@ if ($script:Interactive -and -not $NonInteractive -and [Environment]::UserIntera
 }
 
 # Route to the correct installation path
+Resolve-PublicUrlDefaults
+
 if ($script:DeployMode -eq "docker") {
     Invoke-DockerInstall
+    Show-V3WhatsNew
 } else {
     Test-Prerequisites         # Step 1
     Invoke-CloneOrPull         # Step 2
@@ -1137,4 +1266,5 @@ if ($script:DeployMode -eq "docker") {
     New-WindowsServices        # Step 8
     Start-LuqenServices       # Step 9
     Show-SummaryBareMetal      # Step 10
+    Show-V3WhatsNew            # Post: print v3.x changes summary
 }
