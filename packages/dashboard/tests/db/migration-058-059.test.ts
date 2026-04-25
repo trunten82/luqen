@@ -111,7 +111,13 @@ describe('migration 059 — agent-share-links', () => {
     expect(i059).toBe(i058 + 1);
   });
 
-  it('creates agent_share_links table with the expected columns', () => {
+  it('creates agent_share_links table with the expected post-migration-060 columns', () => {
+    // MigrationRunner.run(DASHBOARD_MIGRATIONS) runs ALL registered migrations,
+    // not just 059. Migration 060 (agent-share-links-expiry) appends the
+    // `expires_at` column. The assertion below therefore reflects the
+    // POST-MIGRATION-060 column set, not migration-059's standalone state.
+    // Migration-060 also adds idx_agent_share_links_expires (verified in the
+    // migration-060 dedicated test) — this assertion focuses on column shape.
     new MigrationRunner(db).run(DASHBOARD_MIGRATIONS);
     const cols = db
       .prepare("PRAGMA table_info('agent_share_links')")
