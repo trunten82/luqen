@@ -172,7 +172,7 @@ Plans:
 - [x] 41-02-PLAN.md — Branding service schemas (~22 inline routes, OAPI-02)
 - [x] 41-03-PLAN.md — LLM service schemas (11 route files incl. capability-exec, OAPI-03)
 - [x] 41-04-PLAN.md — Dashboard non-MCP schemas + Zod-to-TypeBox migration (50 files, OAPI-04)
-- [ ] 41-05-PLAN.md — Dashboard MCP tool schemas via zod-to-json-schema bridge (Wave 2, OAPI-05)
+- [x] 41-05-PLAN.md — Dashboard MCP tool schemas via zod-to-json-schema bridge (Wave 2, OAPI-05)
 
 #### Phase 42: Installer Wizard Redesign
 **Goal**: All 3 installers (`install.sh`, `install.command`, `install.ps1`) match the actual v3.1.0 codebase: 4 deployment profiles (Scanner CLI / API services / Self-hosted dashboard / Docker Compose), per-component install via `INSTALL_COMPONENTS`, and first-class registration of the `@luqen/monitor` agent (currently never installed).
