@@ -17,8 +17,50 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import rateLimit from '@fastify/rate-limit';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 import type { StorageAdapter } from '../../db/adapter.js';
+
+// RFC 7591 §2 client_metadata request body. Field types stay loose
+// (e.g. `redirect_uris` typed as string[] though the handler validates each
+// entry manually) — additionalProperties:true allows extension members
+// without breaking AJV.
+const ClientRegistrationRequestSchema = Type.Object(
+  {
+    client_name: Type.Optional(Type.String()),
+    redirect_uris: Type.Optional(Type.Array(Type.String())),
+    grant_types: Type.Optional(Type.Array(Type.String())),
+    response_types: Type.Optional(Type.Array(Type.String())),
+    token_endpoint_auth_method: Type.Optional(Type.String()),
+    scope: Type.Optional(Type.String()),
+    contacts: Type.Optional(Type.Array(Type.String())),
+    logo_uri: Type.Optional(Type.String()),
+    client_uri: Type.Optional(Type.String()),
+    policy_uri: Type.Optional(Type.String()),
+    tos_uri: Type.Optional(Type.String()),
+    software_id: Type.Optional(Type.String()),
+    software_version: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+// RFC 7591 §3.2.1 client_information_response. Matches reply.send(...) shape
+// in the handler below.
+const ClientRegistrationResponseSchema = Type.Object(
+  {
+    client_id: Type.String(),
+    client_secret: Type.Optional(Type.String()),
+    client_id_issued_at: Type.Optional(Type.Number()),
+    client_secret_expires_at: Type.Optional(Type.Number()),
+    redirect_uris: Type.Array(Type.String()),
+    grant_types: Type.Optional(Type.Array(Type.String())),
+    token_endpoint_auth_method: Type.Optional(Type.String()),
+    client_name: Type.Optional(Type.String()),
+    scope: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
 
 const SUPPORTED_GRANTS = new Set(['authorization_code', 'refresh_token']);
 const SUPPORTED_AUTH_METHODS = new Set(['none', 'client_secret_basic']);
@@ -79,7 +121,18 @@ export async function registerRegisterRoutes(
       errorResponseBuilder: () => ({ error: 'too_many_requests', statusCode: 429 }),
     });
 
-    instance.post('/oauth/register', async (request: FastifyRequest, reply: FastifyReply) => {
+    instance.post('/oauth/register', {
+      schema: {
+        tags: ['oauth', 'dcr'],
+        body: ClientRegistrationRequestSchema,
+        response: {
+          201: ClientRegistrationResponseSchema,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          429: ErrorEnvelope,
+        },
+      },
+    }, async (request: FastifyRequest, reply: FastifyReply) => {
       const body = (request.body ?? {}) as RegisterBody;
 
       // client_name required (RFC 7591 §2 — client_metadata).
