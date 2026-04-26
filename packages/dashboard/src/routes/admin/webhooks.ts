@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import {
   listWebhooks,
   createWebhook,
@@ -7,6 +8,34 @@ import {
 } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const WebhookCreateBody = Type.Object(
+  {
+    url: Type.Optional(Type.String()),
+    events: Type.Optional(Type.Union([Type.String(), Type.Array(Type.String())])),
+    secret: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const WebhookIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 export async function webhookRoutes(
   server: FastifyInstance,
@@ -15,7 +44,10 @@ export async function webhookRoutes(
   // GET /admin/webhooks — list webhooks
   server.get(
     '/admin/webhooks',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       let webhooks: Awaited<ReturnType<typeof listWebhooks>> = [];
       let error: string | undefined;
@@ -45,7 +77,10 @@ export async function webhookRoutes(
   // GET /admin/webhooks/new — modal form fragment
   server.get(
     '/admin/webhooks/new',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: HtmlPartialResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/webhook-form.hbs', {
         isNew: true,
@@ -58,7 +93,10 @@ export async function webhookRoutes(
   // POST /admin/webhooks — add webhook
   server.post(
     '/admin/webhooks',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { body: WebhookCreateBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         url?: string;
@@ -117,7 +155,10 @@ export async function webhookRoutes(
   // POST /admin/webhooks/:id/test — test delivery
   server.post(
     '/admin/webhooks/:id/test',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: WebhookIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -134,7 +175,10 @@ export async function webhookRoutes(
   // DELETE /admin/webhooks/:id — delete webhook
   server.delete(
     '/admin/webhooks/:id',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: WebhookIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 

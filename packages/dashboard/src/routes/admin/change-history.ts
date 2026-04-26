@@ -1,7 +1,30 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { listUpdateProposals } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const ChangeHistoryQuerySchema = Type.Object(
+  {
+    from: Type.Optional(Type.String()),
+    to: Type.Optional(Type.String()),
+    action: Type.Optional(Type.String()),
+    search: Type.Optional(Type.String()),
+    page: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const CsvExportResponse = {
+  response: {
+    200: Type.String(),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 interface ChangeHistoryQuery {
   from?: string;
@@ -27,7 +50,10 @@ export async function changeHistoryRoutes(
 ): Promise<void> {
   server.get(
     '/admin/change-history',
-    { preHandler: requirePermission('compliance.view', 'audit.view') },
+    {
+      preHandler: requirePermission('compliance.view', 'audit.view'),
+      schema: { ...HtmlPageSchema, querystring: ChangeHistoryQuerySchema },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as ChangeHistoryQuery;
       let error: string | undefined;
@@ -69,7 +95,10 @@ export async function changeHistoryRoutes(
 
   server.get(
     '/admin/change-history/export',
-    { preHandler: requirePermission('compliance.view', 'audit.view') },
+    {
+      preHandler: requirePermission('compliance.view', 'audit.view'),
+      schema: { querystring: ChangeHistoryQuerySchema, ...CsvExportResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as ChangeHistoryQuery;
       try {
