@@ -21,6 +21,7 @@
 
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export interface RegisteredToolSnapshot {
@@ -53,18 +54,60 @@ const FALLBACK_OBJECT_SCHEMA: Record<string, unknown> = {
   additionalProperties: true,
 };
 
+/**
+ * Strip JSON-Schema-only top-level keys (`$schema`) and force tolerant
+ * `additionalProperties: true` to honour Phase 41 D-05. Mutates a copy
+ * (the caller hands in the conversion result, never a Zod-internal object).
+ */
+function normaliseJsonSchema(json: Record<string, unknown>): Record<string, unknown> {
+  const { $schema: _drop, ...rest } = json;
+  void _drop;
+  // D-05: tolerant by default. zod's emitter sets additionalProperties=false on
+  // objects; the OpenAPI surface elsewhere in this codebase intentionally
+  // accepts extra fields silently (existing internal callers send superset
+  // payloads). Override unconditionally for top-level objects.
+  if (rest['type'] === 'object') {
+    rest['additionalProperties'] = true;
+  }
+  return rest;
+}
+
+/**
+ * Convert a Zod schema to a JSON Schema, preferring zod v4's native
+ * `z.toJSONSchema()` (the dashboard runs on zod ^4.3.6 — see
+ * packages/dashboard/package.json). Falls back to the `zod-to-json-schema`
+ * library for any v3 schema that may slip through (the MCP SDK supports
+ * both v3 and v4 — see node_modules/.../server/zod-compat.js — and the
+ * v3 emitter's output for v4 schemas is `{}`, so we must dispatch by
+ * version detection).
+ */
 function convertZod(schema: unknown): Record<string, unknown> | undefined {
   if (schema === undefined || schema === null) return undefined;
+
+  // zod v4 schemas carry a `_zod` internal property; v3 carries `_def`.
+  const isV4 =
+    typeof schema === 'object' &&
+    (schema as { _zod?: unknown })._zod !== undefined;
+
   try {
-    // `target: 'openApi3'` produces output compatible with @fastify/swagger's
-    // OpenAPI 3.1 surface; `$refStrategy: 'none'` inlines all sub-schemas so
-    // each operation is self-contained in the generated spec.
+    if (isV4) {
+      // Zod v4 native emitter — produces JSON Schema 2020-12 by default.
+      const json = (z as unknown as { toJSONSchema: (s: unknown) => unknown }).toJSONSchema(
+        schema,
+      );
+      if (json !== null && typeof json === 'object') {
+        return normaliseJsonSchema(json as Record<string, unknown>);
+      }
+      return undefined;
+    }
+    // v3 — `target: 'openApi3'` is OpenAPI 3.0 friendly; `$refStrategy: 'none'`
+    // inlines sub-schemas so each operation is self-contained.
     const json = zodToJsonSchema(schema as never, {
       target: 'openApi3',
       $refStrategy: 'none',
     });
     if (json !== null && typeof json === 'object') {
-      return json as Record<string, unknown>;
+      return normaliseJsonSchema(json as Record<string, unknown>);
     }
     return undefined;
   } catch {

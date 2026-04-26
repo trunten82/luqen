@@ -23,9 +23,1420 @@
   "paths": {
     "/api/v1/mcp": {
       "post": {
+        "summary": "MCP Streamable HTTP JSON-RPC endpoint",
+        "tags": [
+          "mcp"
+        ],
+        "description": "Single entry point for all MCP JSON-RPC traffic. Per-tool operations exposed at /api/v1/mcp/tools/{toolName} are virtual spec stubs — call this endpoint with a JSON-RPC body specifying method (e.g. \"tools/call\") and params.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ],
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "enum": [
+                      "2.0"
+                    ]
+                  },
+                  "method": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  "params": {}
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_create_org": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_create_org",
+        "summary": "dashboard_create_org",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Create a new organization. Requires admin.system permission.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Display name"
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "URL-safe slug (unique)"
+                  }
+                },
+                "required": [
+                  "name",
+                  "slug"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_create_service_connection": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_create_service_connection",
+        "summary": "dashboard_create_service_connection",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Create or upsert a service connection. Supply clientSecret in the call; the response returns a redacted copy (xxxx...last4) — secrets are never echoed back. Use dashboard_test_service_connection afterwards to verify connectivity.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serviceId": {
+                    "type": "string",
+                    "enum": [
+                      "compliance",
+                      "branding",
+                      "llm"
+                    ],
+                    "description": "Target service"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Base URL (e.g. http://host:port)"
+                  },
+                  "clientId": {
+                    "type": "string",
+                    "description": "OAuth2 client ID"
+                  },
+                  "clientSecret": {
+                    "type": "string",
+                    "description": "OAuth2 client secret — encrypted at rest, never returned on reads"
+                  }
+                },
+                "required": [
+                  "serviceId",
+                  "url",
+                  "clientId",
+                  "clientSecret"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_create_user": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_create_user",
+        "summary": "dashboard_create_user",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Create a dashboard user. Password is write-only; response never echoes it.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Username — unique"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "description": "Initial password — at least 8 characters"
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "Role (e.g. admin, member)"
+                  }
+                },
+                "required": [
+                  "username",
+                  "password",
+                  "role"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_get_brand_score": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_get_brand_score",
+        "summary": "dashboard_get_brand_score",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Get the most recent brand score for a scan or site. Provide exactly one of scanId or siteUrl. Secrets are never returned.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scanId": {
+                    "description": "Scan ID (mutually exclusive with siteUrl)",
+                    "type": "string"
+                  },
+                  "siteUrl": {
+                    "description": "Site URL (mutually exclusive with scanId)",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_get_org": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_get_org",
+        "summary": "dashboard_get_org",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Get an organization by ID. Callers with admin.system may target any org; callers with only admin.org may target only their own org (D-07 dual-permission).\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetOrgId": {
+                    "type": "string",
+                    "description": "The org ID to inspect — NOT the caller's own org (that comes from JWT)"
+                  }
+                },
+                "required": [
+                  "targetOrgId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_get_report": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_get_report",
+        "summary": "dashboard_get_report",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Get a scan report by scanId. Returns {status} plus the report when status==\"completed\". LLMs should call this repeatedly (polling) to track async scans started by dashboard_scan_site.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scanId": {
+                    "type": "string",
+                    "description": "Scan ID"
+                  }
+                },
+                "required": [
+                  "scanId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_get_service_connection": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_get_service_connection",
+        "summary": "dashboard_get_service_connection",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Get a single service connection. Secret is never returned — only hasSecret + secretPreview.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serviceId": {
+                    "type": "string",
+                    "enum": [
+                      "compliance",
+                      "branding",
+                      "llm"
+                    ],
+                    "description": "Target service"
+                  }
+                },
+                "required": [
+                  "serviceId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_get_user": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_get_user",
+        "summary": "dashboard_get_user",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Get a dashboard user by ID. Password hash is never returned.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "User ID"
+                  }
+                },
+                "required": [
+                  "userId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_list_brand_scores": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_brand_scores",
+        "summary": "dashboard_list_brand_scores",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List the most recent brand score for every site assigned in the current org. Use before dashboard_get_brand_score when the user asks \"show me our brand scores\".\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "description": "Max entries (default 50)",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_list_orgs": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_orgs",
+        "summary": "dashboard_list_orgs",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List organizations. Callers with admin.system see all orgs; callers with only admin.org see only their own org (D-07 dual-permission).\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_list_reports": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_reports",
+        "summary": "dashboard_list_reports",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List recent scan reports for the current org, ordered newest first. Use when the user asks \"what did we scan recently\" or before calling dashboard_get_report.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "description": "Filter by scan status",
+                    "type": "string",
+                    "enum": [
+                      "queued",
+                      "running",
+                      "completed",
+                      "failed"
+                    ]
+                  },
+                  "limit": {
+                    "description": "Page size (default 50)",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200
+                  },
+                  "offset": {
+                    "description": "Pagination offset",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_list_service_connections": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_service_connections",
+        "summary": "dashboard_list_service_connections",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List all outbound service connections (compliance, branding, llm). Secrets are NEVER returned — responses include hasSecret + secretPreview (xxxx...last4 or null), never the encrypted blob and never the plaintext.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_list_users": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_users",
+        "summary": "dashboard_list_users",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List dashboard users. The top-level `role` field is the user's GLOBAL/system role (e.g. admin, user, viewer). Each user also carries `orgs: [{id, name, orgRole}, ...]` — `orgRole` is the user's role WITHIN that specific org (typically 'admin' for org owners) and is the authoritative answer for 'what role does X have in org Y'. Empty orgs[] means no org membership (common for global admins).\n\nUSAGE PATTERNS:\n- 'Users in MY org' (caller-scoped, default): omit orgScope. Returns members of the caller's own org. Global admins (no caller org) get an error directing them to use orgScope='all'.\n- 'Users in a SPECIFIC org by name or ID' (e.g. Concorsando): pass orgScope='all' AND filter the results client-side by user.orgs[].name or user.orgs[].id. When reporting the user's role in that org, use user.orgs[].orgRole (NOT the top-level user.role). Do NOT pass an orgId in orgScope — the only legal values are 'caller-org' and 'all'.\n- 'All users in the system': pass orgScope='all'.\n\nThe response always echoes the resolved scope ('caller-org:<orgId>' or 'all'). When scope='all', meta.notice reminds you to derive org membership from user.orgs[]. Password hashes are never returned.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orgScope": {
+                    "description": "Defaults to caller-org. Global admins (no caller org context) MUST pass 'all'.",
+                    "type": "string",
+                    "enum": [
+                      "caller-org",
+                      "all"
+                    ]
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_query_issues": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_query_issues",
+        "summary": "dashboard_query_issues",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Query pa11y issues from a scan report by severity, WCAG standard, or rule code. Returns at most 500 issues.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scanId": {
+                    "type": "string",
+                    "description": "Scan ID"
+                  },
+                  "type": {
+                    "description": "Issue severity",
+                    "type": "string",
+                    "enum": [
+                      "error",
+                      "warning",
+                      "notice"
+                    ]
+                  },
+                  "codePrefix": {
+                    "description": "Filter by pa11y code prefix, e.g. WCAG2AA.Principle1",
+                    "type": "string"
+                  },
+                  "limit": {
+                    "description": "Max issues returned (default 100)",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 500
+                  }
+                },
+                "required": [
+                  "scanId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_scan_site": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_scan_site",
+        "summary": "dashboard_scan_site",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: \"queued\", url} immediately. Poll dashboard_get_report with the scanId for status. WARNING: this runs a real scan against the URL and may take minutes; downstream LLM quota is consumed by analyse/fix follow-ups.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "siteUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "The website URL to scan (http:// or https://)"
+                  },
+                  "standard": {
+                    "description": "WCAG level; defaults to WCAG2AA",
+                    "type": "string",
+                    "enum": [
+                      "WCAG2A",
+                      "WCAG2AA",
+                      "WCAG2AAA"
+                    ]
+                  }
+                },
+                "required": [
+                  "siteUrl"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_test_service_connection": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_test_service_connection",
+        "summary": "dashboard_test_service_connection",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Run a live OAuth2 + /health probe against a service connection. Provide serviceId to test the stored config, or url+clientId+clientSecret to test candidate values without persisting. Error messages are scrubbed of long secret-like tokens before being returned.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serviceId": {
+                    "description": "Test the stored config for this service",
+                    "type": "string",
+                    "enum": [
+                      "compliance",
+                      "branding",
+                      "llm"
+                    ]
+                  },
+                  "url": {
+                    "description": "Candidate URL (for untested config)",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "clientId": {
+                    "description": "Candidate client ID",
+                    "type": "string"
+                  },
+                  "clientSecret": {
+                    "description": "Candidate client secret",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_update_org": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_update_org",
+        "summary": "dashboard_update_org",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Update an organization's branding mode or brand score target. Callers with admin.system may target any org; callers with only admin.org may target only their own org (D-07 dual-permission).\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetOrgId": {
+                    "type": "string",
+                    "description": "The org ID to update — NOT the caller's own org"
+                  },
+                  "brandingMode": {
+                    "description": "Branding routing mode",
+                    "type": "string",
+                    "enum": [
+                      "embedded",
+                      "remote"
+                    ]
+                  },
+                  "brandScoreTarget": {
+                    "description": "Brand score target percentage, or null to clear",
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "targetOrgId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_update_service_connection": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_update_service_connection",
+        "summary": "dashboard_update_service_connection",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Update fields on an existing service connection. Omitting clientSecret preserves the existing secret (blank-to-keep semantics) — supply a new secret only when rotating. Response is redacted (xxxx...last4).\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serviceId": {
+                    "type": "string",
+                    "enum": [
+                      "compliance",
+                      "branding",
+                      "llm"
+                    ],
+                    "description": "Target service"
+                  },
+                  "url": {
+                    "description": "New base URL",
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "clientId": {
+                    "description": "New client ID",
+                    "type": "string"
+                  },
+                  "clientSecret": {
+                    "description": "New secret (omit to keep existing)",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "serviceId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_update_user": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_update_user",
+        "summary": "dashboard_update_user",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Update a dashboard user's role or active status. Password changes go through a dedicated reset flow (not exposed via MCP in Phase 30).\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "User ID"
+                  },
+                  "role": {
+                    "description": "New role — omit to leave unchanged",
+                    "type": "string"
+                  },
+                  "active": {
+                    "description": "true=activate, false=deactivate — omit to leave unchanged",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "userId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
