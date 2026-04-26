@@ -202,8 +202,8 @@ Plans:
   5. `install.ps1` reaches feature parity with `install.sh` (currently only offers bare-metal vs docker, no component choice).
   6. Each profile validated end-to-end against a fresh container in CI or operator dry-run.
 **Plans**: 4 plans
-- [ ] 42-01-PLAN.md — install.sh redesign (4 profiles + INSTALL_COMPONENTS dispatch + monitor systemd unit + monitor OAuth client)
-- [ ] 42-02-PLAN.md — install.command launchd loop + install.ps1 4-profile rewrite + OAuth/dashboard-config parity bug fixes + monitor NSSM/Task-Scheduler service
+- [x] 42-01-PLAN.md — install.sh redesign (4 profiles + INSTALL_COMPONENTS dispatch + monitor systemd unit + monitor OAuth client)
+- [x] 42-02-PLAN.md — install.command launchd loop + install.ps1 4-profile rewrite + OAuth/dashboard-config parity bug fixes + monitor NSSM/Task-Scheduler service
 - [x] 42-03-PLAN.md — docker-compose.yml: add llm + monitor (port 4300, opt-in profile) + installer docs (changelog, env-vars, installation)
 - [ ] 42-04-PLAN.md — verification: LXC live runtime gate for install.sh + manual UAT checklists for macOS/Windows + 42-VERIFICATION.md
 
@@ -219,7 +219,7 @@ Plans:
 | 39. Verification Backfill & Deferred-Items Triage | 3/3 | Complete    | 2026-04-25 |
 | 40. Documentation Sweep | 7/7 | Complete    | 2026-04-25 |
 | 41. OpenAPI Schema Backfill | 0/5 | Planned     | - |
-| 42. Installer Wizard Redesign | 1/4 | In Progress|  |
+| 42. Installer Wizard Redesign | 3/4 | In Progress|  |
 
 ### Coverage
 
