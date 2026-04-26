@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.1.0
 milestone_name: Agent Companion v2 + Tech Debt & Docs
-status: verifying
+status: executing
 stopped_at: Phase 40 context gathered
-last_updated: "2026-04-25T21:28:09.755Z"
-last_activity: 2026-04-25
+last_updated: "2026-04-26T07:03:18.614Z"
+last_activity: 2026-04-26 -- Phase 41 execution started
 progress:
-  total_phases: 8
+  total_phases: 10
   completed_phases: 8
-  total_plans: 36
-  completed_plans: 36
-  percent: 100
+  total_plans: 41
+  completed_plans: 40
+  percent: 98
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24 — v3.1.0 milestone started)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 40 — documentation-sweep
+**Current focus:** Phase 41 — openapi-schema-backfill
 
 ## Current Position
 
-Phase: 40 (documentation-sweep) — EXECUTING
-Plan: 7 of 7
-Status: Phase complete — ready for verification
-Last activity: 2026-04-25
+Phase: 41 (openapi-schema-backfill) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 41
+Last activity: 2026-04-26 -- Phase 41 execution started
 
 ## Phase Map (v3.1.0)
 
