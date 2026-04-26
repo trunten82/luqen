@@ -1,6 +1,23 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
 import type { StorageAdapter } from '../../db/index.js';
+import { HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — TypeBox query shape for OpenAPI fidelity. Single HTML route
+// returns the audit-log page; only schema/querystring required.
+const AuditQuerySchema = Type.Object(
+  {
+    actor: Type.Optional(Type.String()),
+    action: Type.Optional(Type.String()),
+    resourceType: Type.Optional(Type.String()),
+    from: Type.Optional(Type.String()),
+    to: Type.Optional(Type.String()),
+    limit: Type.Optional(Type.String()),
+    offset: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
 
 interface AuditQueryParams {
   actor?: string;
@@ -18,7 +35,13 @@ export async function auditRoutes(
 ): Promise<void> {
   server.get(
     '/admin/audit-log',
-    { preHandler: requirePermission('audit.view') },
+    {
+      preHandler: requirePermission('audit.view'),
+      schema: {
+        ...HtmlPageSchema,
+        querystring: AuditQuerySchema,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const q = request.query as AuditQueryParams;
 

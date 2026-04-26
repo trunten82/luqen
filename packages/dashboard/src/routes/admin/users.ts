@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import {
   listUsers,
   createUser,
@@ -6,6 +7,33 @@ import {
 } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const UserCreateBody = Type.Object(
+  {
+    username: Type.Optional(Type.String()),
+    password: Type.Optional(Type.String()),
+    role: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const UserIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 export async function userRoutes(
   server: FastifyInstance,
@@ -14,7 +42,10 @@ export async function userRoutes(
   // GET /admin/users — list users
   server.get(
     '/admin/users',
-    { preHandler: requirePermission('admin.users') },
+    {
+      preHandler: requirePermission('admin.users'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       let users: Awaited<ReturnType<typeof listUsers>> = [];
       let error: string | undefined;
@@ -43,7 +74,10 @@ export async function userRoutes(
   // GET /admin/users/new — modal form fragment
   server.get(
     '/admin/users/new',
-    { preHandler: requirePermission('admin.users') },
+    {
+      preHandler: requirePermission('admin.users'),
+      schema: HtmlPartialResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/user-form.hbs', {
         isNew: true,
@@ -56,7 +90,13 @@ export async function userRoutes(
   // POST /admin/users — create user
   server.post(
     '/admin/users',
-    { preHandler: requirePermission('admin.users') },
+    {
+      preHandler: requirePermission('admin.users'),
+      schema: {
+        body: UserCreateBody,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         username?: string;
@@ -110,7 +150,13 @@ export async function userRoutes(
   // POST /admin/users/:id/deactivate — deactivate user
   server.post(
     '/admin/users/:id/deactivate',
-    { preHandler: requirePermission('admin.users') },
+    {
+      preHandler: requirePermission('admin.users'),
+      schema: {
+        params: UserIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
