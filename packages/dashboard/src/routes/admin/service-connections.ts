@@ -177,6 +177,7 @@ const ListResponse = {
 // Mixed JSON / HTML response for POST endpoints (HTMX returns HTML row +
 // OOB toast; non-HTMX returns JSON ok envelope).
 const MixedResponse = {
+  tags: ['html-page'],
   response: {
     200: Type.Union([
       Type.String(),

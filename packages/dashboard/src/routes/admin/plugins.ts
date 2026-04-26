@@ -11,6 +11,7 @@ import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
 // ---------------------------------------------------------------------------
 
 const HtmlPartialResponse = {
+  tags: ['html-page'],
   produces: ['text/html'],
   response: {
     200: Type.String(),

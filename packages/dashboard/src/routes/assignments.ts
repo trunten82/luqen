@@ -113,7 +113,10 @@ export async function assignmentRoutes(
     {
       // No response schema — handler returns either JSON or HTML based on Accept;
       // a typed response would force one shape and break the other branch.
-      schema: { tags: ['assignments'], params: AssignmentIdParams },
+      // Phase 41.1-05: tagged 'html-page' to satisfy schema-fidelity assertion
+      // (this route legitimately serves both shapes; documenting via the
+      // shared html-page marker per CONTEXT.md verification depth).
+      schema: { tags: ['html-page', 'assignments'], params: AssignmentIdParams },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!hasPermission(request, 'issues.assign')) {

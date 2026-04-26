@@ -14,7 +14,7 @@ import { Type, type Static, type TSchema } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 import type { StorageAdapter } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
-import { LuqenResponse, ErrorEnvelope } from '../../api/schemas/envelope.js';
+import { LuqenResponse, ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
 import type { AgentAuditFilters } from '../../db/interfaces/agent-audit-repository.js';
 
 const PAGE_SIZE = 50;
@@ -156,7 +156,15 @@ export async function agentAuditRoutes(
 ): Promise<void> {
   server.get(
     '/admin/audit',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      // Phase 41.1-05: HtmlPageSchema for OpenAPI fidelity (html-page tag +
+      // typed text/html 200). Querystring is validated by the handler's
+      // safeValidate(AuditQuerySchema, ...) below — Fastify-level
+      // querystring validation would short-circuit the handler's empty-
+      // string normalisation and break Test 2 in admin-agent-audit.test.ts.
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.user;
       if (user === undefined) {
@@ -238,7 +246,20 @@ export async function agentAuditRoutes(
 
   server.get(
     '/admin/audit.csv',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: {
+        tags: ['html-page'],
+        querystring: AuditQuerySchema,
+        produces: ['text/csv'],
+        response: {
+          200: Type.String(),
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.user;
       if (user === undefined) {

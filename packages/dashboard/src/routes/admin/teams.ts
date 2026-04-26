@@ -43,6 +43,7 @@ const TeamMemberParams = Type.Object(
 
 // Routes here mix HTML responses, redirects, and JSON error payloads.
 const MixedResponse = {
+  tags: ['html-page'],
   response: {
     200: Type.Union([Type.String(), Type.Object({}, { additionalProperties: true })]),
     302: Type.Null(),

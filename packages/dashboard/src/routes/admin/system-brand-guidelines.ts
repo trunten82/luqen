@@ -71,6 +71,7 @@ const SystemBrandIdParams = Type.Object(
 const SuccessJson = Type.Object({}, { additionalProperties: true });
 
 const MixedHtmlOrJsonResponse = {
+  tags: ['html-page'],
   // Handlers branch between text/html and application/json based on
   // hx-request, so the response schema unions both shapes via permissive
   // objects/strings. ErrorEnvelope guards 4xx/5xx.
