@@ -20,6 +20,17 @@
 param(
     [ValidateSet("bare-metal","docker")]
     [string]$Mode = "",
+    # Phase 42 / Plan 42-02 Task 2: 4-profile model. T-42-08 mitigation:
+    # ValidateSet enforces an allow-list at the parameter binder, before any
+    # downstream string handling.
+    [ValidateSet("cli","api","dashboard","docker")]
+    [string]$Profile = "",
+    [string]$ApiServices = "",
+    [switch]$WithMonitor,
+    [switch]$WithoutCompliance,
+    [switch]$WithoutBranding,
+    [switch]$WithoutLlm,
+    [int]$MonitorPort = 4300,
     [int]$Port = 0,
     [string]$Pa11yUrl = "",
     [ValidateSet("sqlite","postgres","mongodb")]
@@ -85,6 +96,24 @@ $script:CompliancePort   = 4000
 $script:DashboardPort    = 5000
 $script:BrandingPort     = 4100
 $script:LlmPort          = 4200
+# Phase 42 / Plan 42-02 Task 2: 4-profile model + components dispatch.
+$script:Profile          = "dashboard"
+$script:InstallComponents = @()
+$script:WithMonitor      = $false
+$script:WithoutCompliance = $false
+$script:WithoutBranding  = $false
+$script:WithoutLlm       = $false
+$script:MonitorPort      = 4300
+$script:ApiServicesVal   = ""
+# Phase 42 / Plan 42-02 Task 3: branding + llm + monitor OAuth client cache.
+$script:BrandingClientId         = ""
+$script:BrandingClientSecret     = ""
+$script:LlmClientId              = ""
+$script:LlmClientSecret          = ""
+$script:ComplianceLlmClientId    = ""
+$script:ComplianceLlmClientSecret = ""
+$script:MonitorClientId          = ""
+$script:MonitorClientSecret      = ""
 
 # v3.1.0 public URLs (Phase 30/31.1) -- override for production via env vars
 $script:DashboardPublicUrl  = $env:DASHBOARD_PUBLIC_URL
@@ -154,6 +183,17 @@ if ($SmtpPass)         { $script:SmtpPassVal = $SmtpPass }
 if ($SmtpFrom)         { $script:SmtpFromVal = $SmtpFrom }
 if ($AdminUser)        { $script:AdminUsername = $AdminUser }
 if ($AdminPass)        { $script:AdminPassword = $AdminPass }
+
+# Phase 42 / Plan 42-02 Task 2: apply 4-profile parameters.
+if ($Profile)          { $script:Profile = $Profile }
+if ($ApiServices)      { $script:ApiServicesVal = $ApiServices }
+if ($WithMonitor)      { $script:WithMonitor = $true }
+if ($WithoutCompliance){ $script:WithoutCompliance = $true }
+if ($WithoutBranding)  { $script:WithoutBranding = $true }
+if ($WithoutLlm)       { $script:WithoutLlm = $true }
+if ($MonitorPort -ne 4300) { $script:MonitorPort = $MonitorPort }
+# Back-compat: -Mode docker maps to -Profile docker.
+if ($Mode -eq "docker") { $script:Profile = "docker" }
 
 # ──────────────────────────────────────────────
 # Uninstall handler — runs before normal install flow.
@@ -235,6 +275,53 @@ function Resolve-PublicUrlDefaults {
     if (-not $script:LlmPublicUrl)        { $script:LlmPublicUrl        = "http://localhost:$($script:LlmPort)" }
 }
 Resolve-PublicUrlDefaults
+
+# Phase 42 / Plan 42-02 Task 2: derive INSTALL_COMPONENTS from profile + flags.
+# Mirrors install.sh's derive_install_components (install.sh:595-650). T-42-09
+# mitigation: --api-services CSV is per-token allow-listed against the known
+# service set before being committed to $script:InstallComponents.
+function Resolve-InstallComponents {
+    switch ($script:Profile) {
+        "cli" {
+            $script:InstallComponents = @("core")
+        }
+        "api" {
+            $services = if ($script:ApiServicesVal) {
+                $script:ApiServicesVal.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+            } else {
+                @("compliance","branding","llm")
+            }
+            foreach ($s in $services) {
+                if ($s -notin @("compliance","branding","llm")) {
+                    Write-Err "Invalid -ApiServices value: '$s' (allowed: compliance,branding,llm)"
+                    exit 1
+                }
+            }
+            $script:InstallComponents = @($services)
+        }
+        "dashboard" {
+            $list = @("core","dashboard")
+            if (-not $script:WithoutCompliance) { $list += "compliance" }
+            if (-not $script:WithoutBranding)   { $list += "branding" }
+            if (-not $script:WithoutLlm)        { $list += "llm" }
+            $script:InstallComponents = $list
+        }
+        "docker" {
+            $script:InstallComponents = @("docker")
+        }
+        default {
+            $script:InstallComponents = @("core","dashboard","compliance","branding","llm")
+        }
+    }
+    if ($script:WithMonitor) {
+        $script:InstallComponents += "monitor"
+    }
+    # T-42-06: --with-monitor requires compliance.
+    if (("monitor" -in $script:InstallComponents) -and ("compliance" -notin $script:InstallComponents)) {
+        Write-Err "-WithMonitor requires compliance (selected profile does not include it)"
+        exit 1
+    }
+}
 
 # ──────────────────────────────────────────────
 # Validation helpers
@@ -335,28 +422,107 @@ function Invoke-Wizard {
     Write-Host "  Enterprise accessibility testing platform"
     Write-Host ""
 
-    # 1: Deployment Mode
-    Write-Header "1. Deployment Mode"
+    # Phase 42 / Plan 42-02 Task 2: 4-profile menu (mirrors install.sh:507-559).
+    Write-Header "1. Deployment Profile"
 
     $choice = Read-Choice "How would you like to deploy Luqen?" @(
-        "Bare metal (Node.js + Windows services)"
-        "Docker Compose"
+        "Scanner CLI (only @luqen/core, stdio MCP for VS Code/Claude Code)"
+        "API services (headless: any subset of compliance/branding/llm)"
+        "Self-hosted dashboard (default -- UI + chosen subset of services)"
+        "Docker Compose (full stack in containers)"
     )
     switch ($choice) {
-        "2" {
-            $script:DeployMode = "docker"
-            Write-Ok "Docker Compose deployment selected"
+        "1" { $script:Profile = "cli";       Write-Ok "Scanner CLI profile selected" }
+        "2" { $script:Profile = "api";       Write-Ok "API services profile selected" }
+        "4" { $script:Profile = "docker";    Write-Ok "Docker Compose profile selected" }
+        default { $script:Profile = "dashboard"; Write-Ok "Self-hosted dashboard profile selected" }
+    }
+    # Back-compat: keep $script:DeployMode in sync with $script:Profile so any
+    # legacy code paths that still consult DeployMode see the right value.
+    $script:DeployMode = if ($script:Profile -eq "docker") { "docker" } else { "bare-metal" }
+
+    # Profile 2: prompt for API services subset.
+    if ($script:Profile -eq "api") {
+        Write-Host ""
+        Write-Host "  Pick which API services to install (any subset)." -ForegroundColor White
+        $apiList = @()
+        if (Read-YesNo "Include compliance service (port $($script:CompliancePort))?" $true) { $apiList += "compliance" }
+        if (Read-YesNo "Include branding service (port $($script:BrandingPort))?"   $true) { $apiList += "branding" }
+        if (Read-YesNo "Include LLM service (port $($script:LlmPort))?"             $true) { $apiList += "llm" }
+        if ($apiList.Count -eq 0) {
+            Write-Err "API profile requires at least one service."
+            exit 1
         }
-        default {
-            $script:DeployMode = "bare-metal"
-            Write-Ok "Bare metal deployment selected"
+        $script:ApiServicesVal = ($apiList -join ",")
+    }
+
+    # Profile 3: prompt for backing-service opt-outs (branding + llm explicitly named).
+    if ($script:Profile -eq "dashboard") {
+        Write-Host ""
+        Write-Host "  Backing services (uncheck to disable a service):" -ForegroundColor White
+        if (-not (Read-YesNo "Include compliance service (port $($script:CompliancePort))?" $true)) { $script:WithoutCompliance = $true }
+        if (-not (Read-YesNo "Include branding service (port $($script:BrandingPort))?"   $true)) { $script:WithoutBranding = $true }
+        if (-not (Read-YesNo "Include LLM service (port $($script:LlmPort))?"             $true)) { $script:WithoutLlm = $true }
+    }
+
+    # Monitor agent opt-in (only meaningful when compliance will be installed).
+    $monitorEligible = $false
+    if ($script:Profile -eq "dashboard" -and -not $script:WithoutCompliance) { $monitorEligible = $true }
+    elseif ($script:Profile -eq "api" -and ($script:ApiServicesVal -match "compliance")) { $monitorEligible = $true }
+    if ($monitorEligible -and -not $script:WithMonitor) {
+        if (Read-YesNo "Install monitor agent (auto-tracks regulation changes -- opt-in only, port $($script:MonitorPort))?" $false) {
+            $script:WithMonitor = $true
+            Write-Ok "Monitor agent will be registered as LuqenMonitor"
         }
     }
 
-    if ($script:DeployMode -eq "docker") {
+    if ($script:Profile -eq "docker") {
         Invoke-WizardDocker
+    } elseif ($script:Profile -eq "cli") {
+        Invoke-WizardCli
+    } elseif ($script:Profile -eq "api") {
+        Invoke-WizardApi
     } else {
         Invoke-WizardBareMetal
+    }
+}
+
+# Phase 42 / Plan 42-02 Task 2: minimal CLI wizard. CLI profile only builds
+# @luqen/core; no DB, no auth, no services, no plugins.
+function Invoke-WizardCli {
+    Write-Host ""
+    Write-Host "  Scanner CLI install -- @luqen/core only." -ForegroundColor White
+    Write-Host "  After install, run: node $($script:InstallDirVal)\packages\core\dist\mcp.js"
+    Write-Host "  to expose stdio MCP to VS Code / Claude Code."
+    Write-Host ""
+    if (-not (Read-YesNo "Proceed with CLI install?" $true)) {
+        Write-Info "Installation cancelled."
+        exit 0
+    }
+}
+
+# Phase 42 / Plan 42-02 Task 2: minimal API wizard. Headless services only --
+# no dashboard.config.json, no plugins, no admin user.
+function Invoke-WizardApi {
+    Write-Host ""
+    Write-Host "  API services install -- $($script:ApiServicesVal)." -ForegroundColor White
+    Write-Header "Ports"
+    if ($script:ApiServicesVal -match "compliance") {
+        $script:CompliancePort = [int](Read-Prompt "Compliance port" $script:CompliancePort)
+    }
+    if ($script:ApiServicesVal -match "branding") {
+        $script:BrandingPort = [int](Read-Prompt "Branding port" $script:BrandingPort)
+    }
+    if ($script:ApiServicesVal -match "llm") {
+        $script:LlmPort = [int](Read-Prompt "LLM port" $script:LlmPort)
+    }
+    if ($script:WithMonitor) {
+        $script:MonitorPort = [int](Read-Prompt "Monitor port" $script:MonitorPort)
+    }
+    Write-Host ""
+    if (-not (Read-YesNo "Proceed with API services install?" $true)) {
+        Write-Info "Installation cancelled."
+        exit 0
     }
 }
 
@@ -1317,6 +1483,85 @@ DASHBOARD_JWKS_URL=$($script:DashboardPublicUrl)/oauth/.well-known/jwks.json
 }
 
 # ══════════════════════════════════════════════
+#  CLI / API PROFILE INSTALLERS (Phase 42 / Plan 42-02 Task 2)
+# ══════════════════════════════════════════════
+
+# Profile 1 -- Scanner CLI. Builds @luqen/core only; no DB, no auth, no
+# services, no plugins. Operator runs core/dist/mcp.js for stdio MCP.
+function Invoke-CliInstall {
+    Write-Header "Scanner CLI install"
+    Test-Prerequisites
+    Invoke-CloneOrPull
+
+    Write-Step 3 4 "Installing dependencies + building @luqen/core"
+    Push-Location $script:InstallDirVal
+    try {
+        Invoke-Quiet "npm install" { npm install --no-audit --no-fund 2>&1 }
+        Invoke-Quiet "Building @luqen/core" { npm run build -w packages/core 2>&1 }
+    } finally { Pop-Location }
+
+    Write-Step 4 4 "Installation complete"
+    Write-Host ""
+    Write-Ok "Scanner CLI installed at $($script:InstallDirVal)"
+    Write-Host ""
+    Write-Host "  MCP server (for VS Code / Claude Code):" -ForegroundColor White
+    Write-Host "    node $($script:InstallDirVal)\packages\core\dist\mcp.js"
+    Write-Host ""
+}
+
+# Profile 2 -- API services (headless). Builds + registers any subset of
+# {compliance, branding, llm} (+ optional monitor) as Windows services. No
+# dashboard, no dashboard.config.json, no plugins, no admin user.
+function Invoke-ApiInstall {
+    Write-Header "API services install ($($script:ApiServicesVal))"
+    Test-Prerequisites
+    Invoke-CloneOrPull
+
+    Write-Step 3 5 "Installing dependencies + building selected services"
+    Push-Location $script:InstallDirVal
+    try {
+        Invoke-Quiet "npm install" { npm install --no-audit --no-fund 2>&1 }
+        if ("compliance" -in $script:InstallComponents) {
+            Invoke-Quiet "Building @luqen/compliance" { npm run build -w packages/compliance 2>&1 }
+        }
+        if ("branding" -in $script:InstallComponents) {
+            Invoke-Quiet "Building @luqen/branding" { npm run build -w packages/branding 2>&1 }
+        }
+        if ("llm" -in $script:InstallComponents) {
+            Invoke-Quiet "Building @luqen/llm" { npm run build -w packages/llm 2>&1 }
+        }
+        if ("monitor" -in $script:InstallComponents) {
+            Invoke-Quiet "Building @luqen/monitor" { npm run build -w packages/monitor 2>&1 }
+        }
+    } finally { Pop-Location }
+
+    Write-Step 4 5 "Minting OAuth clients"
+    # Inter-service OAuth clients (compliance<->llm, monitor<->compliance) only.
+    # No dashboard clients in API profile.
+    New-OAuthClient
+
+    Write-Step 5 5 "Registering Windows services"
+    New-WindowsServices
+
+    Write-Host ""
+    Write-Ok "API services installed and registered."
+    Write-Host ""
+    if ("compliance" -in $script:InstallComponents) {
+        Write-Host "    compliance:  http://localhost:$($script:CompliancePort)"
+    }
+    if ("branding" -in $script:InstallComponents) {
+        Write-Host "    branding:    http://localhost:$($script:BrandingPort)"
+    }
+    if ("llm" -in $script:InstallComponents) {
+        Write-Host "    llm:         http://localhost:$($script:LlmPort)"
+    }
+    if ("monitor" -in $script:InstallComponents) {
+        Write-Host "    monitor:     http://localhost:$($script:MonitorPort) (manual mode)"
+    }
+    Write-Host ""
+}
+
+# ══════════════════════════════════════════════
 #  ENTRY POINT
 # ══════════════════════════════════════════════
 
@@ -1324,22 +1569,38 @@ if ($script:Interactive -and -not $NonInteractive -and [Environment]::UserIntera
     Invoke-Wizard
 }
 
-# Route to the correct installation path
+# Route to the correct installation path.
 Resolve-PublicUrlDefaults
+# Phase 42 / Plan 42-02 Task 2: derive INSTALL_COMPONENTS once after wizard /
+# argv parsing settles. All downstream steps (OAuth client minting, Write-Config,
+# New-WindowsServices) gate on $script:InstallComponents membership.
+Resolve-InstallComponents
 
-if ($script:DeployMode -eq "docker") {
-    Invoke-DockerInstall
-    Show-V3WhatsNew
-} else {
-    Test-Prerequisites         # Step 1
-    Invoke-CloneOrPull         # Step 2
-    Install-AndBuild           # Step 3
-    New-Secrets                # Step 4
-    Invoke-Seed                # Step 5
-    New-OAuthClient            # Step 6
-    Write-Config               # Step 7
-    New-WindowsServices        # Step 8
-    Start-LuqenServices       # Step 9
-    Show-SummaryBareMetal      # Step 10
-    Show-V3WhatsNew            # Post: print v3.x changes summary
+switch ($script:Profile) {
+    "cli" {
+        Invoke-CliInstall
+        Show-V3WhatsNew
+    }
+    "api" {
+        Invoke-ApiInstall
+        Show-V3WhatsNew
+    }
+    "docker" {
+        Invoke-DockerInstall
+        Show-V3WhatsNew
+    }
+    default {
+        # dashboard profile (full bare-metal install with dashboard).
+        Test-Prerequisites         # Step 1
+        Invoke-CloneOrPull         # Step 2
+        Install-AndBuild           # Step 3
+        New-Secrets                # Step 4
+        Invoke-Seed                # Step 5
+        New-OAuthClient            # Step 6 (mints all 5 clients per Task 3)
+        Write-Config               # Step 7
+        New-WindowsServices        # Step 8
+        Start-LuqenServices        # Step 9
+        Show-SummaryBareMetal      # Step 10
+        Show-V3WhatsNew            # Post: print v3.x changes summary
+    }
 }
