@@ -7,7 +7,8 @@
     "packages/compliance",
     "packages/branding",
     "packages/llm",
-    "packages/dashboard"
+    "packages/dashboard",
+    "packages/monitor"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
