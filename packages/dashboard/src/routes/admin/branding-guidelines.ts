@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -12,6 +13,7 @@ import { retagScansForSite, retagAllSitesForGuideline } from '../../services/bra
 import type { BrandingOrchestrator } from '../../services/branding/branding-orchestrator.js';
 import type { LLMClient } from '../../llm-client.js';
 import { resolveOrgLLMClient } from '../../llm-client.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
 
 // Fastify instance decoration set by server.ts (Phase 17 branding orchestrator
 // wiring). Required by Phase 18-04 retag rewire so admin route handlers can
@@ -25,6 +27,50 @@ declare module 'fastify' {
 
 const pump = promisify(pipeline);
 
+// Phase 41.1-02 — local TypeBox shapes for HTMX partial responses.
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    204: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+    502: ErrorEnvelope,
+    503: ErrorEnvelope,
+  },
+} as const;
+
+// CSV/JSON template download responses (returns text/csv or application/json)
+const TemplateDownloadResponse = {
+  response: {
+    200: Type.String(),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+  },
+} as const;
+
+const IdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
+const ColorParams = Type.Object(
+  { id: Type.String(), colorId: Type.String() },
+  { additionalProperties: true },
+);
+const FontParams = Type.Object(
+  { id: Type.String(), fontId: Type.String() },
+  { additionalProperties: true },
+);
+const SelectorParams = Type.Object(
+  { id: Type.String(), selectorId: Type.String() },
+  { additionalProperties: true },
+);
+
+const TabQuery = Type.Object(
+  { tab: Type.Optional(Type.String()), from: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
 export async function brandingGuidelineRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
@@ -37,7 +83,10 @@ export async function brandingGuidelineRoutes(
 
   server.get(
     '/admin/branding-guidelines/templates/csv',
-    { preHandler: requirePermission('branding.view') },
+    {
+      preHandler: requirePermission('branding.view'),
+      schema: TemplateDownloadResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const { GuidelineParser } = await import('@luqen/branding');
       const csv = GuidelineParser.generateCSVTemplate();
@@ -50,7 +99,10 @@ export async function brandingGuidelineRoutes(
 
   server.get(
     '/admin/branding-guidelines/templates/json',
-    { preHandler: requirePermission('branding.view') },
+    {
+      preHandler: requirePermission('branding.view'),
+      schema: TemplateDownloadResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const { GuidelineParser } = await import('@luqen/branding');
       const json = GuidelineParser.generateJSONTemplate();
@@ -65,7 +117,10 @@ export async function brandingGuidelineRoutes(
 
   server.post(
     '/admin/branding-guidelines/upload',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         content?: string;
@@ -161,7 +216,10 @@ export async function brandingGuidelineRoutes(
 
   server.get(
     '/admin/branding-guidelines/new',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: HtmlPartialResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/branding-guideline-form.hbs', {});
     },
@@ -171,7 +229,10 @@ export async function brandingGuidelineRoutes(
 
   server.get(
     '/admin/branding-guidelines',
-    { preHandler: requirePermission('branding.view') },
+    {
+      preHandler: requirePermission('branding.view'),
+      schema: { ...HtmlPageSchema, querystring: TabQuery },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const isGlobalAdmin = request.user?.role === 'admin';
@@ -227,7 +288,10 @@ export async function brandingGuidelineRoutes(
 
   server.post(
     '/admin/branding-guidelines/system/:id/clone',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { name?: string } | undefined;
@@ -261,7 +325,10 @@ export async function brandingGuidelineRoutes(
 
   server.post(
     '/admin/branding-guidelines',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as { name?: string; description?: string };
       const name = body.name?.trim();
@@ -301,7 +368,10 @@ export async function brandingGuidelineRoutes(
 
   server.get(
     '/admin/branding-guidelines/:id',
-    { preHandler: requirePermission('branding.view') },
+    {
+      preHandler: requirePermission('branding.view'),
+      schema: { ...HtmlPageSchema, params: IdParams },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
@@ -339,7 +409,10 @@ export async function brandingGuidelineRoutes(
 
   server.post(
     '/admin/branding-guidelines/:id',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = (request.body ?? {}) as { name?: unknown; description?: unknown };
@@ -379,7 +452,10 @@ export async function brandingGuidelineRoutes(
 
   server.post(
     '/admin/branding-guidelines/:id/toggle-active',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -410,7 +486,10 @@ export async function brandingGuidelineRoutes(
 
   server.post(
     '/admin/branding-guidelines/:id/delete',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -444,7 +523,10 @@ export async function brandingGuidelineRoutes(
 
   server.post(
     '/admin/branding-guidelines/:id/toggle',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -516,7 +598,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/discover-branding',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
@@ -716,7 +801,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/upload-css',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { cssContent?: string };
@@ -829,7 +917,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/colors',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as {
@@ -890,7 +981,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/colors/:colorId/delete',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: ColorParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, colorId } = request.params as { id: string; colorId: string };
 
@@ -924,7 +1018,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/fonts',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as {
@@ -981,7 +1078,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/fonts/:fontId/delete',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: FontParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, fontId } = request.params as { id: string; fontId: string };
 
@@ -1015,7 +1115,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/selectors',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { pattern?: string; description?: string };
@@ -1061,7 +1164,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/selectors/:selectorId/delete',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: SelectorParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, selectorId } = request.params as { id: string; selectorId: string };
 
@@ -1095,7 +1201,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/sites',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, querystring: TabQuery, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { siteUrl?: string; confirmOverwrite?: string };
@@ -1173,7 +1282,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/sites/unassign',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, querystring: TabQuery, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as { siteUrl?: string };
       const siteUrl = body.siteUrl?.trim();
@@ -1211,7 +1323,10 @@ ${toastHtml(`Guideline "${escapeHtml(updated.name)}" ${status}.${retagCount > 0 
 
   server.post(
     '/admin/branding-guidelines/:id/image',
-    { preHandler: requirePermission('branding.manage') },
+    {
+      preHandler: requirePermission('branding.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
