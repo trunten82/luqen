@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v3.1.0
 milestone_name: Agent Companion v2 + Tech Debt & Docs
-status: verifying
-stopped_at: Completed 41.1-05-PLAN.md (Phase 41.1 complete — closes OAPI-04 PARTIAL)
-last_updated: "2026-04-26T12:43:04.899Z"
+status: verified
+stopped_at: Phase 41.1 verified passed (7/7 must-haves) — OAPI-04 PARTIAL closed; Phase 41 now fully resolved
+last_updated: "2026-04-26T12:50:00Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 11
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 46
   completed_plans: 46
   percent: 100
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24 — v3.1.0 milestone started)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 41 — openapi-schema-backfill
+**Current focus:** Phase 42 — installer-wizard-redesign (next; Phase 41 + 41.1 verified complete)
 
 ## Current Position
 
-Phase: 41 (openapi-schema-backfill) — VERIFIED (gaps_found)
+Phase: 41.1 (dashboard-non-mcp-per-route-typebox-schema-backfill) — VERIFIED (passed, 7/7 must-haves)
 Plan: 5 of 5 complete
-Status: Phase complete — ready for verification
+Status: Phase 41 + 41.1 verified — OAPI-04 closed; ready for Phase 42
 Last activity: 2026-04-26
 
 ## Phase Map (v3.1.0)
