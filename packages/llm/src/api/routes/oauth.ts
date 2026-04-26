@@ -1,4 +1,6 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { LuqenResponse, ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import type { TokenSigner } from '../../auth/oauth.js';
 import { verifyClientSecret, verifyPassword } from '../../auth/oauth.js';
@@ -8,6 +10,33 @@ interface OAuthDeps {
   readonly signToken: TokenSigner;
   readonly tokenExpiry: string;
 }
+
+const TokenBody = Type.Object(
+  {
+    grant_type: Type.Optional(Type.String()),
+    client_id: Type.Optional(Type.String()),
+    client_secret: Type.Optional(Type.String()),
+    scope: Type.Optional(Type.String()),
+    username: Type.Optional(Type.String()),
+    password: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const TokenResponse = Type.Object(
+  {
+    access_token: Type.String(),
+    token_type: Type.String(),
+    expires_in: Type.Number(),
+    scope: Type.String(),
+  },
+  { additionalProperties: true },
+);
+
+const RevokeResponse = Type.Object(
+  { revoked: Type.Boolean() },
+  { additionalProperties: true },
+);
 
 function parseExpiryToSeconds(tokenExpiry: string): number {
   if (tokenExpiry.endsWith('h')) return parseInt(tokenExpiry, 10) * 3600;
@@ -22,7 +51,19 @@ export async function registerOAuthRoutes(
   const { db, signToken, tokenExpiry } = deps;
 
   // POST /api/v1/oauth/token
-  app.post('/api/v1/oauth/token', async (request, reply) => {
+  app.post('/api/v1/oauth/token', {
+    schema: {
+      tags: ['oauth'],
+      summary: 'Exchange credentials for an access token (client_credentials or password grant)',
+      body: TokenBody,
+      response: {
+        200: LuqenResponse(TokenResponse),
+        400: ErrorEnvelope,
+        401: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     try {
       const body = request.body as Record<string, unknown>;
 
@@ -168,7 +209,15 @@ export async function registerOAuthRoutes(
   });
 
   // POST /api/v1/oauth/revoke — stateless JWT, just acknowledge
-  app.post('/api/v1/oauth/revoke', async (_request, reply) => {
+  app.post('/api/v1/oauth/revoke', {
+    schema: {
+      tags: ['oauth'],
+      summary: 'Revoke a token (no-op for stateless JWT — always 200)',
+      response: {
+        200: LuqenResponse(RevokeResponse),
+      },
+    },
+  }, async (_request, reply) => {
     await reply.status(200).send({ revoked: true });
   });
 }

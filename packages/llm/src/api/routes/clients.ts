@@ -1,7 +1,38 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { LuqenResponse, ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { hashClientSecret, generateClientCredentials } from '../../auth/oauth.js';
+
+const Client = Type.Object(
+  {
+    id: Type.String(),
+    name: Type.String(),
+    scopes: Type.Array(Type.String()),
+    grantTypes: Type.Array(Type.String()),
+    orgId: Type.String(),
+    createdAt: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const CreateClientBody = Type.Object(
+  {
+    name: Type.Optional(Type.String()),
+    scopes: Type.Optional(Type.Array(Type.String())),
+    grantTypes: Type.Optional(Type.Array(Type.String())),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const ClientWithSecret = Type.Intersect([
+  Client,
+  Type.Object({ clientSecret: Type.String() }, { additionalProperties: true }),
+]);
+
+const IdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 
 export async function registerClientRoutes(
   app: FastifyInstance,
@@ -10,6 +41,14 @@ export async function registerClientRoutes(
   // GET /api/v1/clients
   app.get('/api/v1/clients', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['clients'],
+      summary: 'List OAuth clients (secrets stripped)',
+      response: {
+        200: LuqenResponse(Type.Array(Client)),
+        500: ErrorEnvelope,
+      },
+    },
   }, async (_request, reply) => {
     try {
       const clients = await db.listClients();
@@ -23,6 +62,15 @@ export async function registerClientRoutes(
   // POST /api/v1/clients
   app.post('/api/v1/clients', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['clients'],
+      summary: 'Create a new OAuth client (returns plaintext secret once)',
+      body: CreateClientBody,
+      response: {
+        201: LuqenResponse(ClientWithSecret),
+        400: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const body = request.body as Record<string, unknown>;
@@ -62,6 +110,16 @@ export async function registerClientRoutes(
   // DELETE /api/v1/clients/:id
   app.delete('/api/v1/clients/:id', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['clients'],
+      summary: 'Delete an OAuth client',
+      params: IdParams,
+      response: {
+        204: Type.Null(),
+        404: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };

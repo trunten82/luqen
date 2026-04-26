@@ -20,18 +20,20 @@ export const ErrorEnvelope = Type.Object(
 );
 
 /**
- * Slim envelope: `{ data?, meta? }` + `additionalProperties: true`.
+ * `LuqenResponse(T)` — response shape helper for the LLM service.
  *
- * `data` is OPTIONAL because LLM handlers historically return raw payloads
- * (e.g. `{ requirements, model, provider }` without an outer `data` key) —
- * those extras flow through via `additionalProperties: true`. Future
- * normalisation to the full envelope can flip `data` to required.
+ * Per Phase 41 D-04 (per-service envelope variance): branding/llm services
+ * historically return raw payloads (`T`), not the wrapped `{ data: T }`
+ * envelope used by compliance/dashboard. To preserve existing consumers
+ * AND keep the helper available as a single source of truth (so a future
+ * normalisation phase can flip the wrapping in one place), this returns
+ * the inner schema directly today.
+ *
+ * Future: when consumers are migrated, switch to the wrapped shape:
+ * ```ts
+ * Type.Object({ data: Type.Union([data, Type.Null()]),
+ *               meta: Type.Optional(Type.Object({}, { additionalProperties: true })) },
+ *             { additionalProperties: true });
+ * ```
  */
-export const LuqenResponse = <T extends TSchema>(data: T) =>
-  Type.Object(
-    {
-      data: Type.Optional(Type.Union([data, Type.Null()])),
-      meta: Type.Optional(Type.Object({}, { additionalProperties: true })),
-    },
-    { additionalProperties: true },
-  );
+export const LuqenResponse = <T extends TSchema>(data: T): T => data;

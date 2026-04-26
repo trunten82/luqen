@@ -1,4 +1,6 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { LuqenResponse, ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { createAdapter } from '../../providers/registry.js';
@@ -9,6 +11,171 @@ import { executeDiscoverBranding } from '../../capabilities/discover-branding.js
 import { executeAgentConversation } from '../../capabilities/agent-conversation.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../capabilities/types.js';
 
+// ----- Bodies -----
+
+// All body fields declared Optional so handlers' own field validation runs
+// (existing handlers return per-field 400 messages that tests rely on).
+// Schemas still document the expected shape for OpenAPI consumers.
+const ExtractRequirementsBody = Type.Object(
+  {
+    content: Type.Optional(Type.String()),
+    regulationId: Type.Optional(Type.String()),
+    regulationName: Type.Optional(Type.String()),
+    jurisdictionId: Type.Optional(Type.String()),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const GenerateFixBody = Type.Object(
+  {
+    wcagCriterion: Type.Optional(Type.String()),
+    issueMessage: Type.Optional(Type.String()),
+    htmlContext: Type.Optional(Type.String()),
+    cssContext: Type.Optional(Type.String()),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const AnalyseReportIssue = Type.Object(
+  {
+    criterion: Type.String(),
+    message: Type.String(),
+    count: Type.Number(),
+    level: Type.String(),
+  },
+  { additionalProperties: true },
+);
+
+const AnalyseReportBody = Type.Object(
+  {
+    siteUrl: Type.Optional(Type.String()),
+    // totalIssues is Any so the handler runs its own typeof-number check (test
+    // sends a string and expects the handler's per-field 400 message).
+    totalIssues: Type.Optional(Type.Any()),
+    issuesList: Type.Optional(Type.Any()),
+    complianceSummary: Type.Optional(Type.String()),
+    recurringPatterns: Type.Optional(Type.Array(Type.String())),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const DiscoverBrandingBody = Type.Object(
+  {
+    url: Type.Optional(Type.String()),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const AgentConversationBody = Type.Object(
+  {
+    orgId: Type.Optional(Type.String()),
+    userId: Type.Optional(Type.String()),
+    messages: Type.Optional(Type.Array(Type.Any())),
+    tools: Type.Optional(Type.Array(Type.Any())),
+    agentDisplayName: Type.Optional(Type.String()),
+    contextHintsBlock: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+// ----- Response data shapes -----
+
+const ExtractRequirementsData = Type.Object(
+  {
+    requirements: Type.Optional(
+      Type.Array(
+        Type.Object(
+          {
+            id: Type.Optional(Type.String()),
+            text: Type.Optional(Type.String()),
+            jurisdiction: Type.Optional(Type.String()),
+          },
+          { additionalProperties: true },
+        ),
+      ),
+    ),
+    // Capability handlers spread `capResult.data` which can include
+    // wcagVersion / criteria / confidence etc. — all flow via
+    // additionalProperties: true on the outer object.
+    wcagVersion: Type.Optional(Type.String()),
+    wcagLevel: Type.Optional(Type.String()),
+    criteria: Type.Optional(Type.Array(Type.Any())),
+    confidence: Type.Optional(Type.Number()),
+    model: Type.Optional(Type.String()),
+    provider: Type.Optional(Type.String()),
+    attempts: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+
+const GenerateFixData = Type.Object(
+  {
+    fixedHtml: Type.Optional(Type.String()),
+    explanation: Type.Optional(Type.String()),
+    effort: Type.Optional(
+      Type.Union([Type.Literal('low'), Type.Literal('medium'), Type.Literal('high')]),
+    ),
+    source: Type.Optional(
+      Type.Union([Type.Literal('llm'), Type.Literal('hardcoded'), Type.Literal('cache')]),
+    ),
+    model: Type.Optional(Type.String()),
+    provider: Type.Optional(Type.String()),
+    attempts: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+
+const AnalyseReportData = Type.Object(
+  {
+    summary: Type.Optional(Type.String()),
+    keyFindings: Type.Optional(Type.Array(Type.String())),
+    priorities: Type.Optional(Type.Array(Type.String())),
+    patterns: Type.Optional(Type.Array(Type.String())),
+    executiveSummary: Type.Optional(Type.String()),
+    model: Type.Optional(Type.String()),
+    provider: Type.Optional(Type.String()),
+    attempts: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+
+const DiscoverBrandingData = Type.Object(
+  {
+    colors: Type.Array(
+      Type.Object(
+        {
+          hex: Type.String(),
+          name: Type.Optional(Type.String()),
+          usage: Type.Optional(Type.String()),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    fonts: Type.Array(
+      Type.Object(
+        {
+          family: Type.String(),
+          weights: Type.Optional(Type.Array(Type.String())),
+          usage: Type.Optional(Type.String()),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    logo: Type.Optional(Type.String()),
+    logoUrl: Type.Optional(Type.String()),
+    brandName: Type.Optional(Type.String()),
+    description: Type.Optional(Type.String()),
+    model: Type.Optional(Type.String()),
+    provider: Type.Optional(Type.String()),
+    attempts: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+
 export async function registerCapabilityExecRoutes(
   app: FastifyInstance,
   db: DbAdapter,
@@ -17,34 +184,16 @@ export async function registerCapabilityExecRoutes(
   app.post('/api/v1/extract-requirements', {
     preHandler: [requireScope('read')],
     schema: {
-      tags: ['Capabilities'],
+      tags: ['capabilities'],
       summary: 'Extract requirements from a regulation document',
       security: [{ bearerAuth: [] }],
-      body: {
-        type: 'object',
-        properties: {
-          content:        { type: 'string', description: 'Full text of the regulation document' },
-          regulationId:   { type: 'string', description: 'Unique identifier for the regulation (e.g. "wcag-2.2")' },
-          regulationName: { type: 'string', description: 'Human-readable regulation name' },
-          jurisdictionId: { type: 'string', description: 'Optional jurisdiction ID' },
-          orgId:          { type: 'string', description: 'Optional organisation ID for per-org prompt overrides' },
-        },
-      },
+      body: ExtractRequirementsBody,
       response: {
-        200: {
-          type: 'object',
-          additionalProperties: true,
-          properties: {
-            requirements: { type: 'array', items: { type: 'object' } },
-            model:        { type: 'string' },
-            provider:     { type: 'string' },
-            attempts:     { type: 'number' },
-          },
-        },
-        400: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        502: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        503: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        504: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        200: LuqenResponse(ExtractRequirementsData),
+        400: ErrorEnvelope,
+        502: ErrorEnvelope,
+        503: ErrorEnvelope,
+        504: ErrorEnvelope,
       },
     },
   }, async (request, reply) => {
@@ -104,36 +253,16 @@ export async function registerCapabilityExecRoutes(
   app.post('/api/v1/generate-fix', {
     preHandler: [requireScope('read')],
     schema: {
-      tags: ['Capabilities'],
+      tags: ['capabilities'],
       summary: 'Generate an AI fix suggestion for a WCAG issue',
       security: [{ bearerAuth: [] }],
-      body: {
-        type: 'object',
-        properties: {
-          wcagCriterion: { type: 'string', description: 'WCAG success criterion (e.g. "1.1.1 Non-text Content")' },
-          issueMessage:  { type: 'string', description: 'Accessibility issue description from the scanner' },
-          htmlContext:   { type: 'string', description: 'HTML snippet containing the problematic element' },
-          cssContext:    { type: 'string', description: 'Optional: relevant CSS for the element' },
-          orgId:         { type: 'string', description: 'Optional organisation ID for per-org prompt overrides' },
-        },
-      },
+      body: GenerateFixBody,
       response: {
-        200: {
-          type: 'object',
-          additionalProperties: true,
-          properties: {
-            fixedHtml:   { type: 'string' },
-            explanation: { type: 'string' },
-            effort:      { type: 'string', enum: ['low', 'medium', 'high'] },
-            model:       { type: 'string' },
-            provider:    { type: 'string' },
-            attempts:    { type: 'number' },
-          },
-        },
-        400: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        502: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        503: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        504: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        200: LuqenResponse(GenerateFixData),
+        400: ErrorEnvelope,
+        502: ErrorEnvelope,
+        503: ErrorEnvelope,
+        504: ErrorEnvelope,
       },
     },
   }, async (request, reply) => {
@@ -190,50 +319,16 @@ export async function registerCapabilityExecRoutes(
   app.post('/api/v1/analyse-report', {
     preHandler: [requireScope('read')],
     schema: {
-      tags: ['Capabilities'],
+      tags: ['capabilities'],
       summary: 'Generate an AI executive summary for a scan report',
       security: [{ bearerAuth: [] }],
-      body: {
-        type: 'object',
-        properties: {
-          siteUrl:           { type: 'string', description: 'URL of the scanned site' },
-          totalIssues:       { description: 'Total issue count from the scan (number)' },
-          issuesList:        {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                criterion: { type: 'string' },
-                message:   { type: 'string' },
-                count:     { type: 'number' },
-                level:     { type: 'string' },
-              },
-            },
-            description: 'Top issues from the scan',
-          },
-          complianceSummary: { type: 'string', description: 'Optional: compliance matrix summary text' },
-          recurringPatterns: { type: 'array', items: { type: 'string' }, description: 'Optional: recurring criteria from prior scans' },
-          orgId:             { type: 'string', description: 'Optional organisation ID for per-org prompt overrides' },
-        },
-      },
+      body: AnalyseReportBody,
       response: {
-        200: {
-          type: 'object',
-          additionalProperties: true,
-          properties: {
-            summary:      { type: 'string' },
-            keyFindings:  { type: 'array', items: { type: 'string' } },
-            priorities:   { type: 'array', items: { type: 'string' } },
-            patterns:     { type: 'array', items: { type: 'string' } },
-            model:        { type: 'string' },
-            provider:     { type: 'string' },
-            attempts:     { type: 'number' },
-          },
-        },
-        400: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        502: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        503: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        504: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        200: LuqenResponse(AnalyseReportData),
+        400: ErrorEnvelope,
+        502: ErrorEnvelope,
+        503: ErrorEnvelope,
+        504: ErrorEnvelope,
       },
     },
   }, async (request, reply) => {
@@ -296,58 +391,16 @@ export async function registerCapabilityExecRoutes(
   app.post('/api/v1/discover-branding', {
     preHandler: [requireScope('read')],
     schema: {
-      tags: ['Capabilities'],
+      tags: ['capabilities'],
       summary: 'Auto-detect brand colors, fonts, and logo from a URL',
       security: [{ bearerAuth: [] }],
-      body: {
-        type: 'object',
-        properties: {
-          url:   { type: 'string', description: 'URL to fetch and analyse for brand signals (http/https)' },
-          orgId: { type: 'string', description: 'Optional organisation ID for per-org prompt overrides' },
-        },
-      },
+      body: DiscoverBrandingBody,
       response: {
-        200: {
-          type: 'object',
-          additionalProperties: true,
-          properties: {
-            colors: {
-              type: 'array',
-              description: 'Detected brand colors',
-              items: {
-                type: 'object',
-                additionalProperties: true,
-                properties: {
-                  name:  { type: 'string' },
-                  hex:   { type: 'string' },
-                  usage: { type: 'string' },
-                },
-              },
-            },
-            fonts: {
-              type: 'array',
-              description: 'Detected brand fonts',
-              items: {
-                type: 'object',
-                additionalProperties: true,
-                properties: {
-                  family: { type: 'string' },
-                  usage:  { type: 'string' },
-                },
-              },
-            },
-            logoUrl:     { type: 'string', description: 'Detected logo URL (if found)' },
-            brandName:   { type: 'string', description: 'Detected brand name (if found)' },
-            description: { type: 'string', description: 'One-sentence brand description (if extracted)' },
-            model:       { type: 'string' },
-            provider:    { type: 'string' },
-            attempts:    { type: 'number' },
-          },
-        },
-        400: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        502: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        503: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
-        504: { type: 'object', properties: { error: { type: 'string' }, statusCode: { type: 'number' } } },
+        200: LuqenResponse(DiscoverBrandingData),
+        400: ErrorEnvelope,
+        502: ErrorEnvelope,
+        503: ErrorEnvelope,
+        504: ErrorEnvelope,
       },
     },
   }, async (request, reply) => {
@@ -396,6 +449,19 @@ export async function registerCapabilityExecRoutes(
   // POST /api/v1/capabilities/agent-conversation — SSE token-level streaming
   app.post('/api/v1/capabilities/agent-conversation', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['capabilities'],
+      summary: 'Agent conversation streaming endpoint (SSE token frames)',
+      description: 'Returns text/event-stream — body is documented; response is hijacked. See AgentService docs.',
+      security: [{ bearerAuth: [] }],
+      body: AgentConversationBody,
+      response: {
+        // SSE stream: each frame is JSON-encoded after `data: `. Documented
+        // here as a permissive object so OpenAPI clients see the wire shape.
+        200: LuqenResponse(Type.Object({}, { additionalProperties: true })),
+        400: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
     const orgId = typeof body['orgId'] === 'string' ? body['orgId'] : '';

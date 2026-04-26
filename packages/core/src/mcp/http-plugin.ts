@@ -69,6 +69,14 @@ export interface McpHttpPluginOptions {
   readonly resourceMetadata?: readonly ResourceMetadata[];
   readonly requiredScope?: 'read' | 'write' | 'admin';
   readonly path?: string;
+  /**
+   * Phase 41 — optional Fastify schema for the MCP POST route. When set, it
+   * is passed as `app.post(path, { schema }, handler)` so `/api/v1/mcp` is
+   * captured by `app.swagger()` and the route-vs-spec coverage tests pass.
+   * Backwards-compat: when omitted, the plugin registers without a schema
+   * (Phase 28 / 29 behaviour).
+   */
+  readonly routeSchema?: Record<string, unknown>;
 }
 
 const SCOPE_HIERARCHY: Record<string, readonly string[]> = {
@@ -109,7 +117,7 @@ export function runInToolContext<T>(context: ToolContext, fn: () => T | Promise<
 export async function createMcpHttpPlugin(
   options: McpHttpPluginOptions,
 ): Promise<FastifyPluginAsync> {
-  const { mcpServer, toolMetadata, requiredScope = 'read', path = '/api/v1/mcp' } = options;
+  const { mcpServer, toolMetadata, requiredScope = 'read', path = '/api/v1/mcp', routeSchema } = options;
 
   // ------- COMMITTED APPROACH (blocker 4 fix): SDK request-handler override.
   //
@@ -393,7 +401,8 @@ export async function createMcpHttpPlugin(
 
   // ------- Fastify plugin: POST {path} route.
   return async function mcpHttpPlugin(app: FastifyInstance): Promise<void> {
-    app.post(path, async (request: FastifyRequest, reply: FastifyReply) => {
+    const routeOpts = routeSchema != null ? { schema: routeSchema } : {};
+    app.post(path, routeOpts, async (request: FastifyRequest, reply: FastifyReply) => {
       // 1. Auth gate. extractToolContext throws if tokenPayload is missing
       //    (global middleware failed or plugin was registered before it).
       let context: ToolContext;

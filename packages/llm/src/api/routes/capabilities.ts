@@ -1,15 +1,92 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { LuqenResponse, ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { CAPABILITY_NAMES, type CapabilityName } from '../../types.js';
+
+const CapabilityAssignment = Type.Object(
+  {
+    capability: Type.String(),
+    modelId: Type.String(),
+    priority: Type.Number(),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const CapabilityWithAssignments = Type.Object(
+  {
+    name: Type.String(),
+    assignments: Type.Array(CapabilityAssignment),
+  },
+  { additionalProperties: true },
+);
+
+// Body fields Optional so handlers run their own per-field 400 validation.
+const AssignBody = Type.Object(
+  {
+    modelId: Type.Optional(Type.String()),
+    priority: Type.Optional(Type.Number()),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const PriorityBody = Type.Object(
+  {
+    priority: Type.Optional(Type.Number()),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const NameParams = Type.Object({ name: Type.String() }, { additionalProperties: true });
+const NameModelParams = Type.Object(
+  { name: Type.String(), modelId: Type.String() },
+  { additionalProperties: true },
+);
+const OrgQuery = Type.Object(
+  { orgId: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const PriorityUpdated = Type.Object(
+  { updated: Type.Boolean(), priority: Type.Number() },
+  { additionalProperties: true },
+);
+
+const StatusResponse = Type.Object(
+  {
+    providers: Type.Number(),
+    models: Type.Number(),
+    capabilities: Type.Object(
+      {
+        total: Type.Number(),
+        covered: Type.Number(),
+        coverage: Type.Number(),
+      },
+      { additionalProperties: true },
+    ),
+  },
+  { additionalProperties: true },
+);
 
 export async function registerCapabilityRoutes(
   app: FastifyInstance,
   db: DbAdapter,
 ): Promise<void> {
-  // GET /api/v1/capabilities — list all 4 capabilities with assignments
+  // GET /api/v1/capabilities — list all capabilities with assignments
   app.get('/api/v1/capabilities', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['capabilities'],
+      summary: 'List capabilities with assigned models per capability',
+      response: {
+        200: LuqenResponse(Type.Array(CapabilityWithAssignments)),
+        500: ErrorEnvelope,
+      },
+    },
   }, async (_request, reply) => {
     try {
       const assignments = await db.listCapabilityAssignments();
@@ -26,6 +103,17 @@ export async function registerCapabilityRoutes(
   // PUT /api/v1/capabilities/:name/assign
   app.put('/api/v1/capabilities/:name/assign', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['capabilities'],
+      summary: 'Assign a model to a capability (creates priority slot)',
+      params: NameParams,
+      body: AssignBody,
+      response: {
+        200: LuqenResponse(CapabilityAssignment),
+        400: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const { name } = request.params as { name: string };
@@ -76,6 +164,18 @@ export async function registerCapabilityRoutes(
   // DELETE /api/v1/capabilities/:name/assign/:modelId
   app.delete('/api/v1/capabilities/:name/assign/:modelId', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['capabilities'],
+      summary: 'Unassign a model from a capability',
+      params: NameModelParams,
+      querystring: OrgQuery,
+      response: {
+        204: Type.Null(),
+        400: ErrorEnvelope,
+        404: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const { name, modelId } = request.params as { name: string; modelId: string };
@@ -104,6 +204,17 @@ export async function registerCapabilityRoutes(
   // PATCH /api/v1/capabilities/:name/assign/:modelId — update priority
   app.patch('/api/v1/capabilities/:name/assign/:modelId', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['capabilities'],
+      summary: 'Update priority of a capability assignment',
+      params: NameModelParams,
+      body: PriorityBody,
+      response: {
+        200: LuqenResponse(PriorityUpdated),
+        400: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const { name, modelId } = request.params as { name: string; modelId: string };
@@ -138,6 +249,14 @@ export async function registerCapabilityRoutes(
   // GET /api/v1/status — system overview
   app.get('/api/v1/status', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['capabilities'],
+      summary: 'System overview: provider/model count, capability coverage',
+      response: {
+        200: LuqenResponse(StatusResponse),
+        500: ErrorEnvelope,
+      },
+    },
   }, async (_request, reply) => {
     try {
       const [providers, models, assignments] = await Promise.all([
