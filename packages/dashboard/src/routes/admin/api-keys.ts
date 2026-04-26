@@ -1,9 +1,45 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
 import { generateApiKey } from '../../auth/api-key.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import type { StorageAdapter } from '../../db/index.js';
 import { API_KEY_ROLES, type ApiKeyRole } from '../../db/types.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes for OpenAPI fidelity.
+// Routes here return HTMX partials (text/html), so request bodies/params are
+// typed; responses are advertised as String per the dashboard HTML pattern.
+const ApiKeyCreateBody = Type.Object(
+  {
+    label: Type.Optional(Type.String()),
+    role: Type.Optional(Type.String()),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const ApiKeyIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const ApiKeyListQuery = Type.Object(
+  { orgId: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 interface ApiKeyRow {
   readonly id: string;
@@ -63,7 +99,18 @@ export async function apiKeyRoutes(
   // GET /admin/api-keys — list all keys (supports ?orgId= filter)
   server.get(
     '/admin/api-keys',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        ...HtmlPageSchema,
+        querystring: ApiKeyListQuery,
+        response: {
+          200: Type.String(),
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { orgId?: string };
       const orgIdFilter = query.orgId?.trim() || undefined;
@@ -82,7 +129,13 @@ export async function apiKeyRoutes(
   // GET /admin/api-keys/:id/view — view key detail with revoke option
   server.get(
     '/admin/api-keys/:id/view',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        params: ApiKeyIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const rawKey = await storage.apiKeys.listKeys();
@@ -105,7 +158,10 @@ export async function apiKeyRoutes(
   // GET /admin/api-keys/new — modal form to create a new key
   server.get(
     '/admin/api-keys/new',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPartialResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/api-key-form.hbs', {});
     },
@@ -114,7 +170,13 @@ export async function apiKeyRoutes(
   // POST /admin/api-keys — create new API key
   server.post(
     '/admin/api-keys',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        body: ApiKeyCreateBody,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as { label?: string; role?: string; orgId?: string };
       const label = body.label?.trim() || 'default';
@@ -174,7 +236,13 @@ export async function apiKeyRoutes(
   // POST /admin/api-keys/:id/revoke — revoke an API key
   server.post(
     '/admin/api-keys/:id/revoke',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        params: ApiKeyIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 

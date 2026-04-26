@@ -1,8 +1,21 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { safeGetSystemHealth, getSeedStatus } from '../../compliance-client.js';
 import { safeGetHealth as safeGetBrandingHealth } from '../../branding-client.js';
 import type { LLMClient } from '../../llm-client.js';
 import { requirePermission } from '../../auth/middleware.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes for HTML page + reseed POST.
+const ReseedHtmlResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 import { statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
@@ -31,7 +44,10 @@ export async function systemRoutes(
   // GET /admin/system — service health, DB stats, seed status
   server.get(
     '/admin/system',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const token = getToken(request);
@@ -130,7 +146,10 @@ export async function systemRoutes(
   // POST /admin/system/reseed — trigger compliance data reseed
   server.post(
     '/admin/system/reseed',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: ReseedHtmlResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
       try {

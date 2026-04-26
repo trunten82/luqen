@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import {
   listClients,
   createClient,
@@ -14,6 +15,44 @@ import type { StorageAdapter } from '../../db/index.js';
 import type { ServiceTokenManager } from '../../auth/service-token.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml, escapeHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes. Endpoints return HTMX partials and
+// full HTML pages; bodies/params are typed for OpenAPI fidelity.
+const ClientCreateBody = Type.Object(
+  {
+    name: Type.Optional(Type.String()),
+    scopes: Type.Optional(Type.String()),
+    grantTypes: Type.Optional(
+      Type.Union([Type.String(), Type.Array(Type.String())]),
+    ),
+    service: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const ClientIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const DcrClientIdParams = Type.Object(
+  { clientId: Type.String() },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+    503: ErrorEnvelope,
+  },
+} as const;
 
 export async function clientRoutes(
   server: FastifyInstance,
@@ -31,7 +70,10 @@ export async function clientRoutes(
   // (too permissive, granted to many roles) is removed.
   server.get(
     '/admin/clients',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const brandingTokenManager = getBrandingTokenManager();
       const llmClient = getLLMClient();
@@ -196,7 +238,10 @@ export async function clientRoutes(
   // GET /admin/clients/new — modal form fragment
   server.get(
     '/admin/clients/new',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: HtmlPartialResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       return reply.view('admin/client-form.hbs', {
@@ -215,7 +260,13 @@ export async function clientRoutes(
   // POST /admin/clients — create OAuth client
   server.post(
     '/admin/clients',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: {
+        body: ClientCreateBody,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const brandingTokenManager = getBrandingTokenManager();
       const llmClient = getLLMClient();
@@ -335,7 +386,13 @@ export async function clientRoutes(
   // POST /admin/clients/:id/revoke — revoke compliance OAuth client
   server.post(
     '/admin/clients/:id/revoke',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: {
+        params: ClientIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -355,7 +412,13 @@ export async function clientRoutes(
   // POST /admin/clients/:id/revoke-branding — revoke branding OAuth client
   server.post(
     '/admin/clients/:id/revoke-branding',
-    { preHandler: requirePermission('admin.system', 'branding.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'branding.manage'),
+      schema: {
+        params: ClientIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const brandingTokenManager = getBrandingTokenManager();
       const { id } = request.params as { id: string };
@@ -386,7 +449,13 @@ export async function clientRoutes(
   // 'admin.clients.cross_org_revoke_attempt' for forensic tracking.
   server.post(
     '/admin/clients/dcr/:clientId/revoke',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: {
+        params: DcrClientIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { clientId } = request.params as { clientId: string };
       if (storage == null) {
@@ -449,7 +518,13 @@ export async function clientRoutes(
   // POST /admin/clients/:id/revoke-llm — revoke LLM OAuth client
   server.post(
     '/admin/clients/:id/revoke-llm',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        params: ClientIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
