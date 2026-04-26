@@ -41,6 +41,24 @@ Last reviewed for **v3.1.0** (Phase 40 / DOC-03) — head migration 061.
 | `LUQEN_INSTALL_DIR` | `${HOME}/luqen` | No | Override target directory for `install.command`. | v3.1.0 (DOC-03) |
 | `LUQEN_INSTALL_REEXEC` | (set by installer) | No | Internal flag used by `install.sh` and `install.command` to detect re-execution from `curl | bash` form. Do not set manually. | v2.7.0 |
 
+## Monitor agent (Phase 42, `--with-monitor`)
+
+These variables are emitted only when `--with-monitor` is supplied to the
+installer. They configure the optional `luqen-monitor` service (systemd
+unit `luqen-monitor.service` on Linux, `io.luqen.monitor.plist` launchd
+agent on macOS, `LuqenMonitor` NSSM service / Task Scheduler task on
+Windows, or the `monitor` service in `docker-compose.yml` under
+`--profile monitor`).
+
+| Env Var | Default | Required when | Source | Purpose |
+|---------|---------|---------------|--------|---------|
+| `MONITOR_COMPLIANCE_URL` | `${COMPLIANCE_PUBLIC_URL}` | `--with-monitor` | resolved by installer | Compliance API the monitor agent calls to list sources, post update proposals, and update lastChecked timestamps. |
+| `MONITOR_CLIENT_ID` | (minted) | `--with-monitor` | `packages/compliance/dist/cli.js clients create --name luqen-monitor` | OAuth client id used by the monitor agent to obtain access tokens from compliance. |
+| `MONITOR_CLIENT_SECRET` | (minted) | `--with-monitor` | same | OAuth client secret matching `MONITOR_CLIENT_ID`. |
+| `MONITOR_URL` | `http://localhost:4300` | `--with-monitor` | derived from `--monitor-port` | External URL the monitor agent advertises (used in agent-card / A2A discovery). |
+| `MONITOR_PORT` | `4300` | No | `--monitor-port` flag | Port the monitor agent listens on. Default 4300 to avoid collision with the LLM service (4200). |
+| `MONITOR_CHECK_INTERVAL` | `manual` | No | constant set by installer | Polling cadence. `manual` means the agent only scans when triggered via the dashboard MCP integration or `luqen-monitor scan` CLI. |
+
 ## Notes
 
 - All ports may be overridden via the wizard or CLI flags.

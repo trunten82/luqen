@@ -11,6 +11,88 @@ Last reviewed for **v3.1.0** (Phase 40 / DOC-03).
 
 ---
 
+## v3.1.x — Installer Wizard Redesign (Phase 42)
+
+> Phase 42 reshapes the installer wizard around four explicit deployment
+> profiles, registers the `@luqen/monitor` agent as a first-class service,
+> bundles `install.ps1` parity fixes, and refreshes `docker-compose.yml`.
+> Default `--non-interactive` invocation behaviour is unchanged (D-01
+> invariant): a flag-less install still produces the v3.1.0 self-hosted
+> dashboard topology with all four backing services.
+
+**Wizard restructure:** the previous 3-way menu (`install.sh`) and 2-way
+menu (`install.ps1`) are replaced with **4 profiles**:
+
+| Profile | Description |
+|---------|-------------|
+| Scanner CLI (`--profile cli`) | `@luqen/core` only. No system services. Use as `luqen scan ...` or stdio MCP via `node packages/core/dist/mcp.js`. |
+| API services (`--profile api`) | Headless install of any subset of compliance / branding / llm. Selectable via `--api-services compliance,branding,llm`. |
+| Self-hosted dashboard (`--profile dashboard`, default) | Dashboard + chosen subset of {compliance, branding, llm}. Disable any with `--without-compliance` / `--without-branding` / `--without-llm`. |
+| Docker Compose (`--profile docker`) | All 5 services in containers via `docker-compose.yml`. Monitor is opt-in via `docker compose --profile monitor up`. |
+
+**New flags** (apply to `install.sh` and `install.ps1`):
+
+| Flag | Purpose |
+|------|---------|
+| `--profile cli\|api\|dashboard\|docker` | Select deployment profile. Default `dashboard`. |
+| `--api-services <csv>` | Comma-separated list for Profile 2 (e.g. `compliance,branding`). |
+| `--with-monitor` | Register the monitor agent as a system service. Requires compliance to be installed; selecting `--with-monitor` without compliance is a parser error. |
+| `--without-compliance` / `--without-branding` / `--without-llm` | Skip a backing service in Profile 3. |
+| `--monitor-port <int>` | Override the default monitor port (4300). |
+
+**Monitor agent registration** (first time the installer ships this):
+
+- Linux — `luqen-monitor.service` systemd unit, registered alongside the
+  four existing units when `--with-monitor` is passed.
+- macOS — `io.luqen.monitor.plist` launchd agent.
+- Windows — `LuqenMonitor` NSSM service or Task Scheduler task,
+  matching the rest of the install.ps1 service registration.
+- Default port **4300** (configurable via `--monitor-port`). Avoids
+  collision with the LLM service on 4200.
+- OAuth client minted via
+  `packages/compliance/dist/cli.js clients create --name luqen-monitor`.
+  Credentials emitted as `MONITOR_CLIENT_ID` / `MONITOR_CLIENT_SECRET`
+  in the systemd / launchd / NSSM environment block (or `.env` file
+  for Docker installs).
+- Default `MONITOR_CHECK_INTERVAL=manual` — the agent does not poll on a
+  schedule; operators trigger scans via the dashboard MCP integration or
+  the `luqen-monitor scan` CLI.
+
+**install.ps1 parity bug fixes** (bundled with Phase 42):
+
+- Branding service is now named in the wizard prompts (was missing).
+- LLM service is now named in the wizard prompts (was missing).
+- All 5 OAuth clients (compliance↔llm, dashboard↔compliance,
+  dashboard↔branding, dashboard↔llm, dashboard↔monitor) are minted
+  end-to-end. Previously only one client was minted on Windows, leaving
+  the dashboard unable to authenticate to branding or LLM.
+- `dashboard.config.json` now includes `brandingUrl` / `brandingClientId`
+  / `brandingClientSecret` and the matching `llmUrl` / `llmClientId` /
+  `llmClientSecret` fields. Previously these were missing on Windows so
+  the dashboard could only call compliance.
+
+**docker-compose.yml restructure:**
+
+- Adds an `llm` service on port 4200 with its own `llm-data` volume and
+  healthcheck. Dashboard now `depends_on: llm: condition: service_healthy`.
+- Adds a `monitor` service on port 4300 with `profiles: [monitor]`, so
+  it only starts under `docker compose --profile monitor up`. Monitor
+  `depends_on: compliance: condition: service_healthy`.
+- Adds `llm-data` and `monitor-data` named volumes.
+- Per locked scope decision: Profile 4 ships **5 Luqen services + the
+  optional monitor only** — no `pa11y`, no `mongo`, no `redis`. The
+  pa11y npm library is bundled into compliance via `@luqen/core`;
+  Mongo/Redis remain plugin-driven and are out of scope for the
+  installer.
+
+**Migration note for existing installs:** re-running the v3.1.x
+installer on a v3.1.0 host is idempotent. The four existing systemd
+units / launchd plists / NSSM services remain intact. The monitor unit
+is only created when `--with-monitor` is supplied, so no surprises for
+operators who don't opt in.
+
+---
+
 ## v3.1.0 (2026-04-25 — pending release)
 
 > Phase-40 documentation sweep. No behaviour changes shipped beyond
