@@ -2,9 +2,16 @@
  * Phase 40-01 DOC-02 Task 4 — route-vs-spec coverage gate for the MCP
  * Streamable HTTP endpoint hosted on the dashboard service.
  *
- * The MCP endpoint is mounted under /api/v1/mcp and is registered as part
- * of the dashboard Fastify instance. We boot the same dashboard server,
- * filter to /api/v1/mcp* routes, and assert each is present in the spec.
+ * Phase 41-05 (OAPI-05) — flipped from describe.skip to active. The
+ * dashboard MCP route is wired with a JSON-RPC body schema (in
+ * routes/api/mcp.ts) and one virtual operation per registered tool is
+ * injected via packages/dashboard/src/mcp/openapi-bridge.ts so the
+ * Fastify swagger generator emits a substantive entry per tool.
+ *
+ * Routes are captured via the server-side `onRoute` hook attached in
+ * server.ts (`__collectedRoutes`) — same approach as
+ * route-coverage.test.ts (Plan 41-04). The previous printRoutes() trie
+ * parser was lossy for nested branches.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -22,16 +29,7 @@ function toOpenApiPath(fastifyPath: string): string {
   return fastifyPath.replace(/:([^/]+)/g, '{$1}');
 }
 
-function parseRouteLine(line: string): readonly RegisteredRoute[] {
-  const trimmed = line.replace(/[└├│─\s]+/g, ' ').trim();
-  const match = trimmed.match(/^(\S+)\s+\(([^)]+)\)\s*$/);
-  if (!match) return [];
-  const path = match[1] ?? '';
-  const methods = (match[2] ?? '').split(',').map((m) => m.trim()).filter(Boolean);
-  return methods.map((method) => ({ method, path }));
-}
-
-describe.skip('[Phase 41 pending] OpenAPI route coverage (dashboard MCP endpoint)', () => {
+describe('OpenAPI route coverage (dashboard MCP endpoint)', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let app: any;
 
@@ -59,10 +57,10 @@ describe.skip('[Phase 41 pending] OpenAPI route coverage (dashboard MCP endpoint
     const spec = app.swagger() as { paths?: Record<string, unknown> };
     const specPaths = spec.paths ?? {};
 
-    const routes = (app.printRoutes({ commonPrefix: false }) as string)
-      .split('\n')
-      .flatMap(parseRouteLine)
-      .filter((r) => r.method !== 'HEAD')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const collected = ((app as any).__collectedRoutes ?? []) as RegisteredRoute[];
+    const routes = collected
+      .filter((r) => r.method !== 'HEAD' && r.method !== 'OPTIONS')
       .filter((r) => r.path === '/api/v1/mcp' || r.path.startsWith('/api/v1/mcp/'));
 
     expect(routes.length, 'expected at least one /api/v1/mcp* route').toBeGreaterThan(0);

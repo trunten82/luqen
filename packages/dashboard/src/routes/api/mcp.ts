@@ -20,6 +20,14 @@
  * current isolated TypeScript build still compiles (documented as a
  * Rule 3 cross-plan deviation in 30-02-SUMMARY.md).
  *
+ * Phase 41-05 (OAPI-05): the MCP route now declares a schema so the
+ * Fastify swagger generator emits a substantive entry for POST /api/v1/mcp,
+ * and the dashboard MCP server's registered tools are bridged into the
+ * spec as virtual operations under /api/v1/mcp/tools/{toolName} via
+ * `registerMcpOpenApiOperations` from ../../mcp/openapi-bridge.js. Tool
+ * Zod schemas are converted at runtime — no parallel hand-written JSON
+ * Schemas (D-03).
+ *
  * PITFALLS.md #9 — the MCP endpoint is Bearer-only. Cookie sessions are
  * deliberately NOT accepted here. server.ts bypasses the cookie-session
  * guard for /api/v1/mcp (using isBearerOnlyPath) so this scoped preHandler
@@ -27,6 +35,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { createMcpHttpPlugin, type McpHttpPluginOptions } from '@luqen/core/mcp';
 import {
   createDashboardMcpServer,
@@ -34,6 +43,10 @@ import {
   DASHBOARD_RESOURCE_METADATA,
 } from '../../mcp/server.js';
 import { createMcpAuthPreHandler, type McpTokenVerifier } from '../../mcp/middleware.js';
+import {
+  snapshotRegisteredTools,
+  registerMcpOpenApiOperations,
+} from '../../mcp/openapi-bridge.js';
 import type { StorageAdapter } from '../../db/index.js';
 import type { ScanService } from '../../services/scan-service.js';
 import type { ServiceConnectionsRepository } from '../../db/service-connections-repository.js';
@@ -51,6 +64,45 @@ export interface McpRouteOptions {
   readonly resourceMetadataUrl: string;
 }
 
+// JSON-RPC 2.0 body envelope for POST /api/v1/mcp. The route accepts every
+// MCP method (tools/list, tools/call, resources/list, prompts/list, etc.)
+// so the body is intentionally tolerant: only `jsonrpc` + `method` are
+// required, `params` is method-specific, `id` is absent on notifications.
+// additionalProperties: true tolerates SDK-version add-ons (e.g. _meta).
+const JsonRpcRequest = Type.Object(
+  {
+    jsonrpc: Type.Literal('2.0'),
+    method: Type.String(),
+    id: Type.Optional(Type.Union([Type.String(), Type.Number()])),
+    params: Type.Optional(Type.Any()),
+  },
+  { additionalProperties: true },
+);
+
+const JsonRpcResponse = Type.Any();
+
+const ErrorBody = Type.Object(
+  {
+    error: Type.String(),
+    statusCode: Type.Optional(Type.Number()),
+    message: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const MCP_ROUTE_SCHEMA = {
+  tags: ['mcp'],
+  summary: 'MCP Streamable HTTP JSON-RPC endpoint',
+  description:
+    'Single entry point for all MCP JSON-RPC traffic. Per-tool operations exposed at /api/v1/mcp/tools/{toolName} are virtual spec stubs — call this endpoint with a JSON-RPC body specifying method (e.g. "tools/call") and params.',
+  body: JsonRpcRequest,
+  response: {
+    200: JsonRpcResponse,
+    400: ErrorBody,
+    401: ErrorBody,
+  },
+} as const;
+
 export async function registerMcpRoutes(
   app: FastifyInstance,
   opts: McpRouteOptions,
@@ -60,6 +112,14 @@ export async function registerMcpRoutes(
     scanService: opts.scanService,
     serviceConnections: opts.serviceConnections,
   });
+
+  // Phase 41-05: snapshot the registered tools and inject one virtual
+  // OpenAPI operation per tool. Done BEFORE the JSON-RPC route is wired
+  // so the swagger generator captures all spec entries in a single pass.
+  // Virtual routes mount on the parent `app` (not the encapsulated bearer
+  // scope) — they are spec-only stubs that return 405 and need no auth.
+  const toolSnapshots = snapshotRegisteredTools(mcpServer);
+  registerMcpOpenApiOperations(app, toolSnapshots);
 
   // Phase 30-01 (Wave 1, parallel) extends McpHttpPluginOptions with a
   // `resourceMetadata` field used by the ListResourcesRequestSchema
@@ -74,6 +134,7 @@ export async function registerMcpRoutes(
     toolMetadata: DASHBOARD_TOOL_METADATA,
     resourceMetadata: DASHBOARD_RESOURCE_METADATA,
     requiredScope: 'read' as const,
+    routeSchema: MCP_ROUTE_SCHEMA as unknown as Record<string, unknown>,
   };
   const plugin = await createMcpHttpPlugin(
     pluginOptions as unknown as McpHttpPluginOptions,
