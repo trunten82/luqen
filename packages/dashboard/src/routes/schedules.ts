@@ -1,8 +1,12 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from '../db/index.js';
 import { toastHtml, escapeHtml } from './admin/helpers.js';
 import { hasPermission } from '../permissions.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
+
+const ScheduleIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 
 interface CreateScheduleBody {
   readonly siteUrl: string;
@@ -44,6 +48,7 @@ export async function scheduleRoutes(
   // GET /schedules — list all schedules (admin and user roles only)
   server.get(
     '/schedules',
+    { schema: { ...HtmlPageSchema, tags: ['schedules'] } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!hasPermission(request, 'scans.schedule')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
@@ -77,7 +82,10 @@ export async function scheduleRoutes(
   // POST /schedules — create new schedule (admin and user roles only)
   server.post(
     '/schedules',
-    { config: { rateLimit: { max: 10, timeWindow: '10 minutes' } } },
+    {
+      config: { rateLimit: { max: 10, timeWindow: '10 minutes' } },
+      schema: { ...HtmlPageSchema, tags: ['schedules'] },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!hasPermission(request, 'scans.schedule')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
@@ -137,6 +145,7 @@ export async function scheduleRoutes(
   // DELETE /schedules/:id — delete schedule (admin and user roles only)
   server.delete(
     '/schedules/:id',
+    { schema: { ...HtmlPageSchema, tags: ['schedules'], params: ScheduleIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!hasPermission(request, 'scans.schedule')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
@@ -164,6 +173,7 @@ export async function scheduleRoutes(
   // PATCH /schedules/:id/toggle — enable/disable schedule (admin and user roles only)
   server.patch(
     '/schedules/:id/toggle',
+    { schema: { ...HtmlPageSchema, tags: ['schedules'], params: ScheduleIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!hasPermission(request, 'scans.schedule')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });

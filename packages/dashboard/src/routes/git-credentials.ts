@@ -1,10 +1,14 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../db/index.js';
 import type { DashboardConfig } from '../config.js';
 import { requirePermission } from '../auth/middleware.js';
 import { getGitHostPlugin } from '../git-hosts/registry.js';
 import { encryptSecret } from '../plugins/crypto.js';
 import { toastHtml } from './admin/helpers.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
+
+const CredentialIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,7 +35,10 @@ export async function gitCredentialRoutes(
 
   server.get(
     '/account/git-credentials',
-    { preHandler: requirePermission('repos.credentials') },
+    {
+      preHandler: requirePermission('repos.credentials'),
+      schema: { ...HtmlPageSchema, tags: ['git-credentials'] },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = request.user!.id;
       const orgId = request.user?.currentOrgId ?? 'system';
@@ -75,6 +82,7 @@ export async function gitCredentialRoutes(
           timeWindow: '15 minutes',
         },
       },
+      schema: { ...HtmlPageSchema, tags: ['git-credentials'] },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = request.user!.id;
@@ -160,7 +168,10 @@ export async function gitCredentialRoutes(
 
   server.delete(
     '/account/git-credentials/:id',
-    { preHandler: requirePermission('repos.credentials') },
+    {
+      preHandler: requirePermission('repos.credentials'),
+      schema: { ...HtmlPageSchema, tags: ['git-credentials'], params: CredentialIdParams },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const userId = request.user!.id;
