@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import {
   listJurisdictions,
   listRegulations,
@@ -8,6 +9,54 @@ import {
 } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const JurisdictionListQuery = Type.Object(
+  {
+    q: Type.Optional(Type.String()),
+    offset: Type.Optional(Type.String()),
+    limit: Type.Optional(Type.String()),
+    partial: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const JurisdictionCreateBody = Type.Object(
+  {
+    id: Type.Optional(Type.String()),
+    name: Type.Optional(Type.String()),
+    type: Type.Optional(Type.String()),
+    parentId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const JurisdictionUpdateBody = Type.Object(
+  {
+    name: Type.Optional(Type.String()),
+    type: Type.Optional(Type.String()),
+    parentId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const JurisdictionIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 export async function jurisdictionRoutes(
   server: FastifyInstance,
@@ -16,7 +65,10 @@ export async function jurisdictionRoutes(
   // GET /admin/jurisdictions — list table
   server.get(
     '/admin/jurisdictions',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: { ...HtmlPageSchema, querystring: JurisdictionListQuery },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { q?: string; offset?: string; limit?: string };
       const q = query.q?.trim().toLowerCase() ?? '';
@@ -118,7 +170,10 @@ export async function jurisdictionRoutes(
   // GET /admin/jurisdictions/new — modal form fragment
   server.get(
     '/admin/jurisdictions/new',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: HtmlPartialResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/jurisdiction-form.hbs', {
         isNew: true,
@@ -130,7 +185,10 @@ export async function jurisdictionRoutes(
   // POST /admin/jurisdictions — create
   server.post(
     '/admin/jurisdictions',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { body: JurisdictionCreateBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as { id?: string; name?: string; type?: string; parentId?: string };
 
@@ -184,7 +242,10 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
   // GET /admin/jurisdictions/:id/view — read-only detail modal
   server.get(
     '/admin/jurisdictions/:id/view',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: { params: JurisdictionIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
@@ -208,7 +269,10 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
   // GET /admin/jurisdictions/:id/edit — edit form fragment
   server.get(
     '/admin/jurisdictions/:id/edit',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: { params: JurisdictionIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -234,7 +298,10 @@ ${toastHtml(`Jurisdiction "${created.name}" created successfully.`)}`,
   // PATCH /admin/jurisdictions/:id — update
   server.patch(
     '/admin/jurisdictions/:id',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: JurisdictionIdParams, body: JurisdictionUpdateBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { name?: string; type?: string; parentId?: string };
@@ -286,7 +353,10 @@ ${toastHtml(`Jurisdiction "${updated.name}" updated successfully.`)}`,
   // DELETE /admin/jurisdictions/:id — delete
   server.delete(
     '/admin/jurisdictions/:id',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: JurisdictionIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 

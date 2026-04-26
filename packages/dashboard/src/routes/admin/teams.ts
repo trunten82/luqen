@@ -1,7 +1,58 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { escapeHtml, toastHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const TeamCreateBody = Type.Object(
+  {
+    name: Type.Optional(Type.String()),
+    description: Type.Optional(Type.String()),
+    organizationId: Type.Optional(Type.String()),
+    roleId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const TeamOrgBody = Type.Object(
+  { organizationId: Type.Optional(Type.String()), roleId: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const RoleAssignBody = Type.Object(
+  { roleId: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const AddMemberBodySchema = Type.Object(
+  { userId: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const TeamIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const TeamMemberParams = Type.Object(
+  { id: Type.String(), userId: Type.String() },
+  { additionalProperties: true },
+);
+
+// Routes here mix HTML responses, redirects, and JSON error payloads.
+const MixedResponse = {
+  response: {
+    200: Type.Union([Type.String(), Type.Object({}, { additionalProperties: true })]),
+    302: Type.Null(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 /** Tenant isolation: non-admin users can only mutate teams in their own org. */
 function canMutateTeam(request: FastifyRequest, teamOrgId: string): boolean {
@@ -70,7 +121,10 @@ export async function teamRoutes(
   // GET /admin/teams — list teams
   server.get(
     '/admin/teams',
-    { preHandler: requirePermission('admin.teams') },
+    {
+      preHandler: requirePermission('admin.teams'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Admin sees all teams; other users see teams in their org
       const isAdmin = request.user?.role === 'admin';
@@ -118,7 +172,10 @@ export async function teamRoutes(
   // POST /admin/teams — create team
   server.post(
     '/admin/teams',
-    { preHandler: requirePermission('admin.teams') },
+    {
+      preHandler: requirePermission('admin.teams'),
+      schema: { body: TeamCreateBody, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateTeamBody;
       const name = (body.name ?? '').trim();
@@ -168,7 +225,10 @@ export async function teamRoutes(
   // DELETE /admin/teams/:id — delete team
   server.delete(
     '/admin/teams/:id',
-    { preHandler: requirePermission('admin.teams') },
+    {
+      preHandler: requirePermission('admin.teams'),
+      schema: { params: TeamIdParams, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const team = await storage.teams.getTeam(id);
@@ -188,7 +248,10 @@ export async function teamRoutes(
   // GET /admin/teams/:id — team detail with members
   server.get(
     '/admin/teams/:id',
-    { preHandler: requirePermission('admin.teams') },
+    {
+      preHandler: requirePermission('admin.teams'),
+      schema: { params: TeamIdParams, ...HtmlPageSchema },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const team = await storage.teams.getTeam(id);
@@ -252,7 +315,10 @@ export async function teamRoutes(
   // POST /admin/teams/:id/org — update team organization link
   server.post(
     '/admin/teams/:id/org',
-    { preHandler: requirePermission('admin.teams') },
+    {
+      preHandler: requirePermission('admin.teams'),
+      schema: { params: TeamIdParams, body: TeamOrgBody, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as UpdateTeamBody;
@@ -295,7 +361,10 @@ export async function teamRoutes(
   // POST /admin/teams/:id/role — update team role assignment
   server.post(
     '/admin/teams/:id/role',
-    { preHandler: requirePermission('admin.teams') },
+    {
+      preHandler: requirePermission('admin.teams'),
+      schema: { params: TeamIdParams, body: RoleAssignBody, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { roleId?: string };
@@ -348,7 +417,10 @@ export async function teamRoutes(
   // POST /admin/teams/:id/members — add member
   server.post(
     '/admin/teams/:id/members',
-    { preHandler: requirePermission('admin.teams') },
+    {
+      preHandler: requirePermission('admin.teams'),
+      schema: { params: TeamIdParams, body: AddMemberBodySchema, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as AddMemberBody;
@@ -385,7 +457,10 @@ export async function teamRoutes(
   // DELETE /admin/teams/:id/members/:userId — remove member
   server.delete(
     '/admin/teams/:id/members/:userId',
-    { preHandler: requirePermission('admin.teams') },
+    {
+      preHandler: requirePermission('admin.teams'),
+      schema: { params: TeamMemberParams, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
 
