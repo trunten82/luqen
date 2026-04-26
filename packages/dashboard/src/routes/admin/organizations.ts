@@ -13,6 +13,7 @@ import { requirePermission } from '../../auth/middleware.js';
 import { getToken, toastHtml, escapeHtml } from './helpers.js';
 import { t } from '../../i18n/index.js';
 import type { Locale } from '../../i18n/index.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
 
 // ── Phase 32 Plan 08 — agent_display_name Zod schema ───────────────────────
 //
@@ -40,6 +41,26 @@ const AgentDisplayNameSchema = Type.Object(
 );
 
 type AgentDisplayNameInput = Static<typeof AgentDisplayNameSchema>;
+
+// Phase 41.1-02 — local TypeBox shapes.
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    204: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
+
+const IdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
+const IdUserParams = Type.Object(
+  { id: Type.String(), userId: Type.String() },
+  { additionalProperties: true },
+);
 
 function validateAgentDisplayName(
   rawValue: string,
@@ -102,7 +123,10 @@ export async function organizationRoutes(
   // GET /admin/organizations — list all organizations
   server.get(
     '/admin/organizations',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgs = await storage.organizations.listOrgs();
 
@@ -118,7 +142,10 @@ export async function organizationRoutes(
   // GET /admin/organizations/new — create org form fragment
   server.get(
     '/admin/organizations/new',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPartialResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/organization-form.hbs', {});
     },
@@ -127,7 +154,10 @@ export async function organizationRoutes(
   // POST /admin/organizations — create org
   server.post(
     '/admin/organizations',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const brandingTokenManager = getBrandingTokenManager();
       const body = request.body as { name?: string; slug?: string };
@@ -221,7 +251,10 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/delete — delete org
   server.post(
     '/admin/organizations/:id/delete',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -260,7 +293,10 @@ export async function organizationRoutes(
   // GET /admin/organizations/:id/members — show members page (team-based)
   server.get(
     '/admin/organizations/:id/members',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { ...HtmlPageSchema, params: IdParams },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -329,7 +365,10 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/members/add-to-team — add user to a team
   server.post(
     '/admin/organizations/:id/members/add-to-team',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { userId?: string; teamId?: string };
@@ -394,7 +433,10 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/members/:userId/move-team — change a member's team (role)
   server.post(
     '/admin/organizations/:id/members/:userId/move-team',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { params: IdUserParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
       const body = request.body as { teamId?: string };
@@ -443,7 +485,10 @@ export async function organizationRoutes(
   // POST /admin/organizations/:id/members/:userId/remove — remove member from all org teams
   server.post(
     '/admin/organizations/:id/members/:userId/remove',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { params: IdUserParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, userId } = request.params as { id: string; userId: string };
 
@@ -495,7 +540,10 @@ export async function organizationRoutes(
 
   server.get(
     '/admin/organizations/:id/branding-mode',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -526,7 +574,10 @@ export async function organizationRoutes(
 
   server.post(
     '/admin/organizations/:id/branding-mode',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { mode?: string; _confirm?: string };
@@ -616,7 +667,10 @@ export async function organizationRoutes(
 
   server.post(
     '/admin/organizations/:id/branding-test',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -760,7 +814,10 @@ export async function organizationRoutes(
 
   server.get(
     '/admin/organizations/:id/settings',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { ...HtmlPageSchema, params: IdParams },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -784,7 +841,10 @@ export async function organizationRoutes(
 
   server.post(
     '/admin/organizations/:id/settings',
-    { preHandler: requirePermission('admin.system', 'admin.org') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = (request.body as { agent_display_name?: unknown } | undefined) ?? {};
