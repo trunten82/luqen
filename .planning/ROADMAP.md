@@ -179,13 +179,13 @@ Plans:
 **Goal:** Mechanically backfill TypeBox `schema:` blocks across all non-MCP dashboard routes (oauth/, admin/, api/, top-level) so dashboard.json reflects real request/response shapes — replacing the ~301 ops with 2 requestBody / 303 "Default Response" baseline from Phase 41 verification — and add a fidelity assertion (≥95% typed 2xx, all POST/PUT/PATCH have requestBody) to lock the gain in CI.
 **Requirements**: OAPI-04
 **Depends on:** Phase 41
-**Plans:** 1/5 plans executed
+**Plans:** 4/5 plans executed
 
 Plans:
 - [x] 41.1-01-PLAN.md — oauth/* (7 files): well-known/protected-resource/jwks + authorize/token/register
-- [ ] 41.1-02-PLAN.md — admin/* part A (7 large/complex files): branding-guidelines, llm, organizations, plugins, service-connections, dashboard-users, roles
-- [ ] 41.1-03-PLAN.md — admin/* part B (18 remaining files): api-keys/clients/audit/users/system + jurisdictions/regulations/sources/proposals/system-brand-guidelines/teams + git-hosts/email-reports/webhooks/oauth-keys/monitor/change-history (+ helpers.ts confirmation)
-- [ ] 41.1-04-PLAN.md — api/* (6 files excl mcp.ts) + 16 top-level routes (auth/scan/reports/repos/brand-overview/fix-pr/trends/assignments/home/manual-tests/schedules/compare/git-credentials/wcag-enrichment/orgs/tools)
+- [x] 41.1-02-PLAN.md — admin/* part A (7 large/complex files): branding-guidelines, llm, organizations, plugins, service-connections, dashboard-users, roles
+- [x] 41.1-03-PLAN.md — admin/* part B (18 remaining files): api-keys/clients/audit/users/system + jurisdictions/regulations/sources/proposals/system-brand-guidelines/teams + git-hosts/email-reports/webhooks/oauth-keys/monitor/change-history (+ helpers.ts confirmation)
+- [x] 41.1-04-PLAN.md — api/* (6 files excl mcp.ts) + 16 top-level routes (auth/scan/reports/repos/brand-overview/fix-pr/trends/assignments/home/manual-tests/schedules/compare/git-credentials/wcag-enrichment/orgs/tools)
 - [ ] 41.1-05-PLAN.md — Wave 2: regenerate dashboard.json snapshot + add schema fidelity assertion (≥95% typed 2xx, every POST/PUT/PATCH requestBody, no bare Default Response without html-page tag)
 
 #### Phase 42: Installer Wizard Redesign
