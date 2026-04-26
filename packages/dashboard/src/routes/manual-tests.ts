@@ -1,10 +1,14 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../db/index.js';
 import {
   MANUAL_CRITERIA,
   getGroupedCriteria,
   type ManualTestStatus,
 } from '../manual-criteria.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
+
+const ManualIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 
 const VALID_STATUSES = new Set<ManualTestStatus>([
   'untested',
@@ -58,6 +62,7 @@ export async function manualTestRoutes(
   // GET /reports/:id/manual — render manual testing checklist
   server.get(
     '/reports/:id/manual',
+    { schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: ManualIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -123,6 +128,7 @@ export async function manualTestRoutes(
   // POST /reports/:id/manual — save a single manual test result (HTMX)
   server.post(
     '/reports/:id/manual',
+    { schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: ManualIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as ManualTestBody;

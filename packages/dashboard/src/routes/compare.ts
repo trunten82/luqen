@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../db/index.js';
 import { diffReports, type NormalizedReport, type DiffIssue } from '../compare/diff.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 interface CompareQuery {
   a?: string;
@@ -114,6 +115,7 @@ export async function compareRoutes(
 ): Promise<void> {
   server.get(
     '/reports/compare',
+    { schema: { ...HtmlPageSchema, tags: ['compare'] } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as CompareQuery;
       const idA = query.a?.trim();

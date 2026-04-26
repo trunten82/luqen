@@ -4,17 +4,18 @@ import type { DashboardConfig } from '../config.js';
 import { listJurisdictions, listRegulations } from '../compliance-client.js';
 import { getToken, getOrgId } from './admin/helpers.js';
 import { computeSparklinePoints } from '../services/sparkline.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 export async function homeRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
   config?: DashboardConfig,
 ): Promise<void> {
-  server.get('/', async (_request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/', { schema: { ...HtmlPageSchema, tags: ['home'] } }, async (_request: FastifyRequest, reply: FastifyReply) => {
     await reply.redirect('/home');
   });
 
-  server.get('/home', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/home', { schema: { ...HtmlPageSchema, tags: ['home'] } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const isAdmin = request.user?.role === 'admin';
     const orgId = isAdmin ? undefined : request.user?.currentOrgId;
     const orgFilter = orgId !== undefined ? { orgId } : {};

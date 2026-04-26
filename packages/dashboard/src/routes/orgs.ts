@@ -1,5 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../db/index.js';
+import { HtmlPageSchema, ErrorEnvelope } from '../api/schemas/envelope.js';
+
+const OrgsCurrentResponse = Type.Object({}, { additionalProperties: true });
 
 function safeRedirect(referer: string | undefined): string {
   if (referer == null || referer === '') return '/';
@@ -13,7 +17,7 @@ export async function orgRoutes(
   storage: StorageAdapter,
 ): Promise<void> {
   // ── POST /orgs/switch — switch org context ──────────────────────────────
-  server.post('/orgs/switch', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/orgs/switch', { schema: { ...HtmlPageSchema, tags: ['orgs'] } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user;
     if (user === undefined) {
       await reply.code(401).send({ error: 'Authentication required' });
@@ -50,7 +54,7 @@ export async function orgRoutes(
   });
 
   // ── GET /orgs/current — return current org context (JSON) ───────────────
-  server.get('/orgs/current', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/orgs/current', { schema: { tags: ['orgs'], response: { 200: OrgsCurrentResponse, 401: ErrorEnvelope } } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user;
     if (user === undefined) {
       await reply.code(401).send({ error: 'Authentication required' });
