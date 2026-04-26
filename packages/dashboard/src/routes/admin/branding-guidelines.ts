@@ -29,6 +29,7 @@ const pump = promisify(pipeline);
 
 // Phase 41.1-02 — local TypeBox shapes for HTMX partial responses.
 const HtmlPartialResponse = {
+  tags: ['html-page'],
   produces: ['text/html'],
   response: {
     200: Type.String(),

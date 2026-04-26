@@ -8,6 +8,7 @@ import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
 
 // Phase 41.1-02 — local TypeBox shapes.
 const HtmlPartialResponse = {
+  tags: ['html-page'],
   produces: ['text/html'],
   response: {
     200: Type.String(),

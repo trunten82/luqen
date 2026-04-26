@@ -30,6 +30,7 @@ interface UpdateRoleBody {
 // Mixed JSON / HTML response: HTMX path returns HTML toast or redirect; non-
 // HTMX path returns JSON {error} on failure or 302 redirect on success.
 const MixedResponse = {
+  tags: ['html-page'],
   response: {
     200: Type.Union([Type.String(), Type.Object({}, { additionalProperties: true })]),
     302: Type.Union([Type.String(), Type.Null()]),

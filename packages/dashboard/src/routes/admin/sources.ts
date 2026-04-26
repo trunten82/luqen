@@ -48,6 +48,7 @@ const SourceIdParams = Type.Object(
 );
 
 const HtmlPartialResponse = {
+  tags: ['html-page'],
   produces: ['text/html'],
   response: {
     200: Type.String(),

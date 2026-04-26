@@ -405,7 +405,9 @@ export async function authRoutes(
   // CSRF is enforced by the dashboard-wide @fastify/csrf-protection
   // preHandler bound globally in server.ts (line 797-808) — missing or
   // invalid tokens are rejected with 403 BEFORE this handler runs.
-  server.post('/session/switch-org', { schema: { tags: ['auth'], response: { 400: SwitchOrgErrorSchema, 401: ErrorEnvelope, 403: ErrorEnvelope, 503: ErrorEnvelope } } }, async (request: FastifyRequest, reply: FastifyReply) => {
+  // Phase 41.1-05: tagged 'html-page' for schema-fidelity assertion — handler
+  // returns redirects (302) on success, JSON only on error paths.
+  server.post('/session/switch-org', { schema: { tags: ['html-page', 'auth'], response: { 302: Type.String(), 400: SwitchOrgErrorSchema, 401: ErrorEnvelope, 403: ErrorEnvelope, 503: ErrorEnvelope } } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user;
     if (user === undefined) {
       await reply.code(401).send({ error: 'Authentication required' });
