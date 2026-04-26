@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { z } from 'zod';
+import { Type, type Static } from '@sinclair/typebox';
+import { Value } from '@sinclair/typebox/value';
 import type { BrandGuideline, MatchableIssue } from '@luqen/branding';
 import type { StorageAdapter, Organization } from '../../db/index.js';
 import type { ServiceTokenManager } from '../../auth/service-token.js';
@@ -28,13 +29,33 @@ import type { Locale } from '../../i18n/index.js';
 
 const HTML_OR_URL_RE = /[<>]|https?:\/\/|\/\//;
 
-const AgentDisplayNameSchema = z.object({
-  agent_display_name: z
-    .string()
-    .trim()
-    .max(40, { message: 'TOO_LONG' })
-    .refine((v) => v === '' || !HTML_OR_URL_RE.test(v), { message: 'HTML_OR_URL' }),
-});
+// Phase 41-04 D-06 — TypeBox migration of the prior Zod validator.
+// Custom error codes (TOO_LONG, HTML_OR_URL) are emitted by validateAgentDisplayName
+// below, mirroring the i18n-keyed shape callers depend on.
+const AgentDisplayNameSchema = Type.Object(
+  {
+    agent_display_name: Type.String({ maxLength: 40 }),
+  },
+  { additionalProperties: true },
+);
+
+type AgentDisplayNameInput = Static<typeof AgentDisplayNameSchema>;
+
+function validateAgentDisplayName(
+  rawValue: string,
+):
+  | { success: true; data: AgentDisplayNameInput }
+  | { success: false; error: { issues: ReadonlyArray<{ message: string }> } } {
+  const trimmed = rawValue.trim();
+  const candidate = { agent_display_name: trimmed };
+  if (!Value.Check(AgentDisplayNameSchema, candidate)) {
+    return { success: false, error: { issues: [{ message: 'TOO_LONG' }] } };
+  }
+  if (trimmed.length > 0 && HTML_OR_URL_RE.test(trimmed)) {
+    return { success: false, error: { issues: [{ message: 'HTML_OR_URL' }] } };
+  }
+  return { success: true, data: candidate };
+}
 
 function resolveLocale(request: FastifyRequest): Locale {
   const sessionLocale = (request.session as { locale?: string } | undefined)?.locale;
@@ -784,7 +805,7 @@ export async function organizationRoutes(
 
       const locale = resolveLocale(request);
       const rawValue = typeof body.agent_display_name === 'string' ? body.agent_display_name : '';
-      const parsed = AgentDisplayNameSchema.safeParse({ agent_display_name: rawValue });
+      const parsed = validateAgentDisplayName(rawValue);
 
       if (!parsed.success) {
         // Map the first Zod issue message to a user-friendly i18n key. The
