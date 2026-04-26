@@ -1351,6 +1351,38 @@ create_oauth_client() {
   if [ "${has_monitor}" = "1" ]; then
     mint_monitor_oauth_client
   fi
+
+  # Phase 42 / Plan 42-02 Task 1 step 1: write .install-state for install.command
+  # to consume on macOS (launchd block needs INSTALL_COMPONENTS + MONITOR_* values
+  # that live in this child process). chmod 600 — file contains OAuth secrets.
+  write_install_state
+}
+
+# Phase 42 / Plan 42-02 Task 1: emit a flat KEY=value state file at
+# ${INSTALL_DIR}/.install-state. Read by install.command's launchd block to
+# drive per-component plist generation. Shape is shell-safe (KEY=value lines)
+# so install.command can `. .install-state` directly. Avoid quoting — values
+# never contain spaces/newlines (ports are integers, URLs are http URLs,
+# OAuth IDs/secrets are hex/base64).
+write_install_state() {
+  local state_file="${INSTALL_DIR}/.install-state"
+  cat > "${state_file}" <<STATE
+INSTALL_COMPONENTS=${INSTALL_COMPONENTS[*]}
+COMPLIANCE_PORT=${COMPLIANCE_PORT}
+BRANDING_PORT=${BRANDING_PORT}
+LLM_PORT=${LLM_PORT}
+DASHBOARD_PORT=${DASHBOARD_PORT}
+MONITOR_PORT=${MONITOR_PORT}
+COMPLIANCE_PUBLIC_URL=${COMPLIANCE_PUBLIC_URL}
+BRANDING_PUBLIC_URL=${BRANDING_PUBLIC_URL}
+LLM_PUBLIC_URL=${LLM_PUBLIC_URL}
+DASHBOARD_PUBLIC_URL=${DASHBOARD_PUBLIC_URL}
+MONITOR_CLIENT_ID=${MONITOR_CLIENT_ID}
+MONITOR_CLIENT_SECRET=${MONITOR_CLIENT_SECRET}
+MONITOR_CHECK_INTERVAL=${MONITOR_CHECK_INTERVAL:-manual}
+OAUTH_KEY_MAX_AGE_DAYS=${OAUTH_KEY_MAX_AGE_DAYS}
+STATE
+  chmod 600 "${state_file}"
 }
 
 # ──────────────────────────────────────────────
