@@ -1,8 +1,12 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../db/index.js';
 import type { DashboardConfig } from '../config.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
+
+const FixPrIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 import { requirePermission } from '../auth/middleware.js';
 import { getGitHostPlugin } from '../git-hosts/registry.js';
 import { decryptSecret } from '../plugins/crypto.js';
@@ -199,7 +203,10 @@ export async function fixPrRoutes(
 
   server.post(
     '/reports/:id/fixes/create-pr',
-    { preHandler: [requirePermission('repos.credentials'), requirePermission('issues.fix')] },
+    {
+      preHandler: [requirePermission('repos.credentials'), requirePermission('issues.fix')],
+      schema: { ...HtmlPageSchema, tags: ['fix-pr'], params: FixPrIdParams },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id: reportId } = request.params as { id: string };
       const body = request.body as CreatePrBody;

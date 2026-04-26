@@ -1,8 +1,17 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanOrchestrator } from '../scanner/orchestrator.js';
 import type { DashboardConfig } from '../config.js';
 import { getToken, getOrgId } from './admin/helpers.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
+
+const ScanIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
+const SseSchema = {
+  tags: ['streaming'],
+  response: { 200: Type.String() },
+  produces: ['text/event-stream'],
+} as const;
 import {
   ScanService,
   VALID_STANDARDS,
@@ -44,6 +53,7 @@ export async function scanRoutes(
   // GET /scan/new — render new scan form
   server.get(
     '/scan/new',
+    { schema: { ...HtmlPageSchema, tags: ['scan'] } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { prefill?: string };
       const prefillUrl = typeof query.prefill === 'string' && query.prefill.trim() !== ''
@@ -75,7 +85,10 @@ export async function scanRoutes(
   // POST /scan/new — validate, create record, queue scan
   server.post(
     '/scan/new',
-    { config: { rateLimit: { max: 30, timeWindow: '10 minutes' } } },
+    {
+      config: { rateLimit: { max: 30, timeWindow: '10 minutes' } },
+      schema: { ...HtmlPageSchema, tags: ['scan'] },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as NewScanBody;
 
@@ -158,6 +171,7 @@ export async function scanRoutes(
   // GET /scan/:id/progress — render progress page
   server.get(
     '/scan/:id/progress',
+    { schema: { ...HtmlPageSchema, tags: ['scan'], params: ScanIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const orgId = request.user?.currentOrgId ?? 'system';
@@ -182,6 +196,7 @@ export async function scanRoutes(
   // GET /scan/:id/events — SSE endpoint
   server.get(
     '/scan/:id/events',
+    { schema: { ...SseSchema, params: ScanIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const orgId = request.user?.currentOrgId ?? 'system';
@@ -259,6 +274,7 @@ export async function scanRoutes(
   // POST /reports/:id/retry — re-enqueue a stuck queued/failed scan
   server.post(
     '/reports/:id/retry',
+    { schema: { ...HtmlPageSchema, tags: ['scan'], params: ScanIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -301,6 +317,7 @@ export async function scanRoutes(
   // POST /reports/:id/cancel — mark a stuck queued/running scan as failed
   server.post(
     '/reports/:id/cancel',
+    { schema: { ...HtmlPageSchema, tags: ['scan'], params: ScanIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
