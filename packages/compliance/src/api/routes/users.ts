@@ -1,6 +1,20 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
+
+const User = Type.Object({}, { additionalProperties: true });
+const UserList = Type.Array(User);
+const UserParams = Type.Object({ id: Type.String() });
+const UserCreateBody = Type.Object(
+  {
+    username: Type.String(),
+    password: Type.String(),
+    role: Type.Union([Type.Literal('admin'), Type.Literal('editor'), Type.Literal('viewer')]),
+  },
+  { additionalProperties: true },
+);
 
 export async function registerUserRoutes(
   app: FastifyInstance,
@@ -8,11 +22,15 @@ export async function registerUserRoutes(
 ): Promise<void> {
   // GET /api/v1/users
   app.get('/api/v1/users', {
+    schema: {
+      tags: ['users'],
+      summary: 'List users',
+      response: { 200: UserList, 401: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (_request, reply) => {
     try {
       const users = await db.listUsers();
-      // Strip passwordHash from response
       const safeUsers = users.map(({ passwordHash: _ph, ...rest }) => rest);
       await reply.send(safeUsers);
     } catch (err) {
@@ -22,6 +40,12 @@ export async function registerUserRoutes(
 
   // POST /api/v1/users
   app.post('/api/v1/users', {
+    schema: {
+      tags: ['users'],
+      summary: 'Create user',
+      body: UserCreateBody,
+      response: { 201: User, 400: ErrorEnvelope, 401: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -38,7 +62,6 @@ export async function registerUserRoutes(
         password: body.password as string,
         role: body.role as 'admin' | 'editor' | 'viewer',
       });
-      // Strip passwordHash from response
       const { passwordHash: _ph, ...safeUser } = user;
       await reply.status(201).send(safeUser);
     } catch (err) {
@@ -49,6 +72,12 @@ export async function registerUserRoutes(
 
   // PATCH /api/v1/users/:id/deactivate
   app.patch('/api/v1/users/:id/deactivate', {
+    schema: {
+      tags: ['users'],
+      summary: 'Deactivate user',
+      params: UserParams,
+      response: { 204: Type.Null(), 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {

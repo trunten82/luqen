@@ -1,4 +1,6 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import type { TokenSigner } from '../../auth/oauth.js';
 import { verifyClientSecret, verifyPassword } from '../../auth/oauth.js';
@@ -9,6 +11,31 @@ interface OAuthDeps {
   readonly tokenExpiry: string;
 }
 
+const TokenBody = Type.Object(
+  {
+    grant_type: Type.Optional(Type.String()),
+    client_id: Type.Optional(Type.String()),
+    client_secret: Type.Optional(Type.String()),
+    scope: Type.Optional(Type.String()),
+    username: Type.Optional(Type.String()),
+    password: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const TokenResponse = Type.Object(
+  {
+    access_token: Type.String(),
+    token_type: Type.String(),
+    expires_in: Type.Number(),
+    scope: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const RevokeBody = Type.Object({}, { additionalProperties: true });
+const RevokeResponse = Type.Object({ revoked: Type.Boolean() }, { additionalProperties: true });
+
 export async function registerOAuthRoutes(
   app: FastifyInstance,
   deps: OAuthDeps,
@@ -16,7 +43,19 @@ export async function registerOAuthRoutes(
   const { db, signToken, tokenExpiry } = deps;
 
   // POST /api/v1/oauth/token
-  app.post('/api/v1/oauth/token', async (request, reply) => {
+  app.post('/api/v1/oauth/token', {
+    schema: {
+      tags: ['oauth'],
+      summary: 'OAuth2 token endpoint (client_credentials + password grants)',
+      body: TokenBody,
+      response: {
+        200: TokenResponse,
+        400: ErrorEnvelope,
+        401: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     try {
       const body = request.body as Record<string, unknown>;
 
@@ -179,7 +218,16 @@ export async function registerOAuthRoutes(
   });
 
   // POST /api/v1/oauth/revoke — token revocation (best effort, stateless)
-  app.post('/api/v1/oauth/revoke', async (_request, reply) => {
+  app.post('/api/v1/oauth/revoke', {
+    schema: {
+      tags: ['oauth'],
+      summary: 'OAuth2 token revocation (stateless no-op for JWT)',
+      // Body validation omitted — RFC 7009 callers may post empty body.
+      response: {
+        200: RevokeResponse,
+      },
+    },
+  }, async (_request, reply) => {
     // Stateless JWT: just return 200
     await reply.status(200).send({ revoked: true });
   });

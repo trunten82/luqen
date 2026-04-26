@@ -1,8 +1,34 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { parsePagination, paginateArray } from '../pagination.js';
 import * as crud from '../../engine/crud.js';
+
+const Regulation = Type.Object({}, { additionalProperties: true });
+const RegulationDetail = Type.Object({}, { additionalProperties: true });
+const RegulationList = Type.Object(
+  {
+    data: Type.Array(Regulation),
+    total: Type.Optional(Type.Number()),
+    page: Type.Optional(Type.Number()),
+    limit: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+const RegulationParams = Type.Object({ id: Type.String() });
+const RegulationBody = Type.Object({}, { additionalProperties: true });
+const RegulationQuery = Type.Object(
+  {
+    jurisdictionId: Type.Optional(Type.String()),
+    status: Type.Optional(Type.String()),
+    scope: Type.Optional(Type.String()),
+    page: Type.Optional(Type.Union([Type.Number(), Type.String()])),
+    limit: Type.Optional(Type.Union([Type.Number(), Type.String()])),
+  },
+  { additionalProperties: true },
+);
 
 export async function registerRegulationRoutes(
   app: FastifyInstance,
@@ -10,6 +36,12 @@ export async function registerRegulationRoutes(
 ): Promise<void> {
   // GET /api/v1/regulations
   app.get('/api/v1/regulations', {
+    schema: {
+      tags: ['regulations'],
+      summary: 'List regulations',
+      querystring: RegulationQuery,
+      response: { 200: RegulationList, 401: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
@@ -33,6 +65,12 @@ export async function registerRegulationRoutes(
 
   // GET /api/v1/regulations/:id
   app.get('/api/v1/regulations/:id', {
+    schema: {
+      tags: ['regulations'],
+      summary: 'Get regulation by id',
+      params: RegulationParams,
+      response: { 200: RegulationDetail, 401: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
@@ -51,6 +89,12 @@ export async function registerRegulationRoutes(
 
   // POST /api/v1/regulations
   app.post('/api/v1/regulations', {
+    schema: {
+      tags: ['regulations'],
+      summary: 'Create regulation',
+      body: RegulationBody,
+      response: { 201: Regulation, 400: ErrorEnvelope, 401: ErrorEnvelope },
+    },
     preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
@@ -66,6 +110,13 @@ export async function registerRegulationRoutes(
 
   // PATCH /api/v1/regulations/:id
   app.patch('/api/v1/regulations/:id', {
+    schema: {
+      tags: ['regulations'],
+      summary: 'Update regulation',
+      params: RegulationParams,
+      body: RegulationBody,
+      response: { 200: Regulation, 400: ErrorEnvelope, 403: ErrorEnvelope, 404: ErrorEnvelope },
+    },
     preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
@@ -92,6 +143,12 @@ export async function registerRegulationRoutes(
 
   // DELETE /api/v1/regulations/:id
   app.delete('/api/v1/regulations/:id', {
+    schema: {
+      tags: ['regulations'],
+      summary: 'Delete regulation',
+      params: RegulationParams,
+      response: { 204: Type.Null(), 403: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {

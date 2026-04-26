@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -81,7 +82,9 @@ export async function createServer(options: ServerOptions) {
 
   const llmClient = createLLMClient({ llmUrl, llmClientId, llmClientSecret });
 
-  const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }); // 10MB for large site scans
+  // Phase 41-01: apply TypeBoxTypeProvider so route schemas declared with
+  // `@sinclair/typebox` flow into both AJV validation and the swagger output.
+  const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }).withTypeProvider<TypeBoxTypeProvider>(); // 10MB for large site scans
 
   // Register CORS
   await app.register(cors, {
@@ -162,7 +165,13 @@ export async function createServer(options: ServerOptions) {
   await db.initialize();
 
   // OpenAPI JSON alias — Phase 40-01 DOC-02: swagger moved to /docs.
-  app.get('/api/v1/openapi.json', async (_request, reply) => {
+  app.get('/api/v1/openapi.json', {
+    schema: {
+      tags: ['openapi'],
+      summary: 'Redirect to /docs/json (Swagger UI JSON)',
+      response: { 302: { type: 'null' } },
+    },
+  }, async (_request, reply) => {
     await reply.redirect('/docs/json');
   });
 

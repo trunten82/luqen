@@ -12,6 +12,8 @@
  */
 
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 
 const SCOPES_SUPPORTED = Object.freeze([
   'read',
@@ -21,6 +23,17 @@ const SCOPES_SUPPORTED = Object.freeze([
   'admin.users',
 ]);
 
+const ProtectedResourceMetadata = Type.Object(
+  {
+    resource: Type.String(),
+    authorization_servers: Type.Array(Type.String()),
+    scopes_supported: Type.Array(Type.String()),
+    bearer_methods_supported: Type.Array(Type.String()),
+    resource_documentation: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
 export async function registerComplianceProtectedResourceMetadata(
   app: FastifyInstance,
 ): Promise<void> {
@@ -28,7 +41,16 @@ export async function registerComplianceProtectedResourceMetadata(
   const mcpUrl = `${complianceUrl}/api/v1/mcp`;
   const asIssuer = process.env['DASHBOARD_PUBLIC_URL'] ?? 'https://dashboard.luqen.local';
 
-  app.get('/.well-known/oauth-protected-resource', async (_req, reply) => {
+  app.get('/.well-known/oauth-protected-resource', {
+    schema: {
+      tags: ['well-known'],
+      summary: 'RFC 9728 OAuth Protected Resource metadata',
+      response: {
+        200: ProtectedResourceMetadata,
+        500: ErrorEnvelope,
+      },
+    },
+  }, async (_req, reply) => {
     reply.header('Cache-Control', 'public, max-age=3600');
     reply.header('Content-Type', 'application/json');
     return reply.send({
