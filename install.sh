@@ -130,6 +130,22 @@ BRANDING_PORT=4100
 LLM_PORT=4200
 
 # ──────────────────────────────────────────────
+# Phase 42: 4-profile wizard model
+# ──────────────────────────────────────────────
+# PROFILE drives INSTALL_COMPONENTS dispatch. Set by --profile flag or wizard.
+# Default (when --non-interactive without --profile) = "dashboard" (D-01 invariant).
+PROFILE=""                        # cli | api | dashboard | docker
+API_SERVICES=""                   # CSV: subset of compliance,branding,llm
+WITH_MONITOR="false"              # --with-monitor (opt-in)
+WITHOUT_COMPLIANCE="false"        # --without-compliance (dashboard profile)
+WITHOUT_BRANDING="false"          # --without-branding (dashboard profile)
+WITHOUT_LLM="false"               # --without-llm (dashboard profile)
+MONITOR_PORT="${MONITOR_PORT:-4300}"  # avoid collision with LLM (4200)
+INSTALL_COMPONENTS=()             # populated by derive_install_components()
+MONITOR_CLIENT_ID=""
+MONITOR_CLIENT_SECRET=""
+
+# ──────────────────────────────────────────────
 # Public URLs / OAuth issuer (v3.x)
 #
 # Phase 30/31.1 introduced OAuth 2.1 + PKCE + DCR + JWKS discovery and
@@ -222,6 +238,23 @@ Admin user (non-interactive):
   --admin-user USER           Admin username
   --admin-pass PASS           Admin password (min 8 chars)
 
+Deployment profile (Phase 42):
+  --profile cli|api|dashboard|docker
+                              Deployment profile. Default: dashboard.
+                              cli       = @luqen/core only (stdio MCP for IDEs)
+                              api       = headless services (use --api-services)
+                              dashboard = dashboard + chosen subset of services
+                              docker    = full stack via docker compose
+  --api-services CSV          Comma-separated subset of compliance,branding,llm.
+                              Honoured only with --profile api. Default: all.
+  --with-monitor              Register monitor agent (luqen-monitor.service).
+                              Requires --profile dashboard, OR --profile api with
+                              compliance in --api-services. Default: off.
+  --without-compliance        Skip compliance service (dashboard profile).
+  --without-branding          Skip branding service (dashboard profile).
+  --without-llm               Skip llm service (dashboard profile).
+  --monitor-port PORT         Monitor agent A2A port (default: 4300; 1024-65535).
+
 Uninstall:
   --uninstall                 Stop services, remove systemd units, delete install dir.
                               Combine with --purge to also delete data (DB, configs, logs).
@@ -240,7 +273,7 @@ uninstall_luqen() {
 
   if command -v systemctl &>/dev/null; then
     info "Stopping and disabling systemd units..."
-    for unit in luqen-compliance luqen-branding luqen-llm luqen-dashboard; do
+    for unit in luqen-compliance luqen-branding luqen-llm luqen-dashboard luqen-monitor; do
       systemctl stop "${unit}" 2>/dev/null || true
       systemctl disable "${unit}" 2>/dev/null || true
       rm -f "/etc/systemd/system/${unit}.service"
@@ -318,6 +351,35 @@ while [[ $# -gt 0 ]]; do
     --uninstall)        UNINSTALL=true; shift ;;
     --purge)            UNINSTALL_PURGE=true; shift ;;
     --keep-data)        UNINSTALL_PURGE=false; shift ;;
+    --profile)
+      case "$2" in
+        cli|api|dashboard|docker) PROFILE="$2" ;;
+        *) error "--profile must be one of: cli, api, dashboard, docker"; exit 1 ;;
+      esac
+      shift 2 ;;
+    --api-services)
+      API_SERVICES="$2"
+      # Validate each token in the CSV against an allow-list (T-42-02)
+      IFS=',' read -ra _api_tokens <<< "${API_SERVICES}"
+      for _tok in "${_api_tokens[@]}"; do
+        case "${_tok}" in
+          compliance|branding|llm) ;;
+          *) error "--api-services tokens must be one of: compliance, branding, llm (got: ${_tok})"; exit 1 ;;
+        esac
+      done
+      unset _api_tokens _tok
+      shift 2 ;;
+    --with-monitor)       WITH_MONITOR="true"; shift ;;
+    --without-compliance) WITHOUT_COMPLIANCE="true"; shift ;;
+    --without-branding)   WITHOUT_BRANDING="true"; shift ;;
+    --without-llm)        WITHOUT_LLM="true"; shift ;;
+    --monitor-port)
+      # T-42-03: validate monitor port is integer in 1024-65535
+      if ! [[ "$2" =~ ^[0-9]+$ ]] || [ "$2" -lt 1024 ] || [ "$2" -gt 65535 ]; then
+        error "--monitor-port must be an integer between 1024 and 65535 (got: $2)"
+        exit 1
+      fi
+      MONITOR_PORT="$2"; shift 2 ;;
     --help|-h) show_help ;;
     *) error "Unknown option: $1"; show_help ;;
   esac
@@ -423,7 +485,7 @@ ask_choice() {
 }
 
 # ──────────────────────────────────────────────
-# INTERACTIVE WIZARD
+# INTERACTIVE WIZARD (Phase 42 — 4-profile model)
 # ──────────────────────────────────────────────
 run_wizard() {
   printf "\n"
@@ -432,48 +494,158 @@ run_wizard() {
   printf "  %s+======================================+%s\n" "${BOLD}${CYAN}" "${RESET}"
   printf "\n  Enterprise accessibility testing platform\n"
 
-  # ── 1: What to install ─────────────────────
-  header "1. What would you like to install?"
-  printf "  Choose the setup that matches your role:\n\n"
+  # ── 1: Choose deployment profile ───────────
+  header "1. Choose deployment profile"
+  printf "  Pick the topology that matches your deployment:\n\n"
 
-  local install_choice
-  install_choice=$(ask_choice "Installation type:" \
-    "Developer tools (CLI scanner + MCP server for IDE integration)" \
-    "Full platform (dashboard + compliance + scanner + plugins)" \
-    "Docker Compose (full platform in containers)")
+  local profile_choice
+  profile_choice=$(ask_choice "Profile:" \
+    "Scanner CLI (only @luqen/core, stdio MCP for VS Code/Claude Code)" \
+    "API services (headless: any subset of compliance/branding/llm)" \
+    "Self-hosted dashboard (default -- UI + chosen subset of services)" \
+    "Docker Compose (full stack in containers)")
 
-  case "${install_choice}" in
+  case "${profile_choice}" in
     1)
+      PROFILE="cli"
       DEPLOY_MODE="cli-only"
-      success "Developer tools — CLI scanner + MCP server for VS Code / Claude Code"
-      printf "\n  %sAlso install the compliance module?%s\n" "${DIM}" "${RESET}"
-      printf "  (adds legal compliance checking against 58 jurisdictions)\n\n"
-      if ask_yn "Include compliance module?" "n"; then
-        INCLUDE_COMPLIANCE=true
-        success "Compliance module included"
-      fi
-      printf "\n  %sAlso install the branding module?%s\n" "${DIM}" "${RESET}"
-      printf "  (adds brand-aware accessibility analysis — classifies findings as brand-related vs unexpected)\n\n"
-      if ask_yn "Include branding module?" "n"; then
-        INCLUDE_BRANDING=true
-        success "Branding module included"
-      fi
+      success "Scanner CLI selected (@luqen/core + stdio MCP entry point at packages/core/dist/mcp.js)"
       ;;
-    3)
+    2)
+      PROFILE="api"
+      DEPLOY_MODE="bare-metal"
+      success "API services selected (headless)"
+      run_wizard_api_services
+      ;;
+    4)
+      PROFILE="docker"
       DEPLOY_MODE="docker"
       success "Docker Compose deployment selected"
       ;;
     *)
+      PROFILE="dashboard"
       DEPLOY_MODE="bare-metal"
-      success "Full platform selected (dashboard + compliance + scanner)"
+      success "Self-hosted dashboard selected (default)"
+      # Per-component opt-out prompts (--without-X equivalents)
+      if ! ask_yn "Include compliance service?" "y"; then
+        WITHOUT_COMPLIANCE="true"
+      fi
+      if ! ask_yn "Include branding service?" "y"; then
+        WITHOUT_BRANDING="true"
+      fi
+      if ! ask_yn "Include llm service?" "y"; then
+        WITHOUT_LLM="true"
+      fi
       ;;
   esac
+
+  # ── Monitor agent opt-in (only meaningful when compliance is selected) ──
+  local _monitor_eligible=0
+  case "${PROFILE}" in
+    dashboard)
+      [ "${WITHOUT_COMPLIANCE}" = "false" ] && _monitor_eligible=1
+      ;;
+    api)
+      [[ ",${API_SERVICES}," == *",compliance,"* ]] && _monitor_eligible=1
+      ;;
+  esac
+  if [ "${_monitor_eligible}" = "1" ]; then
+    printf "\n"
+    if ask_yn "Install monitor agent (auto-tracks regulation changes -- opt-in only, port ${MONITOR_PORT})?" "n"; then
+      WITH_MONITOR="true"
+      success "Monitor agent will be registered as luqen-monitor.service"
+    fi
+  fi
+  unset _monitor_eligible
 
   case "${DEPLOY_MODE}" in
     cli-only)  run_wizard_cli_only ;;
     docker)    run_wizard_docker ;;
     *)         run_wizard_bare_metal ;;
   esac
+}
+
+# ──────────────────────────────────────────────
+# API services wizard — pick subset of compliance/branding/llm
+# ──────────────────────────────────────────────
+run_wizard_api_services() {
+  header "API services subset"
+  printf "  Pick which services to install (each gets its own systemd unit).\n\n"
+
+  local _svcs=()
+  if ask_yn "Install compliance service (port ${COMPLIANCE_PORT})?" "y"; then
+    _svcs+=("compliance")
+  fi
+  if ask_yn "Install branding service (port ${BRANDING_PORT})?" "y"; then
+    _svcs+=("branding")
+  fi
+  if ask_yn "Install llm service (port ${LLM_PORT})?" "y"; then
+    _svcs+=("llm")
+  fi
+
+  if [ "${#_svcs[@]}" -eq 0 ]; then
+    error "API profile requires at least one of compliance/branding/llm."
+    exit 1
+  fi
+  API_SERVICES="$(IFS=,; echo "${_svcs[*]}")"
+  success "API services: ${API_SERVICES}"
+}
+
+# ──────────────────────────────────────────────
+# derive_install_components -- maps PROFILE + flags → INSTALL_COMPONENTS array
+# Called after wizard / argument parsing completes (Phase 42 dispatch entry point).
+# ──────────────────────────────────────────────
+derive_install_components() {
+  PROFILE="${PROFILE:-dashboard}"
+  case "${PROFILE}" in
+    cli)
+      INSTALL_COMPONENTS=(core)
+      DEPLOY_MODE="cli-only"
+      ;;
+    api)
+      IFS=',' read -ra INSTALL_COMPONENTS <<< "${API_SERVICES:-compliance,branding,llm}"
+      DEPLOY_MODE="bare-metal"
+      ;;
+    dashboard)
+      INSTALL_COMPONENTS=(core dashboard)
+      [ "${WITHOUT_COMPLIANCE}" = "false" ] && INSTALL_COMPONENTS+=(compliance)
+      [ "${WITHOUT_BRANDING}"   = "false" ] && INSTALL_COMPONENTS+=(branding)
+      [ "${WITHOUT_LLM}"        = "false" ] && INSTALL_COMPONENTS+=(llm)
+      DEPLOY_MODE="bare-metal"
+      ;;
+    docker)
+      INSTALL_COMPONENTS=(docker)
+      DEPLOY_MODE="docker"
+      ;;
+    *)
+      error "Unknown profile: ${PROFILE}"
+      exit 1
+      ;;
+  esac
+
+  [ "${WITH_MONITOR}" = "true" ] && INSTALL_COMPONENTS+=(monitor)
+
+  # T-42-06: --with-monitor requires compliance
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" monitor "* ]] && \
+     [[ " ${INSTALL_COMPONENTS[*]} " != *" compliance "* ]]; then
+    error "--with-monitor requires compliance (selected profile does not include it)"
+    exit 1
+  fi
+
+  # Graceful-degradation banners (dashboard profile only)
+  if [ "${PROFILE}" = "dashboard" ]; then
+    if [[ " ${INSTALL_COMPONENTS[*]} " != *" compliance "* ]]; then
+      warn "Compliance service was not selected. The dashboard will run, but"
+      warn "'Run scan' will fall back to local-only mode and the regulation matrix"
+      warn "will not be auto-updated. Re-run with --profile dashboard (default) to install."
+    fi
+    if [[ " ${INSTALL_COMPONENTS[*]} " != *" branding "* ]]; then
+      warn "Branding service not selected -- brand-related classification will fall back to 'unknown'."
+    fi
+    if [[ " ${INSTALL_COMPONENTS[*]} " != *" llm "* ]]; then
+      warn "LLM service not selected -- the Agent companion panel will be hidden behind a feature flag."
+    fi
+  fi
 }
 
 # ──────────────────────────────────────────────
@@ -899,6 +1071,17 @@ check_prerequisites() {
     exit 1
   fi
 
+  # Phase 42: monitor agent declares engines.node >=22 but works on Node 20.4+
+  # (top-level await + fetch). Hard-gate to Node 20 floor so install fails loudly
+  # if someone has an even older Node and selected --with-monitor.
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" monitor "* ]]; then
+    if [ "${NODE_MAJOR}" -lt 20 ]; then
+      error "Monitor agent requires Node.js >= 20 (found Node ${NODE_MAJOR})"
+      exit 1
+    fi
+    info "Monitor agent will run on Node ${NODE_MAJOR} (engines field >=22 is advisory)"
+  fi
+
   success "Node.js $(node --version), npm $(npm --version), git $(git --version | awk '{print $3}')"
 
   # Install Chromium for pa11y scanner (pa11y uses headless Chromium for page rendering)
@@ -943,12 +1126,25 @@ install_and_build() {
 
   cd "${INSTALL_DIR}"
   run_quiet "Installing npm dependencies" npm install --prefer-offline
-  # Build order matters: core → compliance → branding → llm → dashboard
+  # Build order matters: core → compliance → branding → llm → dashboard → monitor
+  # Phase 42 (Plan 42-01 Task 1 step 11): per-component dispatch — only build packages
+  # that are part of the selected profile. core is always built (it's the lib base).
   run_quiet "Building @luqen/core" npm run build -w packages/core
-  run_quiet "Building @luqen/compliance" npm run build -w packages/compliance
-  run_quiet "Building @luqen/branding" npm run build -w packages/branding
-  run_quiet "Building @luqen/llm" npm run build -w packages/llm
-  run_quiet "Building @luqen/dashboard" npm run build -w packages/dashboard
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" compliance "* ]]; then
+    run_quiet "Building @luqen/compliance" npm run build -w packages/compliance
+  fi
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" branding "* ]]; then
+    run_quiet "Building @luqen/branding" npm run build -w packages/branding
+  fi
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" llm "* ]]; then
+    run_quiet "Building @luqen/llm" npm run build -w packages/llm
+  fi
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" dashboard "* ]]; then
+    run_quiet "Building @luqen/dashboard" npm run build -w packages/dashboard
+  fi
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" monitor "* ]]; then
+    run_quiet "Building @luqen/monitor" npm run build -w packages/monitor
+  fi
 }
 
 # ──────────────────────────────────────────────
@@ -957,31 +1153,37 @@ install_and_build() {
 generate_secrets() {
   step 4 $TOTAL_STEPS_BM "Generating secrets"
 
-  KEYS_DIR="${INSTALL_DIR}/packages/compliance/keys"
-  if [ -f "${KEYS_DIR}/private.pem" ]; then
-    info "Compliance JWT keys already exist -- reusing"
-  else
-    mkdir -p "${KEYS_DIR}"
-    (cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js keys generate) >/dev/null 2>&1
-    success "Compliance JWT RS256 key pair generated"
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" compliance "* ]]; then
+    KEYS_DIR="${INSTALL_DIR}/packages/compliance/keys"
+    if [ -f "${KEYS_DIR}/private.pem" ]; then
+      info "Compliance JWT keys already exist -- reusing"
+    else
+      mkdir -p "${KEYS_DIR}"
+      (cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js keys generate) >/dev/null 2>&1
+      success "Compliance JWT RS256 key pair generated"
+    fi
   fi
 
-  BRANDING_KEYS_DIR="${INSTALL_DIR}/packages/branding/keys"
-  if [ -f "${BRANDING_KEYS_DIR}/private.pem" ]; then
-    info "Branding JWT keys already exist -- reusing"
-  else
-    mkdir -p "${BRANDING_KEYS_DIR}"
-    (cd "${INSTALL_DIR}/packages/branding" && node dist/cli.js keys generate) >/dev/null 2>&1
-    success "Branding JWT RS256 key pair generated"
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" branding "* ]]; then
+    BRANDING_KEYS_DIR="${INSTALL_DIR}/packages/branding/keys"
+    if [ -f "${BRANDING_KEYS_DIR}/private.pem" ]; then
+      info "Branding JWT keys already exist -- reusing"
+    else
+      mkdir -p "${BRANDING_KEYS_DIR}"
+      (cd "${INSTALL_DIR}/packages/branding" && node dist/cli.js keys generate) >/dev/null 2>&1
+      success "Branding JWT RS256 key pair generated"
+    fi
   fi
 
-  LLM_KEYS_DIR="${INSTALL_DIR}/packages/llm/keys"
-  if [ -f "${LLM_KEYS_DIR}/private.pem" ]; then
-    info "LLM JWT keys already exist -- reusing"
-  else
-    mkdir -p "${LLM_KEYS_DIR}"
-    (cd "${INSTALL_DIR}/packages/llm" && node dist/cli.js keys generate) >/dev/null 2>&1
-    success "LLM JWT RS256 key pair generated"
+  if [[ " ${INSTALL_COMPONENTS[*]} " == *" llm "* ]]; then
+    LLM_KEYS_DIR="${INSTALL_DIR}/packages/llm/keys"
+    if [ -f "${LLM_KEYS_DIR}/private.pem" ]; then
+      info "LLM JWT keys already exist -- reusing"
+    else
+      mkdir -p "${LLM_KEYS_DIR}"
+      (cd "${INSTALL_DIR}/packages/llm" && node dist/cli.js keys generate) >/dev/null 2>&1
+      success "LLM JWT RS256 key pair generated"
+    fi
   fi
 
   SESSION_SECRET=$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")
@@ -994,6 +1196,11 @@ generate_secrets() {
 seed_data() {
   step 5 $TOTAL_STEPS_BM "Seeding compliance data"
 
+  if [[ " ${INSTALL_COMPONENTS[*]} " != *" compliance "* ]]; then
+    info "Compliance not selected -- skipping seed"
+    return
+  fi
+
   if [ "${SEED}" = "true" ]; then
     run_quiet "Seeding jurisdictions and regulations" \
       bash -c "cd '${INSTALL_DIR}/packages/compliance' && node dist/cli.js seed"
@@ -1005,10 +1212,7 @@ seed_data() {
 # ──────────────────────────────────────────────
 # Step 6: Create OAuth client
 # ──────────────────────────────────────────────
-create_oauth_client() {
-  step 6 $TOTAL_STEPS_BM "Creating OAuth clients"
-
-  # Compliance OAuth client
+mint_compliance_oauth_client() {
   CLIENT_CACHE="${INSTALL_DIR}/.install-client"
   if [ -f "${CLIENT_CACHE}" ]; then
     CLIENT_ID=$(grep "^client_id=" "${CLIENT_CACHE}" | cut -d= -f2-)
@@ -1022,8 +1226,9 @@ create_oauth_client() {
     chmod 600 "${CLIENT_CACHE}"
     success "Compliance OAuth client created"
   fi
+}
 
-  # Branding OAuth client
+mint_branding_oauth_client() {
   BRANDING_CLIENT_CACHE="${INSTALL_DIR}/.install-branding-client"
   if [ -f "${BRANDING_CLIENT_CACHE}" ]; then
     BRANDING_CLIENT_ID=$(grep "^client_id=" "${BRANDING_CLIENT_CACHE}" | cut -d= -f2-)
@@ -1037,8 +1242,9 @@ create_oauth_client() {
     chmod 600 "${BRANDING_CLIENT_CACHE}"
     success "Branding OAuth client created"
   fi
+}
 
-  # LLM OAuth client (dashboard → LLM)
+mint_llm_dashboard_oauth_client() {
   LLM_CLIENT_CACHE="${INSTALL_DIR}/.install-llm-client"
   if [ -f "${LLM_CLIENT_CACHE}" ]; then
     LLM_CLIENT_ID=$(grep "^client_id=" "${LLM_CLIENT_CACHE}" | cut -d= -f2-)
@@ -1058,8 +1264,9 @@ create_oauth_client() {
       LLM_CLIENT_SECRET=""
     fi
   fi
+}
 
-  # LLM OAuth client (compliance → LLM)
+mint_llm_compliance_oauth_client() {
   COMPLIANCE_LLM_CLIENT_CACHE="${INSTALL_DIR}/.install-compliance-llm-client"
   if [ -f "${COMPLIANCE_LLM_CLIENT_CACHE}" ]; then
     COMPLIANCE_LLM_CLIENT_ID=$(grep "^client_id=" "${COMPLIANCE_LLM_CLIENT_CACHE}" | cut -d= -f2-)
@@ -1081,6 +1288,71 @@ create_oauth_client() {
   fi
 }
 
+# Phase 42 / Plan 42-01 Task 2: monitor agent OAuth client (compliance scope).
+# Caller is expected to gate on INSTALL_COMPONENTS membership. Mints a "luqen-monitor"
+# client on the compliance service (admin scope). Cache file is chmod 600 (T-42-05).
+mint_monitor_oauth_client() {
+  MONITOR_CLIENT_CACHE="${INSTALL_DIR}/.install-monitor-client"
+  if [ -f "${MONITOR_CLIENT_CACHE}" ]; then
+    MONITOR_CLIENT_ID=$(grep "^client_id=" "${MONITOR_CLIENT_CACHE}" | cut -d= -f2-)
+    MONITOR_CLIENT_SECRET=$(grep "^client_secret=" "${MONITOR_CLIENT_CACHE}" | cut -d= -f2-)
+    info "Monitor OAuth client already exists -- reusing"
+  else
+    CLIENT_OUT=$(cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js clients create --name "luqen-monitor" --scope "admin" --grant client_credentials 2>&1)
+    MONITOR_CLIENT_ID=$(echo "${CLIENT_OUT}" | grep "client_id:" | awk '{print $2}')
+    MONITOR_CLIENT_SECRET=$(echo "${CLIENT_OUT}" | grep "client_secret:" | awk '{print $2}')
+    if [ -n "${MONITOR_CLIENT_ID}" ] && [ -n "${MONITOR_CLIENT_SECRET}" ]; then
+      printf "client_id=%s\nclient_secret=%s\n" "${MONITOR_CLIENT_ID}" "${MONITOR_CLIENT_SECRET}" \
+        > "${MONITOR_CLIENT_CACHE}"
+      chmod 600 "${MONITOR_CLIENT_CACHE}"
+      success "Monitor OAuth client created (compliance scope)"
+    else
+      warn "Could not parse Monitor OAuth client output -- monitor agent will need manual config"
+      MONITOR_CLIENT_ID=""
+      MONITOR_CLIENT_SECRET=""
+    fi
+  fi
+}
+
+create_oauth_client() {
+  step 6 $TOTAL_STEPS_BM "Creating OAuth clients"
+
+  # Phase 42 / Plan 42-01 Task 1 step 12: gate each minting block by INSTALL_COMPONENTS.
+  # Compliance + Branding + LLM-dashboard + LLM-compliance are linked to dashboard ↔ service
+  # interconnects; only mint when both endpoints are present.
+  local has_compliance=0 has_branding=0 has_llm=0 has_dashboard=0 has_monitor=0
+  case " ${INSTALL_COMPONENTS[*]} " in *" compliance "*) has_compliance=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" branding "*)   has_branding=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" llm "*)        has_llm=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" dashboard "*)  has_dashboard=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" monitor "*)    has_monitor=1 ;; esac
+
+  # Compliance↔Dashboard client: mint when both compliance + dashboard are installed
+  if [ "${has_compliance}" = "1" ] && [ "${has_dashboard}" = "1" ]; then
+    mint_compliance_oauth_client
+  fi
+
+  # Branding↔Dashboard client: mint when both branding + dashboard are installed
+  if [ "${has_branding}" = "1" ] && [ "${has_dashboard}" = "1" ]; then
+    mint_branding_oauth_client
+  fi
+
+  # LLM↔Dashboard client: mint when both llm + dashboard are installed
+  if [ "${has_llm}" = "1" ] && [ "${has_dashboard}" = "1" ]; then
+    mint_llm_dashboard_oauth_client
+  fi
+
+  # LLM↔Compliance client: mint when both llm + compliance are installed (compliance calls llm)
+  if [ "${has_llm}" = "1" ] && [ "${has_compliance}" = "1" ]; then
+    mint_llm_compliance_oauth_client
+  fi
+
+  # Monitor↔Compliance client: mint when monitor selected (compliance is required by validation)
+  if [ "${has_monitor}" = "1" ]; then
+    mint_monitor_oauth_client
+  fi
+}
+
 # ──────────────────────────────────────────────
 # Step 7: Write config file
 # ──────────────────────────────────────────────
@@ -1090,6 +1362,13 @@ write_config() {
   # Resolve to absolute path
   INSTALL_DIR="$(cd "${INSTALL_DIR}" && pwd)"
   CONFIG_FILE="${INSTALL_DIR}/dashboard.config.json"
+
+  # Phase 42: dashboard.config.json is only meaningful when dashboard is installed.
+  # Profiles cli + api skip this step entirely.
+  if [[ " ${INSTALL_COMPONENTS[*]} " != *" dashboard "* ]]; then
+    info "Dashboard not selected -- skipping dashboard.config.json"
+    return
+  fi
 
   local db_config=""
   case "${DB_ADAPTER}" in
@@ -1130,20 +1409,9 @@ CONF
 }
 
 # ──────────────────────────────────────────────
-# Step 8: Create systemd services
+# Step 8: Create systemd services (Phase 42 — dispatch loop over INSTALL_COMPONENTS)
 # ──────────────────────────────────────────────
-create_systemd_services() {
-  step 8 $TOTAL_STEPS_BM "Creating systemd services"
-
-  if ! command -v systemctl &>/dev/null; then
-    warn "systemd not available -- skipping service creation"
-    return
-  fi
-
-  local node_path
-  node_path="$(command -v node)"
-
-  # Compliance service
+write_systemd_unit_compliance() {
   cat > /etc/systemd/system/luqen-compliance.service <<UNIT
 [Unit]
 Description=Luqen Compliance Service
@@ -1166,8 +1434,9 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+}
 
-  # Branding service
+write_systemd_unit_branding() {
   cat > /etc/systemd/system/luqen-branding.service <<UNIT
 [Unit]
 Description=Luqen Branding Service
@@ -1187,13 +1456,13 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+}
 
-  # LLM service
+write_systemd_unit_llm() {
   local llm_ollama_env=""
   if [ -n "${OLLAMA_BASE_URL}" ]; then
     llm_ollama_env="Environment=OLLAMA_BASE_URL=${OLLAMA_BASE_URL}"
   fi
-
   cat > /etc/systemd/system/luqen-llm.service <<UNIT
 [Unit]
 Description=Luqen LLM Service
@@ -1214,13 +1483,9 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+}
 
-  # Dashboard service — absolute paths everywhere
-  local env_webservice=""
-  if [ "${PA11Y_MODE}" = "external" ] && [ -n "${PA11Y_URL}" ]; then
-    env_webservice="Environment=DASHBOARD_WEBSERVICE_URL=${PA11Y_URL}"
-  fi
-
+write_systemd_unit_dashboard() {
   cat > /etc/systemd/system/luqen-dashboard.service <<UNIT
 [Unit]
 Description=Luqen Dashboard
@@ -1246,170 +1511,228 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+}
+
+write_systemd_unit_monitor() {
+  # Phase 42 / Plan 42-01 Task 2: monitor agent system unit.
+  # MONITOR_CLIENT_SECRET passed via Environment= (T-42-04 — never via ExecStart argv).
+  cat > /etc/systemd/system/luqen-monitor.service <<UNIT
+[Unit]
+Description=Luqen Monitor Agent
+After=network.target luqen-compliance.service
+Wants=luqen-compliance.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${INSTALL_DIR}/packages/monitor
+Environment=NODE_ENV=production
+Environment=MONITOR_COMPLIANCE_URL=${COMPLIANCE_PUBLIC_URL}
+Environment=MONITOR_CLIENT_ID=${MONITOR_CLIENT_ID}
+Environment=MONITOR_CLIENT_SECRET=${MONITOR_CLIENT_SECRET}
+Environment=MONITOR_URL=http://localhost:${MONITOR_PORT}
+Environment=MONITOR_CHECK_INTERVAL=${MONITOR_CHECK_INTERVAL:-manual}
+ExecStart=${node_path} ${INSTALL_DIR}/packages/monitor/dist/cli.js serve --port ${MONITOR_PORT}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+}
+
+create_systemd_services() {
+  step 8 $TOTAL_STEPS_BM "Creating systemd services"
+
+  if ! command -v systemctl &>/dev/null; then
+    warn "systemd not available -- skipping service creation"
+    return
+  fi
+
+  local node_path
+  node_path="$(command -v node)"
+
+  local component
+  for component in "${INSTALL_COMPONENTS[@]}"; do
+    case "${component}" in
+      compliance) write_systemd_unit_compliance ;;
+      branding)   write_systemd_unit_branding ;;
+      llm)        write_systemd_unit_llm ;;
+      dashboard)  write_systemd_unit_dashboard ;;
+      monitor)    write_systemd_unit_monitor ;;
+      core|docker) : ;;  # no system unit
+    esac
+  done
 
   systemctl daemon-reload >/dev/null 2>&1
-  systemctl enable luqen-compliance.service >/dev/null 2>&1
-  systemctl enable luqen-branding.service >/dev/null 2>&1
-  systemctl enable luqen-llm.service >/dev/null 2>&1
-  systemctl enable luqen-dashboard.service >/dev/null 2>&1
+  for component in "${INSTALL_COMPONENTS[@]}"; do
+    case "${component}" in
+      compliance|branding|llm|dashboard|monitor)
+        systemctl enable "luqen-${component}.service" >/dev/null 2>&1
+        ;;
+    esac
+  done
   success "systemd services created and enabled"
 }
 
 # ──────────────────────────────────────────────
 # Step 9: Start services + post-install tasks
 # ──────────────────────────────────────────────
+_wait_for_health() {
+  # Args: <label> <url> <log-hint>
+  local label="$1" url="$2" hint="$3"
+  info "Waiting for ${label}..."
+  local attempts=0
+  until curl -sf "${url}" >/dev/null 2>&1; do
+    attempts=$(( attempts + 1 ))
+    if [ "${attempts}" -ge 15 ]; then
+      error "${label} did not start. Check: ${hint}"
+      return 1
+    fi
+    sleep 2
+  done
+  success "${label} running"
+  return 0
+}
+
 start_services_and_post_install() {
   step 9 $TOTAL_STEPS_BM "Starting services"
 
+  local has_dashboard=0 has_compliance=0 has_branding=0 has_llm=0 has_monitor=0
+  case " ${INSTALL_COMPONENTS[*]} " in *" compliance "*) has_compliance=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" branding "*)   has_branding=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" llm "*)        has_llm=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" dashboard "*)  has_dashboard=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" monitor "*)    has_monitor=1 ;; esac
+
+  # Track fallback PIDs for cleanup (when systemd is unavailable)
+  local COMP_PID="" BRANDING_PID="" LLM_PID="" DASH_PID="" MON_PID=""
+
   if command -v systemctl &>/dev/null; then
-    systemctl start luqen-compliance.service >/dev/null 2>&1
-    info "Waiting for compliance service..."
-    local attempts=0
-    until curl -sf "http://localhost:${COMPLIANCE_PORT}/api/v1/health" >/dev/null 2>&1; do
-      attempts=$(( attempts + 1 ))
-      if [ "${attempts}" -ge 15 ]; then
-        error "Compliance service did not start. Check: journalctl -u luqen-compliance"
-        return
-      fi
-      sleep 2
-    done
-    success "Compliance service running"
-
-    systemctl start luqen-branding.service >/dev/null 2>&1
-    info "Waiting for branding service..."
-    attempts=0
-    until curl -sf "http://localhost:${BRANDING_PORT}/api/v1/health" >/dev/null 2>&1; do
-      attempts=$(( attempts + 1 ))
-      if [ "${attempts}" -ge 15 ]; then
-        error "Branding service did not start. Check: journalctl -u luqen-branding"
-        return
-      fi
-      sleep 2
-    done
-    success "Branding service running"
-
-    systemctl start luqen-llm.service >/dev/null 2>&1
-    info "Waiting for LLM service..."
-    attempts=0
-    until curl -sf "http://localhost:${LLM_PORT}/api/v1/health" >/dev/null 2>&1; do
-      attempts=$(( attempts + 1 ))
-      if [ "${attempts}" -ge 15 ]; then
-        error "LLM service did not start. Check: journalctl -u luqen-llm"
-        return
-      fi
-      sleep 2
-    done
-    success "LLM service running"
-
-    systemctl start luqen-dashboard.service >/dev/null 2>&1
-    info "Waiting for dashboard..."
-    attempts=0
-    until curl -sf "http://localhost:${DASHBOARD_PORT}/health" >/dev/null 2>&1; do
-      attempts=$(( attempts + 1 ))
-      if [ "${attempts}" -ge 15 ]; then
-        error "Dashboard did not start. Check: journalctl -u luqen-dashboard"
-        return
-      fi
-      sleep 2
-    done
-    success "Dashboard running"
+    if [ "${has_compliance}" = "1" ]; then
+      systemctl start luqen-compliance.service >/dev/null 2>&1
+      _wait_for_health "Compliance service" \
+        "http://localhost:${COMPLIANCE_PORT}/api/v1/health" \
+        "journalctl -u luqen-compliance" || return
+    fi
+    if [ "${has_branding}" = "1" ]; then
+      systemctl start luqen-branding.service >/dev/null 2>&1
+      _wait_for_health "Branding service" \
+        "http://localhost:${BRANDING_PORT}/api/v1/health" \
+        "journalctl -u luqen-branding" || return
+    fi
+    if [ "${has_llm}" = "1" ]; then
+      systemctl start luqen-llm.service >/dev/null 2>&1
+      _wait_for_health "LLM service" \
+        "http://localhost:${LLM_PORT}/api/v1/health" \
+        "journalctl -u luqen-llm" || return
+    fi
+    if [ "${has_dashboard}" = "1" ]; then
+      systemctl start luqen-dashboard.service >/dev/null 2>&1
+      _wait_for_health "Dashboard" \
+        "http://localhost:${DASHBOARD_PORT}/health" \
+        "journalctl -u luqen-dashboard" || return
+    fi
+    if [ "${has_monitor}" = "1" ]; then
+      systemctl start luqen-monitor.service >/dev/null 2>&1
+      # Monitor's A2A endpoint exposes /agent.json (agent card); use that as a probe.
+      _wait_for_health "Monitor agent" \
+        "http://localhost:${MONITOR_PORT}/agent.json" \
+        "journalctl -u luqen-monitor" || \
+        warn "Monitor health probe failed -- agent may still be starting; check journalctl -u luqen-monitor"
+    fi
   else
-    # Fallback: start directly
+    # Fallback: start directly via nohup (no systemd available)
     info "Starting services directly (no systemd)..."
 
-    nohup node "${INSTALL_DIR}/packages/compliance/dist/cli.js" serve --port "${COMPLIANCE_PORT}" \
-      > /tmp/luqen-comp-install.log 2>&1 &
-    COMP_PID=$!
-    info "Waiting for compliance service..."
-    attempts=0
-    until curl -sf "http://localhost:${COMPLIANCE_PORT}/api/v1/health" >/dev/null 2>&1; do
-      attempts=$(( attempts + 1 ))
-      if [ "${attempts}" -ge 15 ]; then
-        error "Compliance service did not start. Check: /tmp/luqen-comp-install.log"
-        return
-      fi
-      sleep 2
-    done
-    success "Compliance service running"
-
-    nohup node "${INSTALL_DIR}/packages/branding/dist/cli.js" serve --port "${BRANDING_PORT}" \
-      > /tmp/luqen-branding-install.log 2>&1 &
-    BRANDING_PID=$!
-    info "Waiting for branding service..."
-    attempts=0
-    until curl -sf "http://localhost:${BRANDING_PORT}/api/v1/health" >/dev/null 2>&1; do
-      attempts=$(( attempts + 1 ))
-      if [ "${attempts}" -ge 15 ]; then
-        error "Branding service did not start. Check: /tmp/luqen-branding-install.log"
-        return
-      fi
-      sleep 2
-    done
-    success "Branding service running"
-
-    nohup node "${INSTALL_DIR}/packages/llm/dist/cli.js" serve --port 4200 \
-      > /tmp/luqen-llm-install.log 2>&1 &
-    LLM_PID=$!
-    info "Waiting for LLM service..."
-    attempts=0
-    until curl -sf "http://localhost:${LLM_PORT}/api/v1/health" >/dev/null 2>&1; do
-      attempts=$(( attempts + 1 ))
-      if [ "${attempts}" -ge 15 ]; then
-        error "LLM service did not start. Check: /tmp/luqen-llm-install.log"
-        return
-      fi
-      sleep 2
-    done
-    success "LLM service running"
-
-    nohup node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" serve --config "${CONFIG_FILE}" \
-      > /tmp/luqen-dash-install.log 2>&1 &
-    DASH_PID=$!
-    info "Waiting for dashboard..."
-    attempts=0
-    until curl -sf "http://localhost:${DASHBOARD_PORT}/health" >/dev/null 2>&1; do
-      attempts=$(( attempts + 1 ))
-      if [ "${attempts}" -ge 15 ]; then
-        error "Dashboard did not start. Check: /tmp/luqen-dash-install.log"
-        return
-      fi
-      sleep 2
-    done
-    success "Services started (PIDs: ${COMP_PID}, ${DASH_PID})"
-  fi
-
-  # Generate a fresh API key via CLI (reliable, not log-dependent)
-  API_KEY=""
-  local key_output
-  key_output=$(node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" api-key \
-    --config "${INSTALL_DIR}/dashboard.config.json" 2>&1) || true
-  API_KEY=$(echo "${key_output}" | grep -oP '[a-f0-9]{64}' | head -1 || echo "")
-
-  # Create admin user
-  if [ -n "${API_KEY}" ] && [ -n "${ADMIN_USERNAME}" ]; then
-    local result
-    result=$(curl -sf -X POST "http://localhost:${DASHBOARD_PORT}/api/v1/setup" \
-      -H "Authorization: Bearer ${API_KEY}" \
-      -H "Content-Type: application/json" \
-      -d "{\"username\": \"${ADMIN_USERNAME}\", \"password\": \"${ADMIN_PASSWORD}\", \"role\": \"admin\"}" 2>&1) || true
-    if echo "${result}" | grep -q '"username"'; then
-      success "Admin user '${ADMIN_USERNAME}' created"
-    else
-      warn "Could not create admin user"
+    if [ "${has_compliance}" = "1" ]; then
+      nohup node "${INSTALL_DIR}/packages/compliance/dist/cli.js" serve --port "${COMPLIANCE_PORT}" \
+        > /tmp/luqen-comp-install.log 2>&1 &
+      COMP_PID=$!
+      _wait_for_health "Compliance service" \
+        "http://localhost:${COMPLIANCE_PORT}/api/v1/health" \
+        "/tmp/luqen-comp-install.log" || return
     fi
+    if [ "${has_branding}" = "1" ]; then
+      nohup node "${INSTALL_DIR}/packages/branding/dist/cli.js" serve --port "${BRANDING_PORT}" \
+        > /tmp/luqen-branding-install.log 2>&1 &
+      BRANDING_PID=$!
+      _wait_for_health "Branding service" \
+        "http://localhost:${BRANDING_PORT}/api/v1/health" \
+        "/tmp/luqen-branding-install.log" || return
+    fi
+    if [ "${has_llm}" = "1" ]; then
+      nohup node "${INSTALL_DIR}/packages/llm/dist/cli.js" serve --port "${LLM_PORT}" \
+        > /tmp/luqen-llm-install.log 2>&1 &
+      LLM_PID=$!
+      _wait_for_health "LLM service" \
+        "http://localhost:${LLM_PORT}/api/v1/health" \
+        "/tmp/luqen-llm-install.log" || return
+    fi
+    if [ "${has_dashboard}" = "1" ]; then
+      nohup node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" serve --config "${CONFIG_FILE}" \
+        > /tmp/luqen-dash-install.log 2>&1 &
+      DASH_PID=$!
+      _wait_for_health "Dashboard" \
+        "http://localhost:${DASHBOARD_PORT}/health" \
+        "/tmp/luqen-dash-install.log" || return
+    fi
+    if [ "${has_monitor}" = "1" ]; then
+      MONITOR_COMPLIANCE_URL="${COMPLIANCE_PUBLIC_URL}" \
+      MONITOR_CLIENT_ID="${MONITOR_CLIENT_ID}" \
+      MONITOR_CLIENT_SECRET="${MONITOR_CLIENT_SECRET}" \
+      MONITOR_URL="http://localhost:${MONITOR_PORT}" \
+      MONITOR_CHECK_INTERVAL="${MONITOR_CHECK_INTERVAL:-manual}" \
+      nohup node "${INSTALL_DIR}/packages/monitor/dist/cli.js" serve --port "${MONITOR_PORT}" \
+        > /tmp/luqen-monitor-install.log 2>&1 &
+      MON_PID=$!
+      _wait_for_health "Monitor agent" \
+        "http://localhost:${MONITOR_PORT}/agent.json" \
+        "/tmp/luqen-monitor-install.log" || \
+        warn "Monitor health probe failed -- agent may still be starting"
+    fi
+    success "Services started"
   fi
 
-  # Install plugins (needs running services + API key)
-  if [ -n "${API_KEY}" ]; then
-    install_plugins
+  # ── Dashboard-gated post-install (API key, admin user, plugins) ──
+  # API key + admin-user setup + plugin install all require a running dashboard.
+  # Profiles cli + api have no dashboard, so skip these steps cleanly.
+  if [ "${has_dashboard}" = "1" ]; then
+    # Generate a fresh API key via CLI (reliable, not log-dependent)
+    API_KEY=""
+    local key_output
+    key_output=$(node "${INSTALL_DIR}/packages/dashboard/dist/cli.js" api-key \
+      --config "${INSTALL_DIR}/dashboard.config.json" 2>&1) || true
+    API_KEY=$(echo "${key_output}" | grep -oP '[a-f0-9]{64}' | head -1 || echo "")
+
+    # Create admin user
+    if [ -n "${API_KEY}" ] && [ -n "${ADMIN_USERNAME}" ]; then
+      local result
+      result=$(curl -sf -X POST "http://localhost:${DASHBOARD_PORT}/api/v1/setup" \
+        -H "Authorization: Bearer ${API_KEY}" \
+        -H "Content-Type: application/json" \
+        -d "{\"username\": \"${ADMIN_USERNAME}\", \"password\": \"${ADMIN_PASSWORD}\", \"role\": \"admin\"}" 2>&1) || true
+      if echo "${result}" | grep -q '"username"'; then
+        success "Admin user '${ADMIN_USERNAME}' created"
+      else
+        warn "Could not create admin user"
+      fi
+    fi
+
+    # Install plugins (needs running dashboard + API key)
+    if [ -n "${API_KEY}" ]; then
+      install_plugins
+    else
+      warn "Could not retrieve API key -- skipping plugin installation"
+    fi
   else
-    warn "Could not retrieve API key -- skipping plugin installation"
+    info "Skipping plugin install (no dashboard in selected profile)"
   fi
 
   # Stop temp processes if not using systemd
   if ! command -v systemctl &>/dev/null; then
-    kill "${COMP_PID}" "${LLM_PID:-}" "${DASH_PID}" 2>/dev/null || true
-    wait "${COMP_PID}" "${LLM_PID:-}" "${DASH_PID}" 2>/dev/null || true
+    kill ${COMP_PID:-} ${BRANDING_PID:-} ${LLM_PID:-} ${DASH_PID:-} ${MON_PID:-} 2>/dev/null || true
+    wait ${COMP_PID:-} ${BRANDING_PID:-} ${LLM_PID:-} ${DASH_PID:-} ${MON_PID:-} 2>/dev/null || true
   fi
 }
 
@@ -1505,15 +1828,27 @@ install_plugins() {
 show_summary_bare_metal() {
   step 10 $TOTAL_STEPS_BM "Installation complete"
 
+  local has_dashboard=0 has_compliance=0 has_branding=0 has_llm=0 has_monitor=0
+  case " ${INSTALL_COMPONENTS[*]} " in *" compliance "*) has_compliance=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" branding "*)   has_branding=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" llm "*)        has_llm=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" dashboard "*)  has_dashboard=1 ;; esac
+  case " ${INSTALL_COMPONENTS[*]} " in *" monitor "*)    has_monitor=1 ;; esac
+
   printf "\n"
   printf "  %s%s+==========================================+%s\n" "${BOLD}" "${GREEN}" "${RESET}"
   printf "  %s%s|      Luqen installed successfully!       |%s\n" "${BOLD}" "${GREEN}" "${RESET}"
   printf "  %s%s+==========================================+%s\n" "${BOLD}" "${GREEN}" "${RESET}"
   printf "\n"
+  printf "  %sProfile:%s     %s\n" "${BOLD}" "${RESET}" "${PROFILE}"
+  printf "  %sComponents:%s  %s\n" "${BOLD}" "${RESET}" "${INSTALL_COMPONENTS[*]}"
+  printf "\n"
   printf "  %sURLs:%s\n" "${BOLD}" "${RESET}"
-  printf "    Dashboard:   %s%shttp://localhost:${DASHBOARD_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
-  printf "    Compliance:  %s%shttp://localhost:${COMPLIANCE_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
-  printf "    LLM:         %s%shttp://localhost:4200%s\n" "${BOLD}" "${CYAN}" "${RESET}"
+  [ "${has_dashboard}"  = "1" ] && printf "    Dashboard:   %s%shttp://localhost:${DASHBOARD_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
+  [ "${has_compliance}" = "1" ] && printf "    Compliance:  %s%shttp://localhost:${COMPLIANCE_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
+  [ "${has_branding}"   = "1" ] && printf "    Branding:    %s%shttp://localhost:${BRANDING_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
+  [ "${has_llm}"        = "1" ] && printf "    LLM:         %s%shttp://localhost:${LLM_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
+  [ "${has_monitor}"    = "1" ] && printf "    Monitor:     %s%shttp://localhost:${MONITOR_PORT}%s\n" "${BOLD}" "${CYAN}" "${RESET}"
   if [ "${PA11Y_MODE}" = "external" ] && [ -n "${PA11Y_URL}" ]; then
     printf "    pa11y:       %s\n" "${PA11Y_URL}"
   else
@@ -1521,7 +1856,7 @@ show_summary_bare_metal() {
   fi
   printf "\n"
 
-  if [ -n "${ADMIN_USERNAME}" ]; then
+  if [ -n "${ADMIN_USERNAME}" ] && [ "${has_dashboard}" = "1" ]; then
     printf "  %sLogin:%s\n" "${BOLD}" "${RESET}"
     printf "    Username:  %s\n" "${ADMIN_USERNAME}"
     printf "    Password:  (the password you entered)\n"
@@ -1534,28 +1869,52 @@ show_summary_bare_metal() {
     printf "\n"
   fi
 
-  printf "  %sConfig:%s  %s\n" "${BOLD}" "${RESET}" "${CONFIG_FILE}"
-  printf "\n"
+  if [ "${has_dashboard}" = "1" ] && [ -n "${CONFIG_FILE}" ]; then
+    printf "  %sConfig:%s  %s\n" "${BOLD}" "${RESET}" "${CONFIG_FILE}"
+    printf "\n"
+  fi
 
   if command -v systemctl &>/dev/null; then
-    printf "  %sService management:%s\n" "${BOLD}" "${RESET}"
-    printf "    systemctl status  luqen-compliance luqen-branding luqen-llm luqen-dashboard\n"
-    printf "    systemctl restart luqen-compliance luqen-branding luqen-llm luqen-dashboard\n"
-    printf "    systemctl stop    luqen-compliance luqen-branding luqen-llm luqen-dashboard\n"
-    printf "    journalctl -fu    luqen-dashboard\n"
-    printf "    journalctl -fu    luqen-branding\n"
-    printf "    journalctl -fu    luqen-llm\n"
-    printf "\n"
+    # Build space-separated list of installed unit names
+    local _units=""
+    [ "${has_compliance}" = "1" ] && _units="${_units} luqen-compliance"
+    [ "${has_branding}"   = "1" ] && _units="${_units} luqen-branding"
+    [ "${has_llm}"        = "1" ] && _units="${_units} luqen-llm"
+    [ "${has_dashboard}"  = "1" ] && _units="${_units} luqen-dashboard"
+    [ "${has_monitor}"    = "1" ] && _units="${_units} luqen-monitor"
+    _units="${_units# }"
 
-    printf "  %sCurrent status:%s\n" "${BOLD}" "${RESET}"
-    systemctl --no-pager status luqen-compliance.service 2>/dev/null | head -3 | sed 's/^/    /' || true
-    systemctl --no-pager status luqen-branding.service 2>/dev/null | head -3 | sed 's/^/    /' || true
-    systemctl --no-pager status luqen-llm.service 2>/dev/null | head -3 | sed 's/^/    /' || true
-    systemctl --no-pager status luqen-dashboard.service 2>/dev/null | head -3 | sed 's/^/    /' || true
-    printf "\n"
+    if [ -n "${_units}" ]; then
+      printf "  %sService management:%s\n" "${BOLD}" "${RESET}"
+      printf "    systemctl status %s\n" "${_units}"
+      printf "    systemctl restart %s\n" "${_units}"
+      printf "    systemctl stop    %s\n" "${_units}"
+      [ "${has_dashboard}"  = "1" ] && printf "    journalctl -fu    luqen-dashboard\n"
+      [ "${has_branding}"   = "1" ] && printf "    journalctl -fu    luqen-branding\n"
+      [ "${has_llm}"        = "1" ] && printf "    journalctl -fu    luqen-llm\n"
+      [ "${has_monitor}"    = "1" ] && printf "    journalctl -fu    luqen-monitor\n"
+      printf "\n"
+
+      printf "  %sCurrent status:%s\n" "${BOLD}" "${RESET}"
+      [ "${has_compliance}" = "1" ] && systemctl --no-pager status luqen-compliance.service 2>/dev/null | head -3 | sed 's/^/    /' || true
+      [ "${has_branding}"   = "1" ] && systemctl --no-pager status luqen-branding.service   2>/dev/null | head -3 | sed 's/^/    /' || true
+      [ "${has_llm}"        = "1" ] && systemctl --no-pager status luqen-llm.service        2>/dev/null | head -3 | sed 's/^/    /' || true
+      [ "${has_dashboard}"  = "1" ] && systemctl --no-pager status luqen-dashboard.service  2>/dev/null | head -3 | sed 's/^/    /' || true
+      [ "${has_monitor}"    = "1" ] && systemctl --no-pager status luqen-monitor.service    2>/dev/null | head -3 | sed 's/^/    /' || true
+      printf "\n"
+    fi
   else
     printf "  %sStart services:%s\n" "${BOLD}" "${RESET}"
     printf "    cd %s && npm run dev:all\n" "${INSTALL_DIR}"
+    printf "\n"
+  fi
+
+  if [ "${has_monitor}" = "1" ]; then
+    printf "  %sMonitor agent:%s\n" "${BOLD}" "${RESET}"
+    printf "    Registered as luqen-monitor.service (port %s, manual mode).\n" "${MONITOR_PORT}"
+    printf "    The agent listens for A2A requests but does not auto-scan. To run a scan:\n"
+    printf "      sudo -u root node %s/packages/monitor/dist/cli.js scan\n" "${INSTALL_DIR}"
+    printf "    Disable startup at boot: %ssystemctl disable luqen-monitor%s\n" "${DIM}" "${RESET}"
     printf "\n"
   fi
 }
@@ -1765,7 +2124,12 @@ if [ "${INTERACTIVE}" = "true" ] && { [ -t 0 ] || [ -n "${LUQEN_INSTALL_REEXEC:-
   run_wizard
 fi
 
-# Route to the correct installation path
+# Phase 42: derive INSTALL_COMPONENTS from PROFILE + flags before dispatching.
+# Honours D-01 (non-interactive default = dashboard profile, all 4 services, no monitor).
+derive_install_components
+
+# Route to the correct installation path. DEPLOY_MODE was set by derive_install_components
+# (which translates PROFILE → DEPLOY_MODE). Legacy --mode docker also honoured.
 case "${DEPLOY_MODE}" in
   docker)
     resolve_public_url_defaults
@@ -1773,58 +2137,36 @@ case "${DEPLOY_MODE}" in
     show_v3_whats_new
     ;;
   cli-only)
-    # Developer tools — CLI scanner + optional compliance
+    # Phase 42 Profile 1: Scanner CLI — @luqen/core only + stdio MCP for VS Code/Claude Code.
     check_prerequisites
     clone_or_pull
 
-    total_steps=3
-    [ "${INCLUDE_COMPLIANCE}" = "true" ] && total_steps=5
-
-    step 1 ${total_steps} "Installing dependencies"
+    step 1 3 "Installing dependencies"
     run_quiet "Installing npm dependencies" npm install --prefer-offline
     success "Dependencies installed"
 
-    step 2 ${total_steps} "Building scanner"
+    step 2 3 "Building scanner"
     run_quiet "Building @luqen/core" npm run build -w packages/core
     success "Build complete"
 
-    step 3 ${total_steps} "Linking CLI"
+    step 3 3 "Linking CLI"
     run_quiet "Linking luqen command" npm link -w packages/core
     success "CLI linked"
 
-    if [ "${INCLUDE_COMPLIANCE}" = "true" ]; then
-      step 4 ${total_steps} "Building compliance module"
-      run_quiet "Building @luqen/compliance" npm run build -w packages/compliance
-      success "Compliance built"
-
-      step 5 ${total_steps} "Setting up compliance"
-      (cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js keys generate 2>/dev/null || true)
-      (cd "${INSTALL_DIR}/packages/compliance" && node dist/cli.js seed 2>/dev/null || true)
-      success "Compliance ready (58 jurisdictions, 62 regulations)"
-    fi
-
     printf "\n"
     printf "  %s+======================================+%s\n" "${GREEN}${BOLD}" "${RESET}"
-    printf "  %s|    Luqen Developer Tools Installed   |%s\n" "${GREEN}${BOLD}" "${RESET}"
+    printf "  %s|    Luqen Scanner CLI Installed       |%s\n" "${GREEN}${BOLD}" "${RESET}"
     printf "  %s+======================================+%s\n" "${GREEN}${BOLD}" "${RESET}"
     printf "\n"
     printf "  %sScan a site:%s\n" "${BOLD}" "${RESET}"
     printf "    luqen scan https://example.com\n"
     printf "    luqen scan https://example.com --format both\n"
     printf "\n"
-    if [ "${INCLUDE_COMPLIANCE}" = "true" ]; then
-      printf "  %sScan with compliance checking:%s\n" "${BOLD}" "${RESET}"
-      printf "    cd %s/packages/compliance && node dist/cli.js serve &\n" "${INSTALL_DIR}"
-      printf "    luqen scan https://example.com --compliance-url http://localhost:4000 --jurisdictions EU,US\n"
-      printf "\n"
-      printf "  %sCompliance MCP server:%s\n" "${BOLD}" "${RESET}"
-      printf "    node %s/packages/compliance/dist/cli.js mcp\n" "${INSTALL_DIR}"
-      printf "\n"
-    fi
-    printf "  %sMCP server (for VS Code / Claude Code):%s\n" "${BOLD}" "${RESET}"
+    printf "  %sStdio MCP server (for VS Code / Claude Code):%s\n" "${BOLD}" "${RESET}"
     printf "    node %s/packages/core/dist/mcp.js\n" "${INSTALL_DIR}"
     printf "\n"
-    printf "  No external services needed — pa11y runs as a built-in library.\n"
+    printf "  No external services needed -- pa11y runs as a built-in library.\n"
+    printf "  For HTTP/Streamable MCP and the dashboard, use --profile dashboard.\n"
     printf "\n"
     ;;
   *)
