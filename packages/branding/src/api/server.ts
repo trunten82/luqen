@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import rateLimit from '@fastify/rate-limit';
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { SqliteAdapter } from '../db/sqlite-adapter.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
@@ -39,7 +40,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     logger = false,
   } = options;
 
-  const app = Fastify({ logger, bodyLimit: 5 * 1024 * 1024 });
+  const app = Fastify({ logger, bodyLimit: 5 * 1024 * 1024 }).withTypeProvider<TypeBoxTypeProvider>();
 
   // CORS
   await app.register(cors, {
