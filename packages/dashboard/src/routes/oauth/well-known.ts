@@ -13,7 +13,31 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 import { getDashboardIssuer } from '../../auth/oauth-signer.js';
+
+// RFC 8414 Authorization Server Metadata — mirrors the AsMetadata fields the
+// handler emits below. additionalProperties:true keeps the response tolerant
+// to future field additions without breaking schema validation.
+const AuthorizationServerMetadataSchema = Type.Object(
+  {
+    issuer: Type.String(),
+    authorization_endpoint: Type.String(),
+    token_endpoint: Type.String(),
+    registration_endpoint: Type.String(),
+    jwks_uri: Type.String(),
+    response_types_supported: Type.Array(Type.String()),
+    grant_types_supported: Type.Array(Type.String()),
+    code_challenge_methods_supported: Type.Array(Type.String()),
+    token_endpoint_auth_methods_supported: Type.Array(Type.String()),
+    scopes_supported: Type.Array(Type.String()),
+    response_modes_supported: Type.Array(Type.String()),
+    subject_types_supported: Type.Array(Type.String()),
+    id_token_signing_alg_values_supported: Type.Array(Type.String()),
+  },
+  { additionalProperties: true },
+);
 
 interface AsMetadata {
   readonly issuer: string;
@@ -34,6 +58,16 @@ interface AsMetadata {
 export async function registerWellKnownRoutes(server: FastifyInstance): Promise<void> {
   server.get(
     '/.well-known/oauth-authorization-server',
+    {
+      schema: {
+        tags: ['oauth'],
+        response: {
+          200: AuthorizationServerMetadataSchema,
+          400: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+      },
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const issuer = getDashboardIssuer();
       const metadata: AsMetadata = {
