@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { getToken } from '../compliance-client.js';
 import type { DashboardConfig } from '../config.js';
 import type { AuthService } from '../auth/auth-service.js';
@@ -6,6 +7,15 @@ import type { StorageAdapter } from '../db/index.js';
 import { decodeJwt } from 'jose';
 import { validatePassword } from '../validation.js';
 import { SUPPORTED_LOCALES, type Locale } from '../i18n/index.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../api/schemas/envelope.js';
+
+// HTML routes get HtmlPageSchema; redirects (302) also serialize as HTML — the
+// 200-String shape is permissive enough that Fastify won't reject the response.
+const SsoParamsSchema = Type.Object(
+  { pluginId: Type.String() },
+  { additionalProperties: true },
+);
+const SwitchOrgErrorSchema = Type.Object({}, { additionalProperties: true });
 
 interface LoginBody {
   username?: string;
@@ -37,7 +47,7 @@ export async function authRoutes(
   storage?: StorageAdapter,
 ): Promise<void> {
   // GET /login — render login page with mode-aware UI
-  server.get('/login', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/login', { schema: { ...HtmlPageSchema, tags: ['auth'] } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const session = request.session as { get(key: string): unknown };
     const query = request.query as Record<string, string | undefined>;
     const returnTo = safeReturnTo(query['returnTo']);
@@ -70,7 +80,10 @@ export async function authRoutes(
   // POST /login — authenticate based on auth mode
   server.post(
     '/login',
-    { config: { rateLimit: { max: 10, timeWindow: '15 minutes' } } },
+    {
+      config: { rateLimit: { max: 10, timeWindow: '15 minutes' } },
+      schema: { ...HtmlPageSchema, tags: ['auth'] },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as LoginBody;
       const mode = authService.getAuthMode();
@@ -200,6 +213,7 @@ export async function authRoutes(
   // GET /auth/sso/:pluginId — redirect to SSO provider
   server.get(
     '/auth/sso/:pluginId',
+    { schema: { ...HtmlPageSchema, tags: ['auth'], params: SsoParamsSchema } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { pluginId } = request.params as SsoParams;
       const authPlugins = authService.getAuthPlugins();
@@ -225,6 +239,7 @@ export async function authRoutes(
   // GET /auth/callback/:pluginId — handle SSO callback
   server.get(
     '/auth/callback/:pluginId',
+    { schema: { ...HtmlPageSchema, tags: ['auth'], params: SsoParamsSchema } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { pluginId } = request.params as SsoParams;
 
@@ -258,7 +273,7 @@ export async function authRoutes(
   );
 
   // GET /account — profile page
-  server.get('/account', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/account', { schema: { ...HtmlPageSchema, tags: ['auth'] } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const session = request.session as { get(key: string): unknown };
     const authMethod = session.get('authMethod') as string | undefined;
     const canChangePassword = authMethod === 'password';
@@ -275,7 +290,10 @@ export async function authRoutes(
   });
 
   // POST /account/change-password — update own password
-  server.post('/account/change-password', { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } }, async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/account/change-password', {
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
+    schema: { ...HtmlPageSchema, tags: ['auth'] },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const session = request.session as { get(key: string): unknown };
     const authMethod = session.get('authMethod') as string | undefined;
     const canChangePassword = authMethod === 'password';
@@ -341,7 +359,7 @@ export async function authRoutes(
   });
 
   // POST /account/locale — switch UI language
-  server.post('/account/locale', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/account/locale', { schema: { ...HtmlPageSchema, tags: ['auth'] } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { locale, _from } = request.body as { locale?: string; _from?: string };
     if (locale && SUPPORTED_LOCALES.includes(locale as Locale)) {
       const session = request.session as { set(k: string, v: unknown): void };
@@ -367,7 +385,7 @@ export async function authRoutes(
   });
 
   // POST /logout — clear session and redirect
-  server.post('/logout', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/logout', { schema: { ...HtmlPageSchema, tags: ['auth'] } }, async (request: FastifyRequest, reply: FastifyReply) => {
     request.session.delete();
     await reply.redirect('/login');
   });
@@ -387,7 +405,7 @@ export async function authRoutes(
   // CSRF is enforced by the dashboard-wide @fastify/csrf-protection
   // preHandler bound globally in server.ts (line 797-808) — missing or
   // invalid tokens are rejected with 403 BEFORE this handler runs.
-  server.post('/session/switch-org', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/session/switch-org', { schema: { tags: ['auth'], response: { 400: SwitchOrgErrorSchema, 401: ErrorEnvelope, 403: ErrorEnvelope, 503: ErrorEnvelope } } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user;
     if (user === undefined) {
       await reply.code(401).send({ error: 'Authentication required' });

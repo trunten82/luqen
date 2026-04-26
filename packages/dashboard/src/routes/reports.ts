@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { readFile, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -13,6 +14,9 @@ import type { LLMClient } from '../llm-client.js';
 import { resolveOrgLLMClient } from '../llm-client.js';
 import { t } from '../i18n/index.js';
 import { filterDrilldownIssues, isValidDimension } from '../services/brand-drilldown.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
+
+const ReportIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 export { normalizeReportData, inferComponent };
 export type { JsonReportFile };
 
@@ -45,6 +49,7 @@ export async function reportRoutes(
   // GET /reports — list with pagination and search
   server.get(
     '/reports',
+    { schema: { ...HtmlPageSchema, tags: ['reports'] } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as ReportsQuery;
       const offset = query.offset !== undefined ? parseInt(query.offset, 10) : 0;
@@ -146,6 +151,7 @@ export async function reportRoutes(
   // GET /reports/:id — read JSON report and render rich report-detail template
   server.get(
     '/reports/:id',
+    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
@@ -331,6 +337,7 @@ export async function reportRoutes(
   // GET /reports/:id/print — standalone print-friendly HTML for browser print-to-PDF
   server.get(
     '/reports/:id/print',
+    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -400,6 +407,7 @@ export async function reportRoutes(
   // DELETE /reports/:id — delete scan record and files
   server.delete(
     '/reports/:id',
+    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -440,6 +448,7 @@ export async function reportRoutes(
   // GET /reports/:id/fix-suggestion — HTMX partial: AI fix or hardcoded fallback
   server.get(
     '/reports/:id/fix-suggestion',
+    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const query = request.query as {
@@ -524,6 +533,7 @@ export async function reportRoutes(
   // GET /reports/:id/ai-summary — HTMX partial: AI executive summary
   server.get(
     '/reports/:id/ai-summary',
+    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
@@ -698,6 +708,7 @@ export async function reportRoutes(
   // GET /reports/:id/brand-drilldown — HTMX partial: dimension drilldown modal
   server.get(
     '/reports/:id/brand-drilldown',
+    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { dimension?: string };
       const dimensionRaw = query.dimension ?? '';

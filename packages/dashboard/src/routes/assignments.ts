@@ -1,7 +1,11 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
 import type { StorageAdapter, IssueAssignmentStatus } from '../db/index.js';
 import { hasPermission } from '../permissions.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
+
+const AssignmentIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 
 const VALID_STATUSES = new Set<IssueAssignmentStatus>([
   'open',
@@ -49,6 +53,7 @@ export async function assignmentRoutes(
   // GET /reports/:id/assignments — render assignments page
   server.get(
     '/reports/:id/assignments',
+    { schema: { ...HtmlPageSchema, tags: ['assignments'], params: AssignmentIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!hasPermission(request, 'issues.assign')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
@@ -105,6 +110,11 @@ export async function assignmentRoutes(
   // POST /reports/:id/assignments — create assignment (HTMX)
   server.post(
     '/reports/:id/assignments',
+    {
+      // No response schema — handler returns either JSON or HTML based on Accept;
+      // a typed response would force one shape and break the other branch.
+      schema: { tags: ['assignments'], params: AssignmentIdParams },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!hasPermission(request, 'issues.assign')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });
@@ -192,6 +202,7 @@ export async function assignmentRoutes(
   // PATCH /assignments/:id — update status/assignee/notes (HTMX)
   server.patch(
     '/assignments/:id',
+    { schema: { ...HtmlPageSchema, tags: ['assignments'], params: AssignmentIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as UpdateAssignmentBody;
@@ -236,6 +247,7 @@ export async function assignmentRoutes(
   // DELETE /assignments/:id — remove an assignment
   server.delete(
     '/assignments/:id',
+    { schema: { ...HtmlPageSchema, tags: ['assignments'], params: AssignmentIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!hasPermission(request, 'issues.assign')) {
         return reply.code(403).send({ error: 'Insufficient permissions' });

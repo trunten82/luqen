@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter, ScanRecord } from '../db/index.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 interface TrendPoint {
   readonly date: string;
@@ -302,6 +303,7 @@ export async function trendRoutes(
 ): Promise<void> {
   server.get(
     '/reports/trends',
+    { schema: { ...HtmlPageSchema, tags: ['trends'] } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const isAdmin = request.user?.role === 'admin';
       const orgId = isAdmin ? undefined : request.user?.currentOrgId;

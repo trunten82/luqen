@@ -4,6 +4,7 @@ import { requirePermission } from '../auth/middleware.js';
 import { getOrgId } from './admin/helpers.js';
 import { computeSparklinePoints, computeTargetY } from '../services/sparkline.js';
 import type { RescoreService } from '../services/rescore/rescore-service.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 export interface DimensionSparkline {
   readonly points: string;
@@ -81,6 +82,7 @@ export async function brandOverviewRoutes(
 
   server.get('/brand-overview', {
     preHandler: requirePermission('branding.view'),
+    schema: { ...HtmlPageSchema, tags: ['branding'] },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     // Org resolution: org-scoped users see their own org. Global admins
     // (admin.system) can pick any org via ?org= query param, defaulting
@@ -282,6 +284,7 @@ export async function brandOverviewRoutes(
   // duplicating the summary/org-picker chrome.
   server.get('/brand-overview/content', {
     preHandler: requirePermission('branding.view'),
+    schema: { ...HtmlPageSchema, tags: ['branding'] },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     // Reuse the full-page handler's logic by internally redirecting
     // the data computation. We build the same viewData then render
@@ -396,6 +399,7 @@ export async function brandOverviewRoutes(
   // POST /brand-overview/target — set or clear the org-level brand score target
   server.post('/brand-overview/target', {
     preHandler: requirePermission('branding.manage'),
+    schema: { ...HtmlPageSchema, tags: ['branding'] },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     let orgId = getOrgId(request);
     if (!orgId) {
@@ -442,6 +446,7 @@ export async function brandOverviewRoutes(
   // POST /brand-overview/rescore/start — trigger rescore for the org
   server.post('/brand-overview/rescore/start', {
     preHandler: requirePermission('branding.manage'),
+    schema: { ...HtmlPageSchema, tags: ['branding'] },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     let effectiveOrgId = resolveOrgId(request);
     if (!effectiveOrgId) {
@@ -499,6 +504,7 @@ export async function brandOverviewRoutes(
   // GET /brand-overview/rescore/progress — HTMX polling endpoint
   server.get('/brand-overview/rescore/progress', {
     preHandler: requirePermission('branding.manage'),
+    schema: { ...HtmlPageSchema, tags: ['branding'] },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     let effectiveOrgId = resolveOrgId(request);
     if (!effectiveOrgId) {
@@ -542,6 +548,7 @@ export async function brandOverviewRoutes(
   // Used by rescore-complete.hbs to restore the button after success banner
   server.get('/brand-overview/rescore/button', {
     preHandler: requirePermission('branding.manage'),
+    schema: { ...HtmlPageSchema, tags: ['branding'] },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     let effectiveOrgId = resolveOrgId(request);
     if (!effectiveOrgId) {

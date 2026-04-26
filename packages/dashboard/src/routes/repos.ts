@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -11,6 +12,9 @@ import { hasPermission } from '../permissions.js';
 import { getGitHostPlugin } from '../git-hosts/registry.js';
 import { decryptSecret } from '../plugins/crypto.js';
 import { RemoteFileReader } from '../git-hosts/remote-file-reader.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
+
+const RepoIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -162,7 +166,10 @@ export async function repoRoutes(
 
   server.get(
     '/admin/repos',
-    { preHandler: requirePermission('repos.manage') },
+    {
+      preHandler: requirePermission('repos.manage'),
+      schema: { ...HtmlPageSchema, tags: ['repos'] },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const isAdmin = request.user?.role === 'admin';
       const currentOrgId = request.user?.currentOrgId ?? 'system';
@@ -199,7 +206,10 @@ export async function repoRoutes(
 
   server.post(
     '/admin/repos',
-    { preHandler: requirePermission('repos.manage') },
+    {
+      preHandler: requirePermission('repos.manage'),
+      schema: { ...HtmlPageSchema, tags: ['repos'] },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateRepoBody;
       const isAdmin = request.user?.role === 'admin';
@@ -262,7 +272,10 @@ export async function repoRoutes(
 
   server.delete(
     '/admin/repos/:id',
-    { preHandler: requirePermission('repos.manage') },
+    {
+      preHandler: requirePermission('repos.manage'),
+      schema: { ...HtmlPageSchema, tags: ['repos'], params: RepoIdParams },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const repo = await storage.repos.getRepo(id);
@@ -287,6 +300,7 @@ export async function repoRoutes(
 
   server.get(
     '/reports/:id/fixes',
+    { schema: { ...HtmlPageSchema, tags: ['repos'], params: RepoIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Only users with issues.fix permission can view fix proposals
       if (!hasPermission(request, 'issues.fix')) {
