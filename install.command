@@ -154,7 +154,7 @@ if [ "${WANT_UNINSTALL}" = "1" ] && [ "$(uname -s)" = "Darwin" ]; then
     echo ""
     echo "  Unloading launchd agents..."
     LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
-    for label in io.luqen.compliance io.luqen.branding io.luqen.llm io.luqen.dashboard; do
+    for label in io.luqen.compliance io.luqen.branding io.luqen.llm io.luqen.dashboard io.luqen.monitor; do
         plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
         if [ -f "${plist}" ]; then
             launchctl unload "${plist}" 2>/dev/null || true
@@ -208,6 +208,7 @@ COMPLIANCE_PORT="${COMPLIANCE_PORT:-4000}"
 DASHBOARD_PORT="${DASHBOARD_PORT:-5000}"
 BRANDING_PORT="${BRANDING_PORT:-4100}"
 LLM_PORT="${LLM_PORT:-4200}"
+MONITOR_PORT="${MONITOR_PORT:-4300}"
 
 # *_PUBLIC_URL defaults — operators override via the environment before
 # running install.command, e.g. DASHBOARD_PUBLIC_URL=https://luqen.example.com.
@@ -216,6 +217,26 @@ COMPLIANCE_PUBLIC_URL="${COMPLIANCE_PUBLIC_URL:-http://localhost:${COMPLIANCE_PO
 BRANDING_PUBLIC_URL="${BRANDING_PUBLIC_URL:-http://localhost:${BRANDING_PORT}}"
 LLM_PUBLIC_URL="${LLM_PUBLIC_URL:-http://localhost:${LLM_PORT}}"
 OAUTH_KEY_MAX_AGE_DAYS="${OAUTH_KEY_MAX_AGE_DAYS:-90}"
+
+# Phase 42 / Plan 42-02 Task 1: source state file written by install.sh after
+# OAuth client minting (step 6). Provides INSTALL_COMPONENTS + MONITOR_* values
+# that live in install.sh's child process. Falls back to legacy 4-service set
+# when state file is absent (older install.sh, or fresh-install on macOS where
+# install.sh exited before writing state).
+INSTALL_COMPONENTS=""
+MONITOR_CLIENT_ID=""
+MONITOR_CLIENT_SECRET=""
+MONITOR_CHECK_INTERVAL="manual"
+if [ -f "${INSTALL_DIR}/.install-state" ]; then
+    # shellcheck disable=SC1090
+    . "${INSTALL_DIR}/.install-state"
+fi
+# Default to the legacy 4-service set when state file is absent or empty.
+if [ -z "${INSTALL_COMPONENTS}" ]; then
+    INSTALL_COMPONENTS="core dashboard compliance branding llm"
+fi
+# shellcheck disable=SC2206
+COMPONENTS_ARR=(${INSTALL_COMPONENTS})
 
 if [ -z "${NODE_PATH}" ] || [ ! -d "${INSTALL_DIR}/packages/dashboard/dist" ]; then
     echo ""
@@ -270,35 +291,63 @@ PLIST
     echo "  + ${label} -> ${plist_path}"
 }
 
-echo ""
-echo "  Registering launchd agents (compliance, branding, llm, dashboard)..."
-
-write_plist "io.luqen.compliance" "${INSTALL_DIR}/packages/compliance" \
-    COMPLIANCE_PORT "${COMPLIANCE_PORT}" \
-    COMPLIANCE_PUBLIC_URL "${COMPLIANCE_PUBLIC_URL}" \
-    COMPLIANCE_LLM_URL "${LLM_PUBLIC_URL}" \
-    --ARGS-- "${INSTALL_DIR}/packages/compliance/dist/cli.js" "serve" "--port" "${COMPLIANCE_PORT}"
-
-write_plist "io.luqen.branding" "${INSTALL_DIR}/packages/branding" \
-    BRANDING_PORT "${BRANDING_PORT}" \
-    BRANDING_PUBLIC_URL "${BRANDING_PUBLIC_URL}" \
-    --ARGS-- "${INSTALL_DIR}/packages/branding/dist/cli.js" "serve" "--port" "${BRANDING_PORT}"
-
-write_plist "io.luqen.llm" "${INSTALL_DIR}/packages/llm" \
-    LLM_PORT "${LLM_PORT}" \
-    LLM_PUBLIC_URL "${LLM_PUBLIC_URL}" \
-    --ARGS-- "${INSTALL_DIR}/packages/llm/dist/cli.js" "serve" "--port" "${LLM_PORT}"
-
 CONFIG_FILE="${INSTALL_DIR}/dashboard.config.json"
-write_plist "io.luqen.dashboard" "${INSTALL_DIR}" \
-    DASHBOARD_PUBLIC_URL "${DASHBOARD_PUBLIC_URL}" \
-    DASHBOARD_JWKS_URI "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json" \
-    DASHBOARD_JWKS_URL "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json" \
-    OAUTH_KEY_MAX_AGE_DAYS "${OAUTH_KEY_MAX_AGE_DAYS}" \
-    COMPLIANCE_PUBLIC_URL "${COMPLIANCE_PUBLIC_URL}" \
-    BRANDING_PUBLIC_URL "${BRANDING_PUBLIC_URL}" \
-    LLM_PUBLIC_URL "${LLM_PUBLIC_URL}" \
-    --ARGS-- "${INSTALL_DIR}/packages/dashboard/dist/cli.js" "serve" "--config" "${CONFIG_FILE}"
+
+echo ""
+echo "  Registering launchd agents (${COMPONENTS_ARR[*]})..."
+
+# Phase 42 / Plan 42-02 Task 1 step 2: per-component launchd plist generation
+# driven by INSTALL_COMPONENTS sourced from install.sh's .install-state file.
+# Components 'core' and 'docker' have no daemon — skipped silently.
+for component in "${COMPONENTS_ARR[@]}"; do
+    case "${component}" in
+        compliance)
+            write_plist "io.luqen.compliance" "${INSTALL_DIR}/packages/compliance" \
+                COMPLIANCE_PORT "${COMPLIANCE_PORT}" \
+                COMPLIANCE_PUBLIC_URL "${COMPLIANCE_PUBLIC_URL}" \
+                COMPLIANCE_LLM_URL "${LLM_PUBLIC_URL}" \
+                --ARGS-- "${INSTALL_DIR}/packages/compliance/dist/cli.js" "serve" "--port" "${COMPLIANCE_PORT}"
+            ;;
+        branding)
+            write_plist "io.luqen.branding" "${INSTALL_DIR}/packages/branding" \
+                BRANDING_PORT "${BRANDING_PORT}" \
+                BRANDING_PUBLIC_URL "${BRANDING_PUBLIC_URL}" \
+                --ARGS-- "${INSTALL_DIR}/packages/branding/dist/cli.js" "serve" "--port" "${BRANDING_PORT}"
+            ;;
+        llm)
+            write_plist "io.luqen.llm" "${INSTALL_DIR}/packages/llm" \
+                LLM_PORT "${LLM_PORT}" \
+                LLM_PUBLIC_URL "${LLM_PUBLIC_URL}" \
+                --ARGS-- "${INSTALL_DIR}/packages/llm/dist/cli.js" "serve" "--port" "${LLM_PORT}"
+            ;;
+        dashboard)
+            write_plist "io.luqen.dashboard" "${INSTALL_DIR}" \
+                DASHBOARD_PUBLIC_URL "${DASHBOARD_PUBLIC_URL}" \
+                DASHBOARD_JWKS_URI "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json" \
+                DASHBOARD_JWKS_URL "${DASHBOARD_PUBLIC_URL}/oauth/.well-known/jwks.json" \
+                OAUTH_KEY_MAX_AGE_DAYS "${OAUTH_KEY_MAX_AGE_DAYS}" \
+                COMPLIANCE_PUBLIC_URL "${COMPLIANCE_PUBLIC_URL}" \
+                BRANDING_PUBLIC_URL "${BRANDING_PUBLIC_URL}" \
+                LLM_PUBLIC_URL "${LLM_PUBLIC_URL}" \
+                --ARGS-- "${INSTALL_DIR}/packages/dashboard/dist/cli.js" "serve" "--config" "${CONFIG_FILE}"
+            ;;
+        monitor)
+            # Phase 42 / Plan 42-02 Task 1: monitor agent launchd plist.
+            # Mirrors luqen-monitor.service env-var contract (install.sh:1516-1542).
+            # MONITOR_CLIENT_SECRET passed via EnvironmentVariables, never via argv.
+            write_plist "io.luqen.monitor" "${INSTALL_DIR}/packages/monitor" \
+                MONITOR_COMPLIANCE_URL "${COMPLIANCE_PUBLIC_URL}" \
+                MONITOR_CLIENT_ID "${MONITOR_CLIENT_ID}" \
+                MONITOR_CLIENT_SECRET "${MONITOR_CLIENT_SECRET}" \
+                MONITOR_URL "http://localhost:${MONITOR_PORT}" \
+                MONITOR_CHECK_INTERVAL "${MONITOR_CHECK_INTERVAL}" \
+                --ARGS-- "${INSTALL_DIR}/packages/monitor/dist/cli.js" "serve" "--port" "${MONITOR_PORT}"
+            ;;
+        core|docker)
+            : # CLI lib / Docker stack — no launchd agent
+            ;;
+    esac
+done
 
 # ──────────────────────────────────────────────
 # What's new since v2.12.0 (mirrors install.sh)
