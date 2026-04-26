@@ -1,6 +1,29 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
+
+const Webhook = Type.Object({}, { additionalProperties: true });
+const WebhookList = Type.Array(Webhook);
+const WebhookParams = Type.Object({ id: Type.String() });
+const WebhookBody = Type.Object(
+  {
+    url: Type.Optional(Type.String()),
+    secret: Type.Optional(Type.String()),
+    events: Type.Optional(Type.Array(Type.String())),
+  },
+  { additionalProperties: true },
+);
+const WebhookTestResponse = Type.Object({}, { additionalProperties: true });
+const WebhookDispatchBody = Type.Object(
+  {
+    event: Type.String(),
+    data: Type.Optional(Type.Object({}, { additionalProperties: true })),
+  },
+  { additionalProperties: true },
+);
+const WebhookDispatchResponse = Type.Object({ ok: Type.Boolean() }, { additionalProperties: true });
 
 export async function registerWebhookRoutes(
   app: FastifyInstance,
@@ -8,6 +31,11 @@ export async function registerWebhookRoutes(
 ): Promise<void> {
   // GET /api/v1/webhooks
   app.get('/api/v1/webhooks', {
+    schema: {
+      tags: ['webhooks'],
+      summary: 'List webhooks',
+      response: { 200: WebhookList, 401: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -22,6 +50,12 @@ export async function registerWebhookRoutes(
 
   // POST /api/v1/webhooks
   app.post('/api/v1/webhooks', {
+    schema: {
+      tags: ['webhooks'],
+      summary: 'Create webhook subscription',
+      body: WebhookBody,
+      response: { 201: Webhook, 400: ErrorEnvelope, 401: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -45,6 +79,12 @@ export async function registerWebhookRoutes(
 
   // POST /api/v1/webhooks/:id/test
   app.post('/api/v1/webhooks/:id/test', {
+    schema: {
+      tags: ['webhooks'],
+      summary: 'Send test payload to webhook',
+      params: WebhookParams,
+      response: { 200: WebhookTestResponse, 404: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -77,6 +117,12 @@ export async function registerWebhookRoutes(
 
   // POST /api/v1/webhooks/dispatch — trigger webhook dispatch for an event
   app.post('/api/v1/webhooks/dispatch', {
+    schema: {
+      tags: ['webhooks'],
+      summary: 'Trigger webhook dispatch for an event',
+      body: WebhookDispatchBody,
+      response: { 200: WebhookDispatchResponse, 400: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -95,6 +141,12 @@ export async function registerWebhookRoutes(
 
   // DELETE /api/v1/webhooks/:id
   app.delete('/api/v1/webhooks/:id', {
+    schema: {
+      tags: ['webhooks'],
+      summary: 'Delete webhook',
+      params: WebhookParams,
+      response: { 204: Type.Null(), 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {

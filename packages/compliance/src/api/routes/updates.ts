@@ -1,4 +1,6 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { parsePagination, paginateArray } from '../pagination.js';
@@ -8,12 +10,40 @@ import type { FastifyRequest } from 'fastify';
 
 type AuthRequest = FastifyRequest & { tokenPayload?: TokenPayload };
 
+const UpdateProposal = Type.Object({}, { additionalProperties: true });
+const UpdateProposalList = Type.Object(
+  {
+    data: Type.Array(UpdateProposal),
+    total: Type.Optional(Type.Number()),
+    page: Type.Optional(Type.Number()),
+    limit: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+const UpdateBody = Type.Object({}, { additionalProperties: true });
+const UpdateParams = Type.Object({ id: Type.String() });
+const UpdateNotesBody = Type.Object({ notes: Type.Optional(Type.String()) }, { additionalProperties: true });
+const UpdateQuery = Type.Object(
+  {
+    status: Type.Optional(Type.String()),
+    page: Type.Optional(Type.Union([Type.Number(), Type.String()])),
+    limit: Type.Optional(Type.Union([Type.Number(), Type.String()])),
+  },
+  { additionalProperties: true },
+);
+
 export async function registerUpdateRoutes(
   app: FastifyInstance,
   db: DbAdapter,
 ): Promise<void> {
   // POST /api/v1/updates/propose
   app.post('/api/v1/updates/propose', {
+    schema: {
+      tags: ['updates'],
+      summary: 'Propose a regulation update',
+      body: UpdateBody,
+      response: { 201: UpdateProposal, 400: ErrorEnvelope, 401: ErrorEnvelope },
+    },
     preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
@@ -29,6 +59,12 @@ export async function registerUpdateRoutes(
 
   // GET /api/v1/updates
   app.get('/api/v1/updates', {
+    schema: {
+      tags: ['updates'],
+      summary: 'List update proposals',
+      querystring: UpdateQuery,
+      response: { 200: UpdateProposalList, 401: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
@@ -50,6 +86,12 @@ export async function registerUpdateRoutes(
 
   // GET /api/v1/updates/:id
   app.get('/api/v1/updates/:id', {
+    schema: {
+      tags: ['updates'],
+      summary: 'Get update proposal by id',
+      params: UpdateParams,
+      response: { 200: UpdateProposal, 401: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
@@ -67,6 +109,12 @@ export async function registerUpdateRoutes(
 
   // PATCH /api/v1/updates/:id/approve
   app.patch('/api/v1/updates/:id/approve', {
+    schema: {
+      tags: ['updates'],
+      summary: 'Approve update proposal',
+      params: UpdateParams,
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -83,6 +131,12 @@ export async function registerUpdateRoutes(
 
   // PATCH /api/v1/updates/:id/reject
   app.patch('/api/v1/updates/:id/reject', {
+    schema: {
+      tags: ['updates'],
+      summary: 'Reject update proposal',
+      params: UpdateParams,
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -99,6 +153,13 @@ export async function registerUpdateRoutes(
 
   // PATCH /api/v1/updates/:id/acknowledge
   app.patch('/api/v1/updates/:id/acknowledge', {
+    schema: {
+      tags: ['updates'],
+      summary: 'Acknowledge update proposal',
+      params: UpdateParams,
+      body: UpdateNotesBody,
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -116,6 +177,13 @@ export async function registerUpdateRoutes(
 
   // PATCH /api/v1/updates/:id/review
   app.patch('/api/v1/updates/:id/review', {
+    schema: {
+      tags: ['updates'],
+      summary: 'Mark update proposal as reviewed',
+      params: UpdateParams,
+      body: UpdateNotesBody,
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -133,6 +201,13 @@ export async function registerUpdateRoutes(
 
   // PATCH /api/v1/updates/:id/dismiss
   app.patch('/api/v1/updates/:id/dismiss', {
+    schema: {
+      tags: ['updates'],
+      summary: 'Dismiss update proposal',
+      params: UpdateParams,
+      body: UpdateNotesBody,
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {

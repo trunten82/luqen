@@ -15,13 +15,44 @@
  *
  * Backwards-compat: if `verifyMcpToken` is not supplied, falls through
  * to the Phase 28 behaviour where global middleware governs MCP auth.
+ *
+ * Phase 41-01: an `onRoute` hook injects an OpenAPI schema for the
+ * `/api/v1/mcp` POST that the shared core plugin registers, so the
+ * route appears in `app.swagger()` output and the route-vs-spec gate
+ * passes. The body is a permissive JSON-RPC envelope (D-05 tolerant).
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { createMcpHttpPlugin } from '@luqen/core/mcp';
 import type { TokenPayload, TokenVerifier } from '../../auth/oauth.js';
 import { createComplianceMcpServer, COMPLIANCE_TOOL_METADATA } from '../../mcp/server.js';
+
+const McpJsonRpcBody = Type.Object(
+  {
+    jsonrpc: Type.Optional(Type.Literal('2.0')),
+    method: Type.Optional(Type.String()),
+    id: Type.Optional(Type.Union([Type.String(), Type.Number(), Type.Null()])),
+    params: Type.Optional(Type.Any()),
+  },
+  { additionalProperties: true },
+);
+
+const McpJsonRpcResponse = Type.Any();
+
+const McpRouteSchema = {
+  // schema: openapi for the MCP /api/v1/mcp POST endpoint
+  tags: ['mcp'],
+  summary: 'MCP Streamable HTTP endpoint (JSON-RPC 2.0)',
+  body: McpJsonRpcBody,
+  response: {
+    200: McpJsonRpcResponse,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+  },
+};
 
 export interface ComplianceMcpRouteOptions {
   readonly db: DbAdapter;
@@ -48,6 +79,13 @@ export async function registerMcpRoutes(
   if (opts.verifyMcpToken != null) {
     const verifyMcpToken = opts.verifyMcpToken;
     await app.register(async (scoped) => {
+      // Phase 41-01: inject OpenAPI schema for the MCP route registered
+      // by the shared core plugin (which has no schema-injection hook).
+      scoped.addHook('onRoute', (route) => {
+        if (route.path === '/api/v1/mcp' && route.method === 'POST' && route.schema == null) {
+          route.schema = McpRouteSchema;
+        }
+      });
       scoped.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
         const authHeader = request.headers.authorization;
         if (authHeader == null || !authHeader.startsWith('Bearer ')) {
@@ -71,5 +109,12 @@ export async function registerMcpRoutes(
     return;
   }
 
+  // Phase 41-01: same schema injection on the global registration path
+  // when no JWKS verifier is supplied (Phase 28 backwards-compat).
+  app.addHook('onRoute', (route) => {
+    if (route.path === '/api/v1/mcp' && route.method === 'POST' && route.schema == null) {
+      route.schema = McpRouteSchema;
+    }
+  });
   await app.register(plugin);
 }

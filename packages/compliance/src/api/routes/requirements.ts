@@ -1,8 +1,38 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { parsePagination, paginateArray } from '../pagination.js';
 import * as crud from '../../engine/crud.js';
+
+const Requirement = Type.Object({}, { additionalProperties: true });
+const RequirementDetail = Type.Object({}, { additionalProperties: true });
+const RequirementList = Type.Object(
+  {
+    data: Type.Array(Requirement),
+    total: Type.Optional(Type.Number()),
+    page: Type.Optional(Type.Number()),
+    limit: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+const RequirementParams = Type.Object({ id: Type.String() });
+const RequirementBody = Type.Object({}, { additionalProperties: true });
+const RequirementBulkBody = Type.Union([
+  Type.Array(Type.Object({}, { additionalProperties: true })),
+  Type.Object({ requirements: Type.Array(Type.Object({}, { additionalProperties: true })) }, { additionalProperties: true }),
+]);
+const RequirementQuery = Type.Object(
+  {
+    regulationId: Type.Optional(Type.String()),
+    wcagCriterion: Type.Optional(Type.String()),
+    obligation: Type.Optional(Type.String()),
+    page: Type.Optional(Type.Union([Type.Number(), Type.String()])),
+    limit: Type.Optional(Type.Union([Type.Number(), Type.String()])),
+  },
+  { additionalProperties: true },
+);
 
 export async function registerRequirementRoutes(
   app: FastifyInstance,
@@ -10,6 +40,12 @@ export async function registerRequirementRoutes(
 ): Promise<void> {
   // GET /api/v1/requirements
   app.get('/api/v1/requirements', {
+    schema: {
+      tags: ['requirements'],
+      summary: 'List requirements',
+      querystring: RequirementQuery,
+      response: { 200: RequirementList, 401: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
@@ -33,6 +69,12 @@ export async function registerRequirementRoutes(
 
   // GET /api/v1/requirements/:id
   app.get('/api/v1/requirements/:id', {
+    schema: {
+      tags: ['requirements'],
+      summary: 'Get requirement by id',
+      params: RequirementParams,
+      response: { 200: RequirementDetail, 401: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
@@ -51,6 +93,12 @@ export async function registerRequirementRoutes(
 
   // POST /api/v1/requirements
   app.post('/api/v1/requirements', {
+    schema: {
+      tags: ['requirements'],
+      summary: 'Create requirement',
+      body: RequirementBody,
+      response: { 201: Requirement, 400: ErrorEnvelope, 401: ErrorEnvelope },
+    },
     preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
@@ -66,6 +114,12 @@ export async function registerRequirementRoutes(
 
   // POST /api/v1/requirements/bulk
   app.post('/api/v1/requirements/bulk', {
+    schema: {
+      tags: ['requirements'],
+      summary: 'Bulk create requirements',
+      body: RequirementBulkBody,
+      response: { 201: Type.Array(Requirement), 400: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -85,6 +139,13 @@ export async function registerRequirementRoutes(
 
   // PATCH /api/v1/requirements/:id
   app.patch('/api/v1/requirements/:id', {
+    schema: {
+      tags: ['requirements'],
+      summary: 'Update requirement',
+      params: RequirementParams,
+      body: RequirementBody,
+      response: { 200: Requirement, 400: ErrorEnvelope, 403: ErrorEnvelope, 404: ErrorEnvelope },
+    },
     preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
@@ -111,6 +172,12 @@ export async function registerRequirementRoutes(
 
   // DELETE /api/v1/requirements/:id
   app.delete('/api/v1/requirements/:id', {
+    schema: {
+      tags: ['requirements'],
+      summary: 'Delete requirement',
+      params: RequirementParams,
+      response: { 204: Type.Null(), 403: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
