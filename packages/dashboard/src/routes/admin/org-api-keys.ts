@@ -1,9 +1,38 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
 import { generateApiKey } from '../../auth/api-key.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import type { StorageAdapter } from '../../db/index.js';
 import { API_KEY_ROLES, API_KEY_RATE_LIMITS, type ApiKeyRole } from '../../db/types.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const OrgKeyCreateBody = Type.Object(
+  {
+    label: Type.Optional(Type.String()),
+    role: Type.Optional(Type.String()),
+    ttl: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const OrgKeyIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 // ---------------------------------------------------------------------------
 // TTL whitelist
@@ -131,7 +160,10 @@ export async function orgApiKeyRoutes(
   // GET /admin/org-api-keys — list org-scoped keys
   server.get(
     '/admin/org-api-keys',
-    { preHandler: requirePermission('admin.org') },
+    {
+      preHandler: requirePermission('admin.org'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId;
 
@@ -173,7 +205,10 @@ export async function orgApiKeyRoutes(
   // GET /admin/org-api-keys/new — render creation form modal
   server.get(
     '/admin/org-api-keys/new',
-    { preHandler: requirePermission('admin.org') },
+    {
+      preHandler: requirePermission('admin.org'),
+      schema: HtmlPartialResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/org-api-key-form.hbs', { orgScoped: true });
     },
@@ -182,7 +217,13 @@ export async function orgApiKeyRoutes(
   // POST /admin/org-api-keys — create org-scoped key
   server.post(
     '/admin/org-api-keys',
-    { preHandler: requirePermission('admin.org') },
+    {
+      preHandler: requirePermission('admin.org'),
+      schema: {
+        body: OrgKeyCreateBody,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId;
 
@@ -269,7 +310,13 @@ export async function orgApiKeyRoutes(
   // POST /admin/org-api-keys/:id/revoke — revoke key with org_id guard
   server.post(
     '/admin/org-api-keys/:id/revoke',
-    { preHandler: requirePermission('admin.org') },
+    {
+      preHandler: requirePermission('admin.org'),
+      schema: {
+        params: OrgKeyIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const orgId = request.user?.currentOrgId;
@@ -361,7 +408,13 @@ export async function orgApiKeyRoutes(
   // DELETE /admin/org-api-keys/:id — hard-delete a revoked key (org-scoped)
   server.delete(
     '/admin/org-api-keys/:id',
-    { preHandler: requirePermission('admin.org') },
+    {
+      preHandler: requirePermission('admin.org'),
+      schema: {
+        params: OrgKeyIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const orgId = request.user?.currentOrgId;

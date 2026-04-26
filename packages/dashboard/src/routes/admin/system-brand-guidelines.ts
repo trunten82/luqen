@@ -43,6 +43,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
@@ -50,6 +51,41 @@ import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes for system brand guideline routes.
+// Routes return HTML or JSON depending on `hx-request`, so response shapes
+// are intentionally permissive (additionalProperties: true). Bodies are
+// validated only at the handler level (loose); we accept arbitrary JSON to
+// avoid breaking tests that POST minimal payloads.
+const LooseBody = Type.Object({}, { additionalProperties: true });
+
+const SystemBrandIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+// Permissive JSON object shape for the non-HTMX path's `{ ok, guideline }`
+// envelope. Stays open (additionalProperties: true) so handler can include
+// the full guideline shape verbatim.
+const SuccessJson = Type.Object({}, { additionalProperties: true });
+
+const MixedHtmlOrJsonResponse = {
+  // Handlers branch between text/html and application/json based on
+  // hx-request, so the response schema unions both shapes via permissive
+  // objects/strings. ErrorEnvelope guards 4xx/5xx.
+  response: {
+    200: Type.Union([Type.String(), SuccessJson]),
+    201: SuccessJson,
+    204: Type.Null(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    409: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -148,7 +184,10 @@ export async function systemBrandGuidelineRoutes(
   // ── GET /admin/system-brand-guidelines ────────────────────────────────────
   server.get(
     '/admin/system-brand-guidelines',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const guidelines = await storage.branding.listSystemGuidelines();
 
@@ -181,7 +220,10 @@ export async function systemBrandGuidelineRoutes(
   // ── GET /admin/system-brand-guidelines/new ────────────────────────────────
   server.get(
     '/admin/system-brand-guidelines/new',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPageSchema,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const viewCtx = { scope: 'system', postUrl: '/admin/system-brand-guidelines' };
       if (typeof (reply as { view?: unknown }).view === 'function') {
@@ -201,7 +243,10 @@ export async function systemBrandGuidelineRoutes(
   // ── POST /admin/system-brand-guidelines  (create) ─────────────────────────
   server.post(
     '/admin/system-brand-guidelines',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { body: LooseBody, ...MixedHtmlOrJsonResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = (request.body ?? {}) as {
         name?: unknown;
@@ -265,7 +310,10 @@ export async function systemBrandGuidelineRoutes(
   // ── GET /admin/system-brand-guidelines/:id  (detail) ──────────────────────
   server.get(
     '/admin/system-brand-guidelines/:id',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: SystemBrandIdParams, ...HtmlPageSchema },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const guideline = await storage.branding.getGuideline(id);
@@ -311,7 +359,10 @@ export async function systemBrandGuidelineRoutes(
   // ── POST /admin/system-brand-guidelines/:id  (update) ─────────────────────
   server.post(
     '/admin/system-brand-guidelines/:id',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: SystemBrandIdParams, body: LooseBody, ...MixedHtmlOrJsonResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const existing = await storage.branding.getGuideline(id);
@@ -369,7 +420,10 @@ export async function systemBrandGuidelineRoutes(
   // ── POST /admin/system-brand-guidelines/:id/delete ────────────────────────
   server.post(
     '/admin/system-brand-guidelines/:id/delete',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: SystemBrandIdParams, ...MixedHtmlOrJsonResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const existing = await storage.branding.getGuideline(id);

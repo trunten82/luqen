@@ -16,9 +16,23 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { performKeyRotation } from '../../auth/oauth-key-rotation.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const RotateResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    302: Type.Null(),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    500: Type.String(),
+  },
+} as const;
 
 interface OauthKeysRouteDeps {
   readonly csrfToken?: string;
@@ -31,7 +45,10 @@ export async function registerOauthKeysRoutes(
 ): Promise<void> {
   server.get(
     '/admin/oauth-keys',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const keys = await storage.oauthSigningKeys.listPublishableKeys();
       const rows = keys.map((k) => ({
@@ -60,7 +77,10 @@ export async function registerOauthKeysRoutes(
 
   server.post(
     '/admin/oauth-keys/rotate',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: RotateResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const startedAt = Date.now();
       try {

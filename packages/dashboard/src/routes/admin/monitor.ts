@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import {
   listSources,
   listUpdateProposals,
@@ -8,6 +9,18 @@ import {
 } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 // ── Public types for testing ─────────────────────────────────────────────────
 
@@ -169,7 +182,10 @@ export async function monitorRoutes(
   // GET /admin/monitor — main monitor dashboard
   server.get(
     '/admin/monitor',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
       const orgId = getOrgId(request);
@@ -206,7 +222,10 @@ export async function monitorRoutes(
   // POST /admin/monitor/trigger — manually trigger a scan
   server.post(
     '/admin/monitor/trigger',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await scanSources(complianceUrl, getToken(request), true);

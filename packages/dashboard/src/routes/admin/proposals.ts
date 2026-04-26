@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
 import {
   listUpdateProposals,
@@ -10,6 +11,55 @@ import {
 } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const ProposalListQuery = Type.Object(
+  {
+    status: Type.Optional(Type.String()),
+    tab: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const ProposalActionBody = Type.Object(
+  { notes: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const BulkActionBody = Type.Object(
+  {
+    ids: Type.Optional(Type.Array(Type.String())),
+    action: Type.Optional(Type.String()),
+    notes: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const BulkActionResult = Type.Object(
+  {
+    succeeded: Type.Array(Type.String()),
+    failed: Type.Array(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const ProposalIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 export async function proposalRoutes(
   server: FastifyInstance,
@@ -19,7 +69,10 @@ export async function proposalRoutes(
   // GET /admin/proposals — tabbed view: regulatory updates vs custom proposals
   server.get(
     '/admin/proposals',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: { ...HtmlPageSchema, querystring: ProposalListQuery },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { status?: string; tab?: string };
       const tab = query.tab === 'custom' ? 'custom' : 'updates';
@@ -97,7 +150,10 @@ export async function proposalRoutes(
   // POST /admin/proposals/:id/acknowledge — acknowledge official regulatory change
   server.post(
     '/admin/proposals/:id/acknowledge',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: ProposalIdParams, body: ProposalActionBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = (request.body ?? {}) as { notes?: string };
@@ -130,7 +186,10 @@ export async function proposalRoutes(
   // POST /admin/proposals/:id/review — review and apply custom proposal
   server.post(
     '/admin/proposals/:id/review',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: ProposalIdParams, body: ProposalActionBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = (request.body ?? {}) as { notes?: string };
@@ -163,7 +222,10 @@ export async function proposalRoutes(
   // POST /admin/proposals/:id/dismiss — dismiss custom proposal without applying
   server.post(
     '/admin/proposals/:id/dismiss',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: ProposalIdParams, body: ProposalActionBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = (request.body ?? {}) as { notes?: string };
@@ -196,7 +258,19 @@ export async function proposalRoutes(
   // POST /admin/proposals/bulk-action — bulk acknowledge/review/dismiss
   server.post(
     '/admin/proposals/bulk-action',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: {
+        body: BulkActionBody,
+        response: {
+          200: BulkActionResult,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = (request.body ?? {}) as { ids?: string[]; action?: string; notes?: string };
       const ids = body.ids ?? [];
@@ -245,7 +319,10 @@ export async function proposalRoutes(
   // Legacy aliases — keep /approve and /reject working
   server.post(
     '/admin/proposals/:id/approve',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: ProposalIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
@@ -263,7 +340,10 @@ export async function proposalRoutes(
 
   server.post(
     '/admin/proposals/:id/reject',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: ProposalIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {

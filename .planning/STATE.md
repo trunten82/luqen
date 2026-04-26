@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1.0
 milestone_name: Agent Companion v2 + Tech Debt & Docs
 status: verifying
-stopped_at: Phase 41 verification gaps_found (OAPI-04 partial)
-last_updated: "2026-04-26T07:30:00Z"
-last_activity: 2026-04-26 -- Phase 41 verified: 4/5 OAPI requirements pass, OAPI-04 partial
+stopped_at: Completed 41.1-01-PLAN.md
+last_updated: "2026-04-26T11:23:55.997Z"
+last_activity: 2026-04-26
 progress:
-  total_phases: 10
-  completed_phases: 8
-  total_plans: 41
-  completed_plans: 41
-  percent: 100
+  total_phases: 11
+  completed_phases: 9
+  total_plans: 46
+  completed_plans: 42
+  percent: 91
 ---
 
 # Project State
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-04-24 — v3.1.0 milestone started)
 
 Phase: 41 (openapi-schema-backfill) — VERIFIED (gaps_found)
 Plan: 5 of 5 complete
-Status: 4/5 OAPI requirements pass; OAPI-04 PARTIAL (dashboard per-route TypeBox blocks deferred for ~245 non-MCP routes — recommend Phase 41.1)
-Last activity: 2026-04-26 -- Phase 41 verified: 4/5 OAPI requirements pass, OAPI-04 partial
+Status: Phase complete — ready for verification
+Last activity: 2026-04-26
 
 ## Phase Map (v3.1.0)
 
@@ -48,6 +48,7 @@ Last activity: 2026-04-26 -- Phase 41 verified: 4/5 OAPI requirements pass, OAPI
 
 - 2026-04-25: Phase 41 (OpenAPI Schema Backfill) added to v3.1.0 — closes Plan 40-01 deferred Task 2 and DOC-02 PARTIAL. Backfills Fastify route schemas across compliance/branding/llm/dashboard/MCP so `/docs` snapshots are substantive and `route-vs-spec` + `openapi-drift` gates pass.
 - 2026-04-25: Phase 42 (Installer Wizard Redesign) added to v3.1.0 — Plan 40-07 dry-run on a clean LXC surfaced that all 3 installers were wired for the v2-era codebase. Phase 42 introduces 4 deployment profiles (Scanner CLI / API services / Self-hosted dashboard / Docker Compose), first-class registration of `@luqen/monitor`, plugin axis (auth/notify/storage/git-host) gated by profile, and `install.ps1` parity with `install.sh`. CONTEXT.md captured at scope time.
+- 2026-04-26: Phase 41.1 inserted after Phase 41 (URGENT) — Dashboard non-MCP per-route TypeBox schema backfill to close OAPI-04 PARTIAL flagged in 41-VERIFICATION.md (~245 routes; mechanical copy-paste using the infrastructure shipped in 41-04).
 
 ### Decisions (carried forward from v3.0.0)
 
@@ -76,9 +77,9 @@ Last activity: 2026-04-26 -- Phase 41 verified: 4/5 OAPI requirements pass, OAPI
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 40 context gathered
-Resume file: --resume-file
+Last session: 2026-04-26T11:23:55.992Z
+Stopped at: Completed 41.1-01-PLAN.md
+Resume file: None
 Next action: `/gsd-plan-phase 34` (Tokenizer Precision)
 
 **Planned Phase:** 40 (Documentation Sweep) — 7 plans — 2026-04-25T20:39:26.007Z

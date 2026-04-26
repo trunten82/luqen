@@ -26,8 +26,20 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { createPublicKey } from 'node:crypto';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 import type { StorageAdapter } from '../../db/adapter.js';
+
+// RFC 7517 JWKS — keys array of JWK objects. Per-key shape stays loose
+// (additionalProperties:true) because future key types may add new RFC 7518
+// parameters; AJV at runtime should not reject otherwise-valid JWKs.
+const JwksResponseSchema = Type.Object(
+  {
+    keys: Type.Array(Type.Object({}, { additionalProperties: true })),
+  },
+  { additionalProperties: true },
+);
 
 interface PublishedJwk {
   readonly kid: string;
@@ -67,6 +79,17 @@ export async function registerJwksRoutes(
     return reply.send(jwks);
   }
 
-  server.get('/oauth/jwks.json', handler);
-  server.get('/.well-known/jwks.json', handler);
+  const jwksRouteOptions = {
+    schema: {
+      tags: ['oauth', 'jwks'],
+      response: {
+        200: JwksResponseSchema,
+        400: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
+  } as const;
+
+  server.get('/oauth/jwks.json', jwksRouteOptions, handler);
+  server.get('/.well-known/jwks.json', jwksRouteOptions, handler);
 }

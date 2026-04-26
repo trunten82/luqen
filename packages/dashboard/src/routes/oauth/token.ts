@@ -29,11 +29,47 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { createHash, randomBytes } from 'node:crypto';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 import type { StorageAdapter } from '../../db/adapter.js';
 import type { OauthClient } from '../../db/interfaces/oauth-client-repository.js';
 import { verifyS256Challenge } from '../../auth/oauth-pkce.js';
 import type { DashboardSigner } from '../../auth/oauth-signer.js';
+
+// POST /oauth/token request body (RFC 6749 §3.2 / §4.1.3 / §6).
+// Form-encoded inputs are unioned into one body schema; the handler branches
+// on grant_type. additionalProperties:true keeps room for client extensions.
+const TokenBodySchema = Type.Object(
+  {
+    grant_type: Type.Optional(Type.String()),
+    client_id: Type.Optional(Type.String()),
+    client_secret: Type.Optional(Type.String()),
+    code: Type.Optional(Type.String()),
+    code_verifier: Type.Optional(Type.String()),
+    redirect_uri: Type.Optional(Type.String()),
+    refresh_token: Type.Optional(Type.String()),
+    scope: Type.Optional(Type.String()),
+    resource: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+// RFC 6749 §5.1 access-token success response. refresh_token / scope are
+// emitted by handleAuthCode + handleRefresh; id_token is left optional for
+// future OIDC parity. additionalProperties:true matches the existing
+// dashboard convention (D-05).
+const TokenResponseSchema = Type.Object(
+  {
+    access_token: Type.String(),
+    token_type: Type.String(),
+    expires_in: Type.Number(),
+    refresh_token: Type.Optional(Type.String()),
+    scope: Type.Optional(Type.String()),
+    id_token: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
 
 interface TokenBody {
   readonly grant_type?: string;
@@ -88,7 +124,17 @@ export async function registerTokenRoutes(
   storage: StorageAdapter,
   signer: DashboardSigner,
 ): Promise<void> {
-  server.post('/oauth/token', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/oauth/token', {
+    schema: {
+      tags: ['oauth'],
+      body: TokenBodySchema,
+      response: {
+        200: TokenResponseSchema,
+        400: ErrorEnvelope,
+        401: ErrorEnvelope,
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const body = (request.body ?? {}) as TokenBody;
 
     // 1. Resolve client credentials (Basic or body).
