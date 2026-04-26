@@ -1,10 +1,41 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import type { MonitoredSource } from '../../types.js';
 import { acknowledgeUpdate } from '../../engine/proposals.js';
 import { requireScope } from '../../auth/middleware.js';
 import { createHash } from 'node:crypto';
 import type { LLMClient } from '../../llm/llm-client.js';
+
+const Source = Type.Object({}, { additionalProperties: true });
+const SourceList = Type.Array(Source);
+const SourceParams = Type.Object({ id: Type.String() });
+const SourceBody = Type.Object({}, { additionalProperties: true });
+const SourcePatchBody = Type.Object(
+  { managementMode: Type.Optional(Type.Union([Type.Literal('llm'), Type.Literal('manual')])) },
+  { additionalProperties: true },
+);
+const SourceScanQuery = Type.Object({ force: Type.Optional(Type.String()) }, { additionalProperties: true });
+const SourceScanResponse = Type.Object({}, { additionalProperties: true });
+const BulkSwitchBody = Type.Object(
+  { mode: Type.Optional(Type.Union([Type.Literal('llm'), Type.Literal('manual')])) },
+  { additionalProperties: true },
+);
+const SourceUploadBody = Type.Object(
+  {
+    content: Type.String(),
+    name: Type.String(),
+    url: Type.Optional(Type.String()),
+    regulationId: Type.Optional(Type.String()),
+    jurisdictionId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+const SourceCreatedResponse = Type.Object({}, { additionalProperties: true });
+const SourceReprocessResponse = Type.Object({}, { additionalProperties: true });
+const PatchResponse = Type.Object({}, { additionalProperties: true });
+const BulkResponse = Type.Object({}, { additionalProperties: true });
 
 // ── Lightweight inline diff for source content ──────────────────────────────
 
@@ -155,6 +186,11 @@ export async function registerSourceRoutes(
 ): Promise<void> {
   // GET /api/v1/sources
   app.get('/api/v1/sources', {
+    schema: {
+      tags: ['sources'],
+      summary: 'List monitored sources',
+      response: { 200: SourceList, 401: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
@@ -169,6 +205,12 @@ export async function registerSourceRoutes(
 
   // POST /api/v1/sources
   app.post('/api/v1/sources', {
+    schema: {
+      tags: ['sources'],
+      summary: 'Create monitored source',
+      body: SourceBody,
+      response: { 201: Source, 400: ErrorEnvelope, 401: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -184,6 +226,12 @@ export async function registerSourceRoutes(
 
   // DELETE /api/v1/sources/:id
   app.delete('/api/v1/sources/:id', {
+    schema: {
+      tags: ['sources'],
+      summary: 'Delete monitored source',
+      params: SourceParams,
+      response: { 204: Type.Null(), 403: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -212,6 +260,13 @@ export async function registerSourceRoutes(
   // POST /api/v1/sources/scan
   // Query param ?force=true skips schedule check (used by manual "Scan Now" button)
   app.post('/api/v1/sources/scan', {
+    schema: {
+      tags: ['sources'],
+      summary: 'Trigger scan of monitored sources (use ?force=true for manual scan)',
+      querystring: SourceScanQuery,
+      // No body schema — endpoint may be POSTed with empty body.
+      response: { 200: SourceScanResponse, 401: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -399,6 +454,13 @@ export async function registerSourceRoutes(
 
   // PATCH /api/v1/sources/:id — update managementMode
   app.patch('/api/v1/sources/:id', {
+    schema: {
+      tags: ['sources'],
+      summary: 'Update source managementMode',
+      params: SourceParams,
+      body: SourcePatchBody,
+      response: { 200: PatchResponse, 400: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
@@ -417,6 +479,12 @@ export async function registerSourceRoutes(
 
   // POST /api/v1/sources/bulk-switch-mode — switch all government sources
   app.post('/api/v1/sources/bulk-switch-mode', {
+    schema: {
+      tags: ['sources'],
+      summary: 'Bulk switch government source management mode',
+      body: BulkSwitchBody,
+      response: { 200: BulkResponse, 400: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     const body = request.body as { mode?: string };
@@ -441,6 +509,17 @@ export async function registerSourceRoutes(
 
   // POST /api/v1/sources/upload — upload document content for LLM parsing
   app.post('/api/v1/sources/upload', {
+    schema: {
+      tags: ['sources'],
+      summary: 'Upload document content for LLM-based extraction',
+      body: SourceUploadBody,
+      response: {
+        201: SourceCreatedResponse,
+        400: ErrorEnvelope,
+        500: ErrorEnvelope,
+        503: ErrorEnvelope,
+      },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     if (llmClient == null) {
@@ -524,6 +603,18 @@ export async function registerSourceRoutes(
 
   // POST /api/v1/sources/:id/reprocess — re-run LLM extraction on a source
   app.post('/api/v1/sources/:id/reprocess', {
+    schema: {
+      tags: ['sources'],
+      summary: 'Re-run LLM extraction on stored source content',
+      params: SourceParams,
+      response: {
+        200: SourceReprocessResponse,
+        404: ErrorEnvelope,
+        422: ErrorEnvelope,
+        502: ErrorEnvelope,
+        503: ErrorEnvelope,
+      },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     if (llmClient == null) {

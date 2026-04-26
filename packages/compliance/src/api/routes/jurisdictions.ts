@@ -1,8 +1,54 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { parsePagination, paginateArray } from '../pagination.js';
 import * as crud from '../../engine/crud.js';
+
+const Jurisdiction = Type.Object(
+  {
+    id: Type.Optional(Type.String()),
+    code: Type.Optional(Type.String()),
+    name: Type.Optional(Type.String()),
+    type: Type.Optional(Type.String()),
+    parentId: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const JurisdictionList = Type.Object(
+  {
+    data: Type.Array(Jurisdiction),
+    total: Type.Optional(Type.Number()),
+    page: Type.Optional(Type.Number()),
+    limit: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+
+const JurisdictionDetail = Type.Object(
+  {
+    id: Type.Optional(Type.String()),
+    code: Type.Optional(Type.String()),
+    name: Type.Optional(Type.String()),
+    regulationsCount: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+
+const JurisdictionBody = Type.Object({}, { additionalProperties: true });
+const JurisdictionParams = Type.Object({ id: Type.String() });
+const JurisdictionQuery = Type.Object(
+  {
+    type: Type.Optional(Type.String()),
+    parentId: Type.Optional(Type.String()),
+    page: Type.Optional(Type.Union([Type.Number(), Type.String()])),
+    limit: Type.Optional(Type.Union([Type.Number(), Type.String()])),
+  },
+  { additionalProperties: true },
+);
 
 export async function registerJurisdictionRoutes(
   app: FastifyInstance,
@@ -10,6 +56,16 @@ export async function registerJurisdictionRoutes(
 ): Promise<void> {
   // GET /api/v1/jurisdictions
   app.get('/api/v1/jurisdictions', {
+    schema: {
+      tags: ['jurisdictions'],
+      summary: 'List jurisdictions',
+      querystring: JurisdictionQuery,
+      response: {
+        200: JurisdictionList,
+        401: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
@@ -32,6 +88,17 @@ export async function registerJurisdictionRoutes(
 
   // GET /api/v1/jurisdictions/:id
   app.get('/api/v1/jurisdictions/:id', {
+    schema: {
+      tags: ['jurisdictions'],
+      summary: 'Get jurisdiction by id',
+      params: JurisdictionParams,
+      response: {
+        200: JurisdictionDetail,
+        401: ErrorEnvelope,
+        404: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
@@ -51,6 +118,16 @@ export async function registerJurisdictionRoutes(
 
   // POST /api/v1/jurisdictions
   app.post('/api/v1/jurisdictions', {
+    schema: {
+      tags: ['jurisdictions'],
+      summary: 'Create jurisdiction',
+      body: JurisdictionBody,
+      response: {
+        201: Jurisdiction,
+        400: ErrorEnvelope,
+        401: ErrorEnvelope,
+      },
+    },
     preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
@@ -66,6 +143,18 @@ export async function registerJurisdictionRoutes(
 
   // PATCH /api/v1/jurisdictions/:id
   app.patch('/api/v1/jurisdictions/:id', {
+    schema: {
+      tags: ['jurisdictions'],
+      summary: 'Update jurisdiction',
+      params: JurisdictionParams,
+      body: JurisdictionBody,
+      response: {
+        200: Jurisdiction,
+        400: ErrorEnvelope,
+        403: ErrorEnvelope,
+        404: ErrorEnvelope,
+      },
+    },
     preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
@@ -92,6 +181,17 @@ export async function registerJurisdictionRoutes(
 
   // DELETE /api/v1/jurisdictions/:id
   app.delete('/api/v1/jurisdictions/:id', {
+    schema: {
+      tags: ['jurisdictions'],
+      summary: 'Delete jurisdiction',
+      params: JurisdictionParams,
+      response: {
+        204: Type.Null(),
+        403: ErrorEnvelope,
+        404: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {

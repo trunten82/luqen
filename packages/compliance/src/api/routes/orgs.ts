@@ -1,12 +1,27 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
+
+const OrgParams = Type.Object({ id: Type.String() });
 
 export async function registerOrgRoutes(
   app: FastifyInstance,
   db: DbAdapter,
 ): Promise<void> {
   app.delete('/api/v1/orgs/:id/data', {
+    schema: {
+      tags: ['orgs'],
+      summary: 'Delete all data for an organisation',
+      params: OrgParams,
+      response: {
+        204: Type.Null(),
+        400: ErrorEnvelope,
+        401: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {

@@ -165,7 +165,13 @@ export async function createServer(options: ServerOptions) {
   await db.initialize();
 
   // OpenAPI JSON alias — Phase 40-01 DOC-02: swagger moved to /docs.
-  app.get('/api/v1/openapi.json', async (_request, reply) => {
+  app.get('/api/v1/openapi.json', {
+    schema: {
+      tags: ['openapi'],
+      summary: 'Redirect to /docs/json (Swagger UI JSON)',
+      response: { 302: { type: 'null' } },
+    },
+  }, async (_request, reply) => {
     await reply.redirect('/docs/json');
   });
 
