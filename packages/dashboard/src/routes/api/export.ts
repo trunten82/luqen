@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../../db/index.js';
@@ -8,6 +9,22 @@ import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
 import { normalizeReportData, inferComponent } from '../../services/report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
+
+// Export endpoints stream binary buffers — schemas declare a string body and
+// the correct `produces` content-type so the OpenAPI spec accurately reflects
+// the response shape.
+const XlsxProduces = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+const PdfProduces = ['application/pdf'];
+
+const ScanExportIdParamsSchema = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+const TrendsExportQuerystringSchema = Type.Object(
+  { siteUrl: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
 
 // ---------------------------------------------------------------------------
 // Excel helper — single source of truth for all scan-data workbook exports
@@ -124,6 +141,13 @@ export async function exportRoutes(
   // payloads). Excel is the only supported listing format.
   server.get(
     '/api/v1/export/scans.xlsx',
+    {
+      schema: {
+        tags: ['export'],
+        response: { 200: Type.String(), 401: ErrorEnvelope },
+        produces: XlsxProduces,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const scans = await storage.scans.listScans({
@@ -187,6 +211,19 @@ export async function exportRoutes(
   // ── GET /api/v1/export/scans/:id/issues.xlsx — per-report issues workbook
   server.get(
     '/api/v1/export/scans/:id/issues.xlsx',
+    {
+      schema: {
+        tags: ['export'],
+        params: ScanExportIdParamsSchema,
+        response: {
+          200: Type.String(),
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+        produces: XlsxProduces,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -350,6 +387,14 @@ export async function exportRoutes(
   // ── GET /api/v1/export/trends.xlsx ────────────────────────────────────────
   server.get(
     '/api/v1/export/trends.xlsx',
+    {
+      schema: {
+        tags: ['export'],
+        querystring: TrendsExportQuerystringSchema,
+        response: { 200: Type.String(), 401: ErrorEnvelope },
+        produces: XlsxProduces,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { siteUrl?: string };
       const orgId = request.user?.currentOrgId;
@@ -399,6 +444,19 @@ export async function exportRoutes(
   // ── GET /api/v1/export/scans/:id/report.pdf ─────────────────────────────
   server.get(
     '/api/v1/export/scans/:id/report.pdf',
+    {
+      schema: {
+        tags: ['export'],
+        params: ScanExportIdParamsSchema,
+        response: {
+          200: Type.String(),
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+        produces: PdfProduces,
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);

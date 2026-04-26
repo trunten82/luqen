@@ -1,13 +1,35 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
 import type { AuthService } from '../../auth/auth-service.js';
 import { validateUsername, validatePassword } from '../../validation.js';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 
 interface SetupBody {
   username?: string;
   password?: string;
   role?: string;
 }
+
+// Body schema intentionally omitted — Fastify body validation runs before
+// the API-key auth check and would short-circuit a 401 path.
+const SetupUserSchema = Type.Object(
+  {
+    id: Type.String(),
+    username: Type.String(),
+    role: Type.String(),
+  },
+  { additionalProperties: true },
+);
+
+// Handler returns { message, user } directly (no LuqenResponse wrapper) — schema mirrors that bare shape.
+const SetupSuccessSchema = Type.Object(
+  {
+    message: Type.String(),
+    user: SetupUserSchema,
+  },
+  { additionalProperties: true },
+);
 
 /**
  * POST /api/v1/setup — Create the first admin user (or recover admin access).
@@ -25,7 +47,20 @@ export async function setupRoutes(
 ): Promise<void> {
   server.post(
     '/api/v1/setup',
-    { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
+    {
+      config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
+      schema: {
+        tags: ['setup'],
+        summary: 'Create the first admin user (or recover admin access).',
+        response: {
+          201: SetupSuccessSchema,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          409: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // Authenticate via API key (header-based, not session)
       const authHeader = request.headers.authorization;

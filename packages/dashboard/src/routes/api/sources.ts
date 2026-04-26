@@ -1,6 +1,36 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { scanSources, uploadSource } from '../../compliance-client.js';
 import type { PluginManager } from '../../plugins/manager.js';
+import { LuqenResponse, ErrorEnvelope } from '../../api/schemas/envelope.js';
+
+const ScanSourcesQuerystring = Type.Object(
+  { force: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const ScanSourcesResponseSchema = Type.Object(
+  {
+    status: Type.String(),
+    message: Type.String(),
+  },
+  { additionalProperties: true },
+);
+
+// Body fields kept Optional — handler validates and returns specific errors.
+const UploadSourceBodySchema = Type.Object(
+  {
+    content: Type.Optional(Type.String()),
+    name: Type.Optional(Type.String()),
+    regulationId: Type.Optional(Type.String()),
+    regulationName: Type.Optional(Type.String()),
+    jurisdictionId: Type.Optional(Type.String()),
+    pluginId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const UploadSourceResultSchema = Type.Object({}, { additionalProperties: true });
 
 /**
  * Source intelligence API routes.
@@ -20,6 +50,18 @@ export async function sourceApiRoutes(
   // POST /api/v1/sources/scan — trigger async source scan
   server.post(
     '/api/v1/sources/scan',
+    {
+      schema: {
+        tags: ['sources'],
+        querystring: ScanSourcesQuerystring,
+        response: {
+          200: ScanSourcesResponseSchema,
+          401: ErrorEnvelope,
+          500: ErrorEnvelope,
+          503: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user) {
         return reply.code(401).send({ error: 'Authentication required' });
@@ -59,6 +101,19 @@ export async function sourceApiRoutes(
   // POST /api/v1/sources/upload — upload document for LLM parsing
   server.post(
     '/api/v1/sources/upload',
+    {
+      schema: {
+        tags: ['sources'],
+        body: UploadSourceBodySchema,
+        response: {
+          201: UploadSourceResultSchema,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          500: ErrorEnvelope,
+          503: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user) {
         return reply.code(401).send({ error: 'Authentication required' });
