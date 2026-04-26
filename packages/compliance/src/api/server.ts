@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -81,7 +82,9 @@ export async function createServer(options: ServerOptions) {
 
   const llmClient = createLLMClient({ llmUrl, llmClientId, llmClientSecret });
 
-  const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }); // 10MB for large site scans
+  // Phase 41-01: apply TypeBoxTypeProvider so route schemas declared with
+  // `@sinclair/typebox` flow into both AJV validation and the swagger output.
+  const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }).withTypeProvider<TypeBoxTypeProvider>(); // 10MB for large site scans
 
   // Register CORS
   await app.register(cors, {
