@@ -1,8 +1,36 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
 import type { PluginManager } from '../../plugins/manager.js';
 import type { RegistryEntry, ConfigField, PluginManifest } from '../../plugins/types.js';
 import { escapeHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// ---------------------------------------------------------------------------
+// Phase 41.1-02 — local TypeBox shapes
+// ---------------------------------------------------------------------------
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
+
+const IdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
+const PackageNameParams = Type.Object(
+  { packageName: Type.String() },
+  { additionalProperties: true },
+);
+const ConfigOptionsQuery = Type.Object(
+  { field: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -138,7 +166,10 @@ export async function pluginAdminRoutes(
   // GET /admin/plugins — render plugins page (scoped by org)
   server.get(
     '/admin/plugins',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const isAdmin = request.user?.role === 'admin';
@@ -209,7 +240,10 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/install — HTMX install (returns updated HTML fragment)
   server.post<{ Body: { packageName?: string } }>(
     '/admin/plugins/install',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: HtmlPartialResponse,
+    },
     async (request, reply) => {
       const { packageName } = request.body ?? {};
       if (!packageName || typeof packageName !== 'string') {
@@ -242,7 +276,10 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/:id/activate — HTMX activate
   server.post<{ Params: { id: string } }>(
     '/admin/plugins/:id/activate',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       try {
         const plugin = await pluginManager.activate(request.params.id);
@@ -267,7 +304,10 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/:id/deactivate — HTMX deactivate
   server.post<{ Params: { id: string } }>(
     '/admin/plugins/:id/deactivate',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       try {
         const plugin = await pluginManager.deactivate(request.params.id);
@@ -292,7 +332,10 @@ export async function pluginAdminRoutes(
   // DELETE /admin/plugins/:id — HTMX remove
   server.delete<{ Params: { id: string } }>(
     '/admin/plugins/:id',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       try {
         await pluginManager.remove(request.params.id);
@@ -313,7 +356,10 @@ export async function pluginAdminRoutes(
   // GET /admin/plugins/:id/configure — render config form
   server.get<{ Params: { id: string } }>(
     '/admin/plugins/:id/configure',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       try {
         const plugin = pluginManager.getPlugin(request.params.id);
@@ -360,7 +406,10 @@ export async function pluginAdminRoutes(
   // PATCH /admin/plugins/:id/config — HTMX save config
   server.patch<{ Params: { id: string }; Body: Record<string, unknown> }>(
     '/admin/plugins/:id/config',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       try {
         const config = (request.body ?? {}) as Record<string, unknown>;
@@ -392,7 +441,22 @@ export async function pluginAdminRoutes(
   // GET /admin/plugins/:id/config-options — fetch dynamic-select options from active plugin
   server.get<{ Params: { id: string }; Querystring: { field?: string; [k: string]: unknown } }>(
     '/admin/plugins/:id/config-options',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: {
+        params: IdParams,
+        querystring: ConfigOptionsQuery,
+        response: {
+          200: Type.Array(
+            Type.Object({}, { additionalProperties: true }),
+          ),
+          400: Type.String(),
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+          500: Type.String(),
+        },
+      },
+    },
     async (request, reply) => {
       try {
         const fieldKey = (request.query as Record<string, unknown>).field as string | undefined;
@@ -427,7 +491,10 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/:id/org/activate — org-scoped activate
   server.post<{ Params: { id: string } }>(
     '/admin/plugins/:id/org/activate',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       try {
         const orgId = request.user?.currentOrgId;
@@ -458,7 +525,10 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/:id/activate-for-org — global admin activates for a specific org
   server.post<{ Params: { id: string }; Body: { orgId?: string | string[] } }>(
     '/admin/plugins/:id/activate-for-org',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       try {
         const raw = (request.body as Record<string, unknown>)?.orgId;
@@ -498,7 +568,10 @@ export async function pluginAdminRoutes(
   // POST /admin/plugins/:id/org/deactivate — org-scoped deactivate
   server.post<{ Params: { id: string } }>(
     '/admin/plugins/:id/org/deactivate',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       try {
         const orgId = request.user?.currentOrgId;
@@ -529,7 +602,10 @@ export async function pluginAdminRoutes(
   // PATCH /admin/plugins/:packageName/org-config — save org-specific plugin config
   server.patch<{ Params: { packageName: string }; Body: Record<string, unknown> }>(
     '/admin/plugins/:packageName/org-config',
-    { preHandler: requirePermission('admin.system', 'admin.plugins') },
+    {
+      preHandler: requirePermission('admin.system', 'admin.plugins'),
+      schema: { params: PackageNameParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       try {
         const orgId = request.user?.currentOrgId;
