@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
 import { LLMValidationError } from '../../llm-client.js';
 import type { LLMClient } from '../../llm-client.js';
@@ -10,6 +11,7 @@ import { filterToolsByRbac } from '@luqen/core/mcp';
 import { DASHBOARD_TOOL_METADATA } from '../../mcp/metadata.js';
 import { resolveEffectivePermissions } from '../../permissions.js';
 import type { RoleRepository } from '../../db/interfaces/role-repository.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
 
 // Phase 32 D-13 + AI-SPEC §4c.2.B — the three fixed locked fences surfaced
 // by the `agent-system` prompt. Passed to the prompts-tab template so the
@@ -22,6 +24,39 @@ const AGENT_SYSTEM_LOCKED_FENCES: readonly {
   { name: 'confirmation', tooltipKey: 'admin.llm.prompts.lockedConfirmTooltip' },
   { name: 'honesty',      tooltipKey: 'admin.llm.prompts.lockedHonestyTooltip' },
 ];
+
+// Phase 41.1-02 — local TypeBox shapes for HTMX partial responses.
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    422: ErrorEnvelope,
+    500: ErrorEnvelope,
+    503: ErrorEnvelope,
+  },
+} as const;
+
+const IdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
+const NameParams = Type.Object({ name: Type.String() }, { additionalProperties: true });
+const NameModelParams = Type.Object(
+  { name: Type.String(), modelId: Type.String() },
+  { additionalProperties: true },
+);
+const CapabilityParams = Type.Object(
+  { capability: Type.String() },
+  { additionalProperties: true },
+);
+const TabQuery = Type.Object(
+  { tab: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+const ProviderQuery = Type.Object(
+  { providerId: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
 
 export interface LlmAdminRoutesOptions {
   /** Role repository for per-request permission resolution (manifest-size + destructive-count). */
@@ -39,7 +74,10 @@ export async function llmAdminRoutes(
 
   server.get(
     '/admin/llm',
-    { preHandler: requirePermission('admin.system', 'llm.view') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.view'),
+      schema: { ...HtmlPageSchema, querystring: TabQuery },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { tab } = request.query as { tab?: string };
       const activeTab = ['providers', 'models', 'capabilities', 'prompts'].includes(tab ?? '')
@@ -272,7 +310,10 @@ export async function llmAdminRoutes(
 
   server.post(
     '/admin/llm/providers',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -318,7 +359,10 @@ export async function llmAdminRoutes(
 
   server.post<{ Params: { id: string } }>(
     '/admin/llm/providers/:id/test',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -350,7 +394,10 @@ export async function llmAdminRoutes(
 
   server.get(
     '/admin/llm/remote-models',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { querystring: ProviderQuery, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const { providerId } = request.query as { providerId?: string };
@@ -379,7 +426,10 @@ export async function llmAdminRoutes(
 
   server.patch<{ Params: { id: string } }>(
     '/admin/llm/providers/:id',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -420,7 +470,10 @@ export async function llmAdminRoutes(
 
   server.delete<{ Params: { id: string } }>(
     '/admin/llm/providers/:id',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -448,7 +501,10 @@ export async function llmAdminRoutes(
 
   server.post(
     '/admin/llm/models',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -497,7 +553,10 @@ export async function llmAdminRoutes(
 
   server.delete<{ Params: { id: string } }>(
     '/admin/llm/models/:id',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -525,7 +584,10 @@ export async function llmAdminRoutes(
 
   server.put<{ Params: { name: string } }>(
     '/admin/llm/capabilities/:name/assign',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: NameParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -564,7 +626,10 @@ export async function llmAdminRoutes(
 
   server.delete<{ Params: { name: string; modelId: string } }>(
     '/admin/llm/capabilities/:name/unassign/:modelId',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: NameModelParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -592,7 +657,10 @@ export async function llmAdminRoutes(
 
   server.post<{ Params: { name: string; modelId: string } }>(
     '/admin/llm/capabilities/:name/priority/:modelId',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: NameModelParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -620,7 +688,10 @@ export async function llmAdminRoutes(
 
   server.put<{ Params: { capability: string }; Body: Record<string, string> }>(
     '/admin/llm/prompts/:capability',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: CapabilityParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -705,7 +776,10 @@ export async function llmAdminRoutes(
 
   server.delete<{ Params: { capability: string } }>(
     '/admin/llm/prompts/:capability',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: CapabilityParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -735,7 +809,10 @@ export async function llmAdminRoutes(
 
   server.get<{ Params: { capability: string } }>(
     '/admin/llm/prompts/:capability/diff',
-    { preHandler: requirePermission('admin.system', 'llm.view') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.view'),
+      schema: { params: CapabilityParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
@@ -774,7 +851,10 @@ export async function llmAdminRoutes(
 
   server.get<{ Params: { capability: string } }>(
     '/admin/llm/prompts/:capability/reset-confirm',
-    { preHandler: requirePermission('admin.system', 'llm.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'llm.manage'),
+      schema: { params: CapabilityParams, ...HtmlPartialResponse },
+    },
     async (request, reply) => {
       const llmClient = getLLMClient();
       if (!llmClient) {
