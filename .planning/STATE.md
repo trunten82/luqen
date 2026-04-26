@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.1.0
 milestone_name: Agent Companion v2 + Tech Debt & Docs
-status: executing
-stopped_at: Phase 40 context gathered
-last_updated: "2026-04-26T07:03:18.614Z"
-last_activity: 2026-04-26 -- Phase 41 execution started
+status: verifying
+stopped_at: Phase 41 verification gaps_found (OAPI-04 partial)
+last_updated: "2026-04-26T07:30:00Z"
+last_activity: 2026-04-26 -- Phase 41 verified: 4/5 OAPI requirements pass, OAPI-04 partial
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 41
-  completed_plans: 40
-  percent: 98
+  completed_plans: 41
+  percent: 100
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-24 — v3.1.0 milestone started)
 
 ## Current Position
 
-Phase: 41 (openapi-schema-backfill) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 41
-Last activity: 2026-04-26 -- Phase 41 execution started
+Phase: 41 (openapi-schema-backfill) — VERIFIED (gaps_found)
+Plan: 5 of 5 complete
+Status: 4/5 OAPI requirements pass; OAPI-04 PARTIAL (dashboard per-route TypeBox blocks deferred for ~245 non-MCP routes — recommend Phase 41.1)
+Last activity: 2026-04-26 -- Phase 41 verified: 4/5 OAPI requirements pass, OAPI-04 partial
 
 ## Phase Map (v3.1.0)
 
