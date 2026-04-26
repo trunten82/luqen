@@ -193,7 +193,7 @@ Plans:
 #### Phase 42: Installer Wizard Redesign
 **Goal**: All 3 installers (`install.sh`, `install.command`, `install.ps1`) match the actual v3.1.0 codebase: 4 deployment profiles (Scanner CLI / API services / Self-hosted dashboard / Docker Compose), per-component install via `INSTALL_COMPONENTS`, and first-class registration of the `@luqen/monitor` agent (currently never installed).
 **Depends on**: Phase 40 (uninstall flow + tested infra), Phase 41 (no installer-side dependency, but ordered after for milestone closure)
-**Requirements**: TBD (likely INST-01..05)
+**Requirements**: INST-01, INST-02, INST-03, INST-04, INST-05, INST-06
 **Success Criteria** (what must be TRUE):
   1. Interactive wizard exposes 4 deployment profiles aligned to real codebase topologies; each maps to a documented set of installed packages and registered services.
   2. Operator can pick any subset of `compliance`, `branding`, `llm` under the API-services profile; dashboard profile lets them disable any backing service with a graceful-degradation note.
@@ -201,7 +201,11 @@ Plans:
   4. Non-interactive flags add `--profile cli|api|dashboard|docker`, `--api-services <csv>`, `--with-monitor`. Default profile remains `dashboard` so existing `--non-interactive` invocations are unchanged.
   5. `install.ps1` reaches feature parity with `install.sh` (currently only offers bare-metal vs docker, no component choice).
   6. Each profile validated end-to-end against a fresh container in CI or operator dry-run.
-**Plans**: TBD (estimate 3 — sh redesign, command/ps1 mirror, monitor agent registration + docs)
+**Plans**: 4 plans
+- [ ] 42-01-PLAN.md — install.sh redesign (4 profiles + INSTALL_COMPONENTS dispatch + monitor systemd unit + monitor OAuth client)
+- [ ] 42-02-PLAN.md — install.command launchd loop + install.ps1 4-profile rewrite + OAuth/dashboard-config parity bug fixes + monitor NSSM/Task-Scheduler service
+- [x] 42-03-PLAN.md — docker-compose.yml: add llm + monitor (port 4300, opt-in profile) + installer docs (changelog, env-vars, installation)
+- [ ] 42-04-PLAN.md — verification: LXC live runtime gate for install.sh + manual UAT checklists for macOS/Windows + 42-VERIFICATION.md
 
 ### Progress
 
@@ -215,7 +219,7 @@ Plans:
 | 39. Verification Backfill & Deferred-Items Triage | 3/3 | Complete    | 2026-04-25 |
 | 40. Documentation Sweep | 7/7 | Complete    | 2026-04-25 |
 | 41. OpenAPI Schema Backfill | 0/5 | Planned     | - |
-| 42. Installer Wizard Redesign | 0/0 | Not started | - |
+| 42. Installer Wizard Redesign | 1/4 | In Progress|  |
 
 ### Coverage
 
