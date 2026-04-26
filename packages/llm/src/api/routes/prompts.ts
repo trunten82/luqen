@@ -1,7 +1,59 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { LuqenResponse, ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { CAPABILITY_NAMES, type CapabilityName } from '../../types.js';
+
+const PromptOverride = Type.Object(
+  {
+    capability: Type.String(),
+    orgId: Type.String(),
+    template: Type.String(),
+    isOverride: Type.Optional(Type.Boolean()),
+    updatedAt: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    createdAt: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const SetPromptBody = Type.Object(
+  {
+    template: Type.Optional(Type.String()),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const CapabilityParams = Type.Object(
+  { capability: Type.String() },
+  { additionalProperties: true },
+);
+
+const OrgQuery = Type.Object(
+  { orgId: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const PromptViolations = Type.Object(
+  {
+    error: Type.String(),
+    statusCode: Type.Optional(Type.Number()),
+    violations: Type.Optional(
+      Type.Array(
+        Type.Object(
+          {
+            name: Type.String(),
+            reason: Type.String(),
+            explanation: Type.Optional(Type.String()),
+          },
+          { additionalProperties: true },
+        ),
+      ),
+    ),
+  },
+  { additionalProperties: true },
+);
 import { buildExtractionPrompt } from '../../prompts/extract-requirements.js';
 import { buildGenerateFixPrompt } from '../../prompts/generate-fix.js';
 import { buildAnalyseReportPrompt } from '../../prompts/analyse-report.js';
@@ -78,6 +130,14 @@ export async function registerPromptRoutes(
   // GET /api/v1/prompts — list all overrides
   app.get('/api/v1/prompts', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['prompts'],
+      summary: 'List all per-org prompt overrides',
+      response: {
+        200: LuqenResponse(Type.Array(PromptOverride)),
+        500: ErrorEnvelope,
+      },
+    },
   }, async (_request, reply) => {
     try {
       const overrides = await db.listPromptOverrides();
@@ -90,6 +150,17 @@ export async function registerPromptRoutes(
   // GET /api/v1/prompts/:capability — get override or default
   app.get('/api/v1/prompts/:capability', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['prompts'],
+      summary: 'Get prompt template (override if set, else default)',
+      params: CapabilityParams,
+      querystring: OrgQuery,
+      response: {
+        200: LuqenResponse(PromptOverride),
+        400: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     const { capability } = request.params as { capability: string };
 
@@ -137,6 +208,18 @@ export async function registerPromptRoutes(
   // PUT /api/v1/prompts/:capability — set override
   app.put('/api/v1/prompts/:capability', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['prompts'],
+      summary: 'Set per-org prompt override (validates locked sections)',
+      params: CapabilityParams,
+      body: SetPromptBody,
+      response: {
+        200: LuqenResponse(PromptOverride),
+        400: ErrorEnvelope,
+        422: PromptViolations,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     const { capability } = request.params as { capability: string };
 
@@ -215,6 +298,18 @@ export async function registerPromptRoutes(
   // DELETE /api/v1/prompts/:capability — delete override
   app.delete('/api/v1/prompts/:capability', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['prompts'],
+      summary: 'Delete a per-org prompt override',
+      params: CapabilityParams,
+      querystring: OrgQuery,
+      response: {
+        204: Type.Null(),
+        400: ErrorEnvelope,
+        404: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     const { capability } = request.params as { capability: string };
 

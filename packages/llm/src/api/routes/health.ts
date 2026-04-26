@@ -1,18 +1,25 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { LuqenResponse, ErrorEnvelope } from '../schemas/envelope.js';
 import { VERSION } from '../../version.js';
+
+const HealthData = Type.Object(
+  {
+    status: Type.String(),
+    version: Type.String(),
+    timestamp: Type.String(),
+  },
+  { additionalProperties: true },
+);
 
 export async function registerHealthRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/v1/health', {
     schema: {
+      tags: ['health'],
+      summary: 'LLM service health check',
       response: {
-        200: {
-          type: 'object',
-          properties: {
-            status: { type: 'string' },
-            version: { type: 'string' },
-            timestamp: { type: 'string' },
-          },
-        },
+        200: LuqenResponse(HealthData),
+        500: ErrorEnvelope,
       },
     },
   }, async (_request, reply) => {

@@ -9,10 +9,41 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { LuqenResponse, ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { createMcpHttpPlugin } from '@luqen/core/mcp';
 import type { TokenPayload, TokenVerifier } from '../../auth/oauth.js';
 import { createLlmMcpServer, LLM_TOOL_METADATA } from '../../mcp/server.js';
+
+// Phase 41-03 — JSON-RPC envelope (loose) for the MCP Streamable HTTP route.
+// Tool inputs/outputs are documented per-tool inside the MCP protocol itself;
+// this route schema documents the transport envelope only.
+const McpJsonRpcBody = Type.Object(
+  {
+    jsonrpc: Type.Optional(Type.Literal('2.0')),
+    id: Type.Optional(Type.Union([Type.String(), Type.Number(), Type.Null()])),
+    method: Type.Optional(Type.String()),
+    params: Type.Optional(Type.Any()),
+  },
+  { additionalProperties: true },
+);
+
+// schema: passed to the MCP plugin via routeSchema below — registers as the
+// `app.post('/api/v1/mcp', { schema: ... })` Fastify route schema.
+const McpRouteSchema = {
+  tags: ['mcp'],
+  summary: 'MCP Streamable HTTP endpoint (JSON-RPC over POST)',
+  description:
+    'Bearer-token gated. Body is a JSON-RPC 2.0 envelope; per-tool input/output schemas are advertised via tools/list.',
+  body: McpJsonRpcBody,
+  response: {
+    200: LuqenResponse(Type.Any()),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 export interface LlmMcpRouteOptions {
   readonly db: DbAdapter;
@@ -28,6 +59,7 @@ export async function registerMcpRoutes(
     mcpServer,
     toolMetadata: LLM_TOOL_METADATA,
     requiredScope: 'read',
+    routeSchema: McpRouteSchema as unknown as Record<string, unknown>,
   });
 
   if (opts.verifyMcpToken != null) {

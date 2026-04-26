@@ -1,8 +1,69 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { LuqenResponse, ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { createAdapter } from '../../providers/registry.js';
 import type { ProviderType, UpdateProviderInput } from '../../types.js';
+
+const Provider = Type.Object(
+  {
+    id: Type.String(),
+    name: Type.String(),
+    type: Type.Union([
+      Type.Literal('ollama'),
+      Type.Literal('openai'),
+      Type.Literal('anthropic'),
+      Type.Literal('gemini'),
+    ]),
+    baseUrl: Type.String(),
+    status: Type.Union([Type.Literal('active'), Type.Literal('inactive'), Type.Literal('error')]),
+    timeout: Type.Number(),
+    createdAt: Type.Optional(Type.String()),
+    updatedAt: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const CreateProviderBody = Type.Object(
+  {
+    name: Type.Optional(Type.String()),
+    type: Type.Optional(Type.String()),
+    baseUrl: Type.Optional(Type.String()),
+    apiKey: Type.Optional(Type.String()),
+    timeout: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+
+const UpdateProviderBody = Type.Object(
+  {
+    name: Type.Optional(Type.String()),
+    baseUrl: Type.Optional(Type.String()),
+    apiKey: Type.Optional(Type.String()),
+    status: Type.Optional(Type.String()),
+    timeout: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: true },
+);
+
+const IdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
+
+const ProviderModel = Type.Object(
+  {
+    id: Type.String(),
+    name: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const TestResponse = Type.Object(
+  {
+    ok: Type.Boolean(),
+    status: Type.String(),
+  },
+  { additionalProperties: true },
+);
 
 function stripApiKey<T extends { apiKey?: string }>(provider: T): Omit<T, 'apiKey'> {
   const { apiKey: _key, ...rest } = provider;
@@ -16,6 +77,14 @@ export async function registerProviderRoutes(
   // GET /api/v1/providers
   app.get('/api/v1/providers', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['providers'],
+      summary: 'List LLM providers (apiKey stripped)',
+      response: {
+        200: LuqenResponse(Type.Array(Provider)),
+        500: ErrorEnvelope,
+      },
+    },
   }, async (_request, reply) => {
     try {
       const providers = await db.listProviders();
@@ -28,6 +97,16 @@ export async function registerProviderRoutes(
   // GET /api/v1/providers/:id
   app.get('/api/v1/providers/:id', {
     preHandler: [requireScope('read')],
+    schema: {
+      tags: ['providers'],
+      summary: 'Get a provider by id',
+      params: IdParams,
+      response: {
+        200: LuqenResponse(Provider),
+        404: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -45,6 +124,15 @@ export async function registerProviderRoutes(
   // POST /api/v1/providers
   app.post('/api/v1/providers', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['providers'],
+      summary: 'Create a new LLM provider',
+      body: CreateProviderBody,
+      response: {
+        201: LuqenResponse(Provider),
+        400: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const body = request.body as Record<string, unknown>;
@@ -74,6 +162,17 @@ export async function registerProviderRoutes(
   // PATCH /api/v1/providers/:id
   app.patch('/api/v1/providers/:id', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['providers'],
+      summary: 'Update a provider (partial)',
+      params: IdParams,
+      body: UpdateProviderBody,
+      response: {
+        200: LuqenResponse(Provider),
+        404: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -100,6 +199,16 @@ export async function registerProviderRoutes(
   // DELETE /api/v1/providers/:id
   app.delete('/api/v1/providers/:id', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['providers'],
+      summary: 'Delete a provider',
+      params: IdParams,
+      response: {
+        204: Type.Null(),
+        404: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -117,6 +226,16 @@ export async function registerProviderRoutes(
   // POST /api/v1/providers/:id/test
   app.post('/api/v1/providers/:id/test', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['providers'],
+      summary: 'Run a connectivity health-check against the provider',
+      params: IdParams,
+      response: {
+        200: LuqenResponse(TestResponse),
+        404: ErrorEnvelope,
+        502: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -150,6 +269,16 @@ export async function registerProviderRoutes(
   // GET /api/v1/providers/:id/models
   app.get('/api/v1/providers/:id/models', {
     preHandler: [requireScope('admin')],
+    schema: {
+      tags: ['providers'],
+      summary: 'List models advertised by the upstream provider',
+      params: IdParams,
+      response: {
+        200: LuqenResponse(Type.Array(ProviderModel)),
+        404: ErrorEnvelope,
+        502: ErrorEnvelope,
+      },
+    },
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
