@@ -10,9 +10,11 @@
  * 403. See also the existing cross-org-403 pattern in routes/admin/organizations.ts.
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { z } from 'zod';
+import { Type, type Static, type TSchema } from '@sinclair/typebox';
+import { Value } from '@sinclair/typebox/value';
 import type { StorageAdapter } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
+import { LuqenResponse, ErrorEnvelope } from '../../api/schemas/envelope.js';
 import type { AgentAuditFilters } from '../../db/interfaces/agent-audit-repository.js';
 
 const PAGE_SIZE = 50;
@@ -23,25 +25,64 @@ const OUTCOME_DETAIL_HINTS = ['iteration_cap', 'timeout', 'unknown_tool', 'inval
 
 const RATIONALE_PREVIEW_LEN = 80;
 
-const AuditQuerySchema = z.object({
-  from: z.string().optional(),
-  to: z.string().optional(),
-  userId: z.string().optional(),
-  toolName: z.string().optional(),
-  outcome: z.enum(OUTCOME_VALUES).optional(),
-  // Phase 36-05: filter on outcome_detail (e.g. iteration_cap). Blank string
-  // is normalised to undefined via preprocess so empty form submits don't
-  // fail validation.
-  outcomeDetail: z.preprocess(
-    (v) => (typeof v === 'string' && v.trim().length === 0 ? undefined : v),
-    z.string().trim().min(1).max(64).optional(),
-  ),
-  limit: z.coerce.number().int().min(1).max(500).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-  orgId: z.string().optional(),
-});
+// Phase 41-04 D-06 — TypeBox migration of the prior Zod query validator.
+// Empty-string outcomeDetail is normalised to undefined in the safeValidate
+// preprocessor below so empty form submits don't fail validation.
+const AuditQuerySchema = Type.Object(
+  {
+    from: Type.Optional(Type.String()),
+    to: Type.Optional(Type.String()),
+    userId: Type.Optional(Type.String()),
+    toolName: Type.Optional(Type.String()),
+    outcome: Type.Optional(
+      Type.Union(OUTCOME_VALUES.map((v) => Type.Literal(v))),
+    ),
+    outcomeDetail: Type.Optional(Type.String({ minLength: 1, maxLength: 64 })),
+    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 500 })),
+    offset: Type.Optional(Type.Integer({ minimum: 0 })),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
 
-type ParsedAuditQuery = z.infer<typeof AuditQuerySchema>;
+type ParsedAuditQuery = Static<typeof AuditQuerySchema>;
+
+function safeValidate<S extends TSchema>(
+  schema: S,
+  input: unknown,
+): { success: true; data: Static<S> } | { success: false; error: { issues: Array<{ message: string; path: ReadonlyArray<string | number> }> } } {
+  const cleaned: unknown = (() => {
+    if (input === null || typeof input !== 'object') return input;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+      if (typeof v === 'string') {
+        const trimmed = v.trim();
+        // Phase 41-04 D-06: blank-string filter values (e.g. outcomeDetail
+        // from an empty form input) are dropped, matching the prior Zod
+        // preprocess behaviour.
+        if (trimmed.length === 0) continue;
+        out[k] = trimmed;
+      } else {
+        out[k] = v;
+      }
+    }
+    return out;
+  })();
+  let coerced: unknown;
+  try {
+    coerced = Value.Convert(schema, cleaned);
+  } catch {
+    coerced = cleaned;
+  }
+  if (Value.Check(schema, coerced)) {
+    return { success: true, data: coerced as Static<S> };
+  }
+  const issues = [...Value.Errors(schema, coerced)].map((e) => ({
+    message: e.message,
+    path: e.path.split('/').filter(Boolean),
+  }));
+  return { success: false, error: { issues } };
+}
 
 interface ResolvedScope {
   readonly orgId: string | null; // null === cross-org (admin.system)
@@ -121,7 +162,7 @@ export async function agentAuditRoutes(
       if (user === undefined) {
         return reply.code(401).send({ error: 'unauthenticated' });
       }
-      const parsed = AuditQuerySchema.safeParse(request.query ?? {});
+      const parsed = safeValidate(AuditQuerySchema, request.query ?? {});
       if (!parsed.success) {
         return reply.code(400).send({ error: 'invalid_query', issues: parsed.error.issues });
       }
@@ -203,7 +244,7 @@ export async function agentAuditRoutes(
       if (user === undefined) {
         return reply.code(401).send({ error: 'unauthenticated' });
       }
-      const parsed = AuditQuerySchema.safeParse(request.query ?? {});
+      const parsed = safeValidate(AuditQuerySchema, request.query ?? {});
       if (!parsed.success) {
         return reply.code(400).send({ error: 'invalid_query' });
       }

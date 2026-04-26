@@ -197,6 +197,23 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     trustProxy: true,
   }).withTypeProvider<TypeBoxTypeProvider>();
 
+  // Phase 41-04: capture every registered route for the OpenAPI coverage
+  // test (tests/openapi/route-coverage.test.ts). We attach this here BEFORE
+  // any route registration so the hook fires for all of them. The list is
+  // exposed via a non-enumerable `__collectedRoutes` property — strictly
+  // for tests, never used at runtime.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const __collectedRoutes: Array<{ method: string; path: string }> = [];
+  server.addHook('onRoute', (route) => {
+    const path = (route.url ?? route.path) as string;
+    const methods = Array.isArray(route.method) ? route.method : [route.method];
+    for (const m of methods) __collectedRoutes.push({ method: String(m), path });
+  });
+  Object.defineProperty(server, '__collectedRoutes', {
+    value: __collectedRoutes,
+    enumerable: false,
+  });
+
   // ── Database ──────────────────────────────────────────────────────────────
   const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath: config.dbPath } });
   // For consumers that still need raw DB (PluginManager, AuthService):

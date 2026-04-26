@@ -1,11 +1,15 @@
 /**
  * Phase 40-01 DOC-02 Task 4 — route-vs-spec coverage gate (dashboard service).
+ * Phase 41-04 — flipped from describe.skip to active. Routes are captured via
+ * a server-side onRoute hook (server.ts attaches __collectedRoutes before any
+ * route registers). The previous printRoutes() trie parser was lossy — nested
+ * branches lost their parent prefix.
  *
  * The dashboard's createServer() requires a full DashboardConfig, plugin
  * manager, redis-or-null, etc. This test boots a minimal config against
  * an in-memory-style sqlite tmpfile and asserts every Fastify route is
  * surfaced in the swagger spec. MCP-prefixed routes are EXCLUDED here —
- * they live in mcp-route-coverage.test.ts.
+ * they live in mcp-route-coverage.test.ts (owned by Plan 41-05).
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -23,16 +27,7 @@ function toOpenApiPath(fastifyPath: string): string {
   return fastifyPath.replace(/:([^/]+)/g, '{$1}');
 }
 
-function parseRouteLine(line: string): readonly RegisteredRoute[] {
-  const trimmed = line.replace(/[└├│─\s]+/g, ' ').trim();
-  const match = trimmed.match(/^(\S+)\s+\(([^)]+)\)\s*$/);
-  if (!match) return [];
-  const path = match[1] ?? '';
-  const methods = (match[2] ?? '').split(',').map((m) => m.trim()).filter(Boolean);
-  return methods.map((method) => ({ method, path }));
-}
-
-describe.skip('[Phase 41 pending] OpenAPI route coverage (dashboard, non-MCP)', () => {
+describe('OpenAPI route coverage (dashboard, non-MCP)', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let app: any;
 
@@ -60,13 +55,19 @@ describe.skip('[Phase 41 pending] OpenAPI route coverage (dashboard, non-MCP)', 
     const spec = app.swagger() as { paths?: Record<string, unknown> };
     const specPaths = spec.paths ?? {};
 
-    const routes = (app.printRoutes({ commonPrefix: false }) as string)
-      .split('\n')
-      .flatMap(parseRouteLine)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const collected = ((app as any).__collectedRoutes ?? []) as RegisteredRoute[];
+    const routes = collected
       .filter((r) => r.path !== '*' && !r.path.startsWith('/__'))
-      .filter((r) => r.method !== 'HEAD')
-      // MCP routes are covered by mcp-route-coverage.test.ts.
-      .filter((r) => !r.path.startsWith('/api/v1/mcp'));
+      .filter((r) => r.method !== 'HEAD' && r.method !== 'OPTIONS')
+      // MCP routes are covered by mcp-route-coverage.test.ts (Plan 41-05).
+      .filter((r) => !r.path.startsWith('/api/v1/mcp'))
+      // Framework-provided routes (swagger-ui assets, fastify-static
+      // wildcards) are not application surface and live outside the OpenAPI
+      // spec by design.
+      .filter((r) => !r.path.startsWith('/docs'))
+      .filter((r) => !r.path.startsWith('/static'))
+      .filter((r) => !r.path.startsWith('/uploads'));
 
     const missing: string[] = [];
     for (const route of routes) {

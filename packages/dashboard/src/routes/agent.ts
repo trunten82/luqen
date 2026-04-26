@@ -31,7 +31,9 @@ import { fileURLToPath } from 'node:url';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import Handlebars from 'handlebars';
-import { z } from 'zod';
+import { Type, type Static, type TSchema } from '@sinclair/typebox';
+import { Value } from '@sinclair/typebox/value';
+import { LuqenResponse, ErrorEnvelope } from '../api/schemas/envelope.js';
 
 import type { StorageAdapter } from '../db/index.js';
 import { writeFrame, type SseFrame } from '../agent/sse-frames.js';
@@ -63,39 +65,93 @@ export interface RegisterAgentRoutesOptions {
 }
 
 // ---------------------------------------------------------------------------
-// Zod bodies
+// TypeBox bodies / queries (Phase 41-04 — D-06 migration from Zod)
 // ---------------------------------------------------------------------------
 
-const MessageBodySchema = z.object({
-  conversationId: z.string().optional(),
-  content: z.string().min(1).max(8000),
-});
+const MessageBodySchema = Type.Object(
+  {
+    conversationId: Type.Optional(Type.String()),
+    content: Type.String({ minLength: 1, maxLength: 8000 }),
+  },
+  { additionalProperties: true },
+);
 
 // Phase 35 Plan 03 — conversation history schemas.
-const RenameBodySchema = z.object({
-  title: z.string().trim().min(1).max(120),
-});
+const RenameBodySchema = Type.Object(
+  {
+    title: Type.String({ minLength: 1, maxLength: 120 }),
+  },
+  { additionalProperties: true },
+);
 
 // Phase 37 Plan 03 Task 2 — edit-resend body schema.
-const EditResendBodySchema = z.object({
-  content: z.string().trim().min(1).max(8000),
-});
+const EditResendBodySchema = Type.Object(
+  {
+    content: Type.String({ minLength: 1, maxLength: 8000 }),
+  },
+  { additionalProperties: true },
+);
 
-const SearchQuerySchema = z.object({
-  q: z.string().trim().min(1).max(200),
-  limit: z.coerce.number().int().min(1).max(50).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-});
+const SearchQuerySchema = Type.Object(
+  {
+    q: Type.String({ minLength: 1, maxLength: 200 }),
+    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 50 })),
+    offset: Type.Optional(Type.Integer({ minimum: 0 })),
+  },
+  { additionalProperties: true },
+);
 
-const ListQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(50).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-});
+const ListQuerySchema = Type.Object(
+  {
+    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 50 })),
+    offset: Type.Optional(Type.Integer({ minimum: 0 })),
+  },
+  { additionalProperties: true },
+);
 
 // Phase 38 Plan 03 (AORG-01/03/04) — POST /agent/active-org body.
-const ActiveOrgBodySchema = z.object({
-  orgId: z.string().min(1).max(64),
-});
+const ActiveOrgBodySchema = Type.Object(
+  {
+    orgId: Type.String({ minLength: 1, maxLength: 64 }),
+  },
+  { additionalProperties: true },
+);
+
+/**
+ * TypeBox replacement for `Schema.safeParse(x)`. Trims string fields
+ * (matches Zod's `.trim()`) and coerces numeric strings (matches
+ * Zod's `.coerce.number()`) before validating, then returns a
+ * Zod-compatible `{ success, data, error }` tuple so existing call sites
+ * don't need to change shape.
+ */
+function safeValidate<S extends TSchema>(
+  schema: S,
+  input: unknown,
+): { success: true; data: Static<S> } | { success: false; error: { issues: Array<{ message: string; path: ReadonlyArray<string | number> }> } } {
+  const cleaned: unknown = (() => {
+    if (input === null || typeof input !== 'object') return input;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+      if (typeof v === 'string') out[k] = v.trim();
+      else out[k] = v;
+    }
+    return out;
+  })();
+  let coerced: unknown;
+  try {
+    coerced = Value.Convert(schema, cleaned);
+  } catch {
+    coerced = cleaned;
+  }
+  if (Value.Check(schema, coerced)) {
+    return { success: true, data: coerced as Static<S> };
+  }
+  const issues = [...Value.Errors(schema, coerced)].map((e) => ({
+    message: e.message,
+    path: e.path.split('/').filter(Boolean),
+  }));
+  return { success: false, error: { issues } };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -276,12 +332,23 @@ export async function registerAgentRoutes(
     });
 
     // ── POST /agent/message ────────────────────────────────────────────
-    scope.post('/message', async (request: FastifyRequest, reply: FastifyReply) => {
+    scope.post('/message', {
+      schema: {
+        tags: ['agent'],
+        summary: 'Post a user message to the conversation',
+        body: MessageBodySchema,
+        response: {
+          202: LuqenResponse(Type.Object({ conversationId: Type.String() }, { additionalProperties: true })),
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+        },
+      },
+    }, async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.user;
       if (user === undefined) {
         return reply.code(401).send({ error: 'unauthenticated' });
       }
-      const parsed = MessageBodySchema.safeParse(request.body);
+      const parsed = safeValidate(MessageBodySchema, request.body);
       if (!parsed.success) {
         return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
       }
@@ -511,7 +578,7 @@ export async function registerAgentRoutes(
       if (user === undefined) {
         return reply.code(401).send({ error: 'unauthenticated' });
       }
-      const parsed = ActiveOrgBodySchema.safeParse(request.body);
+      const parsed = safeValidate(ActiveOrgBodySchema, request.body);
       if (!parsed.success) {
         return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
       }
@@ -650,7 +717,7 @@ export async function registerAgentRoutes(
       const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
       if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
-      const parsed = ListQuerySchema.safeParse(request.query ?? {});
+      const parsed = safeValidate(ListQuerySchema, request.query ?? {});
       if (!parsed.success) {
         return reply.code(400).send({ error: 'invalid_query', issues: parsed.error.issues });
       }
@@ -687,7 +754,7 @@ export async function registerAgentRoutes(
       const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
       if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
-      const parsed = SearchQuerySchema.safeParse(request.query ?? {});
+      const parsed = safeValidate(SearchQuerySchema, request.query ?? {});
       if (!parsed.success) {
         return reply.code(400).send({ error: 'invalid_query', issues: parsed.error.issues });
       }
@@ -769,7 +836,7 @@ export async function registerAgentRoutes(
         const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
-        const parsed = RenameBodySchema.safeParse(request.body);
+        const parsed = safeValidate(RenameBodySchema, request.body);
         if (!parsed.success) {
           return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
         }
@@ -990,7 +1057,7 @@ export async function registerAgentRoutes(
         const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
-        const parsed = EditResendBodySchema.safeParse(request.body);
+        const parsed = safeValidate(EditResendBodySchema, request.body);
         if (!parsed.success) {
           return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
         }
