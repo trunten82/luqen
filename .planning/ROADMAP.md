@@ -30,7 +30,7 @@
 - [x] **Phase 40: Documentation Sweep & Installer Refresh** — README, OpenAPI specs, installer scripts (actual files, not just docs), MCP integration guide, agent guide, prompt-template guide, RBAC matrix; create new docs for any v3.1.0 surface (agent history, multi-step tool use, streaming UX, multi-org switching) not yet documented (completed 2026-04-25; DOC-02 PARTIAL → Phase 41, DOC-03 SC #3 awaiting runtime LXC test)
 - [x] **Phase 41: OpenAPI Schema Backfill** — Add Fastify route schemas across compliance/branding/llm/dashboard/MCP so `/docs` is substantive and `openapi-drift` + `route-vs-spec` coverage tests go green; closes Plan 40-01 deferred Task 2 and DOC-02 PARTIAL (verified 2026-04-26: 4/5 OAPI requirements PASS; OAPI-04 PARTIAL — dashboard infrastructure shipped but per-route TypeBox `schema:` blocks deferred for ~245 non-MCP routes; OAPI-04 closed by Phase 41.1 verified 2026-04-26 — 7/7 must-haves passed)
 - [x] **Phase 41.1: Dashboard non-MCP per-route TypeBox schema backfill** — Mechanical schema: backfill across the remaining ~245 dashboard non-MCP routes flagged in 41-VERIFICATION.md; closes OAPI-04 PARTIAL (verified 2026-04-26: 7/7 must-haves passed; dashboard.json grew 4715→32622 lines, requestBody 2→38, typed 2xx 0→275; new schema-fidelity assertion locks gain in CI)
-- [ ] **Phase 42: Installer Wizard Redesign** — Replace v2-era 2/3-way wizard with a 4-profile model (Scanner CLI, API services, Self-hosted dashboard, Docker Compose) that maps onto the actual v3.1.0 codebase (5 services + monitor agent); register `@luqen/monitor` across systemd/launchd/NSSM for the first time
+- [x] **Phase 42: Installer Wizard Redesign** — Replace v2-era 2/3-way wizard with a 4-profile model (Scanner CLI, API services, Self-hosted dashboard, Docker Compose) that maps onto the actual v3.1.0 codebase (5 services + monitor agent); register `@luqen/monitor` across systemd/launchd/NSSM for the first time (completed 2026-04-26)
 
 ### Phase Details
 
@@ -205,7 +205,7 @@ Plans:
 - [x] 42-01-PLAN.md — install.sh redesign (4 profiles + INSTALL_COMPONENTS dispatch + monitor systemd unit + monitor OAuth client)
 - [x] 42-02-PLAN.md — install.command launchd loop + install.ps1 4-profile rewrite + OAuth/dashboard-config parity bug fixes + monitor NSSM/Task-Scheduler service
 - [x] 42-03-PLAN.md — docker-compose.yml: add llm + monitor (port 4300, opt-in profile) + installer docs (changelog, env-vars, installation)
-- [ ] 42-04-PLAN.md — verification: LXC live runtime gate for install.sh + manual UAT checklists for macOS/Windows + 42-VERIFICATION.md
+- [x] 42-04-PLAN.md — verification: LXC live runtime gate for install.sh + manual UAT checklists for macOS/Windows + 42-VERIFICATION.md
 
 ### Progress
 
@@ -219,7 +219,7 @@ Plans:
 | 39. Verification Backfill & Deferred-Items Triage | 3/3 | Complete    | 2026-04-25 |
 | 40. Documentation Sweep | 7/7 | Complete    | 2026-04-25 |
 | 41. OpenAPI Schema Backfill | 0/5 | Planned     | - |
-| 42. Installer Wizard Redesign | 3/4 | In Progress|  |
+| 42. Installer Wizard Redesign | 4/4 | Complete   | 2026-04-26 |
 
 ### Coverage
 
