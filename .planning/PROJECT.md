@@ -12,9 +12,28 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 v3.0.0 shipped 2026-04-24 — MCP Servers & Agent Companion. All Luqen services (compliance, branding, LLM, dashboard) expose Streamable HTTP MCP endpoints with OAuth 2.1 Authorization Code + PKCE + DCR for external clients (Claude Desktop, IDEs). Dashboard gains a conversational agent companion with text + speech input, SSE streaming, native-dialog confirmation for destructive tools, context-hints (recent scans + active guidelines injected per turn), token-budget compaction at 85% of model max, and an admin audit log viewer at /admin/audit. 10 phases (28-33 including inserted 30.1, 31.1, 31.2, 32.1), 36 plans, 22/22 requirements satisfied. Previous: v2.12.0 (2026-04-14) Brand Intelligence Polish.
 
-## Next Milestone
+## Current Milestone: v3.1.0 Agent Companion v2 + Tech Debt & Docs
 
-Not yet planned. Use `/gsd-new-milestone` to scope v3.1.0.
+**Goal:** Harden v3.0.0's MCP + agent foundation with precise instrumentation, complete the agent companion experience (history, multi-step tool use, polish, org switching), and refresh all documentation.
+
+**Target features:**
+
+*Agent Companion v2*
+- Conversation search & history UI in the side drawer (list, search, resume past chats)
+- Better tool selection — smarter planning, parallel tool calls, error-recovery loops
+- Streaming/UX polish — interrupt, retry, edit-and-resend, copy/share message
+- Multi-org context switching for global admins inside the agent (no re-login)
+
+*Tech Debt*
+- Precise tokenizer replacing `char/4` heuristic (lightweight, no heavy deps)
+- Nyquist validation backfill for v3.0.0 phases
+- Formal VERIFICATION.md for phases 30.1, 31.2, 32, 32.1, 33
+- Deferred-items review from Phase 31.2 + Phase 32 (triage, fix or close)
+
+*Documentation*
+- Full docs sweep: README, API/Swagger, installer docs, MCP integration guide, agent companion guide, prompt-template docs, RBAC matrix — all updated to reflect v3.0.0 + v3.1.0
+
+**Key constraints:** No new heavy dependencies (tokenizer must stay light).
 
 ## Requirements
 
@@ -102,7 +121,7 @@ Not yet planned. Use `/gsd-new-milestone` to scope v3.1.0.
 
 ### Active
 
-(Defining requirements for next milestone — see REQUIREMENTS.md after `/gsd-new-milestone`)
+(Defining requirements for v3.1.0 — see REQUIREMENTS.md)
 
 ### Out of Scope
 
@@ -186,4 +205,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 after v3.0.0 milestone*
+*Last updated: 2026-04-24 — v3.1.0 milestone started*

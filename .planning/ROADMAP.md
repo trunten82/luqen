@@ -9,7 +9,7 @@
 - ✅ **v2.11.0 Brand Intelligence** — Phases 15-21 (shipped 2026-04-12) — [archived](milestones/v2.11.0-ROADMAP.md)
 - ✅ **v2.12.0 Brand Intelligence Polish** — Phases 22-27 (shipped 2026-04-14) — [archived](milestones/v2.12.0-ROADMAP.md)
 - ✅ **v3.0.0 MCP Servers & Agent Companion** — Phases 28-33 (shipped 2026-04-24) — [archived](milestones/v3.0.0-ROADMAP.md)
-- 🚧 **v3.1.0 Agent Companion v2 + Tech Debt & Docs** — Phases 34-40 (in progress)
+- 🚧 **v3.1.0 Agent Companion v2 + Tech Debt & Docs** — Phases 34-42 (in progress)
 
 ---
 
@@ -17,7 +17,7 @@
 
 **Goal:** Harden v3.0.0's MCP + agent foundation with precise instrumentation, complete the agent companion experience (history, multi-step tool use, polish, org switching), and refresh all documentation.
 
-**Granularity:** coarse · **Phases:** 7 · **Requirements:** 33/33 mapped
+**Granularity:** coarse · **Phases:** 9 · **Requirements:** 33/33 mapped + OAPI-TBD + INST-TBD
 
 ### Phases
 
@@ -27,7 +27,9 @@
 - [x] **Phase 37: Streaming UX Polish** — Interrupt, retry, edit-and-resend, copy, and share for the agent chat (completed 2026-04-25)
 - [x] **Phase 38: Multi-Org Context Switching** — Global admins can switch the agent's active org context inside the drawer without re-login (completed 2026-04-25)
 - [x] **Phase 39: Verification Backfill & Deferred-Items Triage** — Formal VERIFICATION.md for v3.0.0 phases, Nyquist coverage report, deferred-items resolution (completed 2026-04-25)
-- [ ] **Phase 40: Documentation Sweep & Installer Refresh** — README, OpenAPI specs, installer scripts (actual files, not just docs), MCP integration guide, agent guide, prompt-template guide, RBAC matrix; create new docs for any v3.1.0 surface (agent history, multi-step tool use, streaming UX, multi-org switching) not yet documented
+- [x] **Phase 40: Documentation Sweep & Installer Refresh** — README, OpenAPI specs, installer scripts (actual files, not just docs), MCP integration guide, agent guide, prompt-template guide, RBAC matrix; create new docs for any v3.1.0 surface (agent history, multi-step tool use, streaming UX, multi-org switching) not yet documented (completed 2026-04-25; DOC-02 PARTIAL → Phase 41, DOC-03 SC #3 awaiting runtime LXC test)
+- [ ] **Phase 41: OpenAPI Schema Backfill** — Add Fastify route schemas across compliance/branding/llm/dashboard/MCP so `/docs` is substantive and `openapi-drift` + `route-vs-spec` coverage tests go green; closes Plan 40-01 deferred Task 2 and DOC-02 PARTIAL
+- [ ] **Phase 42: Installer Wizard Redesign** — Replace v2-era 2/3-way wizard with a 4-profile model (Scanner CLI, API services, Self-hosted dashboard, Docker Compose) that maps onto the actual v3.1.0 codebase (5 services + monitor agent); register `@luqen/monitor` across systemd/launchd/NSSM for the first time
 
 ### Phase Details
 
@@ -153,7 +155,37 @@ Plans:
   7. Prompt-template authoring guide documents locked sections, fence markers, the validator, and the override workflow.
   8. RBAC matrix lists every permission against every page, route, and MCP tool — end-to-end and machine-checkable against code.
   9. Any v3.1.0 surface (agent history, multi-step tool use + parallel dispatch + retry budget, streaming UX polish + share permalinks, multi-org context switching) that lacks a dedicated doc gets a NEW doc page added under `docs/`.
-**Plans**: TBD
+**Plans**: 7 (40-01..07 complete; DOC-02 partial → Phase 41; DOC-03 SC #3 deferred to runtime LXC)
+
+#### Phase 41: OpenAPI Schema Backfill
+**Goal**: `/docs` and the committed OpenAPI snapshots reflect every shipped route with its real request/response shape — not stub objects — so the `route-vs-spec` coverage tests pass and `openapi-drift` CI gate stays green.
+**Depends on**: Phase 40 (snapshot infra and CI gates already wired up)
+**Requirements**: OAPI-01, OAPI-02, OAPI-03, OAPI-04, OAPI-05
+**Success Criteria** (what must be TRUE):
+  1. Every Fastify route in compliance/branding/llm/dashboard declares a `schema` (body where applicable + response) using TypeBox or JSON Schema.
+  2. Every MCP tool in `packages/dashboard/src/mcp/tools/*` exposes its input/output schema in the generated `mcp.json` snapshot.
+  3. `route-vs-spec` coverage tests in all 5 service test suites pass.
+  4. `npm run docs:openapi` regenerates byte-identical snapshots; `openapi-drift` CI workflow passes.
+  5. No regression in production behaviour — existing request/response shapes preserved.
+**Plans**: 5 plans
+- [ ] 41-01-PLAN.md — Compliance service schemas (16 route files, OAPI-01)
+- [ ] 41-02-PLAN.md — Branding service schemas (~22 inline routes, OAPI-02)
+- [ ] 41-03-PLAN.md — LLM service schemas (11 route files incl. capability-exec, OAPI-03)
+- [ ] 41-04-PLAN.md — Dashboard non-MCP schemas + Zod-to-TypeBox migration (50 files, OAPI-04)
+- [ ] 41-05-PLAN.md — Dashboard MCP tool schemas via zod-to-json-schema bridge (Wave 2, OAPI-05)
+
+#### Phase 42: Installer Wizard Redesign
+**Goal**: All 3 installers (`install.sh`, `install.command`, `install.ps1`) match the actual v3.1.0 codebase: 4 deployment profiles (Scanner CLI / API services / Self-hosted dashboard / Docker Compose), per-component install via `INSTALL_COMPONENTS`, and first-class registration of the `@luqen/monitor` agent (currently never installed).
+**Depends on**: Phase 40 (uninstall flow + tested infra), Phase 41 (no installer-side dependency, but ordered after for milestone closure)
+**Requirements**: TBD (likely INST-01..05)
+**Success Criteria** (what must be TRUE):
+  1. Interactive wizard exposes 4 deployment profiles aligned to real codebase topologies; each maps to a documented set of installed packages and registered services.
+  2. Operator can pick any subset of `compliance`, `branding`, `llm` under the API-services profile; dashboard profile lets them disable any backing service with a graceful-degradation note.
+  3. `@luqen/monitor` is registered as `luqen-monitor.service` (Linux), `io.luqen.monitor.plist` (macOS), and `LuqenMonitor` (Windows NSSM / Task Scheduler) when the user opts in.
+  4. Non-interactive flags add `--profile cli|api|dashboard|docker`, `--api-services <csv>`, `--with-monitor`. Default profile remains `dashboard` so existing `--non-interactive` invocations are unchanged.
+  5. `install.ps1` reaches feature parity with `install.sh` (currently only offers bare-metal vs docker, no component choice).
+  6. Each profile validated end-to-end against a fresh container in CI or operator dry-run.
+**Plans**: TBD (estimate 3 — sh redesign, command/ps1 mirror, monitor agent registration + docs)
 
 ### Progress
 
@@ -165,7 +197,9 @@ Plans:
 | 37. Streaming UX Polish | 5/5 | Complete    | 2026-04-25 |
 | 38. Multi-Org Context Switching | 4/4 | Complete    | 2026-04-25 |
 | 39. Verification Backfill & Deferred-Items Triage | 3/3 | Complete    | 2026-04-25 |
-| 40. Documentation Sweep | 0/0 | Not started | - |
+| 40. Documentation Sweep | 7/7 | Complete    | 2026-04-25 |
+| 41. OpenAPI Schema Backfill | 0/5 | Planned     | - |
+| 42. Installer Wizard Redesign | 0/0 | Not started | - |
 
 ### Coverage
 
