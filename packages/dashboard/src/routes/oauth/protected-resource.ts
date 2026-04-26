@@ -21,6 +21,22 @@
  */
 
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
+
+// RFC 9728 Protected Resource Metadata — mirrors the literal payload the
+// handler returns. additionalProperties:true preserves forward-compat for
+// future RFC 9728 metadata fields.
+const ProtectedResourceMetadataSchema = Type.Object(
+  {
+    resource: Type.String(),
+    authorization_servers: Type.Array(Type.String()),
+    scopes_supported: Type.Array(Type.String()),
+    bearer_methods_supported: Type.Array(Type.String()),
+    resource_documentation: Type.String(),
+  },
+  { additionalProperties: true },
+);
 
 const SCOPES_SUPPORTED = Object.freeze([
   'read',
@@ -40,7 +56,16 @@ export async function registerProtectedResourceMetadata(
   // Smoke-surfaced gap 2026-04-19.
   const mcpUrl = `${issuer}/api/v1/mcp`;
 
-  server.get('/.well-known/oauth-protected-resource', async (_req, reply) => {
+  server.get('/.well-known/oauth-protected-resource', {
+    schema: {
+      tags: ['oauth'],
+      response: {
+        200: ProtectedResourceMetadataSchema,
+        400: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
+  }, async (_req, reply) => {
     reply.header('Cache-Control', 'public, max-age=3600');
     reply.header('Content-Type', 'application/json');
     return reply.send({

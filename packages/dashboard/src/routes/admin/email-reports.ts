@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from '../../db/index.js';
 import type { PluginManager } from '../../plugins/manager.js';
@@ -7,6 +8,52 @@ import { toastHtml, escapeHtml } from './helpers.js';
 import { testSmtpConnection } from '../../email/sender.js';
 import { processEmailReport } from '../../email/scheduler.js';
 import { computeNextSendAt } from '../../email/scheduler.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const SmtpConfigBody = Type.Object(
+  {
+    host: Type.Optional(Type.String()),
+    port: Type.Optional(Type.String()),
+    secure: Type.Optional(Type.String()),
+    username: Type.Optional(Type.String()),
+    password: Type.Optional(Type.String()),
+    fromAddress: Type.Optional(Type.String()),
+    fromName: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const ReportCreateBody = Type.Object(
+  {
+    name: Type.Optional(Type.String()),
+    siteUrl: Type.Optional(Type.String()),
+    recipients: Type.Optional(Type.String()),
+    frequency: Type.Optional(Type.String()),
+    format: Type.Optional(Type.String()),
+    includeCsv: Type.Optional(Type.String()),
+    includeWarnings: Type.Optional(Type.String()),
+    includeNotices: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const ReportIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 const VALID_FREQUENCIES = ['daily', 'weekly', 'monthly'];
 const VALID_FORMATS = ['pdf', 'csv', 'both'];
@@ -50,7 +97,10 @@ export async function emailReportRoutes(
   // GET /admin/email-reports — list email reports + config status
   server.get(
     '/admin/email-reports',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const pluginActive = isEmailPluginActive(pluginManager);
       if (!pluginActive) {
@@ -99,7 +149,10 @@ export async function emailReportRoutes(
   // POST /admin/email-reports/smtp — save SMTP config (legacy)
   server.post(
     '/admin/email-reports/smtp',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { body: SmtpConfigBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         host?: string;
@@ -154,7 +207,10 @@ export async function emailReportRoutes(
   // POST /admin/email-reports/smtp/test — test SMTP connection
   server.post(
     '/admin/email-reports/smtp/test',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // If the email plugin is active, use its test method
       if (pluginManager) {
@@ -203,7 +259,10 @@ export async function emailReportRoutes(
   // POST /admin/email-reports — create new email report schedule
   server.post(
     '/admin/email-reports',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { body: ReportCreateBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         name?: string;
@@ -275,7 +334,10 @@ export async function emailReportRoutes(
   // DELETE /admin/email-reports/:id — delete email report
   server.delete(
     '/admin/email-reports/:id',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: ReportIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const report = await storage.email.getEmailReport(id);
@@ -292,7 +354,10 @@ export async function emailReportRoutes(
   // PATCH /admin/email-reports/:id/toggle — enable/disable
   server.patch(
     '/admin/email-reports/:id/toggle',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: ReportIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const report = await storage.email.getEmailReport(id);
@@ -331,7 +396,10 @@ export async function emailReportRoutes(
   // POST /admin/email-reports/:id/send-now — send immediately for testing
   server.post(
     '/admin/email-reports/:id/send-now',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: ReportIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const report = await storage.email.getEmailReport(id);

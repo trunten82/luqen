@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import {
   listSources,
   createSource,
@@ -11,6 +12,52 @@ import {
 import { escapeHtml } from './helpers.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const SourceCreateBody = Type.Object(
+  {
+    name: Type.Optional(Type.String()),
+    url: Type.Optional(Type.String()),
+    type: Type.Optional(Type.String()),
+    schedule: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const SourceUploadBody = Type.Object(
+  {
+    content: Type.Optional(Type.String()),
+    name: Type.Optional(Type.String()),
+    regulationId: Type.Optional(Type.String()),
+    regulationName: Type.Optional(Type.String()),
+    jurisdictionId: Type.Optional(Type.String()),
+    pluginId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const ModeBody = Type.Object(
+  { mode: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const SourceIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: ErrorEnvelope,
+  },
+} as const;
 
 export async function sourceRoutes(
   server: FastifyInstance,
@@ -22,7 +69,10 @@ export async function sourceRoutes(
   // GET /admin/sources — list monitored sources
   server.get(
     '/admin/sources',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       let sources: Awaited<ReturnType<typeof listSources>> = [];
@@ -58,7 +108,10 @@ export async function sourceRoutes(
   // GET /admin/sources/new — modal form fragment
   server.get(
     '/admin/sources/new',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: HtmlPartialResponse,
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       return reply.view('admin/source-form.hbs', {
         isNew: true,
@@ -70,7 +123,10 @@ export async function sourceRoutes(
   // GET /admin/sources/:id/view — view source detail modal
   server.get(
     '/admin/sources/:id/view',
-    { preHandler: requirePermission('admin.system', 'compliance.view') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.view'),
+      schema: { params: SourceIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
@@ -91,7 +147,10 @@ export async function sourceRoutes(
   // POST /admin/sources — add new source
   server.post(
     '/admin/sources',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { body: SourceCreateBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         name?: string;
@@ -144,7 +203,10 @@ export async function sourceRoutes(
   // DELETE /admin/sources/:id — remove source
   server.delete(
     '/admin/sources/:id',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: SourceIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
@@ -161,7 +223,10 @@ export async function sourceRoutes(
   // POST /admin/sources/upload — upload document for LLM parsing
   server.post(
     '/admin/sources/upload',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { body: SourceUploadBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         content?: string;
@@ -198,7 +263,10 @@ export async function sourceRoutes(
   // POST /admin/sources/bulk-switch — switch all government sources
   server.post(
     '/admin/sources/bulk-switch',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { body: ModeBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as { mode?: string };
       const mode = body.mode === 'manual' ? 'manual' : 'llm';
@@ -220,7 +288,10 @@ export async function sourceRoutes(
   // POST /admin/sources/:id/mode — toggle management mode
   server.post(
     '/admin/sources/:id/mode',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: SourceIdParams, body: ModeBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { mode?: string };
@@ -245,7 +316,10 @@ export async function sourceRoutes(
   // POST /admin/sources/scan — trigger scan
   server.post(
     '/admin/sources/scan',
-    { preHandler: requirePermission('admin.system', 'compliance.manage') },
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const token = getToken(request);
 

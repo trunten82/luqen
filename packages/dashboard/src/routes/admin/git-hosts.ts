@@ -1,9 +1,38 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { listGitHostPluginTypes } from '../../git-hosts/registry.js';
 import { isPrivateHostname } from '../../services/scan-service.js';
 import { escapeHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-03 — local TypeBox shapes.
+const GitHostCreateBody = Type.Object(
+  {
+    pluginType: Type.Optional(Type.String()),
+    hostUrl: Type.Optional(Type.String()),
+    displayName: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const GitHostIdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: Type.String(),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    500: Type.String(),
+  },
+} as const;
 
 export async function gitHostRoutes(
   server: FastifyInstance,
@@ -12,7 +41,10 @@ export async function gitHostRoutes(
   // GET /admin/git-hosts — list configured git hosts
   server.get(
     '/admin/git-hosts',
-    { preHandler: requirePermission('repos.manage') },
+    {
+      preHandler: requirePermission('repos.manage'),
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = request.user?.currentOrgId ?? 'system';
       const configs = await storage.gitHosts.listConfigs(orgId);
@@ -31,7 +63,10 @@ export async function gitHostRoutes(
   // POST /admin/git-hosts — add a new git host config
   server.post(
     '/admin/git-hosts',
-    { preHandler: requirePermission('repos.manage') },
+    {
+      preHandler: requirePermission('repos.manage'),
+      schema: { body: GitHostCreateBody, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         pluginType?: string;
@@ -111,7 +146,10 @@ export async function gitHostRoutes(
   // DELETE /admin/git-hosts/:id — remove a git host config
   server.delete(
     '/admin/git-hosts/:id',
-    { preHandler: requirePermission('repos.manage') },
+    {
+      preHandler: requirePermission('repos.manage'),
+      schema: { params: GitHostIdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
 
