@@ -17,16 +17,40 @@ function toOpenApiPath(fastifyPath: string): string {
   return fastifyPath.replace(/:([^/]+)/g, '{$1}');
 }
 
-function parseRouteLine(line: string): readonly RegisteredRoute[] {
-  const trimmed = line.replace(/[└├│─\s]+/g, ' ').trim();
-  const match = trimmed.match(/^(\S+)\s+\(([^)]+)\)\s*$/);
-  if (!match) return [];
-  const path = match[1] ?? '';
-  const methods = (match[2] ?? '').split(',').map((m) => m.trim()).filter(Boolean);
-  return methods.map((method) => ({ method, path }));
+/**
+ * Fastify's `printRoutes({ commonPrefix: false })` returns an indented tree
+ * where each node prints only its own path segment. To reconstruct full
+ * paths we walk the tree, tracking the prefix at each indent level.
+ */
+function parseRouteTree(tree: string): readonly RegisteredRoute[] {
+  const lines = tree.split('\n');
+  const stack: string[] = [];
+  const routes: RegisteredRoute[] = [];
+
+  for (const raw of lines) {
+    if (raw.trim().length === 0) continue;
+    // Each tree level is 4 chars wide (`│   `, `├── `, `└── `, `    `).
+    const indentMatch = raw.match(/^([│ ]*[├└]?─?─? ?)/);
+    const indent = indentMatch ? indentMatch[0]!.length : 0;
+    const level = Math.floor(indent / 4);
+    const content = raw.slice(indent).trim();
+    const m = content.match(/^(\S+)\s+\(([^)]+)\)\s*$/);
+    if (!m) continue;
+    const segment = m[1] ?? '';
+    const methods = (m[2] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    stack.length = level;
+    stack.push(segment);
+    const fullPath = stack.join('').replace(/\/+/g, '/');
+    if (fullPath === '*' || fullPath.startsWith('/__')) continue;
+    for (const method of methods) {
+      if (method === 'HEAD') continue;
+      routes.push({ method, path: fullPath });
+    }
+  }
+  return routes;
 }
 
-describe.skip('[Phase 41 pending] OpenAPI route coverage (branding)', () => {
+describe('OpenAPI route coverage (branding)', () => {
   let app: Awaited<ReturnType<typeof createServer>>;
 
   beforeAll(async () => {
@@ -53,11 +77,11 @@ describe.skip('[Phase 41 pending] OpenAPI route coverage (branding)', () => {
     const spec = (app as any).swagger() as { paths?: Record<string, unknown> };
     const specPaths = spec.paths ?? {};
 
-    const routes = app.printRoutes({ commonPrefix: false })
-      .split('\n')
-      .flatMap(parseRouteLine)
-      .filter((r) => r.path !== '*' && !r.path.startsWith('/__'))
-      .filter((r) => r.method !== 'HEAD');
+    const routes = parseRouteTree(app.printRoutes({ commonPrefix: false }))
+      // /docs/* is the @fastify/swagger-ui surface itself, not part of the API.
+      .filter((r) => !r.path.startsWith('/docs'))
+      // Backwards-compat alias that 302-redirects to /docs/json — intentionally hidden.
+      .filter((r) => r.path !== '/api/v1/openapi.json');
 
     const missing: string[] = [];
     for (const route of routes) {

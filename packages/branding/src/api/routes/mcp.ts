@@ -9,10 +9,24 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { SqliteAdapter } from '../../db/sqlite-adapter.js';
 import { createMcpHttpPlugin } from '@luqen/core/mcp';
 import type { TokenPayload, TokenVerifier } from '../../auth/oauth.js';
 import { createBrandingMcpServer, BRANDING_TOOL_METADATA } from '../../mcp/server.js';
+
+// Phase 41-02: schema attached to the MCP HTTP route via onRoute hook (the
+// route itself is registered by the shared @luqen/core/mcp plugin, which has
+// no schema option — see http-plugin.ts). Tolerant per Phase 41 D-05.
+const MCP_JSON_RPC_BODY = Type.Object(
+  {
+    jsonrpc: Type.Literal('2.0'),
+    method: Type.String(),
+    id: Type.Optional(Type.Union([Type.String(), Type.Number()])),
+    params: Type.Optional(Type.Any()),
+  },
+  { additionalProperties: true },
+);
 
 export interface BrandingMcpRouteOptions {
   readonly db: SqliteAdapter;
@@ -33,6 +47,20 @@ export async function registerMcpRoutes(
   if (opts.verifyMcpToken != null) {
     const verifyMcpToken = opts.verifyMcpToken;
     await app.register(async (scoped) => {
+      scoped.addHook('onRoute', (routeOptions) => {
+        if (routeOptions.url === '/api/v1/mcp' && routeOptions.method === 'POST') {
+          routeOptions.schema = {
+            ...(routeOptions.schema as Record<string, unknown> | undefined),
+            tags: ['mcp'],
+            body: MCP_JSON_RPC_BODY,
+            response: {
+              200: Type.Any(),
+              401: Type.Object({ error: Type.String(), statusCode: Type.Optional(Type.Number()) }, { additionalProperties: true }),
+              403: Type.Object({ error: Type.String(), statusCode: Type.Optional(Type.Number()) }, { additionalProperties: true }),
+            },
+          };
+        }
+      });
       scoped.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
         const authHeader = request.headers.authorization;
         if (authHeader == null || !authHeader.startsWith('Bearer ')) {
@@ -56,5 +84,21 @@ export async function registerMcpRoutes(
     return;
   }
 
-  await app.register(plugin);
+  await app.register(async (scoped) => {
+    scoped.addHook('onRoute', (routeOptions) => {
+      if (routeOptions.url === '/api/v1/mcp' && routeOptions.method === 'POST') {
+        routeOptions.schema = {
+          ...(routeOptions.schema as Record<string, unknown> | undefined),
+          tags: ['mcp'],
+          body: MCP_JSON_RPC_BODY,
+          response: {
+            200: Type.Any(),
+            401: Type.Object({ error: Type.String(), statusCode: Type.Optional(Type.Number()) }, { additionalProperties: true }),
+            403: Type.Object({ error: Type.String(), statusCode: Type.Optional(Type.Number()) }, { additionalProperties: true }),
+          },
+        };
+      }
+    });
+    await plugin(scoped, {});
+  });
 }
