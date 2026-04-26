@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
 import { hasPermission, getPermissionGroups, ALL_PERMISSION_IDS, DEFAULT_ORG_ROLES } from '../../permissions.js';
 import { toastHtml, escapeHtml } from './helpers.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,6 +22,30 @@ interface UpdateRoleBody {
   readonly permissions?: string | string[];
   readonly _csrf?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 41.1-02 — local TypeBox shapes
+// ---------------------------------------------------------------------------
+
+// Mixed JSON / HTML response: HTMX path returns HTML toast or redirect; non-
+// HTMX path returns JSON {error} on failure or 302 redirect on success.
+const MixedResponse = {
+  response: {
+    200: Type.Union([Type.String(), Type.Object({}, { additionalProperties: true })]),
+    302: Type.Union([Type.String(), Type.Null()]),
+    400: Type.Union([Type.String(), ErrorEnvelope]),
+    403: Type.Union([Type.String(), ErrorEnvelope]),
+    404: Type.Union([Type.String(), ErrorEnvelope]),
+    422: Type.Union([Type.String(), ErrorEnvelope]),
+    500: Type.Union([Type.String(), ErrorEnvelope]),
+  },
+} as const;
+
+const IdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
+const ScopeQuery = Type.Object(
+  { scope: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
 
 // ---------------------------------------------------------------------------
 // Default org role names (cannot be deleted)
@@ -79,6 +105,15 @@ export async function roleRoutes(
 
   server.get(
     '/admin/roles',
+    {
+      schema: {
+        ...HtmlPageSchema,
+        response: {
+          200: Type.String(),
+          403: Type.Union([Type.String(), ErrorEnvelope]),
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
@@ -154,6 +189,15 @@ export async function roleRoutes(
 
   server.get(
     '/admin/roles/global',
+    {
+      schema: {
+        produces: ['text/html'],
+        response: {
+          200: Type.String(),
+          403: Type.Union([Type.String(), ErrorEnvelope]),
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
@@ -181,6 +225,15 @@ export async function roleRoutes(
 
   server.get(
     '/admin/roles/org',
+    {
+      schema: {
+        produces: ['text/html'],
+        response: {
+          200: Type.String(),
+          403: Type.Union([Type.String(), ErrorEnvelope]),
+        },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
@@ -249,6 +302,9 @@ export async function roleRoutes(
 
   server.get(
     '/admin/roles/new',
+    {
+      schema: { querystring: ScopeQuery, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
@@ -285,7 +341,10 @@ export async function roleRoutes(
 
   server.post(
     '/admin/roles',
-    { config: { rateLimit: { max: 30, timeWindow: '10 minutes' } } },
+    {
+      config: { rateLimit: { max: 30, timeWindow: '10 minutes' } },
+      schema: MixedResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
@@ -357,6 +416,9 @@ export async function roleRoutes(
 
   server.get(
     '/admin/roles/:id/edit',
+    {
+      schema: { params: IdParams, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
@@ -398,6 +460,9 @@ export async function roleRoutes(
 
   server.patch(
     '/admin/roles/:id',
+    {
+      schema: { params: IdParams, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
@@ -454,6 +519,9 @@ export async function roleRoutes(
 
   server.post(
     '/admin/roles/:id',
+    {
+      schema: { params: IdParams, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 
@@ -509,6 +577,9 @@ export async function roleRoutes(
 
   server.delete(
     '/admin/roles/:id',
+    {
+      schema: { params: IdParams, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       if (!requireRolesRead(request, reply)) return;
 

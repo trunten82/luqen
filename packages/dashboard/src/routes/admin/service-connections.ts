@@ -35,6 +35,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
@@ -49,6 +50,7 @@ import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { t as translate } from '../../i18n/index.js';
 import type { Locale } from '../../i18n/index.js';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -134,6 +136,70 @@ interface ConfigSnapshot {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 41.1-02 — local TypeBox shapes
+// ---------------------------------------------------------------------------
+
+const IdParams = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+
+const PublicServiceConnectionSchema = Type.Object(
+  {
+    serviceId: Type.String(),
+    url: Type.String(),
+    clientId: Type.String(),
+    hasSecret: Type.Boolean(),
+    source: Type.String(),
+    updatedAt: Type.Union([Type.String(), Type.Null()]),
+    updatedBy: Type.Union([Type.String(), Type.Null()]),
+  },
+  { additionalProperties: true },
+);
+
+// Content-negotiated GET /admin/service-connections returns either HTML or
+// the masked JSON list. Declare both shapes; Fastify validates whichever
+// matches based on the response body.
+const ListResponse = {
+  response: {
+    200: Type.Union([
+      Type.String(),
+      Type.Object(
+        { connections: Type.Array(PublicServiceConnectionSchema) },
+        { additionalProperties: true },
+      ),
+    ]),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+  },
+} as const;
+
+// Mixed JSON / HTML response for POST endpoints (HTMX returns HTML row +
+// OOB toast; non-HTMX returns JSON ok envelope).
+const MixedResponse = {
+  response: {
+    200: Type.Union([
+      Type.String(),
+      Type.Object({}, { additionalProperties: true }),
+    ]),
+    400: Type.Union([Type.String(), ErrorEnvelope]),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    500: Type.Union([Type.String(), ErrorEnvelope]),
+  },
+} as const;
+
+const HtmlPartialOnly = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: Type.Union([Type.String(), ErrorEnvelope]),
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+  },
+} as const;
+
+// ---------------------------------------------------------------------------
 // Route plugin
 // ---------------------------------------------------------------------------
 
@@ -158,7 +224,10 @@ export async function registerServiceConnectionsRoutes(
   // the same endpoint for the initial page load.
   fastify.get(
     '/admin/service-connections',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: ListResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const dbRows = await repo.list();
       const byId = new Map<ServiceId, ServiceConnection>(
@@ -200,7 +269,10 @@ export async function registerServiceConnectionsRoutes(
   // tbody parser context (HTMX unwraps templates before processing).
   fastify.get(
     '/admin/service-connections/:id/edit',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: IdParams, ...HtmlPartialOnly },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id?: string };
       if (id === undefined || !VALID_SERVICE_IDS.has(id)) {
@@ -250,7 +322,10 @@ export async function registerServiceConnectionsRoutes(
   // successful-save response path. HTMX-only.
   fastify.get(
     '/admin/service-connections/:id/row',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: IdParams, ...HtmlPartialOnly },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id?: string };
       if (id === undefined || !VALID_SERVICE_IDS.has(id)) {
@@ -271,7 +346,10 @@ export async function registerServiceConnectionsRoutes(
   // ── POST /admin/service-connections/:id ───────────────────────────────────
   fastify.post(
     '/admin/service-connections/:id',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: IdParams, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id?: string };
       if (id === undefined || !VALID_SERVICE_IDS.has(id)) {
@@ -402,7 +480,10 @@ export async function registerServiceConnectionsRoutes(
   // ── POST /admin/service-connections/:id/test ──────────────────────────────
   fastify.post(
     '/admin/service-connections/:id/test',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: IdParams, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id?: string };
       if (id === undefined || !VALID_SERVICE_IDS.has(id)) {
@@ -483,7 +564,10 @@ export async function registerServiceConnectionsRoutes(
   // ── POST /admin/service-connections/:id/clear-secret ──────────────────────
   fastify.post(
     '/admin/service-connections/:id/clear-secret',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: { params: IdParams, ...MixedResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id?: string };
       if (id === undefined || !VALID_SERVICE_IDS.has(id)) {

@@ -1,8 +1,30 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter, DashboardUser } from '../../db/index.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml } from './helpers.js';
 import { validateUsername, validatePassword } from '../../validation.js';
+import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+// Phase 41.1-02 — local TypeBox shapes.
+const HtmlPartialResponse = {
+  produces: ['text/html'],
+  response: {
+    200: Type.String(),
+    400: ErrorEnvelope,
+    401: ErrorEnvelope,
+    403: ErrorEnvelope,
+    404: ErrorEnvelope,
+    409: Type.String(),
+    500: ErrorEnvelope,
+  },
+} as const;
+
+const IdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
+const UsernameQuery = Type.Object(
+  { username: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
 
 /** Check if a non-admin user can manage the target user.
  * Org owners can only manage users who are in their org's teams (not unbound/global users). */
@@ -109,7 +131,10 @@ export async function dashboardUserRoutes(
   // GET /admin/dashboard-users — list local dashboard users
   server.get(
     '/admin/dashboard-users',
-    { preHandler: anyUserPerm },
+    {
+      preHandler: anyUserPerm,
+      schema: HtmlPageSchema,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const isAdmin = request.user?.role === 'admin';
       const orgId = request.user?.currentOrgId;
@@ -132,7 +157,10 @@ export async function dashboardUserRoutes(
   // GET /admin/dashboard-users/check-username — inline username availability check
   server.get(
     '/admin/dashboard-users/check-username',
-    { preHandler: requirePermission('users.create') },
+    {
+      preHandler: requirePermission('users.create'),
+      schema: { querystring: UsernameQuery, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { username?: string };
       const username = query.username?.trim();
@@ -158,7 +186,10 @@ export async function dashboardUserRoutes(
   // GET /admin/dashboard-users/new — create user form fragment
   server.get(
     '/admin/dashboard-users/new',
-    { preHandler: requirePermission('users.create') },
+    {
+      preHandler: requirePermission('users.create'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const isAdmin = request.user?.role === 'admin';
       const roles = isAdmin
@@ -175,7 +206,10 @@ export async function dashboardUserRoutes(
   // POST /admin/dashboard-users — create user
   server.post(
     '/admin/dashboard-users',
-    { preHandler: requirePermission('users.create') },
+    {
+      preHandler: requirePermission('users.create'),
+      schema: HtmlPartialResponse,
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as {
         username?: string;
@@ -277,7 +311,10 @@ export async function dashboardUserRoutes(
   // PATCH /admin/dashboard-users/:id/role — update user role
   server.patch(
     '/admin/dashboard-users/:id/role',
-    { preHandler: requirePermission('users.roles') },
+    {
+      preHandler: requirePermission('users.roles'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       if (!await canManageUser(storage, request, id)) {
@@ -336,7 +373,10 @@ export async function dashboardUserRoutes(
   // POST /admin/dashboard-users/:id/deactivate — deactivate user
   server.post(
     '/admin/dashboard-users/:id/deactivate',
-    { preHandler: requirePermission('users.activate') },
+    {
+      preHandler: requirePermission('users.activate'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       if (!await canManageUser(storage, request, id)) {
@@ -378,7 +418,10 @@ export async function dashboardUserRoutes(
   // POST /admin/dashboard-users/:id/activate — reactivate user
   server.post(
     '/admin/dashboard-users/:id/activate',
-    { preHandler: requirePermission('users.activate') },
+    {
+      preHandler: requirePermission('users.activate'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       if (!await canManageUser(storage, request, id)) {
@@ -412,7 +455,10 @@ export async function dashboardUserRoutes(
   // GET /admin/dashboard-users/:id/reset-password — show reset password form
   server.get(
     '/admin/dashboard-users/:id/reset-password',
-    { preHandler: requirePermission('users.reset_password') },
+    {
+      preHandler: requirePermission('users.reset_password'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       if (!await canManageUser(storage, request, id)) {
@@ -467,7 +513,10 @@ export async function dashboardUserRoutes(
   // POST /admin/dashboard-users/:id/reset-password — update password
   server.post(
     '/admin/dashboard-users/:id/reset-password',
-    { preHandler: requirePermission('users.reset_password') },
+    {
+      preHandler: requirePermission('users.reset_password'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       if (!await canManageUser(storage, request, id)) {
@@ -522,7 +571,10 @@ export async function dashboardUserRoutes(
   // DELETE /admin/dashboard-users/:id — permanently delete a user
   server.delete(
     '/admin/dashboard-users/:id',
-    { preHandler: requirePermission('users.delete') },
+    {
+      preHandler: requirePermission('users.delete'),
+      schema: { params: IdParams, ...HtmlPartialResponse },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       if (!await canManageUser(storage, request, id)) {
