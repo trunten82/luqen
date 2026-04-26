@@ -1,19 +1,39 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
+
+const Client = Type.Object({}, { additionalProperties: true });
+const ClientList = Type.Array(Client);
+const ClientParams = Type.Object({ id: Type.String() });
+const ClientCreateBody = Type.Object(
+  {
+    name: Type.String(),
+    scopes: Type.Array(Type.String()),
+    grantTypes: Type.Array(Type.String()),
+    redirectUris: Type.Optional(Type.Array(Type.String())),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
 
 export async function registerClientRoutes(
   app: FastifyInstance,
   db: DbAdapter,
 ): Promise<void> {
-  // GET /api/v1/clients — org-scoped: system sees all, org sees system + own
+  // GET /api/v1/clients
   app.get('/api/v1/clients', {
+    schema: {
+      tags: ['clients'],
+      summary: 'List OAuth clients (org-scoped)',
+      response: { 200: ClientList, 401: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
       const orgId = (request as unknown as { orgId?: string }).orgId ?? 'system';
       const clients = await db.listClients(orgId);
-      // Strip secretHash from response
       const safeClients = clients.map(({ secretHash: _sh, ...rest }) => rest);
       await reply.send(safeClients);
     } catch (err) {
@@ -23,6 +43,12 @@ export async function registerClientRoutes(
 
   // POST /api/v1/clients
   app.post('/api/v1/clients', {
+    schema: {
+      tags: ['clients'],
+      summary: 'Create OAuth client',
+      body: ClientCreateBody,
+      response: { 201: Client, 400: ErrorEnvelope, 401: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -41,7 +67,6 @@ export async function registerClientRoutes(
         ...(Array.isArray(body.redirectUris) ? { redirectUris: body.redirectUris as string[] } : {}),
         orgId: typeof body.orgId === 'string' ? body.orgId : 'system',
       });
-      // Strip secretHash, keep secret (returned on creation only)
       const { secretHash: _sh, ...safeClient } = client;
       await reply.status(201).send(safeClient);
     } catch (err) {
@@ -50,8 +75,14 @@ export async function registerClientRoutes(
     }
   });
 
-  // POST /api/v1/clients/:id/revoke — org ownership check
+  // POST /api/v1/clients/:id/revoke
   app.post('/api/v1/clients/:id/revoke', {
+    schema: {
+      tags: ['clients'],
+      summary: 'Revoke (delete) OAuth client',
+      params: ClientParams,
+      response: { 204: Type.Null(), 403: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
+    },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
@@ -64,13 +95,11 @@ export async function registerClientRoutes(
         return;
       }
 
-      // Non-system callers cannot delete system clients
       if (recordOrgId === 'system' && requestOrgId !== 'system') {
         await reply.status(403).send({ error: 'Cannot revoke system client', statusCode: 403 });
         return;
       }
 
-      // Non-system callers cannot delete other orgs' clients
       if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
         await reply.status(403).send({ error: 'Cannot revoke client belonging to another organisation', statusCode: 403 });
         return;

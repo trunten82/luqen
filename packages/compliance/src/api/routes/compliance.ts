@@ -1,10 +1,36 @@
 import type { FastifyInstance } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { checkCompliance } from '../../engine/checker.js';
 import type { ComplianceCheckRequest } from '../../types.js';
 import type { ComplianceCache } from '../../cache/redis.js';
 import { createHash } from 'node:crypto';
+
+const CheckIssue = Type.Object(
+  {
+    code: Type.Optional(Type.String()),
+    type: Type.Optional(Type.String()),
+    selector: Type.Optional(Type.String()),
+    impact: Type.Optional(Type.String()),
+    ruleId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const CheckBody = Type.Object(
+  {
+    issues: Type.Array(CheckIssue),
+    jurisdictions: Type.Optional(Type.Array(Type.String())),
+    regulations: Type.Optional(Type.Array(Type.String())),
+    sectors: Type.Optional(Type.Array(Type.String())),
+    includeOptional: Type.Optional(Type.Boolean()),
+  },
+  { additionalProperties: true },
+);
+
+const CheckResponse = Type.Object({}, { additionalProperties: true });
 
 /**
  * Stable cache key derived from the compliance check request payload and org context.
@@ -39,6 +65,15 @@ export async function registerComplianceRoutes(
 ): Promise<void> {
   // POST /api/v1/compliance/check
   app.post('/api/v1/compliance/check', {
+    schema: {
+      tags: ['compliance'],
+      summary: 'Check accessibility issues against jurisdictions/regulations',
+      body: CheckBody,
+      // Phase 41-01: response schema omitted — engine output contains
+      // dynamic per-jurisdiction matrix keys + nested regulation data
+      // that fast-json-stringify can't serialise from a static schema
+      // without dropping fields. Tolerant default JSON.stringify.
+    },
     preHandler: [requireScope('read')],
   }, async (request, reply) => {
     try {
