@@ -28,6 +28,107 @@ Linux, macOS, and Windows. For headless / CI installs see
 
 ---
 
+## Deployment profiles (Phase 42)
+
+The Phase 42 wizard rewrite replaces the previous 3-way menu with **four
+explicit deployment profiles**. Pick one with `--profile <name>` (or via
+the interactive wizard prompt). Each profile maps to a different shape
+of host install.
+
+### Profile 1: Scanner CLI (`--profile cli`)
+
+Installs `@luqen/core` only. **No system services are registered.** Use
+this profile when you only need ad-hoc command-line scans or stdio MCP
+integration with VS Code / Claude Code / Claude Desktop.
+
+```bash
+bash install.sh --profile cli
+luqen scan https://example.com
+node packages/core/dist/mcp.js   # stdio MCP server (no port, no daemon)
+```
+
+The stdio MCP transport at `packages/core/dist/mcp.js` is the
+canonical Profile 1 IDE integration — no dashboard plugin or HTTP
+endpoint is required.
+
+### Profile 2: API services, headless (`--profile api`)
+
+Installs any subset of the three backing API services
+(compliance / branding / llm) without a dashboard. Each selected service
+is registered as its own systemd unit / launchd agent / NSSM service.
+Use this profile when you have a dedicated API host (for example a
+compliance-only API behind your own front-end).
+
+```bash
+bash install.sh --profile api --api-services compliance
+bash install.sh --profile api --api-services compliance,branding,llm
+```
+
+### Profile 3: Self-hosted dashboard (`--profile dashboard`, default)
+
+Installs the dashboard plus your chosen subset of {compliance, branding,
+llm}. This is the default profile — running `install.sh` with no flags
+gives you all four services and the dashboard. Use the `--without-*`
+flags to drop any backing service:
+
+```bash
+bash install.sh --non-interactive --admin-user admin --admin-pass '...'
+bash install.sh --profile dashboard --without-llm --non-interactive ...
+```
+
+### Profile 4: Docker Compose (`--profile docker`)
+
+Spins up the full stack via `docker-compose.yml`. The compose file ships
+**5 services**:
+
+- `compliance` (port 4000)
+- `branding` (port 4100)
+- `llm` (port 4200)
+- `dashboard` (port 5000)
+- `monitor` (port 4300, opt-in via `--profile monitor`)
+
+```bash
+docker compose up -d                       # 4 services, no monitor
+docker compose --profile monitor up -d     # 5 services including monitor
+```
+
+> Locked scope: Profile 4 ships **5 Luqen services + the optional
+> monitor only** — no `pa11y`, no `mongo`, no `redis`. The pa11y npm
+> library is bundled into compliance via `@luqen/core`; Mongo and Redis
+> remain plugin-driven and orthogonal to the installer surface.
+
+### Monitor agent
+
+The `@luqen/monitor` agent is a separate, opt-in service that watches
+external regulation / standards / branding sources and posts update
+proposals back to the compliance service. Opt in with `--with-monitor`
+on Profiles 2 / 3 (or `docker compose --profile monitor up` for
+Profile 4). Default port **4300** (configurable via `--monitor-port`),
+chosen to avoid collision with the LLM service on 4200.
+
+The monitor runs in `MONITOR_CHECK_INTERVAL=manual` mode by default —
+it does **not** poll on a schedule. Operators trigger scans via the
+dashboard's MCP integration or directly via the
+`luqen-monitor scan` CLI. Selecting `--with-monitor` without
+compliance is a parser error — the agent has no useful behaviour
+without an upstream compliance API to post proposals to.
+
+### Common invocations
+
+| Invocation | Result |
+|------------|--------|
+| `bash install.sh --non-interactive --admin-user X --admin-pass Y` | Default: Profile 3, dashboard + 4 services, no monitor. |
+| `bash install.sh --profile cli` | Scanner CLI only. No services registered. |
+| `bash install.sh --profile api --api-services compliance` | Headless compliance API. |
+| `bash install.sh --profile dashboard --with-monitor --non-interactive --admin-user X --admin-pass Y` | Default install + monitor agent. |
+| `bash install.sh --profile docker` | Docker Compose stack (5 services, monitor opt-in). |
+
+For the complete list of installer flags and the env vars each profile
+emits, see [installer-env-vars.md](../deployment/installer-env-vars.md)
+and [installer-changelog.md](../deployment/installer-changelog.md).
+
+---
+
 ## Quick start
 
 ### Linux
