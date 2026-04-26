@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import rateLimit from '@fastify/rate-limit';
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import type { DbAdapter } from '../db/adapter.js';
 import type { Model } from '../types.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
@@ -107,7 +108,7 @@ export async function createServer(options: ServerOptions) {
     logger = false,
   } = options;
 
-  const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }); // 10MB
+  const app = Fastify({ logger, bodyLimit: 10 * 1024 * 1024 }).withTypeProvider<TypeBoxTypeProvider>(); // 10MB
 
   // Register CORS
   await app.register(cors, {
@@ -137,15 +138,6 @@ export async function createServer(options: ServerOptions) {
       },
       servers: [{ url: 'http://localhost:5100' }],
       components: {
-        schemas: {
-          ErrorResponse: {
-            type: 'object' as const,
-            properties: {
-              error: { type: 'string' as const },
-              statusCode: { type: 'number' as const },
-            },
-          },
-        },
         securitySchemes: {
           bearerAuth: {
             type: 'http',
