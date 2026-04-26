@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.1.0
 milestone_name: Agent Companion v2 + Tech Debt & Docs
-status: ready_to_plan
-stopped_at: Phase 34 context gathered
-last_updated: "2026-04-25T18:25:27.637Z"
-last_activity: 2026-04-25 -- Phase 39.1 execution started
+status: verifying
+stopped_at: Phase 40 context gathered
+last_updated: "2026-04-25T21:28:09.755Z"
+last_activity: 2026-04-25
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 29
-  completed_plans: 27
-  percent: 88
+  completed_phases: 8
+  total_plans: 36
+  completed_plans: 36
+  percent: 100
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24 — v3.1.0 milestone started)
 
 **Core value:** AI-powered accessibility compliance that adapts to each organization's jurisdiction, regulation, and brand context — with admins in control through the dashboard, not config files.
-**Current focus:** Phase 39.1 — deferred-item-resolution
+**Current focus:** Phase 40 — documentation-sweep
 
 ## Current Position
 
-Phase: 40
-Plan: Not started
-Status: Ready to plan
+Phase: 40 (documentation-sweep) — EXECUTING
+Plan: 7 of 7
+Status: Phase complete — ready for verification
 Last activity: 2026-04-25
 
 ## Phase Map (v3.1.0)
@@ -43,6 +43,11 @@ Last activity: 2026-04-25
 | 40 | Documentation Sweep | DOC-01..07 | 34-39 |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- 2026-04-25: Phase 41 (OpenAPI Schema Backfill) added to v3.1.0 — closes Plan 40-01 deferred Task 2 and DOC-02 PARTIAL. Backfills Fastify route schemas across compliance/branding/llm/dashboard/MCP so `/docs` snapshots are substantive and `route-vs-spec` + `openapi-drift` gates pass.
+- 2026-04-25: Phase 42 (Installer Wizard Redesign) added to v3.1.0 — Plan 40-07 dry-run on a clean LXC surfaced that all 3 installers were wired for the v2-era codebase. Phase 42 introduces 4 deployment profiles (Scanner CLI / API services / Self-hosted dashboard / Docker Compose), first-class registration of `@luqen/monitor`, plugin axis (auth/notify/storage/git-host) gated by profile, and `install.ps1` parity with `install.sh`. CONTEXT.md captured at scope time.
 
 ### Decisions (carried forward from v3.0.0)
 
@@ -72,8 +77,8 @@ Last activity: 2026-04-25
 ## Session Continuity
 
 Last session: --stopped-at
-Stopped at: Phase 34 context gathered
+Stopped at: Phase 40 context gathered
 Resume file: --resume-file
 Next action: `/gsd-plan-phase 34` (Tokenizer Precision)
 
-**Planned Phase:** 34 (Tokenizer Precision) — 3 plans — 2026-04-24T13:34:40.743Z
+**Planned Phase:** 40 (Documentation Sweep) — 7 plans — 2026-04-25T20:39:26.007Z
