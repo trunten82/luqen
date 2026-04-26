@@ -4,7 +4,9 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import rateLimit from '@fastify/rate-limit';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
+import { Type } from '@sinclair/typebox';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { LuqenResponse, ErrorEnvelope } from './schemas/envelope.js';
 import type { SqliteAdapter } from '../db/sqlite-adapter.js';
 import type { TokenSigner, TokenVerifier } from '../auth/oauth.js';
 import { createAuthMiddleware, requireScope } from '../auth/middleware.js';
@@ -114,8 +116,125 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
   // Initialize DB
   await db.initialize();
 
+  // ---------------------------------------------------------------------------
+  // Domain entity schemas (used in route response definitions below).
+  // Mirror packages/branding/src/types.ts. Tolerant per Phase 41 D-05.
+  // ---------------------------------------------------------------------------
+
+  const BrandColorSchema = Type.Object(
+    {
+      id: Type.String(),
+      guidelineId: Type.String(),
+      name: Type.String(),
+      hexValue: Type.String(),
+      usage: Type.Optional(Type.String()),
+      context: Type.Optional(Type.String()),
+    },
+    { additionalProperties: true },
+  );
+
+  const BrandFontSchema = Type.Object(
+    {
+      id: Type.String(),
+      guidelineId: Type.String(),
+      family: Type.String(),
+      weights: Type.Optional(Type.Array(Type.String())),
+      usage: Type.Optional(Type.String()),
+      context: Type.Optional(Type.String()),
+    },
+    { additionalProperties: true },
+  );
+
+  const BrandSelectorSchema = Type.Object(
+    {
+      id: Type.String(),
+      guidelineId: Type.String(),
+      pattern: Type.String(),
+      description: Type.Optional(Type.String()),
+    },
+    { additionalProperties: true },
+  );
+
+  const GuidelineSchema = Type.Object(
+    {
+      id: Type.String(),
+      name: Type.String(),
+      orgId: Type.String(),
+      description: Type.Optional(Type.String()),
+      active: Type.Boolean(),
+      colors: Type.Optional(Type.Array(BrandColorSchema)),
+      fonts: Type.Optional(Type.Array(BrandFontSchema)),
+      selectors: Type.Optional(Type.Array(BrandSelectorSchema)),
+    },
+    { additionalProperties: true },
+  );
+
+  const MatchableIssueSchema = Type.Object(
+    {
+      ruleId: Type.String(),
+    },
+    { additionalProperties: true },
+  );
+
+  const MatchBodySchema = Type.Object(
+    {
+      issues: Type.Array(MatchableIssueSchema),
+      siteUrl: Type.Optional(Type.String()),
+      guidelineId: Type.Optional(Type.String()),
+      orgId: Type.Optional(Type.String()),
+    },
+    { additionalProperties: true },
+  );
+
+  const SiteAssignmentSchema = Type.Object(
+    {
+      guidelineId: Type.String(),
+      siteUrl: Type.String(),
+      orgId: Type.String(),
+    },
+    { additionalProperties: true },
+  );
+
+  const ClientSummarySchema = Type.Object(
+    {
+      id: Type.String(),
+      name: Type.String(),
+      scopes: Type.Array(Type.String()),
+      grantTypes: Type.Array(Type.String()),
+      orgId: Type.String(),
+    },
+    { additionalProperties: true },
+  );
+
+  const TokenBodySchema = Type.Object(
+    {
+      grant_type: Type.Optional(Type.String()),
+      client_id: Type.Optional(Type.String()),
+      client_secret: Type.Optional(Type.String()),
+      scope: Type.Optional(Type.String()),
+    },
+    { additionalProperties: true },
+  );
+
+  const TokenResponseSchema = Type.Object(
+    {
+      access_token: Type.String(),
+      token_type: Type.String(),
+      expires_in: Type.Number(),
+      scope: Type.String(),
+    },
+    { additionalProperties: true },
+  );
+
   // OpenAPI JSON alias — Phase 40-01 DOC-02: swagger moved to /docs.
-  app.get('/api/v1/openapi.json', async (_request, reply) => {
+  app.get('/api/v1/openapi.json', {
+    schema: {
+      hide: true,
+      response: {
+        302: Type.Null(),
+      },
+    },
+  }, async (_request, reply) => {
     await reply.redirect('/docs/json');
   });
 
@@ -151,7 +270,18 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
   // OAuth token endpoint
   // ---------------------------------------------------------------------------
 
-  app.post('/api/v1/oauth/token', async (request, reply) => {
+  app.post('/api/v1/oauth/token', {
+    schema: {
+      tags: ['oauth'],
+      body: TokenBodySchema,
+      response: {
+        200: TokenResponseSchema,
+        400: ErrorEnvelope,
+        401: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     try {
       const body = request.body as Record<string, unknown>;
 
@@ -247,7 +377,15 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
   // Templates
   // ---------------------------------------------------------------------------
 
-  app.get('/api/v1/templates/csv', async (_request, reply) => {
+  app.get('/api/v1/templates/csv', {
+    schema: {
+      tags: ['templates'],
+      produces: ['text/csv'],
+      response: {
+        200: Type.String(),
+      },
+    },
+  }, async (_request, reply) => {
     const csv = GuidelineParser.generateCSVTemplate();
     await reply
       .header('Content-Type', 'text/csv')
@@ -255,7 +393,14 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       .send(csv);
   });
 
-  app.get('/api/v1/templates/json', async (_request, reply) => {
+  app.get('/api/v1/templates/json', {
+    schema: {
+      tags: ['templates'],
+      response: {
+        200: Type.Any(),
+      },
+    },
+  }, async (_request, reply) => {
     const json = GuidelineParser.generateJSONTemplate();
     await reply
       .header('Content-Type', 'application/json')
@@ -269,13 +414,29 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
 
   const writeScope = requireScope('write');
 
-  app.get('/api/v1/guidelines', async (request, reply) => {
+  app.get('/api/v1/guidelines', {
+    schema: {
+      tags: ['guidelines'],
+      response: {
+        200: LuqenResponse(Type.Array(GuidelineSchema)),
+      },
+    },
+  }, async (request, reply) => {
     const orgId = (request as FastifyRequest & { orgId: string }).orgId;
     const guidelines = db.listGuidelines(orgId);
-    await reply.status(200).send({ data: guidelines });
+    await reply.status(200).send({ data: guidelines as unknown as never });
   });
 
-  app.get<{ Params: { id: string } }>('/api/v1/guidelines/:id', async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/api/v1/guidelines/:id', {
+    schema: {
+      tags: ['guidelines'],
+      params: Type.Object({ id: Type.String() }),
+      response: {
+        200: LuqenResponse(GuidelineSchema),
+        404: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const guideline = db.getGuideline(request.params.id);
     if (guideline == null) {
       await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
@@ -284,7 +445,24 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     await reply.status(200).send({ data: guideline });
   });
 
-  app.post('/api/v1/guidelines', { preHandler: [writeScope] }, async (request, reply) => {
+  app.post('/api/v1/guidelines', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['guidelines'],
+      body: Type.Object(
+        {
+          name: Type.String(),
+          description: Type.Optional(Type.String()),
+          createdBy: Type.Optional(Type.String()),
+        },
+        { additionalProperties: true },
+      ),
+      response: {
+        201: LuqenResponse(GuidelineSchema),
+        400: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const orgId = (request as FastifyRequest & { orgId: string }).orgId;
     const body = request.body as Record<string, unknown>;
     const name = String(body.name ?? '');
@@ -298,10 +476,28 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       description: body.description != null ? String(body.description) : undefined,
       createdBy: body.createdBy != null ? String(body.createdBy) : undefined,
     });
-    await reply.status(201).send({ data: guideline });
+    await reply.status(201).send({ data: guideline as unknown as never });
   });
 
-  app.put<{ Params: { id: string } }>('/api/v1/guidelines/:id', { preHandler: [writeScope] }, async (request, reply) => {
+  app.put<{ Params: { id: string } }>('/api/v1/guidelines/:id', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['guidelines'],
+      params: Type.Object({ id: Type.String() }),
+      body: Type.Object(
+        {
+          name: Type.Optional(Type.String()),
+          description: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+          active: Type.Optional(Type.Boolean()),
+        },
+        { additionalProperties: true },
+      ),
+      response: {
+        200: LuqenResponse(GuidelineSchema),
+        404: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const existing = db.getGuideline(request.params.id);
     if (existing == null) {
       await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
@@ -317,7 +513,17 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     await reply.status(200).send({ data: updated });
   });
 
-  app.delete<{ Params: { id: string } }>('/api/v1/guidelines/:id', { preHandler: [writeScope] }, async (request, reply) => {
+  app.delete<{ Params: { id: string } }>('/api/v1/guidelines/:id', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['guidelines'],
+      params: Type.Object({ id: Type.String() }),
+      response: {
+        204: Type.Null(),
+        404: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const existing = db.getGuideline(request.params.id);
     if (existing == null) {
       await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
@@ -331,7 +537,26 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
   // Colors
   // ---------------------------------------------------------------------------
 
-  app.post<{ Params: { id: string } }>('/api/v1/guidelines/:id/colors', { preHandler: [writeScope] }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>('/api/v1/guidelines/:id/colors', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['colors'],
+      params: Type.Object({ id: Type.String() }),
+      body: Type.Object(
+        {
+          name: Type.Optional(Type.String()),
+          hexValue: Type.Optional(Type.String()),
+          usage: Type.Optional(Type.String()),
+          context: Type.Optional(Type.String()),
+        },
+        { additionalProperties: true },
+      ),
+      response: {
+        201: LuqenResponse(BrandColorSchema),
+        404: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const guideline = db.getGuideline(request.params.id);
     if (guideline == null) {
       await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
@@ -347,7 +572,16 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     await reply.status(201).send({ data: color });
   });
 
-  app.delete<{ Params: { id: string; colorId: string } }>('/api/v1/guidelines/:id/colors/:colorId', { preHandler: [writeScope] }, async (request, reply) => {
+  app.delete<{ Params: { id: string; colorId: string } }>('/api/v1/guidelines/:id/colors/:colorId', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['colors'],
+      params: Type.Object({ id: Type.String(), colorId: Type.String() }),
+      response: {
+        204: Type.Null(),
+      },
+    },
+  }, async (request, reply) => {
     db.removeColor(request.params.colorId);
     await reply.status(204).send();
   });
@@ -356,7 +590,26 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
   // Fonts
   // ---------------------------------------------------------------------------
 
-  app.post<{ Params: { id: string } }>('/api/v1/guidelines/:id/fonts', { preHandler: [writeScope] }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>('/api/v1/guidelines/:id/fonts', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['fonts'],
+      params: Type.Object({ id: Type.String() }),
+      body: Type.Object(
+        {
+          family: Type.Optional(Type.String()),
+          weights: Type.Optional(Type.Array(Type.String())),
+          usage: Type.Optional(Type.String()),
+          context: Type.Optional(Type.String()),
+        },
+        { additionalProperties: true },
+      ),
+      response: {
+        201: LuqenResponse(BrandFontSchema),
+        404: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const guideline = db.getGuideline(request.params.id);
     if (guideline == null) {
       await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
@@ -372,7 +625,16 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     await reply.status(201).send({ data: font });
   });
 
-  app.delete<{ Params: { id: string; fontId: string } }>('/api/v1/guidelines/:id/fonts/:fontId', { preHandler: [writeScope] }, async (request, reply) => {
+  app.delete<{ Params: { id: string; fontId: string } }>('/api/v1/guidelines/:id/fonts/:fontId', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['fonts'],
+      params: Type.Object({ id: Type.String(), fontId: Type.String() }),
+      response: {
+        204: Type.Null(),
+      },
+    },
+  }, async (request, reply) => {
     db.removeFont(request.params.fontId);
     await reply.status(204).send();
   });
@@ -381,7 +643,24 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
   // Selectors
   // ---------------------------------------------------------------------------
 
-  app.post<{ Params: { id: string } }>('/api/v1/guidelines/:id/selectors', { preHandler: [writeScope] }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>('/api/v1/guidelines/:id/selectors', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['selectors'],
+      params: Type.Object({ id: Type.String() }),
+      body: Type.Object(
+        {
+          pattern: Type.Optional(Type.String()),
+          description: Type.Optional(Type.String()),
+        },
+        { additionalProperties: true },
+      ),
+      response: {
+        201: LuqenResponse(BrandSelectorSchema),
+        404: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const guideline = db.getGuideline(request.params.id);
     if (guideline == null) {
       await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
@@ -395,7 +674,16 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     await reply.status(201).send({ data: selector });
   });
 
-  app.delete<{ Params: { id: string; selectorId: string } }>('/api/v1/guidelines/:id/selectors/:selectorId', { preHandler: [writeScope] }, async (request, reply) => {
+  app.delete<{ Params: { id: string; selectorId: string } }>('/api/v1/guidelines/:id/selectors/:selectorId', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['selectors'],
+      params: Type.Object({ id: Type.String(), selectorId: Type.String() }),
+      response: {
+        204: Type.Null(),
+      },
+    },
+  }, async (request, reply) => {
     db.removeSelector(request.params.selectorId);
     await reply.status(204).send();
   });
@@ -404,7 +692,22 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
   // Site assignments
   // ---------------------------------------------------------------------------
 
-  app.post<{ Params: { id: string } }>('/api/v1/guidelines/:id/sites', { preHandler: [writeScope] }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>('/api/v1/guidelines/:id/sites', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['sites'],
+      params: Type.Object({ id: Type.String() }),
+      body: Type.Object(
+        { siteUrl: Type.String() },
+        { additionalProperties: true },
+      ),
+      response: {
+        201: LuqenResponse(SiteAssignmentSchema),
+        400: ErrorEnvelope,
+        404: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const guideline = db.getGuideline(request.params.id);
     if (guideline == null) {
       await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
@@ -421,7 +724,21 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     await reply.status(201).send({ data: { guidelineId: request.params.id, siteUrl, orgId } });
   });
 
-  app.delete<{ Params: { id: string } }>('/api/v1/guidelines/:id/sites', { preHandler: [writeScope] }, async (request, reply) => {
+  app.delete<{ Params: { id: string } }>('/api/v1/guidelines/:id/sites', {
+    preHandler: [writeScope],
+    schema: {
+      tags: ['sites'],
+      params: Type.Object({ id: Type.String() }),
+      body: Type.Object(
+        { siteUrl: Type.String() },
+        { additionalProperties: true },
+      ),
+      response: {
+        204: Type.Null(),
+        400: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const orgId = (request as FastifyRequest & { orgId: string }).orgId;
     const body = request.body as Record<string, unknown>;
     const siteUrl = String(body.siteUrl ?? '');
@@ -433,7 +750,16 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     await reply.status(204).send();
   });
 
-  app.get<{ Params: { id: string } }>('/api/v1/guidelines/:id/sites', async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/api/v1/guidelines/:id/sites', {
+    schema: {
+      tags: ['sites'],
+      params: Type.Object({ id: Type.String() }),
+      response: {
+        200: LuqenResponse(Type.Array(SiteAssignmentSchema)),
+        404: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const guideline = db.getGuideline(request.params.id);
     if (guideline == null) {
       await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
@@ -449,18 +775,45 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
 
   const adminScope = requireScope('admin');
 
-  app.get('/api/v1/clients', { preHandler: [adminScope] }, async (request, reply) => {
+  app.get('/api/v1/clients', {
+    preHandler: [adminScope],
+    schema: {
+      tags: ['clients'],
+      response: {
+        200: Type.Array(ClientSummarySchema),
+        500: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     try {
       const orgId = (request as FastifyRequest & { orgId: string }).orgId;
       const clients = await db.listClients(orgId === 'system' ? undefined : orgId);
       const safeClients = clients.map(({ secretHash: _sh, ...rest }) => rest);
-      await reply.send(safeClients);
+      await reply.send(safeClients as unknown as never);
     } catch {
       await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
     }
   });
 
-  app.post('/api/v1/clients', { preHandler: [adminScope] }, async (request, reply) => {
+  app.post('/api/v1/clients', {
+    preHandler: [adminScope],
+    schema: {
+      tags: ['clients'],
+      body: Type.Object(
+        {
+          name: Type.String(),
+          scopes: Type.Array(Type.String()),
+          grantTypes: Type.Array(Type.String()),
+          orgId: Type.Optional(Type.String()),
+        },
+        { additionalProperties: true },
+      ),
+      response: {
+        201: LuqenResponse(ClientSummarySchema),
+        400: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     try {
       const body = request.body as Record<string, unknown>;
       if (!body.name || !Array.isArray(body.scopes) || !Array.isArray(body.grantTypes)) {
@@ -477,14 +830,26 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
         orgId: typeof body.orgId === 'string' ? body.orgId : 'system',
       });
       const { secretHash: _sh, ...safeClient } = client;
-      await reply.status(201).send({ data: safeClient });
+      await reply.status(201).send({ data: safeClient as unknown as never });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Bad request';
       await reply.status(400).send({ error: message, statusCode: 400 });
     }
   });
 
-  app.post<{ Params: { id: string } }>('/api/v1/clients/:id/revoke', { preHandler: [adminScope] }, async (request, reply) => {
+  app.post<{ Params: { id: string } }>('/api/v1/clients/:id/revoke', {
+    preHandler: [adminScope],
+    schema: {
+      tags: ['clients'],
+      params: Type.Object({ id: Type.String() }),
+      response: {
+        204: Type.Null(),
+        403: ErrorEnvelope,
+        404: ErrorEnvelope,
+        500: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     try {
       const { id } = request.params;
       const requestOrgId = (request as FastifyRequest & { orgId: string }).orgId;
@@ -516,7 +881,29 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
   // Match endpoint
   // ---------------------------------------------------------------------------
 
-  app.post('/api/v1/match', async (request, reply) => {
+  app.post('/api/v1/match', {
+    schema: {
+      tags: ['match'],
+      body: MatchBodySchema,
+      response: {
+        200: LuqenResponse(
+          Type.Array(
+            Type.Object(
+              {
+                issue: MatchableIssueSchema,
+                brandMatch: Type.Object(
+                  { matched: Type.Boolean() },
+                  { additionalProperties: true },
+                ),
+              },
+              { additionalProperties: true },
+            ),
+          ),
+        ),
+        400: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
     const orgId = (request as FastifyRequest & { orgId: string }).orgId;
     const body = request.body as Record<string, unknown>;
 
@@ -540,7 +927,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
 
     if (guideline == null || !guideline.active) {
       await reply.status(200).send({
-        data: issues.map(issue => ({ issue, brandMatch: { matched: false } })),
+        data: issues.map(issue => ({ issue, brandMatch: { matched: false } })) as unknown as never,
         meta: { matched: 0, total: issues.length, guidelineId: null },
       });
       return;
@@ -550,7 +937,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
     const matchedCount = branded.filter(b => b.brandMatch.matched).length;
 
     await reply.status(200).send({
-      data: branded,
+      data: branded as unknown as never,
       meta: {
         matched: matchedCount,
         total: issues.length,
