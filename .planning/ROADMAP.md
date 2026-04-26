@@ -168,10 +168,10 @@ Plans:
   4. `npm run docs:openapi` regenerates byte-identical snapshots; `openapi-drift` CI workflow passes.
   5. No regression in production behaviour — existing request/response shapes preserved.
 **Plans**: 5 plans
-- [ ] 41-01-PLAN.md — Compliance service schemas (16 route files, OAPI-01)
-- [ ] 41-02-PLAN.md — Branding service schemas (~22 inline routes, OAPI-02)
-- [ ] 41-03-PLAN.md — LLM service schemas (11 route files incl. capability-exec, OAPI-03)
-- [ ] 41-04-PLAN.md — Dashboard non-MCP schemas + Zod-to-TypeBox migration (50 files, OAPI-04)
+- [x] 41-01-PLAN.md — Compliance service schemas (16 route files, OAPI-01)
+- [x] 41-02-PLAN.md — Branding service schemas (~22 inline routes, OAPI-02)
+- [x] 41-03-PLAN.md — LLM service schemas (11 route files incl. capability-exec, OAPI-03)
+- [x] 41-04-PLAN.md — Dashboard non-MCP schemas + Zod-to-TypeBox migration (50 files, OAPI-04)
 - [ ] 41-05-PLAN.md — Dashboard MCP tool schemas via zod-to-json-schema bridge (Wave 2, OAPI-05)
 
 #### Phase 42: Installer Wizard Redesign
