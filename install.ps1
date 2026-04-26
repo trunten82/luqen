@@ -204,8 +204,10 @@ function Invoke-LuqenUninstall {
     Write-Header "Uninstalling Luqen"
 
     # Stop + remove NSSM services if present.
+    # Phase 42 / Plan 42-02 Task 3: LuqenMonitor included so component-selective
+    # uninstall removes the monitor agent regardless of how it was registered.
     $nssm = Get-Command nssm -ErrorAction SilentlyContinue
-    foreach ($svc in @("LuqenCompliance","LuqenBranding","LuqenLlm","LuqenDashboard")) {
+    foreach ($svc in @("LuqenMonitor","LuqenDashboard","LuqenLlm","LuqenBranding","LuqenCompliance")) {
         if ($nssm) {
             try { & nssm stop $svc 2>$null | Out-Null } catch {}
             try { & nssm remove $svc confirm 2>$null | Out-Null } catch {}
@@ -215,7 +217,7 @@ function Invoke-LuqenUninstall {
     Write-Ok "NSSM services stopped/removed (if present)."
 
     # Unregister Task Scheduler tasks (used when NSSM not installed).
-    foreach ($task in @("LuqenCompliance","LuqenBranding","LuqenLlm","LuqenDashboard")) {
+    foreach ($task in @("LuqenMonitor","LuqenDashboard","LuqenLlm","LuqenBranding","LuqenCompliance")) {
         try { Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue } catch {}
     }
     Write-Ok "Scheduled tasks unregistered (if present)."
@@ -878,45 +880,174 @@ function Invoke-Seed {
     }
 }
 
-function New-OAuthClient {
-    Write-Step 6 $script:TotalStepsBM "Creating OAuth client"
+# Phase 42 / Plan 42-02 Task 3: T-42-10 mitigation -- restrict OAuth client
+# cache files to current user via NTFS ACL (Windows equivalent of chmod 600).
+function Protect-CacheFile {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return }
+    try {
+        $acl = Get-Acl $Path
+        $acl.SetAccessRuleProtection($true, $false)  # disable inheritance, no copy
+        $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            [System.Security.Principal.WindowsIdentity]::GetCurrent().Name,
+            "FullControl", "Allow")
+        $acl.AddAccessRule($rule)
+        Set-Acl -Path $Path -AclObject $acl
+    } catch {
+        Write-Warn "Could not restrict ACL on $Path -- secret may be world-readable."
+    }
+}
 
-    $clientCache = Join-Path $script:InstallDirVal ".install-client"
-    if (Test-Path $clientCache) {
-        $cacheContent = Get-Content $clientCache
-        foreach ($line in $cacheContent) {
-            if ($line -match "^client_id=(.+)$")     { $script:ClientId = $Matches[1] }
-            if ($line -match "^client_secret=(.+)$") { $script:ClientSecret = $Matches[1] }
+# Phase 42 / Plan 42-02 Task 3: mint a single OAuth client and persist it to a
+# cache file. Helper used by the per-pair minting blocks below. Returns the
+# (id, secret) tuple or ($null, $null) on parse failure.
+function New-LuqenOAuthClient {
+    param(
+        [string]$ServicePackage,    # e.g. "compliance" or "llm"
+        [string[]]$CliArgs,         # the args to dist/cli.js (after "clients create")
+        [string]$CacheFile,
+        [string]$Label              # for log output
+    )
+    if (Test-Path $CacheFile) {
+        $id = ""; $secret = ""
+        foreach ($line in (Get-Content $CacheFile)) {
+            if ($line -match "^client_id=(.+)$")     { $id = $Matches[1] }
+            if ($line -match "^client_secret=(.+)$") { $secret = $Matches[1] }
         }
-        Write-Info "OAuth client already exists - reusing"
+        Write-Info "$Label OAuth client already exists - reusing"
+        return ,@($id, $secret)
+    }
+    Push-Location (Join-Path $script:InstallDirVal "packages\$ServicePackage")
+    try {
+        $out = & node dist/cli.js clients create @CliArgs 2>&1
+    } finally { Pop-Location }
+    $id = ""; $secret = ""
+    foreach ($line in $out) {
+        if ($line -match "client_id:\s*(\S+)")     { $id = $Matches[1] }
+        if ($line -match "client_secret:\s*(\S+)") { $secret = $Matches[1] }
+    }
+    if ($id -and $secret) {
+        Set-Content -Path $CacheFile -Value "client_id=$id`nclient_secret=$secret" -Encoding UTF8
+        Protect-CacheFile -Path $CacheFile
+        Write-Ok "$Label OAuth client created"
+        return ,@($id, $secret)
     } else {
-        Push-Location (Join-Path $script:InstallDirVal "packages\compliance")
-        $clientOut = node dist/cli.js clients create --name "luqen-dashboard" --scope "read write" 2>&1
-        Pop-Location
-        foreach ($line in $clientOut) {
-            if ($line -match "client_id:\s*(\S+)")     { $script:ClientId = $Matches[1] }
-            if ($line -match "client_secret:\s*(\S+)") { $script:ClientSecret = $Matches[1] }
-        }
-        Set-Content -Path $clientCache -Value "client_id=$($script:ClientId)`nclient_secret=$($script:ClientSecret)" -Encoding UTF8
-        Write-Ok "OAuth client created"
+        Write-Warn "Could not parse $Label OAuth client output -- $Label integration will need manual config"
+        return ,@($null, $null)
+    }
+}
+
+# Phase 42 / Plan 42-02 Task 3: mint all OAuth clients required by the
+# resolved $script:InstallComponents. Mirrors install.sh:1317-1354.
+function New-OAuthClient {
+    Write-Step 6 $script:TotalStepsBM "Creating OAuth clients"
+
+    $hasCompliance = "compliance" -in $script:InstallComponents
+    $hasBranding   = "branding"   -in $script:InstallComponents
+    $hasLlm        = "llm"        -in $script:InstallComponents
+    $hasDashboard  = "dashboard"  -in $script:InstallComponents
+    $hasMonitor    = "monitor"    -in $script:InstallComponents
+
+    # Compliance <-> Dashboard client.
+    if ($hasCompliance -and $hasDashboard) {
+        $cache = Join-Path $script:InstallDirVal ".install-client"
+        $tup = New-LuqenOAuthClient -ServicePackage "compliance" `
+            -CliArgs @("--name","luqen-dashboard","--scope","admin","--grant","client_credentials") `
+            -CacheFile $cache -Label "Compliance"
+        $script:ClientId     = $tup[0]
+        $script:ClientSecret = $tup[1]
+    }
+
+    # Branding <-> Dashboard client.
+    if ($hasBranding -and $hasDashboard) {
+        $cache = Join-Path $script:InstallDirVal ".install-branding-client"
+        $tup = New-LuqenOAuthClient -ServicePackage "branding" `
+            -CliArgs @("--name","luqen-dashboard","--scope","admin","--grant","client_credentials") `
+            -CacheFile $cache -Label "Branding"
+        $script:BrandingClientId     = $tup[0]
+        $script:BrandingClientSecret = $tup[1]
+    }
+
+    # LLM <-> Dashboard client (LLM CLI uses --scopes plural, comma-separated).
+    if ($hasLlm -and $hasDashboard) {
+        $cache = Join-Path $script:InstallDirVal ".install-llm-client"
+        $tup = New-LuqenOAuthClient -ServicePackage "llm" `
+            -CliArgs @("--name","dashboard","--scopes","read,write,admin") `
+            -CacheFile $cache -Label "LLM->Dashboard"
+        $script:LlmClientId     = $tup[0]
+        $script:LlmClientSecret = $tup[1]
+    }
+
+    # LLM <-> Compliance client (compliance calls llm for capability invocation).
+    if ($hasLlm -and $hasCompliance) {
+        $cache = Join-Path $script:InstallDirVal ".install-compliance-llm-client"
+        $tup = New-LuqenOAuthClient -ServicePackage "llm" `
+            -CliArgs @("--name","compliance","--scopes","read,write,admin") `
+            -CacheFile $cache -Label "LLM->Compliance"
+        $script:ComplianceLlmClientId     = $tup[0]
+        $script:ComplianceLlmClientSecret = $tup[1]
+    }
+
+    # Monitor <-> Compliance client (monitor writes regulation proposals into compliance.db).
+    if ($hasMonitor) {
+        $cache = Join-Path $script:InstallDirVal ".install-monitor-client"
+        $tup = New-LuqenOAuthClient -ServicePackage "compliance" `
+            -CliArgs @("--name","luqen-monitor","--scope","admin","--grant","client_credentials") `
+            -CacheFile $cache -Label "Monitor"
+        $script:MonitorClientId     = $tup[0]
+        $script:MonitorClientSecret = $tup[1]
     }
 }
 
 function Write-Config {
     Write-Step 7 $script:TotalStepsBM "Writing configuration"
 
+    # Phase 42 / Plan 42-02 Task 3: dashboard.config.json is only meaningful
+    # when the dashboard is installed. CLI + API profiles skip this step.
+    if ("dashboard" -notin $script:InstallComponents) {
+        Write-Info "Dashboard not selected -- skipping dashboard.config.json"
+        return
+    }
+
     $script:InstallDirVal = (Resolve-Path $script:InstallDirVal).Path
     $script:ConfigFile = Join-Path $script:InstallDirVal "dashboard.config.json"
 
-    $config = @{
+    # Phase 42 / Plan 42-02 Task 3: closes pre-existing parity bug -- previous
+    # versions wrote only complianceUrl/Id/Secret. Now mirrors install.sh
+    # write_config (install.sh:1389-1406) and emits brandingUrl/Id/Secret +
+    # llmUrl/Id/Secret so the dashboard can authenticate to all backing services.
+    $config = [ordered]@{
         port                   = $script:DashboardPort
         complianceUrl          = "http://localhost:$($script:CompliancePort)"
+        brandingUrl            = "http://localhost:$($script:BrandingPort)"
+        llmUrl                 = "http://localhost:$($script:LlmPort)"
         sessionSecret          = $script:SessionSecret
         complianceClientId     = $script:ClientId
         complianceClientSecret = $script:ClientSecret
+        brandingClientId       = $script:BrandingClientId
+        brandingClientSecret   = $script:BrandingClientSecret
+        llmClientId            = $script:LlmClientId
+        llmClientSecret        = $script:LlmClientSecret
         dbPath                 = (Join-Path $script:InstallDirVal "dashboard.db")
         reportsDir             = (Join-Path $script:InstallDirVal "reports")
         pluginsDir             = (Join-Path $script:InstallDirVal "plugins")
+    }
+
+    # Drop service-specific keys when the corresponding service is not installed.
+    if ("compliance" -notin $script:InstallComponents) {
+        $config.Remove("complianceUrl")
+        $config.Remove("complianceClientId")
+        $config.Remove("complianceClientSecret")
+    }
+    if ("branding" -notin $script:InstallComponents) {
+        $config.Remove("brandingUrl")
+        $config.Remove("brandingClientId")
+        $config.Remove("brandingClientSecret")
+    }
+    if ("llm" -notin $script:InstallComponents) {
+        $config.Remove("llmUrl")
+        $config.Remove("llmClientId")
+        $config.Remove("llmClientSecret")
     }
 
     if ($script:Pa11yMode -eq "external" -and $script:Pa11yUrlVal) {
@@ -932,7 +1063,8 @@ function Write-Config {
     }
 
     $config | ConvertTo-Json -Depth 3 | Set-Content -Path $script:ConfigFile -Encoding UTF8
-    Write-Ok "dashboard.config.json written (all absolute paths)"
+    Protect-CacheFile -Path $script:ConfigFile
+    Write-Ok "dashboard.config.json written (all absolute paths, branding+llm parity)"
 }
 
 function New-WindowsServices {
@@ -944,13 +1076,21 @@ function New-WindowsServices {
     $nssmPath = Get-Command nssm -ErrorAction SilentlyContinue
 
     # MCP runs embedded in the dashboard (Fastify plugin). DO NOT register a
-    # separate LuqenMcp service. Daemons: compliance, branding, llm, dashboard.
+    # separate LuqenMcp service.
+
+    $hasCompliance = "compliance" -in $script:InstallComponents
+    $hasBranding   = "branding"   -in $script:InstallComponents
+    $hasLlm        = "llm"        -in $script:InstallComponents
+    $hasDashboard  = "dashboard"  -in $script:InstallComponents
+    $hasMonitor    = "monitor"    -in $script:InstallComponents
 
     $complianceEnv = @(
         "NODE_ENV=production",
         "COMPLIANCE_PORT=$($script:CompliancePort)",
         "COMPLIANCE_PUBLIC_URL=$($script:CompliancePublicUrl)",
-        "COMPLIANCE_LLM_URL=$($script:LlmPublicUrl)"
+        "COMPLIANCE_LLM_URL=$($script:LlmPublicUrl)",
+        "COMPLIANCE_LLM_CLIENT_ID=$($script:ComplianceLlmClientId)",
+        "COMPLIANCE_LLM_CLIENT_SECRET=$($script:ComplianceLlmClientSecret)"
     )
     $brandingEnv = @(
         "NODE_ENV=production",
@@ -982,77 +1122,142 @@ function New-WindowsServices {
         $dashEnv += "DASHBOARD_WEBSERVICE_URL=$($script:Pa11yUrlVal)"
     }
 
+    # Phase 42 / Plan 42-02 Task 3: monitor agent env block.
+    # T-42-04: MONITOR_CLIENT_SECRET passed via AppEnvironmentExtra (registry,
+    # SYSTEM/Administrator-readable only) -- never via argv (process listing).
+    $monitorEnv = @(
+        "NODE_ENV=production",
+        "MONITOR_COMPLIANCE_URL=$($script:CompliancePublicUrl)",
+        "MONITOR_CLIENT_ID=$($script:MonitorClientId)",
+        "MONITOR_CLIENT_SECRET=$($script:MonitorClientSecret)",
+        "MONITOR_URL=http://localhost:$($script:MonitorPort)",
+        "MONITOR_CHECK_INTERVAL=manual"
+    )
+
     if ($nssmPath) {
         Write-Info "Using NSSM to create services..."
+        $registered = @()
 
-        # Compliance
-        & nssm install "LuqenCompliance" "$nodePath" "$($script:InstallDirVal)\packages\compliance\dist\cli.js serve --port $($script:CompliancePort)" 2>$null | Out-Null
-        & nssm set "LuqenCompliance" AppDirectory (Join-Path $script:InstallDirVal "packages\compliance") 2>$null | Out-Null
-        & nssm set "LuqenCompliance" Description "Luqen Compliance Service" 2>$null | Out-Null
-        & nssm set "LuqenCompliance" Start SERVICE_AUTO_START 2>$null | Out-Null
-        & nssm set "LuqenCompliance" AppEnvironmentExtra $complianceEnv 2>$null | Out-Null
+        if ($hasCompliance) {
+            & nssm install "LuqenCompliance" "$nodePath" "$($script:InstallDirVal)\packages\compliance\dist\cli.js serve --port $($script:CompliancePort)" 2>$null | Out-Null
+            & nssm set "LuqenCompliance" AppDirectory (Join-Path $script:InstallDirVal "packages\compliance") 2>$null | Out-Null
+            & nssm set "LuqenCompliance" Description "Luqen Compliance Service" 2>$null | Out-Null
+            & nssm set "LuqenCompliance" Start SERVICE_AUTO_START 2>$null | Out-Null
+            & nssm set "LuqenCompliance" AppEnvironmentExtra $complianceEnv 2>$null | Out-Null
+            $registered += "LuqenCompliance"
+        }
 
-        # Branding
-        & nssm install "LuqenBranding" "$nodePath" "$($script:InstallDirVal)\packages\branding\dist\cli.js serve --port $($script:BrandingPort)" 2>$null | Out-Null
-        & nssm set "LuqenBranding" AppDirectory (Join-Path $script:InstallDirVal "packages\branding") 2>$null | Out-Null
-        & nssm set "LuqenBranding" Description "Luqen Branding Service" 2>$null | Out-Null
-        & nssm set "LuqenBranding" Start SERVICE_AUTO_START 2>$null | Out-Null
-        & nssm set "LuqenBranding" AppEnvironmentExtra $brandingEnv 2>$null | Out-Null
+        if ($hasBranding) {
+            & nssm install "LuqenBranding" "$nodePath" "$($script:InstallDirVal)\packages\branding\dist\cli.js serve --port $($script:BrandingPort)" 2>$null | Out-Null
+            & nssm set "LuqenBranding" AppDirectory (Join-Path $script:InstallDirVal "packages\branding") 2>$null | Out-Null
+            & nssm set "LuqenBranding" Description "Luqen Branding Service" 2>$null | Out-Null
+            & nssm set "LuqenBranding" Start SERVICE_AUTO_START 2>$null | Out-Null
+            & nssm set "LuqenBranding" AppEnvironmentExtra $brandingEnv 2>$null | Out-Null
+            $registered += "LuqenBranding"
+        }
 
-        # LLM
-        & nssm install "LuqenLlm" "$nodePath" "$($script:InstallDirVal)\packages\llm\dist\cli.js serve --port $($script:LlmPort)" 2>$null | Out-Null
-        & nssm set "LuqenLlm" AppDirectory (Join-Path $script:InstallDirVal "packages\llm") 2>$null | Out-Null
-        & nssm set "LuqenLlm" Description "Luqen LLM Service" 2>$null | Out-Null
-        & nssm set "LuqenLlm" Start SERVICE_AUTO_START 2>$null | Out-Null
-        & nssm set "LuqenLlm" AppEnvironmentExtra $llmEnv 2>$null | Out-Null
+        if ($hasLlm) {
+            & nssm install "LuqenLlm" "$nodePath" "$($script:InstallDirVal)\packages\llm\dist\cli.js serve --port $($script:LlmPort)" 2>$null | Out-Null
+            & nssm set "LuqenLlm" AppDirectory (Join-Path $script:InstallDirVal "packages\llm") 2>$null | Out-Null
+            & nssm set "LuqenLlm" Description "Luqen LLM Service" 2>$null | Out-Null
+            & nssm set "LuqenLlm" Start SERVICE_AUTO_START 2>$null | Out-Null
+            & nssm set "LuqenLlm" AppEnvironmentExtra $llmEnv 2>$null | Out-Null
+            $registered += "LuqenLlm"
+        }
 
-        # Dashboard
-        $dashArgs = "$($script:InstallDirVal)\packages\dashboard\dist\cli.js serve --config $($script:ConfigFile)"
-        & nssm install "LuqenDashboard" "$nodePath" $dashArgs 2>$null | Out-Null
-        & nssm set "LuqenDashboard" AppDirectory $script:InstallDirVal 2>$null | Out-Null
-        & nssm set "LuqenDashboard" Description "Luqen Dashboard" 2>$null | Out-Null
-        & nssm set "LuqenDashboard" Start SERVICE_AUTO_START 2>$null | Out-Null
-        & nssm set "LuqenDashboard" DependOnService "LuqenCompliance" "LuqenBranding" "LuqenLlm" 2>$null | Out-Null
-        & nssm set "LuqenDashboard" AppEnvironmentExtra $dashEnv 2>$null | Out-Null
+        if ($hasDashboard) {
+            $dashArgs = "$($script:InstallDirVal)\packages\dashboard\dist\cli.js serve --config $($script:ConfigFile)"
+            & nssm install "LuqenDashboard" "$nodePath" $dashArgs 2>$null | Out-Null
+            & nssm set "LuqenDashboard" AppDirectory $script:InstallDirVal 2>$null | Out-Null
+            & nssm set "LuqenDashboard" Description "Luqen Dashboard" 2>$null | Out-Null
+            & nssm set "LuqenDashboard" Start SERVICE_AUTO_START 2>$null | Out-Null
+            $deps = @()
+            if ($hasCompliance) { $deps += "LuqenCompliance" }
+            if ($hasBranding)   { $deps += "LuqenBranding" }
+            if ($hasLlm)        { $deps += "LuqenLlm" }
+            if ($deps.Count -gt 0) {
+                & nssm set "LuqenDashboard" DependOnService @deps 2>$null | Out-Null
+            }
+            & nssm set "LuqenDashboard" AppEnvironmentExtra $dashEnv 2>$null | Out-Null
+            $registered += "LuqenDashboard"
+        }
 
-        Write-Ok "NSSM services created (LuqenCompliance, LuqenBranding, LuqenLlm, LuqenDashboard)"
+        # Phase 42 / Plan 42-02 Task 3: LuqenMonitor service (depends on
+        # compliance per service-level invariant).
+        if ($hasMonitor) {
+            & nssm install "LuqenMonitor" "$nodePath" "$($script:InstallDirVal)\packages\monitor\dist\cli.js serve --port $($script:MonitorPort)" 2>$null | Out-Null
+            & nssm set "LuqenMonitor" AppDirectory (Join-Path $script:InstallDirVal "packages\monitor") 2>$null | Out-Null
+            & nssm set "LuqenMonitor" Description "Luqen Monitor Agent" 2>$null | Out-Null
+            & nssm set "LuqenMonitor" Start SERVICE_AUTO_START 2>$null | Out-Null
+            & nssm set "LuqenMonitor" DependOnService "LuqenCompliance" 2>$null | Out-Null
+            & nssm set "LuqenMonitor" AppEnvironmentExtra $monitorEnv 2>$null | Out-Null
+            $registered += "LuqenMonitor"
+        }
+
+        Write-Ok ("NSSM services created ({0})" -f ($registered -join ", "))
     } else {
         Write-Info "NSSM not found -- using Task Scheduler..."
 
         $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
         $taskTrigger = New-ScheduledTaskTrigger -AtStartup
+        $registered = @()
 
-        # Compliance
-        $compArgs = "$($script:InstallDirVal)\packages\compliance\dist\cli.js serve --port $($script:CompliancePort)"
-        $compAction = New-ScheduledTaskAction -Execute $nodePath -Argument $compArgs `
-            -WorkingDirectory (Join-Path $script:InstallDirVal "packages\compliance")
-        Register-ScheduledTask -TaskName "LuqenCompliance" -Action $compAction -Trigger $taskTrigger `
-            -Settings $taskSettings -Description "Luqen Compliance Service" -User "SYSTEM" -Force 2>$null | Out-Null
+        if ($hasCompliance) {
+            $compArgs = "$($script:InstallDirVal)\packages\compliance\dist\cli.js serve --port $($script:CompliancePort)"
+            $compAction = New-ScheduledTaskAction -Execute $nodePath -Argument $compArgs `
+                -WorkingDirectory (Join-Path $script:InstallDirVal "packages\compliance")
+            Register-ScheduledTask -TaskName "LuqenCompliance" -Action $compAction -Trigger $taskTrigger `
+                -Settings $taskSettings -Description "Luqen Compliance Service" -User "SYSTEM" -Force 2>$null | Out-Null
+            $registered += "LuqenCompliance"
+        }
 
-        # Branding
-        $brandArgs = "$($script:InstallDirVal)\packages\branding\dist\cli.js serve --port $($script:BrandingPort)"
-        $brandAction = New-ScheduledTaskAction -Execute $nodePath -Argument $brandArgs `
-            -WorkingDirectory (Join-Path $script:InstallDirVal "packages\branding")
-        Register-ScheduledTask -TaskName "LuqenBranding" -Action $brandAction -Trigger $taskTrigger `
-            -Settings $taskSettings -Description "Luqen Branding Service" -User "SYSTEM" -Force 2>$null | Out-Null
+        if ($hasBranding) {
+            $brandArgs = "$($script:InstallDirVal)\packages\branding\dist\cli.js serve --port $($script:BrandingPort)"
+            $brandAction = New-ScheduledTaskAction -Execute $nodePath -Argument $brandArgs `
+                -WorkingDirectory (Join-Path $script:InstallDirVal "packages\branding")
+            Register-ScheduledTask -TaskName "LuqenBranding" -Action $brandAction -Trigger $taskTrigger `
+                -Settings $taskSettings -Description "Luqen Branding Service" -User "SYSTEM" -Force 2>$null | Out-Null
+            $registered += "LuqenBranding"
+        }
 
-        # LLM
-        $llmArgs = "$($script:InstallDirVal)\packages\llm\dist\cli.js serve --port $($script:LlmPort)"
-        $llmAction = New-ScheduledTaskAction -Execute $nodePath -Argument $llmArgs `
-            -WorkingDirectory (Join-Path $script:InstallDirVal "packages\llm")
-        Register-ScheduledTask -TaskName "LuqenLlm" -Action $llmAction -Trigger $taskTrigger `
-            -Settings $taskSettings -Description "Luqen LLM Service" -User "SYSTEM" -Force 2>$null | Out-Null
+        if ($hasLlm) {
+            $llmArgs = "$($script:InstallDirVal)\packages\llm\dist\cli.js serve --port $($script:LlmPort)"
+            $llmAction = New-ScheduledTaskAction -Execute $nodePath -Argument $llmArgs `
+                -WorkingDirectory (Join-Path $script:InstallDirVal "packages\llm")
+            Register-ScheduledTask -TaskName "LuqenLlm" -Action $llmAction -Trigger $taskTrigger `
+                -Settings $taskSettings -Description "Luqen LLM Service" -User "SYSTEM" -Force 2>$null | Out-Null
+            $registered += "LuqenLlm"
+        }
 
-        # Dashboard
-        $dashArgs = "$($script:InstallDirVal)\packages\dashboard\dist\cli.js serve --config $($script:ConfigFile)"
-        $dashAction = New-ScheduledTaskAction -Execute $nodePath -Argument $dashArgs `
-            -WorkingDirectory $script:InstallDirVal
-        Register-ScheduledTask -TaskName "LuqenDashboard" -Action $dashAction -Trigger $taskTrigger `
-            -Settings $taskSettings -Description "Luqen Dashboard" -User "SYSTEM" -Force 2>$null | Out-Null
+        if ($hasDashboard) {
+            $dashArgs = "$($script:InstallDirVal)\packages\dashboard\dist\cli.js serve --config $($script:ConfigFile)"
+            $dashAction = New-ScheduledTaskAction -Execute $nodePath -Argument $dashArgs `
+                -WorkingDirectory $script:InstallDirVal
+            Register-ScheduledTask -TaskName "LuqenDashboard" -Action $dashAction -Trigger $taskTrigger `
+                -Settings $taskSettings -Description "Luqen Dashboard" -User "SYSTEM" -Force 2>$null | Out-Null
+            $registered += "LuqenDashboard"
+        }
 
-        Write-Warn "Task Scheduler tasks do not carry env vars set above."
+        # Phase 42 / Plan 42-02 Task 3: LuqenMonitor scheduled task fallback.
+        if ($hasMonitor) {
+            $monArgs = "$($script:InstallDirVal)\packages\monitor\dist\cli.js serve --port $($script:MonitorPort)"
+            $monAction = New-ScheduledTaskAction -Execute $nodePath -Argument $monArgs `
+                -WorkingDirectory (Join-Path $script:InstallDirVal "packages\monitor")
+            Register-ScheduledTask -TaskName "LuqenMonitor" -Action $monAction -Trigger $taskTrigger `
+                -Settings $taskSettings -Description "Luqen Monitor Agent" -User "SYSTEM" -Force 2>$null | Out-Null
+            $registered += "LuqenMonitor"
+        }
+
+        Write-Warn "Task Scheduler tasks do not carry env vars set above (LuqenCompliance/Branding/Llm/Dashboard/Monitor)."
         Write-Warn "For env-aware service hosting on Windows, install NSSM and re-run."
-        Write-Ok "Scheduled tasks created (LuqenCompliance, LuqenBranding, LuqenLlm, LuqenDashboard)"
+        Write-Ok ("Scheduled tasks created ({0})" -f ($registered -join ", "))
+    }
+
+    # Phase 42 / Plan 42-02 Task 3 step 6: post-install summary for monitor.
+    if ($hasMonitor) {
+        Write-Host ""
+        Write-Info ("Monitor agent registered as LuqenMonitor (port {0}, manual mode)." -f $script:MonitorPort)
+        Write-Info "Trigger a scan via the dashboard MCP tool or 'luqen-monitor scan'."
     }
 }
 
