@@ -1,4 +1,5 @@
 import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { join, resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -184,11 +185,33 @@ function isCsrfExempt(path: string): boolean {
 }
 
 export async function createServer(config: DashboardConfig): Promise<FastifyInstance> {
+  // Phase 41-04: TypeBox type provider for schema-aware route registration.
+  // Routes can declare TypeBox `schema:` blocks and Fastify's AJV runs them
+  // at request time; @fastify/swagger collects them into the OpenAPI spec.
+  // Existing `FastifyInstance`-typed route signatures continue to work —
+  // the type provider only affects compile-time inference of req.body etc.
   const server = Fastify({
     logger: {
       level: process.env['NODE_ENV'] === 'production' ? 'warn' : 'info',
     },
     trustProxy: true,
+  }).withTypeProvider<TypeBoxTypeProvider>();
+
+  // Phase 41-04: capture every registered route for the OpenAPI coverage
+  // test (tests/openapi/route-coverage.test.ts). We attach this here BEFORE
+  // any route registration so the hook fires for all of them. The list is
+  // exposed via a non-enumerable `__collectedRoutes` property — strictly
+  // for tests, never used at runtime.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const __collectedRoutes: Array<{ method: string; path: string }> = [];
+  server.addHook('onRoute', (route) => {
+    const path = (route.url ?? route.path) as string;
+    const methods = Array.isArray(route.method) ? route.method : [route.method];
+    for (const m of methods) __collectedRoutes.push({ method: String(m), path });
+  });
+  Object.defineProperty(server, '__collectedRoutes', {
+    value: __collectedRoutes,
+    enumerable: false,
   });
 
   // ── Database ──────────────────────────────────────────────────────────────
