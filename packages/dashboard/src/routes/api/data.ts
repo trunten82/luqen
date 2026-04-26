@@ -1,9 +1,89 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { readFile, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter, ScanRecord } from '../../db/index.js';
 import { SqliteStorageAdapter } from '../../db/sqlite/index.js';
 import { getFixSuggestion } from '../../fix-suggestions.js';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
+
+// Data API responds with bare JSON ({ data, total } / { data, ... }) — schemas
+// mirror that shape directly rather than going through LuqenResponse.
+const ScanShape = Type.Object({}, { additionalProperties: true });
+const IssueShape = Type.Object({}, { additionalProperties: true });
+const TrendPointShape = Type.Object({}, { additionalProperties: true });
+const ComplianceSummaryShape = Type.Object({}, { additionalProperties: true });
+const FixShape = Type.Object({}, { additionalProperties: true });
+const ConnectedRepoShape = Type.Object({}, { additionalProperties: true });
+
+const ScansListResponseSchema = Type.Object(
+  { data: Type.Array(ScanShape), total: Type.Number() },
+  { additionalProperties: true },
+);
+const ScanDetailResponseSchema = Type.Object(
+  { data: Type.Object({}, { additionalProperties: true }) },
+  { additionalProperties: true },
+);
+const IssuesResponseSchema = Type.Object(
+  { data: Type.Array(IssueShape), total: Type.Number() },
+  { additionalProperties: true },
+);
+const TrendsResponseSchema = Type.Object(
+  { data: Type.Array(TrendPointShape) },
+  { additionalProperties: true },
+);
+const ComplianceSummaryResponseSchema = Type.Object(
+  { data: Type.Array(ComplianceSummaryShape) },
+  { additionalProperties: true },
+);
+const FixesResponseSchema = Type.Object(
+  {
+    data: Type.Array(FixShape),
+    total: Type.Optional(Type.Number()),
+    connectedRepo: Type.Union([ConnectedRepoShape, Type.Null()]),
+  },
+  { additionalProperties: true },
+);
+const DeleteScanResponseSchema = Type.Object(
+  { success: Type.Boolean() },
+  { additionalProperties: true },
+);
+
+const ScanIdParamsSchema = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+const ScansQuerystringSchema = Type.Object(
+  {
+    siteUrl: Type.Optional(Type.String()),
+    from: Type.Optional(Type.String()),
+    to: Type.Optional(Type.String()),
+    limit: Type.Optional(Type.String()),
+    offset: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+const IssuesQuerystringSchema = Type.Object(
+  {
+    severity: Type.Optional(Type.String()),
+    criterion: Type.Optional(Type.String()),
+    limit: Type.Optional(Type.String()),
+    offset: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+const TrendsQuerystringSchema = Type.Object(
+  {
+    siteUrl: Type.Optional(Type.String()),
+    from: Type.Optional(Type.String()),
+    to: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+const ComplianceSummaryQuerystringSchema = Type.Object(
+  { siteUrl: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -162,7 +242,14 @@ export async function dataApiRoutes(
   // ── GET /api/v1/scans ─────────────────────────────────────────────────
   server.get<{ Querystring: ScansQuery }>(
     '/api/v1/scans',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['data'],
+        querystring: ScansQuerystringSchema,
+        response: { 200: ScansListResponseSchema, 401: ErrorEnvelope },
+      },
+    },
     async (request: FastifyRequest<{ Querystring: ScansQuery }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const limit = clampLimit(request.query.limit);
@@ -212,7 +299,18 @@ export async function dataApiRoutes(
   // ── GET /api/v1/scans/:id ─────────────────────────────────────────────
   server.get<{ Params: ScanParams }>(
     '/api/v1/scans/:id',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['data'],
+        params: ScanIdParamsSchema,
+        response: {
+          200: ScanDetailResponseSchema,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest<{ Params: ScanParams }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const scan = await storage.scans.getScan(request.params.id);
@@ -236,7 +334,19 @@ export async function dataApiRoutes(
   // ── GET /api/v1/scans/:id/issues ──────────────────────────────────────
   server.get<{ Params: ScanParams; Querystring: IssuesQuery }>(
     '/api/v1/scans/:id/issues',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['data'],
+        params: ScanIdParamsSchema,
+        querystring: IssuesQuerystringSchema,
+        response: {
+          200: IssuesResponseSchema,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: ScanParams; Querystring: IssuesQuery }>,
       reply: FastifyReply,
@@ -298,7 +408,18 @@ export async function dataApiRoutes(
   // ── GET /api/v1/trends ────────────────────────────────────────────────
   server.get<{ Querystring: TrendsQuery }>(
     '/api/v1/trends',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['data'],
+        querystring: TrendsQuerystringSchema,
+        response: {
+          200: TrendsResponseSchema,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest<{ Querystring: TrendsQuery }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const { siteUrl, from, to } = request.query;
@@ -350,7 +471,14 @@ export async function dataApiRoutes(
   // ── GET /api/v1/compliance-summary ────────────────────────────────────
   server.get<{ Querystring: ComplianceSummaryQuery }>(
     '/api/v1/compliance-summary',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['data'],
+        querystring: ComplianceSummaryQuerystringSchema,
+        response: { 200: ComplianceSummaryResponseSchema, 401: ErrorEnvelope },
+      },
+    },
     async (
       request: FastifyRequest<{ Querystring: ComplianceSummaryQuery }>,
       reply: FastifyReply,
@@ -431,7 +559,18 @@ export async function dataApiRoutes(
   // ── GET /api/v1/scans/:id/fixes ────────────────────────────────────
   server.get<{ Params: ScanParams }>(
     '/api/v1/scans/:id/fixes',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['data'],
+        params: ScanIdParamsSchema,
+        response: {
+          200: FixesResponseSchema,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: ScanParams }>,
       reply: FastifyReply,
@@ -501,7 +640,19 @@ export async function dataApiRoutes(
   // ── DELETE /api/v1/scans/:id ──────────────────────────────────────────
   server.delete<{ Params: ScanParams }>(
     '/api/v1/scans/:id',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['data'],
+        params: ScanIdParamsSchema,
+        response: {
+          200: DeleteScanResponseSchema,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest<{ Params: ScanParams }>, reply: FastifyReply) => {
       const scan = await storage.scans.getScan(request.params.id);
 

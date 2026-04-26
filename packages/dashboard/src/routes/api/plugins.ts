@@ -1,6 +1,25 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
 import type { PluginManager } from '../../plugins/manager.js';
+import { ErrorEnvelope, NoContent } from '../../api/schemas/envelope.js';
+
+// Plugins API responds with bare JSON (not wrapped envelope) — schemas mirror that.
+const PluginShape = Type.Object({}, { additionalProperties: true });
+const PluginListSchema = Type.Array(PluginShape);
+const PluginRegistryEntrySchema = Type.Object({}, { additionalProperties: true });
+const PluginRegistryListSchema = Type.Array(PluginRegistryEntrySchema);
+const PluginHealthSchema = Type.Object({}, { additionalProperties: true });
+
+// InstallBody / ConfigBody intentionally NOT declared as `body:` schemas:
+// the access-control test calls these endpoints without a body, and Fastify
+// runs body validation before preHandler — a body schema would short-circuit
+// the requirePermission 403 path. Handlers validate inputs themselves.
+
+const PluginIdParamsSchema = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
 
 // ---------------------------------------------------------------------------
 // Request body / param types
@@ -29,7 +48,13 @@ export async function pluginApiRoutes(
   // GET /api/v1/plugins — list installed plugins
   server.get(
     '/api/v1/plugins',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        tags: ['plugins'],
+        response: { 200: PluginListSchema, 401: ErrorEnvelope, 403: ErrorEnvelope },
+      },
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const plugins = pluginManager.list();
       return reply.send(plugins);
@@ -39,7 +64,13 @@ export async function pluginApiRoutes(
   // GET /api/v1/plugins/registry — list available from registry (mark installed ones)
   server.get(
     '/api/v1/plugins/registry',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        tags: ['plugins'],
+        response: { 200: PluginRegistryListSchema, 401: ErrorEnvelope, 403: ErrorEnvelope },
+      },
+    },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       const installed = pluginManager.list();
       const installedPackages = new Set(installed.map((p) => p.packageName));
@@ -57,9 +88,21 @@ export async function pluginApiRoutes(
   // POST /api/v1/plugins/install — { name: string }
   server.post<{ Body: InstallBody }>(
     '/api/v1/plugins/install',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        tags: ['plugins'],
+        response: {
+          201: PluginShape,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+      },
+    },
     async (request, reply) => {
-      const { name } = request.body ?? {};
+      const { name } = (request.body ?? {}) as InstallBody;
 
       if (typeof name !== 'string' || name.trim() === '') {
         return reply.code(400).send({ error: 'name is required' });
@@ -83,10 +126,24 @@ export async function pluginApiRoutes(
   // PATCH /api/v1/plugins/:id/config — { config: Record<string, unknown> }
   server.patch<{ Params: PluginParams; Body: ConfigBody }>(
     '/api/v1/plugins/:id/config',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        tags: ['plugins'],
+        params: PluginIdParamsSchema,
+        response: {
+          200: PluginShape,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+          404: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+      },
+    },
     async (request, reply) => {
       const { id } = request.params;
-      const { config } = request.body ?? {};
+      const { config } = (request.body ?? {}) as ConfigBody;
 
       if (config === undefined || config === null || typeof config !== 'object') {
         return reply.code(400).send({ error: 'config object is required' });
@@ -110,7 +167,20 @@ export async function pluginApiRoutes(
   // POST /api/v1/plugins/:id/activate
   server.post<{ Params: PluginParams }>(
     '/api/v1/plugins/:id/activate',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        tags: ['plugins'],
+        params: PluginIdParamsSchema,
+        response: {
+          200: PluginShape,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+          404: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+      },
+    },
     async (request, reply) => {
       const { id } = request.params;
 
@@ -132,7 +202,20 @@ export async function pluginApiRoutes(
   // POST /api/v1/plugins/:id/deactivate
   server.post<{ Params: PluginParams }>(
     '/api/v1/plugins/:id/deactivate',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        tags: ['plugins'],
+        params: PluginIdParamsSchema,
+        response: {
+          200: PluginShape,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+          404: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+      },
+    },
     async (request, reply) => {
       const { id } = request.params;
 
@@ -154,7 +237,20 @@ export async function pluginApiRoutes(
   // DELETE /api/v1/plugins/:id
   server.delete<{ Params: PluginParams }>(
     '/api/v1/plugins/:id',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        tags: ['plugins'],
+        params: PluginIdParamsSchema,
+        response: {
+          204: NoContent,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+          404: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+      },
+    },
     async (request, reply) => {
       const { id } = request.params;
 
@@ -176,7 +272,19 @@ export async function pluginApiRoutes(
   // GET /api/v1/plugins/:id/health
   server.get<{ Params: PluginParams }>(
     '/api/v1/plugins/:id/health',
-    { preHandler: requirePermission('admin.system') },
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        tags: ['plugins'],
+        params: PluginIdParamsSchema,
+        response: {
+          200: PluginHealthSchema,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (request, reply) => {
       const { id } = request.params;
 

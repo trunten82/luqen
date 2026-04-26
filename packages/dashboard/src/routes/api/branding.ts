@@ -1,7 +1,89 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
 import { retagScansForSite } from '../../services/branding-retag.js';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
+
+// Branding API endpoints respond with bare JSON envelopes (data/total/success)
+// rather than the dashboard's LuqenResponse — replies use `.send({ data, ... })`
+// directly. Schemas mirror that bare-JSON shape.
+const GuidelineShape = Type.Object({}, { additionalProperties: true });
+const ColorShape = Type.Object({}, { additionalProperties: true });
+const FontShape = Type.Object({}, { additionalProperties: true });
+const SelectorShape = Type.Object({}, { additionalProperties: true });
+const RetagResultShape = Type.Object({}, { additionalProperties: true });
+
+const ListEnvelope = <T extends ReturnType<typeof Type.Object>>(item: T) =>
+  Type.Object({ data: Type.Array(item) }, { additionalProperties: true });
+const ItemEnvelope = <T extends ReturnType<typeof Type.Object>>(item: T) =>
+  Type.Object({ data: item }, { additionalProperties: true });
+const SuccessEnvelope = Type.Object({ success: Type.Boolean() }, { additionalProperties: true });
+
+const GuidelineParamsSchema = Type.Object(
+  { id: Type.String() },
+  { additionalProperties: true },
+);
+const GuidelineColorParamsSchema = Type.Object(
+  { id: Type.String(), colorId: Type.String() },
+  { additionalProperties: true },
+);
+const GuidelineFontParamsSchema = Type.Object(
+  { id: Type.String(), fontId: Type.String() },
+  { additionalProperties: true },
+);
+const GuidelineSelectorParamsSchema = Type.Object(
+  { id: Type.String(), selectorId: Type.String() },
+  { additionalProperties: true },
+);
+
+// Bodies are fully optional at schema level — handlers do their own validation
+// and return specific error messages that tests assert against. Keeping the
+// schema permissive avoids Fastify's generic "Bad Request" pre-handler reply.
+const CreateGuidelineBodySchema = Type.Object(
+  { name: Type.Optional(Type.String()), description: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const AddColorBodySchema = Type.Object(
+  {
+    name: Type.Optional(Type.String()),
+    hexValue: Type.Optional(Type.String()),
+    usage: Type.Optional(Type.String()),
+    context: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const AddFontBodySchema = Type.Object(
+  {
+    family: Type.Optional(Type.String()),
+    weights: Type.Optional(Type.Array(Type.String())),
+    usage: Type.Optional(Type.String()),
+    context: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const AddSelectorBodySchema = Type.Object(
+  { pattern: Type.Optional(Type.String()), description: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const SiteBodySchema = Type.Object(
+  { siteUrl: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const SiteQuerystringSchema = Type.Object(
+  { siteUrl: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
+
+const RetagBodySchema = Type.Object(
+  { siteUrl: Type.Optional(Type.String()) },
+  { additionalProperties: true },
+);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -93,7 +175,13 @@ export async function brandingApiRoutes(
   // ── GET /api/v1/branding/guidelines ───────────────────────────────────────
   server.get(
     '/api/v1/branding/guidelines',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        response: { 200: ListEnvelope(GuidelineShape), 401: ErrorEnvelope },
+      },
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const guidelines = await storage.branding.listGuidelines(orgId);
@@ -104,7 +192,18 @@ export async function brandingApiRoutes(
   // ── GET /api/v1/branding/guidelines/:id ───────────────────────────────────
   server.get<{ Params: GuidelineParams }>(
     '/api/v1/branding/guidelines/:id',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineParamsSchema,
+        response: {
+          200: ItemEnvelope(GuidelineShape),
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest<{ Params: GuidelineParams }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
@@ -128,7 +227,18 @@ export async function brandingApiRoutes(
   // ── POST /api/v1/branding/guidelines ──────────────────────────────────────
   server.post<{ Body: CreateGuidelineBody }>(
     '/api/v1/branding/guidelines',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        body: CreateGuidelineBodySchema,
+        response: {
+          201: ItemEnvelope(GuidelineShape),
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest<{ Body: CreateGuidelineBody }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const { name, description } = request.body ?? {};
@@ -152,7 +262,18 @@ export async function brandingApiRoutes(
   // ── DELETE /api/v1/branding/guidelines/:id ────────────────────────────────
   server.delete<{ Params: GuidelineParams }>(
     '/api/v1/branding/guidelines/:id',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineParamsSchema,
+        response: {
+          200: SuccessEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest<{ Params: GuidelineParams }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const guideline = await storage.branding.getGuideline(request.params.id);
@@ -169,7 +290,20 @@ export async function brandingApiRoutes(
   // ── POST /api/v1/branding/guidelines/:id/colors ───────────────────────────
   server.post<{ Params: GuidelineParams; Body: AddColorBody }>(
     '/api/v1/branding/guidelines/:id/colors',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineParamsSchema,
+        body: AddColorBodySchema,
+        response: {
+          201: ItemEnvelope(ColorShape),
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: GuidelineParams; Body: AddColorBody }>,
       reply: FastifyReply,
@@ -205,7 +339,18 @@ export async function brandingApiRoutes(
   // ── DELETE /api/v1/branding/guidelines/:id/colors/:colorId ───────────────
   server.delete<{ Params: GuidelineColorParams }>(
     '/api/v1/branding/guidelines/:id/colors/:colorId',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineColorParamsSchema,
+        response: {
+          200: SuccessEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: GuidelineColorParams }>,
       reply: FastifyReply,
@@ -225,7 +370,20 @@ export async function brandingApiRoutes(
   // ── POST /api/v1/branding/guidelines/:id/fonts ────────────────────────────
   server.post<{ Params: GuidelineParams; Body: AddFontBody }>(
     '/api/v1/branding/guidelines/:id/fonts',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineParamsSchema,
+        body: AddFontBodySchema,
+        response: {
+          201: ItemEnvelope(FontShape),
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: GuidelineParams; Body: AddFontBody }>,
       reply: FastifyReply,
@@ -258,7 +416,18 @@ export async function brandingApiRoutes(
   // ── DELETE /api/v1/branding/guidelines/:id/fonts/:fontId ─────────────────
   server.delete<{ Params: GuidelineFontParams }>(
     '/api/v1/branding/guidelines/:id/fonts/:fontId',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineFontParamsSchema,
+        response: {
+          200: SuccessEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: GuidelineFontParams }>,
       reply: FastifyReply,
@@ -278,7 +447,20 @@ export async function brandingApiRoutes(
   // ── POST /api/v1/branding/guidelines/:id/selectors ───────────────────────
   server.post<{ Params: GuidelineParams; Body: AddSelectorBody }>(
     '/api/v1/branding/guidelines/:id/selectors',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineParamsSchema,
+        body: AddSelectorBodySchema,
+        response: {
+          201: ItemEnvelope(SelectorShape),
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: GuidelineParams; Body: AddSelectorBody }>,
       reply: FastifyReply,
@@ -309,7 +491,18 @@ export async function brandingApiRoutes(
   // ── DELETE /api/v1/branding/guidelines/:id/selectors/:selectorId ─────────
   server.delete<{ Params: GuidelineSelectorParams }>(
     '/api/v1/branding/guidelines/:id/selectors/:selectorId',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineSelectorParamsSchema,
+        response: {
+          200: SuccessEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: GuidelineSelectorParams }>,
       reply: FastifyReply,
@@ -329,7 +522,20 @@ export async function brandingApiRoutes(
   // ── POST /api/v1/branding/guidelines/:id/sites ───────────────────────────
   server.post<{ Params: GuidelineParams; Body: AssignSiteBody }>(
     '/api/v1/branding/guidelines/:id/sites',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineParamsSchema,
+        body: SiteBodySchema,
+        response: {
+          200: SuccessEnvelope,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: GuidelineParams; Body: AssignSiteBody }>,
       reply: FastifyReply,
@@ -355,7 +561,20 @@ export async function brandingApiRoutes(
   // ── DELETE /api/v1/branding/guidelines/:id/sites ─────────────────────────
   server.delete<{ Params: GuidelineParams; Body: AssignSiteBody }>(
     '/api/v1/branding/guidelines/:id/sites',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        params: GuidelineParamsSchema,
+        body: SiteBodySchema,
+        response: {
+          200: SuccessEnvelope,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (
       request: FastifyRequest<{ Params: GuidelineParams; Body: AssignSiteBody }>,
       reply: FastifyReply,
@@ -381,7 +600,19 @@ export async function brandingApiRoutes(
   // ── GET /api/v1/branding/sites ────────────────────────────────────────────
   server.get<{ Querystring: SiteQuery }>(
     '/api/v1/branding/sites',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        querystring: SiteQuerystringSchema,
+        response: {
+          200: ItemEnvelope(GuidelineShape),
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest<{ Querystring: SiteQuery }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const { siteUrl } = request.query;
@@ -411,7 +642,18 @@ export async function brandingApiRoutes(
   // ── POST /api/v1/branding/retag ───────────────────────────────────────────
   server.post<{ Body: RetagBody }>(
     '/api/v1/branding/retag',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: {
+        tags: ['branding'],
+        body: RetagBodySchema,
+        response: {
+          200: ItemEnvelope(RetagResultShape),
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+        },
+      },
+    },
     async (request: FastifyRequest<{ Body: RetagBody }>, reply: FastifyReply) => {
       const orgId = getOrgId(request);
       const { siteUrl } = request.body ?? {};
