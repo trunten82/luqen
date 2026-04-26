@@ -36,6 +36,27 @@ services:
       timeout: 5s
       retries: 3
 
+  llm:
+    build: .
+    command: >
+      sh -c "cd packages/llm &&
+        node dist/cli.js keys generate 2>/dev/null || true &&
+        node dist/cli.js serve --port 4200"
+    ports:
+      - "${LLM_PORT:-4200}:4200"
+    environment:
+      - LLM_PORT=4200
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
+      - NODE_ENV=production
+    volumes:
+      - llm-data:/app/packages/llm
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4200/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   dashboard:
     build: .
     command: >
@@ -48,6 +69,7 @@ services:
       - DASHBOARD_SESSION_SECRET=${SESSION_SECRET:-changeme-generate-a-real-secret}
       - DASHBOARD_COMPLIANCE_URL=http://compliance:4000
       - DASHBOARD_BRANDING_URL=http://branding:4100
+      - DASHBOARD_LLM_URL=http://llm:4200
       - DASHBOARD_DB_PATH=/app/data/dashboard.db
       - DASHBOARD_WEBSERVICE_URL=${PA11Y_URL:-}
       - NODE_ENV=production
@@ -61,6 +83,8 @@ services:
         condition: service_healthy
       branding:
         condition: service_healthy
+      llm:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:5000/health"]
@@ -68,10 +92,40 @@ services:
       timeout: 5s
       retries: 3
 
+  monitor:
+    build: .
+    command: >
+      sh -c "cd packages/monitor &&
+        node dist/cli.js serve --port 4300"
+    ports:
+      - "${MONITOR_PORT:-4300}:4300"
+    environment:
+      - MONITOR_COMPLIANCE_URL=http://compliance:4000
+      - MONITOR_CLIENT_ID=${MONITOR_CLIENT_ID:-}
+      - MONITOR_CLIENT_SECRET=${MONITOR_CLIENT_SECRET:-}
+      - MONITOR_URL=http://localhost:4300
+      - MONITOR_CHECK_INTERVAL=${MONITOR_CHECK_INTERVAL:-manual}
+      - NODE_ENV=production
+    volumes:
+      - monitor-data:/app/packages/monitor
+    depends_on:
+      compliance:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4300/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - monitor
+
 volumes:
   compliance-data:
   branding-data:
+  llm-data:
   dashboard-data:
   dashboard-plugins:
   dashboard-reports:
   dashboard-uploads:
+  monitor-data:

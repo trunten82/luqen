@@ -28,7 +28,8 @@
 - [x] **Phase 38: Multi-Org Context Switching** — Global admins can switch the agent's active org context inside the drawer without re-login (completed 2026-04-25)
 - [x] **Phase 39: Verification Backfill & Deferred-Items Triage** — Formal VERIFICATION.md for v3.0.0 phases, Nyquist coverage report, deferred-items resolution (completed 2026-04-25)
 - [x] **Phase 40: Documentation Sweep & Installer Refresh** — README, OpenAPI specs, installer scripts (actual files, not just docs), MCP integration guide, agent guide, prompt-template guide, RBAC matrix; create new docs for any v3.1.0 surface (agent history, multi-step tool use, streaming UX, multi-org switching) not yet documented (completed 2026-04-25; DOC-02 PARTIAL → Phase 41, DOC-03 SC #3 awaiting runtime LXC test)
-- [~] **Phase 41: OpenAPI Schema Backfill** — Add Fastify route schemas across compliance/branding/llm/dashboard/MCP so `/docs` is substantive and `openapi-drift` + `route-vs-spec` coverage tests go green; closes Plan 40-01 deferred Task 2 and DOC-02 PARTIAL (verified 2026-04-26: 4/5 OAPI requirements PASS; OAPI-04 PARTIAL — dashboard infrastructure shipped but per-route TypeBox `schema:` blocks deferred for ~245 non-MCP routes; recommend Phase 41.1 for mechanical backfill)
+- [x] **Phase 41: OpenAPI Schema Backfill** — Add Fastify route schemas across compliance/branding/llm/dashboard/MCP so `/docs` is substantive and `openapi-drift` + `route-vs-spec` coverage tests go green; closes Plan 40-01 deferred Task 2 and DOC-02 PARTIAL (verified 2026-04-26: 4/5 OAPI requirements PASS; OAPI-04 PARTIAL — dashboard infrastructure shipped but per-route TypeBox `schema:` blocks deferred for ~245 non-MCP routes; OAPI-04 closed by Phase 41.1 verified 2026-04-26 — 7/7 must-haves passed)
+- [x] **Phase 41.1: Dashboard non-MCP per-route TypeBox schema backfill** — Mechanical schema: backfill across the remaining ~245 dashboard non-MCP routes flagged in 41-VERIFICATION.md; closes OAPI-04 PARTIAL (verified 2026-04-26: 7/7 must-haves passed; dashboard.json grew 4715→32622 lines, requestBody 2→38, typed 2xx 0→275; new schema-fidelity assertion locks gain in CI)
 - [ ] **Phase 42: Installer Wizard Redesign** — Replace v2-era 2/3-way wizard with a 4-profile model (Scanner CLI, API services, Self-hosted dashboard, Docker Compose) that maps onto the actual v3.1.0 codebase (5 services + monitor agent); register `@luqen/monitor` across systemd/launchd/NSSM for the first time
 
 ### Phase Details
@@ -180,6 +181,7 @@ Plans:
 **Requirements**: OAPI-04
 **Depends on:** Phase 41
 **Plans:** 5/5 plans complete
+**Status:** VERIFIED PASSED — 7/7 must-haves (verified 2026-04-26)
 
 Plans:
 - [x] 41.1-01-PLAN.md — oauth/* (7 files): well-known/protected-resource/jwks + authorize/token/register
