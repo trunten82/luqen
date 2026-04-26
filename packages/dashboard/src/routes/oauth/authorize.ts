@@ -19,9 +19,46 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import { randomBytes } from 'node:crypto';
+import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 import type { StorageAdapter } from '../../db/adapter.js';
 import { resolveEffectivePermissions } from '../../permissions.js';
+
+// GET /oauth/authorize querystring (OAuth 2.1 / RFC 6749 §4.1.1 + PKCE).
+// additionalProperties:true keeps the schema tolerant of extension parameters
+// that some MCP clients pass through (e.g. `prompt`, `nonce`).
+const AuthorizeQuerySchema = Type.Object(
+  {
+    response_type: Type.Optional(Type.String()),
+    client_id: Type.Optional(Type.String()),
+    redirect_uri: Type.Optional(Type.String()),
+    scope: Type.Optional(Type.String()),
+    resource: Type.Optional(Type.String()),
+    code_challenge: Type.Optional(Type.String()),
+    code_challenge_method: Type.Optional(Type.String()),
+    state: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+// POST /oauth/authorize/consent body. Matches the hidden-form-input contract
+// rendered by the consent template plus the CSRF token field. Loose because
+// the form is also re-used by the switch-org / deny submit paths.
+const ConsentBodySchema = Type.Object(
+  {
+    _csrf: Type.Optional(Type.String()),
+    client_id: Type.Optional(Type.String()),
+    redirect_uri: Type.Optional(Type.String()),
+    scope: Type.Optional(Type.String()),
+    resource: Type.Optional(Type.String()),
+    state: Type.Optional(Type.String()),
+    code_challenge: Type.Optional(Type.String()),
+    code_challenge_method: Type.Optional(Type.String()),
+    approved: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
 
 // Phase 31.2 D-10: admin.* scopes retired from OAuth. Admin tool visibility
 // now comes exclusively from the user's real RBAC via filterToolsByRbac
@@ -93,7 +130,22 @@ export async function registerAuthorizeRoutes(
   storage: StorageAdapter,
 ): Promise<void> {
   // ── GET /oauth/authorize ──────────────────────────────────────────────────
-  server.get('/oauth/authorize', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/oauth/authorize', {
+    schema: {
+      tags: ['oauth'],
+      querystring: AuthorizeQuerySchema,
+      response: {
+        // 200 = consent screen (HTML). 302 = redirect (login OR client redirect_uri).
+        // 4xx = JSON error envelope (RFC 6749 §4.1.2.1 — invalid_request etc.).
+        200: Type.String(),
+        302: Type.Null(),
+        400: ErrorEnvelope,
+        401: ErrorEnvelope,
+        403: ErrorEnvelope,
+      },
+      produces: ['text/html', 'application/json'],
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     // 1. Session-auth gate. The global auth guard in server.ts already redirects
     //    unauthenticated requests to /login, but this route may be registered
     //    in isolated test harnesses so we also check here.
@@ -283,6 +335,17 @@ export async function registerAuthorizeRoutes(
   //   5. admin.system gate re-apply
   //   6. approved branching
   server.post('/oauth/authorize/consent', {
+    schema: {
+      tags: ['oauth'],
+      body: ConsentBodySchema,
+      response: {
+        // 302 = redirect to client redirect_uri (allow OR deny). 4xx = JSON error.
+        302: Type.Null(),
+        400: ErrorEnvelope,
+        401: ErrorEnvelope,
+        403: ErrorEnvelope,
+      },
+    },
     // CSRF is validated at preHandler (not onRequest) because
     // @fastify/csrf-protection reads `req.body._csrf` and the body is only
     // parsed after preValidation. Matches the dashboard-wide pattern in
