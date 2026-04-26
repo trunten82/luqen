@@ -1,4 +1,5 @@
 import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { join, resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -184,12 +185,17 @@ function isCsrfExempt(path: string): boolean {
 }
 
 export async function createServer(config: DashboardConfig): Promise<FastifyInstance> {
+  // Phase 41-04: TypeBox type provider for schema-aware route registration.
+  // Routes can declare TypeBox `schema:` blocks and Fastify's AJV runs them
+  // at request time; @fastify/swagger collects them into the OpenAPI spec.
+  // Existing `FastifyInstance`-typed route signatures continue to work —
+  // the type provider only affects compile-time inference of req.body etc.
   const server = Fastify({
     logger: {
       level: process.env['NODE_ENV'] === 'production' ? 'warn' : 'info',
     },
     trustProxy: true,
-  });
+  }).withTypeProvider<TypeBoxTypeProvider>();
 
   // ── Database ──────────────────────────────────────────────────────────────
   const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath: config.dbPath } });
