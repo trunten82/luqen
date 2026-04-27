@@ -171,41 +171,134 @@
     var theme = currentMermaidTheme();
     if (mermaidInitialisedTheme === theme) return;
     try {
-      // Mermaid's 'default' theme assumes light bg; 'dark' picks dark-bg
-      // defaults but its pie palette has near-black + near-bg slices that
-      // disappear on the agent drawer. Override pie + chart palettes with
-      // semantic accessibility colours that hold up against either bg.
+      // Mermaid renders pie, flowchart, sequence, gantt, class, state, ER,
+      // xychart, etc. — each consults a different subset of theme variables.
+      // We pin a single semantic palette across all of them so the agent's
+      // diagrams read consistently and match the dashboard's design tokens
+      // (luqen accent = green; severity colours = red/amber/blue).
+      // ONE consistent series palette used in both themes — only bg, text,
+      // and border tokens swap based on data-theme. Tailwind 500-level
+      // mid-tones give acceptable contrast on both white and dark navy.
+      var SERIES = {
+        series1: '#ef4444',  // red — Errors
+        series2: '#f59e0b',  // amber — Warnings
+        series3: '#3b82f6',  // blue — Notices
+        series4: '#8b5cf6',  // purple
+        series5: '#10b981',  // teal
+        series6: '#ec4899',  // pink
+      };
       var isDark = theme === 'dark';
-      var themeVariables = isDark
+      var p = isDark
         ? {
-            // Pie slices: red=Errors, amber=Warnings, blue=Notices,
-            // then a fallback rotation. Order matches what the agent
-            // emits (errors first, warnings, notices).
-            pie1: '#f87171',
-            pie2: '#fbbf24',
-            pie3: '#60a5fa',
-            pie4: '#a78bfa',
-            pie5: '#34d399',
-            pie6: '#f472b6',
-            pieTitleTextColor: '#e5e7eb',
-            pieSectionTextColor: '#0b1220',
-            pieLegendTextColor: '#e5e7eb',
-            pieStrokeColor: '#0b1220',
-            pieOuterStrokeColor: '#94a3b8',
+            // Dashboard dark tokens (style.css [data-theme="dark"])
+            bg: '#1f2937',
+            bg2: '#111827',
+            bg3: '#374151',
+            text: '#f3f4f6',
+            textMuted: '#94a3b8',
+            border: '#4b5563',
+            accent: '#4ade80',          // luqen green (dark)
+            accentText: '#0b1220',
           }
         : {
-            pie1: '#dc2626',
-            pie2: '#d97706',
-            pie3: '#2563eb',
-            pie4: '#7c3aed',
-            pie5: '#059669',
-            pie6: '#db2777',
-            pieTitleTextColor: '#0b1220',
-            pieSectionTextColor: '#ffffff',
-            pieLegendTextColor: '#0b1220',
-            pieStrokeColor: '#ffffff',
-            pieOuterStrokeColor: '#0b1220',
+            // Dashboard light tokens
+            bg: '#ffffff',
+            bg2: '#fafafa',
+            bg3: '#f8f9fa',
+            text: '#111827',
+            textMuted: '#64748b',
+            border: '#e5e7eb',
+            accent: '#15803d',          // luqen green (light)
+            accentText: '#ffffff',
           };
+      // Slice/series colours are mid-tones, so white text reads well inside
+      // them in either theme.
+      var slotText = '#ffffff';
+      var themeVariables = {
+        // Core (cascades through flowchart, sequence, class, state, ER,
+        // mindmap, etc. as the "primary" colour family)
+        primaryColor: p.accent,
+        primaryTextColor: p.accentText,
+        primaryBorderColor: p.border,
+        secondaryColor: p.bg3,
+        secondaryTextColor: p.text,
+        secondaryBorderColor: p.border,
+        tertiaryColor: p.bg2,
+        tertiaryTextColor: p.text,
+        tertiaryBorderColor: p.border,
+        lineColor: p.textMuted,
+        textColor: p.text,
+        background: p.bg,
+        mainBkg: p.accent,
+        secondBkg: p.bg3,
+        tertiaryBkg: p.bg2,
+        // Notes (sequence + flow comments)
+        noteBkgColor: p.bg3,
+        noteTextColor: p.text,
+        noteBorderColor: p.border,
+        // Sequence diagrams
+        actorBkg: p.accent,
+        actorBorder: p.border,
+        actorTextColor: p.accentText,
+        actorLineColor: p.textMuted,
+        signalColor: p.text,
+        signalTextColor: p.text,
+        labelBoxBkgColor: p.bg3,
+        labelBoxBorderColor: p.border,
+        labelTextColor: p.text,
+        loopTextColor: p.text,
+        activationBkgColor: p.bg3,
+        activationBorderColor: p.border,
+        // Flowchart node defaults
+        nodeBkg: p.accent,
+        nodeBorder: p.border,
+        nodeTextColor: p.accentText,
+        clusterBkg: p.bg3,
+        clusterBorder: p.border,
+        edgeLabelBackground: p.bg2,
+        // Pie — ordered to match the agent's typical severity layout
+        pie1: SERIES.series1,
+        pie2: SERIES.series2,
+        pie3: SERIES.series3,
+        pie4: SERIES.series4,
+        pie5: SERIES.series5,
+        pie6: SERIES.series6,
+        pieTitleTextColor: p.text,
+        pieSectionTextColor: slotText,
+        pieLegendTextColor: p.text,
+        pieStrokeColor: p.bg,
+        pieOuterStrokeColor: p.textMuted,
+        // xychart-beta (bar/line)
+        xyChart: {
+          backgroundColor: p.bg,
+          titleColor: p.text,
+          xAxisLabelColor: p.text,
+          xAxisTitleColor: p.text,
+          xAxisTickColor: p.textMuted,
+          xAxisLineColor: p.textMuted,
+          yAxisLabelColor: p.text,
+          yAxisTitleColor: p.text,
+          yAxisTickColor: p.textMuted,
+          yAxisLineColor: p.textMuted,
+          plotColorPalette: [SERIES.series1, SERIES.series2, SERIES.series3, SERIES.series4, SERIES.series5, SERIES.series6].join(','),
+        },
+        // Gantt
+        sectionBkgColor: p.bg3,
+        altSectionBkgColor: p.bg2,
+        gridColor: p.border,
+        sectionBkgColor2: p.bg3,
+        taskBkgColor: p.accent,
+        taskTextColor: p.accentText,
+        taskTextLightColor: p.text,
+        taskTextOutsideColor: p.text,
+        taskBorderColor: p.border,
+        activeTaskBkgColor: SERIES.series2,
+        activeTaskBorderColor: p.border,
+        doneTaskBkgColor: p.textMuted,
+        doneTaskBorderColor: p.border,
+        critBkgColor: SERIES.series1,
+        critBorderColor: p.border,
+      };
       window.mermaid.initialize({
         startOnLoad: false,
         securityLevel: 'strict',
