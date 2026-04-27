@@ -50,7 +50,10 @@ const ClientRegistrationRequestSchema = Type.Object(
 const ClientRegistrationResponseSchema = Type.Object(
   {
     client_id: Type.String(),
-    client_secret: Type.Optional(Type.String()),
+    // RFC 7591 §3.2.1: public clients (token_endpoint_auth_method=none) MUST
+    // get null for client_secret. Type.Optional(Type.String()) coerces null
+    // to '' through Fastify's TypeBox serializer; the union preserves null.
+    client_secret: Type.Optional(Type.Union([Type.String(), Type.Null()])),
     client_id_issued_at: Type.Optional(Type.Number()),
     client_secret_expires_at: Type.Optional(Type.Number()),
     redirect_uris: Type.Array(Type.String()),
