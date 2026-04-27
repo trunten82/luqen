@@ -993,6 +993,19 @@ export function windowToChatMessages(window: readonly Message[]): AgentChatMessa
   for (const m of window) {
     const role = m.role;
     if (role === 'tool') {
+      // Destructive-pause flow leaves the original `pending_confirmation` tool
+      // row in_window=1 with toolResultJson=NULL even after the user confirms
+      // (routes/agent.ts:/confirm flips status to 'sent' but APPENDS a sibling
+      // tool row with the actual result instead of updating the pending row in
+      // place). The pending row is therefore a stale shadow of its sibling —
+      // emitting it would pair an empty `tool` message against the same
+      // tool_call id that the result row already covers, giving the provider
+      // N+1 tool messages for N declared tool_calls. Drop pending shadows;
+      // they have no useful content and corrupt positional matching.
+      // (Same problem applies to deny / future error/timeout sibling-append paths.)
+      if (m.toolResultJson == null || m.toolResultJson.length === 0) {
+        continue;
+      }
       if (m.toolCallJson != null && m.toolCallJson.length > 0) {
         try {
           const parsed = JSON.parse(m.toolCallJson) as
@@ -1012,7 +1025,7 @@ export function windowToChatMessages(window: readonly Message[]): AgentChatMessa
           }
         } catch { /* invalid JSON shouldn't happen — fall through */ }
       }
-      const content = m.toolResultJson ?? '';
+      const content = m.toolResultJson;
       out.push({ role: 'tool' as const, content });
       continue;
     }

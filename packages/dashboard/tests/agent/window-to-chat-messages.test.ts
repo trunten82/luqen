@@ -153,6 +153,70 @@ describe('windowToChatMessages', () => {
     expect(out[3]).toMatchObject({ role: 'tool' });
   });
 
+  it('drops stale pending_confirmation tool rows (NULL toolResultJson) so they do not duplicate the resolved sibling row (regression: Ollama 400 v2)', () => {
+    // After the destructive-pause confirm flow, the original pending row is
+    // flipped to status='sent' BUT toolResultJson stays NULL — the actual
+    // result is appended as a SIBLING tool row with the same toolCallJson.
+    // Without dropping the shadow, the conversion emits: assistant(tc=[X]),
+    // tool(content=''), tool(content=result) — 1 declared call, 2 results,
+    // Ollama 400 "Unexpected tool call id <X> in tool results".
+    // Mirrors conv 210743d9-443d-4400-9bdd-00c01188e025 from production
+    // (debug session ollama-400-still-after-fix.md).
+    const window: Message[] = [
+      msg({ role: 'user', content: 'Can you check Aperol.com against ADA?' }),
+      msg({
+        role: 'assistant',
+        content: '',
+        toolCallJson: JSON.stringify([
+          { id: '452f77ca', name: 'dashboard_list_regulations', args: { q: 'ada' } },
+        ]),
+      }),
+      msg({
+        role: 'tool',
+        toolCallJson: JSON.stringify({ id: '452f77ca', name: 'dashboard_list_regulations', args: { q: 'ada' } }),
+        toolResultJson: '"reg-list"',
+      }),
+      // Stale pending shadow — toolResultJson=null. Must be dropped.
+      msg({
+        role: 'tool',
+        status: 'sent',
+        toolCallJson: JSON.stringify({ id: 'fb288ff9', name: 'dashboard_scan_site', args: { siteUrl: 'https://www.aperol.com/' } }),
+        toolResultJson: null,
+      }),
+      // Resolved result row from /agent/confirm.
+      msg({
+        role: 'tool',
+        toolCallJson: JSON.stringify({ id: 'fb288ff9', name: 'dashboard_scan_site', args: { siteUrl: 'https://www.aperol.com/' } }),
+        toolResultJson: '{"error":"invalid_args"}',
+      }),
+    ];
+
+    const out = windowToChatMessages(window);
+
+    // Expected: user, assistant(tc=[452f77ca]), tool(reg-list),
+    //           assistant(synth tc=[fb288ff9]), tool(invalid_args)
+    // — total 5, NOT 6. The stale pending shadow must be skipped.
+    expect(out).toHaveLength(5);
+    expect(out[0]).toMatchObject({ role: 'user' });
+    expect((out[1] as { toolCalls: unknown[] }).toolCalls).toHaveLength(1);
+    expect(out[2]).toMatchObject({ role: 'tool', content: '"reg-list"' });
+    expect(out[3]).toMatchObject({ role: 'assistant' });
+    const synth = out[3] as { toolCalls: Array<{ id: string }> };
+    expect(synth.toolCalls).toHaveLength(1);
+    expect(synth.toolCalls[0].id).toBe('fb288ff9');
+    expect(out[4]).toMatchObject({ role: 'tool', content: '{"error":"invalid_args"}' });
+
+    // Sanity: count declared tool_calls vs tool messages — must match for
+    // Ollama positional matching to succeed.
+    let declared = 0;
+    let results = 0;
+    for (const m of out) {
+      if (m.role === 'assistant' && 'toolCalls' in m) declared += (m.toolCalls as unknown[]).length;
+      if (m.role === 'tool') results += 1;
+    }
+    expect(declared).toBe(results);
+  });
+
   it('user message resets the covered-id tracking', () => {
     const window: Message[] = [
       msg({
