@@ -309,6 +309,40 @@
     } catch (_e) { /* leave flag empty — retry on next render */ }
   }
 
+  // Salvage common LLM-generated mermaid mistakes before render so a small
+  // syntax slip doesn't surface as a 'No diagram type detected' error.
+  // The system prompt tells the model the valid types, but small models
+  // hallucinate close-but-wrong tokens (bar, barchart, histogram, etc.).
+  // We rewrite to the closest valid type whose SYNTAX matches what the
+  // model produced, so the chart at least renders.
+  function sanitiseMermaidSource(src) {
+    if (typeof src !== 'string' || src.length === 0) return src;
+    var lines = src.split(/\r?\n/);
+    var firstIdx = -1;
+    for (var i = 0; i < lines.length; i++) {
+      var trimmed = lines[i].replace(/^\s+/, '');
+      if (trimmed.length === 0) continue;
+      if (trimmed.charAt(0) === '%') continue; // mermaid comment
+      firstIdx = i;
+      break;
+    }
+    if (firstIdx === -1) return src;
+    var first = lines[firstIdx];
+    // Aliases the agent commonly invents — all use pie-style "label" : value
+    // syntax in practice, so rewriting the type token to `pie` salvages them.
+    // (xychart-beta has different syntax; we don't auto-rewrite to it.)
+    var pieAliases = /^(\s*)(?:bar|bar\s*chart|barchart|barChart|histogram|chart|column|columnchart|columnChart|donut|doughnut)(\s+title|\s*$|\s+showData)/i;
+    lines[firstIdx] = first.replace(pieAliases, '$1pie$2');
+    // Common flowchart slips
+    lines[firstIdx] = lines[firstIdx]
+      .replace(/^(\s*)flow(\s+|$)/i, '$1flowchart$2')
+      .replace(/^(\s*)sequence(\s+|$)/i, '$1sequenceDiagram$2')
+      .replace(/^(\s*)class(\s+diagram|$)/i, '$1classDiagram$2')
+      .replace(/^(\s*)state(\s+diagram|$)/i, '$1stateDiagram-v2$2')
+      .replace(/^(\s*)er(\s+diagram|$)/i, '$1erDiagram$2');
+    return lines.join('\n');
+  }
+
   function renderMermaidBlocks(root) {
     if (!window.mermaid || typeof window.mermaid.render !== 'function') return;
     ensureMermaidInit();
@@ -317,7 +351,7 @@
       var code = blocks[i];
       var pre = code.parentNode && code.parentNode.tagName === 'PRE' ? code.parentNode : null;
       var host = pre || code;
-      var source = code.textContent || '';
+      var source = sanitiseMermaidSource(code.textContent || '');
       var container = document.createElement('div');
       container.className = 'agent-mermaid';
       host.parentNode.replaceChild(container, host);
