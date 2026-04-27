@@ -171,10 +171,47 @@
     var theme = currentMermaidTheme();
     if (mermaidInitialisedTheme === theme) return;
     try {
-      // Mermaid's 'default' theme assumes light bg; the agent drawer follows
-      // the page's data-theme. Re-initialise when the theme attribute changes
-      // so future diagram renders pick up readable colours.
-      window.mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: theme });
+      // Mermaid's 'default' theme assumes light bg; 'dark' picks dark-bg
+      // defaults but its pie palette has near-black + near-bg slices that
+      // disappear on the agent drawer. Override pie + chart palettes with
+      // semantic accessibility colours that hold up against either bg.
+      var isDark = theme === 'dark';
+      var themeVariables = isDark
+        ? {
+            // Pie slices: red=Errors, amber=Warnings, blue=Notices,
+            // then a fallback rotation. Order matches what the agent
+            // emits (errors first, warnings, notices).
+            pie1: '#f87171',
+            pie2: '#fbbf24',
+            pie3: '#60a5fa',
+            pie4: '#a78bfa',
+            pie5: '#34d399',
+            pie6: '#f472b6',
+            pieTitleTextColor: '#e5e7eb',
+            pieSectionTextColor: '#0b1220',
+            pieLegendTextColor: '#e5e7eb',
+            pieStrokeColor: '#0b1220',
+            pieOuterStrokeColor: '#94a3b8',
+          }
+        : {
+            pie1: '#dc2626',
+            pie2: '#d97706',
+            pie3: '#2563eb',
+            pie4: '#7c3aed',
+            pie5: '#059669',
+            pie6: '#db2777',
+            pieTitleTextColor: '#0b1220',
+            pieSectionTextColor: '#ffffff',
+            pieLegendTextColor: '#0b1220',
+            pieStrokeColor: '#ffffff',
+            pieOuterStrokeColor: '#0b1220',
+          };
+      window.mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'strict',
+        theme: theme,
+        themeVariables: themeVariables,
+      });
       mermaidInitialisedTheme = theme;
     } catch (_e) { /* leave flag empty — retry on next render */ }
   }
