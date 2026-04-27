@@ -171,6 +171,8 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
         [
           'Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: "queued", url} immediately. The scan typically completes in seconds (single page) to a few minutes (full site).',
           '',
+          'Default to scanMode="single" (one-page scan) for ad-hoc requests like "scan X", "check X for ADA", "test X", "audit X", "is X compliant?". Only pass scanMode="site" when the user explicitly asks for a full crawl ("full site scan", "all pages", "crawl the site", "site-wide", "every page"). Site mode without an explicit user request is wasteful — full crawls take minutes and process up to maxPages (server default 50). When in doubt, scan single page first and offer a follow-up site crawl.',
+          '',
           'Status checks: when the user asks "is it done?", "check status", or similar, you MUST call dashboard_get_report with the scanId in the SAME turn. Never restate a previously seen status — the scan likely progressed. Never claim "still queued" or "still running" without a fresh dashboard_get_report call returning that status in the current tool window.',
           '',
           'Discovery first: before passing regulations[] or jurisdictions[], call dashboard_list_regulations and dashboard_list_jurisdictions to obtain valid IDs. Passing a name (e.g. "ADA") rather than an ID will silently produce a scan with no regulation tags. The platform stores ids exactly as the discovery tools return them — do not lowercase, kebab-case, or otherwise transform them.',
@@ -190,7 +192,7 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
           .enum(['single', 'site'])
           .optional()
           .describe(
-            'single = scan only the given URL; site = crawl + scan up to maxPages (default site).',
+            'single = scan only the given URL; site = crawl + scan up to maxPages. Default to "single" for ad-hoc "scan X" / "check X" requests; only use "site" when the user explicitly asks for a full crawl.',
           ),
         jurisdictions: z
           .array(z.string())
