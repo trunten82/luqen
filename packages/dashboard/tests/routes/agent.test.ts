@@ -971,3 +971,115 @@ describe('Phase 38 — GET /agent/conversations/:id cross-org admin allowance', 
     expect(dbUser?.activeOrgId).toBe(ctx.orgA.id);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────
+// SECURITY: agent-conversation-leak-cross-user
+//
+// The panel auto-mount path (and the SSE stream / message-post paths) must
+// NOT surface a conversation owned by a different user, even when both
+// users share an org. The repository's getConversation only filters by
+// org_id; the routes are responsible for the user_id ownership check.
+// ──────────────────────────────────────────────────────────────────────────
+describe('SECURITY: cross-user conversation leak (agent-conversation-leak-cross-user)', () => {
+  it('GET /agent/panel returns empty messages + x-conversation-id:"" when conversationId belongs to a different user in the same org', async () => {
+    const ctx = await buildCtx();
+    try {
+      // Seed a foreign user in the SAME org as the authenticated user, with
+      // a conversation containing a recognisable message. This is the exact
+      // shape of the leak: same-org, different-user conversationId.
+      const foreignUserId = randomUUID();
+      ctx.storage.getRawDatabase().prepare(
+        `INSERT INTO dashboard_users (id, username, password_hash, role, active, created_at)
+         VALUES (?, ?, 'pw', 'viewer', 1, ?)`,
+      ).run(foreignUserId, `victim-${foreignUserId.slice(0, 6)}`, new Date().toISOString());
+      const foreignConv = await ctx.storage.conversations.createConversation({
+        userId: foreignUserId,
+        orgId: ctx.orgId,
+      });
+      await ctx.storage.conversations.appendMessage({
+        conversationId: foreignConv.id,
+        role: 'user',
+        content: 'PRIVATE_VICTIM_MESSAGE_DO_NOT_LEAK',
+        status: 'sent',
+      });
+
+      const res = await ctx.server.inject({
+        method: 'GET',
+        url: `/agent/panel?conversationId=${foreignConv.id}`,
+        headers: { accept: 'text/html' },
+      });
+      expect(res.statusCode).toBe(200);
+      // The foreign user's content MUST NOT appear in the rendered fragment.
+      expect(res.body).not.toContain('PRIVATE_VICTIM_MESSAGE_DO_NOT_LEAK');
+      // Server signals client to wipe its localStorage via empty header.
+      expect(res.headers['x-conversation-id']).toBe('');
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('GET /agent/stream/:id returns 404 for a conversationId owned by a different user (no runTurn invocation)', async () => {
+    const ctx = await buildCtx();
+    try {
+      const foreignUserId = randomUUID();
+      ctx.storage.getRawDatabase().prepare(
+        `INSERT INTO dashboard_users (id, username, password_hash, role, active, created_at)
+         VALUES (?, ?, 'pw', 'viewer', 1, ?)`,
+      ).run(foreignUserId, `victim-${foreignUserId.slice(0, 6)}`, new Date().toISOString());
+      const foreignConv = await ctx.storage.conversations.createConversation({
+        userId: foreignUserId,
+        orgId: ctx.orgId,
+      });
+      await ctx.storage.conversations.appendMessage({
+        conversationId: foreignConv.id,
+        role: 'user',
+        content: 'foreign prompt',
+        status: 'sent',
+      });
+
+      const res = await ctx.server.inject({
+        method: 'GET',
+        url: `/agent/stream/${foreignConv.id}`,
+        headers: { accept: 'text/event-stream' },
+      });
+      expect(res.statusCode).toBe(404);
+      // Critical: the LLM must NOT be invoked against the foreign history.
+      expect(ctx.runTurn).not.toHaveBeenCalled();
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('POST /agent/message with a foreign user conversationId creates a NEW conversation under the caller — does NOT append to the victim row', async () => {
+    const ctx = await buildCtx();
+    try {
+      const foreignUserId = randomUUID();
+      ctx.storage.getRawDatabase().prepare(
+        `INSERT INTO dashboard_users (id, username, password_hash, role, active, created_at)
+         VALUES (?, ?, 'pw', 'viewer', 1, ?)`,
+      ).run(foreignUserId, `victim-${foreignUserId.slice(0, 6)}`, new Date().toISOString());
+      const foreignConv = await ctx.storage.conversations.createConversation({
+        userId: foreignUserId,
+        orgId: ctx.orgId,
+      });
+
+      const res = await ctx.server.inject({
+        method: 'POST',
+        url: '/agent/message',
+        headers: { 'content-type': 'application/json' },
+        payload: { conversationId: foreignConv.id, content: 'attempt-write-into-foreign' },
+      });
+      expect(res.statusCode).toBe(202);
+      // The response must echo a DIFFERENT conversationId (a fresh one,
+      // owned by the caller). The foreign conversation must remain empty.
+      const echoedCid = res.headers['x-conversation-id'];
+      expect(typeof echoedCid).toBe('string');
+      expect(echoedCid).not.toBe(foreignConv.id);
+
+      const foreignWindow = await ctx.storage.conversations.getWindow(foreignConv.id);
+      expect(foreignWindow.find((m) => m.content === 'attempt-write-into-foreign')).toBeUndefined();
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+});
