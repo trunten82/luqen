@@ -1051,11 +1051,26 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // dashboard_scan_site tool invokes initiateScan; dashboard_get_report and
   // dashboard_query_issues call getScanForOrg for the cross-org guard.
   const mcpScanService = new ScanService(storage, orchestrator, config);
+  // Compliance discovery tools (dashboard_list_regulations etc.) and the
+  // expanded dashboard_scan_site need a live compliance bearer. Resolve via
+  // the registry per call so admin secret rotations propagate without a
+  // restart; null when the compliance connection is not configured.
+  const mcpComplianceAccess = async (): Promise<{
+    readonly baseUrl: string;
+    readonly token: string;
+  } | null> => {
+    const tm = getComplianceTokenManager();
+    if (tm === null) return null;
+    const token = await tm.getToken();
+    if (token === '') return null;
+    return { baseUrl: config.complianceUrl, token };
+  };
   await registerMcpRoutes(server, {
     verifyToken: mcpVerifier,
     storage,
     scanService: mcpScanService,
     serviceConnections: serviceConnectionsRepo,
+    complianceAccess: mcpComplianceAccess,
     resourceMetadataUrl: `${dashboardPublicUrl}/.well-known/oauth-protected-resource`,
   });
 
@@ -1093,6 +1108,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     storage,
     scanService: mcpScanService,
     serviceConnections: serviceConnectionsRepo,
+    complianceAccess: mcpComplianceAccess,
   })).server;
   const { catalog: agentToolCatalog, manifest: agentToolManifest } =
     bridgeMcpToolsForAgent(agentMcpServer, DASHBOARD_TOOL_METADATA);

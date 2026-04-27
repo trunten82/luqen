@@ -478,6 +478,68 @@
         }
       }
     },
+    "/api/v1/mcp/tools/dashboard_get_regulation": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_get_regulation",
+        "summary": "dashboard_get_regulation",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Get a single regulation by id, including scope, enforcement date, and jurisdiction. Use this to answer \"what does regulation X cover?\" before recommending a scan. Implemented as a filtered list on top of /api/v1/regulations, returning the matched row.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "regulationId": {
+                    "type": "string",
+                    "description": "Regulation id (e.g. eaa-2025). Resolve via dashboard_list_regulations."
+                  }
+                },
+                "required": [
+                  "regulationId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/tools/dashboard_get_report": {
       "post": {
         "operationId": "mcp.tool.dashboard_get_report",
@@ -730,6 +792,60 @@
         }
       }
     },
+    "/api/v1/mcp/tools/dashboard_list_jurisdictions": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_jurisdictions",
+        "summary": "dashboard_list_jurisdictions",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List jurisdictions (e.g. US-CA, EU, GB) recognised by the compliance service. Use this BEFORE dashboard_scan_site when the user asks to tag a scan with a jurisdiction — pass the resolved id (not name) into scan_site jurisdictions[]. Includes both system seed data and any org-specific jurisdictions defined under the current org.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/tools/dashboard_list_orgs": {
       "post": {
         "operationId": "mcp.tool.dashboard_list_orgs",
@@ -745,6 +861,69 @@
               "schema": {
                 "type": "object",
                 "properties": {},
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_list_regulations": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_regulations",
+        "summary": "dashboard_list_regulations",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List accessibility regulations (e.g. eaa-2025, us-ada-title-iii) tracked by the compliance service. Use this BEFORE dashboard_scan_site to obtain real regulation ids — never pass display names like \"ADA\" or \"EAA\". Optional jurisdictionId narrows results to a single jurisdiction; q matches against names. The returned id is what scan_site regulations[] expects.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jurisdictionId": {
+                    "description": "Filter to a single jurisdiction id (resolve via dashboard_list_jurisdictions).",
+                    "type": "string"
+                  },
+                  "q": {
+                    "description": "Free-text name filter (case-insensitive substring).",
+                    "type": "string"
+                  }
+                },
                 "additionalProperties": true
               }
             }
@@ -978,6 +1157,78 @@
         }
       }
     },
+    "/api/v1/mcp/tools/dashboard_list_wcag_criteria": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_wcag_criteria",
+        "summary": "dashboard_list_wcag_criteria",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List WCAG success criteria (requirements) — optionally filtered by regulationId — including obligation level (mandatory/recommended/optional) and the WCAG version + level the criterion belongs to. Use this to ground claims like \"regulation X requires SC 1.4.3 at AA\" with real platform data, and to answer \"which criteria fail under regulation X\" by cross-referencing with dashboard_query_issues codes.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "regulationId": {
+                    "description": "Filter to a single regulation. Resolve via dashboard_list_regulations.",
+                    "type": "string"
+                  },
+                  "wcagLevel": {
+                    "description": "Filter to a single conformance level.",
+                    "type": "string",
+                    "enum": [
+                      "A",
+                      "AA",
+                      "AAA"
+                    ]
+                  },
+                  "wcagVersion": {
+                    "description": "Filter to a WCAG version string (e.g. \"2.0\", \"2.1\", \"2.2\"). Note: dashboard_scan_site only runs WCAG 2.0 — do not claim the agent can scan for newer versions even when criteria for 2.1/2.2 are listed here.",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/tools/dashboard_query_issues": {
       "post": {
         "operationId": "mcp.tool.dashboard_query_issues",
@@ -1066,7 +1317,7 @@
         "tags": [
           "mcp-tool"
         ],
-        "description": "Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: \"queued\", url} immediately. Poll dashboard_get_report with the scanId for status. WARNING: this runs a real scan against the URL and may take minutes; downstream LLM quota is consumed by analyse/fix follow-ups.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "description": "Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: \"queued\", url} immediately. Poll dashboard_get_report with the scanId for status. WARNING: this runs a real scan against the URL and may take minutes; downstream LLM quota is consumed by analyse/fix follow-ups.\n\nDiscovery first: before passing regulations[] or jurisdictions[], call dashboard_list_regulations and dashboard_list_jurisdictions to obtain valid IDs. Passing a name (e.g. \"ADA\") rather than an ID will silently produce a scan with no regulation tags.\n\nStandard: only WCAG 2.0 levels are accepted (WCAG2A/WCAG2AA/WCAG2AAA). The platform does not run WCAG 2.1 or 2.2 scans today; never claim a scan is using a newer version than what the runner supports.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1087,6 +1338,79 @@
                       "WCAG2AA",
                       "WCAG2AAA"
                     ]
+                  },
+                  "scanMode": {
+                    "description": "single = scan only the given URL; site = crawl + scan up to maxPages (default site).",
+                    "type": "string",
+                    "enum": [
+                      "single",
+                      "site"
+                    ]
+                  },
+                  "jurisdictions": {
+                    "description": "Jurisdiction IDs to tag this scan with (max 50). Resolve via dashboard_list_jurisdictions.",
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "regulations": {
+                    "description": "Regulation IDs to tag this scan with (max 50). Resolve via dashboard_list_regulations. The compliance engine emits a regulation_matrix per regulation when scan completes.",
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "concurrency": {
+                    "description": "Parallel page workers (1–10). Defaults to dashboard config.",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  },
+                  "maxPages": {
+                    "description": "Crawl cap when scanMode=site (1–1000). Defaults to dashboard config.",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000
+                  },
+                  "runner": {
+                    "description": "Audit engine. htmlcs = HTML_CodeSniffer (default), axe = axe-core.",
+                    "type": "string",
+                    "enum": [
+                      "htmlcs",
+                      "axe"
+                    ]
+                  },
+                  "incremental": {
+                    "description": "When true, skip pages whose content hash matches the previous scan. Requires a configured compliance connection.",
+                    "type": "boolean"
+                  },
+                  "includeWarnings": {
+                    "description": "Include WCAG warnings in the result set (default true).",
+                    "type": "boolean"
+                  },
+                  "includeNotices": {
+                    "description": "Include WCAG notices in the result set (default true).",
+                    "type": "boolean"
+                  },
+                  "headers": {
+                    "description": "Custom HTTP headers to send on every request (e.g. {\"Authorization\":\"Bearer xxx\"} for protected sites).",
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "actions": {
+                    "description": "Pa11y actions executed before scoring (e.g. [\"click element #consent-accept\",\"wait for path to be /home\"]).",
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 },
                 "required": [

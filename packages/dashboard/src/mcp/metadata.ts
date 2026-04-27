@@ -23,6 +23,21 @@
 import type { ToolMetadata } from '@luqen/core/mcp';
 import { DASHBOARD_ADMIN_TOOL_METADATA } from './tools/admin.js';
 
+export const DASHBOARD_COMPLIANCE_TOOL_METADATA: readonly ToolMetadata[] = [
+  // Discovery proxies for the compliance reference-data endpoints. All four
+  // are read-only and gated by compliance.view (the same permission that
+  // covers the dashboard regulations / jurisdictions admin pages — see
+  // packages/dashboard/src/permissions.ts:34 and the requirePermission
+  // entries in packages/dashboard/src/routes/admin/regulations.ts +
+  // jurisdictions.ts). Without these tools an agent has to fabricate
+  // regulation ids before calling dashboard_scan_site, producing scans with
+  // empty regulations[] and no regulation_matrix entries.
+  { name: 'dashboard_list_jurisdictions', requiredPermission: 'compliance.view' },
+  { name: 'dashboard_list_regulations',   requiredPermission: 'compliance.view' },
+  { name: 'dashboard_get_regulation',     requiredPermission: 'compliance.view' },
+  { name: 'dashboard_list_wcag_criteria', requiredPermission: 'compliance.view' },
+];
+
 export const DASHBOARD_DATA_TOOL_METADATA: readonly ToolMetadata[] = [
   {
     name: 'dashboard_scan_site',
@@ -47,5 +62,6 @@ export const DASHBOARD_DATA_TOOL_METADATA: readonly ToolMetadata[] = [
 
 export const DASHBOARD_TOOL_METADATA: readonly ToolMetadata[] = [
   ...DASHBOARD_DATA_TOOL_METADATA,
+  ...DASHBOARD_COMPLIANCE_TOOL_METADATA,
   ...DASHBOARD_ADMIN_TOOL_METADATA,
 ];

@@ -50,12 +50,19 @@ import {
 import type { StorageAdapter } from '../../db/index.js';
 import type { ScanService } from '../../services/scan-service.js';
 import type { ServiceConnectionsRepository } from '../../db/service-connections-repository.js';
+import type { ComplianceAccess } from '../../mcp/server.js';
 
 export interface McpRouteOptions {
   readonly verifyToken: McpTokenVerifier;
   readonly storage: StorageAdapter;
   readonly scanService: ScanService;
   readonly serviceConnections: ServiceConnectionsRepository;
+  /**
+   * Resolves the compliance service URL + service token per call. Used by
+   * the four compliance discovery tools and the expanded dashboard_scan_site.
+   * Optional — when omitted, those tools are skipped during registration.
+   */
+  readonly complianceAccess?: ComplianceAccess;
   /**
    * Absolute URL of this RS's `/.well-known/oauth-protected-resource`.
    * Surfaced in the `WWW-Authenticate` header on 401 so MCP clients can
@@ -111,6 +118,9 @@ export async function registerMcpRoutes(
     storage: opts.storage,
     scanService: opts.scanService,
     serviceConnections: opts.serviceConnections,
+    ...(opts.complianceAccess !== undefined
+      ? { complianceAccess: opts.complianceAccess }
+      : {}),
   });
 
   // Phase 41-05: snapshot the registered tools and inject one virtual
