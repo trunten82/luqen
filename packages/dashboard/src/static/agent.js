@@ -13,6 +13,16 @@
 
   var LS_KEY = 'luqen.agent.panel';
   var LS_CONV_KEY = 'luqen.agent.conversationId';
+  // SECURITY (agent-conversation-leak-cross-user): stamp the user-id under
+  // which LS_CONV_KEY was written so that on a subsequent login by a
+  // different user on the same browser we can detect the identity boundary
+  // and wipe the stale conversationId BEFORE the auto-mount path fetches
+  // /agent/panel. Without this, a previous user's open conversation in
+  // localStorage is replayed to the new user and — combined with the
+  // server's org-scoped (not user-scoped) panel lookup — surfaces the
+  // foreign chat. The stamp + eviction is a defence-in-depth complement
+  // to the server-side userId guard.
+  var LS_USER_KEY = 'luqen.agent.userId';
   var DRAWER_ID = 'agent-drawer', BACKDROP_ID = 'agent-backdrop', LAUNCH_ID = 'agent-launch';
   var INPUT_ID = 'agent-input', FORM_ID = 'agent-form', MESSAGES_ID = 'agent-messages';
   var STATUS_ID = 'agent-aria-status', STREAM_STATUS_ID = 'agent-stream-status';
@@ -147,11 +157,51 @@
     return cid && cid.length > 0 ? cid : '';
   }
 
+  function getCurrentUserId() {
+    var form = byId(FORM_ID);
+    if (!form) return '';
+    var uid = form.getAttribute('data-user-id');
+    return typeof uid === 'string' ? uid : '';
+  }
+
   function setConversationId(cid) {
     if (!cid || cid.length === 0) return;
     var form = byId(FORM_ID); if (form) form.setAttribute('data-conversation-id', cid);
     var hidden = byId('agent-conversation-id-field'); if (hidden) hidden.value = cid;
-    try { localStorage.setItem(LS_CONV_KEY, cid); } catch (_e) { /* ignore */ }
+    try {
+      localStorage.setItem(LS_CONV_KEY, cid);
+      // Bind the stored cid to the current user-id so a later login as a
+      // different user can detect and wipe (see evictForeignAgentState).
+      var uid = getCurrentUserId();
+      if (uid.length > 0) localStorage.setItem(LS_USER_KEY, uid);
+    } catch (_e) { /* ignore */ }
+  }
+
+  // SECURITY (agent-conversation-leak-cross-user): if the localStorage user
+  // stamp does not match the currently-rendered user, drop ALL agent-*
+  // localStorage entries before any restore/auto-mount runs. The previous
+  // user's conversationId must never be offered to the server as if it were
+  // ours. Called once at init, before restoreConversationId.
+  function evictForeignAgentState() {
+    try {
+      var current = getCurrentUserId();
+      if (current.length === 0) return; // unauthenticated render — nothing to do
+      var stamped = localStorage.getItem(LS_USER_KEY);
+      if (stamped !== null && stamped.length > 0 && stamped !== current) {
+        localStorage.removeItem(LS_CONV_KEY);
+        localStorage.removeItem(LS_KEY);
+        localStorage.removeItem(LS_USER_KEY);
+      }
+      // Also handle the legacy case where LS_CONV_KEY exists without a
+      // stamp (versions before this fix). Treat as foreign — drop it.
+      if ((stamped === null || stamped.length === 0) && localStorage.getItem(LS_CONV_KEY) !== null) {
+        localStorage.removeItem(LS_CONV_KEY);
+        localStorage.removeItem(LS_KEY);
+      }
+      // Refresh the stamp to the current user so subsequent setConversationId
+      // calls can rely on it.
+      localStorage.setItem(LS_USER_KEY, current);
+    } catch (_e) { /* ignore */ }
   }
 
   function restoreConversationId() {
@@ -1150,6 +1200,10 @@
   // See also agent-speech.js for the form-hint + onresult/onerror behaviour.
 
   function init() {
+    // SECURITY: must run BEFORE restoreConversationId / applyInitialPanelState
+    // so that a stale cid from a previous user on this browser is dropped
+    // and the panel does not auto-mount it (see evictForeignAgentState).
+    evictForeignAgentState();
     restoreConversationId();
     applyInitialPanelState();
     wireDialogCloseTrap();

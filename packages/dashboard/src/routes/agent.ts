@@ -365,7 +365,12 @@ export async function registerAgentRoutes(
       let convId = parsed.data.conversationId;
       if (convId !== undefined && convId.length > 0) {
         const existing = await storage.conversations.getConversation(convId, orgId);
-        if (existing === null) { convId = undefined; }
+        // SECURITY (agent-conversation-leak-cross-user): require userId match
+        // — a same-org-different-user convId from a stale localStorage entry
+        // must NOT be treated as "existing" (would otherwise append the new
+        // user's message into another user's conversation). Treat foreign
+        // ownership as absent so a fresh conversation is created.
+        if (existing === null || existing.userId !== user.id) { convId = undefined; }
       }
       if (convId === undefined || convId.length === 0) {
         const created = await storage.conversations.createConversation({
@@ -418,7 +423,12 @@ export async function registerAgentRoutes(
           return reply.code(400).send({ error: 'no_org_context' });
         }
         const conv = await storage.conversations.getConversation(conversationId, orgId);
-        if (conv === null) {
+        // SECURITY (agent-conversation-leak-cross-user): the SSE stream
+        // executes runTurn against the conversation — a foreign-user convId
+        // would otherwise drive the LLM with another user's history. Same
+        // 404 shape as a missing conversation so we don't leak the existence
+        // of someone else's row.
+        if (conv === null || conv.userId !== user.id) {
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
 
@@ -671,14 +681,26 @@ export async function registerAgentRoutes(
         // conversation they're currently chatting in still see all the
         // messages on refresh — but the conversation is absent from history,
         // matching the "open chat not in history" symptom.
-        if (conv === null || conv.isDeleted) {
-          // Either the id is unknown / from another org / soft-deleted. Treat
-          // all three as empty panel — the user's next message POST will
-          // auto-create a fresh conversation row. Signal the client via
-          // x-conversation-id: '' so it can clear its localStorage and start
-          // a new conversation cleanly.
+        //
+        // SECURITY (agent-conversation-leak-cross-user): the panel auto-mount
+        // path MUST enforce per-user ownership in addition to per-org. The
+        // repository's getConversation only filters by org_id (see
+        // conversation-repository.ts:96), so without this guard a user in the
+        // same org can render another user's window via a stale localStorage
+        // conversationId carried across a logout/login boundary on the same
+        // browser. The explicit GET /agent/conversations/:id route is the
+        // sanctioned cross-user/cross-org admin path; the panel is not.
+        // Foreign-user ids are treated identically to soft-deleted: empty
+        // panel + x-conversation-id:'' so the client wipes its localStorage.
+        const isForeignUser = conv !== null && conv.userId !== user.id;
+        if (conv === null || conv.isDeleted || isForeignUser) {
+          // Either the id is unknown / from another org / soft-deleted /
+          // belongs to another user. Treat all four as empty panel — the
+          // user's next message POST will auto-create a fresh conversation
+          // row. Signal the client via x-conversation-id: '' so it can clear
+          // its localStorage and start a new conversation cleanly.
           messages = [];
-          if (conv?.isDeleted === true) {
+          if (conv?.isDeleted === true || isForeignUser) {
             void reply.header('x-conversation-id', '');
           }
         } else {

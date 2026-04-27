@@ -95,7 +95,8 @@
         hx-post="/agent/message"
         hx-target="#agent-messages"
         hx-swap="beforeend"
-        data-conversation-id="{{conversationId}}">
+        data-conversation-id="{{conversationId}}"
+        data-user-id="{{user.id}}">
     <input type="hidden" name="_csrf" value="{{csrfToken}}">
     <input type="hidden" name="conversationId" value="{{conversationId}}" id="agent-conversation-id-field">
     <button type="button" class="chat-btn--icon btn btn--ghost" id="agent-speech"
