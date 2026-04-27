@@ -108,9 +108,11 @@ describe('buildAgentSystemPrompt', () => {
     expect(prompt).toContain('running. Call the tool normally');
     expect(prompt).toContain('creates a double-confirmation experience.');
 
-    // HONESTY fence (3 lines)
-    expect(prompt).toContain('If a tool returns an error, do not invent results.');
-    expect(prompt).toContain('plainly and offer to try a different approach.');
+    // HONESTY fence — strengthened guardrail against fabricated artefacts
+    expect(prompt).toContain('Never invent IDs, UUIDs, scan IDs, report IDs, dates, counts');
+    expect(prompt).toContain('do not invent results');
+    expect(prompt).toContain('Only state that an');
+    expect(prompt).toContain('action was performed when a tool actually returned a successful result');
   });
 });
 

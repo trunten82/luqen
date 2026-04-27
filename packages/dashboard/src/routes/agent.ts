@@ -665,11 +665,22 @@ export async function registerAgentRoutes(
       }> = [];
       if (conversationId.length > 0) {
         const conv = await storage.conversations.getConversation(conversationId, orgId);
-        if (conv === null && conversationId.length > 0) {
-          // Either the id is unknown (new conversation from client) or it
-          // belongs to another org. Treat both as empty panel — the user's
-          // next message POST will auto-create the conversation row.
+        // Bug #3 (agent-chat-ui-cluster): treat soft-deleted conversations as
+        // missing here so the drawer doesn't render a chat that the history
+        // panel deliberately hides. Without this, users who delete the
+        // conversation they're currently chatting in still see all the
+        // messages on refresh — but the conversation is absent from history,
+        // matching the "open chat not in history" symptom.
+        if (conv === null || conv.isDeleted) {
+          // Either the id is unknown / from another org / soft-deleted. Treat
+          // all three as empty panel — the user's next message POST will
+          // auto-create a fresh conversation row. Signal the client via
+          // x-conversation-id: '' so it can clear its localStorage and start
+          // a new conversation cleanly.
           messages = [];
+          if (conv?.isDeleted === true) {
+            void reply.header('x-conversation-id', '');
+          }
         } else {
           messages = await storage.conversations.getWindow(conversationId);
         }
@@ -887,18 +898,32 @@ export async function registerAgentRoutes(
       async (request: FastifyRequest, reply: FastifyReply) => {
         const user = request.user;
         if (user === undefined) return reply.code(401).send({ error: 'unauthenticated' });
-        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
+        const permissions = getPermissions(request);
+        const orgId = await resolveAgentOrgIdAsync(storage, user, permissions);
         if (orgId === undefined) return reply.code(400).send({ error: 'no_org_context' });
 
         const { id } = request.params as { id: string };
-        const deleted = await storage.conversations.softDeleteConversation(id, orgId);
+        // Bug #2 (agent-chat-ui-cluster): symmetric with GET /agent/conversations/:id
+        // (line 800-806). admin.system can list conversations cross-org via the
+        // history sidebar's org chip; the corresponding delete must accept the
+        // conversation's actual orgId, not the admin's currently resolved org,
+        // otherwise softDeleteConversation writes 0 rows → 404 → DOM li stays →
+        // "respawn on refresh" symptom.
+        let effectiveOrgId = orgId;
+        if (permissions.has('admin.system')) {
+          const conv = await loadConversationAnyOrg(storage, id);
+          if (conv !== null && !conv.isDeleted) {
+            effectiveOrgId = conv.orgId;
+          }
+        }
+        const deleted = await storage.conversations.softDeleteConversation(id, effectiveOrgId);
         if (!deleted) {
           // Idempotent: second call + wrong org + unknown id all map to 404.
           return reply.code(404).send({ error: 'conversation_not_found' });
         }
         await storage.agentAudit.append({
           userId: user.id,
-          orgId,
+          orgId: effectiveOrgId,
           conversationId: id,
           toolName: 'conversation_soft_deleted',
           argsJson: '{}',

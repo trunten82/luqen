@@ -451,9 +451,20 @@
     var cid = getConversationId();
     if (!cid || cid.length === 0) { return; }
     var url = '/agent/panel?conversationId=' + encodeURIComponent(cid);
+    var resetConv = false;
     fetch(url, { credentials: 'same-origin', headers: { 'x-csrf-token': csrfToken() } })
-      .then(function (r) { return r.ok ? r.text() : ''; })
+      .then(function (r) {
+        if (!r.ok) return '';
+        // Bug #3 (agent-chat-ui-cluster): server signals an out-of-band conv
+        // reset (deleted in another tab/session) via empty x-conversation-id.
+        try {
+          var hdr = r.headers.get && r.headers.get('x-conversation-id');
+          if (hdr === '') resetConv = true;
+        } catch (_e) { /* header read unsupported, ignore */ }
+        return r.text();
+      })
       .then(function (html) {
+        if (resetConv) { startNewConversation(); return; }
         if (html.length > 0) { replaceMessagesFromHtml(html); }
         var msgs = byId(MESSAGES_ID);
         var pending = msgs ? msgs.querySelector('.agent-msg--tool[data-pending="true"]') : null;
@@ -957,6 +968,7 @@
     wireDisplayNameUpdates();
     ensureAriaLive();
     wireInputAutoResize();
+    wireComposerKeyAndGuards();
     // initOrgSelectPreviousOrgId moved to agent-org.js (self-bootstraps on DOMContentLoaded).
     // Share view (read-only): render markdown on assistant bodies that were
     // server-rendered as raw text. No SSE, no loadPanel.
@@ -987,6 +999,64 @@
     var form = byId(FORM_ID);
     if (form) form.addEventListener('htmx:afterRequest', function () { resize(); });
     resize();
+  }
+
+  // Bug #5 (agent-chat-ui-cluster): submit on Enter (without Shift) from the
+  // composer textarea. By default Enter inserts a newline in a textarea —
+  // users expect it to submit the chat message. Shift+Enter still inserts a
+  // newline. Uses HTMX's trigger so all htmx-attached behaviour (csrf header,
+  // afterRequest hook) runs identically to a click on the Send button.
+  // Also addresses Bug #1: while a submit is in-flight, the Send button + the
+  // textarea are disabled to prevent double-submits that produce duplicate
+  // user bubbles. They are re-enabled on htmx:afterRequest.
+  function wireComposerKeyAndGuards() {
+    var input = byId(INPUT_ID);
+    var form = byId(FORM_ID);
+    if (!input || !form) return;
+    var sendBtn = byId('agent-send');
+    input.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+      // IME composition (CJK/Korean): Enter confirms the candidate, do not
+      // submit. event.isComposing is the standard signal; some older
+      // browsers expose keyCode 229.
+      if (e.isComposing || e.keyCode === 229) return;
+      var value = String(input.value || '').trim();
+      if (value.length === 0) return;
+      e.preventDefault();
+      // Defer to HTMX's request pipeline so csrf/headers/afterRequest hooks
+      // fire identically to a click on the Send button. window.htmx is the
+      // public API; if it isn't loaded yet (defer race), fall back to the
+      // form's native requestSubmit which HTMX intercepts via its global
+      // submit listener.
+      if (window.htmx && typeof window.htmx.trigger === 'function') {
+        window.htmx.trigger(form, 'submit');
+      } else if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    });
+    // In-flight guard: disable composer the instant a submit fires; re-enable
+    // when the request returns (success OR error). htmx:beforeRequest fires
+    // on every htmx request — filter to this form's path so non-agent
+    // submissions don't get caught by the disable hook.
+    function isAgentMessageRequest(evt) {
+      var cfg = evt && evt.detail && evt.detail.requestConfig;
+      return !!(cfg && typeof cfg.path === 'string' && cfg.path.indexOf('/agent/message') === 0);
+    }
+    document.body.addEventListener('htmx:beforeRequest', function (e) {
+      if (!isAgentMessageRequest(e)) return;
+      input.setAttribute('aria-busy', 'true');
+      input.setAttribute('disabled', '');
+      if (sendBtn) sendBtn.setAttribute('disabled', '');
+    });
+    document.body.addEventListener('htmx:afterRequest', function (e) {
+      if (!isAgentMessageRequest(e)) return;
+      input.removeAttribute('aria-busy');
+      input.removeAttribute('disabled');
+      if (sendBtn) sendBtn.removeAttribute('disabled');
+      try { input.focus(); } catch (_e) { /* ignore */ }
+    });
   }
 
   // Phase 37 Plan 04 — test-export shim (dead code in production).

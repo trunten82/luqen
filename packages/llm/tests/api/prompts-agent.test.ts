@@ -102,8 +102,14 @@ describe('Prompt Override API — agent-system (D-14 refuses per-org override wr
       '<!-- /LOCKED:confirmation -->',
       '',
       '<!-- LOCKED:honesty -->',
-      'If a tool returns an error, do not invent results. Report the error',
-      'plainly and offer to try a different approach.',
+      'Never invent IDs, UUIDs, scan IDs, report IDs, dates, counts, or any',
+      'other artefact that would normally come from a tool result. If you do',
+      'not have a tool to perform the requested action, or the required tool',
+      "is not in this turn's manifest, say so plainly and list the tools you",
+      'do have. If a tool returns an error, do not invent results — report',
+      'the error and offer to try a different approach. Only state that an',
+      'action was performed when a tool actually returned a successful result',
+      'in this turn.',
       '<!-- /LOCKED:honesty -->',
     ].join('\n');
 
