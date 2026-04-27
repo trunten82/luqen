@@ -275,10 +275,16 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
           // Swallow — handler still proceeds with empty token.
         }
       }
+      // Defence-in-depth: if the agent omits scanMode the server falls back
+      // to 'site' (50-page crawl). Smaller LLMs ignore the tool description's
+      // "default to single" rule. Force single when omitted; agent must opt
+      // into 'site' explicitly. Dashboard UI uses routes/scan.ts and is
+      // unaffected.
+      const scanMode = args.scanMode ?? 'single';
       const initiateInput: Parameters<typeof scanService.initiateScan>[0] = {
         siteUrl: args.siteUrl,
         standard: args.standard ?? 'WCAG2AA',
-        ...(args.scanMode !== undefined ? { scanMode: args.scanMode } : {}),
+        scanMode,
         ...(args.jurisdictions !== undefined ? { jurisdictions: [...args.jurisdictions] } : {}),
         ...(args.regulations !== undefined ? { regulations: [...args.regulations] } : {}),
         ...(args.concurrency !== undefined ? { concurrency: args.concurrency } : {}),
