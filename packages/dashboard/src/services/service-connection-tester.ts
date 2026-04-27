@@ -48,11 +48,15 @@ export async function testServiceConnection(
     const tokenResponse = await fetch(`${baseUrl}/api/v1/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      // No `scope` field — RFC 6749 §3.3: when omitted, the auth server
+      // returns all scopes registered for the client. Matches the
+      // ServiceTokenManager convention so the same probe works for both
+      // the global admin-scoped service client and any future read+write
+      // org-scoped credentials configured here.
       body: JSON.stringify({
         grant_type: 'client_credentials',
         client_id: clientId,
         client_secret: clientSecret,
-        scope: 'admin',
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });

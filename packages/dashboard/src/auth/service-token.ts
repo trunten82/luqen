@@ -43,6 +43,12 @@ export class ServiceTokenManager {
   }
 
   private async refresh(): Promise<void> {
+    // No `scope` field — RFC 6749 §3.3: when omitted, the auth server returns
+    // all scopes registered for the client. This makes the same code path
+    // work for both the global dashboard client (registered with admin scope)
+    // and per-org clients (registered with read+write only). Hardcoding
+    // `scope: 'admin'` previously caused per-org token requests to fail with
+    // 400 invalid_scope and silently fall back to '' / env-var.
     const response = await fetch(`${this.complianceUrl}/api/v1/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -50,7 +56,6 @@ export class ServiceTokenManager {
         grant_type: 'client_credentials',
         client_id: this.clientId,
         client_secret: this.clientSecret,
-        scope: 'admin',
       }),
     });
 
