@@ -118,9 +118,24 @@ export const DATA_TOOL_NAMES = [
   'dashboard_get_brand_score',
 ] as const;
 
+/**
+ * Per-call compliance token access. Resolved lazily so that the MCP-side
+ * dashboard_scan_site can pass a real bearer through to scanService for
+ * regulation tagging + incremental hashing. Returns null when no compliance
+ * connection is configured (the scan still runs, regulation/jurisdiction
+ * filtering is best-effort, matching dashboard UI behaviour when the
+ * compliance service is offline).
+ */
+export type ComplianceAccess = () => Promise<{
+  readonly baseUrl: string;
+  readonly token: string;
+} | null>;
+
 export interface RegisterDataToolsOptions {
   readonly storage: StorageAdapter;
   readonly scanService: ScanService;
+  /** Optional — when omitted, scans run with an empty compliance token (same as today). */
+  readonly complianceAccess?: ComplianceAccess;
 }
 
 function resolveOrgId(): string {
@@ -139,14 +154,27 @@ function errorEnvelope(msg: string): {
 }
 
 export function registerDataTools(server: McpServer, opts: RegisterDataToolsOptions): void {
-  const { storage, scanService } = opts;
+  const { storage, scanService, complianceAccess } = opts;
 
   // ---- dashboard_scan_site (destructive, async) ----
+  // 1:1 surface parity with the dashboard scan form (07-P02 InitiateScanInput).
+  // Power users can drive every scan knob the UI exposes — scanMode, regulation
+  // tagging, jurisdictions, runner choice, incremental hashing, max-pages cap,
+  // concurrency, custom headers, pa11y actions, and warning/notice inclusion.
+  // The agent should always call dashboard_list_regulations / _list_jurisdictions
+  // first to resolve real IDs — never fabricate names like "ADA" or "EAA"
+  // as ids; the platform stores them as kebab-case slugs.
   server.registerTool(
     'dashboard_scan_site',
     {
       description:
-        'Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: "queued", url} immediately. Poll dashboard_get_report with the scanId for status. WARNING: this runs a real scan against the URL and may take minutes; downstream LLM quota is consumed by analyse/fix follow-ups.',
+        [
+          'Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: "queued", url} immediately. Poll dashboard_get_report with the scanId for status. WARNING: this runs a real scan against the URL and may take minutes; downstream LLM quota is consumed by analyse/fix follow-ups.',
+          '',
+          'Discovery first: before passing regulations[] or jurisdictions[], call dashboard_list_regulations and dashboard_list_jurisdictions to obtain valid IDs. Passing a name (e.g. "ADA") rather than an ID will silently produce a scan with no regulation tags.',
+          '',
+          'Standard: only WCAG 2.0 levels are accepted (WCAG2A/WCAG2AA/WCAG2AAA). The platform does not run WCAG 2.1 or 2.2 scans today; never claim a scan is using a newer version than what the runner supports.',
+        ].join('\n'),
       inputSchema: z.object({
         siteUrl: z
           .string()
@@ -156,6 +184,72 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
           .enum(['WCAG2A', 'WCAG2AA', 'WCAG2AAA'])
           .optional()
           .describe('WCAG level; defaults to WCAG2AA'),
+        scanMode: z
+          .enum(['single', 'site'])
+          .optional()
+          .describe(
+            'single = scan only the given URL; site = crawl + scan up to maxPages (default site).',
+          ),
+        jurisdictions: z
+          .array(z.string())
+          .max(50)
+          .optional()
+          .describe(
+            'Jurisdiction IDs to tag this scan with (max 50). Resolve via dashboard_list_jurisdictions.',
+          ),
+        regulations: z
+          .array(z.string())
+          .max(50)
+          .optional()
+          .describe(
+            'Regulation IDs to tag this scan with (max 50). Resolve via dashboard_list_regulations. The compliance engine emits a regulation_matrix per regulation when scan completes.',
+          ),
+        concurrency: z
+          .coerce
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .optional()
+          .describe('Parallel page workers (1–10). Defaults to dashboard config.'),
+        maxPages: z
+          .coerce
+          .number()
+          .int()
+          .min(1)
+          .max(1000)
+          .optional()
+          .describe('Crawl cap when scanMode=site (1–1000). Defaults to dashboard config.'),
+        runner: z
+          .enum(['htmlcs', 'axe'])
+          .optional()
+          .describe('Audit engine. htmlcs = HTML_CodeSniffer (default), axe = axe-core.'),
+        incremental: z
+          .boolean()
+          .optional()
+          .describe(
+            'When true, skip pages whose content hash matches the previous scan. Requires a configured compliance connection.',
+          ),
+        includeWarnings: z
+          .boolean()
+          .optional()
+          .describe('Include WCAG warnings in the result set (default true).'),
+        includeNotices: z
+          .boolean()
+          .optional()
+          .describe('Include WCAG notices in the result set (default true).'),
+        headers: z
+          .record(z.string(), z.string())
+          .optional()
+          .describe(
+            'Custom HTTP headers to send on every request (e.g. {"Authorization":"Bearer xxx"} for protected sites).',
+          ),
+        actions: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Pa11y actions executed before scoring (e.g. ["click element #consent-accept","wait for path to be /home"]).',
+          ),
       }),
       annotations: { destructiveHint: true, readOnlyHint: false },
     },
@@ -163,10 +257,40 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
     async (args) => {
       const ctx = getCurrentToolContext();
       const orgId = resolveOrgId();
-      const result = await scanService.initiateScan(
-        { siteUrl: args.siteUrl, standard: args.standard ?? 'WCAG2AA' },
-        { orgId, username: ctx?.userId ?? 'system', complianceToken: '' },
-      );
+      // Resolve a service compliance token when the registry is wired in.
+      // Failure is non-fatal — we still pass complianceToken: '' so the scan
+      // record is created (regulation tagging and incremental hashing become
+      // best-effort; same behaviour as the dashboard UI when compliance is
+      // offline).
+      let complianceToken = '';
+      if (complianceAccess !== undefined) {
+        try {
+          const access = await complianceAccess();
+          if (access !== null) complianceToken = access.token;
+        } catch {
+          // Swallow — handler still proceeds with empty token.
+        }
+      }
+      const initiateInput: Parameters<typeof scanService.initiateScan>[0] = {
+        siteUrl: args.siteUrl,
+        standard: args.standard ?? 'WCAG2AA',
+        ...(args.scanMode !== undefined ? { scanMode: args.scanMode } : {}),
+        ...(args.jurisdictions !== undefined ? { jurisdictions: [...args.jurisdictions] } : {}),
+        ...(args.regulations !== undefined ? { regulations: [...args.regulations] } : {}),
+        ...(args.concurrency !== undefined ? { concurrency: args.concurrency } : {}),
+        ...(args.maxPages !== undefined ? { maxPages: args.maxPages } : {}),
+        ...(args.runner !== undefined ? { runner: args.runner } : {}),
+        ...(args.incremental !== undefined ? { incremental: args.incremental } : {}),
+        ...(args.includeWarnings !== undefined ? { includeWarnings: args.includeWarnings } : {}),
+        ...(args.includeNotices !== undefined ? { includeNotices: args.includeNotices } : {}),
+        ...(args.headers !== undefined ? { headers: { ...args.headers } } : {}),
+        ...(args.actions !== undefined ? { actions: [...args.actions] } : {}),
+      };
+      const result = await scanService.initiateScan(initiateInput, {
+        orgId,
+        username: ctx?.userId ?? 'system',
+        complianceToken,
+      });
       if (result.ok === false) {
         return errorEnvelope(result.error);
       }
@@ -175,7 +299,15 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
           {
             type: 'text',
             text: JSON.stringify(
-              { scanId: result.scanId, status: 'queued', url: args.siteUrl },
+              {
+                scanId: result.scanId,
+                status: 'queued',
+                url: args.siteUrl,
+                standard: args.standard ?? 'WCAG2AA',
+                scanMode: args.scanMode ?? 'site',
+                regulations: args.regulations ?? [],
+                jurisdictions: args.jurisdictions ?? [],
+              },
               null,
               2,
             ),

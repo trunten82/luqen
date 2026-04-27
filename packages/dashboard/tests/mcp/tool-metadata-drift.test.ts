@@ -126,6 +126,10 @@ describe('dashboard MCP tool metadata — drift prevention (Phase 31.2 D-09)', (
       storage: makeStubStorage(),
       scanService: makeStubScanService(),
       serviceConnections: makeStubServiceConnections(),
+      // Compliance discovery tools register only when complianceAccess is
+      // provided; we hand a stub so the registered surface includes the
+      // four compliance tools and matches DASHBOARD_TOOL_METADATA.
+      complianceAccess: async () => ({ baseUrl: 'http://stub', token: 'stub' }),
     });
     const registered =
       (
