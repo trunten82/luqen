@@ -169,9 +169,11 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
     {
       description:
         [
-          'Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: "queued", url} immediately. Poll dashboard_get_report with the scanId for status. WARNING: this runs a real scan against the URL and may take minutes; downstream LLM quota is consumed by analyse/fix follow-ups.',
+          'Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: "queued", url} immediately. The scan typically completes in seconds (single page) to a few minutes (full site).',
           '',
-          'Discovery first: before passing regulations[] or jurisdictions[], call dashboard_list_regulations and dashboard_list_jurisdictions to obtain valid IDs. Passing a name (e.g. "ADA") rather than an ID will silently produce a scan with no regulation tags.',
+          'Status checks: when the user asks "is it done?", "check status", or similar, you MUST call dashboard_get_report with the scanId in the SAME turn. Never restate a previously seen status — the scan likely progressed. Never claim "still queued" or "still running" without a fresh dashboard_get_report call returning that status in the current tool window.',
+          '',
+          'Discovery first: before passing regulations[] or jurisdictions[], call dashboard_list_regulations and dashboard_list_jurisdictions to obtain valid IDs. Passing a name (e.g. "ADA") rather than an ID will silently produce a scan with no regulation tags. The platform stores ids exactly as the discovery tools return them — do not lowercase, kebab-case, or otherwise transform them.',
           '',
           'Standard: only WCAG 2.0 levels are accepted (WCAG2A/WCAG2AA/WCAG2AAA). The platform does not run WCAG 2.1 or 2.2 scans today; never claim a scan is using a newer version than what the runner supports.',
         ].join('\n'),
@@ -371,7 +373,7 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
     'dashboard_get_report',
     {
       description:
-        'Get a scan report by scanId. Returns {status} plus the report when status=="completed". LLMs should call this repeatedly (polling) to track async scans started by dashboard_scan_site.',
+        'Get a scan report by scanId. Returns {status} plus the report when status=="completed". Call this EVERY time the user asks about scan progress or status — async scans change state between turns and the only authoritative answer is a fresh call. Never restate a status from a prior turn or from the dashboard_scan_site response without re-checking.',
       inputSchema: z.object({
         scanId: z.string().describe('Scan ID'),
       }),
