@@ -340,6 +340,22 @@
       .replace(/^(\s*)class(\s+diagram|$)/i, '$1classDiagram$2')
       .replace(/^(\s*)state(\s+diagram|$)/i, '$1stateDiagram-v2$2')
       .replace(/^(\s*)er(\s+diagram|$)/i, '$1erDiagram$2');
+
+    // xychart-beta requires quoted titles; LLMs often emit unquoted ones
+    // with parens, which mermaid lexes as "unrecognized text" on line 2.
+    // Auto-quote the first title line under an xychart-beta block.
+    var head = lines[firstIdx].replace(/^\s+/, '');
+    if (/^xychart-beta\b/i.test(head)) {
+      for (var j = firstIdx + 1; j < lines.length; j++) {
+        var match = /^(\s*)title\s+(.+?)\s*$/i.exec(lines[j]);
+        if (!match) continue;
+        var titleText = match[2];
+        if (/^["'].*["']\s*$/.test(titleText)) break;
+        var safe = titleText.replace(/"/g, '\\"');
+        lines[j] = match[1] + 'title "' + safe + '"';
+        break;
+      }
+    }
     return lines.join('\n');
   }
 
