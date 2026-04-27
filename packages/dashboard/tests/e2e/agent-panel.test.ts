@@ -193,7 +193,12 @@ describe('Phase 32 Plan 06 — agent-panel E2E smoke', () => {
     // v3.1.1 — composer Enter-to-submit + in-flight guard (~50 LOC) added
     // for chat-cluster bug fixes; ceiling raised to 1150. Future split
     // candidate: agent-composer.js with these and other input wiring.
-    expect(loc).toBeLessThanOrEqual(1150);
+    // v3.2.0 — unified mermaid theme (~120 LOC) covering pie, flowchart,
+    // sequence, gantt, xychart-beta, plus sanitiseMermaidSource salvage
+    // for invalid LLM-emitted diagram tokens (~30 LOC). Ceiling raised
+    // to 1320. Future split candidate: agent-mermaid.js owning init,
+    // theme variables, render, and source salvage.
+    expect(loc).toBeLessThanOrEqual(1320);
     const splitFiles = [
       'src/static/agent-history.js',
       'src/static/agent-tools.js',
