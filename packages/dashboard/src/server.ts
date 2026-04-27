@@ -1102,14 +1102,17 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     signer: dashboardSigner,
     dashboardMcpAudience,
     resolveScopes: async (userId, orgId) => {
+      // Look up the user's real role per-dispatch so the admin all-permissions
+      // bypass in resolveEffectivePermissions fires for global admins. Hardcoding
+      // 'viewer' here would silently strip scan/admin tools from the dispatcher's
+      // mintAgentToken scopes — manifesting downstream as the LLM hallucinating
+      // tool results because no real tool was callable.
+      const dbUser = await storage.users.getUserById(userId);
+      const userRole = dbUser?.role ?? 'viewer';
       const perms = await resolveEffectivePermissions(
         storage.roles,
         userId,
-        // Internal agent dispatches run at the user's real role — we look it
-        // up once per dispatch. This is the same data surface the global
-        // permission loader uses (server.ts:682) but read via the storage
-        // adapter here to avoid coupling to the Fastify request cycle.
-        'viewer',
+        userRole,
         orgId,
       );
       return [...perms];
@@ -1136,7 +1139,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     resolvePermissions: async (userId, orgId) => {
       // Called at the HEAD of every AgentService.runTurn iteration — the
       // single source of truth for per-user permissions. See D-07 / Pitfall 6.
-      return resolveEffectivePermissions(storage.roles, userId, 'viewer', orgId);
+      // Look up the real role so the admin bypass in resolveEffectivePermissions
+      // fires for global admins (otherwise buildManifest filters scan/admin
+      // tools out of the LLM manifest and the model hallucinates results).
+      const dbUser = await storage.users.getUserById(userId);
+      const userRole = dbUser?.role ?? 'viewer';
+      return resolveEffectivePermissions(storage.roles, userId, userRole, orgId);
     },
     config: { agentDisplayNameDefault: 'Luqen Assistant' },
   });

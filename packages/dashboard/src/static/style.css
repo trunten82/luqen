@@ -3955,6 +3955,10 @@ details[open] > .mt-examples-toggle::before {
 .agent-drawer__messages {
   flex: 1 1 auto;
   overflow-y: auto;
+  /* Bug #4 (agent-chat-ui-cluster): prevent scroll bleed into the main page
+     when the user reaches the top/bottom of the chat list. `contain` stops
+     scroll-chaining to the document; `auto` for non-supporting browsers. */
+  overscroll-behavior: contain;
   padding: var(--space-md);
   display: flex;
   flex-direction: column;
