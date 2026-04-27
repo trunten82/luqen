@@ -62,11 +62,16 @@ Tool discovery rules — applies whenever you intend to call a scan, regulation,
 
 Output capabilities: your responses are rendered as GitHub-flavoured Markdown with extensions for richer output:
 - **Markdown**: headings, lists, tables, fenced code blocks, bold/italic, links, inline code.
-- **Diagrams**: emit a fenced code block with language \`mermaid\`. Mermaid does NOT have a "bar" diagram type — never start a block with \`bar\`. Supported diagram types you may use: \`pie\`, \`xychart-beta\`, \`flowchart\`, \`sequenceDiagram\`, \`gantt\`, \`classDiagram\`, \`stateDiagram-v2\`, \`erDiagram\`, \`mindmap\`, \`timeline\`, \`quadrantChart\`.
-  - Pie syntax: \`\`\`mermaid\\npie title Issues\\n    "Errors" : 23\\n    "Warnings" : 50\\n\`\`\`
-  - True bar charts use \`xychart-beta\`. Syntax: \`\`\`mermaid\\nxychart-beta\\n    title "Scan trend"\\n    x-axis ["Mon","Tue","Wed","Thu","Fri"]\\n    y-axis "Issues" 0 --> 600\\n    bar [120, 480, 230, 90, 310]\\n\`\`\`
+- **Diagrams (mermaid)**: emit a fenced code block with language \`mermaid\`. The FIRST non-blank line of the block MUST start with one of the exact tokens below — no other diagram type exists, do not invent (\`bar\`, \`barchart\`, \`histogram\`, \`chart\`, \`column\`, \`donut\` are NOT valid mermaid types). Pick the closest matching template and substitute your data verbatim. Do not improvise alternative syntax.
+  Valid templates (copy structure exactly):
+  - **pie** — proportions of a whole. \`\`\`mermaid\\npie title Issue severity\\n    "Errors" : 23\\n    "Warnings" : 145\\n    "Notices" : 12\\n\`\`\`
+  - **xychart-beta** — true bar/line for category counts or time series. \`\`\`mermaid\\nxychart-beta\\n    title "Scans per day"\\n    x-axis ["Mon","Tue","Wed","Thu","Fri"]\\n    y-axis "Issues" 0 --> 600\\n    bar [120, 480, 230, 90, 310]\\n\`\`\`
+  - **flowchart** — processes / decision trees. \`\`\`mermaid\\nflowchart TD\\n    A[Scan] --> B{Issues?}\\n    B -- yes --> C[Generate fixes]\\n    B -- no --> D[Done]\\n\`\`\`
+  - **sequenceDiagram** — actor interactions. \`\`\`mermaid\\nsequenceDiagram\\n    User->>Dashboard: Run scan\\n    Dashboard->>Scanner: enqueue\\n    Scanner-->>Dashboard: report\\n    Dashboard-->>User: results\\n\`\`\`
+  - **gantt** — schedules / timelines. \`\`\`mermaid\\ngantt\\n    title Remediation plan\\n    dateFormat  YYYY-MM-DD\\n    section Critical\\n    Fix forms     :a1, 2026-05-01, 3d\\n    Fix landmarks :after a1, 2d\\n\`\`\`
+  Choosing: proportions of a whole → \`pie\`. Counts per category or time series → \`xychart-beta\`. Steps / branches → \`flowchart\`. Actor messages → \`sequenceDiagram\`. Time-bound work → \`gantt\`. If none of these fit, do not produce a diagram — describe in prose instead.
 - **Images**: reference hosted images via standard Markdown \`![alt](url)\` syntax.
-When the user asks for a chart, visualisation, or diagram, use a \`mermaid\` code block — do NOT refuse. Choose the simplest diagram type that fits: pie for proportions of a whole, xychart-beta for time-series or category-count bars, flowchart for processes, sequenceDiagram for interactions, gantt for timelines.
+When the user asks for a chart, do NOT refuse — pick from the list above and copy the matching template. Never start a mermaid block with \`bar\`, \`barchart\`, \`histogram\`, \`chart\`, \`column\`, or \`donut\`.
 
 {contextHints}`;
 
