@@ -126,23 +126,34 @@ export function formatContextHints(h: ContextHints): string {
     );
   }
 
-  lines.push('Recent scans:');
+  // Recent scans summary — DO NOT emit scan IDs here. The model will latch
+  // onto any UUID in its prompt context and cite it as "the scan ID" when
+  // asked, even when those scans are unrelated to the current turn (root
+  // cause of agent-uat-residuals bug 1: stale scan IDs from prior sessions
+  // leaked through this hint and got reported as "the scan I just ran").
+  // The model must obtain real scan IDs only from tool results
+  // (dashboard_scan_site, dashboard_list_reports). Hints only signal that
+  // recent scans EXIST so the model can offer to list/fetch them.
+  lines.push('Recent scans (summary only — call dashboard_list_reports for IDs):');
   if (h.recentScans.length === 0) {
     lines.push('  - (none)');
   } else {
     for (const s of h.recentScans) {
       lines.push(
-        `  - [${s.id}] ${s.siteUrl} — status=${s.status}, issues=${s.totalIssues}, at ${s.detectedAt}`,
+        `  - ${s.siteUrl} — status=${s.status}, issues=${s.totalIssues}`,
       );
     }
   }
 
-  lines.push('Active brand guidelines:');
+  // Active brand guidelines — same rationale: do not emit IDs. The model
+  // calls dashboard_list_brand_scores / dashboard_get_brand_score when an
+  // ID is actually required.
+  lines.push('Active brand guidelines (names only — call brand tools for IDs):');
   if (h.activeBrands.length === 0) {
     lines.push('  - (none)');
   } else {
     for (const b of h.activeBrands) {
-      lines.push(`  - [${b.id}] ${b.name}`);
+      lines.push(`  - ${b.name}`);
     }
   }
 
