@@ -970,38 +970,58 @@ function buildManifest(
     });
 }
 
-function windowToChatMessages(window: readonly Message[]): AgentChatMessage[] {
+export function windowToChatMessages(window: readonly Message[]): AgentChatMessage[] {
   const out: AgentChatMessage[] = [];
-  // Track whether the last emitted assistant row already carried tool_calls
-  // for the batch — if so, we skip the per-tool synthetic shim to avoid
-  // duplicating the assistant preamble (post-32.1-08 conversations).
-  let lastAssistantHasToolCalls = false;
+  // Track which tool_call ids the most recent assistant(tool_calls) row
+  // already declared. Tool rows whose own toolCallJson references an id
+  // OUTSIDE this set must synthesise their own assistant(tool_calls)
+  // preamble, otherwise providers (Ollama, OpenAI, Anthropic) see a tool
+  // result with no matching prior tool_call and reject the request.
+  //
+  // Background: Phase 32.1-08 introduced assistant(tool_calls) batch rows
+  // that cover the *whole* batch from a single LLM streaming turn. But
+  // mid-conversation rows can still appear that are NOT part of that batch
+  // — most notably the destructive-pause `pending_confirmation` tool row
+  // (see runTurn line 444) which is persisted alone with its own
+  // toolCallJson and resumed in a fresh turn. The original "skip shim if
+  // last assistant had any tool_calls" logic dropped the synthetic
+  // preamble for those rows, producing N+M tool results against an N-call
+  // assistant message — Ollama responds 400 "Unexpected tool call id <X>
+  // in tool results".
+  let coveredIds: Set<string> = new Set();
 
   for (const m of window) {
     const role = m.role;
     if (role === 'tool') {
-      if (!lastAssistantHasToolCalls && m.toolCallJson != null && m.toolCallJson.length > 0) {
-        // Legacy pre-32.1-08 shim — only synthesise when the preceding
-        // assistant row did not already carry tool_calls.
+      if (m.toolCallJson != null && m.toolCallJson.length > 0) {
         try {
-          const call = JSON.parse(m.toolCallJson) as { id: string; name: string; args: Record<string, unknown> };
-          out.push({
-            role: 'assistant' as const,
-            content: '',
-            toolCalls: [{ id: call.id, name: call.name, args: call.args }],
-          });
-        } catch { /* fall through — invalid JSON shouldn't happen but don't abort */ }
+          const parsed = JSON.parse(m.toolCallJson) as
+            | { id: string; name: string; args: Record<string, unknown> }
+            | Array<{ id: string; name: string; args: Record<string, unknown> }>;
+          const call = Array.isArray(parsed) ? parsed[0] : parsed;
+          if (call !== undefined && !coveredIds.has(call.id)) {
+            // This tool row's call id was NOT declared by the preceding
+            // assistant batch — synthesise a single-call assistant
+            // preamble so the provider sees a valid pair.
+            out.push({
+              role: 'assistant' as const,
+              content: '',
+              toolCalls: [{ id: call.id, name: call.name, args: call.args }],
+            });
+            coveredIds = new Set([call.id]);
+          }
+        } catch { /* invalid JSON shouldn't happen — fall through */ }
       }
       const content = m.toolResultJson ?? '';
       out.push({ role: 'tool' as const, content });
       continue;
     }
     if (role === 'assistant') {
-      lastAssistantHasToolCalls = false;
-      // Plan 32.1-08: post-this-change, assistant rows that preceded a tool
-      // batch carry toolCallJson with the full batch array — re-emit them
-      // with the toolCalls field so the provider sees a proper
-      // assistant(tool_calls) → tool pair.
+      // Plan 32.1-08: assistant rows that preceded a tool batch carry
+      // toolCallJson with the full batch array — re-emit with the
+      // toolCalls field so the provider sees an assistant(tool_calls) →
+      // tool pair, and record every id as "covered" so the followers do
+      // not trigger the synthesis path above.
       if (m.toolCallJson != null && m.toolCallJson.length > 0) {
         try {
           const calls = JSON.parse(m.toolCallJson) as Array<{ id: string; name: string; args: Record<string, unknown> }>;
@@ -1011,15 +1031,16 @@ function windowToChatMessages(window: readonly Message[]): AgentChatMessage[] {
               content: m.content ?? '',
               toolCalls: calls.map((c) => ({ id: c.id, name: c.name, args: c.args })),
             });
-            lastAssistantHasToolCalls = true;
+            coveredIds = new Set(calls.map((c) => c.id));
             continue;
           }
         } catch { /* fall through to plain assistant */ }
       }
+      coveredIds = new Set();
       out.push({ role: 'assistant' as const, content: m.content ?? '' });
       continue;
     }
-    lastAssistantHasToolCalls = false;
+    coveredIds = new Set();
     out.push({ role: 'user' as const, content: m.content ?? '' });
   }
   return out;
