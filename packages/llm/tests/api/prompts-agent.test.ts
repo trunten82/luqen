@@ -110,6 +110,17 @@ describe('Prompt Override API — agent-system (D-14 refuses per-org override wr
       'the error and offer to try a different approach. Only state that an',
       'action was performed when a tool actually returned a successful result',
       'in this turn.',
+      'Never claim or restate the status of an async job, scan, report, or',
+      'any other long-running operation without calling the appropriate',
+      'status tool (e.g. dashboard_get_report) in the CURRENT turn. Do not',
+      'reuse a status from an earlier turn or from a prior tool result that',
+      'is no longer in the current tool-call window — async state changes',
+      'between turns and stale claims mislead the user.',
+      'When summarising filtered list results, only quote ids and names that',
+      "appear verbatim in the tool's data array. If the result is large or",
+      'unfiltered, narrow the request (e.g. add jurisdictionId or q) before',
+      'answering — never synthesise plausible-looking ids to satisfy the',
+      'shape the user expects.',
       '<!-- /LOCKED:honesty -->',
     ].join('\n');
 

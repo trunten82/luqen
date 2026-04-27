@@ -258,16 +258,26 @@ describe('Compliance MCP tools — handler happy paths', () => {
     expect((body['meta'] as { count: number }).count).toBe(2);
   });
 
-  it('dashboard_list_regulations forwards filters to compliance-client', async () => {
+  it('dashboard_list_regulations forwards jurisdictionId server-side and post-filters q client-side', async () => {
+    // Two regs returned by the API; client-side q filter narrows to one.
     const spy = vi.spyOn(complianceClient, 'listRegulations').mockResolvedValue([
       {
-        id: 'eaa-2025',
+        id: 'EU-EAA',
         name: 'European Accessibility Act',
         shortName: 'EAA',
-        jurisdictionId: 'eu',
+        jurisdictionId: 'EU',
         enforcementDate: '2025-06-28',
         status: 'in-force',
         scope: 'public-services',
+      },
+      {
+        id: 'EU-WAD',
+        name: 'Web Accessibility Directive',
+        shortName: 'WAD',
+        jurisdictionId: 'EU',
+        enforcementDate: '2018-09-23',
+        status: 'in-force',
+        scope: 'public-sector',
       },
     ]);
     app = await buildApp({
@@ -275,29 +285,58 @@ describe('Compliance MCP tools — handler happy paths', () => {
       complianceAccessReturns: { baseUrl: 'http://compliance', token: 't' },
     });
     const parsed = await callTool(app, 'dashboard_list_regulations', {
-      jurisdictionId: 'eu',
-      q: 'access',
+      jurisdictionId: 'EU',
+      q: 'web',
     });
     const body = extractText(parsed);
-    expect((body['data'] as Array<{ id: string }>)[0]?.id).toBe('eaa-2025');
+    const ids = (body['data'] as Array<{ id: string }>).map((r) => r.id);
+    expect(ids).toEqual(['EU-WAD']); // q='web' matches "Web Accessibility Directive"
+    expect((body['meta'] as { count: number }).count).toBe(1);
+    // Only jurisdictionId is forwarded to the API; q is NOT sent server-side
+    // because compliance /api/v1/regulations does not support it.
     expect(spy).toHaveBeenCalledWith(
       'http://compliance',
       't',
-      { jurisdictionId: 'eu', q: 'access' },
+      { jurisdictionId: 'EU' },
       'org-1',
     );
   });
 
-  it('dashboard_get_regulation returns the matched row', async () => {
-    vi.spyOn(complianceClient, 'listRegulations').mockResolvedValue([
+  it('dashboard_list_regulations with no filters returns full set unchanged', async () => {
+    const spy = vi.spyOn(complianceClient, 'listRegulations').mockResolvedValue([
+      { id: 'EU-EAA', name: 'EAA', shortName: 'EAA', jurisdictionId: 'EU', enforcementDate: '', status: 'in-force', scope: '' },
+      { id: 'US-ADA', name: 'ADA', shortName: 'ADA', jurisdictionId: 'US', enforcementDate: '', status: 'in-force', scope: '' },
+    ]);
+    app = await buildApp({
+      permissions: ['compliance.view'],
+      complianceAccessReturns: { baseUrl: 'http://compliance', token: 't' },
+    });
+    const parsed = await callTool(app, 'dashboard_list_regulations', {});
+    const body = extractText(parsed);
+    expect((body['data'] as Array<{ id: string }>).length).toBe(2);
+    // Empty filter object → undefined passed to the client (not an empty {})
+    expect(spy).toHaveBeenCalledWith('http://compliance', 't', undefined, 'org-1');
+  });
+
+  it('dashboard_get_regulation returns the matched row (case-sensitive id match)', async () => {
+    const spy = vi.spyOn(complianceClient, 'listRegulations').mockResolvedValue([
       {
-        id: 'eaa-2025',
+        id: 'EU-EAA',
         name: 'European Accessibility Act',
         shortName: 'EAA',
-        jurisdictionId: 'eu',
+        jurisdictionId: 'EU',
         enforcementDate: '2025-06-28',
         status: 'in-force',
         scope: 'public-services',
+      },
+      {
+        id: 'EU-WAD',
+        name: 'Web Accessibility Directive',
+        shortName: 'WAD',
+        jurisdictionId: 'EU',
+        enforcementDate: '2018-09-23',
+        status: 'in-force',
+        scope: 'public-sector',
       },
     ]);
     app = await buildApp({
@@ -305,11 +344,13 @@ describe('Compliance MCP tools — handler happy paths', () => {
       complianceAccessReturns: { baseUrl: 'http://compliance', token: 't' },
     });
     const parsed = await callTool(app, 'dashboard_get_regulation', {
-      regulationId: 'eaa-2025',
+      regulationId: 'EU-EAA',
     });
     const body = extractText(parsed);
-    expect(body['id']).toBe('eaa-2025');
+    expect(body['id']).toBe('EU-EAA');
     expect(body['shortName']).toBe('EAA');
+    // No `id` filter sent to API (it does not support one) — full list fetched, find applied locally.
+    expect(spy).toHaveBeenCalledWith('http://compliance', 't', undefined, 'org-1');
   });
 
   it('dashboard_get_regulation returns error envelope on miss', async () => {
@@ -325,14 +366,30 @@ describe('Compliance MCP tools — handler happy paths', () => {
     expect(body['error']).toMatch(/not found/i);
   });
 
-  it('dashboard_list_wcag_criteria forwards regulationId / wcagLevel filters', async () => {
+  it('dashboard_list_wcag_criteria forwards regulationId server-side and post-filters wcagLevel + wcagVersion client-side', async () => {
     const spy = vi.spyOn(complianceClient, 'listRequirements').mockResolvedValue([
       {
         id: 'req-1',
-        regulationId: 'eaa-2025',
+        regulationId: 'EU-EAA',
         wcagVersion: '2.1',
         wcagLevel: 'AA',
         wcagCriterion: '1.4.3',
+        obligation: 'mandatory',
+      },
+      {
+        id: 'req-2',
+        regulationId: 'EU-EAA',
+        wcagVersion: '2.0',
+        wcagLevel: 'A',
+        wcagCriterion: '1.1.1',
+        obligation: 'mandatory',
+      },
+      {
+        id: 'req-3',
+        regulationId: 'EU-EAA',
+        wcagVersion: '2.1',
+        wcagLevel: 'A',
+        wcagCriterion: '2.5.3',
         obligation: 'mandatory',
       },
     ]);
@@ -341,17 +398,20 @@ describe('Compliance MCP tools — handler happy paths', () => {
       complianceAccessReturns: { baseUrl: 'http://compliance', token: 't' },
     });
     const parsed = await callTool(app, 'dashboard_list_wcag_criteria', {
-      regulationId: 'eaa-2025',
+      regulationId: 'EU-EAA',
       wcagLevel: 'AA',
+      wcagVersion: '2.1',
     });
     const body = extractText(parsed);
-    expect((body['data'] as Array<{ wcagCriterion: string }>)[0]?.wcagCriterion).toBe(
-      '1.4.3',
-    );
+    const criteria = (body['data'] as Array<{ wcagCriterion: string }>).map((c) => c.wcagCriterion);
+    // Only req-1 matches both wcagLevel=AA AND wcagVersion=2.1
+    expect(criteria).toEqual(['1.4.3']);
+    expect((body['meta'] as { count: number }).count).toBe(1);
+    // Only regulationId is forwarded to the API; wcagLevel + wcagVersion are NOT.
     expect(spy).toHaveBeenCalledWith(
       'http://compliance',
       't',
-      { regulationId: 'eaa-2025', wcagLevel: 'AA' },
+      { regulationId: 'EU-EAA' },
       'org-1',
     );
   });

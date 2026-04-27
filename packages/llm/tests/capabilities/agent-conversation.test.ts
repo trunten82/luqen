@@ -113,6 +113,12 @@ describe('buildAgentSystemPrompt', () => {
     expect(prompt).toContain('do not invent results');
     expect(prompt).toContain('Only state that an');
     expect(prompt).toContain('action was performed when a tool actually returned a successful result');
+    // Strengthened: async-job state honesty (regulations-fake-and-stuck-queue)
+    expect(prompt).toContain('Never claim or restate the status of an async job');
+    expect(prompt).toContain('in the CURRENT turn');
+    // Strengthened: no synthesising plausible ids when result is large/unfiltered
+    expect(prompt).toContain("appear verbatim in the tool's data array");
+    expect(prompt).toContain('never synthesise plausible-looking ids');
   });
 });
 

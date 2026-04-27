@@ -485,7 +485,7 @@
         "tags": [
           "mcp-tool"
         ],
-        "description": "Get a single regulation by id, including scope, enforcement date, and jurisdiction. Use this to answer \"what does regulation X cover?\" before recommending a scan. Implemented as a filtered list on top of /api/v1/regulations, returning the matched row.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "description": "Get a single regulation by id (case-sensitive), including scope, enforcement date, and jurisdiction. Use this to answer \"what does regulation X cover?\" before recommending a scan. Implemented as a filtered list + find — returns 404-style error if the id does not exist.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
         "requestBody": {
           "required": true,
           "content": {
@@ -495,7 +495,7 @@
                 "properties": {
                   "regulationId": {
                     "type": "string",
-                    "description": "Regulation id (e.g. eaa-2025). Resolve via dashboard_list_regulations."
+                    "description": "Regulation id (case-sensitive, e.g. EU-EAA, US-ADA). Resolve via dashboard_list_regulations."
                   }
                 },
                 "required": [
@@ -547,7 +547,7 @@
         "tags": [
           "mcp-tool"
         ],
-        "description": "Get a scan report by scanId. Returns {status} plus the report when status==\"completed\". LLMs should call this repeatedly (polling) to track async scans started by dashboard_scan_site.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "description": "Get a scan report by scanId. Returns {status} plus the report when status==\"completed\". Call this EVERY time the user asks about scan progress or status — async scans change state between turns and the only authoritative answer is a fresh call. Never restate a status from a prior turn or from the dashboard_scan_site response without re-checking.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
         "requestBody": {
           "required": true,
           "content": {
@@ -907,7 +907,7 @@
         "tags": [
           "mcp-tool"
         ],
-        "description": "List accessibility regulations (e.g. eaa-2025, us-ada-title-iii) tracked by the compliance service. Use this BEFORE dashboard_scan_site to obtain real regulation ids — never pass display names like \"ADA\" or \"EAA\". Optional jurisdictionId narrows results to a single jurisdiction; q matches against names. The returned id is what scan_site regulations[] expects.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "description": "List accessibility regulations (e.g. EU-EAA, US-ADA, US-508) tracked by the compliance service. Use this BEFORE dashboard_scan_site to obtain REAL regulation ids — never pass display names like \"ADA\" or \"EAA\" to scan_site, and never invent kebab-case ids like \"eaa-2025\" or \"euaa-2016\". The platform stores ids exactly as returned here. Filters: jurisdictionId narrows by jurisdiction (resolve via dashboard_list_jurisdictions; e.g. \"EU\" returns only EU-EAA + EU-WAD). q is a case-insensitive substring match against name + shortName + id, applied client-side after the API call. When the user asks about a region (e.g. \"EU regs\"), prefer jurisdictionId over q for tight, deterministic results.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
         "requestBody": {
           "required": true,
           "content": {
@@ -920,7 +920,7 @@
                     "type": "string"
                   },
                   "q": {
-                    "description": "Free-text name filter (case-insensitive substring).",
+                    "description": "Case-insensitive substring match on name, shortName, or id. Applied client-side.",
                     "type": "string"
                   }
                 },
@@ -1164,7 +1164,7 @@
         "tags": [
           "mcp-tool"
         ],
-        "description": "List WCAG success criteria (requirements) — optionally filtered by regulationId — including obligation level (mandatory/recommended/optional) and the WCAG version + level the criterion belongs to. Use this to ground claims like \"regulation X requires SC 1.4.3 at AA\" with real platform data, and to answer \"which criteria fail under regulation X\" by cross-referencing with dashboard_query_issues codes.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "description": "List WCAG success criteria (requirements) — optionally filtered by regulationId — including obligation level (mandatory/recommended/optional) and the WCAG version + level the criterion belongs to. Use this to ground claims like \"regulation X requires SC 1.4.3 at AA\" with real platform data. wcagLevel + wcagVersion are post-filtered client-side after the API call.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1177,7 +1177,7 @@
                     "type": "string"
                   },
                   "wcagLevel": {
-                    "description": "Filter to a single conformance level.",
+                    "description": "Filter to a single conformance level. Applied client-side.",
                     "type": "string",
                     "enum": [
                       "A",
@@ -1186,7 +1186,7 @@
                     ]
                   },
                   "wcagVersion": {
-                    "description": "Filter to a WCAG version string (e.g. \"2.0\", \"2.1\", \"2.2\"). Note: dashboard_scan_site only runs WCAG 2.0 — do not claim the agent can scan for newer versions even when criteria for 2.1/2.2 are listed here.",
+                    "description": "Filter to a WCAG version string (e.g. \"2.0\", \"2.1\", \"2.2\"). Applied client-side. Note: dashboard_scan_site only runs WCAG 2.0 — do not claim the agent can scan for newer versions even when criteria for 2.1/2.2 are listed here.",
                     "type": "string"
                   }
                 },
@@ -1317,7 +1317,7 @@
         "tags": [
           "mcp-tool"
         ],
-        "description": "Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: \"queued\", url} immediately. Poll dashboard_get_report with the scanId for status. WARNING: this runs a real scan against the URL and may take minutes; downstream LLM quota is consumed by analyse/fix follow-ups.\n\nDiscovery first: before passing regulations[] or jurisdictions[], call dashboard_list_regulations and dashboard_list_jurisdictions to obtain valid IDs. Passing a name (e.g. \"ADA\") rather than an ID will silently produce a scan with no regulation tags.\n\nStandard: only WCAG 2.0 levels are accepted (WCAG2A/WCAG2AA/WCAG2AAA). The platform does not run WCAG 2.1 or 2.2 scans today; never claim a scan is using a newer version than what the runner supports.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "description": "Trigger an accessibility scan for a URL. Runs async — returns {scanId, status: \"queued\", url} immediately. The scan typically completes in seconds (single page) to a few minutes (full site).\n\nStatus checks: when the user asks \"is it done?\", \"check status\", or similar, you MUST call dashboard_get_report with the scanId in the SAME turn. Never restate a previously seen status — the scan likely progressed. Never claim \"still queued\" or \"still running\" without a fresh dashboard_get_report call returning that status in the current tool window.\n\nDiscovery first: before passing regulations[] or jurisdictions[], call dashboard_list_regulations and dashboard_list_jurisdictions to obtain valid IDs. Passing a name (e.g. \"ADA\") rather than an ID will silently produce a scan with no regulation tags. The platform stores ids exactly as the discovery tools return them — do not lowercase, kebab-case, or otherwise transform them.\n\nStandard: only WCAG 2.0 levels are accepted (WCAG2A/WCAG2AA/WCAG2AAA). The platform does not run WCAG 2.1 or 2.2 scans today; never claim a scan is using a newer version than what the runner supports.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
         "requestBody": {
           "required": true,
           "content": {
