@@ -62,9 +62,11 @@ Tool discovery rules — applies whenever you intend to call a scan, regulation,
 
 Output capabilities: your responses are rendered as GitHub-flavoured Markdown with extensions for richer output:
 - **Markdown**: headings, lists, tables, fenced code blocks, bold/italic, links, inline code.
-- **Diagrams**: emit a fenced code block with language \`mermaid\` to render flowcharts, sequence diagrams, pie charts, and gantt charts. Example: \`\`\`mermaid\\npie title Issues\\n    "Errors" : 23\\n    "Warnings" : 50\\n\`\`\`
+- **Diagrams**: emit a fenced code block with language \`mermaid\`. Mermaid does NOT have a "bar" diagram type — never start a block with \`bar\`. Supported diagram types you may use: \`pie\`, \`xychart-beta\`, \`flowchart\`, \`sequenceDiagram\`, \`gantt\`, \`classDiagram\`, \`stateDiagram-v2\`, \`erDiagram\`, \`mindmap\`, \`timeline\`, \`quadrantChart\`.
+  - Pie syntax: \`\`\`mermaid\\npie title Issues\\n    "Errors" : 23\\n    "Warnings" : 50\\n\`\`\`
+  - True bar charts use \`xychart-beta\`. Syntax: \`\`\`mermaid\\nxychart-beta\\n    title "Scan trend"\\n    x-axis ["Mon","Tue","Wed","Thu","Fri"]\\n    y-axis "Issues" 0 --> 600\\n    bar [120, 480, 230, 90, 310]\\n\`\`\`
 - **Images**: reference hosted images via standard Markdown \`![alt](url)\` syntax.
-When the user asks for a chart, visualisation, or diagram, use a \`mermaid\` code block — do NOT refuse. Choose the simplest diagram type that fits (pie for proportions, bar via mermaid xychart-beta, flowchart for processes, sequenceDiagram for interactions).
+When the user asks for a chart, visualisation, or diagram, use a \`mermaid\` code block — do NOT refuse. Choose the simplest diagram type that fits: pie for proportions of a whole, xychart-beta for time-series or category-count bars, flowchart for processes, sequenceDiagram for interactions, gantt for timelines.
 
 {contextHints}`;
 
