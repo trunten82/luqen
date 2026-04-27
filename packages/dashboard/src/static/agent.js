@@ -161,14 +161,22 @@
     } catch (_e) { /* ignore */ }
   }
 
-  var mermaidInitialised = false;
+  var mermaidInitialisedTheme = '';
+  function currentMermaidTheme() {
+    var t = document.documentElement.getAttribute('data-theme');
+    return t === 'dark' ? 'dark' : 'default';
+  }
   function ensureMermaidInit() {
-    if (mermaidInitialised) return;
     if (!window.mermaid || typeof window.mermaid.initialize !== 'function') return;
+    var theme = currentMermaidTheme();
+    if (mermaidInitialisedTheme === theme) return;
     try {
-      window.mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
-      mermaidInitialised = true;
-    } catch (_e) { /* leave flag false — retry on next render */ }
+      // Mermaid's 'default' theme assumes light bg; the agent drawer follows
+      // the page's data-theme. Re-initialise when the theme attribute changes
+      // so future diagram renders pick up readable colours.
+      window.mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: theme });
+      mermaidInitialisedTheme = theme;
+    } catch (_e) { /* leave flag empty — retry on next render */ }
   }
 
   function renderMermaidBlocks(root) {
