@@ -304,6 +304,11 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
       if (result.ok === false) {
         return errorEnvelope(result.error);
       }
+      // Echo the RESOLVED params (post server-side defaulting) so the agent
+      // narrates what actually got scheduled, not what it intended. The
+      // scanMode default flipped to 'single' for the MCP path; if the
+      // response still echoed 'site' the agent would describe a full crawl
+      // it never actually triggered.
       return {
         content: [
           {
@@ -314,7 +319,7 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
                 status: 'queued',
                 url: args.siteUrl,
                 standard: args.standard ?? 'WCAG2AA',
-                scanMode: args.scanMode ?? 'site',
+                scanMode,
                 regulations: args.regulations ?? [],
                 jurisdictions: args.jurisdictions ?? [],
               },
