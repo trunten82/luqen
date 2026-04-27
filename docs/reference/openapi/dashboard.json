@@ -31527,7 +31527,14 @@
                       "type": "string"
                     },
                     "client_secret": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "client_id_issued_at": {
                       "type": "number"
