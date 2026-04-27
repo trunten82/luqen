@@ -285,13 +285,26 @@ export class AgentService {
     // Persist the user message BEFORE entering the loop so a mid-stream
     // abort does not silently drop the prompt. Idempotent: POST /agent/message
     // already persists the user row before opening the SSE stream, so skip
-    // the append when the latest window row is the same user content.
+    // the append when the same user content is already present in the
+    // current window.
+    //
+    // Why scan the ENTIRE preWindow (not just the last row) — fix for
+    // agent-uat-residuals bug 2: when a destructive tool goes through the
+    // pending_confirmation flow, the client reopens the SSE stream after
+    // /confirm/:messageId returns (agent.js openStream after handleApproveClick).
+    // At that point the window state is [user, tool(pending→sent), tool(result)],
+    // so lastRow.role === 'tool' and the previous narrower check would
+    // re-persist the user row. Scanning the whole window for any user row
+    // matching userMessage handles confirm-resume, error-resume, and any
+    // future flow where intervening rows separate the user message from the
+    // window tail. False-positive risk: a deliberate same-prompt repeat in
+    // the same turn skips the second persist — acceptable trade-off (and
+    // exceedingly rare; same-prompt repeats are typically separated by an
+    // assistant reply, which makes them a NEW turn with non-matching window).
     const preWindow = await this.storage.conversations.getWindow(conversationId);
-    const lastRow = preWindow[preWindow.length - 1];
-    const alreadyPersisted =
-      lastRow !== undefined &&
-      lastRow.role === 'user' &&
-      (lastRow.content ?? '') === userMessage;
+    const alreadyPersisted = preWindow.some(
+      (row) => row.role === 'user' && (row.content ?? '') === userMessage,
+    );
     if (!alreadyPersisted) {
       await this.storage.conversations.appendMessage({
         conversationId,
