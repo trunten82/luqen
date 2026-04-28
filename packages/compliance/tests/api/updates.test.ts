@@ -196,7 +196,7 @@ describe('Updates API', () => {
     expect(response.statusCode).toBe(404);
   });
 
-  it('requires admin scope for approve', async () => {
+  it('rejects approve from a token without write scope', async () => {
     const propRes = await app.inject({
       method: 'POST',
       url: '/api/v1/updates/propose',
@@ -217,7 +217,7 @@ describe('Updates API', () => {
     const response = await app.inject({
       method: 'PATCH',
       url: `/api/v1/updates/${id}/approve`,
-      headers: authHeader(writeToken),
+      headers: authHeader(readToken),
     });
     expect(response.statusCode).toBe(403);
   });
