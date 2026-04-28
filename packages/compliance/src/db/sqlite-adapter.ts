@@ -620,6 +620,11 @@ export class SqliteAdapter implements DbAdapter {
     return row != null ? row.org_id : null;
   }
 
+  async getUpdateProposalOrgId(id: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT org_id FROM update_proposals WHERE id = ?').get(id) as { org_id: string } | undefined;
+    return row != null ? row.org_id : null;
+  }
+
   async getRequirementOrgId(id: string): Promise<string | null> {
     const row = this.db.prepare('SELECT org_id FROM requirements WHERE id = ?').get(id) as { org_id: string } | undefined;
     return row != null ? row.org_id : null;

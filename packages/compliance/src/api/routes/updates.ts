@@ -6,7 +6,7 @@ import { requireScope } from '../../auth/middleware.js';
 import { parsePagination, paginateArray } from '../pagination.js';
 import { proposeUpdate, approveUpdate, rejectUpdate, acknowledgeUpdate, reviewUpdate, dismissUpdate } from '../../engine/proposals.js';
 import type { TokenPayload } from '../../auth/oauth.js';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 
 type AuthRequest = FastifyRequest & { tokenPayload?: TokenPayload };
 
@@ -107,18 +107,45 @@ export async function registerUpdateRoutes(
     }
   });
 
+  // Row-level ownership: system proposals require a system caller; org-scoped
+  // proposals must match the caller's org. Mirrors the regulations PATCH guard
+  // so we can drop the lifecycle endpoints from `admin` to `write` scope —
+  // per-org OAuth clients only ever carry read+write, never admin.
+  async function checkProposalOwnership(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    id: string,
+  ): Promise<boolean> {
+    const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+    const recordOrgId = await db.getUpdateProposalOrgId(id);
+    if (recordOrgId == null) {
+      await reply.status(404).send({ error: `UpdateProposal '${id}' not found`, statusCode: 404 });
+      return false;
+    }
+    if (recordOrgId === 'system' && requestOrgId !== 'system') {
+      await reply.status(403).send({ error: 'Cannot act on system-level proposal', statusCode: 403 });
+      return false;
+    }
+    if (recordOrgId !== 'system' && requestOrgId != null && recordOrgId !== requestOrgId) {
+      await reply.status(403).send({ error: 'Cannot act on proposal belonging to another organisation', statusCode: 403 });
+      return false;
+    }
+    return true;
+  }
+
   // PATCH /api/v1/updates/:id/approve
   app.patch('/api/v1/updates/:id/approve', {
     schema: {
       tags: ['updates'],
       summary: 'Approve update proposal',
       params: UpdateParams,
-      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 403: ErrorEnvelope, 404: ErrorEnvelope },
     },
-    preHandler: [requireScope('admin')],
+    preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      if (!(await checkProposalOwnership(request, reply, id))) return;
       const reviewer = (request as AuthRequest).tokenPayload?.sub ?? 'system';
       const proposal = await approveUpdate(db, id, reviewer);
       await reply.send(proposal);
@@ -135,12 +162,13 @@ export async function registerUpdateRoutes(
       tags: ['updates'],
       summary: 'Reject update proposal',
       params: UpdateParams,
-      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 403: ErrorEnvelope, 404: ErrorEnvelope },
     },
-    preHandler: [requireScope('admin')],
+    preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      if (!(await checkProposalOwnership(request, reply, id))) return;
       const reviewer = (request as AuthRequest).tokenPayload?.sub ?? 'system';
       const proposal = await rejectUpdate(db, id, reviewer);
       await reply.send(proposal);
@@ -158,12 +186,13 @@ export async function registerUpdateRoutes(
       summary: 'Acknowledge update proposal',
       params: UpdateParams,
       body: UpdateNotesBody,
-      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 403: ErrorEnvelope, 404: ErrorEnvelope },
     },
-    preHandler: [requireScope('admin')],
+    preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      if (!(await checkProposalOwnership(request, reply, id))) return;
       const reviewer = (request as AuthRequest).tokenPayload?.sub ?? 'system';
       const body = (request.body ?? {}) as { notes?: string };
       const proposal = await acknowledgeUpdate(db, id, reviewer, body.notes);
@@ -182,12 +211,13 @@ export async function registerUpdateRoutes(
       summary: 'Mark update proposal as reviewed',
       params: UpdateParams,
       body: UpdateNotesBody,
-      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 403: ErrorEnvelope, 404: ErrorEnvelope },
     },
-    preHandler: [requireScope('admin')],
+    preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      if (!(await checkProposalOwnership(request, reply, id))) return;
       const reviewer = (request as AuthRequest).tokenPayload?.sub ?? 'system';
       const body = (request.body ?? {}) as { notes?: string };
       const proposal = await reviewUpdate(db, id, reviewer, body.notes);
@@ -206,12 +236,13 @@ export async function registerUpdateRoutes(
       summary: 'Dismiss update proposal',
       params: UpdateParams,
       body: UpdateNotesBody,
-      response: { 200: UpdateProposal, 400: ErrorEnvelope, 404: ErrorEnvelope },
+      response: { 200: UpdateProposal, 400: ErrorEnvelope, 403: ErrorEnvelope, 404: ErrorEnvelope },
     },
-    preHandler: [requireScope('admin')],
+    preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      if (!(await checkProposalOwnership(request, reply, id))) return;
       const reviewer = (request as AuthRequest).tokenPayload?.sub ?? 'system';
       const body = (request.body ?? {}) as { notes?: string };
       const proposal = await dismissUpdate(db, id, reviewer, body.notes);
