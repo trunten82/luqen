@@ -200,7 +200,10 @@ describe('Phase 32 Plan 06 — agent-panel E2E smoke', () => {
     // theme variables, render, and source salvage.
     // v3.2.1 — cross-user identity stamp + evictForeignAgentState (~35
     // LOC) shipped as part of the security fix. Ceiling raised to 1400.
-    expect(loc).toBeLessThanOrEqual(1400);
+    // v3.3.0 Phase 43 — plan rendering + step indicator + Cancel (~80 LOC).
+    // Future split candidate: agent-plan.js if planning grows further
+    // (e.g. editable steps in v3.4.0 AGENT-EDIT-PLAN).
+    expect(loc).toBeLessThanOrEqual(1500);
     const splitFiles = [
       'src/static/agent-history.js',
       'src/static/agent-tools.js',
