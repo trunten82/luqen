@@ -5,13 +5,13 @@
        class="tab {{#if (eq tab 'updates')}}tab--active{{/if}}"
        aria-current="{{#if (eq tab 'updates')}}page{{/if}}">
       {{t "admin.proposals.tabUpdates"}}
-      {{#if officialCount}}<span class="badge badge--warning badge--sm">{{officialCount}}</span>{{/if}}
+      {{#if officialCount}}<span class="badge badge--warning badge--sm" data-pending-counter="updates">{{officialCount}}</span>{{/if}}
     </a>
     <a href="/admin/proposals?tab=custom"
        class="tab {{#if (eq tab 'custom')}}tab--active{{/if}}"
        aria-current="{{#if (eq tab 'custom')}}page{{/if}}">
       {{t "admin.proposals.tabCustom"}}
-      {{#if customCount}}<span class="badge badge--warning badge--sm">{{customCount}}</span>{{/if}}
+      {{#if customCount}}<span class="badge badge--warning badge--sm" data-pending-counter="custom">{{customCount}}</span>{{/if}}
     </a>
   </div>
 
@@ -23,7 +23,7 @@
 
   {{!-- Regulatory Updates tab --}}
   {{#if (eq tab 'updates')}}
-  <h2 class="section-title mt-md">{{t "admin.proposals.pendingHeading"}}{{#if officialCount}} <span class="badge badge--warning badge--sm">{{officialCount}}</span>{{/if}}</h2>
+  <h2 class="section-title mt-md">{{t "admin.proposals.pendingHeading"}}{{#if officialCount}} <span class="badge badge--warning badge--sm" data-pending-counter="updates">{{officialCount}}</span>{{/if}}</h2>
   <div class="bulk-bar">
     <label class="bulk-bar__select-all">
       <input type="checkbox" data-action="bulkSelectAll" data-tab="updates" aria-label="{{t 'admin.proposals.selectAll'}}">
@@ -54,7 +54,7 @@
       </thead>
       <tbody>
         {{#each officialPending}}
-        <tr id="proposal-{{id}}">
+        <tr id="proposal-{{id}}" data-pending-tab="updates">
           <td class="col--check">{{#if isPending}}<input type="checkbox" class="bulk-check" data-tab="updates" data-id="{{id}}" data-action="bulkToggle">{{/if}}</td>
           <td data-label="Source" class="cell--wrap">{{source}}</td>
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
@@ -171,7 +171,7 @@
 
   {{!-- Custom Proposals tab --}}
   {{#if (eq tab 'custom')}}
-  <h2 class="section-title mt-md">{{t "admin.proposals.pendingHeading"}}{{#if customCount}} <span class="badge badge--warning badge--sm">{{customCount}}</span>{{/if}}</h2>
+  <h2 class="section-title mt-md">{{t "admin.proposals.pendingHeading"}}{{#if customCount}} <span class="badge badge--warning badge--sm" data-pending-counter="custom">{{customCount}}</span>{{/if}}</h2>
   <div class="bulk-bar">
     <label class="bulk-bar__select-all">
       <input type="checkbox" data-action="bulkSelectAll" data-tab="custom" aria-label="{{t 'admin.proposals.selectAll'}}">
@@ -205,7 +205,7 @@
       </thead>
       <tbody>
         {{#each customPending}}
-        <tr id="proposal-{{id}}">
+        <tr id="proposal-{{id}}" data-pending-tab="custom">
           <td class="col--check">{{#if isPending}}<input type="checkbox" class="bulk-check" data-tab="custom" data-id="{{id}}" data-action="bulkToggle">{{/if}}</td>
           <td data-label="Source" class="cell--wrap">{{source}}</td>
           <td data-label="Type"><span class="badge badge--info">{{type}}</span></td>
@@ -315,3 +315,28 @@
   {{/if}}
   {{/if}}
 </section>
+
+<script>
+  // Decrement pending-counter badges in lockstep with row removal so the
+  // header/tab counts stay accurate after acknowledge/review/dismiss
+  // without a full page reload. The row's data-pending-tab attribute
+  // tells us which badges to update; htmx:beforeSwap fires while the
+  // tr is still in the DOM, so we can read it before deletion.
+  document.body.addEventListener('htmx:beforeSwap', function (event) {
+    var target = event.detail && event.detail.target;
+    if (!target || target.tagName !== 'TR') return;
+    if (!event.detail.xhr || event.detail.xhr.status >= 400) return;
+    var tab = target.getAttribute('data-pending-tab');
+    if (!tab) return;
+    var badges = document.querySelectorAll('[data-pending-counter="' + tab + '"]');
+    badges.forEach(function (badge) {
+      var n = parseInt(badge.textContent, 10);
+      if (isNaN(n)) return;
+      if (n <= 1) {
+        badge.remove();
+      } else {
+        badge.textContent = String(n - 1);
+      }
+    });
+  });
+</script>
