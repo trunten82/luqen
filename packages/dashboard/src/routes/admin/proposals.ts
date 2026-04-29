@@ -160,7 +160,11 @@ export async function proposalRoutes(
       const body = (request.body ?? {}) as { notes?: string };
 
       try {
-        await acknowledgeProposal(baseUrl, getToken(request), id, body.notes, getOrgId(request));
+        // Don't override X-Org-Id: the JWT's orgId is authoritative.
+        // Global admin token → system; org admin token → their org.
+        // Sending a header override mis-scopes the ownership check in
+        // updates.ts when global admins act in an org-switcher context.
+        await acknowledgeProposal(baseUrl, getToken(request), id, body.notes);
 
         void storage.audit.log({
           actor: request.user?.username ?? 'unknown',
@@ -196,7 +200,7 @@ export async function proposalRoutes(
       const body = (request.body ?? {}) as { notes?: string };
 
       try {
-        await reviewProposal(baseUrl, getToken(request), id, body.notes, getOrgId(request));
+        await reviewProposal(baseUrl, getToken(request), id, body.notes);
 
         void storage.audit.log({
           actor: request.user?.username ?? 'unknown',
@@ -232,7 +236,7 @@ export async function proposalRoutes(
       const body = (request.body ?? {}) as { notes?: string };
 
       try {
-        await dismissProposal(baseUrl, getToken(request), id, body.notes, getOrgId(request));
+        await dismissProposal(baseUrl, getToken(request), id, body.notes);
 
         void storage.audit.log({
           actor: request.user?.username ?? 'unknown',
@@ -296,7 +300,7 @@ export async function proposalRoutes(
 
       await Promise.all(ids.map(async (id) => {
         try {
-          await actionFn(baseUrl, getToken(request), id, notes, getOrgId(request));
+          await actionFn(baseUrl, getToken(request), id, notes);
           void storage.audit.log({
             actor: request.user?.username ?? 'unknown',
             actorId: request.user?.id,
@@ -327,7 +331,7 @@ export async function proposalRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
-        await approveProposal(baseUrl, getToken(request), id, getOrgId(request));
+        await approveProposal(baseUrl, getToken(request), id);
         return reply
           .code(200)
           .header('content-type', 'text/html')
@@ -348,7 +352,7 @@ export async function proposalRoutes(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       try {
-        await rejectProposal(baseUrl, getToken(request), id, getOrgId(request));
+        await rejectProposal(baseUrl, getToken(request), id);
         return reply
           .code(200)
           .header('content-type', 'text/html')
