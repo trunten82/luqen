@@ -37,6 +37,7 @@ import type { Message } from '../db/interfaces/conversation-repository.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
 import type { SseFrame } from './sse-frames.js';
 import { parsePlanBlock } from './plan-parser.js';
+import { activeTurnRegistry, type ActiveTurnRegistry } from './active-turn-registry.js';
 import { collectContextHints, formatContextHints } from './context-hints.js';
 import { generateConversationTitle } from './conversation-title-generator.js';
 import {
@@ -197,6 +198,13 @@ export interface AgentServiceOptions {
    * inject a constant so they do not need to seed an org row.
    */
   readonly resolveAgentDisplayName?: (orgId: string) => Promise<string | null | undefined>;
+  /**
+   * Phase 43 Plan 02 (AGENT-02) — active-turn registry override. Defaults
+   * to the module-level singleton `activeTurnRegistry`. Tests inject a
+   * fresh `ActiveTurnRegistry` instance so cancel side-effects are
+   * isolated between cases.
+   */
+  readonly turnRegistry?: ActiveTurnRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -224,6 +232,7 @@ export class AgentService {
   };
   private readonly resolveDisplayName: (orgId: string) => Promise<string>;
   private readonly titleGenerator: TitleGeneratorFn;
+  private readonly turnRegistry: ActiveTurnRegistry;
 
   constructor(options: AgentServiceOptions) {
     this.storage = options.storage;
@@ -233,6 +242,7 @@ export class AgentService {
     this.dispatcher = options.dispatcher;
     this.resolvePermissions = options.resolvePermissions;
     this.config = options.config;
+    this.turnRegistry = options.turnRegistry ?? activeTurnRegistry;
     // Phase 35 Plan 03 — title hook. Default binds to the shared generator
     // with this service's `llm` field; tests inject a stub to count calls.
     const injectedTitleGen = options.titleGenerator;
@@ -281,7 +291,28 @@ export class AgentService {
    * error SSE frame + `status='failed'` persistence + audit row.
    */
   async runTurn(input: AgentTurnInput): Promise<void> {
-    const { conversationId, userId, orgId, userMessage, emit, signal } = input;
+    const { conversationId, userId, orgId, userMessage, emit } = input;
+
+    // Phase 43 Plan 02 (AGENT-02) — register an internal AbortController
+    // for this turn so the `POST /agent/cancel/:conversationId` route can
+    // interrupt the loop. The controller is the sole source-of-truth for
+    // abort signals during the turn:
+    //   - input.signal (from the SSE route, fired on browser disconnect)
+    //     is forwarded into the internal controller.
+    //   - registry.cancel(conversationId) calls .abort() directly.
+    //   - SSE write failures (browser unreachable) call abort via the
+    //     route's controller, which propagates here.
+    // Downstream (LLM stream, tool dispatcher) sees `signal` aliased to
+    // the internal controller's signal so all three sources collapse to
+    // a single AbortSignal.
+    const turnController = this.turnRegistry.register(conversationId);
+    const forwardAbort = (): void => turnController.abort();
+    if (input.signal.aborted) {
+      turnController.abort();
+    } else {
+      input.signal.addEventListener('abort', forwardAbort, { once: true });
+    }
+    const signal = turnController.signal;
 
     // Persist the user message BEFORE entering the loop so a mid-stream
     // abort does not silently drop the prompt. Idempotent: POST /agent/message
@@ -346,6 +377,23 @@ export class AgentService {
 
     try {
       for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
+        // Phase 43 Plan 02 — between-iteration abort check. The dispatcher
+        // also receives `signal` and aborts in-flight fetches, but a cancel
+        // that arrives between iterations (after the first one completed)
+        // would otherwise drive one more LLM call before we noticed. Emit
+        // a terminal `done {aborted:true}` and return cleanly — partial
+        // assistant/tool rows already in the window stay there (that is
+        // the resume contract from CONTEXT.md).
+        //
+        // iter > 0 guard: a pre-aborted signal at iter 0 must flow through
+        // the LLM call so the existing AUX-01 stop-persistence path
+        // (catch → handleStreamAbort → markMessageStopped audit row)
+        // still fires. handleStreamAbort itself emits the
+        // `done {aborted:true}` frame for that path.
+        if (iter > 0 && signal.aborted) {
+          emit({ type: 'done', aborted: true });
+          return;
+        }
         // (1) Re-resolve permissions every iteration (D-07, Guardrail 1).
         const perms = await this.resolvePermissions(userId, orgId);
         const manifest = buildManifest(this.allTools, perms, this.toolCatalog);
@@ -548,6 +596,16 @@ export class AgentService {
           accumulatedText,
           turnStartMs: turnStart,
         });
+        // Phase 43 Plan 02 — emit a terminal aborted-done so the client
+        // can render the cancelled-state UI. Best-effort: emit() may
+        // throw if the SSE stream has already been torn down; swallow
+        // those failures rather than propagating into the route's
+        // hijacked-reply-already-ended path.
+        try {
+          emit({ type: 'done', aborted: true });
+        } catch {
+          /* stream gone; nothing to do */
+        }
         return;
       }
       // Catch-all: emit an error frame + persist failed status on any
@@ -565,6 +623,13 @@ export class AgentService {
         content: `Error: ${message}`,
         status: 'failed',
       });
+    } finally {
+      // Phase 43 Plan 02 — always evict the registry entry so the next
+      // turn starts with a clean controller. Detach the input.signal
+      // forwarder so a late abort on the route's controller doesn't
+      // fire on a discarded turn controller after we've already returned.
+      input.signal.removeEventListener('abort', forwardAbort);
+      this.turnRegistry.cleanup(conversationId);
     }
   }
 

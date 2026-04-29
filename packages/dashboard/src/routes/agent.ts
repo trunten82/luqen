@@ -42,6 +42,10 @@ import type {
   ToolDispatcher,
   ToolCallInput,
 } from '../agent/tool-dispatch.js';
+import {
+  activeTurnRegistry as defaultTurnRegistry,
+  type ActiveTurnRegistry,
+} from '../agent/active-turn-registry.js';
 
 export interface RegisterAgentRoutesOptions {
   readonly agentService: Pick<AgentService, 'runTurn'>;
@@ -62,6 +66,13 @@ export interface RegisterAgentRoutesOptions {
     readonly max: number;
     readonly timeWindow: string;
   };
+  /**
+   * Phase 43 Plan 02 (AGENT-02) — active-turn registry. Tests inject a
+   * fresh `ActiveTurnRegistry` so cancel side-effects don't leak across
+   * cases. Defaults to the module-level singleton shared with
+   * `AgentService.runTurn`.
+   */
+  readonly turnRegistry?: ActiveTurnRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -291,6 +302,7 @@ export async function registerAgentRoutes(
     storage,
     publicUrl,
     rateLimit: rlConfig = { max: 60, timeWindow: '1 minute' },
+    turnRegistry = defaultTurnRegistry,
   } = options;
 
   const expectedOrigin = normaliseUrl(publicUrl);
@@ -568,6 +580,52 @@ export async function registerAgentRoutes(
           status: 'sent',
         });
         return reply.code(202).send({ ok: true });
+      },
+    );
+
+    // ── POST /agent/cancel/:conversationId ─────────────────────────────
+    // Phase 43 Plan 02 (AGENT-02). Interrupt an in-flight runTurn loop
+    // for the given conversation. Looks the AbortController up in the
+    // active-turn registry and fires .abort() — the LLM stream, in-
+    // flight tool fetch, and the runTurn loop's between-iteration check
+    // all observe the signal and unwind cleanly.
+    //
+    // Ownership guard mirrors v3.2.1 cross-user fix: a foreign-user
+    // conversationId returns 404 (not 403) so the existence of someone
+    // else's conversation is not leaked. No active turn → 200 with
+    // `cancelled: false`; this is success, not error — the user clicked
+    // cancel after the turn already finished and there is nothing to do.
+    scope.post(
+      '/cancel/:conversationId',
+      {
+        schema: {
+          tags: ['agent'],
+          summary: 'Cancel the in-flight runTurn for a conversation',
+          response: {
+            200: Type.Object({ cancelled: Type.Boolean() }),
+            401: ErrorEnvelope,
+            404: ErrorEnvelope,
+          },
+        },
+      },
+      async (request: FastifyRequest, reply: FastifyReply) => {
+        const user = request.user;
+        if (user === undefined) {
+          return reply.code(401).send({ error: 'unauthenticated' });
+        }
+        const { conversationId } = request.params as { conversationId: string };
+        const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
+        if (orgId === undefined) {
+          return reply.code(400).send({ error: 'no_org_context' });
+        }
+        const conv = await storage.conversations.getConversation(conversationId, orgId);
+        // SECURITY (agent-conversation-leak-cross-user, v3.2.1): foreign
+        // ownership shaped as 404 to avoid leaking conversation existence.
+        if (conv === null || conv.userId !== user.id) {
+          return reply.code(404).send({ error: 'conversation_not_found' });
+        }
+        const cancelled = turnRegistry.cancel(conversationId);
+        return reply.code(200).send({ cancelled });
       },
     );
 

@@ -42,7 +42,17 @@ export const PendingConfirmationFrameSchema = z.object({
   confirmationText: z.string().optional(),
 });
 
-export const DoneFrameSchema = z.object({ type: z.literal('done') });
+/**
+ * Phase 43 Plan 02 (AGENT-02) — `aborted` flag carried on the terminal
+ * `done` frame when a runTurn loop was interrupted via the cancel route
+ * or an EventSource disconnect. Absent on natural completion. Client
+ * uses the flag to render the "cancelled" state on the plan bubble
+ * (Plan 43-03) instead of a normal completion checkmark.
+ */
+export const DoneFrameSchema = z.object({
+  type: z.literal('done'),
+  aborted: z.boolean().optional(),
+});
 
 export const ErrorFrameSchema = z.object({
   type: z.literal('error'),
