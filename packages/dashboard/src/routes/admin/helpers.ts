@@ -13,13 +13,24 @@ export function getToken(request: FastifyRequest): string {
   const session = request.session as { token?: string };
   if (session.token) return session.token;
 
-  // Per-org token takes priority over global token (set by preHandler hook)
-  const orgToken = (request as unknown as { _orgServiceToken?: string })._orgServiceToken;
-  if (orgToken) return orgToken;
+  const reqExt = request as unknown as { _orgServiceToken?: string; _serviceToken?: string };
 
-  // The preHandler hook in server.ts sets this on every request
-  const serviceToken = (request as unknown as { _serviceToken?: string })._serviceToken;
-  if (serviceToken) return serviceToken;
+  // Global system admins always use the global service token, even when
+  // an org-switcher selection has populated _orgServiceToken. The per-org
+  // token's JWT carries the org's id (not 'system') and only read+write
+  // scopes — it cannot act on system-owned compliance data, which is
+  // exactly what global admins need to do (acknowledge official
+  // regulatory proposals, edit system regulations, etc.). The global
+  // token has scope=admin and orgId=system, so reads stay org-scoped via
+  // X-Org-Id when the route opts in.
+  if (request.user?.role === 'admin' && reqExt._serviceToken) {
+    return reqExt._serviceToken;
+  }
+
+  // Per-org token takes priority over global token for org-scoped users
+  if (reqExt._orgServiceToken) return reqExt._orgServiceToken;
+
+  if (reqExt._serviceToken) return reqExt._serviceToken;
 
   return process.env['DASHBOARD_COMPLIANCE_API_KEY'] ?? '';
 }

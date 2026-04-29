@@ -768,6 +768,27 @@ body {
     white-space: normal;
     word-break: break-all;
   }
+
+  /* Long-form cells (Source URL, Summary, etc.) read better stacked
+     vertically on mobile: label sits above the value with a small gap,
+     full row width is used for the content. The default flex layout
+     squeezes long text into the right column and creates ragged wraps
+     (see /admin/proposals on narrow viewports). */
+  .data-table td.cell--wrap {
+    display: block;
+    text-align: left;
+    padding: var(--space-sm) 0;
+  }
+
+  .data-table td.cell--wrap::before {
+    display: block;
+    margin-bottom: var(--space-xs);
+  }
+
+  .data-table td.cell--wrap {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
 }
 
 /* ---- Tables ---- */

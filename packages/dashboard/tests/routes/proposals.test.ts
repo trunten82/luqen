@@ -185,7 +185,6 @@ describe('Proposal routes', () => {
         BASE_URL,
         expect.any(String),
         'prop-1',
-        expect.anything(),
       );
     });
 
@@ -223,7 +222,6 @@ describe('Proposal routes', () => {
         BASE_URL,
         expect.any(String),
         'prop-1',
-        expect.anything(),
       );
     });
 

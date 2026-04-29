@@ -116,12 +116,17 @@ export async function registerUpdateRoutes(
     reply: FastifyReply,
     id: string,
   ): Promise<boolean> {
-    const requestOrgId = (request as unknown as { orgId?: string }).orgId;
     const recordOrgId = await db.getUpdateProposalOrgId(id);
     if (recordOrgId == null) {
       await reply.status(404).send({ error: `UpdateProposal '${id}' not found`, statusCode: 404 });
       return false;
     }
+    // Admin-scope tokens (global service token) bypass org-ownership.
+    // They're used by dashboard global admins acting across orgs.
+    const payload = (request as AuthRequest).tokenPayload;
+    if (payload?.scopes.includes('admin')) return true;
+
+    const requestOrgId = (request as unknown as { orgId?: string }).orgId;
     if (recordOrgId === 'system' && requestOrgId !== 'system') {
       await reply.status(403).send({ error: 'Cannot act on system-level proposal', statusCode: 403 });
       return false;
