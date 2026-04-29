@@ -20,6 +20,7 @@ import { manualTestRoutes } from './routes/manual-tests.js';
 import { assignmentRoutes } from './routes/assignments.js';
 import { jurisdictionRoutes } from './routes/admin/jurisdictions.js';
 import { regulationRoutes } from './routes/admin/regulations.js';
+import { notificationRoutes } from './routes/admin/notifications.js';
 import { proposalRoutes } from './routes/admin/proposals.js';
 import { sourceRoutes } from './routes/admin/sources.js';
 import { webhookRoutes } from './routes/admin/webhooks.js';
@@ -961,6 +962,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);
   await regulationRoutes(server, config.complianceUrl);
+  await notificationRoutes(server, storage);
   await proposalRoutes(server, config.complianceUrl, storage);
   await changeHistoryRoutes(server, config.complianceUrl);
   await agentAuditRoutes(server, storage);
