@@ -43,3 +43,49 @@ describe('agent-system prompt — LOCKED:planning-mode fence', () => {
     expect(prompt).toContain('<!-- LOCKED:planning-mode -->');
   });
 });
+
+describe('agent-system prompt — Phase 46 LOCKED:honesty async-status extension (AGENT-08)', () => {
+  it('LOCKED:honesty contains the "Async job status — never guess" directive', () => {
+    const prompt = buildAgentSystemPrompt();
+    const start = prompt.indexOf('<!-- LOCKED:honesty -->');
+    const end = prompt.indexOf('<!-- /LOCKED:honesty -->');
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const block = prompt.slice(start, end);
+    expect(block).toMatch(/Async job status — never guess/);
+  });
+
+  it('LOCKED:honesty names the dashboard_get_scan_progress tool', () => {
+    const prompt = buildAgentSystemPrompt();
+    const start = prompt.indexOf('<!-- LOCKED:honesty -->');
+    const end = prompt.indexOf('<!-- /LOCKED:honesty -->');
+    const block = prompt.slice(start, end);
+    expect(block).toContain('dashboard_get_scan_progress');
+  });
+
+  it('LOCKED:honesty instructs the model to call the progress tool BEFORE answering "is it done?"', () => {
+    const prompt = buildAgentSystemPrompt();
+    const start = prompt.indexOf('<!-- LOCKED:honesty -->');
+    const end = prompt.indexOf('<!-- /LOCKED:honesty -->');
+    const block = prompt.slice(start, end);
+    expect(block.toLowerCase()).toContain('is it done?');
+    expect(block.toLowerCase()).toContain('how far along?');
+    expect(block).toMatch(/BEFORE answering/);
+  });
+
+  it('LOCKED:honesty has the "no progress tool exists" fallback line for unsupported job types', () => {
+    const prompt = buildAgentSystemPrompt();
+    const start = prompt.indexOf('<!-- LOCKED:honesty -->');
+    const end = prompt.indexOf('<!-- /LOCKED:honesty -->');
+    const block = prompt.slice(start, end);
+    expect(block).toContain('I cannot directly check that status');
+  });
+
+  it('LOCKED:honesty fence is still single open + single close (well-formed after extension)', () => {
+    const prompt = buildAgentSystemPrompt();
+    const open = prompt.match(/<!-- LOCKED:honesty -->/g) ?? [];
+    const close = prompt.match(/<!-- \/LOCKED:honesty -->/g) ?? [];
+    expect(open.length).toBe(1);
+    expect(close.length).toBe(1);
+  });
+});

@@ -55,6 +55,7 @@ export const DASHBOARD_DATA_TOOL_METADATA: readonly ToolMetadata[] = [
   },
   { name: 'dashboard_list_reports',      requiredPermission: 'reports.view' },
   { name: 'dashboard_get_report',        requiredPermission: 'reports.view' },
+  { name: 'dashboard_get_scan_progress', requiredPermission: 'reports.view' },
   { name: 'dashboard_query_issues',      requiredPermission: 'reports.view' },
   { name: 'dashboard_list_brand_scores', requiredPermission: 'branding.view' },
   { name: 'dashboard_get_brand_score',   requiredPermission: 'branding.view' },

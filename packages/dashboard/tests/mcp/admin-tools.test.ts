@@ -281,7 +281,7 @@ describe('Phase 30 admin tools — tools/list count + permission filtering', () 
     const names = (
       (parseSseOrJson(response.body)['result'] as { tools: Array<{ name: string }> }).tools
     ).map((t) => t.name);
-    expect(names.length).toBe(19);
+    expect(names.length).toBe(20);
     expect(names).toEqual(expect.arrayContaining([...DATA_TOOL_NAMES, ...ADMIN_TOOL_NAMES]));
   });
 
@@ -350,7 +350,7 @@ describe('Phase 30 admin tools — D-17 invariant + classification coverage + no
       scanService: makeStubScanService(),
       serviceConnections: makeStubServiceConnections(),
     });
-    expect(toolNames.length).toBe(19); // 6 data + 13 admin
+    expect(toolNames.length).toBe(20); // 7 data (Phase 46 added scan_progress) + 13 admin
 
     const registered =
       (

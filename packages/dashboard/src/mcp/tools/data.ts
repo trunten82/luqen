@@ -113,6 +113,7 @@ export const DATA_TOOL_NAMES = [
   'dashboard_scan_site',
   'dashboard_list_reports',
   'dashboard_get_report',
+  'dashboard_get_scan_progress',
   'dashboard_query_issues',
   'dashboard_list_brand_scores',
   'dashboard_get_brand_score',
@@ -423,6 +424,82 @@ export function registerDataTools(server: McpServer, opts: RegisterDataToolsOpti
                 scanId: args.scanId,
                 scan: lookup.scan,
                 report,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    },
+  );
+
+  // ---- dashboard_get_scan_progress (Phase 46, AGENT-07) ----
+  // Cheap idempotent live-progress probe. The agent calls this BEFORE
+  // answering "is it done?" / "how far along?" — see the LOCKED:honesty
+  // fence in packages/llm/src/prompts/agent-system.ts for the rule that
+  // keeps the LLM from restating cached statuses across turns.
+  // Returns a flat status payload + ETA; omits the (potentially large)
+  // pa11y report so the agent can poll without blowing token budgets.
+  // Note: ScanRecord has no `totalPages`/`startedAt`/`lastUpdated` fields
+  // (see db/types.ts). We expose `pagesScanned` from the record, leave
+  // `totalPages` as null when unknown, and use `completedAt ?? createdAt`
+  // for `lastUpdated` so the agent always has a coherent timestamp.
+  server.registerTool(
+    'dashboard_get_scan_progress',
+    {
+      description:
+        [
+          'Get live progress of a scan. Use this BEFORE answering "is it done?" / "did it finish?" / "how far along?" questions about a scan id. Returns the current status, pages scanned, and an ETA estimate. Idempotent and cheap — call it every time the user asks about progress; never restate a status from a prior turn.',
+          '',
+          'Returns: { scanId, status, pagesScanned, totalPages, etaSeconds, lastUpdated, finished, siteUrl }. `finished` is true when status is "completed" or "failed". `etaSeconds` is null when the scan is not running or progress data is insufficient.',
+          '',
+          'On a missing or cross-org scan, returns an error envelope — surface that to the user verbatim, do not invent a status.',
+        ].join('\n'),
+      inputSchema: z.object({
+        scanId: z.string().describe('The scan id to check'),
+      }),
+      annotations: { destructiveHint: false, readOnlyHint: true },
+    },
+    // orgId: ctx.orgId (org-scoped — scanService.getScanForOrg applies the cross-org guard before any progress data is returned)
+    async (args) => {
+      const orgId = resolveOrgId();
+      const lookup = await scanService.getScanForOrg(args.scanId, orgId);
+      if (lookup.ok === false) {
+        return errorEnvelope(lookup.error);
+      }
+      const scan = lookup.scan;
+      const pagesScanned = scan.pagesScanned ?? 0;
+      // ScanRecord does not persist totalPages today; leave it null so the
+      // agent says "ETA not yet available" rather than fabricating a count.
+      const totalPages: number | null = null;
+      const finished = scan.status === 'completed' || scan.status === 'failed';
+      const lastUpdated = scan.completedAt ?? scan.createdAt;
+      let etaSeconds: number | null = null;
+      if (
+        scan.status === 'running' &&
+        totalPages !== null &&
+        pagesScanned > 0 &&
+        (totalPages as number) > pagesScanned
+      ) {
+        const elapsedMs = Date.now() - new Date(scan.createdAt).getTime();
+        const avgMsPerPage = elapsedMs / pagesScanned;
+        etaSeconds = Math.ceil((((totalPages as number) - pagesScanned) * avgMsPerPage) / 1000);
+      }
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                scanId: scan.id,
+                status: scan.status,
+                pagesScanned,
+                totalPages,
+                etaSeconds,
+                lastUpdated,
+                finished,
+                siteUrl: scan.siteUrl,
               },
               null,
               2,
