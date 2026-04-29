@@ -243,10 +243,11 @@ describe('POST /api/v1/mcp (dashboard)', () => {
     expect(serverInfo?.name).toBe('luqen-dashboard');
   });
 
-  it('Case 4: valid Bearer + tools/list returns the 6 dashboard data tools (Phase 30 scope)', async () => {
-    // Phase 30-02 populates the dashboard MCP with six data tools covering
-    // MCPT-01 (scan/report/issue) + the MCPT-02 brand-score retrieval half.
-    // A caller with scans.create + reports.view + branding.view sees all six.
+  it('Case 4: valid Bearer + tools/list returns the 7 dashboard data tools (Phase 30 + Phase 46)', async () => {
+    // Phase 30-02 populated the dashboard MCP with six data tools covering
+    // MCPT-01 (scan/report/issue) + MCPT-02 brand-score retrieval. Phase 46
+    // adds dashboard_get_scan_progress (AGENT-07) — bringing the total to 7.
+    // A caller with scans.create + reports.view + branding.view sees all 7.
     // Admin scope on its own does NOT expose the data tools because the
     // manifest filter is permission-driven (filterToolsByPermissions) when
     // the caller has any resolved permissions — the stub below grants the
@@ -286,11 +287,12 @@ describe('POST /api/v1/mcp (dashboard)', () => {
     expect(names).toContain('dashboard_scan_site');
     expect(names).toContain('dashboard_list_reports');
     expect(names).toContain('dashboard_get_report');
+    expect(names).toContain('dashboard_get_scan_progress');
     expect(names).toContain('dashboard_query_issues');
     expect(names).toContain('dashboard_list_brand_scores');
     expect(names).toContain('dashboard_get_brand_score');
-    // Admin tools (plan 30-03) are still empty stubs here, so the count is 6.
-    expect(names.length).toBe(6);
+    // Admin tools (plan 30-03) are still empty stubs here, so the count is 7.
+    expect(names.length).toBe(7);
   });
 
   it('Case 5: cookie-only request (no Bearer) is rejected with 401', async () => {

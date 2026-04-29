@@ -175,7 +175,7 @@ describe('Phase 30 data tools — tools/list RBAC filtering', () => {
     }
   });
 
-  it('caller with all three required permissions sees the 6 data tools (admin tools empty in 30-02)', async () => {
+  it('caller with all three required permissions sees the 7 data tools (admin tools empty in 30-02)', async () => {
     const verifier = makeFakeVerifier({
       sub: 'u',
       // requires write tier — dashboard_scan_site is gated by scope-filter in
@@ -206,13 +206,14 @@ describe('Phase 30 data tools — tools/list RBAC filtering', () => {
     expect(names).toContain('dashboard_scan_site');
     expect(names).toContain('dashboard_list_reports');
     expect(names).toContain('dashboard_get_report');
+    expect(names).toContain('dashboard_get_scan_progress');
     expect(names).toContain('dashboard_query_issues');
     expect(names).toContain('dashboard_list_brand_scores');
     expect(names).toContain('dashboard_get_brand_score');
-    expect(names.length).toBe(6);
+    expect(names.length).toBe(7);
   });
 
-  it('caller with only reports.view sees 3 report tools', async () => {
+  it('caller with only reports.view sees 4 report tools', async () => {
     const verifier = makeFakeVerifier({
       sub: 'u',
       scopes: ['read'],
@@ -241,12 +242,13 @@ describe('Phase 30 data tools — tools/list RBAC filtering', () => {
       expect.arrayContaining([
         'dashboard_list_reports',
         'dashboard_get_report',
+        'dashboard_get_scan_progress',
         'dashboard_query_issues',
       ]),
     );
     expect(names).not.toContain('dashboard_scan_site');
     expect(names).not.toContain('dashboard_list_brand_scores');
-    expect(names.length).toBe(3);
+    expect(names.length).toBe(4);
   });
 
   it('caller with only branding.view sees 2 brand score tools', async () => {
@@ -321,14 +323,13 @@ describe('Phase 30 data tools — D-17 invariant + destructive annotation + clas
       serviceConnections: makeStubServiceConnections(),
     });
 
-    // Plan 30-03: admin.ts now registers 13 admin tools, so the combined
-    // toolNames is 6 (data) + 13 (admin) = 19. The data-tool subset still
-    // has length 6; this test continues to assert the data-tool count via
-    // DATA_TOOL_NAMES while accepting the larger combined surface.
-    expect(DATA_TOOL_NAMES.length).toBe(6);
-    expect(toolNames.length).toBe(19);
-    expect(DASHBOARD_DATA_TOOL_METADATA.length).toBe(6);
-    expect(metadata.length).toBeGreaterThanOrEqual(6);
+    // Phase 46: dashboard_get_scan_progress added — 7 data tools now.
+    // Plan 30-03 registers 13 admin tools, so combined toolNames is
+    // 7 (data) + 13 (admin) = 20.
+    expect(DATA_TOOL_NAMES.length).toBe(7);
+    expect(toolNames.length).toBe(20);
+    expect(DASHBOARD_DATA_TOOL_METADATA.length).toBe(7);
+    expect(metadata.length).toBeGreaterThanOrEqual(7);
 
     const registered =
       (
@@ -403,7 +404,7 @@ describe('Phase 30 data tools — D-17 invariant + destructive annotation + clas
     );
     const orgScoped = (source.match(/\/\/ orgId: ctx\.orgId \(org-scoped/g) ?? []).length;
     const global = (source.match(/\/\/ orgId: N\/A /g) ?? []).length;
-    expect(orgScoped).toBe(6);
+    expect(orgScoped).toBe(7);
     expect(global).toBe(0);
     expect(source).not.toMatch(/TODO\(phase-/);
     expect(source).not.toMatch(/orgId\s*:\s*z\./);
@@ -805,5 +806,200 @@ describe('Phase 30 data tools — dashboard_list_reports strips jsonReport (2604
     const scanA = parsed.data.find((r) => r['id'] === 'scan-a');
     expect(scanA?.['totalIssues']).toBe(205);
     expect(scanA?.['siteUrl']).toBe('https://www.sky.it');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 46 — dashboard_get_scan_progress (AGENT-07)
+// ---------------------------------------------------------------------------
+
+describe('Phase 46 — dashboard_get_scan_progress', () => {
+  let app: FastifyInstance | null = null;
+  afterEach(async () => {
+    if (app !== null) {
+      await app.close();
+      app = null;
+    }
+  });
+
+  async function callTool(
+    name: string,
+    args: Record<string, unknown>,
+    activeApp: FastifyInstance,
+  ): Promise<Record<string, unknown>> {
+    const response = await activeApp.inject({
+      method: 'POST',
+      url: '/api/v1/mcp',
+      headers: {
+        authorization: 'Bearer valid-jwt',
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      payload: rpc('tools/call', { name, arguments: args }),
+    });
+    return parseSseOrJson(response.body);
+  }
+
+  function extractText(result: Record<string, unknown>): Record<string, unknown> {
+    const r = result['result'] as { content?: Array<{ text?: string }> };
+    const text = r?.content?.[0]?.text ?? '{}';
+    return JSON.parse(text) as Record<string, unknown>;
+  }
+
+  function makeScan(overrides: Partial<ScanRecord>): ScanRecord {
+    return {
+      id: 'scan-prog',
+      siteUrl: 'https://example.com',
+      status: 'running',
+      standard: 'WCAG2AA',
+      jurisdictions: [],
+      regulations: [],
+      createdBy: 'tester',
+      createdAt: new Date().toISOString(),
+      orgId: 'org-1',
+      ...overrides,
+    };
+  }
+
+  it('happy path — running scan returns finished=false, status="running" and exposes pagesScanned', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+    });
+    const scan = makeScan({ status: 'running', pagesScanned: 3 });
+    const scanService = makeStubScanService({
+      getScanForOrg: async () => ({ ok: true, scan }),
+    });
+    app = await buildApp({ verifier, storage, scanService });
+    const resp = await callTool('dashboard_get_scan_progress', { scanId: 'scan-prog' }, app);
+    const data = extractText(resp);
+    expect(data['status']).toBe('running');
+    expect(data['finished']).toBe(false);
+    expect(data['pagesScanned']).toBe(3);
+    expect(data['scanId']).toBe('scan-prog');
+    expect(data['siteUrl']).toBe('https://example.com');
+    expect(data['totalPages']).toBeNull();
+    expect(data['etaSeconds']).toBeNull();
+    expect(typeof data['lastUpdated']).toBe('string');
+  });
+
+  it('completed scan returns finished=true, status="completed", etaSeconds=null', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+    });
+    const completedAt = new Date().toISOString();
+    const scan = makeScan({ status: 'completed', pagesScanned: 50, completedAt });
+    const scanService = makeStubScanService({
+      getScanForOrg: async () => ({ ok: true, scan }),
+    });
+    app = await buildApp({ verifier, storage, scanService });
+    const resp = await callTool('dashboard_get_scan_progress', { scanId: 'scan-prog' }, app);
+    const data = extractText(resp);
+    expect(data['status']).toBe('completed');
+    expect(data['finished']).toBe(true);
+    expect(data['etaSeconds']).toBeNull();
+    expect(data['pagesScanned']).toBe(50);
+    expect(data['lastUpdated']).toBe(completedAt);
+  });
+
+  it('failed scan returns finished=true, status="failed"', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+    });
+    const scan = makeScan({ status: 'failed' });
+    const scanService = makeStubScanService({
+      getScanForOrg: async () => ({ ok: true, scan }),
+    });
+    app = await buildApp({ verifier, storage, scanService });
+    const resp = await callTool('dashboard_get_scan_progress', { scanId: 'scan-prog' }, app);
+    const data = extractText(resp);
+    expect(data['status']).toBe('failed');
+    expect(data['finished']).toBe(true);
+  });
+
+  it('missing scan returns error envelope (does not throw)', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+    });
+    const scanService = makeStubScanService({
+      getScanForOrg: async () => ({ ok: false, error: 'Scan not found' }),
+    });
+    app = await buildApp({ verifier, storage, scanService });
+    const resp = await callTool('dashboard_get_scan_progress', { scanId: 'missing' }, app);
+    const r = resp['result'] as { isError?: boolean; content: Array<{ text: string }> };
+    expect(r.isError).toBe(true);
+    const data = JSON.parse(r.content[0]?.text ?? '{}') as Record<string, unknown>;
+    expect(data['error']).toBe('Scan not found');
+  });
+
+  it('cross-org scan denied — scanService.getScanForOrg returns the cross-org error', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['reports.view']),
+    });
+    const scanService = makeStubScanService({
+      getScanForOrg: async () => ({ ok: false, error: 'Scan not in current org' }),
+    });
+    app = await buildApp({ verifier, storage, scanService });
+    const resp = await callTool('dashboard_get_scan_progress', { scanId: 'other-org' }, app);
+    const r = resp['result'] as { isError?: boolean; content: Array<{ text: string }> };
+    expect(r.isError).toBe(true);
+    const data = JSON.parse(r.content[0]?.text ?? '{}') as Record<string, unknown>;
+    expect(String(data['error'])).toMatch(/not in current org/i);
+  });
+
+  it('not exposed to caller without reports.view permission (RBAC tool-list filter)', async () => {
+    const verifier = makeFakeVerifier({
+      sub: 'u',
+      scopes: ['read'],
+      orgId: 'org-1',
+      role: 'member',
+    });
+    const storage = makeStubStorage({
+      getEffectivePermissions: async () => new Set(['branding.view']),
+    });
+    app = await buildApp({ verifier, storage });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/mcp',
+      headers: {
+        authorization: 'Bearer valid-jwt',
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      payload: rpc('tools/list', {}),
+    });
+    const names = (parseSseOrJson(response.body)['result'] as {
+      tools: Array<{ name: string }>;
+    }).tools.map((t) => t.name);
+    expect(names).not.toContain('dashboard_get_scan_progress');
   });
 });
