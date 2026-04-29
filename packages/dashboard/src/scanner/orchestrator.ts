@@ -8,6 +8,8 @@ import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 import type { PluginManager } from '../plugins/manager.js';
 import type { LuqenEvent } from '../plugins/types.js';
 import { NotificationDispatcher } from '../notifications/dispatcher.js';
+import { BrandingRepoBrandContextProvider } from '../notifications/brand-context.js';
+import { LogoCache } from '../notifications/logo-cache.js';
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
 import type { BrandScoreRepository } from '../db/interfaces/brand-score-repository.js';
 import type { ScoreResult } from '../services/scoring/types.js';
@@ -150,6 +152,11 @@ export class ScanOrchestrator {
   private readonly brandScoreRepository?: BrandScoreRepository;
   /** Buffer recent events per scan so late-connecting SSE clients catch up. */
   private readonly eventBuffers = new Map<string, ScanProgressEvent[]>();
+  /**
+   * Phase 49: shared logo cache reused across notification dispatches so the
+   * same org logo is fetched at most once per TTL window.
+   */
+  private readonly notificationLogoCache = new LogoCache();
 
   constructor(storage: StorageAdapter, reportsDir: string, maxConcurrentOrOpts: number | OrchestratorOptions = 2) {
     this.storage = storage;
@@ -887,6 +894,10 @@ export class ScanOrchestrator {
           // Non-fatal: notification failure must not affect scan status
           console.warn(`[orchestrator] ${msg ?? 'notify failure'}:`, obj);
         },
+      },
+      {
+        brandContext: new BrandingRepoBrandContextProvider(this.storage.branding),
+        logoCache: this.notificationLogoCache,
       },
     );
 

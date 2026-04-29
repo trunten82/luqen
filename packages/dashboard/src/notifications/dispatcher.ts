@@ -2,7 +2,9 @@ import type { FastifyBaseLogger } from 'fastify';
 import type { NotificationTemplateRepository } from '../db/interfaces/notification-template-repository.js';
 import type { PluginManager } from '../plugins/manager.js';
 import type { LuqenEvent, NotificationPlugin } from '../plugins/types.js';
-import { renderTemplate } from './render.js';
+import { renderForChannel } from './render.js';
+import type { BrandContextProvider } from './brand-context.js';
+import type { LogoCache } from './logo-cache.js';
 
 // ---------------------------------------------------------------------------
 // Dispatcher result types
@@ -27,6 +29,11 @@ export interface DispatchLogger {
   warn(obj: Record<string, unknown>, msg?: string): void;
 }
 
+export interface DispatcherDeps {
+  readonly brandContext?: BrandContextProvider;
+  readonly logoCache?: LogoCache;
+}
+
 // ---------------------------------------------------------------------------
 // NotificationDispatcher
 //
@@ -35,23 +42,39 @@ export interface DispatchLogger {
 // with `renderedSubject`, `renderedBody`, `templateId`, `templateVersion`,
 // `templateScope` → calls the plugin's existing `send(event)` contract.
 //
-// The plugin contract (NotificationPlugin.send(event)) is preserved
-// byte-identically. Plugins that ignore the new fields keep working;
-// plugins upgraded in Phase 49 will read `renderedBody`.
+// Phase 49 — additionally enriches the event with channel-specific
+// fields (`renderedHtml`, `renderedPlaintext`, `logoAttachment`,
+// `brandColor` for email; `renderedBlocks` + `iconUrl` for Slack;
+// `renderedAdaptiveCard` + `logoUrl` for Teams). The plugin contract
+// (NotificationPlugin.send(event)) is preserved byte-identically. Plugins
+// that ignore the new fields keep working with `renderedBody`.
 // ---------------------------------------------------------------------------
 
 export class NotificationDispatcher {
+  private readonly brandContext: BrandContextProvider | undefined;
+  private readonly logoCache: LogoCache | undefined;
+
   constructor(
     private readonly templateRepo: NotificationTemplateRepository,
     private readonly pluginManager: PluginManager,
     private readonly logger: DispatchLogger,
-  ) {}
+    deps: DispatcherDeps = {},
+  ) {
+    this.brandContext = deps.brandContext;
+    this.logoCache = deps.logoCache;
+  }
 
   async dispatch(event: LuqenEvent, orgId: string): Promise<DispatchResult[]> {
     const plugins = this.pluginManager.getActiveNotificationPlugins();
     if (plugins.length === 0) return [];
 
     const results: DispatchResult[] = [];
+
+    // Resolve brand context once per dispatch — same org for every plugin.
+    const brand =
+      this.brandContext !== undefined
+        ? await this.brandContext.get(orgId).catch(() => null)
+        : null;
 
     for (const plugin of plugins) {
       const channel = plugin.channel;
@@ -71,19 +94,41 @@ export class NotificationDispatcher {
         continue;
       }
 
-      const renderedSubject = renderTemplate(template.subjectTemplate, event.data);
-      const renderedBody = renderTemplate(template.bodyTemplate, event.data);
+      const rendered = await renderForChannel(
+        template,
+        event.data,
+        channel,
+        brand,
+        this.logoCache !== undefined ? { logoCache: this.logoCache } : {},
+      );
 
       const enrichedEvent: LuqenEvent = {
         type: event.type,
         timestamp: event.timestamp,
         data: {
           ...event.data,
-          renderedSubject,
-          renderedBody,
+          renderedSubject: rendered.subject,
+          renderedBody: rendered.body,
           templateId: template.id,
           templateVersion: template.version,
           templateScope: template.scope,
+          ...(rendered.html !== undefined ? { renderedHtml: rendered.html } : {}),
+          ...(rendered.plaintext !== undefined
+            ? { renderedPlaintext: rendered.plaintext }
+            : {}),
+          ...(rendered.brandColor !== undefined
+            ? { brandColor: rendered.brandColor }
+            : {}),
+          ...(rendered.logoAttachment !== undefined
+            ? { logoAttachment: rendered.logoAttachment }
+            : {}),
+          ...(rendered.logoCid !== undefined ? { logoCid: rendered.logoCid } : {}),
+          ...(rendered.blocks !== undefined ? { renderedBlocks: rendered.blocks } : {}),
+          ...(rendered.iconUrl !== undefined ? { iconUrl: rendered.iconUrl } : {}),
+          ...(rendered.adaptiveCard !== undefined
+            ? { renderedAdaptiveCard: rendered.adaptiveCard }
+            : {}),
+          ...(rendered.logoUrl !== undefined ? { logoUrl: rendered.logoUrl } : {}),
         },
       };
 
