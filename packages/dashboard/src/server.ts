@@ -962,7 +962,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Admin routes (all require admin role via adminGuard per route) ─────────
   await jurisdictionRoutes(server, config.complianceUrl);
   await regulationRoutes(server, config.complianceUrl);
-  await notificationRoutes(server, storage);
+  await notificationRoutes(server, storage, { pluginManager, getLLMClient });
   await proposalRoutes(server, config.complianceUrl, storage);
   await changeHistoryRoutes(server, config.complianceUrl);
   await agentAuditRoutes(server, storage);

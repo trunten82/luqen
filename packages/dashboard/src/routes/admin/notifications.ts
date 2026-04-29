@@ -29,6 +29,11 @@ import type {
 import { requirePermission } from '../../auth/middleware.js';
 import { toastHtml, escapeHtml } from './helpers.js';
 import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+import type { LLMClient } from '../../llm-client.js';
+import type { PluginManager } from '../../plugins/manager.js';
+import type { NotificationPlugin, LuqenEvent } from '../../plugins/types.js';
+import { getSampleEventData } from '../../notifications/sample-event-data.js';
+import { renderForChannel } from '../../notifications/render.js';
 
 // ── Validation ───────────────────────────────────────────────────────────────
 
@@ -66,6 +71,20 @@ const NotificationUpdateBody = Type.Object(
     voice: Type.Optional(Type.String()),
     signature: Type.Optional(Type.String()),
     llmEnabled: Type.Optional(Type.Union([Type.String(), Type.Boolean()])),
+  },
+  { additionalProperties: true },
+);
+
+const PreviewBody = Type.Object(
+  {
+    useLlm: Type.Optional(Type.Union([Type.String(), Type.Boolean()])),
+  },
+  { additionalProperties: true },
+);
+
+const TestSendBody = Type.Object(
+  {
+    recipient: Type.Optional(Type.String()),
   },
   { additionalProperties: true },
 );
@@ -181,11 +200,27 @@ function logMutation(
 
 // ── Route module ──────────────────────────────────────────────────────────────
 
+export interface NotificationRoutesDeps {
+  readonly pluginManager?: PluginManager;
+  readonly getLLMClient?: () => LLMClient | null;
+  readonly llmTimeoutMs?: number;
+  /**
+   * Test-send rate limit window — defaults to 60s, overridable for tests.
+   */
+  readonly testSendWindowMs?: number;
+}
+
+// Per-(template, admin) test-send rate limiter — module-scope in-memory map.
+// Keyed by `${templateId}|${userId}`; value is the last send timestamp ms.
+const TEST_SEND_LAST: Map<string, number> = new Map();
+
 export async function notificationRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  deps: NotificationRoutesDeps = {},
 ): Promise<void> {
   const repo = storage.notificationTemplates;
+  const testSendWindowMs = deps.testSendWindowMs ?? 60_000;
 
   // GET /admin/notifications — main page (with optional ?channel filter)
   server.get(
@@ -298,9 +333,23 @@ export async function notificationRoutes(
         return reply.code(400).header('content-type', 'text/html').send(toastHtml(validationErr, 'error'));
       }
 
-      // llm_enabled is parked behind a tooltip in the UI; we never let the
-      // body change it before Phase 50. Persist whatever is already on the
-      // row.
+      // Phase 50-03 — llmEnabled is now writeable. The toggle is no longer
+      // disabled in the UI, and we accept it as either a boolean (JSON) or
+      // a checkbox value (form-encoded → 'on' / undefined).
+      let llmEnabledUpdate: boolean | undefined;
+      if (body.llmEnabled !== undefined) {
+        llmEnabledUpdate =
+          body.llmEnabled === true ||
+          body.llmEnabled === 'on' ||
+          body.llmEnabled === 'true' ||
+          body.llmEnabled === '1';
+      } else if (request.headers['content-type']?.toString().includes('form')) {
+        // Form-encoded checkbox absence means "off" only when the form was
+        // submitted (i.e. the user could have toggled it). For JSON requests
+        // we treat absence as "no change".
+        llmEnabledUpdate = false;
+      }
+
       const updated = await repo.update(
         id,
         {
@@ -308,6 +357,7 @@ export async function notificationRoutes(
           bodyTemplate: body.bodyTemplate ?? undefined,
           voice: body.voice !== undefined ? (body.voice.trim() === '' ? null : body.voice) : undefined,
           signature: body.signature !== undefined ? (body.signature.trim() === '' ? null : body.signature) : undefined,
+          ...(llmEnabledUpdate !== undefined ? { llmEnabled: llmEnabledUpdate } : {}),
         },
         request.user?.username ?? 'unknown',
       );
@@ -438,9 +488,201 @@ export async function notificationRoutes(
     },
   );
 
+  // POST /admin/notifications/:id/preview — Phase 50-03
+  // Renders the template with sample event data + caller's brand context.
+  // Supports `useLlm: true` to call the LLM service for a side-by-side view.
+  // Read-only; no DB writes.
+  server.post(
+    '/admin/notifications/:id/preview',
+    {
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
+      schema: { params: NotificationIdParams, body: PreviewBody, ...HtmlPartialResponse },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const tpl = await repo.getById(id);
+      if (tpl === null || !canAccess(tpl, request)) {
+        return reply.code(404).header('content-type', 'text/html').send(toastHtml('Template not found.', 'error'));
+      }
+
+      const body = request.body as { useLlm?: string | boolean };
+      const useLlm =
+        (body.useLlm === true || body.useLlm === 'true' || body.useLlm === 'on' || body.useLlm === '1') &&
+        tpl.llmEnabled === true;
+
+      const sample = getSampleEventData(tpl.eventType);
+
+      // Optional LLM rewrite for the preview pane. NEVER blocks rendering —
+      // on failure we render the deterministic version and surface a banner.
+      let llmFallbackBanner = '';
+      let workingTemplate = tpl;
+      if (useLlm) {
+        const client = deps.getLLMClient?.() ?? null;
+        if (client !== null) {
+          try {
+            const generated = await client.generateNotificationContent(
+              {
+                template: { subject: tpl.subjectTemplate, body: tpl.bodyTemplate },
+                voice: tpl.voice,
+                signature: tpl.signature,
+                brandContext: { name: getOrgId(request) ?? 'org' },
+                eventData: sample,
+                channel: tpl.channel,
+                outputFormat: 'both',
+                orgId: getOrgId(request),
+              },
+              { timeoutMs: deps.llmTimeoutMs ?? 5000 },
+            );
+            if (generated !== null) {
+              workingTemplate = {
+                ...tpl,
+                subjectTemplate: generated.subject,
+                bodyTemplate: generated.body,
+              };
+            } else {
+              llmFallbackBanner = '<div class="banner banner--warning" role="status">LLM unavailable — showing deterministic version.</div>';
+            }
+          } catch {
+            llmFallbackBanner = '<div class="banner banner--warning" role="status">LLM error — showing deterministic version.</div>';
+          }
+        } else {
+          llmFallbackBanner = '<div class="banner banner--warning" role="status">LLM service not configured — showing deterministic version.</div>';
+        }
+      }
+
+      const rendered = await renderForChannel(workingTemplate, sample, tpl.channel, null);
+
+      return reply.view('admin/notification-preview.hbs', {
+        template: tpl,
+        useLlm,
+        rendered,
+        llmFallbackBanner,
+        sampleJson: JSON.stringify(sample, null, 2),
+      });
+    },
+  );
+
+  // POST /admin/notifications/:id/test-send — Phase 50-03
+  // Renders + dispatches the template via the matching plugin to a single
+  // recipient (admin-supplied). Audit-logged. Rate-limited 1/min/admin/template.
+  server.post(
+    '/admin/notifications/:id/test-send',
+    {
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
+      schema: { params: NotificationIdParams, body: TestSendBody, ...HtmlPartialResponse },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const tpl = await repo.getById(id);
+      if (tpl === null || !canAccess(tpl, request)) {
+        return reply.code(404).header('content-type', 'text/html').send(toastHtml('Template not found.', 'error'));
+      }
+      if (!canMutate(tpl, request)) {
+        return reply.code(403).header('content-type', 'text/html').send(toastHtml('You cannot test-send this template.', 'error'));
+      }
+
+      const body = request.body as { recipient?: string };
+      const recipient = (body.recipient ?? '').trim();
+      const validationErr = validateRecipientForChannel(recipient, tpl.channel);
+      if (validationErr !== null) {
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml(validationErr, 'error'));
+      }
+
+      // Rate limit: 1 send per minute per (template, admin).
+      const userId = request.user?.id ?? request.user?.username ?? 'unknown';
+      const rlKey = `${tpl.id}|${userId}`;
+      const now = Date.now();
+      const last = TEST_SEND_LAST.get(rlKey);
+      if (last !== undefined && now - last < testSendWindowMs) {
+        const waitS = Math.ceil((testSendWindowMs - (now - last)) / 1000);
+        return reply.code(429).header('content-type', 'text/html').send(
+          toastHtml(`Slow down — try again in ${waitS}s.`, 'error'),
+        );
+      }
+
+      // Find the plugin for this channel.
+      const plugins = deps.pluginManager?.getActiveNotificationPlugins() ?? [];
+      const plugin = plugins.find((p) => p.channel === tpl.channel);
+      if (plugin === undefined) {
+        return reply.code(503).header('content-type', 'text/html').send(
+          toastHtml(`No active plugin for channel "${tpl.channel}".`, 'error'),
+        );
+      }
+
+      const sample = { ...getSampleEventData(tpl.eventType), recipient };
+      const rendered = await renderForChannel(tpl, sample, tpl.channel, null);
+
+      const event: LuqenEvent = {
+        type: tpl.eventType,
+        timestamp: new Date().toISOString(),
+        data: {
+          ...sample,
+          recipient,
+          renderedSubject: rendered.subject,
+          renderedBody: rendered.body,
+          ...(rendered.html !== undefined ? { renderedHtml: rendered.html } : {}),
+          ...(rendered.plaintext !== undefined ? { renderedPlaintext: rendered.plaintext } : {}),
+          ...(rendered.brandColor !== undefined ? { brandColor: rendered.brandColor } : {}),
+          ...(rendered.blocks !== undefined ? { renderedBlocks: rendered.blocks } : {}),
+          ...(rendered.adaptiveCard !== undefined ? { renderedAdaptiveCard: rendered.adaptiveCard } : {}),
+          templateId: tpl.id,
+          templateScope: tpl.scope,
+          templateVersion: tpl.version,
+          isTestSend: true,
+        },
+      };
+
+      try {
+        await (plugin.instance as NotificationPlugin).send(event);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'unknown';
+        request.log.warn({ err: message, templateId: tpl.id, channel: tpl.channel }, 'test-send failed');
+        logMutation(storage, request, 'test_send', tpl, { recipient, status: 'error', error: message });
+        return reply.code(502).header('content-type', 'text/html').send(
+          toastHtml(`Test send failed: ${message}`, 'error'),
+        );
+      }
+
+      TEST_SEND_LAST.set(rlKey, now);
+      logMutation(storage, request, 'test_send', tpl, { recipient, status: 'sent' });
+
+      return reply.code(200).header('content-type', 'text/html').send(
+        toastHtml(`Test ${tpl.channel} dispatched to ${escapeHtml(recipient)}.`),
+      );
+    },
+  );
+
   // Re-export validation constants so views can mirror max-length attributes.
   // (Compile-time only; tree-shaken when unused.)
   void ALLOWED_EVENTS;
+}
+
+// ── Recipient validation (per-channel) ───────────────────────────────────────
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SLACK_CHANNEL_RE = /^[CDG][A-Z0-9]{8,}$/; // C / D / G prefix per Slack ID convention
+const HTTPS_URL_RE = /^https:\/\/[^\s/$.?#].[^\s]*$/i;
+
+export function validateRecipientForChannel(recipient: string, channel: NotificationChannel): string | null {
+  if (recipient.length === 0) return 'Recipient is required.';
+  switch (channel) {
+    case 'email':
+      return EMAIL_RE.test(recipient) ? null : 'Recipient must be a valid email address.';
+    case 'slack':
+      // Accept either a Slack channel/user ID or an https webhook.
+      return SLACK_CHANNEL_RE.test(recipient) || HTTPS_URL_RE.test(recipient)
+        ? null
+        : 'Recipient must be a Slack channel/user ID or an https webhook URL.';
+    case 'teams':
+      return HTTPS_URL_RE.test(recipient) ? null : 'Recipient must be an https Teams webhook URL.';
+    default:
+      return 'Unsupported channel.';
+  }
+}
+
+/** Test helper — clear in-memory rate-limit state. */
+export function resetTestSendRateLimit(): void {
+  TEST_SEND_LAST.clear();
 }
 
 // ── Row renderer (shared by PATCH and override-create) ───────────────────────
