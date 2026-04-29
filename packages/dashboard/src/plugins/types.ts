@@ -201,6 +201,14 @@ export interface RegistryEntry {
   readonly checksum?: string;
   /** Minimum dashboard version required to run this plugin. */
   readonly minDashboardVersion?: string;
+  /**
+   * For type='notification' plugins: the channel this plugin delivers to.
+   * Used by the dispatcher (Phase 47) to resolve the correct template.
+   * Future notification plugins MUST declare this; existing entries that
+   * omit it fall back to inferring from the registry name (notify-email →
+   * 'email', etc.) for backwards compatibility.
+   */
+  readonly channel?: 'email' | 'slack' | 'teams';
 }
 
 // ---------------------------------------------------------------------------
