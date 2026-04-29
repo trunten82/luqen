@@ -1548,4 +1548,50 @@ CREATE INDEX IF NOT EXISTS idx_agent_share_links_expires ON agent_share_links(ex
 ALTER TABLE dashboard_users ADD COLUMN active_org_id TEXT;
     `,
   },
+  {
+    id: '062',
+    name: 'notification-templates',
+    sql: `
+-- Phase 47 Plan 01 (NOTIF-01) — notification template registry.
+-- One row per (event_type, channel, scope, org_id) tuple with version history
+-- in notification_template_history. System templates (scope='system',
+-- org_id=NULL) are seeded at startup; org templates (scope='org', org_id=<id>)
+-- are created via the Phase 48 editor and override the system row when present.
+-- The dispatcher (Phase 47 Plan 02) resolves org-first, then falls back to
+-- system; missing rows yield status='no-template' rather than throwing.
+CREATE TABLE IF NOT EXISTS notification_templates (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  scope TEXT NOT NULL DEFAULT 'system',
+  org_id TEXT,
+  subject_template TEXT NOT NULL,
+  body_template TEXT NOT NULL,
+  voice TEXT,
+  signature TEXT,
+  llm_enabled INTEGER NOT NULL DEFAULT 0,
+  version INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT,
+  UNIQUE(event_type, channel, scope, org_id, version)
+);
+CREATE INDEX IF NOT EXISTS idx_nt_event_channel_scope
+  ON notification_templates(event_type, channel, scope, org_id);
+CREATE INDEX IF NOT EXISTS idx_nt_org ON notification_templates(org_id);
+
+CREATE TABLE IF NOT EXISTS notification_template_history (
+  template_id TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  subject_template TEXT NOT NULL,
+  body_template TEXT NOT NULL,
+  voice TEXT,
+  signature TEXT,
+  llm_enabled INTEGER NOT NULL,
+  saved_at TEXT NOT NULL,
+  saved_by TEXT,
+  PRIMARY KEY (template_id, version)
+);
+    `,
+  },
 ];

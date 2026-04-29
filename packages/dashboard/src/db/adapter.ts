@@ -23,6 +23,7 @@ import type { OauthCodeRepository } from './interfaces/oauth-code-repository.js'
 import type { OauthRefreshRepository } from './interfaces/oauth-refresh-repository.js';
 import type { OauthConsentRepository } from './interfaces/oauth-consent-repository.js';
 import type { OauthSigningKeyRepository } from './interfaces/oauth-signing-key-repository.js';
+import type { NotificationTemplateRepository } from './interfaces/notification-template-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -56,4 +57,5 @@ export interface StorageAdapter {
   readonly oauthRefresh: OauthRefreshRepository;
   readonly oauthConsents: OauthConsentRepository;
   readonly oauthSigningKeys: OauthSigningKeyRepository;
+  readonly notificationTemplates: NotificationTemplateRepository;
 }

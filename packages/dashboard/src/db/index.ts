@@ -22,4 +22,5 @@ export type {
   ManualTestRepository,
   ConversationRepository,
   AgentAuditRepository,
+  NotificationTemplateRepository,
 } from './interfaces/index.js';
