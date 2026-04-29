@@ -1272,3 +1272,213 @@ describe('Phase 43 — multi-step plan announcement', () => {
     expect(emits.find((f) => f.type === 'plan')).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 43 Plan 02 (AGENT-02) — cancel via active-turn registry
+// ---------------------------------------------------------------------------
+
+import { ActiveTurnRegistry } from '../../src/agent/active-turn-registry.js';
+
+describe('Phase 43 — runTurn cancellation', () => {
+  let ctx: Ctx;
+  beforeEach(async () => {
+    ctx = await buildCtx();
+  });
+  afterEach(async () => {
+    await ctx.cleanup();
+  });
+
+  it('cancel mid-tool-call: dispatcher signal aborts, runTurn emits done {aborted:true}, no follow-up tool_call', async () => {
+    // LLM scripts ONE tool-calling turn followed by a final-answer turn.
+    // We will cancel before the second turn fires, so streamAgentConversation
+    // should be called exactly once.
+    const llm = makeLlmStub([
+      {
+        text: 'Looking now…',
+        toolCalls: [{ id: 't1', name: 'dashboard_list_reports', args: {} }],
+      },
+      // Second turn must NEVER fire — a guard inside the LLM stub already
+      // throws on dequeue exhaustion, which would surface a different error
+      // shape if we got there.
+      { text: 'Should not be reached.', toolCalls: [] },
+    ]);
+
+    const registry = new ActiveTurnRegistry();
+    const conversationId = ctx.conversationId;
+
+    // Slow tool: resolves only when its abort signal fires (rejecting
+    // with an AbortError) — mirrors a real fetch() with `{ signal }`.
+    const dispatcher = {
+      dispatch: vi.fn(async (
+        _call: ToolCallInput,
+        dispatchCtx: { signal?: AbortSignal },
+      ): Promise<ToolDispatchResult> => {
+        const sig = dispatchCtx.signal;
+        if (sig === undefined) {
+          throw new Error('expected dispatcher signal to be propagated from runTurn');
+        }
+        return new Promise<ToolDispatchResult>((_resolve, reject) => {
+          const onAbort = (): void => {
+            sig.removeEventListener('abort', onAbort);
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+          };
+          if (sig.aborted) onAbort();
+          else sig.addEventListener('abort', onAbort, { once: true });
+        });
+      }),
+    };
+
+    const emits: SseFrame[] = [];
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+      turnRegistry: registry,
+    });
+
+    // Fire runTurn but don't await — we cancel partway through the
+    // dispatcher's pending promise.
+    const turnPromise = svc.runTurn({
+      conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'List reports',
+      emit: (f) => { emits.push(f); },
+      signal: new AbortController().signal,
+    });
+
+    // Wait until the registry has the controller and the dispatcher
+    // promise is in flight, then cancel.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(registry.isActive(conversationId)).toBe(true);
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(1);
+
+    const cancelled = registry.cancel(conversationId);
+    expect(cancelled).toBe(true);
+
+    await turnPromise;
+
+    // After return, the registry is cleaned up.
+    expect(registry.isActive(conversationId)).toBe(false);
+
+    // The terminal frame is `done {aborted:true}` — emitted via the
+    // between-iteration check or the abort-catch path.
+    const doneFrames = emits.filter((f) => f.type === 'done');
+    expect(doneFrames.length).toBe(1);
+    expect((doneFrames[0] as { aborted?: boolean }).aborted).toBe(true);
+
+    // The LLM was called exactly once — the second iteration never ran
+    // because the abort flag short-circuited the loop. tool_started fired
+    // for the first call, but no tool_call_request / tool_started for a
+    // second tool because runTurn returned before iter 2.
+    expect(llm.streamAgentConversation).toHaveBeenCalledTimes(1);
+    const startedFrames = emits.filter((f) => f.type === 'tool_started');
+    expect(startedFrames.length).toBe(1);
+
+    // No further tool_completed success frames — the dispatcher rejected,
+    // landing as a tool_completed error frame at most. There is NO second
+    // tool_started.
+    expect(emits.filter((f) => f.type === 'tool_started').length).toBe(1);
+  });
+
+  it('runTurn registers and cleans up the registry entry on natural completion (success path)', async () => {
+    const llm = makeLlmStub([{ text: 'Done.', toolCalls: [] }]);
+    const dispatcher = makeDispatcherStub(new Map());
+    const registry = new ActiveTurnRegistry();
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+      turnRegistry: registry,
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'hi',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    expect(registry.isActive(ctx.conversationId)).toBe(false);
+  });
+
+  it('runTurn cleans up the registry entry on error path (LLM throws)', async () => {
+    const llm = {
+      streamAgentConversation: vi.fn(async () => { throw new Error('boom'); }),
+    };
+    const dispatcher = makeDispatcherStub(new Map());
+    const registry = new ActiveTurnRegistry();
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+      turnRegistry: registry,
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'hi',
+      emit: () => {},
+      signal: new AbortController().signal,
+    });
+    expect(registry.isActive(ctx.conversationId)).toBe(false);
+  });
+
+  it('input.signal abort (browser disconnect) propagates into the internal turn controller and cleans up', async () => {
+    // LLM stub that respects its abort signal: returns a never-resolving
+    // promise that rejects when aborted.
+    const llm = {
+      streamAgentConversation: vi.fn(
+        async (_input: AgentStreamInput, opts: AgentStreamOptions): Promise<AgentStreamTurn> => {
+          return new Promise<AgentStreamTurn>((_resolve, reject) => {
+            const onAbort = (): void => reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+            if (opts.signal.aborted) onAbort();
+            else opts.signal.addEventListener('abort', onAbort, { once: true });
+          });
+        },
+      ),
+    };
+    const dispatcher = makeDispatcherStub(new Map());
+    const registry = new ActiveTurnRegistry();
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+      turnRegistry: registry,
+    });
+    const routeController = new AbortController();
+    const emits: SseFrame[] = [];
+    const turnPromise = svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'hi',
+      emit: (f) => { emits.push(f); },
+      signal: routeController.signal,
+    });
+    await new Promise((r) => setTimeout(r, 10));
+    routeController.abort();
+    await turnPromise;
+    expect(registry.isActive(ctx.conversationId)).toBe(false);
+    const doneFrames = emits.filter((f) => f.type === 'done');
+    expect(doneFrames.length).toBe(1);
+    expect((doneFrames[0] as { aborted?: boolean }).aborted).toBe(true);
+  });
+});

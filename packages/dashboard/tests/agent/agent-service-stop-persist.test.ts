@@ -341,7 +341,7 @@ describe('AgentService — stop-persistence on AbortSignal', () => {
     expect(emits.some((f) => f.type === 'error')).toBe(true);
   });
 
-  it('case 6: after abort, no done frame is emitted', async () => {
+  it('case 6: after abort, a terminal done {aborted:true} frame is emitted (Phase 43 Plan 02)', async () => {
     const llm = makeAbortableLlmStub({
       chunks: ['x ', 'y '],
       abortAfterChunk: 2,
@@ -375,7 +375,11 @@ describe('AgentService — stop-persistence on AbortSignal', () => {
       signal: controller.signal,
     });
 
+    // Phase 43 Plan 02 (AGENT-02) updated the contract: the stream now
+    // emits a terminal `done {aborted:true}` frame on user abort so the
+    // client can render the cancelled-state UI on the plan bubble.
     const doneFrames = emits.filter((f) => f.type === 'done');
-    expect(doneFrames.length).toBe(0);
+    expect(doneFrames.length).toBe(1);
+    expect((doneFrames[0] as { aborted?: boolean }).aborted).toBe(true);
   });
 });

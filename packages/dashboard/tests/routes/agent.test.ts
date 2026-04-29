@@ -1083,3 +1083,190 @@ describe('SECURITY: cross-user conversation leak (agent-conversation-leak-cross-
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 43 Plan 02 — POST /agent/cancel/:conversationId
+// ---------------------------------------------------------------------------
+
+import { ActiveTurnRegistry } from '../../src/agent/active-turn-registry.js';
+
+interface CancelCtx extends Omit<Ctx, 'cleanup'> {
+  registry: ActiveTurnRegistry;
+  cleanup: () => Promise<void>;
+}
+
+async function buildCancelCtx(): Promise<CancelCtx> {
+  setEncryptionSalt('phase-43-02-agent-cancel-salt');
+  const dbPath = join(tmpdir(), `test-agent-cancel-${randomUUID()}.db`);
+  const storage = new SqliteStorageAdapter(dbPath);
+  await storage.migrate();
+
+  const userId = randomUUID();
+  const raw = storage.getRawDatabase();
+  raw.prepare(
+    `INSERT INTO dashboard_users (id, username, password_hash, role, active, created_at)
+     VALUES (?, ?, 'pw', 'viewer', 1, ?)`,
+  ).run(userId, `u-${userId.slice(0, 6)}`, new Date().toISOString());
+  const org = await storage.organizations.createOrg({
+    name: 'Org',
+    slug: `o-${userId.slice(0, 6)}`,
+  });
+  const conv = await storage.conversations.createConversation({
+    userId,
+    orgId: org.id,
+  });
+
+  const runTurn = vi.fn();
+  const dispatch = vi.fn();
+  const registry = new ActiveTurnRegistry();
+
+  const server = Fastify({ logger: false });
+  await server.register(import('@fastify/formbody'));
+  server.addHook('preHandler', async (request) => {
+    request.user = {
+      id: userId,
+      username: 'tester',
+      role: 'viewer',
+      currentOrgId: org.id,
+    };
+  });
+  await registerAgentRoutes(server, {
+    agentService: { runTurn } as unknown as AgentService,
+    dispatcher: { dispatch } as unknown as ToolDispatcher,
+    storage,
+    publicUrl: PUBLIC_URL,
+    turnRegistry: registry,
+  });
+  await server.ready();
+
+  return {
+    server,
+    storage,
+    userId,
+    orgId: org.id,
+    conversationId: conv.id,
+    runTurn,
+    dispatch,
+    registry,
+    cleanup: async () => {
+      await server.close();
+      await storage.disconnect();
+      if (existsSync(dbPath)) rmSync(dbPath);
+    },
+  };
+}
+
+describe('POST /agent/cancel/:conversationId', () => {
+  it('owner with an active turn → 200 {cancelled:true} and the registered controller is aborted', async () => {
+    const ctx = await buildCancelCtx();
+    try {
+      const ctrl = ctx.registry.register(ctx.conversationId);
+      const res = await ctx.server.inject({
+        method: 'POST',
+        url: `/agent/cancel/${ctx.conversationId}`,
+        headers: { 'content-type': 'application/json' },
+        payload: {},
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ cancelled: true });
+      expect(ctrl.signal.aborted).toBe(true);
+      expect(ctx.registry.isActive(ctx.conversationId)).toBe(false);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('owner without an active turn → 200 {cancelled:false} (idempotent, not an error)', async () => {
+    const ctx = await buildCancelCtx();
+    try {
+      const res = await ctx.server.inject({
+        method: 'POST',
+        url: `/agent/cancel/${ctx.conversationId}`,
+        headers: { 'content-type': 'application/json' },
+        payload: {},
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ cancelled: false });
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('cross-user conversationId → 404 (no existence leak); foreign controller is NOT aborted', async () => {
+    const ctx = await buildCancelCtx();
+    try {
+      // Seed a foreign-user conversation in the SAME org.
+      const foreignUserId = randomUUID();
+      ctx.storage.getRawDatabase().prepare(
+        `INSERT INTO dashboard_users (id, username, password_hash, role, active, created_at)
+         VALUES (?, ?, 'pw', 'viewer', 1, ?)`,
+      ).run(foreignUserId, `victim-${foreignUserId.slice(0, 6)}`, new Date().toISOString());
+      const foreignConv = await ctx.storage.conversations.createConversation({
+        userId: foreignUserId,
+        orgId: ctx.orgId,
+      });
+      const foreignCtrl = ctx.registry.register(foreignConv.id);
+
+      const res = await ctx.server.inject({
+        method: 'POST',
+        url: `/agent/cancel/${foreignConv.id}`,
+        headers: { 'content-type': 'application/json' },
+        payload: {},
+      });
+      expect(res.statusCode).toBe(404);
+      // Critical: the victim's runTurn must NOT be aborted by a cross-user cancel.
+      expect(foreignCtrl.signal.aborted).toBe(false);
+      expect(ctx.registry.isActive(foreignConv.id)).toBe(true);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('unknown conversationId → 404 (matches missing-row shape)', async () => {
+    const ctx = await buildCancelCtx();
+    try {
+      const res = await ctx.server.inject({
+        method: 'POST',
+        url: `/agent/cancel/${randomUUID()}`,
+        headers: { 'content-type': 'application/json' },
+        payload: {},
+      });
+      expect(res.statusCode).toBe(404);
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+
+  it('unauthenticated → 401', async () => {
+    const ctx = await buildCancelCtx();
+    try {
+      // The cancel ctx preHandler always injects a user, so simulate
+      // unauthenticated by tearing down the auth hook with a one-shot
+      // route that returns 401 first. Simpler: send to a different
+      // server with no preHandler.
+      const noAuthServer = Fastify({ logger: false });
+      await noAuthServer.register(import('@fastify/formbody'));
+      await registerAgentRoutes(noAuthServer, {
+        agentService: { runTurn: vi.fn() } as unknown as AgentService,
+        dispatcher: { dispatch: vi.fn() } as unknown as ToolDispatcher,
+        storage: ctx.storage,
+        publicUrl: PUBLIC_URL,
+        turnRegistry: ctx.registry,
+      });
+      await noAuthServer.ready();
+      try {
+        const res = await noAuthServer.inject({
+          method: 'POST',
+          url: `/agent/cancel/${ctx.conversationId}`,
+          headers: { 'content-type': 'application/json' },
+          payload: {},
+        });
+        expect(res.statusCode).toBe(401);
+      } finally {
+        await noAuthServer.close();
+      }
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+});
