@@ -423,6 +423,72 @@ export class LLMClient {
     });
   }
 
+  // -- Generate Notification Content (Phase 50-02) ───────────────────────
+
+  /**
+   * Wraps `POST /api/v1/generate-notification-content`. Returns null on any
+   * failure (HTTP error, timeout, network error, fallback flag from server).
+   * NEVER throws — the caller (dispatcher) must always be free to fall back
+   * to the deterministic template.
+   */
+  async generateNotificationContent(
+    input: {
+      readonly template: { readonly subject: string; readonly body: string };
+      readonly voice?: string | null;
+      readonly signature?: string | null;
+      readonly brandContext?: { readonly name: string; readonly voice?: string | null } | null;
+      readonly eventData: Record<string, unknown>;
+      readonly channel: 'email' | 'slack' | 'teams';
+      readonly outputFormat: 'subject' | 'body' | 'both';
+      readonly orgId?: string;
+    },
+    options?: { readonly timeoutMs?: number },
+  ): Promise<{
+    subject: string;
+    body: string;
+    model: string;
+    provider: string;
+    latencyMs: number;
+    tokensIn: number;
+    tokensOut: number;
+  } | null> {
+    const timeoutMs = options?.timeoutMs ?? 5000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs + 250); // small grace over server-side timeout
+
+    try {
+      const token = await this.tokenManager.getToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${this._baseUrl}/api/v1/generate-notification-content`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...input, timeoutMs }),
+        signal: controller.signal,
+      });
+      if (!res.ok) return null;
+      const json = (await res.json()) as Record<string, unknown>;
+      if (json['fallback'] === true) return null;
+      const subject = json['subject'];
+      const body = json['body'];
+      if (typeof subject !== 'string' || typeof body !== 'string') return null;
+      return {
+        subject,
+        body,
+        model: typeof json['model'] === 'string' ? json['model'] : '',
+        provider: typeof json['provider'] === 'string' ? json['provider'] : '',
+        latencyMs: typeof json['latencyMs'] === 'number' ? json['latencyMs'] : 0,
+        tokensIn: typeof json['tokensIn'] === 'number' ? json['tokensIn'] : 0,
+        tokensOut: typeof json['tokensOut'] === 'number' ? json['tokensOut'] : 0,
+      };
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   // -- OAuth Clients (admin) ──────────────────────────────────────────────
 
   async listOAuthClients(): Promise<Array<{ id: string; name: string; scopes: string[]; grantTypes: string[]; orgId: string; createdAt: string }>> {
