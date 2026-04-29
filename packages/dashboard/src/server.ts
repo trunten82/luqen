@@ -44,6 +44,7 @@ import { gitCredentialRoutes } from './routes/git-credentials.js';
 import { fixPrRoutes } from './routes/fix-pr.js';
 import { resolveStorageAdapter } from './db/index.js';
 import { SqliteStorageAdapter } from './db/sqlite/index.js';
+import { seedSystemNotificationTemplates } from './notifications/seed-templates.js';
 import { PluginManager } from './plugins/manager.js';
 import { loadRegistry } from './plugins/registry.js';
 import { ScanOrchestrator } from './scanner/orchestrator.js';
@@ -218,6 +219,16 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   const storage = await resolveStorageAdapter({ type: 'sqlite', sqlite: { dbPath: config.dbPath } });
   // For consumers that still need raw DB (PluginManager, AuthService):
   const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
+
+  // Seed system notification templates (Phase 47 NOTIF-01) — idempotent.
+  // 4 events × 3 channels = 12 system rows; org-scoped overrides come later
+  // via the Phase 48 editor. Safe to call on every startup.
+  {
+    const inserted = await seedSystemNotificationTemplates(storage.notificationTemplates);
+    if (inserted > 0) {
+      server.log.info({ inserted }, 'seeded system notification templates');
+    }
+  }
 
   // ── Plugin Manager ──────────────────────────────────────────────────────
   const registryEntries = await loadRegistry({

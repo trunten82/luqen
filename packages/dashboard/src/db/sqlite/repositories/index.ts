@@ -23,3 +23,4 @@ export { SqliteOauthCodeRepository } from './oauth-code-repository.js';
 export { SqliteOauthRefreshRepository } from './oauth-refresh-repository.js';
 export { SqliteOauthConsentRepository } from './oauth-consent-repository.js';
 export { SqliteOauthSigningKeyRepository } from './oauth-signing-key-repository.js';
+export { SqliteNotificationTemplateRepository } from './notification-template-repository.js';

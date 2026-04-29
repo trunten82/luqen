@@ -546,3 +546,67 @@ export interface CreateBrandingGuidelineInput {
 export type BrandingGuidelineUpdateData = Partial<
   Omit<BrandingGuidelineRecord, 'id' | 'orgId' | 'createdBy' | 'createdAt'>
 >;
+
+// ---------------------------------------------------------------------------
+// Notification template types (Phase 47)
+// ---------------------------------------------------------------------------
+
+export type NotificationEventType =
+  | 'scan.complete'
+  | 'scan.failed'
+  | 'violation.found'
+  | 'regulation.changed';
+
+export type NotificationChannel = 'email' | 'slack' | 'teams';
+
+export type NotificationTemplateScope = 'system' | 'org';
+
+export interface NotificationTemplate {
+  readonly id: string;
+  readonly eventType: NotificationEventType;
+  readonly channel: NotificationChannel;
+  readonly scope: NotificationTemplateScope;
+  readonly orgId: string | null;
+  readonly subjectTemplate: string;
+  readonly bodyTemplate: string;
+  readonly voice: string | null;
+  readonly signature: string | null;
+  readonly llmEnabled: boolean;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly updatedBy: string | null;
+}
+
+export interface CreateTemplateInput {
+  readonly eventType: NotificationEventType;
+  readonly channel: NotificationChannel;
+  readonly scope: NotificationTemplateScope;
+  readonly orgId?: string | null;
+  readonly subjectTemplate: string;
+  readonly bodyTemplate: string;
+  readonly voice?: string | null;
+  readonly signature?: string | null;
+  readonly llmEnabled?: boolean;
+  readonly updatedBy?: string | null;
+}
+
+export interface UpdateTemplateInput {
+  readonly subjectTemplate?: string;
+  readonly bodyTemplate?: string;
+  readonly voice?: string | null;
+  readonly signature?: string | null;
+  readonly llmEnabled?: boolean;
+}
+
+export interface TemplateHistoryEntry {
+  readonly templateId: string;
+  readonly version: number;
+  readonly subjectTemplate: string;
+  readonly bodyTemplate: string;
+  readonly voice: string | null;
+  readonly signature: string | null;
+  readonly llmEnabled: boolean;
+  readonly savedAt: string;
+  readonly savedBy: string | null;
+}
