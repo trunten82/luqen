@@ -414,6 +414,34 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
 
   const writeScope = requireScope('write');
 
+  // Plan 51-02: ownership guard. Every mutating guideline route (PUT/DELETE
+  // and every sub-resource POST/DELETE) must check that the request orgId
+  // owns the guideline (or that the guideline is system-scoped + caller is
+  // system). Without this any per-org write token can mutate any other org's
+  // guideline. Returns null when access is permitted, or a numeric status to
+  // send back to the caller.
+  async function assertGuidelineOwnership(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    guidelineId: string,
+  ): Promise<boolean> {
+    const guideline = db.getGuideline(guidelineId);
+    if (guideline == null) {
+      await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
+      return false;
+    }
+    const requestOrgId = (request as FastifyRequest & { orgId: string }).orgId;
+    if (guideline.orgId === 'system' && requestOrgId !== 'system') {
+      await reply.status(403).send({ error: 'Cannot modify system guideline', statusCode: 403 });
+      return false;
+    }
+    if (guideline.orgId !== 'system' && guideline.orgId !== requestOrgId) {
+      await reply.status(403).send({ error: 'Cannot modify guideline belonging to another organisation', statusCode: 403 });
+      return false;
+    }
+    return true;
+  }
+
   app.get('/api/v1/guidelines', {
     schema: {
       tags: ['guidelines'],
@@ -498,11 +526,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       },
     },
   }, async (request, reply) => {
-    const existing = db.getGuideline(request.params.id);
-    if (existing == null) {
-      await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
-      return;
-    }
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     const body = request.body as Record<string, unknown>;
     const updates: Record<string, unknown> = {};
     if (body.name != null) updates.name = String(body.name);
@@ -520,15 +544,12 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       params: Type.Object({ id: Type.String() }),
       response: {
         204: Type.Null(),
+        403: ErrorEnvelope,
         404: ErrorEnvelope,
       },
     },
   }, async (request, reply) => {
-    const existing = db.getGuideline(request.params.id);
-    if (existing == null) {
-      await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
-      return;
-    }
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     db.removeGuideline(request.params.id);
     await reply.status(204).send();
   });
@@ -557,11 +578,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       },
     },
   }, async (request, reply) => {
-    const guideline = db.getGuideline(request.params.id);
-    if (guideline == null) {
-      await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
-      return;
-    }
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     const body = request.body as Record<string, unknown>;
     const color = db.addColor(request.params.id, {
       name: String(body.name ?? ''),
@@ -582,6 +599,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       },
     },
   }, async (request, reply) => {
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     db.removeColor(request.params.colorId);
     await reply.status(204).send();
   });
@@ -610,11 +628,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       },
     },
   }, async (request, reply) => {
-    const guideline = db.getGuideline(request.params.id);
-    if (guideline == null) {
-      await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
-      return;
-    }
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     const body = request.body as Record<string, unknown>;
     const font = db.addFont(request.params.id, {
       family: String(body.family ?? ''),
@@ -635,6 +649,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       },
     },
   }, async (request, reply) => {
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     db.removeFont(request.params.fontId);
     await reply.status(204).send();
   });
@@ -661,11 +676,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       },
     },
   }, async (request, reply) => {
-    const guideline = db.getGuideline(request.params.id);
-    if (guideline == null) {
-      await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
-      return;
-    }
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     const body = request.body as Record<string, unknown>;
     const selector = db.addSelector(request.params.id, {
       pattern: String(body.pattern ?? ''),
@@ -684,6 +695,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       },
     },
   }, async (request, reply) => {
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     db.removeSelector(request.params.selectorId);
     await reply.status(204).send();
   });
@@ -708,11 +720,7 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       },
     },
   }, async (request, reply) => {
-    const guideline = db.getGuideline(request.params.id);
-    if (guideline == null) {
-      await reply.status(404).send({ error: 'Guideline not found', statusCode: 404 });
-      return;
-    }
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     const orgId = (request as FastifyRequest & { orgId: string }).orgId;
     const body = request.body as Record<string, unknown>;
     const siteUrl = String(body.siteUrl ?? '');
@@ -736,9 +744,12 @@ export async function createServer(options: ServerOptions): Promise<FastifyInsta
       response: {
         204: Type.Null(),
         400: ErrorEnvelope,
+        403: ErrorEnvelope,
+        404: ErrorEnvelope,
       },
     },
   }, async (request, reply) => {
+    if (!(await assertGuidelineOwnership(request, reply, request.params.id))) return;
     const orgId = (request as FastifyRequest & { orgId: string }).orgId;
     const body = request.body as Record<string, unknown>;
     const siteUrl = String(body.siteUrl ?? '');

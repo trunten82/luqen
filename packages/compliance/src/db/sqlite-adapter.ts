@@ -1020,6 +1020,11 @@ export class SqliteAdapter implements DbAdapter {
     this.db.prepare('DELETE FROM webhooks WHERE id = ?').run(id);
   }
 
+  async getWebhookOrgId(id: string): Promise<string | null> {
+    const row = this.db.prepare('SELECT org_id FROM webhooks WHERE id = ?').get(id) as { org_id: string } | undefined;
+    return row != null ? row.org_id : null;
+  }
+
   // --- WCAG Criteria ---
 
   async listWcagCriteria(filters?: { version?: string; level?: string }): Promise<WcagCriterion[]> {

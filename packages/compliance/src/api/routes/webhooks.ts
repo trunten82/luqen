@@ -145,12 +145,28 @@ export async function registerWebhookRoutes(
       tags: ['webhooks'],
       summary: 'Delete webhook',
       params: WebhookParams,
-      response: { 204: Type.Null(), 500: ErrorEnvelope },
+      response: { 204: Type.Null(), 403: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
     },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
+      // Plan 51-02: ownership guard (HIGH gap from RBAC matrix). Without this
+      // any admin token could delete any other org's webhook.
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getWebhookOrgId(id);
+      if (recordOrgId == null) {
+        await reply.status(404).send({ error: `Webhook '${id}' not found`, statusCode: 404 });
+        return;
+      }
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot delete system webhook', statusCode: 403 });
+        return;
+      }
+      if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot delete webhook belonging to another organisation', statusCode: 403 });
+        return;
+      }
       await db.deleteWebhook(id);
       await reply.status(204).send();
     } catch (err) {
