@@ -167,6 +167,22 @@ export async function seedBaseline(
   const data = loadBaselineData();
   const allCriteria = loadWcagCriteria();
 
+  // Snapshot admin-mutable source state (managementMode + status) keyed by
+  // URL so we can restore it after a force-reseed wipes the rows. Without
+  // this, every compliance restart silently flips every operator-toggled
+  // 'manual' -> 'llm' source back to the seed default of 'manual'.
+  // URL is stable across reseeds; row id is not.
+  const sourceStateByUrl = new Map<string, { managementMode: string; status: string }>();
+  if (force) {
+    const existingSources = await db.listSources();
+    for (const s of existingSources) {
+      sourceStateByUrl.set(s.url, {
+        managementMode: s.managementMode ?? 'manual',
+        status: s.status ?? 'active',
+      });
+    }
+  }
+
   // In force mode, delete everything in dependency order
   if (force) {
     await db.deleteAllSystemRequirements();
@@ -262,7 +278,17 @@ export async function seedBaseline(
     for (const source of data.sources) {
       const alreadyExists = existingSources.some((s) => s.url === source.url);
       if (!alreadyExists) {
-        await db.createSource(source);
+        const created = await db.createSource(source);
+        // Restore admin-mutated state captured before the force-reseed wipe.
+        const prior = sourceStateByUrl.get(source.url);
+        if (prior !== undefined) {
+          if (prior.managementMode !== 'manual') {
+            await db.updateSourceManagementMode(created.id, prior.managementMode as 'llm' | 'manual');
+          }
+          if (prior.status !== 'active') {
+            await db.updateSourceStatus(created.id, prior.status as 'active' | 'degraded');
+          }
+        }
       }
       sourcesCount++;
     }
