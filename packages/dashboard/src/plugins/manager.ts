@@ -75,6 +75,28 @@ function packageNameToPluginName(packageName: string): string {
   return last.replace(/^plugin-/, '');
 }
 
+/**
+ * Phase 47 — Resolve a notification plugin's delivery channel.
+ *
+ * Prefers the registry entry's declared `channel` field; falls back to
+ * inferring from the registry name (`notify-email` → 'email') for plugins
+ * registered before the channel field existed. Returns null when the
+ * channel cannot be determined.
+ */
+function resolveNotificationChannel(
+  entry: RegistryEntry | undefined,
+  packageName: string,
+): 'email' | 'slack' | 'teams' | null {
+  if (entry?.channel === 'email' || entry?.channel === 'slack' || entry?.channel === 'teams') {
+    return entry.channel;
+  }
+  const name = entry?.name ?? packageNameToPluginName(packageName);
+  if (name.includes('email')) return 'email';
+  if (name.includes('slack')) return 'slack';
+  if (name.includes('teams')) return 'teams';
+  return null;
+}
+
 /** Default download function: fetch URL → write to file. */
 async function defaultDownloadFn(url: string, destPath: string): Promise<void> {
   const response = await fetch(url, {
@@ -715,6 +737,53 @@ export class PluginManager {
       }
     }
     return instances;
+  }
+
+  // -----------------------------------------------------------------------
+  // Phase 47: notification plugin metadata
+  //
+  // Returns active notification plugins paired with their declared channel
+  // (from the registry entry) and plugin id. The dispatcher uses this to
+  // resolve the right template per channel without leaking plugin internals.
+  // Falls back to inferring the channel from the registry name (notify-email
+  // → 'email', etc.) when the entry predates the channel field.
+  // -----------------------------------------------------------------------
+
+  getActiveNotificationPlugins(): Array<{
+    readonly id: string;
+    readonly packageName: string;
+    readonly channel: 'email' | 'slack' | 'teams';
+    readonly instance: PluginInstance;
+  }> {
+    const rows = this.db
+      .prepare(
+        "SELECT id, package_name FROM plugins WHERE type = 'notification' AND status = 'active'",
+      )
+      .all() as Array<{ id: string; package_name: string }>;
+
+    const result: Array<{
+      id: string;
+      packageName: string;
+      channel: 'email' | 'slack' | 'teams';
+      instance: PluginInstance;
+    }> = [];
+
+    for (const row of rows) {
+      const instance = this.activeInstances.get(row.id);
+      if (!instance) continue;
+
+      const entry = getByPackageName(this.registryEntries, row.package_name) ?? undefined;
+      const channel = resolveNotificationChannel(entry, row.package_name);
+      if (channel === null) continue;
+
+      result.push({
+        id: row.id,
+        packageName: row.package_name,
+        channel,
+        instance,
+      });
+    }
+    return result;
   }
 
   getActivePluginConfigs(

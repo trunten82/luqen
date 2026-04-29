@@ -6,7 +6,8 @@ import type { PageHashEntry } from '../db/types.js';
 import { checkCompliance, dispatchWebhookEvent } from '../compliance-client.js';
 import type { SsePublisher, RedisScanQueue } from '../cache/redis.js';
 import type { PluginManager } from '../plugins/manager.js';
-import type { NotificationPlugin, LuqenEvent } from '../plugins/types.js';
+import type { LuqenEvent } from '../plugins/types.js';
+import { NotificationDispatcher } from '../notifications/dispatcher.js';
 import type { BrandingOrchestrator } from '../services/branding/branding-orchestrator.js';
 import type { BrandScoreRepository } from '../db/interfaces/brand-score-repository.js';
 import type { ScoreResult } from '../services/scoring/types.js';
@@ -857,8 +858,12 @@ export class ScanOrchestrator {
   }
 
   /**
-   * Dispatch a scan event to all active notification plugins,
-   * using org-scoped plugin config when available.
+   * Dispatch a scan event to all active notification plugins via the
+   * Phase 47 NotificationDispatcher. The dispatcher resolves the right
+   * template per channel (org override → system fallback), renders the
+   * subject/body, and enriches the event before calling each plugin's
+   * existing `send(event)` contract. Returns silently when the plugin
+   * manager is unavailable so unit-test fixtures stay simple.
    */
   private async notifyPlugins(
     eventType: LuqenEvent['type'],
@@ -867,23 +872,29 @@ export class ScanOrchestrator {
   ): Promise<void> {
     if (this.pluginManager === undefined) return;
 
-    const notificationPlugins = this.pluginManager.getActivePluginsByType('notification');
-    if (notificationPlugins.length === 0) return;
-
     const event: LuqenEvent = {
       type: eventType,
       timestamp: new Date().toISOString(),
       data: { ...data, orgId },
     };
 
-    for (const plugin of notificationPlugins) {
-      try {
-        await (plugin as NotificationPlugin).send(event);
-      } catch (err) {
-        // Non-fatal: notification failure should not affect scan status
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[orchestrator] Notification plugin failed for ${eventType}: ${msg}`);
-      }
+    const dispatcher = new NotificationDispatcher(
+      this.storage.notificationTemplates,
+      this.pluginManager,
+      // Minimal logger — orchestrator runs without the Fastify request scope.
+      {
+        warn: (obj, msg) => {
+          // Non-fatal: notification failure must not affect scan status
+          console.warn(`[orchestrator] ${msg ?? 'notify failure'}:`, obj);
+        },
+      },
+    );
+
+    try {
+      await dispatcher.dispatch(event, orgId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[orchestrator] dispatcher failed for ${eventType}: ${msg}`);
     }
   }
 }
