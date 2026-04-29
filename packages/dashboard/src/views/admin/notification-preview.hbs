@@ -1,0 +1,35 @@
+{{!-- Phase 50-03 — preview pane returned by POST /admin/notifications/:id/preview --}}
+<div class="notification-preview" data-channel="{{template.channel}}" data-llm="{{useLlm}}">
+  {{{llmFallbackBanner}}}
+
+  <div class="preview-meta text-muted">
+    <strong>{{template.eventType}}</strong> &middot; {{template.channel}} &middot; v{{template.version}}
+    {{#if useLlm}}<span class="badge badge--info">LLM</span>{{else}}<span class="badge badge--neutral">Deterministic</span>{{/if}}
+  </div>
+
+  <h3 class="preview-subject">Subject</h3>
+  <p class="preview-subject__value">{{rendered.subject}}</p>
+
+  <h3 class="preview-body">Body</h3>
+  {{#if rendered.html}}
+    <iframe class="preview-iframe"
+            sandbox=""
+            title="Email preview"
+            srcdoc="{{rendered.html}}"></iframe>
+  {{else}}
+    {{#if rendered.adaptiveCard}}
+      <pre class="preview-pre" aria-label="Teams Adaptive Card JSON">{{rendered.adaptiveCard}}</pre>
+    {{else}}
+      {{#if rendered.blocks}}
+        <pre class="preview-pre" aria-label="Slack blocks JSON">{{rendered.blocks}}</pre>
+      {{else}}
+        <pre class="preview-pre">{{rendered.body}}</pre>
+      {{/if}}
+    {{/if}}
+  {{/if}}
+
+  <details class="preview-sample">
+    <summary>Sample event data</summary>
+    <pre class="preview-pre">{{sampleJson}}</pre>
+  </details>
+</div>

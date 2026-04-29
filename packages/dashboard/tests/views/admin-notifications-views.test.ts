@@ -32,11 +32,15 @@ describe('Phase 48 Plan 02 — admin notification views', () => {
     expect(hbs).toContain('id="org-templates-body"'); // override target
   });
 
-  it('form template disables LLM toggle and shows Phase 50 hint', () => {
+  it('form template enables LLM toggle (Phase 50-03) and exposes preview/test-send actions', () => {
     const hbs = readFileSync(join(VIEWS, 'notification-form.hbs'), 'utf-8');
     expect(hbs).toContain('id="ntpl-llm"');
-    expect(hbs).toContain('disabled');
-    expect(hbs).toMatch(/Phase 50/);
+    expect(hbs).toContain('name="llmEnabled"');
+    // Phase 50-03 removed the `disabled` attribute on the LLM toggle.
+    expect(hbs).not.toMatch(/id="ntpl-llm"[^>]*disabled/);
+    // Preview + test-send actions are wired.
+    expect(hbs).toContain('hx-post="/admin/notifications/{{template.id}}/preview"');
+    expect(hbs).toContain('hx-post="/admin/notifications/{{template.id}}/test-send"');
     // Field max-length attributes are bound to limits.* values.
     expect(hbs).toContain('maxlength="{{limits.subject}}"');
     expect(hbs).toContain('maxlength="{{limits.body}}"');
