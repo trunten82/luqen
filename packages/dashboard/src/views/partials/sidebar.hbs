@@ -202,6 +202,18 @@
     </a>
     {{/if}}
 
+    {{#if (or perm.adminSystem perm.adminOrg perm.complianceManage)}}
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/notifications')}}is-active{{/if}}"
+       href="/admin/notifications"
+       aria-current="{{#if (startsWith currentPath '/admin/notifications')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M5 8a5 5 0 1110 0v4l2 2H3l2-2V8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8 17a2 2 0 004 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Notifications
+    </a>
+    {{/if}}
+
     {{!-- Plugins section — visible to admin.plugins (org owners) or admin.system --}}
     {{#if perm.adminPlugins}}
     <span class="sidebar__section-label">{{t "nav.plugins"}}</span>
