@@ -1172,3 +1172,103 @@ describe('Phase 38 multi-org per-turn binding', () => {
     expect(llm.calls[1].input.orgId).toBe(ctx.otherOrgId);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 43 Plan 01 (AGENT-01) — multi-step plan-frame emission + persistence
+// ---------------------------------------------------------------------------
+
+describe('Phase 43 — multi-step plan announcement', () => {
+  let ctx: Ctx;
+  beforeEach(async () => {
+    ctx = await buildCtx();
+  });
+  afterEach(async () => {
+    await ctx.cleanup();
+  });
+
+  it('emits plan SSE frame BEFORE any tool_started frame, and persists assistant text without the <plan> block', async () => {
+    const planText = [
+      '<plan>',
+      '1. List reports — User asked about reports',
+      '2. Format summary — Render results once data is in',
+      '</plan>',
+      'Looking up your reports now.',
+    ].join('\n');
+    const llm = makeLlmStub([
+      {
+        text: planText,
+        toolCalls: [{ id: 't1', name: 'dashboard_list_reports', args: {} }],
+      },
+      { text: 'Here are your reports.', toolCalls: [] },
+    ]);
+    const dispatcher = makeDispatcherStub(
+      new Map([['dashboard_list_reports', async () => ({ ok: true, reports: [] })]]),
+    );
+    const emits: SseFrame[] = [];
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'Plan a report tour',
+      emit: (f) => { emits.push(f); },
+      signal: new AbortController().signal,
+    });
+
+    // Order assertion: plan frame must come BEFORE the first tool_started.
+    const planIdx = emits.findIndex((f) => f.type === 'plan');
+    const toolStartedIdx = emits.findIndex((f) => f.type === 'tool_started');
+    expect(planIdx).toBeGreaterThanOrEqual(0);
+    expect(toolStartedIdx).toBeGreaterThan(planIdx);
+
+    // Plan frame shape: 2 steps with rationale captured.
+    const planFrame = emits[planIdx] as Extract<SseFrame, { type: 'plan' }>;
+    expect(planFrame.id).toMatch(/^plan-/);
+    expect(planFrame.steps).toEqual([
+      { n: 1, label: 'List reports', rationale: 'User asked about reports' },
+      { n: 2, label: 'Format summary', rationale: 'Render results once data is in' },
+    ]);
+
+    // Persistence: the assistant(tool_calls) row must NOT contain the
+    // <plan> block — the runTurn loop strips it before persist.
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const toolCallRow = window.find((m) => m.role === 'assistant' && m.toolCallJson != null);
+    expect(toolCallRow).toBeDefined();
+    expect(toolCallRow!.content ?? '').not.toContain('<plan>');
+    expect(toolCallRow!.content ?? '').not.toContain('</plan>');
+    expect(toolCallRow!.content ?? '').toContain('Looking up your reports now.');
+  });
+
+  it('does NOT emit a plan frame when the LLM produces no <plan> block (single-step backwards compat)', async () => {
+    const llm = makeLlmStub([{ text: 'Hi there.', toolCalls: [] }]);
+    const dispatcher = makeDispatcherStub(new Map());
+    const emits: SseFrame[] = [];
+    const svc = new AgentService({
+      storage: ctx.storage,
+      llm: llm as never,
+      allTools: TEST_TOOLS,
+      dispatcher: dispatcher as never,
+      resolvePermissions: async () => new Set(['reports.view']),
+      config: { agentDisplayNameDefault: 'Luqen Assistant' },
+      titleGenerator: async () => { throw new Error('noop'); },
+    });
+    await svc.runTurn({
+      conversationId: ctx.conversationId,
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      userMessage: 'hi',
+      emit: (f) => { emits.push(f); },
+      signal: new AbortController().signal,
+    });
+    expect(emits.find((f) => f.type === 'plan')).toBeUndefined();
+  });
+});
