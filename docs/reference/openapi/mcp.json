@@ -602,6 +602,68 @@
         }
       }
     },
+    "/api/v1/mcp/tools/dashboard_get_scan_progress": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_get_scan_progress",
+        "summary": "dashboard_get_scan_progress",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Get live progress of a scan. Use this BEFORE answering \"is it done?\" / \"did it finish?\" / \"how far along?\" questions about a scan id. Returns the current status, pages scanned, and an ETA estimate. Idempotent and cheap — call it every time the user asks about progress; never restate a status from a prior turn.\n\nReturns: { scanId, status, pagesScanned, totalPages, etaSeconds, lastUpdated, finished, siteUrl }. `finished` is true when status is \"completed\" or \"failed\". `etaSeconds` is null when the scan is not running or progress data is insufficient.\n\nOn a missing or cross-org scan, returns an error envelope — surface that to the user verbatim, do not invent a status.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scanId": {
+                    "type": "string",
+                    "description": "The scan id to check"
+                  }
+                },
+                "required": [
+                  "scanId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/tools/dashboard_get_service_connection": {
       "post": {
         "operationId": "mcp.tool.dashboard_get_service_connection",
