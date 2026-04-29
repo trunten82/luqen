@@ -96,7 +96,7 @@
       <tbody id="sources-table-body">
         {{#each sources}}
         <tr id="source-{{id}}">
-          <td data-label="Name">{{name}}</td>
+          <td data-label="Name" class="cell--wrap">{{name}}</td>
           <td data-label="Parser">
             {{#if (eq sourceCategory "government")}}
               {{#if (eq managementMode "llm")}}

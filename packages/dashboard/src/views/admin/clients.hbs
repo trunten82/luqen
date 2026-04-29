@@ -38,9 +38,9 @@
       <tbody id="clients-table-body">
         {{#each clients}}
         <tr id="client-{{clientId}}">
-          <td data-label="Name">{{name}}</td>
-          <td data-label="Client ID"><code>{{clientId}}</code></td>
-          <td data-label="Scope">{{scopesDisplay}}</td>
+          <td data-label="Name" class="cell--wrap">{{name}}</td>
+          <td data-label="Client ID" class="cell--wrap"><code>{{clientId}}</code></td>
+          <td data-label="Scope" class="cell--wrap">{{scopesDisplay}}</td>
           <td data-label="Service"><span class="badge badge--neutral">{{service}}</span></td>
           <td data-label="Kind">
             {{#if (eq kind 'DCR')}}
