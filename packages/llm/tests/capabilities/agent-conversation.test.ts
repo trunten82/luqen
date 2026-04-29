@@ -68,9 +68,13 @@ describe('CAPABILITY_NAMES includes agent-conversation', () => {
   // CAPABILITY_NAMES which GET /api/v1/capabilities iterates (see
   // api/routes/capabilities.ts), so admins see 'agent-conversation' as a
   // valid assignment target without new admin UI work (AI-SPEC §4c.1 #1).
-  it('is the EXPECTED trailing entry (array order preserved, append-only)', () => {
+  it('is preserved in the EXPECTED order position (array order preserved, append-only)', () => {
     const names = [...CAPABILITY_NAMES];
-    expect(names[names.length - 1]).toBe('agent-conversation');
+    // Phase 50-01 appended 'generate-notification-content' AFTER
+    // 'agent-conversation' (also append-only). Assert agent-conversation is
+    // the second-to-last so the append-only invariant is still enforced.
+    expect(names[names.length - 2]).toBe('agent-conversation');
+    expect(names[names.length - 1]).toBe('generate-notification-content');
   });
 });
 

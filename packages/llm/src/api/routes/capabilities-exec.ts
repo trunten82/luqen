@@ -9,6 +9,7 @@ import { executeGenerateFix } from '../../capabilities/generate-fix.js';
 import { executeAnalyseReport } from '../../capabilities/analyse-report.js';
 import { executeDiscoverBranding } from '../../capabilities/discover-branding.js';
 import { executeAgentConversation } from '../../capabilities/agent-conversation.js';
+import { executeGenerateNotificationContent } from '../../capabilities/generate-notification-content.js';
 import { CapabilityNotConfiguredError, CapabilityExhaustedError } from '../../capabilities/types.js';
 
 // ----- Bodies -----
@@ -66,6 +67,54 @@ const DiscoverBrandingBody = Type.Object(
   {
     url: Type.Optional(Type.String()),
     orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const GenerateNotificationBody = Type.Object(
+  {
+    template: Type.Optional(
+      Type.Object(
+        {
+          subject: Type.Optional(Type.String()),
+          body: Type.Optional(Type.String()),
+        },
+        { additionalProperties: true },
+      ),
+    ),
+    voice: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    signature: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    brandContext: Type.Optional(
+      Type.Union([
+        Type.Null(),
+        Type.Object(
+          {
+            name: Type.String(),
+            voice: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+          },
+          { additionalProperties: true },
+        ),
+      ]),
+    ),
+    eventData: Type.Optional(Type.Any()),
+    channel: Type.Optional(Type.String()),
+    outputFormat: Type.Optional(Type.String()),
+    timeoutMs: Type.Optional(Type.Number()),
+    orgId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+const GenerateNotificationData = Type.Object(
+  {
+    subject: Type.Optional(Type.String()),
+    body: Type.Optional(Type.String()),
+    model: Type.Optional(Type.String()),
+    provider: Type.Optional(Type.String()),
+    latencyMs: Type.Optional(Type.Number()),
+    tokensIn: Type.Optional(Type.Number()),
+    tokensOut: Type.Optional(Type.Number()),
+    fallback: Type.Optional(Type.Boolean()),
   },
   { additionalProperties: true },
 );
@@ -443,6 +492,90 @@ export async function registerCapabilityExecRoutes(
         return;
       }
       await reply.status(502).send({ error: 'Upstream LLM error', statusCode: 502 });
+    }
+  });
+
+  // POST /api/v1/generate-notification-content — Phase 50-01
+  app.post('/api/v1/generate-notification-content', {
+    preHandler: [requireScope('read')],
+    schema: {
+      tags: ['capabilities'],
+      summary: 'Rewrite a notification template using configured LLM, with deterministic fallback',
+      security: [{ bearerAuth: [] }],
+      body: GenerateNotificationBody,
+      response: {
+        200: LuqenResponse(GenerateNotificationData),
+        400: ErrorEnvelope,
+      },
+    },
+  }, async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+    const template = body['template'] as { subject?: unknown; body?: unknown } | undefined;
+    if (!template || typeof template.subject !== 'string' || typeof template.body !== 'string') {
+      await reply.status(400).send({ error: 'template.subject and template.body are required strings', statusCode: 400 });
+      return;
+    }
+    const channel = body['channel'];
+    if (channel !== 'email' && channel !== 'slack' && channel !== 'teams') {
+      await reply.status(400).send({ error: 'channel must be one of email|slack|teams', statusCode: 400 });
+      return;
+    }
+    const outputFormat = body['outputFormat'];
+    if (outputFormat !== 'subject' && outputFormat !== 'body' && outputFormat !== 'both') {
+      await reply.status(400).send({ error: 'outputFormat must be one of subject|body|both', statusCode: 400 });
+      return;
+    }
+    const eventData = (body['eventData'] && typeof body['eventData'] === 'object')
+      ? (body['eventData'] as Record<string, unknown>)
+      : {};
+
+    const reqOrgId = (request as unknown as { orgId: string }).orgId;
+    const orgId = typeof body['orgId'] === 'string' && (body['orgId'] as string).length > 0
+      ? (body['orgId'] as string)
+      : reqOrgId;
+
+    const brandContextRaw = body['brandContext'];
+    const brandContext = (brandContextRaw && typeof brandContextRaw === 'object')
+      ? brandContextRaw as { name: string; voice?: string | null }
+      : null;
+
+    const timeoutMsRaw = body['timeoutMs'];
+    const timeoutMs = typeof timeoutMsRaw === 'number' && timeoutMsRaw > 0 ? timeoutMsRaw : undefined;
+
+    try {
+      const result = await executeGenerateNotificationContent(
+        db,
+        (type: string) => createAdapter(type as import('../../types.js').ProviderType),
+        {
+          template: { subject: template.subject as string, body: template.body as string },
+          voice: typeof body['voice'] === 'string' ? body['voice'] as string : null,
+          signature: typeof body['signature'] === 'string' ? body['signature'] as string : null,
+          brandContext,
+          eventData,
+          channel,
+          outputFormat,
+          orgId,
+        },
+        timeoutMs ? { timeoutMs } : undefined,
+      );
+
+      if (result === null) {
+        await reply.send({ fallback: true });
+        return;
+      }
+      await reply.send({
+        subject: result.subject,
+        body: result.body,
+        model: result.model,
+        provider: result.provider,
+        latencyMs: result.latencyMs,
+        tokensIn: result.tokensIn,
+        tokensOut: result.tokensOut,
+        fallback: false,
+      });
+    } catch (err) {
+      request.log.warn({ err }, 'generate-notification-content unexpected error');
+      await reply.send({ fallback: true });
     }
   });
 
