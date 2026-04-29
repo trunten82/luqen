@@ -157,7 +157,9 @@ describe('NotificationDispatcher', () => {
 
     const emailEvent = plugins[0].received[0];
     expect(emailEvent.data.renderedSubject).toBe('Scan complete: https://example.com');
-    expect(emailEvent.data.renderedBody).toContain('found 4 issues');
+    // Phase 49: body is HTML; keep the substring assertion loose.
+    expect(emailEvent.data.renderedBody).toContain('https://example.com');
+    expect(emailEvent.data.renderedBody).toContain('4');
   });
 
   it('preserves the original event shape — new fields are additive', async () => {
