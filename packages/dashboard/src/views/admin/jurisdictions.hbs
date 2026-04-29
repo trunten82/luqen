@@ -51,9 +51,9 @@
           {{#each jurisdictions}}
           <tr id="jurisdiction-{{id}}">
             <td data-label="ID">{{id}}</td>
-            <td data-label="Name">{{name}}</td>
+            <td data-label="Name" class="cell--wrap">{{name}}</td>
             <td data-label="Type">{{type}}</td>
-            <td data-label="Parent">{{parentId}}</td>
+            <td data-label="Parent" class="cell--wrap">{{parentId}}</td>
             <td data-label="Scope">
               {{#if (eq orgId "system")}}<span class="badge badge--neutral">System</span>{{else}}{{orgId}}{{/if}}
             </td>
