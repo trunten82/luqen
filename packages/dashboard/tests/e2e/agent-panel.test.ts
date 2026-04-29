@@ -212,6 +212,14 @@ describe('Phase 32 Plan 06 — agent-panel E2E smoke', () => {
       const partLoc = partSrc.split('\n').length;
       expect(partLoc, `${rel} exceeds 800 LOC ceiling (${partLoc})`).toBeLessThanOrEqual(800);
     }
+    // Phase 43 Plan 03 — plan-bubble + step indicator + cancel-turn invariants.
+    // The SSE `plan` frame must reach a dedicated handler, the cancel helper
+    // must exist, the ordinal step indicator must use data-step-n attributes,
+    // and shared state must live on the __luqenAgent namespace.
+    expect(src).toMatch(/case ['"]plan['"]|addEventListener\(['"]plan['"]/);
+    expect(src).toMatch(/cancelActiveTurn/);
+    expect(src).toMatch(/data-step-n/);
+    expect(src).toMatch(/__luqenAgent\.activePlan/);
   });
 
   it('Test 4 — agent-drawer partial exposes the DOM ids agent.js targets', () => {

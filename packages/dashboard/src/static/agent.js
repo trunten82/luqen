@@ -947,11 +947,56 @@
     if (typeof fn === 'function') fn();
   }
 
+  // Phase 43 Plan 03 — plan bubble + step indicator + cancel. SSE `plan`
+  // renders inline <ol>; tool_started/tool_completed advance step (ordinal).
+  function planEl(tag, cls, txt) {
+    var e = document.createElement(tag); if (cls) e.className = cls;
+    if (txt != null) e.textContent = String(txt); return e;
+  }
+  function renderPlanBubble(plan) {
+    var msgs = byId(MESSAGES_ID); if (!msgs || !plan || !plan.steps) return null;
+    var wrap = planEl('div', 'agent-msg agent-msg--assistant message--plan');
+    wrap.setAttribute('data-plan-id', String(plan.id || ''));
+    wrap.appendChild(planEl('span', 'agent-msg__role', 'Plan'));
+    var ol = planEl('ol', 'agent-plan');
+    plan.steps.forEach(function (s) {
+      var li = planEl('li', 'agent-plan__step agent-plan__step--pending');
+      li.setAttribute('data-step-n', String(s.n));
+      var ind = planEl('span', 'agent-plan__indicator'); ind.setAttribute('aria-hidden', 'true');
+      li.appendChild(ind);
+      li.appendChild(planEl('span', 'agent-plan__label', s.label || ''));
+      li.appendChild(planEl('span', 'agent-plan__rationale', s.rationale || ''));
+      ol.appendChild(li);
+    });
+    wrap.appendChild(ol);
+    var btn = planEl('button', 'btn btn--ghost btn--sm agent-plan__cancel', 'Cancel');
+    btn.type = 'button'; btn.setAttribute('data-action', 'agentCancelTurn');
+    wrap.appendChild(btn); msgs.appendChild(wrap); return wrap;
+  }
+  function advancePlanStep(toClass) {
+    var ap = window.__luqenAgent && window.__luqenAgent.activePlan; if (!ap || !ap.bubble) return;
+    var li = ap.bubble.querySelector('[data-step-n="' + (ap.callIndex + 1) + '"]'); if (!li) return;
+    li.classList.remove('agent-plan__step--pending', 'agent-plan__step--active', 'agent-plan__step--done'); li.classList.add(toClass);
+  }
+  function cancelActiveTurn() {
+    var convId = getConversationId(); if (!convId) return;
+    if (activeStream) { try { activeStream.close(); } catch (_e) { /* ignore */ } activeStream = null; }
+    fetch('/agent/cancel/' + encodeURIComponent(convId), { method: 'POST', credentials: 'same-origin',
+      headers: { 'x-csrf-token': csrfToken(), 'accept': 'application/json' } }).catch(function () { /* ignore */ });
+    var ap = window.__luqenAgent && window.__luqenAgent.activePlan, b;
+    if (ap && ap.bubble) {
+      b = ap.bubble.querySelector('.agent-plan__cancel'); if (b) b.remove();
+      ap.bubble.classList.add('message--plan--cancelled');
+    }
+    var st = byId(STREAM_STATUS_ID); if (st) st.setAttribute('hidden', '');
+  }
+
   function openStream(conversationId) {
     if (activeStream) { try { activeStream.close(); } catch (_e) { /* ignore */ } }
     var url = '/agent/stream/' + encodeURIComponent(conversationId);
     var es = new EventSource(url, { withCredentials: true });
     activeStream = es;
+    window.__luqenAgent.activeStream = es;
     var statusEl = byId(STREAM_STATUS_ID);
     if (statusEl) statusEl.removeAttribute('hidden');
 
@@ -973,6 +1018,16 @@
     es.addEventListener('tool_calls', function (ev) {
       try { var data = JSON.parse(ev.data); appendToolBubble(data.calls || data); } catch (_e) { /* ignore */ }
     });
+    es.addEventListener('plan', function (ev) {
+      try {
+        var d = JSON.parse(ev.data), bubble = renderPlanBubble(d);
+        if (bubble) window.__luqenAgent.activePlan = { id: d.id, steps: d.steps, callIndex: 0, bubble: bubble };
+      } catch (_e) { /* ignore */ }
+    });
+    es.addEventListener('tool_started', function () { advancePlanStep('agent-plan__step--active'); });
+    es.addEventListener('tool_completed', function () {
+      advancePlanStep('agent-plan__step--done');
+      var ap = window.__luqenAgent.activePlan; if (ap) ap.callIndex += 1; });
     es.addEventListener('pending_confirmation', function (ev) {
       try {
         var data = JSON.parse(ev.data);
@@ -980,8 +1035,15 @@
         document.dispatchEvent(new CustomEvent('agent:pending-confirmation', { detail: data }));
       } catch (_e) { /* ignore */ }
     });
-    es.addEventListener('done', function () {
-      es.close(); activeStream = null;
+    es.addEventListener('done', function (ev) {
+      var dd = null; try { if (ev && ev.data) dd = JSON.parse(ev.data); } catch (_e) { /* ignore */ }
+      var ap = window.__luqenAgent.activePlan, cb;
+      if (ap && ap.bubble) {
+        cb = ap.bubble.querySelector('.agent-plan__cancel'); if (cb) cb.remove();
+        if (dd && dd.aborted === true) ap.bubble.classList.add('message--plan--aborted');
+      }
+      window.__luqenAgent.activePlan = null;
+      es.close(); activeStream = null; window.__luqenAgent.activeStream = null;
       // Clear tool-progress chips on stream completion. Chips are transient progress
       // indicators — once the assistant turn settles, the assistant text already
       // describes what tools did, so leaving chips on screen is clutter (per UAT
@@ -1125,29 +1187,23 @@
     // module-private to agent.js). retry/copy/share/edit handlers + their
     // submit listener moved to agent-actions.js in 39.1-02.
     if (e.target.id === 'agent-stop' || e.target.closest('#agent-stop')) {
-      e.preventDefault();
-      handleStopClick();
-      return;
+      e.preventDefault(); handleStopClick(); return;
+    }
+    if (e.target.closest('[data-action="agentCancelTurn"]')) {
+      e.preventDefault(); cancelActiveTurn(); return;
     }
   });
 
   // ── Phase 37 Plan 04 — handler implementations ────────────────────────
 
   function handleStopClick() {
-    if (activeStream) {
-      try { activeStream.close(); } catch (_e) { /* ignore */ }
-      activeStream = null;
-    }
-    var statusEl = byId(STREAM_STATUS_ID);
-    if (statusEl) statusEl.setAttribute('hidden', '');
-    // actionT moved to agent-actions.js; inline minimal lookup here for the
-    // single string this handler still uses.
-    var stoppedDict = readToolI18n();
-    var stoppedMsg = (stoppedDict && typeof stoppedDict['actions.stopped'] === 'string'
-      && stoppedDict['actions.stopped'].length > 0)
-      ? stoppedDict['actions.stopped']
-      : 'actions.stopped';
-    announce(stoppedMsg);
+    if (activeStream) { try { activeStream.close(); } catch (_e) { /* ignore */ } activeStream = null; }
+    var statusEl = byId(STREAM_STATUS_ID); if (statusEl) statusEl.setAttribute('hidden', '');
+    // actionT moved to agent-actions.js; inline minimal lookup here.
+    var sd = readToolI18n();
+    var msg = (sd && typeof sd['actions.stopped'] === 'string' && sd['actions.stopped'].length > 0)
+      ? sd['actions.stopped'] : 'actions.stopped';
+    announce(msg);
   }
 
   // removeMessageFromDom + handleRetry/Copy/Share/Edit/Cancel/Submit + their
@@ -1301,54 +1357,38 @@
     });
   }
 
-  // Phase 37 Plan 04 — test-export shim (dead code in production).
-  // Tests opt in by setting window.__agentTestMode = true BEFORE loading
-  // agent.js. The shim exposes the helpers the JSDOM test harness needs.
+  // Phase 37 Plan 04 — test-export shim (dead code in production). Tests opt in
+  // via window.__agentTestMode = true BEFORE loading agent.js. agent-actions.js
+  // / agent-org.js / agent-history.js augment this object post-load with their
+  // own helpers (getMarkdownSource, handleAgentOrgSwitch, renderHistoryItem…).
   if (typeof window !== 'undefined' && window.__agentTestMode === true) {
     window.__agentTestExports = {
-      writeToClipboard: writeToClipboard,
-      announce: announce,
-      // getMarkdownSource moved to agent-actions.js (39.1-02); the actions
-      // module augments window.__agentTestExports with it post-load.
-      recordMarkdownSource: recordMarkdownSource,
-      readMarkdownSource: readMarkdownSource,
-      // handleAgentOrgSwitch + autoSwitchOrgIfNeeded are exported by agent-org.js,
-      // which augments window.__agentTestExports after agent.js finishes.
-      autoSwitchOrgIfNeeded: autoSwitchOrgIfNeeded,
-      getConversationId: getConversationId,
-      // setHistoryShowOrgChip + renderHistoryItem moved to agent-history.js
-      // (39.1-02); the history module augments window.__agentTestExports.
+      writeToClipboard: writeToClipboard, announce: announce,
+      recordMarkdownSource: recordMarkdownSource, readMarkdownSource: readMarkdownSource,
+      autoSwitchOrgIfNeeded: autoSwitchOrgIfNeeded, getConversationId: getConversationId,
     };
   }
 
   function wireDisplayNameUpdates() {
-    // Phase 32.1-04: org-settings POST responds with HX-Trigger so the
-    // drawer header updates in-place when an admin saves a new display
-    // name. HTMX dispatches a CustomEvent on the body.
+    // Phase 32.1-04: org-settings POST responds with HX-Trigger so the drawer
+    // header updates in-place when an admin saves a new display name.
     document.body.addEventListener('agent-display-name-updated', function (e) {
       var detail = (e && e.detail) ? e.detail : {};
       var name = detail && typeof detail.name === 'string' ? detail.name : '';
       if (name.length === 0) return;
-      var el = byId('agent-display-name');
-      if (el) { el.textContent = name; }
+      var el = byId('agent-display-name'); if (el) el.textContent = name;
     });
   }
 
   // Phase 39.1-02 — shared utility namespace for split modules.
-  window.__luqenAgent = window.__luqenAgent || {};
-  window.__luqenAgent.csrfToken = csrfToken;
-  window.__luqenAgent.byId = byId;
-  window.__luqenAgent.announce = announce;
-  window.__luqenAgent.getConversationId = getConversationId;
-  window.__luqenAgent.setConversationId = setConversationId;
-  window.__luqenAgent.formatToolI18n = formatToolI18n;
-  window.__luqenAgent.readToolI18n = readToolI18n;
-  window.__luqenAgent.renderMarkdownInto = renderMarkdownInto;
-  window.__luqenAgent.recordMarkdownSource = recordMarkdownSource;
-  window.__luqenAgent.readMarkdownSource = readMarkdownSource;
-  window.__luqenAgent.writeToClipboard = writeToClipboard;
-  window.__luqenAgent.openStream = openStream;
-  window.__luqenAgent.loadPanel = loadPanel;
+  var ns = window.__luqenAgent = window.__luqenAgent || {};
+  ns.csrfToken = csrfToken; ns.byId = byId; ns.announce = announce;
+  ns.getConversationId = getConversationId; ns.setConversationId = setConversationId;
+  ns.formatToolI18n = formatToolI18n; ns.readToolI18n = readToolI18n;
+  ns.renderMarkdownInto = renderMarkdownInto;
+  ns.recordMarkdownSource = recordMarkdownSource; ns.readMarkdownSource = readMarkdownSource;
+  ns.writeToClipboard = writeToClipboard; ns.openStream = openStream; ns.loadPanel = loadPanel;
+  ns.cancelActiveTurn = cancelActiveTurn; ns.activePlan = null;
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
   else { init(); }

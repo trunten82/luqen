@@ -4714,3 +4714,78 @@ details[open] > .mt-examples-toggle::before {
   color: var(--status-error);
   border-color: var(--status-error);
 }
+
+/* ─── Phase 43 Plan 03 — agent plan bubble + step indicator ─────────────
+ * Inline plan bubble rendered when an SSE `plan` frame arrives. Reuses
+ * existing .agent-msg geometry; adds the ordered step list, indicator
+ * (spinner / checkmark), label / rationale, and Cancel button. Reuses the
+ * agent-tool-chip-spin keyframes so the spinner matches the chip strip.
+ */
+.message--plan { border-left: 3px solid var(--accent); }
+.message--plan--cancelled { opacity: 0.7; }
+.message--plan--cancelled .agent-plan__step--pending,
+.message--plan--cancelled .agent-plan__step--active { color: var(--text-muted); }
+.message--plan--aborted { opacity: 0.85; border-left-color: var(--status-warning); }
+
+.agent-plan {
+  list-style: none;
+  margin: 0.25rem 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.agent-plan__step {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  align-items: baseline;
+  column-gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+.agent-plan__indicator {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  display: inline-block;
+  align-self: center;
+}
+.agent-plan__step--pending .agent-plan__indicator {
+  border: 2px solid var(--text-muted);
+  background: transparent;
+}
+.agent-plan__step--active .agent-plan__indicator {
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+  animation: agent-tool-chip-spin 0.8s linear infinite;
+}
+.agent-plan__step--done .agent-plan__indicator {
+  border: 2px solid transparent;
+  position: relative;
+  width: auto;
+  height: auto;
+}
+.agent-plan__step--done .agent-plan__indicator::before {
+  content: '\2713';
+  color: var(--status-success);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+}
+.agent-plan__label {
+  grid-column: 2;
+  font-weight: 600;
+  color: var(--text-primary, var(--text));
+}
+.agent-plan__rationale {
+  grid-column: 2;
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.875em;
+  margin-top: 0.125rem;
+}
+.agent-plan__cancel {
+  margin-top: 0.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-plan__step--active .agent-plan__indicator { animation: none; }
+}
