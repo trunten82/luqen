@@ -114,6 +114,12 @@ function getDefaultTemplate(promptId: PromptId): string {
       // prompt-browser UIs don't blow up, but this code path is not the
       // primary surface for agent prompts.
       return 'Capability: agent-conversation (see agent-system prompt for the system template)';
+    case 'generate-notification-content':
+      // generate-notification-content has a runtime-built prompt parameterised
+      // by the template body, voice, brand, and event data — see
+      // src/prompts/generate-notification-content.ts. Return a stub so the
+      // prompt-browser UI doesn't blow up.
+      return 'Capability: generate-notification-content (prompt is built per-request from the notification template)';
     case AGENT_SYSTEM_PROMPT_ID:
       return buildAgentSystemPrompt();
     default: {
