@@ -209,7 +209,7 @@ export async function notificationRoutes(
       const orgTemplates = visible.filter((t) => t.scope === 'org');
 
       const isHtmx = request.headers['hx-request'] === 'true';
-      const view = isHtmx ? 'admin/notifications-tab.hbs' : 'admin/notifications.hbs';
+      const view = isHtmx ? 'admin/partials/notifications-tab.hbs' : 'admin/notifications.hbs';
 
       return reply.view(view, {
         pageTitle: 'Notification Templates',

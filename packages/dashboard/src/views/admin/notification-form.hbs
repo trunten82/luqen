@@ -1,0 +1,81 @@
+{{!-- Phase 48 Plan 02 — edit form modal for a notification template --}}
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="notification-form-title">
+  <div class="modal modal--lg">
+    <div class="modal__header">
+      <h2 id="notification-form-title">
+        Edit template — {{template.eventType}} <span class="text-muted">({{template.channel}}, {{template.scope}}, v{{template.version}})</span>
+      </h2>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <form hx-patch="/admin/notifications/{{template.id}}"
+          hx-target="#notification-{{template.id}}"
+          hx-swap="outerHTML"
+          novalidate>
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label for="ntpl-subject" class="form-label">
+          Subject <span aria-hidden="true">*</span>
+          <span class="form-hint">Up to {{limits.subject}} characters. Tokens: {{siteUrl}}, {{scanId}}, etc.</span>
+        </label>
+        <input id="ntpl-subject" name="subjectTemplate" type="text" class="input"
+               value="{{template.subjectTemplate}}"
+               maxlength="{{limits.subject}}"
+               required aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="ntpl-body" class="form-label">
+          Body <span aria-hidden="true">*</span>
+          <span class="form-hint">Up to {{limits.body}} characters.</span>
+        </label>
+        <textarea id="ntpl-body" name="bodyTemplate" class="input"
+                  rows="10"
+                  maxlength="{{limits.body}}"
+                  required aria-required="true"
+                  style="font-family:var(--font-mono,monospace);font-size:0.92rem">{{template.bodyTemplate}}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="ntpl-voice" class="form-label">
+          Voice <span class="text-muted">(optional)</span>
+          <span class="form-hint">Tone/style hint passed to the LLM in Phase 50. Up to {{limits.voice}} characters.</span>
+        </label>
+        <textarea id="ntpl-voice" name="voice" class="input"
+                  rows="2"
+                  maxlength="{{limits.voice}}">{{#if template.voice}}{{template.voice}}{{/if}}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="ntpl-signature" class="form-label">
+          Signature <span class="text-muted">(optional)</span>
+          <span class="form-hint">Up to {{limits.signature}} characters.</span>
+        </label>
+        <textarea id="ntpl-signature" name="signature" class="input"
+                  rows="3"
+                  maxlength="{{limits.signature}}">{{#if template.signature}}{{template.signature}}{{/if}}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="ntpl-llm">
+          <input id="ntpl-llm"
+                 type="checkbox"
+                 disabled
+                 {{#if template.llmEnabled}}checked{{/if}}
+                 aria-describedby="ntpl-llm-hint">
+          LLM-assisted generation
+        </label>
+        <span id="ntpl-llm-hint" class="form-hint" title="Coming in Phase 50">
+          Coming in Phase 50 — toggle is read-only for now.
+        </span>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Save</button>
+        <button type="button" class="btn btn--ghost close-modal-btn"
+                aria-label="Cancel and close dialog">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
