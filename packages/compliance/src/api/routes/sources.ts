@@ -459,13 +459,30 @@ export async function registerSourceRoutes(
       summary: 'Update source managementMode',
       params: SourceParams,
       body: SourcePatchBody,
-      response: { 200: PatchResponse, 400: ErrorEnvelope, 500: ErrorEnvelope },
+      response: { 200: PatchResponse, 400: ErrorEnvelope, 403: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
     },
     preHandler: [requireScope('write')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
       const body = request.body as { managementMode?: string };
+      // Plan 51-02: ownership guard. Without this any per-org write token can
+      // mutate the management mode of a system source (or another org's
+      // source). System rows require system caller; cross-org writes blocked.
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getSourceOrgId(id);
+      if (recordOrgId == null) {
+        await reply.status(404).send({ error: `Source '${id}' not found`, statusCode: 404 });
+        return;
+      }
+      if (recordOrgId === 'system' && requestOrgId !== 'system') {
+        await reply.status(403).send({ error: 'Cannot modify system data', statusCode: 403 });
+        return;
+      }
+      if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot modify data belonging to another organisation', statusCode: 403 });
+        return;
+      }
       if (body.managementMode === 'llm' || body.managementMode === 'manual') {
         await db.updateSourceManagementMode(id, body.managementMode);
         await reply.send({ updated: true, managementMode: body.managementMode });
@@ -483,13 +500,20 @@ export async function registerSourceRoutes(
       tags: ['sources'],
       summary: 'Bulk switch government source management mode',
       body: BulkSwitchBody,
-      response: { 200: BulkResponse, 400: ErrorEnvelope, 500: ErrorEnvelope },
+      response: { 200: BulkResponse, 400: ErrorEnvelope, 403: ErrorEnvelope, 500: ErrorEnvelope },
     },
     preHandler: [requireScope('admin')],
   }, async (request, reply) => {
     const body = request.body as { mode?: string };
     if (body.mode !== 'llm' && body.mode !== 'manual') {
       await reply.status(400).send({ error: 'mode must be "llm" or "manual"', statusCode: 400 });
+      return;
+    }
+    // Plan 51-02: bulk-switch must not be a back-door for org admins to flip
+    // system source management modes. System-only caller required.
+    const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+    if (requestOrgId !== 'system' && requestOrgId != null) {
+      await reply.status(403).send({ error: 'Bulk switch is restricted to system administrators', statusCode: 403 });
       return;
     }
     try {
@@ -609,6 +633,7 @@ export async function registerSourceRoutes(
       params: SourceParams,
       response: {
         200: SourceReprocessResponse,
+        403: ErrorEnvelope,
         404: ErrorEnvelope,
         422: ErrorEnvelope,
         502: ErrorEnvelope,
@@ -631,6 +656,20 @@ export async function registerSourceRoutes(
       const source = await db.getSource(id);
       if (source == null) {
         await reply.status(404).send({ error: `Source '${id}' not found`, statusCode: 404 });
+        return;
+      }
+
+      // Plan 51-02: ownership guard. Reprocess writes proposals + mutates
+      // status — must be gated by system/cross-org ownership like other
+      // mutating routes.
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getSourceOrgId(id);
+      if (recordOrgId === 'system' && requestOrgId !== 'system' && requestOrgId != null) {
+        await reply.status(403).send({ error: 'Cannot reprocess system data', statusCode: 403 });
+        return;
+      }
+      if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot reprocess data belonging to another organisation', statusCode: 403 });
         return;
       }
 

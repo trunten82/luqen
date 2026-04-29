@@ -116,6 +116,7 @@ export interface DbAdapter {
   getClientOrgId(id: string): Promise<string | null>;
   getSourceOrgId(id: string): Promise<string | null>;
   getUpdateProposalOrgId(id: string): Promise<string | null>;
+  getWebhookOrgId(id: string): Promise<string | null>;
 
   // WCAG Criteria
   listWcagCriteria(filters?: { version?: string; level?: string }): Promise<WcagCriterion[]>;
