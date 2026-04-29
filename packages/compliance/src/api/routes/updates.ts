@@ -121,16 +121,15 @@ export async function registerUpdateRoutes(
       await reply.status(404).send({ error: `UpdateProposal '${id}' not found`, statusCode: 404 });
       return false;
     }
-    // Admin-scope tokens (global service token) bypass org-ownership.
-    // They're used by dashboard global admins acting across orgs.
+    // Admin-scope tokens bypass everything.
     const payload = (request as AuthRequest).tokenPayload;
     if (payload?.scopes.includes('admin')) return true;
 
+    // System-owned proposals (official regulatory updates) are visible to
+    // every org and can be acknowledged by any operator. The audit trail
+    // (acknowledgedBy / reviewedBy / notes) preserves accountability.
+    // Cross-org isolation still applies to org-owned proposals.
     const requestOrgId = (request as unknown as { orgId?: string }).orgId;
-    if (recordOrgId === 'system' && requestOrgId !== 'system') {
-      await reply.status(403).send({ error: 'Cannot act on system-level proposal', statusCode: 403 });
-      return false;
-    }
     if (recordOrgId !== 'system' && requestOrgId != null && recordOrgId !== requestOrgId) {
       await reply.status(403).send({ error: 'Cannot act on proposal belonging to another organisation', statusCode: 403 });
       return false;
