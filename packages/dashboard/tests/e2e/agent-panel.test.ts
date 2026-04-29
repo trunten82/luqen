@@ -223,6 +223,49 @@ describe('Phase 32 Plan 06 — agent-panel E2E smoke', () => {
     expect(src).toMatch(/cancelActiveTurn/);
     expect(src).toMatch(/data-step-n/);
     expect(src).toMatch(/__luqenAgent\.activePlan/);
+    // Phase 45-01 — tool_completed handler must consult the toolRenderers
+    // registry on the __luqenAgent namespace and fall back to the JSON pre
+    // render path on missing entry / thrown renderer.
+    expect(src).toMatch(/toolRenderers/);
+    expect(src).toMatch(/renderToolJsonFallback/);
+  });
+
+  it('Test 3.1 — agent-tool-renderers.js companion registers 5 tool keys', () => {
+    const src = readFileSync(
+      join(DASHBOARD_ROOT, 'src/static/agent-tool-renderers.js'),
+      'utf-8',
+    );
+    expect(src).toMatch(/__luqenAgent/);
+    expect(src).toMatch(/toolRenderers/);
+    for (const key of [
+      'dashboard_scan_site',
+      'dashboard_get_scan',
+      'dashboard_list_regulations',
+      'dashboard_get_regulation',
+      'dashboard_list_proposals',
+    ]) {
+      expect(src, `companion missing renderer mapping for ${key}`).toContain(key);
+    }
+    // Security guard — renderers MUST use createElement/textContent, NEVER
+    // innerHTML. Strip comments before scanning so the prohibition is on
+    // live code only.
+    const noBlockComments = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    const noComments = noBlockComments.replace(/\/\/[^\n]*/g, '');
+    expect(noComments).not.toMatch(/innerHTML/);
+    expect(src).toMatch(/createElement/);
+    expect(src).toMatch(/textContent/);
+    const loc = src.split('\n').length;
+    expect(loc).toBeLessThanOrEqual(800);
+  });
+
+  it('Test 3.2 — main.hbs loads agent-tool-renderers.js after agent.js', () => {
+    const src = readFileSync(join(DASHBOARD_ROOT, 'src/views/layouts/main.hbs'), 'utf-8');
+    const agentIdx = src.indexOf('agent.js');
+    const renderersIdx = src.indexOf('agent-tool-renderers.js');
+    expect(agentIdx).toBeGreaterThan(-1);
+    expect(renderersIdx).toBeGreaterThan(-1);
+    expect(renderersIdx, 'agent-tool-renderers.js must load AFTER agent.js')
+      .toBeGreaterThan(agentIdx);
   });
 
   it('Test 4 — agent-drawer partial exposes the DOM ids agent.js targets', () => {

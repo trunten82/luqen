@@ -744,6 +744,23 @@
     return body;
   }
 
+  // Phase 45-01 — JSON fallback for tool-result rendering. Used when a
+  // structured renderer in agent-tool-renderers.js throws.
+  function renderToolJsonFallback(result, container) {
+    var wrap = document.createElement('div');
+    wrap.className = 'agent-msg agent-msg--tool card card--muted tool-result-card';
+    var role = document.createElement('span'); role.className = 'agent-msg__role';
+    role.textContent = 'Tool result'; wrap.appendChild(role);
+    var details = document.createElement('details');
+    var summary = document.createElement('summary'); summary.textContent = 'Show raw JSON';
+    var pre = document.createElement('pre'); pre.className = 'prompt-segment-content';
+    try { pre.textContent = JSON.stringify(result, null, 2); }
+    catch (_e) { pre.textContent = String(result); }
+    details.appendChild(summary); details.appendChild(pre);
+    wrap.appendChild(details);
+    container.appendChild(wrap);
+  }
+
   function appendToolBubble(calls) {
     var msgs = byId(MESSAGES_ID); if (!msgs) return;
     var wrap = document.createElement('div');
@@ -1025,9 +1042,29 @@
       } catch (_e) { /* ignore */ }
     });
     es.addEventListener('tool_started', function () { advancePlanStep('agent-plan__step--active'); });
-    es.addEventListener('tool_completed', function () {
+    es.addEventListener('tool_completed', function (ev) {
       advancePlanStep('agent-plan__step--done');
-      var ap = window.__luqenAgent.activePlan; if (ap) ap.callIndex += 1; });
+      var ap = window.__luqenAgent.activePlan; if (ap) ap.callIndex += 1;
+      // Phase 45-01 — structured tool-result rendering. If the frame carries
+      // a `result` field AND a renderer is registered for the toolName, render
+      // a structured card into the messages container. On missing entry or
+      // thrown renderer, fall back to a JSON <pre> block. Never break the
+      // chat thread on a renderer bug.
+      try {
+        var data = JSON.parse(ev.data);
+        if (data && data.result !== undefined && data.toolName && data.status === 'success') {
+          var msgs = byId(MESSAGES_ID);
+          if (msgs) {
+            var registry = (window.__luqenAgent && window.__luqenAgent.toolRenderers) || {};
+            var renderer = registry[data.toolName];
+            if (typeof renderer === 'function') {
+              try { renderer(data.result, msgs); }
+              catch (_e) { renderToolJsonFallback(data.result, msgs); }
+            }
+          }
+        }
+      } catch (_e) { /* malformed frame — ignore */ }
+    });
     es.addEventListener('pending_confirmation', function (ev) {
       try {
         var data = JSON.parse(ev.data);

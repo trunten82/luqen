@@ -890,6 +890,26 @@ export class AgentService {
           resultToStore = { error: outcomeDetail };
         }
         // Emit tool_completed at the moment this individual call settles.
+        // Phase 45-01 — forward structured result to the client (bounded by
+        // TOOL_RESULT_MAX_BYTES) so agent-tool-renderers.js can render scan
+        // cards, regulation tables, and proposal diffs (AGENT-05/06). Only
+        // forwarded on success and only when the serialised payload fits the
+        // existing storage cap; otherwise the client falls back to the
+        // narrative the assistant emits in subsequent text frames.
+        let emitResult: unknown;
+        if (outcome === 'success' && resultToStore !== undefined) {
+          try {
+            const serialised = JSON.stringify(resultToStore);
+            if (
+              serialised !== undefined &&
+              Buffer.byteLength(serialised, 'utf8') <= TOOL_RESULT_MAX_BYTES
+            ) {
+              emitResult = resultToStore;
+            }
+          } catch {
+            // Non-serialisable (cycles, BigInt) — drop result silently.
+          }
+        }
         emit({
           type: 'tool_completed',
           toolCallId: call.id,
@@ -898,6 +918,7 @@ export class AgentService {
           ...(outcome !== 'success' && outcomeDetail !== undefined
             ? { errorMessage: outcomeDetail }
             : {}),
+          ...(emitResult !== undefined ? { result: emitResult } : {}),
         });
         return {
           call,

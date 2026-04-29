@@ -86,6 +86,16 @@ export const ToolCompletedFrameSchema = z.object({
   toolName: z.string(),
   status: z.enum(['success', 'error']),
   errorMessage: z.string().optional(),
+  /**
+   * Phase 45-01 — optional structured tool result, forwarded to the client
+   * for renderer registry lookup (AGENT-05/06: scan cards, regulation
+   * tables, proposal diffs). Bounded by the same TOOL_RESULT_MAX_BYTES cap
+   * applied to storage; if the result is oversized or otherwise unsafe to
+   * forward, this field is omitted and the client falls back to whatever
+   * narrative the assistant emits in subsequent text frames. `unknown` —
+   * the consumer (agent-tool-renderers.js) discriminates by toolName.
+   */
+  result: z.unknown().optional(),
 });
 
 /**
