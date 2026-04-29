@@ -2,7 +2,12 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import type { DbAdapter } from '../db/adapter.js';
-import type { BaselineSeedData, CreateRequirementInput, CreateRegulationInput } from '../types.js';
+import type {
+  BaselineSeedData,
+  CreateRequirementInput,
+  CreateRegulationInput,
+  CreateJurisdictionInput,
+} from '../types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -167,18 +172,52 @@ export async function seedBaseline(
   const data = loadBaselineData();
   const allCriteria = loadWcagCriteria();
 
-  // Snapshot admin-mutable source state (managementMode + status) keyed by
-  // URL so we can restore it after a force-reseed wipes the rows. Without
-  // this, every compliance restart silently flips every operator-toggled
-  // 'manual' -> 'llm' source back to the seed default of 'manual'.
-  // URL is stable across reseeds; row id is not.
+  // Snapshot admin-mutable state for every system table the force-reseed will
+  // wipe, so the operator's edits survive a compliance restart. See
+  // `.planning/audits/v3.3.0-reseed-safety.md` for the column-by-column
+  // justification.
+  //
+  // Sources: stable key = url (id regenerates on createSource).
+  // Regulations + jurisdictions: stable key = id (baseline ids are deterministic).
   const sourceStateByUrl = new Map<string, { managementMode: string; status: string }>();
+  const regulationStateById = new Map<
+    string,
+    {
+      name: string;
+      shortName: string;
+      enforcementDate: string;
+      status: string;
+      scope: string;
+    }
+  >();
+  const jurisdictionStateById = new Map<
+    string,
+    { name: string; type: string; parentId: string | undefined }
+  >();
   if (force) {
     const existingSources = await db.listSources();
     for (const s of existingSources) {
       sourceStateByUrl.set(s.url, {
         managementMode: s.managementMode ?? 'manual',
         status: s.status ?? 'active',
+      });
+    }
+    const existingRegulations = await db.listRegulations();
+    for (const r of existingRegulations) {
+      regulationStateById.set(r.id, {
+        name: r.name,
+        shortName: r.shortName,
+        enforcementDate: r.enforcementDate,
+        status: r.status,
+        scope: r.scope,
+      });
+    }
+    const existingJurisdictions = await db.listJurisdictions();
+    for (const j of existingJurisdictions) {
+      jurisdictionStateById.set(j.id, {
+        name: j.name,
+        type: j.type,
+        parentId: j.parentId,
       });
     }
   }
@@ -208,6 +247,23 @@ export async function seedBaseline(
     const existing = await db.getJurisdiction(jId);
     if (existing == null) {
       await db.createJurisdiction(jurisdiction);
+      // Restore admin-mutated columns captured before the force-reseed wipe.
+      const prior = jurisdictionStateById.get(jId);
+      if (prior !== undefined) {
+        const drift: {
+          -readonly [K in keyof CreateJurisdictionInput]?: CreateJurisdictionInput[K];
+        } = {};
+        if (prior.name !== jurisdiction.name) drift.name = prior.name;
+        if (prior.type !== jurisdiction.type) {
+          drift.type = prior.type as 'supranational' | 'country' | 'state';
+        }
+        if (prior.parentId !== jurisdiction.parentId && prior.parentId !== undefined) {
+          drift.parentId = prior.parentId;
+        }
+        if (Object.keys(drift).length > 0) {
+          await db.updateJurisdiction(jId, drift);
+        }
+      }
     }
   }
 
@@ -222,6 +278,27 @@ export async function seedBaseline(
     const existing = await db.getRegulation(rId);
     if (existing == null) {
       await db.createRegulation(regulation);
+      // Restore admin-mutated columns captured before the force-reseed wipe.
+      const prior = regulationStateById.get(rId);
+      if (prior !== undefined) {
+        const drift: {
+          -readonly [K in keyof CreateRegulationInput]?: CreateRegulationInput[K];
+        } = {};
+        if (prior.name !== regulation.name) drift.name = prior.name;
+        if (prior.shortName !== regulation.shortName) drift.shortName = prior.shortName;
+        if (prior.enforcementDate !== regulation.enforcementDate) {
+          drift.enforcementDate = prior.enforcementDate;
+        }
+        if (prior.status !== regulation.status) {
+          drift.status = prior.status as 'active' | 'draft' | 'repealed';
+        }
+        if (prior.scope !== regulation.scope) {
+          drift.scope = prior.scope as 'public' | 'private' | 'all';
+        }
+        if (Object.keys(drift).length > 0) {
+          await db.updateRegulation(rId, drift);
+        }
+      }
     }
   }
 
