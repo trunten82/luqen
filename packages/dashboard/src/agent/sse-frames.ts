@@ -78,6 +78,24 @@ export const ToolCompletedFrameSchema = z.object({
   errorMessage: z.string().optional(),
 });
 
+/**
+ * Phase 43 AGENT-01 — multi-step plan announcement. Emitted ONCE per turn
+ * BEFORE any `tool_started` frame, when the LLM produced a `<plan>...</plan>`
+ * block. Client renders a numbered step list with a Cancel button (Plan 43-03).
+ * Single-step turns omit this frame entirely.
+ */
+export const PlanFrameSchema = z.object({
+  type: z.literal('plan'),
+  id: z.string(),
+  steps: z.array(
+    z.object({
+      n: z.number().int(),
+      label: z.string(),
+      rationale: z.string(),
+    }),
+  ),
+});
+
 export const SseFrameSchema = z.discriminatedUnion('type', [
   TokenFrameSchema,
   ToolCallsFrameSchema,
@@ -86,6 +104,7 @@ export const SseFrameSchema = z.discriminatedUnion('type', [
   ErrorFrameSchema,
   ToolStartedFrameSchema,
   ToolCompletedFrameSchema,
+  PlanFrameSchema,
 ]);
 
 export type SseFrame = z.infer<typeof SseFrameSchema>;
@@ -96,6 +115,7 @@ export type DoneFrame = z.infer<typeof DoneFrameSchema>;
 export type ErrorFrame = z.infer<typeof ErrorFrameSchema>;
 export type ToolStartedFrame = z.infer<typeof ToolStartedFrameSchema>;
 export type ToolCompletedFrame = z.infer<typeof ToolCompletedFrameSchema>;
+export type PlanFrame = z.infer<typeof PlanFrameSchema>;
 
 /**
  * Minimal FastifyReply shape writeFrame depends on. Avoids importing the

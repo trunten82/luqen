@@ -36,6 +36,7 @@ import type { StorageAdapter } from '../db/index.js';
 import type { Message } from '../db/interfaces/conversation-repository.js';
 import type { ToolMetadata } from '@luqen/core/mcp';
 import type { SseFrame } from './sse-frames.js';
+import { parsePlanBlock } from './plan-parser.js';
 import { collectContextHints, formatContextHints } from './context-hints.js';
 import { generateConversationTitle } from './conversation-title-generator.js';
 import {
@@ -398,6 +399,22 @@ export class AgentService {
           },
         );
 
+        // Phase 43 AGENT-01 — multi-step plan announcement. If the LLM
+        // emitted a `<plan>...</plan>` block at the start of its reply,
+        // parse it out, emit the SSE `plan` frame BEFORE any tool_started
+        // frame, and persist the assistant text MINUS the plan block. No
+        // plan block → no `plan` frame, single-step flow unchanged.
+        const parsedPlan = parsePlanBlock(turn.text ?? '');
+        let assistantText = turn.text ?? '';
+        if (parsedPlan !== null && parsedPlan.steps.length > 0) {
+          emit({
+            type: 'plan',
+            id: `plan-${conversationId}-${iter}`,
+            steps: parsedPlan.steps.map((s) => ({ n: s.n, label: s.label, rationale: s.rationale })),
+          });
+          assistantText = parsedPlan.textWithoutBlock;
+        }
+
         if (turn.toolCalls.length === 0) {
           // Plain final answer path. Phase 37 Plan 03: clear the abort
           // tracker — the LLM returned successfully so any later
@@ -407,7 +424,7 @@ export class AgentService {
           await this.storage.conversations.appendMessage({
             conversationId,
             role: 'assistant',
-            content: turn.text,
+            content: assistantText,
             status: 'sent',
           });
           // Phase 35 Plan 03 — post-first-assistant-turn title hook (D-02/D-03).
@@ -424,7 +441,7 @@ export class AgentService {
             userId,
             agentDisplayName,
             userMessage,
-            assistantReply: turn.text,
+            assistantReply: assistantText,
             signal,
           });
           emit({ type: 'done' });
@@ -466,7 +483,7 @@ export class AgentService {
         await this.storage.conversations.appendMessage({
           conversationId,
           role: 'assistant',
-          content: turn.text ?? '',
+          content: assistantText,
           status: 'sent',
           toolCallJson: JSON.stringify(turn.toolCalls),
         });
