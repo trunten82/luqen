@@ -198,7 +198,9 @@ describe('Phase 32 Plan 06 — agent-panel E2E smoke', () => {
     // for invalid LLM-emitted diagram tokens (~30 LOC). Ceiling raised
     // to 1320. Future split candidate: agent-mermaid.js owning init,
     // theme variables, render, and source salvage.
-    expect(loc).toBeLessThanOrEqual(1320);
+    // v3.2.1 — cross-user identity stamp + evictForeignAgentState (~35
+    // LOC) shipped as part of the security fix. Ceiling raised to 1400.
+    expect(loc).toBeLessThanOrEqual(1400);
     const splitFiles = [
       'src/static/agent-history.js',
       'src/static/agent-tools.js',
