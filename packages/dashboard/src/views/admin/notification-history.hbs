@@ -1,0 +1,46 @@
+{{!-- Phase 48 Plan 02 — history modal listing prior versions chronologically --}}
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="notification-history-title">
+  <div class="modal modal--lg">
+    <div class="modal__header">
+      <h2 id="notification-history-title">
+        History — {{template.eventType}} <span class="text-muted">({{template.channel}})</span>
+      </h2>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <p class="text-muted">
+      Current version: <strong>v{{template.version}}</strong>. Earlier versions
+      are listed below, newest first. Diff polish and side-by-side preview
+      arrive in Phase 50.
+    </p>
+
+    {{#if history.length}}
+    <ol class="history-list" reversed>
+      {{#each history}}
+      <li class="history-list__item">
+        <div class="history-list__head">
+          <strong>v{{version}}</strong>
+          <span class="text-muted">{{savedAt}}</span>
+          {{#if savedBy}}<span class="text-muted">by {{savedBy}}</span>{{/if}}
+        </div>
+        <details class="history-list__detail">
+          <summary>Subject &amp; body snapshot</summary>
+          <h4>Subject</h4>
+          <pre class="code-block">{{subjectTemplate}}</pre>
+          <h4>Body</h4>
+          <pre class="code-block">{{bodyTemplate}}</pre>
+          {{#if voice}}<h4>Voice</h4><pre class="code-block">{{voice}}</pre>{{/if}}
+          {{#if signature}}<h4>Signature</h4><pre class="code-block">{{signature}}</pre>{{/if}}
+        </details>
+      </li>
+      {{/each}}
+    </ol>
+    {{else}}
+    <p class="text-muted">No prior versions yet — this template is at v1.</p>
+    {{/if}}
+
+    <div class="modal__footer">
+      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>

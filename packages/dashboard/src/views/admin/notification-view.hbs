@@ -1,0 +1,67 @@
+{{!-- Phase 48 Plan 02 — read-only view modal for a notification template --}}
+<div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="notification-view-title">
+  <div class="modal modal--lg">
+    <div class="modal__header">
+      <h2 id="notification-view-title">
+        {{template.eventType}} <span class="text-muted">({{template.channel}})</span>
+      </h2>
+      <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <dl class="detail-list">
+      <div class="detail-list__item">
+        <dt>Scope</dt>
+        <dd>
+          {{#if (eq template.scope "system")}}
+          <span class="badge badge--neutral">System</span>
+          {{else}}
+          <span class="badge badge--info">Org</span>
+          {{/if}}
+        </dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Version</dt>
+        <dd>v{{template.version}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Last updated</dt>
+        <dd>{{template.updatedAt}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Last updated by</dt>
+        <dd>{{#if template.updatedBy}}{{template.updatedBy}}{{else}}—{{/if}}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>LLM-assisted</dt>
+        <dd>
+          {{#if template.llmEnabled}}On{{else}}Off{{/if}}
+          <span class="text-muted">(wired in Phase 50)</span>
+        </dd>
+      </div>
+    </dl>
+
+    <h3 class="detail-section-title">Subject</h3>
+    <pre class="code-block" aria-label="Subject template">{{template.subjectTemplate}}</pre>
+
+    <h3 class="detail-section-title">Body</h3>
+    <pre class="code-block" aria-label="Body template">{{template.bodyTemplate}}</pre>
+
+    {{#if template.voice}}
+    <h3 class="detail-section-title">Voice</h3>
+    <pre class="code-block" aria-label="Voice">{{template.voice}}</pre>
+    {{/if}}
+
+    {{#if template.signature}}
+    <h3 class="detail-section-title">Signature</h3>
+    <pre class="code-block" aria-label="Signature">{{template.signature}}</pre>
+    {{/if}}
+
+    <div class="modal__footer">
+      <button hx-get="/admin/notifications/{{template.id}}/history"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+              class="btn btn--ghost">History</button>
+      <button type="button" class="btn btn--ghost close-modal-btn">Close</button>
+    </div>
+  </div>
+</div>

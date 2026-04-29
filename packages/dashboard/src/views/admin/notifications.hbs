@@ -1,0 +1,30 @@
+{{!-- Phase 48 Plan 02 — admin notification template editor --}}
+<section aria-label="Notification templates editor">
+  <header class="page-header">
+    <h1>Notification Templates</h1>
+    <p class="page-subtitle">
+      Edit the subject and body used for each event/channel pair. System
+      templates are the platform-wide defaults; org overrides win when
+      present. Changes are versioned and audited.
+    </p>
+  </header>
+
+  <nav class="tabs" aria-label="Notification channel">
+    {{#each channels}}
+    <a class="tab {{#if (eq this ../channel)}}is-active{{/if}}"
+       href="/admin/notifications?channel={{this}}"
+       hx-get="/admin/notifications?channel={{this}}"
+       hx-target="#notifications-tab-body"
+       hx-push-url="true"
+       aria-current="{{#if (eq this ../channel)}}page{{/if}}">
+      {{this}}
+    </a>
+    {{/each}}
+  </nav>
+
+  <div id="notifications-tab-body">
+    {{> notifications-tab}}
+  </div>
+
+  <div id="modal-container" aria-live="polite"></div>
+</section>

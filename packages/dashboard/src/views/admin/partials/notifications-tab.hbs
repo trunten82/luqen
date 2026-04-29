@@ -1,0 +1,133 @@
+{{!-- Phase 48 Plan 02 — partial: per-channel system + org tables --}}
+<section aria-label="System templates">
+  <header class="section-header">
+    <h2>System templates ({{channel}})</h2>
+    <p class="section-subtitle">
+      Platform-wide defaults. {{#if canEditSystem}}Editable by system admins.{{else}}Read-only — your organisation can override any of these.{{/if}}
+    </p>
+  </header>
+
+  <div class="table-wrapper">
+    <table class="table" aria-label="System notification templates">
+      <thead>
+        <tr>
+          <th scope="col">Event</th>
+          <th scope="col">Channel</th>
+          <th scope="col">Scope</th>
+          <th scope="col">Subject</th>
+          <th scope="col">Version</th>
+          <th scope="col">Updated</th>
+          <th scope="col">Updated by</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each systemTemplates}}
+        <tr id="notification-{{id}}">
+          <td data-label="Event">{{eventType}}</td>
+          <td data-label="Channel">{{channel}}</td>
+          <td data-label="Scope"><span class="badge badge--neutral">System</span></td>
+          <td data-label="Subject" class="cell--wrap">{{subjectTemplate}}</td>
+          <td data-label="Version">v{{version}}</td>
+          <td data-label="Updated">{{updatedAt}}</td>
+          <td data-label="Updated by">{{#if updatedBy}}{{updatedBy}}{{else}}—{{/if}}</td>
+          <td>
+            <button hx-get="/admin/notifications/{{id}}/view"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--ghost"
+                    aria-label="View {{eventType}} {{channel}}">View</button>
+            {{#if ../canEditSystem}}
+            <button hx-get="/admin/notifications/{{id}}/edit"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="Edit {{eventType}} {{channel}}">Edit</button>
+            {{/if}}
+            {{#if ../canCreateOverride}}
+            <button hx-post="/admin/notifications/override"
+                    hx-vals='{"sourceId":"{{id}}"}'
+                    hx-target="#org-templates-body"
+                    hx-swap="beforeend"
+                    class="btn btn--sm btn--primary"
+                    aria-label="Override {{eventType}} {{channel}} for your org">Override</button>
+            {{/if}}
+            <button hx-get="/admin/notifications/{{id}}/history"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--ghost"
+                    aria-label="History for {{eventType}} {{channel}}">History</button>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="8" class="table__empty">No system templates for this channel.</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section aria-label="Org templates" style="margin-top:var(--space-lg)">
+  <header class="section-header">
+    <h2>Your org templates ({{channel}})</h2>
+    <p class="section-subtitle">
+      Org-scoped overrides. When an override exists for an event/channel, it
+      replaces the system default for your organisation.
+    </p>
+  </header>
+
+  <div class="table-wrapper">
+    <table class="table" aria-label="Org notification templates">
+      <thead>
+        <tr>
+          <th scope="col">Event</th>
+          <th scope="col">Channel</th>
+          <th scope="col">Scope</th>
+          <th scope="col">Subject</th>
+          <th scope="col">Version</th>
+          <th scope="col">Updated</th>
+          <th scope="col">Updated by</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="org-templates-body">
+        {{#each orgTemplates}}
+        <tr id="notification-{{id}}">
+          <td data-label="Event">{{eventType}}</td>
+          <td data-label="Channel">{{channel}}</td>
+          <td data-label="Scope"><span class="badge badge--info">Org</span></td>
+          <td data-label="Subject" class="cell--wrap">{{subjectTemplate}}</td>
+          <td data-label="Version">v{{version}}</td>
+          <td data-label="Updated">{{updatedAt}}</td>
+          <td data-label="Updated by">{{#if updatedBy}}{{updatedBy}}{{else}}—{{/if}}</td>
+          <td>
+            <button hx-get="/admin/notifications/{{id}}/view"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--ghost"
+                    aria-label="View {{eventType}} {{channel}}">View</button>
+            <button hx-get="/admin/notifications/{{id}}/edit"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--secondary"
+                    aria-label="Edit {{eventType}} {{channel}}">Edit</button>
+            <button hx-get="/admin/notifications/{{id}}/history"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    class="btn btn--sm btn--ghost"
+                    aria-label="History for {{eventType}} {{channel}}">History</button>
+            <button hx-delete="/admin/notifications/{{id}}"
+                    hx-confirm="Delete this org override? The system default will apply afterwards. This cannot be undone."
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:300ms"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Delete {{eventType}} {{channel}} override">Delete</button>
+          </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="8" class="table__empty">No org overrides yet. Use "Override" on a system row to create one.</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>
