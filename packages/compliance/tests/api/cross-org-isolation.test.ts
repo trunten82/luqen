@@ -108,7 +108,9 @@ describe('cross-org isolation', () => {
   }
 
   describe('sources PATCH (managementMode)', () => {
-    it('rejects org A write token mutating system source', async () => {
+    // Phase 54: org admin mutating a system source now writes a per-org
+    // OVERRIDE row instead of returning 403. The system column is unchanged.
+    it('org A write token writes override on system source (no 403)', async () => {
       const sys = await db.createSource({
         name: 'sys-src',
         url: 'https://sys.example.com',
@@ -123,7 +125,16 @@ describe('cross-org isolation', () => {
         headers: bearer(orgAWriteToken),
         body: JSON.stringify({ managementMode: 'llm' }),
       });
-      expect(res.statusCode).toBe(403);
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body) as { scope: string; orgId: string; managementMode: string };
+      expect(body.scope).toBe('org');
+      expect(body.orgId).toBe('orgA');
+      expect(body.managementMode).toBe('llm');
+      // System column should NOT be mutated.
+      const fresh = await db.getSource(sys.id);
+      expect(fresh?.managementMode).toBe('manual');
+      // Override row for orgA exists.
+      expect(await db.getSourceOrgManagementMode(sys.id, 'orgA')).toBe('llm');
     });
 
     it('rejects org A write token mutating org B source', async () => {
@@ -162,14 +173,18 @@ describe('cross-org isolation', () => {
   });
 
   describe('sources/bulk-switch-mode', () => {
-    it('rejects org A admin token (system-only path)', async () => {
+    // Phase 54: org admin bulk-switch now UPSERTs per-org overrides instead of 403.
+    it('org A admin token writes overrides for caller org (no 403)', async () => {
       const res = await app.inject({
         method: 'POST',
         url: '/api/v1/sources/bulk-switch-mode',
         headers: bearer(orgAAdminToken),
         body: JSON.stringify({ mode: 'llm' }),
       });
-      expect(res.statusCode).toBe(403);
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body) as { scope: string; orgId: string };
+      expect(body.scope).toBe('org');
+      expect(body.orgId).toBe('orgA');
     });
 
     it('allows system token', async () => {
@@ -250,6 +265,139 @@ describe('cross-org isolation', () => {
       // the important assertion is that it is NOT 200.
       expect(res.statusCode).not.toBe(200);
       expect([403, 503]).toContain(res.statusCode);
+    });
+  });
+
+  // Phase 54: scope-aware per-org override behavior.
+  describe('sources PATCH per-org override (Phase 54)', () => {
+    it('system caller PATCH mutates system column, scope=system', async () => {
+      const sys = await db.createSource({
+        name: 'sys-p54',
+        url: 'https://sys-p54.example.com',
+        type: 'html',
+        schedule: 'weekly',
+        orgId: 'system',
+      });
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/sources/${sys.id}`,
+        headers: bearer(systemAdminToken),
+        body: JSON.stringify({ managementMode: 'llm' }),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body) as { scope: string; managementMode: string };
+      expect(body.scope).toBe('system');
+      const fresh = await db.getSource(sys.id);
+      expect(fresh?.managementMode).toBe('llm');
+    });
+
+    it('org admin PATCH on org B source still 403', async () => {
+      const orgBSrc = await db.createSource({
+        name: 'orgb-p54',
+        url: 'https://orgb-p54.example.com',
+        type: 'html',
+        schedule: 'weekly',
+        orgId: 'orgB',
+      });
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/sources/${orgBSrc.id}`,
+        headers: bearer(orgAWriteToken),
+        body: JSON.stringify({ managementMode: 'llm' }),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  describe('sources/bulk-switch-mode per-org (Phase 54)', () => {
+    it('org A bulk-switch UPSERTs override rows for caller', async () => {
+      // Create a government source so bulk-switch finds something.
+      const gov = await db.createSource({
+        name: 'gov-bulk',
+        url: 'https://gov-bulk.example.com',
+        type: 'html',
+        schedule: 'weekly',
+        sourceCategory: 'government',
+        orgId: 'system',
+      } as Parameters<typeof db.createSource>[0]);
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sources/bulk-switch-mode',
+        headers: bearer(orgAAdminToken),
+        body: JSON.stringify({ mode: 'llm' }),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body) as {
+        scope: string;
+        orgId: string;
+        updated: number;
+      };
+      expect(body.scope).toBe('org');
+      expect(body.orgId).toBe('orgA');
+      // Override row for orgA on the gov source.
+      expect(await db.getSourceOrgManagementMode(gov.id, 'orgA')).toBe('llm');
+      // System column unchanged.
+      const fresh = await db.getSource(gov.id);
+      expect(fresh?.managementMode).toBe('manual');
+    });
+  });
+
+  describe('sources/:id/mode/reset (Phase 54)', () => {
+    it('clears caller org override; effective mode falls back to system', async () => {
+      const sys = await db.createSource({
+        name: 'sys-reset',
+        url: 'https://sys-reset.example.com',
+        type: 'html',
+        schedule: 'weekly',
+        orgId: 'system',
+      });
+      // Org A sets an override.
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/sources/${sys.id}`,
+        headers: bearer(orgAWriteToken),
+        body: JSON.stringify({ managementMode: 'llm' }),
+      });
+      expect(await db.getSourceOrgManagementMode(sys.id, 'orgA')).toBe('llm');
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/sources/${sys.id}/mode/reset`,
+        headers: bearer(orgAWriteToken),
+        body: JSON.stringify({}),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body) as { cleared: boolean; effectiveMode: string };
+      expect(body.cleared).toBe(true);
+      expect(body.effectiveMode).toBe('manual');
+      expect(await db.getSourceOrgManagementMode(sys.id, 'orgA')).toBeNull();
+    });
+
+    it('returns 400 when system caller hits reset (nothing to reset)', async () => {
+      const sys = await db.createSource({
+        name: 'sys-reset-2',
+        url: 'https://sys-reset-2.example.com',
+        type: 'html',
+        schedule: 'weekly',
+        orgId: 'system',
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/sources/${sys.id}/mode/reset`,
+        headers: bearer(systemAdminToken),
+        body: JSON.stringify({}),
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('returns 404 when source missing', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sources/does-not-exist/mode/reset',
+        headers: bearer(orgAWriteToken),
+        body: JSON.stringify({}),
+      });
+      expect(res.statusCode).toBe(404);
     });
   });
 });

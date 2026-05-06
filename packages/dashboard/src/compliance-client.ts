@@ -567,14 +567,32 @@ export async function bulkSwitchSourceMode(
   baseUrl: string,
   token: string,
   mode: 'llm' | 'manual',
-): Promise<{ updated: number }> {
+): Promise<{ updated: number; scope?: 'system' | 'org'; orgId?: string }> {
   const res = await fetch(`${baseUrl}/api/v1/sources/bulk-switch-mode`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify({ mode }),
   });
   if (!res.ok) throw new Error(`Failed to bulk switch: ${res.status}`);
-  return res.json() as Promise<{ updated: number }>;
+  return res.json() as Promise<{ updated: number; scope?: 'system' | 'org'; orgId?: string }>;
+}
+
+// Phase 54-02: clear per-org override row for a source.
+export async function resetSourceMode(
+  baseUrl: string,
+  token: string,
+  sourceId: string,
+): Promise<{ cleared: boolean; effectiveMode: 'llm' | 'manual' }> {
+  const res = await fetch(
+    `${baseUrl}/api/v1/sources/${encodeURIComponent(sourceId)}/mode/reset`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({}),
+    },
+  );
+  if (!res.ok) throw new Error(`Failed to reset source mode: ${res.status}`);
+  return res.json() as Promise<{ cleared: boolean; effectiveMode: 'llm' | 'manual' }>;
 }
 
 // ── Webhooks ──────────────────────────────────────────────────────────────────
