@@ -8,6 +8,7 @@ import {
   uploadSource,
   updateSourceMode,
   bulkSwitchSourceMode,
+  resetSourceMode,
 } from '../../compliance-client.js';
 import { escapeHtml } from './helpers.js';
 import { requirePermission } from '../../auth/middleware.js';
@@ -305,6 +306,35 @@ export async function sourceRoutes(
           .header('content-type', 'text/html')
           .header('HX-Redirect', '/admin/sources')
           .send(toastHtml(`Switched to ${body.mode}`, 'success'));
+      } catch (err) {
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(toastHtml(err instanceof Error ? err.message : 'Failed', 'error'));
+      }
+    },
+  );
+
+  // POST /admin/sources/:id/mode/reset — Phase 54-02: clear per-org override.
+  server.post(
+    '/admin/sources/:id/mode/reset',
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: { params: SourceIdParams, ...HtmlPartialResponse },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      try {
+        const result = await resetSourceMode(baseUrl, getToken(request), id);
+        return reply
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', '/admin/sources')
+          .send(
+            toastHtml(
+              `Override cleared. Effective mode is now ${result.effectiveMode}.`,
+              'success',
+            ),
+          );
       } catch (err) {
         return reply
           .code(500)

@@ -453,6 +453,11 @@ export async function registerSourceRoutes(
   });
 
   // PATCH /api/v1/sources/:id — update managementMode
+  // Plan 54-02: scope-aware write semantics.
+  // - System caller (orgId == null/'system'): mutate the system column on monitored_sources.
+  //   Cross-org write of an ORG-OWNED source still returns 403 (Phase 51 guard preserved).
+  // - Org caller: write to per-(source, org) override row in source_org_management_modes.
+  //   Cross-org write of another org's source row → 403 (Phase 51 guard preserved).
   app.patch('/api/v1/sources/:id', {
     schema: {
       tags: ['sources'],
@@ -466,35 +471,55 @@ export async function registerSourceRoutes(
     try {
       const { id } = request.params as { id: string };
       const body = request.body as { managementMode?: string };
-      // Plan 51-02: ownership guard. Without this any per-org write token can
-      // mutate the management mode of a system source (or another org's
-      // source). System rows require system caller; cross-org writes blocked.
       const requestOrgId = (request as unknown as { orgId?: string }).orgId;
       const recordOrgId = await db.getSourceOrgId(id);
       if (recordOrgId == null) {
         await reply.status(404).send({ error: `Source '${id}' not found`, statusCode: 404 });
         return;
       }
-      if (recordOrgId === 'system' && requestOrgId !== 'system') {
-        await reply.status(403).send({ error: 'Cannot modify system data', statusCode: 403 });
+      if (body.managementMode !== 'llm' && body.managementMode !== 'manual') {
+        await reply.status(400).send({ error: 'managementMode must be "llm" or "manual"', statusCode: 400 });
         return;
       }
-      if (requestOrgId != null && recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+      // Cross-org write of an org-owned source → 403 regardless of caller scope.
+      if (
+        recordOrgId !== 'system' &&
+        requestOrgId != null &&
+        recordOrgId !== requestOrgId
+      ) {
         await reply.status(403).send({ error: 'Cannot modify data belonging to another organisation', statusCode: 403 });
         return;
       }
-      if (body.managementMode === 'llm' || body.managementMode === 'manual') {
+
+      if (requestOrgId == null || requestOrgId === 'system') {
+        // System caller: mutate system default column.
         await db.updateSourceManagementMode(id, body.managementMode);
-        await reply.send({ updated: true, managementMode: body.managementMode });
-      } else {
-        await reply.status(400).send({ error: 'managementMode must be "llm" or "manual"', statusCode: 400 });
+        await reply.send({
+          updated: true,
+          managementMode: body.managementMode,
+          scope: 'system',
+        });
+        return;
       }
+
+      // Org caller: write per-org override row.
+      const tokenSub =
+        (request as unknown as { tokenPayload?: { sub?: string } }).tokenPayload?.sub ?? requestOrgId;
+      await db.setSourceOrgManagementMode(id, requestOrgId, body.managementMode, tokenSub);
+      await reply.send({
+        updated: true,
+        managementMode: body.managementMode,
+        scope: 'org',
+        orgId: requestOrgId,
+      });
     } catch (err) {
       await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
     }
   });
 
   // POST /api/v1/sources/bulk-switch-mode — switch all government sources
+  // Plan 54-02: scope-aware. System caller mutates the system default column;
+  // org caller UPSERTs per-org override rows for caller's org. No cross-org leak.
   app.post('/api/v1/sources/bulk-switch-mode', {
     schema: {
       tags: ['sources'],
@@ -502,30 +527,79 @@ export async function registerSourceRoutes(
       body: BulkSwitchBody,
       response: { 200: BulkResponse, 400: ErrorEnvelope, 403: ErrorEnvelope, 500: ErrorEnvelope },
     },
-    preHandler: [requireScope('admin')],
+    preHandler: [requireScope('write')],
   }, async (request, reply) => {
     const body = request.body as { mode?: string };
     if (body.mode !== 'llm' && body.mode !== 'manual') {
       await reply.status(400).send({ error: 'mode must be "llm" or "manual"', statusCode: 400 });
       return;
     }
-    // Plan 51-02: bulk-switch must not be a back-door for org admins to flip
-    // system source management modes. System-only caller required.
     const requestOrgId = (request as unknown as { orgId?: string }).orgId;
-    if (requestOrgId !== 'system' && requestOrgId != null) {
-      await reply.status(403).send({ error: 'Bulk switch is restricted to system administrators', statusCode: 403 });
-      return;
-    }
     try {
       const sources = await db.listSources();
-      let count = 0;
-      for (const s of sources) {
-        if (s.sourceCategory === 'government') {
+      const govSources = sources.filter((s) => s.sourceCategory === 'government');
+      if (requestOrgId == null || requestOrgId === 'system') {
+        for (const s of govSources) {
           await db.updateSourceManagementMode(s.id, body.mode);
-          count++;
         }
+        await reply.send({ updated: govSources.length, mode: body.mode, scope: 'system' });
+        return;
       }
-      await reply.send({ updated: count, mode: body.mode });
+      const tokenSub =
+        (request as unknown as { tokenPayload?: { sub?: string } }).tokenPayload?.sub ?? requestOrgId;
+      for (const s of govSources) {
+        await db.setSourceOrgManagementMode(s.id, requestOrgId, body.mode, tokenSub);
+      }
+      await reply.send({
+        updated: govSources.length,
+        mode: body.mode,
+        scope: 'org',
+        orgId: requestOrgId,
+      });
+    } catch (err) {
+      await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+
+  // POST /api/v1/sources/:id/mode/reset — Plan 54-02: clear org override row.
+  // Org caller required. System caller has no override to reset → 400.
+  app.post('/api/v1/sources/:id/mode/reset', {
+    schema: {
+      tags: ['sources'],
+      summary: 'Clear per-org management mode override',
+      params: SourceParams,
+      response: { 200: PatchResponse, 400: ErrorEnvelope, 403: ErrorEnvelope, 404: ErrorEnvelope, 500: ErrorEnvelope },
+    },
+    preHandler: [requireScope('write')],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      const recordOrgId = await db.getSourceOrgId(id);
+      if (recordOrgId == null) {
+        await reply.status(404).send({ error: `Source '${id}' not found`, statusCode: 404 });
+        return;
+      }
+      if (requestOrgId == null || requestOrgId === 'system') {
+        await reply.status(400).send({
+          error: 'Reset is only meaningful for org callers; system caller has no override',
+          statusCode: 400,
+        });
+        return;
+      }
+      // Org caller writing to org-owned source from another org → 403 preserved.
+      if (recordOrgId !== 'system' && recordOrgId !== requestOrgId) {
+        await reply.status(403).send({ error: 'Cannot modify data belonging to another organisation', statusCode: 403 });
+        return;
+      }
+      await db.clearSourceOrgManagementMode(id, requestOrgId);
+      const effectiveMode = await db.getEffectiveSourceManagementMode(id, requestOrgId);
+      await reply.send({
+        cleared: true,
+        sourceId: id,
+        orgId: requestOrgId,
+        effectiveMode,
+      });
     } catch (err) {
       await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
     }
