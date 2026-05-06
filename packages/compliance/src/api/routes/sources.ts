@@ -613,6 +613,34 @@ export async function registerSourceRoutes(
     }
   });
 
+  // GET /api/v1/sources/org-modes — Phase 54-04: list caller-org override rows.
+  // Returns array of { sourceId, mode } so the dashboard can compute
+  // effectiveMode + hasOrgOverride without per-row lookups. System caller →
+  // empty array (system has no overrides; system column is the source-of-truth).
+  app.get('/api/v1/sources/org-modes', {
+    schema: {
+      tags: ['sources'],
+      summary: 'List caller-org management mode overrides',
+      response: {
+        200: Type.Object({}, { additionalProperties: true }),
+        500: ErrorEnvelope,
+      },
+    },
+    preHandler: [requireScope('read')],
+  }, async (request, reply) => {
+    try {
+      const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+      if (requestOrgId == null || requestOrgId === 'system') {
+        await reply.send({ orgId: 'system', overrides: [] });
+        return;
+      }
+      const overrides = await db.listSourceOrgModesForOrg(requestOrgId);
+      await reply.send({ orgId: requestOrgId, overrides });
+    } catch (err) {
+      await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+
   // POST /api/v1/sources/:id/mode/reset — Plan 54-02: clear org override row.
   // Org caller required. System caller has no override to reset → 400.
   app.post('/api/v1/sources/:id/mode/reset', {

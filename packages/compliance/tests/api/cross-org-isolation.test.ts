@@ -342,6 +342,49 @@ describe('cross-org isolation', () => {
     });
   });
 
+  describe('GET /api/v1/sources/org-modes (Phase 54-04)', () => {
+    it('system caller receives empty overrides list', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/sources/org-modes',
+        headers: bearer(systemAdminToken),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body) as { orgId: string; overrides: unknown[] };
+      expect(body.orgId).toBe('system');
+      expect(body.overrides).toEqual([]);
+    });
+
+    it('org A receives only its own overrides', async () => {
+      const sys = await db.createSource({
+        name: 'src-modes',
+        url: 'https://modes.example.com',
+        type: 'html',
+        schedule: 'weekly',
+        orgId: 'system',
+      });
+      // Org A sets an override.
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/sources/${sys.id}`,
+        headers: bearer(orgAWriteToken),
+        body: JSON.stringify({ managementMode: 'llm' }),
+      });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/sources/org-modes',
+        headers: bearer(orgAWriteToken),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body) as {
+        orgId: string;
+        overrides: Array<{ sourceId: string; mode: string }>;
+      };
+      expect(body.orgId).toBe('orgA');
+      expect(body.overrides.some((o) => o.sourceId === sys.id && o.mode === 'llm')).toBe(true);
+    });
+  });
+
   describe('sources/:id/mode/reset (Phase 54)', () => {
     it('clears caller org override; effective mode falls back to system', async () => {
       const sys = await db.createSource({
