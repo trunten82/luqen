@@ -144,6 +144,7 @@ async function createGenericProposal(
   content: string,
   contentHash: string,
   proposals: unknown[],
+  orgId?: string,
 ): Promise<void> {
   const oldContent = await db.getSourceContent(source.id);
   const diff = oldContent != null ? computeDiff(oldContent, content) : null;
@@ -153,6 +154,7 @@ async function createGenericProposal(
     summary: diff != null
       ? `${source.name}: ${diff.summary}`
       : `Content change detected at ${source.name} (${source.url})`,
+    ...(orgId !== undefined ? { orgId } : {}),
     proposedChanges: {
       action: 'update',
       entityType: 'regulation',
@@ -389,39 +391,89 @@ export async function registerSourceRoutes(
                 } catch {
                   await createGenericProposal(db, source, content, contentHash, proposals);
                 }
-              } else if (category === 'government' && source.managementMode === 'llm' && llmClient != null) {
-                try {
-                  const extracted = await llmClient.extractRequirements({
-                    content,
-                    regulationId: source.id,
-                    regulationName: source.name,
+              } else if (category === 'government') {
+                // Phase 54-03: per-org effective mode determines trustLevel.
+                // Simplification (Option 2 from CONTEXT): when explicit override
+                // rows exist for this source, fan out one proposal per
+                // (override-holder org + 'system'). Otherwise, single
+                // system-orgId proposal as before. ONE LLM extraction maximum
+                // per content change — no cost multiplier.
+                const overrides = await db.listSourceOrgModesForSource(source.id);
+                const recipients: Array<{ orgId: string; mode: 'llm' | 'manual' }> = [];
+                if (overrides.length === 0) {
+                  recipients.push({
+                    orgId: 'system',
+                    mode: source.managementMode === 'llm' ? 'llm' : 'manual',
                   });
-                  const proposal = await db.createUpdateProposal({
-                    source: source.url,
-                    type: 'amendment',
-                    summary: `LLM extraction for ${source.name}: ${extracted.criteria.length} criteria found (confidence ${extracted.confidence})`,
-                    trustLevel: 'extracted',
-                    proposedChanges: {
-                      action: 'update',
-                      entityType: 'regulation',
-                      entityId: source.id,
-                      before: { contentHash: source.lastContentHash },
-                      after: {
-                        contentHash,
-                        wcagVersion: extracted.wcagVersion,
-                        wcagLevel: extracted.wcagLevel,
-                        criteria: extracted.criteria,
-                        confidence: extracted.confidence,
-                        model: extracted.model,
-                        provider: extracted.provider,
+                } else {
+                  recipients.push({
+                    orgId: 'system',
+                    mode: source.managementMode === 'llm' ? 'llm' : 'manual',
+                  });
+                  for (const o of overrides) {
+                    recipients.push({ orgId: o.orgId, mode: o.mode });
+                  }
+                }
+
+                // Run LLM extraction at most once if any recipient wants it.
+                const anyLlm = recipients.some((r) => r.mode === 'llm');
+                let extracted: Awaited<ReturnType<NonNullable<typeof llmClient>['extractRequirements']>> | null = null;
+                let llmFailed = false;
+                if (anyLlm && llmClient != null) {
+                  try {
+                    extracted = await llmClient.extractRequirements({
+                      content,
+                      regulationId: source.id,
+                      regulationName: source.name,
+                    });
+                  } catch {
+                    llmFailed = true;
+                  }
+                }
+
+                let anyLlmProposal = false;
+                for (const recipient of recipients) {
+                  const wantsLlm = recipient.mode === 'llm' && llmClient != null && extracted != null && !llmFailed;
+                  if (wantsLlm && extracted != null) {
+                    const proposal = await db.createUpdateProposal({
+                      source: source.url,
+                      type: 'amendment',
+                      summary: `LLM extraction for ${source.name}: ${extracted.criteria.length} criteria found (confidence ${extracted.confidence})`,
+                      trustLevel: 'extracted',
+                      orgId: recipient.orgId,
+                      proposedChanges: {
+                        action: 'update',
+                        entityType: 'regulation',
+                        entityId: source.id,
+                        before: { contentHash: source.lastContentHash },
+                        after: {
+                          contentHash,
+                          wcagVersion: extracted.wcagVersion,
+                          wcagLevel: extracted.wcagLevel,
+                          criteria: extracted.criteria,
+                          confidence: extracted.confidence,
+                          model: extracted.model,
+                          provider: extracted.provider,
+                        },
                       },
-                    },
-                  });
-                  proposals.push(proposal);
+                    });
+                    proposals.push(proposal);
+                    anyLlmProposal = true;
+                  } else {
+                    await createGenericProposal(
+                      db,
+                      source,
+                      content,
+                      contentHash,
+                      proposals,
+                      recipient.orgId,
+                    );
+                  }
+                }
+
+                if (anyLlmProposal) {
                   await db.updateSourceStatus(source.id, 'active');
-                } catch {
-                  // LLM extraction failed — create degraded generic proposal
-                  await createGenericProposal(db, source, content, contentHash, proposals);
+                } else if (llmFailed) {
                   await db.updateSourceStatus(source.id, 'degraded');
                 }
               } else {
