@@ -409,6 +409,21 @@ export class SqliteAdapter implements DbAdapter {
         org_id TEXT NOT NULL DEFAULT 'system'
       )`,
       `CREATE INDEX IF NOT EXISTS idx_wcag_criteria_version_level ON wcag_criteria(wcag_version, level)`,
+
+      // Phase 54 (migration 063): per-org override of monitored source management mode.
+      // System rows still hold the system default in monitored_sources.management_mode.
+      // Override row PRESENT for (source_id, org_id) → that org's effective mode is the override.
+      // Override row ABSENT → fall back to monitored_sources.management_mode.
+      `CREATE TABLE IF NOT EXISTS source_org_management_modes (
+        source_id TEXT NOT NULL REFERENCES monitored_sources(id) ON DELETE CASCADE,
+        org_id TEXT NOT NULL,
+        management_mode TEXT NOT NULL CHECK(management_mode IN ('llm', 'manual')),
+        updated_at TEXT NOT NULL,
+        updated_by TEXT,
+        PRIMARY KEY (source_id, org_id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_somm_org ON source_org_management_modes(org_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_somm_source ON source_org_management_modes(source_id)`,
     ];
     for (const statement of ddl) {
       this.db.prepare(statement).run();
@@ -904,6 +919,106 @@ export class SqliteAdapter implements DbAdapter {
   async getSourceContent(id: string): Promise<string | null> {
     const row = this.db.prepare('SELECT lastContentText FROM monitored_sources WHERE id = ?').get(id) as { lastContentText: string | null } | undefined;
     return row?.lastContentText ?? null;
+  }
+
+  // --- Phase 54: per-org source management mode override ---
+
+  async setSourceOrgManagementMode(
+    sourceId: string,
+    orgId: string,
+    mode: 'llm' | 'manual',
+    updatedBy: string,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    this.db.prepare(`
+      INSERT INTO source_org_management_modes (source_id, org_id, management_mode, updated_at, updated_by)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(source_id, org_id) DO UPDATE SET
+        management_mode = excluded.management_mode,
+        updated_at = excluded.updated_at,
+        updated_by = excluded.updated_by
+    `).run(sourceId, orgId, mode, now, updatedBy);
+  }
+
+  async clearSourceOrgManagementMode(sourceId: string, orgId: string): Promise<void> {
+    this.db.prepare(
+      'DELETE FROM source_org_management_modes WHERE source_id = ? AND org_id = ?',
+    ).run(sourceId, orgId);
+  }
+
+  async getSourceOrgManagementMode(
+    sourceId: string,
+    orgId: string,
+  ): Promise<'llm' | 'manual' | null> {
+    const row = this.db.prepare(
+      'SELECT management_mode FROM source_org_management_modes WHERE source_id = ? AND org_id = ?',
+    ).get(sourceId, orgId) as { management_mode: string } | undefined;
+    if (row == null) return null;
+    return row.management_mode === 'llm' ? 'llm' : 'manual';
+  }
+
+  async getEffectiveSourceManagementMode(
+    sourceId: string,
+    orgId: string,
+  ): Promise<'llm' | 'manual'> {
+    const override = await this.getSourceOrgManagementMode(sourceId, orgId);
+    if (override !== null) return override;
+    const row = this.db.prepare(
+      'SELECT management_mode FROM monitored_sources WHERE id = ?',
+    ).get(sourceId) as { management_mode: string | null } | undefined;
+    if (row == null) return 'manual';
+    return row.management_mode === 'llm' ? 'llm' : 'manual';
+  }
+
+  async listSourceOrgModesForOrg(
+    orgId: string,
+  ): Promise<Array<{ sourceId: string; mode: 'llm' | 'manual' }>> {
+    const rows = this.db.prepare(
+      'SELECT source_id, management_mode FROM source_org_management_modes WHERE org_id = ?',
+    ).all(orgId) as Array<{ source_id: string; management_mode: string }>;
+    return rows.map((r) => ({
+      sourceId: r.source_id,
+      mode: r.management_mode === 'llm' ? 'llm' : 'manual',
+    }));
+  }
+
+  async listSourceOrgModesForSource(
+    sourceId: string,
+  ): Promise<Array<{ orgId: string; mode: 'llm' | 'manual' }>> {
+    const rows = this.db.prepare(
+      'SELECT org_id, management_mode FROM source_org_management_modes WHERE source_id = ?',
+    ).all(sourceId) as Array<{ org_id: string; management_mode: string }>;
+    return rows.map((r) => ({
+      orgId: r.org_id,
+      mode: r.management_mode === 'llm' ? 'llm' : 'manual',
+    }));
+  }
+
+  async listAllSourceOrgManagementModes(): Promise<
+    Array<{
+      sourceId: string;
+      orgId: string;
+      mode: 'llm' | 'manual';
+      updatedAt: string;
+      updatedBy: string | null;
+    }>
+  > {
+    const rows = this.db.prepare(
+      'SELECT source_id, org_id, management_mode, updated_at, updated_by FROM source_org_management_modes',
+    ).all() as Array<{
+      source_id: string;
+      org_id: string;
+      management_mode: string;
+      updated_at: string;
+      updated_by: string | null;
+    }>;
+    return rows.map((r) => ({
+      sourceId: r.source_id,
+      orgId: r.org_id,
+      mode: r.management_mode === 'llm' ? 'llm' : 'manual',
+      updatedAt: r.updated_at,
+      updatedBy: r.updated_by,
+    }));
   }
 
   // --- OAuth Clients ---

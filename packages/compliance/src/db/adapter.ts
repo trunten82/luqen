@@ -90,6 +90,38 @@ export interface DbAdapter {
   updateSourceManagementMode(id: string, mode: 'llm' | 'manual'): Promise<void>;
   getSourceContent(id: string): Promise<string | null>;
 
+  // Phase 54: per-org management mode override
+  setSourceOrgManagementMode(
+    sourceId: string,
+    orgId: string,
+    mode: 'llm' | 'manual',
+    updatedBy: string,
+  ): Promise<void>;
+  clearSourceOrgManagementMode(sourceId: string, orgId: string): Promise<void>;
+  getSourceOrgManagementMode(
+    sourceId: string,
+    orgId: string,
+  ): Promise<'llm' | 'manual' | null>;
+  getEffectiveSourceManagementMode(
+    sourceId: string,
+    orgId: string,
+  ): Promise<'llm' | 'manual'>;
+  listSourceOrgModesForOrg(
+    orgId: string,
+  ): Promise<Array<{ sourceId: string; mode: 'llm' | 'manual' }>>;
+  listSourceOrgModesForSource(
+    sourceId: string,
+  ): Promise<Array<{ orgId: string; mode: 'llm' | 'manual' }>>;
+  listAllSourceOrgManagementModes(): Promise<
+    Array<{
+      sourceId: string;
+      orgId: string;
+      mode: 'llm' | 'manual';
+      updatedAt: string;
+      updatedBy: string | null;
+    }>
+  >;
+
   // OAuth clients
   getClientById(clientId: string): Promise<OAuthClient | null>;
   createClient(
