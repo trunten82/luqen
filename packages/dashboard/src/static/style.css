@@ -884,6 +884,10 @@ th[aria-sort="none"]::after { content: " ↕"; opacity: 0.4; }
 .badge--error    { background-color: var(--status-error-bg);   color: var(--status-error); }
 .badge--neutral  { background-color: var(--bg-tertiary);       color: var(--text-secondary); }
 
+/* Phase 54-04: tiny variant + per-org override marker beside source mode badge. */
+.badge--xs { font-size: 0.65rem; padding: 1px 6px; }
+.source-mode-override { font-style: italic; opacity: 0.85; margin-left: 4px; }
+
 .badge__icon { width: 12px; height: 12px; flex-shrink: 0; }
 
 /* Status cell: groups a badge with an optional small suffix like "(Expired)" */

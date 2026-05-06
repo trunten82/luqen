@@ -36,6 +36,7 @@ vi.mock('../../src/compliance-client.js', () => ({
   bulkSwitchSourceMode: vi.fn().mockResolvedValue({ updated: 1, scope: 'system' }),
   resetSourceMode: vi.fn().mockResolvedValue({ cleared: true, effectiveMode: 'manual' }),
   uploadSource: vi.fn().mockResolvedValue({ id: 'src-up', name: 'uploaded' }),
+  listSourceOrgModes: vi.fn().mockResolvedValue({ orgId: 'system', overrides: [] }),
 }));
 
 import * as complianceClient from '../../src/compliance-client.js';
@@ -94,6 +95,27 @@ describe('Source routes', () => {
       const body = response.json() as { data: { sources: Array<{ id: string }> } };
       expect(Array.isArray(body.data.sources)).toBe(true);
       expect(body.data.sources.length).toBe(2);
+    });
+
+    it('Phase 54-04: enriches each source with effectiveMode + hasOrgOverride', async () => {
+      const response = await ctx.server.inject({ method: 'GET', url: '/admin/sources' });
+      const body = response.json() as {
+        data: {
+          sources: Array<{
+            id: string;
+            effectiveMode: string;
+            hasOrgOverride: boolean;
+            systemDefaultMode: string;
+          }>;
+          isSystemCaller: boolean;
+        };
+      };
+      // Default test server uses currentOrgId='system' → no overrides applied.
+      expect(body.data.isSystemCaller).toBe(true);
+      for (const s of body.data.sources) {
+        expect(typeof s.effectiveMode).toBe('string');
+        expect(s.hasOrgOverride).toBe(false);
+      }
     });
 
     it('returns 403 without admin.system permission', async () => {

@@ -9,6 +9,7 @@ import {
   updateSourceMode,
   bulkSwitchSourceMode,
   resetSourceMode,
+  listSourceOrgModes,
 } from '../../compliance-client.js';
 import { escapeHtml } from './helpers.js';
 import { requirePermission } from '../../auth/middleware.js';
@@ -96,13 +97,47 @@ export async function sourceRoutes(
         }
       }
 
+      // Phase 54-04: enrich each source with effectiveMode + hasOrgOverride
+      // so the template can show the caller's effective mode and the
+      // "(your override)" indicator + Reset action where appropriate.
+      const callerOrgId = getOrgId(request);
+      let overrideMap = new Map<string, 'llm' | 'manual'>();
+      const isSystemCaller = callerOrgId === undefined || callerOrgId === 'system';
+      if (!isSystemCaller) {
+        try {
+          const res = await listSourceOrgModes(baseUrl, getToken(request));
+          overrideMap = new Map(res.overrides.map((o) => [o.sourceId, o.mode]));
+        } catch {
+          // Override fetch failures are non-fatal — fall back to system defaults.
+        }
+      }
+      const enrichedSources = sources.map((s) => {
+        const sysMode = (s as { managementMode?: string }).managementMode === 'llm' ? 'llm' : 'manual';
+        const override = overrideMap.get(s.id);
+        const hasOrgOverride = !isSystemCaller && override !== undefined;
+        const effectiveMode = override ?? sysMode;
+        return {
+          ...s,
+          systemDefaultMode: sysMode,
+          effectiveMode,
+          hasOrgOverride,
+        };
+      });
+
+      const permissions = (request as unknown as { permissions?: Set<string> }).permissions;
+      const perm = {
+        adminSystem: permissions !== undefined && permissions.has('admin.system'),
+      };
+
       return reply.view('admin/sources.hbs', {
         pageTitle: 'Monitored Sources',
         currentPath: '/admin/sources',
         user: request.user,
-        sources,
+        sources: enrichedSources,
         error,
         llmConnected,
+        perm,
+        isSystemCaller,
       });
     },
   );

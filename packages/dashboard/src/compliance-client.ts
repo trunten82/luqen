@@ -577,6 +577,23 @@ export async function bulkSwitchSourceMode(
   return res.json() as Promise<{ updated: number; scope?: 'system' | 'org'; orgId?: string }>;
 }
 
+// Phase 54-04: list caller-org management-mode overrides.
+// System callers receive an empty list (no overrides apply).
+export async function listSourceOrgModes(
+  baseUrl: string,
+  token: string,
+): Promise<{ orgId: string; overrides: Array<{ sourceId: string; mode: 'llm' | 'manual' }> }> {
+  const res = await fetch(`${baseUrl}/api/v1/sources/org-modes`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch org modes: ${res.status}`);
+  return res.json() as Promise<{
+    orgId: string;
+    overrides: Array<{ sourceId: string; mode: 'llm' | 'manual' }>;
+  }>;
+}
+
 // Phase 54-02: clear per-org override row for a source.
 export async function resetSourceMode(
   baseUrl: string,
