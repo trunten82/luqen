@@ -180,6 +180,11 @@ export async function seedBaseline(
   // Sources: stable key = url (id regenerates on createSource).
   // Regulations + jurisdictions: stable key = id (baseline ids are deterministic).
   const sourceStateByUrl = new Map<string, { managementMode: string; status: string }>();
+  // Phase 54: per-org override rows are keyed by source URL (stable across reseed) + orgId.
+  const orgOverridesByUrlAndOrg = new Map<
+    string,
+    { mode: 'llm' | 'manual'; updatedBy: string | null }
+  >();
   const regulationStateById = new Map<
     string,
     {
@@ -201,6 +206,18 @@ export async function seedBaseline(
         managementMode: s.managementMode ?? 'manual',
         status: s.status ?? 'active',
       });
+    }
+    // Phase 54: snapshot per-org override rows keyed by source URL.
+    const existingOverrides = await db.listAllSourceOrgManagementModes();
+    const existingSourceById = new Map(existingSources.map((s) => [s.id, s]));
+    for (const o of existingOverrides) {
+      const sourceUrl = existingSourceById.get(o.sourceId)?.url;
+      if (sourceUrl !== undefined) {
+        orgOverridesByUrlAndOrg.set(`${sourceUrl}::${o.orgId}`, {
+          mode: o.mode,
+          updatedBy: o.updatedBy,
+        });
+      }
     }
     const existingRegulations = await db.listRegulations();
     for (const r of existingRegulations) {
@@ -370,6 +387,27 @@ export async function seedBaseline(
       sourcesCount++;
     }
     sourcesCount = (await db.listSources()).length;
+
+    // Phase 54: restore per-org override rows by rejoining via stable source URL.
+    if (orgOverridesByUrlAndOrg.size > 0) {
+      const finalSources = await db.listSources();
+      const sourceIdByUrl = new Map(finalSources.map((s) => [s.url, s.id]));
+      for (const [compositeKey, override] of orgOverridesByUrlAndOrg) {
+        const idx = compositeKey.lastIndexOf('::');
+        if (idx === -1) continue;
+        const url = compositeKey.slice(0, idx);
+        const orgId = compositeKey.slice(idx + 2);
+        const newSourceId = sourceIdByUrl.get(url);
+        if (newSourceId !== undefined) {
+          await db.setSourceOrgManagementMode(
+            newSourceId,
+            orgId,
+            override.mode,
+            override.updatedBy ?? 'reseed-restore',
+          );
+        }
+      }
+    }
   }
 
   const finalJurisdictions = await db.listJurisdictions();
