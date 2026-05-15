@@ -175,7 +175,7 @@ describe('Compliance MCP tools — tools/list visibility', () => {
     }
   });
 
-  it('caller with compliance.view sees all 4 compliance discovery tools', async () => {
+  it('caller with compliance.view sees all 6 compliance discovery tools', async () => {
     app = await buildApp({
       permissions: ['compliance.view'],
       complianceAccessReturns: { baseUrl: 'http://compliance', token: 't' },
@@ -194,7 +194,7 @@ describe('Compliance MCP tools — tools/list visibility', () => {
       (parseSseOrJson(resp.body)['result'] as { tools: Array<{ name: string }> }).tools
     ).map((t) => t.name);
     expect(names).toEqual(expect.arrayContaining([...COMPLIANCE_TOOL_NAMES]));
-    expect(names.length).toBe(4);
+    expect(names.length).toBe(6);
   });
 
   it('caller without compliance.view sees zero compliance tools', async () => {
@@ -364,6 +364,42 @@ describe('Compliance MCP tools — handler happy paths', () => {
     });
     const body = extractText(parsed);
     expect(body['error']).toMatch(/not found/i);
+  });
+
+  // Phase 55 task 2 — proposal discovery tools
+  it('dashboard_list_proposals proxies through to compliance-client with status=pending default and applies limit slice', async () => {
+    const spy = vi.spyOn(complianceClient, 'listUpdateProposals').mockResolvedValue([
+      { id: 'prop-1', status: 'pending' } as unknown as complianceClient.UpdateProposal,
+      { id: 'prop-2', status: 'pending' } as unknown as complianceClient.UpdateProposal,
+      { id: 'prop-3', status: 'pending' } as unknown as complianceClient.UpdateProposal,
+    ]);
+    app = await buildApp({
+      permissions: ['compliance.view'],
+      complianceAccessReturns: { baseUrl: 'http://compliance', token: 't' },
+    });
+    const parsed = await callTool(app, 'dashboard_list_proposals', { limit: 2 });
+    const body = extractText(parsed);
+    const ids = (body['data'] as Array<{ id: string }>).map((p) => p.id);
+    expect(ids).toEqual(['prop-1', 'prop-2']);
+    expect((body['meta'] as { count: number; status: string }).count).toBe(2);
+    expect((body['meta'] as { count: number; status: string }).status).toBe('pending');
+    // status defaults to 'pending' when not provided; orgId pulled from token context.
+    expect(spy).toHaveBeenCalledWith('http://compliance', 't', 'pending', 'org-1');
+  });
+
+  it('dashboard_get_proposal proxies through to compliance-client with the proposalId and orgId', async () => {
+    const spy = vi.spyOn(complianceClient, 'getUpdateProposal').mockResolvedValue({
+      id: 'prop-42',
+      status: 'pending',
+    } as unknown as complianceClient.UpdateProposal);
+    app = await buildApp({
+      permissions: ['compliance.view'],
+      complianceAccessReturns: { baseUrl: 'http://compliance', token: 't' },
+    });
+    const parsed = await callTool(app, 'dashboard_get_proposal', { proposalId: 'prop-42' });
+    const body = extractText(parsed);
+    expect(body['id']).toBe('prop-42');
+    expect(spy).toHaveBeenCalledWith('http://compliance', 't', 'prop-42', 'org-1');
   });
 
   it('dashboard_list_wcag_criteria forwards regulationId server-side and post-filters wcagLevel + wcagVersion client-side', async () => {

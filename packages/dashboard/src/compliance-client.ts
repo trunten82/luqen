@@ -249,6 +249,17 @@ export async function listUpdateProposals(
   return unwrapList<UpdateProposal>(result);
 }
 
+export async function getUpdateProposal(
+  baseUrl: string,
+  token: string,
+  id: string,
+  orgId?: string,
+): Promise<UpdateProposal> {
+  return apiFetch<UpdateProposal>(`${baseUrl}/api/v1/updates/${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }, orgId);
+}
+
 export async function approveProposal(
   baseUrl: string,
   token: string,
