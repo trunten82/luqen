@@ -478,6 +478,68 @@
         }
       }
     },
+    "/api/v1/mcp/tools/dashboard_get_proposal": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_get_proposal",
+        "summary": "dashboard_get_proposal",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Get a single regulatory update proposal by id, including proposed changes diff. Use to answer \"what changed in <regulation>?\" or to review a specific pending proposal in detail. Resolve ids via dashboard_list_proposals first.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "proposalId": {
+                    "type": "string",
+                    "description": "Proposal id (resolve via dashboard_list_proposals)."
+                  }
+                },
+                "required": [
+                  "proposalId"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/tools/dashboard_get_regulation": {
       "post": {
         "operationId": "mcp.tool.dashboard_get_regulation",
@@ -923,6 +985,79 @@
               "schema": {
                 "type": "object",
                 "properties": {},
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_list_proposals": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_proposals",
+        "summary": "dashboard_list_proposals",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List regulatory update proposals for the current org (and system-wide). Use this when the user asks about pending proposals, regulatory changes awaiting review, what needs acknowledging, or to summarise current proposal queue. Filter by status; default is \"pending\". Returns up to 50 most recent (default 20).\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "description": "Filter by proposal status (default: pending)",
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "approved",
+                      "rejected",
+                      "acknowledged",
+                      "reviewed",
+                      "dismissed"
+                    ]
+                  },
+                  "limit": {
+                    "description": "Maximum rows returned (default 20, max 50)",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50
+                  }
+                },
                 "additionalProperties": true
               }
             }
