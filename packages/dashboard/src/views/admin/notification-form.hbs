@@ -8,6 +8,14 @@
       <button class="modal__close close-modal-btn" aria-label="Close">&times;</button>
     </div>
 
+    {{#if freshOverride}}
+    {{!-- Phase 55 task 3 — banner reassures the user that the override was
+         created and explains the immediate edit flow. --}}
+    <div class="alert alert--info" style="margin:0 var(--space-md) var(--space-sm)">
+      Override created from the system default. Edit the content below and
+      save — your org will use this template instead of the system version.
+    </div>
+    {{/if}}
     <form hx-patch="/admin/notifications/{{template.id}}"
           hx-target="#notification-{{template.id}}"
           hx-swap="outerHTML"
