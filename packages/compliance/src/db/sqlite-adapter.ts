@@ -946,6 +946,16 @@ export class SqliteAdapter implements DbAdapter {
     ).run(sourceId, orgId);
   }
 
+  // Phase 55 task 4 — bulk-clear all override rows for an org. Used by
+  // POST /api/v1/sources/bulk-reset-mode. Returns the number of rows deleted
+  // so the route can report it back to the caller.
+  async clearAllSourceOrgManagementModesForOrg(orgId: string): Promise<number> {
+    const result = this.db.prepare(
+      'DELETE FROM source_org_management_modes WHERE org_id = ?',
+    ).run(orgId);
+    return Number(result.changes ?? 0);
+  }
+
   async getSourceOrgManagementMode(
     sourceId: string,
     orgId: string,

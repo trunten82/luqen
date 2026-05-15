@@ -8,6 +8,7 @@ import {
   uploadSource,
   updateSourceMode,
   bulkSwitchSourceMode,
+  bulkResetSourceMode,
   resetSourceMode,
   listSourceOrgModes,
 } from '../../compliance-client.js';
@@ -129,6 +130,11 @@ export async function sourceRoutes(
         adminSystem: permissions !== undefined && permissions.has('admin.system'),
       };
 
+      // Phase 55 task 4 — surface a "Reset all my overrides" button only when
+      // the caller actually has any override rows. System callers + org callers
+      // with zero overrides skip the button so the toolbar stays uncluttered.
+      const hasAnyOrgOverride = enrichedSources.some((s) => s.hasOrgOverride === true);
+
       return reply.view('admin/sources.hbs', {
         pageTitle: 'Monitored Sources',
         currentPath: '/admin/sources',
@@ -138,6 +144,7 @@ export async function sourceRoutes(
         llmConnected,
         perm,
         isSystemCaller,
+        hasAnyOrgOverride,
       });
     },
   );
@@ -341,6 +348,35 @@ export async function sourceRoutes(
           .header('content-type', 'text/html')
           .header('HX-Redirect', '/admin/sources')
           .send(toastHtml(`Switched to ${body.mode}`, 'success'));
+      } catch (err) {
+        return reply
+          .code(500)
+          .header('content-type', 'text/html')
+          .send(toastHtml(err instanceof Error ? err.message : 'Failed', 'error'));
+      }
+    },
+  );
+
+  // POST /admin/sources/bulk-reset — Phase 55 task 4: clear ALL org overrides
+  // for caller's org. Server-side guard rejects system caller (no overrides).
+  server.post(
+    '/admin/sources/bulk-reset',
+    {
+      preHandler: requirePermission('admin.system', 'compliance.manage'),
+      schema: HtmlPartialResponse,
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const result = await bulkResetSourceMode(baseUrl, getToken(request));
+        return reply
+          .header('content-type', 'text/html')
+          .header('HX-Redirect', '/admin/sources')
+          .send(
+            toastHtml(
+              `${result.reset} org override${result.reset === 1 ? '' : 's'} cleared. System defaults now apply.`,
+              'success',
+            ),
+          );
       } catch (err) {
         return reply
           .code(500)

@@ -443,4 +443,63 @@ describe('cross-org isolation', () => {
       expect(res.statusCode).toBe(404);
     });
   });
+
+  // Phase 55 task 4 — bulk reset of org overrides
+  describe('sources/bulk-reset-mode (Phase 55)', () => {
+    it('clears ALL caller-org override rows in one call', async () => {
+      const src1 = await db.createSource({
+        name: 'br-1', url: 'https://br1.example.com', type: 'html', schedule: 'weekly', orgId: 'system',
+      });
+      const src2 = await db.createSource({
+        name: 'br-2', url: 'https://br2.example.com', type: 'html', schedule: 'weekly', orgId: 'system',
+      });
+      // Org A creates two overrides
+      await app.inject({ method: 'PATCH', url: `/api/v1/sources/${src1.id}`, headers: bearer(orgAWriteToken), body: JSON.stringify({ managementMode: 'llm' }) });
+      await app.inject({ method: 'PATCH', url: `/api/v1/sources/${src2.id}`, headers: bearer(orgAWriteToken), body: JSON.stringify({ managementMode: 'llm' }) });
+      expect(await db.getSourceOrgManagementMode(src1.id, 'orgA')).toBe('llm');
+      expect(await db.getSourceOrgManagementMode(src2.id, 'orgA')).toBe('llm');
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sources/bulk-reset-mode',
+        headers: bearer(orgAWriteToken),
+        body: JSON.stringify({}),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body) as { reset: number; scope: string; orgId: string };
+      expect(body.reset).toBeGreaterThanOrEqual(2);
+      expect(body.scope).toBe('org');
+      expect(body.orgId).toBe('orgA');
+      expect(await db.getSourceOrgManagementMode(src1.id, 'orgA')).toBeNull();
+      expect(await db.getSourceOrgManagementMode(src2.id, 'orgA')).toBeNull();
+    });
+
+    it('system caller is rejected with 400 (no overrides to reset)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sources/bulk-reset-mode',
+        headers: bearer(systemAdminToken),
+        body: JSON.stringify({}),
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('does NOT delete another org overrides — cross-org leak guard', async () => {
+      const src = await db.createSource({
+        name: 'br-iso', url: 'https://br-iso.example.com', type: 'html', schedule: 'weekly', orgId: 'system',
+      });
+      // Both org A and org B override the same source.
+      await app.inject({ method: 'PATCH', url: `/api/v1/sources/${src.id}`, headers: bearer(orgAWriteToken), body: JSON.stringify({ managementMode: 'llm' }) });
+      await app.inject({ method: 'PATCH', url: `/api/v1/sources/${src.id}`, headers: bearer(orgBWriteToken), body: JSON.stringify({ managementMode: 'manual' }) });
+      // Org A bulk-resets — must not touch org B's override.
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/sources/bulk-reset-mode',
+        headers: bearer(orgAWriteToken),
+        body: JSON.stringify({}),
+      });
+      expect(await db.getSourceOrgManagementMode(src.id, 'orgA')).toBeNull();
+      expect(await db.getSourceOrgManagementMode(src.id, 'orgB')).toBe('manual');
+    });
+  });
 });

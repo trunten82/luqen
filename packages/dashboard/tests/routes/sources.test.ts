@@ -34,6 +34,7 @@ vi.mock('../../src/compliance-client.js', () => ({
   scanSources: vi.fn().mockResolvedValue({ scanned: 2, proposalsCreated: 1, changed: 1, baselined: 0, failed: 0 }),
   updateSourceMode: vi.fn().mockResolvedValue(undefined),
   bulkSwitchSourceMode: vi.fn().mockResolvedValue({ updated: 1, scope: 'system' }),
+  bulkResetSourceMode: vi.fn().mockResolvedValue({ reset: 3, scope: 'org', orgId: 'orgA' }),
   resetSourceMode: vi.fn().mockResolvedValue({ cleared: true, effectiveMode: 'manual' }),
   uploadSource: vi.fn().mockResolvedValue({ id: 'src-up', name: 'uploaded' }),
   listSourceOrgModes: vi.fn().mockResolvedValue({ orgId: 'system', overrides: [] }),
@@ -255,6 +256,45 @@ describe('Source routes', () => {
   });
 
   // Phase 54-02: per-org override reset route.
+  // Phase 55 task 4 — bulk-reset all of caller-org overrides
+  describe('POST /admin/sources/bulk-reset', () => {
+    beforeEach(async () => { ctx = await createTestServer(); });
+
+    it('returns 200 + HX-Redirect on successful bulk reset', async () => {
+      const response = await ctx.server.inject({
+        method: 'POST',
+        url: '/admin/sources/bulk-reset',
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['hx-redirect']).toBe('/admin/sources');
+      expect(response.body).toContain('3 org overrides cleared');
+      expect(complianceClient.bulkResetSourceMode).toHaveBeenCalledWith(
+        BASE_URL,
+        expect.any(String),
+      );
+    });
+
+    it('returns 403 without admin.system / compliance.manage permission', async () => {
+      ctx.cleanup();
+      ctx = await createTestServer([]);
+      const response = await ctx.server.inject({
+        method: 'POST',
+        url: '/admin/sources/bulk-reset',
+      });
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('returns 500 toast HTML when compliance client throws', async () => {
+      vi.mocked(complianceClient.bulkResetSourceMode).mockRejectedValueOnce(new Error('boom'));
+      const response = await ctx.server.inject({
+        method: 'POST',
+        url: '/admin/sources/bulk-reset',
+      });
+      expect(response.statusCode).toBe(500);
+      expect(response.body).toContain('boom');
+    });
+  });
+
   describe('POST /admin/sources/:id/mode/reset', () => {
     beforeEach(async () => { ctx = await createTestServer(); });
 
