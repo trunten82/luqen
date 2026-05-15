@@ -223,6 +223,16 @@ describe('Phase 32 Plan 06 — agent-panel E2E smoke', () => {
     expect(src).toMatch(/cancelActiveTurn/);
     expect(src).toMatch(/data-step-n/);
     expect(src).toMatch(/__luqenAgent\.activePlan/);
+    // Phase 55 task 1 — cancel handler applies a visible cancelled class on the
+    // plan bubble; CSS must define an after-pseudo cancelled-pill so the user
+    // sees the turn was aborted (UAT 2026-05-15 feedback).
+    expect(src).toMatch(/message--plan--cancelled/);
+    const cssSrc = readFileSync(
+      join(DASHBOARD_ROOT, 'src/static/style.css'),
+      'utf-8',
+    );
+    expect(cssSrc).toMatch(/\.message--plan--cancelled::after/);
+    expect(cssSrc).toMatch(/content: 'Cancelled'/);
     // Phase 45-01 — tool_completed handler must consult the toolRenderers
     // registry on the __luqenAgent namespace and fall back to the JSON pre
     // render path on missing entry / thrown renderer.
