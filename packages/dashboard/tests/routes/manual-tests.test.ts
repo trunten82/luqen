@@ -17,7 +17,10 @@ interface TestContext {
   cleanup: () => void;
 }
 
-async function createTestServer(permissions: string[] = ['manual_testing']): Promise<TestContext> {
+async function createTestServer(
+  permissions: string[] = ['manual_testing'],
+  userOverride?: { role: string; currentOrgId: string },
+): Promise<TestContext> {
   const dbPath = join(tmpdir(), `test-manual-tests-${randomUUID()}.db`);
   const storage = new SqliteStorageAdapter(dbPath);
   await storage.migrate();
@@ -35,8 +38,10 @@ async function createTestServer(permissions: string[] = ['manual_testing']): Pro
     },
   );
 
+  const userRole = userOverride?.role ?? 'admin';
+  const userOrgId = userOverride?.currentOrgId ?? 'system';
   server.addHook('preHandler', async (request) => {
-    request.user = { id: 'user-1', username: 'alice', role: 'admin', currentOrgId: 'system' };
+    request.user = { id: 'user-1', username: 'alice', role: userRole, currentOrgId: userOrgId };
     (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
   });
 
@@ -143,16 +148,36 @@ describe('Manual Test Routes', () => {
       expect(body.error).toBe('Report not found');
     });
 
-    it('returns 404 when scan belongs to a different org', async () => {
-      const scanId = await makeScan(ctx, 'other-org');
+    it('returns 404 when non-admin user opens a scan belonging to another org', async () => {
+      // Spin up a fresh server where the user role is NOT admin — the admin
+      // bypass in the cross-org guard should not apply, so the 404 is the
+      // correct privacy outcome.
+      const otherCtx = await createTestServer(['manual_testing'], {
+        role: 'member',
+        currentOrgId: 'org-a',
+      });
+      const scanId = await makeScan(otherCtx, 'other-org');
+      const response = await otherCtx.server.inject({
+        method: 'GET',
+        url: `/reports/${scanId}/manual`,
+      });
+      otherCtx.cleanup();
+      expect(response.statusCode).toBe(404);
+    });
 
+    // Phase 55 task 5 — UAT 2026-05-15: an admin who opens a cross-org report
+    // could see the report-detail page (reports.ts has an admin bypass) but
+    // got 404 on the Manual Testing button. Mirror the guard so the surfaces
+    // are consistent.
+    it('admin role can open Manual Testing for a scan in another org (regression for UAT 404)', async () => {
+      const scanId = await makeScan(ctx, 'other-org');
       const response = await ctx.server.inject({
         method: 'GET',
         url: `/reports/${scanId}/manual`,
       });
-
-      // Scan has orgId 'other-org' but user's currentOrgId is 'system'
-      expect(response.statusCode).toBe(404);
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as { template: string };
+      expect(body.template).toBe('manual-tests.hbs');
     });
 
     it('returns 200 even without manual_testing permission (no explicit perm check in route)', async () => {

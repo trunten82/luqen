@@ -71,8 +71,17 @@ export async function manualTestRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      // Phase 55 task 5 — cross-org guard must mirror reports.ts: admin role
+      // sees any org's scans. Without the admin bypass, an admin who opens a
+      // report belonging to another org could view the report-detail page but
+      // got 404 on the Manual Testing button, even though the link was
+      // rendered for them (UAT 2026-05-15).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (
+        request.user?.role !== 'admin' &&
+        scan.orgId !== orgId &&
+        scan.orgId !== 'system'
+      ) {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
@@ -138,8 +147,17 @@ export async function manualTestRoutes(
         return reply.code(404).send({ error: 'Report not found' });
       }
 
+      // Phase 55 task 5 — cross-org guard must mirror reports.ts: admin role
+      // sees any org's scans. Without the admin bypass, an admin who opens a
+      // report belonging to another org could view the report-detail page but
+      // got 404 on the Manual Testing button, even though the link was
+      // rendered for them (UAT 2026-05-15).
       const orgId = request.user?.currentOrgId ?? 'system';
-      if (scan.orgId !== orgId && scan.orgId !== 'system') {
+      if (
+        request.user?.role !== 'admin' &&
+        scan.orgId !== orgId &&
+        scan.orgId !== 'system'
+      ) {
         return reply.code(404).send({ error: 'Report not found' });
       }
 
