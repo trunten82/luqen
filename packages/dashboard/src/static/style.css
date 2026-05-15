@@ -4726,10 +4726,30 @@ details[open] > .mt-examples-toggle::before {
  * agent-tool-chip-spin keyframes so the spinner matches the chip strip.
  */
 .message--plan { border-left: 3px solid var(--accent); }
-.message--plan--cancelled { opacity: 0.7; }
+.message--plan--cancelled,
+.message--plan--aborted {
+  opacity: 0.65;
+  border-left-color: var(--status-warning);
+}
 .message--plan--cancelled .agent-plan__step--pending,
-.message--plan--cancelled .agent-plan__step--active { color: var(--text-muted); }
-.message--plan--aborted { opacity: 0.85; border-left-color: var(--status-warning); }
+.message--plan--aborted .agent-plan__step--pending,
+.message--plan--cancelled .agent-plan__step--active,
+.message--plan--aborted .agent-plan__step--active {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+.message--plan--cancelled::after,
+.message--plan--aborted::after {
+  content: 'Cancelled';
+  display: inline-block;
+  margin-top: var(--space-xs);
+  padding: 2px 8px;
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
 
 .agent-plan {
   list-style: none;
