@@ -36,6 +36,10 @@ export const DASHBOARD_COMPLIANCE_TOOL_METADATA: readonly ToolMetadata[] = [
   { name: 'dashboard_list_regulations',   requiredPermission: 'compliance.view' },
   { name: 'dashboard_get_regulation',     requiredPermission: 'compliance.view' },
   { name: 'dashboard_list_wcag_criteria', requiredPermission: 'compliance.view' },
+  // Phase 55 task 2 — proposal discovery tools mirror the regulatory-updates UI
+  // route which is also gated by compliance.view. Both are read-only.
+  { name: 'dashboard_list_proposals',     requiredPermission: 'compliance.view' },
+  { name: 'dashboard_get_proposal',       requiredPermission: 'compliance.view' },
 ];
 
 export const DASHBOARD_DATA_TOOL_METADATA: readonly ToolMetadata[] = [

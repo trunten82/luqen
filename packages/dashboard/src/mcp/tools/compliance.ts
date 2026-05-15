@@ -31,6 +31,8 @@ import {
   listJurisdictions,
   listRegulations,
   listRequirements,
+  listUpdateProposals,
+  getUpdateProposal,
 } from '../../compliance-client.js';
 
 export const COMPLIANCE_TOOL_NAMES = [
@@ -38,6 +40,8 @@ export const COMPLIANCE_TOOL_NAMES = [
   'dashboard_list_regulations',
   'dashboard_get_regulation',
   'dashboard_list_wcag_criteria',
+  'dashboard_list_proposals',
+  'dashboard_get_proposal',
 ] as const;
 
 /**
@@ -269,6 +273,92 @@ export function registerComplianceTools(
           return true;
         });
         return okEnvelope({ data: filtered, meta: { count: filtered.length } });
+      } catch (err) {
+        return errorEnvelope(err instanceof Error ? err.message : 'Unknown error');
+      }
+    },
+  );
+
+  // ---- dashboard_list_proposals (Phase 55 task 2) ----
+  // Phase 45 added structured SSE renderers for these tool names but the
+  // tools themselves were never registered — so the agent fell back to scan
+  // tools when asked about pending proposals. Mirrors compliance UI route at
+  // /admin/regulatory-updates. Org-scoped via X-Org-Id header; system seed +
+  // org-scoped proposals returned per the compliance API contract.
+  server.registerTool(
+    'dashboard_list_proposals',
+    {
+      description:
+        [
+          'List regulatory update proposals for the current org (and system-wide).',
+          'Use this when the user asks about pending proposals, regulatory changes awaiting review, what needs acknowledging, or to summarise current proposal queue.',
+          'Filter by status; default is "pending". Returns up to 50 most recent (default 20).',
+        ].join(' '),
+      inputSchema: z.object({
+        status: z
+          .enum(['pending', 'approved', 'rejected', 'acknowledged', 'reviewed', 'dismissed'])
+          .optional()
+          .describe('Filter by proposal status (default: pending)'),
+        limit: z
+          .coerce
+          .number()
+          .int()
+          .min(1)
+          .max(50)
+          .optional()
+          .describe('Maximum rows returned (default 20, max 50)'),
+      }),
+      annotations: { destructiveHint: false, readOnlyHint: true },
+    },
+    // orgId: ctx.orgId (org-scoped — compliance API filters by X-Org-Id; system seed proposals are always returned)
+    async (args) => {
+      const orgId = resolveOrgId();
+      const access = await resolveAccess(complianceAccess);
+      if ('error' in access) return errorEnvelope(access.error);
+      try {
+        const status = args.status ?? 'pending';
+        const limit = args.limit ?? 20;
+        const rows = await listUpdateProposals(
+          access.baseUrl,
+          access.token,
+          status,
+          orgId,
+        );
+        const sliced = rows.slice(0, limit);
+        return okEnvelope({ data: sliced, meta: { count: sliced.length, status } });
+      } catch (err) {
+        return errorEnvelope(err instanceof Error ? err.message : 'Unknown error');
+      }
+    },
+  );
+
+  // ---- dashboard_get_proposal (Phase 55 task 2) ----
+  // Returns the full proposal payload (includes proposedChanges diff). Used
+  // when the user asks "what changed in <regulation>?" or wants to review a
+  // specific pending proposal before acknowledging.
+  server.registerTool(
+    'dashboard_get_proposal',
+    {
+      description:
+        'Get a single regulatory update proposal by id, including proposed changes diff. Use to answer "what changed in <regulation>?" or to review a specific pending proposal in detail. Resolve ids via dashboard_list_proposals first.',
+      inputSchema: z.object({
+        proposalId: z.string().describe('Proposal id (resolve via dashboard_list_proposals).'),
+      }),
+      annotations: { destructiveHint: false, readOnlyHint: true },
+    },
+    // orgId: ctx.orgId (org-scoped — compliance API guards cross-org access via X-Org-Id)
+    async (args) => {
+      const orgId = resolveOrgId();
+      const access = await resolveAccess(complianceAccess);
+      if ('error' in access) return errorEnvelope(access.error);
+      try {
+        const proposal = await getUpdateProposal(
+          access.baseUrl,
+          access.token,
+          args.proposalId,
+          orgId,
+        );
+        return okEnvelope(proposal);
       } catch (err) {
         return errorEnvelope(err instanceof Error ? err.message : 'Unknown error');
       }
