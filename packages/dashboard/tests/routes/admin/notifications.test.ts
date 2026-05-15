@@ -329,6 +329,26 @@ describe('POST /admin/notifications/override', () => {
     const res = await fx.server.inject({ method: 'POST', url: '/admin/notifications/override', payload: { sourceId: sys.id } });
     expect(res.statusCode).toBe(400);
   });
+
+  // Phase 55 task 3 — Override response opens the edit modal of the new org row
+  // via an OOB swap on #modal-container, in addition to appending the row to
+  // #org-templates-body. UAT 2026-05-15: users had to scroll + click Edit
+  // separately after clicking Override; repeated Override clicks errored with
+  // "An override already exists".
+  it('response includes the edit-form modal as an OOB swap on #modal-container', async () => {
+    fx = await buildFixture('admin-org-A');
+    const sys = await findSystemEmailScanComplete(fx.storage);
+    const res = await fx.server.inject({
+      method: 'POST',
+      url: '/admin/notifications/override',
+      payload: { sourceId: sys.id },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatch(/<div id="modal-container" hx-swap-oob="innerHTML">/);
+    expect(res.body).toMatch(/hx-patch="\/admin\/notifications\/[^"]+"/);
+    // freshOverride banner mentions "Override created from the system default"
+    expect(res.body).toMatch(/Override created from the system default/i);
+  });
 });
 
 describe('DELETE /admin/notifications/:id', () => {

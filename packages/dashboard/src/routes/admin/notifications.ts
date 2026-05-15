@@ -34,6 +34,26 @@ import type { PluginManager } from '../../plugins/manager.js';
 import type { NotificationPlugin, LuqenEvent } from '../../plugins/types.js';
 import { getSampleEventData } from '../../notifications/sample-event-data.js';
 import { renderForChannel } from '../../notifications/render.js';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Handlebars from 'handlebars';
+
+// Phase 55 task 3 — compile-once cache for the override flow which needs to
+// render the edit-form modal to a string (the standard reply.view path
+// commits the response and can't be combined with OOB swaps). Mirrors the
+// agent-route pattern used for agent-message.hbs.
+let cachedNotificationFormTemplate: HandlebarsTemplateDelegate | null = null;
+function renderNotificationFormString(ctx: Record<string, unknown>): string {
+  if (cachedNotificationFormTemplate === null) {
+    const here = dirname(fileURLToPath(import.meta.url));
+    // routes/admin/notifications.ts → views/admin/notification-form.hbs
+    const viewPath = join(here, '..', '..', 'views', 'admin', 'notification-form.hbs');
+    const src = readFileSync(viewPath, 'utf-8');
+    cachedNotificationFormTemplate = Handlebars.compile(src);
+  }
+  return cachedNotificationFormTemplate(ctx);
+}
 
 // ── Validation ───────────────────────────────────────────────────────────────
 
@@ -425,12 +445,29 @@ export async function notificationRoutes(
 
       logMutation(storage, request, 'create', created, { clonedFrom: source.id });
 
+      // Phase 55 task 3 — open the edit-form modal for the newly created org
+      // row instead of stopping at a toast. The Override button continues to
+      // target #org-templates-body (beforeend) so the row appears in the
+      // "Your org templates" section; we additionally OOB-swap the modal
+      // container so the user can edit the cloned content immediately and
+      // does not need to scroll + click Edit on the new row separately.
+      // The freshOverride flag drives a banner in notification-form.hbs.
+      const modalString = renderNotificationFormString({
+        template: created,
+        limits: { subject: SUBJECT_MAX, body: BODY_MAX, voice: VOICE_MAX, signature: SIGNATURE_MAX },
+        freshOverride: true,
+        csrfToken: (request as unknown as { csrfToken?: () => string }).csrfToken?.() ?? '',
+      });
+      // Wrap modal in OOB target so HTMX swaps it into #modal-container while
+      // the primary swap (beforeend on #org-templates-body) appends the row.
+      const modalOob = `<div id="modal-container" hx-swap-oob="innerHTML">${modalString}</div>`;
       return reply
         .code(200)
         .header('content-type', 'text/html')
         .send(
           `${renderRow(created, isSystemAdmin(request))}\n` +
-            toastHtml(`Override created for ${created.eventType} (${created.channel}).`),
+            `${modalOob}\n` +
+            toastHtml(`Override created for ${created.eventType} (${created.channel}). Edit and save below.`),
         );
     },
   );
