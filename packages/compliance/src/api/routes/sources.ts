@@ -613,6 +613,34 @@ export async function registerSourceRoutes(
     }
   });
 
+  // POST /api/v1/sources/bulk-reset-mode — Phase 55 task 4: clear ALL of the
+  // caller-org's override rows in one call. Org caller only — system caller
+  // has no overrides to reset (system column is the source-of-truth). No
+  // cross-org leak possible: the underlying DELETE filters by caller's orgId.
+  app.post('/api/v1/sources/bulk-reset-mode', {
+    schema: {
+      tags: ['sources'],
+      summary: 'Bulk reset all per-org management mode overrides to system defaults',
+      response: { 200: BulkResponse, 400: ErrorEnvelope, 403: ErrorEnvelope, 500: ErrorEnvelope },
+    },
+    preHandler: [requireScope('write')],
+  }, async (request, reply) => {
+    const requestOrgId = (request as unknown as { orgId?: string }).orgId;
+    if (requestOrgId == null || requestOrgId === 'system') {
+      await reply.status(400).send({
+        error: 'Bulk reset is an org-scoped action; system caller has no overrides to reset',
+        statusCode: 400,
+      });
+      return;
+    }
+    try {
+      const cleared = await db.clearAllSourceOrgManagementModesForOrg(requestOrgId);
+      await reply.send({ reset: cleared, scope: 'org', orgId: requestOrgId });
+    } catch (err) {
+      await reply.status(500).send({ error: 'Internal server error', statusCode: 500 });
+    }
+  });
+
   // GET /api/v1/sources/org-modes — Phase 54-04: list caller-org override rows.
   // Returns array of { sourceId, mode } so the dashboard can compute
   // effectiveMode + hasOrgOverride without per-row lookups. System caller →

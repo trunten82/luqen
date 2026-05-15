@@ -33,6 +33,19 @@
       {{/if}}
     </button>
     {{/if}}
+    {{!-- Phase 55 task 4 — bulk-reset visible only when caller has any org
+         overrides. Hidden for system callers (they have no overrides). --}}
+    {{#if hasAnyOrgOverride}}
+    <button hx-post="/admin/sources/bulk-reset"
+            hx-confirm="Clear ALL of your org's source mode overrides? Each source will fall back to the system default."
+            hx-target="#scan-results"
+            hx-swap="innerHTML"
+            class="btn btn--ghost"
+            type="button"
+            aria-label="Reset all my source mode overrides to system defaults">
+      Reset All My Overrides
+    </button>
+    {{/if}}
   </div>
 
   <div id="upload-regulation-form" class="card mt-sm" hidden>

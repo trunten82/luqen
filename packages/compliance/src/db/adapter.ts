@@ -98,6 +98,10 @@ export interface DbAdapter {
     updatedBy: string,
   ): Promise<void>;
   clearSourceOrgManagementMode(sourceId: string, orgId: string): Promise<void>;
+  // Phase 55 task 4 — bulk reset all org overrides back to system defaults.
+  // Returns number of rows deleted so the caller can report it. Operates only
+  // on the caller's orgId; never cross-org (the route guards orgId === 'system').
+  clearAllSourceOrgManagementModesForOrg(orgId: string): Promise<number>;
   getSourceOrgManagementMode(
     sourceId: string,
     orgId: string,

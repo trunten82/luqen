@@ -605,6 +605,21 @@ export async function listSourceOrgModes(
   }>;
 }
 
+// Phase 55 task 4: bulk-clear ALL of the caller-org's source mode overrides.
+// Org caller only — compliance returns 400 for system caller.
+export async function bulkResetSourceMode(
+  baseUrl: string,
+  token: string,
+): Promise<{ reset: number; scope?: 'org'; orgId?: string }> {
+  const res = await fetch(`${baseUrl}/api/v1/sources/bulk-reset-mode`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) throw new Error(`Failed to bulk reset source modes: ${res.status}`);
+  return res.json() as Promise<{ reset: number; scope?: 'org'; orgId?: string }>;
+}
+
 // Phase 54-02: clear per-org override row for a source.
 export async function resetSourceMode(
   baseUrl: string,
