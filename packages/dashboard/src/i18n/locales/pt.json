@@ -184,7 +184,12 @@
     "brandScoreDeltaUp": "[PT] vs previous",
     "brandScoreDeltaDown": "[PT] vs previous",
     "brandScoreDeltaFlat": "[PT] No change",
-    "brandScoreTrendLabel": "[PT] Brand score trend"
+    "brandScoreTrendLabel": "[PT] Brand score trend",
+    "recentActivity": "Recent activity",
+    "docketVerdict": "{{trend}} across {{sites}} sites under continuous monitoring.",
+    "docketVerdictNoScans": "No scans yet. Run your first to start tracking compliance posture.",
+    "noIssues": "No issues",
+    "scanFailed": "Scan failed"
   },
   "scans": {
     "newScan": "Nova Varredura",
