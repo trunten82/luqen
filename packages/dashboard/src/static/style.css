@@ -937,6 +937,136 @@ html[data-density="plain"] .verdict-line__sentence {
   max-width: 36ch;
 }
 
+/* ============================================================
+   Public self-scan report — /reports/:id/public (Phase 58 R5).
+   Standalone, no admin chrome. Built around the verdict-line
+   pattern with a small summary and the badge embed snippet.
+   ============================================================ */
+body.report-public { background: var(--bg-page); }
+
+.report-public__main {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-5);
+}
+
+.report-public__brand {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.report-public__brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--id-accent);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--font-size-xl);
+  letter-spacing: -0.015em;
+}
+
+.report-public__brand-label {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.report-public__summary {
+  margin: var(--space-6) 0;
+}
+
+.report-public__summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+}
+
+.report-public__summary-row { margin: 0; }
+
+.report-public__summary-row dt {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.report-public__summary-row dd {
+  font-family: var(--font-display);
+  font-size: var(--type-display-3);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-public__badge-section {
+  margin-top: var(--space-7);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-strong);
+}
+
+.report-public__h2 {
+  font-family: var(--font-display);
+  font-size: var(--type-display-3);
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+  letter-spacing: -0.015em;
+}
+
+.report-public__badge-preview {
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  background: var(--bg-muted);
+  border-radius: var(--border-radius-sm);
+  display: inline-block;
+}
+
+.report-public__footer {
+  margin-top: var(--space-8);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-relaxed);
+}
+
+.report-public__footer a { color: var(--id-accent); }
+
+/* ---- Login self-scan badge (Phase 58 R5) ---- */
+.login-card__self-badge {
+  display: block;
+  margin-top: var(--space-4);
+  text-align: center;
+  border: 0;
+  line-height: 0;
+}
+
+.login-card__self-badge img {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.login-card__self-badge:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 4px;
+}
+
 /* ---- Login learn-more link (Phase 58 R5) ---- */
 .login-card__learn-more {
   margin-top: var(--space-5);

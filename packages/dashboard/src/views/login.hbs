@@ -70,6 +70,16 @@
       <p class="login-card__learn-more">
         {{{t "auth.learnMore"}}}
       </p>
+
+      {{#if selfScanId}}
+      <a class="login-card__self-badge"
+         href="/reports/{{selfScanId}}/public"
+         aria-label="View Luqen's own accessibility self-scan report">
+        <img src="/api/v1/badge/{{selfScanId}}.svg"
+             alt="Verified by Luqen"
+             width="180" height="32">
+      </a>
+      {{/if}}
     </div>
     <p class="app-version">{{appVersion}}</p>
 </div>

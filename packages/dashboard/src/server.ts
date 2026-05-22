@@ -160,6 +160,8 @@ function isPublicPath(path: string): boolean {
   // Phase 58 R5: glossary + verdict badge are public, anonymous, cacheable.
   if (path === '/api/v1/glossary') return true;
   if (path.startsWith('/api/v1/badge/')) return true;
+  // Phase 58 R5: public self-scan report (only the dashboard's own host).
+  if (/^\/reports\/[^/]+\/public$/.test(path)) return true;
   // Phase 31.1 Plan 02: external MCP clients hit these BEFORE they have a
   // user session. The consent gate lives on /oauth/authorize (which is NOT
   // listed here — it keeps the session-auth gate).

@@ -73,6 +73,7 @@ export async function authRoutes(
       mode,
       loginMethods,
       returnTo,
+      selfScanId: config.selfScanId,
       ...(sessionExpired ? { error: 'Your session has expired. Please log in again.' } : {}),
     });
   });
