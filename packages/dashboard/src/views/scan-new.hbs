@@ -108,8 +108,8 @@
     </div>
     {{/if}}
 
-    <div class="card mb-md">
-      <h3 class="card__title mb-md">{{t "scans.scanOptions"}}</h3>
+    <details class="scan-advanced">
+      <summary class="scan-advanced__summary">{{t "scans.scanOptions"}}</summary>
       <div class="form-group">
         <label for="runner">{{t "scans.testRunner"}}</label>
         <select id="runner" name="runner" aria-describedby="runner-hint">
@@ -162,11 +162,10 @@
           {{t "scans.incrementalHint"}}
         </p>
       </div>
-    </div>
+    </details>
 
-    <div class="card mb-md">
-      <details>
-        <summary class="card__title mb-md" style="cursor: pointer;">Authentication (optional)</summary>
+    <details class="scan-advanced">
+      <summary class="scan-advanced__summary">Authentication (optional)</summary>
         <p class="form-hint mb-sm">
           Need to scan pages behind a login or session wall? Use <strong>Custom HTTP Headers</strong> to attach
           tokens or cookies to every request, or <strong>Pre-scan Actions</strong> to automate a browser-based
@@ -220,8 +219,7 @@ wait for url to be https://example.com/app/settings</pre>
                     placeholder="set field #username to myuser&#10;set field #password to mypass&#10;click element button[type=submit]&#10;wait for element .dashboard to be visible"
                     aria-describedby="authActions-hint"></textarea>
         </div>
-      </details>
-    </div>
+    </details>
 
     <div class="page-actions">
       <button type="submit" class="btn btn--primary">{{t "scans.startScan"}}</button>
