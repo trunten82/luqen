@@ -1,5 +1,6 @@
-{{! stat-card partial }}
-<article class="stat-card" role="listitem" {{#if accentColor}}style="border-left: 3px solid {{accentColor}}"{{/if}}>
+{{! stat-card partial — kept for /admin/system; home rewrite deletes it in R2 (Phase 57). }}
+{{! accentColor param accepted but ignored: side-stripe accents are an impeccable absolute ban. }}
+<article class="stat-card" role="listitem">
   <span class="stat-card__value" aria-label="{{value}} {{label}}">{{value}}</span>
   <span class="stat-card__label">{{label}}</span>
 </article>

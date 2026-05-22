@@ -26,7 +26,7 @@
 <section aria-labelledby="brand-summary-heading" class="mb-lg">
   <h2 id="brand-summary-heading" class="section-title">{{t "brandOverview.summary"}}</h2>
   <div class="exec-summary" role="list" aria-label="Brand score summary">
-    <article class="stat-card" role="listitem" style="border-left: 3px solid var(--accent)">
+    <article class="stat-card" role="listitem">
       <span class="stat-card__value {{summary.avgScoreClass}}">{{#if summary.avgScore}}{{summary.avgScore}}{{else}}&mdash;{{/if}}</span>
       <span class="stat-card__label">{{t "brandOverview.avgScore"}}</span>
       {{#if targetScore}}
@@ -42,11 +42,11 @@
       <span class="stat-card__value">{{summary.totalScored}}</span>
       <span class="stat-card__label">{{t "brandOverview.scoredSites"}}</span>
     </article>
-    <article class="stat-card" role="listitem" style="border-left: 3px solid var(--status-success)">
+    <article class="stat-card" role="listitem">
       <span class="stat-card__value">{{summary.improving}}</span>
       <span class="stat-card__label">{{t "brandOverview.improving"}}</span>
     </article>
-    <article class="stat-card" role="listitem" style="border-left: 3px solid var(--status-error)">
+    <article class="stat-card" role="listitem">
       <span class="stat-card__value">{{summary.regressing}}</span>
       <span class="stat-card__label">{{t "brandOverview.regressing"}}</span>
     </article>
