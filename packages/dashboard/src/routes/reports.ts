@@ -305,26 +305,50 @@ export async function reportRoutes(
         : 'pass';
 
       // Verdict line (Phase 57 R2) — one sentence + provenance meta.
-      const verdictStatusMap: Record<string, 'fail' | 'warn' | 'pass' | 'info'> = {
-        fail: 'fail', review: 'warn', pass: 'pass', none: 'info',
-      };
-      const verdictColourClass = verdictStatusMap[complianceStatus] ?? 'info';
+      // The sentence MUST acknowledge raw WCAG errors even when the
+      // jurisdictional matrix says "pass", because jurisdictional pass
+      // ≠ accessibility pass: a site can satisfy every regulation it was
+      // checked against and still ship hundreds of WCAG issues that simply
+      // aren't tied to a named regulatory rule. Saying "compliant" alone
+      // in that case is misleading.
       const errorsCount = reportData?.summary?.byLevel?.error ?? 0;
+      const warningsCount = reportData?.summary?.byLevel?.warning ?? 0;
       const pagesCount = reportData?.summary?.pagesScanned ?? 0;
       const issuesCount = reportData?.summary?.totalIssues ?? 0;
+      const pagesPhrase = `${pagesCount} page${pagesCount === 1 ? '' : 's'}`;
+      const errorsPhrase = `${errorsCount} WCAG error${errorsCount === 1 ? '' : 's'}`;
+      const issuesPhrase = `${issuesCount} WCAG issue${issuesCount === 1 ? '' : 's'}`;
+
       let verdictSentence: string;
+      let verdictColourClass: 'fail' | 'warn' | 'pass' | 'info';
+
       if (complianceStatus === 'fail') {
-        verdictSentence = `${scan.siteUrl} is non-compliant. ${enrichedFailing} mandatory failure${enrichedFailing === 1 ? '' : 's'} across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
+        // Mandatory regulatory failures present. This is the worst case;
+        // raw errors are implied to be at least as bad.
+        verdictSentence = `${scan.siteUrl} is non-compliant. ${enrichedFailing} mandatory failure${enrichedFailing === 1 ? '' : 's'}, ${errorsPhrase} across ${pagesPhrase}.`;
+        verdictColourClass = 'fail';
       } else if (complianceStatus === 'review') {
-        verdictSentence = `${scan.siteUrl} needs review. ${enrichedReview} item${enrichedReview === 1 ? '' : 's'} require manual review across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
+        verdictSentence = `${scan.siteUrl} needs review. ${enrichedReview} item${enrichedReview === 1 ? '' : 's'} require manual review, ${errorsPhrase} across ${pagesPhrase}.`;
+        verdictColourClass = 'warn';
+      } else if (complianceStatus === 'pass' && errorsCount > 0) {
+        // Jurisdictionally compliant but still has raw WCAG errors.
+        // Honest framing: the regulations were satisfied, but the site
+        // is not yet accessible. Down-grade colour to warn.
+        verdictSentence = `${scan.siteUrl} satisfies the regulations it was checked against, but has ${errorsPhrase} across ${pagesPhrase} that fall outside the mandatory ruleset.`;
+        verdictColourClass = 'warn';
       } else if (complianceStatus === 'pass') {
-        verdictSentence = `${scan.siteUrl} is compliant. No mandatory failures across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
+        verdictSentence = `${scan.siteUrl} is compliant. No mandatory failures and no WCAG errors across ${pagesPhrase}.`;
+        verdictColourClass = 'pass';
       } else if (errorsCount > 0) {
-        verdictSentence = `${scan.siteUrl} has ${errorsCount} blocking issue${errorsCount === 1 ? '' : 's'} across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
-      } else if (issuesCount > 0) {
-        verdictSentence = `${scan.siteUrl} has ${issuesCount} issue${issuesCount === 1 ? '' : 's'} across ${pagesCount} page${pagesCount === 1 ? '' : 's'}. No blocking failures.`;
+        // No compliance matrix configured. Lead with the raw count.
+        verdictSentence = `${scan.siteUrl} has ${errorsPhrase} across ${pagesPhrase}. No jurisdictional check was applied.`;
+        verdictColourClass = errorsCount > 0 ? 'fail' : 'info';
+      } else if (warningsCount > 0 || issuesCount > 0) {
+        verdictSentence = `${scan.siteUrl} has ${issuesPhrase} across ${pagesPhrase}, no blocking errors. No jurisdictional check was applied.`;
+        verdictColourClass = 'warn';
       } else {
-        verdictSentence = `${scan.siteUrl} has no issues across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
+        verdictSentence = `${scan.siteUrl} has no WCAG issues across ${pagesPhrase}.`;
+        verdictColourClass = 'pass';
       }
       const standardLabel = (scan.standard ?? '').replace(/^WCAG/i, 'WCAG ').replace(/A{1,3}$/, (m) => ` Level ${m}`).trim();
       const verdictMeta = [
