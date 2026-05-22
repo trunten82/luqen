@@ -184,7 +184,12 @@
     "brandScoreDeltaUp": "[ES] vs previous",
     "brandScoreDeltaDown": "[ES] vs previous",
     "brandScoreDeltaFlat": "[ES] No change",
-    "brandScoreTrendLabel": "[ES] Brand score trend"
+    "brandScoreTrendLabel": "[ES] Brand score trend",
+    "recentActivity": "Recent activity",
+    "docketVerdict": "{{trend}} across {{sites}} sites under continuous monitoring.",
+    "docketVerdictNoScans": "No scans yet. Run your first to start tracking compliance posture.",
+    "noIssues": "No issues",
+    "scanFailed": "Scan failed"
   },
   "scans": {
     "newScan": "Nuevo Escaneo",
