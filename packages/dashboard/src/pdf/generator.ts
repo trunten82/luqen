@@ -6,6 +6,8 @@
  */
 
 import PDFDocument from 'pdfkit';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,13 +80,6 @@ export function formatSubtitle(scan: PdfScanMeta): string {
 // Colors — R1 identity tokens (Phase 56)
 // sRGB hex equivalents of the dashboard OKLCH tokens. All foreground/background
 // pairs used below are AAA (>= 7:1 on small text) against the page surfaces.
-//
-// TODO(phase-56-followup): embed Inter (display + body) and IBM Plex Mono via
-// TTF/OTF and switch font() calls to the embedded family. PDFKit requires
-// TTF/OTF; the available font assets in src/pdf/ and src/static/fonts/ are
-// woff2 and need conversion (or a separate @fontsource-ttf install). Until
-// then this file uses PDFKit's bundled Helvetica family, which is a safe
-// fallback consistent with the email template's font stack.
 // ---------------------------------------------------------------------------
 
 const ID_ACCENT = '#5a2a26';       // oxblood
@@ -99,6 +94,25 @@ const STATUS_WARNING = '#7c5612';
 const STATUS_SUCCESS = '#206a44';
 const STATUS_INFO = '#1f4f99';
 const CITRON = '#d6c43c';          // evidence flag — top-border only, never text
+
+// ---------------------------------------------------------------------------
+// Fonts — embedded Inter + IBM Plex Mono (Phase 56 closeout)
+// ---------------------------------------------------------------------------
+
+const FONTS_DIR = resolve(fileURLToPath(import.meta.url), '..', 'fonts');
+const FONT_FILES = {
+  body: 'Inter-Regular.ttf',
+  bodyBold: 'Inter-SemiBold.ttf',
+  display: 'InterDisplay-SemiBold.ttf',
+  mono: 'IBMPlexMono-Regular.ttf',
+} as const;
+
+function registerFonts(doc: PDFKit.PDFDocument): void {
+  doc.registerFont('Body', resolve(FONTS_DIR, FONT_FILES.body));
+  doc.registerFont('Body-Bold', resolve(FONTS_DIR, FONT_FILES.bodyBold));
+  doc.registerFont('Display-Bold', resolve(FONTS_DIR, FONT_FILES.display));
+  doc.registerFont('Mono', resolve(FONTS_DIR, FONT_FILES.mono));
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -136,6 +150,8 @@ export async function generatePdfFromData(
         },
       });
 
+      registerFonts(doc);
+
       const chunks: Buffer[] = [];
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -150,17 +166,17 @@ export async function generatePdfFromData(
       // ── Cover: eyebrow + verdict line + meta ──
       // Pattern: PRODUCT/DESIGN "verdict line" — one display-weight sentence,
       // a meta line in monospace-ish secondary text. No gradient, no chrome.
-      doc.fontSize(8).fillColor(ID_ACCENT).font('Helvetica-Bold')
+      doc.fontSize(8).fillColor(ID_ACCENT).font('Body-Bold')
         .text('LUQEN ACCESSIBILITY REPORT', { characterSpacing: 1.2, lineGap: 4 });
 
       const verdictText = errors > 0
         ? `${scan.siteUrl} has ${errors} blocking ${errors === 1 ? 'issue' : 'issues'} across ${summary.pagesScanned ?? 0} ${(summary.pagesScanned ?? 0) === 1 ? 'page' : 'pages'}.`
         : `${scan.siteUrl} has no blocking issues across ${summary.pagesScanned ?? 0} ${(summary.pagesScanned ?? 0) === 1 ? 'page' : 'pages'}.`;
 
-      doc.fontSize(18).fillColor(TEXT_PRIMARY).font('Helvetica-Bold')
+      doc.fontSize(18).fillColor(TEXT_PRIMARY).font('Display-Bold')
         .text(verdictText, { lineGap: 2 });
 
-      doc.fontSize(9).fillColor(TEXT_SECONDARY).font('Helvetica')
+      doc.fontSize(9).fillColor(TEXT_SECONDARY).font('Body')
         .text(formatSubtitle(scan), { lineGap: 6 });
 
       doc.moveDown(0.3);
@@ -173,7 +189,7 @@ export async function generatePdfFromData(
 
       // Optional compliance-risk meta sentence, plain body weight.
       if (reportData.complianceMatrix && reportData.complianceMatrix.length > 0) {
-        doc.fontSize(9).fillColor(TEXT_PRIMARY).font('Helvetica')
+        doc.fontSize(9).fillColor(TEXT_PRIMARY).font('Body')
           .text(
             'Compliance: ' +
             reportData.complianceMatrix.map((c) => {
@@ -221,10 +237,10 @@ export async function generatePdfFromData(
             .restore();
         }
 
-        doc.fontSize(20).fillColor(kpiData[i].color).font('Helvetica-Bold')
+        doc.fontSize(20).fillColor(kpiData[i].color).font('Body-Bold')
           .text(kpiData[i].value, x, kpiY + 8, { width: kpiWidth, align: 'center' });
 
-        doc.fontSize(6).fillColor(TEXT_SECONDARY).font('Helvetica-Bold')
+        doc.fontSize(6).fillColor(TEXT_SECONDARY).font('Body-Bold')
           .text(kpiData[i].label, x, kpiY + 33, { width: kpiWidth, align: 'center', characterSpacing: 0.6 });
       }
 
@@ -232,7 +248,7 @@ export async function generatePdfFromData(
 
       // ── Compliance Matrix ──
       if (reportData.complianceMatrix && reportData.complianceMatrix.length > 0) {
-        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Helvetica-Bold')
+        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
           .text('Legal Compliance');
         doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
           .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
@@ -260,14 +276,14 @@ export async function generatePdfFromData(
               .restore();
           }
 
-          doc.fontSize(9).fillColor(TEXT_PRIMARY).font('Helvetica-Bold')
+          doc.fontSize(9).fillColor(TEXT_PRIMARY).font('Body-Bold')
             .text(entry.jurisdictionName, doc.page.margins.left + 8, cardY + 7);
 
           const statusLabel = entry.reviewStatus === 'fail' ? 'FAIL' : entry.reviewStatus === 'review' ? 'REVIEW' : 'PASS';
-          doc.fontSize(9).fillColor(statusColor).font('Helvetica-Bold')
+          doc.fontSize(9).fillColor(statusColor).font('Body-Bold')
             .text(statusLabel, doc.page.margins.left + cardWidth - 64, cardY + 7, { width: 56, align: 'right' });
 
-          doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Helvetica')
+          doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
             .text(
               `WCAG criteria violated: ${entry.confirmedViolations}` +
               (entry.needsReview ? `  ·  Needs review: ${entry.needsReview}` : ''),
@@ -281,13 +297,13 @@ export async function generatePdfFromData(
       }
 
       // ── Top Critical Actions ──
-      doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Helvetica-Bold')
+      doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
         .text('Top Critical Actions');
       doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
         .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
       doc.moveDown(0.2);
 
-      doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Helvetica')
+      doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
         .text('The most impactful issues to address first: errors and regulatory warnings, sorted by severity and reach.');
       doc.moveDown(0.4);
 
@@ -305,7 +321,7 @@ export async function generatePdfFromData(
         .fill(BG_SURFACE)
         .restore();
 
-      doc.fontSize(7).fillColor(TEXT_SECONDARY).font('Helvetica-Bold');
+      doc.fontSize(7).fillColor(TEXT_SECONDARY).font('Body-Bold');
       doc.text('SEVERITY', colX.severity + 4, headerY + 5, { characterSpacing: 0.6 });
       doc.text('WCAG', colX.wcag, headerY + 5, { characterSpacing: 0.6 });
       doc.text('ISSUE', colX.issue, headerY + 5, { characterSpacing: 0.6 });
@@ -337,25 +353,25 @@ export async function generatePdfFromData(
         const textY = currentY + (isError ? 7 : 3);
 
         // Severity as plain typographic label (no filled badge).
-        doc.fontSize(8).fillColor(sevColor).font('Helvetica-Bold')
+        doc.fontSize(8).fillColor(sevColor).font('Body-Bold')
           .text(`${item.count} ${item.severity.toUpperCase()}`, colX.severity + 4, textY, { width: 70 });
 
         // WCAG criterion
-        doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Helvetica-Bold')
+        doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Body-Bold')
           .text(item.criterion, colX.wcag, textY);
 
         // Issue title + regulation tags
-        doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Helvetica')
+        doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Body')
           .text(item.title, colX.issue, textY, { width: colX.pages - colX.issue - 5 });
 
         if (item.regulations.length > 0) {
           const regText = item.regulations.map((r) => r.shortName).join('  ');
-          doc.fontSize(6).fillColor(TEXT_SECONDARY).font('Helvetica-Bold')
+          doc.fontSize(6).fillColor(TEXT_SECONDARY).font('Body-Bold')
             .text(regText, colX.issue, doc.y, { characterSpacing: 0.5 });
         }
 
         // Pages
-        doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Helvetica')
+        doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Body')
           .text(String(item.pageCount), colX.pages, textY, { width: 36, align: 'right' });
 
         // Row separator (quiet 0.5pt)
@@ -371,20 +387,20 @@ export async function generatePdfFromData(
 
       // ── Quick Wins ──
       if (reportData.templateComponents.length > 0) {
-        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Helvetica-Bold')
+        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
           .text('Quick Wins: Template Fixes');
         doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageWidth, doc.y)
           .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
         doc.moveDown(0.2);
 
-        doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Helvetica')
+        doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
           .text('These issues appear in shared components used across multiple pages. Fixing the component once resolves the issue everywhere.');
         doc.moveDown(0.4);
 
         for (const comp of reportData.templateComponents) {
-          doc.fontSize(9).fillColor(TEXT_PRIMARY).font('Helvetica-Bold')
+          doc.fontSize(9).fillColor(TEXT_PRIMARY).font('Body-Bold')
             .text(`${comp.componentName}`, { continued: true })
-            .font('Helvetica').fillColor(TEXT_SECONDARY)
+            .font('Body').fillColor(TEXT_SECONDARY)
             .text(`  ·  ${comp.issueCount} issues  ·  ${comp.maxAffectedPages} pages  ·  fix once, resolves on all pages`);
         }
 
@@ -393,14 +409,14 @@ export async function generatePdfFromData(
 
       // ── Scan Errors ──
       if (reportData.errors && reportData.errors.length > 0) {
-        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Helvetica-Bold')
+        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
           .text('Scan Errors');
         doc.moveDown(0.3);
 
         for (const err of reportData.errors) {
-          doc.fontSize(8).fillColor(STATUS_ERROR).font('Helvetica-Bold')
+          doc.fontSize(8).fillColor(STATUS_ERROR).font('Body-Bold')
             .text(`${err.url}`, { continued: true })
-            .font('Helvetica').fillColor(TEXT_PRIMARY)
+            .font('Body').fillColor(TEXT_PRIMARY)
             .text(`  ·  ${err.code}: ${err.message}`);
         }
 
@@ -408,7 +424,7 @@ export async function generatePdfFromData(
       }
 
       // ── Note ──
-      doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Helvetica')
+      doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
         .text(
           'For the complete issue list with selectors and code context, use the Excel export from the dashboard.',
           doc.page.margins.left, doc.y,
@@ -424,12 +440,12 @@ export async function generatePdfFromData(
 
       const isoDate = new Date().toISOString().slice(0, 10);
       const footerY = doc.y;
-      doc.fontSize(7).fillColor(ID_ACCENT).font('Helvetica-Bold')
+      doc.fontSize(7).fillColor(ID_ACCENT).font('Body-Bold')
         .text('Verified by Luqen', doc.page.margins.left, footerY, { continued: true })
-        .fillColor(TEXT_SECONDARY).font('Courier')
+        .fillColor(TEXT_SECONDARY).font('Mono')
         .text(`  ·  ${isoDate}  ·  ${scan.createdAtDisplay}`);
 
-      doc.fontSize(6).fillColor(TEXT_MUTED).font('Helvetica')
+      doc.fontSize(6).fillColor(TEXT_MUTED).font('Body')
         .text('Generated by Luqen', doc.page.margins.left, doc.y + 2, { width: pageWidth, align: 'left' });
 
       doc.end();
