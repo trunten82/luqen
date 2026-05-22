@@ -933,6 +933,203 @@ html[data-density="plain"] .verdict-line__sentence {
   max-width: 36ch;
 }
 
+/* ---- Scan-new advanced sections (R3 strip-down) ---- */
+.scan-advanced {
+  margin-bottom: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-3);
+}
+
+.scan-advanced__summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--id-accent);
+  padding: var(--space-2) 0;
+  list-style: none;
+}
+
+.scan-advanced__summary::-webkit-details-marker { display: none; }
+
+.scan-advanced__summary::before {
+  content: '+';
+  display: inline-block;
+  width: 1em;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.scan-advanced[open] .scan-advanced__summary::before { content: '−'; }
+
+.scan-advanced > .form-group,
+.scan-advanced > .picker,
+.scan-advanced > p { margin-top: var(--space-3); }
+
+/* ============================================================
+   Reports docket — /reports list (Phase 58 / R3).
+   Same primitives as the home docket, plus a leading checkbox
+   column for the compare workflow and a trailing actions group.
+   ============================================================ */
+.reports-docket {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border-strong);
+}
+
+.reports-docket__row {
+  display: grid;
+  grid-template-columns: 1.5rem 12rem 1fr auto auto;
+  grid-template-areas:
+    "check time     headline status actions"
+    "check time     detail   detail actions";
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  align-items: baseline;
+}
+
+@media (max-width: 900px) {
+  .reports-docket__row {
+    grid-template-columns: 1.5rem 1fr auto;
+    grid-template-areas:
+      "check headline status"
+      "check time     time"
+      ".     detail   detail"
+      ".     actions  actions";
+    row-gap: var(--space-2);
+  }
+}
+
+.reports-docket__row--flag::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: 2px;
+  background: var(--id-evidence);
+  border-radius: 1px;
+}
+
+.reports-docket__check {
+  grid-area: check;
+  align-self: center;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--id-accent);
+  cursor: pointer;
+}
+
+.reports-docket__check-placeholder {
+  grid-area: check;
+  display: inline-block;
+}
+
+.reports-docket__time {
+  grid-area: time;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.reports-docket__headline {
+  grid-area: headline;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.reports-docket__headline:hover,
+.reports-docket__headline:focus-visible { color: var(--id-accent); }
+
+.reports-docket__status {
+  grid-area: status;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.reports-docket__status--completed { color: var(--status-success); }
+.reports-docket__status--running   { color: var(--status-info); }
+.reports-docket__status--queued    { color: var(--status-warning); }
+.reports-docket__status--failed    { color: var(--status-error); }
+
+.reports-docket__detail {
+  grid-area: detail;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.reports-docket__detail a {
+  color: var(--id-accent);
+  text-decoration: none;
+}
+
+.reports-docket__detail a:hover,
+.reports-docket__detail a:focus-visible { text-decoration: underline; }
+
+.reports-docket__actions {
+  grid-area: actions;
+  display: inline-flex;
+  gap: var(--space-3);
+  align-items: center;
+  align-self: center;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.reports-docket__row:hover .reports-docket__actions,
+.reports-docket__row:focus-within .reports-docket__actions {
+  opacity: 1;
+}
+
+@media (hover: none), (max-width: 900px) {
+  .reports-docket__actions { opacity: 1; }
+}
+
+.reports-docket__action-link {
+  background: transparent;
+  border: 0;
+  padding: 2px var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: var(--border-radius-sm);
+}
+
+.reports-docket__action-link:hover,
+.reports-docket__action-link:focus-visible {
+  color: var(--text-primary);
+  background: var(--bg-muted);
+}
+
+.reports-docket__action-link--danger { color: var(--status-error); }
+.reports-docket__action-link--danger:hover,
+.reports-docket__action-link--danger:focus-visible {
+  color: var(--status-error);
+  background: var(--status-error-bg);
+}
+
 /* ---- Section Title ---- */
 .section-title {
   font-size: var(--font-size-xl);
