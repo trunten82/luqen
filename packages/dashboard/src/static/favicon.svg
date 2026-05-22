@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <path d="M16 1C8 1 4 6 4 6v20s4 5 12 5 12-5 12-5V6s-4-5-12-5z" fill="#0056b3" stroke="#003d80" stroke-width="1"/>
-  <path d="M10 16l4 4 8-8" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Luqen">
+  <!-- Lowercase u wordmark with a rectangular notch in the right stem.
+       Oxblood identity color, OKLCH(0.34 0.09 25) ≈ #5a2a26.
+       Designed to read as the "luqen mark" at 16px favicon and at larger sizes. -->
+  <path fill="#5a2a26" d="M6 7 v13 a5 5 0 0 0 5 5 h10 a5 5 0 0 0 5 -5 v-4 h-3 v3 h-2 v-2 h-3 v3 a2 2 0 0 1 -2 2 h-8 a2 2 0 0 1 -2 -2 v-13 z M23 7 v6 h3 v-6 z"/>
 </svg>
