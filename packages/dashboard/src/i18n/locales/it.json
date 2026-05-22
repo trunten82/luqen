@@ -41,7 +41,12 @@
     "scope": "Ambito",
     "owner": "Proprietario",
     "service": "Servizio",
-    "select": "Seleziona"
+    "select": "Seleziona",
+    "density": {
+      "label": "View density",
+      "dense": "Dense",
+      "plain": "Plain"
+    }
   },
   "nav": {
     "overview": "Panoramica",

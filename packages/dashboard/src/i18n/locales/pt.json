@@ -41,7 +41,12 @@
     "scope": "Escopo",
     "owner": "Proprietário",
     "service": "Serviço",
-    "select": "Selecionar"
+    "select": "Selecionar",
+    "density": {
+      "label": "View density",
+      "dense": "Dense",
+      "plain": "Plain"
+    }
   },
   "nav": {
     "overview": "Visão Geral",
