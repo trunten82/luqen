@@ -528,6 +528,8 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .page-header__subtitle {
@@ -661,6 +663,8 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
   letter-spacing: -0.015em;
   font-weight: 600;
   color: var(--text-primary);
+  overflow-wrap: anywhere;
+  word-break: break-word;
   max-width: 60ch;
 }
 
