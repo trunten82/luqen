@@ -1,0 +1,18 @@
+{{! Verdict-line partial — Phase 57.
+    The primary unit of evidence display per DESIGN.md.
+    One sentence in display weight, plus a meta line with provenance.
+    No icon. No badge. Type carries the weight.
+
+    Inputs:
+      sentence (string, required) — the verdict in plain language.
+      meta     (string, required) — provenance line (date · standard · counts).
+      status   (string, optional) — "pass"|"warn"|"fail"|"info" for status word colouring.
+      statusLabel (string, optional) — short uppercase eyebrow above the sentence. }}
+
+<header class="verdict-line" role="region" aria-label="Verdict">
+  {{#if statusLabel}}
+  <p class="verdict-line__eyebrow verdict-line__eyebrow--{{status}}">{{statusLabel}}</p>
+  {{/if}}
+  <p class="verdict-line__sentence">{{{sentence}}}</p>
+  <p class="verdict-line__meta">{{meta}}</p>
+</header>

@@ -1,0 +1,19 @@
+{{! Density toggle — Phase 57 / R2.
+    Persists per-user via cookie + dashboard_users.density column.
+    The data-density attribute on <html> drives the CSS rules. }}
+<div class="density-toggle" role="group" aria-label="{{t "common.density.label"}}">
+  <button type="button"
+          class="density-toggle__btn"
+          data-density="dense"
+          aria-pressed="{{#unless (eq density 'plain')}}true{{else}}false{{/unless}}"
+          data-action="setDensity">
+    {{t "common.density.dense"}}
+  </button>
+  <button type="button"
+          class="density-toggle__btn"
+          data-density="plain"
+          aria-pressed="{{#if (eq density 'plain')}}true{{else}}false{{/if}}"
+          data-action="setDensity">
+    {{t "common.density.plain"}}
+  </button>
+</div>

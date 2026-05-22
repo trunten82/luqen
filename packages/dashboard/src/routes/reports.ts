@@ -304,13 +304,44 @@ export async function reportRoutes(
         : enrichedReview > 0 ? 'review'
         : 'pass';
 
+      // Verdict line (Phase 57 R2) — one sentence + provenance meta.
+      const verdictStatusMap: Record<string, 'fail' | 'warn' | 'pass' | 'info'> = {
+        fail: 'fail', review: 'warn', pass: 'pass', none: 'info',
+      };
+      const verdictColourClass = verdictStatusMap[complianceStatus] ?? 'info';
+      const errorsCount = reportData?.summary?.byLevel?.error ?? 0;
+      const pagesCount = reportData?.summary?.pagesScanned ?? 0;
+      const issuesCount = reportData?.summary?.totalIssues ?? 0;
+      let verdictSentence: string;
+      if (complianceStatus === 'fail') {
+        verdictSentence = `${scan.siteUrl} is non-compliant. ${enrichedFailing} mandatory failure${enrichedFailing === 1 ? '' : 's'} across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
+      } else if (complianceStatus === 'review') {
+        verdictSentence = `${scan.siteUrl} needs review. ${enrichedReview} item${enrichedReview === 1 ? '' : 's'} require manual review across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
+      } else if (complianceStatus === 'pass') {
+        verdictSentence = `${scan.siteUrl} is compliant. No mandatory failures across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
+      } else if (errorsCount > 0) {
+        verdictSentence = `${scan.siteUrl} has ${errorsCount} blocking issue${errorsCount === 1 ? '' : 's'} across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
+      } else if (issuesCount > 0) {
+        verdictSentence = `${scan.siteUrl} has ${issuesCount} issue${issuesCount === 1 ? '' : 's'} across ${pagesCount} page${pagesCount === 1 ? '' : 's'}. No blocking failures.`;
+      } else {
+        verdictSentence = `${scan.siteUrl} has no issues across ${pagesCount} page${pagesCount === 1 ? '' : 's'}.`;
+      }
+      const standardLabel = (scan.standard ?? '').replace(/^WCAG/i, 'WCAG ').replace(/A{1,3}$/, (m) => ` Level ${m}`).trim();
+      const verdictMeta = [
+        `Scanned ${scan.completedAt ? new Date(scan.completedAt).toISOString().slice(0, 10) : '—'}`,
+        standardLabel || scan.standard,
+        scan.jurisdictions && scan.jurisdictions.length > 0 ? scan.jurisdictions.join(' · ') : null,
+      ].filter(Boolean).join(' · ');
+
       return reply.view('report-detail.hbs', {
         pageTitle: `Report — ${scan.siteUrl}`,
         currentPath: `/reports/${id}`,
         user: request.user,
         scan: scanMeta,
         reportData,
-        complianceStatus,
+        complianceStatus: verdictColourClass,
+        verdictSentence,
+        verdictMeta,
         brandFilter,
         brandingGuidelineActive,
         pdfAvailable: true,
