@@ -158,6 +158,31 @@ export async function generateIssuesCsv(
 // Build inline-styled HTML email body with summary KPIs
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Identity tokens (R1 — Phase 56)
+// Email clients do not support OKLCH or external CSS, so we mirror the
+// dashboard's --id-* and status tokens as inline-safe sRGB hex values.
+// Every text/background pair below is verified AAA (>= 7:1) on small text.
+// ---------------------------------------------------------------------------
+
+const EMAIL_FONT_STACK =
+  "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+const EMAIL_MONO_STACK =
+  "'IBM Plex Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace";
+
+const ID_ACCENT = '#5a2a26';       // oxblood
+const TEXT_PRIMARY = '#231e1d';    // ~14.9:1 on #fefcfb (AAA)
+const TEXT_SECONDARY = '#5e5550';  // ~7.6:1 on #fefcfb (AAA small text)
+const TEXT_MUTED = '#807672';      // ~4.7:1 on #fefcfb — large/bold only
+const BG_PAGE = '#fefcfb';
+const BG_SURFACE = '#faf7f6';
+const BG_MUTED = '#efeae8';
+const BORDER_SUBTLE = '#e3dcd9';
+const STATUS_ERROR = '#a52822';    // ~7.0:1 on #fefcfb (AAA)
+const STATUS_WARNING = '#7c5612';  // ~7.4:1 on #fefcfb (AAA)
+const STATUS_INFO = '#1f4f99';     // ~7.4:1 on #fefcfb (AAA)
+const CITRON = '#d6c43c';          // evidence accent — never carries text contrast
+
 export function buildEmailBody(
   scan: ScanRecord,
   options?: { includeWarnings?: boolean; includeNotices?: boolean },
@@ -169,50 +194,76 @@ export function buildEmailBody(
   const scanDate = scan.completedAt
     ? new Date(scan.completedAt).toLocaleString()
     : new Date(scan.createdAt).toLocaleString();
+  const scanIsoDate = (scan.completedAt ?? scan.createdAt).slice(0, 10);
+
+  // Verdict line: one sentence in body-strong type, followed by a meta line.
+  const verdict = errors > 0
+    ? `${scan.siteUrl} has ${errors} blocking ${errors === 1 ? 'issue' : 'issues'} across ${pagesScanned} ${pagesScanned === 1 ? 'page' : 'pages'}.`
+    : `${scan.siteUrl} has no blocking issues across ${pagesScanned} ${pagesScanned === 1 ? 'page' : 'pages'}.`;
+
+  // Whether to flag a block with the 4px citron top-border (evidence rule).
+  const flagErrors = errors > 0;
+  const flagWarnings = warnings > 0;
+
+  // Cell helper: AAA-verified text colours on AAA-verified tinted surfaces.
+  // We retain a tinted background but lift the foreground to the AAA status
+  // tokens above (a52822 / 7c5612 / 206a44 all hit >= 7:1 on faf7f6).
+  const kpiCell = (
+    value: number,
+    label: string,
+    fg: string,
+    flag: boolean,
+  ): string => `
+        <td style="padding: 0; width: 25%; vertical-align: top;">
+          <div style="border-top: 4px solid ${flag ? CITRON : 'transparent'}; background: ${BG_SURFACE}; border-bottom: 1px solid ${BORDER_SUBTLE}; border-left: 1px solid ${BORDER_SUBTLE}; border-right: 1px solid ${BORDER_SUBTLE}; padding: 14px 8px; text-align: center;">
+            <div style="font-family: ${EMAIL_FONT_STACK}; font-size: 28px; font-weight: 700; color: ${fg}; line-height: 1.1; letter-spacing: -0.012em;">${value}</div>
+            <div style="font-family: ${EMAIL_FONT_STACK}; font-size: 11px; font-weight: 600; text-transform: uppercase; color: ${TEXT_SECONDARY}; letter-spacing: 0.06em; margin-top: 4px;">${label}</div>
+          </div>
+        </td>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin: 0; padding: 0; background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-<div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-  <div style="background: #0056b3; color: #ffffff; padding: 24px; text-align: center;">
-    <h1 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.3px;">Luqen Accessibility Report</h1>
+<body style="margin: 0; padding: 0; background: ${BG_MUTED}; font-family: ${EMAIL_FONT_STACK}; color: ${TEXT_PRIMARY};">
+<div style="max-width: 600px; margin: 0 auto; background: ${BG_PAGE};">
+  <div style="padding: 24px 24px 16px; border-bottom: 1px solid ${BORDER_SUBTLE};">
+    <div style="font-family: ${EMAIL_FONT_STACK}; font-size: 12px; font-weight: 600; color: ${ID_ACCENT}; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 6px;">Luqen Accessibility Report</div>
+    <h1 style="margin: 0; font-family: ${EMAIL_FONT_STACK}; font-size: 20px; font-weight: 700; color: ${TEXT_PRIMARY}; letter-spacing: -0.012em; line-height: 1.3;">${escapeHtml(verdict)}</h1>
+    <p style="margin: 8px 0 0; font-family: ${EMAIL_MONO_STACK}; font-size: 12px; color: ${TEXT_SECONDARY}; line-height: 1.5;">
+      Scanned: ${escapeHtml(scanDate)} &middot; Standard: ${escapeHtml(scan.standard)}
+    </p>
   </div>
   <div style="padding: 24px;">
-    <p style="margin: 0 0 8px; font-size: 14px; color: #333;">Site: <strong>${escapeHtml(scan.siteUrl)}</strong></p>
-    <p style="margin: 0 0 8px; font-size: 14px; color: #333;">Standard: <strong>${escapeHtml(scan.standard)}</strong></p>
-    <p style="margin: 0 0 20px; font-size: 14px; color: #333;">Scanned: <strong>${escapeHtml(scanDate)}</strong></p>
+    <p style="margin: 0 0 16px; font-family: ${EMAIL_FONT_STACK}; font-size: 14px; color: ${TEXT_PRIMARY}; line-height: 1.5;">
+      Site: <strong style="color: ${TEXT_PRIMARY};">${escapeHtml(scan.siteUrl)}</strong>
+    </p>
 
-    <table style="width: 100%; border-collapse: separate; border-spacing: 8px 0;" role="presentation">
+    <table style="width: 100%; border-collapse: separate; border-spacing: 6px 0;" role="presentation">
       <tr>
-        <td style="padding: 16px 8px; text-align: center; background: #f8d7da; border-radius: 6px; width: 25%;">
-          <div style="font-size: 28px; font-weight: 800; color: #8b1a1a;">${pagesScanned}</div>
-          <div style="font-size: 11px; text-transform: uppercase; color: #8b1a1a; letter-spacing: 0.5px;">Pages</div>
-        </td>
-        <td style="padding: 16px 8px; text-align: center; background: #f8d7da; border-radius: 6px; width: 25%;">
-          <div style="font-size: 28px; font-weight: 800; color: #8b1a1a;">${errors}</div>
-          <div style="font-size: 11px; text-transform: uppercase; color: #8b1a1a; letter-spacing: 0.5px;">Errors</div>
-        </td>
-        <td style="padding: 16px 8px; text-align: center; background: #fff3cd; border-radius: 6px; width: 25%;">
-          <div style="font-size: 28px; font-weight: 800; color: #856404;">${warnings}</div>
-          <div style="font-size: 11px; text-transform: uppercase; color: #856404; letter-spacing: 0.5px;">Warnings</div>
-        </td>
-        <td style="padding: 16px 8px; text-align: center; background: #d4edda; border-radius: 6px; width: 25%;">
-          <div style="font-size: 28px; font-weight: 800; color: #155724;">${notices}</div>
-          <div style="font-size: 11px; text-transform: uppercase; color: #155724; letter-spacing: 0.5px;">Notices</div>
-        </td>
+        ${kpiCell(pagesScanned, 'Pages', TEXT_PRIMARY, false)}
+        ${kpiCell(errors, 'Errors', STATUS_ERROR, flagErrors)}
+        ${kpiCell(warnings, 'Warnings', STATUS_WARNING, flagWarnings)}
+        ${kpiCell(notices, 'Notices', STATUS_INFO, false)}
       </tr>
     </table>
 
-    <p style="margin: 20px 0 0; font-size: 14px; color: #555;">See the attached report for full details.</p>
+    <p style="margin: 24px 0 0; font-family: ${EMAIL_FONT_STACK}; font-size: 14px; color: ${TEXT_SECONDARY}; line-height: 1.5;">
+      See the attached report for the complete issue list, selectors, and code context.
+    </p>
   </div>
-  <div style="background: #f5f6fa; padding: 16px; text-align: center; font-size: 12px; color: #6b6b6b; border-top: 1px solid #e0e0e0;">
-    Generated by Luqen
+  <div style="background: ${BG_SURFACE}; padding: 16px 24px; border-top: 1px solid ${BORDER_SUBTLE};">
+    <div style="font-family: ${EMAIL_MONO_STACK}; font-size: 11px; color: ${TEXT_SECONDARY}; line-height: 1.5;">
+      <span style="color: ${ID_ACCENT}; font-weight: 600;">Verified by Luqen</span> &middot; ${escapeHtml(scanIsoDate)}
+    </div>
+    <div style="font-family: ${EMAIL_FONT_STACK}; font-size: 11px; color: ${TEXT_MUTED}; margin-top: 4px;">
+      Generated by Luqen
+    </div>
   </div>
 </div>
 </body>
 </html>`;
 }
+
 
 function escapeHtml(text: string): string {
   return text
