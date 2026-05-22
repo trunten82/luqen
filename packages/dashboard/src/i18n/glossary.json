@@ -1,0 +1,90 @@
+{
+  "_meta": {
+    "description": "Plain-language definitions for WCAG and compliance terms used across the dashboard. Surfaced inline via the <dfn data-glossary='key'> markup + the GlossaryController in app.js. Authored 2026-05-22; needs ongoing compliance-team review.",
+    "locale": "en"
+  },
+  "wcag": {
+    "label": "WCAG",
+    "definition": "Web Content Accessibility Guidelines — the international standard that defines how to make web content usable by people with disabilities. The current version is WCAG 2.2."
+  },
+  "aa": {
+    "label": "AA",
+    "definition": "WCAG conformance level AA. The legal floor in most jurisdictions; covers contrast, keyboard access, captioning, and resizable text."
+  },
+  "aaa": {
+    "label": "AAA",
+    "definition": "The highest WCAG conformance level. Requires 7:1 text contrast, sign-language interpretation for video, and other strict criteria. Required for shareable Luqen reports and the verdict badge."
+  },
+  "blocking-issue": {
+    "label": "blocking issue",
+    "definition": "An accessibility error that prevents people with disabilities from using a critical part of the site. Counted separately from warnings and notices."
+  },
+  "mandatory-failure": {
+    "label": "mandatory failure",
+    "definition": "An accessibility issue that violates a named regulatory rule in a jurisdiction the site has been checked against. Distinct from raw WCAG errors that aren't tied to a regulation."
+  },
+  "jurisdiction": {
+    "label": "jurisdiction",
+    "definition": "A legal area whose accessibility regulations apply to a site (for example, EU under EAA, US under ADA Title III). Each jurisdiction maps to one or more named regulations and a subset of WCAG rules."
+  },
+  "regulation": {
+    "label": "regulation",
+    "definition": "A specific accessibility law or technical standard, such as EN 301 549 (EU), Section 508 (US federal), or BITV 2.0 (Germany). One regulation usually covers a defined set of WCAG criteria."
+  },
+  "selector": {
+    "label": "selector",
+    "definition": "A CSS path that identifies the exact element on the page where an issue was found, e.g. main > article:nth-child(2) > img.banner. Used to locate and fix the issue in the source code."
+  },
+  "alt-text": {
+    "label": "alt text",
+    "definition": "Short written description of an image, read by screen readers and used when the image fails to load. Required by WCAG 1.1.1 for all informative images."
+  },
+  "contrast-ratio": {
+    "label": "contrast ratio",
+    "definition": "The relative brightness difference between text and its background, expressed as a ratio from 1:1 (no contrast) to 21:1 (pure black on pure white). WCAG AA requires 4.5:1 for normal text and 3:1 for large; AAA requires 7:1 and 4.5:1."
+  },
+  "aria": {
+    "label": "ARIA",
+    "definition": "Accessible Rich Internet Applications — HTML attributes (role, aria-label, aria-describedby, etc.) that describe a widget's purpose and state to assistive technology. Misused ARIA is often worse than no ARIA."
+  },
+  "screen-reader": {
+    "label": "screen reader",
+    "definition": "Software that reads web content aloud or outputs it to a braille display. Common screen readers: NVDA and JAWS on Windows, VoiceOver on Apple platforms, TalkBack on Android."
+  },
+  "keyboard-navigation": {
+    "label": "keyboard navigation",
+    "definition": "Operating the site without a mouse, using only Tab, Shift+Tab, Enter, Space, arrow keys, and Escape. WCAG 2.1.1 requires every interactive element to be reachable and operable from the keyboard."
+  },
+  "focus-ring": {
+    "label": "focus ring",
+    "definition": "The visible outline that appears around an element when it receives keyboard focus. Required by WCAG 2.4.7; must be removed only when replaced with an equally visible indicator."
+  },
+  "landmark": {
+    "label": "landmark",
+    "definition": "A semantic region of the page identified by an HTML element (header, nav, main, aside, footer) or an ARIA role. Screen-reader users navigate by landmarks; missing or duplicated landmarks make the page harder to scan."
+  },
+  "eaa": {
+    "label": "EAA",
+    "definition": "European Accessibility Act — EU directive 2019/882, effective 2025-06-28. Mandates accessibility for digital products and services sold in the EU; references the technical standard EN 301 549."
+  },
+  "ada": {
+    "label": "ADA",
+    "definition": "Americans with Disabilities Act — US federal civil-rights law. Title III is regularly applied to public-accommodation websites; the DOJ's 2024 final rule references WCAG 2.1 AA for state and local government websites."
+  },
+  "psbar": {
+    "label": "PSBAR",
+    "definition": "Public Sector Bodies (Websites and Mobile Applications) (No. 2) Accessibility Regulations 2018 — UK regulations requiring public-sector websites and mobile apps to meet WCAG 2.2 AA, publish an accessibility statement, and provide a complaints feedback mechanism."
+  },
+  "en-301-549": {
+    "label": "EN 301 549",
+    "definition": "European harmonised standard for accessibility requirements of ICT products and services. Cited by the EAA as the technical means of complying with the directive."
+  },
+  "verdict": {
+    "label": "verdict",
+    "definition": "Luqen's one-sentence summary of a scan's compliance status. Maps jurisdictional results to four states: compliant (no mandatory failures, no errors), warn (mandatory pass but raw errors remain), needs review (manual review required), non-compliant (mandatory failures)."
+  },
+  "fix-proposal": {
+    "label": "fix proposal",
+    "definition": "An AI-generated suggestion for how to remediate a specific accessibility issue. Includes the rationale (why it's broken), the selector (where), and a code snippet (what to change). Always verify before applying."
+  }
+}
