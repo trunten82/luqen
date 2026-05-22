@@ -82,37 +82,55 @@
     </div>
 
     {{#each this.fixes}}
-    <div class="rpt-fix-proposal">
-      <div class="fix-meta-row">
+    <article class="fix-proposal">
+      <header class="fix-proposal__head">
         {{#if ../../canCreatePr}}
-        <label class="fix-checkbox-label">
+        <label class="fix-proposal__check-label">
           <input type="checkbox" name="fixIndices" value="{{this.index}}" class="fix-checkbox">
+          <span class="sr-only">{{t "fixes.selectFix"}}</span>
         </label>
         {{/if}}
-        <span class="badge badge--{{this.severity}}">{{this.severity}}</span>
-        <span class="rpt-fix-effort rpt-fix-effort--{{this.effort}}">{{this.effort}} {{t "fixes.effort"}}</span>
-        <span class="badge badge--neutral" style="font-size:0.75rem;">{{this.confidence}}</span>
-      </div>
+        <span class="fix-proposal__meta">
+          <span class="fix-proposal__severity fix-proposal__severity--{{this.severity}}">{{this.severity}}</span>
+          <span class="fix-proposal__effort">{{this.effort}} {{t "fixes.effort"}}</span>
+          <span class="fix-proposal__confidence">{{this.confidence}}</span>
+        </span>
+      </header>
 
-      <p class="fix-description">{{this.description}}</p>
-
-      <details class="fix-details">
-        <summary class="fix-details__summary">{{t "fixes.issueDetails"}}</summary>
-        <div class="fix-details__body">
-          <p class="fix-details__item"><strong>{{t "fixes.message"}}</strong> {{this.message}}</p>
-          <p class="fix-details__item"><strong>{{t "fixes.selector"}}</strong> <code>{{this.selector}}</code></p>
-          <p class="fix-details__item"><strong>{{t "fixes.page"}}</strong> <a href="{{this.pageUrl}}" target="_blank" rel="noopener noreferrer">{{this.pageUrl}}</a></p>
+      <div class="fix-proposal__panes">
+        <div class="fix-proposal__rationale">
+          <p class="fix-proposal__description">{{this.description}}</p>
+          <dl class="fix-proposal__provenance">
+            <div class="fix-proposal__provenance-row">
+              <dt>{{t "fixes.message"}}</dt>
+              <dd>{{this.message}}</dd>
+            </div>
+            <div class="fix-proposal__provenance-row">
+              <dt>{{t "fixes.selector"}}</dt>
+              <dd><code>{{this.selector}}</code></dd>
+            </div>
+            <div class="fix-proposal__provenance-row">
+              <dt>{{t "fixes.page"}}</dt>
+              <dd><a href="{{this.pageUrl}}" target="_blank" rel="noopener noreferrer">{{this.pageUrl}}</a></dd>
+            </div>
+          </dl>
           {{#if this.context}}
-          <pre class="code-block code-block--sm mt-sm"><code>{{this.context}}</code></pre>
+          <details class="fix-proposal__context-toggle">
+            <summary>{{t "fixes.issueDetails"}}</summary>
+            <pre class="fix-proposal__context"><code>{{this.context}}</code></pre>
+          </details>
           {{/if}}
         </div>
-      </details>
 
-      <div class="fix-code-block">
-        <p class="fix-code-block__label">{{t "fixes.suggestedFix"}}</p>
-        <pre class="rpt-fix-hint__code fix-code-block__pre"><code id="fix-code-{{this.index}}">{{this.codeExample}}</code><button type="button" class="btn btn--ghost btn--sm fix-code-block__copy" data-action="copyFixCode" data-index="{{this.index}}" aria-label="Copy fix code to clipboard">{{t "fixes.copy"}}</button></pre>
+        <div class="fix-proposal__diff">
+          <header class="fix-proposal__diff-head">
+            <span class="fix-proposal__diff-label">{{t "fixes.suggestedFix"}}</span>
+            <button type="button" class="fix-proposal__copy" data-action="copyFixCode" data-index="{{this.index}}" aria-label="Copy fix code to clipboard">{{t "fixes.copy"}}</button>
+          </header>
+          <pre class="fix-proposal__code"><code id="fix-code-{{this.index}}">{{this.codeExample}}</code></pre>
+        </div>
       </div>
-    </div>
+    </article>
     {{/each}}
   </div>
   {{/each}}

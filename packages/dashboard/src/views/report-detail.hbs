@@ -94,8 +94,9 @@
 {{! ── Brand Score Panel (Phase 20) ────────────────────────────────────── }}
 {{> brand-score-panel}}
 
-{{! ── Tab bar ─────────────────────────────────────────────────────────────── }}
-<div class="rpt-tabs" role="tablist">
+{{! ── Tab shell — side-rail nav + panels (Phase 58 R5) ─────────────────── }}
+<div class="rpt-shell">
+<nav class="rpt-tabs rpt-tabs--rail" role="tablist" aria-label="{{t "reportDetail.tabsLabel"}}">
   <button role="tab" class="rpt-tab rpt-tab--active" id="tab-compliance" aria-controls="panel-compliance" aria-selected="true" data-action="rptSwitchTab" data-tab="compliance">{{t "reportDetail.tabCompliance"}}</button>
   <button role="tab" class="rpt-tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false" data-action="rptSwitchTab" data-tab="issues">{{t "reportDetail.tabIssues"}}</button>
   {{#if reportData.templateComponents.length}}<button role="tab" class="rpt-tab" id="tab-templates" aria-controls="panel-templates" aria-selected="false" data-action="rptSwitchTab" data-tab="templates">{{t "reportDetail.tabTemplates"}}</button>{{/if}}
@@ -103,7 +104,8 @@
   {{#if llmEnabled}}
   <button role="tab" class="rpt-tab" id="tab-ai-summary" aria-controls="panel-ai-summary" aria-selected="false" data-action="rptSwitchTab" data-tab="ai-summary">{{t "reportDetail.tabAiSummary"}}</button>
   {{/if}}
-</div>
+</nav>
+<div class="rpt-shell__panels">
 
 {{! ── Tab 1: Compliance Overview ──────────────────────────────────────────── }}
 <div class="rpt-tab-panel" id="panel-compliance" role="tabpanel" aria-labelledby="tab-compliance">
@@ -602,6 +604,8 @@
   </div>
   {{/if}}
 </div>
+</div>{{! ── /rpt-shell__panels ── }}
+</div>{{! ── /rpt-shell ── }}
 
 {{else}}
 

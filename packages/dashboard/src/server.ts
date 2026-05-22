@@ -10,6 +10,8 @@ import { createAuthGuard } from './auth/middleware.js';
 import { AuthService } from './auth/auth-service.js';
 import { authRoutes } from './routes/auth.js';
 import { homeRoutes } from './routes/home.js';
+import { glossaryRoutes } from './routes/glossary.js';
+import { badgeRoutes } from './routes/badge.js';
 import { scanRoutes } from './routes/scan.js';
 import { reportRoutes } from './routes/reports.js';
 import { compareRoutes } from './routes/compare.js';
@@ -155,6 +157,9 @@ function isPublicPath(path: string): boolean {
   if (path.startsWith('/static/')) return true;
   if (path.startsWith('/auth/callback/')) return true;
   if (path.startsWith('/auth/sso/')) return true;
+  // Phase 58 R5: glossary + verdict badge are public, anonymous, cacheable.
+  if (path === '/api/v1/glossary') return true;
+  if (path.startsWith('/api/v1/badge/')) return true;
   // Phase 31.1 Plan 02: external MCP clients hit these BEFORE they have a
   // user session. The consent gate lives on /oauth/authorize (which is NOT
   // listed here — it keeps the session-auth gate).
@@ -952,6 +957,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // ── Routes ────────────────────────────────────────────────────────────────
   await authRoutes(server, config, authService, storage);
   await homeRoutes(server, storage, config);
+  await glossaryRoutes(server);
+  await badgeRoutes(server, storage);
   await scanRoutes(server, storage, orchestrator, config, complianceService);
   await compareRoutes(server, storage);
   await trendRoutes(server, storage);
