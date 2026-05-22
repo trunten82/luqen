@@ -626,6 +626,262 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
   margin-top: var(--space-xs);
 }
 
+/* ============================================================
+   Docket — home page two-column layout (Phase 57 / R2 Move D)
+   Left rail = org posture as type. Right column = activity stream.
+   No cards. Citron 2px left-edge mark on flag rows only —
+   the documented utility-mark exception to the side-stripe ban.
+   ============================================================ */
+.docket {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--space-7);
+  margin-top: var(--space-2);
+  min-height: 60vh;
+}
+
+@media (max-width: 900px) {
+  .docket {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+}
+
+/* ---- Rail (posture block) ---- */
+.docket__rail {
+  border-right: 1px solid var(--border-strong);
+  padding-right: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .docket__rail {
+    border-right: 0;
+    border-bottom: 1px solid var(--border-strong);
+    padding-right: 0;
+    padding-bottom: var(--space-5);
+  }
+}
+
+.docket__rail-eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.docket__rail-score {
+  margin: var(--space-2) 0 var(--space-1);
+  line-height: 1;
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+.docket__rail-score-value {
+  font-size: var(--type-display-1);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.docket__rail-score-unit {
+  font-size: var(--type-display-3);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-left: 0.05em;
+}
+
+.docket__rail-verdict {
+  margin: 0;
+  font-size: var(--font-size-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-primary);
+  max-width: 28ch;
+}
+
+.docket__rail-meta {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.docket__rail-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.docket__rail-meta-row:last-child { border-bottom: 0; }
+
+.docket__rail-meta dt {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.docket__rail-meta dd {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  margin: 0;
+}
+
+.docket__rail-cta {
+  align-self: flex-start;
+  margin-top: var(--space-4);
+}
+
+/* ---- Stream ---- */
+.docket__stream {
+  min-width: 0;
+}
+
+.docket__stream-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.docket__stream-eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.docket__stream-link {
+  font-size: var(--font-size-sm);
+  color: var(--id-accent);
+  text-decoration: none;
+}
+
+.docket__stream-link:hover,
+.docket__stream-link:focus-visible {
+  text-decoration: underline;
+}
+
+.docket__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docket__row {
+  display: grid;
+  grid-template-columns: 9rem 1fr auto;
+  grid-template-areas:
+    "time headline status"
+    "time detail   detail";
+  column-gap: var(--space-4);
+  row-gap: var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  align-items: baseline;
+}
+
+@media (max-width: 640px) {
+  .docket__row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "headline status"
+      "time     time"
+      "detail   detail";
+  }
+}
+
+.docket__row--flag::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: 2px;
+  background: var(--id-evidence);
+  border-radius: 1px;
+}
+
+.docket__row-time {
+  grid-area: time;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.docket__row-headline {
+  grid-area: headline;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.docket__row-headline:hover,
+.docket__row-headline:focus-visible { color: var(--id-accent); }
+
+.docket__row-status {
+  grid-area: status;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.docket__row-status--completed { color: var(--status-success); }
+.docket__row-status--running   { color: var(--status-info); }
+.docket__row-status--queued    { color: var(--status-warning); }
+.docket__row-status--failed    { color: var(--status-error); }
+
+.docket__row-detail {
+  grid-area: detail;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.docket__row-detail a {
+  color: var(--id-accent);
+  text-decoration: none;
+}
+
+.docket__row-detail a:hover,
+.docket__row-detail a:focus-visible { text-decoration: underline; }
+
+.docket__empty {
+  padding: var(--space-7) 0;
+  text-align: left;
+}
+
+.docket__empty-headline {
+  font-family: var(--font-display);
+  font-size: var(--type-display-3);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+  max-width: 36ch;
+}
+
 /* ---- Section Title ---- */
 .section-title {
   font-size: var(--font-size-xl);

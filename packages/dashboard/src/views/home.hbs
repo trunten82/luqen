@@ -1,148 +1,90 @@
-{{! Home page — summary stats and recent scans }}
+{{! Home — two-column docket (Phase 57 / R2 Move D).
+    Left rail: org posture as a typographic block.
+    Right column: activity stream of recent scans.
+    No cards. No icons. Citron 2px left-edge mark on rows needing attention. }}
 
-<section aria-labelledby="exec-summary-heading">
-  <h2 id="exec-summary-heading" class="section-title">{{t "home.executiveSummary"}}</h2>
-  <div class="exec-summary" role="list" aria-label="Executive summary statistics">
-    {{> stat-card value=stats.totalScans label=(t "home.totalScans") accentColor="var(--accent)"}}
-    {{> stat-card value=stats.sitesMonitored label=(t "home.sitesMonitored") accentColor="var(--status-info)"}}
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value {{stats.trendClass}}">{{stats.trendDirection}}</span>
-      <span class="stat-card__label">{{t "home.overallTrend"}}</span>
-    </article>
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value" aria-label="{{stats.complianceRate}} percent {{t "home.complianceRate"}}">{{stats.complianceRate}}%</span>
-      <span class="stat-card__label">{{t "home.complianceRate"}}</span>
-    </article>
-  </div>
-</section>
+<div class="docket">
 
-{{#unless isExecutiveView}}
-<section aria-labelledby="stats-heading">
-  <h2 id="stats-heading" class="section-title">{{t "home.overview"}}</h2>
-  <div class="stats-grid" role="list" aria-label="Summary statistics">
-    {{> stat-card value=stats.totalScans label=(t "home.totalScans")}}
-    {{> stat-card value=stats.scansThisWeek label=(t "home.scansThisWeek")}}
-    {{> stat-card value=stats.pagesScanned label=(t "home.pagesScanned")}}
-    {{> stat-card value=stats.issuesFound label=(t "home.issuesFound")}}
-  </div>
-</section>
-{{/unless}}
+  <aside class="docket__rail" aria-labelledby="docket-posture-heading">
+    <h2 id="docket-posture-heading" class="docket__rail-eyebrow">{{t "common.appName"}} posture</h2>
 
-{{#if perm.scansCreate}}
-<div class="card mb-md">
-  <div class="card__body" style="text-align:center; padding: var(--space-lg);">
-    <h2 class="card__title mb-sm">{{t "home.startScan"}}</h2>
-    <p class="text-muted mb-md">{{t "home.scanDescription"}}</p>
-    <a href="/scan/new" class="btn btn--primary">{{t "nav.newScan"}}</a>
-  </div>
-</div>
-{{/if}}
+    <p class="docket__rail-score" aria-label="{{stats.complianceRate}} percent compliance">
+      <span class="docket__rail-score-value">{{stats.complianceRate}}</span><span class="docket__rail-score-unit">%</span>
+    </p>
 
-<section aria-labelledby="recent-scans-heading">
-  <div class="section-header">
-    <h2 id="recent-scans-heading" class="section-title">{{t "home.recentScans"}}</h2>
-    <a href="/reports" class="btn btn--ghost btn--sm">{{t "home.viewAllReports"}}</a>
-  </div>
+    <p class="docket__rail-verdict">
+      {{#if (eq stats.sitesMonitored 0)}}
+        {{t "home.docketVerdictNoScans"}}
+      {{else}}
+        {{t "home.docketVerdict" sites=stats.sitesMonitored trend=stats.trendDirection}}
+      {{/if}}
+    </p>
 
-  {{#if recentScans.length}}
-  {{#if isExecutiveView}}
-  {{! Executive view — simplified recent scans }}
-  <div class="table-responsive" role="region" aria-label="Recent scans table" tabindex="0">
-    <table class="data-table" aria-label="Recent scans">
-      <caption class="sr-only">Most recent accessibility scans</caption>
-      <thead>
-        <tr>
-          <th scope="col">{{t "home.siteUrl"}}</th>
-          <th scope="col">{{t "common.status"}}</th>
-          <th scope="col">{{t "home.issues"}}</th>
-          <th scope="col">{{t "common.date"}}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each recentScans}}
-        <tr id="scan-{{id}}">
-          <td data-label="Site URL" class="cell--url">{{siteUrl}}</td>
-          <td data-label="Status">
-            <span class="badge badge--{{status}}" aria-label="Status: {{status}}">
-              {{status}}
-            </span>
-          </td>
-          <td data-label="Issues">
-            {{#if totalIssues}}{{totalIssues}}{{else}}&mdash;{{/if}}
-          </td>
-          <td data-label="Date">
-            <time datetime="{{createdAt}}">{{createdAtDisplay}}</time>
-          </td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
-  </div>
-  {{else}}
-  {{! Full view — all columns and actions }}
-  <div class="table-responsive" role="region" aria-label="Recent scans table" tabindex="0">
-    <table class="data-table" aria-label="Recent scans">
-      <caption class="sr-only">Most recent accessibility scans</caption>
-      <thead>
-        <tr>
-          <th scope="col">{{t "home.siteUrl"}}</th>
-          <th scope="col">{{t "common.status"}}</th>
-          <th scope="col">{{t "home.standard"}}</th>
-          <th scope="col">{{t "home.jurisdictions"}}</th>
-          <th scope="col">{{t "home.pages"}}</th>
-          <th scope="col">{{t "home.issues"}}</th>
-          <th scope="col">{{t "common.date"}}</th>
-          <th scope="col">{{t "common.actions"}}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each recentScans}}
-        <tr id="scan-{{id}}">
-          <td data-label="Site URL" class="cell--url">
-            <a href="/reports/{{id}}" aria-label="View report for {{siteUrl}}">
-              {{siteUrl}}
-            </a>
-          </td>
-          <td data-label="Status">
-            <span class="badge badge--{{status}}" aria-label="Status: {{status}}">
-              {{status}}
-            </span>
-          </td>
-          <td data-label="Standard">{{formatStandard standard}}</td>
-          <td data-label="Jurisdictions">{{#if jurisdictions}}{{jurisdictions}}{{else}}&mdash;{{/if}}</td>
-          <td data-label="Pages">{{pagesScanned}}</td>
-          <td data-label="Issues">
+    <dl class="docket__rail-meta">
+      <div class="docket__rail-meta-row">
+        <dt>{{t "home.sitesMonitored"}}</dt>
+        <dd>{{stats.sitesMonitored}}</dd>
+      </div>
+      <div class="docket__rail-meta-row">
+        <dt>{{t "home.pagesScanned"}}</dt>
+        <dd>{{stats.pagesScanned}}</dd>
+      </div>
+      <div class="docket__rail-meta-row">
+        <dt>{{t "home.scansThisWeek"}}</dt>
+        <dd>{{stats.scansThisWeek}}</dd>
+      </div>
+      <div class="docket__rail-meta-row">
+        <dt>{{t "home.issuesFound"}}</dt>
+        <dd>{{stats.issuesFound}}</dd>
+      </div>
+    </dl>
+
+    {{#if perm.scansCreate}}
+    <a href="/scan/new" class="docket__rail-cta btn btn--primary btn--sm">{{t "nav.newScan"}}</a>
+    {{/if}}
+  </aside>
+
+  <section class="docket__stream" aria-labelledby="docket-stream-heading">
+    <header class="docket__stream-header">
+      <h2 id="docket-stream-heading" class="docket__stream-eyebrow">{{t "home.recentActivity"}}</h2>
+      <a href="/reports" class="docket__stream-link">{{t "home.viewAllReports"}}</a>
+    </header>
+
+    {{#if recentScans.length}}
+    <ol class="docket__rows" role="list">
+      {{#each recentScans}}
+      <li class="docket__row{{#if (gt errors 0)}} docket__row--flag{{/if}}" id="scan-{{id}}">
+        <time class="docket__row-time" datetime="{{createdAt}}">{{createdAtDisplay}}</time>
+        <a class="docket__row-headline" href="/reports/{{id}}" aria-label="View report for {{siteUrl}}">
+          {{siteUrl}}
+        </a>
+        <span class="docket__row-status docket__row-status--{{status}}">{{status}}</span>
+        <span class="docket__row-detail">
+          {{#if (eq status 'completed')}}
             {{#if totalIssues}}
-            <span>
-              <span class="text--error">{{errors}} {{t "home.errors"}}</span>,
-              <span class="text--warning">{{warnings}} {{t "home.warnings"}}</span>,
-              {{notices}} {{t "home.notices"}}
-            </span>
+              {{errors}} {{t "home.errors"}}, {{warnings}} {{t "home.warnings"}}, {{pagesScanned}} {{t "home.pages"}}
             {{else}}
-            —
+              {{t "home.noIssues"}} · {{pagesScanned}} {{t "home.pages"}}
             {{/if}}
-          </td>
-          <td data-label="Date">
-            <time datetime="{{createdAt}}">{{createdAtDisplay}}</time>
-          </td>
-          <td>
-            {{#if (eq status 'completed')}}
-            <a href="/reports/{{id}}" class="btn btn--sm btn--secondary">{{t "home.viewReport"}}</a>
-            {{else if (eq status 'running')}}
-            <a href="/scan/{{id}}/progress" class="btn btn--sm btn--secondary">{{t "home.viewProgress"}}</a>
-            {{else if (eq status 'queued')}}
-            <a href="/scan/{{id}}/progress" class="btn btn--sm btn--secondary">{{t "home.viewQueue"}}</a>
-            {{/if}}
-          </td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
-  </div>
-  {{/if}}
-  {{else}}
-  <div class="empty-state" role="status">
-    <p>{{t "home.noScans"}}</p>
-  </div>
-  {{/if}}
-</section>
+          {{else if (eq status 'running')}}
+            <a href="/scan/{{id}}/progress">{{t "home.viewProgress"}}</a>
+          {{else if (eq status 'queued')}}
+            <a href="/scan/{{id}}/progress">{{t "home.viewQueue"}}</a>
+          {{else if (eq status 'failed')}}
+            {{t "home.scanFailed"}}
+          {{/if}}
+        </span>
+      </li>
+      {{/each}}
+    </ol>
+    {{else}}
+    <div class="docket__empty" role="status">
+      <p class="docket__empty-headline">{{t "home.noScans"}}</p>
+      {{#if perm.scansCreate}}
+      <a href="/scan/new" class="btn btn--primary">{{t "nav.newScan"}}</a>
+      {{/if}}
+    </div>
+    {{/if}}
+  </section>
+
+</div>
