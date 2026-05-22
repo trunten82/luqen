@@ -517,13 +517,13 @@ describe('Phase 35 Plan 06 Task 2 — agent history accessibility (axe-core + ke
     // var(--accent) resolved" assertion is structurally infeasible in
     // this harness. The equivalent guarantee here: the accent token IS
     // declared on :root and the focus-visible rule in style.css routes
-    // var(--accent) into the outline of focus-visible elements. Both
-    // are verified below. This is the same assertion a real browser
-    // would make — the accent colour is what reaches focus-visible
-    // elements via outline: var(--focus-outline) → 3px solid var(--accent).
+    // var(--focus-outline) into the outline of focus-visible elements.
+    // Phase 56 (R1) switched the focus ring from --accent (oxblood) to
+    // citron (OKLCH 0.84 0.18 105) — the evidence accent. --accent is
+    // now an alias of --id-accent (oxblood). Both are verified below.
     const accent = h.win.getComputedStyle(h.doc.documentElement).getPropertyValue('--accent').trim();
-    expect(accent).toBe('#15803d');
+    expect(accent).toBe('var(--id-accent)');
     expect(STYLE_CSS_SOURCE).toMatch(/:focus-visible\s*\{[^}]*outline:\s*var\(--focus-outline\)/);
-    expect(STYLE_CSS_SOURCE).toMatch(/--focus-outline:\s*3px\s+solid\s+#15803d/);
+    expect(STYLE_CSS_SOURCE).toMatch(/--focus-outline:\s*3px\s+solid\s+oklch\(0\.84\s+0\.18\s+105\)/);
   });
 });
