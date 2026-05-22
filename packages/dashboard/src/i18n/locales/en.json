@@ -1,6 +1,11 @@
 {
   "common": {
     "appName": "Luqen",
+    "density": {
+      "label": "View density",
+      "dense": "Dense",
+      "plain": "Plain"
+    },
     "signIn": "Sign in",
     "signOut": "Sign out",
     "save": "Save",

@@ -384,6 +384,17 @@ export async function authRoutes(
     await reply.redirect(redirectTo);
   });
 
+  // POST /account/density — switch UI density (Phase 57 R2). Cookie-backed,
+  // per-device. CSRF-protected via the global hook. Returns 204 to allow
+  // a transparent client-side refresh without a redirect.
+  server.post('/account/density', { schema: { ...HtmlPageSchema, tags: ['auth'] } }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { density } = request.body as { density?: string };
+    const value = density === 'plain' ? 'plain' : 'dense';
+    reply.header('Set-Cookie', `luqen-density=${value}; Path=/; Max-Age=31536000; SameSite=Lax`);
+    reply.code(204);
+    return reply.send();
+  });
+
   // POST /logout — clear session and redirect
   server.post('/logout', { schema: { ...HtmlPageSchema, tags: ['auth'] } }, async (request: FastifyRequest, reply: FastifyReply) => {
     request.session.delete();
