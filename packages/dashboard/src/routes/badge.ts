@@ -84,6 +84,10 @@ export async function badgeRoutes(server: FastifyInstance, storage: StorageAdapt
       reply.header('Content-Type', 'image/svg+xml; charset=utf-8');
       reply.header('Cache-Control', 'public, max-age=300');
       reply.header('Access-Control-Allow-Origin', '*');
+      // Override the dashboard's same-origin CORP — the badge is
+      // designed to be embedded as an <img> on third-party sites.
+      reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
+      reply.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
       return reply.send(svg);
     },
   );
@@ -105,6 +109,7 @@ export async function badgeRoutes(server: FastifyInstance, storage: StorageAdapt
       const { label } = statusFor(scan);
       reply.header('Cache-Control', 'public, max-age=300');
       reply.header('Access-Control-Allow-Origin', '*');
+      reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
       return reply.send({
         scanId,
         siteUrl: scan.siteUrl,
