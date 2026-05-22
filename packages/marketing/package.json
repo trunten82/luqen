@@ -1,0 +1,17 @@
+{
+  "name": "@luqen/marketing",
+  "version": "3.4.0",
+  "description": "luqen.dev — marketing site for Luqen (Astro static)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "astro": "^5.5.0"
+  }
+}
