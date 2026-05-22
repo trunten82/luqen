@@ -6,7 +6,10 @@
    Contract: /DESIGN.md
    ============================================================ */
 
-/* ---- Self-hosted Type ---- */
+/* ---- Self-hosted Type (~78KB total: Inter variable latin + Plex Mono 400/500 latin) ----
+   Latin-ext chars fall back gracefully to system-ui — acceptable for a minority of locales.
+   "Inter Display" is the same Inter Variable file; the display family is just Inter at
+   higher weight with tighter tracking applied per-element via the .font-display rule. */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -17,31 +20,13 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Inter Display';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url('/static/fonts/inter-latin-ext.woff2') format('woff2-variations'),
-       url('/static/fonts/inter-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Inter Display';
-  font-style: normal;
-  font-weight: 400 800;
-  font-display: swap;
-  src: url('/static/fonts/inter-display-latin.woff2') format('woff2-variations'),
-       url('/static/fonts/inter-display-latin.woff2') format('woff2');
+  src: url('/static/fonts/inter-latin.woff2') format('woff2-variations'),
+       url('/static/fonts/inter-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Inter Display';
-  font-style: normal;
-  font-weight: 400 800;
-  font-display: swap;
-  src: url('/static/fonts/inter-display-latin-ext.woff2') format('woff2-variations'),
-       url('/static/fonts/inter-display-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
   font-family: 'IBM Plex Mono';
@@ -2851,9 +2836,9 @@ dialog::backdrop {
 }
 .rpt-section-header__title { font-size: 0.92rem; font-weight: 700; margin: 0; }
 .rpt-section-header__hint { font-size: 0.72rem; font-style: italic; margin-left: auto; }
-.rpt-section-header--regulatory { background: var(--status-error-bg); border-left: 4px solid var(--status-error); }
-.rpt-section-header--template { background: var(--accent-template-light); border-left: 4px solid var(--accent-template); }
-.rpt-section-header--other { background: var(--bg-tertiary); border-left: 4px solid var(--border-color); }
+.rpt-section-header--regulatory { background: var(--status-error-bg); padding-left: var(--space-3); }
+.rpt-section-header--template { background: var(--accent-template-light); padding-left: var(--space-3); }
+.rpt-section-header--other { background: var(--bg-tertiary); padding-left: var(--space-3); }
 
 /* ── Collapsible issue groups ─────────────────────────────── */
 .rpt-issue-list { display: flex; flex-direction: column; gap: 0.35rem; }
@@ -2887,12 +2872,12 @@ dialog::backdrop {
   min-width: 0;
 }
 .rpt-issue-item:last-child { border-bottom: none; }
-.rpt-template-block { border-left: 3px solid var(--accent-template); padding-left: 0.6rem; margin-bottom: 0.5rem; }
+.rpt-template-block { border: 1px solid var(--accent-template); padding: 0.5rem 0.6rem; margin-bottom: 0.5rem; border-radius: var(--border-radius-sm); }
 .rpt-template-block__label { font-size: 0.72rem; font-weight: 600; color: var(--accent-template); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
 
 /* ── Templates tab ────────────────────────────────────── */
 .rpt-template-intro { font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1rem; }
-.rpt-group--template { border-left: 3px solid var(--accent-template); }
+.rpt-group--template { border: 1px solid var(--accent-template); border-radius: var(--border-radius-sm); padding: var(--space-2); }
 .rpt-issue-item__head { display: flex; align-items: flex-start; gap: 0.4rem; flex-wrap: wrap; }
 .rpt-issue-item__message { flex: 1; min-width: 0; }
 .rpt-issue-item__detail { margin-top: 0.2rem; }
@@ -2955,9 +2940,9 @@ dialog::backdrop {
 .rpt-table th:nth-child(5) { width: 20%; }  /* Element */
 .rpt-table td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border-color); vertical-align: top; overflow-wrap: break-word; word-break: break-word; }
 .rpt-table tr:last-child td { border-bottom: none; }
-.rpt-row--error td:first-child { border-left: 3px solid var(--status-error); }
-.rpt-row--warning td:first-child { border-left: 3px solid var(--status-warning); }
-.rpt-row--notice td:first-child { border-left: 3px solid var(--status-info); }
+
+
+
 
 /* ── Controls (filter bar, search) ────────────────────────── */
 .rpt-controls { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; }
@@ -3235,9 +3220,9 @@ dialog::backdrop {
   background: var(--bg-tertiary);
   color: var(--text-secondary);
 }
-.mt-level--A { border-left: 2px solid var(--status-success); }
-.mt-level--AA { border-left: 2px solid var(--accent); }
-.mt-level--AAA { border-left: 2px solid var(--status-warning); }
+
+
+
 
 /* ── Toggle button ────────────────────────────────────────────────────── */
 .mt-toggle {
@@ -3387,8 +3372,8 @@ details[open] > .mt-examples-toggle::before {
   border-radius: var(--border-radius);
   overflow: hidden;
 }
-.mt-example--good { border-left: 4px solid var(--status-success); }
-.mt-example--bad { border-left: 4px solid var(--status-error); }
+.mt-example--good { border: 1px solid var(--status-success); border-radius: var(--border-radius-sm); }
+.mt-example--bad { border: 1px solid var(--status-error); border-radius: var(--border-radius-sm); }
 .mt-example__label {
   font-size: 0.72rem;
   font-weight: 700;
@@ -3890,9 +3875,9 @@ details[open] > .mt-examples-toggle::before {
 /* D-13 locked-fence border colors for the agent-system prompt editor
    (rbac=info/blue, confirmation=warning/amber, honesty=success/green).
    Each variant lays atop the existing .card--muted base. */
-.card--locked-rbac { border-left: 4px solid var(--status-info); }
-.card--locked-confirmation { border-left: 4px solid var(--status-warning); }
-.card--locked-honesty { border-left: 4px solid var(--status-success); }
+.card--locked-rbac { border-color: var(--status-info); }
+.card--locked-confirmation { border-color: var(--status-warning); }
+.card--locked-honesty { border-color: var(--status-success); }
 #agent-conv-non-tool-alert[hidden] { display: none; }
 /* Phase 32.1-05: wrap badge rows + long card copy so the agent-conversation
    row on /admin/llm?tab=capabilities and the agent-system locked-prompt
@@ -4231,11 +4216,11 @@ details[open] > .mt-examples-toggle::before {
 .agent-msg__body { color: var(--text-primary); white-space: pre-wrap; }
 .agent-msg--user {
   background: var(--bg-primary);
-  border-left: 3px solid var(--accent);
+  border: 1px solid var(--id-accent);
 }
 .agent-msg--assistant { background: var(--bg-secondary); }
 .agent-msg--tool { background: var(--bg-tertiary); }
-.agent-msg--tool[data-pending="true"] { border-left: 3px solid var(--status-warning); }
+.agent-msg--tool[data-pending="true"] { border: 1px solid var(--status-warning); }
 
 /* ---- Phase 37 Plan 02 — per-message action row + stopped chip + edit form ---- */
 /* Hover-revealed on desktop, always-visible on touch. Uses only existing
@@ -4368,10 +4353,11 @@ details[open] > .mt-examples-toggle::before {
    focus trap, Esc, modal backdrop. Summary card uses existing status-error
    tokens so the warning affordance is consistent with other alerts. */
 .agent-confirm__summary {
-  border-left: 3px solid var(--status-error);
+  border: 1px solid var(--status-error);
   background: var(--status-error-bg);
   padding: var(--space-md);
   margin: 0.75rem 0;
+  border-radius: var(--border-radius-sm);
 }
 .agent-confirm__raw summary { cursor: pointer; font-weight: 600; }
 .agent-confirm__raw pre {
@@ -4561,7 +4547,8 @@ details[open] > .mt-examples-toggle::before {
 .agent-drawer__history-confirm {
   padding: var(--space-md);
   background: var(--bg-secondary);
-  border-left: 3px solid var(--status-error);
+  border: 1px solid var(--status-error);
+  border-radius: var(--border-radius-sm);
 }
 
 .agent-drawer__history-sentinel { height: 1px; }
@@ -4851,11 +4838,11 @@ details[open] > .mt-examples-toggle::before {
  * (spinner / checkmark), label / rationale, and Cancel button. Reuses the
  * agent-tool-chip-spin keyframes so the spinner matches the chip strip.
  */
-.message--plan { border-left: 3px solid var(--accent); }
+.message--plan { border: 1px solid var(--id-accent); border-radius: var(--border-radius-sm); }
 .message--plan--cancelled,
 .message--plan--aborted {
   opacity: 0.65;
-  border-left-color: var(--status-warning);
+  border-color: var(--status-warning);
 }
 .message--plan--cancelled .agent-plan__step--pending,
 .message--plan--aborted .agent-plan__step--pending,
@@ -5036,12 +5023,13 @@ details[open] > .mt-examples-toggle::before {
 .tool-result-proposal__removed,
 .tool-result-proposal__modified {
   margin-top: var(--space-xs);
-  padding-left: var(--space-sm);
-  border-left: 3px solid var(--border-muted);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--border-radius-sm);
 }
-.tool-result-proposal__added { border-left-color: var(--status-success); }
-.tool-result-proposal__removed { border-left-color: var(--status-error); }
-.tool-result-proposal__modified { border-left-color: var(--status-warning); }
+.tool-result-proposal__added { border-color: var(--status-success); }
+.tool-result-proposal__removed { border-color: var(--status-error); }
+.tool-result-proposal__modified { border-color: var(--status-warning); }
 .tool-result-proposal__added strong,
 .tool-result-proposal__removed strong,
 .tool-result-proposal__modified strong {
