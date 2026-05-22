@@ -627,6 +627,57 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
 }
 
 /* ============================================================
+   Verdict line — Phase 57.
+   The primary unit of evidence display: one display-weight sentence
+   plus a meta line with provenance. Used on report-detail and the
+   agent share view.
+   ============================================================ */
+.verdict-line {
+  padding: var(--space-2) 0 var(--space-5);
+  border-bottom: 1px solid var(--border-strong);
+  margin-bottom: var(--space-6);
+}
+
+.verdict-line__eyebrow {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.verdict-line__eyebrow--pass { color: var(--status-success); }
+.verdict-line__eyebrow--warn { color: var(--status-warning); }
+.verdict-line__eyebrow--fail { color: var(--status-error); }
+.verdict-line__eyebrow--info { color: var(--status-info); }
+
+.verdict-line__sentence {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--type-display-3);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 60ch;
+}
+
+.verdict-line__meta {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-density="plain"] .verdict-line__sentence {
+  font-size: calc(var(--type-display-3) * 1.05);
+  line-height: 1.35;
+}
+
+/* ============================================================
    Docket — home page two-column layout (Phase 57 / R2 Move D)
    Left rail = org posture as type. Right column = activity stream.
    No cards. Citron 2px left-edge mark on flag rows only —
