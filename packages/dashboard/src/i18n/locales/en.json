@@ -241,6 +241,7 @@
     "jurisdictionTypeBadge": "J"
   },
   "reports": {
+    "verdictEyebrow": "Verdict",
     "title": "Reports",
     "searchByUrl": "Search by URL",
     "filterPlaceholder": "Filter by site URL…",
