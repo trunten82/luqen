@@ -541,11 +541,10 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
 
 /* ---- Cards ---- */
 .card {
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-strong);
   border-radius: var(--border-radius-lg);
   padding: var(--space-lg);
-  box-shadow: var(--shadow-sm);
 }
 
 .card--elevated {
@@ -603,7 +602,7 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
    These cards stay in /admin/system only; on home they will be replaced. */
 .stat-card {
   background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-strong);
   border-radius: var(--border-radius);
   padding: var(--space-5);
   display: flex;
@@ -1042,14 +1041,14 @@ th[aria-sort="none"]::after { content: " ↕"; opacity: 0.4; }
 }
 
 .btn--primary {
-  background-color: var(--accent-hover);
-  color: var(--text-inverse);
-  border-color: var(--accent-hover);
+  background-color: var(--id-accent);
+  color: var(--text-on-accent);
+  border-color: var(--id-accent);
 }
 
 .btn--primary:hover:not(:disabled) {
-  background-color: #166534;
-  border-color: #166534;
+  background-color: var(--id-accent-hover);
+  border-color: var(--id-accent-hover);
 }
 
 .btn--secondary {
@@ -1075,13 +1074,14 @@ th[aria-sort="none"]::after { content: " ↕"; opacity: 0.4; }
 
 .btn--ghost {
   background-color: transparent;
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
 }
 
 .btn--ghost:hover:not(:disabled) {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-muted);
   color: var(--text-primary);
+  border-color: var(--text-secondary);
 }
 
 .btn--warning {
@@ -1989,10 +1989,11 @@ dialog::backdrop {
 }
 
 .app-header__brand {
+  font-family: var(--font-display);
   font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
 }
 
 .app-header__user {
@@ -2005,10 +2006,10 @@ dialog::backdrop {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   background: none;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-strong);
   border-radius: var(--border-radius);
   cursor: pointer;
   color: var(--text-primary);
@@ -2017,12 +2018,8 @@ dialog::backdrop {
 }
 
 .menu-toggle:hover {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color-strong);
-}
-
-.menu-toggle:active {
-  background-color: var(--bg-tertiary);
+  background-color: var(--bg-muted);
+  border-color: var(--text-secondary);
 }
 
 /* ---- Detail List (view mode) ---- */

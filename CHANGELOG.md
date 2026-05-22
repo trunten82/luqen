@@ -6,6 +6,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.4.0] - 2026-05-22
+
+### Changed
+
+- **UI identity migration (R1, Phase 56)** — the dashboard, email reports, and PDF reports now ship the new Luqen visual identity. Strategic context lives in `PRODUCT.md`; the implementation contract in `DESIGN.md`; the strategic rationale in `.planning/design/UI-REVISION-PROPOSAL.md`.
+  - **Colour:** primary identity changed from forest green (`#15803d`) to OKLCH oxblood (`oklch(0.34 0.09 25)` ≈ `#5a2a26`), with a citron evidence accent (`oklch(0.84 0.18 105)` ≈ `#d6c43c`) reserved for focus rings, diff highlights, and AAA-pass strips. Resolves the previous brand colour split (blue favicon vs green dashboard vs blue email).
+  - **Typography:** Inter Variable + Inter Display + IBM Plex Mono self-hosted (~120KB woff2 subset, SIL OFL, no Google Fonts). Display family applies to h1-h3 with -0.012em tracking; type scale moved to a 1.333 ratio.
+  - **Sidebar:** canvas swapped to oxblood-deep; the 3px left-edge accent on the active link replaced with a 1px right-edge citron utility mark.
+  - **Logo / favicon:** retired the shield+checkmark in favour of a `u` wordmark with a citron rectangular notch — applied to favicon, sidebar, and login.
+  - **Email + PDF reports:** Bootstrap-blue replaced with identity tokens. Verdict-line layout introduced (one sentence + provenance meta). KPI cells gain a 4px citron top-border on Errors/Warnings instead of filled status backgrounds. Footer carries "Verified by Luqen" + ISO date.
+  - **Status palette:** retuned to OKLCH at AAA contrast on both light and dark modes. Pass = green / warn = amber / fail = red / info = blue meanings unchanged.
+  - **Dark mode:** fully retuned to the oxblood family.
+  - **Absolute-ban cleanup:** retired the page-header gradient, the `.stat-card` left-stripe, four inline `border-left` overrides in `home.hbs` / `brand-overview.hbs` / `partials/brand-score-widget.hbs`, and the `.stat-card` partial's accentColor parameter.
+  - **Card visibility, buttons:** card borders use `--border-strong`; primary buttons use `--id-accent`; ghost buttons gain a strong-bordered outline; menu-toggle a stronger hover state.
+
+### Deferred to subsequent R-phases
+
+- Home + report-detail layout rewrites (R2, Phase 57).
+- Plain/Dense toggle (R2).
+- Marketing site at luqen.dev — Astro static site (R4).
+- Verdict-badge embeddable — bundled with the WordPress plugin in v3.4 follow-up phases.
+- PDFKit Inter / IBM Plex Mono embedded fonts (woff2→TTF conversion). The PDF generator falls back to PDFKit's bundled Helvetica/Courier in the interim; a `TODO(phase-56-followup)` marks the call site.
+- Remaining side-stripe patterns inside the report detail views (a half-dozen `border-left ≥2px` accents on rows, callouts, and section headers). Tracked for R5 polish.
+
+---
+
 ## [2.6.1] - 2026-04-03
 
 ### Fixed
