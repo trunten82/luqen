@@ -1,6 +1,6 @@
 {
   "name": "@luqen/dashboard",
-  "version": "2.11.0",
+  "version": "3.4.0",
   "description": "Web dashboard for luqen accessibility scanner",
   "type": "module",
   "main": "dist/cli.js",
