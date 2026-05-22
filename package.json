@@ -8,8 +8,7 @@
     "packages/branding",
     "packages/llm",
     "packages/dashboard",
-    "packages/monitor",
-    "packages/marketing"
+    "packages/monitor"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
@@ -20,8 +19,6 @@
     "build:llm": "npm run build -w packages/llm",
     "build:dashboard": "npm run build -w packages/dashboard",
     "build:monitor": "npm run build -w packages/monitor",
-    "build:marketing": "npm run build -w packages/marketing",
-    "dev:marketing": "npm run dev -w packages/marketing",
     "test": "npm run test --workspaces",
     "test:all": "npm run test --workspaces",
     "test:coverage": "npm run test:coverage --workspaces",

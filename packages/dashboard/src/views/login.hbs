@@ -66,6 +66,10 @@
       {{#unless mode}}
       {{> login-form showUsername=true usernameId="username" passwordId="password" buttonLabel=(t "auth.signInButton") csrfToken=csrfToken returnTo=returnTo error=error username=username}}
       {{/unless}}
+
+      <p class="login-card__learn-more">
+        {{{t "auth.learnMore"}}}
+      </p>
     </div>
     <p class="app-version">{{appVersion}}</p>
 </div>

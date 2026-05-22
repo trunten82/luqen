@@ -933,6 +933,28 @@ html[data-density="plain"] .verdict-line__sentence {
   max-width: 36ch;
 }
 
+/* ---- Login learn-more link (Phase 58 R5) ---- */
+.login-card__learn-more {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.login-card__learn-more a {
+  color: var(--id-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.login-card__learn-more a:hover,
+.login-card__learn-more a:focus-visible {
+  color: var(--id-accent-hover);
+}
+
 /* ============================================================
    Glossary — inline definition affordance (Phase 58).
    <dfn data-glossary="key"> renders the term with a dotted

@@ -103,6 +103,7 @@
     "usernameLabel": "Username",
     "passwordLabel": "Password",
     "signInButton": "Sign in",
+    "learnMore": "Not a user yet? Learn what Luqen is on <a href=\"https://github.com/trunten82/luqen\" rel=\"noopener\">GitHub</a>.",
     "signInWithApiKey": "Sign in with API key",
     "signInWithPassword": "Or sign in with password",
     "signInFailed": "Sign in failed",
