@@ -10,7 +10,7 @@
 
 {{#if brandWidget}}
   <article class="stat-card brand-score-widget" role="listitem"
-           style="border-left: 3px solid var(--status-warning)">
+          >
     <div class="brand-score-widget__inner">
       {{! -- Big number with color band -- }}
       <span class="brand-panel__big-number {{brandWidget.scoreClass}}"
@@ -66,7 +66,7 @@
 {{else}}
   {{! -- Variant 1: No brand scores yet -- }}
   <article class="stat-card brand-score-widget brand-score-widget--empty" role="listitem"
-           style="border-left: 3px solid var(--border-color)">
+          >
     <span class="stat-card__value text-muted" style="font-size:var(--font-size-xl);">&mdash;</span>
     <span class="stat-card__label">{{t "home.brandScore"}}</span>
     <span class="text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-xs);text-align:center;">
