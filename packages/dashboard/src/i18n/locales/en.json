@@ -1,6 +1,11 @@
 {
   "common": {
     "appName": "Luqen",
+    "density": {
+      "label": "View density",
+      "dense": "Dense",
+      "plain": "Plain"
+    },
     "signIn": "Sign in",
     "signOut": "Sign out",
     "save": "Save",
@@ -236,6 +241,7 @@
     "jurisdictionTypeBadge": "J"
   },
   "reports": {
+    "verdictEyebrow": "Verdict",
     "title": "Reports",
     "searchByUrl": "Search by URL",
     "filterPlaceholder": "Filter by site URL…",

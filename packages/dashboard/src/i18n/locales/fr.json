@@ -41,7 +41,12 @@
     "scope": "Portée",
     "owner": "Propriétaire",
     "service": "Service",
-    "select": "Sélectionner"
+    "select": "Sélectionner",
+    "density": {
+      "label": "View density",
+      "dense": "Dense",
+      "plain": "Plain"
+    }
   },
   "nav": {
     "overview": "Aperçu",

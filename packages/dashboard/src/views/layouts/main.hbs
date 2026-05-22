@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{locale}}">
+<html lang="{{locale}}" data-density="{{density}}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Luqen — Accessibility Scanner">
   <title>{{#if pageTitle}}{{pageTitle}} — {{/if}}{{t "common.appName"}}</title>
-  <link rel="stylesheet" href="/static/style.css?v=2.3.1">
+  <link rel="stylesheet" href="/static/style.css?v=3.4.0">
   <script>
 (function(){
   var s=localStorage.getItem('luqen-theme');
@@ -41,6 +41,7 @@
       </svg>
     </button>
     <span class="app-header__brand">{{t "common.appName"}}</span>
+    {{> density-toggle density=density}}
     <span class="app-header__user">{{user.username}}</span>
   </header>
   {{/if}}
@@ -83,6 +84,28 @@
         // Redirect main swap to throwaway div — only OOB swaps processed
         event.detail.target = document.createElement('div');
       }
+    });
+
+    /* Density toggle — Phase 57. CSP-safe click handler. */
+    document.addEventListener('click', function(e) {
+      var db = e.target.closest('[data-action="setDensity"]');
+      if (!db) return;
+      var value = db.getAttribute('data-density');
+      if (value !== 'plain' && value !== 'dense') return;
+      document.documentElement.setAttribute('data-density', value);
+      document.querySelectorAll('.density-toggle__btn').forEach(function(b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-density') === value ? 'true' : 'false');
+      });
+      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      fetch('/account/density', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'x-csrf-token': csrfMeta ? csrfMeta.getAttribute('content') : '',
+        },
+        body: 'density=' + encodeURIComponent(value),
+        credentials: 'same-origin',
+      }).catch(function() { /* non-fatal — DOM state stays in sync this session */ });
     });
 
     /* Toggle show/hide via data-action="toggle-edit" (CSP-safe) */

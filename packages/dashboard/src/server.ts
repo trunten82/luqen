@@ -855,11 +855,20 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     const flashToast = typeof session?.get === 'function' ? session.get('flashToast') as string | undefined : undefined;
     if (flashToast && typeof session?.set === 'function') { session.set('flashToast', null); }
 
+    // Phase 57 — density preference from cookie. Default: dense.
+    // Parsed from the raw Cookie header to avoid a new plugin dependency.
+    const cookieHeader = request.headers.cookie ?? '';
+    const densityMatch = /(?:^|;\s*)luqen-density=(plain|dense)(?:;|$)/.test(cookieHeader)
+      ? cookieHeader.match(/luqen-density=(plain|dense)/)?.[1]
+      : null;
+    const density: 'plain' | 'dense' = densityMatch === 'plain' ? 'plain' : 'dense';
+
     const originalView = reply.view.bind(reply) as typeof reply.view;
     const isHtmxRequest = request.headers['hx-request'] === 'true';
     reply.view = (page: string, data?: Record<string, unknown>) => {
       const merged = {
         ...data,
+        density,
         // Expose `user` to the shared layout so {{#if user}} in main.hbs can
         // render the Phase 32 agent-drawer partial on every authenticated
         // page. Routes may override by passing their own `user` in `data`.
