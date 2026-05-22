@@ -27,6 +27,7 @@ const ConfigSchema = z.object({
   runner: z.enum(['htmlcs', 'axe']).optional(),
   webserviceUrls: z.array(z.string().url()).optional(),
   jwtPublicKey: z.string().optional(),
+  selfScanId: z.string().optional(),
 }).strict();
 
 export interface DashboardConfig {
@@ -67,6 +68,12 @@ export interface DashboardConfig {
    * "\n" sequences are converted to real newlines for single-line env form.
    */
   readonly jwtPublicKey?: string;
+  /**
+   * Phase 58 R5: scan ID for this dashboard's own self-scan. When set,
+   * the login page surfaces a "Verified by Luqen" badge linking to
+   * /reports/<id>/public. Optional; unset = no badge shown.
+   */
+  readonly selfScanId?: string;
 }
 
 const DEFAULTS: DashboardConfig = {
@@ -149,6 +156,7 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
     jwtPublicKey: process.env['DASHBOARD_JWT_PUBLIC_KEY'] !== undefined
       ? process.env['DASHBOARD_JWT_PUBLIC_KEY'].replace(/\\n/g, '\n')
       : config.jwtPublicKey,
+    selfScanId: process.env['DASHBOARD_SELF_SCAN_ID'] ?? config.selfScanId,
   };
 }
 

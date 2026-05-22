@@ -459,6 +459,105 @@ export async function reportRoutes(
     },
   );
 
+  // GET /reports/:id/public — anonymous public view (Phase 58 R5).
+  // Strips admin chrome, shows the verdict line + summary + per-page issues.
+  // Public iff:
+  //   - scan exists and is completed, AND
+  //   - the org owning the scan has opted in via scan.publicShareEnabled
+  //     OR the scan is marked publicly shareable for this dashboard
+  //     (initial cut: any scan of the dashboard's own host is public).
+  server.get(
+    '/reports/:id/public',
+    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+      if (scan.status !== 'completed') {
+        return reply.code(404).send({ error: 'Report not available' });
+      }
+
+      // Permissive policy for the first cut: only the dashboard's own
+      // self-scans are surfaced. If the scan's siteUrl matches the
+      // request host (i.e. it's a Luqen-of-Luqen scan), allow.
+      const reqHost = request.headers.host ?? '';
+      let allow = false;
+      try {
+        const u = new URL(scan.siteUrl);
+        if (u.host === reqHost) allow = true;
+      } catch { /* fall through */ }
+      if (!allow) {
+        return reply.code(404).send({ error: 'Report not public' });
+      }
+
+      let reportData: ReturnType<typeof normalizeReportData> | null = null;
+      try {
+        const dbReport = await storage.scans.getReport(id);
+        if (dbReport !== null) {
+          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+        } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
+          const raw = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
+          reportData = normalizeReportData(raw, scan);
+        }
+      } catch {
+        return reply.code(500).send({ error: 'Failed to read report data' });
+      }
+      if (reportData === null) {
+        return reply.code(404).send({ error: 'Report data not available' });
+      }
+
+      // Verdict (same logic as the authenticated view).
+      const enrichedFailing = (reportData as { compliance?: { summary?: { failing?: number } } }).compliance?.summary?.failing ?? 0;
+      const enrichedReview = (reportData as { compliance?: { summary?: { needsReview?: number } } }).compliance?.summary?.needsReview ?? 0;
+      const hasCompliance = reportData?.complianceMatrix != null;
+      const errorsCount = reportData?.summary?.byLevel?.error ?? 0;
+      const pagesCount = reportData?.summary?.pagesScanned ?? 0;
+      const pagesPhrase = `${pagesCount} page${pagesCount === 1 ? '' : 's'}`;
+      const errorsPhrase = `${errorsCount} WCAG error${errorsCount === 1 ? '' : 's'}`;
+      let verdictSentence: string;
+      let verdictColourClass: 'fail' | 'warn' | 'pass' | 'info';
+      if (hasCompliance && enrichedFailing > 0) {
+        verdictSentence = `${scan.siteUrl} is non-compliant. ${enrichedFailing} mandatory failure${enrichedFailing === 1 ? '' : 's'}, ${errorsPhrase} across ${pagesPhrase}.`;
+        verdictColourClass = 'fail';
+      } else if (hasCompliance && enrichedReview > 0) {
+        verdictSentence = `${scan.siteUrl} needs review. ${enrichedReview} item${enrichedReview === 1 ? '' : 's'} require manual review, ${errorsPhrase} across ${pagesPhrase}.`;
+        verdictColourClass = 'warn';
+      } else if (hasCompliance && errorsCount > 0) {
+        verdictSentence = `${scan.siteUrl} satisfies the regulations it was checked against, but has ${errorsPhrase} across ${pagesPhrase} that fall outside the mandatory ruleset.`;
+        verdictColourClass = 'warn';
+      } else if (hasCompliance) {
+        verdictSentence = `${scan.siteUrl} is compliant. No mandatory failures and no WCAG errors across ${pagesPhrase}.`;
+        verdictColourClass = 'pass';
+      } else if (errorsCount > 0) {
+        verdictSentence = `${scan.siteUrl} has ${errorsPhrase} across ${pagesPhrase}. No jurisdictional check was applied.`;
+        verdictColourClass = 'fail';
+      } else {
+        verdictSentence = `${scan.siteUrl} has no WCAG issues across ${pagesPhrase}.`;
+        verdictColourClass = 'pass';
+      }
+      const standardLabel = (scan.standard ?? '').replace(/^WCAG/i, 'WCAG ').replace(/A{1,3}$/, (m) => ` Level ${m}`).trim();
+      const verdictMeta = [
+        `Scanned ${scan.completedAt ? new Date(scan.completedAt).toISOString().slice(0, 10) : '—'}`,
+        standardLabel || scan.standard,
+      ].filter(Boolean).join(' · ');
+
+      const handlebars = (await import('handlebars')).default;
+      const viewsDir = resolve(join(__dirname, '..', 'views'));
+      const tmpl = handlebars.compile(await readFile(join(viewsDir, 'report-public.hbs'), 'utf-8'));
+      const html = tmpl({
+        scan: { ...scan, jurisdictions: scan.jurisdictions.join(', ') },
+        reportData,
+        verdictSentence,
+        verdictColourClass,
+        verdictMeta,
+        badgeSrc: `/api/v1/badge/${id}.svg`,
+      });
+      return reply.type('text/html').send(html);
+    },
+  );
+
   // DELETE /reports/:id — delete scan record and files
   server.delete(
     '/reports/:id',

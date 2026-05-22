@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{scan.siteUrl}} — Luqen accessibility report</title>
+  <meta name="description" content="{{verdictSentence}}">
+  <meta name="robots" content="index, follow">
+  <link rel="stylesheet" href="/static/style.css?v=3.4.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <meta property="og:title" content="Luqen accessibility report — {{scan.siteUrl}}">
+  <meta property="og:description" content="{{verdictSentence}}">
+  <meta property="og:type" content="article">
+</head>
+<body class="report-public">
+  <main class="report-public__main">
+
+    <header class="report-public__brand">
+      <a href="/" class="report-public__brand-link" aria-label="Luqen">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M6 4 V18 a8 8 0 0 0 8 8 h4 a8 8 0 0 0 8 -8 V4" stroke="currentColor" stroke-width="5" stroke-linecap="square" fill="none"/>
+          <rect x="23" y="4" width="3" height="3" fill="#d6c43c"/>
+        </svg>
+        <span>Luqen</span>
+      </a>
+      <span class="report-public__brand-label">Accessibility report</span>
+    </header>
+
+    <section class="verdict-line" role="region" aria-label="Verdict">
+      <p class="verdict-line__eyebrow verdict-line__eyebrow--{{verdictColourClass}}">Verdict</p>
+      <p class="verdict-line__sentence">{{verdictSentence}}</p>
+      <p class="verdict-line__meta">{{verdictMeta}}</p>
+    </section>
+
+    <section class="report-public__summary" aria-label="Scan summary">
+      <dl class="report-public__summary-grid">
+        <div class="report-public__summary-row">
+          <dt>Pages</dt><dd>{{reportData.summary.pagesScanned}}</dd>
+        </div>
+        <div class="report-public__summary-row">
+          <dt>Issues</dt><dd>{{reportData.summary.totalIssues}}</dd>
+        </div>
+        <div class="report-public__summary-row">
+          <dt>Errors</dt><dd>{{reportData.summary.byLevel.error}}</dd>
+        </div>
+        <div class="report-public__summary-row">
+          <dt>Warnings</dt><dd>{{reportData.summary.byLevel.warning}}</dd>
+        </div>
+        <div class="report-public__summary-row">
+          <dt>Notices</dt><dd>{{reportData.summary.byLevel.notice}}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="report-public__badge-section" aria-labelledby="badge-heading">
+      <h2 id="badge-heading" class="report-public__h2">Embed this verdict</h2>
+      <p>Paste this snippet anywhere on your site to display the live "Verified by Luqen" badge. The badge re-renders against the latest scan automatically.</p>
+      <div class="report-public__badge-preview">
+        <a href="{{scan.siteUrl}}" rel="noopener">
+          <img src="{{badgeSrc}}" alt="{{verdictSentence}}" width="180" height="32">
+        </a>
+      </div>
+      <pre class="fix-proposal__code"><code>&lt;a href=&quot;https://{{lookup scan 'siteUrl'}}&quot; rel=&quot;noopener&quot;&gt;
+  &lt;img src=&quot;https://luqen.alessandrolanna.it{{badgeSrc}}&quot;
+       alt=&quot;Verified by Luqen&quot; width=&quot;180&quot; height=&quot;32&quot;&gt;
+&lt;/a&gt;</code></pre>
+    </section>
+
+    <footer class="report-public__footer">
+      <p>
+        Verified by <a href="/">Luqen</a>
+        · ISO date {{verdictMeta}}
+        · This report is public for the dashboard's own self-scan.
+        Customer reports are private by default.
+      </p>
+    </footer>
+
+  </main>
+</body>
+</html>
