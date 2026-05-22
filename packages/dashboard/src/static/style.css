@@ -133,6 +133,23 @@
   --space-7: 48px;
   --space-8: 72px;
 
+  /* --- Legacy spacing aliases (R1 transition) — used by ~hundreds of rules; do not remove --- */
+  --space-xs: var(--space-1);
+  --space-sm: var(--space-2);
+  --space-md: var(--space-4);
+  --space-lg: var(--space-5);
+  --space-xl: var(--space-6);
+  --space-2xl: var(--space-7);
+
+  /* --- Legacy radius / weight / hover / text aliases (R1 transition) --- */
+  --radius-sm: var(--border-radius-sm);
+  --radius-md: var(--border-radius);
+  --radius-lg: var(--border-radius-lg);
+  --fw-medium: 500;
+  --fw-bold: 700;
+  --bg-hover: var(--bg-muted);
+  --text: var(--text-primary);
+
   /* Typography */
   --font-display: 'Inter Display', 'Inter', system-ui, sans-serif;
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
