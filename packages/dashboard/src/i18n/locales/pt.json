@@ -103,7 +103,8 @@
     "invalidApiKey": "Chave API inválida.",
     "usernameRequired": "O nome de usuário é obrigatório.",
     "passwordRequired": "A senha é obrigatória.",
-    "invalidCredentials": "Nome de usuário ou senha inválidos."
+    "invalidCredentials": "Nome de usuário ou senha inválidos.",
+    "learnMore": "Not a user yet? Learn what Luqen is on <a href=\"https://github.com/trunten82/luqen\" rel=\"noopener\">GitHub</a>."
   },
   "users": {
     "title": "Usuários do Painel",

@@ -103,7 +103,8 @@
     "invalidApiKey": "Ungültiger API-Schlüssel.",
     "usernameRequired": "Benutzername ist erforderlich.",
     "passwordRequired": "Passwort ist erforderlich.",
-    "invalidCredentials": "Ungültiger Benutzername oder Passwort."
+    "invalidCredentials": "Ungültiger Benutzername oder Passwort.",
+    "learnMore": "Not a user yet? Learn what Luqen is on <a href=\"https://github.com/trunten82/luqen\" rel=\"noopener\">GitHub</a>."
   },
   "users": {
     "title": "Dashboard-Benutzer",
