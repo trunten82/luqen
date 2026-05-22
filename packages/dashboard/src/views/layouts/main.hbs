@@ -86,6 +86,76 @@
       }
     });
 
+    /* Glossary — Phase 58. Lazy-load on first hover/focus of any
+       [data-glossary] element. Definitions rendered into a single
+       singleton tooltip; semantic <dfn> still in DOM for screen
+       readers. */
+    (function() {
+      var defs = null, pending = null, tip = null, currentEl = null;
+      function loadDefs() {
+        if (defs) return Promise.resolve(defs);
+        if (pending) return pending;
+        pending = fetch('/api/v1/glossary', { credentials: 'same-origin' })
+          .then(function(r) { return r.ok ? r.json() : {}; })
+          .then(function(json) { defs = json || {}; return defs; })
+          .catch(function() { defs = {}; return defs; });
+        return pending;
+      }
+      function ensureTip() {
+        if (tip) return tip;
+        tip = document.createElement('div');
+        tip.className = 'glossary-tip';
+        tip.setAttribute('role', 'tooltip');
+        tip.hidden = true;
+        document.body.appendChild(tip);
+        return tip;
+      }
+      function show(el) {
+        var key = el.getAttribute('data-glossary');
+        if (!key) return;
+        currentEl = el;
+        loadDefs().then(function(d) {
+          if (currentEl !== el) return;
+          var entry = d && d[key];
+          if (!entry) return;
+          var t = ensureTip();
+          while (t.firstChild) t.removeChild(t.firstChild);
+          var label = document.createElement('strong');
+          label.textContent = entry.label || key;
+          var sep = document.createTextNode(' · ');
+          var body = document.createTextNode(entry.definition || '');
+          t.appendChild(label); t.appendChild(sep); t.appendChild(body);
+          t.hidden = false;
+          var rect = el.getBoundingClientRect();
+          var top = rect.bottom + window.scrollY + 4;
+          var left = Math.max(8, Math.min(window.innerWidth - 320 - 8, rect.left + window.scrollX));
+          t.style.top = top + 'px';
+          t.style.left = left + 'px';
+        });
+      }
+      function hide() {
+        currentEl = null;
+        if (tip) tip.hidden = true;
+      }
+      document.addEventListener('mouseover', function(e) {
+        var el = e.target.closest('[data-glossary]');
+        if (el) show(el);
+      });
+      document.addEventListener('mouseout', function(e) {
+        var el = e.target.closest('[data-glossary]');
+        if (el && (!e.relatedTarget || !el.contains(e.relatedTarget))) hide();
+      });
+      document.addEventListener('focusin', function(e) {
+        var el = e.target.closest('[data-glossary]');
+        if (el) show(el);
+      });
+      document.addEventListener('focusout', function(e) {
+        var el = e.target.closest('[data-glossary]');
+        if (el) hide();
+      });
+      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') hide(); });
+    })();
+
     /* Density toggle — Phase 57. CSP-safe click handler. */
     document.addEventListener('click', function(e) {
       var db = e.target.closest('[data-action="setDensity"]');

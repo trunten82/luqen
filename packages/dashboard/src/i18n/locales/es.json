@@ -975,7 +975,8 @@
     "brandScoreDimensions2of3": "[ES] 2 of 3 dimensions",
     "brandScoreDimensions1of3": "[ES] 1 of 3 dimensions",
     "brandScoreNotAvailable": "[ES] Brand score not available for this scan",
-    "brandScoreIntroduced": "[ES] Brand scoring was introduced in v2.11.0"
+    "brandScoreIntroduced": "[ES] Brand scoring was introduced in v2.11.0",
+    "tabsLabel": "Report sections"
   },
   "reportCompare": {
     "title": "Comparación de Informes",
