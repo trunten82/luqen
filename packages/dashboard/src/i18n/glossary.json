@@ -69,11 +69,11 @@
   },
   "ada": {
     "label": "ADA",
-    "definition": "Americans with Disabilities Act — US federal civil-rights law. Title III is regularly applied to public-accommodation websites; the DOJ's 2024 final rule references WCAG 2.1 AA for state and local government websites."
+    "definition": "Americans with Disabilities Act — US federal civil-rights law. Title II's 2024 DOJ final rule requires state and local government websites to meet WCAG 2.1 AA. Title III governs private 'places of public accommodation' and is enforced via case law, where courts regularly cite WCAG as the conformance benchmark even though no DOJ regulation mandates it for private sites."
   },
   "psbar": {
     "label": "PSBAR",
-    "definition": "Public Sector Bodies (Websites and Mobile Applications) (No. 2) Accessibility Regulations 2018 — UK regulations requiring public-sector websites and mobile apps to meet WCAG 2.2 AA, publish an accessibility statement, and provide a complaints feedback mechanism."
+    "definition": "Public Sector Bodies (Websites and Mobile Applications) (No. 2) Accessibility Regulations 2018 — UK regulations requiring public-sector websites and mobile apps to meet the EN 301 549 standard (which cites WCAG 2.1 AA), publish an accessibility statement, and provide a feedback mechanism for complaints."
   },
   "en-301-549": {
     "label": "EN 301 549",
