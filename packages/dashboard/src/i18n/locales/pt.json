@@ -975,7 +975,8 @@
     "brandScoreDimensions2of3": "[PT] 2 of 3 dimensions",
     "brandScoreDimensions1of3": "[PT] 1 of 3 dimensions",
     "brandScoreNotAvailable": "[PT] Brand score not available for this scan",
-    "brandScoreIntroduced": "[PT] Brand scoring was introduced in v2.11.0"
+    "brandScoreIntroduced": "[PT] Brand scoring was introduced in v2.11.0",
+    "tabsLabel": "Report sections"
   },
   "reportCompare": {
     "title": "Comparação de Relatórios",

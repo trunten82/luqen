@@ -933,6 +933,238 @@ html[data-density="plain"] .verdict-line__sentence {
   max-width: 36ch;
 }
 
+/* ============================================================
+   Glossary — inline definition affordance (Phase 58).
+   <dfn data-glossary="key"> renders the term with a dotted
+   underline. Tooltip is positioned by JS in main.hbs.
+   ============================================================ */
+dfn[data-glossary],
+[data-glossary] {
+  font-style: normal;
+  border-bottom: 1px dotted var(--text-muted);
+  cursor: help;
+  text-decoration: none;
+}
+
+html[data-density="plain"] dfn[data-glossary],
+html[data-density="plain"] [data-glossary] {
+  border-bottom-style: solid;
+}
+
+.glossary-tip {
+  position: absolute;
+  z-index: 120;
+  max-width: 320px;
+  padding: var(--space-3);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.glossary-tip strong {
+  font-weight: 600;
+  color: var(--id-accent);
+  letter-spacing: 0;
+}
+
+.glossary-tip[hidden] { display: none; }
+
+/* ============================================================
+   Fix proposals — two-pane (R5).
+   Left: rationale (prose + provenance).
+   Right: diff (mono code, citron evidence stripe on the wrapper).
+   ============================================================ */
+.fix-proposal {
+  padding: var(--space-5) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.fix-proposal:last-child { border-bottom: 0; }
+
+.fix-proposal__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.fix-proposal__check-label { display: inline-flex; align-items: center; }
+.fix-proposal__check-label input { width: 16px; height: 16px; accent-color: var(--id-accent); }
+
+.fix-proposal__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.fix-proposal__severity--error   { color: var(--status-error); }
+.fix-proposal__severity--warning { color: var(--status-warning); }
+.fix-proposal__severity--notice  { color: var(--status-info); }
+
+.fix-proposal__effort,
+.fix-proposal__confidence { color: var(--text-muted); }
+
+.fix-proposal__panes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .fix-proposal__panes { grid-template-columns: 1fr; }
+}
+
+/* ── Rationale pane ── */
+.fix-proposal__description {
+  font-size: var(--font-size-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-primary);
+  max-width: 60ch;
+  margin: 0 0 var(--space-4);
+}
+
+.fix-proposal__provenance {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fix-proposal__provenance-row {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.fix-proposal__provenance-row dt {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 500;
+  padding-top: 2px;
+}
+
+.fix-proposal__provenance-row dd {
+  margin: 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.fix-proposal__provenance-row code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  color: var(--text-secondary);
+}
+
+.fix-proposal__context-toggle {
+  margin-top: var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.fix-proposal__context-toggle summary {
+  cursor: pointer;
+  color: var(--id-accent);
+  font-weight: 500;
+  padding: var(--space-2) 0;
+  list-style: none;
+}
+
+.fix-proposal__context-toggle summary::-webkit-details-marker { display: none; }
+.fix-proposal__context-toggle summary::before {
+  content: '+';
+  display: inline-block;
+  width: 1em;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.fix-proposal__context-toggle[open] summary::before { content: '−'; }
+
+.fix-proposal__context {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  overflow-x: auto;
+}
+
+/* ── Diff pane ── */
+.fix-proposal__diff {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-left: 2px solid var(--id-evidence);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+
+.fix-proposal__diff-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-muted);
+}
+
+.fix-proposal__diff-label {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fix-proposal__copy {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--border-radius-sm);
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.fix-proposal__copy:hover,
+.fix-proposal__copy:focus-visible {
+  background: var(--bg-page);
+  border-color: var(--text-secondary);
+}
+
+.fix-proposal__code {
+  margin: 0;
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  overflow-x: auto;
+  white-space: pre;
+}
+
 /* ---- Scan-new advanced sections (R3 strip-down) ---- */
 .scan-advanced {
   margin-bottom: var(--space-5);
@@ -3354,6 +3586,79 @@ html[data-density="plain"] .data-table th {
   border-bottom-color: var(--accent);
 }
 .rpt-tab-panel--hidden { display: none; }
+
+/* ── Tab shell — side-rail layout (Phase 58 R5) ────────────────────────
+   Top-level rpt-tabs (those with .rpt-tabs--rail) flip to a vertical
+   nav rail on the left. Sub-tabs inside panels keep the original
+   horizontal layout. */
+.rpt-shell {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--space-6);
+  align-items: start;
+  margin-top: var(--space-4);
+}
+
+.rpt-shell__panels { min-width: 0; }
+
+.rpt-tabs--rail {
+  flex-direction: column;
+  gap: 0;
+  border-bottom: 0;
+  border-right: 1px solid var(--border-strong);
+  margin: 0;
+  padding-right: var(--space-3);
+  position: sticky;
+  top: 76px; /* below app-header (56px) + breathing room */
+  align-self: start;
+}
+
+.rpt-tabs--rail .rpt-tab {
+  text-align: left;
+  padding: var(--space-3) var(--space-3);
+  border: 0;
+  border-right: 2px solid transparent;
+  margin: 0 -1px 0 0;
+  border-radius: 0;
+  font-size: var(--font-size-sm);
+}
+
+.rpt-tabs--rail .rpt-tab:hover,
+.rpt-tabs--rail .rpt-tab:focus-visible {
+  background-color: var(--bg-muted);
+  color: var(--text-primary);
+}
+
+.rpt-tabs--rail .rpt-tab--active {
+  color: var(--id-accent);
+  border-right-color: var(--id-evidence);
+  border-bottom-color: transparent;
+  background-color: var(--id-accent-tint);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .rpt-shell { grid-template-columns: 1fr; gap: var(--space-4); }
+  .rpt-tabs--rail {
+    flex-direction: row;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-strong);
+    padding-right: 0;
+    padding-bottom: 0;
+    position: static;
+    overflow-x: auto;
+  }
+  .rpt-tabs--rail .rpt-tab {
+    border-right: 0;
+    border-bottom: 2px solid transparent;
+    margin: 0 0 -1px;
+    white-space: nowrap;
+  }
+  .rpt-tabs--rail .rpt-tab--active {
+    border-right-color: transparent;
+    border-bottom-color: var(--id-evidence);
+  }
+}
 
 /* ── Compliance traffic light banner ──────────────────────── */
 .rpt-compliance-banner {

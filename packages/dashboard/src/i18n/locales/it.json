@@ -984,7 +984,8 @@
     "brandDrilldownCount": "[IT] failing elements",
     "brandDrilldownClose": "[IT] Close",
     "brandDrilldownAriaLabel": "[IT] View failing elements for",
-    "brandDrilldownClickHint": "[IT] Click to see failing elements"
+    "brandDrilldownClickHint": "[IT] Click to see failing elements",
+    "tabsLabel": "Report sections"
   },
   "reportCompare": {
     "title": "Confronto Report",

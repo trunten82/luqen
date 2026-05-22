@@ -1190,6 +1190,7 @@
     "errors": "Errors",
     "warnings": "Warnings",
     "notices": "Notices",
+    "tabsLabel": "Report sections",
     "tabCompliance": "Compliance",
     "subtabByJurisdiction": "By Jurisdiction",
     "subtabByRegulation": "By Regulation",
@@ -1519,6 +1520,7 @@
     "gitHostLocal": "Local"
   },
   "fixes": {
+    "selectFix": "Select fix",
     "backToReport": "Back to Report",
     "title": "Fix Proposals",
     "site": "Site",
