@@ -513,9 +513,13 @@ export async function reportRoutes(
       const enrichedReview = (reportData as { compliance?: { summary?: { needsReview?: number } } }).compliance?.summary?.needsReview ?? 0;
       const hasCompliance = reportData?.complianceMatrix != null;
       const errorsCount = reportData?.summary?.byLevel?.error ?? 0;
+      const warningsCount = reportData?.summary?.byLevel?.warning ?? 0;
+      const noticesCount = reportData?.summary?.byLevel?.notice ?? 0;
+      const issuesCount = reportData?.summary?.totalIssues ?? 0;
       const pagesCount = reportData?.summary?.pagesScanned ?? 0;
       const pagesPhrase = `${pagesCount} page${pagesCount === 1 ? '' : 's'}`;
       const errorsPhrase = `${errorsCount} WCAG error${errorsCount === 1 ? '' : 's'}`;
+      const noticesPhrase = `${warningsCount + noticesCount} non-blocking issue${(warningsCount + noticesCount) === 1 ? '' : 's'}`;
       let verdictSentence: string;
       let verdictColourClass: 'fail' | 'warn' | 'pass' | 'info';
       if (hasCompliance && enrichedFailing > 0) {
@@ -533,6 +537,12 @@ export async function reportRoutes(
       } else if (errorsCount > 0) {
         verdictSentence = `${scan.siteUrl} has ${errorsPhrase} across ${pagesPhrase}. No jurisdictional check was applied.`;
         verdictColourClass = 'fail';
+      } else if (warningsCount + noticesCount > 0) {
+        verdictSentence = `${scan.siteUrl} has no blocking errors across ${pagesPhrase}, but ${noticesPhrase} for manual review.`;
+        verdictColourClass = 'pass';
+      } else if (issuesCount > 0) {
+        verdictSentence = `${scan.siteUrl} has ${issuesCount} WCAG issue${issuesCount === 1 ? '' : 's'} across ${pagesPhrase}, no blocking errors.`;
+        verdictColourClass = 'warn';
       } else {
         verdictSentence = `${scan.siteUrl} has no WCAG issues across ${pagesPhrase}.`;
         verdictColourClass = 'pass';
