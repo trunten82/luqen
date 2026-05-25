@@ -40,6 +40,7 @@ import { generateApiKey, storeApiKey } from './auth/api-key.js';
 import { exportRoutes } from './routes/api/export.js';
 import { dataApiRoutes } from './routes/api/data.js';
 import { brandingApiRoutes } from './routes/api/branding.js';
+import { wpNetworkApiRoutes } from './routes/api/wp-network.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { repoRoutes } from './routes/repos.js';
@@ -1035,6 +1036,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Branding API routes ──────────────────────────────────────────────────
   await brandingApiRoutes(server, storage);
+
+  // ── WordPress network/fleet API (Phase 61) ──────────────────────────────
+  await wpNetworkApiRoutes(server, storage);
 
   // ── Setup API (create admin user via API key) ──────────────────────────
   await setupRoutes(server, storage, authService);

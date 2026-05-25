@@ -28,6 +28,8 @@ import {
   SqliteOauthConsentRepository,
   SqliteOauthSigningKeyRepository,
   SqliteNotificationTemplateRepository,
+  SqliteWpSitesRepository,
+  SqliteWpUserLinksRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -61,6 +63,8 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly oauthConsents: SqliteOauthConsentRepository;
   readonly oauthSigningKeys: SqliteOauthSigningKeyRepository;
   readonly notificationTemplates: SqliteNotificationTemplateRepository;
+  readonly wpSites: SqliteWpSitesRepository;
+  readonly wpUserLinks: SqliteWpUserLinksRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -90,6 +94,8 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.oauthConsents = new SqliteOauthConsentRepository(this.db);
     this.oauthSigningKeys = new SqliteOauthSigningKeyRepository(this.db);
     this.notificationTemplates = new SqliteNotificationTemplateRepository(this.db);
+    this.wpSites = new SqliteWpSitesRepository(this.db);
+    this.wpUserLinks = new SqliteWpUserLinksRepository(this.db);
   }
 
   async connect(): Promise<void> {

@@ -24,6 +24,7 @@ import type { OauthRefreshRepository } from './interfaces/oauth-refresh-reposito
 import type { OauthConsentRepository } from './interfaces/oauth-consent-repository.js';
 import type { OauthSigningKeyRepository } from './interfaces/oauth-signing-key-repository.js';
 import type { NotificationTemplateRepository } from './interfaces/notification-template-repository.js';
+import type { WpSitesRepository, WpUserLinksRepository } from './interfaces/wp-network-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -58,4 +59,6 @@ export interface StorageAdapter {
   readonly oauthConsents: OauthConsentRepository;
   readonly oauthSigningKeys: OauthSigningKeyRepository;
   readonly notificationTemplates: NotificationTemplateRepository;
+  readonly wpSites: WpSitesRepository;
+  readonly wpUserLinks: WpUserLinksRepository;
 }
