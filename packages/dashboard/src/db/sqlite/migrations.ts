@@ -1594,4 +1594,44 @@ CREATE TABLE IF NOT EXISTS notification_template_history (
 );
     `,
   },
+  {
+    id: '063',
+    name: 'wp-network-fleet',
+    sql: `
+-- Phase 61 — WordPress Network Mode foundation.
+-- wp_sites: every WordPress install that has connected via the plugin's
+--   OAuth client. Identified by (oauth_client_id, url) so re-registering
+--   the same site under the same client is idempotent.
+-- wp_user_links: maps a WP user (site_url + wp_user_id) to a dashboard
+--   user_id, so org-scoped fix/scan attribution can resolve across sites.
+CREATE TABLE IF NOT EXISTS wp_sites (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  oauth_client_id TEXT NOT NULL,
+  url TEXT NOT NULL,
+  wp_version TEXT,
+  plugin_version TEXT,
+  status TEXT NOT NULL DEFAULT 'active',     -- 'active' | 'stale'
+  last_seen_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(oauth_client_id, url)
+);
+CREATE INDEX IF NOT EXISTS idx_wp_sites_org ON wp_sites(org_id);
+CREATE INDEX IF NOT EXISTS idx_wp_sites_status ON wp_sites(status, last_seen_at);
+
+CREATE TABLE IF NOT EXISTS wp_user_links (
+  id TEXT PRIMARY KEY,
+  site_url TEXT NOT NULL,
+  wp_user_id INTEGER NOT NULL,
+  wp_login TEXT NOT NULL,
+  email TEXT NOT NULL,
+  dashboard_user_id TEXT,                    -- NULL when no matching dashboard user
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(site_url, wp_user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_wp_user_links_email ON wp_user_links(email);
+CREATE INDEX IF NOT EXISTS idx_wp_user_links_dashboard_user ON wp_user_links(dashboard_user_id);
+    `,
+  },
 ];

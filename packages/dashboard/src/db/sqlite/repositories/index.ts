@@ -24,3 +24,5 @@ export { SqliteOauthRefreshRepository } from './oauth-refresh-repository.js';
 export { SqliteOauthConsentRepository } from './oauth-consent-repository.js';
 export { SqliteOauthSigningKeyRepository } from './oauth-signing-key-repository.js';
 export { SqliteNotificationTemplateRepository } from './notification-template-repository.js';
+export { SqliteWpSitesRepository } from './wp-sites-repository.js';
+export { SqliteWpUserLinksRepository } from './wp-user-links-repository.js';
