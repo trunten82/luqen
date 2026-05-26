@@ -27,6 +27,7 @@ import type { NotificationTemplateRepository } from './interfaces/notification-t
 import type { WpSitesRepository, WpUserLinksRepository } from './interfaces/wp-network-repository.js';
 import type { SiteBadgesRepository } from './interfaces/site-badges-repository.js';
 import type { TeamOrgLinkRepository } from './interfaces/team-org-link-repository.js';
+import type { CoordinatedPrRepository } from './interfaces/coordinated-pr-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -65,4 +66,5 @@ export interface StorageAdapter {
   readonly wpUserLinks: WpUserLinksRepository;
   readonly siteBadges: SiteBadgesRepository;
   readonly teamOrgLinks: TeamOrgLinkRepository;
+  readonly coordinatedPrs: CoordinatedPrRepository;
 }

@@ -22,3 +22,13 @@ export type { OauthRefreshRepository } from './oauth-refresh-repository.js';
 export type { OauthConsentRepository } from './oauth-consent-repository.js';
 export type { OauthSigningKeyRepository } from './oauth-signing-key-repository.js';
 export type { NotificationTemplateRepository } from './notification-template-repository.js';
+export type {
+  CoordinatedPrRepository,
+  CoordinatedPr,
+  CoordinatedPrLeg,
+  CoordinatedPrStatus,
+  CoordinatedPrLegStatus,
+  CoordinatedPrApprovalStatus,
+  CreateCoordinatedPrInput,
+  UpdateLegPatch,
+} from './coordinated-pr-repository.js';

@@ -32,6 +32,7 @@ import {
   SqliteWpUserLinksRepository,
   SqliteSiteBadgesRepository,
   SqliteTeamOrgLinkRepository,
+  SqliteCoordinatedPrRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -69,6 +70,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly wpUserLinks: SqliteWpUserLinksRepository;
   readonly siteBadges: SqliteSiteBadgesRepository;
   readonly teamOrgLinks: SqliteTeamOrgLinkRepository;
+  readonly coordinatedPrs: SqliteCoordinatedPrRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -102,6 +104,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.wpUserLinks = new SqliteWpUserLinksRepository(this.db);
     this.siteBadges = new SqliteSiteBadgesRepository(this.db);
     this.teamOrgLinks = new SqliteTeamOrgLinkRepository(this.db);
+    this.coordinatedPrs = new SqliteCoordinatedPrRepository(this.db);
   }
 
   async connect(): Promise<void> {

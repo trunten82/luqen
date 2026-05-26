@@ -1726,4 +1726,48 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_team_org_link_invites_pending
   WHERE status = 'pending';
     `,
   },
+  {
+    id: '068',
+    name: 'coordinated-prs',
+    sql: `
+-- Phase 62.2 — Coordinated multi-repo PRs.
+-- One logical PR fans out to N sites via the plugin's Luqen_Git_Host_Client.
+-- Per-org policy knobs control whether each site must approve before the leg
+-- opens and whether a single failure rolls back the rest.
+
+ALTER TABLE organizations
+  ADD COLUMN coordinated_pr_requires_site_approval INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE organizations
+  ADD COLUMN coordinated_pr_failure_mode TEXT NOT NULL DEFAULT 'best_effort'
+  CHECK (coordinated_pr_failure_mode IN ('best_effort','all_or_nothing'));
+
+CREATE TABLE IF NOT EXISTS coordinated_prs (
+  id         TEXT PRIMARY KEY,
+  org_id     TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  team_id    TEXT REFERENCES teams(id) ON DELETE SET NULL,
+  created_by TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft','opening','partial','complete','rolled_back')),
+  summary    TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_coordinated_prs_org_created
+  ON coordinated_prs(org_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS coordinated_pr_legs (
+  id                 TEXT PRIMARY KEY,
+  coordinated_pr_id  TEXT NOT NULL REFERENCES coordinated_prs(id) ON DELETE CASCADE,
+  site_id            TEXT NOT NULL,
+  host_pr_url        TEXT,
+  host_pr_state      TEXT,
+  last_error         TEXT,
+  leg_status         TEXT NOT NULL DEFAULT 'queued'
+    CHECK (leg_status IN ('queued','opening','opened','failed','rolled_back')),
+  approval_status    TEXT NOT NULL DEFAULT 'pending'
+    CHECK (approval_status IN ('pending','approved','skipped'))
+);
+CREATE INDEX IF NOT EXISTS idx_coordinated_pr_legs_pr
+  ON coordinated_pr_legs(coordinated_pr_id);
+    `,
+  },
 ];

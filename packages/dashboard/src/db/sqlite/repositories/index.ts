@@ -28,3 +28,4 @@ export { SqliteWpSitesRepository } from './wp-sites-repository.js';
 export { SqliteWpUserLinksRepository } from './wp-user-links-repository.js';
 export { SqliteSiteBadgesRepository } from './site-badges-repository.js';
 export { SqliteTeamOrgLinkRepository } from './team-org-link-repository.js';
+export { SqliteCoordinatedPrRepository } from './coordinated-pr-repository.js';
