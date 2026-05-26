@@ -1648,4 +1648,26 @@ CREATE INDEX IF NOT EXISTS idx_scan_records_public_share
   ON scan_records(public_share_enabled) WHERE public_share_enabled = 1;
     `,
   },
+  {
+    id: '065',
+    name: 'site-badges',
+    sql: `
+-- Dynamic badges. The static badge at /api/v1/badge/<scanId>.svg is
+-- pinned to one scan forever; a site_badges row instead resolves the
+-- latest completed scan for (org_id, site_url) on every request so
+-- scheduled scans automatically refresh the verdict.
+-- UNIQUE(org_id, site_url) so re-enabling for the same site is idempotent.
+CREATE TABLE IF NOT EXISTS site_badges (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  site_url TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  UNIQUE(org_id, site_url)
+);
+CREATE INDEX IF NOT EXISTS idx_site_badges_org ON site_badges(org_id);
+CREATE INDEX IF NOT EXISTS idx_site_badges_lookup
+  ON site_badges(org_id, site_url) WHERE enabled = 1;
+    `,
+  },
 ];

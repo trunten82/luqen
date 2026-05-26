@@ -789,6 +789,121 @@
     if (row) markRead(row.getAttribute('data-scan-id'));
   });
 
+  /* ── Share panel (report-detail) — Phase 64 ───────────────────────── */
+  function csrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') || '' : '';
+  }
+  function originUrl(path) {
+    return window.location.origin + path;
+  }
+  function renderStaticSnippet(panel) {
+    var scanId = panel.getAttribute('data-scan-id');
+    var target = panel.querySelector('[data-share-snippet-target="static"]');
+    if (!target) return;
+    var url = originUrl('/api/v1/badge/' + scanId + '.svg');
+    var report = originUrl('/reports/' + scanId + '/public');
+    target.value = '<a href="' + report + '" rel="noopener"><img src="' + url + '" alt="Verified by Luqen" width="180" height="32"></a>';
+  }
+  function renderLiveSnippet(panel, badgeId) {
+    var target = panel.querySelector('[data-share-snippet-target="live"]');
+    if (!target) return;
+    if (!badgeId) { target.value = ''; return; }
+    var url = originUrl('/api/v1/badge/live/' + badgeId + '.svg');
+    target.value = '<img src="' + url + '" alt="Latest accessibility verdict by Luqen" width="180" height="32">';
+  }
+  function setStatus(panel, text, ok) {
+    var el = panel.querySelector('[data-share-status]');
+    if (!el) return;
+    el.textContent = text || '';
+    el.classList.toggle('share-panel__status--error', ok === false);
+  }
+  async function postJson(url, body) {
+    var res = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+  function tShare(panel, key, fallback) {
+    var t = window.luqenI18n && window.luqenI18n.t;
+    return (t && t('share.' + key)) || fallback;
+  }
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest && e.target.closest('[data-action="toggleSharePanel"]');
+    if (!btn) return;
+    var panel = document.getElementById('share-panel');
+    if (!panel) return;
+    var nowHidden = !panel.hasAttribute('hidden') ? true : false;
+    if (nowHidden) {
+      panel.setAttribute('hidden', '');
+      btn.setAttribute('aria-expanded', 'false');
+    } else {
+      panel.removeAttribute('hidden');
+      btn.setAttribute('aria-expanded', 'true');
+      renderStaticSnippet(panel);
+      var liveId = panel.getAttribute('data-live-badge-id');
+      renderLiveSnippet(panel, liveId);
+    }
+  });
+  document.addEventListener('change', async function(e) {
+    var input = e.target.closest && e.target.closest('[data-share-toggle]');
+    if (!input) return;
+    var panel = input.closest('#share-panel');
+    if (!panel) return;
+    var kind = input.getAttribute('data-share-toggle');
+    var enabled = !!input.checked;
+    var scanId = panel.getAttribute('data-scan-id');
+    setStatus(panel, tShare(panel, 'saving', 'Saving…'), true);
+    try {
+      if (kind === 'static') {
+        await postJson('/api/v1/reports/' + scanId + '/public-share', { enabled: enabled });
+        panel.setAttribute('data-public-share-enabled', enabled ? '1' : '0');
+        var sn = panel.querySelector('[data-share-snippet="static"]');
+        if (sn) {
+          if (enabled) { sn.removeAttribute('hidden'); renderStaticSnippet(panel); }
+          else { sn.setAttribute('hidden', ''); }
+        }
+      } else if (kind === 'live') {
+        var body = await postJson('/api/v1/reports/' + scanId + '/site-badge', { enabled: enabled });
+        panel.setAttribute('data-live-badge-id', enabled && body.badgeId ? body.badgeId : '');
+        var sn2 = panel.querySelector('[data-share-snippet="live"]');
+        if (sn2) {
+          if (enabled && body.badgeId) {
+            sn2.removeAttribute('hidden');
+            renderLiveSnippet(panel, body.badgeId);
+          } else {
+            sn2.setAttribute('hidden', '');
+          }
+        }
+      }
+      setStatus(panel, tShare(panel, 'saved', 'Saved'), true);
+    } catch (err) {
+      input.checked = !enabled;
+      setStatus(panel, tShare(panel, 'saveError', 'Could not save'), false);
+    }
+  });
+  document.addEventListener('click', async function(e) {
+    var btn = e.target.closest && e.target.closest('[data-share-copy]');
+    if (!btn) return;
+    var kind = btn.getAttribute('data-share-copy');
+    var panel = btn.closest('#share-panel');
+    if (!panel) return;
+    var target = panel.querySelector('[data-share-snippet-target="' + kind + '"]');
+    if (!target || !target.value) return;
+    try {
+      await navigator.clipboard.writeText(target.value);
+      var orig = btn.textContent;
+      btn.textContent = tShare(panel, 'copied', 'Copied');
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    } catch (err) {
+      target.select();
+    }
+  });
+
   /* ── Sidebar collapse (desktop) — persists to localStorage ────────── */
   // Sidebar is always an overlay — no desktop collapse state needed
 

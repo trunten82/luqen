@@ -1171,6 +1171,23 @@
     "logFailed": "Scan failed:",
     "logReconnecting": "Connection interrupted. Reconnecting…"
   },
+  "share": {
+    "button": "Share",
+    "title": "Share this report",
+    "lede": "Publish a public verdict badge. Toggle off any time to revoke.",
+    "staticTitle": "Static badge — this scan",
+    "staticDesc": "Locks the badge to this scan's verdict. Useful for press, evidence packs, regulator submissions.",
+    "staticToggleLabel": "Enable static badge for this scan",
+    "liveTitle": "Live badge — latest scan for this site",
+    "liveDesc": "Always shows the most recent completed scan for this site in your org. Use with scheduled scans.",
+    "liveToggleLabel": "Enable live badge for this site",
+    "embedSnippet": "Paste this on your site",
+    "copy": "Copy",
+    "copied": "Copied",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveError": "Could not save — try again"
+  },
   "reportDetail": {
     "siteUrl": "Site URL",
     "standard": "Standard",

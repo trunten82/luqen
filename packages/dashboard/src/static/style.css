@@ -6105,3 +6105,133 @@ details[open] > .mt-examples-toggle::before {
   .tool-result-table th,
   .tool-result-table td { padding: var(--space-xs); font-size: 0.85rem; }
 }
+
+/* ============================================================
+   Share panel — report-detail page (Phase 64).
+   Inline disclosure, no modal (per DESIGN.md component-modal rule).
+   ============================================================ */
+.share-panel {
+  margin: var(--space-5) 0;
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+}
+.share-panel[hidden] { display: none; }
+
+.share-panel__head {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.share-panel__title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.012em;
+}
+.share-panel__lede {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.share-panel__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) 0;
+}
+.share-panel__row + .share-panel__row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.share-panel__row-title {
+  margin: 0 0 2px;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.share-panel__row-desc {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  max-width: 56ch;
+}
+
+/* Toggle switch (CSS only, no JS layout coupling). */
+.share-panel__switch { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; }
+.share-panel__switch input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.share-panel__switch-track {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+.share-panel__switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--text-on-accent);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.share-panel__switch input:checked + .share-panel__switch-track {
+  background: var(--id-accent);
+  border-color: var(--id-accent);
+}
+.share-panel__switch input:checked + .share-panel__switch-track::after {
+  transform: translateX(18px);
+}
+.share-panel__switch input:focus-visible + .share-panel__switch-track {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
+}
+
+.share-panel__snippet {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-muted);
+  border-radius: var(--radius-sm, 4px);
+}
+.share-panel__snippet[hidden] { display: none; }
+.share-panel__snippet-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+.share-panel__snippet-code {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  background: var(--bg-page);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 4px);
+  padding: var(--space-2);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  resize: vertical;
+  min-height: 60px;
+}
+
+.share-panel__status {
+  margin: var(--space-3) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  min-height: 1.4em;
+}
+.share-panel__status--error { color: var(--status-error); }

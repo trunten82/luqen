@@ -28315,6 +28315,136 @@
         }
       }
     },
+    "/api/v1/badge/live/{badgeId}.json": {
+      "get": {
+        "tags": [
+          "badge"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "badgeId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "badgeId",
+                    "siteUrl",
+                    "scanId",
+                    "status",
+                    "verifiedAt",
+                    "standard"
+                  ],
+                  "properties": {
+                    "badgeId": {
+                      "type": "string"
+                    },
+                    "siteUrl": {
+                      "type": "string"
+                    },
+                    "scanId": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "verifiedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "standard": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/badge/live/{badgeId}.svg": {
+      "get": {
+        "tags": [
+          "badge"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "badgeId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SVG markup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "SVG markup",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/badge/{scanId}.json": {
       "get": {
         "tags": [
@@ -31565,6 +31695,114 @@
                       "type": "string"
                     },
                     "reportUrl": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/{id}/site-badge": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "enabled"
+                ],
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "badgeId",
+                    "siteUrl",
+                    "enabled",
+                    "badgeUrlSvg",
+                    "badgeUrlJson"
+                  ],
+                  "properties": {
+                    "badgeId": {
+                      "type": "string"
+                    },
+                    "siteUrl": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "badgeUrlSvg": {
+                      "type": "string"
+                    },
+                    "badgeUrlJson": {
                       "type": "string"
                     }
                   }

@@ -181,6 +181,12 @@ export async function reportRoutes(
           : '',
       };
 
+      // Phase 64: live-badge id surfaced so the share panel can render the
+      // right toggle state + embed snippet without a client round-trip.
+      const liveBadge = await storage.siteBadges.getForSite(scan.orgId, scan.siteUrl);
+      const liveBadgeId =
+        liveBadge !== null && liveBadge.enabled ? liveBadge.id : '';
+
       // If scan is not completed, render a status-only view
       if (scan.status !== 'completed') {
         return reply.view('report-detail.hbs', {
@@ -188,6 +194,7 @@ export async function reportRoutes(
           currentPath: `/reports/${id}`,
           user: request.user,
           scan: scanMeta,
+          liveBadgeId,
           reportData: null,
           pdfAvailable: true,
           llmEnabled: llmClient !== null,
@@ -217,6 +224,7 @@ export async function reportRoutes(
           currentPath: `/reports/${id}`,
           user: request.user,
           scan: scanMeta,
+          liveBadgeId,
           reportData: null,
           pdfAvailable: true,
           llmEnabled: llmClient !== null,
@@ -368,6 +376,7 @@ export async function reportRoutes(
         currentPath: `/reports/${id}`,
         user: request.user,
         scan: scanMeta,
+        liveBadgeId,
         reportData,
         complianceStatus: verdictColourClass,
         verdictSentence,
@@ -510,6 +519,72 @@ export async function reportRoutes(
         publicShareEnabled: enabled,
         badgeUrl: `https://${host}/api/v1/badge/${id}.svg`,
         reportUrl: `https://${host}/reports/${id}/public`,
+      });
+    },
+  );
+
+  // POST /api/v1/reports/:id/site-badge — turn the dynamic (live) badge
+  // on or off for the scan's siteUrl. The badge URL stays stable even as
+  // new scans land — the resolver always returns the latest completed
+  // scan for (orgId, siteUrl). Owner-or-admin scoped.
+  server.post(
+    '/api/v1/reports/:id/site-badge',
+    {
+      schema: {
+        tags: ['reports'],
+        params: ReportIdParams,
+        body: Type.Object({ enabled: Type.Boolean() }, { additionalProperties: false }),
+        response: {
+          200: Type.Object({
+            badgeId:     Type.String(),
+            siteUrl:     Type.String(),
+            enabled:     Type.Boolean(),
+            badgeUrlSvg: Type.String(),
+            badgeUrlJson:Type.String(),
+          }),
+          403: Type.Object({ error: Type.String() }),
+          404: Type.Object({ error: Type.String() }),
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const enabled = (request.body as { enabled: boolean }).enabled;
+      const scan = await storage.scans.getScan(id);
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+      const orgId = request.user?.currentOrgId ?? 'system';
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && scan.orgId !== orgId) {
+        return reply.code(403).send({ error: 'Forbidden' });
+      }
+      // Always store under the scan's own org (admins acting on
+      // another org's scan still produce an org-scoped badge).
+      const badge = enabled
+        ? await storage.siteBadges.enable(scan.orgId, scan.siteUrl)
+        : (await storage.siteBadges.getForSite(scan.orgId, scan.siteUrl));
+      if (badge === null) {
+        // disable requested on a site that never had a badge — return a
+        // synthetic disabled response so the client's UI state matches.
+        return reply.send({
+          badgeId: '',
+          siteUrl: scan.siteUrl,
+          enabled: false,
+          badgeUrlSvg: '',
+          badgeUrlJson: '',
+        });
+      }
+      if (!enabled) {
+        await storage.siteBadges.setEnabled(badge.id, scan.orgId, false);
+      }
+      const host = request.headers.host ?? '';
+      return reply.send({
+        badgeId: badge.id,
+        siteUrl: badge.siteUrl,
+        enabled,
+        badgeUrlSvg:  `https://${host}/api/v1/badge/live/${badge.id}.svg`,
+        badgeUrlJson: `https://${host}/api/v1/badge/live/${badge.id}.json`,
       });
     },
   );
