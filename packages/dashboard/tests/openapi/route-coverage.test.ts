@@ -184,6 +184,10 @@ describe('OpenAPI route coverage (dashboard, non-MCP)', () => {
       'POST /api/v1/plugins/{id}/deactivate',
       'PATCH /api/v1/plugins/{id}/config',
       'DELETE /api/v1/plugins/{id}',
+      // Phase 62.1 — invite-decision endpoints; the invite id in the path
+      // is the entire payload (target-org admin clicks Accept / Decline).
+      'POST /api/v1/team-org-link-invites/{inviteId}/accept',
+      'POST /api/v1/team-org-link-invites/{inviteId}/decline',
     ]);
 
     // ── Assertion A: typed 2xx response coverage ≥ 95% ────────────────────
