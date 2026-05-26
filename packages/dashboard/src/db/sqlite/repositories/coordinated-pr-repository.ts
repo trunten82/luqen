@@ -8,6 +8,7 @@ import type {
   CoordinatedPrRepository,
   CoordinatedPrStatus,
   CreateCoordinatedPrInput,
+  PendingLegRow,
   UpdateLegPatch,
 } from '../../interfaces/coordinated-pr-repository.js';
 
@@ -30,6 +31,8 @@ interface LegRow {
   last_error: string | null;
   leg_status: CoordinatedPrLegStatus;
   approval_status: CoordinatedPrApprovalStatus;
+  delegated_to: string | null;
+  delegated_by: string | null;
 }
 
 function prRowToRecord(row: PrRow): CoordinatedPr {
@@ -54,6 +57,8 @@ function legRowToRecord(row: LegRow): CoordinatedPrLeg {
     lastError: row.last_error,
     legStatus: row.leg_status,
     approvalStatus: row.approval_status,
+    delegatedTo: row.delegated_to,
+    delegatedBy: row.delegated_by,
   };
 }
 
@@ -238,6 +243,86 @@ export class SqliteCoordinatedPrRepository implements CoordinatedPrRepository {
       this.db.prepare('UPDATE coordinated_prs SET status = ? WHERE id = ?').run(next, id);
     }
     return next;
+  }
+
+  async getLegById(
+    legId: string,
+  ): Promise<{ leg: CoordinatedPrLeg; pr: CoordinatedPr } | null> {
+    const legRow = this.db
+      .prepare('SELECT * FROM coordinated_pr_legs WHERE id = ?')
+      .get(legId) as LegRow | undefined;
+    if (legRow === undefined) return null;
+    const prRow = this.db
+      .prepare('SELECT * FROM coordinated_prs WHERE id = ?')
+      .get(legRow.coordinated_pr_id) as PrRow | undefined;
+    if (prRow === undefined) return null;
+    return { leg: legRowToRecord(legRow), pr: prRowToRecord(prRow) };
+  }
+
+  async listPendingLegs(filter: {
+    siteUrl: string;
+    orgId?: string;
+  }): Promise<readonly PendingLegRow[]> {
+    // Two-step join: scans.id → coordinated_pr_legs.site_id, then PR for org.
+    // Doing a single SQL join keeps the result set tight and supports the
+    // org filter cleanly via WHERE on coordinated_prs.org_id.
+    const params: unknown[] = [filter.siteUrl];
+    let sql = `
+      SELECT
+        l.id              AS id,
+        l.coordinated_pr_id AS coordinated_pr_id,
+        l.site_id         AS site_id,
+        s.site_url        AS site_url,
+        p.org_id          AS org_id,
+        l.approval_status AS approval_status,
+        l.leg_status      AS leg_status,
+        l.delegated_to    AS delegated_to
+      FROM coordinated_pr_legs l
+      JOIN coordinated_prs p ON p.id = l.coordinated_pr_id
+      LEFT JOIN scan_records s ON s.id = l.site_id
+      WHERE l.approval_status = 'pending'
+        AND s.site_url = ?
+    `;
+    if (filter.orgId !== undefined) {
+      sql += ' AND p.org_id = ?';
+      params.push(filter.orgId);
+    }
+    sql += ' ORDER BY l.id ASC';
+    const rows = this.db.prepare(sql).all(...(params as never[])) as Array<{
+      id: string;
+      coordinated_pr_id: string;
+      site_id: string;
+      site_url: string | null;
+      org_id: string;
+      approval_status: CoordinatedPrApprovalStatus;
+      leg_status: CoordinatedPrLegStatus;
+      delegated_to: string | null;
+    }>;
+    return rows.map((r) => ({
+      id: r.id,
+      coordinatedPrId: r.coordinated_pr_id,
+      siteId: r.site_id,
+      siteUrl: r.site_url,
+      orgId: r.org_id,
+      approvalStatus: r.approval_status,
+      legStatus: r.leg_status,
+      delegatedTo: r.delegated_to,
+    }));
+  }
+
+  async delegateLeg(
+    legId: string,
+    toUserId: string,
+    decidedBy: string,
+  ): Promise<boolean> {
+    const result = this.db
+      .prepare(
+        `UPDATE coordinated_pr_legs
+           SET delegated_to = ?, delegated_by = ?
+           WHERE id = ?`,
+      )
+      .run(toUserId, decidedBy, legId);
+    return result.changes > 0;
   }
 
   private getOrgFailureMode(orgId: string): 'best_effort' | 'all_or_nothing' {

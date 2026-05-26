@@ -26,6 +26,7 @@ import { notificationRoutes } from './routes/admin/notifications.js';
 import { proposalRoutes } from './routes/admin/proposals.js';
 import { sourceRoutes } from './routes/admin/sources.js';
 import { webhookRoutes } from './routes/admin/webhooks.js';
+import { orgAggregatorWebhookRoutes } from './routes/admin/org-aggregator-webhooks.js';
 import { userRoutes } from './routes/admin/users.js';
 import { clientRoutes } from './routes/admin/clients.js';
 import { registerOauthKeysRoutes } from './routes/admin/oauth-keys.js';
@@ -1036,6 +1037,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await agentAuditRoutes(server, storage);
   await sourceRoutes(server, config.complianceUrl, pluginManager, getLLMClient);
   await webhookRoutes(server, config.complianceUrl);
+  await orgAggregatorWebhookRoutes(server, storage);
   await userRoutes(server, config.complianceUrl);
   await clientRoutes(server, config.complianceUrl, storage, config.brandingUrl, getBrandingTokenManager, getLLMClient);
   // Phase 31.1 Plan 04 Task 2: admin surface for OAuth signing-key lifecycle.

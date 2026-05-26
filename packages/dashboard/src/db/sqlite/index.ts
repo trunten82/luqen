@@ -34,6 +34,7 @@ import {
   SqliteTeamOrgLinkRepository,
   SqliteCoordinatedPrRepository,
   SqliteBulkFixRepository,
+  SqliteOrgAggregatorWebhookRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -73,6 +74,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly teamOrgLinks: SqliteTeamOrgLinkRepository;
   readonly coordinatedPrs: SqliteCoordinatedPrRepository;
   readonly bulkFixes: SqliteBulkFixRepository;
+  readonly orgAggregatorWebhooks: SqliteOrgAggregatorWebhookRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -108,6 +110,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.teamOrgLinks = new SqliteTeamOrgLinkRepository(this.db);
     this.coordinatedPrs = new SqliteCoordinatedPrRepository(this.db);
     this.bulkFixes = new SqliteBulkFixRepository(this.db);
+    this.orgAggregatorWebhooks = new SqliteOrgAggregatorWebhookRepository(this.db);
   }
 
   async connect(): Promise<void> {
