@@ -1826,4 +1826,33 @@ ALTER TABLE coordinated_pr_legs ADD COLUMN delegated_to TEXT;
 ALTER TABLE coordinated_pr_legs ADD COLUMN delegated_by TEXT;
     `,
   },
+  {
+    id: '071',
+    name: 'fleet-perf-indexes',
+    sql: `
+-- Phase 63.4 — Large-fleet performance hotspot indexes.
+-- Single-column indexes on (org_id) and (created_at) already exist for
+-- scan_records (migrations 010-ish + 015). The composites below target the
+-- ORDER BY created_at DESC + WHERE org_id = ? pattern used by paginated
+-- fleet listings, plus the site_url + created_at scan-history lookup.
+
+CREATE INDEX IF NOT EXISTS idx_scan_records_org_created
+  ON scan_records(org_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_scan_records_site_created
+  ON scan_records(site_url, created_at DESC);
+
+-- audit_log uses 'timestamp' as its time column (not created_at). This
+-- composite speeds up admin audit pages filtered by org + action, which
+-- is also the read path the aggregator webhook dispatcher exercises.
+CREATE INDEX IF NOT EXISTS idx_audit_org_action_created
+  ON audit_log(org_id, action, timestamp DESC);
+
+-- recomputeStatus() in coordinated-pr-repository.ts scans every leg of a PR
+-- and aggregates by leg_status. A composite on (coordinated_pr_id, leg_status)
+-- turns that into an index-only scan for fleets with hundreds of legs per PR.
+CREATE INDEX IF NOT EXISTS idx_coordinated_pr_legs_leg_status
+  ON coordinated_pr_legs(coordinated_pr_id, leg_status);
+    `,
+  },
 ];

@@ -84,26 +84,102 @@ describe('deliverAggregatorEvent', () => {
     ]);
   });
 
-  it('swallows fetch errors so callers never throw', async () => {
+  it('swallows fetch errors so callers never throw (recovers on a later retry)', async () => {
     await storage.orgAggregatorWebhooks.create({ orgId, url: 'https://oops/' });
+    // First attempt throws, retry succeeds → no warn logged.
     fetchSpy.mockRejectedValueOnce(new Error('network down'));
     const warned: string[] = [];
     const logger = { warn: (msg: string) => warned.push(msg) };
-    await expect(
-      deliverAggregatorEvent(
+    vi.useFakeTimers();
+    try {
+      const p = deliverAggregatorEvent(
         storage,
         orgId,
         'coordinated_pr.created',
         {},
         logger,
-      ),
-    ).resolves.toBeUndefined();
-    expect(warned.length).toBe(1);
-    expect(warned[0]).toContain('aggregator webhook delivery failed');
+      );
+      // Walk the backoff schedule to completion.
+      await vi.runAllTimersAsync();
+      await expect(p).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(warned.length).toBe(0);
+    // 1 fail + 1 success.
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it('skips dispatch entirely when no subscribers', async () => {
     await deliverAggregatorEvent(storage, orgId, 'coordinated_pr.created', {});
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  // ── Phase 63.4 — retry helper ────────────────────────────────────────────
+  it('retries 3x on persistent 5xx, then logs the failure', async () => {
+    await storage.orgAggregatorWebhooks.create({
+      orgId,
+      url: 'https://flaky.example/h',
+      secret: null,
+    });
+    fetchSpy.mockResolvedValue(new Response(null, { status: 503 }));
+    const warned: string[] = [];
+    const logger = { warn: (msg: string) => warned.push(msg) };
+    vi.useFakeTimers();
+    try {
+      const p = deliverAggregatorEvent(
+        storage,
+        orgId,
+        'coordinated_pr.created',
+        { id: 'cpr_x' },
+        logger,
+      );
+      await vi.runAllTimersAsync();
+      await expect(p).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+    // 1 initial + 3 retries.
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
+    expect(warned.length).toBe(1);
+    expect(warned[0]).toContain('aggregator webhook delivery failed');
+    expect(warned[0]).toContain('https://flaky.example/h');
+    expect(warned[0]).toContain('http_503');
+  });
+
+  it('retries 3x on persistent network error, then logs the failure', async () => {
+    await storage.orgAggregatorWebhooks.create({
+      orgId,
+      url: 'https://down.example/h',
+    });
+    fetchSpy.mockRejectedValue(new Error('ECONNREFUSED'));
+    const warned: string[] = [];
+    const logger = { warn: (msg: string) => warned.push(msg) };
+    vi.useFakeTimers();
+    try {
+      const p = deliverAggregatorEvent(
+        storage,
+        orgId,
+        'coordinated_pr.leg.opened',
+        {},
+        logger,
+      );
+      await vi.runAllTimersAsync();
+      await expect(p).resolves.toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
+    expect(warned.length).toBe(1);
+    expect(warned[0]).toContain('aggregator webhook delivery failed');
+    expect(warned[0]).toContain('https://down.example/h');
+    expect(warned[0]).toContain('ECONNREFUSED');
+  });
+
+  it('does NOT retry on 4xx — caller error is final', async () => {
+    await storage.orgAggregatorWebhooks.create({ orgId, url: 'https://bad/' });
+    fetchSpy.mockResolvedValue(new Response(null, { status: 404 }));
+    await deliverAggregatorEvent(storage, orgId, 'coordinated_pr.created', {});
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });

@@ -90,7 +90,18 @@ export interface CoordinatedPrRepository {
   getCoordinatedPr(
     id: string,
   ): Promise<{ pr: CoordinatedPr; legs: readonly CoordinatedPrLeg[] } | null>;
-  listForOrg(orgId: string, limit?: number): Promise<readonly CoordinatedPr[]>;
+  /**
+   * Phase 63.4 — Cursor-paginated list. The cursor is the `created_at`
+   * of the last row from the previous page (rows are returned in
+   * `created_at DESC` order). Pass `cursor: undefined` for the first
+   * page. `nextCursor` is non-null only when more rows are available.
+   *
+   * Backward compatible: callers passing nothing get the first 50 rows.
+   */
+  listForOrg(
+    orgId: string,
+    opts?: { limit?: number; cursor?: string },
+  ): Promise<{ items: readonly CoordinatedPr[]; nextCursor: string | null }>;
   updateLeg(legId: string, patch: UpdateLegPatch): Promise<CoordinatedPrLeg | null>;
   markRolledBack(id: string, reason?: string): Promise<boolean>;
   recomputeStatus(id: string): Promise<CoordinatedPrStatus | null>;

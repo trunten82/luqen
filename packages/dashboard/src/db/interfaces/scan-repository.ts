@@ -4,6 +4,16 @@ export interface ScanRepository {
   createScan(data: CreateScanInput): Promise<ScanRecord>;
   getScan(id: string): Promise<ScanRecord | null>;
   listScans(filters?: ScanFilters): Promise<ScanRecord[]>;
+  /**
+   * Phase 63.4 — Cursor-paginated list scoped to a single org. Rows are
+   * returned in `created_at DESC` order; the cursor is the `created_at`
+   * of the last row from the previous page. Backed by the
+   * idx_scan_records_org_created composite from migration 071.
+   */
+  listForOrg(
+    orgId: string,
+    opts?: { limit?: number; cursor?: string },
+  ): Promise<{ items: readonly ScanRecord[]; nextCursor: string | null }>;
   countScans(filters?: ScanFilters): Promise<number>;
   updateScan(id: string, data: ScanUpdateData): Promise<ScanRecord>;
   deleteScan(id: string): Promise<void>;

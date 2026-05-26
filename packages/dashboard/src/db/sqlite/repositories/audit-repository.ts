@@ -48,19 +48,53 @@ export class SqliteAuditRepository implements AuditRepository {
     const rows = this.db.prepare(`SELECT * FROM audit_log ${where} ORDER BY timestamp DESC LIMIT @limit OFFSET @offset`).all({ ...params, limit, offset });
 
     return {
-      entries: (rows as Array<Record<string, unknown>>).map((r) => ({
-        id: r.id as string,
-        timestamp: r.timestamp as string,
-        actor: r.actor as string,
-        actorId: r.actor_id as string | null,
-        action: r.action as string,
-        resourceType: r.resource_type as string,
-        resourceId: r.resource_id as string | null,
-        details: r.details as string | null,
-        ipAddress: r.ip_address as string | null,
-        orgId: r.org_id as string,
-      })),
+      entries: (rows as Array<Record<string, unknown>>).map(mapAuditRow),
       total: countRow.count,
     };
   }
+
+  // Phase 63.4 — Cursor-paginated org listing. Cursor = last row's `timestamp`.
+  async listForOrg(
+    orgId: string,
+    opts: { limit?: number; cursor?: string; action?: string } = {},
+  ): Promise<{ items: readonly AuditEntry[]; nextCursor: string | null }> {
+    const limit = Math.max(1, Math.min(opts.limit ?? 50, 500));
+    const fetchN = limit + 1;
+    const conditions: string[] = ['org_id = @orgId'];
+    const params: Record<string, unknown> = { orgId, limit: fetchN };
+    if (opts.action !== undefined) {
+      conditions.push('action = @action');
+      params['action'] = opts.action;
+    }
+    if (opts.cursor !== undefined) {
+      conditions.push('timestamp < @cursor');
+      params['cursor'] = opts.cursor;
+    }
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM audit_log ${where} ORDER BY timestamp DESC LIMIT @limit`,
+      )
+      .all(params) as Array<Record<string, unknown>>;
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const items = page.map(mapAuditRow);
+    const nextCursor = hasMore ? (items[items.length - 1].timestamp) : null;
+    return { items, nextCursor };
+  }
+}
+
+function mapAuditRow(r: Record<string, unknown>): AuditEntry {
+  return {
+    id: r.id as string,
+    timestamp: r.timestamp as string,
+    actor: r.actor as string,
+    actorId: r.actor_id as string | null,
+    action: r.action as string,
+    resourceType: r.resource_type as string,
+    resourceId: r.resource_id as string | null,
+    details: r.details as string | null,
+    ipAddress: r.ip_address as string | null,
+    orgId: r.org_id as string,
+  };
 }
