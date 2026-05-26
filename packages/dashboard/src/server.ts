@@ -810,6 +810,17 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         userOrgs,
         currentOrg,
       };
+
+      // Phase 62.1 — count pending team-org-link invites targeting the
+      // caller's current org. Drives the "Incoming invites" sidebar badge.
+      if (currentOrgId !== undefined && currentOrgId !== '') {
+        try {
+          const pending = await storage.teamOrgLinks.inviteListPendingForOrg(currentOrgId);
+          (request as FastifyRequest & { incomingTeamInviteCount?: number }).incomingTeamInviteCount = pending.length;
+        } catch {
+          // Non-fatal — sidebar simply omits the badge.
+        }
+      }
     }
 
     // 2. Resolve permissions WITH org context
@@ -948,6 +959,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         showOrgSwitcher,
         orgOptions,
         orgContext: (request as unknown as Record<string, unknown>).orgContext,
+        incomingTeamInviteCount: (request as unknown as { incomingTeamInviteCount?: number }).incomingTeamInviteCount ?? 0,
         appVersion: `v${VERSION}`,
       };
       // HTMX partial requests: render template without layout

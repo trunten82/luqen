@@ -1,0 +1,62 @@
+{{!--
+  Phase 62.1 — Incoming team-org-link invites for the caller's current org.
+  Acceptance grants every team member the team's role within this org.
+--}}
+<div class="admin-header">
+  <h2>{{t "admin.teams.incomingInvitesTitle"}}</h2>
+  <p class="text-muted">{{t "admin.teams.incomingInvitesDesc"}}</p>
+  <div class="mt-sm">
+    <a href="/admin/teams" class="btn btn--ghost btn--sm">&larr; {{t "admin.teams.backToTeams"}}</a>
+  </div>
+</div>
+
+{{#if noOrg}}
+<div class="card mb-lg">
+  <p class="empty-state">{{t "admin.teams.noIncomingInvites"}}</p>
+</div>
+{{else}}
+<div class="card mb-lg">
+  <div class="table-wrapper">
+    <table class="data-table" aria-label="Incoming team invites">
+      <thead>
+        <tr>
+          <th scope="col">{{t "admin.teams.team"}}</th>
+          <th scope="col">{{t "admin.teams.homeOrg"}}</th>
+          <th scope="col">{{t "admin.teams.invitedBy"}}</th>
+          <th scope="col">{{t "admin.teams.invitedAt"}}</th>
+          <th scope="col"><span class="screen-reader-text">{{t "common.actions"}}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each invites}}
+        <tr id="invite-row-{{id}}">
+          <td data-label="Team">{{teamName}}</td>
+          <td data-label="Home org">{{homeOrgName}} <code class="text-muted">{{homeOrgId}}</code></td>
+          <td data-label="Invited by"><code>{{invitedBy}}</code></td>
+          <td data-label="Invited at"><time datetime="{{createdAt}}">{{createdAt}}</time></td>
+          <td>
+            <button hx-post="/admin/teams/invites/{{id}}/accept"
+                    hx-headers='{"X-CSRF-Token": "{{../csrfToken}}"}'
+                    hx-confirm="{{t "admin.teams.acceptConfirm"}}"
+                    hx-target="#invite-row-{{id}}"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--primary"
+                    aria-label="Accept invite from {{homeOrgName}}">{{t "admin.teams.accept"}}</button>
+            <button hx-post="/admin/teams/invites/{{id}}/decline"
+                    hx-headers='{"X-CSRF-Token": "{{../csrfToken}}"}'
+                    hx-confirm="{{t "admin.teams.declineConfirm"}}"
+                    hx-target="#invite-row-{{id}}"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Decline invite from {{homeOrgName}}">{{t "admin.teams.decline"}}</button>
+          </td>
+        </tr>
+        {{/each}}
+        {{#unless invites.length}}
+        <tr><td colspan="5" class="empty-state">{{t "admin.teams.noIncomingInvites"}}</td></tr>
+        {{/unless}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{/if}}

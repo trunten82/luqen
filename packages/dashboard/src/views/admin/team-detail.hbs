@@ -116,3 +116,96 @@
     </tbody>
   </table>
 </div>
+
+{{! ─────────────────────────────────────────────────────────────────────── }}
+{{! Phase 62.1 — Multi-team RBAC overlay: linked orgs, invites, pending.   }}
+{{! ─────────────────────────────────────────────────────────────────────── }}
+
+<section class="card mb-lg" aria-labelledby="linked-orgs-heading">
+  <h3 id="linked-orgs-heading">{{t "admin.teams.linkedOrgs"}}</h3>
+  <p class="text-muted mb-md">{{t "admin.teams.linkedOrgsDesc"}}</p>
+  <div class="table-wrapper">
+    <table class="data-table" aria-label="Linked organizations">
+      <thead>
+        <tr>
+          <th scope="col">{{t "common.organization"}}</th>
+          <th scope="col">{{t "admin.teams.linkedAt"}}</th>
+          <th scope="col">{{t "admin.teams.linkedBy"}}</th>
+          <th scope="col"><span class="screen-reader-text">{{t "common.actions"}}</span></th>
+        </tr>
+      </thead>
+      <tbody id="linked-orgs-body">
+        {{#each activeLinks}}
+        <tr id="linked-org-row-{{orgId}}">
+          <td data-label="Organization">{{orgName}} <code class="text-muted">{{orgId}}</code></td>
+          <td data-label="Linked at"><time datetime="{{linkedAt}}">{{linkedAt}}</time></td>
+          <td data-label="Linked by">{{#if linkedBy}}<code>{{linkedBy}}</code>{{else}}&mdash;{{/if}}</td>
+          <td>
+            <button hx-post="/admin/teams/{{../team.id}}/org-links/{{orgId}}/sever"
+                    hx-headers='{"X-CSRF-Token": "{{../csrfToken}}"}'
+                    hx-confirm="{{t "admin.teams.severLinkConfirm"}}"
+                    hx-target="#linked-org-row-{{orgId}}"
+                    hx-swap="outerHTML"
+                    class="btn btn--sm btn--danger"
+                    aria-label="Sever link with {{orgName}}">{{t "admin.teams.severLink"}}</button>
+          </td>
+        </tr>
+        {{/each}}
+        {{#unless activeLinks.length}}
+        <tr><td colspan="4" class="empty-state">{{t "admin.teams.noLinkedOrgs"}}</td></tr>
+        {{/unless}}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card mb-lg" aria-labelledby="invite-org-heading">
+  <h3 id="invite-org-heading">{{t "admin.teams.inviteAnOrg"}}</h3>
+  <p class="text-muted mb-md">{{t "admin.teams.inviteAnOrgDesc"}}</p>
+  {{#if invitableOrgs.length}}
+  <form hx-post="/admin/teams/{{team.id}}/org-links/invite"
+        class="flex flex-wrap items-center gap-sm">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <label class="form-group form-group--inline">
+      <span class="form-label">{{t "admin.teams.targetOrg"}}</span>
+      <select name="targetOrgId" class="input" required>
+        <option value="">{{t "admin.teams.selectOrg"}}</option>
+        {{#each invitableOrgs}}
+        <option value="{{id}}">{{name}}</option>
+        {{/each}}
+      </select>
+    </label>
+    <button type="submit" class="btn btn--primary">{{t "admin.teams.sendInvite"}}</button>
+  </form>
+  {{else}}
+  <p class="empty-state">{{t "admin.teams.noLinkedOrgs"}}</p>
+  {{/if}}
+</section>
+
+<section class="card mb-lg" aria-labelledby="pending-invites-heading">
+  <h3 id="pending-invites-heading">{{t "admin.teams.pendingInvites"}}</h3>
+  <p class="text-muted mb-md">{{t "admin.teams.outgoingInvitesDesc"}}</p>
+  <div class="table-wrapper">
+    <table class="data-table" aria-label="Pending outgoing invites">
+      <thead>
+        <tr>
+          <th scope="col">{{t "admin.teams.targetOrg"}}</th>
+          <th scope="col">{{t "admin.teams.invitedBy"}}</th>
+          <th scope="col">{{t "admin.teams.invitedAt"}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each pendingInvites}}
+        <tr>
+          <td data-label="Target">{{targetOrgName}} <code class="text-muted">{{targetOrgId}}</code></td>
+          <td data-label="Invited by"><code>{{invitedBy}}</code></td>
+          <td data-label="Invited at"><time datetime="{{createdAt}}">{{createdAt}}</time></td>
+        </tr>
+        {{/each}}
+        {{#unless pendingInvites.length}}
+        <tr><td colspan="3" class="empty-state">{{t "admin.teams.noPendingInvites"}}</td></tr>
+        {{/unless}}
+      </tbody>
+    </table>
+  </div>
+</section>
