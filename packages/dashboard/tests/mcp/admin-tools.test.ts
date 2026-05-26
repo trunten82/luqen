@@ -257,7 +257,7 @@ describe('Phase 30 admin tools — tools/list count + permission filtering', () 
     }
   });
 
-  it('admin.system + admin.users + admin.org + scans.create + reports.view + branding.view → all 19 tools visible', async () => {
+  it('admin.system + admin.users + admin.org + scans.create + reports.view + branding.view → all 24 tools visible', async () => {
     app = await buildApp({
       permissions: [
         'admin.system',
@@ -281,7 +281,9 @@ describe('Phase 30 admin tools — tools/list count + permission filtering', () 
     const names = (
       (parseSseOrJson(response.body)['result'] as { tools: Array<{ name: string }> }).tools
     ).map((t) => t.name);
-    expect(names.length).toBe(20);
+    // Phase 62.4: +4 fleet tools (3 reports.view + 1 admin.org) on top of
+    // the 7 data + 13 admin baseline → 24.
+    expect(names.length).toBe(24);
     expect(names).toEqual(expect.arrayContaining([...DATA_TOOL_NAMES, ...ADMIN_TOOL_NAMES]));
   });
 
@@ -311,7 +313,7 @@ describe('Phase 30 admin tools — tools/list count + permission filtering', () 
     expect(names.length).toBe(4);
   });
 
-  it('admin.system + admin.org → 9 admin.system-relevant tools visible (4 org + 5 service-connection)', async () => {
+  it('admin.system + admin.org → 9 admin.system-relevant tools + 1 admin.org fleet tool = 10', async () => {
     // In production, admin role holders get ALL permissions via
     // resolveEffectivePermissions (permissions.ts), so admin.system holders
     // also have admin.org. The dual-permission tools (list_orgs/get_org/
@@ -332,10 +334,13 @@ describe('Phase 30 admin tools — tools/list count + permission filtering', () 
     const names = (
       (parseSseOrJson(response.body)['result'] as { tools: Array<{ name: string }> }).tools
     ).map((t) => t.name);
-    expect(names.length).toBe(9);
+    // Phase 62.4: dashboard_queue_bulk_fix (admin.org) is the only fleet tool
+    // visible here; the other 3 fleet tools gate on reports.view.
+    expect(names.length).toBe(10);
     expect(names).toContain('dashboard_list_orgs');
     expect(names).toContain('dashboard_list_service_connections');
     expect(names).toContain('dashboard_test_service_connection');
+    expect(names).toContain('dashboard_queue_bulk_fix');
   });
 });
 
@@ -350,7 +355,7 @@ describe('Phase 30 admin tools — D-17 invariant + classification coverage + no
       scanService: makeStubScanService(),
       serviceConnections: makeStubServiceConnections(),
     });
-    expect(toolNames.length).toBe(20); // 7 data (Phase 46 added scan_progress) + 13 admin
+    expect(toolNames.length).toBe(24); // 7 data + 13 admin + 4 fleet (Phase 62.4)
 
     const registered =
       (

@@ -22,6 +22,7 @@
 
 import type { ToolMetadata } from '@luqen/core/mcp';
 import { DASHBOARD_ADMIN_TOOL_METADATA } from './tools/admin.js';
+import { DASHBOARD_FLEET_TOOL_METADATA } from './tools/fleet.js';
 
 export const DASHBOARD_COMPLIANCE_TOOL_METADATA: readonly ToolMetadata[] = [
   // Discovery proxies for the compliance reference-data endpoints. All four
@@ -69,4 +70,5 @@ export const DASHBOARD_TOOL_METADATA: readonly ToolMetadata[] = [
   ...DASHBOARD_DATA_TOOL_METADATA,
   ...DASHBOARD_COMPLIANCE_TOOL_METADATA,
   ...DASHBOARD_ADMIN_TOOL_METADATA,
+  ...DASHBOARD_FLEET_TOOL_METADATA,
 ];

@@ -23,6 +23,10 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { Type, type Static } from '@sinclair/typebox';
 import type { StorageAdapter } from '../../db/index.js';
 import { hasPermission } from '../../permissions.js';
+import {
+  computeBulkFixCandidates,
+  type BulkFixCandidate,
+} from '../../services/bulk-fix-candidates.js';
 
 const ErrorResponse = Type.Object({ error: Type.String() });
 
@@ -127,92 +131,10 @@ function bulkFixToJson(bf: {
   };
 }
 
-interface ScanIssueShape {
-  readonly code?: string;
-  readonly wcagCriterion?: string;
-}
-
-interface ScanReportShape {
-  readonly pages?: ReadonlyArray<{
-    readonly issues?: ReadonlyArray<ScanIssueShape>;
-  }>;
-}
-
-/** Apply the criterion-match rule across a parsed scan report. */
-function reportMatchesCriterion(
-  report: ScanReportShape | null,
-  criterion: string,
-): boolean {
-  if (report === null || !Array.isArray(report.pages)) return false;
-  for (const page of report.pages) {
-    if (!Array.isArray(page.issues)) continue;
-    for (const issue of page.issues) {
-      if (issue.wcagCriterion === criterion) return true;
-      if (typeof issue.code === 'string' && issue.code.startsWith(criterion)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-/** Effective org-id list for a team: home org + every active linked org. */
-async function teamScopeOrgIds(
-  storage: StorageAdapter,
-  teamId: string,
-): Promise<readonly string[]> {
-  const team = await storage.teams.getTeam(teamId);
-  if (team === null) return [];
-  const links = await storage.teamOrgLinks.listLinksForTeam(teamId);
-  const ids = new Set<string>([team.orgId, ...links.map((l) => l.orgId)]);
-  return [...ids];
-}
-
-interface Candidate {
-  readonly site_id: string;
-  readonly site_url: string;
-  readonly last_seen_at: string;
-  readonly suggested_patch_summary: string;
-}
-
-async function computeCandidates(
-  storage: StorageAdapter,
-  bulkFix: {
-    id: string;
-    orgId: string;
-    teamId: string | null;
-    criterion: string;
-  },
-): Promise<Candidate[]> {
-  const orgIds: readonly string[] =
-    bulkFix.teamId !== null
-      ? await teamScopeOrgIds(storage, bulkFix.teamId)
-      : [bulkFix.orgId];
-
-  const found: Candidate[] = [];
-  const seenSiteUrls = new Set<string>();
-  for (const orgId of orgIds) {
-    const latest = await storage.scans.getLatestPerSite(orgId);
-    for (const scan of latest) {
-      if (seenSiteUrls.has(scan.siteUrl)) continue;
-      const report = (await storage.scans.getReport(
-        scan.id,
-      )) as ScanReportShape | null;
-      if (!reportMatchesCriterion(report, bulkFix.criterion)) continue;
-      seenSiteUrls.add(scan.siteUrl);
-      // site_id semantics: we don't carry a stable wp_sites id here, so we
-      // use scan.id as the per-site handle. Dispatch passes this through to
-      // the coordinated_pr leg.site_id; the plugin reconciles by site_url.
-      found.push({
-        site_id: scan.id,
-        site_url: scan.siteUrl,
-        last_seen_at: scan.completedAt ?? scan.createdAt,
-        suggested_patch_summary: `Apply ${bulkFix.criterion} fix to ${scan.siteUrl}`,
-      });
-    }
-  }
-  return found;
-}
+// Candidate-resolution logic moved to services/bulk-fix-candidates.ts so
+// the Phase 62.4 MCP fleet tool (dashboard_queue_bulk_fix) can reuse it
+// without duplicating the team-scope / criterion-match code.
+type Candidate = BulkFixCandidate;
 
 export async function bulkFixRoutes(
   server: FastifyInstance,
@@ -321,7 +243,7 @@ export async function bulkFixRoutes(
           .filter((s) => s.length > 0),
       );
 
-      const all = await computeCandidates(storage, bf);
+      const all = await computeBulkFixCandidates(storage, bf);
       const kept: Candidate[] = [];
       for (const c of all) {
         if (skipSet.has(c.site_id)) {
@@ -373,7 +295,7 @@ export async function bulkFixRoutes(
         return reply.code(403).send({ error: 'forbidden' });
       }
 
-      const all = await computeCandidates(storage, bf);
+      const all = await computeBulkFixCandidates(storage, bf);
       const valid = new Set(all.map((c) => c.site_id));
       for (const id of request.body.site_ids) {
         if (!valid.has(id)) {

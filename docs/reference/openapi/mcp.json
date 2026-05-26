@@ -127,6 +127,69 @@
         }
       }
     },
+    "/api/v1/mcp/tools/dashboard_coordinated_pr_status": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_coordinated_pr_status",
+        "summary": "dashboard_coordinated_pr_status",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Read a coordinated PR by id; returns { pr, legs }. Callers without admin.system can only read coordinated PRs that belong to their current org.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Coordinated PR id"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/tools/dashboard_create_org": {
       "post": {
         "operationId": "mcp.tool.dashboard_create_org",
@@ -916,6 +979,78 @@
         }
       }
     },
+    "/api/v1/mcp/tools/dashboard_list_fleet": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_list_fleet",
+        "summary": "dashboard_list_fleet",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "List WordPress sites in the caller's org scope. org_id defaults to the caller's current org; admin.system holders may target any org. group_id (team_id) filters to sites whose latest scan belongs to that team's effective org scope. status filters wp_sites.status ('active' | 'stale' | 'all', default 'active').\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "org_id": {
+                    "description": "Target org (defaults to caller's). admin.system only when not the caller's own org.",
+                    "type": "string"
+                  },
+                  "group_id": {
+                    "description": "Team id — filters the fleet to that team scope",
+                    "type": "string"
+                  },
+                  "status": {
+                    "description": "wp_sites.status filter (default 'active')",
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "stale",
+                      "all"
+                    ]
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/tools/dashboard_list_jurisdictions": {
       "post": {
         "operationId": "mcp.tool.dashboard_list_jurisdictions",
@@ -1507,6 +1642,82 @@
         }
       }
     },
+    "/api/v1/mcp/tools/dashboard_queue_bulk_fix": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_queue_bulk_fix",
+        "summary": "dashboard_queue_bulk_fix",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "Create a bulk_fix for the given criterion and immediately dispatch it: every site matching the criterion in the caller's scope becomes a coordinated_pr leg. Returns { bulk_fix_id, coordinated_pr_id }. DESTRUCTIVE — opens PRs on every candidate site.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "criterion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "WCAG criterion id (e.g. \"1.4.3\")"
+                  },
+                  "group_id": {
+                    "description": "Team id — bulk_fix scoped to this team",
+                    "type": "string"
+                  },
+                  "team_id": {
+                    "description": "Alias for group_id (preferred name in newer callers)",
+                    "type": "string"
+                  },
+                  "summary": {
+                    "description": "Optional human-readable summary",
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "criterion"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/tools/dashboard_scan_site": {
       "post": {
         "operationId": "mcp.tool.dashboard_scan_site",
@@ -1612,6 +1823,78 @@
                 },
                 "required": [
                   "siteUrl"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MCP tool result envelope (JSON-RPC response)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "MCP tool result envelope (JSON-RPC response)"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/tools/dashboard_scan_summary_for_fleet": {
+      "post": {
+        "operationId": "mcp.tool.dashboard_scan_summary_for_fleet",
+        "summary": "dashboard_scan_summary_for_fleet",
+        "tags": [
+          "mcp-tool"
+        ],
+        "description": "For each site in the caller's org, return the count of issues in the latest completed scan matching the given criterion at-or-after `since`. Match rule: issue.wcagCriterion === criterion OR issue.code.startsWith(criterion). Sites with no matching issues are omitted.\n\nCall via POST /api/v1/mcp with a JSON-RPC `tools/call` body. This path exists in the OpenAPI spec for tool discoverability only — direct POSTs to this URL return 405.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "criterion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "WCAG criterion id (e.g. \"1.4.3\") or code prefix"
+                  },
+                  "since": {
+                    "type": "string",
+                    "description": "ISO-8601 cutoff — only scans completed at-or-after this"
+                  },
+                  "org_id": {
+                    "description": "Override caller org (admin.system only)",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "criterion",
+                  "since"
                 ],
                 "additionalProperties": true
               }

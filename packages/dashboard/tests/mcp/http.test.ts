@@ -291,8 +291,13 @@ describe('POST /api/v1/mcp (dashboard)', () => {
     expect(names).toContain('dashboard_query_issues');
     expect(names).toContain('dashboard_list_brand_scores');
     expect(names).toContain('dashboard_get_brand_score');
-    // Admin tools (plan 30-03) are still empty stubs here, so the count is 7.
-    expect(names.length).toBe(7);
+    // Phase 62.4: 3 reports.view fleet tools (list_fleet,
+    // scan_summary_for_fleet, coordinated_pr_status) join the 7 data tools
+    // when reports.view is in the permission set.
+    expect(names).toContain('dashboard_list_fleet');
+    expect(names).toContain('dashboard_scan_summary_for_fleet');
+    expect(names).toContain('dashboard_coordinated_pr_status');
+    expect(names.length).toBe(10);
   });
 
   it('Case 5: cookie-only request (no Bearer) is rejected with 401', async () => {

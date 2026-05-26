@@ -35,6 +35,7 @@ import {
   registerComplianceTools,
   COMPLIANCE_TOOL_NAMES,
 } from './tools/compliance.js';
+import { registerFleetTools, FLEET_TOOL_NAMES } from './tools/fleet.js';
 import { registerResources } from './resources.js';
 import { registerPrompts } from './prompts.js';
 
@@ -76,6 +77,7 @@ export async function createDashboardMcpServer(
     ...(complianceAccess !== undefined ? { complianceAccess } : {}),
   });
   registerAdminTools(server, { storage, serviceConnections });
+  registerFleetTools(server, { storage });
   // Compliance discovery tools require an access callback; without one they
   // would only ever return errors, so we skip registration entirely (RBAC
   // filtering naturally hides them since they aren't in toolNames).
@@ -87,8 +89,13 @@ export async function createDashboardMcpServer(
 
   const toolNames =
     complianceAccess !== undefined
-      ? [...DATA_TOOL_NAMES, ...COMPLIANCE_TOOL_NAMES, ...ADMIN_TOOL_NAMES]
-      : [...DATA_TOOL_NAMES, ...ADMIN_TOOL_NAMES];
+      ? [
+          ...DATA_TOOL_NAMES,
+          ...COMPLIANCE_TOOL_NAMES,
+          ...ADMIN_TOOL_NAMES,
+          ...FLEET_TOOL_NAMES,
+        ]
+      : [...DATA_TOOL_NAMES, ...ADMIN_TOOL_NAMES, ...FLEET_TOOL_NAMES];
 
   return {
     server,
