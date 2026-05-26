@@ -75,6 +75,12 @@ export interface ScanRecord {
    * Never 0, never NaN. BSTORE-04 regression is pinned on this type.
    */
   readonly brandScore?: ScoreResult | null;
+  /**
+   * Opt-in (Phase 64 — share-the-badge). When true, the badge SVG and the
+   * /reports/:id/public viewer are reachable anonymously. Always 0 by
+   * default — owners must explicitly toggle from the report page.
+   */
+  readonly publicShareEnabled?: boolean;
 }
 
 export interface ScanFilters {

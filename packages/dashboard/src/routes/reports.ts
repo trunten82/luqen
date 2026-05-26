@@ -8,6 +8,7 @@ import type { StorageAdapter } from '../db/index.js';
 import { extractCriterion, getWcagDescription } from './wcag-enrichment.js';
 import { MANUAL_CRITERIA } from '../manual-criteria.js';
 import { normalizeReportData, inferComponent } from '../services/report-service.js';
+import { isScanPublicShareable } from './badge.js';
 import type { JsonReportFile } from '../services/report-service.js';
 import { getFixSuggestion } from '../fix-suggestions.js';
 import type { LLMClient } from '../llm-client.js';
@@ -45,6 +46,11 @@ export async function reportRoutes(
    * Returns null when LLM is not configured.
    */
   getLLMClient: () => LLMClient | null = () => null,
+  /**
+   * Dashboard config (currently only selfScanId is read here, to back-compat
+   * the dogfood login badge through the public-share gate).
+   */
+  config: { selfScanId?: string } = {},
 ): Promise<void> {
   // GET /reports — list with pagination and search
   server.get(
@@ -479,15 +485,8 @@ export async function reportRoutes(
         return reply.code(404).send({ error: 'Report not available' });
       }
 
-      // Permissive policy for the first cut: only the dashboard's own
-      // self-scans are surfaced. If the scan's siteUrl matches the
-      // request host (i.e. it's a Luqen-of-Luqen scan), allow.
       const reqHost = request.headers.host ?? '';
-      let allow = false;
-      try {
-        const u = new URL(scan.siteUrl);
-        if (u.host === reqHost) allow = true;
-      } catch { /* fall through */ }
+      const allow = isScanPublicShareable(scan, config.selfScanId, reqHost);
       if (!allow) {
         return reply.code(404).send({ error: 'Report not public' });
       }

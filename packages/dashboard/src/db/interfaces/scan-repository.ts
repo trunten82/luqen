@@ -11,4 +11,9 @@ export interface ScanRepository {
   getReport(id: string): Promise<Record<string, unknown> | null>;
   getTrendData(orgId?: string): Promise<ScanRecord[]>;
   getLatestPerSite(orgId: string): Promise<ScanRecord[]>;
+  /**
+   * Toggle the public-share flag on a scan. Org-scoped: returns false if the
+   * scan does not exist or does not belong to `orgId`. Idempotent.
+   */
+  setPublicShare(id: string, orgId: string, enabled: boolean): Promise<boolean>;
 }
