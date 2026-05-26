@@ -53,7 +53,7 @@
     {{#if recentScans.length}}
     <ol class="docket__rows" role="list">
       {{#each recentScans}}
-      <li class="docket__row{{#if (gt errors 0)}} docket__row--flag{{/if}}" id="scan-{{id}}">
+      <li class="docket__row docket__row--flag" id="scan-{{id}}" data-scan-id="{{id}}">
         <time class="docket__row-time" datetime="{{createdAt}}">{{createdAtDisplay}}</time>
         <a class="docket__row-headline" href="/reports/{{id}}" aria-label="View report for {{siteUrl}}">
           {{siteUrl}}

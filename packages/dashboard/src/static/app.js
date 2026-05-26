@@ -744,6 +744,51 @@
     applyTheme(getThemePreference());
   });
 
+  /* ── Report read-state (per-user, client-side) ─────────────────────── */
+  // Each home-page row carries data-scan-id; on click we mark the scan
+  // "read" in localStorage. On render, any row whose id is in the set
+  // loses the docket__row--flag class (the left accent bar).
+  var READ_KEY = 'luqen-reports-read';
+  function loadReadSet() {
+    try {
+      var raw = localStorage.getItem(READ_KEY);
+      if (!raw) return {};
+      var parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (e) { return {}; }
+  }
+  function saveReadSet(set) {
+    try { localStorage.setItem(READ_KEY, JSON.stringify(set)); } catch (e) {}
+  }
+  function markRead(scanId) {
+    if (!scanId) return;
+    var set = loadReadSet();
+    if (set[scanId]) return;
+    set[scanId] = Date.now();
+    saveReadSet(set);
+  }
+  function applyReadStateOnHome() {
+    var set = loadReadSet();
+    document.querySelectorAll('.docket__row[data-scan-id]').forEach(function(row) {
+      var id = row.getAttribute('data-scan-id');
+      if (id && set[id]) row.classList.remove('docket__row--flag');
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    applyReadStateOnHome();
+    // If we are currently viewing a /reports/<id>, mark it read.
+    var m = window.location.pathname.match(/^\/reports\/([^\/?#]+)/);
+    if (m) markRead(m[1]);
+  });
+  // Also catch the click on a row link so the home page itself updates
+  // even if the user navigates back via bfcache before reload.
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest && e.target.closest('a.docket__row-headline');
+    if (!link) return;
+    var row = link.closest('.docket__row[data-scan-id]');
+    if (row) markRead(row.getAttribute('data-scan-id'));
+  });
+
   /* ── Sidebar collapse (desktop) — persists to localStorage ────────── */
   // Sidebar is always an overlay — no desktop collapse state needed
 
