@@ -51,6 +51,13 @@
       {{t "reportDetail.downloadPdf"}}
     </a>
     <a href="/api/v1/export/scans/{{scan.id}}/issues.xlsx" class="btn btn--ghost btn--sm" aria-label="Export issues as Excel">{{t "reportDetail.exportExcel"}}</a>
+    <button
+      type="button"
+      class="btn btn--ghost btn--sm"
+      data-action="toggleSharePanel"
+      aria-controls="share-panel"
+      aria-expanded="false"
+    >{{t "share.button"}}</button>
     {{#if perm.issuesAssign}}
     <a href="/reports/{{scan.id}}/assignments" class="btn btn--ghost btn--sm" aria-label="View issue assignments" id="assignments-link">
       {{t "reportDetail.assignments"}}{{#if assignmentActiveCount}} ({{assignmentActiveCount}}){{/if}}
@@ -64,6 +71,8 @@
     {{/if}}
   </div>
 </section>
+
+{{> share-panel scan=scan liveBadgeId=liveBadgeId t=t}}
 
 {{#if reportData}}
 

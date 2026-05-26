@@ -181,4 +181,101 @@ export async function badgeRoutes(
       });
     },
   );
+
+  // ── Live (dynamic) badge — resolves the latest completed scan for
+  //    (org_id, site_url) on every request. Useful for scheduled scans:
+  //    the embed never goes stale, the verdict tracks the latest run.
+  //    The site_badges row is the public-facing handle; the URL never
+  //    leaks org_id or scan ids.
+  server.get(
+    '/api/v1/badge/live/:badgeId.svg',
+    {
+      schema: {
+        tags: ['badge'],
+        params: Type.Object({ badgeId: Type.String() }),
+        response: {
+          200: Type.String({ description: 'SVG markup' }),
+          404: Type.Object({ error: Type.String() }),
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { badgeId } = request.params as { badgeId: string };
+      const badge = await storage.siteBadges.get(badgeId);
+      if (badge === null || !badge.enabled) {
+        reply.code(404);
+        return reply.send({ error: 'badge not found' });
+      }
+      const scan = await storage.scans.getLatestCompletedForSite(
+        badge.orgId,
+        badge.siteUrl,
+      );
+      if (scan === null) {
+        reply.code(404);
+        return reply.send({ error: 'no completed scan yet' });
+      }
+      const host = request.headers.host ?? 'luqen';
+      const completed = scan.completedAt ?? scan.createdAt;
+      const dateIso = completed ? new Date(completed).toISOString().slice(0, 10) : '';
+      const { label, colour } = statusFor(scan);
+      const svg = renderSvg(host, badgeId, label, colour, dateIso);
+      reply.header('Content-Type', 'image/svg+xml; charset=utf-8');
+      // Shorter TTL than the static badge — the verdict actually moves.
+      reply.header('Cache-Control', 'public, max-age=60');
+      reply.header('Access-Control-Allow-Origin', '*');
+      reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
+      reply.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+      return reply.send(svg);
+    },
+  );
+
+  server.get(
+    '/api/v1/badge/live/:badgeId.json',
+    {
+      schema: {
+        tags: ['badge'],
+        params: Type.Object({ badgeId: Type.String() }),
+        response: {
+          200: Type.Object({
+            badgeId:    Type.String(),
+            siteUrl:    Type.String(),
+            scanId:     Type.String(),
+            status:     Type.String(),
+            verifiedAt: Type.Union([Type.String(), Type.Null()]),
+            standard:   Type.String(),
+          }),
+          404: Type.Object({ error: Type.String() }),
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { badgeId } = request.params as { badgeId: string };
+      const badge = await storage.siteBadges.get(badgeId);
+      if (badge === null || !badge.enabled) {
+        reply.code(404);
+        return reply.send({ error: 'badge not found' });
+      }
+      const scan = await storage.scans.getLatestCompletedForSite(
+        badge.orgId,
+        badge.siteUrl,
+      );
+      if (scan === null) {
+        reply.code(404);
+        return reply.send({ error: 'no completed scan yet' });
+      }
+      const completed = scan.completedAt ?? scan.createdAt;
+      const { label } = statusFor(scan);
+      reply.header('Cache-Control', 'public, max-age=60');
+      reply.header('Access-Control-Allow-Origin', '*');
+      reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
+      return reply.send({
+        badgeId,
+        siteUrl: badge.siteUrl,
+        scanId: scan.id,
+        status: label,
+        verifiedAt: completed ? new Date(completed).toISOString() : null,
+        standard: scan.standard,
+      });
+    },
+  );
 }

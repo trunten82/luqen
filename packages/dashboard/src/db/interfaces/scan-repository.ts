@@ -16,4 +16,10 @@ export interface ScanRepository {
    * scan does not exist or does not belong to `orgId`. Idempotent.
    */
   setPublicShare(id: string, orgId: string, enabled: boolean): Promise<boolean>;
+  /**
+   * Most recent completed scan for one specific site within an org.
+   * Used by the live badge resolver (Phase 64). Returns null when no
+   * completed scan exists for (orgId, siteUrl).
+   */
+  getLatestCompletedForSite(orgId: string, siteUrl: string): Promise<ScanRecord | null>;
 }

@@ -241,6 +241,18 @@ export class SqliteScanRepository implements ScanRepository {
     return result.changes > 0;
   }
 
+  async getLatestCompletedForSite(orgId: string, siteUrl: string): Promise<ScanRecord | null> {
+    const row = this.db
+      .prepare(
+        `SELECT * FROM scan_records
+          WHERE org_id = ? AND site_url = ? AND status = 'completed'
+          ORDER BY COALESCE(completed_at, created_at) DESC
+          LIMIT 1`,
+      )
+      .get(orgId, siteUrl) as ScanRow | undefined;
+    return row !== undefined ? rowToRecord(row) : null;
+  }
+
   async getReport(id: string): Promise<Record<string, unknown> | null> {
     const row = this.db.prepare('SELECT json_report FROM scan_records WHERE id = ?').get(id) as { json_report: string | null } | undefined;
     if (row === undefined || row.json_report === null) return null;

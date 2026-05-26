@@ -30,6 +30,7 @@ import {
   SqliteNotificationTemplateRepository,
   SqliteWpSitesRepository,
   SqliteWpUserLinksRepository,
+  SqliteSiteBadgesRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -65,6 +66,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly notificationTemplates: SqliteNotificationTemplateRepository;
   readonly wpSites: SqliteWpSitesRepository;
   readonly wpUserLinks: SqliteWpUserLinksRepository;
+  readonly siteBadges: SqliteSiteBadgesRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -96,6 +98,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.notificationTemplates = new SqliteNotificationTemplateRepository(this.db);
     this.wpSites = new SqliteWpSitesRepository(this.db);
     this.wpUserLinks = new SqliteWpUserLinksRepository(this.db);
+    this.siteBadges = new SqliteSiteBadgesRepository(this.db);
   }
 
   async connect(): Promise<void> {

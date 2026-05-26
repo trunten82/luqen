@@ -1,0 +1,73 @@
+{{!--
+  Share panel — Phase 64.
+  Two modes:
+    static  → POST /api/v1/reports/<scanId>/public-share { enabled }
+              embed URL: /api/v1/badge/<scanId>.svg
+    live    → POST /api/v1/reports/<scanId>/site-badge   { enabled }
+              embed URL: /api/v1/badge/live/<badgeId>.svg
+  Toggles are progressively-enhanced: the form posts the JSON body via
+  fetch + the CSRF token from <meta name="csrf-token"> (set in main layout).
+--}}
+<section
+  id="share-panel"
+  class="share-panel"
+  hidden
+  aria-labelledby="share-panel-heading"
+  data-scan-id="{{scan.id}}"
+  data-site-url="{{scan.siteUrl}}"
+  data-public-share-enabled="{{#if scan.publicShareEnabled}}1{{else}}0{{/if}}"
+  data-live-badge-id="{{liveBadgeId}}"
+>
+  <header class="share-panel__head">
+    <h2 id="share-panel-heading" class="share-panel__title">{{t "share.title"}}</h2>
+    <p class="share-panel__lede">{{t "share.lede"}}</p>
+  </header>
+
+  <div class="share-panel__row">
+    <div class="share-panel__row-text">
+      <h3 class="share-panel__row-title">{{t "share.staticTitle"}}</h3>
+      <p class="share-panel__row-desc">{{t "share.staticDesc"}}</p>
+    </div>
+    <label class="share-panel__switch">
+      <input type="checkbox" data-share-toggle="static" {{#if scan.publicShareEnabled}}checked{{/if}}>
+      <span class="share-panel__switch-track" aria-hidden="true"></span>
+      <span class="sr-only">{{t "share.staticToggleLabel"}}</span>
+    </label>
+  </div>
+  <div class="share-panel__snippet" data-share-snippet="static" {{#unless scan.publicShareEnabled}}hidden{{/unless}}>
+    <label class="share-panel__snippet-label" for="share-snippet-static">{{t "share.embedSnippet"}}</label>
+    <textarea
+      id="share-snippet-static"
+      class="share-panel__snippet-code"
+      readonly
+      rows="3"
+      data-share-snippet-target="static"
+    ></textarea>
+    <button type="button" class="btn btn--ghost btn--sm" data-share-copy="static">{{t "share.copy"}}</button>
+  </div>
+
+  <div class="share-panel__row">
+    <div class="share-panel__row-text">
+      <h3 class="share-panel__row-title">{{t "share.liveTitle"}}</h3>
+      <p class="share-panel__row-desc">{{t "share.liveDesc"}}</p>
+    </div>
+    <label class="share-panel__switch">
+      <input type="checkbox" data-share-toggle="live" {{#if liveBadgeId}}checked{{/if}}>
+      <span class="share-panel__switch-track" aria-hidden="true"></span>
+      <span class="sr-only">{{t "share.liveToggleLabel"}}</span>
+    </label>
+  </div>
+  <div class="share-panel__snippet" data-share-snippet="live" {{#unless liveBadgeId}}hidden{{/unless}}>
+    <label class="share-panel__snippet-label" for="share-snippet-live">{{t "share.embedSnippet"}}</label>
+    <textarea
+      id="share-snippet-live"
+      class="share-panel__snippet-code"
+      readonly
+      rows="3"
+      data-share-snippet-target="live"
+    ></textarea>
+    <button type="button" class="btn btn--ghost btn--sm" data-share-copy="live">{{t "share.copy"}}</button>
+  </div>
+
+  <p class="share-panel__status" role="status" aria-live="polite" data-share-status></p>
+</section>

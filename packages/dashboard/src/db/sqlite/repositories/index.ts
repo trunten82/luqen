@@ -26,3 +26,4 @@ export { SqliteOauthSigningKeyRepository } from './oauth-signing-key-repository.
 export { SqliteNotificationTemplateRepository } from './notification-template-repository.js';
 export { SqliteWpSitesRepository } from './wp-sites-repository.js';
 export { SqliteWpUserLinksRepository } from './wp-user-links-repository.js';
+export { SqliteSiteBadgesRepository } from './site-badges-repository.js';
