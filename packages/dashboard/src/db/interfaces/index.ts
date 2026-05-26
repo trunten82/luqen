@@ -32,3 +32,9 @@ export type {
   CreateCoordinatedPrInput,
   UpdateLegPatch,
 } from './coordinated-pr-repository.js';
+export type {
+  BulkFixRepository,
+  BulkFix,
+  BulkFixStatus,
+  CreateBulkFixInput,
+} from './bulk-fix-repository.js';

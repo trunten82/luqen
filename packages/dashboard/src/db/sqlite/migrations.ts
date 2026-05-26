@@ -1770,4 +1770,28 @@ CREATE INDEX IF NOT EXISTS idx_coordinated_pr_legs_pr
   ON coordinated_pr_legs(coordinated_pr_id);
     `,
   },
+  {
+    id: '069',
+    name: 'bulk-fixes',
+    sql: `
+-- Phase 62.3 — Bulk fix dispatch.
+-- A bulk_fix groups a network-admin intent ("fix criterion X across the fleet")
+-- with the resulting coordinated PR. Status flips from 'draft' → 'dispatched'
+-- when the candidate set is pushed through 62.2's coordinated PR flow.
+
+CREATE TABLE IF NOT EXISTS bulk_fixes (
+  id                 TEXT PRIMARY KEY,
+  org_id             TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  team_id            TEXT REFERENCES teams(id) ON DELETE SET NULL,
+  created_by         TEXT NOT NULL,
+  criterion          TEXT NOT NULL,
+  summary            TEXT,
+  status             TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft','dispatched','complete')),
+  coordinated_pr_id  TEXT REFERENCES coordinated_prs(id) ON DELETE SET NULL,
+  created_at         TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_bulk_fixes_org ON bulk_fixes(org_id, created_at);
+    `,
+  },
 ];

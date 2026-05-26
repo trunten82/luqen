@@ -33,6 +33,7 @@ import {
   SqliteSiteBadgesRepository,
   SqliteTeamOrgLinkRepository,
   SqliteCoordinatedPrRepository,
+  SqliteBulkFixRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -71,6 +72,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly siteBadges: SqliteSiteBadgesRepository;
   readonly teamOrgLinks: SqliteTeamOrgLinkRepository;
   readonly coordinatedPrs: SqliteCoordinatedPrRepository;
+  readonly bulkFixes: SqliteBulkFixRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -105,6 +107,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.siteBadges = new SqliteSiteBadgesRepository(this.db);
     this.teamOrgLinks = new SqliteTeamOrgLinkRepository(this.db);
     this.coordinatedPrs = new SqliteCoordinatedPrRepository(this.db);
+    this.bulkFixes = new SqliteBulkFixRepository(this.db);
   }
 
   async connect(): Promise<void> {
