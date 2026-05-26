@@ -1747,5 +1747,11 @@
   "agent.org.switched": "Switched to {{orgName}}",
   "agent.org.error": "Couldn't switch org",
   "agent.org.forbidden": "Not allowed",
+  "agent.group.label": "Group:",
+  "agent.group.none": "(no group filter)",
+  "agent.group.switching": "Switching group…",
+  "agent.group.switched": "Switched to group {{groupName}}",
+  "agent.group.cleared": "Group filter cleared",
+  "agent.group.error": "Could not switch group",
   "agent.history.orgChip": "Org: {{orgName}}"
 }

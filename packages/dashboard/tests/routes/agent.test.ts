@@ -27,7 +27,7 @@ const __dirname_p38 = dirname(__filename_p38);
 
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { setEncryptionSalt } from '../../src/plugins/crypto.js';
-import { registerAgentRoutes } from '../../src/routes/agent.js';
+import { registerAgentRoutes, buildDrawerGroupContext } from '../../src/routes/agent.js';
 import type { AgentService } from '../../src/agent/agent-service.js';
 import type { ToolDispatcher } from '../../src/agent/tool-dispatch.js';
 
@@ -1265,6 +1265,136 @@ describe('POST /agent/cancel/:conversationId', () => {
       } finally {
         await noAuthServer.close();
       }
+    } finally {
+      await ctx.cleanup();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 62.4 — drawer group-switcher + POST /agent/group
+// ---------------------------------------------------------------------------
+
+describe('Phase 62.4 — buildDrawerGroupContext', () => {
+  it('renders groupOptions sorted alphabetically when the resolved org has teams; cookie selection wins', async () => {
+    setEncryptionSalt('phase-62-4-group-switcher-salt');
+    const dbPath = join(tmpdir(), `test-agent-group-ctx-${randomUUID()}.db`);
+    const storage = new SqliteStorageAdapter(dbPath);
+    await storage.migrate();
+    try {
+      const org = await storage.organizations.createOrg({
+        name: 'GroupOrg',
+        slug: `gorg-${randomUUID().slice(0, 6)}`,
+      });
+      // Create two teams in unsorted order so the alpha-sort assertion bites.
+      const tCharlie = await storage.teams.createTeam({
+        name: 'Charlie',
+        description: '',
+        orgId: org.id,
+      });
+      const tAlpha = await storage.teams.createTeam({
+        name: 'Alpha',
+        description: '',
+        orgId: org.id,
+      });
+
+      const ctx = await buildDrawerGroupContext({
+        resolvedOrgId: org.id,
+        cookieHeader: `luqen_agent_group=${tCharlie.id}; other=x`,
+        storage,
+      });
+      expect(ctx.showGroupSwitcher).toBe(true);
+      expect(ctx.groupOptions.map((g) => g.name)).toEqual(['Alpha', 'Charlie']);
+      expect(ctx.selectedGroupId).toBe(tCharlie.id);
+      expect(ctx.groupOptions.find((g) => g.id === tCharlie.id)?.selected).toBe(true);
+      expect(ctx.groupOptions.find((g) => g.id === tAlpha.id)?.selected).toBe(false);
+
+      // An unknown cookie id resolves to '' (no leak across orgs).
+      const stale = await buildDrawerGroupContext({
+        resolvedOrgId: org.id,
+        cookieHeader: 'luqen_agent_group=does-not-exist',
+        storage,
+      });
+      expect(stale.selectedGroupId).toBe('');
+      expect(stale.groupOptions.every((g) => g.selected === false)).toBe(true);
+
+      // An org with no teams hides the switcher entirely.
+      const emptyOrg = await storage.organizations.createOrg({
+        name: 'EmptyOrg',
+        slug: `eorg-${randomUUID().slice(0, 6)}`,
+      });
+      const hidden = await buildDrawerGroupContext({
+        resolvedOrgId: emptyOrg.id,
+        cookieHeader: undefined,
+        storage,
+      });
+      expect(hidden.showGroupSwitcher).toBe(false);
+      expect(hidden.groupOptions.length).toBe(0);
+    } finally {
+      await storage.disconnect();
+      if (existsSync(dbPath)) rmSync(dbPath);
+    }
+  });
+});
+
+describe('Phase 62.4 — POST /agent/group', () => {
+  it('persists the selection via Set-Cookie and rejects unknown / cross-org ids', async () => {
+    const ctx = await buildCtx();
+    try {
+      // Seed a team in the user's current org.
+      const team = await ctx.storage.teams.createTeam({
+        name: 'TeamOne',
+        description: '',
+        orgId: ctx.orgId,
+      });
+
+      // Success: known id → Set-Cookie with that value + body returns it.
+      const ok = await ctx.server.inject({
+        method: 'POST',
+        url: '/agent/group',
+        headers: { 'content-type': 'application/json' },
+        payload: { groupId: team.id },
+      });
+      expect(ok.statusCode).toBe(200);
+      const okBody = ok.json() as { groupId: string; groupName: string };
+      expect(okBody.groupId).toBe(team.id);
+      expect(okBody.groupName).toBe('TeamOne');
+      const setCookie = ok.headers['set-cookie'];
+      const cookieStr = Array.isArray(setCookie) ? setCookie.join('\n') : String(setCookie ?? '');
+      expect(cookieStr).toContain(`luqen_agent_group=${team.id}`);
+      expect(cookieStr).toContain('HttpOnly');
+      expect(cookieStr).toContain('Path=/');
+
+      // Unknown id → 400 + no cookie (or a clearing cookie — assert error code).
+      const bad = await ctx.server.inject({
+        method: 'POST',
+        url: '/agent/group',
+        headers: { 'content-type': 'application/json' },
+        payload: { groupId: 'team-that-does-not-exist' },
+      });
+      expect(bad.statusCode).toBe(400);
+      expect((bad.json() as { error: string }).error).toBe('unknown_group');
+
+      // Clear sentinel: empty string returns 200 + expired cookie (Max-Age=0).
+      const clr = await ctx.server.inject({
+        method: 'POST',
+        url: '/agent/group',
+        headers: { 'content-type': 'application/json' },
+        payload: { groupId: '' },
+      });
+      expect(clr.statusCode).toBe(200);
+      const clrCookie = clr.headers['set-cookie'];
+      const clrStr = Array.isArray(clrCookie) ? clrCookie.join('\n') : String(clrCookie ?? '');
+      expect(clrStr).toContain('Max-Age=0');
+
+      // Unauthenticated → 401.
+      const unauth = await ctx.server.inject({
+        method: 'POST',
+        url: '/agent/group',
+        headers: { 'content-type': 'application/json', 'x-test-unauth': '1' },
+        payload: { groupId: team.id },
+      });
+      expect(unauth.statusCode).toBe(401);
     } finally {
       await ctx.cleanup();
     }

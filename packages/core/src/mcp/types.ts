@@ -24,6 +24,13 @@ export interface ToolContext {
   readonly scopes: readonly string[];
   readonly permissions: ReadonlySet<string>;
   readonly authType: 'jwt' | 'apikey';
+  /**
+   * Phase 62.4 — user-selected agent group (team) id, persisted via the
+   * drawer's group switcher. Fleet tools default `group_id`/`team_id`
+   * argument from this when the LLM omits it. Empty string / undefined
+   * means no group filter is active.
+   */
+  readonly groupId?: string;
 }
 
 /**

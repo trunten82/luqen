@@ -116,6 +116,11 @@ export function bridgeMcpToolsForAgent(
             ? new Set<string>(['admin.system', 'admin.users', 'admin.org', 'scans.create', 'reports.view', 'branding.view'])
             : new Set<string>(),
           authType: 'jwt',
+          // Phase 62.4 — forward the user-selected group filter so fleet
+          // tools can default their group_id arg when the LLM omits it.
+          ...(ctx.groupId !== undefined && ctx.groupId !== ''
+            ? { groupId: ctx.groupId }
+            : {}),
         };
         return runInToolContext(toolContext, async () => {
           // MCP handler expects (args, extra) where extra is the request's

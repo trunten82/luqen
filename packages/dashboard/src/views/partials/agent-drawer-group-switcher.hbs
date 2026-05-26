@@ -1,0 +1,22 @@
+{{!-- Phase 62.4 — Group switcher in the drawer header.
+     Renders only when `showGroupSwitcher` is truthy AND `groupOptions` is
+     non-empty. Mirrors agent-drawer-org-switcher.hbs visually and structurally.
+     CSP-strict (no inline JS) — agent-group.js wires data-action="agentGroupSwitch"
+     via a delegated change listener.
+
+     The first option (value="") clears the group filter so the agent operates
+     across the user's full org scope (existing behaviour pre-Phase-62.4). --}}
+{{#if showGroupSwitcher}}
+{{#if groupOptions.length}}
+<form class="agent-drawer__org-switcher" data-action="agentGroupSwitch" autocomplete="off">
+  <label class="agent-drawer__org-switcher-label" for="agent-group-select">{{t "agent.group.label"}}</label>
+  <select id="agent-group-select" name="groupId" class="agent-drawer__org-switcher-select" aria-label="{{t "agent.group.label"}}">
+    <option value="">{{t "agent.group.none"}}</option>
+    {{#each groupOptions}}
+      <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+    {{/each}}
+  </select>
+  <output class="agent-drawer__toast agent-drawer__toast--org" data-role="groupToast" aria-live="polite"></output>
+</form>
+{{/if}}
+{{/if}}

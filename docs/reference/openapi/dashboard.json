@@ -29187,6 +29187,15 @@
         }
       }
     },
+    "/agent/group": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/agent/message": {
       "post": {
         "summary": "Post a user message to the conversation",

@@ -113,7 +113,7 @@ import { ToolDispatcher } from './agent/tool-dispatch.js';
 import { DASHBOARD_TOOL_METADATA } from './mcp/metadata.js';
 import { createDashboardMcpServer } from './mcp/server.js';
 import { bridgeMcpToolsForAgent } from './agent/mcp-bridge.js';
-import { registerAgentRoutes, buildDrawerOrgContext } from './routes/agent.js';
+import { registerAgentRoutes, buildDrawerOrgContext, buildDrawerGroupContext } from './routes/agent.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -880,6 +880,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     // from listOrgs() with `selected` flagged on the resolved active org id.
     let showOrgSwitcher = false;
     let orgOptions: ReadonlyArray<{ id: string; name: string; selected: boolean }> = [];
+    // Phase 62.4 — drawer group-switcher context. Mirrors the org switcher
+    // wiring: build once per request, fall through with empty values on
+    // any failure so we never block the page render.
+    let showGroupSwitcher = false;
+    let groupOptions: ReadonlyArray<{ id: string; name: string; selected: boolean }> = [];
     if (request.user) {
       try {
         const drawerOrgCtx = await buildDrawerOrgContext({
@@ -889,6 +894,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         });
         showOrgSwitcher = drawerOrgCtx.showOrgSwitcher;
         orgOptions = drawerOrgCtx.orgOptions;
+        const drawerGroupCtx = await buildDrawerGroupContext({
+          resolvedOrgId: drawerOrgCtx.resolvedOrgId,
+          cookieHeader: request.headers.cookie,
+          storage,
+        });
+        showGroupSwitcher = drawerGroupCtx.showGroupSwitcher;
+        groupOptions = drawerGroupCtx.groupOptions;
       } catch {
         // Fall through with switcher hidden — never block page render on this.
       }
@@ -960,6 +972,8 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         hasGitHostConfigs,
         showOrgSwitcher,
         orgOptions,
+        showGroupSwitcher,
+        groupOptions,
         orgContext: (request as unknown as Record<string, unknown>).orgContext,
         incomingTeamInviteCount: (request as unknown as { incomingTeamInviteCount?: number }).incomingTeamInviteCount ?? 0,
         appVersion: `v${VERSION}`,

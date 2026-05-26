@@ -154,14 +154,24 @@ export function registerFleetTools(
         orgId: scope.orgId,
         status: args.status ?? 'active',
       });
+      // Phase 62.4 — default group_id from the agent's per-conversation
+      // group selection when the LLM omits it. Empty string / undefined
+      // ctx.groupId means no default filter.
+      const ctxGroupId = getCurrentToolContext()?.groupId;
+      const effectiveGroupId =
+        args.group_id !== undefined && args.group_id !== ''
+          ? args.group_id
+          : ctxGroupId !== undefined && ctxGroupId !== ''
+            ? ctxGroupId
+            : undefined;
       // Optional team-scope filter: include only sites whose URL is registered
       // under the team's effective org scope. We approximate "team scope" by
       // listing wp_sites for each of the team's linked orgs (home + linked
       // via team_org_links) and intersecting on site id.
       let filtered = sites;
-      if (args.group_id !== undefined && args.group_id !== '') {
-        const team = await storage.teams.getTeam(args.group_id);
-        if (team === null) return errorEnvelope(`Team "${args.group_id}" not found`);
+      if (effectiveGroupId !== undefined && effectiveGroupId !== '') {
+        const team = await storage.teams.getTeam(effectiveGroupId);
+        if (team === null) return errorEnvelope(`Team "${effectiveGroupId}" not found`);
         const links = await storage.teamOrgLinks.listLinksForTeam(team.id);
         const scopeOrgIds = new Set<string>([
           team.orgId,
@@ -190,7 +200,7 @@ export function registerFleetTools(
         meta: {
           count: filtered.length,
           orgId: scope.orgId,
-          groupId: args.group_id ?? null,
+          groupId: effectiveGroupId ?? null,
           statusFilter: args.status ?? 'active',
         },
       });
@@ -318,7 +328,14 @@ export function registerFleetTools(
       const ctx = getCurrentToolContext();
       const perms = ctx?.permissions ?? new Set<string>();
       const callerOrg = ctx?.orgId ?? '';
-      const teamId = args.team_id ?? args.group_id ?? null;
+      // Phase 62.4 — default team_id/group_id from the agent's per-conversation
+      // group selection when the LLM omits both. ctx.groupId === '' means
+      // user explicitly cleared the filter — treat as no default.
+      const ctxGroupId = ctx?.groupId;
+      const teamId =
+        args.team_id ??
+        args.group_id ??
+        (ctxGroupId !== undefined && ctxGroupId !== '' ? ctxGroupId : null);
 
       let orgId: string;
       if (teamId !== null && teamId !== '') {
