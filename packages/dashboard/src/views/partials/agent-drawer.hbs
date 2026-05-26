@@ -26,6 +26,7 @@
   <header class="agent-drawer__header">
     <h2 class="agent-drawer__title"><span id="agent-display-name">{{agentDisplayName}}</span></h2>
     {{> agent-drawer-org-switcher}}
+    {{> agent-drawer-group-switcher}}
     <button type="button" class="agent-drawer__new-chat btn btn--ghost btn--sm"
             aria-label="{{t "agent.newChat.label"}}"
             title="{{t "agent.newChat.label"}}"
@@ -76,7 +77,11 @@
     "org.switching":    "{{t "agent.org.switching"}}",
     "org.switched":     "{{t "agent.org.switched" orgName="__ORG_NAME__"}}",
     "org.error":        "{{t "agent.org.error"}}",
-    "org.forbidden":    "{{t "agent.org.forbidden"}}"
+    "org.forbidden":    "{{t "agent.org.forbidden"}}",
+    "group.switching":  "{{t "agent.group.switching"}}",
+    "group.switched":   "{{t "agent.group.switched" groupName="__GROUP_NAME__"}}",
+    "group.cleared":    "{{t "agent.group.cleared"}}",
+    "group.error":      "{{t "agent.group.error"}}"
   }
   </script>
 

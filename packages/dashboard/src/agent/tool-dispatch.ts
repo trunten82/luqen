@@ -52,6 +52,14 @@ export interface ToolDispatchContext {
    * user's identity without re-minting.
    */
   readonly authToken: string;
+  /**
+   * Phase 62.4 — user-selected agent group (team) id. Set on the
+   * conversation/cookie via the drawer's group switcher. Fleet tools
+   * (dashboard_list_fleet, dashboard_scan_summary_for_fleet,
+   * dashboard_queue_bulk_fix) default their `group_id` argument from this
+   * when the LLM omits it. Empty string / undefined means no group filter.
+   */
+  readonly groupId?: string;
 }
 
 export interface ToolCallInput {
@@ -165,6 +173,7 @@ export class ToolDispatcher {
       userId: ctx.userId,
       orgId: ctx.orgId,
       ...(ctx.signal !== undefined ? { signal: ctx.signal } : {}),
+      ...(ctx.groupId !== undefined ? { groupId: ctx.groupId } : {}),
       authToken,
     };
 

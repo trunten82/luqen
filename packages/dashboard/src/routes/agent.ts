@@ -128,6 +128,14 @@ const ActiveOrgBodySchema = Type.Object(
   { additionalProperties: true },
 );
 
+// Phase 62.4 — POST /agent/group body. Empty string clears the filter.
+const AgentGroupBodySchema = Type.Object(
+  {
+    groupId: Type.String({ maxLength: 64 }),
+  },
+  { additionalProperties: true },
+);
+
 /**
  * TypeBox replacement for `Schema.safeParse(x)`. Trims string fields
  * (matches Zod's `.trim()`) and coerces numeric strings (matches
@@ -257,6 +265,62 @@ export async function buildDrawerOrgContext(args: {
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((o) => ({ id: o.id, name: o.name, selected: o.id === resolvedOrgId }));
   return { showOrgSwitcher, orgOptions, resolvedOrgId };
+}
+
+/**
+ * Phase 62.4 — drawer group-switcher render context.
+ *
+ * Sources teams (a.k.a. groups) from the caller's resolved orgId. The
+ * switcher renders only when the org has at least one team. The currently
+ * selected group id is read from the `luqen_agent_group` cookie (set by
+ * the client when the user changes the select) and validated against the
+ * team list — an unknown / cross-org id resolves to '' (no filter), so a
+ * stale cookie after switching orgs does not leak a foreign group id
+ * into fleet tool calls.
+ *
+ * Persistence approach: a path=/ HTTP cookie. There is no conversation
+ * column for group selection; the org switcher persists on the user row
+ * but the group filter is a per-browser preference (not per-account) so
+ * a cookie is the simplest reversible store and degrades cleanly when
+ * disabled (drawer renders with the empty selection).
+ */
+export interface DrawerGroupContext {
+  readonly showGroupSwitcher: boolean;
+  readonly groupOptions: ReadonlyArray<{ id: string; name: string; selected: boolean }>;
+  readonly selectedGroupId: string;
+}
+
+export const AGENT_GROUP_COOKIE = 'luqen_agent_group';
+
+export function readAgentGroupCookie(cookieHeader: string | undefined): string {
+  if (cookieHeader === undefined || cookieHeader.length === 0) return '';
+  // Restrict to safe id-style chars so the value cannot inject Set-Cookie
+  // metadata when echoed back (defense in depth — the server only ever
+  // sets vetted ids, but the read side must not trust the cookie either).
+  const match = cookieHeader.match(/(?:^|;\s*)luqen_agent_group=([A-Za-z0-9_-]{1,64})(?:;|$)/);
+  return match !== null && match[1] !== undefined ? match[1] : '';
+}
+
+export async function buildDrawerGroupContext(args: {
+  readonly resolvedOrgId: string | undefined;
+  readonly cookieHeader: string | undefined;
+  readonly storage: Pick<StorageAdapter, 'teams'>;
+}): Promise<DrawerGroupContext> {
+  const { resolvedOrgId, cookieHeader, storage } = args;
+  if (resolvedOrgId === undefined || resolvedOrgId === '') {
+    return { showGroupSwitcher: false, groupOptions: [], selectedGroupId: '' };
+  }
+  const teams = await storage.teams.listTeams(resolvedOrgId);
+  if (teams.length === 0) {
+    return { showGroupSwitcher: false, groupOptions: [], selectedGroupId: '' };
+  }
+  const cookieId = readAgentGroupCookie(cookieHeader);
+  const isKnown = teams.some((t) => t.id === cookieId);
+  const selectedGroupId = isKnown ? cookieId : '';
+  const groupOptions = [...teams]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((t) => ({ id: t.id, name: t.name, selected: t.id === selectedGroupId }));
+  return { showGroupSwitcher: true, groupOptions, selectedGroupId };
 }
 
 function getPermissions(request: FastifyRequest): ReadonlySet<string> {
@@ -482,6 +546,7 @@ export async function registerAgentRoutes(
         };
 
         try {
+          const agentGroupId = readAgentGroupCookie(request.headers.cookie);
           await agentService.runTurn({
             conversationId,
             userId: user.id,
@@ -489,6 +554,7 @@ export async function registerAgentRoutes(
             userMessage,
             emit,
             signal: controller.signal,
+            ...(agentGroupId !== '' ? { groupId: agentGroupId } : {}),
           });
         } catch (err) {
           // Never throw to Fastify — the reply is already hijacked.
@@ -528,9 +594,11 @@ export async function registerAgentRoutes(
         }
 
         await storage.conversations.updateMessageStatus(messageId, 'sent');
+        const agentGroupId = readAgentGroupCookie(request.headers.cookie);
         const result = await dispatcher.dispatch(call, {
           userId: user.id,
           orgId,
+          ...(agentGroupId !== '' ? { groupId: agentGroupId } : {}),
         });
         // Persist the dispatched tool result as a NEW tool row so the loop
         // can resume on the next SSE turn. Truncation mirrors AgentService.
@@ -698,6 +766,61 @@ export async function registerAgentRoutes(
         activeOrgId: target.id,
         activeOrgName: target.name,
       });
+    });
+
+    // ── POST /agent/group ──────────────────────────────────────────────
+    // Phase 62.4 — persist the user's selected agent group (team) into a
+    // path=/ cookie (`luqen_agent_group`). The cookie is read on every
+    // page render so the drawer's <select> remembers the choice, and on
+    // every AgentService.runTurn so fleet tools can default group_id
+    // from it. Empty string clears the cookie (no group filter).
+    //
+    // Security: validate the groupId against the user's resolved-org
+    // team list before persisting. A cross-org / unknown id is rejected
+    // (400) — the cookie is never set to an unvalidated value. Same
+    // CSRF + auth gates as /active-org (global preHandler).
+    scope.post('/group', async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = request.user;
+      if (user === undefined) {
+        return reply.code(401).send({ error: 'unauthenticated' });
+      }
+      const parsed = safeValidate(AgentGroupBodySchema, request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'invalid_body', issues: parsed.error.issues });
+      }
+      const orgId = await resolveAgentOrgIdAsync(storage, user, getPermissions(request));
+      if (orgId === undefined) {
+        return reply.code(400).send({ error: 'no_org_context' });
+      }
+      const requested = parsed.data.groupId.trim();
+      // Empty string is the clear-filter sentinel — set an expired cookie.
+      if (requested === '') {
+        void reply.header(
+          'set-cookie',
+          'luqen_agent_group=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+        );
+        void reply.type('application/json');
+        return reply.code(200).send({ groupId: '', groupName: '' });
+      }
+      // Validate the id against the caller's org teams. Cross-org / unknown
+      // ids are rejected so the cookie never carries an unvalidated value.
+      if (!/^[A-Za-z0-9_-]{1,64}$/.test(requested)) {
+        return reply.code(400).send({ error: 'invalid_group_id' });
+      }
+      const teams = await storage.teams.listTeams(orgId);
+      const target = teams.find((t) => t.id === requested);
+      if (target === undefined) {
+        return reply.code(400).send({ error: 'unknown_group' });
+      }
+      // 30 days; HttpOnly because no JS needs to read it — the server is
+      // the sole source of truth for the rendered <select> and the
+      // dispatch-time fleet-tool default.
+      void reply.header(
+        'set-cookie',
+        `luqen_agent_group=${target.id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+      );
+      void reply.type('application/json');
+      return reply.code(200).send({ groupId: target.id, groupName: target.name });
     });
 
     // ── GET /agent/panel ───────────────────────────────────────────────

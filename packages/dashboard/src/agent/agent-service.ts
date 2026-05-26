@@ -130,6 +130,13 @@ export interface AgentTurnInput {
   readonly userMessage: string;
   readonly emit: (frame: SseFrame) => void;
   readonly signal: AbortSignal;
+  /**
+   * Phase 62.4 — user-selected agent group (team) id from the drawer
+   * switcher cookie. Forwarded to the tool dispatcher so fleet tools can
+   * default their group_id arg when the LLM omits it. Empty string /
+   * undefined means no group filter is active.
+   */
+  readonly groupId?: string;
 }
 
 export interface AgentToolCatalogEntry {
@@ -545,6 +552,7 @@ export class AgentService {
           signal,
           emit,
           retryBudget,
+          ...(input.groupId !== undefined ? { groupId: input.groupId } : {}),
         });
         // Fall through to next iteration.
       }
@@ -843,8 +851,10 @@ export class AgentService {
     readonly signal: AbortSignal;
     readonly emit: (frame: SseFrame) => void;
     readonly retryBudget: { remaining: number };
+    /** Phase 62.4 — forwarded to dispatch so fleet tools default group_id. */
+    readonly groupId?: string;
   }): Promise<void> {
-    const { turn, conversationId, userId, orgId, signal, emit, retryBudget } = args;
+    const { turn, conversationId, userId, orgId, signal, emit, retryBudget, groupId } = args;
     const calls = turn.toolCalls;
 
     // (a) Capture rationale BEFORE dispatching — same string applied to every
@@ -875,7 +885,12 @@ export class AgentService {
         let outcomeDetail: string | undefined;
         let resultToStore: unknown;
         try {
-          const result = await this.dispatcher.dispatch(call, { userId, orgId, signal });
+          const result = await this.dispatcher.dispatch(call, {
+            userId,
+            orgId,
+            signal,
+            ...(groupId !== undefined ? { groupId } : {}),
+          });
           resultToStore = result;
           if (result !== null && typeof result === 'object' && 'error' in result) {
             const err = (result as { error: string }).error;
