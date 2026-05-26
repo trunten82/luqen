@@ -41,6 +41,7 @@ import { exportRoutes } from './routes/api/export.js';
 import { dataApiRoutes } from './routes/api/data.js';
 import { brandingApiRoutes } from './routes/api/branding.js';
 import { wpNetworkApiRoutes } from './routes/api/wp-network.js';
+import { teamOrgLinkRoutes } from './routes/api/team-org-links.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { repoRoutes } from './routes/repos.js';
@@ -1060,6 +1061,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── WordPress network/fleet API (Phase 61) ──────────────────────────────
   await wpNetworkApiRoutes(server, storage);
+
+  // ── Multi-team RBAC overlay API (Phase 62.1) ────────────────────────────
+  await teamOrgLinkRoutes(server, storage);
 
   // ── Setup API (create admin user via API key) ──────────────────────────
   await setupRoutes(server, storage, authService);
