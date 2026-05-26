@@ -212,13 +212,23 @@ export class SqliteRoleRepository implements RoleRepository {
       return globalPerms;
     }
 
-    // 3. Find all teams the user belongs to in this org, and their role_ids
+    // 3. Find all teams the user belongs to whose scope covers this org,
+    //    and their role_ids. Scope = team's home org OR an active cross-org
+    //    link in team_org_links (Phase 62.1 RBAC overlay).
     const teamRoles = this.db.prepare(`
       SELECT DISTINCT t.role_id
       FROM team_members tm
       JOIN teams t ON t.id = tm.team_id
-      WHERE tm.user_id = ? AND t.org_id = ? AND t.role_id IS NOT NULL
-    `).all(userId, orgId) as Array<{ role_id: string }>;
+      WHERE tm.user_id = ?
+        AND t.role_id IS NOT NULL
+        AND (
+          t.org_id = ?
+          OR EXISTS (
+            SELECT 1 FROM team_org_links tol
+            WHERE tol.team_id = t.id AND tol.org_id = ?
+          )
+        )
+    `).all(userId, orgId, orgId) as Array<{ role_id: string }>;
 
     if (teamRoles.length === 0) {
       return globalPerms;

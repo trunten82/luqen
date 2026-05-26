@@ -96,6 +96,112 @@ export async function resolveEffectivePermissions(
 }
 
 // ---------------------------------------------------------------------------
+// Phase 62.1 — Multi-team RBAC overlay: effective role per org
+// ---------------------------------------------------------------------------
+
+/** Role rank for MAX aggregation. Higher = more permissive. */
+const ROLE_RANK: Record<string, number> = {
+  Owner: 4,
+  Admin: 3,
+  Member: 2,
+  Viewer: 1,
+};
+
+export interface EffectiveRoleSource {
+  readonly kind: 'org' | 'team';
+  readonly teamId?: string;
+  readonly role: string;
+}
+
+export interface EffectiveRoleForOrg {
+  readonly orgId: string;
+  readonly role: string;
+  readonly sources: readonly EffectiveRoleSource[];
+}
+
+interface ResolveEffectiveRolesDeps {
+  readonly organizations: {
+    getUserOrgs(userId: string): Promise<readonly { id: string; name: string }[]>;
+    listMembers(orgId: string): Promise<readonly { userId: string; role: string }[]>;
+  };
+  readonly teams: {
+    listTeamMembershipsForUser(
+      userId: string,
+    ): Promise<readonly { teamId: string; role: string }[]>;
+    getTeam(teamId: string): Promise<{ id: string; orgId: string; roleId: string | null } | null>;
+  };
+  readonly teamOrgLinks: {
+    listLinksForTeam(
+      teamId: string,
+    ): Promise<readonly { teamId: string; orgId: string }[]>;
+  };
+  readonly roles: {
+    getRole(roleId: string): Promise<{ id: string; name: string } | null>;
+  };
+}
+
+/**
+ * Compute the effective role each org grants this user. Aggregates via MAX
+ * across:
+ *  - the user's `org_members.role` for that org (the org-default),
+ *  - every team they belong to whose scope covers that org (team's home org
+ *    OR linked via team_org_links — Phase 62.1).
+ *
+ * Returns one entry per org the user has any role in; orgs the user has no
+ * role at all in are omitted.
+ */
+export async function resolveEffectiveRoles(
+  deps: ResolveEffectiveRolesDeps,
+  userId: string,
+): Promise<readonly EffectiveRoleForOrg[]> {
+  const accum = new Map<string, { role: string; sources: EffectiveRoleSource[] }>();
+
+  function record(orgId: string, role: string, source: EffectiveRoleSource): void {
+    const existing = accum.get(orgId);
+    if (existing === undefined) {
+      accum.set(orgId, { role, sources: [source] });
+      return;
+    }
+    existing.sources.push(source);
+    if ((ROLE_RANK[role] ?? 0) > (ROLE_RANK[existing.role] ?? 0)) {
+      existing.role = role;
+    }
+  }
+
+  // 1. Org-level memberships.
+  const orgs = await deps.organizations.getUserOrgs(userId);
+  for (const org of orgs) {
+    const members = await deps.organizations.listMembers(org.id);
+    const me = members.find((m) => m.userId === userId);
+    if (me !== undefined && me.role !== '') {
+      record(org.id, me.role, { kind: 'org', role: me.role });
+    }
+  }
+
+  // 2. Team memberships → fan out to home org + linked orgs.
+  const memberships = await deps.teams.listTeamMembershipsForUser(userId);
+  for (const m of memberships) {
+    const team = await deps.teams.getTeam(m.teamId);
+    if (team === null || team.roleId === null) continue;
+    const role = await deps.roles.getRole(team.roleId);
+    if (role === null) continue;
+    const scopedOrgs = new Set<string>();
+    scopedOrgs.add(team.orgId);
+    const links = await deps.teamOrgLinks.listLinksForTeam(m.teamId);
+    for (const l of links) scopedOrgs.add(l.orgId);
+    for (const orgId of scopedOrgs) {
+      record(orgId, role.name, { kind: 'team', teamId: m.teamId, role: role.name });
+    }
+  }
+
+  return Array.from(accum.entries()).map(([orgId, v]) => ({
+    orgId,
+    role: v.role,
+    sources: v.sources,
+  }));
+}
+
+// ---------------------------------------------------------------------------
 // Org-scoped role definitions (default roles created when an org is created)
 // ---------------------------------------------------------------------------
 
