@@ -38,16 +38,36 @@ export async function adminBadgeRoutes(
     '/admin/badges',
     {
       preHandler: requirePermission('admin.system', 'admin.org'),
-      schema: HtmlPageSchema,
+      schema: {
+        ...HtmlPageSchema,
+        querystring: Type.Object({
+          org: Type.Optional(Type.String()),
+          showDisabled: Type.Optional(Type.String()),
+        }),
+      },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const isAdminSystem = hasPermission(request, 'admin.system');
-      const orgFilter = isAdminSystem ? undefined : (request.user?.currentOrgId ?? 'system');
+      const { org: orgQuery, showDisabled: showDisabledQuery } =
+        request.query as { org?: string; showDisabled?: string };
+      const showDisabled = showDisabledQuery === '1' || showDisabledQuery === 'true';
 
-      const [staticScans, liveBadges] = await Promise.all([
-        storage.scans.listPubliclyShared(orgFilter),
-        storage.siteBadges.list(orgFilter),
+      // admin.org is hard-pinned to their own org; admin.system can pick any
+      // org via the ?org= query param or see all when unset.
+      const baseOrgFilter = isAdminSystem
+        ? (orgQuery && orgQuery !== '' ? orgQuery : undefined)
+        : (request.user?.currentOrgId ?? 'system');
+
+      const [staticScans, liveBadgesAll, orgList] = await Promise.all([
+        storage.scans.listPubliclyShared(baseOrgFilter),
+        storage.siteBadges.list(baseOrgFilter),
+        isAdminSystem ? storage.organizations.listOrgs() : Promise.resolve([]),
       ]);
+
+      const liveBadges = showDisabled
+        ? liveBadgesAll
+        : liveBadgesAll.filter((b) => b.enabled);
+      const hiddenDisabledCount = liveBadgesAll.length - liveBadges.length;
 
       const host = request.headers.host ?? '';
 
@@ -83,6 +103,12 @@ export async function adminBadgeRoutes(
         currentPath: '/admin/badges',
         user: request.user,
         isAdminSystem,
+        filters: {
+          org: orgQuery ?? '',
+          showDisabled,
+        },
+        orgOptions: orgList.map((o) => ({ id: o.id, name: o.name })),
+        hiddenDisabledCount,
         systemBadge,
         staticBadges: staticScans.map((s) => ({
           scanId: s.id,
