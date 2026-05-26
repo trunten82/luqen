@@ -47,6 +47,7 @@ beforeAll(async () => {
   // Register required partials so the drawer template can include them.
   const partialNames = [
     'agent-drawer-org-switcher',
+    'agent-drawer-group-switcher',
     'agent-messages',
     'agent-history-panel',
     'agent-confirm-dialog',
