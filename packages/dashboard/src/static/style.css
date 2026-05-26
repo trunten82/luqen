@@ -873,7 +873,7 @@ html[data-density="plain"] .verdict-line__sentence {
   bottom: 6px;
   left: 0;
   width: 2px;
-  background: var(--id-evidence);
+  background: var(--accent);
   border-radius: 1px;
 }
 
@@ -1417,7 +1417,7 @@ html[data-density="plain"] [data-glossary] {
   bottom: 6px;
   left: 0;
   width: 2px;
-  background: var(--id-evidence);
+  background: var(--status-error);
   border-radius: 1px;
 }
 
