@@ -65,29 +65,91 @@ function statusFor(scan: { errors?: number | null; confirmedViolations?: number 
   return { label: 'VERIFIED', colour: STATUS_PASS };
 }
 
-function renderSvg(host: string, scanId: string, label: string, statusColour: string, dateIso: string): string {
-  // 180 x 32 viewBox. Left half: oxblood block with the u-mark + "LUQEN".
-  // Right half: status word in colour-coded text, date in mono underneath.
-  // Inter / IBM Plex Mono families are listed in font-family stacks but fall
-  // back to system-ui — embedding fonts in an SVG would bloat the badge.
-  const safeHost = escapeXml(host);
-  const safeId = escapeXml(scanId);
-  const titleText = `Verified by Luqen — ${label} on ${dateIso}`;
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="180" height="32" viewBox="0 0 180 32" role="img" aria-label="${escapeXml(titleText)}">
-  <title>${escapeXml(titleText)}</title>
-  <rect x="0" y="0" width="72" height="32" fill="${OXBLOOD}"/>
-  <g fill="#ffffff" stroke="#ffffff">
-    <path d="M10 8 V18 a5 5 0 0 0 5 5 h4 a5 5 0 0 0 5 -5 V8" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="square"/>
-    <rect x="21" y="8" width="2" height="2" fill="${CITRON}" stroke="none"/>
+/**
+ * Render a WCAG standard code as a spaced label.
+ *   WCAG21AA  → 'WCAG 2.1 AA'
+ *   WCAG22AAA → 'WCAG 2.2 AAA'
+ *   WCAG2A    → 'WCAG 2.0 A'
+ * Unknown / empty input falls back to the raw string.
+ */
+function formatStandard(standard: string): string {
+  if (!standard) return '';
+  const m = standard.match(/^WCAG\s*(\d)(\d?)\s*(A{1,3})$/i);
+  if (m === null) return standard;
+  const major = m[1];
+  const minor = m[2] === '' ? '0' : m[2];
+  const level = m[3]!.toUpperCase();
+  return `WCAG ${major}.${minor} ${level}`;
+}
+
+export type BadgeSize = 'small' | 'large';
+
+interface RenderSvgInput {
+  readonly idForMetadata: string;
+  readonly label: string;
+  readonly statusColour: string;
+  readonly dateIso: string;
+  readonly standard: string;
+  readonly size: BadgeSize;
+}
+
+/**
+ * Two sizes, identical content:
+ *   small  180 × 32  — inline footer use (default)
+ *   large  260 × 60  — press kits, evidence packs
+ *
+ * Right column carries STATUS + (standard · date) — host is dropped because
+ * the badge is embedded ON the verified site, and the link wrapping the
+ * <img> already takes you to the full report URL.
+ *
+ * Inter / IBM Plex stacks fall back to system-ui — no embedded fonts.
+ */
+function renderSvg(input: RenderSvgInput): string {
+  const safeId = escapeXml(input.idForMetadata);
+  const standardLabel = formatStandard(input.standard);
+  const provenance = [standardLabel, input.dateIso].filter(Boolean).join(' · ');
+  const titleText = `Luqen verdict: ${input.label} — ${provenance || input.dateIso}`;
+  const safeTitle = escapeXml(titleText);
+  const safeLabel = escapeXml(input.label);
+  const safeProv = escapeXml(provenance || input.dateIso);
+
+  if (input.size === 'large') {
+    // 260 × 60 — same composition, larger type, more breathing room.
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="60" viewBox="0 0 260 60" role="img" aria-label="${safeTitle}">
+  <title>${safeTitle}</title>
+  <rect x="0" y="0" width="104" height="60" fill="${OXBLOOD}"/>
+  <g fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="square">
+    <path d="M16 16 V34 a8 8 0 0 0 8 8 h6 a8 8 0 0 0 8 -8 V16"/>
   </g>
-  <text x="32" y="20" font-family="'Inter', system-ui, sans-serif" font-size="11" font-weight="700" fill="#ffffff" letter-spacing="0.06em">LUQEN</text>
-  <rect x="72" y="0" width="108" height="32" fill="#ffffff"/>
-  <rect x="72" y="0" width="108" height="32" fill="none" stroke="${OXBLOOD}" stroke-width="0.5" opacity="0.4"/>
-  <text x="78" y="14" font-family="'Inter', system-ui, sans-serif" font-size="9" font-weight="700" letter-spacing="0.04em" fill="${statusColour}">${escapeXml(label)}</text>
-  <text x="78" y="26" font-family="'IBM Plex Mono', Menlo, monospace" font-size="8" fill="${OXBLOOD}">${escapeXml(dateIso)} · ${safeHost}</text>
-  <metadata>scan-id:${safeId}</metadata>
+  <rect x="32" y="16" width="3" height="9" fill="${CITRON}"/>
+  <text x="46" y="35" font-family="'Inter Display','Inter',system-ui,sans-serif" font-size="18" font-weight="800" fill="#ffffff" letter-spacing="-0.01em">LUQEN</text>
+  <rect x="104" y="0" width="156" height="60" fill="#ffffff"/>
+  <text x="116" y="28" font-family="'Inter',system-ui,sans-serif" font-size="16" font-weight="700" letter-spacing="0.02em" fill="${input.statusColour}">${safeLabel}</text>
+  <text x="116" y="46" font-family="'Inter',system-ui,sans-serif" font-size="11" font-weight="500" fill="${OXBLOOD}" opacity="0.8">${safeProv}</text>
+  <metadata>luqen-badge:${safeId}</metadata>
 </svg>`;
+  }
+
+  // small — 180 × 32 default
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="32" viewBox="0 0 180 32" role="img" aria-label="${safeTitle}">
+  <title>${safeTitle}</title>
+  <rect x="0" y="0" width="72" height="32" fill="${OXBLOOD}"/>
+  <g fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="square">
+    <path d="M10 8 V18 a5 5 0 0 0 5 5 h4 a5 5 0 0 0 5 -5 V8"/>
+  </g>
+  <rect x="21" y="8" width="2" height="6" fill="${CITRON}"/>
+  <text x="32" y="21" font-family="'Inter',system-ui,sans-serif" font-size="12" font-weight="700" fill="#ffffff" letter-spacing="0.04em">LUQEN</text>
+  <rect x="72" y="0" width="108" height="32" fill="#ffffff"/>
+  <text x="78" y="14" font-family="'Inter',system-ui,sans-serif" font-size="10" font-weight="700" letter-spacing="0.02em" fill="${input.statusColour}">${safeLabel}</text>
+  <text x="78" y="26" font-family="'Inter',system-ui,sans-serif" font-size="8" font-weight="500" fill="${OXBLOOD}" opacity="0.78">${safeProv}</text>
+  <metadata>luqen-badge:${safeId}</metadata>
+</svg>`;
+}
+
+function parseSize(raw: unknown): BadgeSize {
+  return raw === 'large' ? 'large' : 'small';
 }
 
 export async function badgeRoutes(
@@ -102,6 +164,9 @@ export async function badgeRoutes(
       schema: {
         tags: ['badge'],
         params: Type.Object({ scanId: Type.String() }),
+        querystring: Type.Object({
+          size: Type.Optional(Type.Union([Type.Literal('small'), Type.Literal('large')])),
+        }),
         response: {
           200: Type.String({ description: 'SVG markup' }),
           404: Type.Object({ error: Type.String() }),
@@ -115,7 +180,6 @@ export async function badgeRoutes(
         reply.code(404);
         return reply.send({ error: 'scan not found' });
       }
-      // Host from request — supports multi-tenant deployments.
       const host = request.headers.host ?? 'luqen';
       if (!isScanPublicShareable(scan, selfScanId, host)) {
         reply.code(404);
@@ -124,7 +188,14 @@ export async function badgeRoutes(
       const completed = scan.completedAt ?? scan.createdAt;
       const dateIso = completed ? new Date(completed).toISOString().slice(0, 10) : '';
       const { label, colour } = statusFor(scan);
-      const svg = renderSvg(host, scanId, label, colour, dateIso);
+      const svg = renderSvg({
+        idForMetadata: scanId,
+        label,
+        statusColour: colour,
+        dateIso,
+        standard: scan.standard,
+        size: parseSize((request.query as { size?: string }).size),
+      });
       reply.header('Content-Type', 'image/svg+xml; charset=utf-8');
       reply.header('Cache-Control', 'public, max-age=300');
       reply.header('Access-Control-Allow-Origin', '*');
@@ -193,6 +264,9 @@ export async function badgeRoutes(
       schema: {
         tags: ['badge'],
         params: Type.Object({ badgeId: Type.String() }),
+        querystring: Type.Object({
+          size: Type.Optional(Type.Union([Type.Literal('small'), Type.Literal('large')])),
+        }),
         response: {
           200: Type.String({ description: 'SVG markup' }),
           404: Type.Object({ error: Type.String() }),
@@ -214,11 +288,17 @@ export async function badgeRoutes(
         reply.code(404);
         return reply.send({ error: 'no completed scan yet' });
       }
-      const host = request.headers.host ?? 'luqen';
       const completed = scan.completedAt ?? scan.createdAt;
       const dateIso = completed ? new Date(completed).toISOString().slice(0, 10) : '';
       const { label, colour } = statusFor(scan);
-      const svg = renderSvg(host, badgeId, label, colour, dateIso);
+      const svg = renderSvg({
+        idForMetadata: badgeId,
+        label,
+        statusColour: colour,
+        dateIso,
+        standard: scan.standard,
+        size: parseSize((request.query as { size?: string }).size),
+      });
       reply.header('Content-Type', 'image/svg+xml; charset=utf-8');
       // Shorter TTL than the static badge — the verdict actually moves.
       reply.header('Cache-Control', 'public, max-age=60');
