@@ -33,7 +33,15 @@ export interface CreateBulkFixInput {
 export interface BulkFixRepository {
   create(input: CreateBulkFixInput): Promise<BulkFix>;
   getById(id: string): Promise<BulkFix | null>;
-  listForOrg(orgId: string, limit?: number): Promise<readonly BulkFix[]>;
+  /**
+   * Phase 63.4 — Cursor-paginated list ordered by `created_at DESC`.
+   * The cursor is the `created_at` of the last row from the previous page.
+   * Backward compatible: passing no opts returns the first 50 rows.
+   */
+  listForOrg(
+    orgId: string,
+    opts?: { limit?: number; cursor?: string },
+  ): Promise<{ items: readonly BulkFix[]; nextCursor: string | null }>;
   /** Flips status to 'dispatched' and writes the coordinated_pr_id. */
   markDispatched(id: string, coordinatedPrId: string): Promise<void>;
 }

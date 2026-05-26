@@ -155,6 +155,32 @@ export class SqliteScanRepository implements ScanRepository {
     return row !== undefined ? rowToRecord(row) : null;
   }
 
+  // Phase 63.4 — cursor-paginated org list. Uses idx_scan_records_org_created
+  // (migration 071). The cursor is the `created_at` of the last row from the
+  // previous page; rows are returned in `created_at DESC` order.
+  async listForOrg(
+    orgId: string,
+    opts: { limit?: number; cursor?: string } = {},
+  ): Promise<{ items: readonly ScanRecord[]; nextCursor: string | null }> {
+    const limit = Math.max(1, Math.min(opts.limit ?? 50, 500));
+    const fetchN = limit + 1;
+    const rows = (opts.cursor !== undefined
+      ? (this.db
+          .prepare(
+            'SELECT * FROM scan_records WHERE org_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?',
+          )
+          .all(orgId, opts.cursor, fetchN) as ScanRow[])
+      : (this.db
+          .prepare(
+            'SELECT * FROM scan_records WHERE org_id = ? ORDER BY created_at DESC LIMIT ?',
+          )
+          .all(orgId, fetchN) as ScanRow[]));
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? page[page.length - 1].created_at : null;
+    return { items: page.map(rowToRecord), nextCursor };
+  }
+
   async listScans(filters: ScanFilters = {}): Promise<ScanRecord[]> {
     const { where, params } = buildFilterQuery(filters);
     const limit = filters.limit !== undefined ? `LIMIT ${filters.limit}` : '';

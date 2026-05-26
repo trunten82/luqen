@@ -94,3 +94,55 @@ describe('SqliteCoordinatedPrRepository.recomputeStatus', () => {
     expect(next).toBe('opening');
   });
 });
+
+// Phase 63.4 — cursor pagination over listForOrg.
+describe('SqliteCoordinatedPrRepository.listForOrg cursor pagination', () => {
+  async function seedNPrs(n: number): Promise<void> {
+    const db = (storage as unknown as {
+      getRawDatabase: () => import('better-sqlite3').Database;
+    }).getRawDatabase();
+    const stmt = db.prepare(
+      `INSERT INTO coordinated_prs (id, org_id, team_id, created_by, status, summary, created_at)
+       VALUES (?, ?, NULL, 'seed', 'opening', NULL, ?)`,
+    );
+    // Distinct created_at timestamps so DESC order is deterministic. Spaced
+    // 1s apart and starting from 2020 so they never collide with other tests.
+    for (let i = 0; i < n; i++) {
+      const ts = new Date(Date.UTC(2020, 0, 1, 0, 0, i)).toISOString();
+      stmt.run(`cpr_seed_${i.toString().padStart(3, '0')}`, orgId, ts);
+    }
+  }
+
+  it('returns first page + nextCursor when more rows are available', async () => {
+    await seedNPrs(7);
+    const page = await storage.coordinatedPrs.listForOrg(orgId, { limit: 3 });
+    expect(page.items).toHaveLength(3);
+    expect(page.nextCursor).not.toBeNull();
+    // DESC order — newest first.
+    expect(page.items[0].createdAt > page.items[1].createdAt).toBe(true);
+    expect(page.nextCursor).toBe(page.items[2].createdAt);
+  });
+
+  it('uses cursor to fetch the next page and nulls nextCursor on the last', async () => {
+    await seedNPrs(5);
+    const first = await storage.coordinatedPrs.listForOrg(orgId, { limit: 2 });
+    expect(first.items).toHaveLength(2);
+    expect(first.nextCursor).not.toBeNull();
+    const second = await storage.coordinatedPrs.listForOrg(orgId, {
+      limit: 2,
+      cursor: first.nextCursor ?? undefined,
+    });
+    expect(second.items).toHaveLength(2);
+    // No overlap between pages.
+    const firstIds = new Set(first.items.map((p) => p.id));
+    for (const p of second.items) {
+      expect(firstIds.has(p.id)).toBe(false);
+    }
+    const third = await storage.coordinatedPrs.listForOrg(orgId, {
+      limit: 2,
+      cursor: second.nextCursor ?? undefined,
+    });
+    expect(third.items).toHaveLength(1);
+    expect(third.nextCursor).toBeNull();
+  });
+});

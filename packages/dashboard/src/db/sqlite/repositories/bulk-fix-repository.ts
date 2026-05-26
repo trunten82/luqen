@@ -70,13 +70,28 @@ export class SqliteBulkFixRepository implements BulkFixRepository {
     return row !== undefined ? rowToRecord(row) : null;
   }
 
-  async listForOrg(orgId: string, limit = 50): Promise<readonly BulkFix[]> {
-    const rows = this.db
-      .prepare(
-        'SELECT * FROM bulk_fixes WHERE org_id = ? ORDER BY created_at DESC LIMIT ?',
-      )
-      .all(orgId, limit) as BulkFixRow[];
-    return rows.map(rowToRecord);
+  async listForOrg(
+    orgId: string,
+    opts: { limit?: number; cursor?: string } = {},
+  ): Promise<{ items: readonly BulkFix[]; nextCursor: string | null }> {
+    const limit = Math.max(1, Math.min(opts.limit ?? 50, 500));
+    const fetchN = limit + 1;
+    const rows = (opts.cursor !== undefined
+      ? (this.db
+          .prepare(
+            'SELECT * FROM bulk_fixes WHERE org_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?',
+          )
+          .all(orgId, opts.cursor, fetchN) as BulkFixRow[])
+      : (this.db
+          .prepare(
+            'SELECT * FROM bulk_fixes WHERE org_id = ? ORDER BY created_at DESC LIMIT ?',
+          )
+          .all(orgId, fetchN) as BulkFixRow[]));
+
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? page[page.length - 1].created_at : null;
+    return { items: page.map(rowToRecord), nextCursor };
   }
 
   async markDispatched(id: string, coordinatedPrId: string): Promise<void> {

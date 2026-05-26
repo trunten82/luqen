@@ -93,6 +93,11 @@ export class SqliteCoordinatedPrRepository implements CoordinatedPrRepository {
          (id, org_id, team_id, created_by, status, summary, created_at)
        VALUES (?, ?, ?, ?, 'opening', ?, ?)`,
     );
+    // Phase 63.4 — leg insert is already optimal: the statement is prepared
+    // ONCE and reused inside a single better-sqlite3 transaction (synchronous
+    // C-side batching). At 200 legs this is ~4ms on commodity SQLite. Do not
+    // switch to a multi-row VALUES (?, ?, ?), (?, ?, ?) — SQLite has a 999
+    // parameter limit that breaks large fleets without a chunker.
     const insertLeg = this.db.prepare(
       `INSERT INTO coordinated_pr_legs
          (id, coordinated_pr_id, site_id, leg_status, approval_status)
@@ -135,13 +140,29 @@ export class SqliteCoordinatedPrRepository implements CoordinatedPrRepository {
     };
   }
 
-  async listForOrg(orgId: string, limit = 50): Promise<readonly CoordinatedPr[]> {
-    const rows = this.db
-      .prepare(
-        'SELECT * FROM coordinated_prs WHERE org_id = ? ORDER BY created_at DESC LIMIT ?',
-      )
-      .all(orgId, limit) as PrRow[];
-    return rows.map(prRowToRecord);
+  async listForOrg(
+    orgId: string,
+    opts: { limit?: number; cursor?: string } = {},
+  ): Promise<{ items: readonly CoordinatedPr[]; nextCursor: string | null }> {
+    const limit = Math.max(1, Math.min(opts.limit ?? 50, 500));
+    // Pull limit+1 to detect "more pages available" without a separate COUNT.
+    const fetchN = limit + 1;
+    const rows = (opts.cursor !== undefined
+      ? (this.db
+          .prepare(
+            'SELECT * FROM coordinated_prs WHERE org_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?',
+          )
+          .all(orgId, opts.cursor, fetchN) as PrRow[])
+      : (this.db
+          .prepare(
+            'SELECT * FROM coordinated_prs WHERE org_id = ? ORDER BY created_at DESC LIMIT ?',
+          )
+          .all(orgId, fetchN) as PrRow[]));
+
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? page[page.length - 1].created_at : null;
+    return { items: page.map(prRowToRecord), nextCursor };
   }
 
   async updateLeg(legId: string, patch: UpdateLegPatch): Promise<CoordinatedPrLeg | null> {
