@@ -961,7 +961,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await authRoutes(server, config, authService, storage);
   await homeRoutes(server, storage, config);
   await glossaryRoutes(server);
-  await badgeRoutes(server, storage);
+  await badgeRoutes(server, storage, config.selfScanId);
   await scanRoutes(server, storage, orchestrator, config, complianceService);
   await compareRoutes(server, storage);
   await trendRoutes(server, storage);
@@ -969,7 +969,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // LLM client is owned by serviceClientRegistry (constructed above).
   // Routes receive getLLMClient and resolve the current live instance per
   // request so a runtime reload is picked up without a restart.
-  await reportRoutes(server, storage, getLLMClient);
+  await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId });
   await manualTestRoutes(server, storage);
   await assignmentRoutes(server, storage);
   await orgRoutes(server, storage);

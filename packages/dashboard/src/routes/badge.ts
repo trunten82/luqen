@@ -1,5 +1,33 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { StorageAdapter } from '../db/index.js';
+import type { ScanRecord } from '../db/types.js';
+
+/**
+ * Public-share gate (shared by the badge SVG/JSON and the
+ * /reports/:id/public viewer in routes/reports.ts).
+ *
+ * Allow if:
+ *   - the scan's owner opted in (publicShareEnabled === true), OR
+ *   - the scan is the dashboard's configured dogfood self-scan
+ *     (back-compat for the login badge), OR
+ *   - the scan's siteUrl host matches the request host (the original
+ *     "Luqen-of-Luqen" allow path from Phase 58 R5).
+ */
+export function isScanPublicShareable(
+  scan: ScanRecord,
+  selfScanId: string | undefined,
+  requestHost: string,
+): boolean {
+  if (scan.publicShareEnabled === true) return true;
+  if (selfScanId !== undefined && selfScanId === scan.id) return true;
+  try {
+    const u = new URL(scan.siteUrl);
+    if (u.host === requestHost && requestHost !== '') return true;
+  } catch {
+    /* fall through */
+  }
+  return false;
+}
 
 // Verdict badge — public, paste-on-customer-site embeddable.
 // Customers paste:
@@ -61,7 +89,11 @@ function renderSvg(host: string, scanId: string, label: string, statusColour: st
 </svg>`;
 }
 
-export async function badgeRoutes(server: FastifyInstance, storage: StorageAdapter): Promise<void> {
+export async function badgeRoutes(
+  server: FastifyInstance,
+  storage: StorageAdapter,
+  selfScanId?: string,
+): Promise<void> {
   // SVG endpoint — primary embed surface.
   server.get(
     '/api/v1/badge/:scanId.svg',
@@ -75,11 +107,15 @@ export async function badgeRoutes(server: FastifyInstance, storage: StorageAdapt
         reply.code(404);
         return reply.send({ error: 'scan not found' });
       }
+      // Host from request — supports multi-tenant deployments.
+      const host = request.headers.host ?? 'luqen';
+      if (!isScanPublicShareable(scan, selfScanId, host)) {
+        reply.code(404);
+        return reply.send({ error: 'scan not public' });
+      }
       const completed = scan.completedAt ?? scan.createdAt;
       const dateIso = completed ? new Date(completed).toISOString().slice(0, 10) : '';
       const { label, colour } = statusFor(scan);
-      // Host from request — supports multi-tenant deployments.
-      const host = request.headers.host ?? 'luqen';
       const svg = renderSvg(host, scanId, label, colour, dateIso);
       reply.header('Content-Type', 'image/svg+xml; charset=utf-8');
       reply.header('Cache-Control', 'public, max-age=300');
@@ -104,6 +140,11 @@ export async function badgeRoutes(server: FastifyInstance, storage: StorageAdapt
       if (!scan) {
         reply.code(404);
         return reply.send({ error: 'scan not found' });
+      }
+      const host = request.headers.host ?? '';
+      if (!isScanPublicShareable(scan, selfScanId, host)) {
+        reply.code(404);
+        return reply.send({ error: 'scan not public' });
       }
       const completed = scan.completedAt ?? scan.createdAt;
       const { label } = statusFor(scan);

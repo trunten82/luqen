@@ -31,6 +31,7 @@ interface ScanRow {
   branding_guideline_id: string | null;
   branding_guideline_version: number | null;
   brand_related_count: number | null;
+  public_share_enabled: number | null;
 }
 
 function parseJsonArraySafe(raw: string | null | undefined): string[] {
@@ -72,6 +73,7 @@ function rowToRecord(row: ScanRow): ScanRecord {
     ...(row.branding_guideline_id !== null ? { brandingGuidelineId: row.branding_guideline_id } : {}),
     ...(row.branding_guideline_version !== null ? { brandingGuidelineVersion: row.branding_guideline_version } : {}),
     ...(row.brand_related_count !== null ? { brandRelatedCount: row.brand_related_count } : {}),
+    publicShareEnabled: row.public_share_enabled === 1,
   };
 }
 
@@ -227,6 +229,16 @@ export class SqliteScanRepository implements ScanRepository {
 
   async deleteOrgScans(orgId: string): Promise<void> {
     this.db.prepare('DELETE FROM scan_records WHERE org_id = ?').run(orgId);
+  }
+
+  async setPublicShare(id: string, orgId: string, enabled: boolean): Promise<boolean> {
+    const result = this.db
+      .prepare(
+        `UPDATE scan_records SET public_share_enabled = ?
+          WHERE id = ? AND org_id = ?`,
+      )
+      .run(enabled ? 1 : 0, id, orgId);
+    return result.changes > 0;
   }
 
   async getReport(id: string): Promise<Record<string, unknown> | null> {

@@ -1634,4 +1634,18 @@ CREATE INDEX IF NOT EXISTS idx_wp_user_links_email ON wp_user_links(email);
 CREATE INDEX IF NOT EXISTS idx_wp_user_links_dashboard_user ON wp_user_links(dashboard_user_id);
     `,
   },
+  {
+    id: '064',
+    name: 'scan-public-share',
+    sql: `
+-- Opt-in flag for user-shared scan reports. When 1, the badge
+-- (/api/v1/badge/<id>.svg) and the anonymous viewer
+-- (/reports/<id>/public) become reachable for the row. Existing
+-- gate (siteUrl host == dashboard host, for the dogfood self-scan)
+-- remains in place; this column is the new general-purpose path.
+ALTER TABLE scan_records ADD COLUMN public_share_enabled INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_scan_records_public_share
+  ON scan_records(public_share_enabled) WHERE public_share_enabled = 1;
+    `,
+  },
 ];
