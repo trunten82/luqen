@@ -2035,6 +2035,29 @@ th[aria-sort="none"]::after { content: " ↕"; opacity: 0.4; }
   margin-bottom: 0;
 }
 
+/*
+ * Reports controls row — used as the parent of stacked form-groups +
+ * trailing action buttons. Was unstyled; the form-group `flex: 1` did
+ * nothing and the trailing <a>/<button> elements sat in document flow,
+ * giving the appearance of slightly-misaligned button baselines. Now:
+ *   - flex row, wraps on narrow viewports
+ *   - align-items: end so the buttons sit on the same baseline as the
+ *     bottom edge of the form-control inputs (labels live above)
+ *   - explicit gap so buttons share rhythm with the inputs
+ */
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+}
+.controls-row .btn,
+.controls-row .btn--sm {
+  /* Match input height (36px default) so buttons line up bottom-to-bottom
+     with the form fields without manual nudging. */
+  height: 36px;
+}
+
 label {
   display: block;
   font-size: var(--font-size-sm);
