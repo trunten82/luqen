@@ -1031,7 +1031,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await emailReportRoutes(server, storage, pluginManager);
 
   await auditRoutes(server, storage);
-  await adminBadgeRoutes(server, storage);
+  await adminBadgeRoutes(server, storage, config.selfScanId);
   await gitHostRoutes(server, storage);
   const uploadsDir = resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads');
   await brandingGuidelineRoutes(server, storage, getLLMClient, uploadsDir);

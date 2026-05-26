@@ -134,3 +134,24 @@ describe('POST /admin/badges/live/:badgeId/revoke', () => {
     expect(r.statusCode).toBe(404);
   });
 });
+
+describe('POST /admin/badges/live/:badgeId/enable', () => {
+  it('admin.system re-enables a disabled badge — same id, same URL', async () => {
+    const b = await storage.siteBadges.enable('org_a', 'https://x.example', 'u-test');
+    await storage.siteBadges.setEnabled(b.id, 'org_a', false);
+    server = await buildServer(['admin.system'], 'org_a');
+    const r = await server.inject({ method: 'POST', url: `/admin/badges/live/${b.id}/enable` });
+    expect([302, 303]).toContain(r.statusCode);
+    const fresh = await storage.siteBadges.get(b.id);
+    expect(fresh?.enabled).toBe(true);
+    expect(fresh?.id).toBe(b.id);                   // URL stable
+  });
+
+  it('admin.org cannot enable another org\'s badge', async () => {
+    const b = await storage.siteBadges.enable('org_b', 'https://x.example', 'u-test');
+    await storage.siteBadges.setEnabled(b.id, 'org_b', false);
+    server = await buildServer(['admin.org'], 'org_a');
+    const r = await server.inject({ method: 'POST', url: `/admin/badges/live/${b.id}/enable` });
+    expect(r.statusCode).toBe(403);
+  });
+});
