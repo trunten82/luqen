@@ -62,9 +62,12 @@
   --bg-surface: oklch(0.98 0.005 25);
   --bg-surface-raised: oklch(0.96 0.005 25);
   --bg-muted: oklch(0.94 0.008 25);
-  --bg-sidebar: oklch(0.18 0.04 25);
-  --bg-sidebar-hover: oklch(0.24 0.05 25);
-  --bg-sidebar-active: oklch(0.28 0.06 25);
+  /* Light-theme sidebar — off-white surface, accent-tint hover/active.
+     Was always-dark oxblood; user reported the sidebar ignored the
+     light theme setting. */
+  --bg-sidebar: oklch(0.97 0.005 25);
+  --bg-sidebar-hover: oklch(0.94 0.008 25);
+  --bg-sidebar-active: oklch(0.96 0.02 25);
 
   /* Borders */
   --border-subtle: oklch(0.90 0.008 25);
@@ -75,8 +78,9 @@
   --text-secondary: oklch(0.42 0.012 25);
   --text-muted: oklch(0.55 0.010 25);
   --text-on-accent: oklch(0.98 0.005 25);
-  --text-sidebar: oklch(0.78 0.04 25);
-  --text-sidebar-active: oklch(0.97 0.005 25);
+  /* Light-theme sidebar text reads on the new pale sidebar background. */
+  --text-sidebar: oklch(0.30 0.018 25);
+  --text-sidebar-active: oklch(0.36 0.13 25);  /* oxblood accent on hover/active */
 
   /* Status (semantic — universal meaning, retuned for AAA contrast) */
   --status-success: oklch(0.42 0.13 150);
@@ -346,8 +350,8 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-lg) var(--space-md);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff; /* always white on dark sidebar, regardless of theme */
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-sidebar-active);
   text-decoration: none;
   font-size: var(--font-size-xl);
   font-weight: 700;
@@ -440,7 +444,7 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
 .sidebar__locale,
 .sidebar__org-switcher {
   padding: var(--space-sm) var(--space-md);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
   flex-shrink: 0;
   background-color: var(--bg-sidebar);
 }
@@ -448,9 +452,9 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
 .sidebar__locale .select--sm,
 .sidebar__org-switcher .select--sm {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--text-muted);
+  background: var(--bg-sidebar-hover);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-sidebar);
   font-size: var(--font-size-xs);
   border-radius: var(--radius-sm, 4px);
   padding: var(--space-xs) var(--space-sm);
@@ -460,8 +464,8 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
 
 .sidebar__locale .select--sm:hover,
 .sidebar__org-switcher .select--sm:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--bg-sidebar-active);
+  border-color: var(--border-strong);
 }
 
 .sidebar__locale .select--sm:focus,
@@ -474,7 +478,7 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
 .sidebar__footer {
   padding: var(--space-md);
   padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-subtle);
   background-color: var(--bg-sidebar);
   font-size: var(--font-size-xs);
   color: var(--text-muted);
