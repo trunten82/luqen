@@ -116,6 +116,8 @@
           aria-label="Compare with previous scan for {{siteUrl}}"
           title="Compare with previous scan"
         >{{t "reports.vsPrevious"}}</a>
+        {{else}}
+        <span class="reports-docket__action-placeholder" aria-hidden="true"></span>
         {{/if}}
         <button
           class="reports-docket__action-link reports-docket__action-link--danger"
