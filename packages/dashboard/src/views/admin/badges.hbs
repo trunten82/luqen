@@ -15,9 +15,38 @@
     </p>
   </header>
 
+  <form method="GET" action="/admin/badges" class="admin-section" aria-label="Public badge filters">
+    <div class="filter-bar filter-bar--wrap">
+      {{#if isAdminSystem}}
+      <div class="form-group">
+        <label for="filter-org" class="form-label">Organization</label>
+        <select id="filter-org" name="org" class="select select--sm">
+          <option value="">All organizations</option>
+          {{#each orgOptions}}
+          <option value="{{id}}" {{#if (eq id ../filters.org)}}selected{{/if}}>{{name}}</option>
+          {{/each}}
+        </select>
+      </div>
+      {{/if}}
+      <div class="form-group">
+        <label class="admin-badges__check">
+          <input type="checkbox" name="showDisabled" value="1" {{#if filters.showDisabled}}checked{{/if}}>
+          <span>Show disabled live badges</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <button type="submit" class="btn btn--primary btn--sm">Apply</button>
+        <a href="/admin/badges" class="btn btn--ghost btn--sm">Reset</a>
+      </div>
+    </div>
+  </form>
+
   {{#if systemBadge}}
   <section class="admin-badges__section" aria-labelledby="system-heading">
-    <h2 id="system-heading" class="section-subtitle">System &mdash; dogfood</h2>
+    <h2 id="system-heading" class="section-subtitle">
+      System &mdash; dogfood
+      <span class="badge badge--neutral admin-badges__pill" title="Driven by config.selfScanId — change via dashboard.config.json">Read-only · config-driven</span>
+    </h2>
     <div class="table-responsive" role="region" aria-label="System badges" tabindex="0">
       <table class="data-table">
         <thead>
@@ -87,7 +116,10 @@
   </section>
 
   <section class="admin-badges__section" aria-labelledby="live-heading">
-    <h2 id="live-heading" class="section-subtitle">Live &mdash; {{liveBadges.length}}</h2>
+    <h2 id="live-heading" class="section-subtitle">
+      Live &mdash; {{liveBadges.length}}
+      {{#if hiddenDisabledCount}}<span class="text-muted admin-badges__hint"> · {{hiddenDisabledCount}} disabled hidden</span>{{/if}}
+    </h2>
     {{#if liveBadges.length}}
     <div class="table-responsive" role="region" aria-label="Live badges" tabindex="0">
       <table class="data-table">
