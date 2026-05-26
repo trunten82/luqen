@@ -34,7 +34,10 @@ interface RegisteredRoute {
 }
 
 function toOpenApiPath(fastifyPath: string): string {
-  return fastifyPath.replace(/:([^/]+)/g, '{$1}');
+  // Stop at the first non-identifier char so a route like
+  // /api/v1/badge/:scanId.svg becomes /api/v1/badge/{scanId}.svg, not
+  // /api/v1/badge/{scanId.svg}. Identifiers are [A-Za-z0-9_].
+  return fastifyPath.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
 }
 
 describe('OpenAPI route coverage (dashboard, non-MCP)', () => {

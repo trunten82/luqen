@@ -46,6 +46,37 @@ const LinkUserBodySchema = Type.Object(
   { additionalProperties: false },
 );
 
+const ErrorResponse = Type.Object({ error: Type.String() });
+
+const FleetSiteSchema = Type.Object({
+  id:             Type.String(),
+  url:            Type.String(),
+  wp_version:     Type.Union([Type.String(), Type.Null()]),
+  plugin_version: Type.Union([Type.String(), Type.Null()]),
+  status:         Type.String(),
+  last_seen:      Type.String(),
+});
+
+const FleetListResponse  = Type.Object({ sites: Type.Array(FleetSiteSchema) });
+const FleetPostResponse  = Type.Object({ site_id: Type.String(), status: Type.String() });
+const GroupsResponse     = Type.Object({
+  groups: Type.Array(Type.Object({
+    id:           Type.String(),
+    name:         Type.String(),
+    org_id:       Type.String(),
+    member_count: Type.Integer(),
+  })),
+});
+const LinkUserResponse   = Type.Object({
+  linked:         Type.Boolean(),
+  link_id:        Type.String(),
+  dashboard_user: Type.Union([
+    Type.Object({ id: Type.String(), display_name: Type.String() }),
+    Type.Null(),
+  ]),
+  groups:         Type.Array(Type.String()),
+});
+
 type RegisterFleetBody = Static<typeof RegisterFleetBodySchema>;
 type LinkUserBody = Static<typeof LinkUserBodySchema>;
 type FleetQuery = Static<typeof FleetQuerySchema>;
@@ -111,7 +142,10 @@ export async function wpNetworkApiRoutes(
     '/api/v1/fleet',
     {
       config: rateLimitConfig,
-      schema: { querystring: FleetQuerySchema },
+      schema: {
+        querystring: FleetQuerySchema,
+        response: { 200: FleetListResponse, 401: ErrorResponse },
+      },
     },
     async (request: FastifyRequest<{ Querystring: FleetQuery }>, reply) => {
       const ctx = requireAuthOrSend401(request, reply);
@@ -138,7 +172,10 @@ export async function wpNetworkApiRoutes(
     '/api/v1/fleet',
     {
       config: rateLimitConfig,
-      schema: { body: RegisterFleetBodySchema },
+      schema: {
+        body: RegisterFleetBodySchema,
+        response: { 201: FleetPostResponse, 401: ErrorResponse },
+      },
     },
     async (request: FastifyRequest<{ Body: RegisterFleetBody }>, reply) => {
       const ctx = requireAuthOrSend401(request, reply);
@@ -157,7 +194,10 @@ export async function wpNetworkApiRoutes(
   // ── GET /api/v1/groups ───────────────────────────────────────────────────
   server.get(
     '/api/v1/groups',
-    { config: rateLimitConfig },
+    {
+      config: rateLimitConfig,
+      schema: { response: { 200: GroupsResponse, 401: ErrorResponse } },
+    },
     async (request, reply) => {
       const ctx = requireAuthOrSend401(request, reply);
       if (ctx === null) return;
@@ -179,7 +219,10 @@ export async function wpNetworkApiRoutes(
     '/api/v1/users/link',
     {
       config: rateLimitConfig,
-      schema: { body: LinkUserBodySchema },
+      schema: {
+        body: LinkUserBodySchema,
+        response: { 200: LinkUserResponse, 401: ErrorResponse },
+      },
     },
     async (request: FastifyRequest<{ Body: LinkUserBody }>, reply) => {
       const ctx = requireAuthOrSend401(request, reply);
