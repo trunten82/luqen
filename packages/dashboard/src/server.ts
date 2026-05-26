@@ -43,6 +43,7 @@ import { brandingApiRoutes } from './routes/api/branding.js';
 import { wpNetworkApiRoutes } from './routes/api/wp-network.js';
 import { teamOrgLinkRoutes } from './routes/api/team-org-links.js';
 import { coordinatedPrRoutes } from './routes/api/coordinated-prs.js';
+import { bulkFixRoutes } from './routes/api/bulk-fixes.js';
 import { orgRoutes } from './routes/orgs.js';
 import { toolRoutes } from './routes/tools.js';
 import { repoRoutes } from './routes/repos.js';
@@ -1080,6 +1081,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── Coordinated multi-repo PRs API (Phase 62.2) ─────────────────────────
   await coordinatedPrRoutes(server, storage);
+
+  // ── Bulk fix dispatch API (Phase 62.3) ──────────────────────────────────
+  await bulkFixRoutes(server, storage);
 
   // ── Setup API (create admin user via API key) ──────────────────────────
   await setupRoutes(server, storage, authService);

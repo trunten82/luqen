@@ -28,6 +28,7 @@ import type { WpSitesRepository, WpUserLinksRepository } from './interfaces/wp-n
 import type { SiteBadgesRepository } from './interfaces/site-badges-repository.js';
 import type { TeamOrgLinkRepository } from './interfaces/team-org-link-repository.js';
 import type { CoordinatedPrRepository } from './interfaces/coordinated-pr-repository.js';
+import type { BulkFixRepository } from './interfaces/bulk-fix-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -67,4 +68,5 @@ export interface StorageAdapter {
   readonly siteBadges: SiteBadgesRepository;
   readonly teamOrgLinks: TeamOrgLinkRepository;
   readonly coordinatedPrs: CoordinatedPrRepository;
+  readonly bulkFixes: BulkFixRepository;
 }
