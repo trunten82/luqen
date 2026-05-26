@@ -1685,4 +1685,45 @@ CREATE INDEX IF NOT EXISTS idx_scan_records_public_share_at
   WHERE public_share_enabled = 1;
     `,
   },
+  {
+    id: '067',
+    name: 'team-org-links',
+    sql: `
+-- Phase 62.1 — Multi-team RBAC overlay.
+-- A team has a "home" org (teams.org_id, migration 014). team_org_links
+-- grants additional org-scope, gated by a consent handshake stored in
+-- team_org_link_invites. resolveEffectiveRoles() MAX-aggregates the home
+-- org + every linked org against the user's org_members.role per org.
+
+CREATE TABLE IF NOT EXISTS team_org_links (
+  team_id   TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  org_id    TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  linked_at TEXT NOT NULL,
+  linked_by TEXT,
+  PRIMARY KEY (team_id, org_id)
+);
+CREATE INDEX IF NOT EXISTS idx_team_org_links_org ON team_org_links(org_id);
+
+CREATE TABLE IF NOT EXISTS team_org_link_invites (
+  id            TEXT PRIMARY KEY,
+  team_id       TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  target_org_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  invited_by    TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','accepted','declined','revoked')),
+  created_at    TEXT NOT NULL,
+  decided_at    TEXT,
+  decided_by    TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_team_org_link_invites_team
+  ON team_org_link_invites(team_id);
+CREATE INDEX IF NOT EXISTS idx_team_org_link_invites_target
+  ON team_org_link_invites(target_org_id);
+-- At most one pending invite per (team, target_org). Active invites only;
+-- historical accepted/declined rows are kept for audit.
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_team_org_link_invites_pending
+  ON team_org_link_invites(team_id, target_org_id)
+  WHERE status = 'pending';
+    `,
+  },
 ];

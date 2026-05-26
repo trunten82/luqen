@@ -166,6 +166,25 @@ export class SqliteTeamRepository implements TeamRepository {
     stmt.run({ teamId, userId, role });
   }
 
+  async setTeamMemberRole(teamId: string, userId: string, role: string): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO team_members (team_id, user_id, role)
+         VALUES (@teamId, @userId, @role)
+         ON CONFLICT (team_id, user_id) DO UPDATE SET role = excluded.role`,
+      )
+      .run({ teamId, userId, role });
+  }
+
+  async listTeamMembershipsForUser(
+    userId: string,
+  ): Promise<readonly { teamId: string; role: string }[]> {
+    const rows = this.db
+      .prepare('SELECT team_id, role FROM team_members WHERE user_id = ?')
+      .all(userId) as Array<{ team_id: string; role: string }>;
+    return rows.map((r) => ({ teamId: r.team_id, role: r.role }));
+  }
+
   async removeTeamMember(teamId: string, userId: string): Promise<void> {
     this.db.prepare(
       'DELETE FROM team_members WHERE team_id = @teamId AND user_id = @userId',
