@@ -3,7 +3,7 @@
   "info": {
     "title": "Luqen MCP (Streamable HTTP)",
     "description": "Model Context Protocol Streamable HTTP endpoint hosted on the dashboard service",
-    "version": "2.11.0"
+    "version": "3.4.0"
   },
   "components": {
     "securitySchemes": {

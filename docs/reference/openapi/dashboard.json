@@ -3,7 +3,7 @@
   "info": {
     "title": "Luqen Dashboard",
     "description": "Web dashboard, admin surface, and MCP Streamable HTTP endpoint for the Luqen WCAG accessibility platform",
-    "version": "2.11.0"
+    "version": "3.4.0"
   },
   "components": {
     "securitySchemes": {
@@ -397,6 +397,25 @@
       }
     },
     "/account/change-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account/density": {
       "post": {
         "tags": [
           "auth"
@@ -28296,6 +28315,50 @@
         }
       }
     },
+    "/api/v1/badge/{scanId}.json": {
+      "get": {
+        "tags": [
+          "badge"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "scanId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/badge/{scanId}.svg": {
+      "get": {
+        "tags": [
+          "badge"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "scanId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/v1/branding/guidelines": {
       "get": {
         "tags": [
@@ -30169,6 +30232,109 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/fleet": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "active"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "stale"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "all"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "properties": {
+                  "url": {
+                    "minLength": 1,
+                    "maxLength": 2048,
+                    "type": "string"
+                  },
+                  "wp_version": {
+                    "maxLength": 32,
+                    "type": "string"
+                  },
+                  "plugin_version": {
+                    "maxLength": 32,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/glossary": {
+      "get": {
+        "tags": [
+          "glossary"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
           }
         }
       }
@@ -32159,6 +32325,53 @@
         }
       }
     },
+    "/api/v1/users/link": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "site_url",
+                  "wp_user_id",
+                  "wp_login",
+                  "email"
+                ],
+                "properties": {
+                  "site_url": {
+                    "minLength": 1,
+                    "maxLength": 2048,
+                    "type": "string"
+                  },
+                  "wp_user_id": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "wp_login": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "email": {
+                    "minLength": 3,
+                    "maxLength": 320,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/assignments/{id}": {
       "patch": {
         "tags": [
@@ -33965,6 +34178,35 @@
       }
     },
     "/reports/{id}/print": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{id}/public": {
       "get": {
         "tags": [
           "reports"
