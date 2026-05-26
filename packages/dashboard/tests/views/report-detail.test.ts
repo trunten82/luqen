@@ -85,6 +85,34 @@ beforeAll(async () => {
     handlebars.registerPartial('brand-score-panel', bspSource);
   }
 
+  // Register the share-panel partial (badge sharing — Phase 64).
+  if (!handlebars.partials['share-panel']) {
+    const spSource = readFileSync(
+      join(VIEWS_DIR, 'partials', 'share-panel.hbs'),
+      'utf8',
+    );
+    handlebars.registerPartial('share-panel', spSource);
+  }
+
+  // Register the verdict-line partial (Phase 57).
+  if (!handlebars.partials['verdict-line']) {
+    const vlSource = readFileSync(
+      join(VIEWS_DIR, 'partials', 'verdict-line.hbs'),
+      'utf8',
+    );
+    handlebars.registerPartial('verdict-line', vlSource);
+  }
+
+  // Helpers used by share-panel.hbs (Phase 64).
+  if (!handlebars.helpers['or']) {
+    handlebars.registerHelper('or', (...args: unknown[]) =>
+      args.slice(0, -1).some(Boolean),
+    );
+  }
+  if (!handlebars.helpers['eq']) {
+    handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+  }
+
   // Brand score helpers needed by brand-score-panel partial (Phase 20).
   if (!handlebars.helpers['brandScoreClass']) {
     handlebars.registerHelper('brandScoreClass', (value: unknown) => {
