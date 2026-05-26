@@ -1670,4 +1670,19 @@ CREATE INDEX IF NOT EXISTS idx_site_badges_lookup
   ON site_badges(org_id, site_url) WHERE enabled = 1;
     `,
   },
+  {
+    id: '066',
+    name: 'badge-audit-trail',
+    sql: `
+-- Admin oversight (Phase 64.1): record who turned a badge on and when,
+-- so /admin/badges can list both static + dynamic badges with full
+-- provenance and admins can revoke abuses.
+ALTER TABLE scan_records ADD COLUMN public_share_enabled_at TEXT;
+ALTER TABLE scan_records ADD COLUMN public_share_enabled_by TEXT;
+ALTER TABLE site_badges  ADD COLUMN created_by TEXT;
+CREATE INDEX IF NOT EXISTS idx_scan_records_public_share_at
+  ON scan_records(public_share_enabled_at)
+  WHERE public_share_enabled = 1;
+    `,
+  },
 ];

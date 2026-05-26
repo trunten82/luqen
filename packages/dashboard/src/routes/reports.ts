@@ -509,7 +509,12 @@ export async function reportRoutes(
       if (!isAdmin && scan.orgId !== orgId) {
         return reply.code(403).send({ error: 'Forbidden' });
       }
-      const ok = await storage.scans.setPublicShare(id, scan.orgId, enabled);
+      const ok = await storage.scans.setPublicShare(
+        id,
+        scan.orgId,
+        enabled,
+        request.user?.id ?? 'unknown',
+      );
       if (!ok) {
         return reply.code(404).send({ error: 'Report not found' });
       }
@@ -562,7 +567,7 @@ export async function reportRoutes(
       // Always store under the scan's own org (admins acting on
       // another org's scan still produce an org-scoped badge).
       const badge = enabled
-        ? await storage.siteBadges.enable(scan.orgId, scan.siteUrl)
+        ? await storage.siteBadges.enable(scan.orgId, scan.siteUrl, request.user?.id ?? 'unknown')
         : (await storage.siteBadges.getForSite(scan.orgId, scan.siteUrl));
       if (badge === null) {
         // disable requested on a site that never had a badge — return a

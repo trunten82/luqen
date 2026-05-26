@@ -32,6 +32,8 @@ interface ScanRow {
   branding_guideline_version: number | null;
   brand_related_count: number | null;
   public_share_enabled: number | null;
+  public_share_enabled_at: string | null;
+  public_share_enabled_by: string | null;
 }
 
 function parseJsonArraySafe(raw: string | null | undefined): string[] {
@@ -74,6 +76,8 @@ function rowToRecord(row: ScanRow): ScanRecord {
     ...(row.branding_guideline_version !== null ? { brandingGuidelineVersion: row.branding_guideline_version } : {}),
     ...(row.brand_related_count !== null ? { brandRelatedCount: row.brand_related_count } : {}),
     publicShareEnabled: row.public_share_enabled === 1,
+    publicShareEnabledAt: row.public_share_enabled_at,
+    publicShareEnabledBy: row.public_share_enabled_by,
   };
 }
 
@@ -231,14 +235,44 @@ export class SqliteScanRepository implements ScanRepository {
     this.db.prepare('DELETE FROM scan_records WHERE org_id = ?').run(orgId);
   }
 
-  async setPublicShare(id: string, orgId: string, enabled: boolean): Promise<boolean> {
+  async setPublicShare(
+    id: string,
+    orgId: string,
+    enabled: boolean,
+    userId: string,
+  ): Promise<boolean> {
+    const now = enabled ? new Date().toISOString() : null;
+    const by = enabled ? userId : null;
     const result = this.db
       .prepare(
-        `UPDATE scan_records SET public_share_enabled = ?
+        `UPDATE scan_records
+            SET public_share_enabled = ?,
+                public_share_enabled_at = ?,
+                public_share_enabled_by = ?
           WHERE id = ? AND org_id = ?`,
       )
-      .run(enabled ? 1 : 0, id, orgId);
+      .run(enabled ? 1 : 0, now, by, id, orgId);
     return result.changes > 0;
+  }
+
+  async listPubliclyShared(orgIdFilter?: string): Promise<ScanRecord[]> {
+    const rows = (orgIdFilter !== undefined
+      ? this.db
+          .prepare(
+            `SELECT * FROM scan_records
+              WHERE public_share_enabled = 1 AND org_id = ?
+              ORDER BY public_share_enabled_at DESC NULLS LAST, created_at DESC`,
+          )
+          .all(orgIdFilter)
+      : this.db
+          .prepare(
+            `SELECT * FROM scan_records
+              WHERE public_share_enabled = 1
+              ORDER BY public_share_enabled_at DESC NULLS LAST, created_at DESC`,
+          )
+          .all()
+    ) as ScanRow[];
+    return rows.map(rowToRecord);
   }
 
   async getLatestCompletedForSite(orgId: string, siteUrl: string): Promise<ScanRecord | null> {

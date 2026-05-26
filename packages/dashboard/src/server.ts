@@ -79,6 +79,7 @@ import { createBrandingOrgClient } from './branding-client.js';
 import { createLLMOrgClient } from './llm-client.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
+import { adminBadgeRoutes } from './routes/admin/badges.js';
 import { changeHistoryRoutes } from './routes/admin/change-history.js';
 import { agentAuditRoutes } from './routes/admin/agent-audit.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
@@ -1030,6 +1031,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await emailReportRoutes(server, storage, pluginManager);
 
   await auditRoutes(server, storage);
+  await adminBadgeRoutes(server, storage);
   await gitHostRoutes(server, storage);
   const uploadsDir = resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads');
   await brandingGuidelineRoutes(server, storage, getLLMClient, uploadsDir);
