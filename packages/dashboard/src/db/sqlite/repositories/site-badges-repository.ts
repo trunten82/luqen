@@ -11,6 +11,7 @@ interface SiteBadgeRow {
   site_url: string;
   enabled: number;
   created_at: string;
+  created_by: string | null;
 }
 
 function rowToRecord(row: SiteBadgeRow): SiteBadge {
@@ -20,13 +21,14 @@ function rowToRecord(row: SiteBadgeRow): SiteBadge {
     siteUrl: row.site_url,
     enabled: row.enabled === 1,
     createdAt: row.created_at,
+    createdBy: row.created_by,
   };
 }
 
 export class SqliteSiteBadgesRepository implements SiteBadgesRepository {
   constructor(private readonly db: Database.Database) {}
 
-  async enable(orgId: string, siteUrl: string): Promise<SiteBadge> {
+  async enable(orgId: string, siteUrl: string, userId: string): Promise<SiteBadge> {
     const existing = this.db
       .prepare('SELECT * FROM site_badges WHERE org_id = ? AND site_url = ?')
       .get(orgId, siteUrl) as SiteBadgeRow | undefined;
@@ -42,17 +44,30 @@ export class SqliteSiteBadgesRepository implements SiteBadgesRepository {
     const now = new Date().toISOString();
     this.db
       .prepare(
-        `INSERT INTO site_badges (id, org_id, site_url, enabled, created_at)
-         VALUES (@id, @orgId, @siteUrl, 1, @now)`,
+        `INSERT INTO site_badges (id, org_id, site_url, enabled, created_at, created_by)
+         VALUES (@id, @orgId, @siteUrl, 1, @now, @userId)`,
       )
-      .run({ id, orgId, siteUrl, now });
+      .run({ id, orgId, siteUrl, now, userId });
     return rowToRecord({
       id,
       org_id: orgId,
       site_url: siteUrl,
       enabled: 1,
       created_at: now,
+      created_by: userId,
     });
+  }
+
+  async list(orgIdFilter?: string): Promise<readonly SiteBadge[]> {
+    const rows = (orgIdFilter !== undefined
+      ? this.db
+          .prepare('SELECT * FROM site_badges WHERE org_id = ? ORDER BY created_at DESC')
+          .all(orgIdFilter)
+      : this.db
+          .prepare('SELECT * FROM site_badges ORDER BY created_at DESC')
+          .all()
+    ) as SiteBadgeRow[];
+    return rows.map(rowToRecord);
   }
 
   async setEnabled(id: string, orgId: string, enabled: boolean): Promise<boolean> {

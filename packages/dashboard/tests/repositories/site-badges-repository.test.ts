@@ -21,28 +21,28 @@ afterEach(async () => {
 
 describe('SqliteSiteBadgesRepository', () => {
   it('enable creates a new badge', async () => {
-    const b = await storage.siteBadges.enable('org_a', 'https://shop.example');
+    const b = await storage.siteBadges.enable('org_a', 'https://shop.example', 'u-test');
     expect(b.id).toMatch(/^sbdg_/);
     expect(b.enabled).toBe(true);
     expect(b.siteUrl).toBe('https://shop.example');
   });
 
   it('enable is idempotent on (orgId, siteUrl)', async () => {
-    const a = await storage.siteBadges.enable('org_a', 'https://shop.example');
-    const b = await storage.siteBadges.enable('org_a', 'https://shop.example');
+    const a = await storage.siteBadges.enable('org_a', 'https://shop.example', 'u-test');
+    const b = await storage.siteBadges.enable('org_a', 'https://shop.example', 'u-test');
     expect(b.id).toBe(a.id);
   });
 
   it('enable re-flips a disabled badge', async () => {
-    const a = await storage.siteBadges.enable('org_a', 'https://shop.example');
+    const a = await storage.siteBadges.enable('org_a', 'https://shop.example', 'u-test');
     await storage.siteBadges.setEnabled(a.id, 'org_a', false);
-    const reenabled = await storage.siteBadges.enable('org_a', 'https://shop.example');
+    const reenabled = await storage.siteBadges.enable('org_a', 'https://shop.example', 'u-test');
     expect(reenabled.id).toBe(a.id);
     expect(reenabled.enabled).toBe(true);
   });
 
   it('setEnabled is org-scoped', async () => {
-    const a = await storage.siteBadges.enable('org_a', 'https://shop.example');
+    const a = await storage.siteBadges.enable('org_a', 'https://shop.example', 'u-test');
     const okWrongOrg = await storage.siteBadges.setEnabled(a.id, 'org_b', false);
     expect(okWrongOrg).toBe(false);
     const okRightOrg = await storage.siteBadges.setEnabled(a.id, 'org_a', false);
@@ -55,6 +55,66 @@ describe('SqliteSiteBadgesRepository', () => {
 
   it('getForSite returns null when no row exists', async () => {
     expect(await storage.siteBadges.getForSite('org_x', 'https://none')).toBeNull();
+  });
+
+  it('records createdBy on first enable (audit trail)', async () => {
+    const b = await storage.siteBadges.enable('org_a', 'https://shop.example', 'usr-42');
+    expect(b.createdBy).toBe('usr-42');
+  });
+
+  it('list returns rows newest-first, scoped by org', async () => {
+    await storage.siteBadges.enable('org_a', 'https://a.example', 'u1');
+    await new Promise((r) => setTimeout(r, 5));
+    await storage.siteBadges.enable('org_a', 'https://b.example', 'u2');
+    await new Promise((r) => setTimeout(r, 5));
+    await storage.siteBadges.enable('org_b', 'https://c.example', 'u3');
+
+    const orgA = await storage.siteBadges.list('org_a');
+    expect(orgA.map((b) => b.siteUrl)).toEqual(['https://b.example', 'https://a.example']);
+    const all = await storage.siteBadges.list();
+    expect(all).toHaveLength(3);
+  });
+});
+
+describe('SqliteScanRepository public-share audit trail', () => {
+  it('records enabledAt + enabledBy on setPublicShare(true)', async () => {
+    await storage.scans.createScan({
+      id: 's1', siteUrl: 'https://x.example', standard: 'WCAG21AA',
+      jurisdictions: [], createdBy: 'u', orgId: 'org_a', createdAt: '2025-12-01T00:00:00Z',
+    });
+    await storage.scans.setPublicShare('s1', 'org_a', true, 'usr-42');
+    const fresh = await storage.scans.getScan('s1');
+    expect(fresh?.publicShareEnabled).toBe(true);
+    expect(fresh?.publicShareEnabledBy).toBe('usr-42');
+    expect(fresh?.publicShareEnabledAt).toBeTruthy();
+  });
+
+  it('clears enabledAt + enabledBy on setPublicShare(false)', async () => {
+    await storage.scans.createScan({
+      id: 's2', siteUrl: 'https://x.example', standard: 'WCAG21AA',
+      jurisdictions: [], createdBy: 'u', orgId: 'org_a', createdAt: '2025-12-01T00:00:00Z',
+    });
+    await storage.scans.setPublicShare('s2', 'org_a', true, 'usr-42');
+    await storage.scans.setPublicShare('s2', 'org_a', false, 'admin-1');
+    const fresh = await storage.scans.getScan('s2');
+    expect(fresh?.publicShareEnabled).toBe(false);
+    expect(fresh?.publicShareEnabledBy).toBeNull();
+    expect(fresh?.publicShareEnabledAt).toBeNull();
+  });
+
+  it('listPubliclyShared returns only enabled, scoped by org, newest-first', async () => {
+    await storage.scans.createScan({ id: 's1', siteUrl: 'https://a', standard: 'X', jurisdictions: [], createdBy: 'u', orgId: 'org_a', createdAt: '2025-12-01T00:00:00Z' });
+    await storage.scans.createScan({ id: 's2', siteUrl: 'https://b', standard: 'X', jurisdictions: [], createdBy: 'u', orgId: 'org_a', createdAt: '2025-12-02T00:00:00Z' });
+    await storage.scans.createScan({ id: 's3', siteUrl: 'https://c', standard: 'X', jurisdictions: [], createdBy: 'u', orgId: 'org_b', createdAt: '2025-12-03T00:00:00Z' });
+    await storage.scans.setPublicShare('s1', 'org_a', true, 'u1');
+    await new Promise((r) => setTimeout(r, 10));
+    await storage.scans.setPublicShare('s2', 'org_a', true, 'u2');
+    await storage.scans.setPublicShare('s3', 'org_b', true, 'u3');
+
+    const orgA = await storage.scans.listPubliclyShared('org_a');
+    expect(orgA.map((s) => s.id)).toEqual(['s2', 's1']);
+    const all = await storage.scans.listPubliclyShared();
+    expect(all).toHaveLength(3);
   });
 });
 

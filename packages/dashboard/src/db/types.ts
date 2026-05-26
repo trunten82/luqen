@@ -81,6 +81,10 @@ export interface ScanRecord {
    * default — owners must explicitly toggle from the report page.
    */
   readonly publicShareEnabled?: boolean;
+  /** Phase 64.1 — when the static badge was last enabled (null when off). */
+  readonly publicShareEnabledAt?: string | null;
+  /** Phase 64.1 — user id that flipped the static badge on. */
+  readonly publicShareEnabledBy?: string | null;
 }
 
 export interface ScanFilters {

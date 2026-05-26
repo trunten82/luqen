@@ -200,6 +200,15 @@
       </svg>
       {{t "nav.agentAudit"}}
     </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/badges')}}is-active{{/if}}"
+       href="/admin/badges"
+       aria-current="{{#if (startsWith currentPath '/admin/badges')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.4 5.2 16.9l.9-5.4L2.2 7.7l5.4-.8L10 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+      Public badges
+    </a>
     {{/if}}
 
     {{#if (or perm.adminSystem perm.adminOrg perm.complianceManage)}}

@@ -82,7 +82,7 @@ describe('GET /api/v1/badge/live/:badgeId.svg', () => {
 
   it('404 when badge is disabled', async () => {
     await seedScan(orgA, 'https://shop.example', { id: 's1', status: 'completed' });
-    const b = await storage.siteBadges.enable(orgA, 'https://shop.example');
+    const b = await storage.siteBadges.enable(orgA, 'https://shop.example', 'u-test');
     await storage.siteBadges.setEnabled(b.id, orgA, false);
     server = await buildServer(null);
     const r = await server.inject({ method: 'GET', url: `/api/v1/badge/live/${b.id}.svg` });
@@ -90,7 +90,7 @@ describe('GET /api/v1/badge/live/:badgeId.svg', () => {
   });
 
   it('404 when no completed scan exists for the site', async () => {
-    const b = await storage.siteBadges.enable(orgA, 'https://shop.example');
+    const b = await storage.siteBadges.enable(orgA, 'https://shop.example', 'u-test');
     server = await buildServer(null);
     const r = await server.inject({ method: 'GET', url: `/api/v1/badge/live/${b.id}.svg` });
     expect(r.statusCode).toBe(404);
@@ -103,7 +103,7 @@ describe('GET /api/v1/badge/live/:badgeId.svg', () => {
     await seedScan(orgA, 'https://shop.example', {
       id: 'newest', completedAt: '2026-05-01T00:00:00Z', errors: 0,
     });
-    const b = await storage.siteBadges.enable(orgA, 'https://shop.example');
+    const b = await storage.siteBadges.enable(orgA, 'https://shop.example', 'u-test');
     server = await buildServer(null);
     const r = await server.inject({ method: 'GET', url: `/api/v1/badge/live/${b.id}.svg` });
     expect(r.statusCode).toBe(200);
@@ -122,7 +122,7 @@ describe('GET /api/v1/badge/live/:badgeId.svg', () => {
     await seedScan(orgA, 'https://x.example', {
       id: 'newer', completedAt: '2026-02-01T00:00:00Z',
     });
-    const b = await storage.siteBadges.enable(orgA, 'https://x.example');
+    const b = await storage.siteBadges.enable(orgA, 'https://x.example', 'u-test');
     server = await buildServer(null);
     const r = await server.inject({ method: 'GET', url: `/api/v1/badge/live/${b.id}.json` });
     expect(r.statusCode).toBe(200);
@@ -134,7 +134,7 @@ describe('GET /api/v1/badge/live/:badgeId.svg', () => {
     await seedScan(orgA, 'https://acme.example', {
       id: 's-old', completedAt: '2026-01-01T00:00:00Z',
     });
-    const b = await storage.siteBadges.enable(orgA, 'https://acme.example');
+    const b = await storage.siteBadges.enable(orgA, 'https://acme.example', 'u-test');
     server = await buildServer(null);
 
     const first = await server.inject({ method: 'GET', url: `/api/v1/badge/live/${b.id}.json` });
@@ -197,7 +197,7 @@ describe('POST /api/v1/reports/:id/site-badge', () => {
 
   it('disable flips an existing badge off', async () => {
     await seedScan(orgA, 'https://shop.example', { id: 'sA', status: 'completed' });
-    const b = await storage.siteBadges.enable(orgA, 'https://shop.example');
+    const b = await storage.siteBadges.enable(orgA, 'https://shop.example', 'u-test');
     server = await buildServer({ id: 'u', currentOrgId: orgA });
     const r = await server.inject({
       method: 'POST',

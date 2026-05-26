@@ -1,0 +1,116 @@
+{{!--
+  Admin oversight for public badges (Phase 64.1).
+  Two lists: static (per scan) and live (per site).
+  admin.system sees all orgs; admin.org sees just their own.
+--}}
+<section aria-label="Public badges">
+  <header class="admin-badges__head">
+    <h1 class="section-title">Public badges</h1>
+    <p class="text-muted">
+      Static badges are pinned to a single scan. Live badges resolve the
+      latest completed scan for a site on every request. Revoking flips the
+      badge off — the URL keeps returning the verdict-frozen-in-time SVG
+      for the cache TTL (5 min static, 1 min live), then 404s.
+    </p>
+  </header>
+
+  <section class="admin-badges__section" aria-labelledby="static-heading">
+    <h2 id="static-heading" class="section-subtitle">Static — {{staticBadges.length}}</h2>
+    {{#if staticBadges.length}}
+    <div class="table-responsive" role="region" aria-label="Static badges" tabindex="0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Preview</th>
+            <th scope="col">Site</th>
+            {{#if isAdminSystem}}<th scope="col">Org</th>{{/if}}
+            <th scope="col">Enabled by</th>
+            <th scope="col">Enabled at</th>
+            <th scope="col">Scan</th>
+            <th scope="col"><span class="screen-reader-text">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each staticBadges}}
+          <tr>
+            <td class="cell--badge-preview">
+              <img src="{{badgeUrl}}" alt="Badge preview for {{siteUrl}}" width="180" height="32" loading="lazy">
+            </td>
+            <td><a href="{{publicUrl}}" target="_blank" rel="noopener">{{siteUrl}}</a></td>
+            {{#if ../isAdminSystem}}<td><code>{{orgId}}</code></td>{{/if}}
+            <td>{{#if enabledBy}}<code>{{enabledBy}}</code>{{else}}&mdash;{{/if}}</td>
+            <td>
+              {{#if enabledAt}}<time datetime="{{enabledAt}}">{{enabledAt}}</time>{{else}}&mdash;{{/if}}
+            </td>
+            <td><a href="{{reportUrl}}">View report &rarr;</a></td>
+            <td class="cell--actions">
+              <form method="POST" action="/admin/badges/static/{{scanId}}/revoke" style="display:inline">
+                <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+                <button type="submit" class="btn btn--sm btn--danger" data-confirm="Revoke the static badge for {{siteUrl}}? The embedded image will start returning 404 once the cache expires.">Revoke</button>
+              </form>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="empty-state__text">No static badges enabled yet.</p>
+    {{/if}}
+  </section>
+
+  <section class="admin-badges__section" aria-labelledby="live-heading">
+    <h2 id="live-heading" class="section-subtitle">Live — {{liveBadges.length}}</h2>
+    {{#if liveBadges.length}}
+    <div class="table-responsive" role="region" aria-label="Live badges" tabindex="0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Preview</th>
+            <th scope="col">Site</th>
+            {{#if isAdminSystem}}<th scope="col">Org</th>{{/if}}
+            <th scope="col">Status</th>
+            <th scope="col">Created by</th>
+            <th scope="col">Created at</th>
+            <th scope="col"><span class="screen-reader-text">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each liveBadges}}
+          <tr>
+            <td class="cell--badge-preview">
+              {{#if enabled}}
+              <img src="{{badgeUrl}}" alt="Badge preview for {{siteUrl}}" width="180" height="32" loading="lazy">
+              {{else}}
+              <span class="text-muted">disabled</span>
+              {{/if}}
+            </td>
+            <td>{{siteUrl}}</td>
+            {{#if ../isAdminSystem}}<td><code>{{orgId}}</code></td>{{/if}}
+            <td>
+              {{#if enabled}}
+              <span class="badge badge--success">Enabled</span>
+              {{else}}
+              <span class="badge badge--neutral">Disabled</span>
+              {{/if}}
+            </td>
+            <td>{{#if createdBy}}<code>{{createdBy}}</code>{{else}}&mdash;{{/if}}</td>
+            <td><time datetime="{{createdAt}}">{{createdAt}}</time></td>
+            <td class="cell--actions">
+              {{#if enabled}}
+              <form method="POST" action="/admin/badges/live/{{id}}/revoke" style="display:inline">
+                <input type="hidden" name="_csrf" value="{{../csrfToken}}">
+                <button type="submit" class="btn btn--sm btn--danger" data-confirm="Revoke the live badge for {{siteUrl}}? The embedded image will start returning 404 once the cache expires.">Revoke</button>
+              </form>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    {{else}}
+    <p class="empty-state__text">No live badges enabled yet.</p>
+    {{/if}}
+  </section>
+</section>
