@@ -504,6 +504,19 @@
       "secret": "Secret",
       "secretHint": "Used to sign webhook payloads (HMAC-SHA256)"
     },
+    "aggregatorWebhooks": {
+      "title": "Org Aggregator Webhooks",
+      "description": "Receive coordinated PR events (created, leg opened, delegated, rolled back) at a URL of your choice. Each delivery is signed with HMAC-SHA256 when a secret is set.",
+      "tableLabel": "Aggregator webhooks",
+      "url": "Endpoint URL",
+      "secret": "Secret",
+      "secretSet": "Set",
+      "secretNone": "None",
+      "created": "Created",
+      "addButton": "Add Webhook",
+      "deleteConfirm": "Delete this aggregator webhook?",
+      "noWebhooks": "No aggregator webhooks registered."
+    },
     "gitHosts": {
       "displayName": "Display Name",
       "type": "Type",

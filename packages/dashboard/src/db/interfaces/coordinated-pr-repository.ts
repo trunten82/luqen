@@ -46,6 +46,23 @@ export interface CoordinatedPrLeg {
   readonly lastError: string | null;
   readonly legStatus: CoordinatedPrLegStatus;
   readonly approvalStatus: CoordinatedPrApprovalStatus;
+  readonly delegatedTo: string | null;
+  readonly delegatedBy: string | null;
+}
+
+/**
+ * Result row for listPendingLegs — denormalized join of leg + parent PR
+ * + scan.site_url. Returned shape is keyed for the dashboard API surface.
+ */
+export interface PendingLegRow {
+  readonly id: string;
+  readonly coordinatedPrId: string;
+  readonly siteId: string;
+  readonly siteUrl: string | null;
+  readonly orgId: string;
+  readonly approvalStatus: CoordinatedPrApprovalStatus;
+  readonly legStatus: CoordinatedPrLegStatus;
+  readonly delegatedTo: string | null;
 }
 
 export interface CreateCoordinatedPrInput {
@@ -77,4 +94,22 @@ export interface CoordinatedPrRepository {
   updateLeg(legId: string, patch: UpdateLegPatch): Promise<CoordinatedPrLeg | null>;
   markRolledBack(id: string, reason?: string): Promise<boolean>;
   recomputeStatus(id: string): Promise<CoordinatedPrStatus | null>;
+  /** Phase 63.1 — leg + parent PR by leg id (used for org-scope checks). */
+  getLegById(
+    legId: string,
+  ): Promise<{ leg: CoordinatedPrLeg; pr: CoordinatedPr } | null>;
+  /**
+   * Phase 63.1 — list pending legs filtered by site_url (joined from scans).
+   * Optional org scoping; admin.system callers pass undefined to see all.
+   */
+  listPendingLegs(filter: {
+    siteUrl: string;
+    orgId?: string;
+  }): Promise<readonly PendingLegRow[]>;
+  /** Phase 63.1 — delegate a leg to a different user. */
+  delegateLeg(
+    legId: string,
+    toUserId: string,
+    decidedBy: string,
+  ): Promise<boolean>;
 }

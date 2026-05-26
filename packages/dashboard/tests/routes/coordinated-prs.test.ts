@@ -4,10 +4,14 @@
  * Mirrors team-org-links.test.ts. Minimal Fastify with preHandler injecting
  * request.user + request.permissions; real SqliteStorageAdapter; JSON-only.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { coordinatedPrRoutes } from '../../src/routes/api/coordinated-prs.js';
+
+// Stub fetch globally so aggregator delivery never reaches network.
+const fetchSpy = vi.fn(async () => new Response(null, { status: 204 }));
+vi.stubGlobal('fetch', fetchSpy);
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -62,6 +66,7 @@ beforeEach(async () => {
   dbPath = join(tmpdir(), `test-cpr-${randomUUID()}.db`);
   storage = new SqliteStorageAdapter(dbPath);
   await storage.migrate();
+  fetchSpy.mockClear();
 });
 
 afterEach(async () => {
@@ -315,5 +320,45 @@ describe('POST /api/v1/coordinated-prs/:id/legs/:legId', () => {
       payload: { leg_status: 'opened' },
     });
     expect(r.statusCode).toBe(404);
+  });
+});
+
+// ─── Aggregator dispatch (Phase 63.1) ─────────────────────────────────────
+describe('aggregator dispatch on each audited event', () => {
+  it('fans coordinated_pr.created, leg.opened, and rolled_back to active subs', async () => {
+    const orgId = await seedOrg('org_a');
+    await storage.orgAggregatorWebhooks.create({
+      orgId,
+      url: 'https://example.com/hook',
+    });
+    server = await buildServer({ perms: ['admin.org'], orgId });
+
+    const create = await server.inject({
+      method: 'POST',
+      url: '/api/v1/coordinated-prs',
+      payload: { sites: [{ site_id: 'scan-1' }] },
+    });
+    expect(create.statusCode).toBe(201);
+
+    const prId = create.json().pr.id;
+    const legId = create.json().legs[0].id;
+    await server.inject({
+      method: 'POST',
+      url: `/api/v1/coordinated-prs/${prId}/legs/${legId}`,
+      payload: { leg_status: 'opened' },
+    });
+
+    await server.inject({
+      method: 'POST',
+      url: `/api/v1/coordinated-prs/${prId}/rollback`,
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    const events = fetchSpy.mock.calls.map(
+      (c) => (c[1] as { headers: Record<string, string> }).headers['Luqen-Event'],
+    );
+    expect(events).toContain('coordinated_pr.created');
+    expect(events).toContain('coordinated_pr.leg.opened');
+    expect(events).toContain('coordinated_pr.rolled_back');
   });
 });

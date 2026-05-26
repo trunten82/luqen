@@ -1,0 +1,77 @@
+<section aria-label="Org aggregator webhooks">
+  <div class="card">
+    <h2>{{t "admin.aggregatorWebhooks.title"}}</h2>
+    <p>{{t "admin.aggregatorWebhooks.description"}}</p>
+
+    <form hx-post="/admin/org-webhooks/aggregator"
+          hx-target="#toast-container"
+          hx-swap="innerHTML"
+          class="form-group--inline">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <label>
+        {{t "admin.aggregatorWebhooks.url"}}
+        <input type="url" name="url" required>
+      </label>
+      <label>
+        {{t "admin.aggregatorWebhooks.secret"}}
+        <input type="text" name="secret">
+      </label>
+      <button type="submit" class="btn btn--primary">
+        {{t "admin.aggregatorWebhooks.addButton"}}
+      </button>
+    </form>
+  </div>
+
+  <div class="card">
+    <table class="data-table" aria-label="{{t 'admin.aggregatorWebhooks.tableLabel'}}">
+      <thead>
+        <tr>
+          <th scope="col">{{t "admin.aggregatorWebhooks.url"}}</th>
+          <th scope="col">{{t "admin.aggregatorWebhooks.secret"}}</th>
+          <th scope="col">{{t "common.status"}}</th>
+          <th scope="col">{{t "admin.aggregatorWebhooks.created"}}</th>
+          <th scope="col">{{t "common.actions"}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each webhooks}}
+        <tr>
+          <td data-label="URL">{{url}}</td>
+          <td data-label="Secret">
+            {{#if hasSecret}}
+              <span class="badge badge--success">{{t "admin.aggregatorWebhooks.secretSet"}}</span>
+            {{else}}
+              <span class="badge badge--neutral">{{t "admin.aggregatorWebhooks.secretNone"}}</span>
+            {{/if}}
+          </td>
+          <td data-label="Status">
+            {{#if active}}
+              <span class="badge badge--success">{{t "common.active"}}</span>
+            {{else}}
+              <span class="badge badge--neutral">{{t "common.inactive"}}</span>
+            {{/if}}
+          </td>
+          <td data-label="Created">{{createdAtDisplay}}</td>
+          <td>
+            {{#if active}}
+            <form hx-post="/admin/org-webhooks/aggregator/{{id}}/delete"
+                  hx-target="#toast-container"
+                  hx-swap="innerHTML"
+                  hx-confirm="{{t 'admin.aggregatorWebhooks.deleteConfirm'}}">
+              <input type="hidden" name="_csrf" value="{{csrfToken}}">
+              <button type="submit" class="btn btn--sm btn--danger">
+                {{t "common.delete"}}
+              </button>
+            </form>
+            {{/if}}
+          </td>
+        </tr>
+        {{else}}
+        <tr>
+          <td colspan="5">{{t "admin.aggregatorWebhooks.noWebhooks"}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</section>

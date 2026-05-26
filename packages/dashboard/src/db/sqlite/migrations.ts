@@ -1794,4 +1794,36 @@ CREATE TABLE IF NOT EXISTS bulk_fixes (
 CREATE INDEX IF NOT EXISTS idx_bulk_fixes_org ON bulk_fixes(org_id, created_at);
     `,
   },
+  {
+    id: '070',
+    name: 'org-aggregator-webhooks-and-leg-helpers',
+    sql: `
+-- Phase 63.1 — Org-wide webhook aggregator + leg delegation helpers.
+-- Dashboard-side aggregator subscriptions (decoupled from the compliance
+-- service's webhook proxy). The dispatcher in
+-- src/services/aggregator-webhook-delivery.ts reads listActive() and fans
+-- coordinated_pr.* events to every active subscriber.
+
+CREATE TABLE IF NOT EXISTS org_aggregator_webhooks (
+  id          TEXT PRIMARY KEY,
+  org_id      TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  url         TEXT NOT NULL,
+  secret      TEXT,
+  active      INTEGER NOT NULL DEFAULT 1,
+  created_at  TEXT NOT NULL,
+  created_by  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_org_aggregator_webhooks_org
+  ON org_aggregator_webhooks(org_id, active);
+
+-- Lookup index supporting GET /api/v1/coordinated-prs/legs?site_url=...
+CREATE INDEX IF NOT EXISTS idx_coordinated_pr_legs_site_approval
+  ON coordinated_pr_legs(site_id, approval_status);
+
+-- Delegation columns on leg rows. delegated_to is the user the leg has
+-- been re-assigned to; delegated_by is the actor who reassigned it.
+ALTER TABLE coordinated_pr_legs ADD COLUMN delegated_to TEXT;
+ALTER TABLE coordinated_pr_legs ADD COLUMN delegated_by TEXT;
+    `,
+  },
 ];

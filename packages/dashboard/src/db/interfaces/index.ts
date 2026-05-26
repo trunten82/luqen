@@ -38,3 +38,8 @@ export type {
   BulkFixStatus,
   CreateBulkFixInput,
 } from './bulk-fix-repository.js';
+export type {
+  OrgAggregatorWebhookRepository,
+  OrgAggregatorWebhook,
+  CreateOrgAggregatorWebhookInput,
+} from './org-aggregator-webhook-repository.js';
