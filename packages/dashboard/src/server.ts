@@ -395,17 +395,36 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   });
 
   // ── Rate Limiting ────────────────────────────────────────────────────────
+  // Three buckets, evaluated per IP:
+  //   - bearer  (OAuth API clients) → 2000/min
+  //   - session (logged-in browser users) → 600/min
+  //   - anon    (everything else) → 100/min
+  //
+  // Browser users get the 'session' bucket because a single HTMX-heavy page
+  // load can fire many sub-requests (partials, polls, agent drawer); 100/min
+  // tripped after a few clicks. Static assets are served by @fastify/static
+  // at /static and /uploads — skipped to keep the budget for real handlers.
+  const SESSION_COOKIE = 'session';
   await server.register(import('@fastify/rate-limit'), {
     global: true,
     timeWindow: '1 minute',
+    allowList: (req) => {
+      const p = (req.url ?? '').split('?')[0];
+      return p.startsWith('/static') || p.startsWith('/uploads') || p === '/favicon.ico';
+    },
     keyGenerator: (req) => {
-      // Authenticated requests get their own bucket with a higher limit
       const auth = req.headers.authorization ?? '';
-      return auth.startsWith('Bearer ') ? `auth:${req.ip}` : req.ip;
+      if (auth.startsWith('Bearer ')) return `bearer:${req.ip}`;
+      const cookie = req.headers.cookie ?? '';
+      if (cookie.includes(SESSION_COOKIE + '=')) return `session:${req.ip}`;
+      return `anon:${req.ip}`;
     },
     max: (req) => {
       const auth = req.headers.authorization ?? '';
-      return auth.startsWith('Bearer ') ? 2000 : 100;
+      if (auth.startsWith('Bearer ')) return 2000;
+      const cookie = req.headers.cookie ?? '';
+      if (cookie.includes(SESSION_COOKIE + '=')) return 600;
+      return 100;
     },
     errorResponseBuilder: (_req, context) => ({
       statusCode: 429,
