@@ -188,6 +188,9 @@ describe('OpenAPI route coverage (dashboard, non-MCP)', () => {
       // is the entire payload (target-org admin clicks Accept / Decline).
       'POST /api/v1/team-org-link-invites/{inviteId}/accept',
       'POST /api/v1/team-org-link-invites/{inviteId}/decline',
+      // Phase 62.2 — coordinated-PR rollback: the pr id in the path is the
+      // entire payload.
+      'POST /api/v1/coordinated-prs/{id}/rollback',
     ]);
 
     // ── Assertion A: typed 2xx response coverage ≥ 95% ────────────────────
