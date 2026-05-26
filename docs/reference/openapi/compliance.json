@@ -3,7 +3,7 @@
   "info": {
     "title": "Luqen Compliance Service",
     "description": "Accessibility compliance rule engine — check WCAG issues against 60+ country-specific legal requirements",
-    "version": "2.11.0"
+    "version": "3.4.0"
   },
   "components": {
     "securitySchemes": {
