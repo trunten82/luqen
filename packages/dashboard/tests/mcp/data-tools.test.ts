@@ -210,10 +210,16 @@ describe('Phase 30 data tools — tools/list RBAC filtering', () => {
     expect(names).toContain('dashboard_query_issues');
     expect(names).toContain('dashboard_list_brand_scores');
     expect(names).toContain('dashboard_get_brand_score');
-    expect(names.length).toBe(7);
+    // Phase 62.4 added 3 reports.view fleet tools (list_fleet,
+    // scan_summary_for_fleet, coordinated_pr_status); since reports.view is in
+    // the permission set, they all surface here.
+    expect(names).toContain('dashboard_list_fleet');
+    expect(names).toContain('dashboard_scan_summary_for_fleet');
+    expect(names).toContain('dashboard_coordinated_pr_status');
+    expect(names.length).toBe(10);
   });
 
-  it('caller with only reports.view sees 4 report tools', async () => {
+  it('caller with only reports.view sees 4 report tools + 3 fleet tools', async () => {
     const verifier = makeFakeVerifier({
       sub: 'u',
       scopes: ['read'],
@@ -248,7 +254,12 @@ describe('Phase 30 data tools — tools/list RBAC filtering', () => {
     );
     expect(names).not.toContain('dashboard_scan_site');
     expect(names).not.toContain('dashboard_list_brand_scores');
-    expect(names.length).toBe(4);
+    // Phase 62.4 added 3 reports.view fleet tools, so reports.view alone now
+    // sees 4 report tools + 3 fleet tools.
+    expect(names).toContain('dashboard_list_fleet');
+    expect(names).toContain('dashboard_scan_summary_for_fleet');
+    expect(names).toContain('dashboard_coordinated_pr_status');
+    expect(names.length).toBe(7);
   });
 
   it('caller with only branding.view sees 2 brand score tools', async () => {
@@ -327,7 +338,8 @@ describe('Phase 30 data tools — D-17 invariant + destructive annotation + clas
     // Plan 30-03 registers 13 admin tools, so combined toolNames is
     // 7 (data) + 13 (admin) = 20.
     expect(DATA_TOOL_NAMES.length).toBe(7);
-    expect(toolNames.length).toBe(20);
+    // Phase 62.4: 4 fleet tools added → 7 data + 13 admin + 4 fleet = 24.
+    expect(toolNames.length).toBe(24);
     expect(DASHBOARD_DATA_TOOL_METADATA.length).toBe(7);
     expect(metadata.length).toBeGreaterThanOrEqual(7);
 

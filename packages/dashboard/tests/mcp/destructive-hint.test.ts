@@ -21,6 +21,9 @@ import { DASHBOARD_TOOL_METADATA } from '../../src/mcp/metadata.js';
  */
 const EXPECTED_DESTRUCTIVE_TOOLS: readonly string[] = [
   'dashboard_scan_site',
+  // Phase 62.4: dashboard_queue_bulk_fix opens PRs across every matching
+  // site in the caller's scope — APER-02 confirmation required.
+  'dashboard_queue_bulk_fix',
 ];
 
 describe('DASHBOARD_TOOL_METADATA — destructive-hint integrity (D-28)', () => {
