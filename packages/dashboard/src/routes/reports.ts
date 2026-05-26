@@ -465,6 +465,55 @@ export async function reportRoutes(
     },
   );
 
+  // POST /api/v1/reports/:id/public-share — toggle the public-share opt-in
+  // for the given scan. Owner-or-admin scoped via currentOrgId. Idempotent.
+  server.post(
+    '/api/v1/reports/:id/public-share',
+    {
+      schema: {
+        tags: ['reports'],
+        params: ReportIdParams,
+        body: Type.Object({
+          enabled: Type.Boolean(),
+        }, { additionalProperties: false }),
+        response: {
+          200: Type.Object({
+            scanId:             Type.String(),
+            publicShareEnabled: Type.Boolean(),
+            badgeUrl:           Type.String(),
+            reportUrl:          Type.String(),
+          }),
+          403: Type.Object({ error: Type.String() }),
+          404: Type.Object({ error: Type.String() }),
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const enabled = (request.body as { enabled: boolean }).enabled;
+      const scan = await storage.scans.getScan(id);
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+      const orgId = request.user?.currentOrgId ?? 'system';
+      const isAdmin = request.user?.role === 'admin';
+      if (!isAdmin && scan.orgId !== orgId) {
+        return reply.code(403).send({ error: 'Forbidden' });
+      }
+      const ok = await storage.scans.setPublicShare(id, scan.orgId, enabled);
+      if (!ok) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+      const host = request.headers.host ?? '';
+      return reply.send({
+        scanId: id,
+        publicShareEnabled: enabled,
+        badgeUrl: `https://${host}/api/v1/badge/${id}.svg`,
+        reportUrl: `https://${host}/reports/${id}/public`,
+      });
+    },
+  );
+
   // GET /reports/:id/public — anonymous public view (Phase 58 R5).
   // Strips admin chrome, shows the verdict line + summary + per-page issues.
   // Public iff:

@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
 import type { StorageAdapter } from '../db/index.js';
 import type { ScanRecord } from '../db/types.js';
 
@@ -98,7 +99,14 @@ export async function badgeRoutes(
   server.get(
     '/api/v1/badge/:scanId.svg',
     {
-      schema: { tags: ['badge'], params: { type: 'object', properties: { scanId: { type: 'string' } }, required: ['scanId'] } },
+      schema: {
+        tags: ['badge'],
+        params: Type.Object({ scanId: Type.String() }),
+        response: {
+          200: Type.String({ description: 'SVG markup' }),
+          404: Type.Object({ error: Type.String() }),
+        },
+      },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { scanId } = request.params as { scanId: string };
@@ -132,7 +140,20 @@ export async function badgeRoutes(
   server.get(
     '/api/v1/badge/:scanId.json',
     {
-      schema: { tags: ['badge'], params: { type: 'object', properties: { scanId: { type: 'string' } }, required: ['scanId'] } },
+      schema: {
+        tags: ['badge'],
+        params: Type.Object({ scanId: Type.String() }),
+        response: {
+          200: Type.Object({
+            scanId:     Type.String(),
+            siteUrl:    Type.String(),
+            status:     Type.String(),
+            verifiedAt: Type.Union([Type.String(), Type.Null()]),
+            standard:   Type.String(),
+          }),
+          404: Type.Object({ error: Type.String() }),
+        },
+      },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { scanId } = request.params as { scanId: string };
