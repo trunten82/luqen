@@ -287,14 +287,25 @@
     {{/if}}
 
     {{#if perm.adminTeams}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/teams')}}is-active{{/if}}"
+    <a class="sidebar__item {{#if (eq currentPath '/admin/teams')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/teams/')}}{{#unless (eq currentPath '/admin/teams/invites')}}is-active{{/unless}}{{/if}}"
        href="/admin/teams"
-       aria-current="{{#if (startsWith currentPath '/admin/teams')}}page{{/if}}">
+       aria-current="{{#if (eq currentPath '/admin/teams')}}page{{/if}}">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
         <path d="M17 20v-2a4 4 0 00-3-3.87M13 6a3 3 0 010 6M9 11a4 4 0 00-4 4v2M9 7a3 3 0 110-6 3 3 0 010 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       {{t "nav.teams"}}
     </a>
+    {{#if perm.adminOrg}}
+    <a class="sidebar__item sidebar__item--child {{#if (eq currentPath '/admin/teams/invites')}}is-active{{/if}}"
+       href="/admin/teams/invites"
+       aria-current="{{#if (eq currentPath '/admin/teams/invites')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M2 6l8 5 8-5M2 6v8a2 2 0 002 2h12a2 2 0 002-2V6M2 6a2 2 0 012-2h12a2 2 0 012 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      {{t "admin.teams.incomingInvites"}}
+      {{#if incomingTeamInviteCount}}<span class="badge badge--warning">{{incomingTeamInviteCount}}</span>{{/if}}
+    </a>
+    {{/if}}
     {{/if}}
 
     {{#if perm.adminRoles}}
