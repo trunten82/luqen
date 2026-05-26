@@ -69,11 +69,35 @@ export async function authRoutes(
     // Show session expired message if redirected from expiry hook
     const sessionExpired = query['expired'] === '1';
 
+    // Phase 64.2: the login badge tracks the latest completed dogfood scan
+    // dynamically. We auto-resolve (and idempotently seed) a site_badges
+    // row for (system, scan.siteUrl) derived from config.selfScanId so the
+    // operator gets a moving verdict for free, without configuring a
+    // second id. Falls back to the static selfScanId badge if anything
+    // along the resolution chain is missing.
+    let selfLiveBadgeId: string | undefined;
+    if (storage !== undefined && config.selfScanId !== undefined && config.selfScanId !== '') {
+      try {
+        const self = await storage.scans.getScan(config.selfScanId);
+        if (self !== null) {
+          const badge = await storage.siteBadges.enable(
+            'system',
+            self.siteUrl,
+            'system:dogfood',
+          );
+          if (badge.enabled) selfLiveBadgeId = badge.id;
+        }
+      } catch {
+        // Never block the login page on a badge-resolution glitch.
+      }
+    }
+
     return reply.view('login.hbs', {
       mode,
       loginMethods,
       returnTo,
       selfScanId: config.selfScanId,
+      selfLiveBadgeId,
       ...(sessionExpired ? { error: 'Your session has expired. Please log in again.' } : {}),
     });
   });

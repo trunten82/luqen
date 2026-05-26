@@ -71,7 +71,19 @@
         {{{t "auth.learnMore"}}}
       </p>
 
-      {{#if selfScanId}}
+      {{#if selfLiveBadgeId}}
+      {{!-- Live badge — tracks the latest completed dogfood scan
+           automatically; the embed URL stays stable as scheduled
+           scans land. --}}
+      <a class="login-card__self-badge"
+         href="/reports/{{selfScanId}}/public"
+         aria-label="View Luqen's own accessibility self-scan report">
+        <img src="/api/v1/badge/live/{{selfLiveBadgeId}}.svg"
+             alt="Latest verdict by Luqen"
+             width="180" height="32">
+      </a>
+      {{else if selfScanId}}
+      {{!-- Fallback: static badge pinned to the configured selfScanId. --}}
       <a class="login-card__self-badge"
          href="/reports/{{selfScanId}}/public"
          aria-label="View Luqen's own accessibility self-scan report">
