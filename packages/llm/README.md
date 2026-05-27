@@ -122,6 +122,44 @@ Authentication: `Authorization: Bearer <token>` on all endpoints except `/api/v1
 | `POST` | `/providers/:id/test` | `admin` | Test provider connectivity and update status |
 | `GET` | `/providers/:id/models` | `admin` | List models available from the provider's API |
 
+#### Azure AI Foundry
+
+Azure AI Foundry inference endpoints expose an OpenAI‑compatible
+`/v1/chat/completions` surface with `Authorization: Bearer` auth. The
+existing `openai` adapter handles them with no extension — register the
+provider with:
+
+```jsonc
+// POST /providers
+{
+  "type": "openai",
+  "name": "Azure AI Foundry — prod",
+  "baseUrl": "https://<your-resource>.services.ai.azure.com/models",
+  "apiKey": "<foundry-key>"
+}
+```
+
+Then register the deployment name as a model under that provider:
+
+```jsonc
+// POST /models
+{
+  "providerId": "<provider-id-from-above>",
+  "modelId":    "<your-deployment-name>",   // e.g. gpt-4.1-mini
+  "name":       "Azure GPT-4.1 mini",
+  "capabilities": ["generate-fix", "analyse-report"]
+}
+```
+
+The adapter calls `${baseUrl}/v1/chat/completions`; Foundry serves the
+OpenAI-compatible API at `…/models/v1/…` so the resulting URL matches.
+
+> **Classic Azure OpenAI Service** (deployment‑scoped URLs ending
+> `/openai/deployments/<name>/chat/completions?api-version=…` with the
+> `api-key` header) is **not** supported by the `openai` adapter — it
+> uses a different path format and auth scheme. Use a Foundry
+> deployment instead, or open an issue if you need the classic surface.
+
 ### Model Management
 
 | Method | Path | Scope | Description |
