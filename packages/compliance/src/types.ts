@@ -4,7 +4,7 @@ export interface Jurisdiction {
   readonly id: string;
   readonly orgId: string;
   readonly name: string;
-  readonly type: 'supranational' | 'country' | 'state';
+  readonly type: 'supranational' | 'country' | 'state' | 'province' | 'city';
   readonly parentId?: string;
   readonly iso3166?: string;
   readonly createdAt: string;
@@ -240,7 +240,7 @@ export interface WebhookPayload {
 // === Filter types ===
 
 export interface JurisdictionFilters {
-  readonly type?: 'supranational' | 'country' | 'state';
+  readonly type?: 'supranational' | 'country' | 'state' | 'province' | 'city';
   readonly parentId?: string;
   readonly orgId?: string;
 }
@@ -264,7 +264,7 @@ export interface RequirementFilters {
 export interface CreateJurisdictionInput {
   readonly id?: string;
   readonly name: string;
-  readonly type: 'supranational' | 'country' | 'state';
+  readonly type: 'supranational' | 'country' | 'state' | 'province' | 'city';
   readonly parentId?: string;
   readonly iso3166?: string;
   readonly orgId?: string;

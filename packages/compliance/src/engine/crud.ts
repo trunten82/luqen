@@ -10,7 +10,7 @@ import type {
 
 // ---- Constants for validation ----
 
-const VALID_JURISDICTION_TYPES = new Set<string>(['supranational', 'country', 'state']);
+const VALID_JURISDICTION_TYPES = new Set<string>(['supranational', 'country', 'state', 'province', 'city']);
 const VALID_REGULATION_STATUSES = new Set<string>(['active', 'draft', 'repealed']);
 const VALID_REGULATION_SCOPES = new Set<string>(['public', 'private', 'all']);
 const VALID_WCAG_VERSIONS = new Set<string>(['2.0', '2.1', '2.2']);
