@@ -34,11 +34,11 @@
     <tr>
       <th scope="col">Site URL</th>
       {{#if (eq scope "admin")}}<th scope="col">Org</th>{{/if}}
-      <th scope="col">WP version</th>
-      <th scope="col">Plugin version</th>
+      <th scope="col">WP / plugin</th>
       <th scope="col">Status</th>
       <th scope="col">Last seen</th>
-      <th scope="col">Site ID</th>
+      <th scope="col">Last scan</th>
+      <th scope="col">Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -46,15 +46,31 @@
     <tr>
       <td>
         <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a>
+        <br><code class="text-muted" style="font-size: 0.75em">{{id}}</code>
       </td>
       {{#if (eq ../scope "admin")}}<td><code>{{orgId}}</code></td>{{/if}}
-      <td>{{#if wpVersion}}{{wpVersion}}{{else}}<span class="text-muted">—</span>{{/if}}</td>
-      <td>{{#if pluginVersion}}{{pluginVersion}}{{else}}<span class="text-muted">—</span>{{/if}}</td>
+      <td>
+        <span class="text-muted" style="font-size: 0.875em">WP</span>
+        {{#if wpVersion}}{{wpVersion}}{{else}}<span class="text-muted">—</span>{{/if}}
+        <br>
+        <span class="text-muted" style="font-size: 0.875em">plugin</span>
+        {{#if pluginVersion}}{{pluginVersion}}{{else}}<span class="text-muted">—</span>{{/if}}
+      </td>
       <td>
         <span class="badge badge--{{#if (eq status "active")}}success{{else}}warning{{/if}}">{{status}}</span>
       </td>
       <td><time datetime="{{lastSeenAt}}">{{lastSeenAt}}</time></td>
-      <td><code class="text-muted">{{id}}</code></td>
+      <td>
+        {{#if latestScan}}
+          <a href="/reports/{{latestScan.id}}"><time datetime="{{latestScan.createdAt}}">{{latestScan.createdAt}}</time></a>
+          {{#if latestScan.totalIssues}}<br><span class="text-muted">{{latestScan.totalIssues}} issues</span>{{/if}}
+        {{else}}
+          <span class="text-muted">no scan yet</span>
+        {{/if}}
+      </td>
+      <td>
+        <a class="btn btn--sm btn--ghost" href="{{#if (eq ../scope "admin")}}/admin/fleet/{{id}}{{else}}/fleet/{{id}}{{/if}}">Details</a>
+      </td>
     </tr>
     {{/each}}
   </tbody>

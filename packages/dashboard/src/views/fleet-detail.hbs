@@ -1,0 +1,96 @@
+{{!-- Fleet detail — single WP site. Shows registration metadata,
+     latest scan verdict, recent scan history, and quick links to
+     queue a bulk-fix or jump to the live site. --}}
+
+<div class="page-header">
+  <p class="text-muted"><a href="{{backHref}}">&larr; Fleet</a></p>
+  <h1>{{site.url}}</h1>
+  <p class="text-muted">
+    Site <code>{{site.id}}</code>
+    {{#if (eq scope "admin")}} · org <code>{{site.orgId}}</code>{{/if}}
+    · <span class="badge badge--{{#if (eq site.status "active")}}success{{else}}warning{{/if}}">{{site.status}}</span>
+  </p>
+</div>
+
+<section aria-labelledby="site-meta-heading">
+  <h2 id="site-meta-heading">Registration</h2>
+  <dl class="meta-grid">
+    <div class="meta">
+      <dt>WordPress version</dt>
+      <dd>{{#if site.wpVersion}}{{site.wpVersion}}{{else}}<span class="text-muted">—</span>{{/if}}</dd>
+    </div>
+    <div class="meta">
+      <dt>Plugin version</dt>
+      <dd>{{#if site.pluginVersion}}{{site.pluginVersion}}{{else}}<span class="text-muted">—</span>{{/if}}</dd>
+    </div>
+    <div class="meta">
+      <dt>First seen</dt>
+      <dd><time datetime="{{site.createdAt}}">{{site.createdAt}}</time></dd>
+    </div>
+    <div class="meta">
+      <dt>Last heartbeat</dt>
+      <dd><time datetime="{{site.lastSeenAt}}">{{site.lastSeenAt}}</time></dd>
+    </div>
+    <div class="meta">
+      <dt>OAuth client</dt>
+      <dd><code>{{site.oauthClientId}}</code></dd>
+    </div>
+  </dl>
+</section>
+
+<section aria-labelledby="latest-scan-heading">
+  <h2 id="latest-scan-heading">Latest scan</h2>
+  {{#if latestScan}}
+    <p>
+      <a href="/reports/{{latestScan.id}}" class="btn btn--secondary">View report</a>
+      <span class="text-muted">
+        Scanned <time datetime="{{latestScan.createdAt}}">{{latestScan.createdAt}}</time>
+        {{#if latestScan.totalIssues}} · {{latestScan.totalIssues}} issues{{/if}}
+        {{#if latestScan.status}} · status <code>{{latestScan.status}}</code>{{/if}}
+      </span>
+    </p>
+  {{else}}
+    <p class="text-muted">No completed scan yet for this site.</p>
+  {{/if}}
+</section>
+
+<section aria-labelledby="recent-scans-heading">
+  <h2 id="recent-scans-heading">Recent scans (up to 10)</h2>
+  {{#if recentScans.length}}
+    <table class="data-table" aria-label="Recent scans">
+      <thead>
+        <tr>
+          <th scope="col">When</th>
+          <th scope="col">Status</th>
+          <th scope="col">Issues</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each recentScans}}
+        <tr>
+          <td><time datetime="{{createdAt}}">{{createdAt}}</time></td>
+          <td><code>{{status}}</code></td>
+          <td>{{#if totalIssues}}{{totalIssues}}{{else}}<span class="text-muted">—</span>{{/if}}</td>
+          <td><a class="btn btn--sm btn--ghost" href="/reports/{{id}}">View</a></td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  {{else}}
+    <p class="text-muted">No scans recorded against this site URL.</p>
+  {{/if}}
+</section>
+
+<section aria-labelledby="actions-heading">
+  <h2 id="actions-heading">Actions</h2>
+  <p>
+    <a class="btn btn--primary" href="{{site.url}}" target="_blank" rel="noopener noreferrer">Open site</a>
+    <a class="btn btn--secondary" href="{{bulkFixHref}}">Queue bulk-fix</a>
+  </p>
+  <p class="text-muted" style="font-size: 0.875em">
+    The plugin self-re-registers on every 15-minute heartbeat. Sites flip to
+    <code>stale</code> after the heartbeat misses its window — they re-flip to
+    <code>active</code> on the next successful registration.
+  </p>
+</section>
