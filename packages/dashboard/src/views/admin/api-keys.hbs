@@ -11,32 +11,31 @@
 
   <div id="new-key-alert"></div>
 
-  {{#if keys.length}}
+  {{#if activeKeys.length}}
+  <h2 class="visually-hidden">Active keys</h2>
   <div class="table-wrapper">
-    <table class="table" aria-label="API keys">
+    <table class="table" aria-label="Active API keys">
       <thead>
         <tr>
           <th scope="col">{{t "admin.apiKeys.label"}}</th>
           <th scope="col">{{t "admin.apiKeys.role"}}</th>
+          <th scope="col">Org</th>
           <th scope="col">{{t "common.status"}}</th>
           <th scope="col">{{t "admin.apiKeys.created"}}</th>
+          <th scope="col">Expires</th>
           <th scope="col">{{t "admin.apiKeys.lastUsed"}}</th>
           <th scope="col">{{t "common.actions"}}</th>
         </tr>
       </thead>
       <tbody id="api-keys-table">
-        {{#each keys}}
+        {{#each activeKeys}}
         <tr id="api-key-{{this.id}}">
           <td data-label="Label">{{this.label}}</td>
           <td data-label="Role">{{this.role}}</td>
-          <td data-label="Status">
-            {{#if this.active}}
-            <span class="badge badge--success">{{t "common.active"}}</span>
-            {{else}}
-            <span class="badge badge--error">{{t "admin.apiKeys.revoked"}}</span>
-            {{/if}}
-          </td>
+          <td data-label="Org">{{#if this.org_id}}{{this.org_id}}{{else}}system{{/if}}</td>
+          <td data-label="Status"><span class="badge badge--success">{{t "common.active"}}</span></td>
           <td data-label="Created">{{this.created_at}}</td>
+          <td data-label="Expires">{{#if this.expires_at}}{{this.expires_at}}{{else}}<span class="text-muted">Never</span>{{/if}}</td>
           <td data-label="Last Used">{{#if this.last_used_at}}{{this.last_used_at}}{{else}}{{t "admin.apiKeys.never"}}{{/if}}</td>
           <td>
             <button hx-get="/admin/api-keys/{{this.id}}/view"
@@ -52,5 +51,48 @@
   </div>
   {{else}}
   <p class="text-muted">{{t "admin.apiKeys.noKeys"}}</p>
+  {{/if}}
+
+  {{#if revokedKeys.length}}
+  <details style="margin-top: var(--space-lg)">
+    <summary>
+      <strong>Revoked keys ({{revokedCount}})</strong>
+      <span class="text-muted">— click to expand</span>
+    </summary>
+    <div class="table-wrapper" style="margin-top: var(--space-md)">
+      <table class="table" aria-label="Revoked API keys">
+        <thead>
+          <tr>
+            <th scope="col">{{t "admin.apiKeys.label"}}</th>
+            <th scope="col">{{t "admin.apiKeys.role"}}</th>
+            <th scope="col">Org</th>
+            <th scope="col">{{t "common.status"}}</th>
+            <th scope="col">{{t "admin.apiKeys.created"}}</th>
+            <th scope="col">{{t "admin.apiKeys.lastUsed"}}</th>
+            <th scope="col">{{t "common.actions"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each revokedKeys}}
+          <tr id="api-key-{{this.id}}">
+            <td data-label="Label">{{this.label}}</td>
+            <td data-label="Role">{{this.role}}</td>
+            <td data-label="Org">{{#if this.org_id}}{{this.org_id}}{{else}}system{{/if}}</td>
+            <td data-label="Status"><span class="badge badge--error">{{t "admin.apiKeys.revoked"}}</span></td>
+            <td data-label="Created">{{this.created_at}}</td>
+            <td data-label="Last Used">{{#if this.last_used_at}}{{this.last_used_at}}{{else}}{{t "admin.apiKeys.never"}}{{/if}}</td>
+            <td>
+              <button hx-delete="/admin/api-keys/{{this.id}}"
+                      hx-target="#api-key-{{this.id}}"
+                      hx-swap="outerHTML"
+                      hx-confirm="Permanently delete this revoked key?"
+                      class="btn btn--sm btn--danger">Delete</button>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </details>
   {{/if}}
 </section>
