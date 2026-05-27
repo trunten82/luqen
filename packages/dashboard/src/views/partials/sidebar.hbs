@@ -3,7 +3,7 @@
     <a class="sidebar__logo" href="/home" aria-label="Luqen home">
       <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <path d="M6 4 V18 a8 8 0 0 0 8 8 h4 a8 8 0 0 0 8 -8 V4" stroke="currentColor" stroke-width="5" stroke-linecap="square" fill="none"/>
-        <rect x="23" y="4" width="3" height="3" fill="#d6c43c"/>
+        <rect x="23" y="4" width="3" height="3" fill="currentColor" class="sidebar__logo-mark"/>
       </svg>
       <span class="sidebar__logo-text">{{t "common.appName"}}</span>
     </a>
@@ -16,8 +16,9 @@
   </div>
 
   <div class="sidebar__nav">
-    {{!-- Scanning section — Home, Reports, Trends always visible --}}
-    <span class="sidebar__section-label">{{t "nav.scans"}}</span>
+
+    {{!-- ════ SCAN ════ The core operational loop both personas share. --}}
+    <span class="sidebar__section-label">{{t "nav.scanGroup"}}</span>
 
     <a class="sidebar__item {{#if (eq currentPath '/home')}}is-active{{/if}}"
        href="/home"
@@ -26,6 +27,16 @@
         <path d="M3 9l7-7 7 7v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" stroke="currentColor" stroke-width="1.5"/>
       </svg>
       {{t "nav.home"}}
+    </a>
+
+    <a class="sidebar__item {{#if (startsWith currentPath '/reports')}}is-active{{/if}}"
+       href="/reports"
+       aria-current="{{#if (startsWith currentPath '/reports')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M6 2h8l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M14 2v4h4M8 10h4M8 14h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      {{t "nav.reports"}}
     </a>
 
     {{#if perm.scansCreate}}
@@ -52,14 +63,15 @@
     </a>
     {{/if}}
 
-    <a class="sidebar__item {{#if (eq currentPath '/reports')}}is-active{{/if}}"
-       href="/reports"
-       aria-current="{{#if (eq currentPath '/reports')}}page{{/if}}">
+    <a class="sidebar__item {{#if (startsWith currentPath '/fleet')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/fleet')}}is-active{{/if}}"
+       href="/fleet"
+       aria-current="{{#if (startsWith currentPath '/fleet')}}page{{/if}}">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M6 2h8l4 4v12a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M14 2v4h4M8 10h4M8 14h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="2" y="6" width="6" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="12" y="3" width="6" height="13" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 9h0M15 6h0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      {{t "nav.reports"}}
+      {{t "nav.fleet"}}
     </a>
 
     <a class="sidebar__item {{#if (eq currentPath '/reports/trends')}}is-active{{/if}}"
@@ -70,30 +82,6 @@
       </svg>
       {{t "nav.trends"}}
     </a>
-
-    <a class="sidebar__item {{#if (eq currentPath '/fleet')}}is-active{{/if}}"
-       href="/fleet"
-       aria-current="{{#if (eq currentPath '/fleet')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <rect x="2" y="6" width="6" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
-        <rect x="12" y="3" width="6" height="13" rx="1" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M5 9h0M15 6h0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.fleet"}}
-    </a>
-
-    {{#if (eq user.role 'admin')}}
-    <a class="sidebar__item sidebar__item--admin {{#if (eq currentPath '/admin/fleet')}}is-active{{/if}}"
-       href="/admin/fleet"
-       aria-current="{{#if (eq currentPath '/admin/fleet')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <rect x="2" y="6" width="6" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
-        <rect x="12" y="3" width="6" height="13" rx="1" stroke="currentColor" stroke-width="1.5"/>
-        <circle cx="10" cy="18" r="1.5" fill="currentColor"/>
-      </svg>
-      {{t "nav.fleet"}} <span class="text-muted">(all orgs)</span>
-    </a>
-    {{/if}}
 
     {{#if perm.scansCreate}}
     <a class="sidebar__item {{#if (eq currentPath '/tools/bookmarklet')}}is-active{{/if}}"
@@ -106,9 +94,9 @@
     </a>
     {{/if}}
 
-    {{!-- Compliance section — reference data, visible to compliance.view --}}
+    {{!-- ════ COMPLIANCE ════ Reference data + audit trail. --}}
     {{#if perm.complianceView}}
-    <span class="sidebar__section-label">{{t "nav.compliance"}}</span>
+    <span class="sidebar__section-label">{{t "nav.complianceGroup"}}</span>
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/jurisdictions')}}is-active{{/if}}"
        href="/admin/jurisdictions"
@@ -130,54 +118,7 @@
       {{t "nav.regulations"}}
     </a>
 
-    {{/if}}
-
-    {{!-- Branding section — brand guidelines management --}}
-    {{#if perm.brandingView}}
-    <span class="sidebar__section-label">{{t "nav.branding"}}</span>
-
-    <a class="sidebar__item {{#if (eq currentPath '/brand-overview')}}is-active{{/if}}"
-       href="/brand-overview"
-       aria-current="{{#if (eq currentPath '/brand-overview')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M3 17V7l7-5 7 5v10a1 1 0 01-1 1H4a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M8 11h4v6H8z" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      {{t "nav.brandOverview"}}
-    </a>
-
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/branding-guidelines')}}is-active{{/if}}"
-       href="/admin/branding-guidelines"
-       aria-current="{{#if (startsWith currentPath '/admin/branding-guidelines')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <circle cx="7" cy="7" r="2" fill="currentColor"/>
-        <circle cx="13" cy="7" r="2" fill="currentColor"/>
-        <circle cx="7" cy="13" r="2" fill="currentColor"/>
-        <circle cx="13" cy="13" r="2" fill="currentColor"/>
-      </svg>
-      {{t "nav.brandGuidelines"}}
-    </a>
-    {{#if perm.adminSystem}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/system-brand-guidelines')}}is-active{{/if}}"
-       href="/admin/system-brand-guidelines"
-       aria-current="{{#if (startsWith currentPath '/admin/system-brand-guidelines')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <circle cx="7" cy="7" r="2" fill="currentColor"/>
-        <circle cx="13" cy="7" r="2" fill="currentColor"/>
-        <circle cx="7" cy="13" r="2" fill="currentColor"/>
-        <circle cx="13" cy="13" r="2" fill="currentColor"/>
-      </svg>
-      {{t "admin.systemBrand.title"}}
-    </a>
-    {{/if}}
-    {{/if}}
-
-    {{!-- Monitoring section — change tracking --}}
-    <span class="sidebar__section-label">{{t "nav.monitoring"}}</span>
-
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/monitor')}}is-active{{/if}}"
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/monitor')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/sources')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/proposals')}}is-active{{/if}}"
        href="/admin/monitor"
        aria-current="{{#if (startsWith currentPath '/admin/monitor')}}page{{/if}}">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -186,23 +127,6 @@
         <path d="M7 18h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
       {{t "nav.monitor"}}
-    </a>
-
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/sources')}}is-active{{/if}}"
-       href="/admin/sources">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zM4 10h12" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M10 2c-2 2-3 5-3 8s1 6 3 8m0-16c2 2 3 5 3 8s-1 6-3 8" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      {{t "nav.sources"}}
-    </a>
-
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/proposals')}}is-active{{/if}}"
-       href="/admin/proposals">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M11 5H6a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-5M14 3l3 3-8 8H6v-3l8-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.proposals"}}
     </a>
 
     <a class="sidebar__item {{#if (startsWith currentPath '/admin/change-history')}}is-active{{/if}}"
@@ -214,290 +138,273 @@
       </svg>
       {{t "nav.changeHistory"}}
     </a>
+    {{/if}}
 
-    {{#if (or perm.adminSystem perm.adminOrg)}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/audit')}}is-active{{/if}}"
-       href="/admin/audit"
-       aria-current="{{#if (startsWith currentPath '/admin/audit')}}page{{/if}}">
+    {{!-- ════ BRAND ════ Customer-facing brand identity + accessibility score. --}}
+    {{#if perm.brandingView}}
+    <span class="sidebar__section-label">{{t "nav.brandGroup"}}</span>
+
+    <a class="sidebar__item {{#if (eq currentPath '/brand-overview')}}is-active{{/if}}"
+       href="/brand-overview"
+       aria-current="{{#if (eq currentPath '/brand-overview')}}page{{/if}}">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M3 17V7l7-5 7 5v10a1 1 0 01-1 1H4a1 1 0 01-1-1z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 11h4v6H8z" stroke="currentColor" stroke-width="1.5"/>
       </svg>
-      {{t "nav.agentAudit"}}
+      {{t "nav.brandOverview"}}
     </a>
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/badges')}}is-active{{/if}}"
-       href="/admin/badges"
-       aria-current="{{#if (startsWith currentPath '/admin/badges')}}page{{/if}}">
+    <a class="sidebar__item {{#if (startsWith currentPath '/admin/branding-guidelines')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/system-brand-guidelines')}}is-active{{/if}}"
+       href="/admin/branding-guidelines"
+       aria-current="{{#if (startsWith currentPath '/admin/branding-guidelines')}}page{{/if}}">
       <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.4 5.2 16.9l.9-5.4L2.2 7.7l5.4-.8L10 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="7" cy="7" r="2" fill="currentColor"/>
+        <circle cx="13" cy="7" r="2" fill="currentColor"/>
+        <circle cx="7" cy="13" r="2" fill="currentColor"/>
+        <circle cx="13" cy="13" r="2" fill="currentColor"/>
       </svg>
-      Public badges
+      {{t "nav.brandGuidelines"}}
     </a>
     {{/if}}
 
-    {{#if (or perm.adminSystem perm.adminOrg perm.complianceManage)}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/notifications')}}is-active{{/if}}"
-       href="/admin/notifications"
-       aria-current="{{#if (startsWith currentPath '/admin/notifications')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M5 8a5 5 0 1110 0v4l2 2H3l2-2V8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M8 17a2 2 0 004 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      Notifications
-    </a>
-    {{/if}}
+    {{!-- ════ MORE ════ Admin chrome — identity, repos, integrations, system.
+         Collapsed by default; honour browser-persisted state if user opens. --}}
+    {{#if (or perm.usersManageAny perm.adminTeams perm.adminRoles perm.adminOrg perm.adminPlugins perm.reposManage perm.adminSystem perm.llmView perm.auditView)}}
+    <details class="sidebar__more" {{#if isAdminPath}}open{{/if}}>
+      <summary class="sidebar__section-label sidebar__section-label--summary">
+        {{t "common.more"}}
+        <svg class="sidebar__more-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </summary>
 
-    {{!-- Plugins section — visible to admin.plugins (org owners) or admin.system --}}
-    {{#if perm.adminPlugins}}
-    <span class="sidebar__section-label">{{t "nav.plugins"}}</span>
+      {{!-- Identity & access — Dashboard users, Teams, Roles, My org, Org API keys --}}
+      {{#if perm.usersManageAny}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/dashboard-users')}}is-active{{/if}}"
+         href="/admin/dashboard-users">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM5 16a7 7 0 0110 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {{t "nav.dashboardUsers"}}
+      </a>
+      {{/if}}
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/plugins')}}is-active{{/if}}"
-       href="/admin/plugins"
-       aria-current="{{#if (startsWith currentPath '/admin/plugins')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 2a2 2 0 012 2v1h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      {{t "nav.pluginConfig"}}
-    </a>
+      {{#if perm.adminTeams}}
+      <a class="sidebar__item {{#if (eq currentPath '/admin/teams')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/teams/')}}{{#unless (eq currentPath '/admin/teams/invites')}}is-active{{/unless}}{{/if}}"
+         href="/admin/teams"
+         aria-current="{{#if (eq currentPath '/admin/teams')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M17 20v-2a4 4 0 00-3-3.87M13 6a3 3 0 010 6M9 11a4 4 0 00-4 4v2M9 7a3 3 0 110-6 3 3 0 010 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {{t "nav.teams"}}
+      </a>
+      {{#if perm.adminOrg}}
+      <a class="sidebar__item sidebar__item--child {{#if (eq currentPath '/admin/teams/invites')}}is-active{{/if}}"
+         href="/admin/teams/invites"
+         aria-current="{{#if (eq currentPath '/admin/teams/invites')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M2 6l8 5 8-5M2 6v8a2 2 0 002 2h12a2 2 0 002-2V6M2 6a2 2 0 012-2h12a2 2 0 012 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {{t "admin.teams.incomingInvites"}}
+        {{#if incomingTeamInviteCount}}<span class="badge badge--warning">{{incomingTeamInviteCount}}</span>{{/if}}
+      </a>
+      {{/if}}
+      {{/if}}
 
-    {{#if perm.adminSystem}}
-    {{#if pluginAdminPages.length}}
-    {{#each pluginAdminPages}}
-    <a class="sidebar__item {{#if (startsWith ../currentPath this.path)}}is-active{{/if}}"
-       href="{{this.path}}"
-       aria-current="{{#if (startsWith ../currentPath this.path)}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        {{#if (eq this.icon 'envelope')}}
-        <rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M2 6l8 5 8-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        {{else}}
-        <path d="M10 2a2 2 0 012 2v1h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
-        {{/if}}
-      </svg>
-      {{this.title}}
-    </a>
-    {{/each}}
-    {{/if}}
-    {{/if}}
-    {{/if}}
+      {{#if perm.adminRoles}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/roles')}}is-active{{/if}}"
+         href="/admin/roles"
+         aria-current="{{#if (startsWith currentPath '/admin/roles')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M12 2a4 4 0 00-4 4v2H6a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-8a2 2 0 00-2-2h-2V6a2 2 0 014 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {{t "nav.roles"}}
+      </a>
+      {{/if}}
 
-    {{!-- LLM section --}}
-    {{#if perm.llmView}}
-    <span class="sidebar__section-label">LLM</span>
+      {{#if perm.adminOrg}}
+      {{#if orgContext.currentOrg}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/organizations')}}is-active{{/if}}"
+         href="/admin/organizations/{{orgContext.currentOrg.id}}/members"
+         aria-current="{{#if (startsWith currentPath '/admin/organizations')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3 3h14a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M7 10a2 2 0 100-4 2 2 0 000 4zM13 8h3M13 11h3M4 14c0-1.5 1.5-3 3-3s3 1.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {{t "nav.myOrganization"}}
+      </a>
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/org-api-keys')}}is-active{{/if}}"
+         href="/admin/org-api-keys"
+         aria-current="{{#if (startsWith currentPath '/admin/org-api-keys')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M15 7a4 4 0 00-8 0 4 4 0 003 3.87V18l2 2 2-2v-1l-1-1 1-1v-1l-1-1 1-1v-1.13A4 4 0 0015 7zm-4-1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {{t "nav.orgApiKeys"}}
+      </a>
+      {{/if}}
+      {{/if}}
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/llm')}}is-active{{/if}}"
-       href="/admin/llm"
-       aria-current="{{#if (startsWith currentPath '/admin/llm')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M6 9h8M6 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <circle cx="15" cy="5" r="2" fill="currentColor"/>
-      </svg>
-      LLM Config
-    </a>
-    {{/if}}
+      {{!-- Repositories cluster — connected repos + per-account credentials. --}}
+      {{#if perm.reposManage}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/repos')}}is-active{{/if}}"
+         href="/admin/repos"
+         aria-current="{{#if (startsWith currentPath '/admin/repos')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M7 3C5.34 3 4 4.34 4 6c0 1.3.84 2.4 2 2.82V15.18C4.84 15.6 4 16.7 4 18c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V8.82C9.16 8.4 10 7.3 10 6c0-.27-.04-.53-.1-.78L12.17 7.5l.03 3.68c-1.16.42-2 1.52-2 2.82 0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V7.5L10.83 4.12C10.15 3.44 9.12 3 8 3H7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        </svg>
+        {{t "nav.connectedRepos"}}
+      </a>
 
-    {{!-- Administration section — visible to anyone with users.* permissions --}}
-    {{#if perm.usersManageAny}}
-    <span class="sidebar__section-label">{{t "nav.usersAccess"}}</span>
+      {{#if hasGitHostConfigs}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/git-hosts')}}is-active{{/if}}"
+         href="/admin/git-hosts"
+         aria-current="{{#if (startsWith currentPath '/admin/git-hosts')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 2a6 6 0 110 12A6 6 0 0110 4z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M2 10h16M10 2c2 3 3 5 3 8s-1 5-3 8M10 2c-2 3-3 5-3 8s1 5 3 8" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        {{t "nav.gitHosts"}}
+      </a>
+      {{/if}}
+      {{/if}}
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/dashboard-users')}}is-active{{/if}}"
-       href="/admin/dashboard-users">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM5 16a7 7 0 0110 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.dashboardUsers"}}
-    </a>
-    {{/if}}
+      {{#if perm.reposCredentials}}
+      {{#if hasGitHostConfigs}}
+      <a class="sidebar__item sidebar__item--child {{#if (startsWith currentPath '/account/git-credentials')}}is-active{{/if}}"
+         href="/account/git-credentials"
+         aria-current="{{#if (startsWith currentPath '/account/git-credentials')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M15 8H5a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2zm-5 5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM7 8V5a3 3 0 116 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {{t "nav.gitCredentials"}}
+      </a>
+      {{/if}}
+      {{/if}}
 
-    {{#if perm.adminTeams}}
-    <a class="sidebar__item {{#if (eq currentPath '/admin/teams')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/teams/')}}{{#unless (eq currentPath '/admin/teams/invites')}}is-active{{/unless}}{{/if}}"
-       href="/admin/teams"
-       aria-current="{{#if (eq currentPath '/admin/teams')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M17 20v-2a4 4 0 00-3-3.87M13 6a3 3 0 010 6M9 11a4 4 0 00-4 4v2M9 7a3 3 0 110-6 3 3 0 010 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      {{t "nav.teams"}}
-    </a>
-    {{#if perm.adminOrg}}
-    <a class="sidebar__item sidebar__item--child {{#if (eq currentPath '/admin/teams/invites')}}is-active{{/if}}"
-       href="/admin/teams/invites"
-       aria-current="{{#if (eq currentPath '/admin/teams/invites')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M2 6l8 5 8-5M2 6v8a2 2 0 002 2h12a2 2 0 002-2V6M2 6a2 2 0 012-2h12a2 2 0 012 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      {{t "admin.teams.incomingInvites"}}
-      {{#if incomingTeamInviteCount}}<span class="badge badge--warning">{{incomingTeamInviteCount}}</span>{{/if}}
-    </a>
-    {{/if}}
-    {{/if}}
+      {{!-- Integrations — outbound delivery + LLM + plugins. --}}
+      {{#if (or perm.adminSystem perm.adminOrg perm.complianceManage)}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/notifications')}}is-active{{/if}}"
+         href="/admin/notifications"
+         aria-current="{{#if (startsWith currentPath '/admin/notifications')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M5 8a5 5 0 1110 0v4l2 2H3l2-2V8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 17a2 2 0 004 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {{t "nav.notifications"}}
+      </a>
+      {{/if}}
 
-    {{#if perm.adminRoles}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/roles')}}is-active{{/if}}"
-       href="/admin/roles"
-       aria-current="{{#if (startsWith currentPath '/admin/roles')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M12 2a4 4 0 00-4 4v2H6a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-8a2 2 0 00-2-2h-2V6a2 2 0 014 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.roles"}}
-    </a>
-    {{/if}}
+      {{#if perm.llmView}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/llm')}}is-active{{/if}}"
+         href="/admin/llm"
+         aria-current="{{#if (startsWith currentPath '/admin/llm')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M6 9h8M6 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="15" cy="5" r="2" fill="currentColor"/>
+        </svg>
+        {{t "nav.llmConfig"}}
+      </a>
+      {{/if}}
 
-    {{#if perm.adminOrg}}
-    {{#if orgContext.currentOrg}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/organizations')}}is-active{{/if}}"
-       href="/admin/organizations/{{orgContext.currentOrg.id}}/members"
-       aria-current="{{#if (startsWith currentPath '/admin/organizations')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M3 3h14a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M7 10a2 2 0 100-4 2 2 0 000 4zM13 8h3M13 11h3M4 14c0-1.5 1.5-3 3-3s3 1.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.myOrganization"}}
-    </a>
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/org-api-keys')}}is-active{{/if}}"
-       href="/admin/org-api-keys"
-       aria-current="{{#if (startsWith currentPath '/admin/org-api-keys')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M15 7a4 4 0 00-8 0 4 4 0 003 3.87V18l2 2 2-2v-1l-1-1 1-1v-1l-1-1 1-1v-1.13A4 4 0 0015 7zm-4-1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      {{t "nav.orgApiKeys"}}
-    </a>
-    {{/if}}
-    {{/if}}
+      {{#if perm.adminPlugins}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/plugins')}}is-active{{/if}}"
+         href="/admin/plugins"
+         aria-current="{{#if (startsWith currentPath '/admin/plugins')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M10 2a2 2 0 012 2v1h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        {{t "nav.pluginConfig"}}
+      </a>
 
-    {{!-- Repositories section — visible when user can manage repos or has credentials --}}
-    {{#if perm.reposManage}}
-    <span class="sidebar__section-label">Repositories</span>
+      {{#if perm.adminSystem}}
+      {{#if pluginAdminPages.length}}
+      {{#each pluginAdminPages}}
+      <a class="sidebar__item sidebar__item--child {{#if (startsWith ../currentPath this.path)}}is-active{{/if}}"
+         href="{{this.path}}"
+         aria-current="{{#if (startsWith ../currentPath this.path)}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          {{#if (eq this.icon 'envelope')}}
+          <rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M2 6l8 5 8-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          {{else}}
+          <path d="M10 2a2 2 0 012 2v1h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h3V4a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+          {{/if}}
+        </svg>
+        {{this.title}}
+      </a>
+      {{/each}}
+      {{/if}}
+      {{/if}}
+      {{/if}}
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/repos')}}is-active{{/if}}"
-       href="/admin/repos"
-       aria-current="{{#if (startsWith currentPath '/admin/repos')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M7 3C5.34 3 4 4.34 4 6c0 1.3.84 2.4 2 2.82V15.18C4.84 15.6 4 16.7 4 18c0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V8.82C9.16 8.4 10 7.3 10 6c0-.27-.04-.53-.1-.78L12.17 7.5l.03 3.68c-1.16.42-2 1.52-2 2.82 0 1.66 1.34 3 3 3s3-1.34 3-3c0-1.3-.84-2.4-2-2.82V7.5L10.83 4.12C10.15 3.44 9.12 3 8 3H7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-      </svg>
-      {{t "nav.connectedRepos"}}
-    </a>
+      {{!-- System — full admin only, lowest-frequency surfaces. --}}
+      {{#if perm.adminSystem}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/organizations')}}{{#unless orgContext.currentOrg}}is-active{{/unless}}{{/if}}"
+         href="/admin/organizations"
+         aria-current="{{#if (eq currentPath '/admin/organizations')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3 3h14a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M7 10a2 2 0 100-4 2 2 0 000 4zM13 8h3M13 11h3M4 14c0-1.5 1.5-3 3-3s3 1.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {{t "nav.organizations"}}
+      </a>
 
-    {{#if hasGitHostConfigs}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/git-hosts')}}is-active{{/if}}"
-       href="/admin/git-hosts"
-       aria-current="{{#if (startsWith currentPath '/admin/git-hosts')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 2a6 6 0 110 12A6 6 0 0110 4z" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M2 10h16M10 2c2 3 3 5 3 8s-1 5-3 8M10 2c-2 3-3 5-3 8s1 5 3 8" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      Git Hosts
-    </a>
-    {{/if}}
-    {{/if}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/api-keys')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/oauth-keys')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/users')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/clients')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/service-connections')}}is-active{{/if}}{{#if (startsWith currentPath '/admin/webhooks')}}is-active{{/if}}"
+         href="/admin/api-keys"
+         aria-current="{{#if (startsWith currentPath '/admin/api-keys')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M15 7a4 4 0 00-8 0 4 4 0 003 3.87V18l2 2 2-2v-1l-1-1 1-1v-1l-1-1 1-1v-1.13A4 4 0 0015 7zm-4-1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {{t "nav.identityAccess"}}
+      </a>
 
-    {{#if perm.reposCredentials}}
-    {{#if hasGitHostConfigs}}
-    <a class="sidebar__item sidebar__item--child {{#if (startsWith currentPath '/account/git-credentials')}}is-active{{/if}}"
-       href="/account/git-credentials"
-       aria-current="{{#if (startsWith currentPath '/account/git-credentials')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M15 8H5a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2zm-5 5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM7 8V5a3 3 0 116 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      Git Credentials
-    </a>
-    {{/if}}
-    {{/if}}
+      <a class="sidebar__item {{#if (eq currentPath '/admin/system')}}is-active{{/if}}"
+         href="/admin/system">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {{t "nav.systemHealth"}}
+      </a>
+      {{/if}}
 
-    {{!-- System section — full admin permissions required --}}
-    {{#if perm.adminSystem}}
-    <span class="sidebar__section-label">{{t "nav.system"}}</span>
+      {{!-- Audit + agent trails — visible to users with audit view permission. --}}
+      {{#if (or perm.adminSystem perm.adminOrg)}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/audit')}}is-active{{/if}}"
+         href="/admin/audit"
+         aria-current="{{#if (startsWith currentPath '/admin/audit')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {{t "nav.agentAudit"}}
+      </a>
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/organizations')}}is-active{{/if}}"
-       href="/admin/organizations"
-       aria-current="{{#if (startsWith currentPath '/admin/organizations')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M3 3h14a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M7 10a2 2 0 100-4 2 2 0 000 4zM13 8h3M13 11h3M4 14c0-1.5 1.5-3 3-3s3 1.5 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.organizations"}}
-    </a>
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/badges')}}is-active{{/if}}"
+         href="/admin/badges"
+         aria-current="{{#if (startsWith currentPath '/admin/badges')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.4 5.2 16.9l.9-5.4L2.2 7.7l5.4-.8L10 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+        {{t "nav.shareableBadges"}}
+      </a>
+      {{/if}}
 
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/api-keys')}}is-active{{/if}}"
-       href="/admin/api-keys"
-       aria-current="{{#if (startsWith currentPath '/admin/api-keys')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M15 7a4 4 0 00-8 0 4 4 0 003 3.87V18l2 2 2-2v-1l-1-1 1-1v-1l-1-1 1-1v-1.13A4 4 0 0015 7zm-4-1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      {{t "nav.apiKeys"}}
-    </a>
-
-    {{!-- Phase 31.1 Plan 04: OAuth signing keys (RS256 JWKS) — admin.system only --}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/oauth-keys')}}is-active{{/if}}"
-       href="/admin/oauth-keys"
-       aria-current="{{#if (startsWith currentPath '/admin/oauth-keys')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 1l6 3v5c0 4-2.5 7-6 9-3.5-2-6-5-6-9V4l6-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M8 10h4M10 8v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      OAuth Keys
-    </a>
-
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/users')}}is-active{{/if}}"
-       href="/admin/users">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM5 16a7 7 0 0110 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.apiUsers"}}
-    </a>
-
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/webhooks')}}is-active{{/if}}"
-       href="/admin/webhooks">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M13 10a3 3 0 11-6 0 3 3 0 016 0zM7.5 10H3M17 10h-4M10 7.5V3M10 17v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.webhooks"}}
-    </a>
-
-    {{#if perm.complianceManage}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/clients')}}is-active{{/if}}"
-       href="/admin/clients">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <rect x="3" y="6" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M7 6V5a3 3 0 016 0v1" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      {{t "nav.oauthClients"}}
-    </a>
-    {{/if}}
-
-    {{#if perm.adminSystem}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/service-connections')}}is-active{{/if}}"
-       href="/admin/service-connections"
-       aria-current="{{#if (startsWith currentPath '/admin/service-connections')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M7 3a2 2 0 00-2 2v2H3v6h2v2a2 2 0 002 2h6a2 2 0 002-2v-2h2V7h-2V5a2 2 0 00-2-2H7zm0 2h6v10H7V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M9 9h2M9 11h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.serviceConnections"}}
-    </a>
-    {{/if}}
-
-
-    <a class="sidebar__item {{#if (eq currentPath '/admin/system')}}is-active{{/if}}"
-       href="/admin/system">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.systemHealth"}}
-    </a>
-
-    {{#if perm.auditView}}
-    <a class="sidebar__item {{#if (startsWith currentPath '/admin/audit-log')}}is-active{{/if}}"
-       href="/admin/audit-log"
-       aria-current="{{#if (startsWith currentPath '/admin/audit-log')}}page{{/if}}">
-      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M4 4h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M6 8h8M6 11h8M6 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      {{t "nav.auditLog"}}
-    </a>
-    {{/if}}
+      {{#if perm.auditView}}
+      {{#if perm.adminSystem}}
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/audit-log')}}is-active{{/if}}"
+         href="/admin/audit-log"
+         aria-current="{{#if (startsWith currentPath '/admin/audit-log')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M4 4h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M6 8h8M6 11h8M6 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {{t "nav.auditLog"}}
+      </a>
+      {{/if}}
+      {{/if}}
+    </details>
     {{/if}}
   </div>
 
@@ -509,8 +416,8 @@
       <form method="POST" action="/orgs/switch" class="org-switch-form">
         <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <select name="orgId" class="select select--sm" data-action-change="formAutoSubmit"
-                aria-label="Switch organization">
-          <option value="system" {{#unless orgContext.currentOrg}}selected{{/unless}}>System (no org)</option>
+                aria-label="{{t "common.switchOrganization"}}">
+          <option value="system" {{#unless orgContext.currentOrg}}selected{{/unless}}>{{t "common.systemNoOrg"}}</option>
           {{#each orgContext.userOrgs}}
           <option value="{{this.id}}" {{#if (eq this.id ../orgContext.currentOrg.id)}}selected{{/if}}>{{this.name}}</option>
           {{/each}}
@@ -531,7 +438,6 @@
         <button type="submit" class="sr-only">Save language</button>
       </form>
     </div>
-
 
     <div class="sidebar__footer-row">
       <a href="/account" class="sidebar__footer-user" title="{{t "nav.myProfile"}}">{{user.username}}</a>

@@ -1,0 +1,33 @@
+{{!-- Identity & access tab strip — included at the top of every page in the
+     cluster so users can pivot between sibling surfaces without going back
+     to the sidebar. Renders only when the user has admin.system permission
+     (the cluster gate). Pass `currentPath` from the host page context. --}}
+{{#if perm.adminSystem}}
+<nav class="ia-tabs" aria-label="Identity & access">
+  <a class="ia-tabs__tab {{#if (startsWith currentPath '/admin/api-keys')}}is-active{{/if}}"
+     href="/admin/api-keys"
+     aria-current="{{#if (startsWith currentPath '/admin/api-keys')}}page{{/if}}">{{t "nav.apiKeys"}}</a>
+
+  <a class="ia-tabs__tab {{#if (startsWith currentPath '/admin/oauth-keys')}}is-active{{/if}}"
+     href="/admin/oauth-keys"
+     aria-current="{{#if (startsWith currentPath '/admin/oauth-keys')}}page{{/if}}">OAuth keys</a>
+
+  {{#if perm.complianceManage}}
+  <a class="ia-tabs__tab {{#if (startsWith currentPath '/admin/clients')}}is-active{{/if}}"
+     href="/admin/clients"
+     aria-current="{{#if (startsWith currentPath '/admin/clients')}}page{{/if}}">{{t "nav.oauthClients"}}</a>
+  {{/if}}
+
+  <a class="ia-tabs__tab {{#if (startsWith currentPath '/admin/service-connections')}}is-active{{/if}}"
+     href="/admin/service-connections"
+     aria-current="{{#if (startsWith currentPath '/admin/service-connections')}}page{{/if}}">{{t "nav.serviceConnections"}}</a>
+
+  <a class="ia-tabs__tab {{#if (startsWith currentPath '/admin/users')}}is-active{{/if}}"
+     href="/admin/users"
+     aria-current="{{#if (startsWith currentPath '/admin/users')}}page{{/if}}">{{t "nav.apiUsers"}}</a>
+
+  <a class="ia-tabs__tab {{#if (startsWith currentPath '/admin/webhooks')}}is-active{{/if}}"
+     href="/admin/webhooks"
+     aria-current="{{#if (startsWith currentPath '/admin/webhooks')}}page{{/if}}">{{t "nav.webhooks"}}</a>
+</nav>
+{{/if}}

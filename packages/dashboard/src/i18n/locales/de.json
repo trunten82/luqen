@@ -46,7 +46,12 @@
       "label": "View density",
       "dense": "Dense",
       "plain": "Plain"
-    }
+    },
+    "backTo": "Zurück zu {{target}}",
+    "scopeAdmin": "Ansicht: alle Organisationen",
+    "scopeOrg": "Ansicht: {{org}}",
+    "more": "Mehr",
+    "breadcrumb": "Brotkrümel"
   },
   "nav": {
     "overview": "Übersicht",
@@ -85,7 +90,19 @@
     "changeHistory": "Änderungsverlauf",
     "branding": "Branding",
     "brandGuidelines": "Markenrichtlinien",
-    "agentAudit": "Agent-Audit"
+    "agentAudit": "Agent-Audit",
+    "scanGroup": "Scan",
+    "complianceGroup": "Konformität",
+    "brandGroup": "Marke",
+    "moreAdmin": "Mehr",
+    "identityAccess": "Identität & Zugriff",
+    "repositories": "Repositories",
+    "gitHosts": "Git-Hosts",
+    "gitCredentials": "Git-Anmeldedaten",
+    "shareableBadges": "Teilbare Badges",
+    "llmConfig": "LLM-Konfiguration",
+    "notifications": "Benachrichtigungen",
+    "brandOverview": "Markenübersicht"
   },
   "auth": {
     "signInTitle": "Anmelden",

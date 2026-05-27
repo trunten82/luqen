@@ -542,6 +542,85 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.875em; }
   margin-top: var(--space-xs);
 }
 
+/* Phase 65 — page-header back link, breadcrumbs, scope chip.
+   Adopted from fleet-detail.hbs and now project-wide. */
+.page-header__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  margin-bottom: var(--space-2, 8px);
+  padding: 2px var(--space-2, 8px);
+  border-radius: var(--border-radius-sm, 4px);
+}
+.page-header__back:hover,
+.page-header__back:focus-visible {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+.page-header__back-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.page-header__crumbs {
+  margin-bottom: var(--space-2, 8px);
+  font-size: var(--font-size-sm);
+}
+.page-header__crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1, 4px);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--text-muted);
+}
+.page-header__crumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+.page-header__crumbs li:not(:last-child)::after {
+  content: '/';
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.page-header__crumbs a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.page-header__crumbs a:hover,
+.page-header__crumbs a:focus-visible {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+.page-header__crumbs [aria-current='page'] {
+  color: var(--text-primary);
+}
+.page-header__chip {
+  display: inline-block;
+  margin-left: var(--space-2, 8px);
+  padding: 2px var(--space-2, 8px);
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-radius: var(--border-radius-sm, 4px);
+  background-color: var(--bg-muted, var(--bg-surface-raised));
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+.page-header__chip--admin {
+  background-color: var(--id-accent-tint, var(--bg-muted));
+  color: var(--id-accent, var(--text-primary));
+}
+.page-header__chip--warning {
+  background-color: var(--status-warning-bg, var(--bg-muted));
+  color: var(--status-warning-fg, var(--text-secondary));
+}
+
 .page-body {
   padding: var(--space-xl);
   flex: 1;
@@ -6280,4 +6359,66 @@ details[open] > .mt-examples-toggle::before {
 }
 .admin-badges__check input[type="checkbox"] {
   margin: 0;
+}
+
+/* Phase 65 — identity & access pivot tabs (rendered above .page-body on the
+   six admin pages whose individual sidebar entries were consolidated). */
+.ia-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  margin: 0 var(--space-xl) var(--space-md);
+  padding: 0 0 var(--space-1, 4px);
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+}
+.ia-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: var(--border-radius-sm, 4px) var(--border-radius-sm, 4px) 0 0;
+}
+.ia-tabs__tab:hover,
+.ia-tabs__tab:focus-visible {
+  color: var(--text-primary);
+  background-color: var(--bg-muted);
+}
+.ia-tabs__tab.is-active {
+  color: var(--text-primary);
+  border-bottom-color: var(--id-accent, var(--accent));
+  font-weight: 500;
+}
+
+/* Phase 65 — sidebar "More" disclosure. Wraps the admin-chrome cluster
+   collapsed behind a <details> so the visible sidebar stays at 13 items. */
+.sidebar__more {
+  margin-top: var(--space-md);
+}
+.sidebar__more > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+.sidebar__more > summary::-webkit-details-marker {
+  display: none;
+}
+.sidebar__section-label--summary {
+  margin-top: 0;
+}
+.sidebar__more-chevron {
+  width: 14px;
+  height: 14px;
+  margin-right: var(--space-md);
+  opacity: 0.6;
+  transition: transform var(--duration-fast, 120ms) var(--ease-out, ease);
+}
+.sidebar__more[open] > summary .sidebar__more-chevron {
+  transform: rotate(180deg);
 }
