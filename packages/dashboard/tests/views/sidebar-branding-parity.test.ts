@@ -81,9 +81,10 @@ describe('sidebar branding parity — BUI-04', () => {
       },
     });
 
-    // Branding section anchors — BUI-04 parity with the other services.
+    // Branding section anchor — Phase 65 merged the org + system brand
+    // guidelines into a single sidebar entry. The system variant is still
+    // reachable from inside the branding page itself.
     expect(html).toContain('href="/admin/branding-guidelines"');
-    expect(html).toContain('href="/admin/system-brand-guidelines"');
 
     // Compliance section anchors — proves the test harness correctly renders
     // sibling sections so the branding assertion is meaningful.

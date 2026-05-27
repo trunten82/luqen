@@ -979,6 +979,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
         orgContext: (request as unknown as Record<string, unknown>).orgContext,
         incomingTeamInviteCount: (request as unknown as { incomingTeamInviteCount?: number }).incomingTeamInviteCount ?? 0,
         appVersion: `v${VERSION}`,
+        isAdminPath: /^\/admin\//.test(request.url.split('?')[0] ?? ''),
       };
       // HTMX partial requests: render template without layout
       if (isHtmxRequest) {

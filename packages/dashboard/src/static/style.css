@@ -6360,3 +6360,65 @@ details[open] > .mt-examples-toggle::before {
 .admin-badges__check input[type="checkbox"] {
   margin: 0;
 }
+
+/* Phase 65 — identity & access pivot tabs (rendered above .page-body on the
+   six admin pages whose individual sidebar entries were consolidated). */
+.ia-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  margin: 0 var(--space-xl) var(--space-md);
+  padding: 0 0 var(--space-1, 4px);
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+}
+.ia-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: var(--border-radius-sm, 4px) var(--border-radius-sm, 4px) 0 0;
+}
+.ia-tabs__tab:hover,
+.ia-tabs__tab:focus-visible {
+  color: var(--text-primary);
+  background-color: var(--bg-muted);
+}
+.ia-tabs__tab.is-active {
+  color: var(--text-primary);
+  border-bottom-color: var(--id-accent, var(--accent));
+  font-weight: 500;
+}
+
+/* Phase 65 — sidebar "More" disclosure. Wraps the admin-chrome cluster
+   collapsed behind a <details> so the visible sidebar stays at 13 items. */
+.sidebar__more {
+  margin-top: var(--space-md);
+}
+.sidebar__more > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+.sidebar__more > summary::-webkit-details-marker {
+  display: none;
+}
+.sidebar__section-label--summary {
+  margin-top: 0;
+}
+.sidebar__more-chevron {
+  width: 14px;
+  height: 14px;
+  margin-right: var(--space-md);
+  opacity: 0.6;
+  transition: transform var(--duration-fast, 120ms) var(--ease-out, ease);
+}
+.sidebar__more[open] > summary .sidebar__more-chevron {
+  transform: rotate(180deg);
+}
