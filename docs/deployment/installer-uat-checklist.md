@@ -36,9 +36,10 @@ the compliance and LLM modules are reachable.
 
 | Compose file | Last verified | Notes |
 |---|---|---|
-| `docker-compose.minimal.yml` (compliance + dashboard) | _needs runtime_ | All static checks pass; needs `docker compose -f minimal.yml config` on a native-Docker host |
-| `docker-compose.standard.yml` (+ mongo + redis + pa11y) | _needs runtime_ | Same |
-| `docker-compose.full.yml` (+ monitor) | 2026-05-27 (this PR) | Added missing healthcheck on `monitor` service; static lint clean |
+| `docker-compose.minimal.yml` (compliance + dashboard) | 2026-05-27 | `docker compose config -q` PASS on Docker Compose 2.26.1 / Debian 13 |
+| `docker-compose.standard.yml` (+ mongo + redis + pa11y) | 2026-05-27 | `docker compose config -q` PASS |
+| `docker-compose.full.yml` (+ monitor) | 2026-05-27 | `docker compose config -q` PASS + added missing healthcheck on `monitor` service |
+| `docker-compose.yml` (root, dev) | 2026-05-27 | `docker compose config -q` PASS after removing deprecated `version: '3.8'` |
 
 ### macOS — install.sh in Docker mode
 
@@ -80,5 +81,11 @@ Smoke checklist:
   wire it into the CI workflow alongside the existing `bash -n install.sh`
   step.
 - `docker compose config` runtime check still requires native Docker on
-  the runner — both lxc-claude and lxc-luqen omit Docker, so the
-  current CI cannot exercise it.
+  the CI runner. Documented procedure for a one-shot validation on
+  lxc-luqen: `apt-get install -y docker.io docker-compose`, run the
+  four `docker compose -f … config -q` against `docker-compose.yml`
+  + every `deploy/templates/docker-compose.*.yml`, then
+  `apt-get remove --purge -y docker.io docker-compose` +
+  `apt-get autoremove --purge -y` + `rm -rf /var/lib/docker
+  /var/lib/containerd /etc/docker`. Latest run: 2026-05-27 — all four
+  PASS.

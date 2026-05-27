@@ -28,9 +28,35 @@ except ImportError:
 
 def lint(path: str) -> list[str]:
     with open(path) as fh:
-        d: dict[str, Any] = yaml.safe_load(fh) or {}
+        raw = fh.read()
+    d: dict[str, Any] = yaml.safe_load(raw) or {}
     fn = os.path.relpath(path)
     issues: list[str] = []
+
+    # Catch ${VAR} interpolations that aren't backed by a sibling
+    # `.env.example`. Compose silently defaults missing vars to an empty
+    # string, which can cause Dashboard to start without a session secret
+    # and other silent-but-broken setups. Either set a default in the
+    # compose file via ${VAR:-default} or document it in .env.example.
+    import re
+    referenced = set(re.findall(r"\$\{([A-Z_][A-Z0-9_]*)\}", raw))
+    if referenced:
+        env_example = os.path.join(os.path.dirname(path), ".env.example")
+        if os.path.exists(env_example):
+            with open(env_example) as fh2:
+                documented = set(
+                    re.findall(r"^([A-Z_][A-Z0-9_]*)\s*=", fh2.read(), re.M)
+                )
+            missing = referenced - documented
+            for v in sorted(missing):
+                issues.append(
+                    f"{fn}: env `${{{v}}}` referenced but not in .env.example"
+                )
+        else:
+            for v in sorted(referenced):
+                issues.append(
+                    f"{fn}: env `${{{v}}}` referenced but no .env.example beside compose file"
+                )
 
     if "version" in d:
         issues.append(
