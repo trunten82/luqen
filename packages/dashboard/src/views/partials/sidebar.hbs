@@ -71,6 +71,30 @@
       {{t "nav.trends"}}
     </a>
 
+    <a class="sidebar__item {{#if (eq currentPath '/fleet')}}is-active{{/if}}"
+       href="/fleet"
+       aria-current="{{#if (eq currentPath '/fleet')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="2" y="6" width="6" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="12" y="3" width="6" height="13" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 9h0M15 6h0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      {{t "nav.fleet"}}
+    </a>
+
+    {{#if (eq user.role 'admin')}}
+    <a class="sidebar__item sidebar__item--admin {{#if (eq currentPath '/admin/fleet')}}is-active{{/if}}"
+       href="/admin/fleet"
+       aria-current="{{#if (eq currentPath '/admin/fleet')}}page{{/if}}">
+      <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <rect x="2" y="6" width="6" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="12" y="3" width="6" height="13" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="10" cy="18" r="1.5" fill="currentColor"/>
+      </svg>
+      {{t "nav.fleet"}} <span class="text-muted">(all orgs)</span>
+    </a>
+    {{/if}}
+
     {{#if perm.scansCreate}}
     <a class="sidebar__item {{#if (eq currentPath '/tools/bookmarklet')}}is-active{{/if}}"
        href="/tools/bookmarklet"

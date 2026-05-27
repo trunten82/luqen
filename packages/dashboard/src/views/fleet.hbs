@@ -1,0 +1,70 @@
+{{!-- Fleet page — registered WP sites for the caller's org (scope=org)
+     or all orgs (scope=admin). Mirrors reports-list.hbs structure. --}}
+
+<div class="page-header">
+  <h1>{{pageTitle}}</h1>
+  <p class="text-muted">
+    Sites running the Luqen WordPress plugin connected to <strong>{{scopeLabel}}</strong>.
+    {{#if (eq scope "org")}}
+      <a href="/admin/fleet" class="text-muted">View all orgs</a>
+    {{else}}
+      <a href="/fleet" class="text-muted">View my org only</a>
+    {{/if}}
+  </p>
+</div>
+
+<dl class="stat-grid" aria-label="Fleet summary">
+  <div class="stat">
+    <dt>Total sites</dt>
+    <dd>{{siteCount}}</dd>
+  </div>
+  <div class="stat">
+    <dt>Active</dt>
+    <dd>{{activeCount}}</dd>
+  </div>
+  <div class="stat">
+    <dt>Stale</dt>
+    <dd>{{staleCount}}</dd>
+  </div>
+</dl>
+
+{{#if sites.length}}
+<table class="data-table" aria-label="Fleet sites">
+  <thead>
+    <tr>
+      <th scope="col">Site URL</th>
+      {{#if (eq scope "admin")}}<th scope="col">Org</th>{{/if}}
+      <th scope="col">WP version</th>
+      <th scope="col">Plugin version</th>
+      <th scope="col">Status</th>
+      <th scope="col">Last seen</th>
+      <th scope="col">Site ID</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each sites}}
+    <tr>
+      <td>
+        <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{url}}</a>
+      </td>
+      {{#if (eq ../scope "admin")}}<td><code>{{orgId}}</code></td>{{/if}}
+      <td>{{#if wpVersion}}{{wpVersion}}{{else}}<span class="text-muted">—</span>{{/if}}</td>
+      <td>{{#if pluginVersion}}{{pluginVersion}}{{else}}<span class="text-muted">—</span>{{/if}}</td>
+      <td>
+        <span class="badge badge--{{#if (eq status "active")}}success{{else}}warning{{/if}}">{{status}}</span>
+      </td>
+      <td><time datetime="{{lastSeenAt}}">{{lastSeenAt}}</time></td>
+      <td><code class="text-muted">{{id}}</code></td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+{{else}}
+<div class="empty-state" role="status">
+  <p>No WP sites registered yet for <strong>{{scopeLabel}}</strong>.</p>
+  <p class="text-muted">
+    Sites self-register on the plugin's first <code>/api/v1/fleet</code> heartbeat
+    after the dashboard connection is saved.
+  </p>
+</div>
+{{/if}}

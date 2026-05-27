@@ -5,6 +5,7 @@ import type {
   WpSitesRepository,
   RegisterWpSiteInput,
   ListWpSitesFilter,
+  ListAllWpSitesFilter,
 } from '../../interfaces/wp-network-repository.js';
 
 interface WpSiteRow {
@@ -109,6 +110,22 @@ export class SqliteWpSitesRepository implements WpSitesRepository {
               'SELECT * FROM wp_sites WHERE org_id = ? AND status = ? ORDER BY last_seen_at DESC',
             )
             .all(filter.orgId, status)
+    ) as WpSiteRow[];
+    return rows.map(rowToRecord);
+  }
+
+  async listAll(filter: ListAllWpSitesFilter = {}): Promise<readonly WpSite[]> {
+    const status = filter.status ?? 'all';
+    const rows = (
+      status === 'all'
+        ? this.db
+            .prepare('SELECT * FROM wp_sites ORDER BY last_seen_at DESC')
+            .all()
+        : this.db
+            .prepare(
+              'SELECT * FROM wp_sites WHERE status = ? ORDER BY last_seen_at DESC',
+            )
+            .all(status)
     ) as WpSiteRow[];
     return rows.map(rowToRecord);
   }

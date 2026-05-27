@@ -42,6 +42,7 @@ import { exportRoutes } from './routes/api/export.js';
 import { dataApiRoutes } from './routes/api/data.js';
 import { brandingApiRoutes } from './routes/api/branding.js';
 import { wpNetworkApiRoutes } from './routes/api/wp-network.js';
+import { fleetRoutes } from './routes/fleet.js';
 import { teamOrgLinkRoutes } from './routes/api/team-org-links.js';
 import { coordinatedPrRoutes } from './routes/api/coordinated-prs.js';
 import { bulkFixRoutes } from './routes/api/bulk-fixes.js';
@@ -1091,6 +1092,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── WordPress network/fleet API (Phase 61) ──────────────────────────────
   await wpNetworkApiRoutes(server, storage);
+
+  // ── Fleet HTML pages (per-org + admin overview) ─────────────────────────
+  await fleetRoutes(server, storage);
 
   // ── Multi-team RBAC overlay API (Phase 62.1) ────────────────────────────
   await teamOrgLinkRoutes(server, storage);

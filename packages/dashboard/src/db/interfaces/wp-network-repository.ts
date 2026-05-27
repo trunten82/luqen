@@ -31,6 +31,10 @@ export interface ListWpSitesFilter {
   readonly status?: 'active' | 'stale' | 'all';
 }
 
+export interface ListAllWpSitesFilter {
+  readonly status?: 'active' | 'stale' | 'all';
+}
+
 export interface WpSitesRepository {
   /**
    * Idempotent register: insert OR update (last_seen_at + versions) by
@@ -39,6 +43,11 @@ export interface WpSitesRepository {
   register(input: RegisterWpSiteInput): Promise<WpSite>;
   get(id: string): Promise<WpSite | null>;
   list(filter: ListWpSitesFilter): Promise<readonly WpSite[]>;
+  /**
+   * Admin/global cross-org listing — bypasses orgId filter. Used by the
+   * admin Fleet overview to surface all registered WP sites in one view.
+   */
+  listAll(filter?: ListAllWpSitesFilter): Promise<readonly WpSite[]>;
   /**
    * Flip rows that haven't heartbeated in `staleAfterMs` to status='stale'.
    * Returns the count flipped. Idempotent.
