@@ -503,7 +503,8 @@
       "noWebhooks": "Aucun webhook enregistré.",
       "endpointUrl": "URL du Point de Terminaison",
       "secret": "Secret",
-      "secretHint": "Utilisé pour signer les charges utiles webhook (HMAC-SHA256)"
+      "secretHint": "Utilisé pour signer les charges utiles webhook (HMAC-SHA256)",
+      "description": "Outbound webhooks notified when scans complete, fixes ship, audit events fire, or org-level events trigger. Each delivery is signed and retried with exponential backoff."
     },
     "plugins": {
       "active": "actif",
@@ -598,7 +599,8 @@
       "close": "Fermer",
       "generateKey": "Générer une Clé",
       "labelPlaceholder": "ex. pipeline CI, surveillance",
-      "role": "Rôle"
+      "role": "Rôle",
+      "description": "Long-lived API keys for programmatic access to this Luqen instance. Org-scoped keys carry their org's permissions; system keys are global. Treat each key like a password — store it once, rotate often."
     },
     "clients": {
       "addClient": "Ajouter un Client OAuth",
@@ -615,7 +617,8 @@
       "createClient": "Créer un Client",
       "scope": "Portée",
       "systemOwner": "Système",
-      "protected": "Protégé"
+      "protected": "Protégé",
+      "description": "OAuth 2.1 clients allowed to mint tokens against this Luqen instance — one per integration. Each client carries a name, allowed scopes, and (when present) a redirect URI."
     },
     "users": {
       "addUser": "Ajouter un Utilisateur",
@@ -626,7 +629,8 @@
       "noUsers": "Aucun utilisateur trouvé.",
       "password": "Mot de passe",
       "passwordHint": "Minimum 8 caractères",
-      "createUser": "Créer un Utilisateur"
+      "createUser": "Créer un Utilisateur",
+      "description": "API users — long-lived identities for headless integrations and CI jobs. Distinct from the human dashboard users managed under Dashboard users."
     },
     "organizations": {
       "addOrganization": "Ajouter une Organisation",
