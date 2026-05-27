@@ -15,9 +15,20 @@ const ApiKeyCreateBody = Type.Object(
     label: Type.Optional(Type.String()),
     role: Type.Optional(Type.String()),
     orgId: Type.Optional(Type.String()),
+    ttl: Type.Optional(Type.String()),
   },
   { additionalProperties: true },
 );
+
+const TTL_ALLOWED_DAYS = new Set([0, 30, 90, 180, 365]);
+
+function resolveExpiresAt(ttlRaw: string | undefined): string | null {
+  // Mirrors org-api-keys: 0 = never, otherwise N days from now.
+  const ttl = Number.parseInt((ttlRaw ?? '90').trim(), 10);
+  if (!Number.isFinite(ttl) || !TTL_ALLOWED_DAYS.has(ttl)) return null;
+  if (ttl === 0) return null;
+  return new Date(Date.now() + ttl * 86400 * 1000).toISOString();
+}
 
 const ApiKeyIdParams = Type.Object(
   { id: Type.String() },
@@ -50,12 +61,18 @@ interface ApiKeyRow {
   readonly last_used_at: string | null;
   readonly role: string;
   readonly org_id?: string;
+  readonly expires_at?: string | null;
 }
 
-function statusBadge(active: number): string {
+function statusBadge(active: number, expired: boolean = false): string {
+  if (active && expired) return '<span class="badge badge--warning">Expired</span>';
   return active
     ? '<span class="badge badge--completed">Active</span>'
     : '<span class="badge badge--failed">Revoked</span>';
+}
+
+function isExpired(expiresAt: string | null | undefined): boolean {
+  return expiresAt != null && new Date(expiresAt).getTime() < Date.now();
 }
 
 function formatDate(iso: string | null): string {
@@ -76,12 +93,21 @@ function roleBadge(role: string): string {
 }
 
 function keyRowHtml(row: ApiKeyRow): string {
+  const expired = isExpired(row.expires_at);
+  const deleteBtn = row.active
+    ? ''
+    : `<button hx-delete="/admin/api-keys/${encodeURIComponent(row.id)}"
+              hx-target="#api-key-${row.id}"
+              hx-swap="outerHTML"
+              hx-confirm="Permanently delete this revoked key?"
+              class="btn btn--sm btn--danger">Delete</button>`;
   return `<tr id="api-key-${row.id}">
   <td data-label="Label">${escapeHtml(row.label)}</td>
   <td data-label="Role">${roleBadge(row.role ?? 'admin')}</td>
   <td data-label="Organization">${escapeHtml(row.org_id ?? 'system')}</td>
-  <td data-label="Status">${statusBadge(row.active)}</td>
+  <td data-label="Status">${statusBadge(row.active, expired)}</td>
   <td data-label="Created">${formatDate(row.created_at)}</td>
+  <td data-label="Expires">${row.expires_at ? formatDate(row.expires_at) : '<span class="text-muted">Never</span>'}</td>
   <td data-label="Last Used">${formatDate(row.last_used_at)}</td>
   <td>
     <button hx-get="/admin/api-keys/${encodeURIComponent(row.id)}/view"
@@ -89,6 +115,7 @@ function keyRowHtml(row: ApiKeyRow): string {
             hx-swap="innerHTML"
             class="btn btn--sm btn--secondary"
             aria-label="View ${escapeHtml(row.label)}">View</button>
+    ${deleteBtn}
   </td>
 </tr>`;
 }
@@ -116,12 +143,17 @@ export async function apiKeyRoutes(
       const query = request.query as { orgId?: string };
       const orgIdFilter = query.orgId?.trim() || undefined;
       const keys = await storage.apiKeys.listKeys(orgIdFilter) as unknown as readonly ApiKeyRow[];
+      const activeKeys = keys.filter((k) => k.active === 1);
+      const revokedKeys = keys.filter((k) => k.active === 0);
 
       return reply.view('admin/api-keys.hbs', {
         pageTitle: 'API Keys',
         currentPath: '/admin/api-keys',
         user: request.user,
         keys,
+        activeKeys,
+        revokedKeys,
+        revokedCount: revokedKeys.length,
         orgIdFilter,
       });
     },
@@ -179,12 +211,13 @@ export async function apiKeyRoutes(
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const body = request.body as { label?: string; role?: string; orgId?: string };
+      const body = request.body as { label?: string; role?: string; orgId?: string; ttl?: string };
       const label = body.label?.trim() || 'default';
       const role: ApiKeyRole = API_KEY_ROLES.includes(body.role as ApiKeyRole)
         ? (body.role as ApiKeyRole)
         : 'admin';
       const orgId = body.orgId?.trim() || 'system';
+      const expiresAt = resolveExpiresAt(body.ttl);
 
       if (label.length > 100) {
         return reply
@@ -195,7 +228,7 @@ export async function apiKeyRoutes(
 
       try {
         const plaintextKey = generateApiKey();
-        const id = await storage.apiKeys.storeKey(plaintextKey, label, orgId, role);
+        const id = await storage.apiKeys.storeKey(plaintextKey, label, orgId, role, expiresAt);
 
         const row: ApiKeyRow = {
           id,
@@ -205,9 +238,10 @@ export async function apiKeyRoutes(
           last_used_at: null,
           role,
           org_id: orgId,
+          expires_at: expiresAt,
         };
 
-        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.create', resourceType: 'api_key', resourceId: id, details: { label, role, orgId }, ipAddress: request.ip });
+        void storage.audit.log({ actor: request.user?.username ?? 'unknown', actorId: request.user?.id, action: 'api_key.create', resourceType: 'api_key', resourceId: id, details: { label, role, orgId, expiresAt }, ipAddress: request.ip });
 
         const newKeyAlert = `<div id="new-key-alert" hx-swap-oob="true" class="alert alert--warning" role="alert" style="margin-bottom:var(--space-md)">
   <div class="alert__body">
@@ -231,6 +265,46 @@ export async function apiKeyRoutes(
           .header('content-type', 'text/html')
           .send(toastHtml(message, 'error'));
       }
+    },
+  );
+
+  // DELETE /admin/api-keys/:id — permanently delete a revoked key.
+  // Only revoked keys can be deleted (deleteKey filters on active = 0);
+  // active keys must be revoked first.
+  server.delete(
+    '/admin/api-keys/:id',
+    {
+      preHandler: requirePermission('admin.system'),
+      schema: {
+        params: ApiKeyIdParams,
+        ...HtmlPartialResponse,
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const all = await storage.apiKeys.listKeys();
+      const row = (all as unknown as ApiKeyRow[]).find((k) => k.id === id);
+      if (row === undefined) {
+        return reply.code(404).header('content-type', 'text/html').send(toastHtml('API key not found.', 'error'));
+      }
+      if (row.active !== 0) {
+        return reply.code(400).header('content-type', 'text/html').send(toastHtml('Revoke the key before deleting.', 'error'));
+      }
+      const deleted = await storage.apiKeys.deleteKey(id, row.org_id ?? 'system');
+      if (!deleted) {
+        return reply.code(404).header('content-type', 'text/html').send(toastHtml('Key could not be deleted.', 'error'));
+      }
+      void storage.audit.log({
+        actor: request.user?.username ?? 'unknown',
+        actorId: request.user?.id,
+        action: 'api_key.purge',
+        resourceType: 'api_key',
+        resourceId: id,
+        details: { label: row.label },
+        ipAddress: request.ip,
+      });
+      // Empty body replaces the table row; toast announces success.
+      return reply.code(200).header('content-type', 'text/html').send(toastHtml(`API key "${escapeHtml(row.label)}" deleted.`));
     },
   );
 
