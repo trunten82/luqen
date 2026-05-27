@@ -59,3 +59,9 @@ jobs:
 
       - name: Lint
         run: npm run lint --workspaces --if-present
+
+      - name: Compose lint (static)
+        run: python3 tools/lint-compose.py
+
+      - name: Installer syntax check
+        run: bash -n install.sh
