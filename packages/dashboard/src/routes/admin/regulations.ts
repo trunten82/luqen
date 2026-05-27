@@ -7,10 +7,44 @@ import {
   createRegulation,
   updateRegulation,
   deleteRegulation,
+  type Jurisdiction,
 } from '../../compliance-client.js';
 import { requirePermission } from '../../auth/middleware.js';
 import { getToken, getOrgId, toastHtml } from './helpers.js';
 import { ErrorEnvelope, HtmlPageSchema } from '../../api/schemas/envelope.js';
+
+/**
+ * Depth-first sort of jurisdictions so the dropdown reads as a tree.
+ * Each row carries `depth` (0 = root) + `displayName` ("— Indented Name").
+ * Orphans (parentId set but unknown) sort to root level.
+ */
+function buildJurisdictionTree(
+  jurisdictions: readonly Jurisdiction[],
+): Array<Jurisdiction & { depth: number; displayName: string }> {
+  const byId = new Map(jurisdictions.map((j) => [j.id, j]));
+  const childrenByParent = new Map<string, Jurisdiction[]>();
+  const roots: Jurisdiction[] = [];
+  for (const j of jurisdictions) {
+    const parent = j.parentId !== undefined && j.parentId !== '' ? byId.get(j.parentId) : undefined;
+    if (parent === undefined) {
+      roots.push(j);
+    } else {
+      const arr = childrenByParent.get(j.parentId!) ?? [];
+      arr.push(j);
+      childrenByParent.set(j.parentId!, arr);
+    }
+  }
+  const sortByName = (a: Jurisdiction, b: Jurisdiction) => a.name.localeCompare(b.name);
+  roots.sort(sortByName);
+  const out: Array<Jurisdiction & { depth: number; displayName: string }> = [];
+  function walk(node: Jurisdiction, depth: number): void {
+    out.push({ ...node, depth, displayName: '— '.repeat(depth) + node.name });
+    const kids = (childrenByParent.get(node.id) ?? []).slice().sort(sortByName);
+    for (const k of kids) walk(k, depth + 1);
+  }
+  for (const r of roots) walk(r, 0);
+  return out;
+}
 
 // Phase 41.1-03 — local TypeBox shapes.
 const RegulationListQuery = Type.Object(
@@ -117,6 +151,12 @@ export async function regulationRoutes(
         error = err instanceof Error ? err.message : 'Failed to load regulations';
       }
 
+      // Sort jurisdictions hierarchically (parent → child) so the
+      // dropdown shows e.g. US › New York › New York City indented.
+      // Phase 64 (state/city sweep) — added US states + US-NY-NYC, the
+      // flat dropdown made the new tree unreadable.
+      const jurisdictionTree = buildJurisdictionTree(jurisdictions);
+
       const total = regulations.length;
       const page = regulations.slice(offset, offset + limit);
       const hasPrev = offset > 0;
@@ -145,6 +185,7 @@ export async function regulationRoutes(
         user: request.user,
         regulations: page,
         jurisdictions,
+        jurisdictionTree,
         error,
         hasPrev,
         hasNext,

@@ -26,8 +26,8 @@
             class="select"
             aria-label="Filter regulations by jurisdiction">
       <option value="">{{t "admin.regulations.allJurisdictions"}}</option>
-      {{#each jurisdictions}}
-      <option value="{{id}}" {{#if (eq id ../jurisdictionId)}}selected{{/if}}>{{name}}</option>
+      {{#each jurisdictionTree}}
+      <option value="{{id}}" {{#if (eq id ../jurisdictionId)}}selected{{/if}}>{{displayName}} ({{type}})</option>
       {{/each}}
     </select>
 
