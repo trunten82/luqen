@@ -27,6 +27,8 @@ packages/*/compliance.config.json
 packages/*/dashboard.config.json
 .env
 .env.*
+!.env.example
+!**/.env.example
 *.db
 *.db-shm
 *.db-wal
