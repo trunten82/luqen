@@ -11,7 +11,7 @@
 {{#if brandScore}}
   {{! ── Variant 2: Unscorable ──────────────────────────────────── }}
   {{#if (eq brandScore.kind 'unscorable')}}
-  <section class="card mb-md" aria-labelledby="brand-score-heading">
+  <section class="mb-md" aria-labelledby="brand-score-heading">
     <h2 id="brand-score-heading" class="card__heading">{{t "reportDetail.brandScore"}}</h2>
     <div class="card__body">
       <p class="text-muted">
@@ -21,7 +21,7 @@
   </section>
   {{else}}
   {{! ── Variant 3: Scored ──────────────────────────────────────── }}
-  <section class="card mb-md" aria-labelledby="brand-score-heading">
+  <section class="mb-md" aria-labelledby="brand-score-heading">
     <h2 id="brand-score-heading" class="card__heading">{{t "reportDetail.brandScore"}}</h2>
     <div class="card__body">
 
@@ -160,7 +160,7 @@
   {{/if}}
 {{else}}
   {{! ── Variant 1: Null (pre-v2.11.0 scan) ───────────────────── }}
-  <section class="card mb-md" aria-labelledby="brand-score-heading">
+  <section class="mb-md" aria-labelledby="brand-score-heading">
     <h2 id="brand-score-heading" class="card__heading">{{t "reportDetail.brandScore"}}</h2>
     <div class="card__body">
       <p class="text-muted">{{t "reportDetail.brandScoreNotAvailable"}}</p>

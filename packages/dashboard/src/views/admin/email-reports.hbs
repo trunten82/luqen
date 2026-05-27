@@ -2,7 +2,7 @@
   <h2>{{t "admin.emailReports.title"}}</h2>
 
   {{!-- Email Plugin Status --}}
-  <div class="card mb-lg">
+  <div class="mb-lg">
     <h3>{{t "admin.emailReports.emailSendingConfig"}}</h3>
     {{#if emailPluginActive}}
     <div class="alert alert--success mb-md">
@@ -18,7 +18,7 @@
 
   {{!-- Legacy SMTP Configuration (shown only when plugin is NOT active) --}}
   {{#unless emailPluginActive}}
-  <div class="card mb-lg">
+  <div class="mb-lg">
     <h3>{{t "admin.emailReports.smtpLegacy"}}</h3>
     <p class="text-muted text-sm mb-md">
       {{t "admin.emailReports.smtpDescription"}}
@@ -94,7 +94,7 @@
   {{/unless}}
 
   {{!-- Create Email Report --}}
-  <div class="card mb-lg">
+  <div class="mb-lg">
     <h3>{{t "admin.emailReports.createSchedule"}}</h3>
 
     <form hx-post="/admin/email-reports"

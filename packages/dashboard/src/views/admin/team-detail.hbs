@@ -9,7 +9,7 @@
 </div>
 
 {{! Organization assignment }}
-<div class="card mb-lg">
+<div class="mb-lg">
   <h3>{{t "common.organization"}}</h3>
   <p class="text-muted mb-md">
     {{t "admin.teams.orgLinkDesc"}}
@@ -34,7 +34,7 @@
 </div>
 
 {{! Role assignment }}
-<div class="card mb-lg">
+<div class="mb-lg">
   <h3>{{t "admin.teams.teamRole"}}</h3>
   <p class="text-muted mb-md">
     {{t "admin.teams.roleLinkDesc"}}
@@ -64,7 +64,7 @@
       data-reset-on-success
       hx-swap="beforeend"
 
-      class="card mb-lg">
+      class="mb-lg">
   <input type="hidden" name="_csrf" value="{{csrfToken}}">
   <div class="flex flex-wrap items-center gap-sm">
     <label class="form-group form-group--inline">
@@ -121,7 +121,7 @@
 {{! Phase 62.1 — Multi-team RBAC overlay: linked orgs, invites, pending.   }}
 {{! ─────────────────────────────────────────────────────────────────────── }}
 
-<section class="card mb-lg" aria-labelledby="linked-orgs-heading">
+<section class="mb-lg" aria-labelledby="linked-orgs-heading">
   <h3 id="linked-orgs-heading">{{t "admin.teams.linkedOrgs"}}</h3>
   <p class="text-muted mb-md">{{t "admin.teams.linkedOrgsDesc"}}</p>
   <div class="table-wrapper">
@@ -159,7 +159,7 @@
   </div>
 </section>
 
-<section class="card mb-lg" aria-labelledby="invite-org-heading">
+<section class="mb-lg" aria-labelledby="invite-org-heading">
   <h3 id="invite-org-heading">{{t "admin.teams.inviteAnOrg"}}</h3>
   <p class="text-muted mb-md">{{t "admin.teams.inviteAnOrgDesc"}}</p>
   {{#if invitableOrgs.length}}
@@ -182,7 +182,7 @@
   {{/if}}
 </section>
 
-<section class="card mb-lg" aria-labelledby="pending-invites-heading">
+<section class="mb-lg" aria-labelledby="pending-invites-heading">
   <h3 id="pending-invites-heading">{{t "admin.teams.pendingInvites"}}</h3>
   <p class="text-muted mb-md">{{t "admin.teams.outgoingInvitesDesc"}}</p>
   <div class="table-wrapper">
