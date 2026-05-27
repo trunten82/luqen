@@ -114,6 +114,14 @@ services:
       compliance:
         condition: service_healthy
     restart: unless-stopped
+    # Monitor has no HTTP surface — probe the SQLite store the loop writes
+    # to. node -e exits 0 iff the file exists and is non-empty.
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(require('fs').statSync('/app/data/monitor.db').size > 0 ? 0 : 1)"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   mongo-data:
