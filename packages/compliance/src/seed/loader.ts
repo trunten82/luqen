@@ -272,7 +272,7 @@ export async function seedBaseline(
         } = {};
         if (prior.name !== jurisdiction.name) drift.name = prior.name;
         if (prior.type !== jurisdiction.type) {
-          drift.type = prior.type as 'supranational' | 'country' | 'state';
+          drift.type = prior.type as 'supranational' | 'country' | 'state' | 'province' | 'city';
         }
         if (prior.parentId !== jurisdiction.parentId && prior.parentId !== undefined) {
           drift.parentId = prior.parentId;

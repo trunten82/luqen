@@ -136,7 +136,7 @@ export async function createComplianceMcpServer(
     {
       description: 'List all jurisdictions with optional filters',
       inputSchema: z.object({
-        type: z.enum(['supranational', 'country', 'state']).optional(),
+        type: z.enum(['supranational', 'country', 'state', 'province', 'city']).optional(),
         parentId: z.string().optional(),
       }),
     },

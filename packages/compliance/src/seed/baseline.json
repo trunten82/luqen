@@ -376,7 +376,21 @@
       "name": "Thailand",
       "type": "country",
       "iso3166": "TH"
-    }
+    },
+    { "id": "US-CA", "name": "California",     "type": "state", "parentId": "US" },
+    { "id": "US-CO", "name": "Colorado",       "type": "state", "parentId": "US" },
+    { "id": "US-IL", "name": "Illinois",       "type": "state", "parentId": "US" },
+    { "id": "US-KY", "name": "Kentucky",       "type": "state", "parentId": "US" },
+    { "id": "US-MA", "name": "Massachusetts",  "type": "state", "parentId": "US" },
+    { "id": "US-MD", "name": "Maryland",       "type": "state", "parentId": "US" },
+    { "id": "US-MN", "name": "Minnesota",      "type": "state", "parentId": "US" },
+    { "id": "US-NJ", "name": "New Jersey",     "type": "state", "parentId": "US" },
+    { "id": "US-NY", "name": "New York",       "type": "state", "parentId": "US" },
+    { "id": "US-OR", "name": "Oregon",         "type": "state", "parentId": "US" },
+    { "id": "US-TX", "name": "Texas",          "type": "state", "parentId": "US" },
+    { "id": "US-VA", "name": "Virginia",       "type": "state", "parentId": "US" },
+    { "id": "US-WA", "name": "Washington",     "type": "state", "parentId": "US" },
+    { "id": "US-NY-NYC", "name": "New York City", "type": "city", "parentId": "US-NY" }
   ],
   "regulations": [
     {
@@ -1486,6 +1500,149 @@
         "government"
       ],
       "description": "Requires New York State agencies to comply with WCAG 2.1 AA and Section 508 standards for web content."
+    },
+    {
+      "id": "US-NY-NYC-LL12",
+      "jurisdictionId": "US-NY-NYC",
+      "name": "New York City Local Law 12 of 2023 — Website Accessibility",
+      "shortName": "NYC LL12/2023",
+      "reference": "Local Law 12/2023 (NYC Admin Code § 23-802.1)",
+      "url": "https://legistar.council.nyc.gov/LegislationDetail.aspx?ID=5172044&GUID=A5C0DA02-FF5F-4F31-A9CB-7D6BF36E72EF",
+      "enforcementDate": "2024-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Requires New York City agencies (and contractors providing public-facing websites) to meet WCAG 2.1 Level AA. Independent of New York State's policy and stricter on annual reporting + remediation timelines."
+    },
+    {
+      "id": "US-NY-NYC-HRL",
+      "jurisdictionId": "US-NY-NYC",
+      "name": "NYC Human Rights Law — Public Accommodations (digital)",
+      "shortName": "NYC HRL § 8-107(4)",
+      "reference": "NYC Admin Code § 8-107(4)",
+      "url": "https://www.nyc.gov/site/cchr/law/the-law.page",
+      "enforcementDate": "1991-09-16",
+      "status": "active",
+      "scope": "private",
+      "sectors": [],
+      "description": "Prohibits discrimination by NYC places of public accommodation, interpreted by the NYC Commission on Human Rights to extend to commercial websites and mobile apps serving NYC residents."
+    },
+    {
+      "id": "US-TX-1TAC213",
+      "jurisdictionId": "US-TX",
+      "name": "Texas Administrative Code Title 1, Chapter 213 — Electronic and Information Resources",
+      "shortName": "1 TAC 213",
+      "reference": "1 TAC §§ 213.1–213.41",
+      "url": "https://texreg.sos.state.tx.us/public/readtac$ext.ViewTAC?tac_view=4&ti=1&pt=10&ch=213",
+      "enforcementDate": "2017-09-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Requires Texas state agencies and institutions of higher education to align electronic and information resources with WCAG 2.0 AA and Revised Section 508."
+    },
+    {
+      "id": "US-VA-2.2-3504",
+      "jurisdictionId": "US-VA",
+      "name": "Virginia Code § 2.2-3504 — Information Technology Access for Persons with Disabilities",
+      "shortName": "VA 2.2-3504",
+      "reference": "Va. Code § 2.2-3504",
+      "url": "https://law.lis.virginia.gov/vacode/title2.2/chapter35/section2.2-3504/",
+      "enforcementDate": "2002-07-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Requires Virginia state agencies to comply with applicable federal accessibility law (Section 508) for IT resources, including websites."
+    },
+    {
+      "id": "US-MA-ITD",
+      "jurisdictionId": "US-MA",
+      "name": "Massachusetts Enterprise IT Accessibility Standards",
+      "shortName": "MA EITA",
+      "reference": "EOTSS Enterprise Standard ENT-AAS-01",
+      "url": "https://www.mass.gov/info-details/enterprise-it-accessibility-standards",
+      "enforcementDate": "2019-04-12",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Massachusetts EOTSS enterprise standard mandating WCAG 2.1 AA for all executive-branch public-facing digital services."
+    },
+    {
+      "id": "US-MN-16E",
+      "jurisdictionId": "US-MN",
+      "name": "Minnesota Statute § 16E.03 — Accessibility Standards",
+      "shortName": "MN 16E.03",
+      "reference": "Minn. Stat. § 16E.03, subd. 9",
+      "url": "https://www.revisor.mn.gov/statutes/cite/16E.03",
+      "enforcementDate": "2009-08-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Requires Minnesota state agencies to comply with state accessibility standards (currently WCAG 2.1 AA via MN MNIT Accessibility Standard)."
+    },
+    {
+      "id": "US-WA-188",
+      "jurisdictionId": "US-WA",
+      "name": "Washington OCIO Policy 188 — Accessibility",
+      "shortName": "WA OCIO 188",
+      "reference": "RCW 39.26.115; OCIO Policy 188",
+      "url": "https://ocio.wa.gov/policy/accessibility",
+      "enforcementDate": "2020-07-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Requires Washington state agencies to comply with WCAG 2.1 AA for public-facing websites, applications, and digital documents."
+    },
+    {
+      "id": "US-OR-IT",
+      "jurisdictionId": "US-OR",
+      "name": "Oregon IT Accessibility Policy",
+      "shortName": "OR EIS-IT-A11Y",
+      "reference": "Oregon Statewide Policy 107-004-130",
+      "url": "https://www.oregon.gov/das/policies/107-004-130.pdf",
+      "enforcementDate": "2018-01-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Establishes WCAG 2.1 AA as the conformance target for Oregon state agency public-facing electronic content."
+    },
+    {
+      "id": "US-MD-3A-301",
+      "jurisdictionId": "US-MD",
+      "name": "Maryland State Government Article § 3A-301 — Information Technology Nonvisual Access",
+      "shortName": "MD 3A-301",
+      "reference": "Md. Code Ann., State Gov't § 3A-301",
+      "url": "https://mgaleg.maryland.gov/mgawebsite/Laws/StatuteText?article=gsg&section=3A-301",
+      "enforcementDate": "2009-10-01",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Requires Maryland state agency procurement and use of information technology to provide nonvisual access; DoIT enforces WCAG 2.1 AA in practice."
+    },
+    {
+      "id": "US-NJ-P28",
+      "jurisdictionId": "US-NJ",
+      "name": "New Jersey P.L. 2021, c. 488 — State Agency Website Accessibility",
+      "shortName": "NJ c.488/2021",
+      "reference": "N.J.S.A. 52:18A-244.6",
+      "url": "https://pub.njleg.state.nj.us/Bills/2020/PL21/488_.PDF",
+      "enforcementDate": "2022-01-18",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Requires every New Jersey state agency website to conform to WCAG 2.1 AA and to publish an accessibility statement and complaint procedure."
+    },
+    {
+      "id": "US-KY-61.980",
+      "jurisdictionId": "US-KY",
+      "name": "Kentucky Revised Statutes § 61.980 — Equal Access to Information Technology",
+      "shortName": "KRS 61.980",
+      "reference": "KRS 61.980–61.988",
+      "url": "https://apps.legislature.ky.gov/law/statutes/chapter.aspx?id=37877",
+      "enforcementDate": "2000-07-14",
+      "status": "active",
+      "scope": "public",
+      "sectors": ["government"],
+      "description": "Requires Kentucky state agencies to procure and maintain accessible information technology; Commonwealth Office of Technology enforces WCAG 2.0 AA as the benchmark."
     }
   ],
   "requirements": [
@@ -1792,7 +1949,18 @@
       "wcagLevel": "AA",
       "wcagCriterion": "*",
       "obligation": "mandatory"
-    }
+    },
+    { "regulationId": "US-NY-NYC-LL12",   "wcagVersion": "2.1", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" },
+    { "regulationId": "US-NY-NYC-HRL",    "wcagVersion": "2.1", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "recommended" },
+    { "regulationId": "US-TX-1TAC213",    "wcagVersion": "2.0", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" },
+    { "regulationId": "US-VA-2.2-3504",   "wcagVersion": "2.0", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" },
+    { "regulationId": "US-MA-ITD",        "wcagVersion": "2.1", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" },
+    { "regulationId": "US-MN-16E",        "wcagVersion": "2.1", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" },
+    { "regulationId": "US-WA-188",        "wcagVersion": "2.1", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" },
+    { "regulationId": "US-OR-IT",         "wcagVersion": "2.1", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" },
+    { "regulationId": "US-MD-3A-301",     "wcagVersion": "2.1", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" },
+    { "regulationId": "US-NJ-P28",        "wcagVersion": "2.1", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" },
+    { "regulationId": "US-KY-61.980",     "wcagVersion": "2.0", "wcagLevel": "AA", "wcagCriterion": "*", "obligation": "mandatory" }
   ],
   "sources": [
     {
