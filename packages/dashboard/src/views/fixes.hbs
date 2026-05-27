@@ -75,7 +75,7 @@
   {{/if}}
 
   {{#each fixGroups}}
-  <div class="card mb-lg">
+  <div class="mb-lg">
     <div class="card__header-row">
       <h3 class="card__title">{{t "fixes.wcagLabel"}} {{this.criterion}}: {{this.title}}</h3>
       <span class="badge badge--neutral">{{this.fixes.length}} {{t "fixes.fixLabel"}}{{#unless (eq this.fixes.length 1)}}{{t "fixes.fixLabelPlural"}}{{/unless}}</span>
