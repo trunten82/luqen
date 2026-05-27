@@ -205,10 +205,14 @@ describe('GET /admin/clients + revoke — Test 8 (31.2 D-19: non-admin blocked; 
 // ── Test 9 ────────────────────────────────────────────────────────────────────
 
 describe('Sidebar partial — Test 9 (/admin/oauth-keys link gated on admin.system)', () => {
-  it('sidebar.hbs contains a link to /admin/oauth-keys inside an admin.system guard', async () => {
+  it('identity-access-tabs.hbs exposes /admin/oauth-keys inside an admin.system guard', async () => {
+    // Phase 65: the direct sidebar link to /admin/oauth-keys was retired and
+    // replaced by the `identity-access-tabs` partial — a tab strip rendered at
+    // the top of every admin identity/access page. The partial itself is gated
+    // on `perm.adminSystem`, which is what this test now verifies.
     const sidebarPath = join(
       process.cwd(),
-      'src', 'views', 'partials', 'sidebar.hbs',
+      'src', 'views', 'partials', 'identity-access-tabs.hbs',
     );
     const content = readFileSync(sidebarPath, 'utf-8');
     // The link must exist.
