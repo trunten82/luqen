@@ -512,6 +512,7 @@
       "filterPlaceholder": "Filter by name or URL..."
     },
     "webhooks": {
+      "description": "Outbound webhooks notified when scans complete, fixes ship, audit events fire, or org-level events trigger. Each delivery is signed and retried with exponential backoff.",
       "addWebhook": "Add Webhook",
       "url": "URL",
       "events": "Events",
@@ -655,6 +656,7 @@
       "orgName": "Organization"
     },
     "apiKeys": {
+      "description": "Long-lived API keys for programmatic access to this Luqen instance. Org-scoped keys carry their org's permissions; system keys are global. Treat each key like a password — store it once, rotate often.",
       "createApiKey": "Create API Key",
       "label": "Label",
       "created": "Created",
@@ -805,6 +807,7 @@
       "cloneDefaultSuffix": " (cloned)"
     },
     "clients": {
+      "description": "OAuth 2.1 clients allowed to mint tokens against this Luqen instance — one per integration. Each client carries a name, allowed scopes, and (when present) a redirect URI.",
       "addClient": "Add OAuth Client",
       "clientId": "Client ID",
       "scopes": "Scopes",
@@ -822,6 +825,7 @@
       "protected": "Protected"
     },
     "users": {
+      "description": "API users — long-lived identities for headless integrations and CI jobs. Distinct from the human dashboard users managed under Dashboard users.",
       "addUser": "Add User",
       "username": "Username",
       "role": "Role",
