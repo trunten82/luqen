@@ -51,7 +51,12 @@
     "effortLow": "low",
     "effortMedium": "medium",
     "effortHigh": "high",
-    "revoke": "Revoke"
+    "revoke": "Revoke",
+    "backTo": "Back to {{target}}",
+    "scopeAdmin": "Viewing: all organizations",
+    "scopeOrg": "Viewing: {{org}}",
+    "more": "More",
+    "breadcrumb": "Breadcrumb"
   },
   "nav": {
     "overview": "Overview",
@@ -93,7 +98,19 @@
     "branding": "Branding",
     "brandGuidelines": "Brand Guidelines",
     "serviceConnections": "Service Connections",
-    "agentAudit": "Agent audit"
+    "agentAudit": "Agent audit",
+    "scanGroup": "Scan",
+    "complianceGroup": "Compliance",
+    "brandGroup": "Brand",
+    "moreAdmin": "More",
+    "identityAccess": "Identity & access",
+    "repositories": "Repositories",
+    "gitHosts": "Git hosts",
+    "gitCredentials": "Git credentials",
+    "shareableBadges": "Shareable badges",
+    "llmConfig": "LLM config",
+    "notifications": "Notifications",
+    "brandOverview": "Brand Overview"
   },
   "auth": {
     "signInTitle": "Sign in",

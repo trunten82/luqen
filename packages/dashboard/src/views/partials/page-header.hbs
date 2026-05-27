@@ -1,8 +1,44 @@
-{{! page-header partial }}
-<header class="page-header">
+{{!-- Shared page header partial (Phase 65).
+
+  Backward-compatible with previous callers: title / subtitle / actionUrl / actionLabel.
+  New optional fields enable cross-page navigation:
+
+    backHref      string — when set, renders a back-arrow link
+    backLabel     string — label for the back link (defaults to "Back")
+    crumbs        [{ href, label }] — breadcrumb trail rendered above the title
+    scopeChip     string — small chip beside the title (e.g. "Viewing: all organizations")
+    scopeVariant  'admin' | 'info' | 'warning' — variant class suffix
+
+  Example: see views/fleet-detail.hbs page-header block.
+--}}
+<header class="page-header" role="banner">
+  {{#if crumbs.length}}
+  <nav class="page-header__crumbs" aria-label="{{t "common.breadcrumb"}}">
+    <ol>
+      {{#each crumbs}}
+      <li>
+        {{#if this.href}}<a href="{{this.href}}">{{this.label}}</a>{{else}}<span aria-current="page">{{this.label}}</span>{{/if}}
+      </li>
+      {{/each}}
+    </ol>
+  </nav>
+  {{/if}}
+
+  {{#if backHref}}
+  <a class="page-header__back" href="{{backHref}}">
+    <svg class="page-header__back-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    {{#if backLabel}}{{backLabel}}{{else}}Back{{/if}}
+  </a>
+  {{/if}}
+
   <div class="page-header__row">
     <div>
-      <h1 class="page-header__title">{{title}}</h1>
+      <h1 class="page-header__title">
+        {{title}}
+        {{#if scopeChip}}<span class="page-header__chip page-header__chip--{{#if scopeVariant}}{{scopeVariant}}{{else}}info{{/if}}">{{scopeChip}}</span>{{/if}}
+      </h1>
       {{#if subtitle}}<p class="page-header__subtitle">{{subtitle}}</p>{{/if}}
     </div>
     {{#if actionUrl}}
