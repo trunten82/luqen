@@ -1,10 +1,57 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { ErrorEnvelope } from '../schemas/envelope.js';
 import type { DbAdapter } from '../../db/adapter.js';
 import { requireScope } from '../../auth/middleware.js';
 import { CAPABILITY_NAMES } from '../../types.js';
 import type { LlmUsageRecord, UsageFilter } from '../../types.js';
+
+/**
+ * Server-side org scoping for /api/v1/usage.
+ *
+ * Threat: without this check, ANY caller with a valid `read`-scoped
+ * token could fetch another tenant's usage by passing `?orgId=victim`,
+ * because `requireScope('read')` only verifies the scope and not the
+ * subject. We mirror the same rule applied across the rest of the
+ * service: the token's bound orgId is the ceiling; only an admin-scoped
+ * token bound to the `system` org may query across orgs.
+ *
+ * Returns either the orgId the caller is permitted to query (string)
+ * OR `null` if the caller is a system admin and may run an
+ * unfiltered query across all orgs.
+ *
+ * Throws a typed error so the route can return a 403.
+ */
+class ForbiddenOrgError extends Error {
+  constructor(message: string) { super(message); this.name = 'ForbiddenOrgError'; }
+}
+
+interface TokenPayloadShape {
+  readonly orgId?: string;
+  readonly scopes?: ReadonlyArray<string>;
+}
+
+function resolveOrgFilter(request: FastifyRequest, requestedOrgId: string | undefined): string | null {
+  const payload = (request as FastifyRequest & { tokenPayload?: TokenPayloadShape }).tokenPayload;
+  const tokenOrg = payload?.orgId;
+  const tokenScopes = payload?.scopes ?? [];
+  const isSystemAdmin = tokenOrg === 'system' && tokenScopes.includes('admin');
+
+  if (isSystemAdmin) {
+    // System admin: trust the requested filter (may be undefined for
+    // an unfiltered cross-org listing).
+    return requestedOrgId ?? null;
+  }
+
+  // Non-admin: caller is permanently bound to their token's orgId.
+  if (tokenOrg === undefined || tokenOrg === '') {
+    throw new ForbiddenOrgError('Token has no orgId binding');
+  }
+  if (requestedOrgId !== undefined && requestedOrgId !== tokenOrg) {
+    throw new ForbiddenOrgError(`Cannot query orgId=${requestedOrgId} — token is bound to ${tokenOrg}`);
+  }
+  return tokenOrg;
+}
 
 /**
  * Phase 72-03 — read API for the llm_usage table written by the
@@ -108,6 +155,7 @@ export async function registerUsageRoutes(
           200: UsageResponse,
           400: ErrorEnvelope,
           401: ErrorEnvelope,
+          403: ErrorEnvelope,
         },
         tags: ['usage'],
         summary: 'List LLM usage rows with aggregate totals',
@@ -119,8 +167,20 @@ export async function registerUsageRoutes(
           && !(CAPABILITY_NAMES as readonly string[]).includes(q['capability'])) {
         return reply.code(400).send({ error: 'invalid_capability', message: `unknown capability '${q['capability']}'` });
       }
+      let scopedOrg: string | null;
+      try {
+        scopedOrg = resolveOrgFilter(
+          request,
+          typeof q['orgId'] === 'string' ? q['orgId'] : undefined,
+        );
+      } catch (err) {
+        if (err instanceof ForbiddenOrgError) {
+          return reply.code(403).send({ error: 'forbidden_org', message: err.message });
+        }
+        throw err;
+      }
       const filter: UsageFilter = {
-        ...(typeof q['orgId'] === 'string' ? { orgId: q['orgId'] } : {}),
+        ...(scopedOrg !== null ? { orgId: scopedOrg } : {}),
         ...(typeof q['capability'] === 'string'
           ? { capability: q['capability'] as (typeof CAPABILITY_NAMES)[number] }
           : {}),

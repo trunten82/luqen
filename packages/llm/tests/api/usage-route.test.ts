@@ -133,6 +133,38 @@ describe('GET /api/v1/usage', () => {
     expect(body.error).toBe('invalid_capability');
   });
 
+  it('SECURITY — non-admin token cannot query another org', async () => {
+    await seed();
+    // Tear down the system-admin-stubbed app and rebuild with an
+    // org-bound read-only token.
+    await app.close();
+    app = Fastify();
+    app.addHook('onRequest', async (request) => {
+      (request as unknown as { tokenPayload: { scopes: string[]; orgId: string; sub: string } }).tokenPayload = {
+        scopes: ['read'],
+        orgId: 'org-a',
+        sub: 'test-org-a',
+      };
+    });
+    await registerUsageRoutes(app, adapter);
+    await app.ready();
+
+    // Try to read org-b: must be 403.
+    const denied = await app.inject({ method: 'GET', url: '/api/v1/usage?orgId=org-b' });
+    expect(denied.statusCode).toBe(403);
+    const denyBody = JSON.parse(denied.body) as { error: string };
+    expect(denyBody.error).toBe('forbidden_org');
+
+    // Calling without orgId must NOT return cross-org rows — the
+    // handler forces the filter to the caller's token org.
+    const own = await app.inject({ method: 'GET', url: '/api/v1/usage' });
+    expect(own.statusCode).toBe(200);
+    const ownBody = JSON.parse(own.body) as {
+      rows: Array<{ orgId: string | null }>;
+    };
+    expect(ownBody.rows.every((r) => r.orgId === 'org-a')).toBe(true);
+  });
+
   it('returns empty rows + zero totals when no data', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/usage' });
     expect(res.statusCode).toBe(200);
