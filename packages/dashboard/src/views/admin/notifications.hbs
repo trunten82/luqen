@@ -28,4 +28,46 @@
   </div>
 
   <div id="modal-container" aria-live="polite"></div>
+
+  {{#if currentOrgId}}
+  <section class="card" style="margin-top: 1.5rem;" aria-labelledby="unsubscribes-heading">
+    <div class="card__header">
+      <h2 id="unsubscribes-heading" class="card__title">Unsubscribed recipients</h2>
+      <p class="card__sub">Recipients who clicked an unsubscribe link in a report email. They will be skipped on future sends until re-subscribed.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Recipient</th>
+            <th>Channel</th>
+            <th>Unsubscribed at</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each unsubscribes}}
+          <tr>
+            <td data-label="Recipient">{{recipientAddress}}</td>
+            <td data-label="Channel"><code>{{channel}}</code></td>
+            <td data-label="Unsubscribed at">{{unsubscribedAt}}</td>
+            <td>
+              <button class="btn btn--sm btn--secondary"
+                      hx-post="/admin/notifications/unsubscribes/resubscribe"
+                      hx-vals='{"recipient":"{{recipientAddress}}","channel":"{{channel}}"}'
+                      hx-target="closest tr"
+                      hx-swap="outerHTML swap:300ms"
+                      hx-confirm="Re-subscribe {{recipientAddress}}?">
+                Re-subscribe
+              </button>
+            </td>
+          </tr>
+          {{else}}
+          <tr><td colspan="4" class="table__empty">No recipients have unsubscribed.</td></tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {{/if}}
 </section>

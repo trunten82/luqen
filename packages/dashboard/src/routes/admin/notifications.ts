@@ -266,6 +266,12 @@ export async function notificationRoutes(
       const isHtmx = request.headers['hx-request'] === 'true';
       const view = isHtmx ? 'admin/partials/notifications-tab.hbs' : 'admin/notifications.hbs';
 
+      // Phase 71 — list per-recipient unsubscribes for this org so admins
+      // can see who opted out and re-subscribe them on request.
+      const unsubscribes = callerOrgId !== undefined
+        ? await storage.notificationUnsubscribes.listForOrg(callerOrgId)
+        : [];
+
       return reply.view(view, {
         pageTitle: 'Notification Templates',
         currentPath: '/admin/notifications',
@@ -277,7 +283,44 @@ export async function notificationRoutes(
         canEditSystem: isSystemAdmin(request),
         canCreateOverride: callerOrgId !== undefined && callerOrgId !== 'system',
         currentOrgId: callerOrgId ?? null,
+        unsubscribes,
       });
+    },
+  );
+
+  // Phase 71 — POST /admin/notifications/unsubscribes/resubscribe — admin
+  // re-subscribes a recipient who had opted out. Returns an HTMX-friendly
+  // toast + the refreshed unsubscribe row removed via outerHTML swap.
+  server.post(
+    '/admin/notifications/unsubscribes/resubscribe',
+    {
+      preHandler: requirePermission('admin.system', 'admin.org', 'compliance.manage'),
+      schema: {
+        body: Type.Object({
+          recipient: Type.String({ minLength: 1, maxLength: 320 }),
+          channel: Type.String({ minLength: 1, maxLength: 64 }),
+        }),
+        ...HtmlPartialResponse,
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as { recipient: string; channel: string };
+      const orgId = getOrgId(request);
+      if (orgId === undefined || orgId === 'system') {
+        return reply.code(400).header('content-type', 'text/html')
+          .send(toastHtml('No org context — cannot re-subscribe.', 'error'));
+      }
+      const changed = await storage.notificationUnsubscribes.resubscribe(
+        body.recipient,
+        body.channel,
+        orgId,
+      );
+      if (!changed) {
+        return reply.code(404).header('content-type', 'text/html')
+          .send(toastHtml('Recipient was not on the unsubscribe list.', 'error'));
+      }
+      // Empty body — the row is removed via hx-swap=outerHTML on the button.
+      return reply.code(200).header('content-type', 'text/html').send('');
     },
   );
 
