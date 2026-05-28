@@ -2,6 +2,7 @@ import type { DbAdapter } from '../db/adapter.js';
 import type { LLMProviderAdapter } from '../providers/types.js';
 import { buildGenerateFixPrompt } from '../prompts/generate-fix.js';
 import { CapabilityExhaustedError, CapabilityNotConfiguredError, type CapabilityResult } from './types.js';
+import { recordCompletion } from './record-usage.js';
 
 export interface GenerateFixInput {
   readonly wcagCriterion: string;
@@ -91,11 +92,20 @@ export async function executeGenerateFix(
           ? applyPromptTemplate(promptOverride.template, input)
           : buildGenerateFixPrompt(input);
 
-        const result = await adapter.complete(prompt, {
-          model: model.modelId,
-          temperature: 0.2,
-          timeout: provider.timeout,
-        });
+        const result = await recordCompletion(
+          db,
+          {
+            capability: 'generate-fix',
+            orgId: input.orgId,
+            provider: { id: provider.id, type: provider.type },
+            model: { id: model.id, displayName: model.displayName },
+          },
+          () => adapter.complete(prompt, {
+            model: model.modelId,
+            temperature: 0.2,
+            timeout: provider.timeout,
+          }),
+        );
 
         const data = parseGenerateFixResponse(result.text);
 
