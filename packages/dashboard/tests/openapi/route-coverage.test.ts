@@ -80,7 +80,11 @@ describe('OpenAPI route coverage (dashboard, non-MCP)', () => {
       // spec by design.
       .filter((r) => !r.path.startsWith('/docs'))
       .filter((r) => !r.path.startsWith('/static'))
-      .filter((r) => !r.path.startsWith('/uploads'));
+      .filter((r) => !r.path.startsWith('/uploads'))
+      // Phase 71 — public unsubscribe link. Wildcard route (token > Fastify
+      // default maxParamLength) tagged 'html-page' and rendered server-side.
+      // Not part of the API surface.
+      .filter((r) => !r.path.startsWith('/u/'));
 
     const missing: string[] = [];
     for (const route of routes) {
@@ -158,6 +162,8 @@ describe('OpenAPI route coverage (dashboard, non-MCP)', () => {
       if (o.path === '/graphql' || o.path.startsWith('/graphiql')) return false;
       // Standard framework endpoints.
       if (o.path === '/health' || o.path === '/robots.txt') return false;
+      // Phase 71 — public unsubscribe wildcard route, see comment above.
+      if (o.path.startsWith('/u/')) return false;
       return true;
     });
 

@@ -35,6 +35,7 @@ import {
   SqliteCoordinatedPrRepository,
   SqliteBulkFixRepository,
   SqliteOrgAggregatorWebhookRepository,
+  SqliteNotificationUnsubscribeRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -75,6 +76,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly coordinatedPrs: SqliteCoordinatedPrRepository;
   readonly bulkFixes: SqliteBulkFixRepository;
   readonly orgAggregatorWebhooks: SqliteOrgAggregatorWebhookRepository;
+  readonly notificationUnsubscribes: SqliteNotificationUnsubscribeRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -111,6 +113,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.coordinatedPrs = new SqliteCoordinatedPrRepository(this.db);
     this.bulkFixes = new SqliteBulkFixRepository(this.db);
     this.orgAggregatorWebhooks = new SqliteOrgAggregatorWebhookRepository(this.db);
+    this.notificationUnsubscribes = new SqliteNotificationUnsubscribeRepository(this.db);
   }
 
   async connect(): Promise<void> {
