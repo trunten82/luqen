@@ -817,6 +817,21 @@
       "downloadCsv": "Télécharger CSV",
       "noRows": "Aucune entrée d'audit ne correspond.",
       "totalRows": "lignes au total"
+    },
+    "jurisdictionsPage": {
+      "description": "Jurisdictions describe where a regulation applies — country, region, or supranational body. Every regulation links to one jurisdiction, and scan reports filter compliance findings by the jurisdictions an org operates in.",
+      "emptyTitle": "No jurisdictions yet",
+      "emptyBody": "Add a jurisdiction to start mapping regulations. The bundled baseline seeds ~20 common jurisdictions on first install — if this list is empty the seed didn't run; try re-running the migration or click Add Jurisdiction to create one manually."
+    },
+    "regulationsPage": {
+      "description": "Regulations are the laws, standards, and policies that scan findings get checked against (WCAG 2.1/2.2 AA, EAA, ADA Title III, Section 508, etc.). Each regulation belongs to a jurisdiction and groups one or more WCAG requirements.",
+      "emptyTitle": "No regulations yet",
+      "emptyBody": "Regulations link jurisdictions to the WCAG criteria they enforce. The bundled baseline includes the most-common 24 regulations on first install. Add your own to track sector-specific or in-house standards."
+    },
+    "sourcesPage": {
+      "description": "Monitored sources are upstream feeds (regulator websites, RSS, sitemap-watched standards pages) that Luqen polls for updates to the regulations and requirements you depend on. New items become proposals you can review under Compliance proposals.",
+      "emptyTitle": "No monitored sources yet",
+      "emptyBody": "Add a source URL to start watching for upstream regulation changes. The compliance module polls each source on a cadence and surfaces diffs as proposals. The LLM extractor (optional) parses unstructured pages into structured requirement rows."
     }
   },
   "trends": {

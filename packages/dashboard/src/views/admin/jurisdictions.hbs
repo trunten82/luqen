@@ -9,6 +9,8 @@
     </button>
   </div>
 
+  <p class="text-muted mb-md">{{t "admin.jurisdictionsPage.description"}}</p>
+
   {{#if error}}
   <div class="alert alert--error" role="alert">
     <p>{{error}}</p>
@@ -67,7 +69,10 @@
           </tr>
           {{else}}
           <tr>
-            <td colspan="6">{{t "admin.jurisdictions.noJurisdictions"}}</td>
+            <td colspan="6" class="table__empty">
+              <strong>{{t "admin.jurisdictionsPage.emptyTitle"}}</strong><br>
+              <span class="text-muted">{{t "admin.jurisdictionsPage.emptyBody"}}</span>
+            </td>
           </tr>
           {{/each}}
         </tbody>
