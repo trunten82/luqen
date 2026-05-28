@@ -109,6 +109,7 @@
     "gitCredentials": "Git credentials",
     "shareableBadges": "Shareable badges",
     "llmConfig": "LLM config",
+    "llmUsage": "LLM usage",
     "notifications": "Notifications",
     "brandOverview": "Brand Overview"
   },
