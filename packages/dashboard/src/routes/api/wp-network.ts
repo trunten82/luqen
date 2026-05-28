@@ -59,6 +59,9 @@ const FleetSiteSchema = Type.Object({
 
 const FleetListResponse  = Type.Object({ sites: Type.Array(FleetSiteSchema) });
 const FleetPostResponse  = Type.Object({ site_id: Type.String(), status: Type.String() });
+const FleetSiteDetailResponse = Type.Object({ site: FleetSiteSchema });
+const FleetSiteParams = Type.Object({ siteId: Type.String({ minLength: 1, maxLength: 64 }) });
+type FleetSiteParamsT = Static<typeof FleetSiteParams>;
 const GroupsResponse     = Type.Object({
   groups: Type.Array(Type.Object({
     id:           Type.String(),
@@ -163,6 +166,43 @@ export async function wpNetworkApiRoutes(
           status: s.status,
           last_seen: s.lastSeenAt,
         })),
+      });
+    },
+  );
+
+  // ── GET /api/v1/fleet/:siteId ────────────────────────────────────────────
+  // Per-site detail. Scoped to the caller's org — a 404 is returned both
+  // when the row doesn't exist AND when it exists under a different org,
+  // so existence isn't leaked across tenants.
+  server.get(
+    '/api/v1/fleet/:siteId',
+    {
+      config: rateLimitConfig,
+      schema: {
+        params: FleetSiteParams,
+        response: {
+          200: FleetSiteDetailResponse,
+          401: ErrorResponse,
+          404: ErrorResponse,
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Params: FleetSiteParamsT }>, reply) => {
+      const ctx = requireAuthOrSend401(request, reply);
+      if (ctx === null) return;
+      const site = await storage.wpSites.get(request.params.siteId);
+      if (site === null || site.orgId !== ctx.orgId) {
+        return reply.code(404).send({ error: 'site not found' });
+      }
+      return reply.send({
+        site: {
+          id: site.id,
+          url: site.url,
+          wp_version: site.wpVersion,
+          plugin_version: site.pluginVersion,
+          status: site.status,
+          last_seen: site.lastSeenAt,
+        },
       });
     },
   );
