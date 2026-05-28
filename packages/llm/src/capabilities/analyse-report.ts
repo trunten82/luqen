@@ -2,6 +2,7 @@ import type { DbAdapter } from '../db/adapter.js';
 import type { LLMProviderAdapter } from '../providers/types.js';
 import { buildAnalyseReportPrompt, type AnalyseReportPromptInput } from '../prompts/analyse-report.js';
 import { CapabilityExhaustedError, CapabilityNotConfiguredError, type CapabilityResult } from './types.js';
+import { recordCompletion } from './record-usage.js';
 
 export interface AnalyseReportInput {
   readonly siteUrl: string;
@@ -114,11 +115,20 @@ export async function executeAnalyseReport(
           ? applyPromptTemplate(promptOverride.template, input)
           : buildAnalyseReportPrompt(promptInput);
 
-        const result = await adapter.complete(prompt, {
-          model: model.modelId,
-          temperature: 0.3,
-          timeout: provider.timeout,
-        });
+        const result = await recordCompletion(
+          db,
+          {
+            capability: 'analyse-report',
+            orgId: input.orgId,
+            provider: { id: provider.id, type: provider.type },
+            model: { id: model.id, displayName: model.displayName },
+          },
+          () => adapter.complete(prompt, {
+            model: model.modelId,
+            temperature: 0.3,
+            timeout: provider.timeout,
+          }),
+        );
 
         const data = parseAnalyseReportResponse(result.text);
 
