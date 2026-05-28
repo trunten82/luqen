@@ -151,6 +151,35 @@ export interface RemoteModel {
   readonly name?: string;
 }
 
+export interface LlmUsageRow {
+  readonly id: string;
+  readonly occurredAt: string;
+  readonly orgId: string | null;
+  readonly capability: string;
+  readonly providerId: string;
+  readonly providerType: string;
+  readonly modelId: string;
+  readonly modelName: string;
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+  readonly totalTokens: number;
+  readonly latencyMs: number;
+  readonly status: string;
+  readonly errorClass: string | null;
+  readonly agentConvId: string | null;
+  readonly agentMsgId: string | null;
+}
+
+export interface LlmUsageTotals {
+  readonly callCount: number;
+  readonly okCount: number;
+  readonly errorCount: number;
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+  readonly totalTokens: number;
+  readonly avgLatencyMs: number;
+}
+
 // ── Client class ────────────────────────────────────────────────────────────
 
 export class LLMClient {
@@ -601,6 +630,29 @@ export class LLMClient {
     }
 
     return { text: accumulatedText, toolCalls };
+  }
+
+  // -- Usage telemetry (Phase 72-03) ──────────────────────────────────────
+
+  async listUsage(filter: {
+    orgId?: string;
+    capability?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+  } = {}): Promise<{
+    rows: ReadonlyArray<LlmUsageRow>;
+    totals: LlmUsageTotals;
+  }> {
+    const qs = new URLSearchParams();
+    if (filter.orgId !== undefined) qs.set('orgId', filter.orgId);
+    if (filter.capability !== undefined) qs.set('capability', filter.capability);
+    if (filter.from !== undefined) qs.set('from', filter.from);
+    if (filter.to !== undefined) qs.set('to', filter.to);
+    if (filter.limit !== undefined) qs.set('limit', String(filter.limit));
+    const suffix = qs.toString();
+    const url = `${this._baseUrl}/api/v1/usage${suffix === '' ? '' : `?${suffix}`}`;
+    return this.apiFetch<{ rows: ReadonlyArray<LlmUsageRow>; totals: LlmUsageTotals }>(url);
   }
 
   // -- Health / Status ────────────────────────────────────────────────────
