@@ -1,9 +1,9 @@
 {{!-- Phase 48 Plan 02 — partial: per-channel system + org tables --}}
 <section aria-label="System templates">
   <header class="section-header">
-    <h2>System templates ({{channel}})</h2>
-    <p class="section-subtitle">
-      Platform-wide defaults. {{#if canEditSystem}}Editable by system admins.{{else}}Read-only — your organisation can override any of these.{{/if}}
+    <h2>System defaults — {{channel}}</h2>
+    <p class="section-subtitle text-muted">
+      {{#if canEditSystem}}Editable by system admins. These ship with Luqen and apply to every org until an org override replaces them.{{else}}Read-only here — these ship with Luqen. Use the <strong>Override</strong> action on any row to create a per-org copy you can edit.{{/if}}
     </p>
   </header>
 
@@ -69,10 +69,11 @@
 
 <section aria-label="Org templates" style="margin-top:var(--space-lg)">
   <header class="section-header">
-    <h2>Your org templates ({{channel}})</h2>
-    <p class="section-subtitle">
-      Org-scoped overrides. When an override exists for an event/channel, it
-      replaces the system default for your organisation.
+    <h2>Your org overrides — {{channel}}</h2>
+    <p class="section-subtitle text-muted">
+      When an override exists for an event-channel pair, it replaces the
+      system default for your organisation. Delete an override to fall
+      back to the system default.
     </p>
   </header>
 
