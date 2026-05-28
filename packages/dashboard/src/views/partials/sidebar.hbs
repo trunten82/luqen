@@ -296,15 +296,23 @@
       {{/if}}
 
       {{#if perm.llmView}}
-      <a class="sidebar__item {{#if (startsWith currentPath '/admin/llm')}}is-active{{/if}}"
+      <a class="sidebar__item {{#if (eq currentPath '/admin/llm')}}is-active{{/if}}"
          href="/admin/llm"
-         aria-current="{{#if (startsWith currentPath '/admin/llm')}}page{{/if}}">
+         aria-current="{{#if (eq currentPath '/admin/llm')}}page{{/if}}">
         <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <rect x="2" y="5" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
           <path d="M6 9h8M6 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           <circle cx="15" cy="5" r="2" fill="currentColor"/>
         </svg>
         {{t "nav.llmConfig"}}
+      </a>
+      <a class="sidebar__item {{#if (eq currentPath '/admin/llm-usage')}}is-active{{/if}}"
+         href="/admin/llm-usage"
+         aria-current="{{#if (eq currentPath '/admin/llm-usage')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M3 17V10M8 17V7M13 17V12M18 17V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        {{t "nav.llmUsage"}}
       </a>
       {{/if}}
 
