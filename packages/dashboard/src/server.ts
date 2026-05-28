@@ -91,6 +91,7 @@ import { agentAuditRoutes } from './routes/admin/agent-audit.js';
 import { gitHostRoutes } from './routes/admin/git-hosts.js';
 import { brandingGuidelineRoutes } from './routes/admin/branding-guidelines.js';
 import { llmAdminRoutes } from './routes/admin/llm.js';
+import { llmUsageRoutes } from './routes/admin/llm-usage.js';
 import { brandOverviewRoutes } from './routes/brand-overview.js';
 import { SqliteRescoreProgressRepository } from './db/sqlite/repositories/rescore-progress-repository.js';
 import { RescoreService } from './services/rescore/rescore-service.js';
@@ -1074,6 +1075,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── LLM admin routes ────────────────────────────────────────────────────
   await llmAdminRoutes(server, getLLMClient, { roleRepository: storage.roles });
+  await llmUsageRoutes(server, getLLMClient);
   // ── Rescore service (Phase 27) ───────────────────────────────────────────
   const rescoreProgressRepo = new SqliteRescoreProgressRepository(rawDb);
   const rescoreService = new RescoreService({
