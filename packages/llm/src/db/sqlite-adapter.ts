@@ -6,6 +6,8 @@ import type {
   Model, CreateModelInput,
   CapabilityAssignment, AssignCapabilityInput, CapabilityName,
   OAuthClient, User, PromptOverride,
+  LlmUsageRecord, RecordUsageInput, UsageFilter,
+  ProviderType,
 } from '../types.js';
 import type { DbAdapter } from './adapter.js';
 
@@ -65,6 +67,46 @@ interface UserRow {
   role: string;
   active: number;
   created_at: string;
+}
+
+interface UsageRow {
+  id: string;
+  occurred_at: string;
+  org_id: string | null;
+  capability: string;
+  provider_id: string;
+  provider_type: string;
+  model_id: string;
+  model_name: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  latency_ms: number;
+  status: string;
+  error_class: string | null;
+  agent_conv_id: string | null;
+  agent_msg_id: string | null;
+}
+
+function toUsage(row: UsageRow): LlmUsageRecord {
+  return {
+    id: row.id,
+    occurredAt: row.occurred_at,
+    orgId: row.org_id,
+    capability: row.capability as CapabilityName,
+    providerId: row.provider_id,
+    providerType: row.provider_type as ProviderType,
+    modelId: row.model_id,
+    modelName: row.model_name,
+    promptTokens: row.prompt_tokens,
+    completionTokens: row.completion_tokens,
+    totalTokens: row.total_tokens,
+    latencyMs: row.latency_ms,
+    status: row.status as LlmUsageRecord['status'],
+    errorClass: row.error_class,
+    agentConvId: row.agent_conv_id,
+    agentMsgId: row.agent_msg_id,
+  };
 }
 
 // ---- Row converters ----
@@ -185,6 +227,32 @@ const SCHEMA_SQL = `
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL
   );
+
+  -- Phase 72-01 — per-inference usage telemetry. One row per provider
+  -- call attempt (success OR error). model_name is denormalised so
+  -- history survives an admin rename of the Model row.
+  CREATE TABLE IF NOT EXISTS llm_usage (
+    id                TEXT PRIMARY KEY,
+    occurred_at       TEXT NOT NULL,
+    org_id            TEXT,
+    capability        TEXT NOT NULL,
+    provider_id       TEXT NOT NULL,
+    provider_type     TEXT NOT NULL,
+    model_id          TEXT NOT NULL,
+    model_name        TEXT NOT NULL,
+    prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+    completion_tokens INTEGER NOT NULL DEFAULT 0,
+    total_tokens      INTEGER NOT NULL DEFAULT 0,
+    latency_ms        INTEGER NOT NULL DEFAULT 0,
+    status            TEXT NOT NULL,
+    error_class       TEXT,
+    agent_conv_id     TEXT,
+    agent_msg_id      TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_llm_usage_org_time
+    ON llm_usage(org_id, occurred_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_llm_usage_capability_time
+    ON llm_usage(capability, occurred_at DESC);
 `;
 
 // ---- SqliteAdapter ----
@@ -472,5 +540,57 @@ export class SqliteAdapter implements DbAdapter {
     ).run(id, data.username, data.passwordHash, data.role, 1, now);
     const row = this.conn.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow;
     return toUser(row);
+  }
+
+  // ---- Usage telemetry (Phase 72-01) ----
+
+  async recordUsage(input: RecordUsageInput): Promise<LlmUsageRecord> {
+    const id = randomUUID();
+    const occurredAt = new Date().toISOString();
+    const totalTokens = input.promptTokens + input.completionTokens;
+    this.conn.prepare(
+      `INSERT INTO llm_usage (
+        id, occurred_at, org_id, capability,
+        provider_id, provider_type, model_id, model_name,
+        prompt_tokens, completion_tokens, total_tokens, latency_ms,
+        status, error_class, agent_conv_id, agent_msg_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      id,
+      occurredAt,
+      input.orgId ?? null,
+      input.capability,
+      input.providerId,
+      input.providerType,
+      input.modelId,
+      input.modelName,
+      input.promptTokens,
+      input.completionTokens,
+      totalTokens,
+      input.latencyMs,
+      input.status,
+      input.errorClass ?? null,
+      input.agentConvId ?? null,
+      input.agentMsgId ?? null,
+    );
+    const row = this.conn.prepare('SELECT * FROM llm_usage WHERE id = ?').get(id) as UsageRow;
+    return toUsage(row);
+  }
+
+  async listUsage(filter: UsageFilter = {}): Promise<readonly LlmUsageRecord[]> {
+    const clauses: string[] = [];
+    const params: Array<string | number> = [];
+    if (filter.orgId !== undefined) { clauses.push('org_id = ?'); params.push(filter.orgId); }
+    if (filter.capability !== undefined) { clauses.push('capability = ?'); params.push(filter.capability); }
+    if (filter.from !== undefined) { clauses.push('occurred_at >= ?'); params.push(filter.from); }
+    if (filter.to !== undefined) { clauses.push('occurred_at <= ?'); params.push(filter.to); }
+    const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+    const limit = filter.limit !== undefined && filter.limit > 0
+      ? `LIMIT ${Math.min(filter.limit, 10_000)}`
+      : 'LIMIT 1000';
+    const rows = this.conn.prepare(
+      `SELECT * FROM llm_usage ${where} ORDER BY occurred_at DESC ${limit}`,
+    ).all(...params) as UsageRow[];
+    return rows.map(toUsage);
   }
 }

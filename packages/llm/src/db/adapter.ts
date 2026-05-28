@@ -3,6 +3,7 @@ import type {
   Model, CreateModelInput,
   CapabilityAssignment, AssignCapabilityInput, CapabilityName,
   OAuthClient, User, PromptOverride,
+  LlmUsageRecord, RecordUsageInput, UsageFilter,
 } from '../types.js';
 
 export interface DbAdapter {
@@ -49,4 +50,8 @@ export interface DbAdapter {
   // Users
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(data: { username: string; passwordHash: string; role: string }): Promise<User>;
+
+  // Usage telemetry (Phase 72-01)
+  recordUsage(input: RecordUsageInput): Promise<LlmUsageRecord>;
+  listUsage(filter?: UsageFilter): Promise<readonly LlmUsageRecord[]>;
 }

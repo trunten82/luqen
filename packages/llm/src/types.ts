@@ -123,6 +123,59 @@ export interface PromptOverride {
   readonly updatedAt: string;
 }
 
+// ---- Usage telemetry (Phase 72-01) ----
+
+export type UsageStatus = 'ok' | 'error';
+
+/**
+ * One row per inference attempt. Persisted regardless of success — error
+ * rows let us track time spent on retries and provider availability.
+ * `modelName` is denormalised because Model rows are user-editable from
+ * the admin UI and usage history must survive a rename.
+ */
+export interface LlmUsageRecord {
+  readonly id: string;
+  readonly occurredAt: string;
+  readonly orgId: string | null;
+  readonly capability: CapabilityName;
+  readonly providerId: string;
+  readonly providerType: ProviderType;
+  readonly modelId: string;
+  readonly modelName: string;
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+  readonly totalTokens: number;
+  readonly latencyMs: number;
+  readonly status: UsageStatus;
+  readonly errorClass: string | null;
+  readonly agentConvId: string | null;
+  readonly agentMsgId: string | null;
+}
+
+export interface RecordUsageInput {
+  readonly capability: CapabilityName;
+  readonly orgId?: string | null;
+  readonly providerId: string;
+  readonly providerType: ProviderType;
+  readonly modelId: string;
+  readonly modelName: string;
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+  readonly latencyMs: number;
+  readonly status: UsageStatus;
+  readonly errorClass?: string | null;
+  readonly agentConvId?: string | null;
+  readonly agentMsgId?: string | null;
+}
+
+export interface UsageFilter {
+  readonly orgId?: string;
+  readonly capability?: CapabilityName;
+  readonly from?: string;
+  readonly to?: string;
+  readonly limit?: number;
+}
+
 // ---- Config ----
 
 export interface LLMConfig {
