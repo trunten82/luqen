@@ -48,6 +48,8 @@
     {{/if}}
   </div>
 
+  <p class="text-muted mb-md">{{t "admin.sourcesPage.description"}}</p>
+
   <div id="upload-regulation-form" class="card mt-sm" hidden>
     <form hx-post="/admin/sources/upload"
           hx-target="#plugin-messages" hx-swap="innerHTML"
@@ -174,7 +176,10 @@
         </tr>
         {{else}}
         <tr>
-          <td colspan="7">{{t "admin.sources.noSources"}}</td>
+          <td colspan="7" class="table__empty">
+            <strong>{{t "admin.sourcesPage.emptyTitle"}}</strong><br>
+            <span class="text-muted">{{t "admin.sourcesPage.emptyBody"}}</span>
+          </td>
         </tr>
         {{/each}}
       </tbody>
