@@ -8,12 +8,57 @@ import { normalizeReportData } from './report-service.js';
 import type { JsonReportFile } from './report-service.js';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import {
+  CHANNEL_EMAIL_REPORTS,
+  buildUnsubscribeUrl,
+} from '../notifications/unsubscribe-token.js';
 
 // Legacy import kept for backward compatibility with smtp_config table
 import { sendEmail } from '../email/sender.js';
 import type { EmailAttachment } from '../email/sender.js';
 
 const EMAIL_PLUGIN_PACKAGE = '@luqen/plugin-notify-email';
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Phase 71 — Append a per-recipient unsubscribe footer to an HTML email body.
+ *
+ * Inserts a small block immediately before `</body>` (or appended to the end
+ * if there is no `</body>`). The link is a stateless HMAC token that the
+ * public `/u/:token` route verifies, so the URL is safe to expose and the
+ * dispatcher never has to mint or persist tokens.
+ */
+export function appendUnsubscribeFooter(
+  html: string,
+  recipient: string,
+  orgId: string,
+  baseUrl: string,
+): string {
+  const url = buildUnsubscribeUrl(baseUrl, {
+    recipient,
+    channel: CHANNEL_EMAIL_REPORTS,
+    orgId,
+  });
+  const safeUrl = escapeHtml(url);
+  const safeRecipient = escapeHtml(recipient);
+  const footer = `
+<div style="max-width: 600px; margin: 8px auto 24px; padding: 12px 24px; font: 11px/1.5 system-ui, -apple-system, sans-serif; color: #6b6463; text-align: center;">
+You received this email at <strong>${safeRecipient}</strong>.
+<a href="${safeUrl}" style="color: #5a2a26; text-decoration: underline;">Unsubscribe</a>
+from scheduled reports from this organisation.
+</div>`;
+  const closeIdx = html.lastIndexOf('</body>');
+  if (closeIdx === -1) return `${html}${footer}`;
+  return `${html.slice(0, closeIdx)}${footer}${html.slice(closeIdx)}`;
+}
 
 // ---------------------------------------------------------------------------
 // Build email subject line from scan data
@@ -157,8 +202,24 @@ export async function sendNotification(
   attachments: readonly EmailAttachment[],
   pluginManager?: PluginManager,
 ): Promise<void> {
-  // Use org-scoped plugin config if available, fall back to global
+  // Phase 71 — filter recipients who have unsubscribed from this org's
+  // email reports. The dispatcher loops one envelope per recipient so the
+  // unsubscribe footer can be personalised with a per-recipient HMAC link.
   const orgId = report.orgId;
+  const deliverable: string[] = [];
+  for (const recipient of recipients) {
+    const suppressed = await storage.notificationUnsubscribes.isUnsubscribed(
+      recipient,
+      CHANNEL_EMAIL_REPORTS,
+      orgId,
+    );
+    if (!suppressed) deliverable.push(recipient);
+  }
+  if (deliverable.length === 0) return;
+
+  const baseUrl =
+    process.env['DASHBOARD_PUBLIC_URL'] ?? 'https://dashboard.luqen.local';
+
   const orgConfig = orgId !== 'system' && pluginManager
     ? pluginManager.getPluginConfigForOrg(EMAIL_PLUGIN_PACKAGE, orgId)
     : null;
@@ -166,7 +227,6 @@ export async function sendNotification(
   const emailPlugin = pluginManager?.getActiveInstanceByPackageName(EMAIL_PLUGIN_PACKAGE);
 
   if (emailPlugin !== undefined && emailPlugin !== null) {
-    // Plugin is active -- use it to send
     const pluginSendReport = (emailPlugin as unknown as {
       sendReport: (opts: {
         to: readonly string[];
@@ -176,28 +236,34 @@ export async function sendNotification(
       }) => Promise<void>;
     }).sendReport;
 
-    if (typeof pluginSendReport === 'function') {
-      // If org-specific config exists, pass it to override global config
+    if (typeof pluginSendReport !== 'function') {
+      throw new Error('Email plugin does not expose sendReport method');
+    }
+
+    for (const recipient of deliverable) {
+      const html = appendUnsubscribeFooter(emailBody, recipient, orgId, baseUrl);
       await pluginSendReport({
-        to: recipients,
+        to: [recipient],
         subject,
-        html: emailBody,
+        html,
         attachments,
         ...(orgConfig !== null ? { config: orgConfig } : {}),
       });
-    } else {
-      throw new Error('Email plugin does not expose sendReport method');
     }
-  } else {
-    // Fallback: use legacy smtp_config from dashboard DB
-    const smtpConfig =
-      await storage.email.getSmtpConfig(report.orgId) ??
-      await storage.email.getSmtpConfig('system');
+    return;
+  }
 
-    if (smtpConfig === null) {
-      throw new Error(`No email plugin active and no SMTP config found for report ${report.id}`);
-    }
+  // Fallback: use legacy smtp_config from dashboard DB
+  const smtpConfig =
+    await storage.email.getSmtpConfig(report.orgId) ??
+    await storage.email.getSmtpConfig('system');
 
+  if (smtpConfig === null) {
+    throw new Error(`No email plugin active and no SMTP config found for report ${report.id}`);
+  }
+
+  for (const recipient of deliverable) {
+    const html = appendUnsubscribeFooter(emailBody, recipient, orgId, baseUrl);
     await sendEmail({
       smtp: {
         host: smtpConfig.host,
@@ -208,9 +274,9 @@ export async function sendNotification(
         fromAddress: smtpConfig.fromAddress,
         fromName: smtpConfig.fromName,
       },
-      to: recipients,
+      to: [recipient],
       subject,
-      html: emailBody,
+      html,
       attachments,
     });
   }

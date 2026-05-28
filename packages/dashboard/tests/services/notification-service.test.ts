@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ScanRecord, EmailReport } from '../../src/db/types.js';
 
+process.env['SESSION_SECRET'] = process.env['SESSION_SECRET'] ?? 'test-session-secret';
+
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
@@ -108,6 +110,12 @@ function makeStorage(overrides: Record<string, unknown> = {}) {
         fromName: 'Luqen',
       }),
       updateEmailReport: vi.fn().mockResolvedValue(undefined),
+    },
+    notificationUnsubscribes: {
+      isUnsubscribed: vi.fn().mockResolvedValue(false),
+      unsubscribe: vi.fn().mockResolvedValue(undefined),
+      resubscribe: vi.fn().mockResolvedValue(true),
+      listForOrg: vi.fn().mockResolvedValue([]),
     },
     ...overrides,
   } as any;
