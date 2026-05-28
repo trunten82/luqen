@@ -80,6 +80,47 @@ describe('POST + GET /api/v1/fleet', () => {
     expect(sites[0].status).toBe('active');
   });
 
+  it('GET /api/v1/fleet/:siteId returns the registered site', async () => {
+    server = await buildServerWithUser({ id: 'u1', currentOrgId: orgA });
+    const reg = await server.inject({
+      method: 'POST',
+      url: '/api/v1/fleet',
+      payload: { url: 'https://detail.example', wp_version: '7.0', plugin_version: '0.6.0' },
+    });
+    const siteId = reg.json().site_id;
+
+    const detail = await server.inject({ method: 'GET', url: `/api/v1/fleet/${siteId}` });
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().site).toMatchObject({
+      id: siteId,
+      url: 'https://detail.example',
+      wp_version: '7.0',
+      plugin_version: '0.6.0',
+      status: 'active',
+    });
+  });
+
+  it('GET /api/v1/fleet/:siteId 404s for unknown ids', async () => {
+    server = await buildServerWithUser({ id: 'u1', currentOrgId: orgA });
+    const detail = await server.inject({ method: 'GET', url: '/api/v1/fleet/site_does_not_exist' });
+    expect(detail.statusCode).toBe(404);
+  });
+
+  it('GET /api/v1/fleet/:siteId 404s for sites in another org (no cross-tenant leak)', async () => {
+    server = await buildServerWithUser({ id: 'u1', currentOrgId: orgA });
+    const reg = await server.inject({
+      method: 'POST',
+      url: '/api/v1/fleet',
+      payload: { url: 'https://leak.example' },
+    });
+    const siteId = reg.json().site_id;
+    await server.close();
+
+    server = await buildServerWithUser({ id: 'u2', currentOrgId: orgB });
+    const detail = await server.inject({ method: 'GET', url: `/api/v1/fleet/${siteId}` });
+    expect(detail.statusCode).toBe(404);
+  });
+
   it('rejects request when no orgId on user', async () => {
     server = await buildServerWithUser({ id: 'u1', currentOrgId: '' });
     const reg = await server.inject({
