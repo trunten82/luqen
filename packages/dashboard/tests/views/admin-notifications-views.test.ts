@@ -20,15 +20,23 @@ describe('Phase 48 Plan 02 — admin notification views', () => {
   it('main page references the notifications-tab partial', () => {
     const hbs = readFileSync(join(VIEWS, 'notifications.hbs'), 'utf-8');
     expect(hbs).toContain('{{> notifications-tab}}');
-    expect(hbs).toContain('Notification Templates');
+    // Phase 69 polish removed the duplicate in-body <h1>Notification
+    // Templates</h1>; the title now lives in the route handler's
+    // pageTitle and is rendered by main.hbs. The orientation
+    // paragraph that replaced it explains what the page manages.
+    expect(hbs).toMatch(/templates|template/i);
     // Tab nav for the three channels.
     expect(hbs).toContain('hx-get="/admin/notifications?channel=');
   });
 
   it('notifications-tab partial is on disk in admin/partials/', () => {
     const hbs = readFileSync(join(VIEWS, 'partials', 'notifications-tab.hbs'), 'utf-8');
-    expect(hbs).toContain('System templates');
-    expect(hbs).toContain('Your org templates');
+    // Phase 69 polish: section headings switched to clearer
+    // "System defaults" / "Your org overrides" copy so the
+    // system-vs-org distinction is visible at a glance, not just
+    // via the row badge.
+    expect(hbs).toContain('System defaults');
+    expect(hbs).toContain('Your org overrides');
     expect(hbs).toContain('id="org-templates-body"'); // override target
   });
 
