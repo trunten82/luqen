@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ScanRecord, EmailReport } from '../../src/db/types.js';
 
+process.env['SESSION_SECRET'] = process.env['SESSION_SECRET'] ?? 'test-session-secret';
+
 // ---------------------------------------------------------------------------
 // Mocks — set up before importing the module under test
 // ---------------------------------------------------------------------------
@@ -103,6 +105,12 @@ function makeStorage(overrides: Record<string, unknown> = {}) {
       updateEmailReport: vi.fn().mockResolvedValue(undefined),
       getDueEmailReports: vi.fn().mockResolvedValue([]),
     },
+    notificationUnsubscribes: {
+      isUnsubscribed: vi.fn().mockResolvedValue(false),
+      unsubscribe: vi.fn().mockResolvedValue(undefined),
+      resubscribe: vi.fn().mockResolvedValue(true),
+      listForOrg: vi.fn().mockResolvedValue([]),
+    },
     ...overrides,
   } as any;
 }
@@ -200,12 +208,15 @@ describe('processEmailReport', () => {
 
     await processEmailReport(storage, report);
 
-    expect(sendEmail).toHaveBeenCalledTimes(1);
-    const call = vi.mocked(sendEmail).mock.calls[0][0];
-    expect(call.to).toEqual(['alice@test.com', 'bob@test.com']);
-    expect(call.subject).toContain('Accessibility Report');
-    expect(call.subject).toContain('example.com');
-    expect(call.smtp.host).toBe('smtp.example.com');
+    // Phase 71 — dispatcher loops per-recipient so the unsubscribe footer
+    // can be personalised. Two recipients → two SMTP calls.
+    expect(sendEmail).toHaveBeenCalledTimes(2);
+    const calls = vi.mocked(sendEmail).mock.calls;
+    const recipients = calls.flatMap((c) => c[0].to);
+    expect(recipients).toEqual(['alice@test.com', 'bob@test.com']);
+    expect(calls[0][0].subject).toContain('Accessibility Report');
+    expect(calls[0][0].subject).toContain('example.com');
+    expect(calls[0][0].smtp.host).toBe('smtp.example.com');
   });
 
   it('updates nextSendAt and lastSentAt after sending', async () => {
@@ -357,8 +368,10 @@ describe('processEmailReport', () => {
 
     await processEmailReport(storage, report, pluginManager);
 
-    expect(mockSendReport).toHaveBeenCalledTimes(1);
-    expect(mockSendReport.mock.calls[0][0].to).toEqual(['alice@test.com', 'bob@test.com']);
+    // Phase 71 — per-recipient dispatch: 2 recipients → 2 plugin calls.
+    expect(mockSendReport).toHaveBeenCalledTimes(2);
+    const recipients = mockSendReport.mock.calls.flatMap((c: any[]) => c[0].to);
+    expect(recipients).toEqual(['alice@test.com', 'bob@test.com']);
     expect(sendEmail).not.toHaveBeenCalled();
   });
 

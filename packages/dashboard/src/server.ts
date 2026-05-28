@@ -12,6 +12,7 @@ import { authRoutes } from './routes/auth.js';
 import { homeRoutes } from './routes/home.js';
 import { glossaryRoutes } from './routes/glossary.js';
 import { badgeRoutes } from './routes/badge.js';
+import { unsubscribeRoutes } from './routes/unsubscribe.js';
 import { scanRoutes } from './routes/scan.js';
 import { reportRoutes } from './routes/reports.js';
 import { compareRoutes } from './routes/compare.js';
@@ -1014,6 +1015,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await homeRoutes(server, storage, config);
   await glossaryRoutes(server);
   await badgeRoutes(server, storage, config.selfScanId);
+  await unsubscribeRoutes(server, storage);
   await scanRoutes(server, storage, orchestrator, config, complianceService);
   await compareRoutes(server, storage);
   await trendRoutes(server, storage);

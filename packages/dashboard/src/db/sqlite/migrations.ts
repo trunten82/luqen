@@ -1855,4 +1855,28 @@ CREATE INDEX IF NOT EXISTS idx_coordinated_pr_legs_leg_status
   ON coordinated_pr_legs(coordinated_pr_id, leg_status);
     `,
   },
+  {
+    id: '072',
+    name: 'notification-unsubscribes',
+    sql: `
+-- Phase 71 — Per-recipient notification unsubscribe.
+-- One row per (recipient, channel, org) tracking opt-out state. The
+-- unsubscribe URL itself is a stateless HMAC over those three fields, so
+-- the table only records outcome (unsubscribed_at and an optional
+-- resubscribed_at restoring delivery). Dispatch (services/notification-
+-- service.ts) consults isUnsubscribed() before each send.
+
+CREATE TABLE IF NOT EXISTS notification_unsubscribes (
+  recipient_address TEXT NOT NULL,
+  channel           TEXT NOT NULL,
+  org_id            TEXT NOT NULL,
+  unsubscribed_at   TEXT NOT NULL,
+  resubscribed_at   TEXT,
+  PRIMARY KEY (recipient_address, channel, org_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_unsubscribes_org
+  ON notification_unsubscribes(org_id, channel);
+    `,
+  },
 ];
