@@ -6422,3 +6422,19 @@ details[open] > .mt-examples-toggle::before {
 .sidebar__more[open] > summary .sidebar__more-chevron {
   transform: rotate(180deg);
 }
+
+/* Phase 70 — hero-metric purge: typographic verdict line that
+   replaces 4-up stat-card grids on brand-overview (and pattern
+   target for other surfaces). Reads as a sentence; numbers stay
+   scannable via <strong>. */
+.brand-overview__verdict {
+  font-size: var(--font-size-md, 1rem);
+  line-height: 1.55;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-md);
+}
+.brand-overview__verdict strong {
+  font-weight: 600;
+}
+.text--positive { color: var(--status-success-fg, oklch(0.5 0.15 145)); }
+.text--negative { color: var(--status-error-fg,   oklch(0.5 0.18 25)); }
