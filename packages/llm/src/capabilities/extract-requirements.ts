@@ -4,6 +4,7 @@ import type { ExtractedRequirements } from '../types.js';
 import { buildExtractionPrompt } from '../prompts/extract-requirements.js';
 import { parseExtractedRequirements } from './parse-extract-response.js';
 import { CapabilityExhaustedError, CapabilityNotConfiguredError, type CapabilityResult } from './types.js';
+import { recordCompletion } from './record-usage.js';
 
 export interface ExtractRequirementsInput {
   readonly content: string;
@@ -77,11 +78,20 @@ export async function executeExtractRequirements(
               regulationName: input.regulationName,
             });
 
-        const result = await adapter.complete(prompt, {
-          model: model.modelId,
-          temperature: 0.1,
-          timeout: provider.timeout,
-        });
+        const result = await recordCompletion(
+          db,
+          {
+            capability: 'extract-requirements',
+            orgId: input.orgId,
+            provider: { id: provider.id, type: provider.type },
+            model: { id: model.id, displayName: model.displayName },
+          },
+          () => adapter.complete(prompt, {
+            model: model.modelId,
+            temperature: 0.1,
+            timeout: provider.timeout,
+          }),
+        );
 
         const data = parseExtractedRequirements(result.text);
 

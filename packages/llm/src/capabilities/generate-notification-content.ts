@@ -1,6 +1,7 @@
 import type { DbAdapter } from '../db/adapter.js';
 import type { LLMProviderAdapter } from '../providers/types.js';
 import { buildNotificationPrompt } from '../prompts/generate-notification-content.js';
+import { recordCompletion } from './record-usage.js';
 
 /**
  * Phase 50-01 — generate-notification-content capability.
@@ -92,16 +93,25 @@ export async function executeGenerateNotificationContent(
         outputFormat: input.outputFormat,
       });
 
-      const completion = await Promise.race([
-        adapter.complete(prompt, {
-          model: model.modelId,
-          temperature: 0.4,
-          timeout: Math.max(1, Math.ceil(timeoutMs / 1000)),
-        }),
-        new Promise<never>((_resolve, reject) => {
-          controller.signal.addEventListener('abort', () => reject(new Error('LLM_TIMEOUT')));
-        }),
-      ]);
+      const completion = await recordCompletion(
+        db,
+        {
+          capability: 'generate-notification-content',
+          orgId: input.orgId,
+          provider: { id: provider.id, type: provider.type },
+          model: { id: model.id, displayName: model.displayName },
+        },
+        () => Promise.race([
+          adapter.complete(prompt, {
+            model: model.modelId,
+            temperature: 0.4,
+            timeout: Math.max(1, Math.ceil(timeoutMs / 1000)),
+          }),
+          new Promise<never>((_resolve, reject) => {
+            controller.signal.addEventListener('abort', () => reject(new Error('LLM_TIMEOUT')));
+          }),
+        ]),
+      );
 
       const parsed = parseNotificationResponse(completion.text);
       if (parsed === null) return null;

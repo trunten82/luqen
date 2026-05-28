@@ -26,6 +26,7 @@
  *    (first `.next()` throws) trigger provider fallback.
  */
 
+import { performance } from 'node:perf_hooks';
 import type { DbAdapter } from '../db/adapter.js';
 import type {
   ChatMessage,
@@ -112,6 +113,43 @@ export async function* executeAgentConversation(
     // resolves) we commit to this provider for the rest of the turn —
     // mid-stream errors are forwarded to the caller (D-23).
     let iter: AsyncIterator<StreamFrame> | undefined;
+    // Phase 72-02 — per-attempt usage telemetry. Captured from the
+    // terminal `done` frame (when the provider returns usage) OR set
+    // from an `error` frame / thrown exception. Always recorded once,
+    // in the finally-equivalent at the end of this attempt.
+    const t0 = performance.now();
+    let promptTokens = 0;
+    let completionTokens = 0;
+    let streamStatus: 'ok' | 'error' = 'ok';
+    let streamErrorClass: string | undefined;
+    const recordAttempt = async (): Promise<void> => {
+      try {
+        await db.recordUsage({
+          capability: 'agent-conversation',
+          orgId: input.orgId,
+          providerId: provider.id,
+          providerType: provider.type,
+          modelId: model.id,
+          modelName: model.displayName,
+          promptTokens,
+          completionTokens,
+          latencyMs: Math.round(performance.now() - t0),
+          status: streamStatus,
+          ...(streamErrorClass !== undefined ? { errorClass: streamErrorClass } : {}),
+        });
+      } catch {
+        /* telemetry failure must never alter inference path */
+      }
+    };
+    const observeFrame = (frame: StreamFrame): void => {
+      if (frame.type === 'done' && frame.usage !== undefined) {
+        promptTokens = frame.usage.inputTokens;
+        completionTokens = frame.usage.outputTokens;
+      } else if (frame.type === 'error') {
+        streamStatus = 'error';
+        streamErrorClass = frame.code;
+      }
+    };
     try {
       const connectConfig: { baseUrl: string; apiKey?: string } =
         provider.apiKey != null
@@ -143,6 +181,7 @@ export async function* executeAgentConversation(
       const first = await iter.next();
 
       if (!first.done) {
+        observeFrame(first.value);
         yield first.value;
       }
 
@@ -152,11 +191,16 @@ export async function* executeAgentConversation(
       while (true) {
         const step = await iter.next();
         if (step.done) break;
+        observeFrame(step.value);
         yield step.value;
       }
 
+      await recordAttempt();
       return;
     } catch (err) {
+      streamStatus = 'error';
+      streamErrorClass = err instanceof Error ? err.constructor.name : 'Error';
+      await recordAttempt();
       errors.push(err instanceof Error ? err : new Error(String(err)));
       try {
         await adapter.disconnect();

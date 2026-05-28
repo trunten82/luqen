@@ -2,6 +2,7 @@ import type { DbAdapter } from '../db/adapter.js';
 import type { LLMProviderAdapter } from '../providers/types.js';
 import { buildDiscoverBrandingPrompt } from '../prompts/discover-branding.js';
 import { CapabilityExhaustedError, CapabilityNotConfiguredError, type CapabilityResult } from './types.js';
+import { recordCompletion } from './record-usage.js';
 
 export interface DiscoverBrandingInput {
   readonly url: string;
@@ -671,11 +672,20 @@ export async function executeDiscoverBranding(
           ? applyPromptTemplate(promptOverride.template, { ...input, htmlContent, cssContent })
           : applyPromptBuiltin(signals, input.url);
 
-        const result = await adapter.complete(prompt, {
-          model: model.modelId,
-          temperature: 0,
-          timeout: provider.timeout,
-        });
+        const result = await recordCompletion(
+          db,
+          {
+            capability: 'discover-branding',
+            orgId: input.orgId,
+            provider: { id: provider.id, type: provider.type },
+            model: { id: model.id, displayName: model.displayName },
+          },
+          () => adapter.complete(prompt, {
+            model: model.modelId,
+            temperature: 0,
+            timeout: provider.timeout,
+          }),
+        );
 
         const llmData = parseDiscoverBrandingResponse(result.text);
         const merged = mergeResults(signals, llmData, deterministic);
