@@ -1,17 +1,18 @@
-{{!-- Phase 48 Plan 02 — admin notification template editor --}}
+{{!-- Phase 48 Plan 02 — admin notification template editor.
+     Phase 69 polish: dropped the duplicate in-body page-header (the
+     layout already renders one from pageTitle/pageSubtitle); the
+     channel tab strip and section bodies now line up consistently
+     with the identity-access surfaces. --}}
 <section aria-label="Notification templates editor">
-  <header class="page-header">
-    <h1>Notification Templates</h1>
-    <p class="page-subtitle">
-      Edit the subject and body used for each event/channel pair. System
-      templates are the platform-wide defaults; org overrides win when
-      present. Changes are versioned and audited.
-    </p>
-  </header>
+  <p class="text-muted mb-md">
+    Each event-channel pair renders from a template. System templates are
+    the platform-wide defaults that ship out of the box; org overrides win
+    over them whenever present. Every save is versioned and audited.
+  </p>
 
-  <nav class="tabs" aria-label="Notification channel">
+  <nav class="ia-tabs" aria-label="Notification channel">
     {{#each channels}}
-    <a class="tab {{#if (eq this ../channel)}}is-active{{/if}}"
+    <a class="ia-tabs__tab {{#if (eq this ../channel)}}is-active{{/if}}"
        href="/admin/notifications?channel={{this}}"
        hx-get="/admin/notifications?channel={{this}}"
        hx-target="#notifications-tab-body"
