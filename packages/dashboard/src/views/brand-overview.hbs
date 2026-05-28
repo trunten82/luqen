@@ -25,32 +25,22 @@
 {{#if hasSites}}
 <section aria-labelledby="brand-summary-heading" class="mb-lg">
   <h2 id="brand-summary-heading" class="section-title">{{t "brandOverview.summary"}}</h2>
-  <div class="exec-summary" role="list" aria-label="Brand score summary">
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value {{summary.avgScoreClass}}">{{#if summary.avgScore}}{{summary.avgScore}}{{else}}&mdash;{{/if}}</span>
-      <span class="stat-card__label">{{t "brandOverview.avgScore"}}</span>
-      {{#if targetScore}}
-      <span class="stat-card__sub text-sm">
-        {{t "brandOverview.target"}}: {{targetScore}}
-        {{#if gapValue}}
-          <span class="{{gapClass}}">({{#if (gte gapValue 0)}}+{{/if}}{{gapValue}})</span>
-        {{/if}}
-      </span>
-      {{/if}}
-    </article>
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value">{{summary.totalScored}}</span>
-      <span class="stat-card__label">{{t "brandOverview.scoredSites"}}</span>
-    </article>
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value">{{summary.improving}}</span>
-      <span class="stat-card__label">{{t "brandOverview.improving"}}</span>
-    </article>
-    <article class="stat-card" role="listitem">
-      <span class="stat-card__value">{{summary.regressing}}</span>
-      <span class="stat-card__label">{{t "brandOverview.regressing"}}</span>
-    </article>
-  </div>
+  {{!-- Phase 70 hero-metric purge: 4 stat cards (avg score, scored
+       sites, improving, regressing) collapsed into one typographic
+       verdict line. Same pattern as the home docket rail (Phase 57).
+       Numbers stay scannable in bold; vertical space reclaimed for
+       the actual site list below. --}}
+  <p class="brand-overview__verdict" role="status" aria-label="Brand score summary">
+    Average score
+    <strong class="{{summary.avgScoreClass}}">{{#if summary.avgScore}}{{summary.avgScore}}{{else}}&mdash;{{/if}}</strong>
+    across <strong>{{summary.totalScored}}</strong> {{#if (eq summary.totalScored 1)}}site{{else}}sites{{/if}}
+    — <strong class="text--positive">{{summary.improving}}</strong> improving,
+    <strong class="text--negative">{{summary.regressing}}</strong> regressing.
+    {{#if targetScore}}
+      Target <strong>{{targetScore}}</strong>{{#if gapValue}}
+        <span class="{{gapClass}}">({{#if (gte gapValue 0)}}+{{/if}}{{gapValue}})</span>{{/if}}.
+    {{/if}}
+  </p>
   {{#if canManageBranding}}
   <form method="POST" action="/brand-overview/target" class="brand-overview__target-form mt-sm">
     <input type="hidden" name="_csrf" value="{{csrfToken}}">
