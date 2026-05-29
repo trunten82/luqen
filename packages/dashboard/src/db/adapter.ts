@@ -31,6 +31,7 @@ import type { CoordinatedPrRepository } from './interfaces/coordinated-pr-reposi
 import type { BulkFixRepository } from './interfaces/bulk-fix-repository.js';
 import type { OrgAggregatorWebhookRepository } from './interfaces/org-aggregator-webhook-repository.js';
 import type { NotificationUnsubscribeRepository } from './interfaces/notification-unsubscribe-repository.js';
+import type { CreditRepository } from './interfaces/credit-repository.js';
 
 export interface StorageAdapter {
   connect(): Promise<void>;
@@ -73,4 +74,5 @@ export interface StorageAdapter {
   readonly bulkFixes: BulkFixRepository;
   readonly orgAggregatorWebhooks: OrgAggregatorWebhookRepository;
   readonly notificationUnsubscribes: NotificationUnsubscribeRepository;
+  readonly credits: CreditRepository;
 }
