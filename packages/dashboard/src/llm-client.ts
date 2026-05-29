@@ -173,6 +173,21 @@ export interface LlmUsageRow {
   readonly totalCostUsd: number | null;
 }
 
+export interface LlmUsageSummaryRow {
+  readonly key: string;
+  readonly callCount: number;
+  readonly okCount: number;
+  readonly errorCount: number;
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+  readonly totalTokens: number;
+  readonly totalCostUsd: number;
+  readonly unpricedRows: number;
+  readonly avgLatencyMs: number;
+}
+
+export type LlmUsageGroupBy = 'capability' | 'model' | 'provider' | 'org' | 'day';
+
 export interface LlmUsageTotals {
   readonly callCount: number;
   readonly okCount: number;
@@ -659,6 +674,26 @@ export class LLMClient {
     const suffix = qs.toString();
     const url = `${this._baseUrl}/api/v1/usage${suffix === '' ? '' : `?${suffix}`}`;
     return this.apiFetch<{ rows: ReadonlyArray<LlmUsageRow>; totals: LlmUsageTotals }>(url);
+  }
+
+  async summarizeUsage(filter: {
+    groupBy: LlmUsageGroupBy;
+    orgId?: string;
+    capability?: string;
+    from?: string;
+    to?: string;
+  }): Promise<{
+    groupBy: string;
+    rows: ReadonlyArray<LlmUsageSummaryRow>;
+  }> {
+    const qs = new URLSearchParams();
+    qs.set('groupBy', filter.groupBy);
+    if (filter.orgId !== undefined) qs.set('orgId', filter.orgId);
+    if (filter.capability !== undefined) qs.set('capability', filter.capability);
+    if (filter.from !== undefined) qs.set('from', filter.from);
+    if (filter.to !== undefined) qs.set('to', filter.to);
+    const url = `${this._baseUrl}/api/v1/usage/summary?${qs.toString()}`;
+    return this.apiFetch<{ groupBy: string; rows: ReadonlyArray<LlmUsageSummaryRow> }>(url);
   }
 
   // -- Health / Status ────────────────────────────────────────────────────

@@ -181,6 +181,22 @@ export interface UsageFilter {
   readonly limit?: number;
 }
 
+export type UsageGroupDimension = 'capability' | 'model' | 'provider' | 'org' | 'day';
+
+export interface UsageSummaryRow {
+  readonly key: string;
+  readonly callCount: number;
+  readonly okCount: number;
+  readonly errorCount: number;
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+  readonly totalTokens: number;
+  readonly totalCostUsd: number;
+  /** Rows in this group whose price was unknown — surfaces coverage. */
+  readonly unpricedRows: number;
+  readonly avgLatencyMs: number;
+}
+
 // ---- Config ----
 
 export interface LLMConfig {
