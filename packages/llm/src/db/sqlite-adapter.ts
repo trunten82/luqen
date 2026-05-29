@@ -609,6 +609,13 @@ export class SqliteAdapter implements DbAdapter {
     return toUsage(row);
   }
 
+  async purgeUsageBefore(olderThanIso: string): Promise<number> {
+    const result = this.conn
+      .prepare('DELETE FROM llm_usage WHERE occurred_at < ?')
+      .run(olderThanIso);
+    return result.changes;
+  }
+
   async listUsage(filter: UsageFilter = {}): Promise<readonly LlmUsageRecord[]> {
     const clauses: string[] = [];
     const params: Array<string | number> = [];

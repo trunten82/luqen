@@ -54,4 +54,11 @@ export interface DbAdapter {
   // Usage telemetry (Phase 72-01)
   recordUsage(input: RecordUsageInput): Promise<LlmUsageRecord>;
   listUsage(filter?: UsageFilter): Promise<readonly LlmUsageRecord[]>;
+
+  /**
+   * Phase 76 — delete llm_usage rows whose occurred_at is older than
+   * `olderThanIso`. Returns the row count purged. The caller is
+   * responsible for computing the cutoff from the retention policy.
+   */
+  purgeUsageBefore(olderThanIso: string): Promise<number>;
 }
