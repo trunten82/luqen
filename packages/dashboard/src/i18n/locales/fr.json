@@ -122,7 +122,8 @@
     "usernameRequired": "Le nom d'utilisateur est obligatoire.",
     "passwordRequired": "Le mot de passe est obligatoire.",
     "invalidCredentials": "Nom d'utilisateur ou mot de passe invalide.",
-    "learnMore": "Not a user yet? Learn what Luqen is on <a href=\"https://github.com/trunten82/luqen\" rel=\"noopener\">GitHub</a>."
+    "learnMore": "Not a user yet? Learn what Luqen is on <a href=\"https://github.com/trunten82/luqen\" rel=\"noopener\">GitHub</a>.",
+    "genuineRemediation": "Luqen fixes real WCAG issues in your source — <a href=\"https://github.com/trunten82/luqen/blob/master/docs/why-not-an-overlay.md\" rel=\"noopener\">not an overlay</a>."
   },
   "users": {
     "title": "Utilisateurs du Tableau de Bord",
