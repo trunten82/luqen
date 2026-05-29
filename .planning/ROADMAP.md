@@ -2,225 +2,116 @@
 
 ## Milestones
 
-- ✅ **v2.7.0 LLM Module** — [archived](milestones/v2.7.0-ROADMAP.md)
-- ✅ **v2.8.0 Admin UX & Compliance Precision** — Phases 06-08 (shipped 2026-04-06) — [archived](milestones/v2.8.0-ROADMAP.md)
-- ✅ **v2.9.0 Branding Completeness & Org Isolation** — Phases 09-12 (shipped 2026-04-06) — [archived](milestones/v2.9.0-ROADMAP.md)
-- ✅ **v2.10.0 Prompt Safety & API Key Polish** — Phases 13-14 (shipped 2026-04-10) — [archived](milestones/v2.10.0-ROADMAP.md)
-- ✅ **v2.11.0 Brand Intelligence** — Phases 15-21 (shipped 2026-04-12) — [archived](milestones/v2.11.0-ROADMAP.md)
-- ✅ **v2.12.0 Brand Intelligence Polish** — Phases 22-27 (shipped 2026-04-14) — [archived](milestones/v2.12.0-ROADMAP.md)
-- ✅ **v3.0.0 MCP Servers & Agent Companion** — Phases 28-33 (shipped 2026-04-24) — [archived](milestones/v3.0.0-ROADMAP.md)
-- 🚧 **v3.1.0 Agent Companion v2 + Tech Debt & Docs** — Phases 34-42 (in progress)
+- ✅ **v2.7.0 – v3.0.0** — Phases 01-33 (shipped) — see `milestones/` archives
+- ✅ **v3.1.0 Agent Companion v2 + Tech Debt & Docs** — Phases 34-42 (shipped)
+- ✅ **v3.2.0 – v3.4.0 WP Plugin, UI Revision, LLM Cost Telemetry** — Phases 43-77 (shipped directly to master)
+- 🚧 **v3.5.0 Commercial positioning & agency monetization** — Phases 78-82 (in progress)
+
+> Note: `.planning` artifacts lagged behind a sustained direct-to-master run (phases 43–77 — WordPress plugin, UI revision, and the LLM cost-telemetry stack 71–77). Git reality is v3.4.0. This milestone resumes formal roadmapping at **Phase 78**. Earlier milestone detail lives in `milestones/` archives.
 
 ---
 
-## Current Milestone: v3.1.0 Agent Companion v2 + Tech Debt & Docs
+## Current Milestone: v3.5.0 Commercial positioning & agency monetization
 
-**Goal:** Harden v3.0.0's MCP + agent foundation with precise instrumentation, complete the agent companion experience (history, multi-step tool use, polish, org switching), and refresh all documentation.
+**Goal:** Turn verified market research into product — position Luqen explicitly as genuine source-level remediation against the collapsing overlay category, and build the freemium→Pro→Agency monetization spine (Pro feature gates, credit-metered AI fixes, an agency multi-client/white-label tier) that the WP-shelf competitors prove converts. Monetization stays admin-controlled per Core Value; Stripe/Freemius billing is out of scope.
 
-**Granularity:** coarse · **Phases:** 9 · **Requirements:** 33/33 mapped + OAPI-TBD + INST-TBD
+**Granularity:** coarse · **Phases:** 5 · **Requirements:** 22/22 mapped ✓
 
-### Phases
+**Two execution tracks (separate repos, separate CI — parallelizable):**
+- **Platform track** (`luqen` monorepo: dashboard + llm) → Phases 80, 81, 82, and the platform half of 78
+- **WordPress track** (`luqen-wordpress` repo) → Phase 79, and the `readme.txt` half of 78
 
-- [x] **Phase 34: Tokenizer Precision** — Replace char/4 heuristic with per-provider precise tokenizers feeding the 85% compaction trigger (completed 2026-04-24)
-- [x] **Phase 35: Agent Conversation History** — List, search, resume, and delete past agent conversations from the side drawer (completed 2026-04-24)
-- [x] **Phase 36: Multi-Step Tool Use** — Parallel tool calls, automatic error recovery, multi-step planning, and tool-selection rationale logging (completed 2026-04-25)
-- [x] **Phase 37: Streaming UX Polish** — Interrupt, retry, edit-and-resend, copy, and share for the agent chat (completed 2026-04-25)
-- [x] **Phase 38: Multi-Org Context Switching** — Global admins can switch the agent's active org context inside the drawer without re-login (completed 2026-04-25)
-- [x] **Phase 39: Verification Backfill & Deferred-Items Triage** — Formal VERIFICATION.md for v3.0.0 phases, Nyquist coverage report, deferred-items resolution (completed 2026-04-25)
-- [x] **Phase 40: Documentation Sweep & Installer Refresh** — README, OpenAPI specs, installer scripts (actual files, not just docs), MCP integration guide, agent guide, prompt-template guide, RBAC matrix; create new docs for any v3.1.0 surface (agent history, multi-step tool use, streaming UX, multi-org switching) not yet documented (completed 2026-04-25; DOC-02 PARTIAL → Phase 41, DOC-03 SC #3 awaiting runtime LXC test)
-- [x] **Phase 41: OpenAPI Schema Backfill** — Add Fastify route schemas across compliance/branding/llm/dashboard/MCP so `/docs` is substantive and `openapi-drift` + `route-vs-spec` coverage tests go green; closes Plan 40-01 deferred Task 2 and DOC-02 PARTIAL (verified 2026-04-26: 4/5 OAPI requirements PASS; OAPI-04 PARTIAL — dashboard infrastructure shipped but per-route TypeBox `schema:` blocks deferred for ~245 non-MCP routes; OAPI-04 closed by Phase 41.1 verified 2026-04-26 — 7/7 must-haves passed)
-- [x] **Phase 41.1: Dashboard non-MCP per-route TypeBox schema backfill** — Mechanical schema: backfill across the remaining ~245 dashboard non-MCP routes flagged in 41-VERIFICATION.md; closes OAPI-04 PARTIAL (verified 2026-04-26: 7/7 must-haves passed; dashboard.json grew 4715→32622 lines, requestBody 2→38, typed 2xx 0→275; new schema-fidelity assertion locks gain in CI)
-- [x] **Phase 42: Installer Wizard Redesign** — Replace v2-era 2/3-way wizard with a 4-profile model (Scanner CLI, API services, Self-hosted dashboard, Docker Compose) that maps onto the actual v3.1.0 codebase (5 services + monitor agent); register `@luqen/monitor` across systemd/launchd/NSSM for the first time (completed 2026-04-26)
+Ship pattern per phase: wip branch → build → test → merge to master → deploy to lxc-luqen → CI green.
 
-### Phase Details
+## Phases
 
-#### Phase 34: Tokenizer Precision
-**Goal**: Token counts powering the 85% compaction trigger are accurate per-model rather than a 4-char approximation.
-**Depends on**: Nothing (foundational tech debt; unblocks correct compaction for all later phases)
-**Requirements**: TOK-01, TOK-02, TOK-03, TOK-04, TOK-05
+**Phase Numbering:**
+- Integer phases (78, 79, 80…): Planned milestone work
+- Decimal phases (e.g. 80.1): Urgent insertions (marked INSERTED)
+
+- [ ] **Phase 78: Anti-overlay positioning** — Frame Luqen as genuine source-level remediation across WP readme + dashboard/report surfaces, with a "why not an overlay" evidence comparison
+- [ ] **Phase 79: Pro feature-gate bundle (WP plugin)** — Gate full-site/bulk scan, audit history, Excel export, CPT/WooCommerce, multisite behind a free-vs-Pro entitlement check
+- [ ] **Phase 80: Credit-metered AI fixes** — Meter `generate-fix` by org credits on the existing `llm_usage` ledger, gate gracefully when exhausted, and establish the thin per-org entitlement foundation
+- [ ] **Phase 81: Agency tier** — Multi-client console, white-label rebrandable reports + theming, VPAT/ACR generation, partner/resale entitlement
+- [ ] **Phase 82: Pricing & packaging** — Codify Free/Pro/Agency tiers as a feature matrix and a platform-wide plan/entitlement model with documented pricing anchors
+
+## Phase Details
+
+### Phase 78: Anti-overlay positioning
+**Goal**: A prospective and existing user understands Luqen as genuine source-level remediation — not an overlay widget — across the WordPress plugin listing, the dashboard, and scan reports, backed by verified evidence.
+**Track**: Cross-repo — `luqen-wordpress` (`readme.txt`) + `luqen` platform (dashboard/report copy + comparison surface)
+**Depends on**: Nothing (independent; cheapest, highest-impact — ship first). Lightly gated: the jurisdiction-uniqueness comparison claim awaits in-flight research; ship the other claims first and backfill that one line if research lands late.
+**Requirements**: POS-01, POS-02, POS-03
 **Success Criteria** (what must be TRUE):
-  1. `countTokens(messages, model)` returns precise token counts for Ollama, OpenAI, and Anthropic models via per-provider BPE/tiktoken backings.
-  2. Total bundle impact is under 5 MB and contains no native binaries (lightweight pure-JS or wasm only).
-  3. The 85% compaction threshold fires on real token counts; existing compaction UX is unchanged for end users.
-  4. Unknown models fall back to the legacy `char/4` heuristic and emit a warning log identifying the model.
-**Plans**: 3 plans
-- [x] 34-01-PLAN.md — Tokenizer registry + OpenAI/Anthropic/Ollama backends with char/4 fallback + warn-once
-- [x] 34-02-PLAN.md — Wire countMessageTokens into token-budget.ts + AgentService modelId threading + pre-warm
-- [x] 34-03-PLAN.md — End-to-end integration tests, bundle-size guard (<5 MB), monotonicity property tests
-
-#### Phase 35: Agent Conversation History
-**Goal**: Users can find and resume any past agent conversation from a searchable, accessible side-drawer history.
-**Depends on**: Phase 34 (precise compaction so resumed conversations stay coherent)
-**Requirements**: AHIST-01, AHIST-02, AHIST-03, AHIST-04, AHIST-05
-**Success Criteria** (what must be TRUE):
-  1. User sees a paginated list of past conversations (newest first) with title, timestamp, and message count in the side drawer.
-  2. User can free-text search past conversations by message content (case-insensitive), scoped to their user + org.
-  3. User can open any past conversation, see full message history, and append new turns to the same `conversation_id`.
-  4. User can soft-delete a conversation (audit-logged) and start a fresh one without losing access to other history.
-  5. List, search input, and resume/delete actions are fully keyboard-navigable and screen-reader friendly (WCAG 2.2 AA).
-**Plans**: 6 plans
-- [x] 35-01-PLAN.md — Repository extension: migration 050 soft-delete + searchForUser + renameConversation + softDeleteConversation
-- [x] 35-02-PLAN.md — Conversation title-generator module (D-02 AI + D-03 fallback)
-- [x] 35-03-PLAN.md — HTTP routes (list/search/get/rename/delete) + AgentService post-first-turn title hook
-- [x] 35-04-PLAN.md — Handlebars partials, style.css BEM block, i18n copy under agent.history.*
-- [x] 35-05-PLAN.md — agent.js hydration: panel toggle, debounced search, IO pagination, three-dot menu, rename, delete confirm, keyboard flow
-- [x] 35-06-PLAN.md — Playwright e2e round-trip + axe-core WCAG 2.2 AA a11y scan
+  1. A user reading the WP plugin `readme.txt` sees Luqen framed as genuine source-level remediation, with an explicit anti-overlay section naming the risk (overlays don't deliver compliance or prevent lawsuits)
+  2. A user viewing a scan report and the dashboard landing sees genuine-remediation positioning (real fixes in your source, not a widget)
+  3. A user can open a "why not an overlay" comparison surface that cites the verified evidence (FTC $1M settlement, NFB revocation, lawsuits-despite-widget rate)
+**Plans**: TBD
 **UI hint**: yes
 
-#### Phase 36: Multi-Step Tool Use
-**Goal**: The agent plans across multiple tool calls per user turn — in parallel where possible, with automatic recovery from tool errors and a transparent audit trail.
-**Depends on**: Phase 35 (history persistence model is the source of truth for tool-call rows)
-**Requirements**: ATOOL-01, ATOOL-02, ATOOL-03, ATOOL-04
+### Phase 79: Pro feature-gate bundle (WP plugin)
+**Goal**: A free-tier WordPress user can run basic scans, while a Pro-entitled user unlocks the conversion bundle (full-site/bulk scan, audit history, Excel export, CPT/WooCommerce scanning, multisite), with entitlement enforced by the plugin.
+**Track**: `luqen-wordpress` repo (own CI) — independent track, parallelizable with platform work
+**Depends on**: Phase 80 (entitlement foundation) for GATE-06's enterprise-mode path, which reads the connected Luqen org plan. The standalone license-key path is stubbed (no dependency), so the gating UI and free/Pro feature splits can be built in parallel and wired to the foundation at GATE-06.
+**Requirements**: GATE-01, GATE-02, GATE-03, GATE-04, GATE-05, GATE-06
 **Success Criteria** (what must be TRUE):
-  1. When the model returns multiple `tool_use` blocks in one turn, all tools dispatch in parallel and results stream back to the model together.
-  2. A failed tool result is surfaced to the model with retry guidance and the agent recovers automatically up to a per-turn budget.
-  3. The model can chain tool calls across iterations within a single user turn, capped by `max_iterations` (no runaway loops).
-  4. Every tool dispatch records model rationale + outcome in the audit log, visible at `/admin/audit` filterable by tool.
-**Plans**: 6 plans
-- [x] 36-01-PLAN.md — Audit log schema: rationale column + outcomeDetail filter (migration 057)
-- [x] 36-02-PLAN.md — ToolDispatcher.dispatchAll + tool_started/tool_completed SSE frames
-- [x] 36-03-PLAN.md — AgentService: parallel dispatch, retry budget, rationale capture
-- [x] 36-04-PLAN.md — Tool chip strip UI in agent drawer (HBS + agent.js + BEM CSS + i18n)
-- [x] 36-05-PLAN.md — /admin/audit rationale display + outcomeDetail filter
-- [x] 36-06-PLAN.md — Integration + Playwright e2e covering all 4 ATOOL success criteria
-
-#### Phase 37: Streaming UX Polish
-**Goal**: Users have full control over an in-flight agent response and can act on completed messages without leaving the drawer.
-**Depends on**: Phase 35 (edit-and-resend branches require persisted history; superseded marker requires message rows)
-**Requirements**: AUX-01, AUX-02, AUX-03, AUX-04, AUX-05
-**Success Criteria** (what must be TRUE):
-  1. Stop button cancels an in-flight SSE stream and the partial assistant response is persisted as the final state of that turn.
-  2. User can re-run the last assistant turn against the same conversation state with a single click.
-  3. User can edit-and-resend their own message — the conversation branches, the prior assistant reply is marked superseded, and a new turn streams.
-  4. One-click copy on any assistant message places the full markdown source (not rendered HTML) on the clipboard.
-  5. Share action produces a permalink to an audit-viewable conversation snapshot.
-**Plans**: 5 plans
-- [x] 37-01-PLAN.md — DB foundations: migrations 058 (message supersede) + 059 (share_links) + repo extensions
-- [x] 37-02-PLAN.md — UI scaffolding: per-message action partials + BEM CSS + agent.actions.* i18n keys
-- [x] 37-03-PLAN.md — Server routes: AbortSignal stop-persist + retry + edit-resend + share create + share view
-- [x] 37-04-PLAN.md — Client wiring: agent.js handlers for stop/retry/edit/copy/share + UAT checkpoint
-- [x] 37-05-PLAN.md — Playwright e2e + share-view a11y polish + 37-VERIFICATION.md
+  1. A free-tier WP user is limited on full-site/bulk scanning; a Pro-entitled user can run full-site/bulk scans
+  2. A Pro user can view retained audit history for a post/page across scans, scan custom post types / WooCommerce products, and run the plugin across a multisite network
+  3. A Pro user can export findings to Excel (xlsx — no CSV per project rule)
+  4. The plugin enforces free-vs-Pro entitlement: in enterprise mode it derives from the connected Luqen org plan; a standalone license-key path is stubbed for future use
+**Plans**: TBD
 **UI hint**: yes
 
-#### Phase 38: Multi-Org Context Switching
-**Goal**: Global admins can drive the agent against any org's data from a single session, with safe boundaries for non-global users.
-**Depends on**: Phase 36 (tool dispatcher must be re-bindable per turn), Phase 35 (history needs per-turn org attribution)
-**Requirements**: AORG-01, AORG-02, AORG-03, AORG-04
+### Phase 80: Credit-metered AI fixes
+**Goal**: Each org has a credit balance that `generate-fix` decrements on top of the existing `llm_usage` ledger; admins can allocate/top-up credits; when exhausted the flow degrades gracefully to the deterministic fix fallback; balance is visible in the dashboard and WP plugin. This phase also establishes the thin per-org entitlement foundation (plan + allocation persistence) that GATE-06, AGENCY-04, and PRICE-03 build on.
+**Track**: `luqen` platform (llm + dashboard) + a WP consumer surface (`luqen-wordpress`). Builds directly on the `llm_usage` telemetry + pricing registry + retention shipped in Phases 72–77.
+**Depends on**: Phase 78 (sequenced after for ship cadence; functionally independent). Establishes the entitlement foundation other phases consume — so it precedes 79's enterprise path, 81's partner entitlement, and 82's plan model.
+**Requirements**: CREDIT-01, CREDIT-02, CREDIT-03, CREDIT-04, CREDIT-05
 **Success Criteria** (what must be TRUE):
-  1. A user with `admin.system` sees an org switcher in the drawer header and can change the agent's active org without re-login.
-  2. Switching org rebinds tool dispatch + context-hints injection to the new org for all subsequent turns; prior turns remain attributed to their original org in history and audit.
-  3. The active org is visible in the drawer header at all times and persists per-user across sessions.
-  4. Non-global users see no org switcher; any forged switch attempt is rejected server-side with HTTP 403.
-**Plans**: 4 plans
-- [x] 38-01-PLAN.md — Migration 061 (active_org_id column) + UserRepository.setActiveOrgId
-- [x] 38-02-PLAN.md — Drawer org-switcher partial + BEM CSS + i18n keys
-- [x] 38-03-PLAN.md — POST /agent/active-org route, resolveAgentOrgId extension, runTurn per-turn binding
-- [x] 38-04-PLAN.md — agent.js wiring (switcher handler, history auto-switch, org chip) + live UAT
+  1. Each `generate-fix` call decrements the org's credit balance, recorded on top of the existing `llm_usage` ledger (balance + consumption ledger maintained)
+  2. An admin can set or top-up a per-org credit allocation from the dashboard
+  3. When an org's credits are exhausted, `generate-fix` is gated and degrades gracefully to the deterministic fix fallback — never hard-erroring the user flow
+  4. A dashboard user sees remaining credit balance and consumption against allocation on `/admin/llm-usage`
+  5. A WP plugin user sees remaining credits / a paywall prompt when AI fixes are metered out
+**Plans**: TBD
 **UI hint**: yes
 
-#### Phase 39: Verification Backfill & Deferred-Items Triage
-**Goal**: Every v3.0.0 phase has formal verification on record and every deferred item is closed, promoted, or knowingly carried forward.
-**Depends on**: Nothing (parallelizable with feature phases; runs anytime before milestone close)
-**Requirements**: VER-01, VER-02, VER-03
+### Phase 81: Agency tier
+**Goal**: An agency user manages multiple client orgs/sites from one console, produces white-label rebrandable reports and themed client-facing surfaces, generates VPAT/ACR conformance reports, and is governed by a partner/resale entitlement covering N client sites.
+**Track**: `luqen` platform (dashboard)
+**Depends on**: Phase 80 — AGENCY-04 (partner/resale entitlement) extends the thin entitlement foundation established in Phase 80.
+**Requirements**: AGENCY-01, AGENCY-02, AGENCY-03, AGENCY-04, AGENCY-05
 **Success Criteria** (what must be TRUE):
-  1. A formal VERIFICATION.md exists for Phase 30.1, 31.2, 32, 32.1, and 33 covering each success criterion, UAT outcome, and any observed gaps.
-  2. A Nyquist validation coverage report exists for v3.0.0 listing each success criterion and whether it is automatically tested, manually tested, or untested.
-  3. Every line in Phase 31.2 and Phase 32 `deferred-items.md` is resolved as won't-fix, promoted into a v3.1.0 plan, or explicitly deferred to v3.2.0 with rationale.
-**Plans**: 3 plans
-- [x] 39-01-PLAN.md — Backfill VERIFICATION.md for v3.0.0 phases 30.1, 31.2, 32, 32.1, 33
-- [x] 39-02-PLAN.md — Walk all v3.0.0 + v3.1.0 deferred-items sources and produce TRIAGE.md
-- [x] 39-03-PLAN.md — Build v3.0.0-NYQUIST.md coverage report with TRIAGE cross-references
+  1. An agency user manages multiple client orgs/sites from a single multi-client console
+  2. An agency can generate white-label / rebrandable client reports (agency logo + name, not Luqen branding) and apply white-label theming (logo, colors) to client-facing dashboard/report surfaces
+  3. An agency can generate a VPAT / ACR (Accessibility Conformance Report) for a client site
+  4. The platform models a partner/resale entitlement (agency plan covering N client sites)
+**Plans**: TBD
+**UI hint**: yes
 
-### Phase 39.1: Deferred-Item Resolution: agent.js split + test-staleness fixes (6 items from TRIAGE.md) (INSERTED)
-
-**Goal:** Resolve 6 deferred items promoted from Phase 39 TRIAGE.md with passing CI: 5 test-staleness fixes bundled + agent.js structural split into 4 modules.
-**Requirements**: DI-31.2-01, DI-32-01, DI-32-02, DI-32-03, DI-37-01, DI-37-02, DI-38-01, DI-38-02b
-**Depends on:** Phase 39
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 39.1-01-PLAN.md — Bundle 5 test-staleness fixes (auth-flow returnTo, MCP scope tiers, multi-step fetch loader, migration column-list, shareAssistant clipboard mock)
-- [x] 39.1-02-PLAN.md — Split agent.js (2210 LOC) into agent-history.js + agent-tools.js + agent-actions.js + agent-org.js with __luqenAgent namespace and per-module JSDOM tests
-
-#### Phase 40: Documentation Sweep
-**Goal**: External and internal readers see documentation that accurately describes Luqen as it ships at v3.1.0, AND installer scripts deploy v3.1.0 cleanly without manual fix-up.
-**Depends on**: Phase 34, 35, 36, 37, 38 (docs reflect actual implemented behaviour); Phase 39 (RBAC matrix sourced from verified state)
-**Requirements**: DOC-01, DOC-02, DOC-03, DOC-04, DOC-05, DOC-06, DOC-07
+### Phase 82: Pricing & packaging
+**Goal**: Free/Pro/Agency tiers are codified as an explicit feature matrix, driven by a per-org plan/entitlement model that is the single source of truth consumed by dashboard, LLM, and WP, with documented pricing anchors.
+**Track**: `luqen` platform — cross-cutting (consumed by all surfaces)
+**Depends on**: Phases 79, 80, 81 — formalizes and unifies the entitlement slices those phases introduced (credit allocation from 80, partner entitlement from 81, WP entitlement from 79) into one plan model. HARD-GATED on the in-flight enterprise-pricing research, so it sequences LAST.
+**Requirements**: PRICE-01, PRICE-02, PRICE-03
 **Success Criteria** (what must be TRUE):
-  1. Top-level README accurately describes v3.0.0 + v3.1.0 surface (MCP, agent companion, OAuth 2.1, agent history, multi-step tools, streaming UX, multi-org switching) with no stale instructions.
-  2. Swagger/OpenAPI specs are current for compliance, branding, llm, dashboard, and the MCP endpoints — every shipped route appears.
-  3. Installer **scripts** (not just docs) include every new env var, migration baseline (up to 061), systemd unit, admin page, and RBAC permission introduced since v2.12.0. A fresh install of v3.1.0 from these scripts succeeds end-to-end without manual edits.
-  4. Installer docs list every new env var, admin page, and RBAC permission introduced since v2.12.0.
-  5. A standalone MCP integration guide walks Claude Desktop, IDE, and custom client setup including the OAuth 2.1 + PKCE + DCR flow.
-  6. An agent companion user guide covers chat usage, tools, history, org switching, multi-step tool transparency, and speech input from an end-user perspective.
-  7. Prompt-template authoring guide documents locked sections, fence markers, the validator, and the override workflow.
-  8. RBAC matrix lists every permission against every page, route, and MCP tool — end-to-end and machine-checkable against code.
-  9. Any v3.1.0 surface (agent history, multi-step tool use + parallel dispatch + retry budget, streaming UX polish + share permalinks, multi-org context switching) that lacks a dedicated doc gets a NEW doc page added under `docs/`.
-**Plans**: 7 (40-01..07 complete; DOC-02 partial → Phase 41; DOC-03 SC #3 deferred to runtime LXC)
+  1. Free/Pro/Agency tiers are codified as an explicit feature matrix showing which capabilities each tier unlocks
+  2. A per-org plan/entitlement model drives feature availability platform-wide as a single source of truth consumed by dashboard, LLM, and WP
+  3. Pricing anchors are documented (informed by the in-flight enterprise-pricing research; WP anchors free→~$190/yr Pro→~$2,250/yr/25-site Agency already validated)
+**Plans**: TBD
+**UI hint**: yes
 
-#### Phase 41: OpenAPI Schema Backfill
-**Goal**: `/docs` and the committed OpenAPI snapshots reflect every shipped route with its real request/response shape — not stub objects — so the `route-vs-spec` coverage tests pass and `openapi-drift` CI gate stays green.
-**Depends on**: Phase 40 (snapshot infra and CI gates already wired up)
-**Requirements**: OAPI-01, OAPI-02, OAPI-03, OAPI-04, OAPI-05
-**Success Criteria** (what must be TRUE):
-  1. Every Fastify route in compliance/branding/llm/dashboard declares a `schema` (body where applicable + response) using TypeBox or JSON Schema.
-  2. Every MCP tool in `packages/dashboard/src/mcp/tools/*` exposes its input/output schema in the generated `mcp.json` snapshot.
-  3. `route-vs-spec` coverage tests in all 5 service test suites pass.
-  4. `npm run docs:openapi` regenerates byte-identical snapshots; `openapi-drift` CI workflow passes.
-  5. No regression in production behaviour — existing request/response shapes preserved.
-**Plans**: 5 plans
-- [x] 41-01-PLAN.md — Compliance service schemas (16 route files, OAPI-01)
-- [x] 41-02-PLAN.md — Branding service schemas (~22 inline routes, OAPI-02)
-- [x] 41-03-PLAN.md — LLM service schemas (11 route files incl. capability-exec, OAPI-03)
-- [x] 41-04-PLAN.md — Dashboard non-MCP schemas + Zod-to-TypeBox migration (50 files, OAPI-04)
-- [x] 41-05-PLAN.md — Dashboard MCP tool schemas via zod-to-json-schema bridge (Wave 2, OAPI-05)
+## Progress
 
-### Phase 41.1: Dashboard non-MCP per-route TypeBox schema backfill — close OAPI-04 PARTIAL by adding schema: blocks across the remaining ~245 dashboard routes flagged in 41-VERIFICATION.md (INSERTED)
+**Execution Order:**
+Phases execute in numeric order: 78 → 79 → 80 → 81 → 82
 
-**Goal:** Mechanically backfill TypeBox `schema:` blocks across all non-MCP dashboard routes (oauth/, admin/, api/, top-level) so dashboard.json reflects real request/response shapes — replacing the ~301 ops with 2 requestBody / 303 "Default Response" baseline from Phase 41 verification — and add a fidelity assertion (≥95% typed 2xx, all POST/PUT/PATCH have requestBody) to lock the gain in CI.
-**Requirements**: OAPI-04
-**Depends on:** Phase 41
-**Plans:** 5/5 plans complete
-**Status:** VERIFIED PASSED — 7/7 must-haves (verified 2026-04-26)
+Two parallelizable tracks: the WordPress track (78 `readme.txt`, 79) and the platform track (78 dashboard, 80, 81, 82) run concurrently, synchronizing where 79's enterprise path consumes the Phase 80 entitlement foundation.
 
-Plans:
-- [x] 41.1-01-PLAN.md — oauth/* (7 files): well-known/protected-resource/jwks + authorize/token/register
-- [x] 41.1-02-PLAN.md — admin/* part A (7 large/complex files): branding-guidelines, llm, organizations, plugins, service-connections, dashboard-users, roles
-- [x] 41.1-03-PLAN.md — admin/* part B (18 remaining files): api-keys/clients/audit/users/system + jurisdictions/regulations/sources/proposals/system-brand-guidelines/teams + git-hosts/email-reports/webhooks/oauth-keys/monitor/change-history (+ helpers.ts confirmation)
-- [x] 41.1-04-PLAN.md — api/* (6 files excl mcp.ts) + 16 top-level routes (auth/scan/reports/repos/brand-overview/fix-pr/trends/assignments/home/manual-tests/schedules/compare/git-credentials/wcag-enrichment/orgs/tools)
-- [x] 41.1-05-PLAN.md — Wave 2: regenerate dashboard.json snapshot + add schema fidelity assertion (≥95% typed 2xx, every POST/PUT/PATCH requestBody, no bare Default Response without html-page tag)
-
-#### Phase 42: Installer Wizard Redesign
-**Goal**: All 3 installers (`install.sh`, `install.command`, `install.ps1`) match the actual v3.1.0 codebase: 4 deployment profiles (Scanner CLI / API services / Self-hosted dashboard / Docker Compose), per-component install via `INSTALL_COMPONENTS`, and first-class registration of the `@luqen/monitor` agent (currently never installed).
-**Depends on**: Phase 40 (uninstall flow + tested infra), Phase 41 (no installer-side dependency, but ordered after for milestone closure)
-**Requirements**: INST-01, INST-02, INST-03, INST-04, INST-05, INST-06
-**Success Criteria** (what must be TRUE):
-  1. Interactive wizard exposes 4 deployment profiles aligned to real codebase topologies; each maps to a documented set of installed packages and registered services.
-  2. Operator can pick any subset of `compliance`, `branding`, `llm` under the API-services profile; dashboard profile lets them disable any backing service with a graceful-degradation note.
-  3. `@luqen/monitor` is registered as `luqen-monitor.service` (Linux), `io.luqen.monitor.plist` (macOS), and `LuqenMonitor` (Windows NSSM / Task Scheduler) when the user opts in.
-  4. Non-interactive flags add `--profile cli|api|dashboard|docker`, `--api-services <csv>`, `--with-monitor`. Default profile remains `dashboard` so existing `--non-interactive` invocations are unchanged.
-  5. `install.ps1` reaches feature parity with `install.sh` (currently only offers bare-metal vs docker, no component choice).
-  6. Each profile validated end-to-end against a fresh container in CI or operator dry-run.
-**Plans**: 4 plans
-- [x] 42-01-PLAN.md — install.sh redesign (4 profiles + INSTALL_COMPONENTS dispatch + monitor systemd unit + monitor OAuth client)
-- [x] 42-02-PLAN.md — install.command launchd loop + install.ps1 4-profile rewrite + OAuth/dashboard-config parity bug fixes + monitor NSSM/Task-Scheduler service
-- [x] 42-03-PLAN.md — docker-compose.yml: add llm + monitor (port 4300, opt-in profile) + installer docs (changelog, env-vars, installation)
-- [x] 42-04-PLAN.md — verification: LXC live runtime gate for install.sh + manual UAT checklists for macOS/Windows + 42-VERIFICATION.md
-
-### Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 34. Tokenizer Precision | 3/3 | Complete    | 2026-04-24 |
-| 35. Agent Conversation History | 6/6 | Complete    | 2026-04-24 |
-| 36. Multi-Step Tool Use | 6/6 | Complete    | 2026-04-25 |
-| 37. Streaming UX Polish | 5/5 | Complete    | 2026-04-25 |
-| 38. Multi-Org Context Switching | 4/4 | Complete    | 2026-04-25 |
-| 39. Verification Backfill & Deferred-Items Triage | 3/3 | Complete    | 2026-04-25 |
-| 40. Documentation Sweep | 7/7 | Complete    | 2026-04-25 |
-| 41. OpenAPI Schema Backfill | 0/5 | Planned     | - |
-| 42. Installer Wizard Redesign | 4/4 | Complete   | 2026-04-26 |
-
-### Coverage
-
-✓ All 33 v3.1.0 requirements mapped to exactly one phase. No orphans.
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 78. Anti-overlay positioning | v3.5.0 | 0/TBD | Not started | - |
+| 79. Pro feature-gate bundle (WP plugin) | v3.5.0 | 0/TBD | Not started | - |
+| 80. Credit-metered AI fixes | v3.5.0 | 0/TBD | Not started | - |
+| 81. Agency tier | v3.5.0 | 0/TBD | Not started | - |
+| 82. Pricing & packaging | v3.5.0 | 0/TBD | Not started | - |
