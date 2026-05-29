@@ -33,7 +33,7 @@ const TrendsExportQuerystringSchema = Type.Object(
 const XLSX_CONTENT_TYPE =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-async function buildXlsx(
+export async function buildXlsx(
   sheetName: string,
   headers: readonly string[],
   rows: readonly (readonly string[])[],
