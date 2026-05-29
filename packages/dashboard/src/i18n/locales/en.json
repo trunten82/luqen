@@ -123,6 +123,7 @@
     "passwordLabel": "Password",
     "signInButton": "Sign in",
     "learnMore": "Not a user yet? Learn what Luqen is on <a href=\"https://github.com/trunten82/luqen\" rel=\"noopener\">GitHub</a>.",
+    "genuineRemediation": "Luqen fixes real WCAG issues in your source — <a href=\"https://github.com/trunten82/luqen/blob/master/docs/why-not-an-overlay.md\" rel=\"noopener\">not an overlay</a>.",
     "signInWithApiKey": "Sign in with API key",
     "signInWithPassword": "Or sign in with password",
     "signInFailed": "Sign in failed",
