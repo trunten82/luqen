@@ -7,6 +7,7 @@ import type {
   CapabilityAssignment, AssignCapabilityInput, CapabilityName,
   OAuthClient, User, PromptOverride,
   LlmUsageRecord, RecordUsageInput, UsageFilter,
+  UsageGroupDimension, UsageSummaryRow,
   ProviderType,
 } from '../types.js';
 import type { DbAdapter } from './adapter.js';
@@ -607,6 +608,72 @@ export class SqliteAdapter implements DbAdapter {
     );
     const row = this.conn.prepare('SELECT * FROM llm_usage WHERE id = ?').get(id) as UsageRow;
     return toUsage(row);
+  }
+
+  async summarizeUsage(
+    filter: UsageFilter,
+    groupBy: UsageGroupDimension,
+  ): Promise<readonly UsageSummaryRow[]> {
+    const clauses: string[] = [];
+    const params: Array<string | number> = [];
+    if (filter.orgId !== undefined) { clauses.push('org_id = ?'); params.push(filter.orgId); }
+    if (filter.capability !== undefined) { clauses.push('capability = ?'); params.push(filter.capability); }
+    if (filter.from !== undefined) { clauses.push('occurred_at >= ?'); params.push(filter.from); }
+    if (filter.to !== undefined) { clauses.push('occurred_at <= ?'); params.push(filter.to); }
+    const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+    // Phase 77 — group-by SQL. `model` aggregates by model_name so
+    // an admin rename of the model row doesn't fragment history;
+    // `provider` aggregates by provider_type since multiple provider
+    // rows of the same type share a price. `day` substring-trims the
+    // ISO timestamp to YYYY-MM-DD.
+    const groupExpr: Record<UsageGroupDimension, string> = {
+      capability: 'capability',
+      model: 'model_name',
+      provider: 'provider_type',
+      org: `COALESCE(org_id, '')`,
+      day: `substr(occurred_at, 1, 10)`,
+    };
+    const groupCol = groupExpr[groupBy];
+    const rows = this.conn.prepare(
+      `SELECT
+         ${groupCol}                                   AS key,
+         COUNT(*)                                      AS call_count,
+         SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok_count,
+         SUM(CASE WHEN status = 'ok' THEN 0 ELSE 1 END) AS error_count,
+         SUM(prompt_tokens)                            AS prompt_tokens,
+         SUM(completion_tokens)                        AS completion_tokens,
+         SUM(total_tokens)                             AS total_tokens,
+         SUM(COALESCE(total_cost_usd, 0))              AS total_cost_usd,
+         SUM(CASE WHEN total_cost_usd IS NULL THEN 1 ELSE 0 END) AS unpriced_rows,
+         AVG(latency_ms)                               AS avg_latency_ms
+       FROM llm_usage
+       ${where}
+       GROUP BY key
+       ORDER BY total_cost_usd DESC, call_count DESC`,
+    ).all(...params) as Array<{
+      key: string | null;
+      call_count: number;
+      ok_count: number;
+      error_count: number;
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+      total_cost_usd: number;
+      unpriced_rows: number;
+      avg_latency_ms: number;
+    }>;
+    return rows.map((r) => ({
+      key: r.key === null || r.key === '' ? 'system' : r.key,
+      callCount: r.call_count,
+      okCount: r.ok_count,
+      errorCount: r.error_count,
+      promptTokens: r.prompt_tokens ?? 0,
+      completionTokens: r.completion_tokens ?? 0,
+      totalTokens: r.total_tokens ?? 0,
+      totalCostUsd: r.total_cost_usd ?? 0,
+      unpricedRows: r.unpriced_rows ?? 0,
+      avgLatencyMs: Math.round(r.avg_latency_ms ?? 0),
+    }));
   }
 
   async purgeUsageBefore(olderThanIso: string): Promise<number> {

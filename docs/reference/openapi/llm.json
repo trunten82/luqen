@@ -4224,6 +4224,195 @@
           }
         }
       }
+    },
+    "/api/v1/usage/summary": {
+      "get": {
+        "summary": "Aggregate LLM usage rows by a chosen dimension",
+        "tags": [
+          "usage"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "groupBy",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "orgId",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "capability",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "required": [
+                    "groupBy",
+                    "rows"
+                  ],
+                  "properties": {
+                    "groupBy": {
+                      "type": "string"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object",
+                        "required": [
+                          "key",
+                          "callCount",
+                          "okCount",
+                          "errorCount",
+                          "promptTokens",
+                          "completionTokens",
+                          "totalTokens",
+                          "totalCostUsd",
+                          "unpricedRows",
+                          "avgLatencyMs"
+                        ],
+                        "properties": {
+                          "key": {
+                            "type": "string"
+                          },
+                          "callCount": {
+                            "type": "number"
+                          },
+                          "okCount": {
+                            "type": "number"
+                          },
+                          "errorCount": {
+                            "type": "number"
+                          },
+                          "promptTokens": {
+                            "type": "number"
+                          },
+                          "completionTokens": {
+                            "type": "number"
+                          },
+                          "totalTokens": {
+                            "type": "number"
+                          },
+                          "totalCostUsd": {
+                            "type": "number"
+                          },
+                          "unpricedRows": {
+                            "type": "number"
+                          },
+                          "avgLatencyMs": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "servers": [

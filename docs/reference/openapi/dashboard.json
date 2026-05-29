@@ -11445,6 +11445,14 @@
             "in": "query",
             "name": "to",
             "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "groupBy",
+            "required": false
           }
         ],
         "responses": {
@@ -11522,6 +11530,14 @@
             },
             "in": "query",
             "name": "to",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "groupBy",
             "required": false
           }
         ],

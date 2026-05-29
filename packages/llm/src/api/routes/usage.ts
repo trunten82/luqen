@@ -169,6 +169,43 @@ function computeTotals(rows: readonly LlmUsageRecord[]): {
   };
 }
 
+const ALLOWED_GROUPS: ReadonlyArray<string> = ['capability', 'model', 'provider', 'org', 'day'];
+
+const UsageSummaryRowSchema = Type.Object(
+  {
+    key: Type.String(),
+    callCount: Type.Number(),
+    okCount: Type.Number(),
+    errorCount: Type.Number(),
+    promptTokens: Type.Number(),
+    completionTokens: Type.Number(),
+    totalTokens: Type.Number(),
+    totalCostUsd: Type.Number(),
+    unpricedRows: Type.Number(),
+    avgLatencyMs: Type.Number(),
+  },
+  { additionalProperties: true },
+);
+
+const UsageSummaryResponse = Type.Object(
+  {
+    groupBy: Type.String(),
+    rows: Type.Array(UsageSummaryRowSchema),
+  },
+  { additionalProperties: true },
+);
+
+const UsageSummaryQuery = Type.Object(
+  {
+    groupBy: Type.String(),
+    orgId: Type.Optional(Type.String()),
+    capability: Type.Optional(Type.String()),
+    from: Type.Optional(Type.String()),
+    to: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
 export async function registerUsageRoutes(
   app: FastifyInstance,
   db: DbAdapter,
@@ -219,6 +256,64 @@ export async function registerUsageRoutes(
 
       const rows = await db.listUsage(filter);
       return { rows, totals: computeTotals(rows) };
+    },
+  );
+
+  // Phase 77 — aggregate view. Same auth + org-scoping as /usage.
+  app.get(
+    '/api/v1/usage/summary',
+    {
+      preHandler: [requireScope('read')],
+      schema: {
+        querystring: UsageSummaryQuery,
+        response: {
+          200: UsageSummaryResponse,
+          400: ErrorEnvelope,
+          401: ErrorEnvelope,
+          403: ErrorEnvelope,
+        },
+        tags: ['usage'],
+        summary: 'Aggregate LLM usage rows by a chosen dimension',
+      },
+    },
+    async (request, reply) => {
+      const q = request.query as Record<string, string | undefined>;
+      const groupBy = q['groupBy'];
+      if (groupBy === undefined || !ALLOWED_GROUPS.includes(groupBy)) {
+        return reply.code(400).send({
+          error: 'invalid_groupBy',
+          message: `groupBy must be one of ${ALLOWED_GROUPS.join(', ')}`,
+        });
+      }
+      if (typeof q['capability'] === 'string'
+          && !(CAPABILITY_NAMES as readonly string[]).includes(q['capability'])) {
+        return reply.code(400).send({
+          error: 'invalid_capability',
+          message: `unknown capability '${q['capability']}'`,
+        });
+      }
+      let scopedOrg: string | null;
+      try {
+        scopedOrg = resolveOrgFilter(
+          request,
+          typeof q['orgId'] === 'string' ? q['orgId'] : undefined,
+        );
+      } catch (err) {
+        if (err instanceof ForbiddenOrgError) {
+          return reply.code(403).send({ error: 'forbidden_org', message: err.message });
+        }
+        throw err;
+      }
+      const filter: UsageFilter = {
+        ...(scopedOrg !== null ? { orgId: scopedOrg } : {}),
+        ...(typeof q['capability'] === 'string'
+          ? { capability: q['capability'] as (typeof CAPABILITY_NAMES)[number] }
+          : {}),
+        ...(typeof q['from'] === 'string' ? { from: q['from'] } : {}),
+        ...(typeof q['to'] === 'string' ? { to: q['to'] } : {}),
+      };
+      const rows = await db.summarizeUsage(filter, groupBy as 'capability' | 'model' | 'provider' | 'org' | 'day');
+      return { groupBy, rows };
     },
   );
 }

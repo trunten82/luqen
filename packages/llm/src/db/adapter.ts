@@ -4,6 +4,7 @@ import type {
   CapabilityAssignment, AssignCapabilityInput, CapabilityName,
   OAuthClient, User, PromptOverride,
   LlmUsageRecord, RecordUsageInput, UsageFilter,
+  UsageGroupDimension, UsageSummaryRow,
 } from '../types.js';
 
 export interface DbAdapter {
@@ -61,4 +62,14 @@ export interface DbAdapter {
    * responsible for computing the cutoff from the retention policy.
    */
   purgeUsageBefore(olderThanIso: string): Promise<number>;
+
+  /**
+   * Phase 77 — aggregate llm_usage rows by a chosen dimension. Used
+   * by the dashboard's breakdown view. Aggregation runs in SQL so
+   * large date ranges don't fan-out into Node.
+   */
+  summarizeUsage(
+    filter: UsageFilter,
+    groupBy: UsageGroupDimension,
+  ): Promise<readonly UsageSummaryRow[]>;
 }

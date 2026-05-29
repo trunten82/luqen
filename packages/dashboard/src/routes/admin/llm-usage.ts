@@ -18,7 +18,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
 import { HtmlPageSchema, ErrorEnvelope } from '../../api/schemas/envelope.js';
-import type { LLMClient, LlmUsageRow, LlmUsageTotals } from '../../llm-client.js';
+import type { LLMClient, LlmUsageRow, LlmUsageTotals, LlmUsageSummaryRow, LlmUsageGroupBy } from '../../llm-client.js';
 import { escapeHtml } from './helpers.js';
 import { buildXlsx } from '../api/export.js';
 
@@ -28,9 +28,22 @@ const UsageQuery = Type.Object(
     capability: Type.Optional(Type.String()),
     from: Type.Optional(Type.String()),
     to: Type.Optional(Type.String()),
+    groupBy: Type.Optional(Type.String()),
   },
   { additionalProperties: true },
 );
+
+const GROUP_BY_OPTIONS: ReadonlyArray<{ value: LlmUsageGroupBy; label: string }> = [
+  { value: 'capability', label: 'Capability' },
+  { value: 'model',      label: 'Model' },
+  { value: 'provider',   label: 'Provider' },
+  { value: 'org',        label: 'Org' },
+  { value: 'day',        label: 'Day' },
+];
+
+function isValidGroupBy(s: string): s is LlmUsageGroupBy {
+  return GROUP_BY_OPTIONS.some((o) => o.value === s);
+}
 
 /**
  * Accept a `YYYY-MM-DD` or full ISO timestamp. Returns a full ISO
@@ -146,6 +159,40 @@ const CAPABILITY_OPTIONS = [
   'generate-notification-content',
 ] as const;
 
+function renderBreakdown(
+  groupBy: LlmUsageGroupBy,
+  rows: ReadonlyArray<LlmUsageSummaryRow>,
+): string {
+  if (rows.length === 0) {
+    return `<p class="text-muted">No rows match the current filters.</p>`;
+  }
+  const groupLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label ?? groupBy;
+  const body = rows.map((r) => {
+    const coverage = r.unpricedRows > 0
+      ? `<span class="text-muted"> (+${r.unpricedRows} unpriced)</span>`
+      : '';
+    return `<tr>
+      <td data-label="${escapeHtml(groupLabel)}">${escapeHtml(r.key)}</td>
+      <td data-label="Calls" class="num">${r.callCount}<small class="text-muted"> · ${r.okCount} ok · ${r.errorCount} err</small></td>
+      <td data-label="Tokens" class="num">${r.totalTokens}</td>
+      <td data-label="Cost (USD)" class="num"><strong>$${r.totalCostUsd.toFixed(4)}</strong>${coverage}</td>
+      <td data-label="Avg latency" class="num">${r.avgLatencyMs} ms</td>
+    </tr>`;
+  }).join('\n');
+  return `<table class="table">
+    <thead>
+      <tr>
+        <th>${escapeHtml(groupLabel)}</th>
+        <th class="num">Calls</th>
+        <th class="num">Total tokens</th>
+        <th class="num">Cost (USD)</th>
+        <th class="num">Avg latency</th>
+      </tr>
+    </thead>
+    <tbody>${body}</tbody>
+  </table>`;
+}
+
 function renderPage(opts: {
   readonly llmConnected: boolean;
   readonly canFilterCrossOrg: boolean;
@@ -154,7 +201,9 @@ function renderPage(opts: {
   readonly filterCapability: string;
   readonly filterFrom: string;
   readonly filterTo: string;
+  readonly groupBy: LlmUsageGroupBy;
   readonly rows: ReadonlyArray<LlmUsageRow>;
+  readonly summary: ReadonlyArray<LlmUsageSummaryRow>;
   readonly totals: LlmUsageTotals;
   readonly errorMessage: string | null;
 }): string {
@@ -176,6 +225,10 @@ function renderPage(opts: {
   const capOptions = CAPABILITY_OPTIONS
     .map((c) => `<option value="${c}"${c === opts.filterCapability ? ' selected' : ''}>${c}</option>`)
     .join('');
+
+  const groupByOptions = GROUP_BY_OPTIONS.map((o) =>
+    `<option value="${o.value}"${o.value === opts.groupBy ? ' selected' : ''}>${o.label}</option>`,
+  ).join('');
 
   // Preserve the current filters in the CSV export link.
   const exportQs = new URLSearchParams();
@@ -210,12 +263,23 @@ function renderPage(opts: {
         <span class="field__label">To</span>
         <input type="date" name="to" value="${escapeHtml(opts.filterTo)}" class="input">
       </label>
+      <label class="field">
+        <span class="field__label">Group by</span>
+        <select name="groupBy" class="input">
+          ${groupByOptions}
+        </select>
+      </label>
       <div class="field field--actions">
         <button type="submit" class="btn btn--primary">Apply</button>
         <a href="/admin/llm-usage" class="btn btn--ghost">Reset</a>
         <a href="${exportUrl}" class="btn btn--secondary" aria-label="Download current filter as Excel">Export Excel</a>
       </div>
     </form>
+
+    <section class="card mb-md" aria-labelledby="breakdown-heading">
+      <h2 id="breakdown-heading" class="card__title">Breakdown by ${escapeHtml(GROUP_BY_OPTIONS.find((o) => o.value === opts.groupBy)?.label ?? opts.groupBy)}</h2>
+      ${renderBreakdown(opts.groupBy, opts.summary)}
+    </section>
 
     <div class="table-wrap">
       <table class="table">
@@ -258,7 +322,7 @@ export async function llmUsageRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
-      const q = request.query as { orgId?: string; capability?: string; from?: string; to?: string };
+      const q = request.query as { orgId?: string; capability?: string; from?: string; to?: string; groupBy?: string };
       const isAdmin = isSystemAdmin(request);
       const callerOrg = callerOrgId(request) ?? '';
       const filterOrgId = isAdmin
@@ -269,6 +333,9 @@ export async function llmUsageRoutes(
       const toIso = normalizeDate(q.to, 'end');
       const filterFrom = q.from ?? '';
       const filterTo = q.to ?? '';
+      const groupBy: LlmUsageGroupBy = q.groupBy !== undefined && isValidGroupBy(q.groupBy)
+        ? q.groupBy
+        : 'capability';
 
       if (llmClient === null) {
         const body = renderPage({
@@ -279,6 +346,8 @@ export async function llmUsageRoutes(
           filterCapability,
           filterFrom,
           filterTo,
+          groupBy,
+          summary: [],
           rows: [],
           totals: {
             callCount: 0, okCount: 0, errorCount: 0,
@@ -298,13 +367,16 @@ export async function llmUsageRoutes(
       }
 
       try {
-        const { rows, totals } = await llmClient.listUsage({
+        const filterArgs = {
           ...(filterOrgId !== '' ? { orgId: filterOrgId } : {}),
           ...(filterCapability !== '' ? { capability: filterCapability } : {}),
           ...(fromIso !== null ? { from: fromIso } : {}),
           ...(toIso !== null ? { to: toIso } : {}),
-          limit: 500,
-        });
+        };
+        const [usage, summary] = await Promise.all([
+          llmClient.listUsage({ ...filterArgs, limit: 500 }),
+          llmClient.summarizeUsage({ ...filterArgs, groupBy }),
+        ]);
         const body = renderPage({
           llmConnected: true,
           canFilterCrossOrg: isAdmin,
@@ -313,8 +385,10 @@ export async function llmUsageRoutes(
           filterCapability,
           filterFrom,
           filterTo,
-          rows,
-          totals,
+          groupBy,
+          rows: usage.rows,
+          summary: summary.rows,
+          totals: usage.totals,
           errorMessage: null,
         });
         return reply.view('admin/llm-usage.hbs', {
@@ -333,6 +407,8 @@ export async function llmUsageRoutes(
           filterCapability,
           filterFrom,
           filterTo,
+          groupBy,
+          summary: [],
           rows: [],
           totals: {
             callCount: 0, okCount: 0, errorCount: 0,
