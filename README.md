@@ -30,6 +30,8 @@ Luqen is an enterprise accessibility platform that gives teams visibility into d
 
 Under the hood, Luqen uses the [pa11y](https://pa11y.org/) library directly and [axe-core](https://github.com/dequelabs/axe-core) for scanning, but wraps them in a complete platform: team management, role-based access, issue assignment lifecycles, scheduled scans, email reports, plugin ecosystem, and more. The goal is not just to find accessibility problems, but to help organizations systematically fix them.
 
+**Genuine remediation, not an overlay.** Luqen finds real WCAG violations and helps you fix them in your actual source — it is the opposite of an accessibility overlay/widget. Overlays don't deliver compliance (the FTC fined a leading overlay vendor **$1M** in 2025 over exactly that claim) and don't stop lawsuits (~a quarter of 2025 US web-accessibility suits hit sites that already had a widget). See **[Why not an overlay?](docs/why-not-an-overlay.md)** for the evidence and a side-by-side comparison.
+
 > **Why "Luqen"?** A coined name, unique to this project. Pronounced "LOO-ken".
 
 ---
