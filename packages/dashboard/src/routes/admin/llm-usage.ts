@@ -20,14 +20,60 @@ import { requirePermission } from '../../auth/middleware.js';
 import { HtmlPageSchema, ErrorEnvelope } from '../../api/schemas/envelope.js';
 import type { LLMClient, LlmUsageRow, LlmUsageTotals } from '../../llm-client.js';
 import { escapeHtml } from './helpers.js';
+import { buildXlsx } from '../api/export.js';
 
 const UsageQuery = Type.Object(
   {
     orgId: Type.Optional(Type.String()),
     capability: Type.Optional(Type.String()),
+    from: Type.Optional(Type.String()),
+    to: Type.Optional(Type.String()),
   },
   { additionalProperties: true },
 );
+
+/**
+ * Accept a `YYYY-MM-DD` or full ISO timestamp. Returns a full ISO
+ * string clamped to the start (00:00) or end (23:59:59.999) of the
+ * day when the input is date-only. Returns null on invalid input.
+ */
+function normalizeDate(raw: string | undefined, mode: 'start' | 'end'): string | null {
+  if (raw === undefined || raw === '') return null;
+  // YYYY-MM-DD only?
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(raw);
+  const stamp = dateOnly
+    ? (mode === 'start' ? `${raw}T00:00:00.000Z` : `${raw}T23:59:59.999Z`)
+    : raw;
+  const parsed = new Date(stamp);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+const USAGE_XLSX_HEADERS: ReadonlyArray<string> = [
+  'When (UTC)', 'Org', 'Capability', 'Provider', 'Model',
+  'Prompt tokens', 'Completion tokens', 'Total tokens',
+  'Input cost (USD)', 'Output cost (USD)', 'Total cost (USD)',
+  'Latency (ms)', 'Status', 'Error class',
+];
+
+function usageRowsToXlsxRows(rows: ReadonlyArray<LlmUsageRow>): ReadonlyArray<ReadonlyArray<string>> {
+  return rows.map((r) => [
+    r.occurredAt,
+    r.orgId ?? '',
+    r.capability,
+    r.providerType,
+    r.modelName,
+    String(r.promptTokens),
+    String(r.completionTokens),
+    String(r.totalTokens),
+    r.inputCostUsd === null ? '' : r.inputCostUsd.toFixed(6),
+    r.outputCostUsd === null ? '' : r.outputCostUsd.toFixed(6),
+    r.totalCostUsd === null ? '' : r.totalCostUsd.toFixed(6),
+    String(r.latencyMs),
+    r.status,
+    r.errorClass ?? '',
+  ]);
+}
 
 function isSystemAdmin(request: FastifyRequest): boolean {
   const user = request.user as
@@ -106,6 +152,8 @@ function renderPage(opts: {
   readonly currentOrgId: string;
   readonly filterOrgId: string;
   readonly filterCapability: string;
+  readonly filterFrom: string;
+  readonly filterTo: string;
   readonly rows: ReadonlyArray<LlmUsageRow>;
   readonly totals: LlmUsageTotals;
   readonly errorMessage: string | null;
@@ -129,8 +177,16 @@ function renderPage(opts: {
     .map((c) => `<option value="${c}"${c === opts.filterCapability ? ' selected' : ''}>${c}</option>`)
     .join('');
 
+  // Preserve the current filters in the CSV export link.
+  const exportQs = new URLSearchParams();
+  if (opts.filterOrgId !== '') exportQs.set('orgId', opts.filterOrgId);
+  if (opts.filterCapability !== '') exportQs.set('capability', opts.filterCapability);
+  if (opts.filterFrom !== '') exportQs.set('from', opts.filterFrom);
+  if (opts.filterTo !== '') exportQs.set('to', opts.filterTo);
+  const exportUrl = `/admin/llm-usage/export.xlsx${exportQs.toString() === '' ? '' : `?${exportQs.toString()}`}`;
+
   return `<section aria-label="LLM Usage">
-    <p class="text-muted mb-md">Per-inference token usage and latency across all capabilities. Cost figures are not yet calculated (Phase 72 deliberately ships tokens-only until a pricing source is chosen).</p>
+    <p class="text-muted mb-md">Per-inference token usage, latency and USD spend across all capabilities. Costs are computed from the hard-coded pricing registry (Phase 74); rows whose model is not in the registry render with an empty cost cell.</p>
 
     ${renderTotals(opts.totals)}
 
@@ -146,9 +202,18 @@ function renderPage(opts: {
           ${capOptions}
         </select>
       </label>
+      <label class="field">
+        <span class="field__label">From</span>
+        <input type="date" name="from" value="${escapeHtml(opts.filterFrom)}" class="input">
+      </label>
+      <label class="field">
+        <span class="field__label">To</span>
+        <input type="date" name="to" value="${escapeHtml(opts.filterTo)}" class="input">
+      </label>
       <div class="field field--actions">
         <button type="submit" class="btn btn--primary">Apply</button>
         <a href="/admin/llm-usage" class="btn btn--ghost">Reset</a>
+        <a href="${exportUrl}" class="btn btn--secondary" aria-label="Download current filter as Excel">Export Excel</a>
       </div>
     </form>
 
@@ -193,13 +258,17 @@ export async function llmUsageRoutes(
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
-      const q = request.query as { orgId?: string; capability?: string };
+      const q = request.query as { orgId?: string; capability?: string; from?: string; to?: string };
       const isAdmin = isSystemAdmin(request);
       const callerOrg = callerOrgId(request) ?? '';
       const filterOrgId = isAdmin
         ? (q.orgId ?? '')
         : callerOrg;
       const filterCapability = q.capability ?? '';
+      const fromIso = normalizeDate(q.from, 'start');
+      const toIso = normalizeDate(q.to, 'end');
+      const filterFrom = q.from ?? '';
+      const filterTo = q.to ?? '';
 
       if (llmClient === null) {
         const body = renderPage({
@@ -208,6 +277,8 @@ export async function llmUsageRoutes(
           currentOrgId: callerOrg,
           filterOrgId,
           filterCapability,
+          filterFrom,
+          filterTo,
           rows: [],
           totals: {
             callCount: 0, okCount: 0, errorCount: 0,
@@ -230,6 +301,8 @@ export async function llmUsageRoutes(
         const { rows, totals } = await llmClient.listUsage({
           ...(filterOrgId !== '' ? { orgId: filterOrgId } : {}),
           ...(filterCapability !== '' ? { capability: filterCapability } : {}),
+          ...(fromIso !== null ? { from: fromIso } : {}),
+          ...(toIso !== null ? { to: toIso } : {}),
           limit: 500,
         });
         const body = renderPage({
@@ -238,6 +311,8 @@ export async function llmUsageRoutes(
           currentOrgId: callerOrg,
           filterOrgId,
           filterCapability,
+          filterFrom,
+          filterTo,
           rows,
           totals,
           errorMessage: null,
@@ -256,6 +331,8 @@ export async function llmUsageRoutes(
           currentOrgId: callerOrg,
           filterOrgId,
           filterCapability,
+          filterFrom,
+          filterTo,
           rows: [],
           totals: {
             callCount: 0, okCount: 0, errorCount: 0,
@@ -272,6 +349,58 @@ export async function llmUsageRoutes(
           user: request.user,
           bodyHtml: body,
         });
+      }
+    },
+  );
+
+  // Phase 75 — Excel export. CSV is retired project-wide
+  // (feedback_exports_excel_only); the shared buildXlsx helper from
+  // routes/api/export.ts handles header styling + auto-filter +
+  // frozen-pane. Re-uses listUsage so the same server-side org
+  // scoping (admin.org forced to caller's org) applies identically.
+  // Higher row cap (10k) since exports usually want history.
+  server.get(
+    '/admin/llm-usage/export.xlsx',
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: {
+        querystring: UsageQuery,
+        tags: ['html-page'],
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
+      if (llmClient === null) {
+        return reply.code(503).header('content-type', 'text/plain').send('LLM service not connected');
+      }
+      const q = request.query as { orgId?: string; capability?: string; from?: string; to?: string };
+      const isAdmin = isSystemAdmin(request);
+      const callerOrg = callerOrgId(request) ?? '';
+      const filterOrgId = isAdmin ? (q.orgId ?? '') : callerOrg;
+      const fromIso = normalizeDate(q.from, 'start');
+      const toIso = normalizeDate(q.to, 'end');
+      try {
+        const { rows } = await llmClient.listUsage({
+          ...(filterOrgId !== '' ? { orgId: filterOrgId } : {}),
+          ...(q.capability !== undefined && q.capability !== '' ? { capability: q.capability } : {}),
+          ...(fromIso !== null ? { from: fromIso } : {}),
+          ...(toIso !== null ? { to: toIso } : {}),
+          limit: 10000,
+        });
+        const buffer = await buildXlsx(
+          'LLM Usage',
+          USAGE_XLSX_HEADERS,
+          usageRowsToXlsxRows(rows),
+          [22, 26, 28, 12, 26, 14, 14, 14, 16, 16, 16, 12, 10, 22],
+        );
+        const stamp = new Date().toISOString().slice(0, 10);
+        reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        reply.header('Content-Disposition', `attachment; filename="luqen-llm-usage-${stamp}.xlsx"`);
+        return reply.send(buffer);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'unknown';
+        return reply.code(502).header('content-type', 'text/plain')
+          .send(`LLM usage export failed: ${message}`);
       }
     },
   );
