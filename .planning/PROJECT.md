@@ -10,30 +10,32 @@ AI-powered accessibility compliance that adapts to each organization's jurisdict
 
 ## Current State
 
-v3.0.0 shipped 2026-04-24 — MCP Servers & Agent Companion. All Luqen services (compliance, branding, LLM, dashboard) expose Streamable HTTP MCP endpoints with OAuth 2.1 Authorization Code + PKCE + DCR for external clients (Claude Desktop, IDEs). Dashboard gains a conversational agent companion with text + speech input, SSE streaming, native-dialog confirmation for destructive tools, context-hints (recent scans + active guidelines injected per turn), token-budget compaction at 85% of model max, and an admin audit log viewer at /admin/audit. 10 phases (28-33 including inserted 30.1, 31.1, 31.2, 32.1), 36 plans, 22/22 requirements satisfied. Previous: v2.12.0 (2026-04-14) Brand Intelligence Polish.
+v3.4.0 line (package version 3.4.0). Since v3.1.0 the platform has shipped the WordPress plugin (standalone axe-core + enterprise mode), WP network/multi-team modes, public badges, the UI revision, and a sustained run of dashboard/LLM phases (71–77) delivered directly to master with per-phase CI + lxc-luqen deploy: NOTIF per-recipient unsubscribe (71), the LLM cost-telemetry stack — `llm_usage` schema, capability instrumentation, read API + `/admin/llm-usage` page, IDOR fix, pricing registry + cost columns, retention, and a group-by breakdown view (72–77). The notify-email/slack/teams plugins were upgraded to v1.1.0 to consume the dispatcher's rich rendered fields. Note: `.planning` artifacts lagged behind this direct-to-master run; this milestone resyncs them.
 
-## Current Milestone: v3.1.0 Agent Companion v2 + Tech Debt & Docs
+## Current Milestone: v3.5.0 Commercial positioning & agency monetization
 
-**Goal:** Harden v3.0.0's MCP + agent foundation with precise instrumentation, complete the agent companion experience (history, multi-step tool use, polish, org switching), and refresh all documentation.
+**Goal:** Turn verified market research into product — position Luqen explicitly as genuine source-level remediation against the collapsing overlay category, and build the freemium→Pro→Agency monetization spine (Pro feature gates, credit-metered AI fixes, an agency multi-client/white-label tier) that the WP-shelf competitors prove converts.
 
 **Target features:**
 
-*Agent Companion v2*
-- Conversation search & history UI in the side drawer (list, search, resume past chats)
-- Better tool selection — smarter planning, parallel tool calls, error-recovery loops
-- Streaming/UX polish — interrupt, retry, edit-and-resend, copy/share message
-- Multi-org context switching for global admins inside the agent (no re-login)
+*Positioning (anti-overlay)*
+- WP plugin readme + dashboard/report copy framed as real source-level fixes vs overlays (cite FTC $1M, NFB revocation, "sued despite a widget" data)
+- A "why not an overlay" comparison surface
 
-*Tech Debt*
-- Precise tokenizer replacing `char/4` heuristic (lightweight, no heavy deps)
-- Nyquist validation backfill for v3.0.0 phases
-- Formal VERIFICATION.md for phases 30.1, 31.2, 32, 32.1, 33
-- Deferred-items review from Phase 31.2 + Phase 32 (triage, fix or close)
+*Pro feature gates (WP plugin — match the Equalize Digital conversion bundle)*
+- Full-site/bulk scanning, audit history, Excel export, custom-post-type/WooCommerce scanning, multisite — gated as paid conversion levers
+- Entitlement mechanism enforcing free vs Pro
 
-*Documentation*
-- Full docs sweep: README, API/Swagger, installer docs, MCP integration guide, agent companion guide, prompt-template docs, RBAC matrix — all updated to reflect v3.0.0 + v3.1.0
+*Credit-metered AI fixes*
+- Meter `generate-fix` by credits on top of the existing `llm_usage` telemetry + pricing registry; gate when exhausted with graceful deterministic fallback; surface balance in dashboard + WP
 
-**Key constraints:** No new heavy dependencies (tokenizer must stay light).
+*Agency tier*
+- Multi-client dashboard, white-label/rebrandable reports + theming, VPAT/ACR generation, partner/resale entitlement
+
+*Pricing & packaging*
+- Codify Free/Pro/Agency tiers + a plan/entitlement model driving feature availability platform-wide (pricing anchors gated on in-flight enterprise-pricing research)
+
+**Key constraints:** Monetization plumbing stays admin-controlled per Core Value (per-org plan + credits set in the dashboard, not external billing); Stripe/Freemius-style billing integration is explicitly out of scope for this milestone. Excel-only exports (no CSV). Follow the proven ship pattern: wip branch → build → test → merge to master → deploy to lxc-luqen → CI green.
 
 ## Requirements
 
