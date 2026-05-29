@@ -239,42 +239,6 @@ export async function dataApiRoutes(
 ): Promise<void> {
   const rawDb = (storage as SqliteStorageAdapter).getRawDatabase();
 
-  // ── GET /api/v1/credits ───────────────────────────────────────────────
-  // Phase 80 — org-scoped AI-fix credit balance, consumed by the WP plugin
-  // to show remaining credits / a paywall prompt (CREDIT-05). Org is taken
-  // from the authenticated token (currentOrgId), never a query param, so a
-  // caller can only read its own org's balance.
-  server.get(
-    '/api/v1/credits',
-    {
-      config: rateLimitConfig,
-      schema: {
-        tags: ['data'],
-        response: {
-          200: Type.Object({
-            plan: Type.String(),
-            unlimited: Type.Boolean(),
-            allocated: Type.Union([Type.Number(), Type.Null()]),
-            used: Type.Number(),
-            balance: Type.Union([Type.Number(), Type.Null()]),
-          }, { additionalProperties: true }),
-          401: ErrorEnvelope,
-        },
-      },
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const orgId = getOrgId(request);
-      const plan = await storage.credits.getPlan(orgId);
-      return reply.header('content-type', 'application/json').send({
-        plan: plan.plan,
-        unlimited: plan.unlimited,
-        allocated: plan.allocated,
-        used: plan.used,
-        balance: plan.balance,
-      });
-    },
-  );
-
   // ── GET /api/v1/scans ─────────────────────────────────────────────────
   server.get<{ Querystring: ScansQuery }>(
     '/api/v1/scans',
