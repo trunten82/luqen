@@ -768,44 +768,65 @@ export async function reportRoutes(
 
       // Try LLM first
       let llmFailed = false;
+      // Phase 80 — credit gate. Metering is opt-in per org (unlimited
+      // until an admin sets an allocation), so `check` returns allowed
+      // for every org by default. When an org's balance is exhausted we
+      // skip the LLM entirely and fall through to the deterministic
+      // pattern fallback below (graceful degradation, never an error).
+      let creditsExhausted = false;
+      const gateOrgId = request.user?.currentOrgId ?? 'system';
       if (llmClient) {
-        const orgId = request.user?.currentOrgId ?? undefined;
-        const { client: effectiveLlm, isPerOrg } = await resolveOrgLLMClient(
-          llmClient, storage.organizations, orgId,
-        );
-        try {
-          const result = await effectiveLlm!.generateFix({
-            wcagCriterion: criterion,
-            issueMessage: message,
-            htmlContext,
-            ...(cssContext ? { cssContext } : {}),
-            ...(orgId ? { orgId } : {}),
-          });
+        const gate = await storage.credits.check(gateOrgId).catch(() => ({ allowed: true, unlimited: true, balance: null }));
+        if (!gate.allowed) {
+          creditsExhausted = true;
+        } else {
+          const orgId = request.user?.currentOrgId ?? undefined;
+          const { client: effectiveLlm, isPerOrg } = await resolveOrgLLMClient(
+            llmClient, storage.organizations, orgId,
+          );
+          try {
+            const result = await effectiveLlm!.generateFix({
+              wcagCriterion: criterion,
+              issueMessage: message,
+              htmlContext,
+              ...(cssContext ? { cssContext } : {}),
+              ...(orgId ? { orgId } : {}),
+            });
 
-          if (result.fixedHtml) {
-            const html =
-              `<pre class="rpt-fix-hint__code"><code>${esc(result.fixedHtml)}</code></pre>`
-              + `<p class="rpt-fix-hint__desc">${esc(result.explanation)}</p>`
-              + `<div class="rpt-fix-hint__actions">`
-              + `<span class="rpt-fix-hint__source rpt-fix-hint__source--ai">${t('reportDetail.fixSourceAi')}</span>`
-              + copyBtn(result.fixedHtml)
-              + `</div>`
-              + aiDisclaimer();
-            return reply.header('content-type', 'text/html').send(html);
+            if (result.fixedHtml) {
+              // Charge one credit only on a successful AI fix. Unlimited
+              // orgs are a no-op; telemetry of actual token cost is the
+              // LLM service's llm_usage table.
+              await storage.credits
+                .consume(gateOrgId, 1, 'generate-fix', request.user?.id ?? null)
+                .catch(() => { /* metering must never break the fix flow */ });
+              const html =
+                `<pre class="rpt-fix-hint__code"><code>${esc(result.fixedHtml)}</code></pre>`
+                + `<p class="rpt-fix-hint__desc">${esc(result.explanation)}</p>`
+                + `<div class="rpt-fix-hint__actions">`
+                + `<span class="rpt-fix-hint__source rpt-fix-hint__source--ai">${t('reportDetail.fixSourceAi')}</span>`
+                + copyBtn(result.fixedHtml)
+                + `</div>`
+                + aiDisclaimer();
+              return reply.header('content-type', 'text/html').send(html);
+            }
+          } catch {
+            llmFailed = true;
+          } finally {
+            if (isPerOrg && effectiveLlm) effectiveLlm.destroy();
           }
-        } catch {
-          llmFailed = true;
-        } finally {
-          if (isPerOrg && effectiveLlm) effectiveLlm.destroy();
         }
       }
 
       // Fallback: hardcoded pattern from fix-suggestions.ts
       const fix = getFixSuggestion(criterion, message);
       if (fix) {
-        const unavailableNote = (!llmClient || llmFailed)
+        const noteText = creditsExhausted
+          ? t('reportDetail.fixCreditsExhausted')
+          : t('reportDetail.fixLlmUnavailable');
+        const unavailableNote = (!llmClient || llmFailed || creditsExhausted)
           ? `<p class="rpt-fix-hint__desc text-muted" style="font-size:var(--font-size-xs);margin-top:var(--space-xs);">`
-            + `${t('reportDetail.fixLlmUnavailable')}</p>`
+            + `${noteText}</p>`
           : '';
         const html =
           `<pre class="rpt-fix-hint__code"><code>${esc(fix.codeExample)}</code></pre>`

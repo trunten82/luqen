@@ -1015,7 +1015,8 @@
     "brandScoreDimensions1of3": "[DE] 1 of 3 dimensions",
     "brandScoreNotAvailable": "[DE] Brand score not available for this scan",
     "brandScoreIntroduced": "[DE] Brand scoring was introduced in v2.11.0",
-    "tabsLabel": "Report sections"
+    "tabsLabel": "Report sections",
+    "fixCreditsExhausted": "AI fix credits are used up for this organisation. Showing a pattern-based suggestion — an admin can top up credits on the LLM usage page."
   },
   "reportCompare": {
     "title": "Berichtsvergleich",

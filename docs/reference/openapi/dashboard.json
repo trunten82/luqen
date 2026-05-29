@@ -33914,6 +33914,89 @@
         }
       }
     },
+    "/api/v1/credits": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "required": [
+                    "plan",
+                    "unlimited",
+                    "allocated",
+                    "used",
+                    "balance"
+                  ],
+                  "properties": {
+                    "plan": {
+                      "type": "string"
+                    },
+                    "unlimited": {
+                      "type": "boolean"
+                    },
+                    "allocated": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "used": {
+                      "type": "number"
+                    },
+                    "balance": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/export/scans.xlsx": {
       "get": {
         "tags": [
