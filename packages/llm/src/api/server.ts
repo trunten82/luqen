@@ -17,6 +17,7 @@ import { registerModelRoutes } from './routes/models.js';
 import { registerCapabilityRoutes } from './routes/capabilities.js';
 import { registerCapabilityExecRoutes } from './routes/capabilities-exec.js';
 import { registerUsageRoutes } from './routes/usage.js';
+import { startUsageRetention } from './usage-retention.js';
 import { registerPromptRoutes } from './routes/prompts.js';
 import { registerMcpRoutes } from './routes/mcp.js';
 import { registerLlmProtectedResourceMetadata } from './routes/well-known.js';
@@ -193,6 +194,12 @@ export async function createServer(options: ServerOptions) {
   // db.initialize() so schema is ready, BEFORE routes are registered so
   // the very first /api/v1/capabilities call reflects the seeded state.
   await bootstrapAgentConversation(db, app.log);
+
+  // Phase 76 — llm_usage retention. Runs once at boot and then every
+  // 24h so a long-running instance reaps stale rows without operator
+  // intervention. Default 90 days; override via env. Set to 0 to
+  // disable purging entirely (useful for compliance-frozen tenants).
+  startUsageRetention(db, app.log);
 
   // OpenAPI JSON alias — Phase 40-01 DOC-02: swagger moved to /docs.
   app.get('/api/v1/openapi.json', async (_request, reply) => {
