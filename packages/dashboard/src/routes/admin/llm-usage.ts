@@ -21,6 +21,8 @@ import { HtmlPageSchema, ErrorEnvelope } from '../../api/schemas/envelope.js';
 import type { LLMClient, LlmUsageRow, LlmUsageTotals, LlmUsageSummaryRow, LlmUsageGroupBy } from '../../llm-client.js';
 import { escapeHtml } from './helpers.js';
 import { buildXlsx } from '../api/export.js';
+import type { StorageAdapter } from '../../db/index.js';
+import type { OrgPlan } from '../../db/interfaces/credit-repository.js';
 
 const UsageQuery = Type.Object(
   {
@@ -193,6 +195,50 @@ function renderBreakdown(
   </table>`;
 }
 
+// Phase 80b — admin AI-credit card. HTMX hx-post forms; CSRF is added
+// globally by the layout's htmx:configRequest interceptor. Returns a
+// self-contained <section id="credit-card"> the POST handlers re-render
+// for an outerHTML swap.
+function renderCreditCard(plan: OrgPlan | null, orgId: string, canCrossOrg: boolean): string {
+  if (orgId === '') {
+    return `<section id="credit-card" class="card mb-md" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card__title">AI fix credits</h2>
+      <p class="text-muted">${canCrossOrg ? 'Filter by a specific org above to view and manage its AI fix credits.' : 'No org context.'}</p>
+    </section>`;
+  }
+  const p: OrgPlan = plan ?? {
+    orgId, plan: 'free', allocated: null, used: 0, balance: null, unlimited: true, updatedAt: '', updatedBy: null,
+  };
+  const allocDisplay = p.unlimited ? '∞' : String(p.allocated);
+  const balDisplay = p.unlimited ? '∞' : String(p.balance);
+  const meterState = p.unlimited
+    ? 'Unlimited — metering is off for this org.'
+    : `Metered: ${p.balance} of ${p.allocated} credits remaining (${p.used} used). When the balance hits zero, AI fixes fall back to deterministic pattern suggestions.`;
+  return `<section id="credit-card" class="card mb-md" aria-labelledby="credits-heading">
+    <h2 id="credits-heading" class="card__title">AI fix credits — ${escapeHtml(orgId)}</h2>
+    <div class="kpi-strip">
+      <div class="kpi"><div class="kpi__label">Plan</div><div class="kpi__value">${escapeHtml(p.plan)}</div></div>
+      <div class="kpi"><div class="kpi__label">Allocation</div><div class="kpi__value">${allocDisplay}</div><div class="kpi__sub">${p.used} used</div></div>
+      <div class="kpi"><div class="kpi__label">Balance</div><div class="kpi__value">${balDisplay}</div><div class="kpi__sub">${p.unlimited ? 'unlimited' : 'remaining'}</div></div>
+    </div>
+    <p class="text-muted" style="font-size:var(--font-size-xs);margin:var(--space-xs) 0;">${meterState}</p>
+    <form class="filter-row" hx-post="/admin/llm-usage/credits/allocate" hx-target="#credit-card" hx-swap="outerHTML">
+      <input type="hidden" name="orgId" value="${escapeHtml(orgId)}">
+      <label class="field"><span class="field__label">Set allocation</span>
+        <input type="number" name="allocated" min="0" class="input" placeholder="blank = unlimited" value="${p.unlimited ? '' : escapeHtml(String(p.allocated))}">
+      </label>
+      <div class="field field--actions"><button type="submit" class="btn btn--secondary">Set</button></div>
+    </form>
+    <form class="filter-row" hx-post="/admin/llm-usage/credits/topup" hx-target="#credit-card" hx-swap="outerHTML">
+      <input type="hidden" name="orgId" value="${escapeHtml(orgId)}">
+      <label class="field"><span class="field__label">Top up by</span>
+        <input type="number" name="amount" min="1" class="input" placeholder="credits to add">
+      </label>
+      <div class="field field--actions"><button type="submit" class="btn btn--secondary">Top up</button></div>
+    </form>
+  </section>`;
+}
+
 function renderPage(opts: {
   readonly llmConnected: boolean;
   readonly canFilterCrossOrg: boolean;
@@ -206,12 +252,14 @@ function renderPage(opts: {
   readonly summary: ReadonlyArray<LlmUsageSummaryRow>;
   readonly totals: LlmUsageTotals;
   readonly errorMessage: string | null;
+  readonly creditCardHtml: string;
 }): string {
   if (!opts.llmConnected) {
     return `<section aria-label="LLM Usage" class="card">
       <h2 class="card__title">LLM Usage</h2>
       <p>The LLM service is not connected. Configure it under <a href="/admin/service-connections">Service Connections</a> to see usage data.</p>
-    </section>`;
+    </section>
+    ${opts.creditCardHtml}`;
   }
   if (opts.errorMessage !== null) {
     return `<section aria-label="LLM Usage" class="card">
@@ -242,6 +290,8 @@ function renderPage(opts: {
     <p class="text-muted mb-md">Per-inference token usage, latency and USD spend across all capabilities. Costs are computed from the hard-coded pricing registry (Phase 74); rows whose model is not in the registry render with an empty cost cell.</p>
 
     ${renderTotals(opts.totals)}
+
+    ${opts.creditCardHtml}
 
     <form method="get" action="/admin/llm-usage" class="filter-row mb-md" role="search">
       <label class="field">
@@ -309,6 +359,7 @@ function renderPage(opts: {
 export async function llmUsageRoutes(
   server: FastifyInstance,
   getLLMClient: () => LLMClient | null,
+  storage: StorageAdapter,
 ): Promise<void> {
   server.get(
     '/admin/llm-usage',
@@ -337,6 +388,14 @@ export async function llmUsageRoutes(
         ? q.groupBy
         : 'capability';
 
+      // Phase 80b — credit card targets the filtered org (admin) or the
+      // caller's own org. Blank (admin, no org filter) → management hint.
+      const creditOrgId = isAdmin ? filterOrgId : callerOrg;
+      const creditPlan = creditOrgId !== ''
+        ? await storage.credits.getPlan(creditOrgId).catch(() => null)
+        : null;
+      const creditCardHtml = renderCreditCard(creditPlan, creditOrgId, isAdmin);
+
       if (llmClient === null) {
         const body = renderPage({
           llmConnected: false,
@@ -347,6 +406,7 @@ export async function llmUsageRoutes(
           filterFrom,
           filterTo,
           groupBy,
+          creditCardHtml,
           summary: [],
           rows: [],
           totals: {
@@ -386,6 +446,7 @@ export async function llmUsageRoutes(
           filterFrom,
           filterTo,
           groupBy,
+          creditCardHtml,
           rows: usage.rows,
           summary: summary.rows,
           totals: usage.totals,
@@ -408,6 +469,7 @@ export async function llmUsageRoutes(
           filterFrom,
           filterTo,
           groupBy,
+          creditCardHtml,
           summary: [],
           rows: [],
           totals: {
@@ -478,6 +540,66 @@ export async function llmUsageRoutes(
         return reply.code(502).header('content-type', 'text/plain')
           .send(`LLM usage export failed: ${message}`);
       }
+    },
+  );
+
+  // Phase 80b — CREDIT-02/04: admin sets/tops-up an org's AI-fix credit
+  // allocation. HTMX hx-post returning the re-rendered #credit-card.
+  // admin.system targets any org via the hidden orgId field; admin.org
+  // is forced to its own org server-side. CSRF is enforced (cookie POST)
+  // and supplied by the layout's htmx header interceptor.
+  const CreditBody = Type.Object(
+    { orgId: Type.Optional(Type.String()), allocated: Type.Optional(Type.String()), amount: Type.Optional(Type.String()) },
+    { additionalProperties: true },
+  );
+
+  function resolveTargetOrg(request: FastifyRequest, bodyOrgId: string | undefined): string {
+    const isAdmin = isSystemAdmin(request);
+    const callerOrg = callerOrgId(request) ?? '';
+    return isAdmin ? ((bodyOrgId ?? '').trim() || callerOrg) : callerOrg;
+  }
+
+  server.post(
+    '/admin/llm-usage/credits/allocate',
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { body: CreditBody, tags: ['html-page'] },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as { orgId?: string; allocated?: string };
+      const targetOrg = resolveTargetOrg(request, body.orgId);
+      reply.header('content-type', 'text/html');
+      if (targetOrg === '') {
+        return reply.code(400).send('<p class="alert alert--danger">No org selected.</p>');
+      }
+      const raw = (body.allocated ?? '').trim();
+      const allocated = raw === '' ? null : Math.max(0, Number.parseInt(raw, 10) || 0);
+      await storage.credits.setAllocation(targetOrg, allocated, request.user?.id ?? null);
+      const plan = await storage.credits.getPlan(targetOrg);
+      return reply.send(renderCreditCard(plan, targetOrg, isSystemAdmin(request)));
+    },
+  );
+
+  server.post(
+    '/admin/llm-usage/credits/topup',
+    {
+      preHandler: requirePermission('admin.system', 'admin.org'),
+      schema: { body: CreditBody, tags: ['html-page'] },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as { orgId?: string; amount?: string };
+      const targetOrg = resolveTargetOrg(request, body.orgId);
+      reply.header('content-type', 'text/html');
+      if (targetOrg === '') {
+        return reply.code(400).send('<p class="alert alert--danger">No org selected.</p>');
+      }
+      const amount = Math.max(1, Number.parseInt((body.amount ?? '').trim(), 10) || 0);
+      if (amount < 1) {
+        return reply.code(400).send('<p class="alert alert--danger">Enter a positive top-up amount.</p>');
+      }
+      await storage.credits.topUp(targetOrg, amount, request.user?.id ?? null);
+      const plan = await storage.credits.getPlan(targetOrg);
+      return reply.send(renderCreditCard(plan, targetOrg, isSystemAdmin(request)));
     },
   );
 }
