@@ -42,6 +42,17 @@ function callerOrgId(request: FastifyRequest): string | undefined {
   return user?.orgId;
 }
 
+function fmtUsd(value: number | null): string {
+  if (value === null) return '<span class="text-muted">—</span>';
+  // 4-decimal precision for per-row figures, since costs are often
+  // fractions of a cent. Aggregate totals render with 2 decimals.
+  return `$${value.toFixed(4)}`;
+}
+
+function fmtUsdTotal(value: number): string {
+  return `$${value.toFixed(2)}`;
+}
+
 function renderRow(row: LlmUsageRow): string {
   const statusBadge = row.status === 'ok'
     ? '<span class="badge badge--success">ok</span>'
@@ -55,20 +66,27 @@ function renderRow(row: LlmUsageRow): string {
     <td data-label="Prompt" class="num">${row.promptTokens}</td>
     <td data-label="Completion" class="num">${row.completionTokens}</td>
     <td data-label="Total" class="num"><strong>${row.totalTokens}</strong></td>
+    <td data-label="Cost" class="num">${fmtUsd(row.totalCostUsd)}</td>
     <td data-label="Latency" class="num">${row.latencyMs} ms</td>
     <td data-label="Status">${statusBadge}</td>
   </tr>`;
 }
 
 function renderEmpty(): string {
-  return '<tr><td colspan="10" class="table__empty">No LLM activity recorded for the selected filters.</td></tr>';
+  return '<tr><td colspan="11" class="table__empty">No LLM activity recorded for the selected filters.</td></tr>';
 }
 
 function renderTotals(t: LlmUsageTotals): string {
+  const priceCoverage = t.callCount === 0
+    ? ''
+    : t.rowsWithUnknownPrice === 0
+      ? `${t.rowsWithKnownPrice} priced`
+      : `${t.rowsWithKnownPrice} priced · ${t.rowsWithUnknownPrice} unpriced model${t.rowsWithUnknownPrice === 1 ? '' : 's'}`;
   return `
   <div class="kpi-strip">
     <div class="kpi"><div class="kpi__label">Calls</div><div class="kpi__value">${t.callCount}</div><div class="kpi__sub">${t.okCount} ok · ${t.errorCount} error</div></div>
     <div class="kpi"><div class="kpi__label">Total tokens</div><div class="kpi__value">${t.totalTokens}</div><div class="kpi__sub">prompt ${t.promptTokens} · completion ${t.completionTokens}</div></div>
+    <div class="kpi"><div class="kpi__label">Spend (USD)</div><div class="kpi__value">${fmtUsdTotal(t.totalCostUsd)}</div><div class="kpi__sub">${priceCoverage}</div></div>
     <div class="kpi"><div class="kpi__label">Avg latency</div><div class="kpi__value">${t.avgLatencyMs} ms</div><div class="kpi__sub">per call</div></div>
   </div>`;
 }
@@ -146,6 +164,7 @@ function renderPage(opts: {
             <th class="num">Prompt</th>
             <th class="num">Completion</th>
             <th class="num">Total</th>
+            <th class="num">Cost (USD)</th>
             <th class="num">Latency</th>
             <th>Status</th>
           </tr>
@@ -194,6 +213,8 @@ export async function llmUsageRoutes(
             callCount: 0, okCount: 0, errorCount: 0,
             promptTokens: 0, completionTokens: 0, totalTokens: 0,
             avgLatencyMs: 0,
+            totalCostUsd: 0,
+            rowsWithKnownPrice: 0, rowsWithUnknownPrice: 0,
           },
           errorMessage: null,
         });
@@ -240,6 +261,8 @@ export async function llmUsageRoutes(
             callCount: 0, okCount: 0, errorCount: 0,
             promptTokens: 0, completionTokens: 0, totalTokens: 0,
             avgLatencyMs: 0,
+            totalCostUsd: 0,
+            rowsWithKnownPrice: 0, rowsWithUnknownPrice: 0,
           },
           errorMessage: `LLM usage query failed: ${message}`,
         });

@@ -10,6 +10,7 @@ import type {
   ProviderType,
 } from '../types.js';
 import type { DbAdapter } from './adapter.js';
+import { computeCost } from '../providers/pricing.js';
 
 // ---- Row types ----
 
@@ -86,6 +87,9 @@ interface UsageRow {
   error_class: string | null;
   agent_conv_id: string | null;
   agent_msg_id: string | null;
+  input_cost_usd: number | null;
+  output_cost_usd: number | null;
+  total_cost_usd: number | null;
 }
 
 function toUsage(row: UsageRow): LlmUsageRecord {
@@ -106,6 +110,9 @@ function toUsage(row: UsageRow): LlmUsageRecord {
     errorClass: row.error_class,
     agentConvId: row.agent_conv_id,
     agentMsgId: row.agent_msg_id,
+    inputCostUsd: row.input_cost_usd,
+    outputCostUsd: row.output_cost_usd,
+    totalCostUsd: row.total_cost_usd,
   };
 }
 
@@ -255,6 +262,18 @@ const SCHEMA_SQL = `
     ON llm_usage(capability, occurred_at DESC);
 `;
 
+/**
+ * Phase 74 — cost columns. ALTER is idempotent via try/catch in
+ * `initialize()` so deploys onto a DB that already has them are
+ * no-ops. Costs are USD floats computed at write time using the
+ * pricing registry; NULL means "unknown model, no published price".
+ */
+const COST_COLUMNS_SQL: readonly string[] = [
+  `ALTER TABLE llm_usage ADD COLUMN input_cost_usd REAL`,
+  `ALTER TABLE llm_usage ADD COLUMN output_cost_usd REAL`,
+  `ALTER TABLE llm_usage ADD COLUMN total_cost_usd REAL`,
+];
+
 // ---- SqliteAdapter ----
 
 export class SqliteAdapter implements DbAdapter {
@@ -268,6 +287,9 @@ export class SqliteAdapter implements DbAdapter {
     this.db.pragma('foreign_keys = ON');
     this.db.exec(SCHEMA_SQL);
     try { this.db.exec('ALTER TABLE providers ADD COLUMN timeout INTEGER NOT NULL DEFAULT 120'); } catch { /* column already exists */ }
+    for (const stmt of COST_COLUMNS_SQL) {
+      try { this.db.exec(stmt); } catch { /* column already exists */ }
+    }
     this.db.exec(`CREATE TABLE IF NOT EXISTS prompt_overrides (
       capability TEXT NOT NULL,
       org_id TEXT NOT NULL DEFAULT 'system',
@@ -548,13 +570,20 @@ export class SqliteAdapter implements DbAdapter {
     const id = randomUUID();
     const occurredAt = new Date().toISOString();
     const totalTokens = input.promptTokens + input.completionTokens;
+    const cost = computeCost(
+      input.providerType,
+      input.modelId,
+      input.promptTokens,
+      input.completionTokens,
+    );
     this.conn.prepare(
       `INSERT INTO llm_usage (
         id, occurred_at, org_id, capability,
         provider_id, provider_type, model_id, model_name,
         prompt_tokens, completion_tokens, total_tokens, latency_ms,
-        status, error_class, agent_conv_id, agent_msg_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        status, error_class, agent_conv_id, agent_msg_id,
+        input_cost_usd, output_cost_usd, total_cost_usd
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       occurredAt,
@@ -572,6 +601,9 @@ export class SqliteAdapter implements DbAdapter {
       input.errorClass ?? null,
       input.agentConvId ?? null,
       input.agentMsgId ?? null,
+      cost.input,
+      cost.output,
+      cost.total,
     );
     const row = this.conn.prepare('SELECT * FROM llm_usage WHERE id = ?').get(id) as UsageRow;
     return toUsage(row);

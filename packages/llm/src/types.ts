@@ -150,6 +150,11 @@ export interface LlmUsageRecord {
   readonly errorClass: string | null;
   readonly agentConvId: string | null;
   readonly agentMsgId: string | null;
+  /** Phase 74 — USD cost computed from the pricing registry at write
+   *  time. `null` = no published price for this (providerType, modelId). */
+  readonly inputCostUsd: number | null;
+  readonly outputCostUsd: number | null;
+  readonly totalCostUsd: number | null;
 }
 
 export interface RecordUsageInput {
