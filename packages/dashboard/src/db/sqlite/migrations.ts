@@ -1916,4 +1916,15 @@ CREATE INDEX IF NOT EXISTS idx_credit_ledger_org_time
   ON credit_ledger(org_id, created_at DESC);
     `,
   },
+  {
+    id: '074',
+    name: 'drop-org-plans-and-credit-ledger',
+    sql: `
+-- Reverts Phase 80. The free/pro/agency plan tiers and AI-fix credit
+-- metering were removed wholesale; the dashboard no longer reads or
+-- writes these tables. Drop them so the schema matches the code.
+DROP TABLE IF EXISTS credit_ledger;
+DROP TABLE IF EXISTS org_plans;
+    `,
+  },
 ];

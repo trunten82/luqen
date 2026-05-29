@@ -1,113 +1,83 @@
-# Milestone v3.1.0 — Agent Companion v2 + Tech Debt & Docs
+# Requirements — Milestone v3.5.0: Commercial positioning & agency monetization
 
-**Goal:** Harden v3.0.0's MCP + agent foundation with precise instrumentation, complete the agent companion experience (history, multi-step tool use, polish, org switching), and refresh all documentation.
+Derived from the deep-research findings (2026-05-29). Genuine-remediation positioning + the freemium→Pro→Agency monetization spine the WP-shelf competitors prove converts.
+
+**Research provenance:** overlay collapse (FTC $1M / NFB revocation / sued-despite-widget) verified 3-0; Equalize Digital freemium gate (full-site scan, audit history, Excel export, CPT, multisite) verified 3-0; Elementor Ally credit-metered AI fixes verified 3-0. Enterprise pricing + market-size + jurisdiction-uniqueness + agency-demand specifics from a follow-up run (in flight) feed PRICE-* and refine AGENCY-*.
+
+---
 
 ## Active Requirements
 
-### Agent History (AHIST)
+### POS — Positioning (anti-overlay)
+- [ ] **POS-01**: A prospective user reading the WP plugin `readme.txt` sees Luqen framed as genuine source-level remediation, with an explicit anti-overlay section naming the risk (overlays don't deliver compliance or prevent lawsuits).
+- [ ] **POS-02**: A user viewing a scan report / the dashboard landing sees genuine-remediation positioning (real fixes in your source, not a widget).
+- [ ] **POS-03**: A user can read a "why not an overlay" comparison surface citing the verified evidence (FTC settlement, NFB revocation, lawsuits-despite-widget rate).
 
-- [x] **AHIST-01**: User can list past agent conversations from the side drawer (paginated, newest first, with title + timestamp + message count)
-- [x] **AHIST-02**: User can search past conversations by free-text query against message content (case-insensitive, scoped to user + org)
-- [x] **AHIST-03**: User can resume any past conversation — full message history loaded, new turns append to the same conversation_id
-- [x] **AHIST-04**: User can delete a past conversation (soft delete, audit-logged) and start a new one from scratch
-- [x] **AHIST-05**: Conversation list and search are keyboard-accessible and screen-reader friendly (WCAG 2.2 AA)
+### GATE — Pro feature gating (WP plugin)
+- [ ] **GATE-01**: A free-tier WP user is limited on full-site/bulk scanning; a Pro-entitled user can run full-site/bulk scans.
+- [ ] **GATE-02**: A Pro user can view retained audit history for a post/page across scans.
+- [ ] **GATE-03**: A Pro user can export findings to Excel (xlsx; no CSV per project rule).
+- [ ] **GATE-04**: A Pro user can scan custom post types / WooCommerce products.
+- [ ] **GATE-05**: A Pro/agency user can run the plugin across a multisite network.
+- [ ] **GATE-06**: The plugin enforces free-vs-Pro entitlement (in enterprise mode entitlement derives from the connected Luqen instance's org plan; a standalone license-key path is stubbed for future).
 
-### Agent Multi-Step Tool Use (ATOOL)
+### CREDIT — Credit-metered AI fixes
+- [ ] **CREDIT-01**: Each `generate-fix` call decrements an org credit balance, recorded on top of the existing `llm_usage` ledger.
+- [ ] **CREDIT-02**: An admin can set/top-up a per-org credit allocation; the system maintains a balance + consumption ledger.
+- [ ] **CREDIT-03**: When an org's credits are exhausted, `generate-fix` is gated and degrades gracefully to the deterministic fix fallback (never hard-errors the user flow).
+- [ ] **CREDIT-04**: A dashboard user sees remaining credit balance and consumption against allocation on `/admin/llm-usage`.
+- [ ] **CREDIT-05**: A WP plugin user sees remaining credits / a paywall prompt when AI fixes are metered out.
 
-- [x] **ATOOL-01**: Agent can issue parallel tool calls within a single turn when the model returns multiple tool_use blocks
-- [x] **ATOOL-02**: Agent recovers from tool errors automatically — failed tool returns surface to the model with retry guidance, up to a per-turn budget
-- [x] **ATOOL-03**: Agent supports multi-step planning — model can chain tool calls across iterations within a single user turn (capped by max_iterations)
-- [x] **ATOOL-04**: Tool selection is logged with model rationale + outcome so admins can audit why a tool fired
+### AGENCY — Agency tier
+- [ ] **AGENCY-01**: An agency user manages multiple client orgs/sites from a single multi-client console.
+- [ ] **AGENCY-02**: An agency can generate white-label / rebrandable client reports (agency logo + name, not Luqen branding).
+- [ ] **AGENCY-03**: An agency can generate a VPAT / ACR (Accessibility Conformance Report) for a client site.
+- [ ] **AGENCY-04**: The platform models a partner/resale entitlement (agency plan covering N client sites).
+- [ ] **AGENCY-05**: An agency can apply white-label theming (logo, colors) to client-facing dashboard/report surfaces.
 
-### Agent Streaming/UX Polish (AUX)
+### PRICE — Pricing & packaging
+- [ ] **PRICE-01**: Free/Pro/Agency tiers are codified as an explicit feature matrix (which capabilities each tier unlocks).
+- [ ] **PRICE-02**: Pricing anchors are documented (informed by the in-flight enterprise-pricing research; WP anchors free→~$190/yr Pro→~$2,250/yr/25-site Agency already validated).
+- [ ] **PRICE-03**: A per-org plan/entitlement model drives feature availability platform-wide (single source of truth consumed by dashboard + LLM + WP).
 
-- [x] **AUX-01**: User can interrupt an in-flight streaming response (stop button cancels SSE + persists partial response)
-- [x] **AUX-02**: User can retry the last assistant turn (re-runs against the same conversation state)
-- [x] **AUX-03**: User can edit-and-resend their own message — branches the conversation, prior assistant reply is marked superseded
-- [x] **AUX-04**: User can copy any assistant message to clipboard with one click (full markdown source, not rendered HTML)
-- [x] **AUX-05**: User can share an assistant message via a permalink to an audit-viewable conversation snapshot
+---
 
-### Agent Multi-Org Context (AORG)
+## Future Requirements (deferred)
+- External billing integration (Stripe/Freemius) + self-serve checkout — this milestone keeps plan/credit allocation admin-controlled.
+- Standalone WP.org license-key issuance + a hosted licensing service (only the entitlement hook is stubbed in GATE-06).
+- Usage-based overage billing / auto-top-up.
+- Per-end-user (vs per-org) credit attribution.
 
-- [x] **AORG-01**: Global admin (`admin.system`) can switch the agent's active org context inside the side drawer without re-login
-- [x] **AORG-02**: Switching org rebinds tool dispatch + context-hints to the new org for all subsequent turns; prior turns remain attributed to their original org
-- [x] **AORG-03**: Active org is visible in the drawer header and persisted per-user across sessions
-- [x] **AORG-04**: Non-global users see no org switcher (UI hidden, server-side denies any switch attempt with 403)
-
-### Tokenizer Precision (TOK)
-
-- [x] **TOK-01**: Replace `char/4` heuristic with a precise tokenizer for Ollama, OpenAI, and Anthropic models (per-provider implementation)
-- [x] **TOK-02**: Tokenizer adds no heavy native dependencies (lightweight pure-JS or wasm, total bundle impact under 5 MB)
-- [x] **TOK-03**: 85% compaction threshold triggers using precise counts; existing compaction behavior remains observable (no UX regression)
-- [x] **TOK-04**: Token estimator exposes a single `countTokens(messages, model)` interface with per-model BPE/tiktoken backing
-- [x] **TOK-05**: Tokenizer choice falls back gracefully to `char/4` if a model is unknown, with a warning log
-
-### Verification & Validation Backfill (VER)
-
-- [x] **VER-01**: Formal VERIFICATION.md backfilled for Phase 30.1, 31.2, 32, 32.1, 33 (covers SC checklist + UAT outcomes + observed gaps)
-- [x] **VER-02**: Nyquist validation run for v3.0.0 phases — produce coverage report identifying any untested success criteria
-- [x] **VER-03**: Deferred-items.md from Phase 31.2 + Phase 32 triaged — each item closed (won't fix), promoted to v3.1.0 plan, or deferred to v3.2.0 with rationale
-
-### Documentation Sweep (DOC)
-
-- [ ] **DOC-01**: Top-level README updated to reflect v3.0.0 + v3.1.0 surface (MCP, agent companion, OAuth 2.1, agent history)
-- [ ] **DOC-02**: Swagger/OpenAPI specs current for all services (compliance, branding, llm, dashboard, MCP endpoints)
-- [ ] **DOC-03**: Installer docs updated (new env vars, new admin pages, new RBAC permissions)
-- [ ] **DOC-04**: MCP integration guide published (Claude Desktop + IDE + custom client setup, OAuth 2.1 + PKCE + DCR walkthrough)
-- [ ] **DOC-05**: Agent companion user guide published (chat usage, tools, history, org switching, speech input)
-- [ ] **DOC-06**: Prompt-template authoring guide updated (locked sections, fence markers, validator, override workflow)
-- [ ] **DOC-07**: RBAC matrix documented end-to-end (every permission × every page/route/MCP tool)
-
-## Future Requirements (Deferred)
-
-- Token-cost dashboard per org/user (LLM usage tracking + budgets) — v3.2.0
-- Agent voice output (text-to-speech) — v3.2.0
-- Conversation export (JSON/PDF) — v3.2.0
-- Per-user agent preferences (model, temperature, default tools) — v3.2.0
-
-## Out of Scope (v3.1.0)
-
-- Multimodal image input to agent — defer
-- Custom agent personas / system prompt overrides per user — defer
-- Real-time multi-user collaborative agent sessions — not a use case
-- Migration from existing tokenizer to new tokenizer for already-stored conversations — new conversations only; existing rows unchanged
+## Out of Scope (explicit)
+- Payment processing / PCI handling — deliberately excluded; Core Value keeps admins in control via the dashboard, not a billing pipeline.
+- Reviving the removed LLM provider plugins (superseded by @luqen/llm).
+- Overlay/widget functionality of any kind — Luqen is the genuine-remediation antithesis of overlays; building one would undercut POS-*.
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TOK-01 | Phase 34 | Complete |
-| TOK-02 | Phase 34 | Complete |
-| TOK-03 | Phase 34 | Complete |
-| TOK-04 | Phase 34 | Complete |
-| TOK-05 | Phase 34 | Complete |
-| AHIST-01 | Phase 35 | Complete |
-| AHIST-02 | Phase 35 | Complete |
-| AHIST-03 | Phase 35 | Complete |
-| AHIST-04 | Phase 35 | Complete |
-| AHIST-05 | Phase 35 | Complete |
-| ATOOL-01 | Phase 36 | Complete |
-| ATOOL-02 | Phase 36 | Complete |
-| ATOOL-03 | Phase 36 | Complete |
-| ATOOL-04 | Phase 36 | Complete |
-| AUX-01 | Phase 37 | Complete |
-| AUX-02 | Phase 37 | Complete |
-| AUX-03 | Phase 37 | Complete |
-| AUX-04 | Phase 37 | Complete |
-| AUX-05 | Phase 37 | Complete |
-| AORG-01 | Phase 38 | Complete |
-| AORG-02 | Phase 38 | Complete |
-| AORG-03 | Phase 38 | Complete |
-| AORG-04 | Phase 38 | Complete |
-| VER-01 | Phase 39 | Complete |
-| VER-02 | Phase 39 | Complete |
-| VER-03 | Phase 39 | Complete |
-| DOC-01 | Phase 40 | Pending |
-| DOC-02 | Phase 40 | Pending |
-| DOC-03 | Phase 40 | Pending |
-| DOC-04 | Phase 40 | Pending |
-| DOC-05 | Phase 40 | Pending |
-| DOC-06 | Phase 40 | Pending |
-| DOC-07 | Phase 40 | Pending |
+| POS-01 | Phase 78 | Pending |
+| POS-02 | Phase 78 | Pending |
+| POS-03 | Phase 78 | Pending |
+| GATE-01 | Phase 79 | Pending |
+| GATE-02 | Phase 79 | Pending |
+| GATE-03 | Phase 79 | Pending |
+| GATE-04 | Phase 79 | Pending |
+| GATE-05 | Phase 79 | Pending |
+| GATE-06 | Phase 79 | Pending |
+| CREDIT-01 | Phase 80 | Pending |
+| CREDIT-02 | Phase 80 | Pending |
+| CREDIT-03 | Phase 80 | Pending |
+| CREDIT-04 | Phase 80 | Pending |
+| CREDIT-05 | Phase 80 | Pending |
+| AGENCY-01 | Phase 81 | Pending |
+| AGENCY-02 | Phase 81 | Pending |
+| AGENCY-03 | Phase 81 | Pending |
+| AGENCY-04 | Phase 81 | Pending |
+| AGENCY-05 | Phase 81 | Pending |
+| PRICE-01 | Phase 82 | Pending |
+| PRICE-02 | Phase 82 | Pending |
+| PRICE-03 | Phase 82 | Pending |
 
-**Coverage: 33/33 requirements mapped to exactly one phase.**
+**Coverage: 22/22 requirements mapped — no orphans, no duplicates.**
