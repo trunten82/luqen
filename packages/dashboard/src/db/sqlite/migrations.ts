@@ -1879,4 +1879,41 @@ CREATE INDEX IF NOT EXISTS idx_notification_unsubscribes_org
   ON notification_unsubscribes(org_id, channel);
     `,
   },
+  {
+    id: '073',
+    name: 'org-plans-and-credit-ledger',
+    sql: `
+-- Phase 80 — thin entitlement foundation + AI-fix credit metering.
+-- org_plans is the per-org commercial plan + AI credit allocation. It is
+-- the single source of truth the dashboard consumes for feature gating
+-- (Phase 82 formalises the full plan model on top). ai_credits_allocated
+-- = NULL means UNLIMITED (metering OFF) — the default, so existing
+-- generate-fix flows are unaffected until an admin sets a cap. When set,
+-- remaining balance = ai_credits_allocated - ai_credits_used.
+CREATE TABLE IF NOT EXISTS org_plans (
+  org_id               TEXT PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
+  plan                 TEXT NOT NULL DEFAULT 'free',
+  ai_credits_allocated INTEGER,
+  ai_credits_used      INTEGER NOT NULL DEFAULT 0,
+  updated_at           TEXT NOT NULL,
+  updated_by           TEXT
+);
+
+-- Append-only audit trail of credit movements: allocations/top-ups (+),
+-- consumption (−). balance_after is the remaining balance at write time
+-- (NULL when the org is unlimited). Reason is e.g. 'generate-fix',
+-- 'admin.topup', 'admin.set'.
+CREATE TABLE IF NOT EXISTS credit_ledger (
+  id            TEXT PRIMARY KEY,
+  org_id        TEXT NOT NULL,
+  delta         INTEGER NOT NULL,
+  reason        TEXT NOT NULL,
+  balance_after INTEGER,
+  actor         TEXT,
+  created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_credit_ledger_org_time
+  ON credit_ledger(org_id, created_at DESC);
+    `,
+  },
 ];

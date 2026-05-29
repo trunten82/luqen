@@ -1024,7 +1024,8 @@
     "brandDrilldownClose": "[IT] Close",
     "brandDrilldownAriaLabel": "[IT] View failing elements for",
     "brandDrilldownClickHint": "[IT] Click to see failing elements",
-    "tabsLabel": "Report sections"
+    "tabsLabel": "Report sections",
+    "fixCreditsExhausted": "AI fix credits are used up for this organisation. Showing a pattern-based suggestion — an admin can top up credits on the LLM usage page."
   },
   "reportCompare": {
     "title": "Confronto Report",
