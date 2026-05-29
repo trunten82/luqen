@@ -95,6 +95,9 @@ const UsageRow = Type.Object(
     errorClass: Type.Union([Type.String(), Type.Null()]),
     agentConvId: Type.Union([Type.String(), Type.Null()]),
     agentMsgId: Type.Union([Type.String(), Type.Null()]),
+    inputCostUsd: Type.Union([Type.Number(), Type.Null()]),
+    outputCostUsd: Type.Union([Type.Number(), Type.Null()]),
+    totalCostUsd: Type.Union([Type.Number(), Type.Null()]),
   },
   { additionalProperties: true },
 );
@@ -108,6 +111,9 @@ const UsageTotals = Type.Object(
     completionTokens: Type.Number(),
     totalTokens: Type.Number(),
     avgLatencyMs: Type.Number(),
+    totalCostUsd: Type.Number(),
+    rowsWithKnownPrice: Type.Number(),
+    rowsWithUnknownPrice: Type.Number(),
   },
   { additionalProperties: true },
 );
@@ -128,6 +134,9 @@ function computeTotals(rows: readonly LlmUsageRecord[]): {
   completionTokens: number;
   totalTokens: number;
   avgLatencyMs: number;
+  totalCostUsd: number;
+  rowsWithKnownPrice: number;
+  rowsWithUnknownPrice: number;
 } {
   const callCount = rows.length;
   const okCount = rows.filter((r) => r.status === 'ok').length;
@@ -138,7 +147,26 @@ function computeTotals(rows: readonly LlmUsageRecord[]): {
   const avgLatencyMs = callCount === 0
     ? 0
     : Math.round(rows.reduce((s, r) => s + r.latencyMs, 0) / callCount);
-  return { callCount, okCount, errorCount, promptTokens, completionTokens, totalTokens, avgLatencyMs };
+  // Cost rollup. Rows with NULL cost (unknown model) are excluded from
+  // the sum but surfaced as a count so the dashboard can disclose
+  // partial coverage.
+  let totalCostUsd = 0;
+  let rowsWithKnownPrice = 0;
+  let rowsWithUnknownPrice = 0;
+  for (const r of rows) {
+    if (r.totalCostUsd === null) rowsWithUnknownPrice += 1;
+    else {
+      rowsWithKnownPrice += 1;
+      totalCostUsd += r.totalCostUsd;
+    }
+  }
+  return {
+    callCount, okCount, errorCount,
+    promptTokens, completionTokens, totalTokens,
+    avgLatencyMs,
+    totalCostUsd,
+    rowsWithKnownPrice, rowsWithUnknownPrice,
+  };
 }
 
 export async function registerUsageRoutes(

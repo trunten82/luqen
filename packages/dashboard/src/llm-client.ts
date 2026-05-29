@@ -168,6 +168,9 @@ export interface LlmUsageRow {
   readonly errorClass: string | null;
   readonly agentConvId: string | null;
   readonly agentMsgId: string | null;
+  readonly inputCostUsd: number | null;
+  readonly outputCostUsd: number | null;
+  readonly totalCostUsd: number | null;
 }
 
 export interface LlmUsageTotals {
@@ -178,6 +181,9 @@ export interface LlmUsageTotals {
   readonly completionTokens: number;
   readonly totalTokens: number;
   readonly avgLatencyMs: number;
+  readonly totalCostUsd: number;
+  readonly rowsWithKnownPrice: number;
+  readonly rowsWithUnknownPrice: number;
 }
 
 // ── Client class ────────────────────────────────────────────────────────────

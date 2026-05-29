@@ -3988,7 +3988,10 @@
                           "status",
                           "errorClass",
                           "agentConvId",
-                          "agentMsgId"
+                          "agentMsgId",
+                          "inputCostUsd",
+                          "outputCostUsd",
+                          "totalCostUsd"
                         ],
                         "properties": {
                           "id": {
@@ -4066,6 +4069,36 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "inputCostUsd": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "outputCostUsd": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "totalCostUsd": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         }
                       }
@@ -4080,7 +4113,10 @@
                         "promptTokens",
                         "completionTokens",
                         "totalTokens",
-                        "avgLatencyMs"
+                        "avgLatencyMs",
+                        "totalCostUsd",
+                        "rowsWithKnownPrice",
+                        "rowsWithUnknownPrice"
                       ],
                       "properties": {
                         "callCount": {
@@ -4102,6 +4138,15 @@
                           "type": "number"
                         },
                         "avgLatencyMs": {
+                          "type": "number"
+                        },
+                        "totalCostUsd": {
+                          "type": "number"
+                        },
+                        "rowsWithKnownPrice": {
+                          "type": "number"
+                        },
+                        "rowsWithUnknownPrice": {
                           "type": "number"
                         }
                       }
