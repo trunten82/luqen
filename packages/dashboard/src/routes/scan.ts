@@ -29,6 +29,7 @@ interface NewScanBody {
   maxPages?: string;
   runner?: string;
   incremental?: string;
+  behavioral?: string;
   includeWarnings?: string | boolean;
   includeNotices?: string | boolean;
   authHeaders?: string;
@@ -128,6 +129,7 @@ export async function scanRoutes(
         maxPages: body.maxPages,
         runner: body.runner,
         incremental: body.incremental,
+        behavioral: body.behavioral,
         includeWarnings: body.includeWarnings === 'true' || body.includeWarnings === true,
         includeNotices: body.includeNotices === 'true' || body.includeNotices === true,
         headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,

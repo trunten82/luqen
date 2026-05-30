@@ -247,7 +247,9 @@
     "maxPages": "Páginas Máximas",
     "maxPagesHint": "Número máximo de páginas a descobrir e verificar no modo site completo (1–1000).",
     "includeWarnings": "Incluir avisos",
-    "includeNotices": "Incluir notificações"
+    "includeNotices": "Incluir notificações",
+    "behavioral": "Verificação comportamental profunda (beta)",
+    "behavioralHint": "Executa também verificações reais no navegador de teclado, foco e elementos interativos que a verificação estática não deteta (ex.: armadilhas de teclado, indicadores de foco em falta). Mais lenta — abre um navegador headless por página."
   },
   "reports": {
     "title": "Relatórios",
