@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="{{#if @root.locale}}{{@root.locale}}{{else}}en{{/if}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{t "a11yStatement.public.pageTitle" entity=statement.entityName}}</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6; color: #1a1a1a; background: #fff;
+      max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem;
+    }
+    h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 .25rem; }
+    h2 { font-size: 1.25rem; margin: 2rem 0 .5rem; }
+    .meta { color: #555; font-size: .9rem; margin-bottom: 1.5rem; }
+    .status {
+      display: inline-block; padding: .35rem .75rem; border-radius: .5rem;
+      font-weight: 600; font-size: .95rem; margin: .5rem 0 1rem;
+    }
+    .status--partial { background: #fef3c7; color: #92400e; }
+    .status--none { background: #fee2e2; color: #991b1b; }
+    ul { padding-left: 1.25rem; }
+    li { margin: .35rem 0; }
+    .limitation { margin: .5rem 0; padding-left: .5rem; border-left: 3px solid #e5e7eb; }
+    .limitation code { font-size: .85rem; color: #374151; }
+    .contact { background: #f3f4f6; border-radius: .5rem; padding: 1rem 1.25rem; margin: 1rem 0; }
+    .contact a { color: #1d4ed8; }
+    .disclaimer { color: #555; font-size: .82rem; border-top: 1px solid #e5e7eb; margin-top: 2.5rem; padding-top: 1rem; }
+    @media (prefers-color-scheme: dark) {
+      body { color: #e5e7eb; background: #111; }
+      .meta, .disclaimer { color: #9ca3af; }
+      .contact { background: #1f2937; }
+      .limitation { border-left-color: #374151; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>{{t "a11yStatement.public.heading" entity=statement.entityName}}</h1>
+    <p class="meta">{{t "a11yStatement.public.publishedOn"}} {{statement.statementDate}}</p>
+
+    {{#if statement.commitment}}
+      <p>{{statement.commitment}}</p>
+    {{else}}
+      <p>{{t "a11yStatement.public.defaultCommitment" entity=statement.entityName standard=statement.standardLabel}}</p>
+    {{/if}}
+
+    <h2>{{t "a11yStatement.public.conformanceHeading"}}</h2>
+    {{#if (eq statement.conformanceStatus "partially-conformant")}}
+      <p>
+        <span class="status status--partial">{{t "a11yStatement.status.partial"}}</span>
+      </p>
+      <p>{{t "a11yStatement.public.partialBody" entity=statement.entityName standard=statement.standardLabel}}</p>
+    {{else}}
+      <p>
+        <span class="status status--none">{{t "a11yStatement.status.none"}}</span>
+      </p>
+      <p>{{t "a11yStatement.public.noneBody" entity=statement.entityName standard=statement.standardLabel}}</p>
+    {{/if}}
+
+    {{#if statement.hasAssessment}}
+      {{#if statement.knownLimitations.length}}
+        <h2>{{t "a11yStatement.public.limitationsHeading"}}</h2>
+        <p>{{t "a11yStatement.public.limitationsIntro"}}</p>
+        <div>
+          {{#each statement.knownLimitations}}
+            <div class="limitation">
+              <strong>{{this.title}}</strong> <code>(WCAG {{this.criterion}})</code><br>
+              <span>{{this.remarks}}</span>
+            </div>
+          {{/each}}
+        </div>
+      {{/if}}
+      {{#if statement.notEvaluatedCount}}
+        <p>{{t "a11yStatement.public.pendingNote" count=statement.notEvaluatedCount}}</p>
+      {{/if}}
+    {{else}}
+      <h2>{{t "a11yStatement.public.limitationsHeading"}}</h2>
+      <p>{{t "a11yStatement.public.noAssessment"}}</p>
+    {{/if}}
+
+    <h2>{{t "a11yStatement.public.measuresHeading"}}</h2>
+    <ul>
+      <li>{{t "a11yStatement.public.measureAutomated"}}</li>
+      <li>{{t "a11yStatement.public.measureBehavioral"}}</li>
+      <li>{{t "a11yStatement.public.measureManual"}}</li>
+      <li>{{t "a11yStatement.public.measureRemediation"}}</li>
+    </ul>
+
+    <h2>{{t "a11yStatement.public.feedbackHeading"}}</h2>
+    <div class="contact">
+      <p>{{t "a11yStatement.public.feedbackIntro" entity=statement.entityName}}</p>
+      <ul>
+        {{#if statement.contactEmail}}<li>{{t "a11yStatement.public.feedbackEmail"}} <a href="mailto:{{statement.contactEmail}}">{{statement.contactEmail}}</a></li>{{/if}}
+        {{#if statement.contactUrl}}<li>{{t "a11yStatement.public.feedbackForm"}} <a href="{{statement.contactUrl}}" target="_blank" rel="noopener">{{statement.contactUrl}}</a></li>{{/if}}
+      </ul>
+      {{#unless statement.contactEmail}}{{#unless statement.contactUrl}}<p>{{t "a11yStatement.public.feedbackNoChannel"}}</p>{{/unless}}{{/unless}}
+    </div>
+
+    {{#if statement.assessmentDate}}
+      <p class="meta">{{t "a11yStatement.public.lastAssessed"}} {{statement.assessmentDate}}</p>
+    {{/if}}
+
+    <p class="disclaimer">{{t "a11yStatement.public.disclaimer"}}</p>
+  </main>
+</body>
+</html>

@@ -377,6 +377,35 @@
         }
       }
     },
+    "/accessibility-statement/{slug}": {
+      "get": {
+        "tags": [
+          "html-page"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "slug",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/account": {
       "get": {
         "tags": [
@@ -503,6 +532,42 @@
       "post": {
         "tags": [
           "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/accessibility-statement": {
+      "get": {
+        "tags": [
+          "html-page"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "html-page"
         ],
         "responses": {
           "200": {

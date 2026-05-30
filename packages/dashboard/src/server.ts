@@ -15,6 +15,7 @@ import { badgeRoutes } from './routes/badge.js';
 import { unsubscribeRoutes } from './routes/unsubscribe.js';
 import { scanRoutes } from './routes/scan.js';
 import { reportRoutes } from './routes/reports.js';
+import { accessibilityStatementRoutes } from './routes/accessibility-statement.js';
 import { compareRoutes } from './routes/compare.js';
 import { trendRoutes } from './routes/trends.js';
 import { scheduleRoutes } from './routes/schedules.js';
@@ -171,6 +172,8 @@ function isPublicPath(path: string): boolean {
   if (path.startsWith('/api/v1/badge/')) return true;
   // Phase 58 R5: public self-scan report (only the dashboard's own host).
   if (/^\/reports\/[^/]+\/public$/.test(path)) return true;
+  // Public, hostable accessibility statement (anon; gated by org `enabled`).
+  if (/^\/accessibility-statement\/[^/]+$/.test(path)) return true;
   // Phase 31.1 Plan 02: external MCP clients hit these BEFORE they have a
   // user session. The consent gate lives on /oauth/authorize (which is NOT
   // listed here — it keeps the session-auth gate).
@@ -1025,6 +1028,7 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // Routes receive getLLMClient and resolve the current live instance per
   // request so a runtime reload is picked up without a restart.
   await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId });
+  await accessibilityStatementRoutes(server, storage);
   await manualTestRoutes(server, storage);
   await assignmentRoutes(server, storage);
   await orgRoutes(server, storage);
