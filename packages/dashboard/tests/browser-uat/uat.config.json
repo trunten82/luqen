@@ -1,0 +1,10 @@
+{
+  "port": 5071,
+  "sessionSecret": "luqen-browser-uat-session-secret-at-least-32-bytes-long-xx",
+  "complianceUrl": "http://localhost:4000",
+  "maxPages": 200,
+  "allowPrivateScanTargets": true,
+  "dbPath": "./.tmp/uat-dashboard.db",
+  "reportsDir": "./.tmp/reports",
+  "pluginsDir": "./.tmp/plugins"
+}
