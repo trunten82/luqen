@@ -108,6 +108,16 @@
     </div>
     {{/if}}
 
+    <div class="form-group behavioral-option">
+      <label class="checkbox-label">
+        <input type="checkbox" name="behavioral" value="true" id="behavioral-cb">
+        <span>{{t "scans.behavioral"}}</span>
+      </label>
+      <p class="form-hint" id="behavioral-hint">
+        {{t "scans.behavioralHint"}}
+      </p>
+    </div>
+
     <details class="scan-advanced">
       <summary class="scan-advanced__summary">{{t "scans.scanOptions"}}</summary>
       <div class="form-group">
@@ -160,15 +170,6 @@
         </label>
         <p class="form-hint" id="incremental-hint">
           {{t "scans.incrementalHint"}}
-        </p>
-      </div>
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input type="checkbox" name="behavioral" value="true" id="behavioral-cb">
-          <span>{{t "scans.behavioral"}}</span>
-        </label>
-        <p class="form-hint" id="behavioral-hint">
-          {{t "scans.behavioralHint"}}
         </p>
       </div>
     </details>
