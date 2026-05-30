@@ -93,8 +93,9 @@ export function isPrivateHostname(hostname: string): boolean {
   const h = hostname.toLowerCase();
   return (
     h === 'localhost' ||
-    h === '127.0.0.1' ||
+    h.startsWith('127.') ||
     h === '::1' ||
+    h === '[::1]' ||
     h === '0.0.0.0' ||
     h.startsWith('10.') ||
     h.startsWith('192.168.') ||
@@ -109,7 +110,10 @@ export function isPrivateHostname(hostname: string): boolean {
 /**
  * Validate and parse the scan URL. Returns the parsed URL or an error string.
  */
-export function validateScanUrl(rawUrl: string): { url: URL } | { error: string } {
+export function validateScanUrl(
+  rawUrl: string,
+  allowPrivate = false,
+): { url: URL } | { error: string } {
   if (typeof rawUrl !== 'string' || rawUrl.trim() === '') {
     return { error: 'Please enter a URL to scan.' };
   }
@@ -125,7 +129,7 @@ export function validateScanUrl(rawUrl: string): { url: URL } | { error: string 
     return { error: 'URL must use http or https' };
   }
 
-  if (isPrivateHostname(parsedUrl.hostname)) {
+  if (!allowPrivate && isPrivateHostname(parsedUrl.hostname)) {
     return { error: 'Scanning internal or private addresses is not allowed.' };
   }
 
