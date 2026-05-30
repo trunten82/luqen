@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{t "vpat.title"}} — {{scan.siteUrl}}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1a1a1a; background: #fff; margin: 0; padding: 2rem; font-size: 11pt; line-height: 1.5;
+    }
+    h1 { font-size: 1.5rem; margin: 0 0 0.25rem; color: #5a2a26; }
+    h2 { font-size: 1.05rem; margin: 1.75rem 0 0.5rem; border-bottom: 2px solid #5a2a26; padding-bottom: 0.2rem; color: #5a2a26; }
+    a { color: #5a2a26; text-decoration: underline; }
+    p.intro { font-size: 0.9rem; color: #4a4a4a; max-width: 60rem; }
+
+    .print-bar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; margin-bottom: 1rem; padding: 0.5rem 0; border-bottom: 1px solid #d0d4de; }
+    .print-btn { display: inline-block; padding: 0.45rem 1.1rem; background: #5a2a26; color: #fff; border: none; border-radius: 4px; font-size: 0.85rem; cursor: pointer; text-decoration: none; }
+    .print-btn:hover { background: #401d1a; }
+    .print-btn--secondary { background: #6b6b6b; }
+
+    .subtitle { font-size: 0.85rem; color: #4a4a4a; margin-bottom: 1.25rem; }
+    .subtitle span { margin-right: 1.5rem; }
+
+    /* Summary cards */
+    .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.6rem; margin: 1rem 0 1.5rem; }
+    .summary-card { border: 1px solid #d0d4de; border-radius: 6px; padding: 0.6rem; text-align: center; }
+    .summary-card__value { font-size: 1.6rem; font-weight: 800; display: block; }
+    .summary-card__label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; color: #6b6b6b; }
+    .summary-card--supports .summary-card__value { color: #206a44; }
+    .summary-card--partial .summary-card__value { color: #7c5612; }
+    .summary-card--dns .summary-card__value { color: #a52822; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 1rem; }
+    th, td { padding: 0.45rem 0.5rem; text-align: left; border-bottom: 1px solid #d0d4de; vertical-align: top; }
+    th { background: #faf7f6; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .crit-title { color: #6b6b6b; font-size: 0.72rem; }
+
+    .badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 3px; font-size: 0.68rem; font-weight: 700; }
+    .badge--success { background: #d4edda; color: #206a44; }
+    .badge--warning { background: #fff3cd; color: #7c5612; }
+    .badge--error { background: #f8d7da; color: #a52822; }
+    .badge--neutral { background: #e9ecef; color: #495057; }
+    .level-tag { display: inline-block; padding: 0.05rem 0.35rem; border-radius: 3px; font-size: 0.64rem; font-weight: 700; background: #ece6df; color: #5e5550; margin-left: 0.35rem; }
+
+    .text-muted { color: #6b6b6b; }
+
+    /* Methodology & disclaimer — transparency framing, not a legal claim */
+    .methodology { border: 1px solid #d0d4de; border-top: 4px solid #d6c43c; border-radius: 6px; padding: 0.9rem 1.1rem; margin: 1.25rem 0; background: #faf7f6; max-width: 60rem; }
+    .methodology__heading { font-size: 0.95rem; margin: 0 0 0.4rem; border: none; padding: 0; color: #5a2a26; }
+    .methodology__body { font-size: 0.8rem; color: #4a4a4a; margin: 0 0 0.5rem; }
+    .methodology__disclaimer { font-size: 0.8rem; color: #7c5612; font-weight: 600; margin: 0; }
+
+    .report-footer { margin-top: 1.5rem; padding-top: 0.4rem; border-top: 1px solid #d0d4de; font-size: 0.7rem; color: #6b6b6b; text-align: center; }
+
+    @media print {
+      body { padding: 0.5cm; font-size: 9pt; }
+      .print-bar { display: none !important; }
+      a { color: #1a1a1a; }
+      a[href]::after { content: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="print-bar">
+  <button class="print-btn" data-action="printPage">{{t "vpat.print"}}</button>
+  <a class="print-btn print-btn--secondary" href="/api/v1/export/scans/{{scan.id}}/vpat.pdf">{{t "vpat.downloadPdf"}}</a>
+  <button class="print-btn print-btn--secondary" data-action="closeWindow">{{t "vpat.close"}}</button>
+</div>
+
+<h1>{{t "vpat.title"}}</h1>
+<div class="subtitle">
+  <span><strong>{{scan.siteUrl}}</strong></span>
+  <span>{{formatStandard vpat.standard}}</span>
+  <span>{{t "vpat.generatedAt"}}: {{vpat.generatedAt}}</span>
+</div>
+
+<p class="intro">{{t "vpat.intro"}}</p>
+
+{{! ── Methodology & disclaimer (legal-defensibility framing) ── }}
+<div class="methodology">
+  <h2 class="methodology__heading">{{t "vpat.methodologyHeading"}}</h2>
+  <p class="methodology__body">{{t "vpat.methodologyBody"}}</p>
+  <p class="methodology__disclaimer">{{t "vpat.disclaimerBody"}}</p>
+</div>
+
+{{#if vpat.tablesByLevel.length}}
+
+{{! ── Conformance summary ── }}
+<h2>{{t "vpat.summary"}}</h2>
+<div class="summary-grid">
+  <div class="summary-card summary-card--supports"><span class="summary-card__value">{{vpat.summary.supports}}</span><span class="summary-card__label">{{t "vpat.summarySupports"}}</span></div>
+  <div class="summary-card summary-card--partial"><span class="summary-card__value">{{vpat.summary.partial}}</span><span class="summary-card__label">{{t "vpat.summaryPartial"}}</span></div>
+  <div class="summary-card summary-card--dns"><span class="summary-card__value">{{vpat.summary.doesNotSupport}}</span><span class="summary-card__label">{{t "vpat.summaryDoesNotSupport"}}</span></div>
+  <div class="summary-card"><span class="summary-card__value">{{vpat.summary.notApplicable}}</span><span class="summary-card__label">{{t "vpat.summaryNotApplicable"}}</span></div>
+  <div class="summary-card"><span class="summary-card__value">{{vpat.summary.notEvaluated}}</span><span class="summary-card__label">{{t "vpat.summaryNotEvaluated"}}</span></div>
+  <div class="summary-card"><span class="summary-card__value">{{vpat.summary.total}}</span><span class="summary-card__label">{{t "vpat.summaryTotal"}}</span></div>
+</div>
+
+{{! ── Per-level conformance tables ── }}
+{{#each vpat.tablesByLevel}}
+<h2>{{t "vpat.levelTable" level=this.level}}</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width:40%;">{{t "vpat.colCriteria"}}</th>
+      <th style="width:18%;">{{t "vpat.colConformance"}}</th>
+      <th>{{t "vpat.colRemarks"}}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each this.rows}}
+    <tr>
+      <td>
+        <a href="{{url}}" target="_blank" rel="noopener"><strong>{{criterion}}</strong> {{title}}</a>
+        <span class="level-tag">{{level}}</span>
+      </td>
+      <td>{{conformanceBadge conformance}}</td>
+      <td class="text-muted">{{remarks}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+{{/each}}
+
+{{else}}
+<p class="intro">{{t "vpat.noData"}}</p>
+{{/if}}
+
+<div class="report-footer">
+  {{t "vpat.footer"}} &middot; {{vpat.generatedAt}}
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

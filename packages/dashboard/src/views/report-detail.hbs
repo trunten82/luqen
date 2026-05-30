@@ -47,6 +47,9 @@
     <a href="/reports/{{scan.id}}/print" target="_blank" class="btn btn--ghost btn--sm" aria-label="Open print-friendly version for PDF export">
       {{t "reportDetail.printPdf"}}
     </a>
+    <a href="/reports/{{scan.id}}/vpat" target="_blank" rel="noopener" class="btn btn--ghost btn--sm" aria-label="Generate VPAT / ACR accessibility conformance report">
+      {{t "reportDetail.vpatGenerate"}}
+    </a>
     <a href="/api/v1/export/scans/{{scan.id}}/report.pdf" class="btn btn--ghost btn--sm" aria-label="Download report as PDF">
       {{t "reportDetail.downloadPdf"}}
     </a>
