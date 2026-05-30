@@ -247,7 +247,9 @@
     "maxPages": "Pages Maximum",
     "maxPagesHint": "Nombre maximum de pages à découvrir et analyser en mode site complet (1–1000).",
     "includeWarnings": "Inclure les avertissements",
-    "includeNotices": "Inclure les avis"
+    "includeNotices": "Inclure les avis",
+    "behavioral": "Analyse comportementale approfondie (bêta)",
+    "behavioralHint": "Exécute en plus des vérifications réelles dans le navigateur (clavier, focus, éléments interactifs) que l’analyse statique ne détecte pas (p. ex. pièges au clavier, indicateurs de focus manquants). Plus lent — lance un navigateur headless par page."
   },
   "reports": {
     "title": "Rapports",

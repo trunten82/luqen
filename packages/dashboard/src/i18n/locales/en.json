@@ -259,7 +259,9 @@
     "errorJurisdictionOrRegulationRequired": "Select at least one jurisdiction or regulation",
     "regulationsSelected": "Selected regulations",
     "regulationTypeBadge": "R",
-    "jurisdictionTypeBadge": "J"
+    "jurisdictionTypeBadge": "J",
+    "behavioral": "Deep behavioral scan (beta)",
+    "behavioralHint": "Additionally runs real-browser keyboard, focus, and interactive-element checks that static scanning cannot detect (e.g. keyboard traps, missing focus indicators). Slower — launches a headless browser per page."
   },
   "reports": {
     "verdictEyebrow": "Verdict",

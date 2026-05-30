@@ -37,6 +37,8 @@ export interface InitiateScanInput {
   readonly includeNotices?: boolean;
   readonly headers?: Readonly<Record<string, string>>;
   readonly actions?: readonly string[];
+  /** Opt-in "deep behavioral scan" (real-browser keyboard/focus/dynamic-state). */
+  readonly behavioral?: string | boolean;
 }
 
 export interface ScanContext {
@@ -230,6 +232,7 @@ export class ScanService {
     // 8. Determine scan mode and incremental flag
     const scanMode = input.scanMode === 'single' ? 'single' : 'site';
     const incremental = input.incremental === 'true' || input.incremental === true;
+    const behavioral = input.behavioral === 'true' || input.behavioral === true;
 
     // 9. Create scan record
     const scanId = randomUUID();
@@ -262,6 +265,7 @@ export class ScanService {
       orgId: context.orgId,
       ...(runner !== undefined ? { runner } : {}),
       ...(incremental ? { incremental } : {}),
+      ...(behavioral ? { behavioral } : {}),
       includeWarnings: input.includeWarnings !== false,
       includeNotices: input.includeNotices !== false,
       ...(input.headers !== undefined ? { headers: input.headers } : {}),
