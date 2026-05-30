@@ -13,6 +13,8 @@ export { DirectScanner } from './scanner/direct-scanner.js';
 export { discoverUrls } from './discovery/discover.js';
 export { buildAnnotatedPages } from './reporter/html-reporter.js';
 export { computeContentHash, computeContentHashes } from './scanner/content-hash.js';
+export { runBehavioralChecks } from './behavioral/index.js';
+export type { BehavioralOptions, BehavioralResult } from './behavioral/types.js';
 export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanError, ProgressListener, ComplianceEnrichment } from './types.js';
 
 import { discoverUrls } from './discovery/discover.js';
