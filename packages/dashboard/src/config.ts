@@ -24,6 +24,7 @@ const ConfigSchema = z.object({
   catalogueCacheTtl: z.number().int().min(0).default(3600),
   redisUrl: z.string().url().optional(),
   maxPages: z.number().int().min(1).max(1000).default(50),
+  allowPrivateScanTargets: z.boolean().optional(),
   runner: z.enum(['htmlcs', 'axe']).optional(),
   webserviceUrls: z.array(z.string().url()).optional(),
   jwtPublicKey: z.string().optional(),
@@ -58,6 +59,12 @@ export interface DashboardConfig {
   readonly redisUrl?: string;
   /** Maximum pages to scan in full-site mode. Default: 50. */
   readonly maxPages: number;
+  /**
+   * Opt-in escape hatch: allow scanning loopback/private/internal targets.
+   * Defaults to false (secure). Only enable in trusted test environments via
+   * DASHBOARD_ALLOW_PRIVATE_SCAN_TARGETS=true or dashboard.config.json.
+   */
+  readonly allowPrivateScanTargets?: boolean;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Requires the runner installed on the webservice. */
   readonly runner?: 'htmlcs' | 'axe';
   /** Additional pa11y webservice URLs for horizontal scaling (comma-separated via env). */
@@ -93,6 +100,7 @@ const DEFAULTS: DashboardConfig = {
   pluginsDir: './plugins',
   catalogueCacheTtl: 3600,
   maxPages: 50,
+  allowPrivateScanTargets: false,
 };
 
 function loadConfigFile(configPath: string): Partial<DashboardConfig> {
@@ -146,6 +154,10 @@ function applyEnvOverrides(config: DashboardConfig): DashboardConfig {
     maxPages: process.env['DASHBOARD_MAX_PAGES'] !== undefined
       ? parseInt(process.env['DASHBOARD_MAX_PAGES'], 10)
       : config.maxPages,
+    allowPrivateScanTargets:
+      process.env['DASHBOARD_ALLOW_PRIVATE_SCAN_TARGETS'] === 'true'
+        ? true
+        : (config.allowPrivateScanTargets ?? false),
     ...(process.env['DASHBOARD_SCANNER_RUNNER'] !== undefined &&
         (process.env['DASHBOARD_SCANNER_RUNNER'] === 'htmlcs' || process.env['DASHBOARD_SCANNER_RUNNER'] === 'axe')
       ? { runner: process.env['DASHBOARD_SCANNER_RUNNER'] as 'htmlcs' | 'axe' }
