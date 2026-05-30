@@ -49,7 +49,9 @@ beforeAll(() => {
  * generous.
  */
 
-const TEST_TIMEOUT = 60000;
+// Static Pa11y scan + behavioral pass = two browser launches; generous budget
+// for cold/constrained CI runners (see behavioral.test.ts timeout rationale).
+const TEST_TIMEOUT = 120000;
 
 let servers: Server[] = [];
 
