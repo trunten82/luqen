@@ -21,7 +21,8 @@ import { discoverUrls } from './discovery/discover.js';
 import { scanUrls, type ScanOptions } from './scanner/scanner.js';
 import { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
 import { DirectScanner } from './scanner/direct-scanner.js';
-import type { DiscoveredUrl, PageResult, ProgressListener } from './types.js';
+import { runBehavioralChecks } from './behavioral/index.js';
+import type { DiscoveredUrl, PageResult, AccessibilityIssue, ProgressListener } from './types.js';
 
 export interface CreateScannerOptions {
   /** When set, uses the pa11y webservice HTTP API (legacy mode). When omitted, uses direct pa11y npm library. */
@@ -49,6 +50,19 @@ export interface CreateScannerOptions {
   readonly includeWarnings?: boolean;
   /** Include notices in results (default: true). */
   readonly includeNotices?: boolean;
+  /**
+   * When true, run the behavioral testing layer (real-browser keyboard /
+   * focus / dynamic-state checks) on each scanned page IN ADDITION to the
+   * static Pa11y scan. Default: false. OPT-IN — a "deep behavioral scan".
+   * Slower + heavier (launches a headless browser per page); bounded by
+   * `behavioralMaxPages`.
+   */
+  readonly behavioral?: boolean;
+  /**
+   * Cap on how many of the scanned pages the behavioral layer runs against
+   * (behavioral checks are far more expensive than a static scan). Default: 10.
+   */
+  readonly behavioralMaxPages?: number;
 }
 
 export interface Scanner {
@@ -132,12 +146,20 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       // Scan all discovered URLs
       const results = await scanUrls(urls, clientOrPool, scanOptions);
 
+      // Optional behavioral pass (opt-in). Runs a real-browser interaction
+      // suite on up to `behavioralMaxPages` of the scanned pages and merges
+      // its findings into each page's issue list (runner='behavioral'). Each
+      // page is best-effort: a behavioral failure never breaks the static scan.
+      const pages: PageResult[] = opts.behavioral === true
+        ? await runBehavioralPass(results.pages, opts)
+        : results.pages;
+
       // Aggregate results
       let errorCount = 0;
       let warningCount = 0;
       let noticeCount = 0;
 
-      for (const page of results.pages) {
+      for (const page of pages) {
         for (const issue of page.issues) {
           if (issue.type === 'error') errorCount++;
           else if (issue.type === 'warning') warningCount++;
@@ -146,9 +168,9 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       }
 
       return {
-        pages: results.pages,
+        pages,
         summary: {
-          pagesScanned: results.pages.length,
+          pagesScanned: pages.length,
           byLevel: {
             error: errorCount,
             warning: warningCount,
@@ -158,4 +180,54 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       };
     },
   };
+}
+
+/**
+ * Run the behavioral testing layer over (up to behavioralMaxPages of) the
+ * statically-scanned pages and merge its findings into each page's issues.
+ *
+ * Bounded + best-effort: pages beyond the cap are returned unchanged, and a
+ * behavioral failure on one page leaves that page's static results intact.
+ * Behavioral issues are mapped to the AccessibilityIssue shape so they render
+ * and flow into compliance / VPAT exactly like static findings.
+ */
+async function runBehavioralPass(
+  staticPages: PageResult[],
+  opts: CreateScannerOptions,
+): Promise<PageResult[]> {
+  const cap = opts.behavioralMaxPages ?? 10;
+  const out: PageResult[] = [];
+
+  for (let i = 0; i < staticPages.length; i++) {
+    const page = staticPages[i];
+    if (i >= cap) {
+      out.push(page);
+      continue;
+    }
+    try {
+      const behavioral = await runBehavioralChecks(page.url, {
+        ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
+        ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
+      });
+      if (behavioral.issues.length === 0) {
+        out.push(page);
+        continue;
+      }
+      const mapped: AccessibilityIssue[] = behavioral.issues.map((issue) => ({
+        code: issue.code,
+        type: issue.type,
+        message: issue.message,
+        selector: issue.selector,
+        context: issue.context,
+        fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
+      }));
+      const mergedIssues = [...page.issues, ...mapped];
+      out.push({ ...page, issues: mergedIssues, issueCount: mergedIssues.length });
+    } catch {
+      // Behavioral layer is additive — never let it drop a page's static results.
+      out.push(page);
+    }
+  }
+
+  return out;
 }
