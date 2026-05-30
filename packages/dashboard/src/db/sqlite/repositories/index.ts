@@ -32,3 +32,4 @@ export { SqliteCoordinatedPrRepository } from './coordinated-pr-repository.js';
 export { SqliteBulkFixRepository } from './bulk-fix-repository.js';
 export { SqliteOrgAggregatorWebhookRepository } from './org-aggregator-webhook-repository.js';
 export { SqliteNotificationUnsubscribeRepository } from './notification-unsubscribe-repository.js';
+export { SqliteAccessibilityStatementRepository } from './accessibility-statement-repository.js';

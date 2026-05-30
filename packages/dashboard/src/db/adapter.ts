@@ -17,6 +17,7 @@ import type { BrandingRepository } from './interfaces/branding-repository.js';
 import type { BrandScoreRepository } from './interfaces/brand-score-repository.js';
 import type { ConversationRepository } from './interfaces/conversation-repository.js';
 import type { ShareLinkRepository } from './interfaces/share-link-repository.js';
+import type { AccessibilityStatementRepository } from './interfaces/accessibility-statement-repository.js';
 import type { AgentAuditRepository } from './interfaces/agent-audit-repository.js';
 import type { OauthClientRepository } from './interfaces/oauth-client-repository.js';
 import type { OauthCodeRepository } from './interfaces/oauth-code-repository.js';
@@ -73,4 +74,5 @@ export interface StorageAdapter {
   readonly bulkFixes: BulkFixRepository;
   readonly orgAggregatorWebhooks: OrgAggregatorWebhookRepository;
   readonly notificationUnsubscribes: NotificationUnsubscribeRepository;
+  readonly accessibilityStatements: AccessibilityStatementRepository;
 }
