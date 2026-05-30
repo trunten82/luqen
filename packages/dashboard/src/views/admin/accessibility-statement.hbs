@@ -1,0 +1,104 @@
+<section aria-label="{{t "a11yStatement.admin.title"}}">
+  <h2>{{t "a11yStatement.admin.title"}}</h2>
+  <p class="text-muted text-sm mb-md">{{t "a11yStatement.admin.intro"}}</p>
+
+  {{#if saved}}
+  <div class="alert alert--success mb-md" role="status">{{t "a11yStatement.admin.saved"}}</div>
+  {{/if}}
+
+  {{#if publicUrl}}
+  <div class="alert {{#if publicEnabled}}alert--success{{else}}alert--warning{{/if}} mb-md">
+    {{#if publicEnabled}}
+      {{t "a11yStatement.admin.publicLive"}}
+      <a href="{{publicUrl}}" target="_blank" rel="noopener"><code>{{publicUrl}}</code></a>
+    {{else}}
+      {{t "a11yStatement.admin.publicDisabled"}} <code>{{publicUrl}}</code>
+    {{/if}}
+  </div>
+  {{/if}}
+
+  <div class="grid grid--2col">
+    <form method="post" action="/admin/accessibility-statement" class="form-grid">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="enabled" {{#if config.enabled}}checked{{/if}}>
+          {{t "a11yStatement.admin.enable"}}
+        </label>
+        <p class="text-muted text-sm">{{t "a11yStatement.admin.enableHelp"}}</p>
+      </div>
+
+      <div class="form-group">
+        <label for="as-entity">{{t "a11yStatement.admin.entityName"}}</label>
+        <input type="text" id="as-entity" name="entityName" class="input" value="{{config.entityName}}"
+               placeholder="{{t "a11yStatement.admin.entityNamePlaceholder"}}">
+      </div>
+
+      <div class="form-group">
+        <label for="as-site">{{t "a11yStatement.admin.siteUrl"}}</label>
+        <input type="url" id="as-site" name="siteUrl" class="input" value="{{config.siteUrl}}"
+               placeholder="https://example.com">
+        <p class="text-muted text-sm">{{t "a11yStatement.admin.siteUrlHelp"}}</p>
+      </div>
+
+      <div class="form-group">
+        <label for="as-version">{{t "a11yStatement.admin.wcagVersion"}}</label>
+        <select id="as-version" name="wcagVersion" class="input">
+          <option value="2.1" {{#if (eq config.wcagVersion "2.1")}}selected{{/if}}>WCAG 2.1</option>
+          <option value="2.2" {{#if (eq config.wcagVersion "2.2")}}selected{{/if}}>WCAG 2.2</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="as-level">{{t "a11yStatement.admin.wcagLevel"}}</label>
+        <select id="as-level" name="wcagLevel" class="input">
+          <option value="A" {{#if (eq config.wcagLevel "A")}}selected{{/if}}>Level A</option>
+          <option value="AA" {{#if (eq config.wcagLevel "AA")}}selected{{/if}}>Level AA</option>
+          <option value="AAA" {{#if (eq config.wcagLevel "AAA")}}selected{{/if}}>Level AAA</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="as-email">{{t "a11yStatement.admin.contactEmail"}}</label>
+        <input type="email" id="as-email" name="contactEmail" class="input" value="{{config.contactEmail}}"
+               placeholder="accessibility@example.com">
+        <p class="text-muted text-sm">{{t "a11yStatement.admin.contactHelp"}}</p>
+      </div>
+
+      <div class="form-group">
+        <label for="as-url">{{t "a11yStatement.admin.contactUrl"}}</label>
+        <input type="url" id="as-url" name="contactUrl" class="input" value="{{config.contactUrl}}"
+               placeholder="https://example.com/contact">
+      </div>
+
+      <div class="form-group">
+        <label for="as-commitment">{{t "a11yStatement.admin.commitment"}}</label>
+        <textarea id="as-commitment" name="commitment" class="input" rows="4"
+                  placeholder="{{t "a11yStatement.admin.commitmentPlaceholder"}}">{{config.commitment}}</textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">{{t "a11yStatement.admin.save"}}</button>
+      </div>
+    </form>
+
+    <aside class="card" aria-label="{{t "a11yStatement.admin.previewTitle"}}">
+      <h3>{{t "a11yStatement.admin.previewTitle"}}</h3>
+      <p class="text-sm"><strong>{{preview.entityName}}</strong> — {{preview.standardLabel}}</p>
+      <p class="text-sm">
+        {{#if (eq preview.conformanceStatus "partially-conformant")}}
+          <span class="badge badge--warning">{{t "a11yStatement.status.partial"}}</span>
+        {{else}}
+          <span class="badge badge--error">{{t "a11yStatement.status.none"}}</span>
+        {{/if}}
+      </p>
+      {{#if preview.hasAssessment}}
+        <p class="text-muted text-sm">{{t "a11yStatement.admin.previewAssessed"}} {{preview.assessmentDate}}</p>
+        <p class="text-sm">{{t "a11yStatement.admin.previewLimitations"}} <strong>{{preview.knownLimitations.length}}</strong> · {{t "a11yStatement.admin.previewPending"}} <strong>{{preview.notEvaluatedCount}}</strong></p>
+      {{else}}
+        <p class="text-muted text-sm">{{t "a11yStatement.admin.previewNoScan"}}</p>
+      {{/if}}
+    </aside>
+  </div>
+</section>

@@ -103,7 +103,8 @@
     "llmConfig": "Configurazione LLM",
     "notifications": "Notifiche",
     "brandOverview": "Panoramica del marchio",
-    "llmUsage": "LLM usage"
+    "llmUsage": "LLM usage",
+    "accessibilityStatement": "Dichiarazione di accessibilità"
   },
   "auth": {
     "signInTitle": "Accedi",
@@ -1374,5 +1375,62 @@
     "methodologyHeading": "Methodology & scope",
     "methodologyBody": "Conformance is derived from automated testing (Pa11y / axe-core) combined with any recorded manual test results. Automated testing reliably detects only a portion of WCAG success criteria (industry estimates ~30–40%); it can confirm machine-verifiable failures but cannot, on its own, prove that a criterion requiring human judgement (such as meaningful alternative text, logical reading order, or keyboard operability) is fully met. Criteria that automated testing cannot conclusively verify are reported as “Not Evaluated” until a manual test is recorded — they are not assumed to pass. Where AI-assisted fixes were applied, they were reviewed and merged under human developer supervision.",
     "disclaimerBody": "This report is a transparency and remediation-planning document. It is not a certificate of compliance and does not constitute legal advice or a guarantee against accessibility claims. No automated tool or report can make a site “lawsuit-proof”; ongoing manual testing and remediation are required."
+  },
+  "a11yStatement": {
+    "status": {
+      "partial": "Parzialmente conforme",
+      "none": "Non conforme"
+    },
+    "admin": {
+      "title": "Dichiarazione di accessibilità",
+      "intro": "Genera una dichiarazione di accessibilità pubblica e ospitabile per il tuo sito. È concepita come un resoconto trasparente e in buona fede: segnala la conformità parziale, elenca le limitazioni note dalla tua ultima scansione e indirizza i riscontri a te. Viene pubblicata solo quando la attivi.",
+      "saved": "Impostazioni della dichiarazione di accessibilità salvate.",
+      "publicLive": "La tua dichiarazione è online all'indirizzo",
+      "publicDisabled": "La tua dichiarazione è disattivata. Una volta attivata, verrà pubblicata all'indirizzo",
+      "enable": "Pubblica pubblicamente questa dichiarazione di accessibilità",
+      "enableHelp": "Quando è disattivata, la pagina pubblica restituisce un errore 404.",
+      "entityName": "Nome dell'organizzazione / dell'ente",
+      "entityNamePlaceholder": "Acme S.p.A.",
+      "siteUrl": "Sito coperto da questa dichiarazione",
+      "siteUrlHelp": "Le limitazioni note sono tratte dall'ultima scansione completata di questo sito.",
+      "wcagVersion": "Versione WCAG di riferimento",
+      "wcagLevel": "Livello di conformità di riferimento",
+      "contactEmail": "E-mail per riscontri / segnalazione di barriere",
+      "contactHelp": "Dove gli utenti segnalano le barriere di accessibilità. Viene indirizzato alla tua organizzazione, non a un avvocato.",
+      "contactUrl": "URL del modulo di riscontro (facoltativo)",
+      "commitment": "Impegno di correzione (facoltativo)",
+      "commitmentPlaceholder": "Ci impegniamo a correggere le barriere di accessibilità confermate entro 30 giorni da una segnalazione.",
+      "save": "Salva dichiarazione",
+      "previewTitle": "Anteprima",
+      "previewAssessed": "Sulla base di una scansione del",
+      "previewLimitations": "Limitazioni note:",
+      "previewPending": "Revisione manuale in sospeso:",
+      "previewNoScan": "Non è ancora stata trovata alcuna scansione completata per il sito configurato: imposta un URL del sito ed esegui una scansione per popolare le limitazioni note."
+    },
+    "public": {
+      "pageTitle": "Dichiarazione di accessibilità — {entity}",
+      "heading": "Dichiarazione di accessibilità di {entity}",
+      "publishedOn": "Pubblicata il",
+      "defaultCommitment": "{entity} si impegna a rendere accessibile il proprio sito web, in linea con {standard}. Consideriamo l'accessibilità un impegno continuo e continuiamo a individuare e correggere le barriere.",
+      "conformanceHeading": "Stato di conformità",
+      "partialBody": "{entity} è parzialmente conforme a {standard}. «Parzialmente conforme» significa che alcune parti dei contenuti non sono pienamente conformi allo standard di accessibilità. I problemi noti sono elencati di seguito e stiamo lavorando per risolverli.",
+      "noneBody": "In base alla nostra ultima valutazione, {entity} non è ancora conforme a {standard}. I problemi noti sono elencati di seguito e la correzione è in corso.",
+      "limitationsHeading": "Limitazioni note",
+      "limitationsIntro": "Nonostante i nostri massimi sforzi, gli utenti potrebbero incontrare le seguenti barriere. Stiamo lavorando attivamente per risolverle:",
+      "pendingNote": "Inoltre, {count} criteri di successo richiedono una valutazione manuale che i test automatizzati da soli non possono confermare; questi sono in fase di revisione.",
+      "noAssessment": "È attualmente in corso una valutazione completa di questo sito. Questa dichiarazione verrà aggiornata con riscontri specifici una volta completata la valutazione.",
+      "measuresHeading": "Misure a sostegno dell'accessibilità",
+      "measureAutomated": "Scansione WCAG automatizzata delle pagine rispetto allo standard di riferimento.",
+      "measureBehavioral": "Controlli comportamentali su browser reale (trappole da tastiera, visibilità del focus, stati dinamici e focus delle finestre di dialogo) oltre all'analisi statica.",
+      "measureManual": "Revisione manuale dei criteri che i test automatizzati non possono confermare da soli.",
+      "measureRemediation": "Correzione a livello di codice sorgente dei problemi confermati — non una sovrapposizione né un widget di accessibilità.",
+      "feedbackHeading": "Riscontri e contatti",
+      "feedbackIntro": "Accogliamo con favore i tuoi riscontri sull'accessibilità di {entity}. Se incontri una barriera, faccelo sapere:",
+      "feedbackEmail": "E-mail:",
+      "feedbackForm": "Modulo di contatto:",
+      "feedbackNoChannel": "Non è ancora stato configurato un canale per i riscontri. Contatta il gestore del sito per segnalare una barriera di accessibilità.",
+      "lastAssessed": "Ultima valutazione il",
+      "disclaimer": "Questa dichiarazione riflette i test automatizzati e comportamentali insieme a qualsiasi revisione manuale registrata. È un resoconto in buona fede dei nostri sforzi in materia di accessibilità e non costituisce né una certificazione legale di conformità né una consulenza legale."
+    }
   }
 }
