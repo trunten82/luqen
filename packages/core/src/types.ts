@@ -52,6 +52,22 @@ export interface AccessibilityIssue {
   readonly fixSuggestion?: string;
 }
 
+/**
+ * A single behavioral (or static) accessibility finding.
+ *
+ * Used by the behavioral engine (`src/behavioral`). The `code` MUST embed the
+ * WCAG criterion in underscore form (e.g. `2_1_2`) so `extractCriterion()` can
+ * parse it downstream. `runner` is set to `'behavioral'` for behavioral findings.
+ */
+export interface Issue {
+  readonly type: 'error' | 'warning' | 'notice';
+  readonly code: string;
+  readonly message: string;
+  readonly selector: string;
+  readonly context: string;
+  readonly runner?: string;
+}
+
 export interface SourceMapping {
   readonly file: string;
   readonly line?: number;

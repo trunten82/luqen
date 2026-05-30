@@ -247,7 +247,9 @@
     "maxPages": "Max. Seiten",
     "maxPagesHint": "Maximale Anzahl der zu entdeckenden und zu scannenden Seiten im Vollständige-Website-Modus (1–1000).",
     "includeWarnings": "Warnungen einschließen",
-    "includeNotices": "Hinweise einschließen"
+    "includeNotices": "Hinweise einschließen",
+    "behavioral": "Tiefer Verhaltensscan (Beta)",
+    "behavioralHint": "Führt zusätzlich echte Browser-Prüfungen für Tastatur, Fokus und interaktive Elemente aus, die ein statischer Scan nicht erkennt (z. B. Tastaturfallen, fehlende Fokus-Indikatoren). Langsamer — startet pro Seite einen Headless-Browser."
   },
   "reports": {
     "title": "Berichte",

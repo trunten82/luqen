@@ -62,6 +62,12 @@ export interface ScanConfig {
   readonly includeWarnings?: boolean;
   /** Include notices in results (default: true). */
   readonly includeNotices?: boolean;
+  /**
+   * Opt-in "deep behavioral scan": run the real-browser keyboard / focus /
+   * dynamic-state checks in addition to the static Pa11y scan. Default: false.
+   * Transient (not persisted on the scan record) — mirrors `incremental`.
+   */
+  readonly behavioral?: boolean;
 }
 
 class ScanQueue {
@@ -449,6 +455,7 @@ export class ScanOrchestrator {
             ...(config.runner !== undefined ? { runner: config.runner } : {}),
             ...(config.headers !== undefined ? { headers: config.headers } : {}),
             ...(config.actions !== undefined && config.actions.length > 0 ? { actions: config.actions } : {}),
+            ...(config.behavioral === true ? { behavioral: true } : {}),
             onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
               if (progress.type === 'scan:start') {
                 // First scan:start event tells us discovery is done
