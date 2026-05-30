@@ -15,6 +15,7 @@ import type { LLMClient } from '../llm-client.js';
 import { resolveOrgLLMClient } from '../llm-client.js';
 import { t } from '../i18n/index.js';
 import { filterDrilldownIssues, isValidDimension } from '../services/brand-drilldown.js';
+import { buildVpat } from '../services/vpat-service.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 const ReportIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
@@ -470,6 +471,89 @@ export async function reportRoutes(
         isExecutiveView: !perms.has('scans.create') && perms.has('trends.view'),
       });
 
+      return reply.type('text/html').send(html);
+    },
+  );
+
+  // GET /reports/:id/vpat — standalone, printable VPAT / ACR document.
+  // Open + ungated: available for any completed scan the caller can view.
+  server.get(
+    '/reports/:id/vpat',
+    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      if (scan.status !== 'completed') {
+        return reply.code(404).send({ error: 'Report data not available' });
+      }
+
+      let reportData: ReturnType<typeof normalizeReportData> | null = null;
+      try {
+        const dbReport = await storage.scans.getReport(id);
+        if (dbReport !== null) {
+          reportData = normalizeReportData(dbReport as JsonReportFile, scan);
+        } else if (scan.jsonReportPath !== undefined && existsSync(scan.jsonReportPath)) {
+          const raw = JSON.parse(
+            await readFile(scan.jsonReportPath, 'utf-8'),
+          ) as JsonReportFile;
+          reportData = normalizeReportData(raw, scan);
+        }
+      } catch {
+        return reply.code(500).send({ error: 'Failed to read report data' });
+      }
+
+      if (reportData === null) {
+        return reply.code(404).send({ error: 'Report data not available' });
+      }
+
+      const manualResults = await storage.manualTests.getManualTests(id);
+      const vpat = buildVpat(reportData, scan, manualResults);
+
+      // Compile the VPAT template directly with the shared Handlebars singleton
+      // (same approach as /reports/:id/print). The global `t` and `formatStandard`
+      // helpers are registered in server.ts; we only add the VPAT-specific
+      // `conformanceBadge` helper (idempotent — safe to re-register per request).
+      const handlebars = (await import('handlebars')).default;
+      const viewsDir = resolve(join(__dirname, '..', 'views'));
+
+      handlebars.registerHelper('conformanceBadge', (conformance: string) => {
+        const cls =
+          conformance === 'Supports' ? 'badge--success' :
+          conformance === 'Partially Supports' ? 'badge--warning' :
+          conformance === 'Does Not Support' ? 'badge--error' : 'badge--neutral';
+        const escaped = handlebars.escapeExpression(conformance);
+        return new handlebars.SafeString(`<span class="badge ${cls}">${escaped}</span>`);
+      });
+
+      const scanMeta = {
+        ...scan,
+        createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
+      };
+      // Locale plumbing mirrors the global preHandler in server.ts: the UI
+      // language is stored in the secure session and the global `t` helper reads
+      // it from the render root, falling back to 'en'.
+      const session = request.session as { get?(key: string): unknown } | undefined;
+      const locale =
+        (typeof session?.get === 'function'
+          ? (session.get('locale') as string | undefined)
+          : undefined) ?? 'en';
+      const template = handlebars.compile(
+        await readFile(join(viewsDir, 'vpat.hbs'), 'utf-8'),
+      );
+      const html = template(
+        { scan: scanMeta, vpat, user: request.user },
+        { data: { root: { locale } } },
+      );
       return reply.type('text/html').send(html);
     },
   );
