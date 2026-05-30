@@ -184,7 +184,7 @@ export class ScanService {
     context: ScanContext,
   ): Promise<ScanInitiationResult> {
     // 1. Validate URL
-    const urlResult = validateScanUrl(input.siteUrl);
+    const urlResult = validateScanUrl(input.siteUrl, this.config.allowPrivateScanTargets ?? false);
     if ('error' in urlResult) {
       return { ok: false, error: urlResult.error };
     }
