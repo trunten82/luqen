@@ -242,6 +242,14 @@
         </svg>
         {{t "nav.orgApiKeys"}}
       </a>
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/accessibility-statement')}}is-active{{/if}}"
+         href="/admin/accessibility-statement"
+         aria-current="{{#if (startsWith currentPath '/admin/accessibility-statement')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 3.2a1 1 0 110 2 1 1 0 010-2zM7 9h6M10 9v6m-2 0h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {{t "nav.accessibilityStatement"}}
+      </a>
       {{/if}}
       {{/if}}
 

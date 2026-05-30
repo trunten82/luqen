@@ -103,7 +103,8 @@
     "llmConfig": "LLM-Konfiguration",
     "notifications": "Benachrichtigungen",
     "brandOverview": "Markenübersicht",
-    "llmUsage": "LLM usage"
+    "llmUsage": "LLM usage",
+    "accessibilityStatement": "Erklärung zur Barrierefreiheit"
   },
   "auth": {
     "signInTitle": "Anmelden",
@@ -1365,5 +1366,62 @@
     "methodologyHeading": "Methodology & scope",
     "methodologyBody": "Conformance is derived from automated testing (Pa11y / axe-core) combined with any recorded manual test results. Automated testing reliably detects only a portion of WCAG success criteria (industry estimates ~30–40%); it can confirm machine-verifiable failures but cannot, on its own, prove that a criterion requiring human judgement (such as meaningful alternative text, logical reading order, or keyboard operability) is fully met. Criteria that automated testing cannot conclusively verify are reported as “Not Evaluated” until a manual test is recorded — they are not assumed to pass. Where AI-assisted fixes were applied, they were reviewed and merged under human developer supervision.",
     "disclaimerBody": "This report is a transparency and remediation-planning document. It is not a certificate of compliance and does not constitute legal advice or a guarantee against accessibility claims. No automated tool or report can make a site “lawsuit-proof”; ongoing manual testing and remediation are required."
+  },
+  "a11yStatement": {
+    "status": {
+      "partial": "Teilweise konform",
+      "none": "Nicht konform"
+    },
+    "admin": {
+      "title": "Erklärung zur Barrierefreiheit",
+      "intro": "Erstellen Sie eine öffentliche, hostbare Erklärung zur Barrierefreiheit für Ihre Website. Sie ist als nach Treu und Glauben verfasster, transparenter Nachweis angelegt — sie meldet teilweise Konformität, listet bekannte Einschränkungen aus Ihrem letzten Scan auf und leitet Rückmeldungen an Sie weiter. Sie wird nur veröffentlicht, wenn Sie sie aktivieren.",
+      "saved": "Einstellungen der Erklärung zur Barrierefreiheit gespeichert.",
+      "publicLive": "Ihre Erklärung ist live unter",
+      "publicDisabled": "Ihre Erklärung ist deaktiviert. Nach Aktivierung wird sie veröffentlicht unter",
+      "enable": "Diese Erklärung zur Barrierefreiheit öffentlich veröffentlichen",
+      "enableHelp": "Wenn deaktiviert, gibt die öffentliche Seite 404 zurück.",
+      "entityName": "Name der Organisation / Einrichtung",
+      "entityNamePlaceholder": "Muster GmbH",
+      "siteUrl": "Website, die diese Erklärung abdeckt",
+      "siteUrlHelp": "Bekannte Einschränkungen stammen aus dem letzten abgeschlossenen Scan dieser Website.",
+      "wcagVersion": "Angestrebte WCAG-Version",
+      "wcagLevel": "Angestrebte Konformitätsstufe",
+      "contactEmail": "E-Mail für Rückmeldungen / Barrieremeldungen",
+      "contactHelp": "Wohin Nutzer Barrieren bei der Barrierefreiheit melden. Dies wird an Ihre Organisation geleitet — nicht an einen Anwalt.",
+      "contactUrl": "URL des Rückmeldeformulars (optional)",
+      "commitment": "Verpflichtung zur Behebung (optional)",
+      "commitmentPlaceholder": "Wir bemühen uns, bestätigte Barrieren bei der Barrierefreiheit innerhalb von 30 Tagen nach einer Meldung zu beheben.",
+      "save": "Erklärung speichern",
+      "previewTitle": "Vorschau",
+      "previewAssessed": "Basierend auf einem Scan vom",
+      "previewLimitations": "Bekannte Einschränkungen:",
+      "previewPending": "Ausstehende manuelle Prüfung:",
+      "previewNoScan": "Für die konfigurierte Website wurde noch kein abgeschlossener Scan gefunden — legen Sie eine Website-URL fest und führen Sie einen Scan durch, um bekannte Einschränkungen zu erfassen."
+    },
+    "public": {
+      "pageTitle": "Erklärung zur Barrierefreiheit — {entity}",
+      "heading": "Erklärung zur Barrierefreiheit für {entity}",
+      "publishedOn": "Veröffentlicht am",
+      "defaultCommitment": "{entity} verpflichtet sich, seine Website im Einklang mit {standard} barrierefrei zu gestalten. Wir betrachten Barrierefreiheit als fortlaufende Aufgabe und identifizieren und beheben Barrieren kontinuierlich.",
+      "conformanceHeading": "Konformitätsstatus",
+      "partialBody": "{entity} ist teilweise konform mit {standard}. „Teilweise konform\" bedeutet, dass einige Teile der Inhalte dem Standard für Barrierefreiheit nicht vollständig entsprechen. Die bekannten Probleme sind nachstehend aufgeführt, und wir arbeiten an deren Behebung.",
+      "noneBody": "Basierend auf unserer letzten Bewertung erfüllt {entity} {standard} noch nicht. Die bekannten Probleme sind nachstehend aufgeführt, und die Behebung ist im Gange.",
+      "limitationsHeading": "Bekannte Einschränkungen",
+      "limitationsIntro": "Trotz unserer größten Bemühungen können Nutzer auf folgende Barrieren stoßen. Wir arbeiten aktiv an deren Behebung:",
+      "pendingNote": "Darüber hinaus erfordern {count} Erfolgskriterien eine manuelle Bewertung, die durch automatisierte Tests allein nicht bestätigt werden kann; diese werden derzeit geprüft.",
+      "noAssessment": "Eine vollständige Bewertung dieser Website wird derzeit durchgeführt. Diese Erklärung wird mit konkreten Ergebnissen aktualisiert, sobald die Bewertung abgeschlossen ist.",
+      "measuresHeading": "Maßnahmen zur Förderung der Barrierefreiheit",
+      "measureAutomated": "Automatisiertes WCAG-Scannen von Seiten anhand des angestrebten Standards.",
+      "measureBehavioral": "Verhaltensprüfungen im echten Browser (Tastaturfallen, Fokus-Sichtbarkeit, dynamische Zustände und Dialog-Fokus) über die statische Analyse hinaus.",
+      "measureManual": "Manuelle Prüfung von Kriterien, die durch automatisierte Tests allein nicht bestätigt werden können.",
+      "measureRemediation": "Behebung bestätigter Probleme auf Quellcode-Ebene — kein Overlay und kein Barrierefreiheits-Widget.",
+      "feedbackHeading": "Rückmeldungen und Kontakt",
+      "feedbackIntro": "Wir freuen uns über Ihre Rückmeldung zur Barrierefreiheit von {entity}. Wenn Sie auf eine Barriere stoßen, teilen Sie uns dies bitte mit:",
+      "feedbackEmail": "E-Mail:",
+      "feedbackForm": "Kontaktformular:",
+      "feedbackNoChannel": "Es wurde noch kein Rückmeldekanal konfiguriert. Bitte wenden Sie sich an den Betreiber der Website, um eine Barriere bei der Barrierefreiheit zu melden.",
+      "lastAssessed": "Zuletzt bewertet am",
+      "disclaimer": "Diese Erklärung spiegelt automatisierte und verhaltensbezogene Tests zusammen mit etwaigen erfassten manuellen Prüfungen wider. Sie ist ein nach Treu und Glauben erstellter Nachweis unserer Bemühungen um Barrierefreiheit und stellt weder eine rechtliche Konformitätsbescheinigung noch eine Rechtsberatung dar."
+    }
   }
 }

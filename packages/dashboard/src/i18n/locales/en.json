@@ -111,7 +111,8 @@
     "llmConfig": "LLM config",
     "llmUsage": "LLM usage",
     "notifications": "Notifications",
-    "brandOverview": "Brand Overview"
+    "brandOverview": "Brand Overview",
+    "accessibilityStatement": "Accessibility Statement"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -1840,5 +1841,62 @@
     "methodologyHeading": "Methodology & scope",
     "methodologyBody": "Conformance is derived from automated testing (Pa11y / axe-core) combined with any recorded manual test results. Automated testing reliably detects only a portion of WCAG success criteria (industry estimates ~30–40%); it can confirm machine-verifiable failures but cannot, on its own, prove that a criterion requiring human judgement (such as meaningful alternative text, logical reading order, or keyboard operability) is fully met. Criteria that automated testing cannot conclusively verify are reported as “Not Evaluated” until a manual test is recorded — they are not assumed to pass. Where AI-assisted fixes were applied, they were reviewed and merged under human developer supervision.",
     "disclaimerBody": "This report is a transparency and remediation-planning document. It is not a certificate of compliance and does not constitute legal advice or a guarantee against accessibility claims. No automated tool or report can make a site “lawsuit-proof”; ongoing manual testing and remediation are required."
+  },
+  "a11yStatement": {
+    "status": {
+      "partial": "Partially conformant",
+      "none": "Not conformant"
+    },
+    "admin": {
+      "title": "Accessibility Statement",
+      "intro": "Generate a public, hostable accessibility statement for your site. It is framed as a good-faith, transparent record — it reports partial conformance, lists known limitations from your latest scan, and routes feedback to you. It is published only when you enable it.",
+      "saved": "Accessibility statement settings saved.",
+      "publicLive": "Your statement is live at",
+      "publicDisabled": "Your statement is disabled. When enabled it will be published at",
+      "enable": "Publish this accessibility statement publicly",
+      "enableHelp": "When off, the public page returns 404.",
+      "entityName": "Organisation / entity name",
+      "entityNamePlaceholder": "Acme Corporation",
+      "siteUrl": "Site this statement covers",
+      "siteUrlHelp": "Known limitations are drawn from the latest completed scan of this site.",
+      "wcagVersion": "Target WCAG version",
+      "wcagLevel": "Target conformance level",
+      "contactEmail": "Feedback / barrier-report email",
+      "contactHelp": "Where users report accessibility barriers. This routes to your organisation — not a lawyer.",
+      "contactUrl": "Feedback form URL (optional)",
+      "commitment": "Remediation commitment (optional)",
+      "commitmentPlaceholder": "We aim to fix confirmed accessibility barriers within 30 days of a report.",
+      "save": "Save statement",
+      "previewTitle": "Preview",
+      "previewAssessed": "Based on a scan from",
+      "previewLimitations": "Known limitations:",
+      "previewPending": "Pending manual review:",
+      "previewNoScan": "No completed scan found for the configured site yet — set a site URL and run a scan to populate known limitations."
+    },
+    "public": {
+      "pageTitle": "Accessibility Statement — {entity}",
+      "heading": "Accessibility Statement for {entity}",
+      "publishedOn": "Published on",
+      "defaultCommitment": "{entity} is committed to making its website accessible, in line with {standard}. We treat accessibility as an ongoing effort and continue to identify and remediate barriers.",
+      "conformanceHeading": "Conformance status",
+      "partialBody": "{entity} is partially conformant with {standard}. \"Partially conformant\" means that some parts of the content do not fully conform to the accessibility standard. The known issues are listed below, and we are working to address them.",
+      "noneBody": "Based on our latest assessment, {entity} does not yet conform to {standard}. The known issues are listed below, and remediation is in progress.",
+      "limitationsHeading": "Known limitations",
+      "limitationsIntro": "Despite our best efforts, users may encounter the following barriers. We are actively working to resolve them:",
+      "pendingNote": "In addition, {count} success criteria require manual evaluation that automated testing alone cannot confirm; these are under review.",
+      "noAssessment": "A full assessment of this site is currently in progress. This statement will be updated with specific findings once the assessment completes.",
+      "measuresHeading": "Measures to support accessibility",
+      "measureAutomated": "Automated WCAG scanning of pages against the target standard.",
+      "measureBehavioral": "Real-browser behavioural checks (keyboard traps, focus visibility, dynamic-state and dialog focus) beyond static analysis.",
+      "measureManual": "Manual review of criteria that automated testing cannot confirm on its own.",
+      "measureRemediation": "Source-level remediation of confirmed issues — not an overlay or accessibility widget.",
+      "feedbackHeading": "Feedback and contact",
+      "feedbackIntro": "We welcome your feedback on the accessibility of {entity}. If you encounter a barrier, please tell us:",
+      "feedbackEmail": "Email:",
+      "feedbackForm": "Contact form:",
+      "feedbackNoChannel": "A feedback channel has not yet been configured. Please contact the site operator to report an accessibility barrier.",
+      "lastAssessed": "Last assessed on",
+      "disclaimer": "This statement reflects automated and behavioural testing together with any recorded manual review. It is a good-faith record of our accessibility efforts and is not a legal certification of compliance, nor legal advice."
+    }
   }
 }
