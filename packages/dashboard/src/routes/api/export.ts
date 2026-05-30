@@ -4,9 +4,10 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../../db/index.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
-import { generatePdfFromData } from '../../pdf/generator.js';
+import { generatePdfFromData, generateVpatPdf } from '../../pdf/generator.js';
 import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
 import { normalizeReportData, inferComponent } from '../../services/report-service.js';
+import { buildVpat } from '../../services/vpat-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
@@ -515,6 +516,86 @@ export async function exportRoutes(
           .send(pdfBuffer);
       } catch (err) {
         request.log.error(err, 'PDF generation failed');
+        return reply.code(500).send({ error: 'PDF generation failed' });
+      }
+    },
+  );
+
+  // ── GET /api/v1/export/scans/:id/vpat.pdf — VPAT / ACR document ──────────
+  server.get(
+    '/api/v1/export/scans/:id/vpat.pdf',
+    {
+      schema: {
+        tags: ['export'],
+        params: ScanExportIdParamsSchema,
+        response: {
+          200: Type.String(),
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+        produces: PdfProduces,
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      // Org-scope enforcement (mirror report.pdf route).
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      if (scan.status !== 'completed') {
+        return reply.code(404).send({ error: 'Report data not available' });
+      }
+
+      try {
+        let reportJson: JsonReportFile | null = null;
+        const dbReport = await storage.scans.getReport(scan.id);
+        if (dbReport !== null) {
+          reportJson = dbReport as JsonReportFile;
+        } else if (scan.jsonReportPath && existsSync(scan.jsonReportPath)) {
+          reportJson = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
+        }
+
+        if (reportJson === null) {
+          return reply.code(404).send({ error: 'Report data not available' });
+        }
+
+        const reportData = normalizeReportData(reportJson, scan);
+        const manualResults = await storage.manualTests.getManualTests(scan.id);
+        const vpat = buildVpat(reportData, scan, manualResults);
+
+        const scanMeta: PdfScanMeta = {
+          siteUrl: scan.siteUrl,
+          standard: scan.standard,
+          jurisdictions: scan.jurisdictions.join(', '),
+          regulations: (scan.regulations ?? []).join(', '),
+          createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
+        };
+
+        const pdfBuffer = await generateVpatPdf(scanMeta, vpat);
+
+        let hostname: string;
+        try {
+          hostname = new URL(scan.siteUrl).hostname;
+        } catch {
+          hostname = scan.siteUrl.replace(/[^a-zA-Z0-9.-]/g, '_');
+        }
+        const filename = `vpat_${hostname}_${todayStamp()}.pdf`;
+
+        return reply
+          .header('Content-Type', 'application/pdf')
+          .header('Content-Disposition', `attachment; filename="${filename}"`)
+          .send(pdfBuffer);
+      } catch (err) {
+        request.log.error(err, 'VPAT PDF generation failed');
         return reply.code(500).send({ error: 'PDF generation failed' });
       }
     },
