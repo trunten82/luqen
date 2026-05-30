@@ -1927,4 +1927,26 @@ DROP TABLE IF EXISTS credit_ledger;
 DROP TABLE IF EXISTS org_plans;
     `,
   },
+  {
+    id: '075',
+    name: 'create-accessibility-statements',
+    sql: `
+-- Per-org Accessibility Statement configuration. Drives the public, hostable
+-- accessibility statement page (a good-faith remediation artifact for US
+-- lawsuit protection). One row per org; only served publicly when enabled = 1.
+CREATE TABLE IF NOT EXISTS accessibility_statements (
+  org_id        TEXT PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
+  enabled       INTEGER NOT NULL DEFAULT 0,
+  entity_name   TEXT,
+  site_url      TEXT,
+  wcag_version  TEXT NOT NULL DEFAULT '2.1',
+  wcag_level    TEXT NOT NULL DEFAULT 'AA',
+  contact_email TEXT,
+  contact_url   TEXT,
+  commitment    TEXT,
+  updated_at    TEXT NOT NULL,
+  updated_by    TEXT
+);
+    `,
+  },
 ];
