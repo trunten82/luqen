@@ -400,7 +400,7 @@ export class ScanOrchestrator {
               headers: {},
               wait: 0,
               ...(config.runner !== undefined ? { runner: config.runner } : {}),
-              ...(config.deepScan === true ? { runners: ['htmlcs', 'axe'] } : {}),
+              ...(config.deepScan === true ? { runners: ['htmlcs', 'axe'], lighthouse: true } : {}),
               onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
                 if (progress.type === 'scan:start') {
                   // Don't emit scan_complete on start — wait for actual completion
@@ -463,7 +463,7 @@ export class ScanOrchestrator {
             ...(config.headers !== undefined ? { headers: config.headers } : {}),
             ...(config.actions !== undefined && config.actions.length > 0 ? { actions: config.actions } : {}),
             ...(config.behavioral === true ? { behavioral: true } : {}),
-            ...(config.deepScan === true ? { runners: ['htmlcs', 'axe'] } : {}),
+            ...(config.deepScan === true ? { runners: ['htmlcs', 'axe'], lighthouse: true } : {}),
             onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
               if (progress.type === 'scan:start') {
                 // First scan:start event tells us discovery is done
