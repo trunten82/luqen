@@ -263,11 +263,13 @@ describe('buildVpat', () => {
 
   it('computes an evaluation attestation (date, scope, standards, methods)', () => {
     const report = makeReport([]);
-    // makeReport sets summary.pagesScanned = 3.
-    const noManual = buildVpat(report, scanAA, [], { generatedAt: GEN_AT });
+    // makeReport sets summary.pagesScanned = 3. standardsLabel is now
+    // jurisdiction-driven, so pass a US scan to surface 508/ADA.
+    const usScan = { siteUrl: 'https://example.com', standard: 'WCAG2AA', jurisdictions: ['US'], regulations: ['Section 508', 'ADA'] };
+    const noManual = buildVpat(report, usScan, [], { generatedAt: GEN_AT });
     expect(noManual.attestation.evaluationDate).toBe(GEN_AT);
     expect(noManual.attestation.pagesEvaluated).toBe(3);
-    expect(noManual.attestation.standardsLabel).toContain('WCAG 2.2 Level AA');
+    expect(noManual.attestation.standardsLabel).toContain('WCAG 2.2');
     expect(noManual.attestation.standardsLabel).toContain('Section 508');
     expect(noManual.attestation.standardsLabel).toContain('ADA Title II');
     // No manual results recorded → manual testing not claimed.
