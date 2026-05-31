@@ -18,6 +18,7 @@ import {
 } from '../wcag-catalog.js';
 import { MANUAL_CRITERIA, type ManualTestResult } from '../manual-criteria.js';
 import { deriveSection508, type Section508Report } from './section508.js';
+import { deriveLegalFramings, type LegalFraming } from './legal-framings.js';
 import type { RemediationRecord } from './remediation-service.js';
 import type { normalizeReportData } from './report-service.js';
 
@@ -93,6 +94,18 @@ export interface VpatReport {
    */
   readonly section508: Section508Report;
   /**
+   * Jurisdiction-driven legal framing blocks, derived from the scan's selected
+   * jurisdictions/regulations — NOT a hardcoded US frame. Render in order.
+   */
+  readonly legalFramings: readonly LegalFraming[];
+  /**
+   * Whether the Functional Performance table applies (Section 508 §302 or
+   * EN 301 549 clause 4). When false, no FPC table is shown.
+   */
+  readonly includeFunctionalPerformance: boolean;
+  /** Heading for the Functional Performance table when included. */
+  readonly functionalPerformanceHeading: string;
+  /**
    * Dated good-faith remediation record (AI-proposed fixes, developer
    * verifications, scan trend). Null when no remediation data was supplied.
    */
@@ -112,6 +125,10 @@ export interface BuildVpatOptions {
 export interface VpatScanInput {
   readonly siteUrl: string;
   readonly standard: string;
+  /** Selected jurisdiction tokens — drive the report's legal framing. */
+  readonly jurisdictions?: readonly string[];
+  /** Selected regulation tokens — drive the report's legal framing. */
+  readonly regulations?: readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -283,6 +300,9 @@ export function buildVpat(
 ): VpatReport {
   const level = levelFromStandard(scan.standard);
   const generatedAt = opts.generatedAt ?? new Date().toISOString().slice(0, 10);
+  // Legal framing is driven by the scan's selected jurisdictions/regulations,
+  // not a hardcoded US frame.
+  const framing = deriveLegalFramings(scan.jurisdictions ?? [], scan.regulations ?? []);
 
   const groupsByCriterion = new Map<string, IssueGroup>();
   for (const g of reportData.allIssueGroups ?? []) {
@@ -330,7 +350,7 @@ export function buildVpat(
     evaluationDate: generatedAt,
     pagesEvaluated,
     methods,
-    standardsLabel: `WCAG 2.2 Level ${level} (incl. 2.0/2.1) · Section 508 (Revised) · ADA Title II & III`,
+    standardsLabel: framing.standardsLabel,
     manualTestingRecorded,
     ...(opts.evaluator?.trim() ? { evaluator: opts.evaluator.trim() } : {}),
   };
@@ -343,6 +363,9 @@ export function buildVpat(
     tablesByLevel,
     summary,
     section508: deriveSection508(rows),
+    legalFramings: framing.framings,
+    includeFunctionalPerformance: framing.includeFunctionalPerformance,
+    functionalPerformanceHeading: framing.functionalPerformanceHeading,
     remediation,
     attestation,
   };

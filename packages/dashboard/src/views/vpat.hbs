@@ -142,11 +142,9 @@
 <p class="intro">{{t "vpat.noData"}}</p>
 {{/if}}
 
-{{! ── Section 508 conformance (US framing) ── }}
-<h2>{{t "vpat.section508Heading"}}</h2>
-<p class="intro">{{t "vpat.section508Intro"}}</p>
-
-<h2>{{t "vpat.fpcHeading"}}</h2>
+{{! ── Functional Performance table — only when 508 §302 or EN 301 549 cl.4 applies ── }}
+{{#if vpat.includeFunctionalPerformance}}
+<h2>{{vpat.functionalPerformanceHeading}}</h2>
 <table>
   <thead>
     <tr>
@@ -167,11 +165,13 @@
     {{/each}}
   </tbody>
 </table>
-<p class="intro">{{t "vpat.section508DocsNote"}}</p>
+{{/if}}
 
-{{! ── ADA Title II / III context ── }}
-<h2>{{t "vpat.adaHeading"}}</h2>
-<p class="intro">{{t "vpat.adaBody"}}</p>
+{{! ── Jurisdiction-driven legal framing (from the scan's selected jurisdictions/regulations) ── }}
+{{#each vpat.legalFramings}}
+<h2>{{this.heading}}</h2>
+<p class="intro">{{this.body}}</p>
+{{/each}}
 
 {{! ── Remediation record (dated, good-faith) ── }}
 {{#if vpat.remediation}}
