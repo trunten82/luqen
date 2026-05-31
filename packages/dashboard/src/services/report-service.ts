@@ -659,7 +659,6 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
     templateOccurrenceCount,
     templateComponents,
     allIssueGroups,
-    engineCorroboration: computeEngineCorroboration(enrichedPages),
     regulatoryIssueCount,
     templateIssueTotal,
     topActionItems: allIssueGroups
