@@ -64,6 +64,22 @@ export interface VpatSummary {
   readonly total: number;
 }
 
+/**
+ * Evaluation methodology + attestation metadata. Gives the ACR documentary
+ * weight: WHO/WHAT/WHEN/HOW the evaluation was performed and the standards it
+ * was assessed against. Framed as a good-faith evaluation as of a date — never
+ * a certification (over-claiming is the liability).
+ */
+export interface VpatAttestation {
+  readonly evaluationDate: string;
+  readonly pagesEvaluated: number;
+  readonly methods: readonly string[];
+  readonly standardsLabel: string;
+  readonly manualTestingRecorded: boolean;
+  /** Optional evaluator/organisation name; omitted when unknown. */
+  readonly evaluator?: string;
+}
+
 export interface VpatReport {
   readonly siteUrl: string;
   readonly standard: string;
@@ -81,6 +97,8 @@ export interface VpatReport {
    * verifications, scan trend). Null when no remediation data was supplied.
    */
   readonly remediation: RemediationRecord | null;
+  /** Evaluation methodology + attestation (documentary weight). */
+  readonly attestation: VpatAttestation;
 }
 
 export interface BuildVpatOptions {
@@ -298,6 +316,25 @@ export function buildVpat(
     total: rows.length,
   };
 
+  // Attestation: what was actually done, conservatively described. Manual
+  // testing is only claimed when at least one manual result was recorded.
+  const manualTestingRecorded = manualResults.some((m) => m.status !== 'untested');
+  const methods = [
+    'Automated testing (Pa11y / axe-core)',
+    'Behavioral checks (keyboard, focus, dynamic state) where enabled',
+    ...(manualTestingRecorded ? ['Recorded manual testing with human review'] : []),
+  ];
+  const pagesEvaluated =
+    (reportData.summary as { pagesScanned?: number } | undefined)?.pagesScanned ?? 0;
+  const attestation: VpatAttestation = {
+    evaluationDate: generatedAt,
+    pagesEvaluated,
+    methods,
+    standardsLabel: `WCAG 2.2 Level ${level} (incl. 2.0/2.1) · Section 508 (Revised) · ADA Title II & III`,
+    manualTestingRecorded,
+    ...(opts.evaluator?.trim() ? { evaluator: opts.evaluator.trim() } : {}),
+  };
+
   return {
     siteUrl: scan.siteUrl,
     standard: scan.standard,
@@ -307,5 +344,6 @@ export function buildVpat(
     summary,
     section508: deriveSection508(rows),
     remediation,
+    attestation,
   };
 }
