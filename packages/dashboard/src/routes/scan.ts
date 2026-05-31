@@ -30,6 +30,7 @@ interface NewScanBody {
   runner?: string;
   incremental?: string;
   behavioral?: string;
+  deepScan?: string;
   includeWarnings?: string | boolean;
   includeNotices?: string | boolean;
   authHeaders?: string;
@@ -130,6 +131,7 @@ export async function scanRoutes(
         runner: body.runner,
         incremental: body.incremental,
         behavioral: body.behavioral,
+        deepScan: body.deepScan,
         includeWarnings: body.includeWarnings === 'true' || body.includeWarnings === true,
         includeNotices: body.includeNotices === 'true' || body.includeNotices === true,
         headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,

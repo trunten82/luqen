@@ -291,6 +291,20 @@ function deriveRow(
  * at or below that level are included. Rows are grouped into per-level tables
  * (A, then AA, then AAA) in ascending criterion order.
  */
+/** Friendly engine label for the attestation methods list. */
+function labelRunner(runner: string): string {
+  switch (runner) {
+    case 'htmlcs': return 'HTML_CodeSniffer';
+    case 'axe': return 'axe-core';
+    case 'lighthouse': return 'Lighthouse';
+    case 'ibm': return 'IBM Equal Access';
+    case 'reflow': return 'reflow (zoom 400%)';
+    case 'a11y-tree': return 'accessibility tree';
+    case 'behavioral': return 'behavioral';
+    default: return runner;
+  }
+}
+
 export function buildVpat(
   reportData: NormalizedReportData,
   scan: VpatScanInput,
@@ -339,8 +353,16 @@ export function buildVpat(
   // Attestation: what was actually done, conservatively described. Manual
   // testing is only claimed when at least one manual result was recorded.
   const manualTestingRecorded = manualResults.some((m) => m.status !== 'untested');
+  const corro = reportData.engineCorroboration ?? { engines: [], corroboratedFindings: 0 };
+  const automatedEngines = corro.engines.filter((e) => e !== 'behavioral');
+  const multiEngine = automatedEngines.length >= 2;
   const methods = [
-    'Automated testing (Pa11y / axe-core)',
+    multiEngine
+      ? `Automated testing with ${automatedEngines.length} independent engines (${automatedEngines.map(labelRunner).join(', ')})`
+      : 'Automated testing (Pa11y / axe-core)',
+    ...(multiEngine && corro.corroboratedFindings > 0
+      ? [`${corro.corroboratedFindings} finding${corro.corroboratedFindings === 1 ? '' : 's'} independently flagged by 2 or more engines`]
+      : []),
     'Behavioral checks (keyboard, focus, dynamic state) where enabled',
     ...(manualTestingRecorded ? ['Recorded manual testing with human review'] : []),
   ];
