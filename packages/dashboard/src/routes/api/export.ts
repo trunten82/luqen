@@ -9,6 +9,7 @@ import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
 import { normalizeReportData, inferComponent } from '../../services/report-service.js';
 import { buildVpat } from '../../services/vpat-service.js';
 import { buildRemediationRecord } from '../../services/remediation-service.js';
+import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
@@ -18,6 +19,7 @@ import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 // the response shape.
 const XlsxProduces = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
 const PdfProduces = ['application/pdf'];
+const GzipProduces = ['application/gzip'];
 
 const ScanExportIdParamsSchema = Type.Object(
   { id: Type.String() },
@@ -606,6 +608,41 @@ export async function exportRoutes(
       } catch (err) {
         request.log.error(err, 'VPAT PDF generation failed');
         return reply.code(500).send({ error: 'PDF generation failed' });
+      }
+    },
+  );
+
+  // ── GET /api/v1/export/fleet.tar.gz — bundle of every site's VPAT/ACR ─────
+  // One VPAT PDF per site's latest completed scan in the caller's org, plus a
+  // MANIFEST.txt. Reuses the single-report pipeline so each PDF matches the
+  // per-site download exactly. Capped at FLEET_REPORT_MAX_SITES.
+  server.get(
+    '/api/v1/export/fleet.tar.gz',
+    {
+      schema: {
+        tags: ['export'],
+        response: {
+          200: Type.String(),
+          401: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+        produces: GzipProduces,
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const orgId = request.user?.currentOrgId ?? 'system';
+      try {
+        const bundle = await buildFleetReportBundle(storage, orgId, { orgLabel: orgId });
+        const filename = `luqen-fleet-reports-${todayStamp()}.tar.gz`;
+        return reply
+          .header('Content-Type', 'application/gzip')
+          .header('Content-Disposition', `attachment; filename="${filename}"`)
+          .header('X-Luqen-Reports-Included', String(bundle.included))
+          .header('X-Luqen-Reports-Truncated', String(bundle.truncated))
+          .send(bundle.buffer);
+      } catch (err) {
+        request.log.error(err, 'Fleet report bundle generation failed');
+        return reply.code(500).send({ error: 'Fleet report generation failed' });
       }
     },
   );

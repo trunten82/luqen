@@ -1451,5 +1451,9 @@
       "lastAssessed": "Dernière évaluation le",
       "disclaimer": "Cette déclaration reflète les tests automatisés et comportementaux ainsi que tout examen manuel enregistré. Il s'agit d'un état des lieux de bonne foi de nos efforts en matière d'accessibilité ; elle ne constitue ni une certification légale de conformité ni un conseil juridique."
     }
+  },
+  "fleet": {
+    "downloadReports": "Télécharger tous les rapports",
+    "downloadReportsHint": "Télécharge une archive .tar.gz du VPAT/ACR pour chaque site ayant une analyse terminée"
   }
 }
