@@ -1,0 +1,62 @@
+name: Deploy
+
+# Auto-deploy to the live box (lxc-luqen) on green CI.
+#
+# Gated on the CI workflow completing successfully — `workflow_run` fires
+# AFTER CI finishes, and the job-level `if:` filters to successful
+# completions only, so a red build never ships. Runs on the self-hosted
+# `luqen-prod` runner that lives ON lxc-luqen, so deploy is a local
+# git pull + build + systemctl restart — no SSH, no secrets.
+#
+# workflow_dispatch lets us trigger a manual redeploy from the Actions tab.
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [master]
+  workflow_dispatch: {}
+
+# Serialize deploys — burst pushes queue through one at a time rather than
+# racing on the same checkout / service restart.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, luqen-prod]
+    # workflow_run triggers also fire on CI failure; this guard filters
+    # them out. Manual dispatch bypasses the workflow_run path entirely.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Pull latest master
+        run: |
+          cd /root/luqen
+          git fetch origin master
+          git checkout master
+          git reset --hard origin/master
+          echo "Deploying $(git rev-parse --short HEAD)"
+
+      - name: Build core
+        run: |
+          cd /root/luqen
+          npm run build -w packages/core
+
+      - name: Build dashboard
+        run: |
+          cd /root/luqen
+          npm run build -w packages/dashboard
+
+      - name: Restart service
+        run: |
+          systemctl restart luqen-dashboard
+          sleep 4
+          systemctl is-active luqen-dashboard
+
+      - name: Smoke check
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://luqen.alessandrolanna.it/login)
+          echo "login HTTP $code"
+          test "$code" = "200"
