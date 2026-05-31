@@ -86,6 +86,8 @@ export interface VpatReport {
 export interface BuildVpatOptions {
   /** ISO date string (YYYY-MM-DD). Injectable for deterministic tests. */
   readonly generatedAt?: string;
+  /** Optional evaluator/organisation name to record in the attestation. */
+  readonly evaluator?: string;
 }
 
 /** Minimal shape of the scan record needed to build a VPAT. */

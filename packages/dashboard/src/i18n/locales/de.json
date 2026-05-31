@@ -1385,7 +1385,15 @@
     "remColAction": "Aktion",
     "remColCriterion": "Kriterium",
     "remColDetail": "Detail",
-    "remediationDisclaimer": "Dieses Protokoll spiegelt ausschließlich erfasste Mängelbeseitigungsmaßnahmen und den Scan-Verlauf wider. Es ist ein Nachweis für ein Bemühen nach Treu und Glauben, keine Garantie dafür, dass jedes Problem behoben wurde oder die Website konform ist."
+    "remediationDisclaimer": "Dieses Protokoll spiegelt ausschließlich erfasste Mängelbeseitigungsmaßnahmen und den Scan-Verlauf wider. Es ist ein Nachweis für ein Bemühen nach Treu und Glauben, keine Garantie dafür, dass jedes Problem behoben wurde oder die Website konform ist.",
+    "attestationHeading": "Bewertungsmethodik & Attestierung",
+    "attEvaluationDate": "Bewertungsdatum",
+    "attScope": "Umfang",
+    "attScopeValue": "{{pages}} Seite(n) von {{site}}",
+    "attStandards": "Bewertete Standards",
+    "attMethods": "Methoden",
+    "attEvaluator": "Bewerter",
+    "attestationStatement": "Dieser Bericht spiegelt eine nach Treu und Glauben durchgeführte Bewertung der Website zum Bewertungsdatum wider, durchgeführt mit den oben genannten Methoden. Er dokumentiert den Konformitätsstand zu diesem Zeitpunkt und die laufende Mängelbeseitigung; er ist keine Zertifizierung und garantiert keine Konformität."
   },
   "a11yStatement": {
     "status": {
