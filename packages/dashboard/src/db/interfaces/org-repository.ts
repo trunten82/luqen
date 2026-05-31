@@ -40,6 +40,21 @@ export interface OrgRepository {
    * Added in 16-P03 (migration 043 schema).
    */
   setBrandingMode(orgId: string, mode: 'embedded' | 'remote'): Promise<void>;
+  /**
+   * Read the per-org deep-scan default. When `true`, scan requests that do
+   * not explicitly set `deepScan` run both pa11y runners (htmlcs + axe).
+   *
+   * Added in migration 077 (add-deep-scan-default). Defaults to `false` for
+   * orgs created before the column existed.
+   */
+  getDeepScanDefault(orgId: string): Promise<boolean>;
+  /**
+   * Persist the per-org deep-scan default. Updates the row in place — this is
+   * not an append-only history table.
+   *
+   * Added in migration 077 (add-deep-scan-default).
+   */
+  setDeepScanDefault(orgId: string, enabled: boolean): Promise<void>;
   getOrgLLMCredentials(orgId: string): Promise<{ clientId: string; clientSecret: string } | null>;
   updateOrgLLMClient(orgId: string, clientId: string, clientSecret: string): Promise<void>;
   /**

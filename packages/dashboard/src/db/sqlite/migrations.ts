@@ -1975,4 +1975,16 @@ CREATE INDEX IF NOT EXISTS idx_remediation_events_scan
   ON remediation_events(scan_id);
     `,
   },
+  {
+    id: '077',
+    name: 'add-deep-scan-default',
+    sql: `
+-- Per-org default for the deep-scan opt-in (runs both pa11y runners:
+-- htmlcs + axe). Mirrors the branding_mode per-org column (migration 043).
+-- SQLite boolean = INTEGER 0/1; default 0 = off. When a scan request does
+-- not explicitly set deepScan, this org default applies.
+ALTER TABLE organizations
+  ADD COLUMN deep_scan_default INTEGER NOT NULL DEFAULT 0;
+    `,
+  },
 ];
