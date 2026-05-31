@@ -39,6 +39,15 @@ jobs:
           git reset --hard origin/master
           echo "Deploying $(git rev-parse --short HEAD)"
 
+      - name: Install dependencies
+        run: |
+          cd /root/luqen
+          # `npm ci` keeps node_modules in lockstep with package-lock so a
+          # commit that adds/updates a dependency is installed on the box
+          # before the build — without this, a new dep is missing at build
+          # or runtime. Slower than skipping, but deploys aren't frequent.
+          npm ci
+
       - name: Build core
         run: |
           cd /root/luqen
