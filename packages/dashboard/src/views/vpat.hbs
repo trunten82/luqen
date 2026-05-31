@@ -160,6 +160,43 @@
 <h2>{{t "vpat.adaHeading"}}</h2>
 <p class="intro">{{t "vpat.adaBody"}}</p>
 
+{{! ── Remediation record (dated, good-faith) ── }}
+{{#if vpat.remediation}}
+{{#unless vpat.remediation.isEmpty}}
+<h2>{{t "vpat.remediationHeading"}}</h2>
+<p class="intro">{{t "vpat.remediationIntro"}}</p>
+<div class="summary-grid" style="grid-template-columns: repeat(4, 1fr);">
+  <div class="summary-card"><span class="summary-card__value">{{vpat.remediation.summary.aiProposed}}</span><span class="summary-card__label">{{t "vpat.remAiProposed"}}</span></div>
+  <div class="summary-card"><span class="summary-card__value">{{vpat.remediation.summary.developerVerified}}</span><span class="summary-card__label">{{t "vpat.remDeveloperVerified"}}</span></div>
+  <div class="summary-card"><span class="summary-card__value">{{vpat.remediation.summary.total}}</span><span class="summary-card__label">{{t "vpat.remTotal"}}</span></div>
+  <div class="summary-card"><span class="summary-card__value">{{vpat.remediation.scanTrend.length}}</span><span class="summary-card__label">{{t "vpat.remScans"}}</span></div>
+</div>
+{{#if vpat.remediation.events.length}}
+<table>
+  <thead>
+    <tr>
+      <th style="width:14%;">{{t "vpat.remColDate"}}</th>
+      <th style="width:22%;">{{t "vpat.remColAction"}}</th>
+      <th style="width:14%;">{{t "vpat.remColCriterion"}}</th>
+      <th>{{t "vpat.remColDetail"}}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each vpat.remediation.events}}
+    <tr>
+      <td>{{this.date}}</td>
+      <td>{{#if (eq this.type "ai-proposed")}}{{t "vpat.remAiProposed"}}{{/if}}{{#if (eq this.type "developer-verified")}}{{t "vpat.remDeveloperVerified"}}{{/if}}{{#if (eq this.type "manual-verified")}}{{t "vpat.remManualVerified"}}{{/if}}</td>
+      <td>{{#if this.criterion}}{{this.criterion}}{{else}}&mdash;{{/if}}</td>
+      <td class="text-muted">{{this.detail}}{{#if this.actor}} ({{this.actor}}){{/if}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+{{/if}}
+<p class="methodology__disclaimer">{{t "vpat.remediationDisclaimer"}}</p>
+{{/unless}}
+{{/if}}
+
 <div class="report-footer">
   {{t "vpat.footer"}} &middot; {{vpat.generatedAt}}
 </div>

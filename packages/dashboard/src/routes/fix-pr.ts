@@ -446,6 +446,30 @@ export async function fixPrRoutes(
           token,
         });
 
+        // Log a dated good-faith remediation event per distinct criterion in the
+        // PR — "AI-proposed". Recording must never break the PR flow, so failures
+        // are swallowed (logged only).
+        try {
+          const criteria = [...new Set(selectedFixes.map((f) => f.criterion).filter((c) => c !== ''))];
+          const actor = request.user?.username ?? userId;
+          const detail = `AI-proposed fix in PR #${pr.number} (${pr.url})`;
+          if (criteria.length === 0) {
+            await storage.remediationEvents.record({
+              orgId, siteUrl: scan.siteUrl, scanId: reportId,
+              criterion: null, eventType: 'ai-proposed', detail, actor,
+            });
+          } else {
+            for (const criterion of criteria) {
+              await storage.remediationEvents.record({
+                orgId, siteUrl: scan.siteUrl, scanId: reportId,
+                criterion, eventType: 'ai-proposed', detail, actor,
+              });
+            }
+          }
+        } catch (recErr) {
+          request.log.error({ recErr }, 'Failed to log remediation event for PR');
+        }
+
         if (isHtmx) {
           const escapedUrl = pr.url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
           return reply
