@@ -1373,7 +1373,19 @@
     "fpcColNeed": "Besoin fonctionnel",
     "section508DocsNote": "Le chapitre 6 de la Section 508 (documentation et services d'assistance) sort du périmètre de l'analyse web automatisée et n'est pas évalué ici.",
     "adaHeading": "Contexte des titres II et III de l'ADA",
-    "adaBody": "Les tribunaux américains et le Department of Justice ont, à plusieurs reprises, retenu les WCAG 2.x niveau AA comme référence pratique pour l’Americans with Disabilities Act, bien que l’ADA elle-même ne désigne aucun standard technique unique. Le titre III s’applique aux « lieux privés accueillant du public » (places of public accommodation) ; le titre II s’applique aux administrations des États et locales, pour lesquelles la règle du DOJ de 2024 adopte formellement les WCAG 2.1 niveau AA. Ce rapport vise à appuyer une démarche de remédiation documentée et de bonne foi au titre des deux titres. Il ne constitue pas un avis juridique et ne certifie pas la conformité."
+    "adaBody": "Les tribunaux américains et le Department of Justice ont, à plusieurs reprises, retenu les WCAG 2.x niveau AA comme référence pratique pour l’Americans with Disabilities Act, bien que l’ADA elle-même ne désigne aucun standard technique unique. Le titre III s’applique aux « lieux privés accueillant du public » (places of public accommodation) ; le titre II s’applique aux administrations des États et locales, pour lesquelles la règle du DOJ de 2024 adopte formellement les WCAG 2.1 niveau AA. Ce rapport vise à appuyer une démarche de remédiation documentée et de bonne foi au titre des deux titres. Il ne constitue pas un avis juridique et ne certifie pas la conformité.",
+    "remediationHeading": "Journal de remédiation",
+    "remediationIntro": "Un journal daté et de bonne foi de l’activité de remédiation de ce site : corrections proposées par l’IA, vérifications par les développeurs et l’historique des analyses dans le temps. Il documente une démarche de remédiation active et continue — il ne certifie pas la conformité.",
+    "remAiProposed": "Proposé par l’IA",
+    "remDeveloperVerified": "Vérifié par le développeur",
+    "remManualVerified": "Vérifié manuellement",
+    "remTotal": "Actions totales",
+    "remScans": "Analyses terminées",
+    "remColDate": "Date",
+    "remColAction": "Action",
+    "remColCriterion": "Critère",
+    "remColDetail": "Détail",
+    "remediationDisclaimer": "Ce journal ne reflète que les actions de remédiation enregistrées et l’historique des analyses. Il constitue une preuve d’effort de bonne foi, et non une garantie que chaque problème a été résolu ou que le site est conforme."
   },
   "a11yStatement": {
     "status": {

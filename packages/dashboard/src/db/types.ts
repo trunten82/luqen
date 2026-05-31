@@ -284,6 +284,42 @@ export interface CreateAssignmentInput {
 }
 
 // ---------------------------------------------------------------------------
+// Remediation record types
+// ---------------------------------------------------------------------------
+
+/**
+ * A dated good-faith remediation action. `ai-proposed` is logged when an
+ * AI-suggested fix PR is opened; `developer-verified` when a human moves an
+ * issue assignment to fixed/verified; `manual-verified` is reserved for manual
+ * WCAG test passes. The log is append-only — it is a legal-defensibility
+ * artifact, so events are never edited or deleted.
+ */
+export type RemediationEventType = 'ai-proposed' | 'developer-verified' | 'manual-verified';
+
+export interface RemediationEvent {
+  readonly id: string;
+  readonly orgId: string;
+  readonly siteUrl: string;
+  readonly scanId: string | null;
+  readonly criterion: string | null;
+  readonly eventType: RemediationEventType;
+  readonly detail: string | null;
+  readonly actor: string | null;
+  readonly createdAt: string;
+}
+
+export interface CreateRemediationEventInput {
+  readonly orgId?: string;
+  readonly siteUrl: string;
+  readonly scanId?: string | null;
+  readonly criterion?: string | null;
+  readonly eventType: RemediationEventType;
+  readonly detail?: string | null;
+  readonly actor?: string | null;
+  readonly createdAt?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Scan schedule types
 // ---------------------------------------------------------------------------
 
