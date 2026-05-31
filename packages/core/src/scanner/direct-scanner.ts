@@ -13,6 +13,8 @@ export interface DirectScanOptions {
   readonly headers?: Readonly<Record<string, string>>;
   readonly actions?: readonly string[];
   readonly runner?: 'htmlcs' | 'axe';
+  /** Deep scan: run multiple pa11y runners. Overrides `runner` when non-empty. */
+  readonly runners?: readonly string[];
   readonly includeWarnings?: boolean;
   readonly includeNotices?: boolean;
 }
@@ -62,7 +64,9 @@ export class DirectScanner {
       hideElements: options.hideElements || undefined,
       headers: options.headers || {},
       actions: options.actions && options.actions.length > 0 ? [...options.actions] : [],
-      runners: options.runner === 'axe' ? ['axe'] : ['htmlcs'],
+      runners: options.runners && options.runners.length > 0
+        ? [...options.runners]
+        : (options.runner === 'axe' ? ['axe'] : ['htmlcs']),
       includeWarnings: options.includeWarnings !== false,
       includeNotices: options.includeNotices !== false,
       chromeLaunchConfig: {

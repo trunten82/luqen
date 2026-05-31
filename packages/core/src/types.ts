@@ -50,6 +50,8 @@ export interface AccessibilityIssue {
   readonly selector: string;
   readonly context: string;
   readonly fixSuggestion?: string;
+  /** Engine that produced this finding (e.g. 'htmlcs', 'axe', 'behavioral'). */
+  readonly runner?: string;
 }
 
 /**
