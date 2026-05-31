@@ -16,14 +16,23 @@
  * (via `setConfig`) with `outputFormat: ['disable']` and OS-temp folders so a
  * scan never writes junk into the repo / working directory.
  *
- * Chrome discovery reuses the same strategy as the behavioral / Lighthouse
- * engines: an explicit env override / known system binary is exported via
- * `PUPPETEER_EXECUTABLE_PATH` so the checker's bundled puppeteer picks it up.
+ * Browser launch: the checker's OWN bundled puppeteer launches Chrome WITHOUT
+ * `--no-sandbox`, which fails when the service runs as root ("Running as root
+ * without --no-sandbox is not supported"). To take full control of the launch
+ * flags — mirroring how the Lighthouse engine drives chrome-launcher — we launch
+ * our OWN puppeteer browser/page with `--no-sandbox --disable-setuid-sandbox`,
+ * navigate it to the URL, and hand the puppeteer Page (not a URL string) to
+ * `getCompliance`. The checker scans the supplied page in place and never spawns
+ * its own Chrome. Chrome discovery reuses the same strategy as the behavioral /
+ * Lighthouse engines: an explicit env override / known system binary, then
+ * puppeteer's own resolver / download cache, then a playwright chromium.
  */
 
 import { existsSync, readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { Browser, Page, PuppeteerNode } from 'puppeteer';
 import type { IbmOptions, IbmResult } from './types.js';
 import { mapIbmResults, type IbmReport } from './map.js';
 
@@ -32,6 +41,38 @@ export { mapIbmResults, IBM_WCAG_MAP, MAX_ISSUES } from './map.js';
 export type { IbmReport, IbmReportResult } from './map.js';
 
 const DEFAULT_TIMEOUT = 60_000;
+
+/** Lazily-loaded puppeteer runtime (resolved through pa11y). */
+let puppeteerPromise: Promise<PuppeteerNode> | undefined;
+
+/**
+ * Load the puppeteer runtime. Resolves the module through pa11y (the package
+ * that actually depends on puppeteer), falling back to a bare specifier in case
+ * puppeteer is hoisted to the top level in another environment. Mirrors the
+ * behavioral browser helper's resolution strategy.
+ */
+async function loadPuppeteer(): Promise<PuppeteerNode> {
+  if (!puppeteerPromise) {
+    puppeteerPromise = (async () => {
+      const require = createRequire(import.meta.url);
+      let specifier = 'puppeteer';
+      try {
+        specifier = require.resolve('puppeteer');
+      } catch {
+        try {
+          // Resolve via pa11y's module graph (its nested dependency).
+          const pa11yRequire = createRequire(require.resolve('pa11y/package.json'));
+          specifier = pa11yRequire.resolve('puppeteer');
+        } catch {
+          // Leave the bare specifier; the import below surfaces a clear error.
+        }
+      }
+      const mod = (await import(specifier)) as { default?: PuppeteerNode } & PuppeteerNode;
+      return (mod.default ?? mod) as PuppeteerNode;
+    })();
+  }
+  return puppeteerPromise;
+}
 
 /** Scan a puppeteer-style chrome cache dir for an installed chrome binary. */
 function findChromeInCache(cacheRoot: string): string | undefined {
@@ -68,8 +109,7 @@ function findPlaywrightChromium(): string | undefined {
  * Find a Chromium/Chrome executable. Prefers an explicit env override and
  * system binaries (mirrors the pa11y scanner + behavioral / Lighthouse
  * engines), then falls back to puppeteer's own download cache and finally a
- * playwright chromium. Returns undefined to let the checker's puppeteer use its
- * own default.
+ * playwright chromium. Returns undefined when nothing is found on disk.
  */
 function findChromiumExecutable(): string | undefined {
   const explicit = [
@@ -84,6 +124,54 @@ function findChromiumExecutable(): string | undefined {
   }
   const home = process.env['HOME'] ?? '/root';
   return findChromeInCache(join(home, '.cache', 'puppeteer')) ?? findPlaywrightChromium();
+}
+
+/**
+ * Resolve the chromium executable. Order of preference (mirrors the behavioral
+ * browser helper):
+ *  1. explicit env / system binaries / cache scans (above),
+ *  2. puppeteer's OWN resolver (`executablePath()`) — the chromium pa11y's
+ *     puppeteer downloaded at install; the path that exists on the live server.
+ * Returns undefined to let puppeteer.launch() use its built-in default.
+ */
+function resolveExecutablePath(puppeteer: PuppeteerNode): string | undefined {
+  const explicit = findChromiumExecutable();
+  if (explicit) return explicit;
+  try {
+    const own = puppeteer.executablePath();
+    if (own && existsSync(own)) return own;
+  } catch {
+    // executablePath can throw if no browser is configured — fall through.
+  }
+  return undefined;
+}
+
+/**
+ * Build the puppeteer launch options, merging caller overrides last. The
+ * `--no-sandbox` / `--disable-setuid-sandbox` flags are essential when running
+ * as root (the live server) — without them Chrome refuses to start.
+ */
+function buildLaunchOptions(
+  puppeteer: PuppeteerNode,
+  opts: IbmOptions,
+): Record<string, unknown> {
+  const executablePath = resolveExecutablePath(puppeteer);
+  return {
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    ...(executablePath ? { executablePath } : {}),
+    ...(opts.chromeLaunchConfig ?? {}),
+  };
+}
+
+/** Close a browser without throwing (best-effort teardown). */
+async function safeCloseBrowser(browser: Browser | undefined): Promise<void> {
+  if (!browser) return;
+  try {
+    await browser.close();
+  } catch {
+    // Never let teardown failures mask the real result / error.
+  }
 }
 
 /** Minimal shape of the accessibility-checker module we depend on. */
@@ -143,20 +231,29 @@ export async function runIbmChecks(
   opts: IbmOptions = {},
 ): Promise<IbmResult> {
   let checker: AceCheckerModule | undefined;
+  let browser: Browser | undefined;
   try {
-    // Point the checker's bundled Chrome at a discovered system binary, if any.
-    const chromePath = findChromiumExecutable();
-    if (chromePath && !process.env['PUPPETEER_EXECUTABLE_PATH']) {
-      process.env['PUPPETEER_EXECUTABLE_PATH'] = chromePath;
+    // Launch OUR OWN puppeteer browser with --no-sandbox so Chrome starts even
+    // when the service runs as root; the checker scans the page we hand it
+    // rather than spawning its own (sandboxed) Chrome.
+    const puppeteer = await loadPuppeteer();
+    const timeout = opts.timeout ?? DEFAULT_TIMEOUT;
+    browser = await puppeteer.launch(
+      buildLaunchOptions(puppeteer, opts) as Parameters<PuppeteerNode['launch']>[0],
+    );
+    const page: Page = await browser.newPage();
+    if (opts.headers && Object.keys(opts.headers).length > 0) {
+      await page.setExtraHTTPHeaders({ ...opts.headers });
     }
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
 
     checker = await loadAceChecker();
     await checker.setConfig(buildCheckerConfig());
 
     const label = `luqen-ibm-${Date.now()}`;
     const result = await withTimeout(
-      checker.getCompliance(url, label),
-      opts.timeout ?? DEFAULT_TIMEOUT,
+      checker.getCompliance(page, label),
+      timeout,
       url,
     );
     const report = result?.report;
@@ -183,6 +280,7 @@ export async function runIbmChecks(
         // Never let teardown failures mask the real result / error.
       }
     }
+    await safeCloseBrowser(browser);
   }
 }
 
