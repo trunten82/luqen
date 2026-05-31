@@ -40,6 +40,13 @@ jobs:
           echo "Deploying $(git rev-parse --short HEAD)"
 
       - name: Install dependencies
+        # The box uses its system Chromium (the scanner engines discover it at
+        # runtime), so block puppeteer's postinstall Chromium download — it
+        # fails on this host and aborted the whole `npm ci` (accessibility-checker
+        # pulls puppeteer transitively).
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
         run: |
           cd /root/luqen
           # `npm ci` keeps node_modules in lockstep with package-lock so a
