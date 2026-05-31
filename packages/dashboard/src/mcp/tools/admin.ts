@@ -428,6 +428,10 @@ export function registerAdminTools(
           .nullable()
           .optional()
           .describe('Brand score target percentage, or null to clear'),
+        deepScanDefault: z
+          .boolean()
+          .optional()
+          .describe('Per-org default for the deep-scan opt-in (runs both pa11y runners)'),
       }),
     },
     // orgId: ctx.orgId (org-scoped — admin.system may target any org; admin.org-only callers are guarded to their own orgId)
@@ -449,6 +453,12 @@ export function registerAdminTools(
         await storage.organizations.setBrandScoreTarget(
           args.targetOrgId,
           args.brandScoreTarget,
+        );
+      }
+      if (args.deepScanDefault !== undefined) {
+        await storage.organizations.setDeepScanDefault(
+          args.targetOrgId,
+          args.deepScanDefault,
         );
       }
       const updated = await storage.organizations.getOrg(args.targetOrgId);

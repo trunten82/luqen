@@ -400,6 +400,12 @@ export interface Organization {
   readonly llmClientSecret?: string;
   readonly brandingMode?: 'embedded' | 'remote';
   /**
+   * Migration 077: per-org deep-scan default. When `true`, scan requests that
+   * do not explicitly set `deepScan` run both pa11y runners (htmlcs + axe).
+   * Defaults to `false`. See {@link OrgRepository.getDeepScanDefault}.
+   */
+  readonly deepScanDefault?: boolean;
+  /**
    * Per-org agent display name (D-14 — the ONLY per-org agent knob;
    * per-org system-prompt override is permanently out of scope). Nullable;
    * when null, callers fall back to the project-wide default ("Luqen
