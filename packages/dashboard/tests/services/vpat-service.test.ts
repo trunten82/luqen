@@ -231,4 +231,19 @@ describe('buildVpat', () => {
     expect(withoutVision?.conformance).toBe('Does Not Support');
     expect(withoutVision?.remarks).toContain('1.1.1');
   });
+
+  it('defaults remediation to null and passes through a supplied record', () => {
+    const noRem = buildVpat(makeReport([]), scanAA, [], { generatedAt: GEN_AT });
+    expect(noRem.remediation).toBeNull();
+
+    const record = {
+      events: [{ date: '2026-05-01', type: 'ai-proposed' as const, criterion: '1.1.1', detail: 'PR #5', actor: 'alice' }],
+      summary: { aiProposed: 1, developerVerified: 0, manualVerified: 0, total: 1, firstActivity: '2026-05-01', lastActivity: '2026-05-01' },
+      scanTrend: [],
+      isEmpty: false,
+    };
+    const withRem = buildVpat(makeReport([]), scanAA, [], { generatedAt: GEN_AT }, record);
+    expect(withRem.remediation).toBe(record);
+    expect(withRem.remediation?.summary.aiProposed).toBe(1);
+  });
 });

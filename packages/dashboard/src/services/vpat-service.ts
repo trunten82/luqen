@@ -18,6 +18,7 @@ import {
 } from '../wcag-catalog.js';
 import { MANUAL_CRITERIA, type ManualTestResult } from '../manual-criteria.js';
 import { deriveSection508, type Section508Report } from './section508.js';
+import type { RemediationRecord } from './remediation-service.js';
 import type { normalizeReportData } from './report-service.js';
 
 /**
@@ -75,6 +76,11 @@ export interface VpatReport {
    * derived conservatively from the WCAG rows. US lawsuit-protection context.
    */
   readonly section508: Section508Report;
+  /**
+   * Dated good-faith remediation record (AI-proposed fixes, developer
+   * verifications, scan trend). Null when no remediation data was supplied.
+   */
+  readonly remediation: RemediationRecord | null;
 }
 
 export interface BuildVpatOptions {
@@ -253,6 +259,7 @@ export function buildVpat(
   scan: VpatScanInput,
   manualResults: readonly ManualTestResult[] = [],
   opts: BuildVpatOptions = {},
+  remediation: RemediationRecord | null = null,
 ): VpatReport {
   const level = levelFromStandard(scan.standard);
   const generatedAt = opts.generatedAt ?? new Date().toISOString().slice(0, 10);
@@ -297,5 +304,6 @@ export function buildVpat(
     tablesByLevel,
     summary,
     section508: deriveSection508(rows),
+    remediation,
   };
 }

@@ -1373,7 +1373,19 @@
     "fpcColNeed": "Necessidade funcional",
     "section508DocsNote": "O Capítulo 6 da Section 508 (documentação e serviços de apoio) está fora do âmbito da análise web automatizada e não é avaliado aqui.",
     "adaHeading": "Contexto do Título II e Título III da ADA",
-    "adaBody": "Os tribunais dos EUA e o Department of Justice têm tratado repetidamente as WCAG 2.x de nível AA como a referência prática para a Americans with Disabilities Act, embora a própria ADA não indique um único padrão técnico. O Título III aplica-se a «locais privados de acesso público» (places of public accommodation); o Título II aplica-se às administrações estaduais e locais, para as quais a regra do DOJ de 2024 adota formalmente as WCAG 2.1 de nível AA. Este relatório destina-se a apoiar um esforço de remediação documentado e de boa-fé ao abrigo de ambos os títulos. Não constitui aconselhamento jurídico nem certifica a conformidade."
+    "adaBody": "Os tribunais dos EUA e o Department of Justice têm tratado repetidamente as WCAG 2.x de nível AA como a referência prática para a Americans with Disabilities Act, embora a própria ADA não indique um único padrão técnico. O Título III aplica-se a «locais privados de acesso público» (places of public accommodation); o Título II aplica-se às administrações estaduais e locais, para as quais a regra do DOJ de 2024 adota formalmente as WCAG 2.1 de nível AA. Este relatório destina-se a apoiar um esforço de remediação documentado e de boa-fé ao abrigo de ambos os títulos. Não constitui aconselhamento jurídico nem certifica a conformidade.",
+    "remediationHeading": "Registo de remediação",
+    "remediationIntro": "Um registo datado e de boa-fé da atividade de remediação deste site: correções propostas pela IA, verificações dos programadores e o histórico de análises ao longo do tempo. Documenta um esforço de remediação ativo e contínuo — não atesta a conformidade.",
+    "remAiProposed": "Proposto por IA",
+    "remDeveloperVerified": "Verificado pelo programador",
+    "remManualVerified": "Verificado manualmente",
+    "remTotal": "Ações totais",
+    "remScans": "Análises concluídas",
+    "remColDate": "Data",
+    "remColAction": "Ação",
+    "remColCriterion": "Critério",
+    "remColDetail": "Detalhe",
+    "remediationDisclaimer": "Este registo reflete apenas as ações de remediação registadas e o histórico de análises. É prova de um esforço de boa-fé, não uma garantia de que todos os problemas foram resolvidos ou de que o site está em conformidade."
   },
   "a11yStatement": {
     "status": {

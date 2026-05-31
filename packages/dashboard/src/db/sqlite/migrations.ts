@@ -1949,4 +1949,30 @@ CREATE TABLE IF NOT EXISTS accessibility_statements (
 );
     `,
   },
+  {
+    id: '076',
+    name: 'create-remediation-events',
+    sql: `
+-- Append-only good-faith remediation log. Each row is a dated, attributed
+-- remediation action (AI-proposed fix PR, developer-verified issue, manual
+-- verification) tied to a site. Surfaced in the VPAT/ACR as a "remediation
+-- record" — a core US-lawsuit-protection artifact (documents an active,
+-- ongoing good-faith effort). Never mutated after insert.
+CREATE TABLE IF NOT EXISTS remediation_events (
+  id          TEXT PRIMARY KEY,
+  org_id      TEXT NOT NULL DEFAULT 'system',
+  site_url    TEXT NOT NULL,
+  scan_id     TEXT,
+  criterion   TEXT,
+  event_type  TEXT NOT NULL,
+  detail      TEXT,
+  actor       TEXT,
+  created_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_remediation_events_site
+  ON remediation_events(org_id, site_url, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_remediation_events_scan
+  ON remediation_events(scan_id);
+    `,
+  },
 ];

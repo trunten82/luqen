@@ -1373,7 +1373,19 @@
     "fpcColNeed": "Funktionaler Bedarf",
     "section508DocsNote": "Kapitel 6 der Section 508 (Begleitdokumentation und Dienstleistungen) liegt außerhalb des Umfangs der automatisierten Web-Prüfung und wird hier nicht bewertet.",
     "adaHeading": "Kontext zu ADA Titel II und Titel III",
-    "adaBody": "US-Gerichte und das Department of Justice haben WCAG 2.x Stufe AA wiederholt als praktischen Maßstab für den Americans with Disabilities Act herangezogen, obwohl der ADA selbst keinen einzelnen technischen Standard nennt. Titel III gilt für private „öffentlich zugängliche Einrichtungen“ (places of public accommodation); Titel II gilt für Behörden der Bundesstaaten und Kommunen, für die die DOJ-Regelung von 2024 formal WCAG 2.1 Stufe AA übernimmt. Dieser Bericht soll eine dokumentierte, nach Treu und Glauben durchgeführte Mängelbeseitigung im Sinne beider Titel unterstützen. Er stellt keine Rechtsberatung dar und bescheinigt keine Konformität."
+    "adaBody": "US-Gerichte und das Department of Justice haben WCAG 2.x Stufe AA wiederholt als praktischen Maßstab für den Americans with Disabilities Act herangezogen, obwohl der ADA selbst keinen einzelnen technischen Standard nennt. Titel III gilt für private „öffentlich zugängliche Einrichtungen“ (places of public accommodation); Titel II gilt für Behörden der Bundesstaaten und Kommunen, für die die DOJ-Regelung von 2024 formal WCAG 2.1 Stufe AA übernimmt. Dieser Bericht soll eine dokumentierte, nach Treu und Glauben durchgeführte Mängelbeseitigung im Sinne beider Titel unterstützen. Er stellt keine Rechtsberatung dar und bescheinigt keine Konformität.",
+    "remediationHeading": "Mängelbeseitigungsprotokoll",
+    "remediationIntro": "Ein datiertes, nach Treu und Glauben geführtes Protokoll der Mängelbeseitigung für diese Website: KI-vorgeschlagene Korrekturen, Entwicklerverifizierungen und der Scan-Verlauf über die Zeit. Es dokumentiert eine aktive, fortlaufende Mängelbeseitigung — es bescheinigt keine Konformität.",
+    "remAiProposed": "KI-vorgeschlagen",
+    "remDeveloperVerified": "Vom Entwickler verifiziert",
+    "remManualVerified": "Manuell verifiziert",
+    "remTotal": "Aktionen gesamt",
+    "remScans": "Abgeschlossene Scans",
+    "remColDate": "Datum",
+    "remColAction": "Aktion",
+    "remColCriterion": "Kriterium",
+    "remColDetail": "Detail",
+    "remediationDisclaimer": "Dieses Protokoll spiegelt ausschließlich erfasste Mängelbeseitigungsmaßnahmen und den Scan-Verlauf wider. Es ist ein Nachweis für ein Bemühen nach Treu und Glauben, keine Garantie dafür, dass jedes Problem behoben wurde oder die Website konform ist."
   },
   "a11yStatement": {
     "status": {

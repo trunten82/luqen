@@ -1373,7 +1373,19 @@
     "fpcColNeed": "Necesidad funcional",
     "section508DocsNote": "El Capítulo 6 de la Section 508 (documentación y servicios de soporte) queda fuera del alcance del análisis web automatizado y no se evalúa aquí.",
     "adaHeading": "Contexto del Título II y Título III de la ADA",
-    "adaBody": "Los tribunales estadounidenses y el Department of Justice han considerado reiteradamente las WCAG 2.x de nivel AA como la referencia práctica para la Americans with Disabilities Act, aunque la propia ADA no nombra un único estándar técnico. El Título III se aplica a los «lugares privados de acceso público» (places of public accommodation); el Título II se aplica a las administraciones estatales y locales, para las que la norma del DOJ de 2024 adopta formalmente las WCAG 2.1 de nivel AA. Este informe pretende respaldar un esfuerzo de remediación documentado y de buena fe en virtud de ambos títulos. No constituye asesoramiento legal ni certifica el cumplimiento."
+    "adaBody": "Los tribunales estadounidenses y el Department of Justice han considerado reiteradamente las WCAG 2.x de nivel AA como la referencia práctica para la Americans with Disabilities Act, aunque la propia ADA no nombra un único estándar técnico. El Título III se aplica a los «lugares privados de acceso público» (places of public accommodation); el Título II se aplica a las administraciones estatales y locales, para las que la norma del DOJ de 2024 adopta formalmente las WCAG 2.1 de nivel AA. Este informe pretende respaldar un esfuerzo de remediación documentado y de buena fe en virtud de ambos títulos. No constituye asesoramiento legal ni certifica el cumplimiento.",
+    "remediationHeading": "Registro de remediación",
+    "remediationIntro": "Un registro fechado y de buena fe de la actividad de remediación de este sitio: correcciones propuestas por la IA, verificaciones de los desarrolladores y el historial de análisis a lo largo del tiempo. Documenta un esfuerzo de remediación activo y continuo, no certifica la conformidad.",
+    "remAiProposed": "Propuesto por IA",
+    "remDeveloperVerified": "Verificado por desarrollador",
+    "remManualVerified": "Verificado manualmente",
+    "remTotal": "Acciones totales",
+    "remScans": "Análisis completados",
+    "remColDate": "Fecha",
+    "remColAction": "Acción",
+    "remColCriterion": "Criterio",
+    "remColDetail": "Detalle",
+    "remediationDisclaimer": "Este registro refleja únicamente las acciones de remediación registradas y el historial de análisis. Es prueba de un esfuerzo de buena fe, no una garantía de que se haya resuelto cada problema ni de que el sitio sea conforme."
   },
   "a11yStatement": {
     "status": {

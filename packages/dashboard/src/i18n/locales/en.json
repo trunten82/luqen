@@ -1848,7 +1848,19 @@
     "fpcColNeed": "Functional need",
     "section508DocsNote": "Section 508 Chapter 6 (support documentation and services) is outside the scope of automated web scanning and is not evaluated here.",
     "adaHeading": "ADA Title II & Title III context",
-    "adaBody": "U.S. courts and the Department of Justice have repeatedly treated WCAG 2.x Level AA as the practical benchmark for the Americans with Disabilities Act, although the ADA itself names no single technical standard. Title III applies to private 'places of public accommodation'; Title II applies to state and local government, for which the DOJ's 2024 rule formally adopts WCAG 2.1 Level AA. This report is intended to support a good-faith, documented remediation effort under both titles. It is not legal advice and does not certify compliance."
+    "adaBody": "U.S. courts and the Department of Justice have repeatedly treated WCAG 2.x Level AA as the practical benchmark for the Americans with Disabilities Act, although the ADA itself names no single technical standard. Title III applies to private 'places of public accommodation'; Title II applies to state and local government, for which the DOJ's 2024 rule formally adopts WCAG 2.1 Level AA. This report is intended to support a good-faith, documented remediation effort under both titles. It is not legal advice and does not certify compliance.",
+    "remediationHeading": "Remediation record",
+    "remediationIntro": "A dated, good-faith record of remediation activity for this site: AI-proposed fixes, developer verifications, and the scan history over time. It documents an active, ongoing remediation effort — it does not assert conformance.",
+    "remAiProposed": "AI-proposed",
+    "remDeveloperVerified": "Developer-verified",
+    "remManualVerified": "Manually verified",
+    "remTotal": "Total actions",
+    "remScans": "Completed scans",
+    "remColDate": "Date",
+    "remColAction": "Action",
+    "remColCriterion": "Criterion",
+    "remColDetail": "Detail",
+    "remediationDisclaimer": "This record reflects logged remediation actions and scan history only. It is evidence of good-faith effort, not a guarantee that every issue has been resolved or that the site is compliant."
   },
   "a11yStatement": {
     "status": {

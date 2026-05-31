@@ -313,6 +313,18 @@ export class SqliteScanRepository implements ScanRepository {
     return row !== undefined ? rowToRecord(row) : null;
   }
 
+  async getScansForSite(orgId: string, siteUrl: string, limit = 100): Promise<ScanRecord[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM scan_records
+          WHERE org_id = ? AND site_url = ?
+          ORDER BY created_at DESC
+          LIMIT ?`,
+      )
+      .all(orgId, siteUrl, limit) as ScanRow[];
+    return rows.map(rowToRecord);
+  }
+
   async getReport(id: string): Promise<Record<string, unknown> | null> {
     const row = this.db.prepare('SELECT json_report FROM scan_records WHERE id = ?').get(id) as { json_report: string | null } | undefined;
     if (row === undefined || row.json_report === null) return null;
