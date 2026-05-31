@@ -1385,7 +1385,15 @@
     "remColAction": "Action",
     "remColCriterion": "Critère",
     "remColDetail": "Détail",
-    "remediationDisclaimer": "Ce journal ne reflète que les actions de remédiation enregistrées et l’historique des analyses. Il constitue une preuve d’effort de bonne foi, et non une garantie que chaque problème a été résolu ou que le site est conforme."
+    "remediationDisclaimer": "Ce journal ne reflète que les actions de remédiation enregistrées et l’historique des analyses. Il constitue une preuve d’effort de bonne foi, et non une garantie que chaque problème a été résolu ou que le site est conforme.",
+    "attestationHeading": "Méthodologie d’évaluation et attestation",
+    "attEvaluationDate": "Date d’évaluation",
+    "attScope": "Périmètre",
+    "attScopeValue": "{{pages}} page(s) de {{site}}",
+    "attStandards": "Normes évaluées",
+    "attMethods": "Méthodes",
+    "attEvaluator": "Évaluateur",
+    "attestationStatement": "Ce rapport reflète une évaluation de bonne foi du site à la date d’évaluation, réalisée selon les méthodes indiquées ci-dessus. Il consigne l’état de conformité à ce moment et la démarche de remédiation en cours ; il ne constitue pas une certification et ne garantit pas la conformité."
   },
   "a11yStatement": {
     "status": {

@@ -1385,7 +1385,15 @@
     "remColAction": "Acción",
     "remColCriterion": "Criterio",
     "remColDetail": "Detalle",
-    "remediationDisclaimer": "Este registro refleja únicamente las acciones de remediación registradas y el historial de análisis. Es prueba de un esfuerzo de buena fe, no una garantía de que se haya resuelto cada problema ni de que el sitio sea conforme."
+    "remediationDisclaimer": "Este registro refleja únicamente las acciones de remediación registradas y el historial de análisis. Es prueba de un esfuerzo de buena fe, no una garantía de que se haya resuelto cada problema ni de que el sitio sea conforme.",
+    "attestationHeading": "Metodología de evaluación y atestación",
+    "attEvaluationDate": "Fecha de evaluación",
+    "attScope": "Alcance",
+    "attScopeValue": "{{pages}} página(s) de {{site}}",
+    "attStandards": "Estándares evaluados",
+    "attMethods": "Métodos",
+    "attEvaluator": "Evaluador",
+    "attestationStatement": "Este informe refleja una evaluación de buena fe del sitio en la fecha de evaluación, realizada con los métodos indicados anteriormente. Registra el estado de conformidad en ese momento y el esfuerzo de remediación en curso; no es una certificación ni garantiza la conformidad."
   },
   "a11yStatement": {
     "status": {

@@ -86,6 +86,19 @@
   <p class="methodology__disclaimer">{{t "vpat.disclaimerBody"}}</p>
 </div>
 
+{{! ── Evaluation methodology & attestation (documentary weight) ── }}
+<h2>{{t "vpat.attestationHeading"}}</h2>
+<table>
+  <tbody>
+    <tr><th style="width:30%;">{{t "vpat.attEvaluationDate"}}</th><td>{{vpat.attestation.evaluationDate}}</td></tr>
+    <tr><th>{{t "vpat.attScope"}}</th><td>{{t "vpat.attScopeValue" pages=vpat.attestation.pagesEvaluated site=scan.siteUrl}}</td></tr>
+    <tr><th>{{t "vpat.attStandards"}}</th><td>{{vpat.attestation.standardsLabel}}</td></tr>
+    <tr><th>{{t "vpat.attMethods"}}</th><td>{{#each vpat.attestation.methods}}{{this}}{{#unless @last}}; {{/unless}}{{/each}}</td></tr>
+    {{#if vpat.attestation.evaluator}}<tr><th>{{t "vpat.attEvaluator"}}</th><td>{{vpat.attestation.evaluator}}</td></tr>{{/if}}
+  </tbody>
+</table>
+<p class="methodology__disclaimer">{{t "vpat.attestationStatement"}}</p>
+
 {{#if vpat.tablesByLevel.length}}
 
 {{! ── Conformance summary ── }}
