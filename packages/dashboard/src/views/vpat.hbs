@@ -129,6 +129,37 @@
 <p class="intro">{{t "vpat.noData"}}</p>
 {{/if}}
 
+{{! ── Section 508 conformance (US framing) ── }}
+<h2>{{t "vpat.section508Heading"}}</h2>
+<p class="intro">{{t "vpat.section508Intro"}}</p>
+
+<h2>{{t "vpat.fpcHeading"}}</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width:12%;">{{t "vpat.fpcColId"}}</th>
+      <th style="width:28%;">{{t "vpat.fpcColNeed"}}</th>
+      <th style="width:18%;">{{t "vpat.colConformance"}}</th>
+      <th>{{t "vpat.colRemarks"}}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each vpat.section508.functionalPerformance}}
+    <tr>
+      <td><strong>{{id}}</strong></td>
+      <td>{{need}}</td>
+      <td>{{conformanceBadge conformance}}</td>
+      <td class="text-muted">{{remarks}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+<p class="intro">{{t "vpat.section508DocsNote"}}</p>
+
+{{! ── ADA Title II / III context ── }}
+<h2>{{t "vpat.adaHeading"}}</h2>
+<p class="intro">{{t "vpat.adaBody"}}</p>
+
 <div class="report-footer">
   {{t "vpat.footer"}} &middot; {{vpat.generatedAt}}
 </div>
