@@ -17,6 +17,10 @@ export { runBehavioralChecks } from './behavioral/index.js';
 export type { BehavioralOptions, BehavioralResult } from './behavioral/types.js';
 export { runLighthouseChecks } from './lighthouse/index.js';
 export type { LighthouseOptions, LighthouseResult } from './lighthouse/types.js';
+export { runIbmChecks } from './ibm/index.js';
+export type { IbmOptions, IbmResult } from './ibm/types.js';
+export { mapIbmResults, IBM_WCAG_MAP } from './ibm/index.js';
+export type { IbmReport, IbmReportResult } from './ibm/index.js';
 export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanError, ProgressListener, ComplianceEnrichment } from './types.js';
 
 import { discoverUrls } from './discovery/discover.js';
@@ -25,6 +29,7 @@ import { WebserviceClient, WebservicePool } from './scanner/webservice-client.js
 import { DirectScanner } from './scanner/direct-scanner.js';
 import { runBehavioralChecks } from './behavioral/index.js';
 import { runLighthouseChecks } from './lighthouse/index.js';
+import { runIbmChecks } from './ibm/index.js';
 import type { DiscoveredUrl, PageResult, AccessibilityIssue, ProgressListener } from './types.js';
 
 export interface CreateScannerOptions {
@@ -82,6 +87,19 @@ export interface CreateScannerOptions {
    * Default: 5.
    */
   readonly lighthouseMaxPages?: number;
+  /**
+   * When true, run the IBM Equal Access engine (IBM's accessibility-checker —
+   * a SECOND independent ruleset, distinct from axe-core) on each scanned page
+   * IN ADDITION to the static Pa11y scan. Default: false. OPT-IN — part of the
+   * "deep scan". Heavy (drives its own headless Chrome per page); bounded by
+   * `ibmMaxPages`. Findings carry runner='ibm'.
+   */
+  readonly ibm?: boolean;
+  /**
+   * Cap on how many of the scanned pages the IBM layer runs against. IBM is
+   * heavy (own headless Chrome), so the default is small. Default: 5.
+   */
+  readonly ibmMaxPages?: number;
 }
 
 export interface Scanner {
@@ -178,9 +196,18 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       // Lighthouse's accessibility category on up to `lighthouseMaxPages` of the
       // scanned pages and merges its findings (runner='lighthouse') into each
       // page. Best-effort: a Lighthouse failure never breaks the static scan.
-      const pages: PageResult[] = opts.lighthouse === true
+      const lighthousePages: PageResult[] = opts.lighthouse === true
         ? await runLighthousePass(behavioralPages, opts)
         : behavioralPages;
+
+      // Optional IBM Equal Access pass (opt-in, part of deep scan). Runs IBM's
+      // accessibility-checker (a second independent ruleset) on up to
+      // `ibmMaxPages` of the scanned pages and merges its findings
+      // (runner='ibm') into each page. Best-effort: an IBM failure never breaks
+      // the static scan.
+      const pages: PageResult[] = opts.ibm === true
+        ? await runIbmPass(lighthousePages, opts)
+        : lighthousePages;
 
       // Aggregate results
       let errorCount = 0;
@@ -306,6 +333,58 @@ async function runLighthousePass(
       out.push({ ...page, issues: mergedIssues, issueCount: mergedIssues.length });
     } catch {
       // Lighthouse layer is additive — never let it drop a page's results.
+      out.push(page);
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Run the IBM Equal Access engine over (up to ibmMaxPages of) the scanned pages
+ * and merge its findings into each page's issues.
+ *
+ * Bounded + best-effort, mirroring {@link runLighthousePass}: pages beyond the
+ * cap are returned unchanged, and an IBM failure on one page leaves that page's
+ * existing results intact. IBM issues are mapped to the AccessibilityIssue shape
+ * (runner='ibm') so they render and flow into compliance / VPAT exactly like
+ * static, behavioral and Lighthouse findings.
+ */
+async function runIbmPass(
+  inputPages: PageResult[],
+  opts: CreateScannerOptions,
+): Promise<PageResult[]> {
+  const cap = opts.ibmMaxPages ?? 5;
+  const out: PageResult[] = [];
+
+  for (let i = 0; i < inputPages.length; i++) {
+    const page = inputPages[i];
+    if (i >= cap) {
+      out.push(page);
+      continue;
+    }
+    try {
+      const ibm = await runIbmChecks(page.url, {
+        ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
+        ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
+      });
+      if (ibm.issues.length === 0) {
+        out.push(page);
+        continue;
+      }
+      const mapped: AccessibilityIssue[] = ibm.issues.map((issue) => ({
+        code: issue.code,
+        type: issue.type,
+        message: issue.message,
+        selector: issue.selector,
+        context: issue.context,
+        runner: issue.runner ?? 'ibm',
+        fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
+      }));
+      const mergedIssues = [...page.issues, ...mapped];
+      out.push({ ...page, issues: mergedIssues, issueCount: mergedIssues.length });
+    } catch {
+      // IBM layer is additive — never let it drop a page's results.
       out.push(page);
     }
   }
