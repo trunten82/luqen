@@ -453,15 +453,17 @@ export async function fixPrRoutes(
           const criteria = [...new Set(selectedFixes.map((f) => f.criterion).filter((c) => c !== ''))];
           const actor = request.user?.username ?? userId;
           const detail = `AI-proposed fix in PR #${pr.number} (${pr.url})`;
+          // Key by the SCAN's org (matches the VPAT remediation lookup scope).
+          const remOrgId = scan.orgId;
           if (criteria.length === 0) {
             await storage.remediationEvents.record({
-              orgId, siteUrl: scan.siteUrl, scanId: reportId,
+              orgId: remOrgId, siteUrl: scan.siteUrl, scanId: reportId,
               criterion: null, eventType: 'ai-proposed', detail, actor,
             });
           } else {
             for (const criterion of criteria) {
               await storage.remediationEvents.record({
-                orgId, siteUrl: scan.siteUrl, scanId: reportId,
+                orgId: remOrgId, siteUrl: scan.siteUrl, scanId: reportId,
                 criterion, eventType: 'ai-proposed', detail, actor,
               });
             }

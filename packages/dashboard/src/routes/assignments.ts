@@ -249,7 +249,10 @@ export async function assignmentRoutes(
           const scan = await storage.scans.getScan(assignment.scanId);
           if (scan !== null) {
             await storage.remediationEvents.record({
-              orgId: assignment.orgId,
+              // Key by the SCAN's org, since the VPAT remediation lookup is
+              // scoped by scan.orgId. The assignment's org can differ when the
+              // scan is system-owned but assigned within a user org.
+              orgId: scan.orgId,
               siteUrl: scan.siteUrl,
               scanId: assignment.scanId,
               criterion: assignment.wcagCriterion,
