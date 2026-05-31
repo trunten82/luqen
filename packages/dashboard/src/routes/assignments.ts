@@ -237,6 +237,32 @@ export async function assignmentRoutes(
         return reply.code(500).send({ error: 'Failed to retrieve updated assignment' });
       }
 
+      // Log a dated good-faith remediation event when a human moves an issue
+      // INTO fixed/verified — "developer-verified". Only on a real transition
+      // (not a no-op re-save). Failure must never break the assignment update.
+      if (
+        status !== undefined &&
+        status !== assignment.status &&
+        (status === 'fixed' || status === 'verified')
+      ) {
+        try {
+          const scan = await storage.scans.getScan(assignment.scanId);
+          if (scan !== null) {
+            await storage.remediationEvents.record({
+              orgId: assignment.orgId,
+              siteUrl: scan.siteUrl,
+              scanId: assignment.scanId,
+              criterion: assignment.wcagCriterion,
+              eventType: 'developer-verified',
+              detail: `Issue marked ${status}`,
+              actor: request.user?.username ?? request.user?.id ?? null,
+            });
+          }
+        } catch (recErr) {
+          request.log.error({ recErr }, 'Failed to log remediation event for assignment');
+        }
+      }
+
       const stats = await storage.assignments.getAssignmentStats(assignment.scanId);
 
       // Return updated card HTML

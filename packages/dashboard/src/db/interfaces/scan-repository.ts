@@ -34,6 +34,11 @@ export interface ScanRepository {
    */
   getLatestCompletedForSite(orgId: string, siteUrl: string): Promise<ScanRecord | null>;
   /**
+   * All scans for one site within an org, most-recent-first. Backs the
+   * remediation-record scan trend (migration 076). Capped by `limit`.
+   */
+  getScansForSite(orgId: string, siteUrl: string, limit?: number): Promise<ScanRecord[]>;
+  /**
    * Admin audit (Phase 64.1): every scan with public_share_enabled = 1.
    * Sorted by most-recently-enabled first.
    */

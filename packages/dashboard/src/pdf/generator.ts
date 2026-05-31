@@ -716,6 +716,80 @@ export async function generateVpatPdf(
       doc.moveDown(0.7);
       doc.x = left;
 
+      // ── Remediation record (dated, good-faith) ──
+      const rem = vpat.remediation;
+      if (rem && !rem.isEmpty) {
+        if (doc.y > doc.page.height - doc.page.margins.bottom - 90) {
+          doc.addPage();
+        }
+        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
+          .text('Remediation record', left, doc.y);
+        doc.moveTo(left, doc.y).lineTo(left + pageWidth, doc.y)
+          .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
+        doc.moveDown(0.2);
+        doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+          .text(
+            `A dated, good-faith record of remediation activity for this site: `
+            + `${rem.summary.aiProposed} AI-proposed fix action(s), `
+            + `${rem.summary.developerVerified} developer-verified, across `
+            + `${rem.scanTrend.length} completed scan(s)`
+            + `${rem.summary.firstActivity ? ` since ${rem.summary.firstActivity}` : ''}. `
+            + `It documents an active, ongoing remediation effort; it does not assert conformance.`,
+            left, doc.y, { lineGap: 2, width: pageWidth },
+          );
+        doc.moveDown(0.4);
+        doc.x = left;
+
+        const remLabel = (t: string): string =>
+          t === 'ai-proposed' ? 'AI-proposed'
+          : t === 'developer-verified' ? 'Developer-verified'
+          : 'Manual-verified';
+
+        const colDate = left;
+        const colAction = left + 70;
+        const colCrit = left + 180;
+        const colDetail = left + 250;
+        const detailWidth = left + pageWidth - colDetail;
+
+        if (rem.events.length > 0) {
+          const remHeaderY = doc.y;
+          doc.save().rect(left, remHeaderY, pageWidth, 16).fill(BG_SURFACE).restore();
+          doc.fontSize(7).fillColor(TEXT_SECONDARY).font('Body-Bold');
+          doc.text('DATE', colDate + 4, remHeaderY + 5, { characterSpacing: 0.6 });
+          doc.text('ACTION', colAction, remHeaderY + 5, { characterSpacing: 0.6 });
+          doc.text('CRITERION', colCrit, remHeaderY + 5, { characterSpacing: 0.6 });
+          doc.text('DETAIL', colDetail, remHeaderY + 5, { characterSpacing: 0.6 });
+          doc.y = remHeaderY + 18;
+
+          for (const ev of rem.events) {
+            if (doc.y > doc.page.height - doc.page.margins.bottom - 30) {
+              doc.addPage();
+            }
+            const evY = doc.y;
+            doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+              .text(ev.date, colDate + 4, evY, { width: colAction - colDate - 6 });
+            const dateBottom = doc.y;
+            doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Body-Bold')
+              .text(remLabel(ev.type), colAction, evY, { width: colCrit - colAction - 6 });
+            const actionBottom = doc.y;
+            doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+              .text(ev.criterion ?? '—', colCrit, evY, { width: colDetail - colCrit - 6 });
+            const critBottom = doc.y;
+            const detailText = ev.actor ? `${ev.detail ?? ''} (${ev.actor})` : (ev.detail ?? '');
+            doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+              .text(detailText, colDetail, evY, { width: detailWidth });
+            const detailBottom = doc.y;
+
+            const evNext = Math.max(dateBottom, actionBottom, critBottom, detailBottom) + 4;
+            doc.moveTo(left, evNext).lineTo(left + pageWidth, evNext)
+              .lineWidth(0.5).strokeColor(BORDER_SUBTLE).stroke();
+            doc.y = evNext + 3;
+          }
+        }
+        doc.moveDown(0.7);
+        doc.x = left;
+      }
+
       // ── Footer ──
       if (doc.y > doc.page.height - doc.page.margins.bottom - 30) {
         doc.addPage();
