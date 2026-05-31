@@ -16,6 +16,7 @@ import { resolveOrgLLMClient } from '../llm-client.js';
 import { t } from '../i18n/index.js';
 import { filterDrilldownIssues, isValidDimension } from '../services/brand-drilldown.js';
 import { buildVpat } from '../services/vpat-service.js';
+import { buildRemediationRecord } from '../services/remediation-service.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 const ReportIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
@@ -517,7 +518,16 @@ export async function reportRoutes(
       }
 
       const manualResults = await storage.manualTests.getManualTests(id);
-      const vpat = buildVpat(reportData, scan, manualResults);
+      // Assemble the dated good-faith remediation record (events + completed-scan
+      // trend). Keyed by scan.orgId to match how events are recorded. Empty
+      // input → empty record, so the section stays hidden.
+      const remOrgId = scan.orgId ?? 'system';
+      const [remediationEvents, siteScans] = await Promise.all([
+        storage.remediationEvents.listForSite(remOrgId, scan.siteUrl),
+        storage.scans.getScansForSite(remOrgId, scan.siteUrl),
+      ]);
+      const remediation = buildRemediationRecord(remediationEvents, siteScans);
+      const vpat = buildVpat(reportData, scan, manualResults, {}, remediation);
 
       // Compile the VPAT template directly with the shared Handlebars singleton
       // (same approach as /reports/:id/print). The global `t` and `formatStandard`
