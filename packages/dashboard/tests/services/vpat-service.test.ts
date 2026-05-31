@@ -261,6 +261,30 @@ describe('buildVpat', () => {
     }
   });
 
+  it('computes an evaluation attestation (date, scope, standards, methods)', () => {
+    const report = makeReport([]);
+    // makeReport sets summary.pagesScanned = 3.
+    const noManual = buildVpat(report, scanAA, [], { generatedAt: GEN_AT });
+    expect(noManual.attestation.evaluationDate).toBe(GEN_AT);
+    expect(noManual.attestation.pagesEvaluated).toBe(3);
+    expect(noManual.attestation.standardsLabel).toContain('WCAG 2.2 Level AA');
+    expect(noManual.attestation.standardsLabel).toContain('Section 508');
+    expect(noManual.attestation.standardsLabel).toContain('ADA Title II');
+    // No manual results recorded → manual testing not claimed.
+    expect(noManual.attestation.manualTestingRecorded).toBe(false);
+    expect(noManual.attestation.methods.some((m) => /manual/i.test(m))).toBe(false);
+    expect(noManual.attestation.evaluator).toBeUndefined();
+
+    // A recorded manual result flips manualTestingRecorded + adds the method.
+    const withManual = buildVpat(report, scanAA, [makeManual('1.1.1', 'pass')], {
+      generatedAt: GEN_AT,
+      evaluator: 'Acme Corp',
+    });
+    expect(withManual.attestation.manualTestingRecorded).toBe(true);
+    expect(withManual.attestation.methods.some((m) => /manual/i.test(m))).toBe(true);
+    expect(withManual.attestation.evaluator).toBe('Acme Corp');
+  });
+
   it('excludes WCAG 2.2 AAA criteria from an AA scan but includes them at AAA', () => {
     const aa = buildVpat(makeReport([]), scanAA, [], { generatedAt: GEN_AT });
     const aaIds = new Set(aa.tablesByLevel.flatMap((t) => t.rows).map((r) => r.criterion));

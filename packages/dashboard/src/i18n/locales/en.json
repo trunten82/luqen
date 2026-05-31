@@ -1860,7 +1860,15 @@
     "remColAction": "Action",
     "remColCriterion": "Criterion",
     "remColDetail": "Detail",
-    "remediationDisclaimer": "This record reflects logged remediation actions and scan history only. It is evidence of good-faith effort, not a guarantee that every issue has been resolved or that the site is compliant."
+    "remediationDisclaimer": "This record reflects logged remediation actions and scan history only. It is evidence of good-faith effort, not a guarantee that every issue has been resolved or that the site is compliant.",
+    "attestationHeading": "Evaluation methodology & attestation",
+    "attEvaluationDate": "Evaluation date",
+    "attScope": "Scope",
+    "attScopeValue": "{{pages}} page(s) of {{site}}",
+    "attStandards": "Standards assessed",
+    "attMethods": "Methods",
+    "attEvaluator": "Evaluator",
+    "attestationStatement": "This report reflects a good-faith evaluation of the site as of the evaluation date, performed using the methods listed above. It records the state of conformance at that time and the ongoing remediation effort; it is not a certification and does not guarantee conformance."
   },
   "a11yStatement": {
     "status": {
