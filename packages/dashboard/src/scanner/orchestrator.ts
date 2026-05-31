@@ -68,6 +68,12 @@ export interface ScanConfig {
    * Transient (not persisted on the scan record) — mirrors `incremental`.
    */
   readonly behavioral?: boolean;
+  /**
+   * Opt-in "deep scan": run multiple independent accessibility engines
+   * (B0 = dual-runner htmlcs + axe cross-check) and label findings by runner
+   * for legal corroboration. Transient — mirrors `behavioral`. Default: false.
+   */
+  readonly deepScan?: boolean;
 }
 
 class ScanQueue {
@@ -394,6 +400,7 @@ export class ScanOrchestrator {
               headers: {},
               wait: 0,
               ...(config.runner !== undefined ? { runner: config.runner } : {}),
+              ...(config.deepScan === true ? { runners: ['htmlcs', 'axe'] } : {}),
               onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
                 if (progress.type === 'scan:start') {
                   // Don't emit scan_complete on start — wait for actual completion
@@ -456,6 +463,7 @@ export class ScanOrchestrator {
             ...(config.headers !== undefined ? { headers: config.headers } : {}),
             ...(config.actions !== undefined && config.actions.length > 0 ? { actions: config.actions } : {}),
             ...(config.behavioral === true ? { behavioral: true } : {}),
+            ...(config.deepScan === true ? { runners: ['htmlcs', 'axe'] } : {}),
             onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
               if (progress.type === 'scan:start') {
                 // First scan:start event tells us discovery is done

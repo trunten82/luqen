@@ -21,6 +21,7 @@ export interface JsonReportFile {
       message: string;
       selector: string;
       context: string;
+      runner?: string;
       wcagCriterion?: string;
       wcagTitle?: string;
       wcagDescription?: string;
@@ -173,6 +174,37 @@ function obligationPriority(obligation: string): number {
   if (obligation === 'recommended') return 2;
   if (obligation === 'optional') return 1;
   return 0;
+}
+
+// ---------------------------------------------------------------------------
+// Engine corroboration (deep-scan multi-engine cross-check)
+// ---------------------------------------------------------------------------
+
+/**
+ * Summarise multi-engine agreement for legal corroboration. Counts the distinct
+ * engines (runners) that produced findings, and how many distinct
+ * (criterion, selector) findings were independently flagged by 2+ engines.
+ * Legacy/single-engine scans yield engines.length <= 1 and 0 corroborated.
+ */
+export function computeEngineCorroboration(
+  pages: ReadonlyArray<{ issues: ReadonlyArray<{ code: string; selector: string; runner?: string; wcagCriterion?: string }> }>,
+): { engines: string[]; corroboratedFindings: number } {
+  const engines = new Set<string>();
+  const byKey = new Map<string, Set<string>>();
+  for (const page of pages) {
+    for (const issue of page.issues) {
+      if (!issue.runner) continue;
+      engines.add(issue.runner);
+      const crit = issue.wcagCriterion ?? extractCriterion(issue.code) ?? issue.code;
+      const key = `${crit}||${issue.selector}`;
+      let set = byKey.get(key);
+      if (set === undefined) { set = new Set(); byKey.set(key, set); }
+      set.add(issue.runner);
+    }
+  }
+  let corroboratedFindings = 0;
+  for (const set of byKey.values()) { if (set.size >= 2) corroboratedFindings++; }
+  return { engines: [...engines].sort(), corroboratedFindings };
 }
 
 // ---------------------------------------------------------------------------
@@ -627,6 +659,7 @@ export function normalizeReportData(raw: JsonReportFile, scan: { siteUrl: string
     templateOccurrenceCount,
     templateComponents,
     allIssueGroups,
+    engineCorroboration: computeEngineCorroboration(enrichedPages),
     regulatoryIssueCount,
     templateIssueTotal,
     topActionItems: allIssueGroups

@@ -262,7 +262,9 @@
     "regulationTypeBadge": "R",
     "jurisdictionTypeBadge": "J",
     "behavioral": "Deep behavioral scan (beta)",
-    "behavioralHint": "Additionally runs real-browser keyboard, focus, and interactive-element checks that static scanning cannot detect (e.g. keyboard traps, missing focus indicators). Slower — launches a headless browser per page."
+    "behavioralHint": "Additionally runs real-browser keyboard, focus, and interactive-element checks that static scanning cannot detect (e.g. keyboard traps, missing focus indicators). Slower — launches a headless browser per page.",
+    "deepScan": "Deep scan (multi-engine cross-check)",
+    "deepScanHint": "Runs a second independent engine (axe-core) alongside the default and labels each finding by engine, so the report shows which issues were independently confirmed by more than one engine. Slower, but stronger evidence for a good-faith audit."
   },
   "reports": {
     "verdictEyebrow": "Verdict",

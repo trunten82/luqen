@@ -250,7 +250,9 @@
     "includeWarnings": "Inclure les avertissements",
     "includeNotices": "Inclure les avis",
     "behavioral": "Analyse comportementale approfondie (bêta)",
-    "behavioralHint": "Exécute en plus des vérifications réelles dans le navigateur (clavier, focus, éléments interactifs) que l’analyse statique ne détecte pas (p. ex. pièges au clavier, indicateurs de focus manquants). Plus lent — lance un navigateur headless par page."
+    "behavioralHint": "Exécute en plus des vérifications réelles dans le navigateur (clavier, focus, éléments interactifs) que l’analyse statique ne détecte pas (p. ex. pièges au clavier, indicateurs de focus manquants). Plus lent — lance un navigateur headless par page.",
+    "deepScan": "Deep scan (multi-engine cross-check)",
+    "deepScanHint": "Runs a second independent engine (axe-core) alongside the default and labels each finding by engine, so the report shows which issues were independently confirmed by more than one engine. Slower, but stronger evidence for a good-faith audit."
   },
   "reports": {
     "title": "Rapports",
