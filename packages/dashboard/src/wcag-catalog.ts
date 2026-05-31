@@ -1,6 +1,9 @@
-// AUTO-GENERATED from packages/compliance/src/seed/wcag-criteria.json — do not edit by hand.
-// Canonical WCAG 2.1 success-criteria catalog (superset of WCAG 2.0), used to build
-// VPAT / ACR conformance tables. Regenerate from the compliance seed if criteria change.
+// Canonical WCAG success-criteria catalog (WCAG 2.0 + 2.1 + 2.2), used to build
+// VPAT / ACR conformance tables. The 2.0/2.1 rows mirror
+// packages/compliance/src/seed/wcag-criteria.json; the nine WCAG 2.2 rows are
+// maintained directly here. 88 entries total. The human-judgement 2.2 criteria
+// also have manual-test entries in manual-criteria.ts so they correctly report
+// "Not Evaluated" (never "Supports") until a person records a manual result.
 
 export type WcagLevel = 'A' | 'AA' | 'AAA';
 
@@ -8,7 +11,7 @@ export interface WcagCatalogEntry {
   readonly criterion: string;   // e.g. "1.1.1"
   readonly title: string;
   readonly level: WcagLevel;
-  readonly version: string;     // "2.0" | "2.1" (originating WCAG version)
+  readonly version: string;     // "2.0" | "2.1" | "2.2" (originating WCAG version)
   readonly url: string;
 }
 
@@ -91,6 +94,16 @@ export const WCAG_CATALOG: readonly WcagCatalogEntry[] = [
   { criterion: '4.1.1', title: 'Parsing', level: 'A', version: '2.0', url: 'https://www.w3.org/TR/UNDERSTANDING-WCAG20/ensure-compat-parses.html' },
   { criterion: '4.1.2', title: 'Name, Role, Value', level: 'A', version: '2.0', url: 'https://www.w3.org/TR/UNDERSTANDING-WCAG20/ensure-compat-rsv.html' },
   { criterion: '4.1.3', title: 'Status Messages', level: 'AA', version: '2.1', url: 'https://www.w3.org/WAI/WCAG21/Understanding/status-messages' },
+  // ── WCAG 2.2 additions (2023) ──────────────────────────────────────────────
+  { criterion: '2.4.11', title: 'Focus Not Obscured (Minimum)', level: 'AA', version: '2.2', url: 'https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum' },
+  { criterion: '2.4.12', title: 'Focus Not Obscured (Enhanced)', level: 'AAA', version: '2.2', url: 'https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-enhanced' },
+  { criterion: '2.4.13', title: 'Focus Appearance', level: 'AAA', version: '2.2', url: 'https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance' },
+  { criterion: '2.5.7', title: 'Dragging Movements', level: 'AA', version: '2.2', url: 'https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements' },
+  { criterion: '2.5.8', title: 'Target Size (Minimum)', level: 'AA', version: '2.2', url: 'https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum' },
+  { criterion: '3.2.6', title: 'Consistent Help', level: 'A', version: '2.2', url: 'https://www.w3.org/WAI/WCAG22/Understanding/consistent-help' },
+  { criterion: '3.3.7', title: 'Redundant Entry', level: 'A', version: '2.2', url: 'https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry' },
+  { criterion: '3.3.8', title: 'Accessible Authentication (Minimum)', level: 'AA', version: '2.2', url: 'https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum' },
+  { criterion: '3.3.9', title: 'Accessible Authentication (Enhanced)', level: 'AAA', version: '2.2', url: 'https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-enhanced' },
 ];
 
 const LEVEL_RANK: Record<WcagLevel, number> = { A: 1, AA: 2, AAA: 3 };
