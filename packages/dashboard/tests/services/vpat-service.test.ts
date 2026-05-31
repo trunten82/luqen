@@ -211,4 +211,24 @@ describe('buildVpat', () => {
     const vpat = buildVpat(makeReport([]), scanAA, [], { generatedAt: GEN_AT });
     expect(vpat.generatedAt).toBe(GEN_AT);
   });
+
+  it('attaches a conservative Section 508 functional-performance table', () => {
+    // Clean scan → every functional need "Not Evaluated", never "Supports".
+    const clean = buildVpat(makeReport([]), scanAA, [], { generatedAt: GEN_AT });
+    expect(clean.section508.functionalPerformance).toHaveLength(9);
+    expect(
+      clean.section508.functionalPerformance.every((f) => f.conformance !== 'Supports'),
+    ).toBe(true);
+
+    // A WCAG failure for 1.1.1 escalates 302.1 (Without vision) to Does Not Support.
+    const failing = buildVpat(
+      makeReport([makeGroup({ criterion: '1.1.1', errorCount: 2, pageCount: 1 })]),
+      scanAA,
+      [],
+      { generatedAt: GEN_AT },
+    );
+    const withoutVision = failing.section508.functionalPerformance.find((f) => f.id === '302.1');
+    expect(withoutVision?.conformance).toBe('Does Not Support');
+    expect(withoutVision?.remarks).toContain('1.1.1');
+  });
 });

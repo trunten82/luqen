@@ -17,6 +17,7 @@ import {
   type WcagCatalogEntry,
 } from '../wcag-catalog.js';
 import { MANUAL_CRITERIA, type ManualTestResult } from '../manual-criteria.js';
+import { deriveSection508, type Section508Report } from './section508.js';
 import type { normalizeReportData } from './report-service.js';
 
 /**
@@ -69,6 +70,11 @@ export interface VpatReport {
   readonly generatedAt: string;
   readonly tablesByLevel: readonly VpatLevelTable[];
   readonly summary: VpatSummary;
+  /**
+   * Revised Section 508 framing (Functional Performance Criteria, §302),
+   * derived conservatively from the WCAG rows. US lawsuit-protection context.
+   */
+  readonly section508: Section508Report;
 }
 
 export interface BuildVpatOptions {
@@ -290,5 +296,6 @@ export function buildVpat(
     generatedAt,
     tablesByLevel,
     summary,
+    section508: deriveSection508(rows),
   };
 }
