@@ -52,11 +52,18 @@ jobs:
       - name: Restart service
         run: |
           systemctl restart luqen-dashboard
-          sleep 4
           systemctl is-active luqen-dashboard
 
       - name: Smoke check
         run: |
-          code=$(curl -s -o /dev/null -w '%{http_code}' https://luqen.alessandrolanna.it/login)
-          echo "login HTTP $code"
-          test "$code" = "200"
+          # Retry with backoff — the dashboard takes a few seconds to bind
+          # its port after restart, so a single immediate check can hit a
+          # transient 502 before the app is listening.
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://luqen.alessandrolanna.it/login)
+            echo "attempt $i: login HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 3
+          done
+          echo "smoke check failed: /login never returned 200"
+          exit 1
