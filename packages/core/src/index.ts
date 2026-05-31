@@ -15,6 +15,8 @@ export { buildAnnotatedPages } from './reporter/html-reporter.js';
 export { computeContentHash, computeContentHashes } from './scanner/content-hash.js';
 export { runBehavioralChecks } from './behavioral/index.js';
 export type { BehavioralOptions, BehavioralResult } from './behavioral/types.js';
+export { runLighthouseChecks } from './lighthouse/index.js';
+export type { LighthouseOptions, LighthouseResult } from './lighthouse/types.js';
 export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanError, ProgressListener, ComplianceEnrichment } from './types.js';
 
 import { discoverUrls } from './discovery/discover.js';
@@ -22,6 +24,7 @@ import { scanUrls, type ScanOptions } from './scanner/scanner.js';
 import { WebserviceClient, WebservicePool } from './scanner/webservice-client.js';
 import { DirectScanner } from './scanner/direct-scanner.js';
 import { runBehavioralChecks } from './behavioral/index.js';
+import { runLighthouseChecks } from './lighthouse/index.js';
 import type { DiscoveredUrl, PageResult, AccessibilityIssue, ProgressListener } from './types.js';
 
 export interface CreateScannerOptions {
@@ -65,6 +68,20 @@ export interface CreateScannerOptions {
    * (behavioral checks are far more expensive than a static scan). Default: 10.
    */
   readonly behavioralMaxPages?: number;
+  /**
+   * When true, run the Lighthouse accessibility engine (Google Lighthouse's
+   * accessibility category — a curated axe-core audit set) on each scanned page
+   * IN ADDITION to the static Pa11y scan. Default: false. OPT-IN — part of the
+   * "deep scan". Heavy (launches a headless Chrome and runs Lighthouse per
+   * page); bounded by `lighthouseMaxPages`. Findings carry runner='lighthouse'.
+   */
+  readonly lighthouse?: boolean;
+  /**
+   * Cap on how many of the scanned pages the Lighthouse layer runs against.
+   * Lighthouse is heavier than the behavioral layer, so the default is small.
+   * Default: 5.
+   */
+  readonly lighthouseMaxPages?: number;
 }
 
 export interface Scanner {
@@ -153,9 +170,17 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       // suite on up to `behavioralMaxPages` of the scanned pages and merges
       // its findings into each page's issue list (runner='behavioral'). Each
       // page is best-effort: a behavioral failure never breaks the static scan.
-      const pages: PageResult[] = opts.behavioral === true
+      const behavioralPages: PageResult[] = opts.behavioral === true
         ? await runBehavioralPass(results.pages, opts)
         : results.pages;
+
+      // Optional Lighthouse pass (opt-in, part of deep scan). Runs Google
+      // Lighthouse's accessibility category on up to `lighthouseMaxPages` of the
+      // scanned pages and merges its findings (runner='lighthouse') into each
+      // page. Best-effort: a Lighthouse failure never breaks the static scan.
+      const pages: PageResult[] = opts.lighthouse === true
+        ? await runLighthousePass(behavioralPages, opts)
+        : behavioralPages;
 
       // Aggregate results
       let errorCount = 0;
@@ -229,6 +254,58 @@ async function runBehavioralPass(
       out.push({ ...page, issues: mergedIssues, issueCount: mergedIssues.length });
     } catch {
       // Behavioral layer is additive — never let it drop a page's static results.
+      out.push(page);
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Run the Lighthouse accessibility engine over (up to lighthouseMaxPages of)
+ * the scanned pages and merge its findings into each page's issues.
+ *
+ * Bounded + best-effort, mirroring {@link runBehavioralPass}: pages beyond the
+ * cap are returned unchanged, and a Lighthouse failure on one page leaves that
+ * page's existing results intact. Lighthouse issues are mapped to the
+ * AccessibilityIssue shape (runner='lighthouse') so they render and flow into
+ * compliance / VPAT exactly like static and behavioral findings.
+ */
+async function runLighthousePass(
+  inputPages: PageResult[],
+  opts: CreateScannerOptions,
+): Promise<PageResult[]> {
+  const cap = opts.lighthouseMaxPages ?? 5;
+  const out: PageResult[] = [];
+
+  for (let i = 0; i < inputPages.length; i++) {
+    const page = inputPages[i];
+    if (i >= cap) {
+      out.push(page);
+      continue;
+    }
+    try {
+      const lighthouse = await runLighthouseChecks(page.url, {
+        ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
+        ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
+      });
+      if (lighthouse.issues.length === 0) {
+        out.push(page);
+        continue;
+      }
+      const mapped: AccessibilityIssue[] = lighthouse.issues.map((issue) => ({
+        code: issue.code,
+        type: issue.type,
+        message: issue.message,
+        selector: issue.selector,
+        context: issue.context,
+        runner: issue.runner ?? 'lighthouse',
+        fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
+      }));
+      const mergedIssues = [...page.issues, ...mapped];
+      out.push({ ...page, issues: mergedIssues, issueCount: mergedIssues.length });
+    } catch {
+      // Lighthouse layer is additive — never let it drop a page's results.
       out.push(page);
     }
   }
