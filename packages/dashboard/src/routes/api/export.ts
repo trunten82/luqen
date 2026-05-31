@@ -8,6 +8,7 @@ import { generatePdfFromData, generateVpatPdf } from '../../pdf/generator.js';
 import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
 import { normalizeReportData, inferComponent } from '../../services/report-service.js';
 import { buildVpat } from '../../services/vpat-service.js';
+import { buildRemediationRecord } from '../../services/remediation-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
@@ -570,7 +571,15 @@ export async function exportRoutes(
 
         const reportData = normalizeReportData(reportJson, scan);
         const manualResults = await storage.manualTests.getManualTests(scan.id);
-        const vpat = buildVpat(reportData, scan, manualResults);
+        // Dated good-faith remediation record (keyed by scan.orgId to match how
+        // events are recorded). Empty input → empty record (section hidden).
+        const remOrgId = scan.orgId ?? 'system';
+        const [remediationEvents, siteScans] = await Promise.all([
+          storage.remediationEvents.listForSite(remOrgId, scan.siteUrl),
+          storage.scans.getScansForSite(remOrgId, scan.siteUrl),
+        ]);
+        const remediation = buildRemediationRecord(remediationEvents, siteScans);
+        const vpat = buildVpat(reportData, scan, manualResults, {}, remediation);
 
         const scanMeta: PdfScanMeta = {
           siteUrl: scan.siteUrl,
