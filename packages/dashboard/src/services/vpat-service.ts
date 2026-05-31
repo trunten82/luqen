@@ -20,7 +20,7 @@ import { MANUAL_CRITERIA, type ManualTestResult } from '../manual-criteria.js';
 import { deriveSection508, type Section508Report } from './section508.js';
 import { deriveLegalFramings, type LegalFraming } from './legal-framings.js';
 import type { RemediationRecord } from './remediation-service.js';
-import type { normalizeReportData } from './report-service.js';
+import { computeEngineCorroboration, type normalizeReportData } from './report-service.js';
 
 /**
  * normalizeReportData returns an inferred type (no named export). We derive the
@@ -353,7 +353,7 @@ export function buildVpat(
   // Attestation: what was actually done, conservatively described. Manual
   // testing is only claimed when at least one manual result was recorded.
   const manualTestingRecorded = manualResults.some((m) => m.status !== 'untested');
-  const corro = reportData.engineCorroboration ?? { engines: [], corroboratedFindings: 0 };
+  const corro = computeEngineCorroboration(reportData.pages ?? []);
   const automatedEngines = corro.engines.filter((e) => e !== 'behavioral');
   const multiEngine = automatedEngines.length >= 2;
   const methods = [
