@@ -2051,6 +2051,10 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "deepScanDefault": {
+                    "description": "Per-org default for the deep-scan opt-in (runs both pa11y runners)",
+                    "type": "boolean"
                   }
                 },
                 "required": [

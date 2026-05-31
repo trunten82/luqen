@@ -20,6 +20,7 @@ interface OrgRow {
   llm_client_id: string | null;
   llm_client_secret: string | null;
   branding_mode: string;
+  deep_scan_default: number;
   agent_display_name: string | null;
 }
 
@@ -66,6 +67,9 @@ function rowToOrg(row: OrgRow): Organization {
     ...(row.llm_client_id ? { llmClientId: row.llm_client_id } : {}),
     ...(row.llm_client_secret ? { llmClientSecret: row.llm_client_secret } : {}),
     brandingMode: narrowBrandingMode(row.branding_mode),
+    // Migration 077: per-org deep-scan default. SQLite stores the boolean as
+    // INTEGER 0/1; pre-077 orgs read 0 from the ALTER TABLE default.
+    deepScanDefault: row.deep_scan_default === 1,
     // Phase 32 Plan 03 (D-14): surfaces the per-org agent display name.
     // Migration 055 column is nullable TEXT; pre-055 orgs read null from
     // the ALTER TABLE default. Nullish-coalesce (?? null) only maps
@@ -272,6 +276,25 @@ export class SqliteOrgRepository implements OrgRepository {
     const result = this.db
       .prepare('UPDATE organizations SET branding_mode = ? WHERE id = ?')
       .run(mode, orgId);
+    if (result.changes === 0) {
+      throw new Error(`organization not found: ${orgId}`);
+    }
+  }
+
+  async getDeepScanDefault(orgId: string): Promise<boolean> {
+    const row = this.db
+      .prepare('SELECT deep_scan_default FROM organizations WHERE id = ?')
+      .get(orgId) as { deep_scan_default: number } | undefined;
+    if (row === undefined) {
+      throw new Error(`organization not found: ${orgId}`);
+    }
+    return row.deep_scan_default === 1;
+  }
+
+  async setDeepScanDefault(orgId: string, enabled: boolean): Promise<void> {
+    const result = this.db
+      .prepare('UPDATE organizations SET deep_scan_default = ? WHERE id = ?')
+      .run(enabled ? 1 : 0, orgId);
     if (result.changes === 0) {
       throw new Error(`organization not found: ${orgId}`);
     }

@@ -66,6 +66,18 @@ export async function scanRoutes(
       const orgId = getOrgId(request);
       const lookupData = await complianceSvc.getComplianceLookupData(token, orgId);
 
+      // Per-org deep-scan default (migration 077). Failure-safe — a missing
+      // org or column must never break rendering the form. `orgId` may be
+      // undefined for unauthenticated/legacy callers; skip the lookup then.
+      let deepScanDefault = false;
+      if (orgId !== undefined) {
+        try {
+          deepScanDefault = await storage.organizations.getDeepScanDefault(orgId);
+        } catch {
+          deepScanDefault = false;
+        }
+      }
+
       return reply.view('scan-new.hbs', {
         pageTitle: 'New Scan',
         currentPath: '/scan/new',
@@ -79,6 +91,7 @@ export async function scanRoutes(
         defaultConcurrency: config.maxConcurrentScans,
         maxPages: config.maxPages,
         defaultRunner: config.runner ?? 'htmlcs',
+        deepScanDefault,
         prefillUrl,
       });
     },

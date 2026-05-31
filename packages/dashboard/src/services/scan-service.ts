@@ -239,7 +239,19 @@ export class ScanService {
     const scanMode = input.scanMode === 'single' ? 'single' : 'site';
     const incremental = input.incremental === 'true' || input.incremental === true;
     const behavioral = input.behavioral === 'true' || input.behavioral === true;
-    const deepScan = input.deepScan === 'true' || input.deepScan === true;
+    // deepScan: an explicit request value wins; when the request does not
+    // specify it at all, fall back to the org's stored default (migration
+    // 077). Failure-safe — a missing org or column must never break a scan.
+    let deepScan: boolean;
+    if (input.deepScan === undefined) {
+      try {
+        deepScan = await this.storage.organizations.getDeepScanDefault(context.orgId);
+      } catch {
+        deepScan = false;
+      }
+    } else {
+      deepScan = input.deepScan === 'true' || input.deepScan === true;
+    }
 
     // 9. Create scan record
     const scanId = randomUUID();
