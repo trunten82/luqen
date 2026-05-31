@@ -600,6 +600,120 @@ export const MANUAL_CRITERIA: readonly ManualCriterion[] = [
     goodExample: '<form>\n  <!-- Step 1: Enter data -->\n  <!-- Step 2: Review -->\n  <h2>Review your order</h2>\n  <button type="button">Edit</button>\n  <button type="submit">Confirm &amp; Pay</button>\n</form>',
     badExample: '<form>\n  <!-- Single step, no review -->\n  <button type="submit">Pay Now</button>\n  <!-- Immediate, irreversible submission -->\n</form>',
   },
+  // ── WCAG 2.2 (2023) — all require human judgement; automated scanning cannot
+  //    confirm them, so they report "Not Evaluated" until manually tested. ──
+  {
+    id: '2.4.11',
+    title: 'Focus Not Obscured (Minimum)',
+    level: 'AA',
+    automatable: 'none',
+    testInstructions: 'Tab through the page and confirm the focused element is never fully hidden by other content (sticky headers, cookie banners, chat widgets).',
+    whatToCheck: [
+      'When an element receives keyboard focus, is at least part of it visible?',
+      'Do sticky/fixed headers or footers completely cover the focused control?',
+      'Do overlays (cookie bars, chat bubbles) hide the focused element?',
+    ],
+    steps: [
+      'Press Tab repeatedly from the top of the page',
+      'Watch the focus indicator as it moves, especially near sticky headers/footers',
+      'Scroll to positions where a fixed bar overlaps content and re-check',
+      'Confirm the focused element is at least partially visible at every step',
+    ],
+    goodExample: 'A sticky header offsets scroll so the focused field stays visible below it.',
+    badExample: 'Tabbing to a field scrolls it under a fixed header, fully hiding it.',
+  },
+  {
+    id: '2.5.7',
+    title: 'Dragging Movements',
+    level: 'AA',
+    automatable: 'none',
+    testInstructions: 'For any feature that uses dragging, confirm a single-pointer alternative (tap/click) exists.',
+    whatToCheck: [
+      'Can every drag-and-drop action be completed without dragging?',
+      'Do sliders, sortable lists, and map pans offer click/tap or button alternatives?',
+    ],
+    steps: [
+      'Identify all drag interactions (sliders, reordering, drag-to-upload, map pan)',
+      'Try to achieve the same result with single clicks/taps or buttons',
+      'Confirm no essential action requires a dragging gesture',
+    ],
+    goodExample: 'A slider can also be adjusted with up/down arrow buttons or by clicking the track.',
+    badExample: 'A list can only be reordered by dragging items, with no move-up/move-down buttons.',
+  },
+  {
+    id: '2.5.8',
+    title: 'Target Size (Minimum)',
+    level: 'AA',
+    automatable: 'partial',
+    testInstructions: 'Check that pointer targets are at least 24x24 CSS pixels, or have sufficient spacing/an alternative.',
+    whatToCheck: [
+      'Are interactive targets (buttons, links, icons) at least 24x24px?',
+      'If smaller, is there at least 24px spacing around them, or an equivalent larger control?',
+      'Are inline links and adjacent icon buttons spaced enough to avoid mis-taps?',
+    ],
+    steps: [
+      'Inspect interactive elements with DevTools and read their rendered size',
+      'For targets under 24x24px, measure the spacing to neighbouring targets',
+      'Confirm each undersized target meets the spacing or alternative exception',
+    ],
+    goodExample: 'Icon buttons are 32x32px, or 20px icons with 12px padding spacing them apart.',
+    badExample: 'Two 16x16px icon buttons sit flush against each other with no spacing.',
+  },
+  {
+    id: '3.2.6',
+    title: 'Consistent Help',
+    level: 'A',
+    automatable: 'none',
+    testInstructions: 'If help mechanisms exist (contact details, chat, help link), confirm they appear in the same relative order across pages.',
+    whatToCheck: [
+      'Is the help link/contact info in a consistent location across pages?',
+      'Does its relative order (e.g. last item in the header) stay the same?',
+    ],
+    steps: [
+      'Identify the help mechanism (contact, help link, chat) on one page',
+      'Visit several other pages that include help',
+      'Confirm it appears in the same relative position each time',
+    ],
+    goodExample: 'A "Contact us" link is always the last item in the header on every page.',
+    badExample: 'The help link is in the header on one page and only in the footer on another.',
+  },
+  {
+    id: '3.3.7',
+    title: 'Redundant Entry',
+    level: 'A',
+    automatable: 'none',
+    testInstructions: 'In multi-step processes, confirm previously entered information is auto-populated or selectable rather than re-typed.',
+    whatToCheck: [
+      'Is information entered earlier in a process auto-filled or offered for selection later?',
+      'Are users forced to re-type the same data (e.g. billing = shipping address)?',
+    ],
+    steps: [
+      'Complete the first step of a multi-step form',
+      'Proceed to a later step that needs the same information',
+      'Confirm it is pre-filled or selectable (e.g. "same as shipping" checkbox)',
+    ],
+    goodExample: 'Checkout offers "Billing address same as shipping" to avoid re-entry.',
+    badExample: 'A wizard makes you re-type your email address on a later step.',
+  },
+  {
+    id: '3.3.8',
+    title: 'Accessible Authentication (Minimum)',
+    level: 'AA',
+    automatable: 'none',
+    testInstructions: 'Confirm login does not require a cognitive function test (memorising/transcribing) without an alternative or assistance.',
+    whatToCheck: [
+      'Does login allow password managers / paste into the password field?',
+      'Are there cognitive-test steps (puzzles, transcribing codes) without an alternative?',
+      'Is object-recognition or user-supplied content the only way to authenticate?',
+    ],
+    steps: [
+      'Open the login flow',
+      'Confirm the password field allows paste and autofill (not blocked)',
+      'Check any extra step (CAPTCHA, code) offers an accessible alternative',
+    ],
+    goodExample: 'Login supports password managers and email-link sign-in as an alternative.',
+    badExample: 'Login blocks paste and requires solving an image puzzle with no alternative.',
+  },
 ] as const;
 
 /**
