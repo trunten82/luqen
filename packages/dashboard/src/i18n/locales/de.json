@@ -250,7 +250,9 @@
     "includeWarnings": "Warnungen einschließen",
     "includeNotices": "Hinweise einschließen",
     "behavioral": "Tiefer Verhaltensscan (Beta)",
-    "behavioralHint": "Führt zusätzlich echte Browser-Prüfungen für Tastatur, Fokus und interaktive Elemente aus, die ein statischer Scan nicht erkennt (z. B. Tastaturfallen, fehlende Fokus-Indikatoren). Langsamer — startet pro Seite einen Headless-Browser."
+    "behavioralHint": "Führt zusätzlich echte Browser-Prüfungen für Tastatur, Fokus und interaktive Elemente aus, die ein statischer Scan nicht erkennt (z. B. Tastaturfallen, fehlende Fokus-Indikatoren). Langsamer — startet pro Seite einen Headless-Browser.",
+    "deepScan": "Deep scan (multi-engine cross-check)",
+    "deepScanHint": "Runs a second independent engine (axe-core) alongside the default and labels each finding by engine, so the report shows which issues were independently confirmed by more than one engine. Slower, but stronger evidence for a good-faith audit."
   },
   "reports": {
     "title": "Berichte",

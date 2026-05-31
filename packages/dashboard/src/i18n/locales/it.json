@@ -250,7 +250,9 @@
     "includeWarnings": "Includi avvisi",
     "includeNotices": "Includi notifiche",
     "behavioral": "Scansione comportamentale approfondita (beta)",
-    "behavioralHint": "Esegue inoltre controlli reali nel browser su tastiera, focus ed elementi interattivi che la scansione statica non rileva (es. trappole da tastiera, indicatori di focus mancanti). Più lenta — avvia un browser headless per pagina."
+    "behavioralHint": "Esegue inoltre controlli reali nel browser su tastiera, focus ed elementi interattivi che la scansione statica non rileva (es. trappole da tastiera, indicatori di focus mancanti). Più lenta — avvia un browser headless per pagina.",
+    "deepScan": "Deep scan (multi-engine cross-check)",
+    "deepScanHint": "Runs a second independent engine (axe-core) alongside the default and labels each finding by engine, so the report shows which issues were independently confirmed by more than one engine. Slower, but stronger evidence for a good-faith audit."
   },
   "reports": {
     "title": "Report",

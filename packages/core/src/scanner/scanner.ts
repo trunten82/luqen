@@ -16,6 +16,8 @@ export interface ScanOptions {
   readonly onProgress?: ProgressListener;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Passed through to the webservice task. */
   readonly runner?: 'htmlcs' | 'axe';
+  /** Deep scan: run multiple runners (direct mode merges their findings). */
+  readonly runners?: readonly string[];
   readonly includeWarnings?: boolean;
   readonly includeNotices?: boolean;
 }
@@ -32,6 +34,7 @@ function mapIssues(issues: readonly Pa11yIssue[]): AccessibilityIssue[] {
     message: issue.message,
     selector: issue.selector,
     context: issue.context,
+    runner: (issue as { runner?: string }).runner,
     fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
   }));
 }
@@ -245,6 +248,7 @@ async function scanUrlDirect(
       headers: options.headers,
       actions: options.actions,
       runner: options.runner,
+      runners: options.runners,
       includeWarnings: options.includeWarnings,
       includeNotices: options.includeNotices,
     });
@@ -255,6 +259,7 @@ async function scanUrlDirect(
       message: issue.message,
       selector: issue.selector,
       context: issue.context,
+      runner: issue.runner,
       fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
     }));
 

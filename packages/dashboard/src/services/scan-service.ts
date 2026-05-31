@@ -39,6 +39,8 @@ export interface InitiateScanInput {
   readonly actions?: readonly string[];
   /** Opt-in "deep behavioral scan" (real-browser keyboard/focus/dynamic-state). */
   readonly behavioral?: string | boolean;
+  /** Opt-in "deep scan": multi-engine cross-check (B0 = dual-runner htmlcs+axe). */
+  readonly deepScan?: string | boolean;
 }
 
 export interface ScanContext {
@@ -237,6 +239,7 @@ export class ScanService {
     const scanMode = input.scanMode === 'single' ? 'single' : 'site';
     const incremental = input.incremental === 'true' || input.incremental === true;
     const behavioral = input.behavioral === 'true' || input.behavioral === true;
+    const deepScan = input.deepScan === 'true' || input.deepScan === true;
 
     // 9. Create scan record
     const scanId = randomUUID();
@@ -270,6 +273,7 @@ export class ScanService {
       ...(runner !== undefined ? { runner } : {}),
       ...(incremental ? { incremental } : {}),
       ...(behavioral ? { behavioral } : {}),
+      ...(deepScan ? { deepScan } : {}),
       includeWarnings: input.includeWarnings !== false,
       includeNotices: input.includeNotices !== false,
       ...(input.headers !== undefined ? { headers: input.headers } : {}),

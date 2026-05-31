@@ -46,6 +46,8 @@ export interface CreateScannerOptions {
   readonly maxPages?: number;
   /** Pa11y test runner: 'htmlcs' (default) or 'axe'. Requires the runner installed alongside the webservice. */
   readonly runner?: 'htmlcs' | 'axe';
+  /** Deep scan: run multiple runners (e.g. ['htmlcs','axe']) and merge findings. Direct mode only. */
+  readonly runners?: readonly string[];
   /** Include warnings in results (default: true). */
   readonly includeWarnings?: boolean;
   /** Include notices in results (default: true). */
@@ -115,6 +117,7 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
     wait: opts.wait ?? 0,
     onProgress: opts.onProgress,
     ...(opts.runner !== undefined ? { runner: opts.runner } : {}),
+    ...(opts.runners !== undefined ? { runners: opts.runners } : {}),
     includeWarnings: opts.includeWarnings !== false,
     includeNotices: opts.includeNotices !== false,
   };
@@ -219,6 +222,7 @@ async function runBehavioralPass(
         message: issue.message,
         selector: issue.selector,
         context: issue.context,
+        runner: issue.runner ?? 'behavioral',
         fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
       }));
       const mergedIssues = [...page.issues, ...mapped];
