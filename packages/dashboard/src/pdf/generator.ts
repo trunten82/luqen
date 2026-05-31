@@ -624,6 +624,98 @@ export async function generateVpatPdf(
         doc.moveDown(0.6);
       }
 
+      // ── Section 508 — Functional Performance Criteria (§302) ──
+      // US framing: Revised Section 508 incorporates WCAG 2.0 A & AA by
+      // reference (E205.4), so the WCAG tables above are the success-criteria
+      // evidence; §302 adds holistic functional outcomes, derived conservatively
+      // (a mapped WCAG failure escalates a need to "Does Not Support"; a clean
+      // scan leaves it "Not Evaluated", never auto-"Supports").
+      if (doc.y > doc.page.height - doc.page.margins.bottom - 90) {
+        doc.addPage();
+      }
+      doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
+        .text('Section 508 — Functional Performance Criteria (§302)', left, doc.y);
+      doc.moveTo(left, doc.y).lineTo(left + pageWidth, doc.y)
+        .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
+      doc.moveDown(0.2);
+      doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+        .text(
+          'Revised Section 508 (36 CFR 1194, Appendix A) incorporates WCAG 2.0 Level A and AA by reference for '
+          + 'electronic content (E205.4); the WCAG tables above constitute that evidence. The functional needs below '
+          + 'describe end-to-end outcomes and are reported conservatively — a related WCAG failure marks a need "Does '
+          + 'Not Support", while a clean scan leaves it "Not Evaluated" pending manual testing with assistive technology.',
+          left, doc.y, { lineGap: 2, width: pageWidth },
+        );
+      doc.moveDown(0.4);
+      doc.x = left;
+
+      // Column header (Functional need | Conformance | Remarks).
+      const fpcHeaderY = doc.y;
+      doc.save().rect(left, fpcHeaderY, pageWidth, 16).fill(BG_SURFACE).restore();
+      doc.fontSize(7).fillColor(TEXT_SECONDARY).font('Body-Bold');
+      doc.text('FUNCTIONAL NEED', colCriteria + 4, fpcHeaderY + 5, { characterSpacing: 0.6 });
+      doc.text('CONFORMANCE LEVEL', colConformance, fpcHeaderY + 5, { characterSpacing: 0.6 });
+      doc.text('REMARKS', colRemarks, fpcHeaderY + 5, { characterSpacing: 0.6 });
+      doc.y = fpcHeaderY + 18;
+
+      for (const fpc of vpat.section508.functionalPerformance) {
+        if (doc.y > doc.page.height - doc.page.margins.bottom - 30) {
+          doc.addPage();
+        }
+        const fpcRowY = doc.y;
+
+        doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Body-Bold')
+          .text(fpc.id, colCriteria + 4, fpcRowY, { width: colConformance - colCriteria - 8 });
+        doc.fontSize(7).fillColor(TEXT_SECONDARY).font('Body')
+          .text(fpc.need, colCriteria + 4, doc.y, { width: colConformance - colCriteria - 8 });
+        const needBottom = doc.y;
+
+        doc.fontSize(8).fillColor(conformanceColor(fpc.conformance)).font('Body-Bold')
+          .text(fpc.conformance, colConformance, fpcRowY, { width: colRemarks - colConformance - 6 });
+        const fpcConformanceBottom = doc.y;
+
+        doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+          .text(fpc.remarks, colRemarks, fpcRowY, { width: remarksWidth });
+        const fpcRemarksBottom = doc.y;
+
+        const fpcNextY = Math.max(needBottom, fpcConformanceBottom, fpcRemarksBottom) + 4;
+        doc.moveTo(left, fpcNextY).lineTo(left + pageWidth, fpcNextY)
+          .lineWidth(0.5).strokeColor(BORDER_SUBTLE).stroke();
+        doc.y = fpcNextY + 3;
+      }
+      doc.moveDown(0.4);
+      doc.x = left;
+      doc.fontSize(7).fillColor(TEXT_MUTED).font('Body')
+        .text(
+          'Section 508 Chapter 6 (support documentation and services) is outside the scope of automated web '
+          + 'scanning and is not evaluated here.',
+          left, doc.y, { lineGap: 2, width: pageWidth },
+        );
+      doc.moveDown(0.7);
+      doc.x = left;
+
+      // ── ADA Title II & Title III context ──
+      if (doc.y > doc.page.height - doc.page.margins.bottom - 90) {
+        doc.addPage();
+      }
+      doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
+        .text('ADA Title II & Title III context', left, doc.y);
+      doc.moveTo(left, doc.y).lineTo(left + pageWidth, doc.y)
+        .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
+      doc.moveDown(0.2);
+      doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+        .text(
+          'U.S. courts and the Department of Justice have repeatedly treated WCAG 2.x Level AA as the practical '
+          + 'benchmark for the Americans with Disabilities Act, although the ADA itself names no single technical '
+          + 'standard. Title III applies to private "places of public accommodation"; Title II applies to state and '
+          + 'local government, for which the DOJ 2024 rule formally adopts WCAG 2.1 Level AA. This report is intended '
+          + 'to support a good-faith, documented remediation effort under both titles. It is not legal advice and does '
+          + 'not certify compliance.',
+          left, doc.y, { lineGap: 2, width: pageWidth },
+        );
+      doc.moveDown(0.7);
+      doc.x = left;
+
       // ── Footer ──
       if (doc.y > doc.page.height - doc.page.margins.bottom - 30) {
         doc.addPage();
