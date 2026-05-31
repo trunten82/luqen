@@ -31,6 +31,9 @@ function vpatWith(rows: VpatRow[]): VpatReport {
       notEvaluated: rows.filter((r) => r.conformance === 'Not Evaluated').length,
       total: rows.length,
     },
+    legalFramings: [],
+    includeFunctionalPerformance: false,
+    functionalPerformanceHeading: '',
   };
 }
 
