@@ -246,4 +246,34 @@ describe('buildVpat', () => {
     expect(withRem.remediation).toBe(record);
     expect(withRem.remediation?.summary.aiProposed).toBe(1);
   });
+
+  it('includes WCAG 2.2 AA criteria and reports them Not Evaluated on a clean scan', () => {
+    // WCAG 2.2 success criteria must appear in an AA VPAT and — because they are
+    // human-judgement — must NEVER auto-claim "Supports" from a clean scan.
+    const vpat = buildVpat(makeReport([]), scanAA, [], { generatedAt: GEN_AT });
+    const rows = vpat.tablesByLevel.flatMap((t) => t.rows);
+    const ids = new Set(rows.map((r) => r.criterion));
+    for (const c of ['2.4.11', '2.5.7', '2.5.8', '3.2.6', '3.3.7', '3.3.8']) {
+      expect(ids.has(c)).toBe(true);
+      const row = rows.find((r) => r.criterion === c);
+      expect(row?.conformance).toBe('Not Evaluated');
+      expect(row?.conformance).not.toBe('Supports');
+    }
+  });
+
+  it('excludes WCAG 2.2 AAA criteria from an AA scan but includes them at AAA', () => {
+    const aa = buildVpat(makeReport([]), scanAA, [], { generatedAt: GEN_AT });
+    const aaIds = new Set(aa.tablesByLevel.flatMap((t) => t.rows).map((r) => r.criterion));
+    expect(aaIds.has('2.4.13')).toBe(false); // Focus Appearance is AAA
+
+    const aaa = buildVpat(
+      makeReport([]),
+      { siteUrl: 'https://example.com', standard: 'WCAG2AAA' },
+      [],
+      { generatedAt: GEN_AT },
+    );
+    const aaaIds = new Set(aaa.tablesByLevel.flatMap((t) => t.rows).map((r) => r.criterion));
+    expect(aaaIds.has('2.4.13')).toBe(true);
+    expect(aaaIds.has('3.3.9')).toBe(true);
+  });
 });
