@@ -84,6 +84,8 @@ describe('buildFleetReportBundle', () => {
   });
 
   it('caps at FLEET_REPORT_MAX_SITES and reports the remainder as truncated', async () => {
+    // Generates FLEET_REPORT_MAX_SITES real VPAT PDFs — legitimately slow, so
+    // allow generous time (this asserts the cap arithmetic, not throughput).
     const many = Array.from({ length: FLEET_REPORT_MAX_SITES + 5 }, (_, i) =>
       scan({ id: `s${i}`, siteUrl: `https://s${i}.example.com` }),
     );
@@ -91,5 +93,5 @@ describe('buildFleetReportBundle', () => {
     expect(res.candidates).toBe(FLEET_REPORT_MAX_SITES + 5);
     expect(res.included).toBe(FLEET_REPORT_MAX_SITES);
     expect(res.truncated).toBe(5);
-  });
+  }, 60_000);
 });
