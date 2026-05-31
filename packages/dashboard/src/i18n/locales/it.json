@@ -1460,5 +1460,9 @@
       "lastAssessed": "Ultima valutazione il",
       "disclaimer": "Questa dichiarazione riflette i test automatizzati e comportamentali insieme a qualsiasi revisione manuale registrata. È un resoconto in buona fede dei nostri sforzi in materia di accessibilità e non costituisce né una certificazione legale di conformità né una consulenza legale."
     }
+  },
+  "fleet": {
+    "downloadReports": "Scarica tutti i report",
+    "downloadReportsHint": "Scarica un archivio .tar.gz con il VPAT/ACR di ogni sito con una scansione completata"
   }
 }
