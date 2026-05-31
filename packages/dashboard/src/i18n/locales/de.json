@@ -1451,5 +1451,9 @@
       "lastAssessed": "Zuletzt bewertet am",
       "disclaimer": "Diese Erklärung spiegelt automatisierte und verhaltensbezogene Tests zusammen mit etwaigen erfassten manuellen Prüfungen wider. Sie ist ein nach Treu und Glauben erstellter Nachweis unserer Bemühungen um Barrierefreiheit und stellt weder eine rechtliche Konformitätsbescheinigung noch eine Rechtsberatung dar."
     }
+  },
+  "fleet": {
+    "downloadReports": "Alle Berichte herunterladen",
+    "downloadReportsHint": "Lädt ein .tar.gz-Bündel mit dem VPAT/ACR für jede Website mit abgeschlossenem Scan herunter"
   }
 }

@@ -1451,5 +1451,9 @@
       "lastAssessed": "Última evaluación el",
       "disclaimer": "Esta declaración refleja las pruebas automatizadas y de comportamiento junto con cualquier revisión manual registrada. Es un registro de buena fe de nuestros esfuerzos en materia de accesibilidad y no constituye una certificación legal de cumplimiento ni asesoramiento jurídico."
     }
+  },
+  "fleet": {
+    "downloadReports": "Descargar todos los informes",
+    "downloadReportsHint": "Descarga un paquete .tar.gz con el VPAT/ACR de cada sitio con un análisis completado"
   }
 }

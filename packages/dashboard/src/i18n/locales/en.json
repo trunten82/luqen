@@ -1926,5 +1926,9 @@
       "lastAssessed": "Last assessed on",
       "disclaimer": "This statement reflects automated and behavioural testing together with any recorded manual review. It is a good-faith record of our accessibility efforts and is not a legal certification of compliance, nor legal advice."
     }
+  },
+  "fleet": {
+    "downloadReports": "Download all reports",
+    "downloadReportsHint": "Download a .tar.gz bundle of the VPAT/ACR for every site with a completed scan"
   }
 }
