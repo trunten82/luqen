@@ -567,6 +567,31 @@ export async function generateVpatPdf(
       doc.moveDown(0.7);
       doc.x = left;
 
+      // ── Evaluation methodology & attestation (documentary weight) ──
+      const att = vpat.attestation;
+      doc.fontSize(9).fillColor(ID_ACCENT).font('Body-Bold')
+        .text('Evaluation methodology & attestation', left, doc.y, { lineGap: 2 });
+      const attLine = (label: string, value: string): void => {
+        doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body-Bold')
+          .text(`${label}  `, left, doc.y, { continued: true })
+          .fillColor(TEXT_PRIMARY).font('Body').text(value);
+      };
+      attLine('Evaluation date:', att.evaluationDate);
+      attLine('Scope:', `${att.pagesEvaluated} page(s) of ${scan.siteUrl}`);
+      attLine('Standards assessed:', att.standardsLabel);
+      attLine('Methods:', att.methods.join('; '));
+      if (att.evaluator) attLine('Evaluator:', att.evaluator);
+      doc.moveDown(0.3);
+      doc.fontSize(8).fillColor(STATUS_WARNING).font('Body')
+        .text(
+          `This Accessibility Conformance Report reflects a good-faith evaluation of ${scan.siteUrl} as of `
+          + `${att.evaluationDate}, performed using the methods listed above. It records the state of conformance at `
+          + 'that time and the ongoing remediation effort; it is not a certification and does not guarantee conformance.',
+          left, doc.y, { lineGap: 2, width: pageWidth },
+        );
+      doc.moveDown(0.7);
+      doc.x = left;
+
       // Column geometry.
       const colCriteria = left;
       const colConformance = left + 150;
