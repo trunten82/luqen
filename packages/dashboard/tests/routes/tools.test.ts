@@ -70,6 +70,7 @@ describe('Tool routes', () => {
       const response = await ctx.server.inject({
         method: 'GET',
         url: '/tools/bookmarklet',
+        headers: { 'x-test-anon': '1' },
       });
 
       const body = response.json() as BookmarkletData;

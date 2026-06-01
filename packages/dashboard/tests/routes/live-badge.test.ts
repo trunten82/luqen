@@ -29,7 +29,12 @@ let server: FastifyInstance;
 async function buildServer(user: { id: string; role?: string; currentOrgId: string } | null) {
   const s = Fastify();
   if (user !== null) {
-    s.addHook('preHandler', async (request) => { request.user = user; });
+    s.addHook('preHandler', async (request) => {
+      request.user = user;
+      // The site-badge toggle now requires reports.export; grant it (these test
+      // users are authorised org actors — the tests vary orgId to check scope).
+      (request as unknown as Record<string, unknown>)['permissions'] = new Set(['reports.export']);
+    });
   }
   await badgeRoutes(s, storage);
   await reportRoutes(s, storage, () => null, {});
