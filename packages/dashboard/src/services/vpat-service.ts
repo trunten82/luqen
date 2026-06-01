@@ -230,29 +230,64 @@ function deriveRow(
   };
 
   const manual = manualByCriterion.get(entry.criterion);
+  const group = groupsByCriterion.get(entry.criterion);
 
-  // 1. Explicit "not applicable" from manual testing wins outright.
+  // Legally-defensible reconciliation of a human manual verdict with automated
+  // findings: never hide a failure or over-claim, but honour genuine human
+  // judgement transparently.
+  //   - Manual N/A / Fail always win (a human determination is authoritative
+  //     for inapplicability and for failures).
+  //   - A hard automated ERROR is never overridden by a manual Pass (a tool-
+  //     detected definite failure must not be hidden).
+  //   - A manual Pass elevates lower-confidence automated findings (warnings /
+  //     notices — the human-judgement items) to Supports, while transparently
+  //     noting what the scan flagged.
+
+  // 1. Manual "not applicable" wins outright.
   if (manual?.status === 'na') {
-    return {
-      ...base,
-      conformance: 'Not Applicable',
-      remarks: 'Marked not applicable during manual testing',
-    };
+    return { ...base, conformance: 'Not Applicable', remarks: 'Marked not applicable during manual testing' };
   }
 
-  // 2. Automated findings for this criterion.
-  const group = groupsByCriterion.get(entry.criterion);
-  if (group !== undefined) {
-    if (group.errorCount > 0) {
+  // 2. Manual "fail" wins — never hide a human-found failure.
+  if (manual?.status === 'fail') {
+    const remarks = group !== undefined
+      ? withRegulations(
+          `Failed manual testing; automated scan also flagged ${pluralise(group.warningCount + group.noticeCount + group.errorCount, 'issue')} across ${pluralise(group.pageCount, 'page')}`,
+          group,
+        )
+      : 'Failed manual testing';
+    return { ...base, conformance: 'Does Not Support', remarks };
+  }
+
+  // 3. Hard automated errors → Does Not Support, never overridden by a manual
+  //    Pass (don't hide a definite, tool-detected failure).
+  if (group !== undefined && group.errorCount > 0) {
+    const errText = `${pluralise(group.errorCount, 'error')} across ${pluralise(group.pageCount, 'page')}`;
+    const remarks = withRegulations(
+      manual?.status === 'pass' ? `${errText}; manual testing recorded Pass — review` : errText,
+      group,
+    );
+    return { ...base, conformance: 'Does Not Support', remarks };
+  }
+
+  // 4. Manual "pass" — human judgement elevates the criterion to Supports,
+  //    transparently noting any automated warnings/notices.
+  if (manual?.status === 'pass') {
+    if (group !== undefined && (group.warningCount > 0 || group.noticeCount > 0)) {
       return {
         ...base,
-        conformance: 'Does Not Support',
+        conformance: 'Supports',
         remarks: withRegulations(
-          `${pluralise(group.errorCount, 'error')} across ${pluralise(group.pageCount, 'page')}`,
+          `Verified by manual testing; automated scan also flagged ${pluralise(group.warningCount, 'warning')}, ${pluralise(group.noticeCount, 'notice')} across ${pluralise(group.pageCount, 'page')}`,
           group,
         ),
       };
     }
+    return { ...base, conformance: 'Supports', remarks: 'Verified by manual testing' };
+  }
+
+  // 5. No manual verdict — automated findings drive the verdict.
+  if (group !== undefined) {
     if (group.warningCount > 0 || group.noticeCount > 0) {
       return {
         ...base,
@@ -263,46 +298,20 @@ function deriveRow(
         ),
       };
     }
-    // Group present but no error/warning/notice (rare). Still apply the
-    // conservative rule: only claim Supports for fully-automatable criteria.
+    // Group present but no findings (rare): only claim Supports when fully
+    // machine-verifiable; otherwise it still needs human evaluation.
     if (requiresManual.has(entry.criterion)) {
-      return {
-        ...base,
-        conformance: 'Not Evaluated',
-        remarks: 'Requires manual evaluation; automated testing alone cannot confirm conformance',
-      };
+      return { ...base, conformance: 'Not Evaluated', remarks: 'Requires manual evaluation; automated testing alone cannot confirm conformance' };
     }
-    return {
-      ...base,
-      conformance: 'Supports',
-      remarks: 'No outstanding issues detected by automated scan',
-    };
+    return { ...base, conformance: 'Supports', remarks: 'No outstanding issues detected by automated scan' };
   }
 
-  // 3. Criterion absent from automated findings. A recorded manual result is
-  //    the strongest signal; otherwise fall back to the conservative rule.
-  if (manual?.status === 'pass') {
-    return { ...base, conformance: 'Supports', remarks: 'Verified by manual testing' };
-  }
-  if (manual?.status === 'fail') {
-    return { ...base, conformance: 'Does Not Support', remarks: 'Failed manual testing' };
-  }
-  // CONSERVATIVE: absence of automated findings only proves Support when the
-  // criterion is FULLY machine-verifiable. For any criterion needing human
-  // judgement (automatable 'partial' or 'none'), a clean scan is inconclusive
-  // → Not Evaluated, pending manual testing. Never silently upgrade to Supports.
+  // 6. No automated findings and no manual verdict — conservative: only a
+  //    fully machine-verifiable criterion can claim Supports on a clean scan.
   if (requiresManual.has(entry.criterion)) {
-    return {
-      ...base,
-      conformance: 'Not Evaluated',
-      remarks: 'Requires manual evaluation; automated testing alone cannot confirm conformance',
-    };
+    return { ...base, conformance: 'Not Evaluated', remarks: 'Requires manual evaluation; automated testing alone cannot confirm conformance' };
   }
-  return {
-    ...base,
-    conformance: 'Supports',
-    remarks: 'No issues detected by automated testing for this machine-verifiable criterion',
-  };
+  return { ...base, conformance: 'Supports', remarks: 'No issues detected by automated testing for this machine-verifiable criterion' };
 }
 
 // ---------------------------------------------------------------------------
