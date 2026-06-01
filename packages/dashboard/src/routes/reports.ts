@@ -59,7 +59,8 @@ export async function reportRoutes(
   // GET /reports — list with pagination and search
   server.get(
     '/reports',
-    { schema: { ...HtmlPageSchema, tags: ['reports'] } },
+    {
+      preHandler: requirePermission('reports.view'), schema: { ...HtmlPageSchema, tags: ['reports'] } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as ReportsQuery;
       const offset = query.offset !== undefined ? parseInt(query.offset, 10) : 0;
@@ -161,7 +162,8 @@ export async function reportRoutes(
   // GET /reports/:id — read JSON report and render rich report-detail template
   server.get(
     '/reports/:id',
-    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+    {
+      preHandler: requirePermission('reports.view'), schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
@@ -411,7 +413,8 @@ export async function reportRoutes(
   // GET /reports/:id/print — standalone print-friendly HTML for browser print-to-PDF
   server.get(
     '/reports/:id/print',
-    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+    {
+      preHandler: requirePermission('reports.view'), schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -907,7 +910,8 @@ export async function reportRoutes(
   // DELETE /reports/:id — delete scan record and files
   server.delete(
     '/reports/:id',
-    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+    {
+      schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -948,7 +952,8 @@ export async function reportRoutes(
   // GET /reports/:id/fix-suggestion — HTMX partial: AI fix or hardcoded fallback
   server.get(
     '/reports/:id/fix-suggestion',
-    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+    {
+      preHandler: requirePermission('llm.view'), schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const query = request.query as {
@@ -1033,7 +1038,8 @@ export async function reportRoutes(
   // GET /reports/:id/ai-summary — HTMX partial: AI executive summary
   server.get(
     '/reports/:id/ai-summary',
-    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+    {
+      preHandler: requirePermission('llm.view'), schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const llmClient = getLLMClient();
       const { id } = request.params as { id: string };
@@ -1208,7 +1214,8 @@ export async function reportRoutes(
   // GET /reports/:id/brand-drilldown — HTMX partial: dimension drilldown modal
   server.get(
     '/reports/:id/brand-drilldown',
-    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+    {
+      preHandler: requirePermission('reports.view'), schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as { dimension?: string };
       const dimensionRaw = query.dimension ?? '';

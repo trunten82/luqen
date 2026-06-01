@@ -51,6 +51,7 @@ async function createTestServer(): Promise<TestContext> {
     (request as unknown as Record<string, unknown>)['permissions'] = new Set([
       'reports.delete',
       'scans.create',
+      'reports.view',
     ]);
   });
 
