@@ -2150,4 +2150,22 @@ CREATE TABLE IF NOT EXISTS report_identities (
 );
     `,
   },
+  {
+    id: '083',
+    name: 'create-org-entitlements',
+    sql: `
+-- Phase 80 — per-org commercial plan (the thin entitlement foundation).
+-- Admin-controlled monetisation: the plan is a configuration value (no billing
+-- integration). Consumed by the WordPress Pro gate (GATE-06), the agency
+-- partner entitlement (AGENCY-04), and the pricing/packaging model (PRICE-03).
+-- AI-fix credits are NOT stored here — they live in the @luqen/llm service
+-- alongside the usage ledger.
+CREATE TABLE IF NOT EXISTS org_entitlements (
+  org_id     TEXT PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
+  plan       TEXT NOT NULL DEFAULT 'free',
+  updated_at TEXT NOT NULL,
+  updated_by TEXT
+);
+    `,
+  },
 ];

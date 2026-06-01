@@ -29,9 +29,9 @@ Ship pattern per phase: wip branch → build → test → merge to master → de
 - Integer phases (78, 79, 80…): Planned milestone work
 - Decimal phases (e.g. 80.1): Urgent insertions (marked INSERTED)
 
-- [ ] **Phase 78: Anti-overlay positioning** — Frame Luqen as genuine source-level remediation across WP readme + dashboard/report surfaces, with a "why not an overlay" evidence comparison
-- [ ] **Phase 79: Pro feature-gate bundle (WP plugin)** — Gate full-site/bulk scan, audit history, Excel export, CPT/WooCommerce, multisite behind a free-vs-Pro entitlement check
-- [ ] **Phase 80: Credit-metered AI fixes** — Meter `generate-fix` by org credits on the existing `llm_usage` ledger, gate gracefully when exhausted, and establish the thin per-org entitlement foundation
+- [x] **Phase 78: Anti-overlay positioning** — DONE 2026-06-01. WP readme anti-overlay + public-report positioning line + docs/why-not-an-overlay.md comparison surface shipped during 43–77; the dashboard-landing positioning gap (SC2) closed in f40b43e (CI green, deployed). Evidence re-verified (FTC $1M; NFB 2021/2025; UsableNet/EcomBack overlay-lawsuit rate).
+- [x] **Phase 79: Pro feature-gate bundle (WP plugin)** — DONE 2026-06-01 (luqen-wordpress `ad736f7`, v0.24.0, WP CI green, 12/12 Playwright UAT). `Luqen_Entitlement` model + *Luqen → Plan* admin screen; gated full-site/bulk scan, scan history, Excel export, CPT/WooCommerce, multisite network bulk fixes, VPAT/ACR+evidence+sharing behind free-vs-Pro. Defence-in-depth (UI paywall + handler/REST re-check). Admin-controlled (no billing); enterprise path wired via filter seam, HTTP fetch lands in Phase 80.
+- [x] **Phase 80: Credit-metered AI fixes** — DONE 2026-06-01. `generate-fix` decrements a per-org AI-fix credit balance (append-only `credit_ledger` + `org_credits` in the LLM DB); exhausted → `402` so consumers degrade to the deterministic fix path; system calls unmetered; default free allocation env-configurable (seed 50). Credits API on @luqen/llm; admin credits+plan panel on `/admin/llm-usage`; `org_entitlements` table (migration 083) + `EntitlementRepository` = the thin plan foundation; inbound `GET /api/v1/entitlement` feeds the WP Pro gate. Admin-controlled (no billing). LLM 416 + dashboard 3935 tests green; docs:rbac/openapi regenerated.
 - [ ] **Phase 81: Agency tier** — Multi-client console, white-label rebrandable reports + theming, VPAT/ACR generation, partner/resale entitlement
 - [ ] **Phase 82: Pricing & packaging** — Codify Free/Pro/Agency tiers as a feature matrix and a platform-wide plan/entitlement model with documented pricing anchors
 
@@ -110,8 +110,8 @@ Two parallelizable tracks: the WordPress track (78 `readme.txt`, 79) and the pla
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 78. Anti-overlay positioning | v3.5.0 | 0/TBD | Not started | - |
-| 79. Pro feature-gate bundle (WP plugin) | v3.5.0 | 0/TBD | Not started | - |
-| 80. Credit-metered AI fixes | v3.5.0 | 0/TBD | Not started | - |
+| 78. Anti-overlay positioning | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
+| 79. Pro feature-gate bundle (WP plugin) | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
+| 80. Credit-metered AI fixes | v3.5.0 | 1/1 | ✅ Done | 2026-06-01 |
 | 81. Agency tier | v3.5.0 | 0/TBD | Not started | - |
 | 82. Pricing & packaging | v3.5.0 | 0/TBD | Not started | - |

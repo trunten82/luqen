@@ -6,6 +6,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Credit-metered AI fixes + per-org entitlement foundation (v3.5.0 Phase 80).** The `generate-fix` capability now decrements a per-org AI-fix credit balance on top of the existing `llm_usage` ledger; when an org's credits are exhausted the call is gated with `402` so the consumer degrades gracefully to its deterministic fix path (never a hard error). System/unscoped calls stay unmetered. New orgs start with a configurable default free allocation (`LLM_FREE_DEFAULT_CREDITS`, seeds at 50).
+  - **@luqen/llm:** an append-only `credit_ledger` + `org_credits` balance in the LLM DB; `getCreditBalance` / `setCreditAllocation` / `addCredits` / `consumeCredit` / `listCreditLedger` adapter methods; a credits API (`GET /api/v1/credits`, `GET /api/v1/credits/ledger`, `POST /api/v1/credits/allocation`, `POST /api/v1/credits/topup`) with the same org-scoping as `/api/v1/usage`. The `generate-fix` response carries an `X-Luqen-Credits-Remaining` header.
+  - **Dashboard:** an "AI fix credits & plan" panel on `/admin/llm-usage` (per selected org) showing balance / allocated / used with admin controls to set the allocation, top up, and set the org's commercial plan. A new optional `org_entitlements` table (migration 083) + `EntitlementRepository` is the thin per-org plan foundation (free / pro / agency). A new inbound `GET /api/v1/entitlement` returns the caller org's plan + credit position for the WordPress Pro gate.
+  - Monetisation stays **admin-controlled — there is no billing integration**; allocations and the plan are configuration an administrator sets.
+
 ## [3.4.0] - 2026-05-22
 
 ### Changed

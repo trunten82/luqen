@@ -197,6 +197,30 @@ export interface UsageSummaryRow {
   readonly avgLatencyMs: number;
 }
 
+// ---- Credits (Phase 80) ----
+
+/**
+ * An org's AI-fix credit position. `balance` is the spendable amount
+ * (never negative). When an org has no row yet it is treated as having the
+ * configurable default free allocation with zero used.
+ */
+export interface CreditBalance {
+  readonly orgId: string;
+  readonly allocated: number;
+  readonly used: number;
+  readonly balance: number;
+}
+
+/** Append-only credit movement (grant, top-up, or consumption). */
+export interface CreditLedgerEntry {
+  readonly id: string;
+  readonly orgId: string;
+  readonly delta: number;
+  readonly reason: string;
+  readonly balanceAfter: number;
+  readonly occurredAt: string;
+}
+
 // ---- Config ----
 
 export interface LLMConfig {

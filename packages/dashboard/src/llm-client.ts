@@ -201,6 +201,24 @@ export interface LlmUsageTotals {
   readonly rowsWithUnknownPrice: number;
 }
 
+// ── Credits (Phase 80) ──────────────────────────────────────────────────────
+
+export interface LlmCreditBalance {
+  readonly orgId: string;
+  readonly allocated: number;
+  readonly used: number;
+  readonly balance: number;
+}
+
+export interface LlmCreditLedgerEntry {
+  readonly id: string;
+  readonly orgId: string;
+  readonly delta: number;
+  readonly reason: string;
+  readonly balanceAfter: number;
+  readonly occurredAt: string;
+}
+
 // ── Client class ────────────────────────────────────────────────────────────
 
 export class LLMClient {
@@ -694,6 +712,43 @@ export class LLMClient {
     if (filter.to !== undefined) qs.set('to', filter.to);
     const url = `${this._baseUrl}/api/v1/usage/summary?${qs.toString()}`;
     return this.apiFetch<{ groupBy: string; rows: ReadonlyArray<LlmUsageSummaryRow> }>(url);
+  }
+
+  // -- Credits (Phase 80) ─────────────────────────────────────────────────
+
+  /** Current AI-fix credit balance for an org. Never throws — returns null on error. */
+  async getCredits(orgId: string): Promise<LlmCreditBalance | null> {
+    try {
+      return await this.apiFetch<LlmCreditBalance>(
+        `${this._baseUrl}/api/v1/credits?orgId=${encodeURIComponent(orgId)}`,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  async setCreditAllocation(orgId: string, allocated: number, updatedBy?: string): Promise<LlmCreditBalance> {
+    return this.apiFetch<LlmCreditBalance>(`${this._baseUrl}/api/v1/credits/allocation`, {
+      method: 'POST',
+      body: JSON.stringify({ orgId, allocated, ...(updatedBy ? { updatedBy } : {}) }),
+    });
+  }
+
+  async topupCredits(orgId: string, delta: number, updatedBy?: string): Promise<LlmCreditBalance> {
+    return this.apiFetch<LlmCreditBalance>(`${this._baseUrl}/api/v1/credits/topup`, {
+      method: 'POST',
+      body: JSON.stringify({ orgId, delta, ...(updatedBy ? { updatedBy } : {}) }),
+    });
+  }
+
+  async listCreditLedger(orgId: string): Promise<readonly LlmCreditLedgerEntry[]> {
+    try {
+      return await this.apiFetch<readonly LlmCreditLedgerEntry[]>(
+        `${this._baseUrl}/api/v1/credits/ledger?orgId=${encodeURIComponent(orgId)}`,
+      );
+    } catch {
+      return [];
+    }
   }
 
   // -- Health / Status ────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import type {
   OAuthClient, User, PromptOverride,
   LlmUsageRecord, RecordUsageInput, UsageFilter,
   UsageGroupDimension, UsageSummaryRow,
+  CreditBalance, CreditLedgerEntry,
 } from '../types.js';
 
 export interface DbAdapter {
@@ -72,4 +73,44 @@ export interface DbAdapter {
     filter: UsageFilter,
     groupBy: UsageGroupDimension,
   ): Promise<readonly UsageSummaryRow[]>;
+
+  // Credits (Phase 80) — admin-controlled AI-fix metering on top of llm_usage.
+
+  /**
+   * Current credit position for an org. Orgs with no row are reported with
+   * the configurable default free allocation and zero used.
+   */
+  getCreditBalance(orgId: string): Promise<CreditBalance>;
+
+  /**
+   * Set an org's allocation to an absolute value (a fresh grant — resets used
+   * to 0). Writes a ledger entry. Used by the dashboard admin "set" control.
+   */
+  setCreditAllocation(orgId: string, allocated: number, updatedBy?: string): Promise<CreditBalance>;
+
+  /**
+   * Add (or subtract) credits — a top-up that raises the allocation without
+   * resetting consumption. Writes a ledger entry.
+   */
+  addCredits(orgId: string, delta: number, updatedBy?: string, reason?: string): Promise<CreditBalance>;
+
+  /**
+   * Atomically consume credits for a successful metered call. Returns ok:false
+   * (and leaves state unchanged) when the balance is insufficient.
+   */
+  consumeCredit(orgId: string, amount: number, reason: string): Promise<{ ok: boolean; balance: CreditBalance }>;
+
+  /** Recent ledger entries for an org, newest first. */
+  listCreditLedger(orgId: string, limit?: number): Promise<readonly CreditLedgerEntry[]>;
+}
+
+/**
+ * Default free monthly AI-fix credit allocation for an org with no explicit
+ * allocation. Admin-configurable via env (no hardcoded business value);
+ * seeds at 50 when unset.
+ */
+export function defaultFreeCredits(): number {
+  const raw = process.env.LLM_FREE_DEFAULT_CREDITS;
+  const n = raw != null ? Number.parseInt(raw, 10) : NaN;
+  return Number.isFinite(n) && n >= 0 ? n : 50;
 }

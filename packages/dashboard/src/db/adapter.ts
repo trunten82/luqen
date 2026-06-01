@@ -22,6 +22,7 @@ import type { ConversationRepository } from './interfaces/conversation-repositor
 import type { ShareLinkRepository } from './interfaces/share-link-repository.js';
 import type { AccessibilityStatementRepository } from './interfaces/accessibility-statement-repository.js';
 import type { ReportIdentityRepository } from './interfaces/report-identity-repository.js';
+import type { EntitlementRepository } from './interfaces/entitlement-repository.js';
 import type { AgentAuditRepository } from './interfaces/agent-audit-repository.js';
 import type { OauthClientRepository } from './interfaces/oauth-client-repository.js';
 import type { OauthCodeRepository } from './interfaces/oauth-code-repository.js';
@@ -91,4 +92,11 @@ export interface StorageAdapter {
    * and degrade to "no identity" (report renders as before) when absent.
    */
   readonly reportIdentities?: ReportIdentityRepository;
+  /**
+   * Per-org commercial plan (the Phase 80 entitlement foundation). OPTIONAL on
+   * purpose, same rationale as `reportIdentities`: out-of-repo Postgres/Mongo
+   * StorageAdapter plugins must not break on a required new field. Consumers
+   * guard with `storage.entitlements?.` and degrade to the 'free' plan.
+   */
+  readonly entitlements?: EntitlementRepository;
 }

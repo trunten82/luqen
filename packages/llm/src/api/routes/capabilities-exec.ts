@@ -309,6 +309,7 @@ export async function registerCapabilityExecRoutes(
       response: {
         200: LuqenResponse(GenerateFixData),
         400: ErrorEnvelope,
+        402: ErrorEnvelope,
         502: ErrorEnvelope,
         503: ErrorEnvelope,
         504: ErrorEnvelope,
@@ -332,6 +333,24 @@ export async function registerCapabilityExecRoutes(
       ? body.orgId
       : reqOrgId;
 
+    // Phase 80 — credit metering. System/unscoped calls are unmetered; real
+    // orgs are gated on their AI-fix credit balance. When exhausted we never
+    // hard-error the user flow: a 402 lets the caller fall back to its
+    // deterministic fix path (the same degrade path as an unavailable LLM).
+    const metered = typeof orgId === 'string' && orgId.length > 0 && orgId !== 'system';
+    if (metered) {
+      const bal = await db.getCreditBalance(orgId);
+      if (bal.balance <= 0) {
+        void reply.header('X-Luqen-Credits-Remaining', '0');
+        await reply.status(402).send({
+          error: 'AI-fix credits exhausted for this organisation',
+          statusCode: 402,
+          creditsExhausted: true,
+        });
+        return;
+      }
+    }
+
     try {
       const capResult = await executeGenerateFix(
         db,
@@ -344,6 +363,12 @@ export async function registerCapabilityExecRoutes(
           orgId,
         },
       );
+
+      // Charge one credit only for a successful, metered fix.
+      if (metered) {
+        const consumed = await db.consumeCredit(orgId, 1, 'generate-fix');
+        void reply.header('X-Luqen-Credits-Remaining', String(consumed.balance.balance));
+      }
 
       await reply.send({
         ...capResult.data,
