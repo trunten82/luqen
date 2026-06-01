@@ -62,7 +62,7 @@ async function createTestServer(
       currentOrgId: 'system',
       ...userOverrides,
     };
-    (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set([...permissions, 'reports.view', 'llm.view']);
   });
 
   await reportRoutes(server, storage);
