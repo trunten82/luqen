@@ -11,6 +11,7 @@ import { registerSession } from '../../src/auth/session.js';
 import { loadTranslations, t as translate, type Locale } from '../../src/i18n/index.js';
 import Handlebars from 'handlebars';
 import JSZip from 'jszip';
+import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 
 /**
  * Register the global Handlebars helpers the vpat.hbs template depends on
@@ -176,12 +177,9 @@ async function createServer(): Promise<Ctx> {
       role: 'admin',
       currentOrgId: 'system',
     };
-    (request as unknown as Record<string, unknown>)['permissions'] = new Set([
-      'scans.create',
-      'reports.view',
-      'reports.delete',
-      'trends.view',
-    ]);
+    // Admins hold every permission in production; mirror that so the VPAT/export
+    // routes' requirePermission guards (reports.vpat / reports.export) pass.
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set(ALL_PERMISSION_IDS);
   });
 
   await reportRoutes(server, storage);

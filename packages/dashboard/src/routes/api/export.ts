@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { requirePermission } from '../../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -169,6 +170,7 @@ export async function exportRoutes(
   server.get(
     '/api/v1/export/scans.xlsx',
     {
+      preHandler: requirePermission('reports.export'),
       schema: {
         tags: ['export'],
         response: { 200: Type.String(), 401: ErrorEnvelope },
@@ -239,6 +241,7 @@ export async function exportRoutes(
   server.get(
     '/api/v1/export/scans/:id/issues.xlsx',
     {
+      preHandler: requirePermission('reports.export'),
       schema: {
         tags: ['export'],
         params: ScanExportIdParamsSchema,
@@ -415,6 +418,7 @@ export async function exportRoutes(
   server.get(
     '/api/v1/export/trends.xlsx',
     {
+      preHandler: requirePermission('reports.export'),
       schema: {
         tags: ['export'],
         querystring: TrendsExportQuerystringSchema,
@@ -472,6 +476,7 @@ export async function exportRoutes(
   server.get(
     '/api/v1/export/scans/:id/report.pdf',
     {
+      preHandler: requirePermission('reports.export'),
       schema: {
         tags: ['export'],
         params: ScanExportIdParamsSchema,
@@ -551,6 +556,7 @@ export async function exportRoutes(
   server.get(
     '/api/v1/export/scans/:id/vpat.pdf',
     {
+      preHandler: requirePermission('reports.vpat'),
       schema: {
         tags: ['export'],
         params: ScanExportIdParamsSchema,
@@ -656,6 +662,7 @@ export async function exportRoutes(
   server.get(
     '/api/v1/export/scans/:id/vpat-pack.zip',
     {
+      preHandler: requirePermission('reports.vpat'),
       schema: {
         tags: ['export'],
         params: ScanExportIdParamsSchema,
@@ -801,6 +808,7 @@ export async function exportRoutes(
   server.get(
     '/api/v1/export/fleet.tar.gz',
     {
+      preHandler: requirePermission('reports.export'),
       schema: {
         tags: ['export'],
         response: {

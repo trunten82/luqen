@@ -8,6 +8,7 @@ import ExcelJS from 'exceljs';
 import { SqliteStorageAdapter } from '../../../src/db/sqlite/index.js';
 import { registerSession } from '../../../src/auth/session.js';
 import { exportRoutes } from '../../../src/routes/api/export.js';
+import { ALL_PERMISSION_IDS } from '../../../src/permissions.js';
 
 const XLSX_CONTENT_TYPE =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -72,6 +73,9 @@ async function createTestServer(): Promise<TestContext> {
 
   server.addHook('preHandler', async (request) => {
     request.user = { id: 'user-1', username: 'alice', role: 'admin', currentOrgId: 'system' };
+    // Admins hold every permission in production (resolveEffectivePermissions);
+    // mirror that so the export routes' requirePermission guards are satisfied.
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set(ALL_PERMISSION_IDS);
   });
 
   await exportRoutes(server, storage);

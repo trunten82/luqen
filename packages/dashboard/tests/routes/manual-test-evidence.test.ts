@@ -38,6 +38,9 @@ async function createTestServer(
   const orgId = userOverride?.currentOrgId ?? 'system';
   server.addHook('preHandler', async (request) => {
     request.user = { id: 'user-1', username: 'alice', role, currentOrgId: orgId };
+    // The manual-test routes now require the `manual_testing` permission; grant
+    // it so the cross-org guard (404) is reached rather than a permission 403.
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set(['manual_testing']);
   });
 
   await manualTestRoutes(server, storage, uploadsDir);

@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { requirePermission } from '../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
 import { readFile, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -481,7 +482,8 @@ export async function reportRoutes(
   // Open + ungated: available for any completed scan the caller can view.
   server.get(
     '/reports/:id/vpat',
-    { schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
+    {
+      preHandler: requirePermission('reports.vpat'), schema: { ...HtmlPageSchema, tags: ['reports'], params: ReportIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -586,6 +588,7 @@ export async function reportRoutes(
   server.post(
     '/api/v1/reports/:id/public-share',
     {
+      preHandler: requirePermission('reports.export'),
       schema: {
         tags: ['reports'],
         params: ReportIdParams,
@@ -642,6 +645,7 @@ export async function reportRoutes(
   server.post(
     '/api/v1/reports/:id/site-badge',
     {
+      preHandler: requirePermission('reports.export'),
       schema: {
         tags: ['reports'],
         params: ReportIdParams,
