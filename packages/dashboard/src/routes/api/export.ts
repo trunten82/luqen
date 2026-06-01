@@ -14,8 +14,7 @@ import { buildRemediationRecord } from '../../services/remediation-service.js';
 import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
-import JSZip from 'jszip';
-import { join } from 'node:path';
+import { buildEvidencePackZip } from '../../services/vpat-share-service.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 
 // Export endpoints stream binary buffers — schemas declare a string body and
@@ -84,21 +83,6 @@ export async function buildXlsx(
 
 function todayStamp(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-// Sanitise a single path component before it becomes a ZIP entry name —
-// defence-in-depth against zip-slip (path traversal) via a criterion id or a
-// stored filename. Strips separators, parent-dir hops, control chars and
-// leading dots; never returns empty.
-function sanitizeZipPart(value: string): string {
-  const cleaned = value
-    .replace(/[\\/]/g, '_')
-    .replace(/\.\.+/g, '_')
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\x00-\x1f]/g, '')
-    .replace(/^\.+/, '')
-    .trim();
-  return cleaned.length > 0 ? cleaned : 'file';
 }
 
 function siteSlug(siteUrl: string): string {
@@ -694,93 +678,10 @@ export async function exportRoutes(
       }
 
       try {
-        let reportJson: JsonReportFile | null = null;
-        const dbReport = await storage.scans.getReport(scan.id);
-        if (dbReport !== null) {
-          reportJson = dbReport as JsonReportFile;
-        } else if (scan.jsonReportPath && existsSync(scan.jsonReportPath)) {
-          reportJson = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
-        }
-
-        if (reportJson === null) {
+        const zipBuffer = await buildEvidencePackZip(storage, scan, uploadsRoot);
+        if (zipBuffer === null) {
           return reply.code(404).send({ error: 'Report data not available' });
         }
-
-        const reportData = normalizeReportData(reportJson, scan);
-        const manualResults = await storage.manualTests.getManualTests(scan.id);
-        const evidenceRecords = await storage.manualTestEvidence.listEvidence(scan.id);
-        const evidenceCounts = new Map(
-          (await storage.manualTestEvidence.countByCriterion(scan.id)).map((c) => [c.criterionId, c.count]),
-        );
-        const reasonedChangeCount = await storage.manualTestAudit.countReasonedChanges(scan.id);
-        const remOrgId = scan.orgId ?? 'system';
-        const [remediationEvents, siteScans] = await Promise.all([
-          storage.remediationEvents.listForSite(remOrgId, scan.siteUrl),
-          storage.scans.getScansForSite(remOrgId, scan.siteUrl),
-        ]);
-        const remediation = buildRemediationRecord(remediationEvents, siteScans);
-        const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts, reasonedChangeCount }, remediation);
-        const evidenceGroups = buildVpatEvidenceGroups(evidenceRecords, vpat);
-
-        const scanMeta: PdfScanMeta = {
-          siteUrl: scan.siteUrl,
-          standard: scan.standard,
-          jurisdictions: scan.jurisdictions.join(', '),
-          regulations: (scan.regulations ?? []).join(', '),
-          createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
-        };
-
-        const pdfBuffer = await generateVpatPdf(scanMeta, vpat, {
-          groups: evidenceGroups,
-          uploadsRoot,
-        });
-
-        // Assemble the pack: ACR PDF + original evidence files (foldered by
-        // criterion) + a human-readable index.
-        const zip = new JSZip();
-        zip.file('accessibility-conformance-report.pdf', pdfBuffer);
-
-        const indexLines: string[] = [
-          'LUQEN — VPAT / ACR EVIDENCE PACK',
-          '',
-          `Site:      ${scan.siteUrl}`,
-          `Standard:  ${vpat.standard}`,
-          `Generated: ${vpat.generatedAt}`,
-          '',
-          'This pack contains the Accessibility Conformance Report',
-          '(accessibility-conformance-report.pdf) and the supporting manual-test',
-          'evidence files, organised by WCAG success criterion below.',
-          '',
-        ];
-
-        let bundled = 0;
-        let missing = 0;
-        for (const group of evidenceGroups) {
-          indexLines.push(group.title ? `${group.criterion} — ${group.title}` : group.criterion);
-          const critDir = sanitizeZipPart(group.criterion);
-          for (const item of group.items) {
-            const fileSafe = sanitizeZipPart(item.fileName);
-            const entryPath = `evidence/${critDir}/${fileSafe}`;
-            try {
-              const bytes = await readFile(join(uploadsRoot, item.filePath.replace(/^\/uploads\//, '')));
-              zip.file(entryPath, bytes);
-              indexLines.push(`    ${entryPath}`);
-              bundled += 1;
-            } catch {
-              indexLines.push(`    ${fileSafe}  (file unavailable — not included)`);
-              missing += 1;
-            }
-          }
-          indexLines.push('');
-        }
-        if (evidenceGroups.length === 0) {
-          indexLines.push('(No manual-test evidence files were recorded for this scan.)');
-          indexLines.push('');
-        }
-        indexLines.push(`Files bundled: ${bundled}${missing > 0 ? `; unavailable: ${missing}` : ''}`);
-        zip.file('EVIDENCE-INDEX.txt', `${indexLines.join('\n')}\n`);
-
-        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 
         let hostname: string;
         try {

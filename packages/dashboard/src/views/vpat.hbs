@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{#if csrfToken}}<meta name="csrf-token" content="{{csrfToken}}">{{/if}}
   <title>{{t "vpat.title"}} — {{scan.siteUrl}}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -62,11 +63,24 @@
     .evidence-doc { display: inline-flex; align-items: center; gap: 0.35rem; max-width: 100%; padding: 0.3rem 0.6rem; border: 1px solid #d0d4de; border-radius: 4px; font-size: 0.78rem; background: #faf7f6; text-decoration: none; overflow-wrap: anywhere; word-break: break-word; }
     .evidence-doc::before { content: "\1F4C4"; font-size: 0.85rem; }
 
+    /* Secure external share panel (authenticated view only; hidden on print) */
+    .share-panel { border: 1px solid #d0d4de; border-top: 4px solid #206a44; border-radius: 6px; padding: 0.8rem 1rem; margin: 0 0 1.25rem; background: #f6faf7; max-width: 60rem; }
+    .share-panel__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; }
+    .share-panel__head strong { color: #206a44; font-size: 0.95rem; }
+    .share-panel__hint { font-size: 0.78rem; color: #4a4a4a; margin: 0.4rem 0 0.6rem; }
+    .share-panel__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+    .share-link { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+    .share-link__url { flex: 1 1 16rem; min-width: 0; font-size: 0.76rem; padding: 0.35rem 0.5rem; border: 1px solid #d0d4de; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .share-link__btn { padding: 0.35rem 0.7rem; border: 1px solid #206a44; background: #206a44; color: #fff; border-radius: 4px; font-size: 0.76rem; cursor: pointer; }
+    .share-link__btn--revoke { background: #fff; color: #a52822; border-color: #a52822; }
+    .share-panel__empty { font-size: 0.78rem; color: #6b6b6b; }
+
     .report-footer { margin-top: 1.5rem; padding-top: 0.4rem; border-top: 1px solid #d0d4de; font-size: 0.7rem; color: #6b6b6b; text-align: center; }
 
     @media print {
       body { padding: 0.5cm; font-size: 9pt; }
       .print-bar { display: none !important; }
+      .share-panel { display: none !important; }
       a { color: #1a1a1a; }
       a[href]::after { content: none !important; }
       .evidence-thumb img { max-width: 120px; max-height: 90px; }
@@ -78,10 +92,31 @@
 
 <div class="print-bar">
   <button class="print-btn" data-action="printPage">{{t "vpat.print"}}</button>
-  <a class="print-btn print-btn--secondary" href="/api/v1/export/scans/{{scan.id}}/vpat.pdf">{{t "vpat.downloadPdf"}}</a>
-  {{#if evidenceGroups.length}}<a class="print-btn print-btn--secondary" href="/api/v1/export/scans/{{scan.id}}/vpat-pack.zip">{{t "vpat.downloadPack"}}</a>{{/if}}
-  <button class="print-btn print-btn--secondary" data-action="closeWindow">{{t "vpat.close"}}</button>
+  <a class="print-btn print-btn--secondary" href="{{pdfUrl}}">{{t "vpat.downloadPdf"}}</a>
+  {{#if packUrl}}<a class="print-btn print-btn--secondary" href="{{packUrl}}">{{t "vpat.downloadPack"}}</a>{{/if}}
+  {{#unless isShared}}<button class="print-btn print-btn--secondary" data-action="closeWindow">{{t "vpat.close"}}</button>{{/unless}}
 </div>
+
+{{#if canShare}}{{#unless isShared}}
+<div class="share-panel" id="share-panel" data-confirm-revoke="{{t "share.revokeConfirm"}}" data-copied="{{t "share.copied"}}" data-error="{{t "share.createError"}}" data-copy-label="{{t "share.copy"}}" data-revoke-label="{{t "share.revoke"}}">
+  <div class="share-panel__head">
+    <strong>{{t "share.panelHeading"}}</strong>
+    <button class="print-btn" type="button" data-action="shareCreate" data-scan-id="{{scan.id}}">{{t "share.create"}}</button>
+  </div>
+  <p class="share-panel__hint">{{t "share.panelHint"}}</p>
+  <ul class="share-panel__list" id="share-list" data-empty-label="{{t "share.none"}}">
+    {{#each shareLinks}}
+    <li class="share-link" id="share-{{this.id}}">
+      <input class="share-link__url" type="text" readonly value="/share/{{this.token}}" data-token="{{this.token}}">
+      <button class="share-link__btn" type="button" data-action="shareCopy" data-token="{{this.token}}">{{t "share.copy"}}</button>
+      <button class="share-link__btn share-link__btn--revoke" type="button" data-action="shareRevoke" data-scan-id="{{scan.id}}" data-share-id="{{this.id}}">{{t "share.revoke"}}</button>
+    </li>
+    {{else}}
+    <li class="share-panel__empty">{{t "share.none"}}</li>
+    {{/each}}
+  </ul>
+</div>
+{{/unless}}{{/if}}
 
 <h1>{{t "vpat.title"}}</h1>
 <div class="subtitle">
@@ -247,5 +282,99 @@
 </div>
 
 <script src="/static/app.js"></script>
+<script>
+  (function () {
+    var panel = document.getElementById('share-panel');
+    if (!panel) return; // only present on the authenticated, can-share view
+
+    function csrf() {
+      var m = document.querySelector('meta[name="csrf-token"]');
+      return m ? m.getAttribute('content') : '';
+    }
+    function shareUrl(token) { return window.location.origin + '/share/' + token; }
+    // Show absolute URLs in the read-only inputs.
+    function paintAbsolute(scope) {
+      (scope || document).querySelectorAll('.share-link__url').forEach(function (i) {
+        i.value = shareUrl(i.getAttribute('data-token'));
+      });
+    }
+    paintAbsolute(document);
+
+    function addRow(scanId, token, shareId) {
+      var list = document.getElementById('share-list');
+      var empty = list.querySelector('.share-panel__empty');
+      if (empty) empty.remove();
+      var li = document.createElement('li');
+      li.className = 'share-link';
+      li.id = 'share-' + shareId;
+
+      var input = document.createElement('input');
+      input.className = 'share-link__url';
+      input.type = 'text';
+      input.readOnly = true;
+      input.value = shareUrl(token);
+
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'share-link__btn';
+      copyBtn.type = 'button';
+      copyBtn.setAttribute('data-action', 'shareCopy');
+      copyBtn.setAttribute('data-token', token);
+      copyBtn.textContent = panel.getAttribute('data-copy-label') || 'Copy';
+
+      var revokeBtn = document.createElement('button');
+      revokeBtn.className = 'share-link__btn share-link__btn--revoke';
+      revokeBtn.type = 'button';
+      revokeBtn.setAttribute('data-action', 'shareRevoke');
+      revokeBtn.setAttribute('data-scan-id', scanId);
+      revokeBtn.setAttribute('data-share-id', shareId);
+      revokeBtn.textContent = panel.getAttribute('data-revoke-label') || 'Revoke';
+
+      li.appendChild(input);
+      li.appendChild(copyBtn);
+      li.appendChild(revokeBtn);
+      list.appendChild(li);
+    }
+
+    document.addEventListener('click', function (e) {
+      var el = e.target.closest('[data-action]');
+      if (!el || !panel.contains(el)) return;
+      var action = el.getAttribute('data-action');
+
+      if (action === 'shareCreate') {
+        el.disabled = true;
+        fetch('/api/v1/reports/' + el.getAttribute('data-scan-id') + '/shares', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf() },
+          body: '{}'
+        })
+          .then(function (r) { if (!r.ok) throw new Error('create failed'); return r.json(); })
+          .then(function (d) { addRow(el.getAttribute('data-scan-id'), d.token, d.shareId); })
+          .catch(function () { window.alert(panel.getAttribute('data-error')); })
+          .then(function () { el.disabled = false; });
+      }
+
+      if (action === 'shareCopy') {
+        var url = shareUrl(el.getAttribute('data-token'));
+        var done = function () { var t = el.textContent; el.textContent = panel.getAttribute('data-copied'); setTimeout(function () { el.textContent = t; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(done, function () { window.prompt('', url); });
+        } else { window.prompt('', url); }
+      }
+
+      if (action === 'shareRevoke') {
+        if (!window.confirm(panel.getAttribute('data-confirm-revoke'))) return;
+        var shareId = el.getAttribute('data-share-id');
+        fetch('/api/v1/reports/' + el.getAttribute('data-scan-id') + '/shares/' + shareId + '/revoke', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrf() },
+          body: '{}'
+        })
+          .then(function (r) { if (!r.ok) throw new Error('revoke failed'); return r.json(); })
+          .then(function () { var row = document.getElementById('share-' + shareId); if (row) row.remove(); })
+          .catch(function () { window.alert(panel.getAttribute('data-error')); });
+      }
+    });
+  })();
+</script>
 </body>
 </html>

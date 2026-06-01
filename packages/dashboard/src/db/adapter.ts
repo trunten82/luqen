@@ -14,6 +14,7 @@ import type { PageHashRepository } from './interfaces/page-hash-repository.js';
 import type { ManualTestRepository } from './interfaces/manual-test-repository.js';
 import type { ManualTestEvidenceRepository } from './interfaces/manual-test-evidence-repository.js';
 import type { ManualTestAuditRepository } from './interfaces/manual-test-audit-repository.js';
+import type { ReportShareRepository } from './interfaces/report-share-repository.js';
 import type { GitHostRepository } from './interfaces/git-host-repository.js';
 import type { BrandingRepository } from './interfaces/branding-repository.js';
 import type { BrandScoreRepository } from './interfaces/brand-score-repository.js';
@@ -59,6 +60,7 @@ export interface StorageAdapter {
   readonly manualTests: ManualTestRepository;
   readonly manualTestEvidence: ManualTestEvidenceRepository;
   readonly manualTestAudit: ManualTestAuditRepository;
+  readonly reportShares: ReportShareRepository;
   readonly gitHosts: GitHostRepository;
   readonly branding: BrandingRepository;
   readonly brandScores: BrandScoreRepository;
