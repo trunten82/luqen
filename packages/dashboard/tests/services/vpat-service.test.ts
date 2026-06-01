@@ -349,6 +349,31 @@ describe('buildVpat — manual-test evidence counts (Slice C)', () => {
     expect(rowFor(vpat, '1.1.1')?.remarks).not.toContain('evidence file');
   });
 
+  it('manual Pass elevates a warnings/notices criterion to Supports, noting the scan', () => {
+    const report = makeReport([makeGroup({ criterion: '1.2.1', warningCount: 0, noticeCount: 31, pageCount: 19 })]);
+    const vpat = buildVpat(report, scanAA, [makeManual('1.2.1', 'pass')], { generatedAt: GEN_AT });
+    const row = rowFor(vpat, '1.2.1');
+    expect(row?.conformance).toBe('Supports');
+    expect(row?.remarks).toContain('Verified by manual testing');
+    expect(row?.remarks).toContain('31 notices');
+  });
+
+  it('manual Pass does NOT override a hard automated error', () => {
+    const report = makeReport([makeGroup({ criterion: '1.1.1', errorCount: 4, pageCount: 2 })]);
+    const vpat = buildVpat(report, scanAA, [makeManual('1.1.1', 'pass')], { generatedAt: GEN_AT });
+    const row = rowFor(vpat, '1.1.1');
+    expect(row?.conformance).toBe('Does Not Support');
+    expect(row?.remarks).toContain('manual testing recorded Pass');
+  });
+
+  it('manual Fail wins even when the scan only found warnings', () => {
+    const report = makeReport([makeGroup({ criterion: '1.4.3', warningCount: 2, pageCount: 1 })]);
+    const vpat = buildVpat(report, scanAA, [makeManual('1.4.3', 'fail')], { generatedAt: GEN_AT });
+    const row = rowFor(vpat, '1.4.3');
+    expect(row?.conformance).toBe('Does Not Support');
+    expect(row?.remarks).toContain('Failed manual testing');
+  });
+
   it('records the reasoned-change count in the attestation when > 0', () => {
     const report = makeReport([]);
     const vpat = buildVpat(report, scanAA, [], { generatedAt: GEN_AT, reasonedChangeCount: 3 });
