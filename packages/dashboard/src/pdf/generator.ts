@@ -581,6 +581,9 @@ export async function generateVpatPdf(
       attLine('Standards assessed:', att.standardsLabel);
       attLine('Methods:', att.methods.join('; '));
       if (att.evaluator) attLine('Evaluator:', att.evaluator);
+      if (att.reasonedChangeCount && att.reasonedChangeCount > 0) {
+        attLine('Documented verdict changes (with reasons):', String(att.reasonedChangeCount));
+      }
       doc.moveDown(0.3);
       doc.fontSize(8).fillColor(STATUS_WARNING).font('Body')
         .text(
