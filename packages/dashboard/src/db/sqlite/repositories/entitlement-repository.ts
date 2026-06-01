@@ -9,6 +9,7 @@ import { ORG_PLANS } from '../../interfaces/entitlement-repository.js';
 interface EntitlementRow {
   org_id: string;
   plan: string;
+  max_client_sites: number | null;
   updated_at: string;
   updated_by: string | null;
 }
@@ -21,6 +22,7 @@ function rowToRecord(row: EntitlementRow): EntitlementRecord {
   return {
     orgId: row.org_id,
     plan: normalizePlan(row.plan),
+    maxClientSites: row.max_client_sites,
     updatedAt: row.updated_at,
     ...(row.updated_by !== null ? { updatedBy: row.updated_by } : {}),
   };
@@ -34,7 +36,7 @@ export class SqliteEntitlementRepository implements EntitlementRepository {
       .prepare('SELECT * FROM org_entitlements WHERE org_id = ?')
       .get(orgId) as EntitlementRow | undefined;
     if (row === undefined) {
-      return { orgId, plan: 'free', updatedAt: '1970-01-01T00:00:00.000Z' };
+      return { orgId, plan: 'free', maxClientSites: null, updatedAt: '1970-01-01T00:00:00.000Z' };
     }
     return rowToRecord(row);
   }
@@ -50,6 +52,20 @@ export class SqliteEntitlementRepository implements EntitlementRepository {
            plan = @plan, updated_at = @updatedAt, updated_by = @updatedBy`,
       )
       .run({ orgId, plan: safe, updatedAt: now, updatedBy: updatedBy ?? null });
+    return this.get(orgId);
+  }
+
+  async setMaxClientSites(orgId: string, maxClientSites: number | null, updatedBy?: string): Promise<EntitlementRecord> {
+    const now = new Date().toISOString();
+    const value = maxClientSites === null ? null : Math.max(0, Math.floor(maxClientSites));
+    this.db
+      .prepare(
+        `INSERT INTO org_entitlements (org_id, plan, max_client_sites, updated_at, updated_by)
+         VALUES (@orgId, 'free', @max, @updatedAt, @updatedBy)
+         ON CONFLICT(org_id) DO UPDATE SET
+           max_client_sites = @max, updated_at = @updatedAt, updated_by = @updatedBy`,
+      )
+      .run({ orgId, max: value, updatedAt: now, updatedBy: updatedBy ?? null });
     return this.get(orgId);
   }
 }

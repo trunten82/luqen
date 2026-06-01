@@ -18,6 +18,11 @@ export const ORG_PLANS: readonly OrgPlan[] = ['free', 'pro', 'agency'];
 export interface EntitlementRecord {
   readonly orgId: string;
   readonly plan: OrgPlan;
+  /**
+   * Phase 81 (AGENCY-04) — for an agency-plan org, the number of client sites
+   * the partner seat covers. null = unlimited / not set.
+   */
+  readonly maxClientSites?: number | null;
   readonly updatedAt: string;
   readonly updatedBy?: string;
 }
@@ -28,4 +33,10 @@ export interface EntitlementRepository {
 
   /** Set the org's plan. */
   setPlan(orgId: string, plan: OrgPlan, updatedBy?: string): Promise<EntitlementRecord>;
+
+  /**
+   * Set the agency partner seat size (max client sites). null clears the limit.
+   * Phase 81 (AGENCY-04).
+   */
+  setMaxClientSites(orgId: string, maxClientSites: number | null, updatedBy?: string): Promise<EntitlementRecord>;
 }

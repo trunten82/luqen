@@ -105,7 +105,8 @@
     "brandOverview": "Panoramica del marchio",
     "llmUsage": "LLM usage",
     "accessibilityStatement": "Dichiarazione di accessibilità",
-    "reportIdentity": "Identità del report"
+    "reportIdentity": "Identità del report",
+    "agencyConsole": "Console agenzia"
   },
   "auth": {
     "signInTitle": "Accedi",
