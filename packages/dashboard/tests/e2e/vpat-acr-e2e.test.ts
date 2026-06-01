@@ -10,6 +10,7 @@ import { exportRoutes } from '../../src/routes/api/export.js';
 import { registerSession } from '../../src/auth/session.js';
 import { loadTranslations, t as translate, type Locale } from '../../src/i18n/index.js';
 import Handlebars from 'handlebars';
+import JSZip from 'jszip';
 
 /**
  * Register the global Handlebars helpers the vpat.hbs template depends on
@@ -297,12 +298,15 @@ describe('VPAT / ACR E2E', () => {
       // Document evidence rendered as a filename link.
       expect(html).toContain('href="/uploads/system/evidence/sr-transcript.pdf"');
       expect(html).toContain('sr-transcript.pdf');
+      // The evidence-pack download button is offered when evidence exists.
+      expect(html).toContain(`/api/v1/export/scans/${id}/vpat-pack.zip`);
     });
 
-    it('omits the evidence appendix when no evidence is recorded', async () => {
+    it('omits the evidence appendix and pack button when no evidence is recorded', async () => {
       const id = await seedCompletedScan(ctx.storage);
       const res = await ctx.server.inject({ method: 'GET', url: `/reports/${id}/vpat` });
       expect(res.body).not.toContain('Manual test evidence');
+      expect(res.body).not.toContain('vpat-pack.zip');
     });
   });
 
@@ -382,6 +386,63 @@ describe('VPAT / ACR E2E', () => {
       expect(withEv.rawPayload.subarray(0, 5).toString('latin1')).toBe('%PDF-');
       // The evidence appendix (embedded PNG + listed document) enlarges the PDF.
       expect(withEv.rawPayload.length).toBeGreaterThan(baseline.rawPayload.length);
+    });
+  });
+
+  // ── ZIP evidence pack ──────────────────────────────────────────────────────
+
+  describe('GET /api/v1/export/scans/:id/vpat-pack.zip', () => {
+    it('bundles the ACR PDF, the original evidence files (foldered by criterion) and an index', async () => {
+      const id = await seedCompletedScan(ctx.storage);
+      await seedEvidence(ctx.storage, ctx.uploadsDir, {
+        scanId: id, criterionId: '1.1.1', fileName: 'shot.png', mimeType: 'image/png', bytes: PNG_1X1,
+      });
+      await seedEvidence(ctx.storage, ctx.uploadsDir, {
+        scanId: id, criterionId: '1.4.3', fileName: 'transcript.pdf', mimeType: 'application/pdf',
+        bytes: Buffer.from('%PDF-1.4 fake transcript'),
+      });
+
+      const res = await ctx.server.inject({ method: 'GET', url: `/api/v1/export/scans/${id}/vpat-pack.zip` });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['content-type']).toContain('application/zip');
+      expect(String(res.headers['content-disposition'])).toMatch(/attachment; filename="vpat-evidence-pack_.*\.zip"/);
+
+      const zip = await JSZip.loadAsync(res.rawPayload);
+      const names = Object.keys(zip.files);
+      expect(names).toContain('accessibility-conformance-report.pdf');
+      expect(names).toContain('EVIDENCE-INDEX.txt');
+      expect(names).toContain('evidence/1.1.1/shot.png');
+      expect(names).toContain('evidence/1.4.3/transcript.pdf');
+
+      // The bundled report is a real PDF.
+      const pdfEntry = zip.file('accessibility-conformance-report.pdf');
+      expect(pdfEntry).not.toBeNull();
+      const pdfBytes = await pdfEntry!.async('nodebuffer');
+      expect(pdfBytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+
+      // The index references the site and the bundled files.
+      const indexEntry = zip.file('EVIDENCE-INDEX.txt');
+      expect(indexEntry).not.toBeNull();
+      const index = await indexEntry!.async('string');
+      expect(index).toContain('vpat-test.example.com');
+      expect(index).toContain('evidence/1.1.1/shot.png');
+      expect(index).toContain('Files bundled: 2');
+    });
+
+    it('still produces a pack (PDF + index) when no evidence is recorded', async () => {
+      const id = await seedCompletedScan(ctx.storage);
+      const res = await ctx.server.inject({ method: 'GET', url: `/api/v1/export/scans/${id}/vpat-pack.zip` });
+      expect(res.statusCode).toBe(200);
+      const zip = await JSZip.loadAsync(res.rawPayload);
+      expect(Object.keys(zip.files)).toContain('accessibility-conformance-report.pdf');
+      const indexEntry = zip.file('EVIDENCE-INDEX.txt');
+      expect(indexEntry).not.toBeNull();
+      expect(await indexEntry!.async('string')).toContain('No manual-test evidence');
+    });
+
+    it('returns 404 for a non-existent scan', async () => {
+      const res = await ctx.server.inject({ method: 'GET', url: `/api/v1/export/scans/${randomUUID()}/vpat-pack.zip` });
+      expect(res.statusCode).toBe(404);
     });
   });
 });

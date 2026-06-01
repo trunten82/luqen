@@ -13,6 +13,8 @@ import { buildRemediationRecord } from '../../services/remediation-service.js';
 import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
+import { join } from 'node:path';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 
 // Export endpoints stream binary buffers — schemas declare a string body and
@@ -21,6 +23,7 @@ import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 const XlsxProduces = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
 const PdfProduces = ['application/pdf'];
 const GzipProduces = ['application/gzip'];
+const ZipProduces = ['application/zip'];
 
 const ScanExportIdParamsSchema = Type.Object(
   { id: Type.String() },
@@ -80,6 +83,21 @@ export async function buildXlsx(
 
 function todayStamp(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+// Sanitise a single path component before it becomes a ZIP entry name —
+// defence-in-depth against zip-slip (path traversal) via a criterion id or a
+// stored filename. Strips separators, parent-dir hops, control chars and
+// leading dots; never returns empty.
+function sanitizeZipPart(value: string): string {
+  const cleaned = value
+    .replace(/[\\/]/g, '_')
+    .replace(/\.\.+/g, '_')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x1f]/g, '')
+    .replace(/^\.+/, '')
+    .trim();
+  return cleaned.length > 0 ? cleaned : 'file';
 }
 
 function siteSlug(siteUrl: string): string {
@@ -626,6 +644,152 @@ export async function exportRoutes(
       } catch (err) {
         request.log.error(err, 'VPAT PDF generation failed');
         return reply.code(500).send({ error: 'PDF generation failed' });
+      }
+    },
+  );
+
+  // ── GET /api/v1/export/scans/:id/vpat-pack.zip — self-contained evidence pack ──
+  // The ACR PDF plus every original manual-test evidence file (foldered by
+  // criterion) and a plain-text index. For legal / offline handoff: the PDF
+  // embeds screenshots inline, while documents that cannot be embedded are
+  // preserved at full fidelity inside the pack.
+  server.get(
+    '/api/v1/export/scans/:id/vpat-pack.zip',
+    {
+      schema: {
+        tags: ['export'],
+        params: ScanExportIdParamsSchema,
+        response: {
+          200: Type.String(),
+          401: ErrorEnvelope,
+          404: ErrorEnvelope,
+          500: ErrorEnvelope,
+        },
+        produces: ZipProduces,
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+
+      if (scan === null) {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      // Org-scope enforcement (mirror the vpat.pdf route).
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+
+      if (scan.status !== 'completed') {
+        return reply.code(404).send({ error: 'Report data not available' });
+      }
+
+      try {
+        let reportJson: JsonReportFile | null = null;
+        const dbReport = await storage.scans.getReport(scan.id);
+        if (dbReport !== null) {
+          reportJson = dbReport as JsonReportFile;
+        } else if (scan.jsonReportPath && existsSync(scan.jsonReportPath)) {
+          reportJson = JSON.parse(await readFile(scan.jsonReportPath, 'utf-8')) as JsonReportFile;
+        }
+
+        if (reportJson === null) {
+          return reply.code(404).send({ error: 'Report data not available' });
+        }
+
+        const reportData = normalizeReportData(reportJson, scan);
+        const manualResults = await storage.manualTests.getManualTests(scan.id);
+        const evidenceRecords = await storage.manualTestEvidence.listEvidence(scan.id);
+        const evidenceCounts = new Map(
+          (await storage.manualTestEvidence.countByCriterion(scan.id)).map((c) => [c.criterionId, c.count]),
+        );
+        const reasonedChangeCount = await storage.manualTestAudit.countReasonedChanges(scan.id);
+        const remOrgId = scan.orgId ?? 'system';
+        const [remediationEvents, siteScans] = await Promise.all([
+          storage.remediationEvents.listForSite(remOrgId, scan.siteUrl),
+          storage.scans.getScansForSite(remOrgId, scan.siteUrl),
+        ]);
+        const remediation = buildRemediationRecord(remediationEvents, siteScans);
+        const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts, reasonedChangeCount }, remediation);
+        const evidenceGroups = buildVpatEvidenceGroups(evidenceRecords, vpat);
+
+        const scanMeta: PdfScanMeta = {
+          siteUrl: scan.siteUrl,
+          standard: scan.standard,
+          jurisdictions: scan.jurisdictions.join(', '),
+          regulations: (scan.regulations ?? []).join(', '),
+          createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
+        };
+
+        const pdfBuffer = await generateVpatPdf(scanMeta, vpat, {
+          groups: evidenceGroups,
+          uploadsRoot,
+        });
+
+        // Assemble the pack: ACR PDF + original evidence files (foldered by
+        // criterion) + a human-readable index.
+        const zip = new JSZip();
+        zip.file('accessibility-conformance-report.pdf', pdfBuffer);
+
+        const indexLines: string[] = [
+          'LUQEN — VPAT / ACR EVIDENCE PACK',
+          '',
+          `Site:      ${scan.siteUrl}`,
+          `Standard:  ${vpat.standard}`,
+          `Generated: ${vpat.generatedAt}`,
+          '',
+          'This pack contains the Accessibility Conformance Report',
+          '(accessibility-conformance-report.pdf) and the supporting manual-test',
+          'evidence files, organised by WCAG success criterion below.',
+          '',
+        ];
+
+        let bundled = 0;
+        let missing = 0;
+        for (const group of evidenceGroups) {
+          indexLines.push(group.title ? `${group.criterion} — ${group.title}` : group.criterion);
+          const critDir = sanitizeZipPart(group.criterion);
+          for (const item of group.items) {
+            const fileSafe = sanitizeZipPart(item.fileName);
+            const entryPath = `evidence/${critDir}/${fileSafe}`;
+            try {
+              const bytes = await readFile(join(uploadsRoot, item.filePath.replace(/^\/uploads\//, '')));
+              zip.file(entryPath, bytes);
+              indexLines.push(`    ${entryPath}`);
+              bundled += 1;
+            } catch {
+              indexLines.push(`    ${fileSafe}  (file unavailable — not included)`);
+              missing += 1;
+            }
+          }
+          indexLines.push('');
+        }
+        if (evidenceGroups.length === 0) {
+          indexLines.push('(No manual-test evidence files were recorded for this scan.)');
+          indexLines.push('');
+        }
+        indexLines.push(`Files bundled: ${bundled}${missing > 0 ? `; unavailable: ${missing}` : ''}`);
+        zip.file('EVIDENCE-INDEX.txt', `${indexLines.join('\n')}\n`);
+
+        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+        let hostname: string;
+        try {
+          hostname = new URL(scan.siteUrl).hostname;
+        } catch {
+          hostname = scan.siteUrl.replace(/[^a-zA-Z0-9.-]/g, '_');
+        }
+        const filename = `vpat-evidence-pack_${hostname}_${todayStamp()}.zip`;
+
+        return reply
+          .header('Content-Type', 'application/zip')
+          .header('Content-Disposition', `attachment; filename="${filename}"`)
+          .send(zipBuffer);
+      } catch (err) {
+        request.log.error(err, 'VPAT evidence pack generation failed');
+        return reply.code(500).send({ error: 'Evidence pack generation failed' });
       }
     },
   );
