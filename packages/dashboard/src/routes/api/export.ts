@@ -8,6 +8,7 @@ import { generatePdfFromData, generateVpatPdf } from '../../pdf/generator.js';
 import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
 import { normalizeReportData, inferComponent } from '../../services/report-service.js';
 import { buildVpat } from '../../services/vpat-service.js';
+import { buildVpatEvidenceGroups } from '../../services/vpat-evidence.js';
 import { buildRemediationRecord } from '../../services/remediation-service.js';
 import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
@@ -137,6 +138,10 @@ interface ExportReportFile {
 export async function exportRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  // On-disk uploads root, used to resolve manual-test evidence files for the
+  // VPAT PDF. Optional so existing callers/tests keep working; defaults to the
+  // conventional './uploads' relative root (mirrors server.ts).
+  uploadsRoot: string = './uploads',
 ): Promise<void> {
 
   // ── GET /api/v1/export/scans.xlsx ─────────────────────────────────────────
@@ -586,6 +591,12 @@ export async function exportRoutes(
         ]);
         const remediation = buildRemediationRecord(remediationEvents, siteScans);
         const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts, reasonedChangeCount }, remediation);
+        // Manual-test evidence ARTIFACTS — embed screenshots + list documents
+        // per criterion in the ACR appendix. Resolved on disk from uploadsRoot.
+        const evidenceGroups = buildVpatEvidenceGroups(
+          await storage.manualTestEvidence.listEvidence(scan.id),
+          vpat,
+        );
 
         const scanMeta: PdfScanMeta = {
           siteUrl: scan.siteUrl,
@@ -595,7 +606,10 @@ export async function exportRoutes(
           createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
         };
 
-        const pdfBuffer = await generateVpatPdf(scanMeta, vpat);
+        const pdfBuffer = await generateVpatPdf(scanMeta, vpat, {
+          groups: evidenceGroups,
+          uploadsRoot,
+        });
 
         let hostname: string;
         try {

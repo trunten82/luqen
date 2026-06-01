@@ -1404,7 +1404,9 @@
     "attMethods": "Métodos",
     "attEvaluator": "Avaliador",
     "attestationStatement": "Este relatório reflete uma avaliação de boa-fé do site na data de avaliação, realizada com os métodos acima indicados. Regista o estado de conformidade nesse momento e o esforço de remediação em curso; não é uma certificação nem garante a conformidade.",
-    "attReasonedChanges": "Alterações de veredito documentadas (com motivos)"
+    "attReasonedChanges": "Alterações de veredito documentadas (com motivos)",
+    "evidenceHeading": "Evidências dos testes manuais",
+    "evidenceIntro": "Ficheiros de evidência registados durante os testes manuais, organizados por critério de sucesso. Estes elementos — capturas de ecrã e documentos — sustentam os veredictos manuais indicados acima e fazem parte do registo de testes datado e de boa-fé. São fornecidos para fins de transparência e não constituem uma certificação de conformidade."
   },
   "a11yStatement": {
     "status": {
