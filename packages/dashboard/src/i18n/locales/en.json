@@ -1554,7 +1554,10 @@
     "testedBy": "Tested by",
     "on": "on",
     "partiallyAutomatedTitle": "Partially Automated — Verify Manually",
-    "partiallyAutomatedDesc": "Automation catches some issues but human verification is needed to confirm full compliance."
+    "partiallyAutomatedDesc": "Automation catches some issues but human verification is needed to confirm full compliance.",
+    "evidenceLabel": "Evidence",
+    "evidenceUpload": "Upload",
+    "evidenceDelete": "Delete evidence"
   },
   "assignments": {
     "siteUrl": "Site URL",

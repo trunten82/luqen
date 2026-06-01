@@ -1987,4 +1987,37 @@ ALTER TABLE organizations
   ADD COLUMN deep_scan_default INTEGER NOT NULL DEFAULT 0;
     `,
   },
+  {
+    id: '078',
+    name: 'create-manual-test-evidence',
+    sql: `
+-- Slice C: manual-test evidence artifacts. The per-criterion pass/fail/na +
+-- notes verdict already lives in manual_test_results (a SINGLE row per
+-- scan+criterion); this table holds the supporting FILE ARTIFACTS — N files
+-- per (scan, criterion) — documenting a manual test (screenshots, screen-reader
+-- transcripts, keyboard-nav recordings, PDFs). The evidence COUNT per criterion
+-- is surfaced in the VPAT/ACR remarks as a US-lawsuit-protection artifact (a
+-- defensible, evidenced testing record). Files are persisted on disk under
+-- uploads/<org>/evidence/ and served at /uploads/...; only metadata lives here.
+-- No UNIQUE(scan_id, criterion_id) — multiple files per criterion are allowed.
+CREATE TABLE IF NOT EXISTS manual_test_evidence (
+  id            TEXT PRIMARY KEY,
+  scan_id       TEXT NOT NULL,
+  criterion_id  TEXT NOT NULL,
+  file_path     TEXT NOT NULL,
+  file_name     TEXT NOT NULL,
+  mime_type     TEXT,
+  file_size     INTEGER,
+  uploaded_by   TEXT,
+  uploaded_at   TEXT NOT NULL,
+  org_id        TEXT NOT NULL DEFAULT 'system'
+);
+CREATE INDEX IF NOT EXISTS idx_manual_test_evidence_scan
+  ON manual_test_evidence(scan_id);
+CREATE INDEX IF NOT EXISTS idx_manual_test_evidence_criterion
+  ON manual_test_evidence(scan_id, criterion_id);
+CREATE INDEX IF NOT EXISTS idx_manual_test_evidence_org
+  ON manual_test_evidence(org_id);
+    `,
+  },
 ];

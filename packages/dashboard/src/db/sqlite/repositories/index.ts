@@ -12,6 +12,7 @@ export { SqlitePluginRepository } from './plugin-repository.js';
 export { SqliteApiKeyRepository } from './api-key-repository.js';
 export { SqlitePageHashRepository } from './page-hash-repository.js';
 export { SqliteManualTestRepository } from './manual-test-repository.js';
+export { SqliteManualTestEvidenceRepository } from './manual-test-evidence-repository.js';
 export { SqliteGitHostRepository } from './git-host-repository.js';
 export { SqliteBrandingRepository } from './branding-repository.js';
 export { SqliteBrandScoreRepository } from './brand-score-repository.js';

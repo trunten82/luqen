@@ -303,3 +303,49 @@ describe('buildVpat', () => {
     expect(aaaIds.has('3.3.9')).toBe(true);
   });
 });
+
+describe('buildVpat — manual-test evidence counts (Slice C)', () => {
+  function rowFor(vpat: ReturnType<typeof buildVpat>, criterion: string) {
+    return vpat.tablesByLevel.flatMap((t) => t.rows).find((r) => r.criterion === criterion);
+  }
+
+  it('appends the evidence count to a manually-passed criterion remark', () => {
+    const report = makeReport([]);
+    const manual = [makeManual('1.1.1', 'pass')];
+    const evidenceCounts = new Map<string, number>([['1.1.1', 2]]);
+
+    const vpat = buildVpat(report, scanAA, manual, { generatedAt: GEN_AT, evidenceCounts });
+    const row = rowFor(vpat, '1.1.1');
+    expect(row?.conformance).toBe('Supports');
+    expect(row?.remarks).toContain('Verified by manual testing');
+    expect(row?.remarks).toContain('2 evidence files on record');
+  });
+
+  it('uses the singular for a single evidence file', () => {
+    const report = makeReport([]);
+    const evidenceCounts = new Map<string, number>([['1.1.1', 1]]);
+
+    const vpat = buildVpat(report, scanAA, [makeManual('1.1.1', 'fail')], { generatedAt: GEN_AT, evidenceCounts });
+    const row = rowFor(vpat, '1.1.1');
+    expect(row?.remarks).toContain('1 evidence file on record');
+    expect(row?.remarks).not.toContain('1 evidence files');
+  });
+
+  it('does not alter remarks for criteria with zero evidence', () => {
+    const report = makeReport([]);
+    const evidenceCounts = new Map<string, number>([['1.1.1', 3]]);
+
+    const vpat = buildVpat(report, scanAA, [makeManual('1.1.1', 'pass'), makeManual('1.3.1', 'pass')], {
+      generatedAt: GEN_AT,
+      evidenceCounts,
+    });
+    expect(rowFor(vpat, '1.1.1')?.remarks).toContain('evidence file');
+    expect(rowFor(vpat, '1.3.1')?.remarks).not.toContain('evidence file');
+  });
+
+  it('is a no-op when no evidenceCounts are supplied (backward compatible)', () => {
+    const report = makeReport([]);
+    const vpat = buildVpat(report, scanAA, [makeManual('1.1.1', 'pass')], { generatedAt: GEN_AT });
+    expect(rowFor(vpat, '1.1.1')?.remarks).not.toContain('evidence file');
+  });
+});

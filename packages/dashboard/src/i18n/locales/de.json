@@ -1170,7 +1170,10 @@
     "testedBy": "Getestet von",
     "on": "am",
     "partiallyAutomatedTitle": "Teilweise automatisiert — manuell verifizieren",
-    "partiallyAutomatedDesc": "Die Automatisierung erkennt einige Probleme, aber zur Bestätigung der vollständigen Compliance ist eine menschliche Überprüfung erforderlich."
+    "partiallyAutomatedDesc": "Die Automatisierung erkennt einige Probleme, aber zur Bestätigung der vollständigen Compliance ist eine menschliche Überprüfung erforderlich.",
+    "evidenceLabel": "Nachweis",
+    "evidenceUpload": "Hochladen",
+    "evidenceDelete": "Nachweis löschen"
   },
   "assignments": {
     "siteUrl": "Website-URL",
