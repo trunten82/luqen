@@ -35,6 +35,7 @@ function renderCreditsCard(opts: {
   plan: OrgPlan;
   csrfToken: string;
   notice: string | null;
+  canManage: boolean;
 }): string {
   const csrf = `<input type="hidden" name="_csrf" value="${escapeHtml(opts.csrfToken)}">`;
   const org = `<input type="hidden" name="orgId" value="${escapeHtml(opts.orgId)}">`;
@@ -48,6 +49,18 @@ function renderCreditsCard(opts: {
   const notice = opts.notice !== null
     ? `<p class="alert alert--success">${escapeHtml(opts.notice)}</p>`
     : '';
+  const planLine = `<p><strong>Plan:</strong> ${escapeHtml(opts.plan)}</p>`;
+  if (!opts.canManage) {
+    // Org admins may view the balance/plan but not mutate it — credit allocation
+    // and plan changes are operator-controlled (system admin only).
+    return `<section class="card mb-md" aria-labelledby="credits-heading">
+      <h2 id="credits-heading" class="card__title">AI fix credits &amp; plan — ${escapeHtml(opts.orgId)}</h2>
+      ${notice}
+      ${balanceLine}
+      ${planLine}
+      <p class="text-muted">Allocations and plan are managed by your Luqen administrator.</p>
+    </section>`;
+  }
   return `<section class="card mb-md" aria-labelledby="credits-heading">
     <h2 id="credits-heading" class="card__title">AI fix credits &amp; plan — ${escapeHtml(opts.orgId)}</h2>
     ${notice}
@@ -263,6 +276,7 @@ function renderPage(opts: {
   readonly plan?: OrgPlan;
   readonly csrfToken?: string;
   readonly creditNotice?: string | null;
+  readonly canManageCredits?: boolean;
 }): string {
   if (!opts.llmConnected) {
     return `<section aria-label="LLM Usage" class="card">
@@ -306,6 +320,7 @@ function renderPage(opts: {
       plan: opts.plan ?? 'free',
       csrfToken: opts.csrfToken ?? '',
       notice: opts.creditNotice ?? null,
+      canManage: opts.canManageCredits ?? false,
     }) : ''}
 
     <form method="get" action="/admin/llm-usage" class="filter-row mb-md" role="search">
@@ -467,6 +482,7 @@ export async function llmUsageRoutes(
           plan: planRec?.plan ?? 'free',
           csrfToken: (request as unknown as { csrfToken?: () => string }).csrfToken?.() ?? '',
           creditNotice,
+          canManageCredits: isAdmin,
         });
         return reply.view('admin/llm-usage.hbs', {
           pageTitle: 'LLM Usage',
@@ -507,15 +523,18 @@ export async function llmUsageRoutes(
   );
 
   // Phase 80 — set / top up an org's AI-fix credit allocation.
+  // SYSTEM ADMIN ONLY: credits are operator-controlled monetisation; an org
+  // admin must not be able to grant their own org credits (privilege escalation).
   server.post(
     '/admin/llm-usage/credits',
-    { preHandler: requirePermission('admin.system', 'admin.org'), schema: { ...HtmlPageSchema } },
+    { preHandler: requirePermission('admin.system'), schema: { ...HtmlPageSchema } },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!isSystemAdmin(request)) {
+        return reply.code(403).send({ error: 'forbidden', statusCode: 403 });
+      }
       const llmClient = getLLMClient();
       const body = (request.body ?? {}) as Record<string, string | undefined>;
-      const isAdmin = isSystemAdmin(request);
-      const callerOrg = callerOrgId(request) ?? '';
-      const orgId = isAdmin ? (body.orgId ?? '') : callerOrg;
+      const orgId = body.orgId ?? '';
       const updatedBy = (request.user as { id?: string } | undefined)?.id;
       if (llmClient === null || orgId === '') {
         return reply.redirect(`/admin/llm-usage${orgId !== '' ? `?orgId=${encodeURIComponent(orgId)}` : ''}`);
@@ -532,14 +551,16 @@ export async function llmUsageRoutes(
   );
 
   // Phase 80 — set an org's commercial plan (the entitlement foundation).
+  // SYSTEM ADMIN ONLY: an org admin must not be able to upgrade their own plan.
   server.post(
     '/admin/llm-usage/plan',
-    { preHandler: requirePermission('admin.system', 'admin.org'), schema: { ...HtmlPageSchema } },
+    { preHandler: requirePermission('admin.system'), schema: { ...HtmlPageSchema } },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!isSystemAdmin(request)) {
+        return reply.code(403).send({ error: 'forbidden', statusCode: 403 });
+      }
       const body = (request.body ?? {}) as Record<string, string | undefined>;
-      const isAdmin = isSystemAdmin(request);
-      const callerOrg = callerOrgId(request) ?? '';
-      const orgId = isAdmin ? (body.orgId ?? '') : callerOrg;
+      const orgId = body.orgId ?? '';
       const updatedBy = (request.user as { id?: string } | undefined)?.id;
       const plan = (ORG_PLANS as readonly string[]).includes(body.plan ?? '') ? (body.plan as OrgPlan) : 'free';
       if (storage.entitlements !== undefined && orgId !== '') {

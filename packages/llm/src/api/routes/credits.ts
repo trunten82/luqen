@@ -151,9 +151,16 @@ export async function registerCreditsRoutes(
         summary: 'Set an org AI-fix credit allocation (admin)',
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const b = request.body as { orgId: string; allocated: number; updatedBy?: string };
-      return db.setCreditAllocation(b.orgId, b.allocated, b.updatedBy);
+      let org: string;
+      try {
+        org = resolveOrg(request, b.orgId);
+      } catch (err) {
+        if (err instanceof ForbiddenOrgError) return reply.code(403).send({ error: 'forbidden_org', message: err.message });
+        throw err;
+      }
+      return db.setCreditAllocation(org, b.allocated, b.updatedBy);
     },
   );
 
@@ -168,9 +175,16 @@ export async function registerCreditsRoutes(
         summary: 'Top up an org AI-fix credit allocation (admin)',
       },
     },
-    async (request) => {
+    async (request, reply) => {
       const b = request.body as { orgId: string; delta: number; updatedBy?: string; reason?: string };
-      return db.addCredits(b.orgId, b.delta, b.updatedBy, b.reason ?? 'topup');
+      let org: string;
+      try {
+        org = resolveOrg(request, b.orgId);
+      } catch (err) {
+        if (err instanceof ForbiddenOrgError) return reply.code(403).send({ error: 'forbidden_org', message: err.message });
+        throw err;
+      }
+      return db.addCredits(org, b.delta, b.updatedBy, b.reason ?? 'topup');
     },
   );
 }
