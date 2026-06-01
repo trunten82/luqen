@@ -2108,4 +2108,26 @@ JOIN (
 WHERE r.name = 'Executive' AND r.org_id != 'system';
     `,
   },
+  {
+    id: '081',
+    name: 'create-report-shares',
+    sql: `
+-- Secure external sharing of a report's VPAT/ACR + evidence pack via an
+-- unguessable token link (NOT the scan id). A row authorises anonymous access
+-- to one scan's VPAT and evidence-pack download until it expires or is revoked.
+-- The token is the secret carried in the /share/:token URL.
+CREATE TABLE IF NOT EXISTS report_shares (
+  id          TEXT PRIMARY KEY,
+  token       TEXT NOT NULL UNIQUE,
+  scan_id     TEXT NOT NULL,
+  org_id      TEXT NOT NULL DEFAULT 'system',
+  created_by  TEXT,
+  created_at  TEXT NOT NULL,
+  expires_at  TEXT,
+  revoked_at  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_report_shares_scan ON report_shares(scan_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_report_shares_token ON report_shares(token);
+    `,
+  },
 ];

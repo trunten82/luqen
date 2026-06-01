@@ -1469,5 +1469,18 @@
   "fleet": {
     "downloadReports": "Télécharger tous les rapports",
     "downloadReportsHint": "Télécharge une archive .tar.gz du VPAT/ACR pour chaque site ayant une analyse terminée"
+  },
+  "share": {
+    "unavailableTitle": "Ce lien de partage n’est plus disponible",
+    "unavailableBody": "Ce lien de partage du document a expiré ou a été révoqué. Veuillez demander un nouveau lien à l’organisation qui l’a partagé.",
+    "panelHeading": "Partager en externe",
+    "panelHint": "Créez un lien sécurisé permettant à un évaluateur externe de consulter ce rapport et de télécharger son dossier de preuves, sans l’exposer publiquement. Les liens expirent après 90 jours et peuvent être révoqués à tout moment.",
+    "create": "Créer un lien",
+    "copy": "Copier",
+    "revoke": "Révoquer",
+    "copied": "Copié",
+    "revokeConfirm": "Révoquer ce lien de partage ? Toute personne le détenant perdra l’accès.",
+    "createError": "Impossible d’effectuer l’action. Veuillez réessayer.",
+    "none": "Aucun lien de partage actif."
   }
 }

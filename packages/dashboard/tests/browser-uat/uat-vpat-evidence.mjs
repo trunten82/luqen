@@ -194,6 +194,39 @@ async function main() {
     await new Promise((r) => setTimeout(r, 600));
     await page.screenshot({ path: path.join(TMP, 'uat-vpat-desktop.png'), fullPage: true });
 
+    // ── Secure external sharing: create → anonymous access → revoke → gone ──
+    page.on('dialog', (d) => d.accept()); // auto-accept the revoke confirm()
+    const hasPanel = await page.evaluate(() => !!document.getElementById('share-panel'));
+    assert('F1. share panel present for authorised viewer', hasPanel);
+    await page.click('[data-action="shareCreate"]');
+    await page.waitForSelector('.share-link__url', { timeout: 10000 });
+    const shareUrl = await page.evaluate(() => document.querySelector('.share-link__url').value);
+    assert('F2. created share link is a /share/<token> URL', /\/share\/[A-Za-z0-9_-]{20,}$/.test(shareUrl || ''), shareUrl);
+    const shareToken = shareUrl.split('/share/')[1];
+
+    // Anonymous context (no admin cookie) opens the shared VPAT.
+    const anonCtx = browser.createBrowserContext ? await browser.createBrowserContext() : await browser.createIncognitoBrowserContext();
+    const anon = await anonCtx.newPage();
+    const anonResp = await anon.goto(`${BASE}/share/${shareToken}`, { waitUntil: 'networkidle0', timeout: 30000 });
+    assert('F3. anonymous viewer can open the shared VPAT (200)', anonResp.status() === 200, String(anonResp.status()));
+    const anonDom = await anon.evaluate(() => ({
+      site: document.body.textContent.includes('uat-vpat.example.com'),
+      tokenPdf: [...document.querySelectorAll('a.print-btn')].some((a) => /\/share\/.+\/vpat\.pdf$/.test(a.getAttribute('href') || '')),
+      noInternal: !document.body.innerHTML.includes('/api/v1/export/scans/'),
+      noPanel: !document.getElementById('share-panel'),
+    }));
+    assert('F4. shared VPAT shows the report + token download link, no internal/admin surface', anonDom.site && anonDom.tokenPdf && anonDom.noInternal && anonDom.noPanel, JSON.stringify(anonDom));
+    const anonZip = await anon.evaluate(async (u) => { const r = await fetch(u); const b = new Uint8Array(await r.arrayBuffer()); return { status: r.status, magic: String.fromCharCode(b[0], b[1]) }; }, `${BASE}/share/${shareToken}/evidence-pack.zip`);
+    assert('F5. anonymous viewer can download the evidence pack', anonZip.status === 200 && anonZip.magic === 'PK', JSON.stringify(anonZip));
+
+    // Revoke from the admin panel → the link is gone.
+    await page.click('[data-action="shareRevoke"]');
+    await new Promise((r) => setTimeout(r, 800));
+    const afterRevoke = await anon.goto(`${BASE}/share/${shareToken}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    assert('F6. revoked link is no longer available (410)', afterRevoke.status() === 410, String(afterRevoke.status()));
+    assert('F7. revoked link shows the "no longer available" page', /no longer available/i.test(await anon.content()));
+    await anonCtx.close();
+
     // ── Mobile overflow ──
     await page.setViewport({ width: 390, height: 844, isMobile: true });
     await page.reload({ waitUntil: 'networkidle0' });
