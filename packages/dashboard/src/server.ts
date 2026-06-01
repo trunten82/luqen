@@ -46,6 +46,7 @@ import { shareRoutes } from './routes/share.js';
 import { dataApiRoutes } from './routes/api/data.js';
 import { brandingApiRoutes } from './routes/api/branding.js';
 import { wpNetworkApiRoutes } from './routes/api/wp-network.js';
+import { entitlementApiRoutes } from './routes/api/entitlement.js';
 import { fleetRoutes } from './routes/fleet.js';
 import { teamOrgLinkRoutes } from './routes/api/team-org-links.js';
 import { coordinatedPrRoutes } from './routes/api/coordinated-prs.js';
@@ -1130,6 +1131,9 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
 
   // ── WordPress network/fleet API (Phase 61) ──────────────────────────────
   await wpNetworkApiRoutes(server, storage);
+
+  // ── Entitlement API (Phase 80) — plan + AI-fix credits for the WP plugin ──
+  await entitlementApiRoutes(server, storage, getLLMClient);
 
   // ── Fleet HTML pages (per-org + admin overview) ─────────────────────────
   await fleetRoutes(server, storage);

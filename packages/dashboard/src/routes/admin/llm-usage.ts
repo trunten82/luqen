@@ -18,10 +18,62 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { requirePermission } from '../../auth/middleware.js';
 import { HtmlPageSchema, ErrorEnvelope } from '../../api/schemas/envelope.js';
-import type { LLMClient, LlmUsageRow, LlmUsageTotals, LlmUsageSummaryRow, LlmUsageGroupBy } from '../../llm-client.js';
+import type { LLMClient, LlmUsageRow, LlmUsageTotals, LlmUsageSummaryRow, LlmUsageGroupBy, LlmCreditBalance } from '../../llm-client.js';
 import { escapeHtml } from './helpers.js';
 import { buildXlsx } from '../api/export.js';
 import type { StorageAdapter } from '../../db/index.js';
+import { ORG_PLANS, type OrgPlan } from '../../db/interfaces/entitlement-repository.js';
+
+/**
+ * Phase 80 — AI-fix credit + plan card. Shown when a specific org is selected.
+ * Lets an admin see the balance/consumption and set the allocation, top up, or
+ * change the org's commercial plan. Monetisation is admin-controlled (no billing).
+ */
+function renderCreditsCard(opts: {
+  orgId: string;
+  credits: LlmCreditBalance | null;
+  plan: OrgPlan;
+  csrfToken: string;
+  notice: string | null;
+}): string {
+  const csrf = `<input type="hidden" name="_csrf" value="${escapeHtml(opts.csrfToken)}">`;
+  const org = `<input type="hidden" name="orgId" value="${escapeHtml(opts.orgId)}">`;
+  const c = opts.credits;
+  const balanceLine = c === null
+    ? `<p class="alert alert--warning">Could not read the credit balance from the LLM service.</p>`
+    : `<p><strong>Balance:</strong> ${c.balance} &nbsp;·&nbsp; <strong>Allocated:</strong> ${c.allocated} &nbsp;·&nbsp; <strong>Used:</strong> ${c.used}</p>`;
+  const planOptions = ORG_PLANS
+    .map((p) => `<option value="${p}"${p === opts.plan ? ' selected' : ''}>${p}</option>`)
+    .join('');
+  const notice = opts.notice !== null
+    ? `<p class="alert alert--success">${escapeHtml(opts.notice)}</p>`
+    : '';
+  return `<section class="card mb-md" aria-labelledby="credits-heading">
+    <h2 id="credits-heading" class="card__title">AI fix credits &amp; plan — ${escapeHtml(opts.orgId)}</h2>
+    ${notice}
+    ${balanceLine}
+    <div class="filter-row" style="gap:1.5rem;flex-wrap:wrap">
+      <form method="post" action="/admin/llm-usage/credits" class="filter-row" style="gap:.5rem">
+        ${csrf}${org}<input type="hidden" name="op" value="set">
+        <label class="field"><span class="field__label">Set allocation</span>
+          <input type="number" name="allocated" min="0" value="${c ? c.allocated : 0}" class="input" style="width:7rem"></label>
+        <div class="field field--actions"><button type="submit" class="btn btn--secondary">Set</button></div>
+      </form>
+      <form method="post" action="/admin/llm-usage/credits" class="filter-row" style="gap:.5rem">
+        ${csrf}${org}<input type="hidden" name="op" value="topup">
+        <label class="field"><span class="field__label">Top up by</span>
+          <input type="number" name="delta" value="50" class="input" style="width:7rem"></label>
+        <div class="field field--actions"><button type="submit" class="btn btn--secondary">Top up</button></div>
+      </form>
+      <form method="post" action="/admin/llm-usage/plan" class="filter-row" style="gap:.5rem">
+        ${csrf}${org}
+        <label class="field"><span class="field__label">Plan</span>
+          <select name="plan" class="input">${planOptions}</select></label>
+        <div class="field field--actions"><button type="submit" class="btn btn--secondary">Save plan</button></div>
+      </form>
+    </div>
+  </section>`;
+}
 
 const UsageQuery = Type.Object(
   {
@@ -207,6 +259,10 @@ function renderPage(opts: {
   readonly summary: ReadonlyArray<LlmUsageSummaryRow>;
   readonly totals: LlmUsageTotals;
   readonly errorMessage: string | null;
+  readonly credits?: LlmCreditBalance | null;
+  readonly plan?: OrgPlan;
+  readonly csrfToken?: string;
+  readonly creditNotice?: string | null;
 }): string {
   if (!opts.llmConnected) {
     return `<section aria-label="LLM Usage" class="card">
@@ -243,6 +299,14 @@ function renderPage(opts: {
     <p class="text-muted mb-md">Per-inference token usage, latency and USD spend across all capabilities. Costs are computed from the hard-coded pricing registry (Phase 74); rows whose model is not in the registry render with an empty cost cell.</p>
 
     ${renderTotals(opts.totals)}
+
+    ${opts.filterOrgId !== '' ? renderCreditsCard({
+      orgId: opts.filterOrgId,
+      credits: opts.credits ?? null,
+      plan: opts.plan ?? 'free',
+      csrfToken: opts.csrfToken ?? '',
+      notice: opts.creditNotice ?? null,
+    }) : ''}
 
     <form method="get" action="/admin/llm-usage" class="filter-row mb-md" role="search">
       <label class="field">
@@ -375,10 +439,17 @@ export async function llmUsageRoutes(
           ...(fromIso !== null ? { from: fromIso } : {}),
           ...(toIso !== null ? { to: toIso } : {}),
         };
-        const [usage, summary] = await Promise.all([
+        const [usage, summary, credits, planRec] = await Promise.all([
           llmClient.listUsage({ ...filterArgs, limit: 500 }),
           llmClient.summarizeUsage({ ...filterArgs, groupBy }),
+          filterOrgId !== '' ? llmClient.getCredits(filterOrgId) : Promise.resolve(null),
+          filterOrgId !== '' && storage.entitlements !== undefined
+            ? storage.entitlements.get(filterOrgId)
+            : Promise.resolve(null),
         ]);
+        const creditNotice = ((request.query as { credit?: string }).credit === 'saved')
+          ? 'Credits / plan updated.'
+          : null;
         const body = renderPage({
           llmConnected: true,
           canFilterCrossOrg: isAdmin,
@@ -392,6 +463,10 @@ export async function llmUsageRoutes(
           summary: summary.rows,
           totals: usage.totals,
           errorMessage: null,
+          credits,
+          plan: planRec?.plan ?? 'free',
+          csrfToken: (request as unknown as { csrfToken?: () => string }).csrfToken?.() ?? '',
+          creditNotice,
         });
         return reply.view('admin/llm-usage.hbs', {
           pageTitle: 'LLM Usage',
@@ -428,6 +503,49 @@ export async function llmUsageRoutes(
           bodyHtml: body,
         });
       }
+    },
+  );
+
+  // Phase 80 — set / top up an org's AI-fix credit allocation.
+  server.post(
+    '/admin/llm-usage/credits',
+    { preHandler: requirePermission('admin.system', 'admin.org'), schema: { ...HtmlPageSchema } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const llmClient = getLLMClient();
+      const body = (request.body ?? {}) as Record<string, string | undefined>;
+      const isAdmin = isSystemAdmin(request);
+      const callerOrg = callerOrgId(request) ?? '';
+      const orgId = isAdmin ? (body.orgId ?? '') : callerOrg;
+      const updatedBy = (request.user as { id?: string } | undefined)?.id;
+      if (llmClient === null || orgId === '') {
+        return reply.redirect(`/admin/llm-usage${orgId !== '' ? `?orgId=${encodeURIComponent(orgId)}` : ''}`);
+      }
+      try {
+        if (body.op === 'topup') {
+          await llmClient.topupCredits(orgId, Number.parseInt(body.delta ?? '0', 10) || 0, updatedBy);
+        } else {
+          await llmClient.setCreditAllocation(orgId, Math.max(0, Number.parseInt(body.allocated ?? '0', 10) || 0), updatedBy);
+        }
+      } catch { /* surface nothing — the page will re-read the live balance */ }
+      return reply.redirect(`/admin/llm-usage?orgId=${encodeURIComponent(orgId)}&credit=saved`);
+    },
+  );
+
+  // Phase 80 — set an org's commercial plan (the entitlement foundation).
+  server.post(
+    '/admin/llm-usage/plan',
+    { preHandler: requirePermission('admin.system', 'admin.org'), schema: { ...HtmlPageSchema } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = (request.body ?? {}) as Record<string, string | undefined>;
+      const isAdmin = isSystemAdmin(request);
+      const callerOrg = callerOrgId(request) ?? '';
+      const orgId = isAdmin ? (body.orgId ?? '') : callerOrg;
+      const updatedBy = (request.user as { id?: string } | undefined)?.id;
+      const plan = (ORG_PLANS as readonly string[]).includes(body.plan ?? '') ? (body.plan as OrgPlan) : 'free';
+      if (storage.entitlements !== undefined && orgId !== '') {
+        await storage.entitlements.setPlan(orgId, plan, updatedBy);
+      }
+      return reply.redirect(`/admin/llm-usage?orgId=${encodeURIComponent(orgId)}&credit=saved`);
     },
   );
 

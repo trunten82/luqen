@@ -17,6 +17,7 @@ import { registerModelRoutes } from './routes/models.js';
 import { registerCapabilityRoutes } from './routes/capabilities.js';
 import { registerCapabilityExecRoutes } from './routes/capabilities-exec.js';
 import { registerUsageRoutes } from './routes/usage.js';
+import { registerCreditsRoutes } from './routes/credits.js';
 import { startUsageRetention } from './usage-retention.js';
 import { registerPromptRoutes } from './routes/prompts.js';
 import { registerMcpRoutes } from './routes/mcp.js';
@@ -218,6 +219,7 @@ export async function createServer(options: ServerOptions) {
   await registerCapabilityExecRoutes(app, db);
   await registerPromptRoutes(app, db);
   await registerUsageRoutes(app, db);
+  await registerCreditsRoutes(app, db);
 
   // Phase 31.1 Plan 03 (D-33/D-04): MCP-facing JWKS verifier with audience
   // enforcement. See compliance/src/api/server.ts for the same pattern.

@@ -9,8 +9,10 @@ import type {
   LlmUsageRecord, RecordUsageInput, UsageFilter,
   UsageGroupDimension, UsageSummaryRow,
   ProviderType,
+  CreditBalance, CreditLedgerEntry,
 } from '../types.js';
 import type { DbAdapter } from './adapter.js';
+import { defaultFreeCredits } from './adapter.js';
 import { computeCost } from '../providers/pricing.js';
 
 // ---- Row types ----
@@ -299,6 +301,27 @@ export class SqliteAdapter implements DbAdapter {
       updated_at TEXT NOT NULL,
       PRIMARY KEY (capability, org_id)
     );`);
+
+    // Phase 80 — AI-fix credit metering. `org_credits` holds the current
+    // position (allocated grant + consumed); `credit_ledger` is the
+    // append-only audit of every grant, top-up and consumption.
+    this.db.exec(`CREATE TABLE IF NOT EXISTS org_credits (
+      org_id     TEXT PRIMARY KEY,
+      allocated  INTEGER NOT NULL,
+      used       INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      updated_by TEXT
+    );`);
+    this.db.exec(`CREATE TABLE IF NOT EXISTS credit_ledger (
+      id            TEXT PRIMARY KEY,
+      org_id        TEXT NOT NULL,
+      delta         INTEGER NOT NULL,
+      reason        TEXT NOT NULL,
+      balance_after INTEGER NOT NULL,
+      occurred_at   TEXT NOT NULL
+    );`);
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_credit_ledger_org_time
+      ON credit_ledger(org_id, occurred_at DESC);`);
   }
 
   async close(): Promise<void> {
@@ -608,6 +631,95 @@ export class SqliteAdapter implements DbAdapter {
     );
     const row = this.conn.prepare('SELECT * FROM llm_usage WHERE id = ?').get(id) as UsageRow;
     return toUsage(row);
+  }
+
+  // ---- Credits (Phase 80) ----
+
+  async getCreditBalance(orgId: string): Promise<CreditBalance> {
+    const row = this.conn
+      .prepare('SELECT allocated, used FROM org_credits WHERE org_id = ?')
+      .get(orgId) as { allocated: number; used: number } | undefined;
+    const allocated = row ? row.allocated : defaultFreeCredits();
+    const used = row ? row.used : 0;
+    return { orgId, allocated, used, balance: Math.max(0, allocated - used) };
+  }
+
+  private writeLedger(orgId: string, delta: number, reason: string, balanceAfter: number): void {
+    this.conn
+      .prepare(
+        `INSERT INTO credit_ledger (id, org_id, delta, reason, balance_after, occurred_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(randomUUID(), orgId, delta, reason, balanceAfter, new Date().toISOString());
+  }
+
+  async setCreditAllocation(orgId: string, allocated: number, updatedBy?: string): Promise<CreditBalance> {
+    const safe = Math.max(0, Math.floor(allocated));
+    const now = new Date().toISOString();
+    this.conn
+      .prepare(
+        `INSERT INTO org_credits (org_id, allocated, used, updated_at, updated_by)
+         VALUES (?, ?, 0, ?, ?)
+         ON CONFLICT(org_id) DO UPDATE SET allocated = excluded.allocated, used = 0, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+      )
+      .run(orgId, safe, now, updatedBy ?? null);
+    this.writeLedger(orgId, safe, 'allocation', safe);
+    return this.getCreditBalance(orgId);
+  }
+
+  async addCredits(orgId: string, delta: number, updatedBy?: string, reason = 'topup'): Promise<CreditBalance> {
+    const current = await this.getCreditBalance(orgId);
+    const allocated = Math.max(0, current.allocated + Math.floor(delta));
+    const now = new Date().toISOString();
+    this.conn
+      .prepare(
+        `INSERT INTO org_credits (org_id, allocated, used, updated_at, updated_by)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(org_id) DO UPDATE SET allocated = excluded.allocated, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+      )
+      .run(orgId, allocated, current.used, now, updatedBy ?? null);
+    const after = Math.max(0, allocated - current.used);
+    this.writeLedger(orgId, Math.floor(delta), reason, after);
+    return this.getCreditBalance(orgId);
+  }
+
+  async consumeCredit(orgId: string, amount: number, reason: string): Promise<{ ok: boolean; balance: CreditBalance }> {
+    const amt = Math.max(0, Math.floor(amount));
+    const current = await this.getCreditBalance(orgId);
+    if (current.balance < amt) {
+      return { ok: false, balance: { ...current, balance: Math.max(0, current.balance) } };
+    }
+    const now = new Date().toISOString();
+    const newUsed = current.used + amt;
+    this.conn
+      .prepare(
+        `INSERT INTO org_credits (org_id, allocated, used, updated_at, updated_by)
+         VALUES (?, ?, ?, ?, NULL)
+         ON CONFLICT(org_id) DO UPDATE SET allocated = excluded.allocated, used = excluded.used, updated_at = excluded.updated_at`,
+      )
+      .run(orgId, current.allocated, newUsed, now);
+    const balanceAfter = Math.max(0, current.allocated - newUsed);
+    this.writeLedger(orgId, -amt, reason, balanceAfter);
+    return { ok: true, balance: await this.getCreditBalance(orgId) };
+  }
+
+  async listCreditLedger(orgId: string, limit = 50): Promise<readonly CreditLedgerEntry[]> {
+    const rows = this.conn
+      .prepare(
+        `SELECT id, org_id, delta, reason, balance_after, occurred_at
+         FROM credit_ledger WHERE org_id = ? ORDER BY occurred_at DESC, rowid DESC LIMIT ?`,
+      )
+      .all(orgId, limit) as Array<{
+        id: string; org_id: string; delta: number; reason: string; balance_after: number; occurred_at: string;
+      }>;
+    return rows.map((r) => ({
+      id: r.id,
+      orgId: r.org_id,
+      delta: r.delta,
+      reason: r.reason,
+      balanceAfter: r.balance_after,
+      occurredAt: r.occurred_at,
+    }));
   }
 
   async summarizeUsage(

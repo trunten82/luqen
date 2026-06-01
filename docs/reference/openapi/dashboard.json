@@ -11559,6 +11559,25 @@
         }
       }
     },
+    "/admin/llm-usage/credits": {
+      "post": {
+        "tags": [
+          "html-page"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/llm-usage/export.xlsx": {
       "get": {
         "tags": [
@@ -11609,6 +11628,25 @@
         "responses": {
           "200": {
             "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/admin/llm-usage/plan": {
+      "post": {
+        "tags": [
+          "html-page"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
@@ -33995,6 +34033,79 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/entitlement": {
+      "get": {
+        "summary": "Caller org commercial plan + AI-fix credit balance",
+        "tags": [
+          "entitlement"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "plan",
+                    "credits"
+                  ],
+                  "properties": {
+                    "plan": {
+                      "type": "string"
+                    },
+                    "credits": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "allocated",
+                            "used",
+                            "balance"
+                          ],
+                          "properties": {
+                            "allocated": {
+                              "type": "number"
+                            },
+                            "used": {
+                              "type": "number"
+                            },
+                            "balance": {
+                              "type": "number"
+                            }
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
             "description": "Default Response",
             "content": {
               "application/json": {
