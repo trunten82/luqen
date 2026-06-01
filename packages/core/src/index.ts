@@ -21,6 +21,10 @@ export { runIbmChecks } from './ibm/index.js';
 export type { IbmOptions, IbmResult } from './ibm/types.js';
 export { mapIbmResults, IBM_WCAG_MAP } from './ibm/index.js';
 export type { IbmReport, IbmReportResult } from './ibm/index.js';
+export { runReflowChecks } from './reflow/index.js';
+export type { ReflowOptions, ReflowResult } from './reflow/types.js';
+export { mapReflowObservations, KIND_MAP as REFLOW_KIND_MAP } from './reflow/index.js';
+export type { ReflowObservation, ReflowObservationKind } from './reflow/index.js';
 export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanError, ProgressListener, ComplianceEnrichment } from './types.js';
 
 import { discoverUrls } from './discovery/discover.js';
@@ -30,6 +34,7 @@ import { DirectScanner } from './scanner/direct-scanner.js';
 import { runBehavioralChecks } from './behavioral/index.js';
 import { runLighthouseChecks } from './lighthouse/index.js';
 import { runIbmChecks } from './ibm/index.js';
+import { runReflowChecks } from './reflow/index.js';
 import type { DiscoveredUrl, PageResult, AccessibilityIssue, ProgressListener } from './types.js';
 
 export interface CreateScannerOptions {
@@ -100,6 +105,21 @@ export interface CreateScannerOptions {
    * heavy (own headless Chrome), so the default is small. Default: 5.
    */
   readonly ibmMaxPages?: number;
+  /**
+   * When true, run the reflow / zoom-400% engine (narrows the viewport to 320
+   * CSS px and checks for content that breaks — horizontal scrolling, element
+   * overflow, zoom-locked viewport meta) on each scanned page IN ADDITION to
+   * the static Pa11y scan. Default: false. OPT-IN — part of the "deep scan".
+   * Heavy (launches a headless Chrome per page); bounded by `reflowMaxPages`.
+   * Findings carry runner='reflow' (WCAG 1.4.10 / 1.4.4).
+   */
+  readonly reflow?: boolean;
+  /**
+   * Cap on how many of the scanned pages the reflow layer runs against. Reflow
+   * launches its own headless Chrome per page, so the default is small.
+   * Default: 5.
+   */
+  readonly reflowMaxPages?: number;
 }
 
 export interface Scanner {
@@ -205,9 +225,17 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       // `ibmMaxPages` of the scanned pages and merges its findings
       // (runner='ibm') into each page. Best-effort: an IBM failure never breaks
       // the static scan.
-      const pages: PageResult[] = opts.ibm === true
+      const ibmPages: PageResult[] = opts.ibm === true
         ? await runIbmPass(lighthousePages, opts)
         : lighthousePages;
+
+      // Optional reflow / zoom-400% pass (opt-in, part of deep scan). Narrows
+      // each scanned page to 320 CSS px and merges its findings (runner='reflow')
+      // for WCAG 1.4.10 / 1.4.4. Best-effort: a reflow failure never breaks the
+      // static scan.
+      const pages: PageResult[] = opts.reflow === true
+        ? await runReflowPass(ibmPages, opts)
+        : ibmPages;
 
       // Aggregate results
       let errorCount = 0;
@@ -385,6 +413,58 @@ async function runIbmPass(
       out.push({ ...page, issues: mergedIssues, issueCount: mergedIssues.length });
     } catch {
       // IBM layer is additive — never let it drop a page's results.
+      out.push(page);
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Run the reflow / zoom-400% engine over (up to reflowMaxPages of) the scanned
+ * pages and merge its findings into each page's issues.
+ *
+ * Bounded + best-effort, mirroring {@link runIbmPass}: pages beyond the cap are
+ * returned unchanged, and a reflow failure on one page leaves that page's
+ * existing results intact. Reflow issues are mapped to the AccessibilityIssue
+ * shape (runner='reflow') so they render and flow into compliance / VPAT
+ * exactly like static, behavioral, Lighthouse and IBM findings.
+ */
+async function runReflowPass(
+  inputPages: PageResult[],
+  opts: CreateScannerOptions,
+): Promise<PageResult[]> {
+  const cap = opts.reflowMaxPages ?? 5;
+  const out: PageResult[] = [];
+
+  for (let i = 0; i < inputPages.length; i++) {
+    const page = inputPages[i];
+    if (i >= cap) {
+      out.push(page);
+      continue;
+    }
+    try {
+      const reflow = await runReflowChecks(page.url, {
+        ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
+        ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
+      });
+      if (reflow.issues.length === 0) {
+        out.push(page);
+        continue;
+      }
+      const mapped: AccessibilityIssue[] = reflow.issues.map((issue) => ({
+        code: issue.code,
+        type: issue.type,
+        message: issue.message,
+        selector: issue.selector,
+        context: issue.context,
+        runner: issue.runner ?? 'reflow',
+        fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
+      }));
+      const mergedIssues = [...page.issues, ...mapped];
+      out.push({ ...page, issues: mergedIssues, issueCount: mergedIssues.length });
+    } catch {
+      // Reflow layer is additive — never let it drop a page's results.
       out.push(page);
     }
   }
