@@ -531,6 +531,36 @@ export async function generateVpatPdf(
           { lineGap: 6 },
         );
 
+      // ── Per-org legal/company identity (attribution only, no new claim) ──
+      if (vpat.identity) {
+        const id = vpat.identity;
+        doc.moveDown(0.4);
+        // Logo: PNG/JPEG only (PDFKit cannot rasterise gif/webp), resolved on
+        // disk from the org's branding image — never a user-supplied path.
+        if (id.logoPath && evidence?.uploadsRoot) {
+          const logoAbs = join(evidence.uploadsRoot, id.logoPath.replace(/^\/uploads\//, ''));
+          if (/\.(png|jpe?g)$/i.test(logoAbs) && existsSync(logoAbs)) {
+            try {
+              const yTop = doc.y;
+              doc.image(logoAbs, left, yTop, { fit: [140, 48] });
+              doc.y = yTop + 52;
+            } catch {
+              /* unreadable logo — skip, render text only */
+            }
+          }
+        }
+        doc.fontSize(10).fillColor(TEXT_PRIMARY).font('Body-Bold')
+          .text(id.entityName, left, doc.y);
+        if (id.postalAddress) {
+          doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+            .text(id.postalAddress, left, doc.y);
+        }
+        if (id.contactEmail) {
+          doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+            .text(`Contact: ${id.contactEmail}`, left, doc.y);
+        }
+      }
+
       doc.moveDown(0.3);
       doc.moveTo(left, doc.y).lineTo(left + pageWidth, doc.y)
         .lineWidth(0.5).strokeColor(BORDER_SUBTLE).stroke();

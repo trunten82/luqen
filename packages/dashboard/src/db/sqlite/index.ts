@@ -41,6 +41,7 @@ import {
   SqliteNotificationUnsubscribeRepository,
   SqliteAccessibilityStatementRepository,
   SqliteRemediationEventRepository,
+  SqliteReportIdentityRepository,
 } from './repositories/index.js';
 import type Database from 'better-sqlite3';
 
@@ -87,6 +88,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly notificationUnsubscribes: SqliteNotificationUnsubscribeRepository;
   readonly accessibilityStatements: SqliteAccessibilityStatementRepository;
   readonly remediationEvents: SqliteRemediationEventRepository;
+  readonly reportIdentities: SqliteReportIdentityRepository;
 
   constructor(dbPath: string) {
     this.db = createSqliteConnection({ dbPath });
@@ -129,6 +131,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.notificationUnsubscribes = new SqliteNotificationUnsubscribeRepository(this.db);
     this.accessibilityStatements = new SqliteAccessibilityStatementRepository(this.db);
     this.remediationEvents = new SqliteRemediationEventRepository(this.db);
+    this.reportIdentities = new SqliteReportIdentityRepository(this.db);
   }
 
   async connect(): Promise<void> {

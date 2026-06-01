@@ -1,0 +1,52 @@
+<section aria-label="{{t "reportIdentity.admin.title"}}">
+  <h2>{{t "reportIdentity.admin.title"}}</h2>
+  <p class="text-muted text-sm mb-md">{{t "reportIdentity.admin.intro"}}</p>
+
+  {{#if saved}}
+  <div class="alert alert--success mb-md" role="status">{{t "reportIdentity.admin.saved"}}</div>
+  {{/if}}
+
+  {{#unless supported}}
+  <div class="alert alert--warning mb-md">{{t "reportIdentity.admin.unsupported"}}</div>
+  {{/unless}}
+
+  <form method="post" action="/admin/report-identity" class="form-grid">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+
+    <div class="form-group">
+      <label for="ri-entity">{{t "reportIdentity.admin.entityName"}}</label>
+      <input type="text" id="ri-entity" name="entityName" class="input" value="{{config.entityName}}"
+             placeholder="{{t "reportIdentity.admin.entityNamePlaceholder"}}">
+      <p class="text-muted text-sm">{{t "reportIdentity.admin.entityNameHelp"}}</p>
+    </div>
+
+    <div class="form-group">
+      <label for="ri-email">{{t "reportIdentity.admin.contactEmail"}}</label>
+      <input type="email" id="ri-email" name="contactEmail" class="input" value="{{config.contactEmail}}"
+             placeholder="accessibility@example.com">
+      <p class="text-muted text-sm">{{t "reportIdentity.admin.contactEmailHelp"}}</p>
+    </div>
+
+    <div class="form-group">
+      <label for="ri-address">{{t "reportIdentity.admin.postalAddress"}}</label>
+      <textarea id="ri-address" name="postalAddress" class="input" rows="3"
+                placeholder="{{t "reportIdentity.admin.postalAddressPlaceholder"}}">{{config.postalAddress}}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="ri-prepared">{{t "reportIdentity.admin.preparedBy"}}</label>
+      <input type="text" id="ri-prepared" name="preparedBy" class="input" value="{{config.preparedBy}}"
+             placeholder="{{t "reportIdentity.admin.preparedByPlaceholder"}}">
+      <p class="text-muted text-sm">{{t "reportIdentity.admin.preparedByHelp"}}</p>
+    </div>
+
+    <div class="form-group">
+      <p class="text-muted text-sm">{{t "reportIdentity.admin.logoNote"}}
+        <a href="/admin/branding">{{t "reportIdentity.admin.logoLink"}}</a>.</p>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary"{{#unless supported}} disabled{{/unless}}>{{t "reportIdentity.admin.save"}}</button>
+    </div>
+  </form>
+</section>

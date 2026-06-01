@@ -104,7 +104,8 @@
     "notifications": "Notificaciones",
     "brandOverview": "Resumen de marca",
     "llmUsage": "LLM usage",
-    "accessibilityStatement": "Declaración de accesibilidad"
+    "accessibilityStatement": "Declaración de accesibilidad",
+    "reportIdentity": "Identidad del informe"
   },
   "auth": {
     "signInTitle": "Iniciar sesión",
@@ -1403,6 +1404,7 @@
     "attStandards": "Estándares evaluados",
     "attMethods": "Métodos",
     "attEvaluator": "Evaluador",
+    "identityContact": "Contacto",
     "attestationStatement": "Este informe refleja una evaluación de buena fe del sitio en la fecha de evaluación, realizada con los métodos indicados anteriormente. Registra el estado de conformidad en ese momento y el esfuerzo de remediación en curso; no es una certificación ni garantiza la conformidad.",
     "attReasonedChanges": "Cambios de veredicto documentados (con motivos)",
     "evidenceHeading": "Evidencias de las pruebas manuales",
@@ -1482,5 +1484,26 @@
     "revokeConfirm": "¿Revocar este enlace? Quien lo tenga perderá el acceso.",
     "createError": "No se pudo completar la acción. Inténtelo de nuevo.",
     "none": "No hay enlaces para compartir activos."
+  },
+  "reportIdentity": {
+    "admin": {
+      "intro": "Set the legal entity attribution shown on this organisation’s VPAT/ACR reports. Attribution only — it makes no conformance or certification claim.",
+      "saved": "Report identity saved.",
+      "unsupported": "This storage backend does not support report identities. Reports will render without a company identity.",
+      "entityName": "Legal entity name",
+      "entityNamePlaceholder": "Acme Corporation, Inc.",
+      "entityNameHelp": "Appears in the report title and header. Leave blank to render the generic report title.",
+      "contactEmail": "Contact email",
+      "contactEmailHelp": "A barrier-report / accessibility contact channel shown on the report.",
+      "postalAddress": "Postal address",
+      "postalAddressPlaceholder": "123 Main St, Suite 100, Anytown, ST 00000",
+      "preparedBy": "Prepared by (evaluator org)",
+      "preparedByPlaceholder": "Acme Accessibility Office",
+      "preparedByHelp": "Shown as the evaluator in the attestation block.",
+      "logoNote": "The report logo is taken from this organisation’s branding guideline image — manage it on the",
+      "logoLink": "Branding page",
+      "save": "Save report identity",
+      "title": "Identidad del informe"
+    }
   }
 }

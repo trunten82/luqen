@@ -21,6 +21,7 @@ import type { BrandScoreRepository } from './interfaces/brand-score-repository.j
 import type { ConversationRepository } from './interfaces/conversation-repository.js';
 import type { ShareLinkRepository } from './interfaces/share-link-repository.js';
 import type { AccessibilityStatementRepository } from './interfaces/accessibility-statement-repository.js';
+import type { ReportIdentityRepository } from './interfaces/report-identity-repository.js';
 import type { AgentAuditRepository } from './interfaces/agent-audit-repository.js';
 import type { OauthClientRepository } from './interfaces/oauth-client-repository.js';
 import type { OauthCodeRepository } from './interfaces/oauth-code-repository.js';
@@ -83,4 +84,11 @@ export interface StorageAdapter {
   readonly notificationUnsubscribes: NotificationUnsubscribeRepository;
   readonly accessibilityStatements: AccessibilityStatementRepository;
   readonly remediationEvents: RemediationEventRepository;
+  /**
+   * Per-org VPAT/ACR legal identity. OPTIONAL on purpose: out-of-repo
+   * Postgres/Mongo plugins implement StorageAdapter, and a required new field
+   * would break them. Consumers must guard with `storage.reportIdentities?.`
+   * and degrade to "no identity" (report renders as before) when absent.
+   */
+  readonly reportIdentities?: ReportIdentityRepository;
 }

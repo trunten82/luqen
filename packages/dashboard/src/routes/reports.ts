@@ -17,6 +17,7 @@ import { resolveOrgLLMClient } from '../llm-client.js';
 import { t } from '../i18n/index.js';
 import { filterDrilldownIssues, isValidDimension } from '../services/brand-drilldown.js';
 import { buildVpat } from '../services/vpat-service.js';
+import { resolveScanIdentity } from '../services/vpat-share-service.js';
 import { buildVpatEvidenceGroups } from '../services/vpat-evidence.js';
 import { buildRemediationRecord } from '../services/remediation-service.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
@@ -537,7 +538,14 @@ export async function reportRoutes(
         storage.scans.getScansForSite(remOrgId, scan.siteUrl),
       ]);
       const remediation = buildRemediationRecord(remediationEvents, siteScans);
-      const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts, reasonedChangeCount }, remediation);
+      const identity = await resolveScanIdentity(storage, scan);
+      const vpat = buildVpat(
+        reportData,
+        scan,
+        manualResults,
+        { evidenceCounts, reasonedChangeCount, ...(identity ? { identity } : {}) },
+        remediation,
+      );
       // Manual-test evidence ARTIFACTS (screenshots / documents) per criterion —
       // surfaced as an appendix in the report (the COUNT already lands in the
       // remarks via evidenceCounts). The browser fetches files via filePath
