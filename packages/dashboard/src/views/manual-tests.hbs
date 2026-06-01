@@ -103,13 +103,28 @@
         </details>
         {{/if}}
         <div class="mt-actions">
-          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
-          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
-          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
         </div>
         <div class="mt-notes-wrap">
           <label for="mt-notes-{{id}}">{{t "manualTests.notes"}}</label>
           <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="{{t "manualTests.optionalNotes"}}">{{notes}}</textarea>
+        </div>
+        <div class="mt-evidence" data-criterion-id="{{id}}">
+          <span class="mt-evidence__heading">{{t "manualTests.evidenceLabel"}}</span>
+          <ul class="mt-evidence__list" id="mt-ev-list-{{id}}" data-count="{{evidenceCount}}">
+            {{#each evidence}}
+            <li class="mt-evidence__item" id="mt-ev-{{id}}">
+              <a href="{{filePath}}" target="_blank" rel="noopener noreferrer">{{fileName}}</a>
+              <button type="button" class="mt-evidence__del" data-action="mtEvidenceDelete" data-scan-id="{{../../scan.id}}" data-evidence-id="{{id}}" data-criterion-id="{{../id}}" aria-label="{{t "manualTests.evidenceDelete"}}">&times;</button>
+            </li>
+            {{/each}}
+          </ul>
+          <div class="mt-evidence__upload">
+            <input type="file" id="mt-ev-file-{{id}}" class="mt-evidence__file" accept="image/*,application/pdf" aria-label="{{t "manualTests.evidenceLabel"}}">
+            <button type="button" class="btn btn--ghost btn--sm" data-action="mtEvidenceUpload" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}">{{t "manualTests.evidenceUpload"}}</button>
+          </div>
         </div>
         {{#if testedBy}}
         <div class="mt-tested-info">{{t "manualTests.testedBy"}} {{testedBy}} {{t "manualTests.on"}} {{testedAt}}</div>
@@ -172,13 +187,28 @@
         </details>
         {{/if}}
         <div class="mt-actions">
-          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
-          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
-          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-test-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
         </div>
         <div class="mt-notes-wrap">
           <label for="mt-notes-{{id}}">{{t "manualTests.notes"}}</label>
           <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="{{t "manualTests.optionalNotes"}}">{{notes}}</textarea>
+        </div>
+        <div class="mt-evidence" data-criterion-id="{{id}}">
+          <span class="mt-evidence__heading">{{t "manualTests.evidenceLabel"}}</span>
+          <ul class="mt-evidence__list" id="mt-ev-list-{{id}}" data-count="{{evidenceCount}}">
+            {{#each evidence}}
+            <li class="mt-evidence__item" id="mt-ev-{{id}}">
+              <a href="{{filePath}}" target="_blank" rel="noopener noreferrer">{{fileName}}</a>
+              <button type="button" class="mt-evidence__del" data-action="mtEvidenceDelete" data-scan-id="{{../../scan.id}}" data-evidence-id="{{id}}" data-criterion-id="{{../id}}" aria-label="{{t "manualTests.evidenceDelete"}}">&times;</button>
+            </li>
+            {{/each}}
+          </ul>
+          <div class="mt-evidence__upload">
+            <input type="file" id="mt-ev-file-{{id}}" class="mt-evidence__file" accept="image/*,application/pdf" aria-label="{{t "manualTests.evidenceLabel"}}">
+            <button type="button" class="btn btn--ghost btn--sm" data-action="mtEvidenceUpload" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}">{{t "manualTests.evidenceUpload"}}</button>
+          </div>
         </div>
         {{#if testedBy}}
         <div class="mt-tested-info">{{t "manualTests.testedBy"}} {{testedBy}} {{t "manualTests.on"}} {{testedAt}}</div>
@@ -211,8 +241,78 @@
         var status = target.getAttribute('data-status');
         mtSave(scanId, criterionId, status, target);
       }
+
+      if (action === 'mtFilter') {
+        mtFilter(target.getAttribute('data-status'), target);
+      }
+
+      if (action === 'mtEvidenceUpload') {
+        mtEvidenceUpload(target.getAttribute('data-scan-id'), target.getAttribute('data-criterion-id'));
+      }
+
+      if (action === 'mtEvidenceDelete') {
+        mtEvidenceDelete(
+          target.getAttribute('data-scan-id'),
+          target.getAttribute('data-evidence-id'),
+          target.getAttribute('data-criterion-id')
+        );
+      }
     });
   })();
+
+  /* ── CSRF helper ─────────────────────────────────────────────────────── */
+  function mtCsrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+  }
+
+  /* ── Upload an evidence file for a criterion ─────────────────────────── */
+  function mtEvidenceUpload(scanId, criterionId) {
+    var input = document.getElementById('mt-ev-file-' + criterionId);
+    if (!input || !input.files || input.files.length === 0) {
+      showToast('Choose a file first', 'error');
+      return;
+    }
+    var fd = new FormData();
+    fd.append('file', input.files[0]);
+
+    fetch('/reports/' + scanId + '/evidence/' + encodeURIComponent(criterionId), {
+      method: 'POST',
+      headers: { 'x-csrf-token': mtCsrfToken(), 'HX-Request': 'true' },
+      body: fd
+    })
+    .then(function(r) { if (!r.ok) throw new Error('Upload failed (' + r.status + ')'); return r.text(); })
+    .then(function(html) {
+      mtSwapEvidenceList(criterionId, html);
+      input.value = '';
+      showToast('Evidence uploaded', 'success');
+    })
+    .catch(function(err) { showToast(err.message, 'error'); });
+  }
+
+  /* ── Delete an evidence file ─────────────────────────────────────────── */
+  function mtEvidenceDelete(scanId, evidenceId, criterionId) {
+    fetch('/reports/' + scanId + '/evidence/' + evidenceId + '/delete', {
+      method: 'POST',
+      headers: { 'x-csrf-token': mtCsrfToken(), 'HX-Request': 'true' }
+    })
+    .then(function(r) { if (!r.ok) throw new Error('Delete failed'); return r.text(); })
+    .then(function(html) {
+      mtSwapEvidenceList(criterionId, html);
+      showToast('Evidence removed', 'success');
+    })
+    .catch(function(err) { showToast(err.message, 'error'); });
+  }
+
+  /* ── Replace a criterion's evidence list with the returned fragment ──── */
+  function mtSwapEvidenceList(criterionId, html) {
+    var existing = document.getElementById('mt-ev-list-' + criterionId);
+    if (!existing) return;
+    var temp = document.createElement('div');
+    temp.innerHTML = html;
+    var fresh = temp.querySelector('.mt-evidence__list');
+    if (fresh) existing.replaceWith(fresh);
+  }
 
   /* ── Save result via fetch POST ─────────────────────────────────────── */
   function mtSave(scanId, criterionId, status, btn) {

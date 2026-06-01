@@ -119,6 +119,13 @@ export interface BuildVpatOptions {
   readonly generatedAt?: string;
   /** Optional evaluator/organisation name to record in the attestation. */
   readonly evaluator?: string;
+  /**
+   * Per-criterion manual-test evidence counts (criterion id → number of
+   * uploaded evidence files). When a criterion has ≥1 evidence file, the count
+   * is appended to its VPAT remark as a defensibility signal ("N evidence files
+   * on record"). Slice C.
+   */
+  readonly evidenceCounts?: ReadonlyMap<string, number>;
 }
 
 /** Minimal shape of the scan record needed to build a VPAT. */
@@ -185,6 +192,12 @@ function withRegulations(base: string, group: IssueGroup): string {
 
 function pluralise(count: number, singular: string): string {
   return `${count} ${singular}${count === 1 ? '' : 's'}`;
+}
+
+/** Append a manual-test evidence-count note to a VPAT remark (Slice C). */
+function appendEvidenceNote(remarks: string, count: number): string {
+  const note = `${pluralise(count, 'evidence file')} on record`;
+  return remarks ? `${remarks} — ${note}` : note;
 }
 
 /**
@@ -329,11 +342,18 @@ export function buildVpat(
   }
 
   const requiresManual = requiresManualJudgement();
+  const evidenceCounts = opts.evidenceCounts;
 
   const rows: VpatRow[] = catalogForLevel(level)
-    .map((entry) =>
-      deriveRow(entry, groupsByCriterion, manualByCriterion, requiresManual),
-    )
+    .map((entry) => {
+      const row = deriveRow(entry, groupsByCriterion, manualByCriterion, requiresManual);
+      const evidence = evidenceCounts?.get(entry.criterion) ?? 0;
+      // Append the evidence count to the remark — a defensibility signal that
+      // the manual verdict for this criterion is backed by uploaded artifacts.
+      return evidence > 0
+        ? { ...row, remarks: appendEvidenceNote(row.remarks, evidence) }
+        : row;
+    })
     .sort((a, b) => compareCriteria(a.criterion, b.criterion));
 
   // Group into per-level tables, preserving criterion order within each.

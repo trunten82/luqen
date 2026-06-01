@@ -1029,7 +1029,11 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // request so a runtime reload is picked up without a restart.
   await reportRoutes(server, storage, getLLMClient, { selfScanId: config.selfScanId });
   await accessibilityStatementRoutes(server, storage);
-  await manualTestRoutes(server, storage);
+  await manualTestRoutes(
+    server,
+    storage,
+    resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads'),
+  );
   await assignmentRoutes(server, storage);
   await orgRoutes(server, storage);
   await toolRoutes(server);
