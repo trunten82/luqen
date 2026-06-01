@@ -4472,6 +4472,50 @@ html[data-density="plain"] .data-table th {
   font-style: italic;
 }
 
+/* ── Manual-test verdict save + change history ───────────────────────── */
+.mt-save-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+.mt-save-hint {
+  font-size: 0.75rem;
+  color: var(--color-warning, #b45309);
+  font-style: italic;
+}
+.mt-history {
+  margin: 0.4rem 0;
+  font-size: 0.8rem;
+}
+.mt-history__summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.mt-history__list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0 0 0 0.5rem;
+  border-left: 2px solid var(--border-subtle, var(--border, #e5e7eb));
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.mt-history__item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.mt-history__change { font-weight: 600; }
+.mt-history__to--pass { color: var(--color-success, #15803d); }
+.mt-history__to--fail { color: var(--color-danger, #b91c1c); }
+.mt-history__to--na,
+.mt-history__to--untested { color: var(--text-secondary); }
+.mt-history__comment { font-style: italic; color: var(--text-primary); }
+.mt-history__meta { color: var(--text-secondary); font-size: 0.72rem; }
+
 /* ── Manual-test evidence (Slice C) ──────────────────────────────────── */
 .mt-evidence {
   margin: 0.5rem 0;

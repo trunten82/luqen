@@ -102,15 +102,31 @@
           </div>
         </details>
         {{/if}}
-        <div class="mt-actions">
-          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
-          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
-          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
+        <div class="mt-actions" role="group" aria-label="{{t "manualTests.setVerdict"}}">
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSelect" data-criterion-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSelect" data-criterion-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSelect" data-criterion-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
         </div>
         <div class="mt-notes-wrap">
-          <label for="mt-notes-{{id}}">{{t "manualTests.notes"}}</label>
+          <label for="mt-notes-{{id}}">{{t "manualTests.notesReason"}}</label>
           <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="{{t "manualTests.optionalNotes"}}">{{notes}}</textarea>
         </div>
+        <div class="mt-save-row">
+          <button type="button" class="btn btn--primary btn--sm" data-action="mtSaveCommit" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}">{{t "manualTests.save"}}</button>
+          <span class="mt-save-hint" id="mt-dirty-{{id}}" hidden>{{t "manualTests.unsaved"}}</span>
+        </div>
+        <details class="mt-history" id="mt-history-wrap-{{id}}"{{#unless history.length}} hidden{{/unless}}>
+          <summary class="mt-history__summary">{{t "manualTests.history"}} (<span id="mt-history-count-{{id}}">{{historyCount}}</span>)</summary>
+          <ul class="mt-history__list" id="mt-history-{{id}}">
+            {{#each history}}
+            <li class="mt-history__item">
+              <span class="mt-history__change">{{fromStatus}} &rarr; <strong class="mt-history__to--{{toStatus}}">{{toStatus}}</strong></span>
+              {{#if comment}}<span class="mt-history__comment">&ldquo;{{comment}}&rdquo;</span>{{/if}}
+              <span class="mt-history__meta">{{actor}} &middot; {{at}}</span>
+            </li>
+            {{/each}}
+          </ul>
+        </details>
         <div class="mt-evidence" data-criterion-id="{{id}}">
           <span class="mt-evidence__heading">{{t "manualTests.evidenceLabel"}}</span>
           <ul class="mt-evidence__list" id="mt-ev-list-{{id}}" data-count="{{evidenceCount}}">
@@ -186,15 +202,31 @@
           </div>
         </details>
         {{/if}}
-        <div class="mt-actions">
-          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
-          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
-          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSave" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
+        <div class="mt-actions" role="group" aria-label="{{t "manualTests.setVerdict"}}">
+          <button type="button" class="mt-btn mt-btn--pass{{#if (eq status 'pass')}} mt-btn--active{{/if}}" data-action="mtSelect" data-criterion-id="{{id}}" data-status="pass">{{t "manualTests.pass"}}</button>
+          <button type="button" class="mt-btn mt-btn--fail{{#if (eq status 'fail')}} mt-btn--active{{/if}}" data-action="mtSelect" data-criterion-id="{{id}}" data-status="fail">{{t "manualTests.fail"}}</button>
+          <button type="button" class="mt-btn mt-btn--na{{#if (eq status 'na')}} mt-btn--active{{/if}}" data-action="mtSelect" data-criterion-id="{{id}}" data-status="na">{{t "manualTests.na"}}</button>
         </div>
         <div class="mt-notes-wrap">
-          <label for="mt-notes-{{id}}">{{t "manualTests.notes"}}</label>
+          <label for="mt-notes-{{id}}">{{t "manualTests.notesReason"}}</label>
           <textarea id="mt-notes-{{id}}" class="mt-notes" rows="2" placeholder="{{t "manualTests.optionalNotes"}}">{{notes}}</textarea>
         </div>
+        <div class="mt-save-row">
+          <button type="button" class="btn btn--primary btn--sm" data-action="mtSaveCommit" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}">{{t "manualTests.save"}}</button>
+          <span class="mt-save-hint" id="mt-dirty-{{id}}" hidden>{{t "manualTests.unsaved"}}</span>
+        </div>
+        <details class="mt-history" id="mt-history-wrap-{{id}}"{{#unless history.length}} hidden{{/unless}}>
+          <summary class="mt-history__summary">{{t "manualTests.history"}} (<span id="mt-history-count-{{id}}">{{historyCount}}</span>)</summary>
+          <ul class="mt-history__list" id="mt-history-{{id}}">
+            {{#each history}}
+            <li class="mt-history__item">
+              <span class="mt-history__change">{{fromStatus}} &rarr; <strong class="mt-history__to--{{toStatus}}">{{toStatus}}</strong></span>
+              {{#if comment}}<span class="mt-history__comment">&ldquo;{{comment}}&rdquo;</span>{{/if}}
+              <span class="mt-history__meta">{{actor}} &middot; {{at}}</span>
+            </li>
+            {{/each}}
+          </ul>
+        </details>
         <div class="mt-evidence" data-criterion-id="{{id}}">
           <span class="mt-evidence__heading">{{t "manualTests.evidenceLabel"}}</span>
           <ul class="mt-evidence__list" id="mt-ev-list-{{id}}" data-count="{{evidenceCount}}">
@@ -222,6 +254,12 @@
 <script>
   /* ── Event delegation for manual test actions ────────────────────────── */
   (function() {
+    // Bind the document-level listener at most once per page lifetime. Inline
+    // page scripts can be re-executed (e.g. htmx history restore) while the
+    // document — and thus prior listeners — persists; without this guard the
+    // handler would fire N times per click (duplicate toasts / double upload).
+    if (window.__mtManualBound) return;
+    window.__mtManualBound = true;
     document.addEventListener('click', function(e) {
       var target = e.target.closest('[data-action]');
       if (!target) return;
@@ -235,11 +273,12 @@
         target.textContent = collapsed ? '\u25BC' : '\u25B2';
       }
 
-      if (action === 'mtSave') {
-        var scanId = target.getAttribute('data-scan-id');
-        var criterionId = target.getAttribute('data-criterion-id');
-        var status = target.getAttribute('data-status');
-        mtSave(scanId, criterionId, status, target);
+      if (action === 'mtSelect') {
+        mtSelect(target.getAttribute('data-criterion-id'), target.getAttribute('data-status'), target);
+      }
+
+      if (action === 'mtSaveCommit') {
+        mtSaveCommit(target.getAttribute('data-scan-id'), target.getAttribute('data-criterion-id'));
       }
 
       if (action === 'mtFilter') {
@@ -269,12 +308,18 @@
   /* ── Upload an evidence file for a criterion ─────────────────────────── */
   function mtEvidenceUpload(scanId, criterionId) {
     var input = document.getElementById('mt-ev-file-' + criterionId);
-    if (!input || !input.files || input.files.length === 0) {
+    var file = input && input.files && input.files[0];
+    if (!file) {
       showToast('Choose a file first', 'error');
       return;
     }
+    // In-flight guard: ignore re-entrant calls for the same input until the
+    // current upload settles (belt-and-suspenders against any double trigger).
+    if (input.getAttribute('data-uploading') === '1') return;
+    input.setAttribute('data-uploading', '1');
+
     var fd = new FormData();
-    fd.append('file', input.files[0]);
+    fd.append('file', file);
 
     fetch('/reports/' + scanId + '/evidence/' + encodeURIComponent(criterionId), {
       method: 'POST',
@@ -287,11 +332,13 @@
       input.value = '';
       showToast('Evidence uploaded', 'success');
     })
-    .catch(function(err) { showToast(err.message, 'error'); });
+    .catch(function(err) { showToast(err.message, 'error'); })
+    .then(function() { input.removeAttribute('data-uploading'); });
   }
 
-  /* ── Delete an evidence file ─────────────────────────────────────────── */
+  /* ── Delete an evidence file (irreversible — confirm first) ──────────── */
   function mtEvidenceDelete(scanId, evidenceId, criterionId) {
+    if (!window.confirm('Delete this evidence file? This cannot be undone.')) return;
     fetch('/reports/' + scanId + '/evidence/' + evidenceId + '/delete', {
       method: 'POST',
       headers: { 'x-csrf-token': mtCsrfToken(), 'HX-Request': 'true' }
@@ -314,63 +361,103 @@
     if (fresh) existing.replaceWith(fresh);
   }
 
-  /* ── Save result via fetch POST ─────────────────────────────────────── */
-  function mtSave(scanId, criterionId, status, btn) {
+  /* ── Status label / badge-class maps ────────────────────────────────── */
+  var MT_LABELS = { pass: 'Pass', fail: 'Fail', na: 'N/A', untested: 'Untested' };
+  var MT_BADGE = { pass: 'mt-badge--pass', fail: 'mt-badge--fail', na: 'mt-badge--na', untested: 'mt-badge--untested' };
+
+  /* ── Select a verdict (pending only — nothing is saved until Save) ──── */
+  function mtSelect(criterionId, status, btn) {
+    var actions = btn.parentNode;
+    var already = btn.classList.contains('mt-btn--active');
+    actions.querySelectorAll('.mt-btn').forEach(function(b) { b.classList.remove('mt-btn--active'); });
+    // Clicking the active verdict again clears it (→ untested) so mistakes are
+    // freely revisable before committing.
+    if (!already) btn.classList.add('mt-btn--active');
+    var hint = document.getElementById('mt-dirty-' + criterionId);
+    if (hint) hint.hidden = false;
+  }
+
+  /* ── Commit the selected verdict (explicit save; confirm on change) ──── */
+  function mtSaveCommit(scanId, criterionId) {
     var row = document.getElementById('mt-row-' + criterionId);
+    if (!row) return;
+    var actions = row.querySelector('.mt-actions');
+    var activeBtn = actions ? actions.querySelector('.mt-btn--active') : null;
+    var selected = activeBtn ? activeBtn.getAttribute('data-status') : 'untested';
+    var saved = row.getAttribute('data-status') || 'untested';
+
+    // Confirm changing an EXISTING verdict — disruptive, the user decides.
+    if (selected !== saved && saved !== 'untested') {
+      var msg = selected === 'untested'
+        ? 'Clear the ' + MT_LABELS[saved] + ' verdict for ' + criterionId + '?'
+        : 'Change ' + criterionId + ' from ' + MT_LABELS[saved] + ' to ' + MT_LABELS[selected] + '?';
+      if (!window.confirm(msg)) return;
+    }
+
     var notesEl = document.getElementById('mt-notes-' + criterionId);
     var notes = notesEl ? notesEl.value : '';
 
-    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
-    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
-
-    var formData = new URLSearchParams();
-    formData.append('criterionId', criterionId);
-    formData.append('status', status);
-    formData.append('notes', notes);
+    var fd = new URLSearchParams();
+    fd.append('criterionId', criterionId);
+    fd.append('status', selected);
+    fd.append('notes', notes);
+    fd.append('comment', notes); // the note doubles as the change reason (audit)
 
     fetch('/reports/' + scanId + '/manual', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'x-csrf-token': csrfToken,
+        'x-csrf-token': mtCsrfToken(),
         'HX-Request': 'true'
       },
-      body: formData.toString()
+      body: fd.toString()
     })
-    .then(function(response) {
-      if (!response.ok) throw new Error('Save failed');
-      return response.text();
-    })
-    .then(function(html) {
-      // The response contains an updated .mt-criterion div and a hidden
-      // element with data-stats carrying JSON stats.
-      var temp = document.createElement('div');
-      temp.innerHTML = html;
-
-      // Swap the criterion row
-      var newRow = temp.querySelector('.mt-criterion');
-      if (newRow && row) {
-        row.replaceWith(newRow);
+    .then(function(r) { if (!r.ok) throw new Error('Save failed (' + r.status + ')'); return r.json(); })
+    .then(function(data) {
+      row.setAttribute('data-status', data.status);
+      var badge = row.querySelector('.mt-badge');
+      if (badge) {
+        badge.className = 'mt-badge ' + (MT_BADGE[data.status] || 'mt-badge--untested');
+        badge.textContent = MT_LABELS[data.status] || 'Untested';
       }
-
-      // Update stats from data attributes on a hidden element
-      var statsEl = temp.querySelector('[data-mt-tested]');
-      if (statsEl) {
-        mtUpdateStats(
-          parseInt(statsEl.getAttribute('data-mt-tested'), 10),
-          parseInt(statsEl.getAttribute('data-mt-passed'), 10),
-          parseInt(statsEl.getAttribute('data-mt-failed'), 10),
-          parseInt(statsEl.getAttribute('data-mt-na'), 10),
-          parseInt(statsEl.getAttribute('data-mt-untested'), 10),
-          parseInt(statsEl.getAttribute('data-mt-pct'), 10)
-        );
+      if (data.stats) {
+        mtUpdateStats(data.stats.tested, data.stats.passed, data.stats.failed, data.stats.na, data.stats.untested, data.stats.percentage);
       }
-
-      showToast('Saved: ' + criterionId + ' = ' + status, 'success');
+      if (data.auditEntry) mtPrependHistory(criterionId, data.auditEntry);
+      var hint = document.getElementById('mt-dirty-' + criterionId);
+      if (hint) hint.hidden = true;
+      showToast('Saved ' + criterionId + ' = ' + (MT_LABELS[data.status] || 'Untested'), 'success');
     })
-    .catch(function(err) {
-      showToast('Failed to save: ' + err.message, 'error');
-    });
+    .catch(function(err) { showToast('Failed to save: ' + err.message, 'error'); });
+  }
+
+  /* ── Prepend a new audit entry to a criterion's history (safe DOM) ──── */
+  function mtPrependHistory(criterionId, entry) {
+    var list = document.getElementById('mt-history-' + criterionId);
+    if (!list) return;
+    var li = document.createElement('li');
+    li.className = 'mt-history__item';
+    var change = document.createElement('span');
+    change.className = 'mt-history__change';
+    change.textContent = (entry.fromStatus || 'untested') + ' → ' + entry.toStatus;
+    li.appendChild(change);
+    if (entry.comment) {
+      var c = document.createElement('span');
+      c.className = 'mt-history__comment';
+      c.textContent = '“' + entry.comment + '”';
+      li.appendChild(c);
+    }
+    var meta = document.createElement('span');
+    meta.className = 'mt-history__meta';
+    var when = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
+    meta.textContent = (entry.actor || 'unknown') + ' · ' + when;
+    li.appendChild(meta);
+    list.insertBefore(li, list.firstChild);
+
+    var wrap = document.getElementById('mt-history-wrap-' + criterionId);
+    if (wrap) wrap.hidden = false;
+    var count = document.getElementById('mt-history-count-' + criterionId);
+    if (count) count.textContent = String(list.children.length);
   }
 
   /* ── Update progress stats (using textContent for safe DOM updates) ── */

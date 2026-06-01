@@ -79,6 +79,12 @@ export interface VpatAttestation {
   readonly manualTestingRecorded: boolean;
   /** Optional evaluator/organisation name; omitted when unknown. */
   readonly evaluator?: string;
+  /**
+   * Count of manual-test verdict changes recorded WITH a documented reason.
+   * Surfaced as evidence of an ongoing, reasoned testing process. Omitted (0)
+   * when none.
+   */
+  readonly reasonedChangeCount?: number;
 }
 
 export interface VpatReport {
@@ -126,6 +132,12 @@ export interface BuildVpatOptions {
    * on record"). Slice C.
    */
   readonly evidenceCounts?: ReadonlyMap<string, number>;
+  /**
+   * Count of manual-test verdict changes recorded WITH a documented reason
+   * (from the verdict audit trail). Surfaced in the attestation as evidence of
+   * an ongoing, reasoned testing process.
+   */
+  readonly reasonedChangeCount?: number;
 }
 
 /** Minimal shape of the scan record needed to build a VPAT. */
@@ -395,6 +407,9 @@ export function buildVpat(
     standardsLabel: framing.standardsLabel,
     manualTestingRecorded,
     ...(opts.evaluator?.trim() ? { evaluator: opts.evaluator.trim() } : {}),
+    ...(opts.reasonedChangeCount && opts.reasonedChangeCount > 0
+      ? { reasonedChangeCount: opts.reasonedChangeCount }
+      : {}),
   };
 
   return {
