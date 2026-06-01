@@ -1404,7 +1404,9 @@
     "attMethods": "Métodos",
     "attEvaluator": "Evaluador",
     "attestationStatement": "Este informe refleja una evaluación de buena fe del sitio en la fecha de evaluación, realizada con los métodos indicados anteriormente. Registra el estado de conformidad en ese momento y el esfuerzo de remediación en curso; no es una certificación ni garantiza la conformidad.",
-    "attReasonedChanges": "Cambios de veredicto documentados (con motivos)"
+    "attReasonedChanges": "Cambios de veredicto documentados (con motivos)",
+    "evidenceHeading": "Evidencias de las pruebas manuales",
+    "evidenceIntro": "Archivos de evidencia registrados durante las pruebas manuales, organizados por criterio de conformidad. Estos elementos — capturas de pantalla y documentos — respaldan los veredictos manuales indicados anteriormente y forman parte del registro de pruebas fechado y de buena fe. Se proporcionan con fines de transparencia y no constituyen una certificación de conformidad."
   },
   "a11yStatement": {
     "status": {
