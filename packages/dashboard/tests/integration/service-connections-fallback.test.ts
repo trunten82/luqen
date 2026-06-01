@@ -226,6 +226,12 @@ async function buildServer(options: BuildOptions): Promise<TestContext> {
 // Tests
 // ---------------------------------------------------------------------------
 
+// Each test spins up a full Fastify server via buildServer(), which is CPU-heavy.
+// Under the full dashboard suite's parallelism the default 5s timeout flakes on
+// slower/contended machines (passes in isolation and in CI). Raise the per-test
+// timeout for this file so contention slack no longer produces false reds.
+vi.setConfig({ testTimeout: 20000 });
+
 describe('Phase 06 P05 — bootstrap + fallback + permission gating', () => {
   let ctx: TestContext;
   afterEach(async () => {
