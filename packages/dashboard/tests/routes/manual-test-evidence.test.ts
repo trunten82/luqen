@@ -141,6 +141,36 @@ describe('Manual Test Evidence Routes', () => {
     expect((await ctx.storage.manualTestEvidence.listEvidence(scanId))).toHaveLength(0);
   });
 
+  it('rejects an SVG (active-content / stored-XSS vector) even with an image/* mime', async () => {
+    const scanId = await makeScan(ctx);
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
+    const { headers, payload } = multipart('x.svg', 'image/svg+xml', Buffer.from(svg));
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: `/reports/${scanId}/evidence/${encodeURIComponent(CRITERION)}`,
+      headers,
+      payload,
+    });
+    expect(res.statusCode).toBe(400);
+    expect((await ctx.storage.manualTestEvidence.listEvidence(scanId))).toHaveLength(0);
+  });
+
+  it('derives the stored extension from the validated MIME, not the filename', async () => {
+    const scanId = await makeScan(ctx);
+    // Client lies: .svg filename but a real PNG mime → stored as .png, not .svg.
+    const { headers, payload } = multipart('sneaky.svg', 'image/png', Buffer.from('\x89PNG'));
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: `/reports/${scanId}/evidence/${encodeURIComponent(CRITERION)}`,
+      headers,
+      payload,
+    });
+    expect(res.statusCode).toBe(200);
+    const [row] = await ctx.storage.manualTestEvidence.listEvidence(scanId);
+    expect(row.filePath.endsWith('.png')).toBe(true);
+    expect(row.filePath.includes('.svg')).toBe(false);
+  });
+
   it('rejects an unknown criterion (400)', async () => {
     const scanId = await makeScan(ctx);
     const { headers, payload } = multipart('shot.png', 'image/png', Buffer.from('bytes'));
