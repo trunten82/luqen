@@ -1170,7 +1170,10 @@
     "testedBy": "Testado por",
     "on": "em",
     "partiallyAutomatedTitle": "Parcialmente Automatizado — Verificar Manualmente",
-    "partiallyAutomatedDesc": "A automação detecta alguns problemas, mas a verificação humana é necessária para confirmar a conformidade total."
+    "partiallyAutomatedDesc": "A automação detecta alguns problemas, mas a verificação humana é necessária para confirmar a conformidade total.",
+    "evidenceLabel": "Evidência",
+    "evidenceUpload": "Carregar",
+    "evidenceDelete": "Excluir evidência"
   },
   "assignments": {
     "siteUrl": "URL do Site",
