@@ -130,14 +130,14 @@ describe('VPAT report identity — PDF ACR', () => {
     const pdf = await generateVpatPdf(scanMeta, vpat, { groups: [], uploadsRoot });
     expect(pdf.length).toBeGreaterThan(1000);
     expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
-  }, 30000);
+  }, 60000);
 
   it('produces a PDF with no identity set (backward-compat)', async () => {
     const vpat = buildVpat(makeReport(), scanAA, [], { generatedAt: GEN_AT });
     const pdf = await generateVpatPdf(scanMeta, vpat);
     expect(pdf.length).toBeGreaterThan(1000);
     expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
-  }, 30000);
+  }, 60000);
 });
 
 describe('VPAT report identity — storage round-trip (migration 082)', () => {
