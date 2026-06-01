@@ -1101,7 +1101,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   await brandOverviewRoutes(server, storage, rescoreService);
 
   // ── Export API routes ────────────────────────────────────────────────────
-  await exportRoutes(server, storage);
+  // Pass the on-disk uploads root so the VPAT PDF can embed manual-test
+  // evidence screenshots (resolved from their public /uploads/... paths).
+  await exportRoutes(
+    server,
+    storage,
+    resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads'),
+  );
 
   // ── Data API routes (Power BI / external integrations) ──────────────────
   await dataApiRoutes(server, storage);

@@ -6,9 +6,11 @@
  */
 
 import PDFDocument from 'pdfkit';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { VpatReport, VpatConformance } from '../services/vpat-service.js';
+import type { VpatEvidenceGroup } from '../services/vpat-evidence.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -479,10 +481,21 @@ function conformanceColor(conformance: VpatConformance): string {
  * a conformance summary line, then one table per WCAG level with columns
  * Criteria | Conformance Level | Remarks. Reuses the same fonts, colours and
  * helpers as the standard report PDF.
+ *
+ * When `evidence` is supplied, an appendix embeds image evidence (screenshots,
+ * PNG/JPEG only — PDFKit cannot rasterise gif/webp) and lists every other
+ * evidence document by filename, per criterion. `uploadsRoot` is the on-disk
+ * uploads directory used to resolve each public `/uploads/...` path.
  */
+export interface VpatEvidence {
+  readonly groups: readonly VpatEvidenceGroup[];
+  readonly uploadsRoot: string;
+}
+
 export async function generateVpatPdf(
   scan: PdfScanMeta,
   vpat: VpatReport,
+  evidence?: VpatEvidence,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
@@ -798,6 +811,96 @@ export async function generateVpatPdf(
           }
         }
         doc.moveDown(0.7);
+        doc.x = left;
+      }
+
+      // ── Manual test evidence (screenshots embedded, documents listed) ──
+      if (evidence && evidence.groups.length > 0) {
+        const THUMB_W = 130;
+        const THUMB_H = 98;
+        const GAP = 8;
+
+        if (doc.y > doc.page.height - doc.page.margins.bottom - 90) {
+          doc.addPage();
+        }
+        doc.fontSize(12).fillColor(TEXT_PRIMARY).font('Body-Bold')
+          .text('Manual test evidence', left, doc.y);
+        doc.moveTo(left, doc.y).lineTo(left + pageWidth, doc.y)
+          .lineWidth(0.5).strokeColor(BORDER_STRONG).stroke();
+        doc.moveDown(0.2);
+        doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+          .text(
+            'Supporting evidence files recorded during manual testing, grouped by success criterion. '
+            + 'Screenshots are embedded below; other documents are listed by filename. These artifacts '
+            + 'substantiate the manual verdicts and form part of the dated, good-faith testing record.',
+            left, doc.y, { lineGap: 2, width: pageWidth },
+          );
+        doc.moveDown(0.4);
+        doc.x = left;
+
+        for (const group of evidence.groups) {
+          // Criterion heading.
+          if (doc.y > doc.page.height - doc.page.margins.bottom - 40) {
+            doc.addPage();
+          }
+          doc.fontSize(9).fillColor(ID_ACCENT).font('Body-Bold')
+            .text(group.title ? `${group.criterion}: ${group.title}` : group.criterion, left, doc.y);
+          doc.moveDown(0.15);
+          doc.x = left;
+
+          // Embed image evidence (PNG/JPEG) in a wrapping row; collect every
+          // non-embeddable or missing file to list by name afterwards.
+          const docFiles: string[] = [];
+          let cursorX = left;
+          let rowTop = doc.y;
+          let rowHasImage = false;
+
+          for (const item of group.items) {
+            const embeddable = item.mimeType === 'image/png' || item.mimeType === 'image/jpeg';
+            const absPath = embeddable
+              ? join(evidence.uploadsRoot, item.filePath.replace(/^\/uploads\//, ''))
+              : '';
+            if (!embeddable || absPath === '' || !existsSync(absPath)) {
+              docFiles.push(item.fileName);
+              continue;
+            }
+            // Wrap to a new row when the next thumbnail would overflow the width.
+            if (cursorX + THUMB_W > left + pageWidth) {
+              cursorX = left;
+              rowTop = rowTop + THUMB_H + GAP;
+            }
+            // Page-break when the row would overflow the page bottom.
+            if (rowTop + THUMB_H > doc.page.height - doc.page.margins.bottom) {
+              doc.addPage();
+              rowTop = doc.page.margins.top;
+              cursorX = left;
+            }
+            try {
+              doc.image(absPath, cursorX, rowTop, { fit: [THUMB_W, THUMB_H] });
+              cursorX += THUMB_W + GAP;
+              rowHasImage = true;
+            } catch {
+              // Corrupt / unreadable image → fall back to listing the filename.
+              docFiles.push(item.fileName);
+            }
+          }
+          if (rowHasImage) {
+            doc.y = rowTop + THUMB_H + 6;
+            doc.x = left;
+          }
+
+          // List documents (and any non-embeddable images) by filename.
+          for (const name of docFiles) {
+            if (doc.y > doc.page.height - doc.page.margins.bottom - 20) {
+              doc.addPage();
+            }
+            doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+              .text(`- ${name}`, left, doc.y, { width: pageWidth });
+          }
+          doc.moveDown(0.4);
+          doc.x = left;
+        }
+        doc.moveDown(0.3);
         doc.x = left;
       }
 

@@ -16,6 +16,7 @@ import { resolveOrgLLMClient } from '../llm-client.js';
 import { t } from '../i18n/index.js';
 import { filterDrilldownIssues, isValidDimension } from '../services/brand-drilldown.js';
 import { buildVpat } from '../services/vpat-service.js';
+import { buildVpatEvidenceGroups } from '../services/vpat-evidence.js';
 import { buildRemediationRecord } from '../services/remediation-service.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
@@ -532,6 +533,14 @@ export async function reportRoutes(
       ]);
       const remediation = buildRemediationRecord(remediationEvents, siteScans);
       const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts, reasonedChangeCount }, remediation);
+      // Manual-test evidence ARTIFACTS (screenshots / documents) per criterion —
+      // surfaced as an appendix in the report (the COUNT already lands in the
+      // remarks via evidenceCounts). The browser fetches files via filePath
+      // (/uploads/...); no on-disk resolution needed here.
+      const evidenceGroups = buildVpatEvidenceGroups(
+        await storage.manualTestEvidence.listEvidence(id),
+        vpat,
+      );
 
       // Compile the VPAT template directly with the shared Handlebars singleton
       // (same approach as /reports/:id/print). The global `t` and `formatStandard`
@@ -565,7 +574,7 @@ export async function reportRoutes(
         await readFile(join(viewsDir, 'vpat.hbs'), 'utf-8'),
       );
       const html = template(
-        { scan: scanMeta, vpat, user: request.user },
+        { scan: scanMeta, vpat, evidenceGroups, user: request.user },
         { data: { root: { locale } } },
       );
       return reply.type('text/html').send(html);
