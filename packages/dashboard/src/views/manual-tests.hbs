@@ -138,8 +138,7 @@
             {{/each}}
           </ul>
           <div class="mt-evidence__upload">
-            <input type="file" id="mt-ev-file-{{id}}" class="mt-evidence__file" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" aria-label="{{t "manualTests.evidenceLabel"}}">
-            <button type="button" class="btn btn--ghost btn--sm" data-action="mtEvidenceUpload" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}">{{t "manualTests.evidenceUpload"}}</button>
+            <input type="file" id="mt-ev-file-{{id}}" class="mt-evidence__file" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" aria-label="{{t "manualTests.evidenceUpload"}}">
           </div>
         </div>
         {{#if testedBy}}
@@ -238,8 +237,7 @@
             {{/each}}
           </ul>
           <div class="mt-evidence__upload">
-            <input type="file" id="mt-ev-file-{{id}}" class="mt-evidence__file" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" aria-label="{{t "manualTests.evidenceLabel"}}">
-            <button type="button" class="btn btn--ghost btn--sm" data-action="mtEvidenceUpload" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}">{{t "manualTests.evidenceUpload"}}</button>
+            <input type="file" id="mt-ev-file-{{id}}" class="mt-evidence__file" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" data-scan-id="{{../scan.id}}" data-criterion-id="{{id}}" aria-label="{{t "manualTests.evidenceUpload"}}">
           </div>
         </div>
         {{#if testedBy}}
@@ -285,10 +283,6 @@
         mtFilter(target.getAttribute('data-status'), target);
       }
 
-      if (action === 'mtEvidenceUpload') {
-        mtEvidenceUpload(target.getAttribute('data-scan-id'), target.getAttribute('data-criterion-id'));
-      }
-
       if (action === 'mtEvidenceDelete') {
         mtEvidenceDelete(
           target.getAttribute('data-scan-id'),
@@ -296,6 +290,15 @@
           target.getAttribute('data-criterion-id')
         );
       }
+    });
+
+    // Evidence uploads on file SELECTION (change), not a button click — a button
+    // click was observed double-firing on mobile (one upload + a spurious
+    // "choose a file first"). 'change' fires exactly once per selection.
+    document.addEventListener('change', function(e) {
+      var input = e.target.closest('.mt-evidence__file');
+      if (!input) return;
+      mtEvidenceUpload(input.getAttribute('data-scan-id'), input.getAttribute('data-criterion-id'));
     });
   })();
 
@@ -306,15 +309,21 @@
   }
 
   /* ── Upload an evidence file for a criterion ─────────────────────────── */
+  var mtUploadDedup = {};
   function mtEvidenceUpload(scanId, criterionId) {
     var input = document.getElementById('mt-ev-file-' + criterionId);
     var file = input && input.files && input.files[0];
-    if (!file) {
-      showToast('Choose a file first', 'error');
-      return;
-    }
-    // In-flight guard: ignore re-entrant calls for the same input until the
-    // current upload settles (belt-and-suspenders against any double trigger).
+    // No file selected → nothing to do. Silent (uploads are triggered by
+    // file selection, so this path should not normally be reachable).
+    if (!file) return;
+    // Time-dedup: ignore a repeat invocation for the same criterion within a
+    // short window (defends against any duplicate event delivery, regardless of
+    // source). Keyed by criterion + the selected file's name.
+    var key = criterionId + '|' + file.name + '|' + file.size;
+    var now = Date.now();
+    if (mtUploadDedup[key] && (now - mtUploadDedup[key]) < 5000) return;
+    mtUploadDedup[key] = now;
+    // In-flight guard: ignore re-entrant calls while the upload is running.
     if (input.getAttribute('data-uploading') === '1') return;
     input.setAttribute('data-uploading', '1');
 
