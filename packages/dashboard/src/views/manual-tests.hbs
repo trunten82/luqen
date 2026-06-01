@@ -346,7 +346,17 @@
   }
 
   /* ── Delete an evidence file (irreversible — confirm first) ──────────── */
+  var mtDeleteDedup = {};
   function mtEvidenceDelete(scanId, evidenceId, criterionId) {
+    // De-dupe rapid duplicate dispatches: a single tap on mobile fires the
+    // click handler 2-3× (touch + ghost-click), which previously popped the
+    // confirm() twice and sent a second DELETE for an id the first call had
+    // already removed (→ a spurious "Delete failed" 404 after a success).
+    // First dispatch wins; repeats within the window are ignored BEFORE the
+    // confirm so the dialog only appears once. Mirrors the upload dedup.
+    var now = Date.now();
+    if (mtDeleteDedup[evidenceId] && (now - mtDeleteDedup[evidenceId]) < 3000) return;
+    mtDeleteDedup[evidenceId] = now;
     if (!window.confirm('Delete this evidence file? This cannot be undone.')) return;
     fetch('/reports/' + scanId + '/evidence/' + evidenceId + '/delete', {
       method: 'POST',
