@@ -1413,7 +1413,9 @@
     "attMethods": "Metodi",
     "attEvaluator": "Valutatore",
     "attestationStatement": "Questo report riflette una valutazione in buona fede del sito alla data di valutazione, eseguita con i metodi sopra elencati. Documenta lo stato di conformità in quel momento e l’attività di remediation in corso; non è una certificazione e non garantisce la conformità.",
-    "attReasonedChanges": "Modifiche di esito documentate (con motivazione)"
+    "attReasonedChanges": "Modifiche di esito documentate (con motivazione)",
+    "evidenceHeading": "Evidenze dei test manuali",
+    "evidenceIntro": "File di evidenza raccolti durante i test manuali, organizzati per criterio di successo. Questi elementi — schermate e documenti — comprovano i giudizi manuali riportati sopra e fanno parte del registro di test datato e in buona fede. Sono forniti a scopo di trasparenza e non costituiscono una certificazione di conformità."
   },
   "a11yStatement": {
     "status": {

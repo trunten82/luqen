@@ -52,6 +52,14 @@
     .methodology__body { font-size: 0.8rem; color: #4a4a4a; margin: 0 0 0.5rem; }
     .methodology__disclaimer { font-size: 0.8rem; color: #7c5612; font-weight: 600; margin: 0; }
 
+    /* Manual-test evidence appendix (per-criterion screenshots + documents) */
+    h3.evidence-crit { font-size: 0.92rem; margin: 1.1rem 0 0.4rem; color: #5a2a26; }
+    .evidence-gallery { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .evidence-thumb { display: inline-block; border: 1px solid #d0d4de; border-radius: 4px; padding: 2px; line-height: 0; }
+    .evidence-thumb img { max-width: 160px; max-height: 120px; width: auto; height: auto; display: block; }
+    .evidence-doc { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.6rem; border: 1px solid #d0d4de; border-radius: 4px; font-size: 0.78rem; background: #faf7f6; text-decoration: none; }
+    .evidence-doc::before { content: "\1F4C4"; font-size: 0.85rem; }
+
     .report-footer { margin-top: 1.5rem; padding-top: 0.4rem; border-top: 1px solid #d0d4de; font-size: 0.7rem; color: #6b6b6b; text-align: center; }
 
     @media print {
@@ -59,6 +67,8 @@
       .print-bar { display: none !important; }
       a { color: #1a1a1a; }
       a[href]::after { content: none !important; }
+      .evidence-thumb img { max-width: 120px; max-height: 90px; }
+      .evidence-thumb, .evidence-doc { break-inside: avoid; }
     }
   </style>
 </head>
@@ -209,6 +219,24 @@
 {{/if}}
 <p class="methodology__disclaimer">{{t "vpat.remediationDisclaimer"}}</p>
 {{/unless}}
+{{/if}}
+
+{{! ── Manual test evidence artifacts (per-criterion screenshots + documents) ── }}
+{{#if evidenceGroups.length}}
+<h2>{{t "vpat.evidenceHeading"}}</h2>
+<p class="intro">{{t "vpat.evidenceIntro"}}</p>
+{{#each evidenceGroups}}
+<h3 class="evidence-crit">{{this.criterion}}{{#if this.title}} &mdash; {{this.title}}{{/if}}</h3>
+<div class="evidence-gallery">
+  {{#each this.items}}
+  {{#if this.isImage}}
+  <a class="evidence-thumb" href="{{this.filePath}}" target="_blank" rel="noopener noreferrer"><img src="{{this.filePath}}" alt="{{this.fileName}}" loading="lazy"></a>
+  {{else}}
+  <a class="evidence-doc" href="{{this.filePath}}" target="_blank" rel="noopener noreferrer">{{this.fileName}}</a>
+  {{/if}}
+  {{/each}}
+</div>
+{{/each}}
 {{/if}}
 
 <div class="report-footer">

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { rmSync, existsSync, mkdirSync } from 'node:fs';
+import { rmSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
 import { reportRoutes } from '../../src/routes/reports.js';
 import { exportRoutes } from '../../src/routes/api/export.js';
@@ -56,11 +56,43 @@ interface Ctx {
   server: FastifyInstance;
   storage: SqliteStorageAdapter;
   reportsDir: string;
+  uploadsDir: string;
   dbPath: string;
   cleanup: () => void;
 }
 
 let ctx: Ctx;
+
+// A minimal valid 1×1 PNG — enough for PDFKit's doc.image to embed.
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/**
+ * Records one manual-test evidence artifact for a scan+criterion. When `bytes`
+ * is supplied, the file is also written under the uploads root so the PDF
+ * renderer can resolve and embed it.
+ */
+async function seedEvidence(
+  storage: SqliteStorageAdapter,
+  uploadsDir: string,
+  args: { scanId: string; criterionId: string; fileName: string; mimeType: string; bytes?: Buffer },
+): Promise<void> {
+  if (args.bytes) {
+    const dir = join(uploadsDir, 'system', 'evidence');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, args.fileName), args.bytes);
+  }
+  await storage.manualTestEvidence.addEvidence({
+    scanId: args.scanId,
+    criterionId: args.criterionId,
+    filePath: `/uploads/system/evidence/${args.fileName}`,
+    fileName: args.fileName,
+    mimeType: args.mimeType,
+    orgId: 'system',
+  });
+}
 
 /**
  * Seeds a completed scan whose stored JSON report contains:
@@ -112,7 +144,9 @@ async function seedCompletedScan(
 async function createServer(): Promise<Ctx> {
   const dbPath = join(tmpdir(), `test-vpat-${randomUUID()}.db`);
   const reportsDir = join(tmpdir(), `test-vpat-reports-${randomUUID()}`);
+  const uploadsDir = join(tmpdir(), `test-vpat-uploads-${randomUUID()}`);
   mkdirSync(reportsDir, { recursive: true });
+  mkdirSync(uploadsDir, { recursive: true });
 
   const storage = new SqliteStorageAdapter(dbPath);
   await storage.migrate();
@@ -150,17 +184,18 @@ async function createServer(): Promise<Ctx> {
   });
 
   await reportRoutes(server, storage);
-  await exportRoutes(server, storage);
+  await exportRoutes(server, storage, uploadsDir);
   await server.ready();
 
   const cleanup = (): void => {
     void storage.disconnect();
     if (existsSync(dbPath)) rmSync(dbPath);
     if (existsSync(reportsDir)) rmSync(reportsDir, { recursive: true });
+    if (existsSync(uploadsDir)) rmSync(uploadsDir, { recursive: true });
     void server.close();
   };
 
-  return { server, storage, reportsDir, dbPath, cleanup };
+  return { server, storage, reportsDir, uploadsDir, dbPath, cleanup };
 }
 
 describe('VPAT / ACR E2E', () => {
@@ -242,6 +277,33 @@ describe('VPAT / ACR E2E', () => {
       const res = await ctx.server.inject({ method: 'GET', url: `/reports/${id}/vpat` });
       expect(res.body).toContain('Not Applicable');
     });
+
+    it('renders the manual-test evidence appendix with image thumbnails and document links', async () => {
+      const id = await seedCompletedScan(ctx.storage);
+      await seedEvidence(ctx.storage, ctx.uploadsDir, {
+        scanId: id, criterionId: '1.1.1', fileName: 'screenshot-alt.png', mimeType: 'image/png',
+      });
+      await seedEvidence(ctx.storage, ctx.uploadsDir, {
+        scanId: id, criterionId: '1.1.1', fileName: 'sr-transcript.pdf', mimeType: 'application/pdf',
+      });
+      const res = await ctx.server.inject({ method: 'GET', url: `/reports/${id}/vpat` });
+
+      expect(res.statusCode).toBe(200);
+      const html = res.body;
+      // Appendix heading (i18n en) + intro.
+      expect(html).toContain('Manual test evidence');
+      // Image evidence rendered as a thumbnail <img> pointing at the served path.
+      expect(html).toContain('<img src="/uploads/system/evidence/screenshot-alt.png"');
+      // Document evidence rendered as a filename link.
+      expect(html).toContain('href="/uploads/system/evidence/sr-transcript.pdf"');
+      expect(html).toContain('sr-transcript.pdf');
+    });
+
+    it('omits the evidence appendix when no evidence is recorded', async () => {
+      const id = await seedCompletedScan(ctx.storage);
+      const res = await ctx.server.inject({ method: 'GET', url: `/reports/${id}/vpat` });
+      expect(res.body).not.toContain('Manual test evidence');
+    });
   });
 
   // ── PDF export route ──────────────────────────────────────────────────────
@@ -300,6 +362,26 @@ describe('VPAT / ACR E2E', () => {
       // The two reports differ (A has a Does-Not-Support row, B does not), so
       // their PDF bytes must differ — proving each response is freshly built.
       expect(Buffer.compare(resA.rawPayload, resB.rawPayload)).not.toBe(0);
+    });
+
+    it('embeds image evidence and lists documents in the ACR PDF appendix', async () => {
+      const id = await seedCompletedScan(ctx.storage);
+      // Baseline PDF (no evidence) for a size comparison.
+      const baseline = await ctx.server.inject({ method: 'GET', url: `/api/v1/export/scans/${id}/vpat.pdf` });
+      expect(baseline.statusCode).toBe(200);
+
+      await seedEvidence(ctx.storage, ctx.uploadsDir, {
+        scanId: id, criterionId: '1.1.1', fileName: 'shot.png', mimeType: 'image/png', bytes: PNG_1X1,
+      });
+      await seedEvidence(ctx.storage, ctx.uploadsDir, {
+        scanId: id, criterionId: '1.1.1', fileName: 'notes.pdf', mimeType: 'application/pdf',
+      });
+
+      const withEv = await ctx.server.inject({ method: 'GET', url: `/api/v1/export/scans/${id}/vpat.pdf` });
+      expect(withEv.statusCode).toBe(200);
+      expect(withEv.rawPayload.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+      // The evidence appendix (embedded PNG + listed document) enlarges the PDF.
+      expect(withEv.rawPayload.length).toBeGreaterThan(baseline.rawPayload.length);
     });
   });
 });
