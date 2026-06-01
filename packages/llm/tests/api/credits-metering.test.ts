@@ -25,12 +25,13 @@ describe('generate-fix credit metering (Phase 80)', () => {
   let app: Awaited<ReturnType<typeof createServer>>;
   let db: SqliteAdapter;
   let token: string;
+  let signToken: Awaited<ReturnType<typeof createTokenSigner>>;
 
   beforeAll(async () => {
     cleanup();
     db = new SqliteAdapter(TEST_DB);
     const { privateKey, publicKey } = await generateKeyPair('RS256', { extractable: true });
-    const signToken = await createTokenSigner(await exportPKCS8(privateKey));
+    signToken = await createTokenSigner(await exportPKCS8(privateKey));
     const verifyToken = await createTokenVerifier(await exportSPKI(publicKey));
     app = await createServer({ db, signToken, verifyToken, tokenExpiry: '1h', logger: false });
     await app.ready();
@@ -85,5 +86,17 @@ describe('generate-fix credit metering (Phase 80)', () => {
     const res = await post();
     expect(res.statusCode).toBe(200);
     expect(res.headers['x-luqen-credits-remaining']).toBeUndefined();
+  });
+
+  it('forbids a non-system token from setting another org credit allocation', async () => {
+    // Org-bound token (orgId=org-a), even with admin scope, must not touch org-b.
+    const orgToken = await signToken({ sub: 'u2', scopes: ['read', 'write', 'admin'], orgId: 'org-a', expiresIn: '1h' });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/credits/allocation',
+      headers: { authorization: `Bearer ${orgToken}` },
+      payload: { orgId: 'org-b', allocated: 9999 },
+    });
+    expect(res.statusCode).toBe(403);
   });
 });
