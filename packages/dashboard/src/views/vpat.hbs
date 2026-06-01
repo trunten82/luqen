@@ -79,6 +79,7 @@
 <div class="print-bar">
   <button class="print-btn" data-action="printPage">{{t "vpat.print"}}</button>
   <a class="print-btn print-btn--secondary" href="/api/v1/export/scans/{{scan.id}}/vpat.pdf">{{t "vpat.downloadPdf"}}</a>
+  {{#if evidenceGroups.length}}<a class="print-btn print-btn--secondary" href="/api/v1/export/scans/{{scan.id}}/vpat-pack.zip">{{t "vpat.downloadPack"}}</a>{{/if}}
   <button class="print-btn print-btn--secondary" data-action="closeWindow">{{t "vpat.close"}}</button>
 </div>
 
