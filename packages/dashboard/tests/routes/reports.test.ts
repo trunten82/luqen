@@ -50,7 +50,10 @@ async function createTestServer(
       currentOrgId: 'system',
       ...userOverrides,
     };
-    (request as unknown as Record<string, unknown>)['permissions'] = new Set(permissions);
+    // Report view + AI routes are gated by reports.view / llm.view; include
+    // them so functionality tests reach their handlers (denial tests target the
+    // mutation permissions, not these read baselines).
+    (request as unknown as Record<string, unknown>)['permissions'] = new Set([...permissions, 'reports.view', 'llm.view']);
   });
 
   await reportRoutes(server, storage);
