@@ -25,6 +25,10 @@ export { runReflowChecks } from './reflow/index.js';
 export type { ReflowOptions, ReflowResult } from './reflow/types.js';
 export { mapReflowObservations, KIND_MAP as REFLOW_KIND_MAP } from './reflow/index.js';
 export type { ReflowObservation, ReflowObservationKind } from './reflow/index.js';
+export { runA11yTreeChecks } from './a11y-tree/index.js';
+export type { A11yTreeOptions, A11yTreeResult } from './a11y-tree/types.js';
+export { mapA11yTreeObservations, KIND_MAP as A11Y_TREE_KIND_MAP } from './a11y-tree/index.js';
+export type { A11yTreeObservation, A11yTreeObservationKind } from './a11y-tree/index.js';
 export type { DiscoveredUrl, PageResult, AccessibilityIssue, ScanProgress, ScanError, ProgressListener, ComplianceEnrichment } from './types.js';
 
 import { discoverUrls } from './discovery/discover.js';
@@ -35,6 +39,7 @@ import { runBehavioralChecks } from './behavioral/index.js';
 import { runLighthouseChecks } from './lighthouse/index.js';
 import { runIbmChecks } from './ibm/index.js';
 import { runReflowChecks } from './reflow/index.js';
+import { runA11yTreeChecks } from './a11y-tree/index.js';
 import type { DiscoveredUrl, PageResult, AccessibilityIssue, ProgressListener } from './types.js';
 
 export interface CreateScannerOptions {
@@ -120,6 +125,21 @@ export interface CreateScannerOptions {
    * Default: 5.
    */
   readonly reflowMaxPages?: number;
+  /**
+   * When true, run the accessibility-tree engine (inspects the CDP accessibility
+   * tree for interactive nodes with no accessible name [WCAG 4.1.2] and positive
+   * tabindex [WCAG 2.4.3]) on each scanned page IN ADDITION to the static Pa11y
+   * scan. Default: false. OPT-IN — part of the "deep scan". Heavy (launches a
+   * headless Chrome per page); bounded by `a11yTreeMaxPages`. Findings carry
+   * runner='a11y-tree'.
+   */
+  readonly a11yTree?: boolean;
+  /**
+   * Cap on how many of the scanned pages the accessibility-tree layer runs
+   * against. It launches its own headless Chrome per page, so the default is
+   * small. Default: 5.
+   */
+  readonly a11yTreeMaxPages?: number;
 }
 
 export interface Scanner {
@@ -233,9 +253,18 @@ export function createScanner(opts: CreateScannerOptions): Scanner {
       // each scanned page to 320 CSS px and merges its findings (runner='reflow')
       // for WCAG 1.4.10 / 1.4.4. Best-effort: a reflow failure never breaks the
       // static scan.
-      const pages: PageResult[] = opts.reflow === true
+      const reflowPages: PageResult[] = opts.reflow === true
         ? await runReflowPass(ibmPages, opts)
         : ibmPages;
+
+      // Optional accessibility-tree pass (opt-in, part of deep scan). Inspects
+      // the CDP accessibility tree for nameless interactive nodes (WCAG 4.1.2)
+      // and positive tabindex (WCAG 2.4.3) and merges its findings
+      // (runner='a11y-tree') into each page. Best-effort: a failure never breaks
+      // the static scan.
+      const pages: PageResult[] = opts.a11yTree === true
+        ? await runA11yTreePass(reflowPages, opts)
+        : reflowPages;
 
       // Aggregate results
       let errorCount = 0;
@@ -465,6 +494,58 @@ async function runReflowPass(
       out.push({ ...page, issues: mergedIssues, issueCount: mergedIssues.length });
     } catch {
       // Reflow layer is additive — never let it drop a page's results.
+      out.push(page);
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Run the accessibility-tree engine over (up to a11yTreeMaxPages of) the scanned
+ * pages and merge its findings into each page's issues.
+ *
+ * Bounded + best-effort, mirroring {@link runReflowPass}: pages beyond the cap
+ * are returned unchanged, and a failure on one page leaves that page's existing
+ * results intact. Findings are mapped to the AccessibilityIssue shape
+ * (runner='a11y-tree') so they render and flow into compliance / VPAT exactly
+ * like static, behavioral, Lighthouse, IBM and reflow findings.
+ */
+async function runA11yTreePass(
+  inputPages: PageResult[],
+  opts: CreateScannerOptions,
+): Promise<PageResult[]> {
+  const cap = opts.a11yTreeMaxPages ?? 5;
+  const out: PageResult[] = [];
+
+  for (let i = 0; i < inputPages.length; i++) {
+    const page = inputPages[i];
+    if (i >= cap) {
+      out.push(page);
+      continue;
+    }
+    try {
+      const a11yTree = await runA11yTreeChecks(page.url, {
+        ...(opts.timeout !== undefined ? { timeout: opts.timeout } : {}),
+        ...(opts.headers !== undefined ? { headers: { ...opts.headers } } : {}),
+      });
+      if (a11yTree.issues.length === 0) {
+        out.push(page);
+        continue;
+      }
+      const mapped: AccessibilityIssue[] = a11yTree.issues.map((issue) => ({
+        code: issue.code,
+        type: issue.type,
+        message: issue.message,
+        selector: issue.selector,
+        context: issue.context,
+        runner: issue.runner ?? 'a11y-tree',
+        fixSuggestion: `Refer to WCAG documentation for ${issue.code}`,
+      }));
+      const mergedIssues = [...page.issues, ...mapped];
+      out.push({ ...page, issues: mergedIssues, issueCount: mergedIssues.length });
+    } catch {
+      // Accessibility-tree layer is additive — never let it drop a page's results.
       out.push(page);
     }
   }
