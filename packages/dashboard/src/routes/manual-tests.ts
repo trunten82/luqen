@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { requirePermission } from '../auth/middleware.js';
 import { Type } from '@sinclair/typebox';
 import { mkdir, unlink } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
@@ -168,7 +169,8 @@ export async function manualTestRoutes(
   // GET /reports/:id/manual — render manual testing checklist
   server.get(
     '/reports/:id/manual',
-    { schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: ManualIdParams } },
+    {
+      preHandler: requirePermission('manual_testing'), schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: ManualIdParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scan = await storage.scans.getScan(id);
@@ -276,7 +278,8 @@ export async function manualTestRoutes(
   // would serialize the JSON object away.
   server.post(
     '/reports/:id/manual',
-    { schema: { tags: ['manual-tests'], params: ManualIdParams, body: ManualSaveBody, response: { 200: ManualSaveResponse } } },
+    {
+      preHandler: requirePermission('manual_testing'), schema: { tags: ['manual-tests'], params: ManualIdParams, body: ManualSaveBody, response: { 200: ManualSaveResponse } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as ManualTestBody;
@@ -410,7 +413,8 @@ export async function manualTestRoutes(
   // POST /reports/:id/evidence/:criterionId — upload one evidence file (multipart)
   server.post(
     '/reports/:id/evidence/:criterionId',
-    { schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: EvidenceUploadParams } },
+    {
+      preHandler: requirePermission('manual_testing'), schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: EvidenceUploadParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, criterionId } = request.params as { id: string; criterionId: string };
 
@@ -485,7 +489,8 @@ export async function manualTestRoutes(
   // POST /reports/:id/evidence/:evidenceId/delete — remove one evidence file
   server.post(
     '/reports/:id/evidence/:evidenceId/delete',
-    { schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: EvidenceDeleteParams } },
+    {
+      preHandler: requirePermission('manual_testing'), schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: EvidenceDeleteParams } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, evidenceId } = request.params as { id: string; evidenceId: string };
 

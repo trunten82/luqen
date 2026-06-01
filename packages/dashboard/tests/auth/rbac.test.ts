@@ -36,7 +36,7 @@ describe('RBAC Permission Matrix', () => {
     // Phase 31.2 D-04: migration 054 back-fills `mcp.use` onto every existing
     // role (day-1 MCP continuity for the Claude Desktop clients live from
     // Phase 31.1 smoke). Permission counts below are +1 vs pre-31.2.
-    it('developer has exactly 15 permissions (14 pre-31.2 + mcp.use)', async () => {
+    it('developer has exactly 16 permissions (15 + reports.vpat)', async () => {
       const user = await storage.users.createUser(`dev-${randomUUID()}`, 'pass', 'developer');
       const perms = await storage.roles.getUserPermissions(user.id);
 
@@ -45,6 +45,7 @@ describe('RBAC Permission Matrix', () => {
         'reports.view',
         'reports.view_technical',
         'reports.export',
+        'reports.vpat',
         'reports.delete',
         'reports.compare',
         'issues.assign',
@@ -59,13 +60,13 @@ describe('RBAC Permission Matrix', () => {
       ]);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(15);
+      expect(perms.size).toBe(16);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
     });
 
-    it('user has exactly 11 permissions (10 pre-31.2 + mcp.use)', async () => {
+    it('user has exactly 12 permissions (11 + reports.vpat)', async () => {
       const user = await storage.users.createUser(`user-${randomUUID()}`, 'pass', 'user');
       const perms = await storage.roles.getUserPermissions(user.id);
 
@@ -74,6 +75,7 @@ describe('RBAC Permission Matrix', () => {
         'scans.schedule',
         'reports.view',
         'reports.export',
+        'reports.vpat',
         'reports.delete',
         'reports.compare',
         'issues.assign',
@@ -84,26 +86,27 @@ describe('RBAC Permission Matrix', () => {
       ]);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(11);
+      expect(perms.size).toBe(12);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
     });
 
-    it('executive has exactly 5 permissions (4 pre-31.2 + mcp.use)', async () => {
+    it('executive has exactly 6 permissions (5 + reports.vpat)', async () => {
       const user = await storage.users.createUser(`exec-${randomUUID()}`, 'pass', 'executive');
       const perms = await storage.roles.getUserPermissions(user.id);
 
       const expected = new Set([
         'reports.view',
         'reports.export',
+        'reports.vpat',
         'trends.view',
         'branding.view',
         'mcp.use',
       ]);
 
       expect(perms).toBeInstanceOf(Set);
-      expect(perms.size).toBe(5);
+      expect(perms.size).toBe(6);
       for (const id of expected) {
         expect(perms.has(id)).toBe(true);
       }
@@ -134,7 +137,7 @@ describe('RBAC Permission Matrix', () => {
     // Phase 31.2 D-04: migration 054 adds `mcp.use` to every existing role.
     const adminPermissions = new Set([
       'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
-      'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
+      'reports.export', 'reports.vpat', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
       'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view', 'users.create', 'users.delete',
       'users.activate', 'users.reset_password', 'users.roles', 'admin.users', 'admin.roles',
       'admin.teams', 'admin.plugins', 'admin.org', 'admin.system', 'audit.view',
@@ -144,7 +147,7 @@ describe('RBAC Permission Matrix', () => {
     ]);
 
     const developerPermissions = new Set([
-      'scans.create', 'reports.view', 'reports.view_technical', 'reports.export',
+      'scans.create', 'reports.view', 'reports.view_technical', 'reports.export', 'reports.vpat',
       'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
       'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
       'branding.view', 'branding.manage',
@@ -152,13 +155,13 @@ describe('RBAC Permission Matrix', () => {
     ]);
 
     const userPermissions = new Set([
-      'scans.create', 'scans.schedule', 'reports.view', 'reports.export', 'reports.delete',
+      'scans.create', 'scans.schedule', 'reports.view', 'reports.export', 'reports.vpat', 'reports.delete',
       'reports.compare', 'issues.assign', 'manual_testing', 'trends.view', 'branding.view',
       'mcp.use',
     ]);
 
     const executivePermissions = new Set([
-      'reports.view', 'reports.export', 'trends.view', 'branding.view',
+      'reports.view', 'reports.export', 'reports.vpat', 'trends.view', 'branding.view',
       'mcp.use',
     ]);
 

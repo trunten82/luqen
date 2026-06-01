@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { rmSync, existsSync, mkdirSync } from 'node:fs';
 import { SqliteStorageAdapter } from '../../src/db/sqlite/index.js';
+import { ALL_PERMISSION_IDS } from '../../src/permissions.js';
 import { ScanOrchestrator } from '../../src/scanner/orchestrator.js';
 import { authRoutes } from '../../src/routes/auth.js';
 import { homeRoutes } from '../../src/routes/home.js';
@@ -110,6 +111,23 @@ export async function createTestServer(): Promise<TestContext> {
 
   await server.register(import('@fastify/formbody'));
   await registerSession(server, TEST_SESSION_SECRET);
+
+  // Default authenticated-admin context (with all permissions) for the shared
+  // harness, so routes guarded by requirePermission are satisfied. Only applied
+  // when a real session/token hasn't already populated request.user, so auth
+  // tests that drive the real login flow are unaffected. Tests that need to
+  // exercise the genuinely-unauthenticated path send `x-test-anon: 1`.
+  server.addHook('preHandler', async (request) => {
+    if (request.user === undefined && request.headers['x-test-anon'] !== '1') {
+      request.user = {
+        id: 'test-user-id',
+        username: 'testuser',
+        role: 'admin',
+        currentOrgId: 'system',
+      } as NonNullable<FastifyRequest['user']>;
+      (request as unknown as Record<string, unknown>)['permissions'] = new Set(ALL_PERMISSION_IDS);
+    }
+  });
 
   // Replace reply.view with a JSON-returning stub so tests can inspect template data
   server.decorateReply(

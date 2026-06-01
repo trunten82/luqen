@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { requirePermission } from '../auth/middleware.js';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../db/index.js';
@@ -115,7 +116,8 @@ export async function compareRoutes(
 ): Promise<void> {
   server.get(
     '/reports/compare',
-    { schema: { ...HtmlPageSchema, tags: ['compare'] } },
+    {
+      preHandler: requirePermission('reports.compare'), schema: { ...HtmlPageSchema, tags: ['compare'] } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const query = request.query as CompareQuery;
       const idA = query.a?.trim();

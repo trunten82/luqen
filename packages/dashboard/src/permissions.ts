@@ -11,6 +11,7 @@ export const ALL_PERMISSIONS = [
   { id: 'reports.view', label: 'View reports', group: 'Reports' },
   { id: 'reports.view_technical', label: 'View technical details (selectors, context)', group: 'Reports' },
   { id: 'reports.export', label: 'Export CSV and PDF', group: 'Reports' },
+  { id: 'reports.vpat', label: 'Generate and export VPAT/ACR reports', group: 'Reports' },
   { id: 'reports.delete', label: 'Delete reports', group: 'Reports' },
   { id: 'reports.compare', label: 'Compare reports', group: 'Reports' },
   { id: 'issues.assign', label: 'Assign issues to team members', group: 'Issues' },
@@ -99,11 +100,17 @@ export async function resolveEffectivePermissions(
 // Phase 62.1 — Multi-team RBAC overlay: effective role per org
 // ---------------------------------------------------------------------------
 
-/** Role rank for MAX aggregation. Higher = more permissive. */
+/**
+ * Role rank for MAX aggregation. Higher = more permissive. Executive sits above
+ * Viewer and below Member: it is a read + reports/VPAT/export role with no scan,
+ * manual-testing or admin capability. Inserting it keeps the relative order of
+ * the original four roles (Viewer < Member < Admin < Owner).
+ */
 const ROLE_RANK: Record<string, number> = {
-  Owner: 4,
-  Admin: 3,
-  Member: 2,
+  Owner: 5,
+  Admin: 4,
+  Member: 3,
+  Executive: 2,
   Viewer: 1,
 };
 
@@ -208,7 +215,7 @@ export async function resolveEffectiveRoles(
 /** Permissions for the org-level "Owner" role (all org permissions). */
 export const ORG_OWNER_PERMISSIONS: readonly string[] = [
   'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
-  'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
+  'reports.export', 'reports.vpat', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
   'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
   'admin.roles', 'admin.teams', 'admin.org', 'admin.plugins',
   'users.create', 'users.delete', 'users.activate', 'users.reset_password',
@@ -220,7 +227,7 @@ export const ORG_OWNER_PERMISSIONS: readonly string[] = [
 /** Permissions for the org-level "Admin" role. */
 export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
   'scans.create', 'scans.schedule', 'reports.view', 'reports.view_technical',
-  'reports.export', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
+  'reports.export', 'reports.vpat', 'reports.delete', 'reports.compare', 'issues.assign', 'issues.fix',
   'manual_testing', 'repos.manage', 'repos.credentials', 'trends.view',
   'admin.plugins', 'users.create', 'users.delete', 'users.activate', 'users.reset_password',
   'compliance.view', 'compliance.manage',
@@ -230,10 +237,21 @@ export const ORG_ADMIN_PERMISSIONS: readonly string[] = [
 
 /** Permissions for the org-level "Member" role. */
 export const ORG_MEMBER_PERMISSIONS: readonly string[] = [
-  'scans.create', 'reports.view', 'reports.view_technical', 'reports.export',
+  'scans.create', 'reports.view', 'reports.view_technical', 'reports.export', 'reports.vpat',
   'reports.compare', 'manual_testing', 'repos.credentials', 'trends.view', 'compliance.view',
   'branding.view',
   'llm.view',
+];
+
+/**
+ * Permissions for the org-level "Executive" role: a read + reports/VPAT/export
+ * role. Can view reports, trends, compliance and branding, and generate &
+ * export the VPAT/ACR (and its evidence pack), but cannot run scans, edit the
+ * manual-testing record, or administer the org/users/teams.
+ */
+export const ORG_EXECUTIVE_PERMISSIONS: readonly string[] = [
+  'reports.view', 'reports.view_technical', 'reports.export', 'reports.vpat', 'reports.compare',
+  'trends.view', 'compliance.view', 'branding.view', 'llm.view',
 ];
 
 /** Permissions for the org-level "Viewer" role. */
@@ -255,5 +273,6 @@ export const DEFAULT_ORG_ROLES: ReadonlyArray<{
   { name: 'Owner', description: 'Full organization owner with all permissions', permissions: ORG_OWNER_PERMISSIONS },
   { name: 'Admin', description: 'Manage teams, run scans, view reports, configure plugins', permissions: ORG_ADMIN_PERMISSIONS },
   { name: 'Member', description: 'Run scans and view reports', permissions: ORG_MEMBER_PERMISSIONS },
+  { name: 'Executive', description: 'View reports and generate/export VPAT/ACR reports (no scans or administration)', permissions: ORG_EXECUTIVE_PERMISSIONS },
   { name: 'Viewer', description: 'View reports only', permissions: ORG_VIEWER_PERMISSIONS },
 ];

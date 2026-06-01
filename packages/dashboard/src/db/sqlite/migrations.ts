@@ -2049,4 +2049,63 @@ CREATE INDEX IF NOT EXISTS idx_manual_test_audit_org
   ON manual_test_audit(org_id);
     `,
   },
+  {
+    id: '080',
+    name: 'rbac-reports-vpat-and-executive-role',
+    sql: `
+-- RBAC full-coverage backfill (2026-06-01). The VPAT view + all exports + manual
+-- testing + compare routes are now gated by named permissions. Two things must
+-- happen for EXISTING orgs so this gating does not strip access from current
+-- users (new orgs already get all of this from DEFAULT_ORG_ROLES at creation):
+--   1. the new 'reports.vpat' permission is granted to existing Owner/Admin/
+--      Member org roles (they keep VPAT/ACR generation + export);
+--   2. an 'Executive' org role (read + reports/VPAT/export, no scans/admin) is
+--      added to every existing org so it becomes assignable.
+-- Global admins are unaffected (they bypass permission checks).
+
+-- 1a. Global (system) roles that can already export reports can also generate
+--     VPAT/ACR (admin keeps "all permissions"; executive gains it per product
+--     direction; developer/user keep the VPAT access they had when it was ungated).
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+SELECT DISTINCT role_id, 'reports.vpat'
+FROM role_permissions
+WHERE permission = 'reports.export'
+  AND role_id IN ('admin', 'developer', 'user', 'executive');
+
+-- 1b. Existing privileged org roles keep VPAT generation + export.
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+SELECT id, 'reports.vpat'
+FROM roles
+WHERE org_id != 'system' AND name IN ('Owner', 'Admin', 'Member');
+
+-- 2. Create an "Executive" role for every org that lacks one
+--    (roles has UNIQUE(name, org_id) since migration 021).
+INSERT INTO roles (id, name, description, is_system, org_id, created_at)
+SELECT lower(hex(randomblob(16))),
+       'Executive',
+       'View reports and generate/export VPAT/ACR reports (no scans or administration)',
+       0, o.id, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+FROM organizations o
+WHERE NOT EXISTS (
+  SELECT 1 FROM roles r WHERE r.org_id = o.id AND r.name = 'Executive'
+);
+
+-- 3. Seed the Executive role's permission set.
+INSERT OR IGNORE INTO role_permissions (role_id, permission)
+SELECT r.id, p.permission
+FROM roles r
+JOIN (
+  SELECT 'reports.view' AS permission UNION ALL
+  SELECT 'reports.view_technical' UNION ALL
+  SELECT 'reports.export' UNION ALL
+  SELECT 'reports.vpat' UNION ALL
+  SELECT 'reports.compare' UNION ALL
+  SELECT 'trends.view' UNION ALL
+  SELECT 'compliance.view' UNION ALL
+  SELECT 'branding.view' UNION ALL
+  SELECT 'llm.view'
+) p
+WHERE r.name = 'Executive' AND r.org_id != 'system';
+    `,
+  },
 ];
