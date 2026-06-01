@@ -1469,5 +1469,18 @@
   "fleet": {
     "downloadReports": "Transferir todos os relatórios",
     "downloadReportsHint": "Transfere um pacote .tar.gz com o VPAT/ACR de cada site com uma análise concluída"
+  },
+  "share": {
+    "unavailableTitle": "Esta ligação de partilha já não está disponível",
+    "unavailableBody": "Esta ligação de partilha do documento expirou ou foi revogada. Solicite uma nova ligação à organização que a partilhou.",
+    "panelHeading": "Partilhar externamente",
+    "panelHint": "Crie uma ligação segura para permitir que um revisor externo veja este relatório e transfira o respetivo pacote de evidências, sem o expor publicamente. As ligações expiram após 90 dias e podem ser revogadas a qualquer momento.",
+    "create": "Criar ligação",
+    "copy": "Copiar",
+    "revoke": "Revogar",
+    "copied": "Copiado",
+    "revokeConfirm": "Revogar esta ligação de partilha? Quem a tiver perderá o acesso.",
+    "createError": "Não foi possível concluir a ação. Tente novamente.",
+    "none": "Não há ligações de partilha ativas."
   }
 }

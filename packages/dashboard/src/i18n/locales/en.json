@@ -1270,7 +1270,16 @@
     "copied": "Copied",
     "saving": "Saving…",
     "saved": "Saved",
-    "saveError": "Could not save — try again"
+    "saveError": "Could not save — try again",
+    "unavailableTitle": "This share link is no longer available",
+    "unavailableBody": "This document share link has expired or been revoked. Please request a new link from the organisation that shared it.",
+    "panelHeading": "Share externally",
+    "panelHint": "Create a secure link to let an external reviewer view this report and download its evidence pack — without exposing it publicly. Links expire after 90 days and can be revoked at any time.",
+    "create": "Create link",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke this share link? Anyone holding it will lose access.",
+    "createError": "Could not complete the action. Please try again.",
+    "none": "No active share links."
   },
   "reportDetail": {
     "siteUrl": "Site URL",

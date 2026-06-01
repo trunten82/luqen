@@ -1469,5 +1469,18 @@
   "fleet": {
     "downloadReports": "Alle Berichte herunterladen",
     "downloadReportsHint": "Lädt ein .tar.gz-Bündel mit dem VPAT/ACR für jede Website mit abgeschlossenem Scan herunter"
+  },
+  "share": {
+    "unavailableTitle": "Dieser Freigabelink ist nicht mehr verfügbar",
+    "unavailableBody": "Dieser Dokument-Freigabelink ist abgelaufen oder wurde widerrufen. Bitte fordern Sie einen neuen Link bei der Organisation an, die ihn geteilt hat.",
+    "panelHeading": "Extern teilen",
+    "panelHint": "Erstellen Sie einen sicheren Link, damit ein externer Prüfer diesen Bericht ansehen und sein Nachweispaket herunterladen kann — ohne ihn öffentlich zugänglich zu machen. Links laufen nach 90 Tagen ab und können jederzeit widerrufen werden.",
+    "create": "Link erstellen",
+    "copy": "Kopieren",
+    "revoke": "Widerrufen",
+    "copied": "Kopiert",
+    "revokeConfirm": "Diesen Freigabelink widerrufen? Wer ihn besitzt, verliert den Zugriff.",
+    "createError": "Aktion konnte nicht abgeschlossen werden. Bitte erneut versuchen.",
+    "none": "Keine aktiven Freigabelinks."
   }
 }

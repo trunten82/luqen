@@ -522,6 +522,33 @@ export interface CriterionEvidenceCount {
 }
 
 // ---------------------------------------------------------------------------
+// Secure external report shares — anonymous, token-authorised access to one
+// scan's VPAT/ACR + evidence pack, revocable and time-limited.
+// ---------------------------------------------------------------------------
+
+export interface ReportShareRecord {
+  readonly id: string;
+  /** The unguessable secret carried in the /share/:token URL. */
+  readonly token: string;
+  readonly scanId: string;
+  readonly orgId: string;
+  readonly createdBy: string | null;
+  readonly createdAt: string;
+  /** ISO timestamp after which the link no longer works (null = never expires). */
+  readonly expiresAt: string | null;
+  /** ISO timestamp when the link was revoked (null = active). */
+  readonly revokedAt: string | null;
+}
+
+export interface AddReportShareInput {
+  readonly scanId: string;
+  readonly orgId?: string;
+  readonly createdBy?: string | null;
+  /** Days until expiry; null = never. Defaults to 90 in the repository. */
+  readonly expiresInDays?: number | null;
+}
+
+// ---------------------------------------------------------------------------
 // Manual-test verdict audit (append-only change log with optional reason).
 // Current verdict stays in manual_test_results; each change appends here.
 // ---------------------------------------------------------------------------

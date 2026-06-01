@@ -1,0 +1,158 @@
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { Type } from '@sinclair/typebox';
+import { readFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { StorageAdapter } from '../db/index.js';
+import type { ScanRecord, ReportShareRecord } from '../db/types.js';
+import { HtmlPageSchema } from '../api/schemas/envelope.js';
+import { loadVpatForScan, buildEvidencePackZip } from '../services/vpat-share-service.js';
+import { generateVpatPdf } from '../pdf/generator.js';
+import { t } from '../i18n/index.js';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const ShareTokenParams = Type.Object({ token: Type.String() }, { additionalProperties: true });
+
+/**
+ * Anonymous, token-authorised access to a single scan's VPAT/ACR + evidence
+ * pack. The token (not the scan id) is the secret; a share is valid only while
+ * it exists, is unexpired and unrevoked, and its scan is still completed.
+ *
+ * These routes are exempt from the global auth guard (see server.ts) — the
+ * token IS the authorisation, so internal RBAC gating never applies here.
+ */
+export async function shareRoutes(
+  server: FastifyInstance,
+  storage: StorageAdapter,
+  uploadsRoot: string,
+): Promise<void> {
+  // Resolve a token to its active share + completed scan, or a reason it is not
+  // available ('gone' = expired/revoked/missing-scan; 'notfound' = bad token).
+  async function resolveActiveShare(
+    token: string,
+  ): Promise<{ share: ReportShareRecord; scan: ScanRecord } | { reason: 'gone' | 'notfound' }> {
+    const share = await storage.reportShares.getByToken(token);
+    if (share === null) return { reason: 'notfound' };
+    if (share.revokedAt !== null) return { reason: 'gone' };
+    if (share.expiresAt !== null && Date.parse(share.expiresAt) <= Date.now()) return { reason: 'gone' };
+    const scan = await storage.scans.getScan(share.scanId);
+    if (scan === null || scan.status !== 'completed') return { reason: 'gone' };
+    return { share, scan };
+  }
+
+  // A clean "no longer available" page for missing / expired / revoked links.
+  function notAvailablePage(reply: FastifyReply, code: number): FastifyReply {
+    const esc = (s: string): string =>
+      s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">`
+      + `<meta name="viewport" content="width=device-width, initial-scale=1">`
+      + `<title>${esc(t('share.unavailableTitle'))}</title>`
+      + `<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;background:#faf7f6;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:2rem}`
+      + `.card{max-width:34rem;background:#fff;border:1px solid #d0d4de;border-top:4px solid #5a2a26;border-radius:8px;padding:2rem;text-align:center}`
+      + `h1{color:#5a2a26;font-size:1.3rem;margin:0 0 .6rem}p{color:#4a4a4a;line-height:1.5;margin:0}</style></head>`
+      + `<body><div class="card"><h1>${esc(t('share.unavailableTitle'))}</h1>`
+      + `<p>${esc(t('share.unavailableBody'))}</p></div></body></html>`;
+    return reply.code(code).type('text/html').send(html);
+  }
+
+  // ── GET /share/:token — the shared VPAT/ACR document ──────────────────────
+  server.get(
+    '/share/:token',
+    { schema: { ...HtmlPageSchema, tags: ['share'], params: ShareTokenParams } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { token } = request.params as { token: string };
+      const resolved = await resolveActiveShare(token);
+      if ('reason' in resolved) {
+        return notAvailablePage(reply, resolved.reason === 'notfound' ? 404 : 410);
+      }
+      const { scan } = resolved;
+
+      const loaded = await loadVpatForScan(storage, scan);
+      if (loaded === null) return notAvailablePage(reply, 410);
+
+      const handlebars = (await import('handlebars')).default;
+      const viewsDir = resolve(join(__dirname, '..', 'views'));
+      handlebars.registerHelper('conformanceBadge', (conformance: string) => {
+        const cls =
+          conformance === 'Supports' ? 'badge--success' :
+          conformance === 'Partially Supports' ? 'badge--warning' :
+          conformance === 'Does Not Support' ? 'badge--error' : 'badge--neutral';
+        const escaped = handlebars.escapeExpression(conformance);
+        return new handlebars.SafeString(`<span class="badge ${cls}">${escaped}</span>`);
+      });
+      const template = handlebars.compile(await readFile(join(viewsDir, 'vpat.hbs'), 'utf-8'));
+      const html = template(
+        {
+          scan,
+          vpat: loaded.vpat,
+          evidenceGroups: loaded.evidenceGroups,
+          // External viewer: download links point at the token routes (the
+          // internal export routes are RBAC-gated and would 403), and the
+          // app-only "close window" control is hidden.
+          pdfUrl: `/share/${encodeURIComponent(token)}/vpat.pdf`,
+          packUrl: loaded.evidenceGroups.length > 0 ? `/share/${encodeURIComponent(token)}/evidence-pack.zip` : null,
+          isShared: true,
+        },
+        { data: { root: { locale: 'en' } } },
+      );
+      return reply.type('text/html').send(html);
+    },
+  );
+
+  // ── GET /share/:token/vpat.pdf — token-authorised ACR PDF ─────────────────
+  server.get(
+    '/share/:token/vpat.pdf',
+    {
+      schema: {
+        tags: ['share'],
+        params: ShareTokenParams,
+        response: { 200: Type.String(), 404: Type.Object({ error: Type.String() }), 410: Type.Object({ error: Type.String() }) },
+        produces: ['application/pdf'],
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { token } = request.params as { token: string };
+      const resolved = await resolveActiveShare(token);
+      if ('reason' in resolved) {
+        return reply.code(resolved.reason === 'notfound' ? 404 : 410).send({ error: 'Share not available' });
+      }
+      const loaded = await loadVpatForScan(storage, resolved.scan);
+      if (loaded === null) return reply.code(410).send({ error: 'Share not available' });
+      const pdf = await generateVpatPdf(loaded.scanMeta, loaded.vpat, { groups: loaded.evidenceGroups, uploadsRoot });
+      let hostname: string;
+      try { hostname = new URL(resolved.scan.siteUrl).hostname; } catch { hostname = 'report'; }
+      return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', `attachment; filename="vpat_${hostname}.pdf"`)
+        .send(pdf);
+    },
+  );
+
+  // ── GET /share/:token/evidence-pack.zip — token-authorised evidence pack ──
+  server.get(
+    '/share/:token/evidence-pack.zip',
+    {
+      schema: {
+        tags: ['share'],
+        params: ShareTokenParams,
+        response: { 200: Type.String(), 404: Type.Object({ error: Type.String() }), 410: Type.Object({ error: Type.String() }) },
+        produces: ['application/zip'],
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { token } = request.params as { token: string };
+      const resolved = await resolveActiveShare(token);
+      if ('reason' in resolved) {
+        return reply.code(resolved.reason === 'notfound' ? 404 : 410).send({ error: 'Share not available' });
+      }
+      const zip = await buildEvidencePackZip(storage, resolved.scan, uploadsRoot);
+      if (zip === null) return reply.code(410).send({ error: 'Share not available' });
+      let hostname: string;
+      try { hostname = new URL(resolved.scan.siteUrl).hostname; } catch { hostname = 'report'; }
+      return reply
+        .header('Content-Type', 'application/zip')
+        .header('Content-Disposition', `attachment; filename="vpat-evidence-pack_${hostname}.zip"`)
+        .send(zip);
+    },
+  );
+}

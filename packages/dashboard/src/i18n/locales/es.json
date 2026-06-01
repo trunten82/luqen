@@ -1469,5 +1469,18 @@
   "fleet": {
     "downloadReports": "Descargar todos los informes",
     "downloadReportsHint": "Descarga un paquete .tar.gz con el VPAT/ACR de cada sitio con un análisis completado"
+  },
+  "share": {
+    "unavailableTitle": "Este enlace para compartir ya no está disponible",
+    "unavailableBody": "Este enlace para compartir el documento ha caducado o ha sido revocado. Solicite un nuevo enlace a la organización que lo compartió.",
+    "panelHeading": "Compartir externamente",
+    "panelHint": "Cree un enlace seguro para que un revisor externo pueda ver este informe y descargar su paquete de evidencias, sin exponerlo públicamente. Los enlaces caducan a los 90 días y pueden revocarse en cualquier momento.",
+    "create": "Crear enlace",
+    "copy": "Copiar",
+    "revoke": "Revocar",
+    "copied": "Copiado",
+    "revokeConfirm": "¿Revocar este enlace? Quien lo tenga perderá el acceso.",
+    "createError": "No se pudo completar la acción. Inténtelo de nuevo.",
+    "none": "No hay enlaces para compartir activos."
   }
 }
