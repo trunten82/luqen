@@ -195,19 +195,51 @@ describe('Manual Test Routes', () => {
   });
 
   describe('POST /reports/:id/manual', () => {
-    it('upserts a test result and returns HTML for HTMX swap', async () => {
+    it('upserts a test result and returns JSON (status + stats + audit entry)', async () => {
       const scanId = await makeScan(ctx);
 
       const response = await ctx.server.inject({
         method: 'POST',
         url: `/reports/${scanId}/manual`,
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        payload: `criterionId=${encodeURIComponent(FIRST_CRITERION.id)}&status=pass&notes=Looks+good`,
+        payload: `criterionId=${encodeURIComponent(FIRST_CRITERION.id)}&status=pass&notes=Looks+good&comment=verified`,
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.headers['content-type']).toContain('text/html');
-      expect(response.body).toContain(FIRST_CRITERION.id);
+      expect(response.headers['content-type']).toContain('application/json');
+      const body = response.json() as {
+        criterionId: string;
+        status: string;
+        stats: { passed: number };
+        auditEntry: { fromStatus: string; toStatus: string; comment: string } | null;
+      };
+      expect(body.criterionId).toBe(FIRST_CRITERION.id);
+      expect(body.status).toBe('pass');
+      expect(body.stats.passed).toBe(1);
+      // untested → pass with a comment ⇒ an audit entry is recorded.
+      expect(body.auditEntry?.fromStatus).toBe('untested');
+      expect(body.auditEntry?.toStatus).toBe('pass');
+      expect(body.auditEntry?.comment).toBe('verified');
+    });
+
+    it('records an audit row on verdict change and skips no-op re-saves', async () => {
+      const scanId = await makeScan(ctx);
+      const url = `/reports/${scanId}/manual`;
+      const hdr = { 'content-type': 'application/x-www-form-urlencoded' };
+
+      // untested → pass (change, no comment) ⇒ 1 audit row
+      await ctx.server.inject({ method: 'POST', url, headers: hdr, payload: `criterionId=${encodeURIComponent(FIRST_CRITERION.id)}&status=pass` });
+      // pass → pass, no comment (no-op) ⇒ no new row
+      await ctx.server.inject({ method: 'POST', url, headers: hdr, payload: `criterionId=${encodeURIComponent(FIRST_CRITERION.id)}&status=pass` });
+      // pass → fail with reason ⇒ 1 more row
+      const r3 = await ctx.server.inject({ method: 'POST', url, headers: hdr, payload: `criterionId=${encodeURIComponent(FIRST_CRITERION.id)}&status=fail&comment=regressed` });
+
+      expect((r3.json() as { auditEntry: { fromStatus: string; toStatus: string } }).auditEntry.fromStatus).toBe('pass');
+      const audit = await ctx.storage.manualTestAudit.listAudit(scanId);
+      expect(audit).toHaveLength(2);
+      expect(audit[0].toStatus).toBe('fail'); // newest first
+      expect(audit[0].comment).toBe('regressed');
+      expect(audit[1].toStatus).toBe('pass');
     });
 
     it('persists the test result in storage', async () => {
