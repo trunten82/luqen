@@ -1173,7 +1173,12 @@
     "partiallyAutomatedDesc": "L'automatisation détecte certains problèmes mais une vérification humaine est nécessaire pour confirmer la conformité complète.",
     "evidenceLabel": "Preuves",
     "evidenceUpload": "Téléverser",
-    "evidenceDelete": "Supprimer la preuve"
+    "evidenceDelete": "Supprimer la preuve",
+    "setVerdict": "Définir le verdict",
+    "notesReason": "Notes / motif du changement",
+    "save": "Enregistrer",
+    "unsaved": "Modifications non enregistrées",
+    "history": "Historique des modifications"
   },
   "assignments": {
     "siteUrl": "URL du Site",
@@ -1398,7 +1403,8 @@
     "attStandards": "Normes évaluées",
     "attMethods": "Méthodes",
     "attEvaluator": "Évaluateur",
-    "attestationStatement": "Ce rapport reflète une évaluation de bonne foi du site à la date d’évaluation, réalisée selon les méthodes indiquées ci-dessus. Il consigne l’état de conformité à ce moment et la démarche de remédiation en cours ; il ne constitue pas une certification et ne garantit pas la conformité."
+    "attestationStatement": "Ce rapport reflète une évaluation de bonne foi du site à la date d’évaluation, réalisée selon les méthodes indiquées ci-dessus. Il consigne l’état de conformité à ce moment et la démarche de remédiation en cours ; il ne constitue pas une certification et ne garantit pas la conformité.",
+    "attReasonedChanges": "Changements de verdict documentés (avec motifs)"
   },
   "a11yStatement": {
     "status": {

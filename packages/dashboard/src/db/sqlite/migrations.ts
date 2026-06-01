@@ -2020,4 +2020,33 @@ CREATE INDEX IF NOT EXISTS idx_manual_test_evidence_org
   ON manual_test_evidence(org_id);
     `,
   },
+  {
+    id: '079',
+    name: 'create-manual-test-audit',
+    sql: `
+-- Append-only audit trail of manual-test VERDICT changes. The current verdict
+-- lives in manual_test_results (upserted); each change ALSO appends a row here
+-- recording from_status → to_status, an OPTIONAL reason/comment, the actor and
+-- timestamp. Surfaced as per-criterion history on the manual page and summarised
+-- in the VPAT/ACR (a dated, reasoned testing record = US-lawsuit-protection
+-- evidence of ongoing good-faith effort). Never mutated after insert.
+CREATE TABLE IF NOT EXISTS manual_test_audit (
+  id            TEXT PRIMARY KEY,
+  scan_id       TEXT NOT NULL,
+  criterion_id  TEXT NOT NULL,
+  from_status   TEXT,
+  to_status     TEXT NOT NULL,
+  comment       TEXT,
+  actor         TEXT,
+  created_at    TEXT NOT NULL,
+  org_id        TEXT NOT NULL DEFAULT 'system'
+);
+CREATE INDEX IF NOT EXISTS idx_manual_test_audit_scan
+  ON manual_test_audit(scan_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_manual_test_audit_criterion
+  ON manual_test_audit(scan_id, criterion_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_manual_test_audit_org
+  ON manual_test_audit(org_id);
+    `,
+  },
 ];

@@ -95,6 +95,7 @@
     <tr><th>{{t "vpat.attStandards"}}</th><td>{{vpat.attestation.standardsLabel}}</td></tr>
     <tr><th>{{t "vpat.attMethods"}}</th><td>{{#each vpat.attestation.methods}}{{this}}{{#unless @last}}; {{/unless}}{{/each}}</td></tr>
     {{#if vpat.attestation.evaluator}}<tr><th>{{t "vpat.attEvaluator"}}</th><td>{{vpat.attestation.evaluator}}</td></tr>{{/if}}
+    {{#if vpat.attestation.reasonedChangeCount}}<tr><th>{{t "vpat.attReasonedChanges"}}</th><td>{{vpat.attestation.reasonedChangeCount}}</td></tr>{{/if}}
   </tbody>
 </table>
 <p class="methodology__disclaimer">{{t "vpat.attestationStatement"}}</p>
