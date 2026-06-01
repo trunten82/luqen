@@ -21,7 +21,7 @@
     .print-btn--secondary { background: #6b6b6b; }
 
     .subtitle { font-size: 0.85rem; color: #4a4a4a; margin-bottom: 1.25rem; }
-    .subtitle span { margin-right: 1.5rem; }
+    .subtitle span { margin-right: 1.5rem; overflow-wrap: anywhere; word-break: break-word; }
 
     /* Summary cards */
     .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.6rem; margin: 1rem 0 1.5rem; }
@@ -32,8 +32,10 @@
     .summary-card--partial .summary-card__value { color: #7c5612; }
     .summary-card--dns .summary-card__value { color: #a52822; }
 
-    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 1rem; }
-    th, td { padding: 0.45rem 0.5rem; text-align: left; border-bottom: 1px solid #d0d4de; vertical-align: top; }
+    table { width: 100%; max-width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 1rem; table-layout: fixed; }
+    /* Long unbreakable strings (e.g. a scoped URL in the attestation table) must
+       wrap rather than force horizontal overflow on narrow / mobile viewports. */
+    th, td { padding: 0.45rem 0.5rem; text-align: left; border-bottom: 1px solid #d0d4de; vertical-align: top; overflow-wrap: anywhere; word-break: break-word; }
     th { background: #faf7f6; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; }
     .crit-title { color: #6b6b6b; font-size: 0.72rem; }
 
@@ -57,7 +59,7 @@
     .evidence-gallery { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.6rem; }
     .evidence-thumb { display: inline-block; border: 1px solid #d0d4de; border-radius: 4px; padding: 2px; line-height: 0; }
     .evidence-thumb img { max-width: 160px; max-height: 120px; width: auto; height: auto; display: block; }
-    .evidence-doc { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.6rem; border: 1px solid #d0d4de; border-radius: 4px; font-size: 0.78rem; background: #faf7f6; text-decoration: none; }
+    .evidence-doc { display: inline-flex; align-items: center; gap: 0.35rem; max-width: 100%; padding: 0.3rem 0.6rem; border: 1px solid #d0d4de; border-radius: 4px; font-size: 0.78rem; background: #faf7f6; text-decoration: none; overflow-wrap: anywhere; word-break: break-word; }
     .evidence-doc::before { content: "\1F4C4"; font-size: 0.85rem; }
 
     .report-footer { margin-top: 1.5rem; padding-top: 0.4rem; border-top: 1px solid #d0d4de; font-size: 0.7rem; color: #6b6b6b; text-align: center; }
