@@ -4472,6 +4472,53 @@ html[data-density="plain"] .data-table th {
   font-style: italic;
 }
 
+/* ── Manual-test evidence (Slice C) ──────────────────────────────────── */
+.mt-evidence {
+  margin: 0.5rem 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle, var(--border, #e5e7eb));
+}
+.mt-evidence__heading {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+.mt-evidence__list {
+  list-style: none;
+  margin: 0 0 0.4rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.mt-evidence__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+.mt-evidence__del {
+  border: none;
+  background: none;
+  color: var(--color-danger, #b91c1c);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.25rem;
+}
+.mt-evidence__upload {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.mt-evidence__file {
+  font-size: 0.8rem;
+  max-width: 100%;
+}
+
 /* ── Step-by-step guide (manual testing) ─────────────────────────────── */
 .mt-steps-detail,
 .mt-examples-detail {

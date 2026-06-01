@@ -483,6 +483,45 @@ export interface UpsertManualTestInput {
 }
 
 // ---------------------------------------------------------------------------
+// Manual-test evidence (Slice C) — file artifacts supporting a manual test.
+// N files per (scan, criterion); the per-criterion verdict lives in
+// manual_test_results. Only file metadata is stored; bytes live on disk.
+// ---------------------------------------------------------------------------
+
+export interface ManualTestEvidenceRecord {
+  readonly id: string;
+  readonly scanId: string;
+  readonly criterionId: string;
+  /** Public URL path under /uploads/... where the file is served. */
+  readonly filePath: string;
+  /** Original (sanitised) display filename. */
+  readonly fileName: string;
+  readonly mimeType: string | null;
+  readonly fileSize: number | null;
+  readonly uploadedBy: string | null;
+  readonly uploadedAt: string;
+  readonly orgId: string;
+}
+
+export interface AddManualTestEvidenceInput {
+  readonly scanId: string;
+  readonly criterionId: string;
+  readonly filePath: string;
+  readonly fileName: string;
+  readonly mimeType?: string | null;
+  readonly fileSize?: number | null;
+  readonly uploadedBy?: string | null;
+  readonly uploadedAt?: string | null;
+  readonly orgId?: string;
+}
+
+/** Per-criterion evidence count, for VPAT remark enrichment. */
+export interface CriterionEvidenceCount {
+  readonly criterionId: string;
+  readonly count: number;
+}
+
+// ---------------------------------------------------------------------------
 // API key types
 // ---------------------------------------------------------------------------
 

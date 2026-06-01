@@ -1,12 +1,54 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
+import { mkdir, unlink } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { pipeline } from 'node:stream';
+import { promisify } from 'node:util';
+import { join } from 'node:path';
 import type { StorageAdapter } from '../db/index.js';
+import type { ManualTestEvidenceRecord } from '../db/types.js';
 import {
   MANUAL_CRITERIA,
   getGroupedCriteria,
   type ManualTestStatus,
 } from '../manual-criteria.js';
 import { HtmlPageSchema } from '../api/schemas/envelope.js';
+
+const pump = promisify(pipeline);
+
+/** Allowed evidence MIME types — screenshots + documents (legal-evidence norm). */
+function isAllowedEvidenceMime(mime: string): boolean {
+  return mime.startsWith('image/') || mime === 'application/pdf';
+}
+
+/** HTML-escape a string for safe interpolation into fragments. */
+function esc(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Render the per-criterion evidence list fragment (used by the GET page render
+ * AND the upload/delete HTMX responses, so the markup stays identical).
+ */
+function renderEvidenceList(
+  scanId: string,
+  criterionId: string,
+  items: readonly ManualTestEvidenceRecord[],
+): string {
+  const rows = items
+    .map(
+      (e) => `<li class="mt-evidence__item" id="mt-ev-${esc(e.id)}">
+  <a href="${esc(e.filePath)}" target="_blank" rel="noopener noreferrer">${esc(e.fileName)}</a>
+  <button type="button" class="mt-evidence__del" data-action="mtEvidenceDelete" data-scan-id="${esc(scanId)}" data-evidence-id="${esc(e.id)}" data-criterion-id="${esc(criterionId)}" aria-label="Delete evidence">&times;</button>
+</li>`,
+    )
+    .join('');
+  return `<ul class="mt-evidence__list" id="mt-ev-list-${esc(criterionId)}" data-count="${items.length}">${rows}</ul>`;
+}
 
 const ManualIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 
@@ -58,6 +100,7 @@ function computeStats(
 export async function manualTestRoutes(
   server: FastifyInstance,
   storage: StorageAdapter,
+  uploadsDir?: string,
 ): Promise<void> {
   // GET /reports/:id/manual — render manual testing checklist
   server.get(
@@ -91,6 +134,15 @@ export async function manualTestRoutes(
         savedResults.map((r) => [r.criterionId, r]),
       );
 
+      // Load evidence artifacts (Slice C), grouped per criterion.
+      const evidenceRows = await storage.manualTestEvidence.listEvidence(id);
+      const evidenceMap = new Map<string, ManualTestEvidenceRecord[]>();
+      for (const e of evidenceRows) {
+        const list = evidenceMap.get(e.criterionId) ?? [];
+        list.push(e);
+        evidenceMap.set(e.criterionId, list);
+      }
+
       const { manual, partial } = getGroupedCriteria();
 
       // Merge criteria with saved results
@@ -99,6 +151,7 @@ export async function manualTestRoutes(
       ) =>
         criteria.map((c) => {
           const saved = resultMap.get(c.id);
+          const evidence = evidenceMap.get(c.id) ?? [];
           return {
             ...c,
             status: saved?.status ?? 'untested',
@@ -107,6 +160,8 @@ export async function manualTestRoutes(
             testedAt: saved?.testedAt
               ? new Date(saved.testedAt).toLocaleString()
               : null,
+            evidence: evidence.map((e) => ({ id: e.id, fileName: e.fileName, filePath: e.filePath })),
+            evidenceCount: evidence.length,
           };
         });
 
@@ -271,6 +326,137 @@ export async function manualTestRoutes(
 <span hidden data-mt-tested="${stats.tested}" data-mt-passed="${stats.passed}" data-mt-failed="${stats.failed}" data-mt-na="${stats.na}" data-mt-untested="${stats.untested}" data-mt-pct="${stats.percentage}"></span>`;
 
       return reply.type('text/html').send(html);
+    },
+  );
+
+  // ── Slice C: manual-test evidence file artifacts ──────────────────────────
+
+  const EvidenceUploadParams = Type.Object(
+    { id: Type.String(), criterionId: Type.String() },
+    { additionalProperties: true },
+  );
+  const EvidenceDeleteParams = Type.Object(
+    { id: Type.String(), evidenceId: Type.String() },
+    { additionalProperties: true },
+  );
+
+  /** Shared cross-org guard (mirrors the manual routes above). */
+  async function guardScan(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    scanId: string,
+  ): Promise<{ orgId: string } | null> {
+    const scan = await storage.scans.getScan(scanId);
+    if (scan === null) {
+      reply.code(404).header('content-type', 'text/html').send('Report not found');
+      return null;
+    }
+    const orgId = request.user?.currentOrgId ?? 'system';
+    if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+      reply.code(404).header('content-type', 'text/html').send('Report not found');
+      return null;
+    }
+    return { orgId: scan.orgId ?? orgId };
+  }
+
+  // POST /reports/:id/evidence/:criterionId — upload one evidence file (multipart)
+  server.post(
+    '/reports/:id/evidence/:criterionId',
+    { schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: EvidenceUploadParams } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id, criterionId } = request.params as { id: string; criterionId: string };
+
+      const guard = await guardScan(request, reply, id);
+      if (guard === null) return reply;
+
+      if (MANUAL_CRITERIA.find((c) => c.id === criterionId) === undefined) {
+        return reply.code(400).header('content-type', 'text/html').send('Unknown criterion ID');
+      }
+
+      const data = await request.file();
+      if (data === undefined) {
+        return reply.code(400).header('content-type', 'text/html').send('No file uploaded.');
+      }
+      if (!isAllowedEvidenceMime(data.mimetype)) {
+        return reply
+          .code(400)
+          .header('content-type', 'text/html')
+          .send('Only image and PDF files are allowed.');
+      }
+
+      const rawExt = data.filename.split('.').pop() ?? 'bin';
+      const ext = rawExt.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'bin';
+      const critSlug = criterionId.replace(/[^a-z0-9]+/gi, '-');
+      const unique = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+      const storedName = `${id}-${critSlug}-${unique}.${ext}`;
+      const orgId = guard.orgId;
+      const dir = join(uploadsDir ?? './uploads', orgId, 'evidence');
+      const filepath = join(dir, storedName);
+
+      try {
+        await mkdir(dir, { recursive: true });
+        await pump(data.file, createWriteStream(filepath));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to save evidence';
+        return reply.code(500).header('content-type', 'text/html').send(esc(message));
+      }
+
+      // @fastify/multipart truncates oversized files (5MB limit) — reject + clean up.
+      if (data.file.truncated) {
+        await unlink(filepath).catch(() => undefined);
+        return reply
+          .code(413)
+          .header('content-type', 'text/html')
+          .send('File too large (max 5MB).');
+      }
+
+      // Original display name, sanitised: keep word chars, dot, dash, space.
+      const displayName = (data.filename.split(/[\\/]/).pop() ?? 'evidence')
+        .replace(/[ -<>"]/g, '')
+        .replace(/[^\w.\- ]+/g, '_')
+        .slice(0, 200) || 'evidence';
+
+      await storage.manualTestEvidence.addEvidence({
+        scanId: id,
+        criterionId,
+        filePath: `/uploads/${orgId}/evidence/${storedName}`,
+        fileName: displayName,
+        mimeType: data.mimetype,
+        uploadedBy: request.user?.username ?? 'unknown',
+        orgId,
+      });
+
+      const items = (await storage.manualTestEvidence.listEvidence(id)).filter(
+        (e) => e.criterionId === criterionId,
+      );
+      return reply.type('text/html').send(renderEvidenceList(id, criterionId, items));
+    },
+  );
+
+  // POST /reports/:id/evidence/:evidenceId/delete — remove one evidence file
+  server.post(
+    '/reports/:id/evidence/:evidenceId/delete',
+    { schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: EvidenceDeleteParams } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id, evidenceId } = request.params as { id: string; evidenceId: string };
+
+      const guard = await guardScan(request, reply, id);
+      if (guard === null) return reply;
+
+      const record = await storage.manualTestEvidence.getEvidence(evidenceId);
+      if (record === null || record.scanId !== id) {
+        return reply.code(404).header('content-type', 'text/html').send('Evidence not found');
+      }
+
+      // Best-effort: remove the file from disk (path → uploads root).
+      const relative = record.filePath.replace(/^\/uploads\//, '');
+      await unlink(join(uploadsDir ?? './uploads', relative)).catch(() => undefined);
+      await storage.manualTestEvidence.deleteEvidence(evidenceId);
+
+      const items = (await storage.manualTestEvidence.listEvidence(id)).filter(
+        (e) => e.criterionId === record.criterionId,
+      );
+      return reply.type('text/html').send(renderEvidenceList(id, record.criterionId, items));
     },
   );
 }
