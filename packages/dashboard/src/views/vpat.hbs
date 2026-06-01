@@ -24,7 +24,7 @@
     .subtitle span { margin-right: 1.5rem; }
 
     /* Summary cards */
-    .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.6rem; margin: 1rem 0 1.5rem; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.6rem; margin: 1rem 0 1.5rem; }
     .summary-card { border: 1px solid #d0d4de; border-radius: 6px; padding: 0.6rem; text-align: center; }
     .summary-card__value { font-size: 1.6rem; font-weight: 800; display: block; }
     .summary-card__label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; color: #6b6b6b; }
@@ -179,7 +179,7 @@
 {{#unless vpat.remediation.isEmpty}}
 <h2>{{t "vpat.remediationHeading"}}</h2>
 <p class="intro">{{t "vpat.remediationIntro"}}</p>
-<div class="summary-grid" style="grid-template-columns: repeat(4, 1fr);">
+<div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
   <div class="summary-card"><span class="summary-card__value">{{vpat.remediation.summary.aiProposed}}</span><span class="summary-card__label">{{t "vpat.remAiProposed"}}</span></div>
   <div class="summary-card"><span class="summary-card__value">{{vpat.remediation.summary.developerVerified}}</span><span class="summary-card__label">{{t "vpat.remDeveloperVerified"}}</span></div>
   <div class="summary-card"><span class="summary-card__value">{{vpat.remediation.summary.total}}</span><span class="summary-card__label">{{t "vpat.remTotal"}}</span></div>
