@@ -113,7 +113,8 @@
     "notifications": "Notifications",
     "brandOverview": "Brand Overview",
     "accessibilityStatement": "Accessibility Statement",
-    "reportIdentity": "Report Identity"
+    "reportIdentity": "Report Identity",
+    "agencyConsole": "Agency console"
   },
   "auth": {
     "signInTitle": "Sign in",

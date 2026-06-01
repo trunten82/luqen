@@ -52,4 +52,19 @@ describe('EntitlementRepository (Phase 80)', () => {
     expect(rec.updatedBy).toBe('user-7');
     expect(rec.updatedAt).not.toBe('1970-01-01T00:00:00.000Z');
   });
+
+  it('defaults the agency partner seat (max client sites) to null', async () => {
+    const rec = await storage.entitlements.get('org-none');
+    expect(rec.maxClientSites ?? null).toBeNull();
+  });
+
+  it('persists and clears the agency partner seat (AGENCY-04)', async () => {
+    const id = await newOrg('org-agency');
+    await storage.entitlements.setPlan(id, 'agency', 'admin');
+    let rec = await storage.entitlements.setMaxClientSites(id, 25, 'admin');
+    expect(rec.maxClientSites).toBe(25);
+    expect(rec.plan).toBe('agency'); // plan preserved when seat changes
+    rec = await storage.entitlements.setMaxClientSites(id, null, 'admin');
+    expect(rec.maxClientSites ?? null).toBeNull();
+  });
 });

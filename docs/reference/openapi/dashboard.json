@@ -583,6 +583,44 @@
         }
       }
     },
+    "/admin/agency": {
+      "get": {
+        "tags": [
+          "html-page"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/agency/seat": {
+      "post": {
+        "tags": [
+          "html-page"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/api-keys": {
       "get": {
         "tags": [

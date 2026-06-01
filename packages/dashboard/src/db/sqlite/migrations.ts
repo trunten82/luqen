@@ -2168,4 +2168,14 @@ CREATE TABLE IF NOT EXISTS org_entitlements (
 );
     `,
   },
+  {
+    id: '084',
+    name: 'add-agency-partner-entitlement',
+    sql: `
+-- Phase 81 — partner/resale entitlement (AGENCY-04). For an agency-plan org,
+-- max_client_sites is the number of client sites the partner seat covers
+-- (NULL = unlimited / not set). Admin-controlled; no billing.
+ALTER TABLE org_entitlements ADD COLUMN max_client_sites INTEGER;
+    `,
+  },
 ];
