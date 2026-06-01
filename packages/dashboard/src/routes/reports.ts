@@ -575,11 +575,108 @@ export async function reportRoutes(
       const template = handlebars.compile(
         await readFile(join(viewsDir, 'vpat.hbs'), 'utf-8'),
       );
+      // Secure-share management surface: only users who can export may create
+      // share links; expose the existing ACTIVE links for the panel.
+      const perms = (request as unknown as { permissions?: Set<string> }).permissions;
+      const canShare = perms?.has('reports.export') === true;
+      const now = Date.now();
+      const shareLinks = canShare
+        ? (await storage.reportShares.listForScan(id))
+            .filter((s) => s.revokedAt === null && (s.expiresAt === null || Date.parse(s.expiresAt) > now))
+            .map((s) => ({ id: s.id, token: s.token, expiresAt: s.expiresAt }))
+        : [];
+      // generateCsrf is decorated by @fastify/csrf-protection in production;
+      // guard so the VPAT route still renders in test servers that omit it.
+      const csrfToken = typeof reply.generateCsrf === 'function' ? reply.generateCsrf() : '';
       const html = template(
-        { scan: scanMeta, vpat, evidenceGroups, user: request.user },
+        {
+          scan: scanMeta,
+          vpat,
+          evidenceGroups,
+          user: request.user,
+          pdfUrl: `/api/v1/export/scans/${id}/vpat.pdf`,
+          packUrl: evidenceGroups.length > 0 ? `/api/v1/export/scans/${id}/vpat-pack.zip` : null,
+          isShared: false,
+          canShare,
+          shareLinks,
+          csrfToken,
+        },
         { data: { root: { locale } } },
       );
       return reply.type('text/html').send(html);
+    },
+  );
+
+  // POST /api/v1/reports/:id/shares — create a secure external share link for
+  // this scan's VPAT/ACR + evidence pack. Returns the token (the client builds
+  // the absolute /share/<token> URL). Gated by reports.export; org-scoped.
+  server.post(
+    '/api/v1/reports/:id/shares',
+    {
+      schema: {
+        tags: ['reports'],
+        params: ReportIdParams,
+        body: Type.Object(
+          { expiresInDays: Type.Optional(Type.Union([Type.Number(), Type.Null()])) },
+          { additionalProperties: false },
+        ),
+        response: {
+          200: Type.Object({
+            shareId: Type.String(),
+            token: Type.String(),
+            expiresAt: Type.Union([Type.String(), Type.Null()]),
+          }, { additionalProperties: true }),
+          404: Type.Object({ error: Type.String() }, { additionalProperties: true }),
+        },
+      },
+      preHandler: requirePermission('reports.export'),
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const scan = await storage.scans.getScan(id);
+      if (scan === null) return reply.code(404).send({ error: 'Report not found' });
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (request.user?.role !== 'admin' && scan.orgId !== orgId && scan.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Report not found' });
+      }
+      const body = (request.body ?? {}) as { expiresInDays?: number | null };
+      const share = await storage.reportShares.createShare({
+        scanId: id,
+        orgId: scan.orgId ?? 'system',
+        createdBy: request.user?.id ?? null,
+        expiresInDays: body.expiresInDays,
+      });
+      return reply.send({ shareId: share.id, token: share.token, expiresAt: share.expiresAt });
+    },
+  );
+
+  // POST /api/v1/reports/:id/shares/:shareId/revoke — revoke a share link.
+  server.post(
+    '/api/v1/reports/:id/shares/:shareId/revoke',
+    {
+      schema: {
+        tags: ['reports'],
+        params: Type.Object({ id: Type.String(), shareId: Type.String() }, { additionalProperties: true }),
+        body: Type.Optional(Type.Object({}, { additionalProperties: true })),
+        response: {
+          200: Type.Object({ revoked: Type.Boolean() }, { additionalProperties: true }),
+          404: Type.Object({ error: Type.String() }, { additionalProperties: true }),
+        },
+      },
+      preHandler: requirePermission('reports.export'),
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id, shareId } = request.params as { id: string; shareId: string };
+      const share = await storage.reportShares.getShare(shareId);
+      if (share === null || share.scanId !== id) {
+        return reply.code(404).send({ error: 'Share not found' });
+      }
+      const orgId = request.user?.currentOrgId ?? 'system';
+      if (request.user?.role !== 'admin' && share.orgId !== orgId && share.orgId !== 'system') {
+        return reply.code(404).send({ error: 'Share not found' });
+      }
+      const revoked = await storage.reportShares.revoke(shareId);
+      return reply.send({ revoked });
     },
   );
 

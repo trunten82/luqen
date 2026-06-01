@@ -41,6 +41,7 @@ import { pluginApiRoutes } from './routes/api/plugins.js';
 import { sourceApiRoutes } from './routes/api/sources.js';
 import { generateApiKey, storeApiKey } from './auth/api-key.js';
 import { exportRoutes } from './routes/api/export.js';
+import { shareRoutes } from './routes/share.js';
 import { dataApiRoutes } from './routes/api/data.js';
 import { brandingApiRoutes } from './routes/api/branding.js';
 import { wpNetworkApiRoutes } from './routes/api/wp-network.js';
@@ -172,6 +173,9 @@ function isPublicPath(path: string): boolean {
   if (path.startsWith('/api/v1/badge/')) return true;
   // Phase 58 R5: public self-scan report (only the dashboard's own host).
   if (/^\/reports\/[^/]+\/public$/.test(path)) return true;
+  // Secure external report shares — anonymous, token-authorised (the token in
+  // the path IS the authorisation; covers /share/:token and its downloads).
+  if (path.startsWith('/share/')) return true;
   // Public, hostable accessibility statement (anon; gated by org `enabled`).
   if (/^\/accessibility-statement\/[^/]+$/.test(path)) return true;
   // Phase 31.1 Plan 02: external MCP clients hit these BEFORE they have a
@@ -1104,6 +1108,13 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
   // Pass the on-disk uploads root so the VPAT PDF can embed manual-test
   // evidence screenshots (resolved from their public /uploads/... paths).
   await exportRoutes(
+    server,
+    storage,
+    resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads'),
+  );
+
+  // ── Secure external share routes (anonymous, token-authorised) ───────────
+  await shareRoutes(
     server,
     storage,
     resolve(config.dbPath ? join(config.dbPath, '..', 'uploads') : './uploads'),

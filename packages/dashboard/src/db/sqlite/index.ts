@@ -18,6 +18,7 @@ import {
   SqliteManualTestRepository,
   SqliteManualTestEvidenceRepository,
   SqliteManualTestAuditRepository,
+  SqliteReportShareRepository,
   SqliteGitHostRepository,
   SqliteBrandingRepository,
   SqliteBrandScoreRepository,
@@ -63,6 +64,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
   readonly manualTests: SqliteManualTestRepository;
   readonly manualTestEvidence: SqliteManualTestEvidenceRepository;
   readonly manualTestAudit: SqliteManualTestAuditRepository;
+  readonly reportShares: SqliteReportShareRepository;
   readonly gitHosts: SqliteGitHostRepository;
   readonly branding: SqliteBrandingRepository;
   readonly brandScores: SqliteBrandScoreRepository;
@@ -104,6 +106,7 @@ export class SqliteStorageAdapter implements StorageAdapter {
     this.manualTests = new SqliteManualTestRepository(this.db);
     this.manualTestEvidence = new SqliteManualTestEvidenceRepository(this.db);
     this.manualTestAudit = new SqliteManualTestAuditRepository(this.db);
+    this.reportShares = new SqliteReportShareRepository(this.db);
     this.gitHosts = new SqliteGitHostRepository(this.db);
     this.branding = new SqliteBrandingRepository(this.db);
     this.brandScores = new SqliteBrandScoreRepository(this.db);

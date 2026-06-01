@@ -1478,5 +1478,18 @@
   "fleet": {
     "downloadReports": "Scarica tutti i report",
     "downloadReportsHint": "Scarica un archivio .tar.gz con il VPAT/ACR di ogni sito con una scansione completata"
+  },
+  "share": {
+    "unavailableTitle": "Questo link di condivisione non è più disponibile",
+    "unavailableBody": "Questo link di condivisione del documento è scaduto o è stato revocato. Richiedi un nuovo link all’organizzazione che lo ha condiviso.",
+    "panelHeading": "Condividi esternamente",
+    "panelHint": "Crea un link sicuro per consentire a un revisore esterno di visualizzare questo report e scaricarne il pacchetto di evidenze, senza esporlo pubblicamente. I link scadono dopo 90 giorni e possono essere revocati in qualsiasi momento.",
+    "create": "Crea link",
+    "copy": "Copia",
+    "revoke": "Revoca",
+    "copied": "Copiato",
+    "revokeConfirm": "Revocare questo link di condivisione? Chi lo possiede perderà l’accesso.",
+    "createError": "Impossibile completare l’operazione. Riprova.",
+    "none": "Nessun link di condivisione attivo."
   }
 }
