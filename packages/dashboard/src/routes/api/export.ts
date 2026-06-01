@@ -576,6 +576,7 @@ export async function exportRoutes(
         const evidenceCounts = new Map(
           (await storage.manualTestEvidence.countByCriterion(scan.id)).map((c) => [c.criterionId, c.count]),
         );
+        const reasonedChangeCount = await storage.manualTestAudit.countReasonedChanges(scan.id);
         // Dated good-faith remediation record (keyed by scan.orgId to match how
         // events are recorded). Empty input → empty record (section hidden).
         const remOrgId = scan.orgId ?? 'system';
@@ -584,7 +585,7 @@ export async function exportRoutes(
           storage.scans.getScansForSite(remOrgId, scan.siteUrl),
         ]);
         const remediation = buildRemediationRecord(remediationEvents, siteScans);
-        const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts }, remediation);
+        const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts, reasonedChangeCount }, remediation);
 
         const scanMeta: PdfScanMeta = {
           siteUrl: scan.siteUrl,

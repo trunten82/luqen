@@ -522,6 +522,36 @@ export interface CriterionEvidenceCount {
 }
 
 // ---------------------------------------------------------------------------
+// Manual-test verdict audit (append-only change log with optional reason).
+// Current verdict stays in manual_test_results; each change appends here.
+// ---------------------------------------------------------------------------
+
+export interface ManualTestAuditRecord {
+  readonly id: string;
+  readonly scanId: string;
+  readonly criterionId: string;
+  /** Prior status ('untested' for a first verdict), or null when unknown. */
+  readonly fromStatus: string | null;
+  readonly toStatus: string;
+  /** Optional reason/comment for the change. */
+  readonly comment: string | null;
+  readonly actor: string | null;
+  readonly createdAt: string;
+  readonly orgId: string;
+}
+
+export interface AppendManualTestAuditInput {
+  readonly scanId: string;
+  readonly criterionId: string;
+  readonly fromStatus?: string | null;
+  readonly toStatus: string;
+  readonly comment?: string | null;
+  readonly actor?: string | null;
+  readonly createdAt?: string | null;
+  readonly orgId?: string;
+}
+
+// ---------------------------------------------------------------------------
 // API key types
 // ---------------------------------------------------------------------------
 

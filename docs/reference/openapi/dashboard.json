@@ -40091,6 +40091,31 @@
         "tags": [
           "manual-tests"
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "properties": {
+                  "criterionId": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "comment": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
         "parameters": [
           {
             "schema": {
@@ -40105,9 +40130,127 @@
           "200": {
             "description": "Default Response",
             "content": {
-              "text/html": {
+              "application/json": {
                 "schema": {
-                  "type": "string"
+                  "additionalProperties": true,
+                  "type": "object",
+                  "required": [
+                    "criterionId",
+                    "status",
+                    "testedBy",
+                    "testedAt",
+                    "stats",
+                    "auditEntry"
+                  ],
+                  "properties": {
+                    "criterionId": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "testedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "testedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stats": {
+                      "additionalProperties": true,
+                      "type": "object",
+                      "required": [
+                        "tested",
+                        "passed",
+                        "failed",
+                        "na",
+                        "untested",
+                        "percentage"
+                      ],
+                      "properties": {
+                        "tested": {
+                          "type": "number"
+                        },
+                        "passed": {
+                          "type": "number"
+                        },
+                        "failed": {
+                          "type": "number"
+                        },
+                        "na": {
+                          "type": "number"
+                        },
+                        "untested": {
+                          "type": "number"
+                        },
+                        "percentage": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "auditEntry": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": true,
+                          "type": "object",
+                          "required": [
+                            "fromStatus",
+                            "toStatus",
+                            "comment",
+                            "actor",
+                            "createdAt"
+                          ],
+                          "properties": {
+                            "fromStatus": {
+                              "type": "string"
+                            },
+                            "toStatus": {
+                              "type": "string"
+                            },
+                            "comment": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "actor": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             }

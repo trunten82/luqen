@@ -63,6 +63,56 @@ function renderEvidenceList(
 
 const ManualIdParams = Type.Object({ id: Type.String() }, { additionalProperties: true });
 
+/**
+ * Verdict-save request body (form-urlencoded). Permissive — all optional with
+ * additionalProperties — so the handler's specific 400 messages still apply
+ * rather than schema-level rejection.
+ */
+const ManualSaveBody = Type.Object(
+  {
+    criterionId: Type.Optional(Type.String()),
+    status: Type.Optional(Type.String()),
+    notes: Type.Optional(Type.String()),
+    comment: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+);
+
+/** Typed 200 response for the verdict-save route (JSON). */
+const ManualSaveResponse = Type.Object(
+  {
+    criterionId: Type.String(),
+    status: Type.String(),
+    testedBy: Type.Union([Type.String(), Type.Null()]),
+    testedAt: Type.Union([Type.String(), Type.Null()]),
+    stats: Type.Object(
+      {
+        tested: Type.Number(),
+        passed: Type.Number(),
+        failed: Type.Number(),
+        na: Type.Number(),
+        untested: Type.Number(),
+        percentage: Type.Number(),
+      },
+      { additionalProperties: true },
+    ),
+    auditEntry: Type.Union([
+      Type.Object(
+        {
+          fromStatus: Type.String(),
+          toStatus: Type.String(),
+          comment: Type.Union([Type.String(), Type.Null()]),
+          actor: Type.Union([Type.String(), Type.Null()]),
+          createdAt: Type.String(),
+        },
+        { additionalProperties: true },
+      ),
+      Type.Null(),
+    ]),
+  },
+  { additionalProperties: true },
+);
+
 const VALID_STATUSES = new Set<ManualTestStatus>([
   'untested',
   'pass',
@@ -74,6 +124,8 @@ interface ManualTestBody {
   criterionId?: string;
   status?: string;
   notes?: string;
+  /** Optional reason/comment recorded in the verdict audit trail. */
+  comment?: string;
 }
 
 /**
@@ -154,6 +206,15 @@ export async function manualTestRoutes(
         evidenceMap.set(e.criterionId, list);
       }
 
+      // Load verdict-change audit history, grouped per criterion (newest first).
+      const auditRows = await storage.manualTestAudit.listAudit(id);
+      const auditMap = new Map<string, typeof auditRows>();
+      for (const a of auditRows) {
+        const list = auditMap.get(a.criterionId) ?? [];
+        list.push(a);
+        auditMap.set(a.criterionId, list);
+      }
+
       const { manual, partial } = getGroupedCriteria();
 
       // Merge criteria with saved results
@@ -163,6 +224,13 @@ export async function manualTestRoutes(
         criteria.map((c) => {
           const saved = resultMap.get(c.id);
           const evidence = evidenceMap.get(c.id) ?? [];
+          const history = (auditMap.get(c.id) ?? []).map((a) => ({
+            fromStatus: a.fromStatus ?? 'untested',
+            toStatus: a.toStatus,
+            comment: a.comment ?? '',
+            actor: a.actor ?? 'unknown',
+            at: new Date(a.createdAt).toLocaleString(),
+          }));
           return {
             ...c,
             status: saved?.status ?? 'untested',
@@ -173,6 +241,8 @@ export async function manualTestRoutes(
               : null,
             evidence: evidence.map((e) => ({ id: e.id, fileName: e.fileName, filePath: e.filePath })),
             evidenceCount: evidence.length,
+            history,
+            historyCount: history.length,
           };
         });
 
@@ -200,10 +270,13 @@ export async function manualTestRoutes(
     },
   );
 
-  // POST /reports/:id/manual — save a single manual test result (HTMX)
+  // POST /reports/:id/manual — save a single manual test result. Returns JSON
+  // (status + stats + audit entry); the client updates the criterion in place.
+  // NB: deliberately NOT HtmlPageSchema — that pins a 200 string response and
+  // would serialize the JSON object away.
   server.post(
     '/reports/:id/manual',
-    { schema: { ...HtmlPageSchema, tags: ['manual-tests'], params: ManualIdParams } },
+    { schema: { tags: ['manual-tests'], params: ManualIdParams, body: ManualSaveBody, response: { 200: ManualSaveResponse } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as ManualTestBody;
@@ -247,6 +320,13 @@ export async function manualTestRoutes(
       }
 
       const testedBy = request.user?.username ?? 'unknown';
+      const comment = (body.comment ?? '').trim();
+
+      // Capture the prior verdict so the audit row records from → to.
+      const prior = (await storage.manualTests.getManualTests(id)).find(
+        (r) => r.criterionId === criterionId,
+      );
+      const fromStatus = prior?.status ?? 'untested';
 
       const result = await storage.manualTests.upsertManualTest({
         scanId: id,
@@ -257,86 +337,43 @@ export async function manualTestRoutes(
         orgId,
       });
 
-      // Compute updated stats
+      // Append an audit row for a genuine verdict change OR a commented save.
+      // (A no-op re-save of the same status without a comment adds no history.)
+      let auditEntry:
+        | { fromStatus: string; toStatus: string; comment: string | null; actor: string | null; createdAt: string }
+        | null = null;
+      if (status !== fromStatus || comment !== '') {
+        const rec = await storage.manualTestAudit.appendAudit({
+          scanId: id,
+          criterionId,
+          fromStatus,
+          toStatus: status,
+          comment: comment !== '' ? comment : undefined,
+          actor: testedBy,
+          orgId,
+        });
+        auditEntry = {
+          fromStatus: rec.fromStatus ?? 'untested',
+          toStatus: rec.toStatus,
+          comment: rec.comment,
+          actor: rec.actor,
+          createdAt: rec.createdAt,
+        };
+      }
+
       const allResults = await storage.manualTests.getManualTests(id);
       const stats = computeStats(allResults, MANUAL_CRITERIA.length);
 
-      // Return updated row HTML for HTMX swap
-      const statusLabel =
-        status === 'pass'
-          ? 'Pass'
-          : status === 'fail'
-            ? 'Fail'
-            : status === 'na'
-              ? 'N/A'
-              : 'Untested';
-      const statusClass =
-        status === 'pass'
-          ? 'mt-badge--pass'
-          : status === 'fail'
-            ? 'mt-badge--fail'
-            : status === 'na'
-              ? 'mt-badge--na'
-              : 'mt-badge--untested';
-
-      const testedAtDisplay = result.testedAt
-        ? new Date(result.testedAt).toLocaleString()
-        : '';
-
-      const escapedNotes = (result.notes ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-
-      const escapedTitle = criterion.title
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-      const checkItems = criterion.whatToCheck
-        .map(
-          (item) =>
-            `<li>${item.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</li>`,
-        )
-        .join('');
-
-      const escapedInstructions = criterion.testInstructions
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-      // Build buttons — mark active one (using data attributes for event delegation)
-      const makeBtn = (s: ManualTestStatus, label: string, cls: string) => {
-        const active = s === status ? ' mt-btn--active' : '';
-        return `<button type="button" class="mt-btn ${cls}${active}" data-action="mtSave" data-scan-id="${id}" data-criterion-id="${criterionId}" data-status="${s}">${label}</button>`;
-      };
-
-      const html = `<div class="mt-criterion" id="mt-row-${criterionId}" data-status="${status}">
-  <div class="mt-criterion__header">
-    <span class="mt-badge ${statusClass}">${statusLabel}</span>
-    <strong>${criterionId}</strong> &mdash; ${escapedTitle}
-    <span class="mt-level mt-level--${criterion.level}">${criterion.level}</span>
-    <button type="button" class="mt-toggle" data-action="mtToggle" aria-label="Toggle details" aria-expanded="false">&#9660;</button>
-  </div>
-  <div class="mt-criterion__body mt-criterion__body--collapsed">
-    <p class="mt-instructions">${escapedInstructions}</p>
-    <ul class="mt-checklist">${checkItems}</ul>
-    <div class="mt-actions">
-      ${makeBtn('pass', 'Pass', 'mt-btn--pass')}
-      ${makeBtn('fail', 'Fail', 'mt-btn--fail')}
-      ${makeBtn('na', 'N/A', 'mt-btn--na')}
-    </div>
-    <div class="mt-notes-wrap">
-      <label for="mt-notes-${criterionId}">Notes</label>
-      <textarea id="mt-notes-${criterionId}" class="mt-notes" rows="2" placeholder="Optional notes...">${escapedNotes}</textarea>
-    </div>
-    ${result.testedBy ? `<div class="mt-tested-info">Tested by ${result.testedBy} on ${testedAtDisplay}</div>` : ''}
-  </div>
-</div>
-<span hidden data-mt-tested="${stats.tested}" data-mt-passed="${stats.passed}" data-mt-failed="${stats.failed}" data-mt-na="${stats.na}" data-mt-untested="${stats.untested}" data-mt-pct="${stats.percentage}"></span>`;
-
-      return reply.type('text/html').send(html);
+      // JSON response — the client updates the criterion in place (badge,
+      // active button, stats, and prepends any new history entry).
+      return reply.send({
+        criterionId,
+        status,
+        testedBy: result.testedBy,
+        testedAt: result.testedAt,
+        stats,
+        auditEntry,
+      });
     },
   );
 

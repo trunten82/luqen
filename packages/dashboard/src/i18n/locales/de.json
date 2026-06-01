@@ -1173,7 +1173,12 @@
     "partiallyAutomatedDesc": "Die Automatisierung erkennt einige Probleme, aber zur Bestätigung der vollständigen Compliance ist eine menschliche Überprüfung erforderlich.",
     "evidenceLabel": "Nachweis",
     "evidenceUpload": "Hochladen",
-    "evidenceDelete": "Nachweis löschen"
+    "evidenceDelete": "Nachweis löschen",
+    "setVerdict": "Bewertung festlegen",
+    "notesReason": "Notizen / Änderungsgrund",
+    "save": "Speichern",
+    "unsaved": "Nicht gespeicherte Änderungen",
+    "history": "Änderungsverlauf"
   },
   "assignments": {
     "siteUrl": "Website-URL",
@@ -1398,7 +1403,8 @@
     "attStandards": "Bewertete Standards",
     "attMethods": "Methoden",
     "attEvaluator": "Bewerter",
-    "attestationStatement": "Dieser Bericht spiegelt eine nach Treu und Glauben durchgeführte Bewertung der Website zum Bewertungsdatum wider, durchgeführt mit den oben genannten Methoden. Er dokumentiert den Konformitätsstand zu diesem Zeitpunkt und die laufende Mängelbeseitigung; er ist keine Zertifizierung und garantiert keine Konformität."
+    "attestationStatement": "Dieser Bericht spiegelt eine nach Treu und Glauben durchgeführte Bewertung der Website zum Bewertungsdatum wider, durchgeführt mit den oben genannten Methoden. Er dokumentiert den Konformitätsstand zu diesem Zeitpunkt und die laufende Mängelbeseitigung; er ist keine Zertifizierung und garantiert keine Konformität.",
+    "attReasonedChanges": "Dokumentierte Bewertungsänderungen (mit Begründung)"
   },
   "a11yStatement": {
     "status": {

@@ -521,6 +521,7 @@ export async function reportRoutes(
       const evidenceCounts = new Map(
         (await storage.manualTestEvidence.countByCriterion(id)).map((c) => [c.criterionId, c.count]),
       );
+      const reasonedChangeCount = await storage.manualTestAudit.countReasonedChanges(id);
       // Assemble the dated good-faith remediation record (events + completed-scan
       // trend). Keyed by scan.orgId to match how events are recorded. Empty
       // input → empty record, so the section stays hidden.
@@ -530,7 +531,7 @@ export async function reportRoutes(
         storage.scans.getScansForSite(remOrgId, scan.siteUrl),
       ]);
       const remediation = buildRemediationRecord(remediationEvents, siteScans);
-      const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts }, remediation);
+      const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts, reasonedChangeCount }, remediation);
 
       // Compile the VPAT template directly with the shared Handlebars singleton
       // (same approach as /reports/:id/print). The global `t` and `formatStandard`

@@ -348,4 +348,16 @@ describe('buildVpat — manual-test evidence counts (Slice C)', () => {
     const vpat = buildVpat(report, scanAA, [makeManual('1.1.1', 'pass')], { generatedAt: GEN_AT });
     expect(rowFor(vpat, '1.1.1')?.remarks).not.toContain('evidence file');
   });
+
+  it('records the reasoned-change count in the attestation when > 0', () => {
+    const report = makeReport([]);
+    const vpat = buildVpat(report, scanAA, [], { generatedAt: GEN_AT, reasonedChangeCount: 3 });
+    expect(vpat.attestation.reasonedChangeCount).toBe(3);
+  });
+
+  it('omits the reasoned-change count when zero', () => {
+    const report = makeReport([]);
+    const vpat = buildVpat(report, scanAA, [], { generatedAt: GEN_AT, reasonedChangeCount: 0 });
+    expect(vpat.attestation.reasonedChangeCount).toBeUndefined();
+  });
 });
