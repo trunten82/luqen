@@ -18526,6 +18526,25 @@
         }
       }
     },
+    "/admin/plans": {
+      "get": {
+        "tags": [
+          "html-page"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/plugins": {
       "get": {
         "tags": [
