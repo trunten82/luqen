@@ -266,6 +266,14 @@
         </svg>
         {{t "nav.agencyConsole"}}
       </a>
+      <a class="sidebar__item {{#if (startsWith currentPath '/admin/plans')}}is-active{{/if}}"
+         href="/admin/plans"
+         aria-current="{{#if (startsWith currentPath '/admin/plans')}}page{{/if}}">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M4 6h12M4 10h12M4 14h7M16 13l1.5 1.5L20 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {{t "nav.plansPricing"}}
+      </a>
       {{/if}}
       {{/if}}
 

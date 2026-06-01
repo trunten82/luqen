@@ -114,7 +114,8 @@
     "brandOverview": "Brand Overview",
     "accessibilityStatement": "Accessibility Statement",
     "reportIdentity": "Report Identity",
-    "agencyConsole": "Agency console"
+    "agencyConsole": "Agency console",
+    "plansPricing": "Plans & pricing"
   },
   "auth": {
     "signInTitle": "Sign in",

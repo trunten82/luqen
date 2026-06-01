@@ -106,7 +106,8 @@
     "llmUsage": "LLM usage",
     "accessibilityStatement": "Déclaration d'accessibilité",
     "reportIdentity": "Identité du rapport",
-    "agencyConsole": "Console agence"
+    "agencyConsole": "Console agence",
+    "plansPricing": "Forfaits et tarifs"
   },
   "auth": {
     "signInTitle": "Se connecter",
