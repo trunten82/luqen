@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-29 — v3.5.0 milestone)
 Phase: Not started (roadmap drafted, awaiting plan-phase)
 Plan: —
 Status: Roadmap created
-Last activity: 2026-06-01 — Completed quick task 260601-fte: manual-test evidence artifacts in VPAT/ACR
+Last activity: 2026-06-01 — Completed quick task 260601-njq: per-org legal/company identity on VPAT/ACR
 
 > Numbering note: `.planning` artifacts lagged a direct-to-master run (phases 43–77). Git reality is v3.4.0 with phases 71–77 shipped. v3.5.0 resumes at **Phase 78**.
 
@@ -81,6 +81,7 @@ Last activity: 2026-06-01 — Completed quick task 260601-fte: manual-test evide
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260601-fte | Manual-test evidence artifacts (screenshots/documents) in the VPAT/ACR report (web + PDF) | 2026-06-01 | 1304877 | [260601-fte-vpat-evidence-artifacts](./quick/260601-fte-vpat-evidence-artifacts/) |
+| 260601-njq | Per-org legal/company identity on VPAT/ACR reports (web + PDF + share); migration 082, optional StorageAdapter field | 2026-06-01 | c3cc788 | [260601-njq-vpat-org-legal-identity](./quick/260601-njq-vpat-org-legal-identity/) |
 
 ## Session Continuity
 
