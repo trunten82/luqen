@@ -224,7 +224,9 @@
     "brandScoreDeltaUp": "vs previous",
     "brandScoreDeltaDown": "vs previous",
     "brandScoreDeltaFlat": "No change",
-    "brandScoreTrendLabel": "Brand score trend"
+    "brandScoreTrendLabel": "Brand score trend",
+    "positioning": "Luqen fixes accessibility at the source — not an overlay.",
+    "positioningLink": "Why that matters"
   },
   "scans": {
     "newScan": "New Scan",

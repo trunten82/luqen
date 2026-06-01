@@ -216,7 +216,9 @@
     "docketVerdict": "{{trend}} across {{sites}} sites under continuous monitoring.",
     "docketVerdictNoScans": "No scans yet. Run your first to start tracking compliance posture.",
     "noIssues": "No issues",
-    "scanFailed": "Scan failed"
+    "scanFailed": "Scan failed",
+    "positioning": "Luqen fixes accessibility at the source — not an overlay.",
+    "positioningLink": "Why that matters"
   },
   "scans": {
     "newScan": "Nouvelle Analyse",
