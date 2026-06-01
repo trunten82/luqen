@@ -258,8 +258,13 @@ async function gatherObservations(
         return sel;
       };
 
+      // Only RIGHTWARD overflow is a reflow problem (it forces horizontal
+      // scrolling). Elements positioned off-screen to the LEFT — the standard
+      // visually-hidden / skip-link / sr-only pattern (left:-9999px) — have
+      // rect.right <= 0 and never create horizontal scroll, so we must NOT flag
+      // them (they are an accessibility AID, not a failure).
       const overflowsViewport = (rect: DOMRect): boolean =>
-        rect.width > 0 && rect.height > 0 && (rect.right > vw + tol || rect.left < -tol);
+        rect.width > 0 && rect.height > 0 && rect.right > vw + tol;
 
       const all = document.body ? document.body.querySelectorAll('*') : [];
       let scanned = 0;
