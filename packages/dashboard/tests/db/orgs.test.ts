@@ -42,13 +42,13 @@ describe('OrgDb', () => {
       await expect(storage.organizations.createOrg({ name: 'Acme 2', slug: 'acme' })).rejects.toThrow();
     });
 
-    it('auto-creates 4 default org roles', async () => {
+    it('auto-creates 5 default org roles', async () => {
       const org = await storage.organizations.createOrg({ name: 'RoleOrg', slug: 'role-org' });
       const roles = await storage.roles.listRoles(org.id);
       const orgRoles = roles.filter((r) => r.orgId === org.id);
-      expect(orgRoles).toHaveLength(4);
+      expect(orgRoles).toHaveLength(5);
       const names = orgRoles.map((r) => r.name).sort();
-      expect(names).toEqual(['Admin', 'Member', 'Owner', 'Viewer']);
+      expect(names).toEqual(['Admin', 'Executive', 'Member', 'Owner', 'Viewer']);
     });
 
     it('default org roles have correct permissions', async () => {

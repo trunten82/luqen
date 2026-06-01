@@ -229,17 +229,16 @@ describe('Compare Routes', () => {
       expect(typeof body.data.diff.unchangedCount).toBe('number');
     });
 
-    it('returns 200 even without reports.compare permission (no explicit perm check in route)', async () => {
-      // The compare route itself does not enforce permissions server-side;
-      // that is handled by the global auth guard layer outside this handler.
+    it('returns 403 without the reports.compare permission', async () => {
+      // The compare route now enforces reports.compare; the guard runs before
+      // the missing-params (400) check, so no permission → 403.
       const noPerm = await createTestServer([]);
       const response = await noPerm.server.inject({
         method: 'GET',
         url: '/reports/compare',
       });
       noPerm.cleanup();
-      // No params → 400, not 403 — confirms there is no permission check in the route
-      expect(response.statusCode).toBe(400);
+      expect(response.statusCode).toBe(403);
     });
   });
 });

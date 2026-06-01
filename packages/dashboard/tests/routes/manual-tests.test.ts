@@ -180,7 +180,7 @@ describe('Manual Test Routes', () => {
       expect(body.template).toBe('manual-tests.hbs');
     });
 
-    it('returns 200 even without manual_testing permission (no explicit perm check in route)', async () => {
+    it('returns 403 without the manual_testing permission', async () => {
       const noPerm = await createTestServer([]);
       const scanId = await makeScan(noPerm);
 
@@ -189,8 +189,8 @@ describe('Manual Test Routes', () => {
         url: `/reports/${scanId}/manual`,
       });
       noPerm.cleanup();
-      // Route does not enforce permissions — auth guard handles that at a higher level
-      expect(response.statusCode).toBe(200);
+      // The manual-testing checklist now requires the manual_testing permission.
+      expect(response.statusCode).toBe(403);
     });
   });
 
