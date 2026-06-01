@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-29 — v3.5.0 milestone)
 Phase: Not started (roadmap drafted, awaiting plan-phase)
 Plan: —
 Status: Roadmap created
-Last activity: 2026-05-29 — Milestone v3.5.0 roadmap created (phases 78-82)
+Last activity: 2026-06-01 — Completed quick task 260601-fte: manual-test evidence artifacts in VPAT/ACR
 
 > Numbering note: `.planning` artifacts lagged a direct-to-master run (phases 43–77). Git reality is v3.4.0 with phases 71–77 shipped. v3.5.0 resumes at **Phase 78**.
 
@@ -75,6 +75,12 @@ Last activity: 2026-05-29 — Milestone v3.5.0 roadmap created (phases 78-82)
 - **New services/surfaces must appear in ALL shared admin sections** (health, clients, sidebar)
 - **Cross-service auth**: OAuth2 client credentials only, never raw API keys
 - **Live tracks master, not develop** — push to master before deploy; no CI on lxc-luqen, deploy via explicit ssh
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260601-fte | Manual-test evidence artifacts (screenshots/documents) in the VPAT/ACR report (web + PDF) | 2026-06-01 | 1304877 | [260601-fte-vpat-evidence-artifacts](./quick/260601-fte-vpat-evidence-artifacts/) |
 
 ## Session Continuity
 
