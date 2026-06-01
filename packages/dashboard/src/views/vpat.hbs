@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {{#if csrfToken}}<meta name="csrf-token" content="{{csrfToken}}">{{/if}}
-  <title>{{t "vpat.title"}} — {{scan.siteUrl}}</title>
+  <title>{{#if vpat.identity}}{{vpat.identity.entityName}} — {{/if}}{{t "vpat.title"}} — {{scan.siteUrl}}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -54,6 +54,12 @@
     .methodology__heading { font-size: 0.95rem; margin: 0 0 0.4rem; border: none; padding: 0; color: #5a2a26; }
     .methodology__body { font-size: 0.8rem; color: #4a4a4a; margin: 0 0 0.5rem; }
     .methodology__disclaimer { font-size: 0.8rem; color: #7c5612; font-weight: 600; margin: 0; }
+
+    /* Per-org legal/company identity — attribution only, no conformance claim */
+    .report-identity { display: flex; align-items: flex-start; gap: 1rem; margin: 0 0 1.25rem; }
+    .report-identity__logo { max-height: 64px; max-width: 200px; object-fit: contain; }
+    .report-identity__entity { font-size: 0.95rem; font-weight: 700; color: #5a2a26; margin: 0 0 0.15rem; }
+    .report-identity__line { font-size: 0.82rem; color: #4a4a4a; margin: 0; }
 
     /* Manual-test evidence appendix (per-criterion screenshots + documents) */
     h3.evidence-crit { font-size: 0.92rem; margin: 1.1rem 0 0.4rem; color: #5a2a26; }
@@ -118,12 +124,23 @@
 </div>
 {{/unless}}{{/if}}
 
-<h1>{{t "vpat.title"}}</h1>
+<h1>{{#if vpat.identity}}{{vpat.identity.entityName}} — {{/if}}{{t "vpat.title"}}</h1>
 <div class="subtitle">
   <span><strong>{{scan.siteUrl}}</strong></span>
   <span>{{formatStandard vpat.standard}}</span>
   <span>{{t "vpat.generatedAt"}}: {{vpat.generatedAt}}</span>
 </div>
+
+{{#if vpat.identity}}
+<div class="report-identity">
+  {{#if vpat.identity.logoPath}}<img class="report-identity__logo" src="{{vpat.identity.logoPath}}" alt="{{vpat.identity.entityName}}">{{/if}}
+  <div class="report-identity__body">
+    <p class="report-identity__entity">{{vpat.identity.entityName}}</p>
+    {{#if vpat.identity.postalAddress}}<p class="report-identity__line">{{vpat.identity.postalAddress}}</p>{{/if}}
+    {{#if vpat.identity.contactEmail}}<p class="report-identity__line">{{t "vpat.identityContact"}}: <a href="mailto:{{vpat.identity.contactEmail}}">{{vpat.identity.contactEmail}}</a></p>{{/if}}
+  </div>
+</div>
+{{/if}}
 
 <p class="intro">{{t "vpat.intro"}}</p>
 

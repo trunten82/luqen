@@ -18,6 +18,7 @@ import {
 } from '../wcag-catalog.js';
 import { MANUAL_CRITERIA, type ManualTestResult } from '../manual-criteria.js';
 import { deriveSection508, type Section508Report } from './section508.js';
+import type { VpatIdentity } from './vpat-identity.js';
 import { deriveLegalFramings, type LegalFraming } from './legal-framings.js';
 import type { RemediationRecord } from './remediation-service.js';
 import { computeEngineCorroboration, type normalizeReportData } from './report-service.js';
@@ -118,6 +119,13 @@ export interface VpatReport {
   readonly remediation: RemediationRecord | null;
   /** Evaluation methodology + attestation (documentary weight). */
   readonly attestation: VpatAttestation;
+  /**
+   * Per-org legal/company identity (entity name, contact, address, preparer,
+   * logo). Null when the org has set none — the report then renders with the
+   * generic title and no company block (backward-compatible). Attribution only;
+   * never a conformance claim.
+   */
+  readonly identity?: VpatIdentity;
 }
 
 export interface BuildVpatOptions {
@@ -138,6 +146,12 @@ export interface BuildVpatOptions {
    * an ongoing, reasoned testing process.
    */
   readonly reasonedChangeCount?: number;
+  /**
+   * Resolved per-org report identity. When present, its `preparedBy` populates
+   * the attestation evaluator (taking precedence over `evaluator`), and the
+   * full block is attached to the report for the header/company rendering.
+   */
+  readonly identity?: VpatIdentity;
 }
 
 /** Minimal shape of the scan record needed to build a VPAT. */
@@ -415,7 +429,13 @@ export function buildVpat(
     methods,
     standardsLabel: framing.standardsLabel,
     manualTestingRecorded,
-    ...(opts.evaluator?.trim() ? { evaluator: opts.evaluator.trim() } : {}),
+    // Prefer the identity's preparer org for the attestation evaluator; fall
+    // back to the explicit `evaluator` option for older callers.
+    ...(opts.identity?.preparedBy?.trim()
+      ? { evaluator: opts.identity.preparedBy.trim() }
+      : opts.evaluator?.trim()
+        ? { evaluator: opts.evaluator.trim() }
+        : {}),
     ...(opts.reasonedChangeCount && opts.reasonedChangeCount > 0
       ? { reasonedChangeCount: opts.reasonedChangeCount }
       : {}),
@@ -434,5 +454,6 @@ export function buildVpat(
     functionalPerformanceHeading: framing.functionalPerformanceHeading,
     remediation,
     attestation,
+    ...(opts.identity ? { identity: opts.identity } : {}),
   };
 }

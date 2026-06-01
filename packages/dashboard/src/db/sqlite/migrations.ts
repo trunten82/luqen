@@ -2130,4 +2130,24 @@ CREATE INDEX IF NOT EXISTS idx_report_shares_scan ON report_shares(scan_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_report_shares_token ON report_shares(token);
     `,
   },
+  {
+    id: '082',
+    name: 'create-report-identities',
+    sql: `
+-- Per-org legal/company identity for the VPAT/ACR reports. Supplies the legal
+-- entity attribution (name, contact, address, evaluator/preparer org) rendered
+-- on the report — strengthens legal defensibility (US-lawsuit-protection
+-- direction) without making any conformance claim. One row per org. The logo
+-- is NOT stored here; it is reused from the org's branding guideline image.
+CREATE TABLE IF NOT EXISTS report_identities (
+  org_id         TEXT PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
+  entity_name    TEXT,
+  contact_email  TEXT,
+  postal_address TEXT,
+  prepared_by    TEXT,
+  updated_at     TEXT NOT NULL,
+  updated_by     TEXT
+);
+    `,
+  },
 ];

@@ -14,7 +14,7 @@ import { buildRemediationRecord } from '../../services/remediation-service.js';
 import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
 import ExcelJS from 'exceljs';
-import { buildEvidencePackZip } from '../../services/vpat-share-service.js';
+import { buildEvidencePackZip, resolveScanIdentity } from '../../services/vpat-share-service.js';
 import { ErrorEnvelope } from '../../api/schemas/envelope.js';
 
 // Export endpoints stream binary buffers — schemas declare a string body and
@@ -598,7 +598,14 @@ export async function exportRoutes(
           storage.scans.getScansForSite(remOrgId, scan.siteUrl),
         ]);
         const remediation = buildRemediationRecord(remediationEvents, siteScans);
-        const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts, reasonedChangeCount }, remediation);
+        const identity = await resolveScanIdentity(storage, scan);
+        const vpat = buildVpat(
+          reportData,
+          scan,
+          manualResults,
+          { evidenceCounts, reasonedChangeCount, ...(identity ? { identity } : {}) },
+          remediation,
+        );
         // Manual-test evidence ARTIFACTS — embed screenshots + list documents
         // per criterion in the ACR appendix. Resolved on disk from uploadsRoot.
         const evidenceGroups = buildVpatEvidenceGroups(

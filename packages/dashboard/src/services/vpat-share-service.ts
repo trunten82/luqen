@@ -8,6 +8,25 @@ import { normalizeReportData } from './report-service.js';
 import type { JsonReportFile } from './report-service.js';
 import { buildVpat, type VpatReport } from './vpat-service.js';
 import { buildVpatEvidenceGroups, type VpatEvidenceGroup } from './vpat-evidence.js';
+import { resolveReportIdentity, type VpatIdentity } from './vpat-identity.js';
+
+/**
+ * Resolve a scan's per-org report identity (legal text fields + the org's
+ * branding logo). Shared by the web VPAT route, the PDF export route, and the
+ * token-share assembly so all surfaces render identical attribution. Guarded:
+ * a storage backend without the OPTIONAL `reportIdentities` repo yields null
+ * (the report renders exactly as before).
+ */
+export async function resolveScanIdentity(
+  storage: StorageAdapter,
+  scan: ScanRecord,
+): Promise<VpatIdentity | null> {
+  const orgId = scan.orgId ?? 'system';
+  return resolveReportIdentity(
+    (await storage.reportIdentities?.get(orgId)) ?? null,
+    (await storage.branding.getGuidelineForSite(scan.siteUrl, orgId))?.imagePath ?? null,
+  );
+}
 import { buildRemediationRecord } from './remediation-service.js';
 import { generateVpatPdf } from '../pdf/generator.js';
 import type { PdfScanMeta } from '../pdf/generator.js';
@@ -54,7 +73,17 @@ export async function loadVpatForScan(
     storage.scans.getScansForSite(remOrgId, scan.siteUrl),
   ]);
   const remediation = buildRemediationRecord(remediationEvents, siteScans);
-  const vpat = buildVpat(reportData, scan, manualResults, { evidenceCounts, reasonedChangeCount }, remediation);
+  // Resolve the per-org legal identity ONCE here so the web view, the PDF, the
+  // token-share view, and the evidence-pack PDF (all routed through this
+  // assembly) render it identically.
+  const identity = await resolveScanIdentity(storage, scan);
+  const vpat = buildVpat(
+    reportData,
+    scan,
+    manualResults,
+    { evidenceCounts, reasonedChangeCount, ...(identity ? { identity } : {}) },
+    remediation,
+  );
   const evidenceGroups = buildVpatEvidenceGroups(
     await storage.manualTestEvidence.listEvidence(scan.id),
     vpat,

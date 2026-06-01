@@ -37,3 +37,4 @@ export { SqliteOrgAggregatorWebhookRepository } from './org-aggregator-webhook-r
 export { SqliteNotificationUnsubscribeRepository } from './notification-unsubscribe-repository.js';
 export { SqliteAccessibilityStatementRepository } from './accessibility-statement-repository.js';
 export { SqliteRemediationEventRepository } from './remediation-event-repository.js';
+export { SqliteReportIdentityRepository } from './report-identity-repository.js';

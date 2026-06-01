@@ -112,7 +112,8 @@
     "llmUsage": "LLM usage",
     "notifications": "Notifications",
     "brandOverview": "Brand Overview",
-    "accessibilityStatement": "Accessibility Statement"
+    "accessibilityStatement": "Accessibility Statement",
+    "reportIdentity": "Report Identity"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -1887,6 +1888,7 @@
     "attStandards": "Standards assessed",
     "attMethods": "Methods",
     "attEvaluator": "Evaluator",
+    "identityContact": "Contact",
     "attestationStatement": "This report reflects a good-faith evaluation of the site as of the evaluation date, performed using the methods listed above. It records the state of conformance at that time and the ongoing remediation effort; it is not a certification and does not guarantee conformance.",
     "attReasonedChanges": "Documented verdict changes (with reasons)",
     "evidenceHeading": "Manual test evidence",
@@ -1953,5 +1955,26 @@
   "fleet": {
     "downloadReports": "Download all reports",
     "downloadReportsHint": "Download a .tar.gz bundle of the VPAT/ACR for every site with a completed scan"
+  },
+  "reportIdentity": {
+    "admin": {
+      "intro": "Set the legal entity attribution shown on this organisation’s VPAT/ACR reports. Attribution only — it makes no conformance or certification claim.",
+      "saved": "Report identity saved.",
+      "unsupported": "This storage backend does not support report identities. Reports will render without a company identity.",
+      "entityName": "Legal entity name",
+      "entityNamePlaceholder": "Acme Corporation, Inc.",
+      "entityNameHelp": "Appears in the report title and header. Leave blank to render the generic report title.",
+      "contactEmail": "Contact email",
+      "contactEmailHelp": "A barrier-report / accessibility contact channel shown on the report.",
+      "postalAddress": "Postal address",
+      "postalAddressPlaceholder": "123 Main St, Suite 100, Anytown, ST 00000",
+      "preparedBy": "Prepared by (evaluator org)",
+      "preparedByPlaceholder": "Acme Accessibility Office",
+      "preparedByHelp": "Shown as the evaluator in the attestation block.",
+      "logoNote": "The report logo is taken from this organisation’s branding guideline image — manage it on the",
+      "logoLink": "Branding page",
+      "save": "Save report identity",
+      "title": "Report Identity"
+    }
   }
 }
