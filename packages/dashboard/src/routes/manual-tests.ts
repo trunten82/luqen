@@ -16,10 +16,21 @@ import { HtmlPageSchema } from '../api/schemas/envelope.js';
 
 const pump = promisify(pipeline);
 
-/** Allowed evidence MIME types — screenshots + documents (legal-evidence norm). */
-function isAllowedEvidenceMime(mime: string): boolean {
-  return mime.startsWith('image/') || mime === 'application/pdf';
-}
+/**
+ * Allowed evidence types: a strict MIME→extension allowlist (screenshots +
+ * PDF, the legal-evidence norm). SVG is deliberately EXCLUDED — it can carry
+ * inline <script> and, served same-origin from /uploads/, would execute as
+ * active content when the evidence link is opened (stored XSS). The on-disk
+ * extension is derived from the VALIDATED MIME below, never the client-supplied
+ * filename, so a mislabelled extension cannot smuggle active content.
+ */
+const ALLOWED_EVIDENCE_MIME: ReadonlyMap<string, string> = new Map([
+  ['image/png', 'png'],
+  ['image/jpeg', 'jpg'],
+  ['image/gif', 'gif'],
+  ['image/webp', 'webp'],
+  ['application/pdf', 'pdf'],
+]);
 
 /** HTML-escape a string for safe interpolation into fragments. */
 function esc(s: string): string {
@@ -377,15 +388,16 @@ export async function manualTestRoutes(
       if (data === undefined) {
         return reply.code(400).header('content-type', 'text/html').send('No file uploaded.');
       }
-      if (!isAllowedEvidenceMime(data.mimetype)) {
+      // Strict allowlist: validate the MIME and DERIVE the extension from it
+      // (never the client filename). Rejects SVG and any active-content type.
+      const ext = ALLOWED_EVIDENCE_MIME.get(data.mimetype);
+      if (ext === undefined) {
         return reply
           .code(400)
           .header('content-type', 'text/html')
-          .send('Only image and PDF files are allowed.');
+          .send('Only PNG, JPEG, GIF, WebP and PDF files are allowed.');
       }
 
-      const rawExt = data.filename.split('.').pop() ?? 'bin';
-      const ext = rawExt.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'bin';
       const critSlug = criterionId.replace(/[^a-z0-9]+/gi, '-');
       const unique = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
       const storedName = `${id}-${critSlug}-${unique}.${ext}`;

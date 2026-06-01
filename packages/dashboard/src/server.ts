@@ -526,6 +526,12 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     root: uploadsRoot,
     prefix: '/uploads/',
     decorateReply: false,
+    // Defense-in-depth for user-uploaded files (branding images, manual-test
+    // evidence): block MIME-sniffing so a mislabelled upload can't be coerced
+    // into executing as HTML/script on the app origin.
+    setHeaders: (res) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    },
   });
 
   // robots.txt — guides crawlers (including Luqen's own scanner) to skip non-page URLs
