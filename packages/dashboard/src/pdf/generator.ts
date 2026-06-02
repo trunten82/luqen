@@ -638,6 +638,32 @@ export async function generateVpatPdf(
       doc.moveDown(0.7);
       doc.x = left;
 
+      // ── Standards & laws evaluated against (explicit coverage enumeration) ──
+      if (vpat.evaluatedStandards.length > 0) {
+        if (doc.y > doc.page.height - doc.page.margins.bottom - 80) {
+          doc.addPage();
+        }
+        doc.fontSize(9).fillColor(ID_ACCENT).font('Body-Bold')
+          .text('Standards & laws evaluated against', left, doc.y, { lineGap: 2 });
+        doc.fontSize(8).fillColor(TEXT_SECONDARY).font('Body')
+          .text(
+            'This report was evaluated explicitly against each of the following standards and laws, '
+            + 'as selected for this scan. Each is named in full so the scope of coverage is unambiguous.',
+            left, doc.y, { lineGap: 2, width: pageWidth },
+          );
+        doc.moveDown(0.2);
+        for (const std of vpat.evaluatedStandards) {
+          if (doc.y > doc.page.height - doc.page.margins.bottom - 24) {
+            doc.addPage();
+          }
+          doc.fontSize(8).fillColor(TEXT_PRIMARY).font('Body-Bold')
+            .text(`•  ${std.name}  `, left, doc.y, { continued: true })
+            .fillColor(TEXT_SECONDARY).font('Body').text(`(${std.token})`);
+        }
+        doc.moveDown(0.7);
+        doc.x = left;
+      }
+
       // Column geometry.
       const colCriteria = left;
       const colConformance = left + 150;
