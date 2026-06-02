@@ -58,6 +58,7 @@ import { buildExtractionPrompt } from '../../prompts/extract-requirements.js';
 import { buildGenerateFixPrompt } from '../../prompts/generate-fix.js';
 import { buildAnalyseReportPrompt } from '../../prompts/analyse-report.js';
 import { buildDiscoverBrandingPrompt } from '../../prompts/discover-branding.js';
+import { buildAnalyseVisualPrompt } from '../../prompts/analyse-visual.js';
 import { buildAgentSystemPrompt } from '../../prompts/agent-system.js';
 import { validateOverride, LOCKED_SECTION_EXPLANATIONS } from '../../prompts/segments.js';
 
@@ -120,6 +121,8 @@ function getDefaultTemplate(promptId: PromptId): string {
       // src/prompts/generate-notification-content.ts. Return a stub so the
       // prompt-browser UI doesn't blow up.
       return 'Capability: generate-notification-content (prompt is built per-request from the notification template)';
+    case 'analyse-visual':
+      return buildAnalyseVisualPrompt({ check: 'heading-semantics', context: '{{context}}' });
     case AGENT_SYSTEM_PROMPT_ID:
       return buildAgentSystemPrompt();
     default: {

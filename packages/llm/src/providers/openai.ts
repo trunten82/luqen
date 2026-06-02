@@ -4,6 +4,7 @@ import type {
   CompletionResult,
   RemoteModel,
   ChatMessage,
+  ImageInput,
   StreamFrame,
   ToolCall,
   ToolDef,
@@ -46,13 +47,13 @@ export class OpenAIAdapter implements LLMProviderAdapter {
   }
 
   async complete(prompt: string, options: CompletionOptions): Promise<CompletionResult> {
-    const messages: Array<{ role: string; content: string }> = [];
+    const messages: Array<Record<string, unknown>> = [];
 
     if (options.systemPrompt) {
       messages.push({ role: 'system', content: options.systemPrompt });
     }
 
-    messages.push({ role: 'user', content: prompt });
+    messages.push({ role: 'user', content: toOpenAIUserContent(prompt, options.images) });
 
     const body = {
       model: options.model,
@@ -301,8 +302,28 @@ function toOpenAIMessages(messages: readonly ChatMessage[]): Array<Record<string
         })),
       };
     }
+    if (m.role === 'user' && m.images && m.images.length > 0) {
+      return { role: 'user', content: toOpenAIUserContent(m.content, m.images) };
+    }
     return { role: m.role, content: m.content };
   });
+}
+
+/**
+ * Build the OpenAI chat user `content` field. Plain string when no images;
+ * otherwise the multimodal array of `{type:'text'}` + `{type:'image_url'}`
+ * parts, with each image encoded as a `data:` URL.
+ */
+function toOpenAIUserContent(
+  text: string,
+  images?: readonly ImageInput[],
+): string | Array<Record<string, unknown>> {
+  if (!images || images.length === 0) return text;
+  const parts: Array<Record<string, unknown>> = [{ type: 'text', text }];
+  for (const img of images) {
+    parts.push({ type: 'image_url', image_url: { url: `data:${img.mediaType};base64,${img.data}` } });
+  }
+  return parts;
 }
 
 function toOpenAITool(tool: ToolDef): Record<string, unknown> {

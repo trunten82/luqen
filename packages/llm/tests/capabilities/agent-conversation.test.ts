@@ -70,11 +70,16 @@ describe('CAPABILITY_NAMES includes agent-conversation', () => {
   // valid assignment target without new admin UI work (AI-SPEC §4c.1 #1).
   it('is preserved in the EXPECTED order position (array order preserved, append-only)', () => {
     const names = [...CAPABILITY_NAMES];
-    // Phase 50-01 appended 'generate-notification-content' AFTER
-    // 'agent-conversation' (also append-only). Assert agent-conversation is
-    // the second-to-last so the append-only invariant is still enforced.
-    expect(names[names.length - 2]).toBe('agent-conversation');
-    expect(names[names.length - 1]).toBe('generate-notification-content');
+    // Append-only invariant: 'agent-conversation' (Phase 32) then
+    // 'generate-notification-content' (Phase 50) then 'analyse-visual'
+    // (Phase 84 vision adapter) keep their relative order at the tail.
+    const ac = names.indexOf('agent-conversation');
+    const gnc = names.indexOf('generate-notification-content');
+    const av = names.indexOf('analyse-visual');
+    expect(ac).toBeGreaterThanOrEqual(0);
+    expect(gnc).toBe(ac + 1);
+    expect(av).toBe(gnc + 1);
+    expect(av).toBe(names.length - 1);
   });
 });
 

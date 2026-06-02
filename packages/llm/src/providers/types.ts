@@ -1,9 +1,27 @@
+/**
+ * A single image attached to an LLM request (Phase 84 vision adapter).
+ *
+ * `data` is the raw base64-encoded image payload WITHOUT any `data:` URI
+ * prefix — each adapter wraps it in the provider-native shape (Anthropic
+ * base64 source, OpenAI `data:` URL, Ollama bare base64 array).
+ */
+export interface ImageInput {
+  readonly mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+  readonly data: string;
+}
+
 export interface CompletionOptions {
   readonly model: string;
   readonly maxTokens?: number;
   readonly temperature?: number;
   readonly systemPrompt?: string;
   readonly timeout?: number; // seconds
+  /**
+   * Images to attach to the single user turn of a `complete()` call (Phase 84
+   * vision adapter). Providers that cannot accept images on the selected model
+   * will reject at the API layer; callers gate on model vision-capability.
+   */
+  readonly images?: readonly ImageInput[];
 }
 
 export interface CompletionResult {
@@ -32,6 +50,11 @@ export interface ChatMessage {
   readonly toolName?: string;
   /** For role='assistant' — the tool calls the assistant emitted this turn. */
   readonly toolCalls?: ReadonlyArray<ToolCall>;
+  /**
+   * For role='user' — images attached to this turn (Phase 84 vision adapter).
+   * Adapters render these into provider-native multimodal content blocks.
+   */
+  readonly images?: readonly ImageInput[];
 }
 
 export interface ToolDef {

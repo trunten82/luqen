@@ -112,6 +112,48 @@ describe('AnthropicAdapter', () => {
     expect(callArgs.messages.find((m: { role: string }) => m.role === 'system')).toBeUndefined();
   });
 
+  it('Test 12v: complete attaches image blocks to the user message when options.images present', async () => {
+    await adapter.connect({ baseUrl: 'https://api.anthropic.com', apiKey: 'sk-ant-test' });
+    messagesCreateSpy.mockResolvedValueOnce({
+      content: [{ type: 'text', text: 'looks like an h2' }],
+      usage: { input_tokens: 50, output_tokens: 8 },
+    });
+
+    await adapter.complete('What heading level is this?', {
+      model: 'claude-sonnet-4-6',
+      images: [{ mediaType: 'image/png', data: 'AAAABBBB' }],
+    });
+
+    const callArgs = messagesCreateSpy.mock.calls[0][0];
+    expect(Array.isArray(callArgs.messages[0].content)).toBe(true);
+    const blocks = callArgs.messages[0].content as Array<Record<string, unknown>>;
+    const img = blocks.find((b) => b.type === 'image') as
+      | { type: string; source: { type: string; media_type: string; data: string } }
+      | undefined;
+    expect(img).toBeDefined();
+    expect(img!.source).toEqual({ type: 'base64', media_type: 'image/png', data: 'AAAABBBB' });
+    const text = blocks.find((b) => b.type === 'text') as { type: string; text: string } | undefined;
+    expect(text!.text).toBe('What heading level is this?');
+  });
+
+  it('Test 12vs: completeStream renders ChatMessage.images into image blocks on the user turn', async () => {
+    await adapter.connect({ baseUrl: 'https://api.anthropic.com', apiKey: 'sk-ant-test' });
+    const stream = fakeStream([], { content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 1, output_tokens: 1 } });
+    messagesStreamSpy.mockReturnValueOnce(stream);
+
+    const messages: readonly ChatMessage[] = [
+      { role: 'user', content: 'describe', images: [{ mediaType: 'image/jpeg', data: 'ZZZZ' }] },
+    ];
+    for await (const _f of adapter.completeStream!(messages, { model: 'claude-sonnet-4-6' })) { void _f; }
+
+    const params = messagesStreamSpy.mock.calls[0][0];
+    const blocks = params.messages[0].content as Array<Record<string, unknown>>;
+    expect(Array.isArray(blocks)).toBe(true);
+    const img = blocks.find((b) => b.type === 'image') as { source: { media_type: string; data: string } } | undefined;
+    expect(img!.source.media_type).toBe('image/jpeg');
+    expect(img!.source.data).toBe('ZZZZ');
+  });
+
   it('Test 13: completeStream emits token frames + done frame for plain text', async () => {
     await adapter.connect({ baseUrl: 'https://api.anthropic.com', apiKey: 'sk-ant-test' });
 
