@@ -1,0 +1,255 @@
+/*
+ * Luqen — Accessibility Conformance Report (ACR / VPAT) stylesheet.
+ *
+ * SINGLE SOURCE OF TRUTH. This file is authored once and rendered identically by
+ * every surface that produces an ACR: the dashboard (web view + HTML→PDF) and
+ * the WordPress plugin (which vendors a synced copy). Edit here; sync to
+ * consumers. Do not fork.
+ *
+ * Built strictly on the Luqen identity tokens from DESIGN.md — warm-red/oxblood
+ * identity (hue 25), citron RESERVED for the "Verified by Luqen" evidence mark,
+ * Inter / IBM Plex Mono. Light + AAA, because an ACR is a customer-shareable
+ * artifact. It is a transparency and remediation document, never a compliance
+ * certificate; the type carries the authority, decoration does not.
+ */
+
+:root {
+	/* Identity (light) */
+	--acr-id-accent: oklch(0.34 0.09 25);
+	--acr-id-accent-tint: oklch(0.96 0.02 25);
+	--acr-evidence: oklch(0.84 0.18 105); /* citron — Verified-by-Luqen mark only */
+
+	/* Surfaces — neutrals tinted toward hue 25, never pure #fff/#000 */
+	--acr-bg-page: oklch(0.995 0.005 25);
+	--acr-bg-surface: oklch(0.98 0.005 25);
+	--acr-bg-muted: oklch(0.955 0.008 25);
+	--acr-border-subtle: oklch(0.90 0.008 25);
+	--acr-border-strong: oklch(0.82 0.012 25);
+
+	/* Text */
+	--acr-text-primary: oklch(0.18 0.015 25);
+	--acr-text-secondary: oklch(0.42 0.012 25);
+	--acr-text-muted: oklch(0.55 0.010 25);
+
+	/* Status (semantic; paired with a text label, never colour alone) */
+	--acr-success: oklch(0.42 0.13 150);
+	--acr-warning: oklch(0.50 0.13 70);
+	--acr-error: oklch(0.48 0.20 27);
+	--acr-info: oklch(0.42 0.14 250);
+
+	/* Type */
+	--acr-font-display: 'Inter Display', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--acr-font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--acr-font-mono: 'IBM Plex Mono', 'SFMono-Regular', 'Cascadia Code', Consolas, monospace;
+
+	/* Rhythm */
+	--acr-space-1: 4px;
+	--acr-space-2: 8px;
+	--acr-space-3: 12px;
+	--acr-space-4: 16px;
+	--acr-space-5: 24px;
+	--acr-space-6: 32px;
+}
+
+/* ── Page frame ─────────────────────────────────────────────────────────── */
+
+.acr {
+	font-family: var(--acr-font-sans);
+	color: var(--acr-text-primary);
+	background: var(--acr-bg-page);
+	font-size: 9.6pt;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	max-width: 50rem;
+	margin: 0 auto;
+	padding: var(--acr-space-5);
+}
+
+@media print {
+	@page { size: A4; margin: 14mm 12mm; }
+	.acr { padding: 0; max-width: none; font-size: 9pt; }
+	.acr__section { break-inside: avoid; }
+	.acr tr { break-inside: avoid; }
+}
+
+.acr :is(h1, h2, h3, p, ul, table) { margin: 0; }
+
+/* ── Masthead ───────────────────────────────────────────────────────────── */
+
+.acr__wordmark {
+	display: flex;
+	align-items: center;
+	gap: var(--acr-space-2);
+	font-family: var(--acr-font-display);
+	font-weight: 700;
+	font-size: 8.5pt;
+	letter-spacing: 0.14em;
+	color: var(--acr-id-accent);
+	text-transform: uppercase;
+}
+
+/* The "Verified by Luqen" evidence mark — the one sanctioned use of citron. */
+.acr__mark {
+	display: inline-block;
+	width: 4px;
+	height: 14px;
+	background: var(--acr-evidence);
+	border-radius: 1px;
+}
+
+.acr__title {
+	font-family: var(--acr-font-display);
+	font-weight: 700;
+	font-size: 21pt;
+	line-height: 1.1;
+	letter-spacing: -0.022em;
+	margin-top: var(--acr-space-3);
+}
+
+.acr__meta {
+	color: var(--acr-text-secondary);
+	font-size: 8.5pt;
+	margin-top: var(--acr-space-2);
+}
+.acr__meta .acr__dot { color: var(--acr-text-muted); padding: 0 0.4em; }
+
+/* Org identity (attribution only) */
+.acr__identity {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--acr-space-4);
+	margin-top: var(--acr-space-4);
+}
+.acr__identity img { max-height: 44px; max-width: 160px; object-fit: contain; }
+.acr__identity-name { font-weight: 600; }
+.acr__identity p { font-size: 8.5pt; color: var(--acr-text-secondary); }
+
+.acr__rule {
+	border: 0;
+	border-top: 1px solid var(--acr-border-subtle);
+	margin: var(--acr-space-4) 0;
+}
+
+/* ── Verdict line — the primary evidence unit ───────────────────────────── */
+
+.acr__verdict {
+	font-size: 11pt;
+	font-weight: 600;
+	line-height: 1.4;
+	letter-spacing: -0.006em;
+}
+.acr__verdict-meta {
+	margin-top: var(--acr-space-1);
+	font-size: 8.5pt;
+	color: var(--acr-text-secondary);
+}
+
+/* Conformance tally — typographic, not cards. Each count owns its label so
+   status never rides on colour alone. */
+.acr__tally {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--acr-space-2) var(--acr-space-4);
+	margin-top: var(--acr-space-3);
+	padding-top: var(--acr-space-3);
+	border-top: 1px solid var(--acr-border-subtle);
+	font-size: 9pt;
+}
+.acr__tally-item { white-space: nowrap; color: var(--acr-text-secondary); }
+.acr__tally-n { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--acr-text-primary); }
+.acr__tally-item[data-k="supports"] .acr__tally-n { color: var(--acr-success); }
+.acr__tally-item[data-k="does-not"] .acr__tally-n { color: var(--acr-error); }
+.acr__tally-item[data-k="partial"] .acr__tally-n { color: var(--acr-warning); }
+
+/* ── Sections ───────────────────────────────────────────────────────────── */
+
+.acr__section { margin-top: var(--acr-space-5); }
+
+/* Small eyebrow heading for the prose sections — restraint, calm authority. */
+.acr__eyebrow {
+	font-size: 8.5pt;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--acr-id-accent);
+	margin-bottom: var(--acr-space-2);
+}
+
+.acr__prose { font-size: 9pt; color: var(--acr-text-secondary); max-width: 68ch; }
+.acr__prose + .acr__prose { margin-top: var(--acr-space-2); }
+.acr__prose strong { color: var(--acr-text-primary); font-weight: 600; }
+
+/* Legal caveats sit quiet, in warning ink, never shouting. */
+.acr__caveat {
+	font-size: 8pt;
+	color: var(--acr-warning);
+	max-width: 68ch;
+	margin-top: var(--acr-space-2);
+}
+
+/* Attestation: aligned label / value lines. */
+.acr__att { margin-top: var(--acr-space-1); font-size: 9pt; }
+.acr__att div { display: flex; gap: var(--acr-space-2); padding: 1px 0; }
+.acr__att dt { flex: 0 0 13rem; color: var(--acr-text-secondary); font-weight: 600; }
+.acr__att dd { margin: 0; color: var(--acr-text-primary); }
+
+/* Standards & laws — a list of programmatic per-regulation notes. */
+.acr__std { margin-top: var(--acr-space-3); }
+.acr__std-name { font-weight: 600; }
+.acr__std-token { color: var(--acr-text-muted); font-weight: 400; font-family: var(--acr-font-mono); font-size: 8pt; }
+.acr__std-cite { font-size: 7.5pt; color: var(--acr-text-muted); margin-top: 1px; }
+.acr__std-desc { font-size: 8.5pt; color: var(--acr-text-secondary); margin-top: 1px; }
+.acr__std a { color: var(--acr-id-accent); text-decoration: none; }
+
+/* ── Tables (borderless; row separators only) ───────────────────────────── */
+
+.acr__table-heading {
+	font-family: var(--acr-font-display);
+	font-size: 14pt;
+	font-weight: 600;
+	letter-spacing: -0.012em;
+	padding-bottom: var(--acr-space-1);
+	border-bottom: 1px solid var(--acr-border-strong);
+	margin-bottom: 2px;
+}
+
+.acr table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+.acr thead th {
+	text-align: left;
+	font-size: 7pt;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--acr-text-muted);
+	background: var(--acr-bg-muted);
+	padding: var(--acr-space-2) var(--acr-space-2);
+}
+.acr tbody td {
+	padding: var(--acr-space-2);
+	border-bottom: 1px solid var(--acr-border-subtle);
+	vertical-align: top;
+	color: var(--acr-text-secondary);
+}
+.acr__crit { color: var(--acr-text-primary); font-weight: 600; font-family: var(--acr-font-mono); }
+.acr__crit-title { display: block; font-family: var(--acr-font-sans); font-weight: 400; color: var(--acr-text-secondary); font-size: 8pt; margin-top: 1px; }
+
+/* Conformance verdict cell: colour + the word, never colour alone. */
+.acr__verdict-cell { font-weight: 600; white-space: nowrap; }
+.acr__verdict-cell[data-c="supports"] { color: var(--acr-success); }
+.acr__verdict-cell[data-c="partial"] { color: var(--acr-warning); }
+.acr__verdict-cell[data-c="none"] { color: var(--acr-error); }
+.acr__verdict-cell[data-c="na"],
+.acr__verdict-cell[data-c="eval"] { color: var(--acr-text-muted); }
+
+.acr__col-conf { width: 26%; }
+.acr__col-crit { width: 28%; }
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+
+.acr__footer {
+	margin-top: var(--acr-space-6);
+	padding-top: var(--acr-space-3);
+	border-top: 1px solid var(--acr-border-subtle);
+	font-size: 7.5pt;
+	color: var(--acr-text-muted);
+}
