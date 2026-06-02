@@ -89,7 +89,8 @@ import { SqliteServiceConnectionsRepository } from './db/sqlite/service-connecti
 import { importFromConfigIfEmpty } from './services/service-connections-bootstrap.js';
 import { createComplianceClient } from './compliance-client.js';
 import { createBrandingOrgClient } from './branding-client.js';
-import { createLLMOrgClient } from './llm-client.js';
+import { createLLMOrgClient, resolveOrgLLMClient } from './llm-client.js';
+import { buildVisionAnalyzer } from './scanner/vision-pass.js';
 import { enforceApiKeyRole } from './auth/api-key-guard.js';
 import { auditRoutes } from './routes/admin/audit.js';
 import { adminBadgeRoutes } from './routes/admin/badges.js';
@@ -389,6 +390,16 @@ export async function createServer(config: DashboardConfig): Promise<FastifyInst
     // Plan 18-03 flips the inline BrandingMatcher block to call them.
     brandingOrchestrator,
     brandScoreRepository: storage.brandScores,
+    // Phase 84: resolve an org-scoped vision analyzer for the behavioral pass.
+    // Returns null when no LLM is configured; the analyzer itself degrades to
+    // [] when the org has no vision-capable model (analyse-visual → 503).
+    resolveVisionAnalyzer: async (orgId) => {
+      const systemClient = getLLMClient();
+      if (systemClient === null) return null;
+      const { client } = await resolveOrgLLMClient(systemClient, storage.organizations, orgId);
+      if (client === null) return null;
+      return buildVisionAnalyzer(client, orgId);
+    },
   });
 
   // ── Security Headers (helmet) ────────────────────────────────────────────

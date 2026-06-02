@@ -14,6 +14,7 @@ import type { BrandingOrchestrator } from '../services/branding/branding-orchest
 import type { BrandScoreRepository } from '../db/interfaces/brand-score-repository.js';
 import type { ScoreResult } from '../services/scoring/types.js';
 import type { BrandGuideline } from '@luqen/branding';
+import type { Issue, VisualContext } from '@luqen/core';
 
 export interface ScanProgressEvent {
   readonly type: 'discovery' | 'scan_start' | 'scan_complete' | 'scan_error' | 'compliance' | 'complete' | 'failed';
@@ -148,6 +149,16 @@ export interface OrchestratorOptions {
    * test fixtures green.
    */
   readonly brandScoreRepository?: BrandScoreRepository;
+  /**
+   * Phase 84: resolves an org-scoped LLM-vision analyzer for the behavioral
+   * pass. When supplied AND the scan is behavioral, the orchestrator captures
+   * each page's visual context and runs the `analyse-visual` capability,
+   * merging vision findings (runner='vision'). Returns null when the org has no
+   * vision-capable model — vision is then silently skipped.
+   */
+  readonly resolveVisionAnalyzer?: (
+    orgId: string | undefined,
+  ) => Promise<((ctx: VisualContext, url: string) => Promise<readonly Issue[]>) | null>;
 }
 
 export class ScanOrchestrator {
@@ -162,6 +173,8 @@ export class ScanOrchestrator {
   private readonly brandingOrchestrator?: BrandingOrchestrator;
   /** Phase 18: constructor-injected. Read by Plan 18-03 inside runScan. */
   private readonly brandScoreRepository?: BrandScoreRepository;
+  /** Phase 84: constructor-injected vision-analyzer resolver. */
+  private readonly resolveVisionAnalyzer?: OrchestratorOptions['resolveVisionAnalyzer'];
   /** Buffer recent events per scan so late-connecting SSE clients catch up. */
   private readonly eventBuffers = new Map<string, ScanProgressEvent[]>();
   /**
@@ -185,6 +198,7 @@ export class ScanOrchestrator {
     this.pluginManager = opts.pluginManager;
     this.brandingOrchestrator = opts.brandingOrchestrator;
     this.brandScoreRepository = opts.brandScoreRepository;
+    this.resolveVisionAnalyzer = opts.resolveVisionAnalyzer;
   }
 
   emit(scanId: string, event: ScanProgressEvent): void {
@@ -448,6 +462,11 @@ export class ScanOrchestrator {
           }
         } else {
           // --- Standard (non-incremental) scan ---
+          // Phase 84: resolve an org-scoped vision analyzer for the behavioral
+          // pass (only meaningful when behavioral is enabled).
+          const visionAnalyzer = config.behavioral === true && this.resolveVisionAnalyzer
+            ? await this.resolveVisionAnalyzer(config.orgId).catch(() => null)
+            : null;
           const scanner = createScanner({
             ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
             ...(config.webserviceUrls !== undefined && config.webserviceUrls.length > 0
@@ -463,6 +482,7 @@ export class ScanOrchestrator {
             ...(config.headers !== undefined ? { headers: config.headers } : {}),
             ...(config.actions !== undefined && config.actions.length > 0 ? { actions: config.actions } : {}),
             ...(config.behavioral === true ? { behavioral: true } : {}),
+            ...(visionAnalyzer !== null ? { onVisualContext: visionAnalyzer } : {}),
             ...(config.deepScan === true ? { runners: ['htmlcs', 'axe'], lighthouse: true, ibm: true, reflow: true, a11yTree: true } : {}),
             onProgress: (progress: { type: string; url: string; current: number; total: number }) => {
               if (progress.type === 'scan:start') {
