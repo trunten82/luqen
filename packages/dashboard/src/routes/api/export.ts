@@ -5,12 +5,15 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import type { StorageAdapter } from '../../db/index.js';
 import { extractCriterion, getWcagDescription } from '../wcag-enrichment.js';
-import { generatePdfFromData, generateVpatPdf } from '../../pdf/generator.js';
+import { generatePdfFromData } from '../../pdf/generator.js';
 import type { PdfReportData, PdfScanMeta } from '../../pdf/generator.js';
 import { normalizeReportData, inferComponent } from '../../services/report-service.js';
 import { buildVpat } from '../../services/vpat-service.js';
 import { resolveRegulationDetails } from '../../services/regulation-catalog.js';
 import { buildVpatEvidenceGroups } from '../../services/vpat-evidence.js';
+import { buildAcrView, type AcrEvidenceGroup } from '../../services/acr-view.js';
+import { generateAcrPdf } from '../../services/acr-render.js';
+import { join } from 'node:path';
 import { buildRemediationRecord } from '../../services/remediation-service.js';
 import { buildFleetReportBundle } from '../../services/fleet-report-service.js';
 import type { JsonReportFile } from '../../services/report-service.js';
@@ -631,10 +634,40 @@ export async function exportRoutes(
           createdAtDisplay: new Date(scan.createdAt).toLocaleString(),
         };
 
-        const pdfBuffer = await generateVpatPdf(scanMeta, vpat, {
-          groups: evidenceGroups,
-          uploadsRoot,
+        // Resolve evidence images + the org logo to data URIs so the shared
+        // ACR template renders self-contained (HTML→PDF has no base URL). Only
+        // PNG/JPEG are embedded; other documents are listed by filename.
+        const toDataUri = async (publicPath: string): Promise<string> => {
+          const m = /\.(png|jpe?g)$/i.exec(publicPath);
+          if (!m) return '';
+          const abs = join(uploadsRoot, publicPath.replace(/^\/uploads\//, ''));
+          if (!existsSync(abs)) return '';
+          try {
+            const mime = /\.png$/i.test(abs) ? 'image/png' : 'image/jpeg';
+            return `data:${mime};base64,${(await readFile(abs)).toString('base64')}`;
+          } catch {
+            return '';
+          }
+        };
+        const acrEvidence: AcrEvidenceGroup[] = await Promise.all(
+          evidenceGroups.map(async (g) => ({
+            criterion: g.criterion,
+            title: g.title,
+            items: await Promise.all(
+              g.items.map(async (it) => ({
+                fileName: it.fileName,
+                isImage: it.isImage,
+                src: it.isImage ? await toDataUri(it.filePath) : '',
+              })),
+            ),
+          })),
+        );
+        const logoUrl = vpat.identity?.logoPath ? await toDataUri(vpat.identity.logoPath) : '';
+        const acrView = buildAcrView(vpat, scanMeta, {
+          ...(logoUrl ? { logoUrl } : {}),
+          evidence: acrEvidence,
         });
+        const pdfBuffer = await generateAcrPdf(acrView);
 
         let hostname: string;
         try {
