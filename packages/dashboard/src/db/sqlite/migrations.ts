@@ -2178,4 +2178,15 @@ CREATE TABLE IF NOT EXISTS org_entitlements (
 ALTER TABLE org_entitlements ADD COLUMN max_client_sites INTEGER;
     `,
   },
+  {
+    id: '085',
+    name: 'add-agent-message-images',
+    sql: `
+-- Phase 83 multimodal — images attached to a role='user' agent message.
+-- Stored as a JSON array of { mediaType, data } objects where data is raw
+-- base64 (no data: prefix), matching the @luqen/llm ImageInput contract the
+-- provider adapters consume. NULL when no images are attached.
+ALTER TABLE agent_messages ADD COLUMN images TEXT;
+    `,
+  },
 ];

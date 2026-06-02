@@ -30,6 +30,7 @@ function msg(partial: Partial<Message> & Pick<Message, 'role'>): Message {
     createdAt: partial.createdAt ?? '2026-04-27T19:14:50.000Z',
     inWindow: true,
     supersededAt: null,
+    images: partial.images ?? null,
   };
 }
 
@@ -215,6 +216,36 @@ describe('windowToChatMessages', () => {
       if (m.role === 'tool') results += 1;
     }
     expect(declared).toBe(results);
+  });
+
+  it('carries images attached to a user message into the AgentChatMessage (Phase 83 multimodal)', () => {
+    const window: Message[] = [
+      msg({
+        role: 'user',
+        content: 'What is wrong with this heading?',
+        images: [
+          { mediaType: 'image/png', data: 'aGVsbG8=' },
+          { mediaType: 'image/jpeg', data: 'd29ybGQ=' },
+        ],
+      }),
+    ];
+
+    const out = windowToChatMessages(window);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      role: 'user',
+      content: 'What is wrong with this heading?',
+    });
+    const images = (out[0] as { images?: ReadonlyArray<{ mediaType: string; data: string }> }).images;
+    expect(images).toHaveLength(2);
+    expect(images?.[0]).toEqual({ mediaType: 'image/png', data: 'aGVsbG8=' });
+    expect(images?.[1]).toEqual({ mediaType: 'image/jpeg', data: 'd29ybGQ=' });
+  });
+
+  it('omits the images key for a text-only user message', () => {
+    const out = windowToChatMessages([msg({ role: 'user', content: 'text only' })]);
+    expect(out).toHaveLength(1);
+    expect('images' in out[0]).toBe(false);
   });
 
   it('user message resets the covered-id tracking', () => {

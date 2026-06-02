@@ -30196,16 +30196,64 @@
               "schema": {
                 "additionalProperties": true,
                 "type": "object",
-                "required": [
-                  "content"
-                ],
                 "properties": {
                   "conversationId": {
                     "type": "string"
                   },
                   "content": {
-                    "minLength": 1,
                     "maxLength": 8000,
+                    "type": "string"
+                  },
+                  "images": {
+                    "maxItems": 4,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "mediaType",
+                        "data"
+                      ],
+                      "properties": {
+                        "mediaType": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "image/png"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "image/jpeg"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "image/webp"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "image/gif"
+                              ]
+                            }
+                          ]
+                        },
+                        "data": {
+                          "minLength": 1,
+                          "maxLength": 7000000,
+                          "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "imagesJson": {
+                    "maxLength": 28001024,
                     "type": "string"
                   }
                 }

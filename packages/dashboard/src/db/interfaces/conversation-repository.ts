@@ -22,6 +22,18 @@
 
 export type MessageRole = 'user' | 'assistant' | 'tool';
 
+/**
+ * Phase 83 multimodal — an image attached to a user turn in the agent
+ * companion. `data` is raw base64 WITHOUT any `data:` URI prefix (mirrors the
+ * @luqen/llm `ImageInput` contract the provider adapters consume). The
+ * dashboard does not depend on @luqen/llm, so the shape is declared locally and
+ * crosses the service boundary as JSON on the agent-conversation request.
+ */
+export interface ImageInput {
+  readonly mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+  readonly data: string;
+}
+
 export type MessageStatus =
   | 'sent'
   | 'pending_confirmation'
@@ -78,6 +90,11 @@ export interface Message {
    * superseded by a retry/edit-resend. Null for non-superseded rows.
    */
   readonly supersededAt: string | null;
+  /**
+   * Phase 83 multimodal: images attached to a `role='user'` message, or null
+   * when none were attached. Persisted as a JSON array in the `images` column.
+   */
+  readonly images: readonly ImageInput[] | null;
 }
 
 export interface CreateConversationInput {
@@ -94,6 +111,8 @@ export interface AppendMessageInput {
   readonly toolResultJson?: string;
   /** Defaults to 'sent'. */
   readonly status?: MessageStatus;
+  /** Phase 83 multimodal: images attached to a `role='user'` message. */
+  readonly images?: readonly ImageInput[];
 }
 
 export interface ListConversationsOptions {

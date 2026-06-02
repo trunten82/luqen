@@ -85,6 +85,18 @@
   }
   </script>
 
+  {{!-- Phase 83 multimodal — client-side image attachment strings (inert JSON,
+       CSP-strict). Read once by agent.js for thumbnail aria-labels + validation
+       error messages. __MAX__ is substituted per message. --}}
+  <script type="application/json" id="agent-images-i18n">
+  {
+    "remove":      "{{t "agent.image.remove"}}",
+    "capExceeded": "{{t "agent.image.capExceeded" max="__MAX__"}}",
+    "tooLarge":    "{{t "agent.image.tooLarge"}}",
+    "badType":     "{{t "agent.image.badType"}}"
+  }
+  </script>
+
   {{> agent-history-panel items=historyItems agentDisplayName=agentDisplayName}}
 
   <div class="agent-drawer__stream-status" id="agent-stream-status" role="status" aria-live="polite" hidden>
@@ -104,6 +116,23 @@
         data-user-id="{{user.id}}">
     <input type="hidden" name="_csrf" value="{{csrfToken}}">
     <input type="hidden" name="conversationId" value="{{conversationId}}" id="agent-conversation-id-field">
+    {{!-- Phase 83 multimodal — staged image attachments. agent.js reads files
+         here (and paste events on the composer), base64-encodes them, renders
+         removable thumbnails into #agent-attachments, and injects them as the
+         `imagesJson` form field via htmx:configRequest on submit. --}}
+    <div class="agent-drawer__attachments" id="agent-attachments" role="list"
+         aria-label="{{t "agent.image.staged"}}" hidden></div>
+    <input type="file" id="agent-image-input" class="sr-only"
+           accept="image/png,image/jpeg,image/webp,image/gif" multiple
+           aria-hidden="true" tabindex="-1">
+    <button type="button" class="chat-btn--icon btn btn--ghost" id="agent-attach"
+            aria-label="{{t "agent.image.add"}}"
+            title="{{t "agent.image.add"}}">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
     <button type="button" class="chat-btn--icon btn btn--ghost" id="agent-speech"
             aria-label="{{t "agent.speech.start"}}"
             aria-pressed="false"
@@ -125,12 +154,13 @@
       </svg>
     </button>
     <label for="agent-input" class="sr-only">{{t "agent.input.placeholder" name=agentDisplayName}}</label>
+    {{!-- `required` intentionally omitted (Phase 83): an image-only turn has no
+         text. The server enforces "text OR ≥1 image"; agent.js gates submit. --}}
     <textarea id="agent-input" name="content"
               placeholder="{{t "agent.input.placeholder" name=agentDisplayName}}"
               rows="1"
               lang="{{locale}}"
-              maxlength="4000"
-              required></textarea>
+              maxlength="4000"></textarea>
     <button type="submit" class="btn btn--primary chat-btn--icon" id="agent-send"
             aria-label="{{t "agent.input.sendAria"}}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">

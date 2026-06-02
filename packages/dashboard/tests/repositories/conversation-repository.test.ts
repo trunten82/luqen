@@ -174,6 +174,43 @@ describe('SqliteConversationRepository — appendMessage basics', () => {
     expect(refreshed?.lastMessageAt).toBe(refreshed?.updatedAt);
   });
 
+  it('round-trips images attached to a user message through getWindow (Phase 83 multimodal)', async () => {
+    const conv = await storage.conversations.createConversation({
+      userId,
+      orgId: orgA,
+    });
+    const images = [
+      { mediaType: 'image/png' as const, data: 'aGVsbG8=' },
+      { mediaType: 'image/jpeg' as const, data: 'd29ybGQ=' },
+    ];
+    const msg = await storage.conversations.appendMessage({
+      conversationId: conv.id,
+      role: 'user',
+      content: 'what is wrong here?',
+      images,
+    });
+    expect(msg.images).toEqual(images);
+
+    const window = await storage.conversations.getWindow(conv.id);
+    expect(window).toHaveLength(1);
+    expect(window[0].images).toEqual(images);
+  });
+
+  it('persists images as null when none are attached', async () => {
+    const conv = await storage.conversations.createConversation({
+      userId,
+      orgId: orgA,
+    });
+    const msg = await storage.conversations.appendMessage({
+      conversationId: conv.id,
+      role: 'user',
+      content: 'text only',
+    });
+    expect(msg.images).toBeNull();
+    const window = await storage.conversations.getWindow(conv.id);
+    expect(window[0].images).toBeNull();
+  });
+
   it('a new user message is inserted with in_window = 1 by default', async () => {
     const conv = await storage.conversations.createConversation({
       userId,

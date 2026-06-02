@@ -32,6 +32,14 @@
   var SPEECH_BTN_ID = 'agent-speech';
   var activeStream = null;
 
+  // Phase 83 multimodal — staged image attachments live in agent-images.js
+  // (window.__luqenAgentImages). These thin shims let the composer hooks below
+  // stay null-safe if that file failed to load.
+  function agentImages() { return window.__luqenAgentImages || null; }
+  function hasStagedImages() { var a = agentImages(); return !!(a && a.hasStaged()); }
+  function getStagedImages() { var a = agentImages(); return a ? a.getStaged() : []; }
+  function clearStagedImages() { var a = agentImages(); if (a) a.clear(); }
+
   // ──────────────────────────────────────────────────────────────────────
   // Phase 37 Plan 04 — per-message action primitives.
   //
@@ -1276,6 +1284,18 @@
     }
   });
 
+  // Phase 83 multimodal — inject staged images into the /agent/message POST as
+  // a JSON string field (urlencoded-safe). Also abort an empty submit (no text
+  // AND no images) before HTMX disables the composer, so nothing is sent.
+  document.body.addEventListener('htmx:configRequest', function (e) {
+    var detail = e.detail;
+    if (!detail || typeof detail.path !== 'string' || detail.path.indexOf('/agent/message') !== 0) return;
+    var params = detail.parameters || {};
+    var hasText = String(params.content || '').trim().length > 0;
+    if (!hasText && !hasStagedImages()) { e.preventDefault(); return; }
+    if (hasStagedImages()) { params.imagesJson = JSON.stringify(getStagedImages()); }
+  });
+
   document.body.addEventListener('htmx:afterRequest', function (e) {
     var cfg = e.detail && e.detail.requestConfig;
     if (!cfg || typeof cfg.path !== 'string') return;
@@ -1285,6 +1305,8 @@
       var headerCid = xhr.getResponseHeader('x-conversation-id');
       if (headerCid && headerCid.length > 0) { setConversationId(headerCid); }
       var input = byId(INPUT_ID); if (input) { input.value = ''; }
+      // Phase 83: the staged images were just sent — clear the staging tray.
+      clearStagedImages();
       // Phase 36-04: clear previous turn's tool chips before opening the new stream.
       clearToolChips();
       openStream(getConversationId());
@@ -1314,6 +1336,7 @@
     ensureAriaLive();
     wireInputAutoResize();
     wireComposerKeyAndGuards();
+    // Image attachments self-wire in agent-images.js (window.__luqenAgentImages).
     // initOrgSelectPreviousOrgId moved to agent-org.js (self-bootstraps on DOMContentLoaded).
     // Share view (read-only): render markdown on assistant bodies that were
     // server-rendered as raw text. No SSE, no loadPanel.
@@ -1366,7 +1389,8 @@
       // browsers expose keyCode 229.
       if (e.isComposing || e.keyCode === 229) return;
       var value = String(input.value || '').trim();
-      if (value.length === 0) return;
+      // Phase 83: allow Enter-to-send for an image-only turn (no text).
+      if (value.length === 0 && !hasStagedImages()) return;
       e.preventDefault();
       // Defer to HTMX's request pipeline so csrf/headers/afterRequest hooks
       // fire identically to a click on the Send button. window.htmx is the

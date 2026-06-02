@@ -159,6 +159,120 @@ describe('/agent/* routes', () => {
     expect(userRow).toBeDefined();
   });
 
+  it('Test 2b: POST /agent/message with valid images persists them on the user row (Phase 83 multimodal)', async () => {
+    const images = [{ mediaType: 'image/png', data: 'aGVsbG8=' }];
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'content-type': 'application/json' },
+      payload: { conversationId: ctx.conversationId, content: 'what is wrong?', images },
+    });
+    expect(res.statusCode).toBe(202);
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const userRow = window.find((m) => m.role === 'user' && m.content === 'what is wrong?');
+    expect(userRow?.images).toEqual(images);
+  });
+
+  it('Test 2c: POST /agent/message image-only (empty content + an image) is accepted', async () => {
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'content-type': 'application/json' },
+      payload: {
+        conversationId: ctx.conversationId,
+        content: '',
+        images: [{ mediaType: 'image/jpeg', data: 'd29ybGQ=' }],
+      },
+    });
+    expect(res.statusCode).toBe(202);
+  });
+
+  it('Test 2d: POST /agent/message with neither content nor images returns 400', async () => {
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'content-type': 'application/json' },
+      payload: { conversationId: ctx.conversationId, content: '   ' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('Test 2e: POST /agent/message rejects an unsupported image mediaType', async () => {
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'content-type': 'application/json' },
+      payload: {
+        conversationId: ctx.conversationId,
+        content: 'hi',
+        images: [{ mediaType: 'image/svg+xml', data: 'aGVsbG8=' }],
+      },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('Test 2f: POST /agent/message rejects more than the per-message image cap', async () => {
+    const images = Array.from({ length: 5 }, () => ({ mediaType: 'image/png', data: 'aGVsbG8=' }));
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'content-type': 'application/json' },
+      payload: { conversationId: ctx.conversationId, content: 'hi', images },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('Test 2g: POST /agent/message rejects non-base64 image data', async () => {
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'content-type': 'application/json' },
+      payload: {
+        conversationId: ctx.conversationId,
+        content: 'hi',
+        images: [{ mediaType: 'image/png', data: 'data:image/png;base64,aGk=' }],
+      },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('Test 2h: POST /agent/message accepts images via the urlencoded imagesJson field and persists them', async () => {
+    const images = [{ mediaType: 'image/webp', data: 'aW1n' }];
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: `conversationId=${ctx.conversationId}&content=look&imagesJson=${encodeURIComponent(JSON.stringify(images))}`,
+    });
+    expect(res.statusCode).toBe(202);
+    const window = await ctx.storage.conversations.getWindow(ctx.conversationId);
+    const userRow = window.find((m) => m.role === 'user' && m.content === 'look');
+    expect(userRow?.images).toEqual(images);
+  });
+
+  it('Test 2i: POST /agent/message rejects a malformed imagesJson string', async () => {
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: `conversationId=${ctx.conversationId}&content=look&imagesJson=${encodeURIComponent('{not json')}`,
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('Test 2j: POST /agent/message accepts an image larger than the 1 MB Fastify default body limit', async () => {
+    // ~1.5 MB of base64 — would 413 if the per-route bodyLimit override were
+    // missing (default Fastify limit is 1 MB).
+    const bigData = 'A'.repeat(1_500_000);
+    const res = await ctx.server.inject({
+      method: 'POST',
+      url: '/agent/message',
+      headers: { 'content-type': 'application/json' },
+      payload: { conversationId: ctx.conversationId, content: 'big', images: [{ mediaType: 'image/png', data: bigData }] },
+    });
+    expect(res.statusCode).toBe(202);
+  });
+
   it('Test 3: GET /agent/stream/:id sets SSE headers and invokes AgentService.runTurn', async () => {
     // Seed a user message to drive the turn.
     await ctx.storage.conversations.appendMessage({
