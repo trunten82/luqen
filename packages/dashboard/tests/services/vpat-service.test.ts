@@ -330,6 +330,31 @@ describe('buildVpat', () => {
     expect(withManual.attestation.evaluator).toBe('Acme Corp');
   });
 
+  it('surfaces an explicit evaluatedStandards list (regulation full names) on the report', () => {
+    const report = makeReport([]);
+    const usScan = {
+      siteUrl: 'https://example.com',
+      standard: 'WCAG2AA',
+      jurisdictions: ['US'],
+      regulations: ['US-ADA', 'US-NY-NYC-LL12'],
+    };
+    const vpat = buildVpat(report, usScan, [], { generatedAt: GEN_AT });
+    const names = vpat.evaluatedStandards.map((s) => s.name);
+    expect(vpat.evaluatedStandards.map((s) => s.token)).toEqual(['US-ADA', 'US-NY-NYC-LL12']);
+    expect(names).toContain('Americans with Disabilities Act');
+    expect(names.join(' ')).toContain('Local Law 12');
+  });
+
+  it('lets a regulationNames override map drive evaluatedStandards names', () => {
+    const report = makeReport([]);
+    const usScan = { siteUrl: 'https://example.com', standard: 'WCAG2AA', jurisdictions: ['US'], regulations: ['US-ADA'] };
+    const vpat = buildVpat(report, usScan, [], {
+      generatedAt: GEN_AT,
+      regulationNames: new Map([['US-ADA', 'ADA (from live compliance)']]),
+    });
+    expect(vpat.evaluatedStandards[0]?.name).toBe('ADA (from live compliance)');
+  });
+
   it('excludes WCAG 2.2 AAA criteria from an AA scan but includes them at AAA', () => {
     const aa = buildVpat(makeReport([]), scanAA, [], { generatedAt: GEN_AT });
     const aaIds = new Set(aa.tablesByLevel.flatMap((t) => t.rows).map((r) => r.criterion));

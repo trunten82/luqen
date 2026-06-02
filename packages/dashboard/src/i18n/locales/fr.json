@@ -1419,6 +1419,8 @@
     "attEvaluator": "Évaluateur",
     "identityContact": "Contact",
     "attestationStatement": "Ce rapport reflète une évaluation de bonne foi du site à la date d’évaluation, réalisée selon les méthodes indiquées ci-dessus. Il consigne l’état de conformité à ce moment et la démarche de remédiation en cours ; il ne constitue pas une certification et ne garantit pas la conformité.",
+    "standardsEvaluatedHeading": "Normes et lois évaluées",
+    "standardsEvaluatedIntro": "Ce rapport a été évalué explicitement au regard de chacune des normes et lois suivantes, sélectionnées pour cette analyse. Chacune est nommée en toutes lettres afin que l’étendue de la couverture soit sans ambiguïté.",
     "attReasonedChanges": "Changements de verdict documentés (avec motifs)",
     "evidenceHeading": "Preuves des tests manuels",
     "evidenceIntro": "Fichiers de preuve recueillis lors des tests manuels, classés par critère de succès. Ces éléments — captures d’écran et documents — étayent les verdicts manuels indiqués ci-dessus et font partie du registre de tests daté et de bonne foi. Ils sont fournis à des fins de transparence et ne constituent pas une certification de conformité.",

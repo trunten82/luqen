@@ -27,8 +27,29 @@ export interface LegalFraming {
   readonly shortLabel: string;
 }
 
+/**
+ * A single standard/law the scan was explicitly evaluated against — its selected
+ * token (regulation id) plus a resolved human-readable full name. Powers the
+ * "Standards & laws evaluated against" section so the report states coverage
+ * EXPLICITLY (e.g. "Americans with Disabilities Act"), never folded into a bare
+ * jurisdiction code like "US".
+ */
+export interface EvaluatedStandard {
+  /** The selected regulation token / id, e.g. "US-ADA". */
+  readonly token: string;
+  /** Resolved full name, e.g. "Americans with Disabilities Act". */
+  readonly name: string;
+}
+
 export interface LegalFramingResult {
   readonly framings: readonly LegalFraming[];
+  /**
+   * Explicit enumeration of every selected regulation by full name, in selection
+   * order (deduped). Empty when no regulations were selected. Resolved from the
+   * caller-supplied live name map first, then the built-in catalog, then the raw
+   * token — so the report is always explicit about what it covered.
+   */
+  readonly evaluatedStandards: readonly EvaluatedStandard[];
   /**
    * Whether to render the Functional Performance table. True when Section 508
    * (§302) or EN 301 549 (clause 4 Functional Performance Statements) applies —
@@ -187,10 +208,76 @@ const FRAMINGS: readonly FramingDef[] = [
   },
 ];
 
+/**
+ * Built-in catalog of regulation token (id) → full legal name, mirroring the
+ * compliance baseline seed for the commonly-selected jurisdictions. Used as a
+ * FALLBACK when the caller does not supply a live name map (e.g. summary-only
+ * render paths). The user-facing report routes pass the authoritative live map
+ * from the compliance service, which takes precedence over this catalog and
+ * covers the full regulation set. Keep names in sync with
+ * `packages/compliance/src/seed/baseline.json` when they change.
+ */
+const KNOWN_STANDARD_NAMES: Readonly<Record<string, string>> = {
+  // United States — federal
+  'US-508': 'Section 508 of the Rehabilitation Act',
+  'US-ADA': 'Americans with Disabilities Act',
+  'US-ADA-T2-WEB': 'ADA Title II Web Accessibility Rule (2024)',
+  'US-255': 'Section 255 of the Telecommunications Act',
+  'US-ACAA': 'Air Carrier Access Act',
+  'US-CVAA': '21st Century Communications and Video Accessibility Act',
+  // United States — states
+  'US-CA-GOV7405': 'California Government Code Section 7405',
+  'US-IL-IITAA': 'Illinois Information Technology Accessibility Act',
+  'US-CO-HB211110': 'Colorado HB21-1110 Accessibility for Persons with Disabilities',
+  'US-NY-WEB': 'New York State Web Accessibility Policy',
+  'US-NY-NYC-LL12': 'New York City Local Law 12 of 2023 — Website Accessibility',
+  'US-NY-NYC-HRL': 'NYC Human Rights Law — Public Accommodations (digital)',
+  'US-TX-1TAC213': 'Texas Administrative Code Title 1, Chapter 213 — Electronic and Information Resources',
+  'US-VA-2.2-3504': 'Virginia Code § 2.2-3504 — Information Technology Access for Persons with Disabilities',
+  'US-MA-ITD': 'Massachusetts Enterprise IT Accessibility Standards',
+  'US-MN-16E': 'Minnesota Statute § 16E.03 — Accessibility Standards',
+  'US-WA-188': 'Washington OCIO Policy 188 — Accessibility',
+  'US-OR-IT': 'Oregon IT Accessibility Policy',
+  'US-MD-3A-301': 'Maryland State Government Article § 3A-301 — Information Technology Nonvisual Access',
+  'US-NJ-P28': 'New Jersey P.L. 2021, c. 488 — State Agency Website Accessibility',
+  'US-KY-61.980': 'Kentucky Revised Statutes § 61.980 — Equal Access to Information Technology',
+  // European Union & member states (common)
+  'EU-EAA': 'European Accessibility Act',
+  'EU-WAD': 'Web Accessibility Directive',
+  // United Kingdom
+  'UK-EA': 'Equality Act 2010',
+  'UK-PSBAR': 'Public Sector Bodies Accessibility Regulations',
+  // Other major jurisdictions
+  'DE-BITV': 'Barrierefreie-Informationstechnik-Verordnung 2.0',
+  'FR-RGAA': 'Référentiel Général d’Amélioration de l’Accessibilité',
+  'AU-DDA': 'Disability Discrimination Act 1992',
+  'CA-ACA': 'Accessible Canada Act',
+};
+
 function normalise(tokens: readonly string[]): string[] {
   return tokens
     .filter((t): t is string => typeof t === 'string')
     .map((t) => t.toLowerCase());
+}
+
+/**
+ * Resolves the ordered, de-duplicated list of selected regulations to explicit
+ * full names. Resolution order per token: live override map → built-in catalog →
+ * the raw token itself (so an unknown selection is still shown, never dropped).
+ */
+function deriveEvaluatedStandards(
+  regulations: readonly string[],
+  regulationNames?: ReadonlyMap<string, string>,
+): EvaluatedStandard[] {
+  const seen = new Set<string>();
+  const out: EvaluatedStandard[] = [];
+  for (const token of regulations) {
+    if (typeof token !== 'string' || token.trim() === '' || seen.has(token)) continue;
+    seen.add(token);
+    const name = regulationNames?.get(token) ?? KNOWN_STANDARD_NAMES[token] ?? token;
+    out.push({ token, name });
+  }
+  return out;
 }
 
 /**
@@ -200,6 +287,7 @@ function normalise(tokens: readonly string[]): string[] {
 export function deriveLegalFramings(
   jurisdictions: readonly string[] = [],
   regulations: readonly string[] = [],
+  regulationNames?: ReadonlyMap<string, string>,
 ): LegalFramingResult {
   const tokens = normalise([...jurisdictions, ...regulations]);
   const has = (def: FramingDef): boolean =>
@@ -249,6 +337,7 @@ export function deriveLegalFramings(
 
   return {
     framings,
+    evaluatedStandards: deriveEvaluatedStandards(regulations, regulationNames),
     includeFunctionalPerformance,
     functionalPerformanceHeading,
     standardsLabel,

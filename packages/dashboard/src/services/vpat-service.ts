@@ -19,7 +19,7 @@ import {
 import { MANUAL_CRITERIA, type ManualTestResult } from '../manual-criteria.js';
 import { deriveSection508, type Section508Report } from './section508.js';
 import type { VpatIdentity } from './vpat-identity.js';
-import { deriveLegalFramings, type LegalFraming } from './legal-framings.js';
+import { deriveLegalFramings, type LegalFraming, type EvaluatedStandard } from './legal-framings.js';
 import type { RemediationRecord } from './remediation-service.js';
 import { computeEngineCorroboration, type normalizeReportData } from './report-service.js';
 
@@ -106,6 +106,13 @@ export interface VpatReport {
    */
   readonly legalFramings: readonly LegalFraming[];
   /**
+   * Explicit enumeration of every selected regulation by full name (e.g.
+   * "Americans with Disabilities Act"), in selection order. Drives the
+   * "Standards & laws evaluated against" section so the report states coverage
+   * explicitly. Empty when no regulations were selected.
+   */
+  readonly evaluatedStandards: readonly EvaluatedStandard[];
+  /**
    * Whether the Functional Performance table applies (Section 508 §302 or
    * EN 301 549 clause 4). When false, no FPC table is shown.
    */
@@ -163,6 +170,13 @@ export interface BuildVpatOptions {
    * earlier in deriveRow). Empty/absent by default → no change to conformance.
    */
   readonly behaviorallyEvaluatedCriteria?: ReadonlySet<string>;
+  /**
+   * Live regulation token → full-name map resolved from the compliance service.
+   * Drives the explicit "Standards & laws evaluated against" enumeration; takes
+   * precedence over the built-in catalog so the report always names the exact
+   * laws selected. Absent → falls back to the built-in catalog, then the token.
+   */
+  readonly regulationNames?: ReadonlyMap<string, string>;
 }
 
 /** Minimal shape of the scan record needed to build a VPAT. */
@@ -384,7 +398,7 @@ export function buildVpat(
   const generatedAt = opts.generatedAt ?? new Date().toISOString().slice(0, 10);
   // Legal framing is driven by the scan's selected jurisdictions/regulations,
   // not a hardcoded US frame.
-  const framing = deriveLegalFramings(scan.jurisdictions ?? [], scan.regulations ?? []);
+  const framing = deriveLegalFramings(scan.jurisdictions ?? [], scan.regulations ?? [], opts.regulationNames);
 
   const groupsByCriterion = new Map<string, IssueGroup>();
   for (const g of reportData.allIssueGroups ?? []) {
@@ -471,6 +485,7 @@ export function buildVpat(
     summary,
     section508: deriveSection508(rows),
     legalFramings: framing.framings,
+    evaluatedStandards: framing.evaluatedStandards,
     includeFunctionalPerformance: framing.includeFunctionalPerformance,
     functionalPerformanceHeading: framing.functionalPerformanceHeading,
     remediation,

@@ -58,3 +58,39 @@ describe('deriveLegalFramings', () => {
     }
   });
 });
+
+describe('deriveLegalFramings — evaluatedStandards (explicit coverage enumeration)', () => {
+  it('enumerates each selected regulation by full name from the built-in catalog', () => {
+    const r = deriveLegalFramings(
+      ['US'],
+      ['US-ADA', 'US-ADA-T2-WEB', 'US-NY-WEB', 'US-NY-NYC-LL12', 'US-NY-NYC-HRL'],
+    );
+    const byToken = Object.fromEntries(r.evaluatedStandards.map((s) => [s.token, s.name]));
+    expect(byToken['US-ADA']).toBe('Americans with Disabilities Act');
+    expect(byToken['US-ADA-T2-WEB']).toBe('ADA Title II Web Accessibility Rule (2024)');
+    expect(byToken['US-NY-WEB']).toBe('New York State Web Accessibility Policy');
+    expect(byToken['US-NY-NYC-LL12']).toContain('Local Law 12');
+    expect(byToken['US-NY-NYC-HRL']).toContain('Human Rights Law');
+    // ADA must be named explicitly, never folded into "US".
+    expect(r.evaluatedStandards.map((s) => s.name).join(' ')).toContain('Americans with Disabilities Act');
+  });
+
+  it('prefers a live name-resolution override map over the built-in catalog', () => {
+    const overrides = new Map([['US-ADA', 'Americans with Disabilities Act (live)']]);
+    const r = deriveLegalFramings(['US'], ['US-ADA', 'XX-UNKNOWN'], overrides);
+    const byToken = Object.fromEntries(r.evaluatedStandards.map((s) => [s.token, s.name]));
+    expect(byToken['US-ADA']).toBe('Americans with Disabilities Act (live)');
+    // Unknown token with no override and no catalog entry falls back to the token itself.
+    expect(byToken['XX-UNKNOWN']).toBe('XX-UNKNOWN');
+  });
+
+  it('preserves selection order and de-duplicates repeated tokens', () => {
+    const r = deriveLegalFramings(['US'], ['US-508', 'US-ADA', 'US-508']);
+    expect(r.evaluatedStandards.map((s) => s.token)).toEqual(['US-508', 'US-ADA']);
+  });
+
+  it('returns no evaluated standards when no regulations are selected', () => {
+    expect(deriveLegalFramings(['US'], []).evaluatedStandards).toHaveLength(0);
+    expect(deriveLegalFramings([], []).evaluatedStandards).toHaveLength(0);
+  });
+});

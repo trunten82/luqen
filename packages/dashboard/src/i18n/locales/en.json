@@ -1903,6 +1903,8 @@
     "attEvaluator": "Evaluator",
     "identityContact": "Contact",
     "attestationStatement": "This report reflects a good-faith evaluation of the site as of the evaluation date, performed using the methods listed above. It records the state of conformance at that time and the ongoing remediation effort; it is not a certification and does not guarantee conformance.",
+    "standardsEvaluatedHeading": "Standards & laws evaluated against",
+    "standardsEvaluatedIntro": "This report was evaluated explicitly against each of the following standards and laws, as selected for this scan. Each is named in full so the scope of coverage is unambiguous.",
     "attReasonedChanges": "Documented verdict changes (with reasons)",
     "evidenceHeading": "Manual test evidence",
     "evidenceIntro": "Supporting evidence files recorded during manual testing, organised by success criterion. These artifacts — screenshots and documents — substantiate the manual verdicts recorded above and form part of the dated, good-faith testing record. They are provided for transparency and do not constitute a certification of conformance.",
