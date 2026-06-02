@@ -321,6 +321,25 @@ Used anywhere else, it's a bug.
 
 ---
 
+## Accessibility Conformance Report (ACR) — single source
+
+The ACR (VPAT®) is the customer-shareable artifact a compliance officer prints for a regulator or a CFO. It is a transparency and remediation-planning document, never a certificate. The type carries the authority; decoration does not.
+
+**One document, two renderers.** The ACR template and stylesheet are authored once in `shared/acr/` (`acr.template.html` + `acr.css`) and rendered by every surface that produces an ACR:
+
+- **Dashboard** — `acr-view.ts` maps a built VPAT report onto the template's view shape, `acr-render.ts` renders it with mustache.js, inlines `acr.css` and the four self-hosted fonts as data URIs, and prints to PDF through headless Chromium (the browser the scanner already runs). The PDFKit path (`pdf/generator.ts`) stays only as a degrade fallback for hosts that cannot launch Chromium.
+- **WordPress plugin** — `Luqen_Vpat::build_acr_view` builds the same view shape, and a tiny dependency-free PHP port (`Luqen_Mustache`) renders the *same* template. The port matches mustache.js byte for byte: identical HTML escaping (`& < > " ' / \` =`) and the standalone-tag whitespace rule. Rendering the same view data through both renderers diffs clean.
+
+Edit the template or the stylesheet once and both surfaces change. Never fork the rendered markup into a consumer.
+
+**Token basis.** Built strictly on the identity tokens above: oxblood identity (hue 25), citron reserved for the "Verified by Luqen" mark only, Inter + Inter Display + IBM Plex Mono. Light canvas, AAA contrast, because it is customer-shareable. Borderless tables, row separators only. The verdict line leads (see [The verdict line](#the-verdict-line)); the conformance tally is typographic, not cards; status rides on colour plus a word, never colour alone.
+
+**Conservative by construction.** The verdict line claims "conforms" only when every assessed criterion supports. Criteria automation cannot confirm read "Not Evaluated" until a manual test is recorded; they are never assumed to pass.
+
+**Sync mechanism.** `shared/acr/` in the dashboard monorepo is canonical. The WordPress plugin (separate repo) vendors a synced copy under `includes/acr/` plus the four TTFs under `assets/fonts/`. `scripts/sync-acr-template.sh` copies canonical → plugin; the vendored files are never hand-edited. Workflow: edit `shared/acr`, run the sync script in the plugin repo, commit the vendored copy with a CHANGELOG entry.
+
+---
+
 ## Imagery and iconography
 
 - **Icon set:** Phosphor Icons (open source, SIL OFL). Weight: `regular` only — no duotone, no filled, no thin. Always 16px or 20px or 24px, inline with text.
