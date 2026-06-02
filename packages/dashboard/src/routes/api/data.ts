@@ -126,6 +126,8 @@ interface ReportIssue {
   readonly context?: string;
   readonly wcagCriterion?: string;
   readonly wcagTitle?: string;
+  /** Which engine produced the finding (e.g. 'axe-core', 'behavioral', 'vision'). */
+  readonly runner?: string;
   readonly regulations?: ReadonlyArray<{
     readonly shortName: string;
     readonly url?: string;
@@ -378,6 +380,7 @@ export async function dataApiRoutes(
             selector: issue.selector,
             wcagCriterion: issue.wcagCriterion ?? null,
             wcagTitle: issue.wcagTitle ?? null,
+            runner: issue.runner ?? null,
             pageUrl: page.url,
             regulations: issue.regulations ?? [],
           });
