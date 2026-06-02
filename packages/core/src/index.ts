@@ -15,6 +15,13 @@ export { buildAnnotatedPages } from './reporter/html-reporter.js';
 export { computeContentHash, computeContentHashes } from './scanner/content-hash.js';
 export { runBehavioralChecks } from './behavioral/index.js';
 export type { BehavioralOptions, BehavioralResult } from './behavioral/types.js';
+export { captureVisualContext } from './behavioral/visual.js';
+export type {
+  VisualContext,
+  CapturedImage,
+  CapturedScreenshot,
+  CaptureVisualOptions,
+} from './behavioral/visual.js';
 export { runLighthouseChecks } from './lighthouse/index.js';
 export type { LighthouseOptions, LighthouseResult } from './lighthouse/types.js';
 export { runIbmChecks } from './ibm/index.js';
