@@ -547,7 +547,12 @@ export async function reportRoutes(
         reportData,
         scan,
         manualResults,
-        { evidenceCounts, reasonedChangeCount, ...(identity ? { identity } : {}) },
+        {
+          evidenceCounts,
+          reasonedChangeCount,
+          behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []),
+          ...(identity ? { identity } : {}),
+        },
         remediation,
       );
       // Manual-test evidence ARTIFACTS (screenshots / documents) per criterion —

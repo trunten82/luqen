@@ -64,6 +64,16 @@ export const MAX_ALT_TEXT_IMAGES = 5;
 export function buildVisionAnalyzer(
   client: LLMClient,
   orgId: string | undefined,
+  /**
+   * C#2 (Phase 84) side-channel: when supplied, the analyzer records the WCAG
+   * criteria it actually evaluated — regardless of verdict — so a clean
+   * behavioral evaluation can later be distinguished from "vision never ran".
+   * Only DEFINITIVE verdicts count ('pass' OR 'issue'); 'uncertain' verdicts
+   * and errors must NOT mark a criterion evaluated (never claim Supports off a
+   * degraded/failed vision call). The set is mutated in place; the return type
+   * stays Issue[] and all existing behavior is unchanged.
+   */
+  evaluatedSink?: Set<string>,
 ): (ctx: VisualContext, url: string) => Promise<readonly Issue[]> {
   const org = orgId !== undefined ? { orgId } : {};
   return async (ctx: VisualContext): Promise<readonly Issue[]> => {
@@ -78,6 +88,11 @@ export function buildVisionAnalyzer(
           context: ctx.headingOutline,
           ...org,
         });
+        // Record 1.3.1 as evaluated on any DEFINITIVE verdict (pass or issue),
+        // never on 'uncertain'. Errors throw and skip this entirely.
+        if (result.verdict === 'pass' || result.verdict === 'issue') {
+          evaluatedSink?.add('1.3.1');
+        }
         if (result.verdict === 'issue' && Array.isArray(result.findings)) {
           for (const f of result.findings) {
             issues.push(mapVisionFindingToIssue(f, 'document', ctx.headingOutline.slice(0, 200)));
@@ -101,6 +116,11 @@ export function buildVisionAnalyzer(
           context,
           ...org,
         });
+        // A definitive alt-text verdict (pass or issue) means 1.1.1 was
+        // evaluated for this page; 'uncertain' and errors do not count.
+        if (result.verdict === 'pass' || result.verdict === 'issue') {
+          evaluatedSink?.add('1.1.1');
+        }
         if (result.verdict !== 'issue' || !Array.isArray(result.findings)) continue;
         const suffix =
           typeof result.suggestedAlt === 'string' && result.suggestedAlt.length > 0

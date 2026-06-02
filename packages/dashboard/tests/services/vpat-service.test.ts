@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildVpat, type VpatScanInput } from '../../src/services/vpat-service.js';
-import type { normalizeReportData } from '../../src/services/report-service.js';
+import { normalizeReportData, type JsonReportFile } from '../../src/services/report-service.js';
 import type { ManualTestResult } from '../../src/manual-criteria.js';
 
 // normalizeReportData returns an inferred type; derive the shapes locally so the
@@ -427,5 +427,47 @@ describe('buildVpat — manual-test evidence counts (Slice C)', () => {
     const report = makeReport([]);
     const vpat = buildVpat(report, scanAA, [], { generatedAt: GEN_AT, reasonedChangeCount: 0 });
     expect(vpat.attestation.reasonedChangeCount).toBeUndefined();
+  });
+});
+
+// Producer→consumer wiring (Phase 84 C#2): a persisted report carrying
+// behaviorallyEvaluatedCriteria flows through normalizeReportData and into the
+// VPAT options the way every buildVpat caller now does it, elevating a clean
+// manual-judgement criterion to "Supports".
+describe('buildVpat — behaviorallyEvaluatedCriteria from a persisted report', () => {
+  function rawCleanReport(behaviorallyEvaluatedCriteria?: string[]): JsonReportFile {
+    return {
+      summary: { pagesScanned: 2, totalIssues: 0, byLevel: { error: 0, warning: 0, notice: 0 } },
+      pages: [{ url: 'https://example.com', issueCount: 0, issues: [] }],
+      ...(behaviorallyEvaluatedCriteria ? { behaviorallyEvaluatedCriteria } : {}),
+    };
+  }
+  const scan = { siteUrl: 'https://example.com', standard: 'WCAG2AA' };
+
+  it('elevates 1.3.1 to Supports when the report records it as vision-evaluated and there are no findings', () => {
+    const reportData = normalizeReportData(rawCleanReport(['1.3.1']), scan);
+    // Same call shape every buildVpat caller now uses.
+    const vpat = buildVpat(
+      reportData,
+      { siteUrl: scan.siteUrl, standard: scan.standard },
+      [],
+      { generatedAt: GEN_AT, behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []) },
+    );
+    const row = vpat.tablesByLevel.flatMap((t) => t.rows).find((r) => r.criterion === '1.3.1');
+    expect(row?.conformance).toBe('Supports');
+    expect(row?.remarks).toBe('Evaluated by LLM-vision behavioral testing; no issues detected');
+  });
+
+  it('leaves 1.3.1 as Not Evaluated when the report records no vision-evaluated criteria', () => {
+    const reportData = normalizeReportData(rawCleanReport(), scan);
+    expect(reportData.behaviorallyEvaluatedCriteria).toEqual([]);
+    const vpat = buildVpat(
+      reportData,
+      { siteUrl: scan.siteUrl, standard: scan.standard },
+      [],
+      { generatedAt: GEN_AT, behaviorallyEvaluatedCriteria: new Set(reportData.behaviorallyEvaluatedCriteria ?? []) },
+    );
+    const row = vpat.tablesByLevel.flatMap((t) => t.rows).find((r) => r.criterion === '1.3.1');
+    expect(row?.conformance).toBe('Not Evaluated');
   });
 });

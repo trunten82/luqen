@@ -140,3 +140,113 @@ describe('buildVisionAnalyzer — alt-text (Phase 84 C#1)', () => {
     expect(await analyzer(ctx, 'u')).toEqual([]);
   });
 });
+
+describe('buildVisionAnalyzer — evaluated-criteria sink (Phase 84 C#2)', () => {
+  it("records '1.3.1' when heading-semantics returns a 'pass' verdict", async () => {
+    const sink = new Set<string>();
+    const analyzer = buildVisionAnalyzer(
+      clientWith(vi.fn().mockResolvedValue({ verdict: 'pass', findings: [] })),
+      'org-1',
+      sink,
+    );
+    await analyzer(CTX, 'u');
+    expect(sink.has('1.3.1')).toBe(true);
+  });
+
+  it("records '1.3.1' when heading-semantics returns an 'issue' verdict", async () => {
+    const sink = new Set<string>();
+    const analyzer = buildVisionAnalyzer(
+      clientWith(vi.fn().mockResolvedValue({
+        verdict: 'issue',
+        findings: [{ description: 'd', wcagCriterion: '1.3.1', confidence: 'high' }],
+      })),
+      'org-1',
+      sink,
+    );
+    await analyzer(CTX, 'u');
+    expect(sink.has('1.3.1')).toBe(true);
+  });
+
+  it("does NOT record '1.3.1' on an 'uncertain' verdict", async () => {
+    const sink = new Set<string>();
+    const analyzer = buildVisionAnalyzer(
+      clientWith(vi.fn().mockResolvedValue({ verdict: 'uncertain', findings: [] })),
+      'org-1',
+      sink,
+    );
+    await analyzer(CTX, 'u');
+    expect(sink.has('1.3.1')).toBe(false);
+  });
+
+  it("does NOT record '1.3.1' when analyse-visual throws", async () => {
+    const sink = new Set<string>();
+    const analyzer = buildVisionAnalyzer(
+      clientWith(vi.fn().mockRejectedValue(new Error('HTTP 503'))),
+      'org-1',
+      sink,
+    );
+    await analyzer(CTX, 'u');
+    expect(sink.has('1.3.1')).toBe(false);
+  });
+
+  it("does NOT record '1.3.1' when the heading outline is empty (call never runs)", async () => {
+    const sink = new Set<string>();
+    const analyzer = buildVisionAnalyzer(clientWith(vi.fn()), 'org-1', sink);
+    await analyzer({ ...CTX, headingOutline: '', images: [] }, 'u');
+    expect(sink.has('1.3.1')).toBe(false);
+  });
+
+  it("records '1.1.1' when an alt-text call returns definitively ('pass')", async () => {
+    const sink = new Set<string>();
+    const analyseVisual = vi.fn(async (input: { check: string }) => {
+      if (input.check === 'heading-semantics') return { verdict: 'pass', findings: [] };
+      return { verdict: 'pass', findings: [] };
+    });
+    const ctx: VisualContext = { ...CTX, headingOutline: '', images: [imgWithBytes('img', 'logo')] };
+    const analyzer = buildVisionAnalyzer(clientWith(analyseVisual as unknown as LLMClient['analyseVisual']), 'org-1', sink);
+    await analyzer(ctx, 'u');
+    expect(sink.has('1.1.1')).toBe(true);
+  });
+
+  it("records '1.1.1' when an alt-text call returns an 'issue' verdict", async () => {
+    const sink = new Set<string>();
+    const analyseVisual = vi.fn(async (input: { check: string }) => {
+      if (input.check === 'heading-semantics') return { verdict: 'pass', findings: [] };
+      return { verdict: 'issue', findings: [{ description: 'd', wcagCriterion: '1.1.1', confidence: 'medium' }] };
+    });
+    const ctx: VisualContext = { ...CTX, headingOutline: '', images: [imgWithBytes('img', null)] };
+    const analyzer = buildVisionAnalyzer(clientWith(analyseVisual as unknown as LLMClient['analyseVisual']), 'org-1', sink);
+    await analyzer(ctx, 'u');
+    expect(sink.has('1.1.1')).toBe(true);
+  });
+
+  it("does NOT record '1.1.1' when the alt-text call is 'uncertain' or throws", async () => {
+    const sink = new Set<string>();
+    const analyseVisual = vi.fn(async (input: { check: string }) => {
+      if (input.check === 'heading-semantics') return { verdict: 'pass', findings: [] };
+      if (input.check === 'alt-text') throw new Error('HTTP 503');
+      return { verdict: 'pass', findings: [] };
+    });
+    const ctx: VisualContext = { ...CTX, headingOutline: '', images: [imgWithBytes('img', null)] };
+    const analyzer = buildVisionAnalyzer(clientWith(analyseVisual as unknown as LLMClient['analyseVisual']), 'org-1', sink);
+    await analyzer(ctx, 'u');
+    expect(sink.has('1.1.1')).toBe(false);
+  });
+
+  it("does NOT record '1.1.1' when no images have captured bytes (call never runs)", async () => {
+    const sink = new Set<string>();
+    const noBytes = { selector: 'img', src: 's', alt: 'x', role: null, surroundingText: '' };
+    const ctx: VisualContext = { ...CTX, headingOutline: '', images: [noBytes] };
+    const analyzer = buildVisionAnalyzer(clientWith(vi.fn()), 'org-1', sink);
+    await analyzer(ctx, 'u');
+    expect(sink.has('1.1.1')).toBe(false);
+  });
+
+  it('is backward-compatible: omitting the sink keeps the existing Issue[] behavior', async () => {
+    const analyzer = buildVisionAnalyzer(
+      clientWith(vi.fn().mockResolvedValue({ verdict: 'pass', findings: [] })),
+      'org-1',
+    );
+    expect(await analyzer(CTX, 'u')).toEqual([]);
+  });
+});

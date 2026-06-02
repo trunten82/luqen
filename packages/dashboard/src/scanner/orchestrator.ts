@@ -158,6 +158,13 @@ export interface OrchestratorOptions {
    */
   readonly resolveVisionAnalyzer?: (
     orgId: string | undefined,
+    /**
+     * Phase 84 C#2: a Set the analyzer adds evaluated WCAG criteria to (e.g.
+     * '1.3.1', '1.1.1') on definitive verdicts. The orchestrator owns the set,
+     * passes it in, and persists its contents on the scan report afterwards so
+     * the VPAT/ACR builder can elevate cleanly-evaluated criteria to "Supports".
+     */
+    evaluatedSink?: Set<string>,
   ) => Promise<((ctx: VisualContext, url: string) => Promise<readonly Issue[]>) | null>;
 }
 
@@ -319,6 +326,10 @@ export class ScanOrchestrator {
       let notices = 0;
       let allIssues: Array<{ code: string; type: string; message: string; selector: string; context: string }> = [];
       let scanPages: Array<{ url: string; issueCount: number; issues: Array<{ code: string; type: string; message: string; selector: string; context: string }> }> = [];
+      // Phase 84 C#2: WCAG criteria the LLM-vision pass evaluated definitively
+      // during this scan (populated only on a behavioral standard scan). Persisted
+      // on the report so buildVpat can elevate clean criteria to "Supports".
+      const visionEvaluatedCriteria = new Set<string>();
 
       if (coreModule !== null) {
         const { createScanner, discoverUrls, scanUrls, WebserviceClient, WebservicePool, DirectScanner, computeContentHashes } = coreModule;
@@ -463,9 +474,11 @@ export class ScanOrchestrator {
         } else {
           // --- Standard (non-incremental) scan ---
           // Phase 84: resolve an org-scoped vision analyzer for the behavioral
-          // pass (only meaningful when behavioral is enabled).
+          // pass (only meaningful when behavioral is enabled). The sink
+          // accumulates the WCAG criteria the vision pass actually evaluated
+          // (C#2), persisted on the report below for the VPAT/ACR builder.
           const visionAnalyzer = config.behavioral === true && this.resolveVisionAnalyzer
-            ? await this.resolveVisionAnalyzer(config.orgId).catch(() => null)
+            ? await this.resolveVisionAnalyzer(config.orgId, visionEvaluatedCriteria).catch(() => null)
             : null;
           const scanner = createScanner({
             ...(config.webserviceUrl !== undefined ? { webserviceUrl: config.webserviceUrl } : {}),
@@ -550,6 +563,14 @@ export class ScanOrchestrator {
         : [{ url: config.siteUrl, issues: allIssues, issueCount: allIssues.length }];
 
       reportData.errors = [];
+
+      // Phase 84 C#2: record which WCAG criteria the LLM-vision behavioral pass
+      // evaluated definitively (pass/issue). buildVpat reads this back to elevate
+      // a clean, no-findings manual-judgement criterion from "Not Evaluated" to
+      // "Supports". Omitted when empty so legacy/non-vision scans are unaffected.
+      if (visionEvaluatedCriteria.size > 0) {
+        reportData.behaviorallyEvaluatedCriteria = [...visionEvaluatedCriteria];
+      }
 
       let confirmedViolations: number | undefined;
 
