@@ -131,6 +131,49 @@ describe('buildVpat', () => {
     expect(row?.conformance).not.toBe('Supports');
   });
 
+  it('C#2: a clean LLM-vision behavioral evaluation upgrades a no-findings manual-judgement criterion to Supports', () => {
+    // 1.3.1 requires manual judgement (a static scan sees some structure, not
+    // all) → normally "Not Evaluated" on a clean scan. But an LLM-vision pass
+    // actually evaluated the rendered heading semantics and found no issue, so
+    // it earns "Supports" with a transparent method note.
+    const report = makeReport([]);
+    const baseline = buildVpat(report, scanAA, [], { generatedAt: GEN_AT });
+    expect(baseline.tablesByLevel.flatMap((t) => t.rows).find((r) => r.criterion === '1.3.1')?.conformance).toBe('Not Evaluated');
+
+    const vpat = buildVpat(report, scanAA, [], {
+      generatedAt: GEN_AT,
+      behaviorallyEvaluatedCriteria: new Set(['1.3.1']),
+    });
+    const row = vpat.tablesByLevel.flatMap((t) => t.rows).find((r) => r.criterion === '1.3.1');
+    expect(row?.conformance).toBe('Supports');
+    expect(row?.remarks.toLowerCase()).toContain('vision');
+  });
+
+  it('C#2: behavioral evaluation does NOT upgrade a criterion that has findings (failures still win)', () => {
+    // A vision-evaluated criterion that ALSO has a hard automated error stays
+    // Does Not Support — a positive behavioral signal never hides a failure.
+    const report = makeReport([
+      makeGroup({ criterion: '1.3.1', errorCount: 2, pageCount: 1 }),
+    ]);
+    const vpat = buildVpat(report, scanAA, [], {
+      generatedAt: GEN_AT,
+      behaviorallyEvaluatedCriteria: new Set(['1.3.1']),
+    });
+    const row = vpat.tablesByLevel.flatMap((t) => t.rows).find((r) => r.criterion === '1.3.1');
+    expect(row?.conformance).toBe('Does Not Support');
+  });
+
+  it('C#2: a criterion NOT behaviorally evaluated stays Not Evaluated', () => {
+    const report = makeReport([]);
+    const vpat = buildVpat(report, scanAA, [], {
+      generatedAt: GEN_AT,
+      behaviorallyEvaluatedCriteria: new Set(['1.3.1']),
+    });
+    // 1.2.1 is not in the set → unchanged.
+    const row = vpat.tablesByLevel.flatMap((t) => t.rows).find((r) => r.criterion === '1.2.1');
+    expect(row?.conformance).toBe('Not Evaluated');
+  });
+
   it('a manual pass upgrades a partially-automatable criterion with no findings to Supports', () => {
     const report = makeReport([]);
     const vpat = buildVpat(report, scanAA, [makeManual('1.1.1', 'pass')], { generatedAt: GEN_AT });

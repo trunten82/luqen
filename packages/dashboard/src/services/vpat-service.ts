@@ -152,6 +152,17 @@ export interface BuildVpatOptions {
    * full block is attached to the report for the header/company rendering.
    */
   readonly identity?: VpatIdentity;
+  /**
+   * C#2 (Phase 84) — WCAG criteria that an LLM-vision behavioral pass actually
+   * evaluated and found clean during this scan (e.g. 1.3.1 heading-semantics,
+   * 1.1.1 alt-text). For such a criterion with NO findings and no manual
+   * verdict, the conformance is elevated from "Not Evaluated" to "Supports"
+   * with a transparent method note — a clean *behavioral* evaluation of the
+   * rendered page is a substantive assessment, unlike a bare static scan. A
+   * behavioral pass NEVER hides a finding or a manual fail (those are decided
+   * earlier in deriveRow). Empty/absent by default → no change to conformance.
+   */
+  readonly behaviorallyEvaluatedCriteria?: ReadonlySet<string>;
 }
 
 /** Minimal shape of the scan record needed to build a VPAT. */
@@ -234,6 +245,7 @@ function deriveRow(
   groupsByCriterion: ReadonlyMap<string, IssueGroup>,
   manualByCriterion: ReadonlyMap<string, ManualTestResult>,
   requiresManual: ReadonlySet<string>,
+  behaviorallyEvaluated: ReadonlySet<string>,
 ): VpatRow {
   const base = {
     criterion: entry.criterion,
@@ -313,16 +325,24 @@ function deriveRow(
       };
     }
     // Group present but no findings (rare): only claim Supports when fully
-    // machine-verifiable; otherwise it still needs human evaluation.
+    // machine-verifiable; otherwise it still needs human evaluation — UNLESS an
+    // LLM-vision behavioral pass evaluated it clean (C#2).
     if (requiresManual.has(entry.criterion)) {
+      if (behaviorallyEvaluated.has(entry.criterion)) {
+        return { ...base, conformance: 'Supports', remarks: 'Evaluated by LLM-vision behavioral testing; no issues detected' };
+      }
       return { ...base, conformance: 'Not Evaluated', remarks: 'Requires manual evaluation; automated testing alone cannot confirm conformance' };
     }
     return { ...base, conformance: 'Supports', remarks: 'No outstanding issues detected by automated scan' };
   }
 
-  // 6. No automated findings and no manual verdict — conservative: only a
-  //    fully machine-verifiable criterion can claim Supports on a clean scan.
+  // 6. No automated findings and no manual verdict — conservative: a fully
+  //    machine-verifiable criterion, OR one cleanly evaluated by an LLM-vision
+  //    behavioral pass (C#2), can claim Supports on a clean scan.
   if (requiresManual.has(entry.criterion)) {
+    if (behaviorallyEvaluated.has(entry.criterion)) {
+      return { ...base, conformance: 'Supports', remarks: 'Evaluated by LLM-vision behavioral testing; no issues detected' };
+    }
     return { ...base, conformance: 'Not Evaluated', remarks: 'Requires manual evaluation; automated testing alone cannot confirm conformance' };
   }
   return { ...base, conformance: 'Supports', remarks: 'No issues detected by automated testing for this machine-verifiable criterion' };
@@ -377,11 +397,12 @@ export function buildVpat(
   }
 
   const requiresManual = requiresManualJudgement();
+  const behaviorallyEvaluated = opts.behaviorallyEvaluatedCriteria ?? new Set<string>();
   const evidenceCounts = opts.evidenceCounts;
 
   const rows: VpatRow[] = catalogForLevel(level)
     .map((entry) => {
-      const row = deriveRow(entry, groupsByCriterion, manualByCriterion, requiresManual);
+      const row = deriveRow(entry, groupsByCriterion, manualByCriterion, requiresManual, behaviorallyEvaluated);
       const evidence = evidenceCounts?.get(entry.criterion) ?? 0;
       // Append the evidence count to the remark — a defensibility signal that
       // the manual verdict for this criterion is backed by uploaded artifacts.
